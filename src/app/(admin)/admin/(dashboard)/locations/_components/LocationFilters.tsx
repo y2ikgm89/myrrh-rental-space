@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { Search } from 'lucide-react'
-import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { useRef, useEffect } from 'react'
+import { Search } from "lucide-react";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useRef, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -10,53 +10,53 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 
 const PUBLISH_STATUS_OPTIONS = [
-  { value: 'ALL', label: 'すべて' },
-  { value: 'true', label: '公開中' },
-  { value: 'false', label: '非公開' },
-]
+  { value: "ALL", label: "すべて" },
+  { value: "true", label: "公開中" },
+  { value: "false", label: "非公開" },
+];
 
 export function LocationFilters() {
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      published: parseAsString.withDefault(''),
+      search: parseAsString.withDefault(""),
+      published: parseAsString.withDefault(""),
       page: parseAsInteger.withDefault(1),
-      tab: parseAsString.withDefault('locations'),
+      tab: parseAsString.withDefault("locations"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const setSearchDebounced = (value: string) => {
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ search: value || null, page: 1 })
-    }, 300)
-  }
+      void setParams({ search: value || null, page: 1 });
+    }, 300);
+  };
 
   const setPublished = (value: string) => {
-    const publishedValue = value === 'ALL' ? null : value || null
-    void setParams({ published: publishedValue, page: 1 })
-  }
+    const publishedValue = value === "ALL" ? null : value || null;
+    void setParams({ published: publishedValue, page: 1 });
+  };
 
-  const currentPublished = params.published || 'ALL'
+  const currentPublished = params.published || "ALL";
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -88,5 +88,5 @@ export function LocationFilters() {
         />
       </div>
     </div>
-  )
+  );
 }

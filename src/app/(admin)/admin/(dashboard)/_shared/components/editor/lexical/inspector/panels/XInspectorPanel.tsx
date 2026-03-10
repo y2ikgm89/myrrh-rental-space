@@ -4,16 +4,16 @@
  * @description XNodeの情報表示パネル（読み取り専用）
  */
 
-'use client'
+"use client";
 
-import type { XNode } from '../../nodes/XNode'
-import { tweetIdState } from '../../nodes/XNode'
-import { EmbedInspectorPanel } from './EmbedInspectorPanel'
+import type { XNode } from "../../nodes/XNode";
+import { tweetIdState } from "../../nodes/XNode";
+import { EmbedInspectorPanel } from "./EmbedInspectorPanel";
 
 type XInspectorPanelProps = {
-  nodeKey: string
-  node: XNode
-}
+  nodeKey: string;
+  node: XNode;
+};
 
 export function XInspectorPanel({ nodeKey, node }: XInspectorPanelProps) {
   return (
@@ -25,5 +25,5 @@ export function XInspectorPanel({ nodeKey, node }: XInspectorPanelProps) {
       idState={tweetIdState}
       buildUrl={(id) => `https://x.com/i/status/${id}`}
     />
-  )
+  );
 }

@@ -10,10 +10,12 @@
 ### 1. お知らせ管理にtiptapエディター導入
 
 **変更ファイル**:
+
 - `src/app/admin/news/_components/NewsForm.tsx` - Textarea → RichTextEditor
 - `src/app/(public)/news/[id]/_components/NewsContent.tsx` - DOMPurify拡張（iframe対応）
 
 **機能**:
+
 - 画像・YouTube動画の埋め込み対応
 - XSS対策: DOMPurifyで信頼できるiframeホストのみ許可
   - youtube.com, youtube-nocookie.com, player.vimeo.com
@@ -21,16 +23,19 @@
 ### 2. AnnouncementBar機能の新規実装
 
 **新規ファイル**:
+
 - `src/actions/admin/announcement-bar.ts` - Server Actions (CRUD + 認証)
 - `src/app/admin/settings/announcement-bar/page.tsx` - 管理画面
 - `src/components/site/AnnouncementBar.tsx` - 表示コンポーネント
 - `src/components/site/AnnouncementBarWrapper.tsx` - Server Component ラッパー
 
 **変更ファイル**:
+
 - `prisma/schema.prisma` - AnnouncementBarモデル追加
 - `src/app/(public)/layout.tsx` - AnnouncementBarWrapper追加
 
 **データモデル**:
+
 ```prisma
 model AnnouncementBar {
   id        String    @id @default(uuid())
@@ -54,6 +59,7 @@ model AnnouncementBar {
 ```
 
 **機能**:
+
 - 3種類のタイプ: info（青）, warning（黄）, promo（緑）
 - カスタム背景色・文字色対応
 - 表示期間指定（開始日時・終了日時）

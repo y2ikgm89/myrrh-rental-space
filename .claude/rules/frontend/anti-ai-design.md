@@ -17,14 +17,14 @@ paths:
 
 ## 禁止パターン表
 
-| カテゴリ | AI Default（禁止） | プロジェクト推奨パターン |
-|----------|-------------------|----------------------|
-| **Layout** | 等幅 3 カラム `grid-cols-3` 全カード同高さ | 非対称グリッド（テキスト + ParallaxImage）、カード grid は `gap-6 md:gap-8` で呼吸 |
+| カテゴリ       | AI Default（禁止）                         | プロジェクト推奨パターン                                                                                   |
+| -------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Layout**     | 等幅 3 カラム `grid-cols-3` 全カード同高さ | 非対称グリッド（テキスト + ParallaxImage）、カード grid は `gap-6 md:gap-8` で呼吸                         |
 | **Typography** | Sans 単一フォント、16/20/24px 均等ステップ | Serif heading (`font-heading`) + Sans body、4x+ スケール差（→ `project-design-config.md` §タイポグラフィ） |
-| **Color** | 3 色均等配分、全面グラデーション | Dominant/Support/Accent 比率を遵守（→ `project-design-config.md` §カラーパレット）。Accent は限定箇所のみ |
-| **Motion** | 全要素 `fade-in-up`、同一 duration/easing | 主役/脇役/背景の役割分担（→ `project-design-config.md` §モーション設計）。`animations.ts` 定数使用 |
-| **Corners** | 全要素 `rounded-lg` 統一 | コンテナ/画像: `rounded-lg`。CTA: `rounded-full`。セクション境界: sharp |
-| **Buttons** | 全ボタン pill gradient、同一スタイル | CTA/Secondary/Form の3段階ヒエラルキー（→ `project-design-config.md` §コンポーネント規約） |
+| **Color**      | 3 色均等配分、全面グラデーション           | Dominant/Support/Accent 比率を遵守（→ `project-design-config.md` §カラーパレット）。Accent は限定箇所のみ  |
+| **Motion**     | 全要素 `fade-in-up`、同一 duration/easing  | 主役/脇役/背景の役割分担（→ `project-design-config.md` §モーション設計）。`animations.ts` 定数使用         |
+| **Corners**    | 全要素 `rounded-lg` 統一                   | コンテナ/画像: `rounded-lg`。CTA: `rounded-full`。セクション境界: sharp                                    |
+| **Buttons**    | 全ボタン pill gradient、同一スタイル       | CTA/Secondary/Form の3段階ヒエラルキー（→ `project-design-config.md` §コンポーネント規約）                 |
 
 ---
 

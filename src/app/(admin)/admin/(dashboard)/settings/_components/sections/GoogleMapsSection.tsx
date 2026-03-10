@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Google Maps設定セクション
@@ -6,8 +6,8 @@
  * Google Maps APIキーの設定と接続テスト
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -17,23 +17,24 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updateGoogleMapsSettings,
   testGoogleMapsConnectionAction,
   clearGoogleMapsKeys,
-} from '@/admin/actions/api-keys'
-import type { GoogleMapsConfig } from '@/admin/types/api-keys'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/api-keys";
+import type { GoogleMapsConfig } from "@/admin/types/api-keys";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface GoogleMapsSectionProps {
-  config: GoogleMapsConfig
+  config: GoogleMapsConfig;
 }
 
 // =============================================================================
@@ -41,90 +42,90 @@ interface GoogleMapsSectionProps {
 // =============================================================================
 
 export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
-    googleMapsApiKey: '',
-  })
+    googleMapsApiKey: "",
+  });
 
-  const [showKeyInput, setShowKeyInput] = useState(false)
+  const [showKeyInput, setShowKeyInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateGoogleMapsSettings({
         googleMapsApiKey: formData.googleMapsApiKey || null,
-      })
-      if (result.success) {
-        setFormData({ googleMapsApiKey: '' })
-        setShowKeyInput(false)
+      });
+      if (!isMutationError(result)) {
+        setFormData({ googleMapsApiKey: "" });
+        setShowKeyInput(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Google Maps設定を保存しました");
+    });
+  };
 
   const handleConnectionTest = async () => {
     if (!formData.googleMapsApiKey) {
       setTestResult({
         success: false,
-        message: 'APIキーを入力してください',
-      })
-      return
+        message: "APIキーを入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
       const result = await testGoogleMapsConnectionAction(
-        formData.googleMapsApiKey
-      )
-      if (result.success) {
+        formData.googleMapsApiKey,
+      );
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
-          message: result.data?.message || '接続成功',
-        })
-        refresh()
+          message: "接続成功",
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続に失敗しました',
-        })
+          message: result.error,
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearKeys = async () => {
     const confirmed = await confirm({
-      title: 'APIキーをクリアしますか？',
-      description: 'Google Maps APIキーをクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "APIキーをクリアしますか？",
+      description: "Google Maps APIキーをクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearGoogleMapsKeys()
-      if (result.success) {
-        setFormData({ googleMapsApiKey: '' })
-        setTestResult(null)
+      const result = await clearGoogleMapsKeys();
+      if (!isMutationError(result)) {
+        setFormData({ googleMapsApiKey: "" });
+        setTestResult(null);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Google Maps設定をクリアしました");
+    });
+  };
 
   return (
     <Card>
@@ -184,9 +185,9 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
 
         {/* 接続ステータス */}
         {config.connectionStatus && (
-          <StatusBanner success={config.connectionStatus === 'connected'}>
+          <StatusBanner success={config.connectionStatus === "connected"}>
             <div className="flex items-center gap-2">
-              {config.connectionStatus === 'connected' ? (
+              {config.connectionStatus === "connected" ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-success" />
                   <span className="text-sm font-medium text-success">
@@ -214,7 +215,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
             >
               {testResult.message}
             </p>
@@ -224,7 +225,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
           {formData.googleMapsApiKey && (
             <Button
@@ -232,7 +233,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '接続テスト'}
+              {isTesting ? "テスト中..." : "接続テスト"}
             </Button>
           )}
           {config.apiKeyMasked && (
@@ -247,5 +248,5 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

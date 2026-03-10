@@ -82,12 +82,12 @@ Ran 121 tests across 4 files. [150.00ms]
 
 ## 対象コード
 
-| ファイル | テスト対象 |
-|---------|-----------|
-| `src/lib/permissions.ts` | RBAC権限管理 |
-| `src/lib/validations/reservation.ts` | 予約Zodスキーマ |
-| `src/lib/reservation-utils.ts` | 予約重複チェック |
-| `src/types/server-actions.ts` | withPermission, withRole等HOF |
+| ファイル                             | テスト対象                    |
+| ------------------------------------ | ----------------------------- |
+| `src/lib/permissions.ts`             | RBAC権限管理                  |
+| `src/lib/validations/reservation.ts` | 予約Zodスキーマ               |
+| `src/lib/reservation-utils.ts`       | 予約重複チェック              |
+| `src/types/server-actions.ts`        | withPermission, withRole等HOF |
 
 ## 設計判断
 

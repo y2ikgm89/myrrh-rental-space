@@ -4,42 +4,51 @@
  * @description MapEmbedNode のプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isMapEmbedNode, embedUrlState, mapLabelState } from '../../nodes/MapEmbedNode'
-import type { MapEmbedNode } from '../../nodes/MapEmbedNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorFields } from '../InspectorFields'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $isMapEmbedNode,
+  embedUrlState,
+  mapLabelState,
+} from "../../nodes/MapEmbedNode";
+import type { MapEmbedNode } from "../../nodes/MapEmbedNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorFields } from "../InspectorFields";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type MapEmbedInspectorPanelProps = {
-  nodeKey: string
-  node: MapEmbedNode
-}
+  nodeKey: string;
+  node: MapEmbedNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function MapEmbedInspectorPanel({ nodeKey, node }: MapEmbedInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isMapEmbedNode)
+export function MapEmbedInspectorPanel({
+  nodeKey,
+  node,
+}: MapEmbedInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isMapEmbedNode);
 
   const { embedUrl, label } = editor.getEditorState().read(() => ({
     embedUrl: $getState(node, embedUrlState),
     label: $getState(node, mapLabelState),
-  }))
+  }));
 
   const handleLabelChange = (value: string) => {
-    updateNode((n) => { $setState(n, mapLabelState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, mapLabelState, value);
+    });
+  };
 
   return (
     <div>
@@ -65,5 +74,5 @@ export function MapEmbedInspectorPanel({ nodeKey, node }: MapEmbedInspectorPanel
         </div>
       </InspectorFields>
     </div>
-  )
+  );
 }

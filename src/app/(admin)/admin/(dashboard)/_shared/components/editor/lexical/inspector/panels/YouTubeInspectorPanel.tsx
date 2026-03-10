@@ -4,18 +4,21 @@
  * @description YouTubeNodeの情報表示パネル（読み取り専用）
  */
 
-'use client'
+"use client";
 
-import type { YouTubeNode } from '../../nodes/YouTubeNode'
-import { videoIdState } from '../../nodes/YouTubeNode'
-import { EmbedInspectorPanel } from './EmbedInspectorPanel'
+import type { YouTubeNode } from "../../nodes/YouTubeNode";
+import { videoIdState } from "../../nodes/YouTubeNode";
+import { EmbedInspectorPanel } from "./EmbedInspectorPanel";
 
 type YouTubeInspectorPanelProps = {
-  nodeKey: string
-  node: YouTubeNode
-}
+  nodeKey: string;
+  node: YouTubeNode;
+};
 
-export function YouTubeInspectorPanel({ nodeKey, node }: YouTubeInspectorPanelProps) {
+export function YouTubeInspectorPanel({
+  nodeKey,
+  node,
+}: YouTubeInspectorPanelProps) {
   return (
     <EmbedInspectorPanel
       nodeKey={nodeKey}
@@ -25,5 +28,5 @@ export function YouTubeInspectorPanel({ nodeKey, node }: YouTubeInspectorPanelPr
       idState={videoIdState}
       buildUrl={(id) => `https://www.youtube.com/watch?v=${id}`}
     />
-  )
+  );
 }

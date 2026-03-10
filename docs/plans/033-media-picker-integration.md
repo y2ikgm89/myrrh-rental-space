@@ -50,40 +50,40 @@ src/
 ```tsx
 // 単一選択
 const picker = useSingleMediaPicker({
-  defaultUsage: 'SPACE',
+  defaultUsage: "SPACE",
   onSelect: (media) => {
     if (media.length > 0) {
-      setValue('mainImageUrl', media[0].url)
+      setValue("mainImageUrl", media[0].url);
     }
   },
-})
+});
 
 return (
   <>
     <Button onClick={() => picker.openPicker()}>画像を選択</Button>
     <picker.MediaPicker />
   </>
-)
+);
 
 // 複数選択
 const multiPicker = useMultipleMediaPicker({
-  defaultUsage: 'SPACE',
+  defaultUsage: "SPACE",
   maxSelections: 10,
   onSelect: (media) => {
-    setImageUrls(media.map(m => m.url))
+    setImageUrls(media.map((m) => m.url));
   },
-})
+});
 ```
 
 ## 統合対象
 
-| 対象 | ファイル | 用途 |
-|------|----------|------|
-| SpaceForm | `spaces/_components/SpaceForm.tsx` | メイン画像 + 追加画像(max 10) |
-| ImageFields | `inline/side-panel/ImageFields.tsx` | サムネイル + OGP画像 |
-| PageSeoForm | `pages/[slug]/seo/_components/PageSeoForm.tsx` | OGP画像 |
-| SectionEditor | `settings/_components/tabs/SectionEditor.tsx` | Hero背景画像 |
-| CardPlugin | `editor/lexical/plugins/CardPlugin.tsx` | カード画像 |
+| 対象          | ファイル                                       | 用途                          |
+| ------------- | ---------------------------------------------- | ----------------------------- |
+| SpaceForm     | `spaces/_components/SpaceForm.tsx`             | メイン画像 + 追加画像(max 10) |
+| ImageFields   | `inline/side-panel/ImageFields.tsx`            | サムネイル + OGP画像          |
+| PageSeoForm   | `pages/[slug]/seo/_components/PageSeoForm.tsx` | OGP画像                       |
+| SectionEditor | `settings/_components/tabs/SectionEditor.tsx`  | Hero背景画像                  |
+| CardPlugin    | `editor/lexical/plugins/CardPlugin.tsx`        | カード画像                    |
 
 ## 新規ファイル
 

@@ -25,12 +25,12 @@ description: >
 
 **関連ファイル**:
 
-| ファイル | 役割 |
-|---------|------|
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts` | Stripe クライアント生成・接続テスト（`server-only`） |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts` | キー形式バリデーション（クライアント safe） |
-| `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts` | 設定保存・接続テスト Server Action |
-| `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/stripe.ts` | Zod スキーマ |
+| ファイル                                                               | 役割                                                 |
+| ---------------------------------------------------------------------- | ---------------------------------------------------- |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts`              | Stripe クライアント生成・接続テスト（`server-only`） |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts`       | キー形式バリデーション（クライアント safe）          |
+| `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/stripe.ts` | 設定保存・接続テスト Server Action                   |
+| `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/stripe.ts`  | Zod スキーマ                                         |
 
 ---
 
@@ -48,6 +48,7 @@ grep STRIPE .env.local 2>/dev/null || echo "STRIPE keys not in .env.local"
 ```
 
 **確認項目**:
+
 - `stripeSecretKey`: 暗号化文字列が入っているか（`null` なら未設定）
 - `stripePublishableKey`: 公開可能キーが入っているか
 - `stripeWebhookSecret`: Webhook シークレットが入っているか
@@ -66,14 +67,14 @@ grep STRIPE .env.local 2>/dev/null || echo "STRIPE keys not in .env.local"
 
 ### Step 3 — 接続テスト失敗の原因別対処
 
-| エラーメッセージ | 原因 | 対処 |
-|-----------------|------|------|
-| `No API key found` | 環境変数もDBも未設定 | Cloud Run 環境変数 or 管理画面で設定 |
-| `Invalid API Key provided` | キーのフォーマット不正・削除済み | Stripe ダッシュボードで新しいキーを発行 |
-| `You are using a restricted key` | Restricted Key で権限不足 | Secret Key (`sk_*`) に変更 |
-| `This account cannot currently make live charges` | テストキーを本番で使用 | テスト環境では `sk_test_*`、本番では `sk_live_*` |
-| Timeout / `fetch failed` | Cloud Run からの外部アクセス不可 | Cloud Run の VPC 設定・ファイアウォールを確認 |
-| `auth.ts` 認証エラー | Better Auth のセッション期限切れ | 再ログイン |
+| エラーメッセージ                                  | 原因                             | 対処                                             |
+| ------------------------------------------------- | -------------------------------- | ------------------------------------------------ |
+| `No API key found`                                | 環境変数もDBも未設定             | Cloud Run 環境変数 or 管理画面で設定             |
+| `Invalid API Key provided`                        | キーのフォーマット不正・削除済み | Stripe ダッシュボードで新しいキーを発行          |
+| `You are using a restricted key`                  | Restricted Key で権限不足        | Secret Key (`sk_*`) に変更                       |
+| `This account cannot currently make live charges` | テストキーを本番で使用           | テスト環境では `sk_test_*`、本番では `sk_live_*` |
+| Timeout / `fetch failed`                          | Cloud Run からの外部アクセス不可 | Cloud Run の VPC 設定・ファイアウォールを確認    |
+| `auth.ts` 認証エラー                              | Better Auth のセッション期限切れ | 再ログイン                                       |
 
 ### Step 4 — Webhook の確認（将来実装時）
 
@@ -100,6 +101,7 @@ gcloud run services describe myrrh-rental-space --region=asia-northeast1 --forma
 ```
 
 **必要な環境変数（Stripe 関連）**:
+
 - `STRIPE_SECRET_KEY` — オプション（DBで管理する場合は不要）
 - `STRIPE_WEBHOOK_SECRET` — Webhook 使用時は必須
 
@@ -107,12 +109,12 @@ gcloud run services describe myrrh-rental-space --region=asia-northeast1 --forma
 
 ## テストモード vs 本番モード
 
-| 確認方法 | 内容 |
-|---------|------|
-| キープレフィックス | `sk_test_*` = テスト、`sk_live_*` = 本番 |
-| `isTestKey()` 関数 | `stripe-shared.ts` に実装済み |
-| Stripe ダッシュボード | テストモードのトグルで確認 |
-| 接続テスト結果の `mode` フィールド | `'test'` または `'live'` が返る |
+| 確認方法                           | 内容                                     |
+| ---------------------------------- | ---------------------------------------- |
+| キープレフィックス                 | `sk_test_*` = テスト、`sk_live_*` = 本番 |
+| `isTestKey()` 関数                 | `stripe-shared.ts` に実装済み            |
+| Stripe ダッシュボード              | テストモードのトグルで確認               |
+| 接続テスト結果の `mode` フィールド | `'test'` または `'live'` が返る          |
 
 **注意**: 本番デプロイ前に必ず本番キー（`sk_live_*`）に切り替える。
 テストキーで本番決済は処理されない（エラーにはならず、Stripe 側でフィルタされる）。

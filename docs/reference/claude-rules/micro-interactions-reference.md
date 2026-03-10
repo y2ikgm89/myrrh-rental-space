@@ -7,31 +7,31 @@
 
 ### GSAP 定数（`(public-v3)/_shared/lib/animations.ts`）
 
-| 定数 | 値 | 用途 |
-|------|-----|------|
-| `DURATION.fast` | 0.3s | hover、toggle、micro interaction |
-| `DURATION.normal` | 0.6s | ScrollReveal、dropdown |
-| `DURATION.slow` | 0.8s | SplitText、card stagger |
-| `DURATION.xslow` | 1.2s | ページ遷移 |
-| `DURATION.hero` | 1.5s | Hero 入場アニメーション |
+| 定数              | 値   | 用途                             |
+| ----------------- | ---- | -------------------------------- |
+| `DURATION.fast`   | 0.3s | hover、toggle、micro interaction |
+| `DURATION.normal` | 0.6s | ScrollReveal、dropdown           |
+| `DURATION.slow`   | 0.8s | SplitText、card stagger          |
+| `DURATION.xslow`  | 1.2s | ページ遷移                       |
+| `DURATION.hero`   | 1.5s | Hero 入場アニメーション          |
 
-| 定数 | 値 | 用途 |
-|------|-----|------|
-| `EASE.outExpo` | `expo.out` | 一般的な入場（Hero content） |
-| `EASE.outQuart` | `power4.out` | テキスト reveal（SplitText, ScrollReveal） |
-| `EASE.inOutQuart` | `quart.inOut` | スクロール連動 |
-| `EASE.outElastic` | `elastic.out(1, 0.3)` | MagneticButton snap-back |
-| `EASE.none` | `none` | ParallaxImage scrub |
+| 定数              | 値                    | 用途                                       |
+| ----------------- | --------------------- | ------------------------------------------ |
+| `EASE.outExpo`    | `expo.out`            | 一般的な入場（Hero content）               |
+| `EASE.outQuart`   | `power4.out`          | テキスト reveal（SplitText, ScrollReveal） |
+| `EASE.inOutQuart` | `quart.inOut`         | スクロール連動                             |
+| `EASE.outElastic` | `elastic.out(1, 0.3)` | MagneticButton snap-back                   |
+| `EASE.none`       | `none`                | ParallaxImage scrub                        |
 
 ### Stagger 定数
 
-| 定数 | 値 | 用途 |
-|------|-----|------|
-| `STAGGER.char` | 0.03s | SplitText variant="chars" |
-| `STAGGER.word` | 0.08s | SplitText variant="words" |
-| `STAGGER.line` | 0.15s | SplitText variant="lines" |
-| `STAGGER.card` | 0.12s | SpaceShowcase カードグリッド |
-| `STAGGER.element` | 0.1s | FeaturesSection アイテム |
+| 定数              | 値    | 用途                         |
+| ----------------- | ----- | ---------------------------- |
+| `STAGGER.char`    | 0.03s | SplitText variant="chars"    |
+| `STAGGER.word`    | 0.08s | SplitText variant="words"    |
+| `STAGGER.line`    | 0.15s | SplitText variant="lines"    |
+| `STAGGER.card`    | 0.12s | SpaceShowcase カードグリッド |
+| `STAGGER.element` | 0.1s  | FeaturesSection アイテム     |
 
 ### CSS 用カスタムプロパティ（`public-v3.css` に追加推奨）
 
@@ -77,11 +77,11 @@
 <SplitText variant="lines">見出し</SplitText>
 ```
 
-| variant | stagger | 用途 |
-|---------|---------|------|
-| `chars` | 0.03s | ContactHero、ReservationHero（短い見出し） |
-| `words` | 0.08s | HeroSection、CTASection（中程度の見出し） |
-| `lines` | 0.15s | ConceptSection（長い見出し） |
+| variant | stagger | 用途                                       |
+| ------- | ------- | ------------------------------------------ |
+| `chars` | 0.03s   | ContactHero、ReservationHero（短い見出し） |
+| `words` | 0.08s   | HeroSection、CTASection（中程度の見出し）  |
+| `lines` | 0.15s   | ConceptSection（長い見出し）               |
 
 ### ScrollReveal（汎用入場）
 
@@ -109,7 +109,7 @@
   src="/image.jpg"
   alt="説明"
   className="relative aspect-[4/5] rounded-lg"
-  speed="subtle"  // 0.3 or "normal" 0.5
+  speed="subtle" // 0.3 or "normal" 0.5
 />
 ```
 
@@ -119,32 +119,40 @@
 
 ### ボタン
 
-| 種類 | スタイル | hover | active |
-|------|---------|-------|--------|
-| CTA | `MagneticButton` | マウス追従 | elastic snap-back |
-| Secondary | テキスト + 下線 reveal | `width: 0→100%` (200ms) | — |
+| 種類        | スタイル                                        | hover                                    | active                |
+| ----------- | ----------------------------------------------- | ---------------------------------------- | --------------------- |
+| CTA         | `MagneticButton`                                | マウス追従                               | elastic snap-back     |
+| Secondary   | テキスト + 下線 reveal                          | `width: 0→100%` (200ms)                  | —                     |
 | Form submit | `bg-primary text-primary-foreground rounded-lg` | `hover:-translate-y-0.5 hover:shadow-md` | `active:scale-[0.98]` |
 
 ```tsx
 // Secondary: テキストリンク + 下線 reveal
 <a className="group relative inline-flex items-center gap-1 text-foreground">
   詳しく見る
-  <span className="absolute bottom-0 left-0 h-px w-0 bg-current
-    transition-all duration-200 ease-out group-hover:w-full" />
+  <span
+    className="absolute bottom-0 left-0 h-px w-0 bg-current
+    transition-all duration-200 ease-out group-hover:w-full"
+  />
 </a>
 ```
 
 ### カード（SpaceShowcase パターン）
 
 ```tsx
-<div className="group overflow-hidden rounded-lg border border-border bg-card
-  transition-shadow duration-300 hover:shadow-lg">
+<div
+  className="group overflow-hidden rounded-lg border border-border bg-card
+  transition-shadow duration-300 hover:shadow-lg"
+>
   <div className="aspect-[4/3] overflow-hidden">
-    <Image className="h-full w-full object-cover transition-transform
-      duration-500 group-hover:scale-105" />
+    <Image
+      className="h-full w-full object-cover transition-transform
+      duration-500 group-hover:scale-105"
+    />
   </div>
   <div className="p-5 md:p-6">
-    <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">{english}</p>
+    <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">
+      {english}
+    </p>
     <h3 className="mt-1 font-heading text-lg tracking-tight">{japanese}</h3>
     {/* ... */}
   </div>
@@ -202,7 +210,9 @@
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -215,15 +225,15 @@
 
 ## GSAP vs CSS 使い分け（v3 基準）
 
-| パターン | CSS | GSAP | v3 実装例 |
-|----------|-----|------|----------|
-| hover/focus | YES | — | カード shadow、ボタン translate |
-| 単一要素入場 | — | ScrollReveal | SectionLabel、テキスト |
-| テキスト分割 | — | SplitText | 見出し words/lines/chars |
-| 画像パララックス | — | ParallaxImage | ConceptSection 右カラム |
-| カード stagger | — | `data-space-card` + GSAP | SpaceShowcase 3 枚 |
-| scroll-linked header | — | useScrollState | Header bg 切替 |
-| マウス追従 | — | MagneticButton | CTA ボタン |
+| パターン             | CSS | GSAP                     | v3 実装例                       |
+| -------------------- | --- | ------------------------ | ------------------------------- |
+| hover/focus          | YES | —                        | カード shadow、ボタン translate |
+| 単一要素入場         | —   | ScrollReveal             | SectionLabel、テキスト          |
+| テキスト分割         | —   | SplitText                | 見出し words/lines/chars        |
+| 画像パララックス     | —   | ParallaxImage            | ConceptSection 右カラム         |
+| カード stagger       | —   | `data-space-card` + GSAP | SpaceShowcase 3 枚              |
+| scroll-linked header | —   | useScrollState           | Header bg 切替                  |
+| マウス追従           | —   | MagneticButton           | CTA ボタン                      |
 
 ## 参照
 

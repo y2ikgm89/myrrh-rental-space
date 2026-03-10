@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * StandardHeroSection — Generic hero with height/overlay/CTA variants
@@ -13,31 +13,35 @@
  * delegates to the minimal layout for visual consistency.
  */
 
-import { useRef, type ReactElement } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { SplitText } from '@/public/components/animations/SplitText'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { MagneticButton } from '@/public/components/animations/MagneticButton'
-import { DURATION, EASE, SCROLL_TRIGGER } from '@/public/lib/animations'
-import type { HeroConfig } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
-import { getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
+import { useRef, type ReactElement } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { SplitText } from "@/public/components/animations/SplitText";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { DURATION, EASE, SCROLL_TRIGGER } from "@/public/lib/animations";
+import type { HeroConfig } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  getTitleClasses,
+  getTitleStyle,
+  getTextStyle,
+} from "@/public/components/sections/SectionWrapper";
 
-type HeroButton = HeroConfig['buttons'][number]
+type HeroButton = HeroConfig["buttons"][number];
 
 function HeroButtons({
   primary,
   secondary,
-  className = 'flex flex-wrap items-center gap-4',
+  className = "flex flex-wrap items-center gap-4",
 }: {
-  primary: HeroButton | undefined
-  secondary: HeroButton | undefined
-  className?: string
+  primary: HeroButton | undefined;
+  secondary: HeroButton | undefined;
+  className?: string;
 }) {
-  if (!primary && !secondary) return null
+  if (!primary && !secondary) return null;
   return (
     <div className={className}>
       {primary && (
@@ -55,42 +59,49 @@ function HeroButtons({
         </Link>
       )}
     </div>
-  )
+  );
 }
 
 const HEIGHT_MAP = {
-  sm: 'h-[40vh]',
-  md: 'h-[60vh]',
-  lg: 'h-[80vh]',
-  full: 'h-svh',
-} as const
+  sm: "h-[40vh]",
+  md: "h-[60vh]",
+  lg: "h-[80vh]",
+  full: "h-svh",
+} as const;
 
 interface StandardHeroSectionProps {
-  readonly config: HeroConfig
-  readonly design: SectionDesign
+  readonly config: HeroConfig;
+  readonly design: SectionDesign;
 }
 
-export function StandardHeroSection({ config, design }: StandardHeroSectionProps): ReactElement {
-  const sectionRef = useRef<HTMLElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const imageRef = useRef<HTMLDivElement>(null)
+export function StandardHeroSection({
+  config,
+  design,
+}: StandardHeroSectionProps): ReactElement {
+  const sectionRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
 
-  const variant = config.variant
-  const hasBackground = !!(config.backgroundImageUrl || (variant === 'video' && config.videoUrl))
+  const variant = config.variant;
+  const hasBackground = !!(
+    config.backgroundImageUrl ||
+    (variant === "video" && config.videoUrl)
+  );
 
   // minimal layout: explicit minimal OR default without background
-  const useMinimalLayout = variant === 'minimal' || (variant === 'default' && !hasBackground)
+  const useMinimalLayout =
+    variant === "minimal" || (variant === "default" && !hasBackground);
 
   useGSAP(
     () => {
       // Minimal layout delegates animation to SplitText/ScrollReveal
-      if (useMinimalLayout) return
+      if (useMinimalLayout) return;
 
-      const content = contentRef.current
-      if (!content) return
+      const content = contentRef.current;
+      if (!content) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.fromTo(
           content,
           { opacity: 0, y: 40 },
@@ -101,35 +112,35 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
             ease: EASE.outExpo,
             delay: 0.2,
           },
-        )
+        );
 
         // Parallax background when variant is 'parallax'
-        const image = imageRef.current
-        const section = sectionRef.current
-        if (!image || !section || variant !== 'parallax') return
+        const image = imageRef.current;
+        const section = sectionRef.current;
+        if (!image || !section || variant !== "parallax") return;
 
-        const displacement = config.parallaxSpeed * 200
-        gsap.set(image, { scale: 1.15 })
+        const displacement = config.parallaxSpeed * 200;
+        gsap.set(image, { scale: 1.15 });
         gsap.fromTo(
           image,
           { y: -displacement },
           {
             y: displacement,
-            ease: 'none',
+            ease: "none",
             scrollTrigger: {
               trigger: section,
               ...SCROLL_TRIGGER.scrub,
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: sectionRef },
-  )
+  );
 
-  const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md
-  const primaryButton = config.buttons.find((b) => b.variant === 'primary')
-  const secondaryButton = config.buttons.find((b) => b.variant === 'secondary')
+  const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
+  const primaryButton = config.buttons.find((b) => b.variant === "primary");
+  const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
 
   // =========================================================================
   // Minimal: bottom-aligned, gradient bg, left-aligned
@@ -170,28 +181,38 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
           )}
           {(primaryButton ?? secondaryButton) && (
             <ScrollReveal delay={0.6}>
-              <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-wrap items-center gap-4 md:mt-10" />
+              <HeroButtons
+                primary={primaryButton}
+                secondary={secondaryButton}
+                className="mt-6 flex flex-wrap items-center gap-4 md:mt-10"
+              />
             </ScrollReveal>
           )}
         </div>
       </section>
-    )
+    );
   }
 
   // =========================================================================
   // Split: 2-column layout (text left, image right)
   // =========================================================================
-  if (variant === 'split') {
+  if (variant === "split") {
     return (
       <section
         ref={sectionRef}
         data-hero=""
         className={`relative overflow-hidden pt-[var(--header-height)] ${heightClass}`}
       >
-        <div ref={contentRef} className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center px-5 md:flex-row md:px-8">
+        <div
+          ref={contentRef}
+          className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center px-5 md:flex-row md:px-8"
+        >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {config.title && (
-              <h1 className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`} style={getTitleStyle(design)}>
+              <h1
+                className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
+                style={getTitleStyle(design)}
+              >
                 <SplitText variant="words" trigger={false} delay={0.3}>
                   {config.title}
                 </SplitText>
@@ -199,14 +220,21 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
             )}
             {config.subtitle && (
               <ScrollReveal delay={0.2}>
-                <p className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base" style={getTextStyle(design)}>
+                <p
+                  className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
+                  style={getTextStyle(design)}
+                >
                   {config.subtitle}
                 </p>
               </ScrollReveal>
             )}
             {(primaryButton ?? secondaryButton) && (
               <ScrollReveal delay={0.3}>
-                <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-wrap items-center gap-4 md:mt-10" />
+                <HeroButtons
+                  primary={primaryButton}
+                  secondary={secondaryButton}
+                  className="mt-6 flex flex-wrap items-center gap-4 md:mt-10"
+                />
               </ScrollReveal>
             )}
           </div>
@@ -226,13 +254,13 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
           )}
         </div>
       </section>
-    )
+    );
   }
 
   // =========================================================================
   // Default / Parallax / Video: centered with background
   // =========================================================================
-  const useVideo = variant === 'video' && config.videoUrl
+  const useVideo = variant === "video" && config.videoUrl;
 
   return (
     <section
@@ -278,7 +306,10 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
       {/* Content */}
       <div ref={contentRef} className="relative z-10 px-5 text-center md:px-8">
         {config.title && (
-          <h1 className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`} style={getTitleStyle(design)}>
+          <h1
+            className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
+            style={getTitleStyle(design)}
+          >
             <SplitText variant="words" trigger={false} delay={0.3}>
               {config.title}
             </SplitText>
@@ -287,7 +318,10 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
 
         {config.subtitle && (
           <ScrollReveal delay={0.2}>
-            <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base" style={getTextStyle(design)}>
+            <p
+              className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
+              style={getTextStyle(design)}
+            >
               {config.subtitle}
             </p>
           </ScrollReveal>
@@ -295,10 +329,14 @@ export function StandardHeroSection({ config, design }: StandardHeroSectionProps
 
         {(primaryButton ?? secondaryButton) && (
           <ScrollReveal delay={0.3}>
-            <HeroButtons primary={primaryButton} secondary={secondaryButton} className="mt-6 flex flex-col items-center gap-4 md:mt-10" />
+            <HeroButtons
+              primary={primaryButton}
+              secondary={secondaryButton}
+              className="mt-6 flex flex-col items-center gap-4 md:mt-10"
+            />
           </ScrollReveal>
         )}
       </div>
     </section>
-  )
+  );
 }

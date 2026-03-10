@@ -30,6 +30,7 @@ function Input({ ref, ...props }: InputProps & { ref?: Ref<HTMLInputElement> }) 
 ```
 
 **ルール:**
+
 - `forwardRef` / `React.forwardRef` の使用禁止
 - `displayName` の手動設定不要（名前付き関数で自動推論）
 
@@ -64,10 +65,10 @@ React Compiler 1.0（2025年10月 stable リリース、Next.js 16 でデフォ�
 
 React Compiler が自動処理するため、以下は原則禁止:
 
-| 廃止パターン | React Compiler が自動処理 |
-|------------|--------------------------|
-| `useCallback` | 関数参照の同一性を自動保持 |
-| `useMemo` | 計算結果の自動キャッシュ |
+| 廃止パターン   | React Compiler が自動処理                      |
+| -------------- | ---------------------------------------------- |
+| `useCallback`  | 関数参照の同一性を自動保持                     |
+| `useMemo`      | 計算結果の自動キャッシュ                       |
 | `React.memo()` | 親再レンダリング時の不要な子再レンダリング防止 |
 
 ```typescript
@@ -99,9 +100,9 @@ function HeavyList({ data }: { data: Item[] }) {
 ```typescript
 // OK: useSyncExternalStore の subscribe（参照同一性が必須）
 const subscribe = useCallback((callback: () => void) => {
-  window.addEventListener('storage', callback)
-  return () => window.removeEventListener('storage', callback)
-}, [])
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}, []);
 
 // OK: 外部ライブラリが関数の参照同一性を明示的に要求する場合
 // OK: パフォーマンス計測で明確なボトルネックが確認された場合のみ
@@ -114,19 +115,19 @@ const subscribe = useCallback((callback: () => void) => {
 
 ```typescript
 // NG: React Compiler エラー — ref.current が依存配列に不足
-const stateRef = useRef(true)
+const stateRef = useRef(true);
 const handleMove = useCallback((e: React.MouseEvent) => {
-  if (!stateRef.current) return
-  doSomething(e)
-}, [])
+  if (!stateRef.current) return;
+  doSomething(e);
+}, []);
 // Compiler: "inferred dependency stateRef.current" でエラー
 
 // OK: useCallback を除去してプレーン関数（Compiler が自動メモ化）
-const stateRef = useRef(true)
+const stateRef = useRef(true);
 const handleMove = (e: React.MouseEvent) => {
-  if (!stateRef.current) return
-  doSomething(e)
-}
+  if (!stateRef.current) return;
+  doSomething(e);
+};
 ```
 
 **ルール**: `ref` を参照するイベントハンドラでは `useCallback` を使わずプレーン関数で定義する。
@@ -139,18 +140,19 @@ GSAP アニメーション系のイベントハンドラで特に頻出（→ `g
 ```typescript
 // NG: 恒久的に 'use no memo' を使い続ける（Rules of React 違反を放置）
 function ProblematicComponent() {
-  "use no memo"  // 根本原因を修正しないまま放置
+  "use no memo"; // 根本原因を修正しないまま放置
   // ...
 }
 
 // OK: 一時的なデバッグ・段階的移行（TODO コメント必須）
 function TemporarilyExcluded() {
-  "use no memo" // TODO: #123 — 副作用がレンダリング中に発生している問題を修正後に削除
+  "use no memo"; // TODO: #123 — 副作用がレンダリング中に発生している問題を修正後に削除
   // ...
 }
 ```
 
 **使用ルール:**
+
 - 関数本体の**先頭**に配置（コメントは先でも可）
 - `// TODO: Issue番号 — 根本原因の説明` を必ず付記
 - Rules of React 違反を修正したら即座に削除
@@ -227,27 +229,28 @@ React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-
 
 ```typescript
 // NG: React Compiler でメモ化不可、フォーム全体が再レンダリング
-const { watch } = useForm()
-const value = watch('fieldName')
+const { watch } = useForm();
+const value = watch("fieldName");
 
 // OK: コンポーネントレベルで再レンダリングを分離
-const { control } = useForm()
-const value = useWatch({ control, name: 'fieldName' })
+const { control } = useForm();
+const value = useWatch({ control, name: "fieldName" });
 
 // OK: 複数フィールドを同時監視
 const [firstName, lastName] = useWatch({
   control,
-  name: ['firstName', 'lastName'],
-})
+  name: ["firstName", "lastName"],
+});
 
 // OK: compute 関数で派生値を計算
 const isValid = useWatch({
   control,
   compute: (data) => Boolean(data.email && data.password),
-})
+});
 ```
 
 **理由:**
+
 - `watch` はフォームのルート（`useForm` を呼んだコンポーネント）全体を再レンダリングする
 - `useWatch` はサブコンポーネントレベルで再レンダリングを分離し、パフォーマンスを向上させる
 - React Compiler は `watch` の戻り値をメモ化できない
@@ -260,23 +263,23 @@ const isValid = useWatch({
 
 ## 禁止事項
 
-| 禁止パターン | 代替 |
-|-------------|------|
-| `forwardRef` / `React.forwardRef` | `ref` を通常の prop として受け取る |
-| `ComponentPropsWithoutRef` | `ComponentPropsWithRef` |
-| `Input.displayName = 'Input'` | 名前付き関数で自動推論 |
-| `useCallback` / `useMemo`（原則） | プレーン関数・式（Compiler が最適化） |
-| `React.memo()`（原則） | プレーン関数コンポーネント（Compiler が最適化） |
-| `useCallback` 内で `ref.current` を参照 | プレーン関数に変更 |
-| `watch('fieldName')` (React Hook Form) | `useWatch({ control, name: 'fieldName' })` |
-| `useOptimistic` なし で楽観的 UI を手動実装 | `useOptimistic` を使用 |
-| `useFormStatus` を form の外で使用 | `<form>` 子孫コンポーネント内に配置 |
-| `"use no memo"` を恒久的に使用 | Rules of React 違反を修正して削除 |
-| `eslint-plugin-react-compiler` の継続使用 | `eslint-plugin-react-hooks@latest` に統合済み |
-| クラスコンポーネント（新規作成） | 関数コンポーネントに書き換える（Compiler 対応） |
-| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す |
-| `ViewTransition` を `startTransition` 外で使用 | `startTransition` で状態更新をラップする |
-| `useId` の生成値を文字列として依存 | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
+| 禁止パターン                                    | 代替                                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `forwardRef` / `React.forwardRef`               | `ref` を通常の prop として受け取る                                             |
+| `ComponentPropsWithoutRef`                      | `ComponentPropsWithRef`                                                        |
+| `Input.displayName = 'Input'`                   | 名前付き関数で自動推論                                                         |
+| `useCallback` / `useMemo`（原則）               | プレーン関数・式（Compiler が最適化）                                          |
+| `React.memo()`（原則）                          | プレーン関数コンポーネント（Compiler が最適化）                                |
+| `useCallback` 内で `ref.current` を参照         | プレーン関数に変更                                                             |
+| `watch('fieldName')` (React Hook Form)          | `useWatch({ control, name: 'fieldName' })`                                     |
+| `useOptimistic` なし で楽観的 UI を手動実装     | `useOptimistic` を使用                                                         |
+| `useFormStatus` を form の外で使用              | `<form>` 子孫コンポーネント内に配置                                            |
+| `"use no memo"` を恒久的に使用                  | Rules of React 違反を修正して削除                                              |
+| `eslint-plugin-react-compiler` の継続使用       | `eslint-plugin-react-hooks@latest` に統合済み                                  |
+| クラスコンポーネント（新規作成）                | 関数コンポーネントに書き換える（Compiler 対応）                                |
+| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す                                |
+| `ViewTransition` を `startTransition` 外で使用  | `startTransition` で状態更新をラップする                                       |
+| `useId` の生成値を文字列として依存              | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
 
 ---
 

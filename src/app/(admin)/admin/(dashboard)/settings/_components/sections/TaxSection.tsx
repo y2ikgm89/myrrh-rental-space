@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 消費税設定セクション
@@ -6,7 +6,7 @@
  * 税率と価格表示モードの設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -21,18 +21,21 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateTaxSettings, type TaxSettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
-import { TaxDisplayMode, TaxInputMode } from '@/shared/db/enums'
+} from "@/admin/components/ui";
+import {
+  updateTaxSettings,
+  type TaxSettingsData,
+} from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
+import { TaxDisplayMode, TaxInputMode } from "@/shared/db/enums";
 
 interface TaxSectionProps {
-  settings: TaxSettingsData
+  settings: TaxSettingsData;
 }
 
 export function TaxSection({ settings }: TaxSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
 
   const [formData, setFormData] = useState({
     taxStandardRate: settings.standardRate,
@@ -40,14 +43,14 @@ export function TaxSection({ settings }: TaxSectionProps) {
     taxDisplayModeAdmin: settings.displayModeAdmin,
     taxDisplayModePublic: settings.displayModePublic,
     taxInputMode: settings.inputMode,
-  })
+  });
 
   const handleSave = () => {
     startTransition(async () => {
-      const result = await updateTaxSettings(formData)
-      handleResult(result)
-    })
-  }
+      const result = await updateTaxSettings(formData);
+      handleResult(result, "消費税設定を更新しました");
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -55,9 +58,7 @@ export function TaxSection({ settings }: TaxSectionProps) {
       <Card>
         <CardHeader>
           <CardTitle>税率設定</CardTitle>
-          <CardDescription>
-            標準税率と軽減税率を設定します
-          </CardDescription>
+          <CardDescription>標準税率と軽減税率を設定します</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-6 sm:grid-cols-2">
@@ -148,8 +149,8 @@ export function TaxSection({ settings }: TaxSectionProps) {
             </Select>
             <p className="text-xs text-muted-foreground">
               {formData.taxInputMode === TaxInputMode.tax_excluded
-                ? '入力した価格は税抜き価格として保存され、表示時に税込み価格が計算されます'
-                : '入力した価格は税込み価格として扱われ、内部で税抜き価格に換算して保存されます'}
+                ? "入力した価格は税抜き価格として保存され、表示時に税込み価格が計算されます"
+                : "入力した価格は税込み価格として扱われ、内部で税抜き価格に換算して保存されます"}
             </p>
           </div>
         </CardContent>
@@ -177,8 +178,12 @@ export function TaxSection({ settings }: TaxSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={TaxDisplayMode.tax_excluded}>税抜き価格のみ</SelectItem>
-                <SelectItem value={TaxDisplayMode.tax_included}>税込み価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_excluded}>
+                  税抜き価格のみ
+                </SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_included}>
+                  税込み価格のみ
+                </SelectItem>
                 <SelectItem value={TaxDisplayMode.both}>両方表示</SelectItem>
               </SelectContent>
             </Select>
@@ -197,8 +202,12 @@ export function TaxSection({ settings }: TaxSectionProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={TaxDisplayMode.tax_excluded}>税抜き価格のみ</SelectItem>
-                <SelectItem value={TaxDisplayMode.tax_included}>税込み価格のみ</SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_excluded}>
+                  税抜き価格のみ
+                </SelectItem>
+                <SelectItem value={TaxDisplayMode.tax_included}>
+                  税込み価格のみ
+                </SelectItem>
                 <SelectItem value={TaxDisplayMode.both}>両方表示</SelectItem>
               </SelectContent>
             </Select>
@@ -211,8 +220,8 @@ export function TaxSection({ settings }: TaxSectionProps) {
 
       {/* 保存ボタン */}
       <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? '保存中...' : '消費税設定を保存'}
+        {isPending ? "保存中..." : "消費税設定を保存"}
       </Button>
     </div>
-  )
+  );
 }

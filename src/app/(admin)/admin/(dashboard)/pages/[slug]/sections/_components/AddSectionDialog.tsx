@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * セクション追加ダイアログ
@@ -14,20 +14,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   sectionTypeLabels,
   sectionTypeDescriptions,
   sectionTypesByCategory,
-} from '@/shared/lib/validations/section'
-import { SectionTypeIcon } from './SectionTypeIcon'
-import type { SectionType } from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
+import { SectionTypeIcon } from "./SectionTypeIcon";
+import type { SectionType } from "@/shared/lib/validations/section";
 
 interface AddSectionDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onAdd: (type: SectionType) => void
-  disabled: boolean
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAdd: (type: SectionType) => void;
+  disabled: boolean;
 }
 
 export function AddSectionDialog({
@@ -53,22 +53,25 @@ export function AddSectionDialog({
               </h3>
               <div className="grid grid-cols-2 gap-2">
                 {types.map((type) => {
-                  const typeLabel = sectionTypeLabels[type]
-                  const description = sectionTypeDescriptions[type]
+                  const typeLabel = sectionTypeLabels[type];
+                  const description = sectionTypeDescriptions[type];
 
                   return (
                     <button
                       key={type}
                       type="button"
                       onClick={() => {
-                        onAdd(type)
-                        onOpenChange(false)
+                        onAdd(type);
+                        onOpenChange(false);
                       }}
                       disabled={disabled}
                       className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
                     >
                       <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                        <SectionTypeIcon type={type} className="h-5 w-5 text-primary" />
+                        <SectionTypeIcon
+                          type={type}
+                          className="h-5 w-5 text-primary"
+                        />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium">{typeLabel}</p>
@@ -77,7 +80,7 @@ export function AddSectionDialog({
                         </p>
                       </div>
                     </button>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -88,5 +91,5 @@ export function AddSectionDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

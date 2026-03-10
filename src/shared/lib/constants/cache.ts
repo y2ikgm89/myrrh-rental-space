@@ -28,26 +28,26 @@ export const CACHE_LIFE = {
    * 公開コンテンツ（ブログ、ニュース、スペース、ページ）
    * - 頻繁に更新されないが、適度に最新を保つ
    */
-  PUBLIC_CONTENT: 'hours',
+  PUBLIC_CONTENT: "hours",
 
   /**
    * 静的設定（サイト設定、ナビゲーション）
    * - 管理画面で変更されるまで長期間有効
    */
-  STATIC_SETTINGS: 'days',
+  STATIC_SETTINGS: "days",
 
   /**
    * 動的データ（予約状況、在庫など）
    * - 頻繁に更新される可能性がある
    */
-  DYNAMIC_DATA: 'minutes',
+  DYNAMIC_DATA: "minutes",
 
   /**
    * メタデータ・SEO関連
    * - 公開コンテンツと同期
    */
-  METADATA: 'hours',
-} as const
+  METADATA: "hours",
+} as const;
 
 /**
  * キャッシュタグのプレフィックス
@@ -67,88 +67,88 @@ export const CACHE_LIFE = {
  */
 export const CACHE_TAGS = {
   /** 投稿記事 */
-  POSTS: 'posts',
+  POSTS: "posts",
   /** 投稿カテゴリ */
-  POST_CATEGORIES: 'post-categories',
+  POST_CATEGORIES: "post-categories",
   /** 投稿タグ */
-  POST_TAGS: 'post-tags',
+  POST_TAGS: "post-tags",
   /** 投稿コメント */
-  POST_COMMENTS: 'post-comments',
+  POST_COMMENTS: "post-comments",
   /** お知らせ */
-  NEWS: 'news',
+  NEWS: "news",
   /** スペース */
-  SPACES: 'spaces',
+  SPACES: "spaces",
   /** スペースカテゴリ */
-  SPACE_CATEGORIES: 'space-categories',
+  SPACE_CATEGORIES: "space-categories",
   /** ロケーション */
-  LOCATIONS: 'locations',
+  LOCATIONS: "locations",
   /** カスタムページ */
-  PAGES: 'pages',
+  PAGES: "pages",
   /** サイト設定 */
-  SETTINGS: 'settings',
+  SETTINGS: "settings",
   /** FAQ */
-  FAQ: 'faq',
+  FAQ: "faq",
   /** FAQカテゴリ */
-  FAQ_CATEGORIES: 'faq-categories',
+  FAQ_CATEGORIES: "faq-categories",
   /** 予約 */
-  RESERVATIONS: 'reservations',
+  RESERVATIONS: "reservations",
   /** 顧客 */
-  CUSTOMERS: 'customers',
+  CUSTOMERS: "customers",
   /** お問い合わせ */
-  INQUIRIES: 'inquiries',
+  INQUIRIES: "inquiries",
   /** メディア */
-  MEDIA: 'media',
+  MEDIA: "media",
   /** ナビゲーション */
-  NAVIGATION: 'navigation',
+  NAVIGATION: "navigation",
   /** アナウンスバー */
-  ANNOUNCEMENT_BAR: 'announcement-bar',
+  ANNOUNCEMENT_BAR: "announcement-bar",
   /** セクション全体 */
-  SECTIONS: 'sections',
+  SECTIONS: "sections",
   /** ホームページセクション */
-  HOMEPAGE_SECTIONS: 'homepage-sections',
+  HOMEPAGE_SECTIONS: "homepage-sections",
   /** ページセクション */
-  PAGE_SECTIONS: 'page-sections',
+  PAGE_SECTIONS: "page-sections",
   /** 利用規約 */
-  TERMS: 'terms',
+  TERMS: "terms",
   /** スタッフ */
-  STAFF: 'staff',
+  STAFF: "staff",
   /** クーポン */
-  COUPONS: 'coupons',
+  COUPONS: "coupons",
   /** ビジネス設定（営業時間・NAP情報等） */
-  BUSINESS_SETTINGS: 'business-settings',
+  BUSINESS_SETTINGS: "business-settings",
   /** Cookie同意設定 */
-  COOKIE_CONSENT: 'cookie-consent',
+  COOKIE_CONSENT: "cookie-consent",
   /** パーマリンク設定 */
-  PERMALINK: 'permalink',
+  PERMALINK: "permalink",
   /** robots.txt設定 */
-  ROBOTS_TXT: 'robots-txt',
+  ROBOTS_TXT: "robots-txt",
   /** レイアウト全般設定 */
-  LAYOUT: 'layout',
+  LAYOUT: "layout",
   /** レイアウト詳細設定（コンテンツ幅等） */
-  LAYOUT_SETTINGS: 'layout-settings',
+  LAYOUT_SETTINGS: "layout-settings",
   /** アナリティクス設定 */
-  ANALYTICS_CONFIG: 'analytics-config',
+  ANALYTICS_CONFIG: "analytics-config",
   /** SEO設定（メタデータファクトリ用） */
-  SEO_SETTINGS: 'seo-settings',
+  SEO_SETTINGS: "seo-settings",
   /** 組織設定（JSON-LD用） */
-  ORGANIZATION_SETTINGS: 'organization-settings',
+  ORGANIZATION_SETTINGS: "organization-settings",
   /** ソーシャルリンク */
-  SOCIAL_LINKS: 'social-links',
+  SOCIAL_LINKS: "social-links",
   /** ページSEO */
-  PAGE_SEO: 'page-seo',
+  PAGE_SEO: "page-seo",
   /** サイドバーデータ */
-  SIDEBAR_DATA: 'sidebar-data',
+  SIDEBAR_DATA: "sidebar-data",
   /** サイドバー設定 */
-  SIDEBAR_SETTINGS: 'sidebar-settings',
+  SIDEBAR_SETTINGS: "sidebar-settings",
   /** Instagramフィード */
-  INSTAGRAM_FEED: 'instagram-feed',
+  INSTAGRAM_FEED: "instagram-feed",
   /** キャンセルポリシー */
-  CANCELLATION_POLICY: 'cancellation-policy',
+  CANCELLATION_POLICY: "cancellation-policy",
   /** ブロックテンプレート */
-  BLOCK_TEMPLATES: 'block-templates',
+  BLOCK_TEMPLATES: "block-templates",
   /** 権限 */
-  PERMISSIONS: 'permissions',
-} as const
+  PERMISSIONS: "permissions",
+} as const;
 
 /**
  * 階層的キャッシュタグ生成ヘルパー
@@ -223,10 +223,10 @@ export const getCacheTag = {
   pageSeo: {
     detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,
   },
-} as const
+} as const;
 
 /** キャッシュ有効期間の型 */
-export type CacheLife = (typeof CACHE_LIFE)[keyof typeof CACHE_LIFE]
+export type CacheLife = (typeof CACHE_LIFE)[keyof typeof CACHE_LIFE];
 
 /** キャッシュタグの型 */
-export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS]
+export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];

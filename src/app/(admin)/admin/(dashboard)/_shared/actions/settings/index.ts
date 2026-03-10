@@ -26,7 +26,7 @@ export type {
   BusinessHoursDay,
   BusinessHours,
   SettingsData,
-} from './types'
+} from "./types";
 
 // =============================================================================
 // Schemas (Input Types)
@@ -54,7 +54,7 @@ export type {
   DiscountSettingsInput,
   DurationDiscountRuleInput,
   HeaderSettingsInput,
-} from './schemas'
+} from "./schemas";
 
 // =============================================================================
 // Basic Actions
@@ -64,7 +64,7 @@ export {
   updateBasicInfo,
   updateLayoutSettings,
   updateSeoSettings,
-} from './basic'
+} from "./basic";
 
 // =============================================================================
 // Business Actions
@@ -75,16 +75,13 @@ export {
   updateContactInfo,
   updateBusinessHoursSettings,
   updateMeoSettings,
-} from './business'
+} from "./business";
 
 // =============================================================================
 // Email Actions
 // =============================================================================
 
-export {
-  updateEmailSettings,
-  updateNotificationSettings,
-} from './email'
+export { updateEmailSettings, updateNotificationSettings } from "./email";
 
 // =============================================================================
 // Google Calendar Actions
@@ -100,7 +97,7 @@ export {
   setupCalendarWebhook,
   stopCalendarWebhook,
   triggerManualSync,
-} from './google-calendar'
+} from "./google-calendar";
 
 // =============================================================================
 // Stripe Actions
@@ -110,9 +107,9 @@ export {
   updateStripeSettings,
   testStripeConnectionAction,
   clearStripeKeys,
-} from './stripe'
+} from "./stripe";
 
-export type { StripeSettingsInput } from '@/admin/lib/validations/stripe'
+export type { StripeSettingsInput } from "@/admin/lib/validations/stripe";
 
 // =============================================================================
 // Other Actions
@@ -127,40 +124,33 @@ export {
   updateAnnouncementBarCarouselSettings,
   updatePermalinkSettings,
   updateHeaderSettings,
-} from './other'
+} from "./other";
 
 // =============================================================================
 // Discount Actions
 // =============================================================================
 
-export {
-  updateDiscountSettings,
-} from './discount'
+export { updateDiscountSettings } from "./discount";
 
-export type { DiscountSettingsData } from '@/shared/domain/settings/types'
-export type { DurationDiscountRuleInput as DurationDiscountRule } from './schemas'
+export type { DiscountSettingsData } from "@/shared/domain/settings/types";
+export type { DurationDiscountRuleInput as DurationDiscountRule } from "./schemas";
 
 // =============================================================================
 // Tax Actions
 // =============================================================================
 
-export {
-  updateTaxSettings,
-} from './tax'
+export { updateTaxSettings } from "./tax";
 
-export type { TaxSettingsData } from '@/shared/domain/settings/types'
-export type { TaxSettingsInput } from './schemas'
+export type { TaxSettingsData } from "@/shared/domain/settings/types";
+export type { TaxSettingsInput } from "./schemas";
 
 // =============================================================================
 // robots.txt Actions
 // =============================================================================
 
-export {
-  updateRobotsTxtSettings,
-  resetRobotsTxtToDefault,
-} from './robots-txt'
+export { updateRobotsTxtSettings, resetRobotsTxtToDefault } from "./robots-txt";
 
-export { DEFAULT_ROBOTS_TXT } from './robots-txt-constants'
+export { DEFAULT_ROBOTS_TXT } from "./robots-txt-constants";
 
-export type { RobotsTxtData } from '@/shared/domain/settings/types'
-export type { RobotsTxtSettingsInput } from './schemas'
+export type { RobotsTxtData } from "@/shared/domain/settings/types";
+export type { RobotsTxtSettingsInput } from "./schemas";

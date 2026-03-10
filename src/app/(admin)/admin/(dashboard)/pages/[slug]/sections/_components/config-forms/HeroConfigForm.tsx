@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import Image from "next/image";
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Input,
@@ -15,10 +15,10 @@ import {
   SelectValue,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { ImagePlus } from 'lucide-react'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
+} from "@/admin/components/ui";
+import { ImagePlus } from "lucide-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   heroConfigSchema,
   getHeroConfig,
@@ -27,13 +27,21 @@ import {
   type HeroConfig,
   type HeroConfigInput,
   type CTAButtonItem,
-} from '@/shared/lib/validations/section'
-import { heroVariantLabels, heroHeightLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import {
+  heroVariantLabels,
+  heroHeightLabels,
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function HeroConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getHeroConfig(section.config)
+export default function HeroConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getHeroConfig(section.config);
 
   const {
     register,
@@ -44,35 +52,38 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
   } = useForm<HeroConfigInput, unknown, HeroConfig>({
     resolver: zodResolver(heroConfigSchema),
     defaultValues: config,
-  })
+  });
 
-  const backgroundImageUrl = useWatch({ control, name: 'backgroundImageUrl' })
-  const variant = useWatch({ control, name: 'variant' })
+  const backgroundImageUrl = useWatch({ control, name: "backgroundImageUrl" });
+  const variant = useWatch({ control, name: "variant" });
 
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
-    setButtons(newButtons)
-    setValue('buttons', newButtons)
-  }
+    setButtons(newButtons);
+    setValue("buttons", newButtons);
+  };
 
   const bgPicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('backgroundImageUrl', selected.url)
+        setValue("backgroundImageUrl", selected.url);
       }
     },
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="hero-title">タイトル（任意）</Label>
           <Input
             id="hero-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="ページのメインタイトル"
             disabled={isPending}
           />
@@ -85,7 +96,7 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
           <Label htmlFor="hero-subtitle">サブタイトル（任意）</Label>
           <Textarea
             id="hero-subtitle"
-            {...register('subtitle')}
+            {...register("subtitle")}
             placeholder="サブタイトルを入力"
             rows={2}
             disabled={isPending}
@@ -125,7 +136,7 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setValue('backgroundImageUrl', '')}
+                  onClick={() => setValue("backgroundImageUrl", "")}
                   disabled={isPending}
                 >
                   削除
@@ -140,7 +151,7 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
             <Label htmlFor="hero-variant">バリエーション</Label>
             <Select
               defaultValue={config.variant}
-              onValueChange={(v) => setValue('variant', parseHeroVariant(v))}
+              onValueChange={(v) => setValue("variant", parseHeroVariant(v))}
               disabled={isPending}
             >
               <SelectTrigger id="hero-variant">
@@ -148,7 +159,9 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
               </SelectTrigger>
               <SelectContent>
                 {keysOf(heroVariantLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{heroVariantLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {heroVariantLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -158,7 +171,7 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
             <Label htmlFor="hero-height">高さ</Label>
             <Select
               defaultValue={config.height}
-              onValueChange={(v) => setValue('height', parseHeroHeight(v))}
+              onValueChange={(v) => setValue("height", parseHeroHeight(v))}
               disabled={isPending}
             >
               <SelectTrigger id="hero-height">
@@ -166,7 +179,9 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
               </SelectTrigger>
               <SelectContent>
                 {keysOf(heroHeightLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{heroHeightLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {heroHeightLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -179,7 +194,7 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
               type="number"
               min={0}
               max={100}
-              {...register('overlayOpacity', { valueAsNumber: true })}
+              {...register("overlayOpacity", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -189,22 +204,35 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
           <Switch
             id="hero-overlay"
             checked={config.overlay}
-            onCheckedChange={(checked) => setValue('overlay', checked)}
+            onCheckedChange={(checked) => setValue("overlay", checked)}
             disabled={isPending}
           />
           <Label htmlFor="hero-overlay">オーバーレイを表示</Label>
         </div>
 
-        {variant === 'video' && (
+        {variant === "video" && (
           <div className="space-y-2">
             <Label htmlFor="hero-video-url">動画URL</Label>
-            <Input id="hero-video-url" {...register('videoUrl')} placeholder="https://..." disabled={isPending} />
+            <Input
+              id="hero-video-url"
+              {...register("videoUrl")}
+              placeholder="https://..."
+              disabled={isPending}
+            />
           </div>
         )}
-        {variant === 'parallax' && (
+        {variant === "parallax" && (
           <div className="space-y-2">
             <Label htmlFor="hero-parallax-speed">パララックス速度</Label>
-            <Input id="hero-parallax-speed" type="number" min={0} max={1} step={0.1} {...register('parallaxSpeed', { valueAsNumber: true })} disabled={isPending} />
+            <Input
+              id="hero-parallax-speed"
+              type="number"
+              min={0}
+              max={1}
+              step={0.1}
+              {...register("parallaxSpeed", { valueAsNumber: true })}
+              disabled={isPending}
+            />
           </div>
         )}
 
@@ -218,8 +246,12 @@ export default function HeroConfigForm({ section, onSave, isPending, onDirtyChan
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
       <bgPicker.MediaPicker />
     </form>
-  )
+  );
 }

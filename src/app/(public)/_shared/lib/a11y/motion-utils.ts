@@ -19,15 +19,15 @@ export const REDUCED_MOTION_CSS = `
     scroll-behavior: auto !important;
   }
 }
-`
+`;
 
 /**
  * クライアントサイドでreduced-motion設定を取得
  * Server Componentでは使用不可
  */
 export function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /**
@@ -36,6 +36,6 @@ export function prefersReducedMotion(): boolean {
  * @returns reduced-motion時は0、それ以外は元の値
  */
 export function getAnimationDuration(duration: number): number {
-  if (typeof window === 'undefined') return duration
-  return prefersReducedMotion() ? 0 : duration
+  if (typeof window === "undefined") return duration;
+  return prefersReducedMotion() ? 0 : duration;
 }

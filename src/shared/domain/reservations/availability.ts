@@ -2,7 +2,10 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
-import { parseBusinessHours, type BusinessHours } from "@/shared/lib/json-validators";
+import {
+  parseBusinessHours,
+  type BusinessHours,
+} from "@/shared/lib/json-validators";
 import type {
   OverlapCheckParams,
   OverlapCheckResult,

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * FilePreview
@@ -6,13 +6,13 @@
  * アップロードファイルのプレビュー
  */
 
-import { X } from 'lucide-react'
+import { X } from "lucide-react";
 
 interface FilePreviewProps {
-  file: File
-  previewUrl: string | null
-  onRemove: () => void
-  disabled?: boolean
+  file: File;
+  previewUrl: string | null;
+  onRemove: () => void;
+  disabled?: boolean;
 }
 
 export function FilePreview({
@@ -25,7 +25,6 @@ export function FilePreview({
     <div className="space-y-4">
       <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-muted">
         {previewUrl && (
-          
           <img
             src={previewUrl}
             alt="プレビュー"
@@ -52,13 +51,13 @@ export function FilePreview({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }

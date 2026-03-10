@@ -34,21 +34,21 @@ src/app/(public)/_shared/
 ```typescript
 // セクションのパディングを変更
 export const sectionVariants = tv({
-  base: 'py-12 md:py-16',  // ← ここを変更
+  base: "py-12 md:py-16", // ← ここを変更
   // ...
-})
+});
 
 // タイトルのスタイルを変更
 export const sectionTitleVariants = tv({
-  base: 'text-2xl font-bold md:text-3xl mb-8 text-center text-foreground',
+  base: "text-2xl font-bold md:text-3xl mb-8 text-center text-foreground",
   // ...
-})
+});
 
 // カードのスタイルを変更
 export const cardVariants = tv({
-  base: 'bg-card rounded-lg shadow-sm border border-border',
+  base: "bg-card rounded-lg shadow-sm border border-border",
   // ...
-})
+});
 ```
 
 ### 2. 画像オーバーレイの変更
@@ -57,11 +57,11 @@ export const cardVariants = tv({
 
 ```typescript
 export const imageOverlayClasses = {
-  captionGradient: 'bg-gradient-to-t from-black/60 to-transparent',
-  light: 'bg-black/30',
-  medium: 'bg-black/40',
-  dark: 'bg-black/60',
-}
+  captionGradient: "bg-gradient-to-t from-black/60 to-transparent",
+  light: "bg-black/30",
+  medium: "bg-black/40",
+  dark: "bg-black/60",
+};
 ```
 
 > **注意**: オーバーレイは背景画像の上に表示されるため、テーマに関係なく黒系を使用します。
@@ -73,17 +73,17 @@ export const imageOverlayClasses = {
 ```typescript
 // Masonryカラム（動的クラス回避）
 export const masonryColumnClasses = {
-  1: 'columns-1',
-  2: 'columns-1 sm:columns-2',
-  3: 'columns-1 sm:columns-2 lg:columns-3',
+  1: "columns-1",
+  2: "columns-1 sm:columns-2",
+  3: "columns-1 sm:columns-2 lg:columns-3",
   // ...
-}
+};
 
 // 星評価の色
 export const ratingStarClasses = {
-  filled: 'fill-yellow-400 text-yellow-400',
-  empty: 'fill-muted text-muted',
-}
+  filled: "fill-yellow-400 text-yellow-400",
+  empty: "fill-muted text-muted",
+};
 ```
 
 > **注意**: Tailwind CSSは動的クラス（`lg:columns-${n}`）を検出できないため、完全なクラス名を事前定義しています。
@@ -92,29 +92,29 @@ export const ratingStarClasses = {
 
 各セクションコンポーネントを直接編集します。
 
-| セクション | ファイル |
-|-----------|---------|
-| Hero | `components/sections/HeroSection.tsx` |
-| Gallery | `components/page-sections/GallerySection.tsx` |
+| セクション  | ファイル                                          |
+| ----------- | ------------------------------------------------- |
+| Hero        | `components/sections/HeroSection.tsx`             |
+| Gallery     | `components/page-sections/GallerySection.tsx`     |
 | Testimonial | `components/page-sections/TestimonialSection.tsx` |
-| Map | `components/page-sections/MapSection.tsx` |
-| Embed | `components/page-sections/EmbedSection.tsx` |
+| Map         | `components/page-sections/MapSection.tsx`         |
+| Embed       | `components/page-sections/EmbedSection.tsx`       |
 | ContactForm | `components/page-sections/ContactFormSection.tsx` |
 
 ## スタイルルール
 
 ### 使用すべきテーマ変数
 
-| 用途 | 使用する変数 | 禁止 |
-|------|-------------|------|
-| テキスト（メイン） | `text-foreground` | `text-gray-900`, `text-black` |
-| テキスト（サブ） | `text-muted-foreground` | `text-gray-600`, `text-gray-500` |
-| 背景 | `bg-background` | `bg-white`, `bg-gray-50` |
-| 背景（サブ） | `bg-muted`, `bg-muted/30` | `bg-gray-100`, `bg-slate-50` |
-| ボーダー | `border-border` | `border-gray-200` |
-| カード | `bg-card` | `bg-white` |
-| アクセント | `bg-accent`, `text-accent-foreground` | `bg-blue-*` |
-| プライマリ | `bg-primary`, `text-primary-foreground` | 直接色指定 |
+| 用途               | 使用する変数                            | 禁止                             |
+| ------------------ | --------------------------------------- | -------------------------------- |
+| テキスト（メイン） | `text-foreground`                       | `text-gray-900`, `text-black`    |
+| テキスト（サブ）   | `text-muted-foreground`                 | `text-gray-600`, `text-gray-500` |
+| 背景               | `bg-background`                         | `bg-white`, `bg-gray-50`         |
+| 背景（サブ）       | `bg-muted`, `bg-muted/30`               | `bg-gray-100`, `bg-slate-50`     |
+| ボーダー           | `border-border`                         | `border-gray-200`                |
+| カード             | `bg-card`                               | `bg-white`                       |
+| アクセント         | `bg-accent`, `text-accent-foreground`   | `bg-blue-*`                      |
+| プライマリ         | `bg-primary`, `text-primary-foreground` | 直接色指定                       |
 
 ### 例外（テーマ変数を使用しない場合）
 
@@ -133,12 +133,12 @@ export const ratingStarClasses = {
 
 ```typescript
 // src/shared/lib/validations/page-section.ts
-export type HeroConfig = z.output<typeof heroConfigSchema>
-export type GalleryConfig = z.output<typeof galleryConfigSchema>
+export type HeroConfig = z.output<typeof heroConfigSchema>;
+export type GalleryConfig = z.output<typeof galleryConfigSchema>;
 // ...
 
 // フォーム用（React Hook Form）
-export type HeroConfigInput = z.input<typeof heroConfigSchema>
+export type HeroConfigInput = z.input<typeof heroConfigSchema>;
 // ...
 ```
 
@@ -149,11 +149,11 @@ export type HeroConfigInput = z.input<typeof heroConfigSchema>
 ```typescript
 // HeroSection.tsx内
 interface HeroConfig {
-  title: string
-  subtitle?: string
-  backgroundImageUrl?: string
-  ctaPrimary: { text: string; url: string }
-  ctaSecondary?: { text?: string; url?: string }
+  title: string;
+  subtitle?: string;
+  backgroundImageUrl?: string;
+  ctaPrimary: { text: string; url: string };
+  ctaSecondary?: { text?: string; url?: string };
 }
 ```
 

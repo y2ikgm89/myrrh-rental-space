@@ -80,23 +80,34 @@
 ```typescript
 // 単純なフォーム送信
 export async function submitContact(input: ContactInput, token?: string) {
-  return withTurnstileAndValidation(token, contactSchema, input, async (data) => {
-    // ビジネスロジック
-    return { success: true, message: '送信しました' }
-  })
+  return withTurnstileAndValidation(
+    token,
+    contactSchema,
+    input,
+    async (data) => {
+      // ビジネスロジック
+      return { success: true, message: "送信しました" };
+    },
+  );
 }
 
 // 動的スキーマやカスタムロジックが必要な場合
-export async function createReservation(input: ReservationInput, token?: string) {
-  const turnstileResult = await validateTurnstile(token)
+export async function createReservation(
+  input: ReservationInput,
+  token?: string,
+) {
+  const turnstileResult = await validateTurnstile(token);
   if (!turnstileResult.success) {
-    return { success: false, error: turnstileResult.error }
+    return { success: false, error: turnstileResult.error };
   }
 
-  const schema = condition ? schemaA : schemaB
-  const validation = schema.safeParse(input)
+  const schema = condition ? schemaA : schemaB;
+  const validation = schema.safeParse(input);
   if (!validation.success) {
-    return { success: false, fieldErrors: extractFieldErrors(validation.error) }
+    return {
+      success: false,
+      fieldErrors: extractFieldErrors(validation.error),
+    };
   }
 
   // ビジネスロジック

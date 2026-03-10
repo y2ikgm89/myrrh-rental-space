@@ -12,21 +12,27 @@
  * @module api/cron/calendar-sync
  */
 
-import { NextResponse } from 'next/server'
-import { unstable_rethrow } from 'next/navigation'
-import { revalidateTag } from 'next/cache'
-import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from '@/shared/lib/constants'
-import { syncFromCalendar } from '@/shared/lib/calendar-sync'
+import { unstable_rethrow } from "next/navigation";
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import {
   isTwoWaySyncEnabled,
   getTwoWaySyncSettings,
   renewWebhookIfNeeded,
-} from '@/shared/lib/google-calendar'
-import { sendWebhookRenewalNotification } from '@/shared/lib/email-service'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
-import { fireAndForget } from '@/shared/lib/async-utils'
-import { CalendarSyncMethod } from '@/shared/db/enums'
-import { serverEnv } from '@/shared/lib/env/server'
+} from "@/shared/lib/google-calendar";
+import { sendWebhookRenewalNotification } from "@/shared/lib/email-service";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { CalendarSyncMethod } from "@/shared/db/enums";
+import { serverEnv } from "@/shared/lib/env/server";
+import { authorizeCronRequest } from "@/shared/lib/cron-auth";
+import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 
 /**
  * カレンダー同期用Cronエンドポイント
@@ -39,61 +45,40 @@ import { serverEnv } from '@/shared/lib/env/server'
  */
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = serverEnv.CRON_SECRET
-
-    // 本番環境ではCRON_SECRETを必須とする
-    if (!cronSecret && serverEnv.NODE_ENV === 'production') {
-      logError(new Error('CRON_SECRET is not set in production environment'), {
-        category: ErrorCategory.AUTHORIZATION,
-        severity: ErrorSeverity.CRITICAL,
-        context: { operation: 'calendarSyncCron' },
-      })
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      )
-    }
-
-    // 開発環境で認証をスキップする場合は警告ログ
-    if (!cronSecret && serverEnv.NODE_ENV !== 'production') {
-      logError(new Error('CRON_SECRET is not set - authentication skipped in development'), {
-        category: ErrorCategory.AUTHORIZATION,
-        severity: ErrorSeverity.LOW,
-        context: { operation: 'calendarSyncCron', environment: serverEnv.NODE_ENV },
-      })
-    }
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authorizationResult = authorizeCronRequest({
+      authorizationHeader: request.headers.get("authorization"),
+      secret: serverEnv.CRON_SECRET,
+      nodeEnv: serverEnv.NODE_ENV,
+      operation: "calendarSyncCron",
+    });
+    if (authorizationResult) {
+      return authorizationResult;
     }
 
     // 双方向同期が有効か確認
-    const enabled = await isTwoWaySyncEnabled()
+    const enabled = await isTwoWaySyncEnabled();
     if (!enabled) {
-      return NextResponse.json({
-        success: true,
-        message: 'Two-way sync is disabled',
+      return jsonSuccess({
         skipped: true,
-      })
+        reason: "Two-way sync is disabled",
+      });
     }
 
     // 同期方式を確認（pollingまたはbothの場合のみ実行）
-    const settings = await getTwoWaySyncSettings()
+    const settings = await getTwoWaySyncSettings();
     if (settings.syncMethod === CalendarSyncMethod.webhook) {
-      return NextResponse.json({
-        success: true,
-        message: 'Polling is disabled (webhook only)',
+      return jsonSuccess({
         skipped: true,
-      })
+        reason: "Polling is disabled (webhook only)",
+      });
     }
 
     // Webhook自動更新チェック（有効期限2日前に更新）
-    let webhookRenewed = false
+    let webhookRenewed = false;
     try {
-      const renewalResult = await renewWebhookIfNeeded()
+      const renewalResult = await renewWebhookIfNeeded();
       if (renewalResult.renewed) {
-        webhookRenewed = true
+        webhookRenewed = true;
         // 成功メール通知（バックグラウンド）
         fireAndForget(
           sendWebhookRenewalNotification({
@@ -101,95 +86,84 @@ export async function GET(request: Request) {
             newExpiration: renewalResult.newExpiration,
           }),
           {
-            operation: 'sendWebhookRenewalNotificationSuccess',
+            operation: "sendWebhookRenewalNotificationSuccess",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.LOW,
-          }
-        )
+          },
+        );
       } else if (!renewalResult.success) {
         // 更新失敗時のメール通知
-        logError(new Error(renewalResult.error || 'Webhook renewal failed'), {
+        logError(new Error(renewalResult.error || "Webhook renewal failed"), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.MEDIUM,
-          context: { operation: 'renewWebhookIfNeeded' },
-        })
+          context: { operation: "renewWebhookIfNeeded" },
+        });
         fireAndForget(
           sendWebhookRenewalNotification({
             success: false,
             error: renewalResult.error,
           }),
           {
-            operation: 'sendWebhookRenewalNotificationFailure',
+            operation: "sendWebhookRenewalNotificationFailure",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.LOW,
-          }
-        )
+          },
+        );
       }
     } catch (renewalError) {
       // Webhook更新エラーはログ記録のみ（同期処理は継続）
       logError(normalizeError(renewalError), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'renewWebhookIfNeeded', phase: 'catch' },
-      })
+        context: { operation: "renewWebhookIfNeeded", phase: "catch" },
+      });
       fireAndForget(
         sendWebhookRenewalNotification({
           success: false,
           error:
-            renewalError instanceof Error ? renewalError.message : 'Unknown error',
+            renewalError instanceof Error
+              ? renewalError.message
+              : "Unknown error",
         }),
         {
-          operation: 'sendWebhookRenewalNotificationError',
+          operation: "sendWebhookRenewalNotificationError",
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
-        }
-      )
+        },
+      );
     }
 
     // 同期実行
-    const result = await syncFromCalendar()
+    const result = await syncFromCalendar();
 
     if (!result.success) {
-      logError(new Error('Calendar sync failed'), {
+      logError(new Error("Calendar sync failed"), {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.MEDIUM,
-        context: { operation: 'syncFromCalendar', errors: result.errors },
-      })
-      return NextResponse.json(
-        {
-          success: false,
-          errors: result.errors,
-        },
-        { status: 500 }
-      )
+        context: { operation: "syncFromCalendar", errors: result.errors },
+      });
+      return jsonError("Calendar sync failed", 503);
     }
 
     // キャッシュ無効化: カレンダー同期後に予約データを最新化
-    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA)
-    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA)
+    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
+    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
 
-    return NextResponse.json({
-      success: true,
+    return jsonSuccess({
       processed: result.processed,
       deleted: result.deleted,
       updated: result.updated,
       errors: result.errors,
       webhookRenewed,
       timestamp: new Date().toISOString(),
-    })
+    });
   } catch (error) {
-    unstable_rethrow(error)
+    unstable_rethrow(error);
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,
-      context: { operation: 'calendarSyncCron' },
-    })
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    )
+      context: { operation: "calendarSyncCron" },
+    });
+    return jsonError("Calendar sync cron failed", 500);
   }
 }

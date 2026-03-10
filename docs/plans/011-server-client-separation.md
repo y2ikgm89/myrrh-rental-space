@@ -16,6 +16,7 @@ Next.js公式ベストプラクティスに準拠し、Server Componentでデー
 ### アーキテクチャ変更
 
 **Before:**
+
 ```
 page.tsx ('use client')
 ├── useEffect → Server Action呼び出し
@@ -24,6 +25,7 @@ page.tsx ('use client')
 ```
 
 **After:**
+
 ```
 page.tsx (Server Component)
 ├── async function: Server Actionでデータフェッチ
@@ -38,24 +40,26 @@ page.tsx (Server Component)
 
 #### blog/categories
 
-| ファイル | Before | After |
-|---------|--------|-------|
-| `page.tsx` | 506行 Client Component | 8行 Server Component |
-| `_components/CategoryManager.tsx` | - | 379行 Client Component（新規） |
+| ファイル                          | Before                 | After                          |
+| --------------------------------- | ---------------------- | ------------------------------ |
+| `page.tsx`                        | 506行 Client Component | 8行 Server Component           |
+| `_components/CategoryManager.tsx` | -                      | 379行 Client Component（新規） |
 
 **改善点:**
+
 - 初期レンダリング時にServer側でデータ取得
 - useEffectでのデータフェッチ不要
 - 共通`DragHandle`コンポーネントを使用（重複削除）
 
 #### settings/navigation
 
-| ファイル | Before | After |
-|---------|--------|-------|
-| `page.tsx` | 1068行 Client Component | 23行 Server Component |
-| `_components/NavigationManager.tsx` | - | 780行 Client Component（新規） |
+| ファイル                            | Before                  | After                          |
+| ----------------------------------- | ----------------------- | ------------------------------ |
+| `page.tsx`                          | 1068行 Client Component | 23行 Server Component          |
+| `_components/NavigationManager.tsx` | -                       | 780行 Client Component（新規） |
 
 **改善点:**
+
 - 4つのServer Action並列実行（`Promise.all`）
 - 初期データをpropsで渡す
 - 共通`DragHandle`コンポーネントを使用（重複削除）
@@ -81,16 +85,16 @@ export default async function Page() {
 
 ```typescript
 // _components/Manager.tsx
-'use client'
+"use client";
 
 export function Manager({ initialData }: Props) {
-  const [data, setData] = useState(initialData)
+  const [data, setData] = useState(initialData);
 
   // 更新後の再取得
   const loadData = async () => {
-    const fresh = await getServerAction()
-    setData(fresh)
-  }
+    const fresh = await getServerAction();
+    setData(fresh);
+  };
 
   // D&D, CRUD handlers...
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * MainContent
@@ -8,43 +8,43 @@
  * - フルスクリーンモード時はサイドバーの左パディングとmainのパディングを除去
  */
 
-import type { ReactNode } from 'react'
-import { tv } from 'tailwind-variants'
-import { useAdminLayout } from '@/admin/contexts/admin-layout-context'
+import type { ReactNode } from "react";
+import { tv } from "tailwind-variants";
+import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 
 const wrapperStyles = tv({
   variants: {
     isFullscreen: {
-      true: '',
-      false: 'lg:pl-64',
+      true: "",
+      false: "lg:pl-64",
     },
   },
-})
+});
 
 const mainStyles = tv({
-  base: 'min-h-[calc(100vh-4rem)] bg-background',
+  base: "min-h-[calc(100vh-4rem)] bg-background",
   variants: {
     isFullscreen: {
-      true: '',
-      false: 'p-4 lg:p-6',
+      true: "",
+      false: "p-4 lg:p-6",
     },
   },
-})
+});
 
 type MainContentProps = {
   /** TopBar（mainの外に配置） */
-  topBar?: ReactNode
+  topBar?: ReactNode;
   /** メインコンテンツ */
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export function MainContent({ topBar, children }: MainContentProps) {
-  const { isFullscreen } = useAdminLayout()
+  const { isFullscreen } = useAdminLayout();
 
   return (
     <div className={wrapperStyles({ isFullscreen })}>
       {topBar}
       <main className={mainStyles({ isFullscreen })}>{children}</main>
     </div>
-  )
+  );
 }

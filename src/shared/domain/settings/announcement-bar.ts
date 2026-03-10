@@ -187,7 +187,9 @@ export async function getAnnouncementBarById(
   );
 }
 
-export async function getActiveAnnouncementBars(): Promise<AnnouncementBarData[]> {
+export async function getActiveAnnouncementBars(): Promise<
+  AnnouncementBarData[]
+> {
   "use cache";
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
   cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
@@ -246,19 +248,26 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
 
   return {
     announcementBarAnimation:
-      settings.announcementBarAnimation ?? defaultCarouselSettings.announcementBarAnimation,
+      settings.announcementBarAnimation ??
+      defaultCarouselSettings.announcementBarAnimation,
     announcementBarDuration:
-      settings.announcementBarDuration ?? defaultCarouselSettings.announcementBarDuration,
+      settings.announcementBarDuration ??
+      defaultCarouselSettings.announcementBarDuration,
     announcementBarAutoPlay:
-      settings.announcementBarAutoPlay ?? defaultCarouselSettings.announcementBarAutoPlay,
+      settings.announcementBarAutoPlay ??
+      defaultCarouselSettings.announcementBarAutoPlay,
     announcementBarPauseOnHover:
-      settings.announcementBarPauseOnHover ?? defaultCarouselSettings.announcementBarPauseOnHover,
+      settings.announcementBarPauseOnHover ??
+      defaultCarouselSettings.announcementBarPauseOnHover,
     announcementBarShowArrows:
-      settings.announcementBarShowArrows ?? defaultCarouselSettings.announcementBarShowArrows,
+      settings.announcementBarShowArrows ??
+      defaultCarouselSettings.announcementBarShowArrows,
     announcementBarShowIndicator:
-      settings.announcementBarShowIndicator ?? defaultCarouselSettings.announcementBarShowIndicator,
+      settings.announcementBarShowIndicator ??
+      defaultCarouselSettings.announcementBarShowIndicator,
     announcementBarDesignStyle:
-      settings.announcementBarDesignStyle ?? defaultCarouselSettings.announcementBarDesignStyle,
+      settings.announcementBarDesignStyle ??
+      defaultCarouselSettings.announcementBarDesignStyle,
     announcementBarBgColor: settings.announcementBarBgColor,
     announcementBarTextColor: settings.announcementBarTextColor,
     announcementBarStripeColor: settings.announcementBarStripeColor,
@@ -272,7 +281,8 @@ export async function getAnnouncementBarCarouselSettings(): Promise<Announcement
       settings.announcementBarGlassAnimation ??
       defaultCarouselSettings.announcementBarGlassAnimation,
     announcementBarSticky:
-      settings.announcementBarSticky ?? defaultCarouselSettings.announcementBarSticky,
+      settings.announcementBarSticky ??
+      defaultCarouselSettings.announcementBarSticky,
   };
 }
 

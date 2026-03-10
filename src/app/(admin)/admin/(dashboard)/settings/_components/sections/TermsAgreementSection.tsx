@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 規約同意設定セクション
@@ -6,7 +6,7 @@
  * 予約フォームでの規約同意チェックボックスの設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -17,24 +17,26 @@ import {
   Input,
   Label,
   Checkbox,
-} from '@/admin/components/ui'
-import { updateTermsAgreementSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateTermsAgreementSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface TermsAgreementSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
-export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+export function TermsAgreementSection({
+  settings,
+}: TermsAgreementSectionProps) {
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     termsAgreementEnabled: settings.termsAgreementEnabled,
-    termsAgreementText: settings.termsAgreementText || '',
+    termsAgreementText: settings.termsAgreementText || "",
     requireTermsAgreement: settings.requireTermsAgreement,
     requirePrivacyAgreement: settings.requirePrivacyAgreement,
-  })
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -43,18 +45,20 @@ export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) 
         termsAgreementText: formData.termsAgreementText || null,
         requireTermsAgreement: formData.requireTermsAgreement,
         requirePrivacyAgreement: formData.requirePrivacyAgreement,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "規約同意設定を保存しました");
+    });
+  };
 
   // デフォルト文言を生成
   const getDefaultText = () => {
-    const items = []
-    if (formData.requireTermsAgreement) items.push('利用規約')
-    if (formData.requirePrivacyAgreement) items.push('プライバシーポリシー')
-    return items.length > 0 ? `${items.join('と')}に同意します` : '規約に同意します'
-  }
+    const items = [];
+    if (formData.requireTermsAgreement) items.push("利用規約");
+    if (formData.requirePrivacyAgreement) items.push("プライバシーポリシー");
+    return items.length > 0
+      ? `${items.join("と")}に同意します`
+      : "規約に同意します";
+  };
 
   return (
     <Card>
@@ -87,7 +91,10 @@ export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) 
                 id="termsAgreementText"
                 value={formData.termsAgreementText}
                 onChange={(e) =>
-                  setFormData({ ...formData, termsAgreementText: e.target.value })
+                  setFormData({
+                    ...formData,
+                    termsAgreementText: e.target.value,
+                  })
                 }
                 placeholder={getDefaultText()}
                 disabled={isPending}
@@ -105,11 +112,17 @@ export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) 
                     id="requireTermsAgreement"
                     checked={formData.requireTermsAgreement}
                     onCheckedChange={(checked) =>
-                      setFormData({ ...formData, requireTermsAgreement: checked })
+                      setFormData({
+                        ...formData,
+                        requireTermsAgreement: checked,
+                      })
                     }
                     disabled={isPending}
                   />
-                  <Label htmlFor="requireTermsAgreement" className="cursor-pointer font-normal">
+                  <Label
+                    htmlFor="requireTermsAgreement"
+                    className="cursor-pointer font-normal"
+                  >
                     利用規約への同意を必須にする
                   </Label>
                 </div>
@@ -118,11 +131,17 @@ export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) 
                     id="requirePrivacyAgreement"
                     checked={formData.requirePrivacyAgreement}
                     onCheckedChange={(checked) =>
-                      setFormData({ ...formData, requirePrivacyAgreement: checked })
+                      setFormData({
+                        ...formData,
+                        requirePrivacyAgreement: checked,
+                      })
                     }
                     disabled={isPending}
                   />
-                  <Label htmlFor="requirePrivacyAgreement" className="cursor-pointer font-normal">
+                  <Label
+                    htmlFor="requirePrivacyAgreement"
+                    className="cursor-pointer font-normal"
+                  >
                     プライバシーポリシーへの同意を必須にする
                   </Label>
                 </div>
@@ -135,9 +154,9 @@ export function TermsAgreementSection({ settings }: TermsAgreementSectionProps) 
         )}
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '規約同意設定を保存'}
+          {isPending ? "保存中..." : "規約同意設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

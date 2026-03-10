@@ -8,10 +8,10 @@
  * @module
  */
 
-'use client'
+"use client";
 
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey, type LexicalNode } from 'lexical'
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getNodeByKey, type LexicalNode } from "lexical";
 
 // =============================================================================
 // Types
@@ -23,7 +23,9 @@ import { $getNodeByKey, type LexicalNode } from 'lexical'
  * @description Lexicalの$isXxxNode関数と同じシグネチャ
  * @template T - 判定対象のノード型
  */
-type TypeGuard<T extends LexicalNode> = (node: LexicalNode | null | undefined) => node is T
+type TypeGuard<T extends LexicalNode> = (
+  node: LexicalNode | null | undefined,
+) => node is T;
 
 /**
  * ノード更新関数の型
@@ -31,7 +33,7 @@ type TypeGuard<T extends LexicalNode> = (node: LexicalNode | null | undefined) =
  * @description updateNode関数に渡すコールバックの型
  * @template T - 更新対象のノード型
  */
-export type NodeUpdater<T extends LexicalNode> = (node: T) => void
+export type NodeUpdater<T extends LexicalNode> = (node: T) => void;
 
 // =============================================================================
 // Hook
@@ -86,16 +88,16 @@ export type NodeUpdater<T extends LexicalNode> = (node: T) => void
  */
 export function useNodeUpdater<T extends LexicalNode>(
   nodeKey: string,
-  typeGuard: TypeGuard<T>
+  typeGuard: TypeGuard<T>,
 ): (updater: NodeUpdater<T>) => void {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   return (updater: NodeUpdater<T>) => {
     editor.update(() => {
-      const targetNode = $getNodeByKey(nodeKey)
+      const targetNode = $getNodeByKey(nodeKey);
       if (typeGuard(targetNode)) {
-        updater(targetNode)
+        updater(targetNode);
       }
-    })
-  }
+    });
+  };
 }

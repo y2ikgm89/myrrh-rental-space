@@ -47,7 +47,9 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">お問い合わせ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            お問い合わせ管理
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             お問い合わせの確認・ステータス管理を行います
           </p>
@@ -66,4 +68,3 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
     </div>
   );
 }
-

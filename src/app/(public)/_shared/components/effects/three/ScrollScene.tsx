@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { useRef } from 'react'
-import type { ReactNode } from 'react'
-import { useFrame } from '@react-three/fiber'
-import type { Group } from 'three'
-import { useScrollRef } from './ThreeCanvas'
-import type { ScrollState } from '../core/types'
+import { useRef } from "react";
+import type { ReactNode } from "react";
+import { useFrame } from "@react-three/fiber";
+import type { Group } from "three";
+import { useScrollRef } from "./ThreeCanvas";
+import type { ScrollState } from "../core/types";
 
 export interface ScrollSceneProps {
-  readonly children: ReactNode
+  readonly children: ReactNode;
   /** scroll progress/velocity/direction を受け取るコールバック */
-  readonly onScroll?: (state: ScrollState) => void
+  readonly onScroll?: (state: ScrollState) => void;
 }
 
 /**
@@ -18,14 +18,14 @@ export interface ScrollSceneProps {
  * R3F children がカスタムアニメーションロジックを実装可能。
  */
 export function ScrollScene({ children, onScroll }: ScrollSceneProps) {
-  const scrollRef = useScrollRef()
-  const groupRef = useRef<Group>(null)
+  const scrollRef = useScrollRef();
+  const groupRef = useRef<Group>(null);
 
   useFrame(() => {
     if (onScroll) {
-      onScroll(scrollRef.current)
+      onScroll(scrollRef.current);
     }
-  })
+  });
 
-  return <group ref={groupRef}>{children}</group>
+  return <group ref={groupRef}>{children}</group>;
 }

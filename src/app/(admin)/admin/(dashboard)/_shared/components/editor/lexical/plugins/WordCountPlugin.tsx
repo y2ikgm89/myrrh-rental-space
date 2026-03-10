@@ -4,11 +4,11 @@
  * @description 文字数・読了目安を計算するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getRoot } from 'lexical'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getRoot } from "lexical";
 
 // =============================================================================
 // Types
@@ -16,15 +16,15 @@ import { $getRoot } from 'lexical'
 
 export type WordCountData = {
   /** 文字数（空白除く） */
-  charCount: number
+  charCount: number;
   /** 文字数（空白込み） */
-  charCountWithSpaces: number
+  charCountWithSpaces: number;
   /** 読了目安（分） */
-  readingTimeMinutes: number
-}
+  readingTimeMinutes: number;
+};
 
 // 日本語の平均読字速度: 約400-600文字/分（500で計算）
-const CJK_CHARS_PER_MINUTE = 500
+const CJK_CHARS_PER_MINUTE = 500;
 
 // =============================================================================
 // Component
@@ -33,24 +33,27 @@ const CJK_CHARS_PER_MINUTE = 500
 export function WordCountPlugin({
   onUpdate,
 }: {
-  onUpdate: (data: WordCountData) => void
+  onUpdate: (data: WordCountData) => void;
 }) {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        const text = $getRoot().getTextContent()
-        const charCountWithSpaces = text.length
-        const charCount = text.replace(/\s/g, '').length
-        const readingTimeMinutes = Math.max(1, Math.ceil(charCount / CJK_CHARS_PER_MINUTE))
+        const text = $getRoot().getTextContent();
+        const charCountWithSpaces = text.length;
+        const charCount = text.replace(/\s/g, "").length;
+        const readingTimeMinutes = Math.max(
+          1,
+          Math.ceil(charCount / CJK_CHARS_PER_MINUTE),
+        );
 
-        onUpdate({ charCount, charCountWithSpaces, readingTimeMinutes })
-      })
-    })
-  }, [editor, onUpdate])
+        onUpdate({ charCount, charCountWithSpaces, readingTimeMinutes });
+      });
+    });
+  }, [editor, onUpdate]);
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -62,7 +65,7 @@ export function useWordCount() {
     charCount: 0,
     charCountWithSpaces: 0,
     readingTimeMinutes: 0,
-  })
+  });
 
-  return { wordCountData: data, updateWordCount: setData }
+  return { wordCountData: data, updateWordCount: setData };
 }

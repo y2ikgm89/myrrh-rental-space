@@ -74,6 +74,7 @@ import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import type { FaqEditorFormData } from "@/admin/components/editor/inline/types";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Schema
@@ -193,22 +194,24 @@ export function FaqItemInlineEditor({
 
         if (mode === "create") {
           const result = await createFaqItem(payload);
-          if (result.success) {
-            toast.success("FAQ項目を作成しました");
-            router.push(`/admin/faq/items/${result.data.id}`);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          toast.success("FAQ項目を作成しました");
+          router.push(`/admin/faq/items/${result.id}`);
         } else if (item) {
           const result = await updateFaqItem(item.id, payload);
-          if (result.success) {
-            reset(data);
-            setHasEditorChanges(false);
-            router.refresh();
-            toast.success("FAQ項目を保存しました");
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          reset(data);
+          setHasEditorChanges(false);
+          router.refresh();
+          toast.success("FAQ項目を保存しました");
         }
       } catch (error) {
         logger.error("保存中にエラーが発生しました", {
@@ -228,13 +231,18 @@ export function FaqItemInlineEditor({
     if (!item || isPending) return;
     startTransition(async () => {
       const result = await toggleFaqItemPublished(item.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("isPublished", true);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success(
+        result.isPublished
+          ? "FAQ項目を公開しました"
+          : "FAQ項目を非公開にしました",
+      );
+      setValue("isPublished", result.isPublished);
+      router.refresh();
     });
   };
 
@@ -242,13 +250,18 @@ export function FaqItemInlineEditor({
     if (!item || isPending) return;
     startTransition(async () => {
       const result = await toggleFaqItemPublished(item.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("isPublished", false);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success(
+        result.isPublished
+          ? "FAQ項目を公開しました"
+          : "FAQ項目を非公開にしました",
+      );
+      setValue("isPublished", result.isPublished);
+      router.refresh();
     });
   };
 
@@ -292,12 +305,13 @@ export function FaqItemInlineEditor({
     startTransition(async () => {
       try {
         const result = await deleteFaqItem(item.id);
-        if (result.success) {
-          toast.success("FAQ項目を削除しました");
-          router.push("/admin/faq");
-        } else {
+        if (isMutationError(result)) {
           toast.error(result.error);
+          return;
         }
+
+        toast.success("FAQ項目を削除しました");
+        router.push("/admin/faq");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {
           error: getErrorMessage(error),

@@ -8,8 +8,8 @@
  */
 
 export async function register(): Promise<void> {
-  if (process.env["NEXT_RUNTIME"] === 'nodejs') {
-    const { bootstrapSystemPages } = await import('@/shared/lib/bootstrap')
-    await bootstrapSystemPages()
+  if (process.env["NEXT_RUNTIME"] === "nodejs") {
+    const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
+    await bootstrapSystemPages();
   }
 }

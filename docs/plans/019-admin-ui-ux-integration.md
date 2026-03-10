@@ -7,17 +7,20 @@
 ## 実装内容
 
 ### Phase 1: レスポンシブ対応
+
 - 管理画面サイドバーの折りたたみ機能（モバイル: hidden、タブレット: collapsed、デスクトップ: expanded）
 - モバイル時オーバーレイ表示（ESCキー・外側クリックで閉じる）
 - TopBar追加（モバイルでハンバーガーメニュー表示）
 - AdminLayoutContext（サイドバー状態管理）
 
 ### Phase 2: GenericSidePanel
+
 - BlogSidePanel/NewsSidePanel統合の汎用コンポーネント設計
 - タブ切り替え対応
 - 型安全なジェネリクス設計
 
 ### Phase 3: ダッシュボード改善
+
 - Recharts導入（予約数・売上推移グラフ）
 - 直近30日の日別集計
 - 双軸グラフ（左: 予約数、右: 売上）

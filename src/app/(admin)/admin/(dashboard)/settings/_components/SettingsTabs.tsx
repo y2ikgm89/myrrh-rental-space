@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 設定ページ用タブコンポーネント
@@ -7,15 +7,15 @@
  * Radix UI Tabs ベース
  */
 
-import { useQueryState } from 'nuqs'
-import { parseAsStringLiteral } from 'nuqs'
+import { useQueryState } from "nuqs";
+import { parseAsStringLiteral } from "nuqs";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
   TabsContent,
-} from '@/admin/components/ui/tabs'
-import type { ReactNode } from 'react'
+} from "@/admin/components/ui/tabs";
+import type { ReactNode } from "react";
 
 // =============================================================================
 // 型定義
@@ -23,18 +23,18 @@ import type { ReactNode } from 'react'
 
 export interface TabConfig {
   /** タブのキー（URLパラメータ値） */
-  value: string
+  value: string;
   /** タブのラベル */
-  label: string
+  label: string;
   /** タブのコンテンツ */
-  content: ReactNode
+  content: ReactNode;
 }
 
 interface SettingsTabsProps {
   /** タブ設定の配列 */
-  tabs: TabConfig[]
+  tabs: TabConfig[];
   /** デフォルトで選択されるタブ（未指定時は最初のタブ） */
-  defaultTab?: string
+  defaultTab?: string;
 }
 
 // =============================================================================
@@ -42,18 +42,17 @@ interface SettingsTabsProps {
 // =============================================================================
 
 export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
-  const firstTab = defaultTab ?? tabs[0]?.value ?? ''
+  const firstTab = defaultTab ?? tabs[0]?.value ?? "";
   // parseAsStringLiteral は非空タプルを要求 — ランタイムで構築
-  const values = tabs.map((t) => t.value)
-  const tabValues: [string, ...string[]] = values[0] !== undefined
-    ? [values[0], ...values.slice(1)]
-    : [firstTab]
+  const values = tabs.map((t) => t.value);
+  const tabValues: [string, ...string[]] =
+    values[0] !== undefined ? [values[0], ...values.slice(1)] : [firstTab];
 
   // nuqs でURLパラメータと同期
   const [activeTab, setActiveTab] = useQueryState(
-    'tab',
-    parseAsStringLiteral(tabValues).withDefault(firstTab)
-  )
+    "tab",
+    parseAsStringLiteral(tabValues).withDefault(firstTab),
+  );
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -70,5 +69,5 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
         </TabsContent>
       ))}
     </Tabs>
-  )
+  );
 }

@@ -22,18 +22,18 @@
 
 ### ✅ 完全対応
 
-| 機能 | 状態 | 備考 |
-|------|------|------|
-| パッケージ管理 | ✅ | `bun install`で依存関係を管理 |
-| 開発サーバー | ✅ | `bun run dev`でNext.js開発サーバー起動 |
-| 本番ビルド | ✅ | `bun run build`でNext.jsアプリケーションをビルド |
-| 本番サーバー | ✅ | `bun run start`でNext.jsアプリケーションを起動 |
-| Prisma | ✅ | BunのNode.js互換性により完全動作 |
-| Prismaマイグレーション | ✅ | `bunx --bun prisma migrate`で実行可能 |
-| Prisma Studio | ✅ | `bunx --bun prisma studio`で実行可能 |
-| Next.js | ✅ | Next.js 16.1.1がBunで完全動作 |
-| Better Auth | ✅ | Bunで完全動作 |
-| Turbopack | ✅ | Next.js 16のデフォルトバンドラー（Bunと統合） |
+| 機能                   | 状態 | 備考                                             |
+| ---------------------- | ---- | ------------------------------------------------ |
+| パッケージ管理         | ✅   | `bun install`で依存関係を管理                    |
+| 開発サーバー           | ✅   | `bun run dev`でNext.js開発サーバー起動           |
+| 本番ビルド             | ✅   | `bun run build`でNext.jsアプリケーションをビルド |
+| 本番サーバー           | ✅   | `bun run start`でNext.jsアプリケーションを起動   |
+| Prisma                 | ✅   | BunのNode.js互換性により完全動作                 |
+| Prismaマイグレーション | ✅   | `bunx --bun prisma migrate`で実行可能            |
+| Prisma Studio          | ✅   | `bunx --bun prisma studio`で実行可能             |
+| Next.js                | ✅   | Next.js 16.1.1がBunで完全動作                    |
+| Better Auth            | ✅   | Bunで完全動作                                    |
+| Turbopack              | ✅   | Next.js 16のデフォルトバンドラー（Bunと統合）    |
 
 ---
 
@@ -139,33 +139,37 @@ PrismaはBunで完全に動作します。Prisma 7では、ドライバーアダ
 
 ```typescript
 // src/lib/prisma.ts
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client'
-import { Pool } from 'pg'
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
+import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-})
+});
 
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 
 **注意**: Prisma 7では、データベース接続にドライバーアダプターが必要です。Bunランタイムでも、Node.js互換性により`pg`パッケージと`@prisma/adapter-pg`が動作します。詳細は[`type-safety.md`](./type-safety.md)を参照してください。
 
 **マイグレーション**:
+
 ```bash
 # 開発環境
 bunx --bun prisma migrate dev
@@ -221,6 +225,7 @@ Next.js 16では、Turbopackがデフォルトのバンドラーとして使用�
 **問題**: Prismaクライアントが見つからない
 
 **解決策**:
+
 ```bash
 bunx --bun prisma generate
 ```
@@ -230,6 +235,7 @@ bunx --bun prisma generate
 **問題**: ビルドエラー
 
 **解決策**:
+
 ```bash
 # キャッシュをクリア
 rm -rf .next
@@ -241,6 +247,7 @@ bun run build
 **問題**: パッケージのインストールエラー
 
 **解決策**:
+
 ```bash
 # ロックファイルを再生成
 rm bun.lock
@@ -262,6 +269,7 @@ bun outdated
 ```
 
 **出力例**:
+
 ```
 Package            Current   Wanted   Latest
 react              19.2.1    19.2.1    19.2.3
@@ -313,6 +321,7 @@ bunx npm-check-updates -u "/.*/"
 ```
 
 **出力例**:
+
 ```
 next       ^16.0.7  → ^16.1.1
 react      ^19.2.1  → ^19.2.3
@@ -361,13 +370,13 @@ bunx npm-check-updates
 
 ### コマンド一覧
 
-| 目的 | コマンド |
-|------|----------|
-| 全体の最新版確認 | `bun outdated` |
-| 個別パッケージ詳細 | `bun info <package>` |
-| 影響確認 | `bun add <package>@latest --dry-run` |
-| 世代更新判断 | `bunx npm-check-updates` |
-| 実体確認 | `bun pm ls` |
+| 目的               | コマンド                             |
+| ------------------ | ------------------------------------ |
+| 全体の最新版確認   | `bun outdated`                       |
+| 個別パッケージ詳細 | `bun info <package>`                 |
+| 影響確認           | `bun add <package>@latest --dry-run` |
+| 世代更新判断       | `bunx npm-check-updates`             |
+| 実体確認           | `bun pm ls`                          |
 
 ---
 

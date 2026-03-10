@@ -17,6 +17,7 @@
 **背景:** 公式ドキュメントより「プロジェクト共有フックは `.claude/settings.json` に定義し git 管理する」。現状は `settings.local.json` に定義されており非共有。
 
 **Files:**
+
 - Create: `.claude/settings.json`
 
 **Step 1: ファイルを作成**
@@ -57,6 +58,7 @@ cat .claude/settings.json
 **背景:** Task 1 で共有設定に移動したため、`settings.local.json` から重複項目を削除する。`permissions`（allow/deny）は個人用のため `settings.local.json` に残す。
 
 **Files:**
+
 - Modify: `.claude/settings.local.json`
 
 **Step 1: ファイルを以下の内容に書き換え**
@@ -180,6 +182,7 @@ cat .claude/settings.local.json | python -m json.tool
 **背景:** 公式ドキュメント「Use `$CLAUDE_PROJECT_DIR` to reference hook scripts relative to the project root」。現状のハードコードパスは PC 移行で壊れる。
 
 **Files:**
+
 - Modify: `.claude/hooks/prettier-format.sh`
 
 **Step 1: スクリプトを書き換え**
@@ -223,6 +226,7 @@ grep -n "G:/" .claude/hooks/prettier-format.sh
 **背景:** 公式ドキュメント「Custom slash commands have been merged into skills. Skills take precedence over commands.」3 ファイルすべて `skills/` に上位版あり。
 
 **Files:**
+
 - Delete: `.claude/commands/lexical-node.md`
 - Delete: `.claude/commands/lexical-plugin.md`
 - Delete: `.claude/commands/lexical-toolbar.md`
@@ -248,6 +252,7 @@ ls .claude/commands/ 2>&1
 **背景:** 空ディレクトリ。公式 Claude Code の機能ではない。`docs/plans/` と混同を招く。
 
 **Files:**
+
 - Delete: `.claude/plans/` (空ディレクトリ)
 
 **Step 1: 削除**
@@ -271,11 +276,13 @@ ls .claude/plans/ 2>&1
 **背景:** 公式ドキュメント「`memory: local` scope: `.claude/agent-memory-local/<name>/` — project-specific but should not be checked into version control」。現状は gitignore 未登録。
 
 **Files:**
+
 - Modify: `.gitignore`
 
 **Step 1: Claude Code セクションに追記**
 
 現在の `.gitignore` の Claude Code セクション（行 72-73）:
+
 ```
 # Claude Code local files
 .claude/logs/
@@ -284,6 +291,7 @@ ls .claude/plans/ 2>&1
 ```
 
 以下を追加:
+
 ```
 .claude/agent-memory-local/
 ```
@@ -303,11 +311,13 @@ git check-ignore -v .claude/agent-memory-local/verification/MEMORY.md
 **背景:** このスキルはユーザーが明示的に `/prisma-migration` で起動するワークフロー。Claude が自動的に呼び出すべきではない（マイグレーション実行は副作用あり）。
 
 **Files:**
+
 - Modify: `.claude/skills/prisma-migration/SKILL.md`
 
 **Step 1: フロントマターに `disable-model-invocation: true` を追加**
 
 現在のフロントマター:
+
 ```yaml
 ---
 name: prisma-migration
@@ -317,6 +327,7 @@ description: >
 ```
 
 変更後:
+
 ```yaml
 ---
 name: prisma-migration
@@ -344,11 +355,13 @@ head -10 .claude/skills/prisma-migration/SKILL.md
 **背景:** このスキルは Python スクリプト (`scripts/search.py`) を実行するツール。引数付きのユーザー起動が前提で、Claude の自動呼び出しは不適切。
 
 **Files:**
+
 - Modify: `.claude/skills/ui-ux-pro-max/SKILL.md`
 
 **Step 1: フロントマターに `disable-model-invocation: true` を追加**
 
 現在のフロントマター:
+
 ```yaml
 ---
 name: ui-ux-pro-max
@@ -357,6 +370,7 @@ description: "UI/UX design intelligence. ..."
 ```
 
 変更後（`description` の後に追加）:
+
 ```yaml
 ---
 name: ui-ux-pro-max
@@ -381,11 +395,13 @@ head -8 .claude/skills/ui-ux-pro-max/SKILL.md
 **背景:** セキュリティレビューは繰り返し実施される。プロジェクト固有のセキュリティパターン（例：`withPermission` HOF の使用状況、Instagram OAuth の CSRF 検証箇所）を蓄積することでレビュー精度が向上する。
 
 **Files:**
+
 - Modify: `.claude/agents/security-reviewer.md`
 
 **Step 1: フロントマターに `memory: project` を追加**
 
 現在のフロントマター末尾:
+
 ```yaml
 tools:
   - Read
@@ -395,6 +411,7 @@ model: sonnet
 ```
 
 変更後:
+
 ```yaml
 tools:
   - Read
@@ -423,6 +440,7 @@ git status .claude/ .gitignore
 ```
 
 期待:
+
 - `.claude/settings.json` — new file
 - `.claude/settings.local.json` — modified
 - `.claude/hooks/prettier-format.sh` — modified

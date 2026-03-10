@@ -11,7 +11,7 @@
 /**
  * フォームフィールドの値として取りうる型
  */
-export type FormFieldValue = string | number | boolean | File | undefined
+export type FormFieldValue = string | number | boolean | File | undefined;
 
 // =============================================================================
 // 文字列フィールド
@@ -32,12 +32,15 @@ export type FormFieldValue = string | number | boolean | File | undefined
  *   // name is string
  * }
  */
-export function getFormString(formData: FormData, key: string): string | undefined {
-  const value = formData.get(key)
-  if (typeof value !== 'string' || value === '') {
-    return undefined
+export function getFormString(
+  formData: FormData,
+  key: string,
+): string | undefined {
+  const value = formData.get(key);
+  if (typeof value !== "string" || value === "") {
+    return undefined;
   }
-  return value
+  return value;
 }
 
 /**
@@ -56,10 +59,10 @@ export function getFormString(formData: FormData, key: string): string | undefin
 export function getFormStringOrDefault(
   formData: FormData,
   key: string,
-  defaultValue: string
+  defaultValue: string,
 ): string {
-  const value = getFormString(formData, key)
-  return value ?? defaultValue
+  const value = getFormString(formData, key);
+  return value ?? defaultValue;
 }
 
 /**
@@ -80,14 +83,14 @@ export function getFormStringOrDefault(
  * }
  */
 export function getFormStringRequired(formData: FormData, key: string): string {
-  const value = formData.get(key)
-  if (typeof value !== 'string') {
-    throw new Error(`Required form field '${key}' is missing or invalid`)
+  const value = formData.get(key);
+  if (typeof value !== "string") {
+    throw new Error(`Required form field '${key}' is missing or invalid`);
   }
-  if (value === '') {
-    throw new Error(`Required form field '${key}' is empty`)
+  if (value === "") {
+    throw new Error(`Required form field '${key}' is empty`);
   }
-  return value
+  return value;
 }
 
 // =============================================================================
@@ -109,16 +112,19 @@ export function getFormStringRequired(formData: FormData, key: string): string {
  *   // count is number
  * }
  */
-export function getFormNumber(formData: FormData, key: string): number | undefined {
-  const value = formData.get(key)
-  if (typeof value !== 'string' || value === '') {
-    return undefined
+export function getFormNumber(
+  formData: FormData,
+  key: string,
+): number | undefined {
+  const value = formData.get(key);
+  if (typeof value !== "string" || value === "") {
+    return undefined;
   }
-  const parsed = Number(value)
+  const parsed = Number(value);
   if (Number.isNaN(parsed)) {
-    return undefined
+    return undefined;
   }
-  return parsed
+  return parsed;
 }
 
 /**
@@ -137,10 +143,10 @@ export function getFormNumber(formData: FormData, key: string): number | undefin
 export function getFormNumberOrDefault(
   formData: FormData,
   key: string,
-  defaultValue: number
+  defaultValue: number,
 ): number {
-  const value = getFormNumber(formData, key)
-  return value ?? defaultValue
+  const value = getFormNumber(formData, key);
+  return value ?? defaultValue;
 }
 
 // =============================================================================
@@ -161,8 +167,8 @@ export function getFormNumberOrDefault(
  * const isAccepted = getFormBoolean(formData, 'termsAccepted')
  */
 export function getFormBoolean(formData: FormData, key: string): boolean {
-  const value = formData.get(key)
-  return value === 'true' || value === 'on' || value === '1'
+  const value = formData.get(key);
+  return value === "true" || value === "on" || value === "1";
 }
 
 // =============================================================================
@@ -186,14 +192,14 @@ export function getFormBoolean(formData: FormData, key: string): boolean {
  * }
  */
 export function getFormFile(formData: FormData, key: string): File | undefined {
-  const value = formData.get(key)
+  const value = formData.get(key);
   // File は Blob のサブクラス
   if (!(value instanceof File)) {
-    return undefined
+    return undefined;
   }
   // input[type="file"] で未選択の場合、size === 0 の空ファイルが送信される
   if (value.size === 0) {
-    return undefined
+    return undefined;
   }
-  return value
+  return value;
 }

@@ -1,10 +1,10 @@
 # 046: 顧客管理 - 新規顧客作成機能
 
-| 項目 | 内容 |
-|------|------|
-| 作成日 | 2026-01-18 |
-| ステータス | 完了 |
-| 関連 | Plan 045 (Admin Reservation Creation) |
+| 項目       | 内容                                  |
+| ---------- | ------------------------------------- |
+| 作成日     | 2026-01-18                            |
+| ステータス | 完了                                  |
+| 関連       | Plan 045 (Admin Reservation Creation) |
 
 ## 概要
 
@@ -23,14 +23,14 @@
 
 `src/admin/actions/customer.ts` に `createCustomer` を追加。
 
-| フィールド | 型 | 必須 | 説明 |
-|------------|-----|------|------|
-| lastName | string | ✅ | 姓 |
-| firstName | string | ✅ | 名 |
-| email | string | ✅ | メールアドレス（ユニーク） |
-| phoneNumber | string | - | 電話番号 |
-| address | string | - | 住所 |
-| notes | string | - | メモ |
+| フィールド  | 型     | 必須 | 説明                       |
+| ----------- | ------ | ---- | -------------------------- |
+| lastName    | string | ✅   | 姓                         |
+| firstName   | string | ✅   | 名                         |
+| email       | string | ✅   | メールアドレス（ユニーク） |
+| phoneNumber | string | -    | 電話番号                   |
+| address     | string | -    | 住所                       |
+| notes       | string | -    | メモ                       |
 
 ### Phase 2: CustomerForm コンポーネント
 

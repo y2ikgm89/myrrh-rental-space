@@ -149,7 +149,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             : null,
         paymentAccepted: formData.paymentAccepted || null,
       });
-      handleResult(result);
+      handleResult(result, "MEO設定を保存しました");
     });
   };
 

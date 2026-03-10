@@ -29,6 +29,7 @@ import {
   type UpdateReservationInput,
 } from "@/admin/lib/validations/admin-reservation";
 import { updateAdminReservation } from "@/admin/actions/reservation";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatCurrency } from "@/shared/lib/utils";
 import {
   ReservationStatus,
@@ -166,12 +167,9 @@ export function ReservationEditForm({
       };
 
       const result = await updateAdminReservation(reservation.id, submitData);
-      if (result.success) {
-        toast.success(result.message);
-        router.push(`/admin/reservations/${reservation.id}`);
-      } else {
-        toast.error(result.error || "予約の更新に失敗しました");
-        if ("fieldErrors" in result && result.fieldErrors) {
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             if (Array.isArray(messages)) {
               messages.forEach((message: string) =>
@@ -180,7 +178,11 @@ export function ReservationEditForm({
             }
           });
         }
+        return;
       }
+
+      toast.success("予約を更新しました");
+      router.push(`/admin/reservations/${reservation.id}`);
     });
   };
 

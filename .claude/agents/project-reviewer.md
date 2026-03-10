@@ -4,7 +4,7 @@ description: >
   Expert code reviewer for this project (Next.js 16 / React 19 / TypeScript 6.0-beta).
   Use proactively after writing or modifying code. Reviews for type safety (no `as` assertions),
   semantic color tokens (no hardcoded colors), React Compiler compatibility,
-  Server Actions patterns, Zod 4 validation, and all 25 project rules.
+  Server Actions patterns, Zod 4 validation, and all 27 project rules.
   Catches violations before they reach CI.
 disallowedTools:
   - Write
@@ -109,7 +109,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **`src/app/(admin)/**/lexical/**`**:
 
-- Lexical 0.40 patterns
+- Lexical 0.41 / NodeState API patterns
 - Node properties must be JSON-serializable
 - `mergeRegister` imported from `lexical` (moved from `@lexical/utils` in 0.40)
 - No top-level Lexical imports in Server Actions — use `lazy-renderer.ts` dynamic import
@@ -152,9 +152,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 ## Rule count reference
 
-**Always-load (13):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns
+**Always-load (1):** gotchas
 
-**Conditional (13):** anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
+**Conditional by paths: (26):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
 
 ## Output format
 

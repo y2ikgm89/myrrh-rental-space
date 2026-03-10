@@ -8,48 +8,55 @@
  * Pageモデルが存在しなければ自動作成します。
  */
 
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { headers } from "next/headers";
-import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { getPageForEdit, getPageWithSections } from '@/admin/queries/page-section'
-import { Button, Badge, Breadcrumb } from '@/admin/components/ui'
-import { SectionMasterDetail } from './_components/SectionMasterDetail'
-import { PublishToggle } from './_components/PublishToggle'
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import {
+  getPageForEdit,
+  getPageWithSections,
+} from "@/admin/queries/page-section";
+import { Button, Badge, Breadcrumb } from "@/admin/components/ui";
+import { SectionMasterDetail } from "./_components/SectionMasterDetail";
+import { PublishToggle } from "./_components/PublishToggle";
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
 
-
-type PageParams = Promise<{ slug: string }>
+type PageParams = Promise<{ slug: string }>;
 
 type PageProps = {
-  params: PageParams
-}
+  params: PageParams;
+};
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await headers();
-  const { slug } = await params
-  const page = await getPageWithSections(slug)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  await connection();
+  const { slug } = await params;
+  const page = await getPageWithSections(slug);
 
   return {
-    title: page ? `${page.title}を編集` : 'ページ編集',
-  }
+    title: page ? `${page.title}を編集` : "ページ編集",
+  };
 }
 
-export default async function EditPagePage({ params }: PageProps): Promise<ReactElement> {
-  const { slug } = await params
+export default async function EditPagePage({
+  params,
+}: PageProps): Promise<ReactElement> {
+  await connection();
+  const { slug } = await params;
 
-  const page = await getPageForEdit(slug)
+  const page = await getPageForEdit(slug);
 
   if (!page) {
-    notFound()
+    notFound();
   }
 
   return (
     <div className="space-y-4">
       <Breadcrumb
         items={[
-          { label: 'ページ管理', href: '/admin/pages' },
+          { label: "ページ管理", href: "/admin/pages" },
           { label: page.title },
         ]}
       />
@@ -63,9 +70,11 @@ export default async function EditPagePage({ params }: PageProps): Promise<React
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">{page.title}</h1>
-              <Badge variant={page.isSystem ? 'secondary' : 'outline'}>
-                {page.isSystem ? 'システム' : 'カスタム'}
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                {page.title}
+              </h1>
+              <Badge variant={page.isSystem ? "secondary" : "outline"}>
+                {page.isSystem ? "システム" : "カスタム"}
               </Badge>
             </div>
             <p className="text-muted-foreground">/{slug}</p>
@@ -86,6 +95,5 @@ export default async function EditPagePage({ params }: PageProps): Promise<React
 
       <SectionMasterDetail page={page} />
     </div>
-  )
+  );
 }
-

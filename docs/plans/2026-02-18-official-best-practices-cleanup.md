@@ -26,6 +26,7 @@
 ## Task 1: serverEnv に VERCEL_URL を追加
 
 **Files:**
+
 - Modify: `src/shared/lib/env/server.ts`
 
 **目的**: `VERCEL_URL` を T3 Env スキーマで管理し、ビルド時検証の対象にする。
@@ -72,6 +73,7 @@ git commit -m "feat(env): add VERCEL_URL to serverEnv schema"
 ## Task 2: Instagram authorize/route.ts の process.env 直接アクセスを修正
 
 **Files:**
+
 - Modify: `src/app/api/instagram/oauth/authorize/route.ts`
 
 **現状の問題箇所:**
@@ -97,6 +99,7 @@ return process.env["VERCEL_URL"]
 **Step 3: 2箇所を修正**
 
 line 49:
+
 ```typescript
 // Before:
 secure: process.env["NODE_ENV"] === 'production',
@@ -106,16 +109,17 @@ secure: serverEnv.NODE_ENV === 'production',
 ```
 
 lines 74-75（`getBaseUrl()` 関数内）:
+
 ```typescript
 // Before:
 return process.env["VERCEL_URL"]
   ? `https://${process.env["VERCEL_URL"]}`
-  : 'http://localhost:3000'
+  : "http://localhost:3000";
 
 // After:
 return serverEnv.VERCEL_URL
   ? `https://${serverEnv.VERCEL_URL}`
-  : 'http://localhost:3000'
+  : "http://localhost:3000";
 ```
 
 **Step 4: 型チェック**
@@ -136,6 +140,7 @@ git commit -m "fix(instagram): replace process.env direct access with serverEnv"
 ## Task 3: Instagram callback/route.ts の process.env 直接アクセスを修正
 
 **Files:**
+
 - Modify: `src/app/api/instagram/oauth/callback/route.ts`
 
 **現状の問題箇所（lines 170-171）:**
@@ -143,7 +148,7 @@ git commit -m "fix(instagram): replace process.env direct access with serverEnv"
 ```typescript
 return process.env["VERCEL_URL"]
   ? `https://${process.env["VERCEL_URL"]}`
-  : 'http://localhost:3000'
+  : "http://localhost:3000";
 ```
 
 **Step 1: ファイルを読む**
@@ -156,23 +161,23 @@ return process.env["VERCEL_URL"]
 // Before:
 function getBaseUrl(): string {
   if (serverEnv.BETTER_AUTH_URL) {
-    return serverEnv.BETTER_AUTH_URL
+    return serverEnv.BETTER_AUTH_URL;
   }
   // フォールバック
   return process.env["VERCEL_URL"]
     ? `https://${process.env["VERCEL_URL"]}`
-    : 'http://localhost:3000'
+    : "http://localhost:3000";
 }
 
 // After:
 function getBaseUrl(): string {
   if (serverEnv.BETTER_AUTH_URL) {
-    return serverEnv.BETTER_AUTH_URL
+    return serverEnv.BETTER_AUTH_URL;
   }
   // フォールバック
   return serverEnv.VERCEL_URL
     ? `https://${serverEnv.VERCEL_URL}`
-    : 'http://localhost:3000'
+    : "http://localhost:3000";
 }
 ```
 
@@ -194,12 +199,13 @@ git commit -m "fix(instagram): replace process.env direct access with serverEnv 
 ## Task 4: google-calendar.ts の process.env 直接アクセスを修正
 
 **Files:**
+
 - Modify: `src/shared/lib/google-calendar.ts`
 
 **現状の問題箇所（line 944）:**
 
 ```typescript
-const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
+const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"];
 ```
 
 **Step 1: ファイルを読む（944行前後）**
@@ -217,12 +223,14 @@ const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
 
 ```typescript
 // Before:
-const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
+const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"];
 
 // After（envの一元管理経由）:
-import { env } from '@/shared/lib/env'
+import { env } from "@/shared/lib/env";
 // ...
-const baseUrl = env.NEXT_PUBLIC_APP_URL || (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined)
+const baseUrl =
+  env.NEXT_PUBLIC_APP_URL ||
+  (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined);
 ```
 
 または、既存の import に合わせて最もシンプルな書き方を選択する。
@@ -230,19 +238,23 @@ const baseUrl = env.NEXT_PUBLIC_APP_URL || (serverEnv.VERCEL_URL ? `https://${se
 
 ```typescript
 // After:
-const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined)
+const baseUrl =
+  process.env["NEXT_PUBLIC_APP_URL"] ||
+  (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined);
 ```
 
-**注意**: `NEXT_PUBLIC_APP_URL` は `clientEnv` 経由が理想だが、google-calendar.ts がサーバー専用ファイルの場合は `process.env["NEXT_PUBLIC_APP_URL"]` のままでも問題ない（NEXT_PUBLIC_ は Next.js がビルド時にインライン化するため）。`VERCEL_URL` のみを `serverEnv.VERCEL_URL` に変更する最小修正でよい。
+**注意**: `NEXT_PUBLIC_APP_URL` は `clientEnv` 経由が理想だが、google-calendar.ts がサーバー専用ファイルの場合は `process.env["NEXT_PUBLIC_APP_URL"]` のままでも問題ない（NEXT*PUBLIC* は Next.js がビルド時にインライン化するため）。`VERCEL_URL` のみを `serverEnv.VERCEL_URL` に変更する最小修正でよい。
 
 **最小修正パターン（推奨）:**
 
 ```typescript
 // Before:
-const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"]
+const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || process.env["VERCEL_URL"];
 
 // After:
-const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined)
+const baseUrl =
+  process.env["NEXT_PUBLIC_APP_URL"] ||
+  (serverEnv.VERCEL_URL ? `https://${serverEnv.VERCEL_URL}` : undefined);
 ```
 
 **Step 4: serverEnv import を確認・追加**
@@ -250,7 +262,7 @@ const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || (serverEnv.VERCEL_URL ? `h
 ファイル冒頭に `serverEnv` が import されていない場合は追加：
 
 ```typescript
-import { serverEnv } from '@/shared/lib/env/server'
+import { serverEnv } from "@/shared/lib/env/server";
 ```
 
 **Step 5: 型チェック**
@@ -270,9 +282,10 @@ git commit -m "fix(google-calendar): replace process.env VERCEL_URL with serverE
 
 ---
 
-## Task 5: cacheLife マジックストリングを CACHE_LIFE 定数に置換（グループ A: public/_shared/lib）
+## Task 5: cacheLife マジックストリングを CACHE_LIFE 定数に置換（グループ A: public/\_shared/lib）
 
 **Files:**
+
 - Modify: `src/app/(public)/_shared/lib/header-settings.ts`
 - Modify: `src/app/(public)/_shared/lib/layout-settings.ts`
 - Modify: `src/app/(public)/_shared/lib/page-metadata.ts`
@@ -286,6 +299,7 @@ git commit -m "fix(google-calendar): replace process.env VERCEL_URL with serverE
 `CACHE_LIFE.PUBLIC_CONTENT = 'hours'` 定数を使用する。
 
 **CACHE_LIFE の値:**
+
 ```
 CACHE_LIFE.PUBLIC_CONTENT = 'hours'   — ブログ・ニュース・スペース・ページ
 CACHE_LIFE.STATIC_SETTINGS = 'days'  — サイト設定・ナビゲーション
@@ -303,10 +317,10 @@ CACHE_LIFE.METADATA = 'hours'        — SEO関連
 
 ```typescript
 // import を修正
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
 // line 28:
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // ヘッダー設定はサイト設定カテゴリ
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // ヘッダー設定はサイト設定カテゴリ
 ```
 
 **注意**: `header-settings.ts` はサイト設定（ヘッダー）なので `STATIC_SETTINGS` ('days') が適切。`PUBLIC_CONTENT` ('hours') ではなく注意すること。
@@ -315,41 +329,41 @@ cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // ヘッダー設定はサイト設定�
 
 ```typescript
 // import を修正（CACHE_TAGS の import にCACHE_LIFEを追加）
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // 4箇所すべて:
-cacheLife(CACHE_LIFE.PUBLIC_CONTENT)  // コンテンツレイアウト設定
+cacheLife(CACHE_LIFE.PUBLIC_CONTENT); // コンテンツレイアウト設定
 ```
 
 **page-metadata.ts (line 47):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
-cacheLife(CACHE_LIFE.METADATA)  // SEOメタデータ
+cacheLife(CACHE_LIFE.METADATA); // SEOメタデータ
 ```
 
 **navigation.ts (line 28):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // ナビゲーション（サイト設定）
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // ナビゲーション（サイト設定）
 ```
 
 **seo/metadata-factory.ts (line 47):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
-cacheLife(CACHE_LIFE.METADATA)  // SEO設定
+cacheLife(CACHE_LIFE.METADATA); // SEO設定
 ```
 
 **seo/json-ld-config.ts (lines 110, 349):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // 2箇所:
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // JSON-LD組織設定
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // JSON-LD組織設定
 ```
 
 **Step 3: 検証**
@@ -373,9 +387,10 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 
 ---
 
-## Task 6: cacheLife マジックストリングを CACHE_LIFE 定数に置換（グループ B: public/_shared/actions）
+## Task 6: cacheLife マジックストリングを CACHE_LIFE 定数に置換（グループ B: public/\_shared/actions）
 
 **Files:**
+
 - Modify: `src/app/(public)/_shared/actions/section.ts`
 - Modify: `src/app/(public)/_shared/actions/post.ts`
 - Modify: `src/app/(public)/_shared/actions/news.ts`
@@ -388,25 +403,25 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 
 ```typescript
 // import を修正
-import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from "@/shared/lib/constants";
 // 全7箇所:
-cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
 ```
 
 **post.ts (lines 83, 128 — 2箇所):**
 
 ```typescript
-import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from "@/shared/lib/constants";
 // 2箇所:
-cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
 ```
 
 **news.ts (lines 51, 96 — 2箇所):**
 
 ```typescript
-import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, getCacheTag, CACHE_LIFE } from "@/shared/lib/constants";
 // 2箇所:
-cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
+cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
 ```
 
 **Step 3: 検証**
@@ -430,6 +445,7 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 ## Task 7: cacheLife マジックストリングを CACHE_LIFE 定数に置換（グループ C: shared/lib + admin）
 
 **Files:**
+
 - Modify: `src/shared/lib/settings/public.ts`
 - Modify: `src/shared/lib/analytics/config.ts`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts`
@@ -443,14 +459,14 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 
 ```typescript
 // import に CACHE_LIFE を追加
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 
 // lines 60, 90, 139, 206, 240, 267: 'hours' → STATIC_SETTINGS または PUBLIC_CONTENT
 // 設定データなので STATIC_SETTINGS ('days') が適切
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // 6箇所
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // 6箇所
 
 // line 182: 'minutes' → DYNAMIC_DATA
-cacheLife(CACHE_LIFE.DYNAMIC_DATA)    // 1箇所
+cacheLife(CACHE_LIFE.DYNAMIC_DATA); // 1箇所
 ```
 
 **注意**: `public.ts` の各関数が何を返すかを確認して適切な定数を選ぶ。
@@ -460,25 +476,25 @@ cacheLife(CACHE_LIFE.DYNAMIC_DATA)    // 1箇所
 **analytics/config.ts (line 49):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // アナリティクス設定
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // アナリティクス設定
 ```
 
 **permissions.ts (lines 450, 471):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // 2箇所:
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // 権限設定（管理画面）
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // 権限設定（管理画面）
 ```
 
 **layout.tsx (line 31):**
 
 ```typescript
-import { CACHE_TAGS, CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 // ...
-cacheLife(CACHE_LIFE.STATIC_SETTINGS)  // 管理画面ブランディング設定
+cacheLife(CACHE_LIFE.STATIC_SETTINGS); // 管理画面ブランディング設定
 ```
 
 **Step 3: 全体検証**
@@ -505,6 +521,7 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 ## Task 8: Zod — section.ts の faqInitialOpen デフォルト値を定数に変更
 
 **Files:**
+
 - Modify: `src/shared/lib/validations/section.ts`
 
 **背景:**
@@ -519,7 +536,7 @@ git commit -m "fix(cache): replace cacheLife magic strings with CACHE_LIFE const
 
 ```typescript
 // section-options.ts (既存)
-export const faqInitialOpenValues = ['first', 'none', 'all'] as const
+export const faqInitialOpenValues = ["first", "none", "all"] as const;
 ```
 
 **Step 2: section.ts の line 205 を修正**
@@ -553,6 +570,7 @@ git commit -m "fix(validation): use const reference for faqInitialOpen default v
 ## Task 9: Zod — stripe.ts の inline enum array を named const に抽出
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/stripe.ts`
 
 **現状の問題箇所（line 61）:**
@@ -571,8 +589,8 @@ stripeCurrency: z.enum(['jpy', 'usd', 'eur']).default('jpy'),
 
 ```typescript
 /** サポート通貨 */
-export const SUPPORTED_CURRENCIES = ['jpy', 'usd', 'eur'] as const
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]
+export const SUPPORTED_CURRENCIES = ["jpy", "usd", "eur"] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 ```
 
 **Step 3: line 61 を修正**
@@ -629,6 +647,7 @@ Expected: BUILD SUCCESS
 **Priority**: LOW（機能影響なし、視覚的差異も小さい）
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/media/MediaGrid.tsx` (8箇所)
 - Modify: `src/app/(public)/_shared/components/space/SpaceDetail.tsx` (4箇所)
 - Modify: `src/app/(public)/_shared/components/space/AnnouncementBarCarousel.tsx` (1箇所)
@@ -640,6 +659,7 @@ Tailwind ルールでは `text-white` 等のデフォルトカラー禁止。
 修正の際はデザイン意図を確認してから実施すること。
 
 **判断基準:**
+
 - 暗いオーバーレイ（dark gradient）上の白テキスト → 修正対象（`text-primary-foreground` または CSS変数）
 - 意図的にブランドカラーと無関係な白を使う → 修正対象外（exception として扱う）
 
@@ -675,19 +695,19 @@ git commit -m "fix(style): replace text-white with semantic tokens on image over
 
 ## 実行順序サマリー
 
-| タスク | ファイル数 | 優先度 |
-|-------|---------|--------|
-| Task 1: serverEnv に VERCEL_URL 追加 | 1 | P0 |
-| Task 2: authorize/route.ts 修正 | 1 | P0 |
-| Task 3: callback/route.ts 修正 | 1 | P0 |
-| Task 4: google-calendar.ts 修正 | 1 | P0 |
-| Task 5: cacheLife グループA（public/_shared/lib） | 6 | P1b |
-| Task 6: cacheLife グループB（public/_shared/actions） | 3 | P1b |
-| Task 7: cacheLife グループC（shared/lib + admin） | 4 | P1b |
-| Task 8: section.ts Zod デフォルト値 | 1 | P1 |
-| Task 9: stripe.ts inline enum | 1 | P1 |
-| Task 10: 最終検証 | — | 必須 |
-| Task 11: text-white（オプション） | 3 | P3 |
+| タスク                                                 | ファイル数 | 優先度 |
+| ------------------------------------------------------ | ---------- | ------ |
+| Task 1: serverEnv に VERCEL_URL 追加                   | 1          | P0     |
+| Task 2: authorize/route.ts 修正                        | 1          | P0     |
+| Task 3: callback/route.ts 修正                         | 1          | P0     |
+| Task 4: google-calendar.ts 修正                        | 1          | P0     |
+| Task 5: cacheLife グループA（public/\_shared/lib）     | 6          | P1b    |
+| Task 6: cacheLife グループB（public/\_shared/actions） | 3          | P1b    |
+| Task 7: cacheLife グループC（shared/lib + admin）      | 4          | P1b    |
+| Task 8: section.ts Zod デフォルト値                    | 1          | P1     |
+| Task 9: stripe.ts inline enum                          | 1          | P1     |
+| Task 10: 最終検証                                      | —          | 必須   |
+| Task 11: text-white（オプション）                      | 3          | P3     |
 
 **合計修正ファイル**: 19〜22 ファイル
 **合計修正箇所**: 約 60〜65 箇所

@@ -8,21 +8,21 @@
 
 ### Phase 3: 基盤ユーティリティ
 
-| 対象 | 手法 | 削減数 |
-|------|------|--------|
-| `Object.keys() as Type[]` | `keysOf<T>()` / `entriesOf<T>()` | 12 |
-| `filter(Boolean) as T[]` | `filterTruthy<T>()` | 2 |
-| DOM属性パース | `parseEnumAttribute()` | 4 |
-| PageData型 | Prisma生成型re-export | 4 |
+| 対象                      | 手法                             | 削減数 |
+| ------------------------- | -------------------------------- | ------ |
+| `Object.keys() as Type[]` | `keysOf<T>()` / `entriesOf<T>()` | 12     |
+| `filter(Boolean) as T[]`  | `filterTruthy<T>()`              | 2      |
+| DOM属性パース             | `parseEnumAttribute()`           | 4      |
+| PageData型                | Prisma生成型re-export            | 4      |
 
 ### Phase 4: 型ガード・Zod活用
 
-| 対象 | 手法 | 削減数 |
-|------|------|--------|
-| BlockType | `isBlockType()` 型述語関数 | 1 |
-| PostListWidgetType | `parseEnumAttribute()` | 2 |
-| 認証型ガード | `Record<string, unknown>` | 2 |
-| Role enum | `z.nativeEnum(Role)` | - |
+| 対象               | 手法                       | 削減数 |
+| ------------------ | -------------------------- | ------ |
+| BlockType          | `isBlockType()` 型述語関数 | 1      |
+| PostListWidgetType | `parseEnumAttribute()`     | 2      |
+| 認証型ガード       | `Record<string, unknown>`  | 2      |
+| Role enum          | `z.nativeEnum(Role)`       | -      |
 
 ## 新規ユーティリティ
 
@@ -30,20 +30,22 @@
 // src/shared/lib/serialize.ts
 
 // オブジェクトキーを型安全に取得
-export function keysOf<T extends object>(obj: T): (keyof T)[]
+export function keysOf<T extends object>(obj: T): (keyof T)[];
 
 // オブジェクトエントリを型安全に取得
-export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][]
+export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][];
 
 // filter(Boolean)の型安全版
-export function filterTruthy<T>(arr: readonly (T | false | null | undefined)[]): T[]
+export function filterTruthy<T>(
+  arr: readonly (T | false | null | undefined)[],
+): T[];
 
 // DOM属性を型安全にパース
 export function parseEnumAttribute<T extends string>(
   value: string | null,
   allowedValues: readonly T[],
-  defaultValue: T
-): T
+  defaultValue: T,
+): T;
 ```
 
 ## 型定義パターン
@@ -73,13 +75,16 @@ export function isBlockType(value: string): value is BlockType {
 ## 変更ファイル一覧
 
 ### ユーティリティ
+
 - `src/shared/lib/serialize.ts`
 
 ### 型定義
+
 - `src/shared/lib/validations/page.ts`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/types.ts`
 
 ### Lexicalエディタ
+
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ButtonNode.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/DividerNode.tsx`
@@ -89,11 +94,14 @@ export function isBlockType(value: string): value is BlockType {
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/PostListWidgetPlugin.tsx`
 
 ### Server Actions
+
 - `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts`
 
 ### 認証・フォーム
+
 - `src/shared/lib/auth.ts`
 - `src/app/(admin)/admin/(dashboard)/staff/_components/UserForm.tsx`
 
 ### その他
+
 - `src/app/(public)/_shared/components/sections/SectionRenderer.tsx`

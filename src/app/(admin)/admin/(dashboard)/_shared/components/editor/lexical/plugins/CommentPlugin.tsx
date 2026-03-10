@@ -7,10 +7,10 @@
  * @see https://lexical.dev/docs/concepts/serialization#mark-nodes
  */
 
-'use client'
+"use client";
 
-import { useEffect, useRef, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getNodeByKey,
   $getRoot,
@@ -20,38 +20,40 @@ import {
   $isTextNode,
   COMMAND_PRIORITY_LOW,
   createCommand,
+  type EditorState,
   type LexicalCommand,
   type LexicalEditor,
   mergeRegister,
   type LexicalNode,
-} from 'lexical'
+} from "lexical";
 import {
   $getMarkIDs,
   $isMarkNode,
   $unwrapMarkNode,
   $wrapSelectionInMarkNode,
   MarkNode,
-} from '@lexical/mark'
-import { MessageSquarePlus } from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
+} from "@lexical/mark";
+import { MessageSquarePlus } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
 // Types & Commands
 // =============================================================================
 
 export type AddCommentPayload = {
-  markId: string
-  quotedText: string
-}
+  markId: string;
+  quotedText: string;
+};
 
 export const ADD_COMMENT_COMMAND: LexicalCommand<AddCommentPayload> =
-  createCommand('ADD_COMMENT_COMMAND')
+  createCommand("ADD_COMMENT_COMMAND");
 
-export const REMOVE_COMMENT_COMMAND: LexicalCommand<string> =
-  createCommand('REMOVE_COMMENT_COMMAND')
+export const REMOVE_COMMENT_COMMAND: LexicalCommand<string> = createCommand(
+  "REMOVE_COMMENT_COMMAND",
+);
 
 export const CLICK_MARK_COMMAND: LexicalCommand<string> =
-  createCommand('CLICK_MARK_COMMAND')
+  createCommand("CLICK_MARK_COMMAND");
 
 // =============================================================================
 // Utility Functions
@@ -61,23 +63,23 @@ export const CLICK_MARK_COMMAND: LexicalCommand<string> =
  * ユニークなマークIDを生成
  */
 export function generateMarkId(): string {
-  return `mark_${crypto.randomUUID()}`
+  return `mark_${crypto.randomUUID()}`;
 }
 
 /**
  * 選択範囲のテキストを取得
  */
 function getSelectedText(editor: LexicalEditor): string {
-  let selectedText = ''
+  let selectedText = "";
 
   editor.getEditorState().read(() => {
-    const selection = $getSelection()
+    const selection = $getSelection();
     if ($isRangeSelection(selection)) {
-      selectedText = selection.getTextContent()
+      selectedText = selection.getTextContent();
     }
-  })
+  });
 
-  return selectedText
+  return selectedText;
 }
 
 // =============================================================================
@@ -85,61 +87,69 @@ function getSelectedText(editor: LexicalEditor): string {
 // =============================================================================
 
 export type UseCommentReturn = {
-  canAddComment: boolean
-  addComment: () => AddCommentPayload | null
-  activeMarkIds: string[]
-}
+  canAddComment: boolean;
+  addComment: () => AddCommentPayload | null;
+  activeMarkIds: string[];
+};
 
 export function useComment(): UseCommentReturn {
-  const [editor] = useLexicalComposerContext()
-  const [canAddComment, setCanAddComment] = useState(false)
-  const [activeMarkIds, setActiveMarkIds] = useState<string[]>([])
+  const [editor] = useLexicalComposerContext();
+  const [canAddComment, setCanAddComment] = useState(false);
+  const [activeMarkIds, setActiveMarkIds] = useState<string[]>([]);
+
+  const syncCommentState = useEffectEvent((editorState: EditorState) => {
+    editorState.read(() => {
+      const selection = $getSelection();
+      const isRangeSelected = $isRangeSelection(selection);
+
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      setCanAddComment(isRangeSelected && !selection.isCollapsed());
+
+      if (!isRangeSelected) {
+        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        setActiveMarkIds([]);
+        return;
+      }
+
+      const anchorNode = selection.anchor.getNode();
+      if ($isTextNode(anchorNode)) {
+        const markIds = $getMarkIDs(anchorNode, selection.anchor.offset);
+        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        setActiveMarkIds(markIds ?? []);
+      } else {
+        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        setActiveMarkIds([]);
+      }
+    });
+  });
 
   // 選択状態の監視
   useEffect(() => {
+    syncCommentState(editor.getEditorState());
+
     return editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        const selection = $getSelection()
-        const isRangeSelected = $isRangeSelection(selection)
-
-        // テキストが選択されている場合はコメント追加可能
-        setCanAddComment(isRangeSelected && !selection.isCollapsed())
-
-        // 現在のカーソル位置のマークIDを取得
-        if (!isRangeSelected) {
-          setActiveMarkIds([])
-          return
-        }
-
-        const anchorNode = selection.anchor.getNode()
-        if ($isTextNode(anchorNode)) {
-          const markIds = $getMarkIDs(anchorNode, selection.anchor.offset)
-          setActiveMarkIds(markIds ?? [])
-        } else {
-          setActiveMarkIds([])
-        }
-      })
-    })
-  }, [editor])
+      syncCommentState(editorState);
+    });
+  }, [editor]);
 
   // コメントを追加
   const addComment = (): AddCommentPayload | null => {
-    const quotedText = getSelectedText(editor)
-    if (!quotedText) return null
+    const quotedText = getSelectedText(editor);
+    if (!quotedText) return null;
 
-    const markId = generateMarkId()
+    const markId = generateMarkId();
 
     editor.update(() => {
-      const selection = $getSelection()
+      const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        $wrapSelectionInMarkNode(selection, selection.isBackward(), markId)
+        $wrapSelectionInMarkNode(selection, selection.isBackward(), markId);
       }
-    })
+    });
 
-    return { markId, quotedText }
-  }
+    return { markId, quotedText };
+  };
 
-  return { canAddComment, addComment, activeMarkIds }
+  return { canAddComment, addComment, activeMarkIds };
 }
 
 // =============================================================================
@@ -147,9 +157,9 @@ export function useComment(): UseCommentReturn {
 // =============================================================================
 
 type CommentButtonProps = {
-  onClick: () => void
-  disabled?: boolean
-}
+  onClick: () => void;
+  disabled?: boolean;
+};
 
 export function CommentButton({ onClick, disabled }: CommentButtonProps) {
   return (
@@ -165,7 +175,7 @@ export function CommentButton({ onClick, disabled }: CommentButtonProps) {
     >
       <MessageSquarePlus className="h-4 w-4" />
     </Button>
-  )
+  );
 }
 
 // =============================================================================
@@ -173,101 +183,102 @@ export function CommentButton({ onClick, disabled }: CommentButtonProps) {
 // =============================================================================
 
 type CommentPluginProps = {
-  onMarkClick?: (markId: string) => void
-}
+  onMarkClick?: (markId: string) => void;
+};
 
-export function CommentPlugin({
-  onMarkClick,
-}: CommentPluginProps) {
-  const [editor] = useLexicalComposerContext()
+export function CommentPlugin({ onMarkClick }: CommentPluginProps) {
+  const [editor] = useLexicalComposerContext();
   // イベントリスナーを追跡してクリーンアップ
-  const clickListenersRef = useRef<Map<string, () => void>>(new Map())
+  const clickListenersRef = useRef<Map<string, () => void>>(new Map());
+  const handleMarkClick = useEffectEvent((markId: string) => {
+    onMarkClick?.(markId);
+  });
 
   // マーククリックのリスナー登録
   useEffect(() => {
-    const clickListeners = clickListenersRef.current
+    const clickListeners = clickListenersRef.current;
 
     return mergeRegister(
       // マーククリックコマンド
       editor.registerCommand(
         CLICK_MARK_COMMAND,
         (markId) => {
-          onMarkClick?.(markId)
-          return true
+          handleMarkClick(markId);
+          return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       // コメント追加コマンド
       editor.registerCommand(
         ADD_COMMENT_COMMAND,
         (payload) => {
           editor.update(() => {
-            const selection = $getSelection()
+            const selection = $getSelection();
             if ($isRangeSelection(selection)) {
               $wrapSelectionInMarkNode(
                 selection,
                 selection.isBackward(),
-                payload.markId
-              )
+                payload.markId,
+              );
             }
-          })
-          return true
+          });
+          return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       // コメント削除コマンド
       editor.registerCommand(
         REMOVE_COMMENT_COMMAND,
         (markId) => {
           editor.update(() => {
-            const markNodeMap = $getMarkNodesInDocument()
-            const markNodes = markNodeMap.get(markId)
+            const markNodeMap = $getMarkNodesInDocument();
+            const markNodes = markNodeMap.get(markId);
             if (markNodes) {
               for (const markNode of markNodes) {
-                $unwrapMarkNode(markNode)
+                $unwrapMarkNode(markNode);
               }
             }
-          })
-          return true
+          });
+          return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       // マークノードのクリックイベントをキャプチャ
       editor.registerMutationListener(MarkNode, (mutations) => {
         for (const [nodeKey, mutation] of mutations) {
           // 削除時: イベントリスナーをクリーンアップ
-          if (mutation === 'destroyed') {
-            const listener = clickListeners.get(nodeKey)
+          if (mutation === "destroyed") {
+            const listener = clickListeners.get(nodeKey);
             if (listener) {
-              const element = editor.getElementByKey(nodeKey)
-              element?.removeEventListener('click', listener)
-              clickListeners.delete(nodeKey)
+              const element = editor.getElementByKey(nodeKey);
+              element?.removeEventListener("click", listener);
+              clickListeners.delete(nodeKey);
             }
-          } else if (mutation === 'created' || mutation === 'updated') {
+          } else if (mutation === "created" || mutation === "updated") {
             // 既存のリスナーがあれば削除
-            const existingListener = clickListeners.get(nodeKey)
+            const existingListener = clickListeners.get(nodeKey);
             if (existingListener) {
-              const element = editor.getElementByKey(nodeKey)
-              element?.removeEventListener('click', existingListener)
+              const element = editor.getElementByKey(nodeKey);
+              element?.removeEventListener("click", existingListener);
             }
 
-            const element = editor.getElementByKey(nodeKey)
+            const element = editor.getElementByKey(nodeKey);
             if (element) {
               const listener = () => {
                 editor.getEditorState().read(() => {
-                  const node = $getNodeByKey(nodeKey)
+                  const node = $getNodeByKey(nodeKey);
                   if ($isMarkNode(node)) {
-                    const ids = node.getIDs()
-                    const firstId = ids[0]
+                    const ids = node.getIDs();
+                    const firstId = ids[0];
                     if (firstId) {
-                      editor.dispatchCommand(CLICK_MARK_COMMAND, firstId)
+                      editor.dispatchCommand(CLICK_MARK_COMMAND, firstId);
                     }
                   }
-                })
-              }
+                });
+              };
               // eslint-disable-next-line @eslint-react/web-api/no-leaked-event-listener -- cleanup is handled via clickListeners Map (lines below)
-              element.addEventListener('click', listener)
-              clickListeners.set(nodeKey, listener)
+              element.addEventListener("click", listener);
+              clickListeners.set(nodeKey, listener);
             }
           }
         }
@@ -275,15 +286,15 @@ export function CommentPlugin({
       // コンポーネントアンマウント時に全リスナーをクリーンアップ
       () => {
         for (const [nodeKey, listener] of clickListeners) {
-          const element = editor.getElementByKey(nodeKey)
-          element?.removeEventListener('click', listener)
+          const element = editor.getElementByKey(nodeKey);
+          element?.removeEventListener("click", listener);
         }
-        clickListeners.clear()
-      }
-    )
-  }, [editor, onMarkClick])
+        clickListeners.clear();
+      },
+    );
+  }, [editor]);
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -291,31 +302,31 @@ export function CommentPlugin({
 // =============================================================================
 
 function $getMarkNodesInDocument(): Map<string, MarkNode[]> {
-  const markNodeMap = new Map<string, MarkNode[]>()
-  const root = $getRoot()
+  const markNodeMap = new Map<string, MarkNode[]>();
+  const root = $getRoot();
 
   // DFS でルートからすべてのノードを走査
   const traverse = (node: LexicalNode) => {
     if ($isMarkNode(node)) {
-      const ids = node.getIDs()
+      const ids = node.getIDs();
       for (const id of ids) {
-        const existing = markNodeMap.get(id) ?? []
-        existing.push(node)
-        markNodeMap.set(id, existing)
+        const existing = markNodeMap.get(id) ?? [];
+        existing.push(node);
+        markNodeMap.set(id, existing);
       }
     }
     if ($isElementNode(node)) {
       for (const child of node.getChildren()) {
-        traverse(child)
+        traverse(child);
       }
     }
-  }
+  };
 
   for (const child of root.getChildren()) {
-    traverse(child)
+    traverse(child);
   }
 
-  return markNodeMap
+  return markNodeMap;
 }
 
 // =============================================================================
@@ -323,27 +334,28 @@ function $getMarkNodesInDocument(): Map<string, MarkNode[]> {
 // =============================================================================
 
 export function useMarkIds(): string[] {
-  const [editor] = useLexicalComposerContext()
-  const [markIds, setMarkIds] = useState<string[]>([])
+  const [editor] = useLexicalComposerContext();
+  const [markIds, setMarkIds] = useState<string[]>([]);
+  const updateMarkIds = useEffectEvent((editorState?: EditorState) => {
+    const currentEditorState = editorState ?? editor.getEditorState();
+    currentEditorState.read(() => {
+      const ids = new Set<string>();
+      const markNodeMap = $getMarkNodesInDocument();
+      for (const [id] of markNodeMap) {
+        ids.add(id);
+      }
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      setMarkIds([...ids]);
+    });
+  });
 
   useEffect(() => {
-    const updateMarkIds = () => {
-      editor.getEditorState().read(() => {
-        const ids = new Set<string>()
-        const markNodeMap = $getMarkNodesInDocument()
-        for (const [id] of markNodeMap) {
-          ids.add(id)
-        }
-        setMarkIds([...ids])
-      })
-    }
+    updateMarkIds();
 
-    updateMarkIds()
+    return editor.registerUpdateListener(({ editorState }) => {
+      updateMarkIds(editorState);
+    });
+  }, [editor]);
 
-    return editor.registerUpdateListener(() => {
-      updateMarkIds()
-    })
-  }, [editor])
-
-  return markIds
+  return markIds;
 }

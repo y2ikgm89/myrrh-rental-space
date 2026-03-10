@@ -5,16 +5,16 @@
 
 ## マテリアルカタログ
 
-| マテリアル | 特徴 | 用途 | パフォーマンス |
-|-----------|------|------|-------------|
-| `meshBasicMaterial` | ライティング不要、フラット | ワイヤフレーム、パーティクル、背景 | Excellent |
-| `meshStandardMaterial` | PBR、金属/粗さ | リアルなオブジェクト、プロダクト表示 | Moderate |
-| `meshPhysicalMaterial` | Standard拡張、透過/クリアコート | ガラス、車、液体 | Poor |
-| `meshToonMaterial` | セルシェーディング | イラスト風、ゲーム的表現 | Good |
-| `meshNormalMaterial` | 法線カラー表示 | デバッグ、抽象的表現 | Excellent |
-| `MeshDistortMaterial` (drei) | 頂点歪み + 速度制御 | 有機的な形状、流体風 | Moderate |
-| `MeshWobbleMaterial` (drei) | 頂点揺れ + 周波数制御 | ゼリー、フラグ、柔らかい物体 | Moderate |
-| `MeshTransmissionMaterial` (drei) | 透過 + 屈折 + 歪み | ガラス球、水晶、レンズ | Poor |
+| マテリアル                        | 特徴                            | 用途                                 | パフォーマンス |
+| --------------------------------- | ------------------------------- | ------------------------------------ | -------------- |
+| `meshBasicMaterial`               | ライティング不要、フラット      | ワイヤフレーム、パーティクル、背景   | Excellent      |
+| `meshStandardMaterial`            | PBR、金属/粗さ                  | リアルなオブジェクト、プロダクト表示 | Moderate       |
+| `meshPhysicalMaterial`            | Standard拡張、透過/クリアコート | ガラス、車、液体                     | Poor           |
+| `meshToonMaterial`                | セルシェーディング              | イラスト風、ゲーム的表現             | Good           |
+| `meshNormalMaterial`              | 法線カラー表示                  | デバッグ、抽象的表現                 | Excellent      |
+| `MeshDistortMaterial` (drei)      | 頂点歪み + 速度制御             | 有機的な形状、流体風                 | Moderate       |
+| `MeshWobbleMaterial` (drei)       | 頂点揺れ + 周波数制御           | ゼリー、フラグ、柔らかい物体         | Moderate       |
+| `MeshTransmissionMaterial` (drei) | 透過 + 屈折 + 歪み              | ガラス球、水晶、レンズ               | Poor           |
 
 ### ガラスマテリアル例（MeshTransmissionMaterial）
 
@@ -43,15 +43,15 @@ function GlassSphere() {
 
 ## ジオメトリカタログ
 
-| ジオメトリ | 引数例 | 用途 | ポリゴン数 |
-|-----------|-------|------|----------|
-| `sphereGeometry` | `[1, 32, 32]` | パーティクル、惑星、装飾 | 中 |
-| `planeGeometry` | `[10, 10, 32, 32]` | 背景面、波面、地形 | 可変 |
-| `torusKnotGeometry` | `[1, 0.3, 128, 32]` | 抽象オブジェクト、ロゴ | 高 |
-| `boxGeometry` | `[1, 1, 1]` | 建築表現、キューブ | 低 |
-| `icosahedronGeometry` | `[1, 1]` | ローポリ球体、結晶 | 低 |
-| `cylinderGeometry` | `[0.5, 0.5, 2, 32]` | 柱、ピン、UI要素 | 中 |
-| `bufferGeometry` (カスタム) | Position属性直接操作 | 波面、地形、データ可視化 | 完全制御 |
+| ジオメトリ                  | 引数例               | 用途                     | ポリゴン数 |
+| --------------------------- | -------------------- | ------------------------ | ---------- |
+| `sphereGeometry`            | `[1, 32, 32]`        | パーティクル、惑星、装飾 | 中         |
+| `planeGeometry`             | `[10, 10, 32, 32]`   | 背景面、波面、地形       | 可変       |
+| `torusKnotGeometry`         | `[1, 0.3, 128, 32]`  | 抽象オブジェクト、ロゴ   | 高         |
+| `boxGeometry`               | `[1, 1, 1]`          | 建築表現、キューブ       | 低         |
+| `icosahedronGeometry`       | `[1, 1]`             | ローポリ球体、結晶       | 低         |
+| `cylinderGeometry`          | `[0.5, 0.5, 2, 32]`  | 柱、ピン、UI要素         | 中         |
+| `bufferGeometry` (カスタム) | Position属性直接操作 | 波面、地形、データ可視化 | 完全制御   |
 
 ### カスタムBufferGeometry（波面）
 
@@ -107,33 +107,33 @@ function WavePlane({ width = 10, segments = 64, color = 'var(--color-primary)' }
 
 ### Drei コンポーネントカタログ
 
-| カテゴリ | コンポーネント | 用途 |
-|---------|-------------|------|
-| **アニメーション** | `Float` | 自動浮遊（速度/回転/振幅制御） |
-| | `Trail` | オブジェクト追従軌跡（光の軌跡、彗星） |
-| | `MarchingCubes` | メタボール（有機的な融合形状） |
-| **テキスト** | `Text` | SDF 3Dテキスト（troika-three-text） |
-| | `Text3D` | 押し出し3Dテキスト（フォントJSON必須） |
-| **パーティクル** | `Sparkles` | 簡易パーティクル（星屑、ほこり） |
-| | `Stars` | 星空背景 |
-| **環境** | `Environment` | HDR環境マップ（プリセット: sunset, studio, city等） |
-| | `Sky` | 手続き的空（太陽位置制御） |
-| | `Cloud` | ボリュメトリッククラウド |
-| **ユーティリティ** | `Html` | 3D空間にHTML要素を配置 |
-| | `Billboard` | 常にカメラを向くオブジェクト |
-| | `Mask` | ステンシルマスク |
-| **パフォーマンス** | `Preload` | アセットプリロード |
-| | `BakeShadows` | 影の事前ベイク |
-| | `AdaptiveDpr` | DPR自動調整 |
+| カテゴリ           | コンポーネント  | 用途                                                |
+| ------------------ | --------------- | --------------------------------------------------- |
+| **アニメーション** | `Float`         | 自動浮遊（速度/回転/振幅制御）                      |
+|                    | `Trail`         | オブジェクト追従軌跡（光の軌跡、彗星）              |
+|                    | `MarchingCubes` | メタボール（有機的な融合形状）                      |
+| **テキスト**       | `Text`          | SDF 3Dテキスト（troika-three-text）                 |
+|                    | `Text3D`        | 押し出し3Dテキスト（フォントJSON必須）              |
+| **パーティクル**   | `Sparkles`      | 簡易パーティクル（星屑、ほこり）                    |
+|                    | `Stars`         | 星空背景                                            |
+| **環境**           | `Environment`   | HDR環境マップ（プリセット: sunset, studio, city等） |
+|                    | `Sky`           | 手続き的空（太陽位置制御）                          |
+|                    | `Cloud`         | ボリュメトリッククラウド                            |
+| **ユーティリティ** | `Html`          | 3D空間にHTML要素を配置                              |
+|                    | `Billboard`     | 常にカメラを向くオブジェクト                        |
+|                    | `Mask`          | ステンシルマスク                                    |
+| **パフォーマンス** | `Preload`       | アセットプリロード                                  |
+|                    | `BakeShadows`   | 影の事前ベイク                                      |
+|                    | `AdaptiveDpr`   | DPR自動調整                                         |
 
 ### ライティングレシピ
 
-| レシピ | ライト構成 | 効果 | 用途 |
-|--------|-----------|------|------|
-| **スタジオ** | Ambient(0.4) + Directional(1.0, 斜め上) + Fill(0.3, 反対側) | クリーンで均一 | プロダクト、ポートフォリオ |
-| **ドラマチック** | Ambient(0.1) + Spot(1.5, 狭角) + Rim(0.8, 背面) | 高コントラスト | ブランド、アート |
-| **アウトドア** | Hemisphere(sky/ground) + Directional(太陽角度) | 自然光 | 建築、ランドスケープ |
-| **アンビエント** | Ambient(0.6) のみ or Environment(preset) | フラット、均一 | 抽象、ワイヤフレーム |
+| レシピ           | ライト構成                                                  | 効果           | 用途                       |
+| ---------------- | ----------------------------------------------------------- | -------------- | -------------------------- |
+| **スタジオ**     | Ambient(0.4) + Directional(1.0, 斜め上) + Fill(0.3, 反対側) | クリーンで均一 | プロダクト、ポートフォリオ |
+| **ドラマチック** | Ambient(0.1) + Spot(1.5, 狭角) + Rim(0.8, 背面)             | 高コントラスト | ブランド、アート           |
+| **アウトドア**   | Hemisphere(sky/ground) + Directional(太陽角度)              | 自然光         | 建築、ランドスケープ       |
+| **アンビエント** | Ambient(0.6) のみ or Environment(preset)                    | フラット、均一 | 抽象、ワイヤフレーム       |
 
 ### スタジオライティング例
 
@@ -193,12 +193,12 @@ function AnimatedMesh() {
 
 ```typescript
 function PerformanceHandler() {
-  const { performance, invalidate } = useThree()
+  const { performance, invalidate } = useThree();
 
   const handleComplexOperation = () => {
-    performance.regress()       // パフォーマンス低下を通知
-    invalidate()                // 再レンダリングを要求（frameloop="demand" 時）
-  }
+    performance.regress(); // パフォーマンス低下を通知
+    invalidate(); // 再レンダリングを要求（frameloop="demand" 時）
+  };
 }
 ```
 
@@ -339,7 +339,7 @@ const DistortMaterial = shaderMaterial(
       gl_FragColor = texture2D(uTexture, uv);
     }
   `,
-)
+);
 ```
 
 ### 頂点ディスプレースメント（波面）
@@ -430,15 +430,15 @@ Three.js パターンと `ui-ux-pro-max` スタイルデータベースの対応
 
 ### スタイル → Three.js パターン マッピング
 
-| スタイル | Three.js パターン | 推奨コンポーネント | パフォーマンス |
-|---------|-----------------|------------------|-------------|
-| **3D & Hyperrealism** (5) | ParticleField + FloatingGeometry + PostProcessing | InstancedMesh, Bloom, ChromaticAberration | Poor — L3+必須 |
-| **Spatial UI / VisionOS** (55) | Float + 深度レイヤー + ブラー | Float, DepthOfField, Parallax | Moderate |
-| **Motion-Driven** (15) | ScrollScene + スクロール連動 | ScrollScene, useFrame velocity | Good |
-| **Liquid Glass** (14) | カスタムShader + 屈折 | ShaderMaterial, MeshTransmissionMaterial | Moderate-Poor |
-| **Parallax Storytelling** (49) | ScrollScene + 段階的カメラ移動 | useFrame progress, camera path | Good |
-| **Dimensional Layering** (46) | Z軸レイヤー + 深度ボケ | DepthOfField, group positioning | Good |
-| **Biomimetic / Organic** (58) | パーティクル + 流体シム | InstancedMesh, custom shader | Poor |
+| スタイル                       | Three.js パターン                                 | 推奨コンポーネント                        | パフォーマンス |
+| ------------------------------ | ------------------------------------------------- | ----------------------------------------- | -------------- |
+| **3D & Hyperrealism** (5)      | ParticleField + FloatingGeometry + PostProcessing | InstancedMesh, Bloom, ChromaticAberration | Poor — L3+必須 |
+| **Spatial UI / VisionOS** (55) | Float + 深度レイヤー + ブラー                     | Float, DepthOfField, Parallax             | Moderate       |
+| **Motion-Driven** (15)         | ScrollScene + スクロール連動                      | ScrollScene, useFrame velocity            | Good           |
+| **Liquid Glass** (14)          | カスタムShader + 屈折                             | ShaderMaterial, MeshTransmissionMaterial  | Moderate-Poor  |
+| **Parallax Storytelling** (49) | ScrollScene + 段階的カメラ移動                    | useFrame progress, camera path            | Good           |
+| **Dimensional Layering** (46)  | Z軸レイヤー + 深度ボケ                            | DepthOfField, group positioning           | Good           |
+| **Biomimetic / Organic** (58)  | パーティクル + 流体シム                           | InstancedMesh, custom shader              | Poor           |
 
 ### 検索コマンド例
 
@@ -461,17 +461,17 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "3D lazy loading WebGL" -
 
 ```typescript
 function ScrollCamera() {
-  const scrollRef = useScrollRef()
-  const { camera } = useThree()
+  const scrollRef = useScrollRef();
+  const { camera } = useThree();
 
   useFrame(() => {
-    const { progress } = scrollRef.current
-    camera.position.z = 5 - progress * 3
-    camera.position.y = progress * 2
-    camera.rotation.x = -progress * 0.3
-  })
+    const { progress } = scrollRef.current;
+    camera.position.z = 5 - progress * 3;
+    camera.position.y = progress * 2;
+    camera.rotation.x = -progress * 0.3;
+  });
 
-  return null
+  return null;
 }
 ```
 
@@ -506,31 +506,31 @@ const WAYPOINTS = [
   { pos: [3, 2, 4], lookAt: [0, 1, 0] },
   { pos: [-2, 1, 3], lookAt: [1, 0, -1] },
   { pos: [0, 3, 2], lookAt: [0, 0, 0] },
-] as const
+] as const;
 
 function CameraPath() {
-  const scrollRef = useScrollRef()
-  const { camera } = useThree()
-  const target = useMemo(() => new THREE.Vector3(), [])
-  const lookTarget = useMemo(() => new THREE.Vector3(), [])
+  const scrollRef = useScrollRef();
+  const { camera } = useThree();
+  const target = useMemo(() => new THREE.Vector3(), []);
+  const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
-    const t = scrollRef.current.progress * (WAYPOINTS.length - 1)
-    const i = Math.floor(t)
-    const f = t - i
-    const from = WAYPOINTS[Math.min(i, WAYPOINTS.length - 1)]
-    const to = WAYPOINTS[Math.min(i + 1, WAYPOINTS.length - 1)]
+    const t = scrollRef.current.progress * (WAYPOINTS.length - 1);
+    const i = Math.floor(t);
+    const f = t - i;
+    const from = WAYPOINTS[Math.min(i, WAYPOINTS.length - 1)];
+    const to = WAYPOINTS[Math.min(i + 1, WAYPOINTS.length - 1)];
 
     // 位置補間
-    target.set(...from.pos).lerp(new THREE.Vector3(...to.pos), f)
-    camera.position.copy(target)
+    target.set(...from.pos).lerp(new THREE.Vector3(...to.pos), f);
+    camera.position.copy(target);
 
     // 注視点補間
-    lookTarget.set(...from.lookAt).lerp(new THREE.Vector3(...to.lookAt), f)
-    camera.lookAt(lookTarget)
-  })
+    lookTarget.set(...from.lookAt).lerp(new THREE.Vector3(...to.lookAt), f);
+    camera.lookAt(lookTarget);
+  });
 
-  return null
+  return null;
 }
 ```
 
@@ -604,14 +604,14 @@ function CompressedModel() {
 
 ### GLTFモデル最適化チェックリスト
 
-| 項目 | 推奨値 | 理由 |
-|------|--------|------|
-| ポリゴン数 | < 50K | モバイル対応 |
-| テクスチャサイズ | ≤ 2048px | VRAM節約 |
-| テクスチャ形式 | WebP / Basis | 転送サイズ削減 |
-| Draco圧縮 | 有効 | 転送サイズ50-90%削減 |
-| ファイル形式 | .glb | .gltf + 別ファイルより効率的 |
-| アニメーション | Baked | ランタイム負荷削減 |
+| 項目             | 推奨値       | 理由                         |
+| ---------------- | ------------ | ---------------------------- |
+| ポリゴン数       | < 50K        | モバイル対応                 |
+| テクスチャサイズ | ≤ 2048px     | VRAM節約                     |
+| テクスチャ形式   | WebP / Basis | 転送サイズ削減               |
+| Draco圧縮        | 有効         | 転送サイズ50-90%削減         |
+| ファイル形式     | .glb         | .gltf + 別ファイルより効率的 |
+| アニメーション   | Baked        | ランタイム負荷削減           |
 
 ### Cloneパターン（複数インスタンス）
 
@@ -711,34 +711,38 @@ function ScrollDOF() {
 ### カスタムPass パターン
 
 ```typescript
-import { Effect } from 'postprocessing'
+import { Effect } from "postprocessing";
 
 class CustomVignetteEffect extends Effect {
   constructor({ intensity = 0.5 } = {}) {
-    super('CustomVignette', `
+    super(
+      "CustomVignette",
+      `
       uniform float intensity;
       void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
         float dist = distance(uv, vec2(0.5));
         float vignette = smoothstep(0.5, 0.2, dist) * intensity;
         outputColor = vec4(inputColor.rgb * (1.0 - vignette * 0.5), inputColor.a);
       }
-    `, {
-      uniforms: new Map([['intensity', new THREE.Uniform(intensity)]]),
-    })
+    `,
+      {
+        uniforms: new Map([["intensity", new THREE.Uniform(intensity)]]),
+      },
+    );
   }
 }
 ```
 
 ### エフェクト別パフォーマンスコスト
 
-| エフェクト | コスト | フルHDでの影響 | 推奨使用場面 |
-|-----------|--------|-------------|------------|
-| Bloom | Medium | -5~10fps | Hero、ハイライト強調 |
-| ChromaticAberration | Low | -2fps | 速度感、グリッチ |
-| DepthOfField | High | -10~15fps | フォーカス演出、映画的 |
-| Noise | Very Low | -1fps | フィルム質感（常時OK） |
-| Vignette | Very Low | -1fps | 注視点誘導（常時OK） |
-| SSAO | Very High | -15~20fps | 奥行き強調（L3+のみ） |
+| エフェクト          | コスト    | フルHDでの影響 | 推奨使用場面           |
+| ------------------- | --------- | -------------- | ---------------------- |
+| Bloom               | Medium    | -5~10fps       | Hero、ハイライト強調   |
+| ChromaticAberration | Low       | -2fps          | 速度感、グリッチ       |
+| DepthOfField        | High      | -10~15fps      | フォーカス演出、映画的 |
+| Noise               | Very Low  | -1fps          | フィルム質感（常時OK） |
+| Vignette            | Very Low  | -1fps          | 注視点誘導（常時OK）   |
+| SSAO                | Very High | -15~20fps      | 奥行き強調（L3+のみ）  |
 
 ### エフェクト順序ベストプラクティス
 
@@ -766,77 +770,95 @@ const CAMERA_POINTS = [
   new THREE.Vector3(5, 2, 7),
   new THREE.Vector3(-3, 4, 5),
   new THREE.Vector3(0, 1, 3),
-]
+];
 
 function WaypointCamera() {
-  const scrollRef = useScrollRef()
-  const { camera } = useThree()
-  const temp = useMemo(() => new THREE.Vector3(), [])
+  const scrollRef = useScrollRef();
+  const { camera } = useThree();
+  const temp = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
-    const t = scrollRef.current.progress * (CAMERA_POINTS.length - 1)
-    const i = Math.floor(t)
-    const f = t - i
-    const from = CAMERA_POINTS[Math.min(i, CAMERA_POINTS.length - 1)]
-    const to = CAMERA_POINTS[Math.min(i + 1, CAMERA_POINTS.length - 1)]
+    const t = scrollRef.current.progress * (CAMERA_POINTS.length - 1);
+    const i = Math.floor(t);
+    const f = t - i;
+    const from = CAMERA_POINTS[Math.min(i, CAMERA_POINTS.length - 1)];
+    const to = CAMERA_POINTS[Math.min(i + 1, CAMERA_POINTS.length - 1)];
 
-    temp.lerpVectors(from, to, f)
-    camera.position.copy(temp)
-    camera.lookAt(0, 0, 0)
-  })
+    temp.lerpVectors(from, to, f);
+    camera.position.copy(temp);
+    camera.lookAt(0, 0, 0);
+  });
 
-  return null
+  return null;
 }
 ```
 
 ### CatmullRomCurve3 スムーズパス
 
 ```typescript
-const curve = useMemo(() => new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0, 0, 10),
-  new THREE.Vector3(5, 3, 7),
-  new THREE.Vector3(8, 1, 3),
-  new THREE.Vector3(3, 4, 0),
-  new THREE.Vector3(0, 2, -3),
-], false, 'catmullrom', 0.5), [])
+const curve = useMemo(
+  () =>
+    new THREE.CatmullRomCurve3(
+      [
+        new THREE.Vector3(0, 0, 10),
+        new THREE.Vector3(5, 3, 7),
+        new THREE.Vector3(8, 1, 3),
+        new THREE.Vector3(3, 4, 0),
+        new THREE.Vector3(0, 2, -3),
+      ],
+      false,
+      "catmullrom",
+      0.5,
+    ),
+  [],
+);
 
 function SmoothCamera() {
-  const scrollRef = useScrollRef()
-  const { camera } = useThree()
-  const point = useMemo(() => new THREE.Vector3(), [])
+  const scrollRef = useScrollRef();
+  const { camera } = useThree();
+  const point = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
-    curve.getPointAt(scrollRef.current.progress, point)
-    camera.position.copy(point)
-    camera.lookAt(0, 0, 0)
-  })
+    curve.getPointAt(scrollRef.current.progress, point);
+    camera.position.copy(point);
+    camera.lookAt(0, 0, 0);
+  });
 
-  return null
+  return null;
 }
 ```
 
 ### lookAt ターゲット補間
 
 ```typescript
-const lookCurve = useMemo(() => new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0, 0, 0),
-  new THREE.Vector3(2, 1, -2),
-  new THREE.Vector3(-1, 0, -5),
-], false, 'catmullrom', 0.5), [])
+const lookCurve = useMemo(
+  () =>
+    new THREE.CatmullRomCurve3(
+      [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(2, 1, -2),
+        new THREE.Vector3(-1, 0, -5),
+      ],
+      false,
+      "catmullrom",
+      0.5,
+    ),
+  [],
+);
 
 function CameraWithLookAt() {
-  const scrollRef = useScrollRef()
-  const { camera } = useThree()
-  const lookTarget = useMemo(() => new THREE.Vector3(), [])
+  const scrollRef = useScrollRef();
+  const { camera } = useThree();
+  const lookTarget = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(() => {
-    const t = scrollRef.current.progress
-    curve.getPointAt(t, camera.position)
-    lookCurve.getPointAt(t, lookTarget)
-    camera.lookAt(lookTarget)
-  })
+    const t = scrollRef.current.progress;
+    curve.getPointAt(t, camera.position);
+    lookCurve.getPointAt(t, lookTarget);
+    camera.lookAt(lookTarget);
+  });
 
-  return null
+  return null;
 }
 ```
 
@@ -844,13 +866,13 @@ function CameraWithLookAt() {
 
 ### InstancedMesh vs 個別メッシュ判断基準
 
-| 基準 | InstancedMesh | 個別メッシュ |
-|------|--------------|------------|
-| 同一ジオメトリ + マテリアル | ✅ 1ドローコール | ❌ N ドローコール |
-| 個別アニメーション必要 | ⚠️ matrix更新必要 | ✅ 直感的 |
-| 要素数 | > 10 で有利 | < 10 では差なし |
-| 個別マテリアル | ❌ 不可 | ✅ 可能 |
-| 個別ライティング | ❌ 共有 | ✅ 個別 |
+| 基準                        | InstancedMesh     | 個別メッシュ      |
+| --------------------------- | ----------------- | ----------------- |
+| 同一ジオメトリ + マテリアル | ✅ 1ドローコール  | ❌ N ドローコール |
+| 個別アニメーション必要      | ⚠️ matrix更新必要 | ✅ 直感的         |
+| 要素数                      | > 10 で有利       | < 10 では差なし   |
+| 個別マテリアル              | ❌ 不可           | ✅ 可能           |
+| 個別ライティング            | ❌ 共有           | ✅ 個別           |
 
 ### InstancedBufferAttribute（per-instance color/size）
 
@@ -924,56 +946,56 @@ function InstancedTrees() {
 ### ジオメトリマージ（BufferGeometryUtils）
 
 ```typescript
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
+import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 
 const mergedGeometry = useMemo(() => {
-  const geometries: THREE.BufferGeometry[] = []
+  const geometries: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 50; i++) {
-    const geo = new THREE.BoxGeometry(1, 1, 1)
-    geo.translate(i * 2, 0, 0)
-    geometries.push(geo)
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    geo.translate(i * 2, 0, 0);
+    geometries.push(geo);
   }
-  return BufferGeometryUtils.mergeGeometries(geometries)
-}, [])
+  return BufferGeometryUtils.mergeGeometries(geometries);
+}, []);
 ```
 
 ## Drei ユーティリティ拡張
 
 ### ローディング系
 
-| コンポーネント | 用途 | 使用例 |
-|-------------|------|--------|
-| `useGLTF` | GLTFモデルロード | `const { scene } = useGLTF(url)` |
-| `useTexture` | テクスチャロード | `const tex = useTexture('/textures/wood.jpg')` |
-| `useKTX2` | KTX2圧縮テクスチャ | GPU圧縮テクスチャ対応 |
-| `Preload` | アセットプリロード | `<Preload all />` |
+| コンポーネント | 用途               | 使用例                                         |
+| -------------- | ------------------ | ---------------------------------------------- |
+| `useGLTF`      | GLTFモデルロード   | `const { scene } = useGLTF(url)`               |
+| `useTexture`   | テクスチャロード   | `const tex = useTexture('/textures/wood.jpg')` |
+| `useKTX2`      | KTX2圧縮テクスチャ | GPU圧縮テクスチャ対応                          |
+| `Preload`      | アセットプリロード | `<Preload all />`                              |
 
 ### インスタンシング系
 
-| コンポーネント | 用途 | vs InstancedMesh |
-|-------------|------|-----------------|
-| `Instances` + `Instance` | 宣言的インスタンシング | R3F フレンドリーなAPI |
-| `Merged` | ジオメトリマージ | 異なるジオメトリを1ドローコール化 |
+| コンポーネント           | 用途                   | vs InstancedMesh                  |
+| ------------------------ | ---------------------- | --------------------------------- |
+| `Instances` + `Instance` | 宣言的インスタンシング | R3F フレンドリーなAPI             |
+| `Merged`                 | ジオメトリマージ       | 異なるジオメトリを1ドローコール化 |
 
 ### プロジェクション系
 
-| コンポーネント | 用途 |
-|-------------|------|
-| `Decal` | メッシュ表面にテクスチャ投影 |
-| `MeshReflectorMaterial` | 床面リアルタイム反射 |
-| `MeshPortalMaterial` | ポータルエフェクト（別シーン覗き込み） |
+| コンポーネント          | 用途                                   |
+| ----------------------- | -------------------------------------- |
+| `Decal`                 | メッシュ表面にテクスチャ投影           |
+| `MeshReflectorMaterial` | 床面リアルタイム反射                   |
+| `MeshPortalMaterial`    | ポータルエフェクト（別シーン覗き込み） |
 
 ### 可視性系
 
-| フック | 用途 | 使用場面 |
-|--------|------|---------|
-| `useIntersect` | ビューポート可視性検出 | 画面外のメッシュ非表示化 |
-| `Bvh` | BVH高速レイキャスト | 大量メッシュのクリック検出 |
+| フック         | 用途                   | 使用場面                   |
+| -------------- | ---------------------- | -------------------------- |
+| `useIntersect` | ビューポート可視性検出 | 画面外のメッシュ非表示化   |
+| `Bvh`          | BVH高速レイキャスト    | 大量メッシュのクリック検出 |
 
 ### プロジェクト useScrollRef との使い分け
 
-| ユーティリティ | 用途 | useScrollRef との関係 |
-|-------------|------|---------------------|
-| drei `useScroll` | R3F純正スクロール管理 | **使用しない** -- Lenis + ScrollTrigger と競合 |
-| `useScrollRef` (プロジェクト) | Lenis → R3F ref | ✅ 使用（Lenis連携） |
-| drei `ScrollControls` | R3F内スクロール | **使用しない** -- Lenis と競合 |
+| ユーティリティ                | 用途                  | useScrollRef との関係                          |
+| ----------------------------- | --------------------- | ---------------------------------------------- |
+| drei `useScroll`              | R3F純正スクロール管理 | **使用しない** -- Lenis + ScrollTrigger と競合 |
+| `useScrollRef` (プロジェクト) | Lenis → R3F ref       | ✅ 使用（Lenis連携）                           |
+| drei `ScrollControls`         | R3F内スクロール       | **使用しない** -- Lenis と競合                 |

@@ -9,10 +9,11 @@
  * - 動的コンテンツ: 設定データ（Suspenseでラップ）
  */
 
-import { Suspense } from 'react'
-import { getSettings } from '@/admin/queries/settings'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { SettingsTabs } from '../_components/SettingsTabs'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { getSettings } from "@/admin/queries/settings";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   BasicInfoSection,
   ContactInfoSection,
@@ -22,14 +23,14 @@ import {
   LayoutSection,
   HeaderSection,
   PermalinkSection,
-} from '../_components/sections'
-import type { ReactElement } from 'react'
+} from "../_components/sections";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: サイト設定
  */
 async function SiteSettingsContent(): Promise<ReactElement> {
-  const settings = await getSettings()
+  const settings = await getSettings();
 
   if (!settings) {
     return (
@@ -41,13 +42,13 @@ async function SiteSettingsContent(): Promise<ReactElement> {
           設定を読み込めませんでした
         </div>
       </SettingsLayout>
-    )
+    );
   }
 
   const tabs = [
     {
-      value: 'general',
-      label: '一般',
+      value: "general",
+      label: "一般",
       content: (
         <div className="space-y-6">
           <BasicInfoSection settings={settings} />
@@ -56,8 +57,8 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       ),
     },
     {
-      value: 'seo',
-      label: 'SEO',
+      value: "seo",
+      label: "SEO",
       content: (
         <div className="space-y-6">
           <SeoSection settings={settings} />
@@ -66,8 +67,8 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       ),
     },
     {
-      value: 'layout',
-      label: 'レイアウト',
+      value: "layout",
+      label: "レイアウト",
       content: (
         <div className="space-y-6">
           <HeaderSection settings={settings} />
@@ -77,11 +78,11 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       ),
     },
     {
-      value: 'post',
-      label: '投稿',
+      value: "post",
+      label: "投稿",
       content: <PermalinkSection settings={settings} />,
     },
-  ]
+  ];
 
   return (
     <SettingsLayout
@@ -90,7 +91,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
     >
       <SettingsTabs tabs={tabs} defaultTab="general" />
     </SettingsLayout>
-  )
+  );
 }
 
 /**
@@ -113,16 +114,14 @@ function SiteSettingsLoading(): ReactElement {
         <div className="h-48 bg-muted rounded" />
       </div>
     </SettingsLayout>
-  )
+  );
 }
 
 export default async function SiteSettingsPage(): Promise<ReactElement> {
+  await connection();
   return (
     <Suspense fallback={<SiteSettingsLoading />}>
       <SiteSettingsContent />
     </Suspense>
-  )
+  );
 }
-
-
-

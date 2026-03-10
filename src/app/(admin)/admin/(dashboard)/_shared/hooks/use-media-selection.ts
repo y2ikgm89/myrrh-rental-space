@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * useMediaSelection
@@ -6,32 +6,32 @@
  * メディア選択状態を管理するフック
  */
 
-import { useState } from 'react'
-import type { MediaData } from '@/admin/types/media-picker'
-import type { SelectionMode, SelectedMedia } from '@/admin/types/media-picker'
+import { useState } from "react";
+import type { MediaData } from "@/admin/types/media-picker";
+import type { SelectionMode, SelectedMedia } from "@/admin/types/media-picker";
 
 /** アップロード結果（シンプルな型） */
 interface UploadedMediaData {
-  id: string
-  url: string
+  id: string;
+  url: string;
 }
 
 interface UseMediaSelectionOptions {
-  mode: SelectionMode
-  maxSelections?: number
-  initialSelected?: SelectedMedia[]
+  mode: SelectionMode;
+  maxSelections?: number;
+  initialSelected?: SelectedMedia[];
 }
 
 interface UseMediaSelectionReturn {
-  selectedIds: Set<string>
-  selectedMedia: SelectedMedia[]
-  toggleSelection: (media: MediaData) => void
-  addUrlMedia: (url: string, alt?: string) => void
-  addUploadedMedia: (media: UploadedMediaData) => void
-  removeSelection: (id: string) => void
-  clearSelection: () => void
-  isSelected: (id: string) => boolean
-  canSelectMore: boolean
+  selectedIds: Set<string>;
+  selectedMedia: SelectedMedia[];
+  toggleSelection: (media: MediaData) => void;
+  addUrlMedia: (url: string, alt?: string) => void;
+  addUploadedMedia: (media: UploadedMediaData) => void;
+  removeSelection: (id: string) => void;
+  clearSelection: () => void;
+  isSelected: (id: string) => boolean;
+  canSelectMore: boolean;
 }
 
 export function useMediaSelection({
@@ -39,36 +39,39 @@ export function useMediaSelection({
   maxSelections = 10,
   initialSelected = [],
 }: UseMediaSelectionOptions): UseMediaSelectionReturn {
-  const [selectedMedia, setSelectedMedia] = useState<SelectedMedia[]>(initialSelected)
+  const [selectedMedia, setSelectedMedia] =
+    useState<SelectedMedia[]>(initialSelected);
 
   const selectedIds = new Set(
-    selectedMedia.filter((m): m is SelectedMedia & { id: string } => m.id !== null).map((m) => m.id)
-  )
+    selectedMedia
+      .filter((m): m is SelectedMedia & { id: string } => m.id !== null)
+      .map((m) => m.id),
+  );
 
   const canSelectMore =
-    mode === 'single' || selectedMedia.length < maxSelections
+    mode === "single" || selectedMedia.length < maxSelections;
 
   const toggleSelection = (media: MediaData) => {
-    if (mode === 'single') {
+    if (mode === "single") {
       setSelectedMedia([
         {
           id: media.id,
           url: media.url,
           alt: media.alt ?? undefined,
           filename: media.filename,
-          source: 'library',
+          source: "library",
         },
-      ])
+      ]);
     } else {
       setSelectedMedia((prev) => {
-        const isAlreadySelected = prev.some((m) => m.id === media.id)
+        const isAlreadySelected = prev.some((m) => m.id === media.id);
 
         if (isAlreadySelected) {
-          return prev.filter((m) => m.id !== media.id)
+          return prev.filter((m) => m.id !== media.id);
         }
 
         if (prev.length >= maxSelections) {
-          return prev
+          return prev;
         }
 
         return [
@@ -78,61 +81,61 @@ export function useMediaSelection({
             url: media.url,
             alt: media.alt ?? undefined,
             filename: media.filename,
-            source: 'library',
+            source: "library",
           },
-        ]
-      })
+        ];
+      });
     }
-  }
+  };
 
   const addUrlMedia = (url: string, alt?: string) => {
     const urlMedia: SelectedMedia = {
       id: null,
       url,
       alt,
-      source: 'url',
-    }
+      source: "url",
+    };
 
-    if (mode === 'single') {
-      setSelectedMedia([urlMedia])
+    if (mode === "single") {
+      setSelectedMedia([urlMedia]);
     } else {
       setSelectedMedia((prev) => {
         if (prev.length >= maxSelections) {
-          return prev
+          return prev;
         }
-        return [...prev, urlMedia]
-      })
+        return [...prev, urlMedia];
+      });
     }
-  }
+  };
 
   const addUploadedMedia = (media: UploadedMediaData) => {
     const uploadedMedia: SelectedMedia = {
       id: media.id,
       url: media.url,
-      source: 'upload',
-    }
+      source: "upload",
+    };
 
-    if (mode === 'single') {
-      setSelectedMedia([uploadedMedia])
+    if (mode === "single") {
+      setSelectedMedia([uploadedMedia]);
     } else {
       setSelectedMedia((prev) => {
         if (prev.length >= maxSelections) {
-          return prev
+          return prev;
         }
-        return [...prev, uploadedMedia]
-      })
+        return [...prev, uploadedMedia];
+      });
     }
-  }
+  };
 
   const removeSelection = (id: string) => {
-    setSelectedMedia((prev) => prev.filter((m) => m.id !== id && m.url !== id))
-  }
+    setSelectedMedia((prev) => prev.filter((m) => m.id !== id && m.url !== id));
+  };
 
   const clearSelection = () => {
-    setSelectedMedia([])
-  }
+    setSelectedMedia([]);
+  };
 
-  const isSelected = (id: string) => selectedIds.has(id)
+  const isSelected = (id: string) => selectedIds.has(id);
 
   return {
     selectedIds,
@@ -144,5 +147,5 @@ export function useMediaSelection({
     clearSelection,
     isSelected,
     canSelectMore,
-  }
+  };
 }

@@ -5,26 +5,26 @@ export type {
   ScrollState,
   PerformanceBudget,
   WebGLContextEntry,
-} from './types'
-export { toEffectLevel, PERFORMANCE_BUDGETS } from './types'
+} from "./types";
+export { toEffectLevel, PERFORMANCE_BUDGETS } from "./types";
 
 // Device capabilities
-export { detectDeviceCapabilities } from './device-capabilities'
+export { detectDeviceCapabilities } from "./device-capabilities";
 
 // WebGL context manager
-export { webGLContextManager } from './webgl-context-manager'
+export { webGLContextManager } from "./webgl-context-manager";
 
 // Providers & hooks
 export {
   VisualEffectsProvider,
   useVisualEffects,
   useVisualEffectsOptional,
-} from './VisualEffectsProvider'
+} from "./VisualEffectsProvider";
 
 export {
   ScrollOrchestratorProvider,
   useScrollState,
   useScrollStateOptional,
-} from './ScrollOrchestrator'
+} from "./ScrollOrchestrator";
 
-export { PerformanceMonitor } from './PerformanceMonitor'
+export { PerformanceMonitor } from "./PerformanceMonitor";

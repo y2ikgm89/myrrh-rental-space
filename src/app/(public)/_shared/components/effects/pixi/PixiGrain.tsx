@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { usePixiApp } from './hooks/use-pixi-app'
+import { useEffect } from "react";
+import { usePixiApp } from "./hooks/use-pixi-app";
 
 /**
  * フィルムグレインエフェクト。
@@ -13,9 +13,9 @@ import { usePixiApp } from './hooks/use-pixi-app'
 
 interface PixiGrainProps {
   /** グレイン強度 (0-1, default 0.05) */
-  readonly intensity?: number
+  readonly intensity?: number;
   /** アニメーション速度 (default 1.0) */
-  readonly speed?: number
+  readonly speed?: number;
 }
 
 const VERTEX_SHADER = `
@@ -41,7 +41,7 @@ void main(void) {
   gl_Position = filterVertexPosition();
   vTextureCoord = filterTextureCoord();
 }
-`
+`;
 
 const FRAGMENT_SHADER = `
 in vec2 vTextureCoord;
@@ -62,68 +62,68 @@ void main(void) {
   color.rgb += noise * uIntensity;
   finalColor = color;
 }
-`
+`;
 
-export function PixiGrain({
-  intensity = 0.05,
-  speed = 1.0,
-}: PixiGrainProps) {
-  const app = usePixiApp()
+export function PixiGrain({ intensity = 0.05, speed = 1.0 }: PixiGrainProps) {
+  const app = usePixiApp();
 
   useEffect(() => {
-    let filter: import('pixi.js').Filter | null = null
-    let tickerCb: ((ticker: import('pixi.js').Ticker) => void) | null = null
-    let destroyed = false
+    let filter: import("pixi.js").Filter | null = null;
+    let tickerCb: ((ticker: import("pixi.js").Ticker) => void) | null = null;
+    let destroyed = false;
 
     const setup = async () => {
-      const { Filter, GlProgram } = await import('pixi.js')
-      if (destroyed) return
+      const { Filter, GlProgram } = await import("pixi.js");
+      if (destroyed) return;
 
       const glProgram = new GlProgram({
         vertex: VERTEX_SHADER,
         fragment: FRAGMENT_SHADER,
-      })
+      });
 
       filter = new Filter({
         glProgram,
         resources: {
           grainUniforms: {
-            uIntensity: { value: intensity, type: 'f32' },
-            uTime: { value: 0, type: 'f32' },
+            uIntensity: { value: intensity, type: "f32" },
+            uTime: { value: 0, type: "f32" },
           },
         },
-      })
+      });
 
-      const existing = app.stage.filters
-      app.stage.filters = [...(Array.isArray(existing) ? existing : []), filter]
+      const existing = app.stage.filters;
+      app.stage.filters = [
+        ...(Array.isArray(existing) ? existing : []),
+        filter,
+      ];
 
       // ticker で uTime を更新 → アニメーショングレイン
-      const tickerCallback = (ticker: import('pixi.js').Ticker) => {
+      const tickerCallback = (ticker: import("pixi.js").Ticker) => {
         if (filter) {
-          const resource = filter.resources['grainUniforms']
+          const resource = filter.resources["grainUniforms"];
           if (resource?.uniforms) {
-            resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed
+            resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed;
           }
         }
-      }
-      app.ticker.add(tickerCallback)
-      tickerCb = tickerCallback
-    }
+      };
+      app.ticker.add(tickerCallback);
+      tickerCb = tickerCallback;
+    };
 
-    void setup()
+    void setup();
 
     return () => {
-      destroyed = true
-      if (tickerCb) app.ticker.remove(tickerCb)
+      destroyed = true;
+      if (tickerCb) app.ticker.remove(tickerCb);
       if (filter) {
         // filters 配列から除去
         if (Array.isArray(app.stage.filters)) {
-          app.stage.filters = app.stage.filters.filter((f) => f !== filter)
+          app.stage.filters = app.stage.filters.filter((f) => f !== filter);
         }
-        filter.destroy()
+        filter.destroy();
       }
-    }
-  }, [app, intensity, speed])
+    };
+  }, [app, intensity, speed]);
 
-  return null
+  return null;
 }

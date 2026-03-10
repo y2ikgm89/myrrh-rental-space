@@ -5,8 +5,12 @@
  * 管理画面・公開ページ両方で使用
  */
 
-import { checkReservationOverlapQuery } from '@/shared/domain/reservations/availability'
-import type { OverlapCheckParams, OverlapCheckResult, PrismaTransactionClient } from './types'
+import { checkReservationOverlapQuery } from "@/shared/domain/reservations/availability";
+import type {
+  OverlapCheckParams,
+  OverlapCheckResult,
+  PrismaTransactionClient,
+} from "./types";
 
 /**
  * 予約の重複をチェック
@@ -38,7 +42,7 @@ import type { OverlapCheckParams, OverlapCheckResult, PrismaTransactionClient } 
  */
 export async function checkReservationOverlap(
   params: OverlapCheckParams,
-  tx?: PrismaTransactionClient
+  tx?: PrismaTransactionClient,
 ): Promise<OverlapCheckResult> {
-  return checkReservationOverlapQuery(params, tx)
+  return checkReservationOverlapQuery(params, tx);
 }

@@ -1,26 +1,26 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  Input,
-  Textarea,
-  Label,
-} from '@/admin/components/ui'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Input, Textarea, Label } from "@/admin/components/ui";
 import {
   spaceCategoryFormSchema,
   defaultSpaceCategoryFormValues,
   type SpaceCategoryFormInput,
   type SpaceCategoryWithStats,
-} from '@/admin/lib/validations/space-category'
+} from "@/admin/lib/validations/space-category";
 
 type CategoryFormProps = {
-  category?: SpaceCategoryWithStats
-  isPending: boolean
-  onSubmit: (data: SpaceCategoryFormInput) => void
-}
+  category?: SpaceCategoryWithStats;
+  isPending: boolean;
+  onSubmit: (data: SpaceCategoryFormInput) => void;
+};
 
-export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProps) {
+export function CategoryForm({
+  category,
+  isPending,
+  onSubmit,
+}: CategoryFormProps) {
   const {
     register,
     handleSubmit,
@@ -30,21 +30,25 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
     defaultValues: category
       ? {
           name: category.name,
-          description: category.description ?? '',
-          icon: category.icon ?? '',
-          color: category.color ?? '',
+          description: category.description ?? "",
+          icon: category.icon ?? "",
+          color: category.color ?? "",
           sortOrder: category.sortOrder,
         }
       : defaultSpaceCategoryFormValues,
-  })
+  });
 
   return (
-    <form id="category-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      id="category-form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="name">カテゴリー名 *</Label>
         <Input
           id="name"
-          {...register('name')}
+          {...register("name")}
           placeholder="例: 会議室"
           disabled={isPending}
         />
@@ -57,13 +61,15 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
         <Label htmlFor="description">説明</Label>
         <Textarea
           id="description"
-          {...register('description')}
+          {...register("description")}
           placeholder="カテゴリーの説明（オプション）"
           rows={3}
           disabled={isPending}
         />
         {errors.description && (
-          <p className="text-sm text-destructive">{errors.description.message}</p>
+          <p className="text-sm text-destructive">
+            {errors.description.message}
+          </p>
         )}
       </div>
 
@@ -72,7 +78,7 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
           <Label htmlFor="icon">アイコン名</Label>
           <Input
             id="icon"
-            {...register('icon')}
+            {...register("icon")}
             placeholder="例: building"
             disabled={isPending}
           />
@@ -90,12 +96,12 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
             <Input
               id="color"
               type="color"
-              {...register('color')}
+              {...register("color")}
               className="h-10 w-16 cursor-pointer p-1"
               disabled={isPending}
             />
             <Input
-              {...register('color')}
+              {...register("color")}
               placeholder="#3B82F6"
               className="flex-1"
               disabled={isPending}
@@ -112,7 +118,7 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
         <Input
           id="sortOrder"
           type="number"
-          {...register('sortOrder', { valueAsNumber: true })}
+          {...register("sortOrder", { valueAsNumber: true })}
           placeholder="0"
           disabled={isPending}
         />
@@ -124,5 +130,5 @@ export function CategoryForm({ category, isPending, onSubmit }: CategoryFormProp
         )}
       </div>
     </form>
-  )
+  );
 }

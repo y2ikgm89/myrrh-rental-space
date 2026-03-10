@@ -1,1 +1,1 @@
-export { AnnouncementBarManager } from './AnnouncementBarManager'
+export { AnnouncementBarManager } from "./AnnouncementBarManager";

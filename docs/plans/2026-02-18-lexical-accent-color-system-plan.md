@@ -15,6 +15,7 @@
 ## Task 1: config/accent-colors.ts を作成する
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/config/accent-colors.ts`
 
 **Step 1: ファイルを作成する**
@@ -27,59 +28,59 @@
  * CSS: [data-color="X"] { --accent: ...; --accent-fg: ...; }
  */
 
-import { createEnumGuard } from './type-guards'
+import { createEnumGuard } from "./type-guards";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type AccentColor =
-  | 'default'
-  | 'blue'
-  | 'teal'
-  | 'green'
-  | 'yellow'
-  | 'orange'
-  | 'red'
-  | 'pink'
-  | 'purple'
-  | 'slate'
+  | "default"
+  | "blue"
+  | "teal"
+  | "green"
+  | "yellow"
+  | "orange"
+  | "red"
+  | "pink"
+  | "purple"
+  | "slate";
 
 export const ACCENT_COLORS: readonly AccentColor[] = [
-  'default',
-  'blue',
-  'teal',
-  'green',
-  'yellow',
-  'orange',
-  'red',
-  'pink',
-  'purple',
-  'slate',
-] as const
+  "default",
+  "blue",
+  "teal",
+  "green",
+  "yellow",
+  "orange",
+  "red",
+  "pink",
+  "purple",
+  "slate",
+] as const;
 
 // =============================================================================
 // Type Guard
 // =============================================================================
 
-export const isAccentColor = createEnumGuard<AccentColor>(ACCENT_COLORS)
+export const isAccentColor = createEnumGuard<AccentColor>(ACCENT_COLORS);
 
 // =============================================================================
 // Swatch CSS values（ColorSwatchPicker で表示する実際の色値）
 // =============================================================================
 
 export const ACCENT_COLOR_SWATCHES: Record<AccentColor, string> = {
-  default: 'var(--color-primary)',
-  blue:    'oklch(0.55 0.20 255)',
-  teal:    'oklch(0.60 0.15 195)',
-  green:   'oklch(0.58 0.18 142)',
-  yellow:  'oklch(0.82 0.17 90)',
-  orange:  'oklch(0.72 0.18 55)',
-  red:     'oklch(0.55 0.22 25)',
-  pink:    'oklch(0.65 0.22 350)',
-  purple:  'oklch(0.55 0.20 300)',
-  slate:   'oklch(0.52 0.02 250)',
-}
+  default: "var(--color-primary)",
+  blue: "oklch(0.55 0.20 255)",
+  teal: "oklch(0.60 0.15 195)",
+  green: "oklch(0.58 0.18 142)",
+  yellow: "oklch(0.82 0.17 90)",
+  orange: "oklch(0.72 0.18 55)",
+  red: "oklch(0.55 0.22 25)",
+  pink: "oklch(0.65 0.22 350)",
+  purple: "oklch(0.55 0.20 300)",
+  slate: "oklch(0.52 0.02 250)",
+};
 ```
 
 **Step 2: コミット**
@@ -94,6 +95,7 @@ git commit -m "feat(lexical): add AccentColor type, constants, and swatch values
 ## Task 2: inspector/ColorSwatchPicker.tsx を作成する
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/ColorSwatchPicker.tsx`
 
 **Step 1: ファイルを作成する**
@@ -106,38 +108,46 @@ git commit -m "feat(lexical): add AccentColor type, constants, and swatch values
  * 全インスペクタパネルで共有
  */
 
-'use client'
+"use client";
 
-import { Label } from '@/admin/components/ui'
-import { ACCENT_COLORS, ACCENT_COLOR_SWATCHES, type AccentColor } from '../config/accent-colors'
+import { Label } from "@/admin/components/ui";
+import {
+  ACCENT_COLORS,
+  ACCENT_COLOR_SWATCHES,
+  type AccentColor,
+} from "../config/accent-colors";
 
 type ColorSwatchPickerProps = {
-  value: AccentColor
-  onChange: (color: AccentColor) => void
-  label?: string
-}
+  value: AccentColor;
+  onChange: (color: AccentColor) => void;
+  label?: string;
+};
 
 const COLOR_NAMES: Record<AccentColor, string> = {
-  default: 'デフォルト',
-  blue:    'ブルー',
-  teal:    'ティール',
-  green:   'グリーン',
-  yellow:  'イエロー',
-  orange:  'オレンジ',
-  red:     'レッド',
-  pink:    'ピンク',
-  purple:  'パープル',
-  slate:   'スレート',
-}
+  default: "デフォルト",
+  blue: "ブルー",
+  teal: "ティール",
+  green: "グリーン",
+  yellow: "イエロー",
+  orange: "オレンジ",
+  red: "レッド",
+  pink: "ピンク",
+  purple: "パープル",
+  slate: "スレート",
+};
 
-export function ColorSwatchPicker({ value, onChange, label = 'アクセントカラー' }: ColorSwatchPickerProps) {
+export function ColorSwatchPicker({
+  value,
+  onChange,
+  label = "アクセントカラー",
+}: ColorSwatchPickerProps) {
   return (
     <div className="space-y-2">
       <Label className="text-xs">{label}</Label>
       <div className="grid grid-cols-5 gap-1.5">
         {ACCENT_COLORS.map((color) => {
-          const isSelected = value === color
-          const swatchColor = ACCENT_COLOR_SWATCHES[color]
+          const isSelected = value === color;
+          const swatchColor = ACCENT_COLOR_SWATCHES[color];
           return (
             <button
               key={color}
@@ -145,20 +155,20 @@ export function ColorSwatchPicker({ value, onChange, label = 'アクセントカ
               title={COLOR_NAMES[color]}
               onClick={() => onChange(color)}
               className={[
-                'h-6 w-full rounded transition-shadow',
+                "h-6 w-full rounded transition-shadow",
                 isSelected
-                  ? 'ring-2 ring-ring ring-offset-1'
-                  : 'hover:ring-1 hover:ring-border',
-              ].join(' ')}
+                  ? "ring-2 ring-ring ring-offset-1"
+                  : "hover:ring-1 hover:ring-border",
+              ].join(" ")}
               style={{ backgroundColor: swatchColor }}
               aria-label={COLOR_NAMES[color]}
               aria-pressed={isSelected}
             />
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -174,6 +184,7 @@ git commit -m "feat(lexical): add shared ColorSwatchPicker component"
 ## Task 3: config/node-labels.ts を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/config/node-labels.ts`
 
 **Step 1: import に AccentColor を追加し、COLLAPSIBLE_TITLE_COLOR_LABELS を ACCENT_COLOR_LABELS に置き換える**
@@ -181,16 +192,32 @@ git commit -m "feat(lexical): add shared ColorSwatchPicker component"
 ファイル先頭の import セクションを以下に変更する:
 
 ```typescript
-import type { AccentColor } from './accent-colors'
-import type { CalloutType } from '../nodes/CalloutNode'
-import type { ButtonVariant, ButtonSize, ButtonAlignment } from '../nodes/ButtonNode'
-import type { CollapsibleStyle, CollapsibleRadius } from '../nodes/CollapsibleContainerNode'
-import type { PullQuoteStyle } from '../nodes/PullQuoteNode'
-import type { StepsStyle, StepsShape, StepsFill } from '../nodes/StepsContainerNode'
-import type { TabsStyle, TabsSize, TabsFixedWidth } from '../nodes/TabsContainerNode'
+import type { AccentColor } from "./accent-colors";
+import type { CalloutType } from "../nodes/CalloutNode";
+import type {
+  ButtonVariant,
+  ButtonSize,
+  ButtonAlignment,
+} from "../nodes/ButtonNode";
+import type {
+  CollapsibleStyle,
+  CollapsibleRadius,
+} from "../nodes/CollapsibleContainerNode";
+import type { PullQuoteStyle } from "../nodes/PullQuoteNode";
+import type {
+  StepsStyle,
+  StepsShape,
+  StepsFill,
+} from "../nodes/StepsContainerNode";
+import type {
+  TabsStyle,
+  TabsSize,
+  TabsFixedWidth,
+} from "../nodes/TabsContainerNode";
 ```
 
 変更点:
+
 - `CollapsibleTitleColor` の import を削除（`CollapsibleContainerNode` から）
 - `AccentColor` を `./accent-colors` から import に追加
 
@@ -202,18 +229,18 @@ import type { TabsStyle, TabsSize, TabsFixedWidth } from '../nodes/TabsContainer
 // =============================================================================
 
 export const COLLAPSIBLE_STYLE_LABELS: Record<CollapsibleStyle, string> = {
-  default: 'デフォルト',
-  minimal: 'ミニマル',
-  card: 'カード',
-  filled: '塗りつぶし',
-}
+  default: "デフォルト",
+  minimal: "ミニマル",
+  card: "カード",
+  filled: "塗りつぶし",
+};
 
 export const COLLAPSIBLE_RADIUS_LABELS: Record<CollapsibleRadius, string> = {
-  none: 'なし',
-  sm: '小（0.25rem）',
-  md: '中（0.5rem）',
-  lg: '大（0.75rem）',
-}
+  none: "なし",
+  sm: "小（0.25rem）",
+  md: "中（0.5rem）",
+  lg: "大（0.75rem）",
+};
 
 // COLLAPSIBLE_TITLE_COLOR_LABELS は削除（AccentColor 統一化により廃止）
 ```
@@ -226,17 +253,17 @@ export const COLLAPSIBLE_RADIUS_LABELS: Record<CollapsibleRadius, string> = {
 // =============================================================================
 
 export const ACCENT_COLOR_LABELS: Record<AccentColor, string> = {
-  default: 'デフォルト',
-  blue:    'ブルー',
-  teal:    'ティール',
-  green:   'グリーン',
-  yellow:  'イエロー',
-  orange:  'オレンジ',
-  red:     'レッド',
-  pink:    'ピンク',
-  purple:  'パープル',
-  slate:   'スレート',
-}
+  default: "デフォルト",
+  blue: "ブルー",
+  teal: "ティール",
+  green: "グリーン",
+  yellow: "イエロー",
+  orange: "オレンジ",
+  red: "レッド",
+  pink: "ピンク",
+  purple: "パープル",
+  slate: "スレート",
+};
 ```
 
 **Step 4: コミット**
@@ -251,6 +278,7 @@ git commit -m "feat(lexical): add ACCENT_COLOR_LABELS, remove COLLAPSIBLE_TITLE_
 ## Task 4: StepsContainerNode.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/StepsContainerNode.tsx`
 
 **Step 1: import と型定義を追加する**
@@ -258,13 +286,13 @@ git commit -m "feat(lexical): add ACCENT_COLOR_LABELS, remove COLLAPSIBLE_TITLE_
 ファイル先頭の import の直後に以下を追加:
 
 ```typescript
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 ```
 
 Types セクションに追加（`STEPS_FILLS` の後）:
 
 ```typescript
-export type AccentColor = import('../config/accent-colors').AccentColor
+export type AccentColor = import("../config/accent-colors").AccentColor;
 ```
 
 **注意**: 上記は re-export ではなく、既に `accent-colors.ts` の型をそのまま使用するため import のみでよい。
@@ -274,10 +302,10 @@ export type AccentColor = import('../config/accent-colors').AccentColor
 `stepsFillState` の後に追加:
 
 ```typescript
-export const stepsColorState = createState('stepsColor', {
+export const stepsColorState = createState("stepsColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 ```
 
 **Step 3: `$config()` の stateConfigs に stepsColorState を追加する**
@@ -301,24 +329,26 @@ override $config() {
 **Step 4: importDOM の `$convertStepsContainerElement` を更新する**
 
 ```typescript
-function $convertStepsContainerElement(element: HTMLElement): null | DOMConversionOutput {
-  const styleAttr = element.getAttribute('data-steps-style')
-  const style = styleAttr && isStepsStyle(styleAttr) ? styleAttr : 'numbered'
-  const labelAttr = element.getAttribute('data-steps-label')
-  const shapeAttr = element.getAttribute('data-steps-shape')
-  const startAttr = element.getAttribute('data-steps-start')
-  const fillAttr = element.getAttribute('data-steps-fill')
-  const colorAttr = element.getAttribute('data-color')
+function $convertStepsContainerElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const styleAttr = element.getAttribute("data-steps-style");
+  const style = styleAttr && isStepsStyle(styleAttr) ? styleAttr : "numbered";
+  const labelAttr = element.getAttribute("data-steps-label");
+  const shapeAttr = element.getAttribute("data-steps-shape");
+  const startAttr = element.getAttribute("data-steps-start");
+  const fillAttr = element.getAttribute("data-steps-fill");
+  const colorAttr = element.getAttribute("data-color");
 
   const node = $createStepsContainerNode({
     style,
-    label: labelAttr ?? 'STEP',
-    shape: shapeAttr && isStepsShape(shapeAttr) ? shapeAttr : 'circle',
+    label: labelAttr ?? "STEP",
+    shape: shapeAttr && isStepsShape(shapeAttr) ? shapeAttr : "circle",
     startNumber: startAttr ? parseInt(startAttr, 10) || 1 : 1,
-    fill: fillAttr && isStepsFill(fillAttr) ? fillAttr : 'filled',
-    color: colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default',
-  })
-  return { node }
+    fill: fillAttr && isStepsFill(fillAttr) ? fillAttr : "filled",
+    color: colorAttr && isAccentColor(colorAttr) ? colorAttr : "default",
+  });
+  return { node };
 }
 ```
 
@@ -377,10 +407,10 @@ override createDOM(_config: EditorConfig): HTMLElement {
 `fillChange` の if ブロックの後に追加:
 
 ```typescript
-const colorChange = $getStateChange(this, prevNode, stepsColorState)
+const colorChange = $getStateChange(this, prevNode, stepsColorState);
 if (colorChange) {
-  const [newColor] = colorChange
-  dom.setAttribute('data-color', newColor)
+  const [newColor] = colorChange;
+  dom.setAttribute("data-color", newColor);
 }
 ```
 
@@ -388,32 +418,34 @@ if (colorChange) {
 
 ```typescript
 type StepsContainerOptions = {
-  style?: StepsStyle
-  label?: string
-  shape?: StepsShape
-  startNumber?: number
-  fill?: StepsFill
-  color?: AccentColor
-}
+  style?: StepsStyle;
+  label?: string;
+  shape?: StepsShape;
+  startNumber?: number;
+  fill?: StepsFill;
+  color?: AccentColor;
+};
 
-export function $createStepsContainerNode(options: StepsContainerOptions = {}): StepsContainerNode {
+export function $createStepsContainerNode(
+  options: StepsContainerOptions = {},
+): StepsContainerNode {
   const {
-    style = 'numbered',
-    label = 'STEP',
-    shape = 'circle',
+    style = "numbered",
+    label = "STEP",
+    shape = "circle",
     startNumber = 1,
-    fill = 'filled',
-    color = 'default',
-  } = options
+    fill = "filled",
+    color = "default",
+  } = options;
 
-  const node = $create(StepsContainerNode)
-  $setState(node, stepsStyleState, style)
-  $setState(node, stepsLabelState, label)
-  $setState(node, stepsShapeState, shape)
-  $setState(node, startNumberState, startNumber)
-  $setState(node, stepsFillState, fill)
-  $setState(node, stepsColorState, color)
-  return node
+  const node = $create(StepsContainerNode);
+  $setState(node, stepsStyleState, style);
+  $setState(node, stepsLabelState, label);
+  $setState(node, stepsShapeState, shape);
+  $setState(node, startNumberState, startNumber);
+  $setState(node, stepsFillState, fill);
+  $setState(node, stepsColorState, color);
+  return node;
 }
 ```
 
@@ -429,21 +461,22 @@ git commit -m "feat(lexical): add stepsColorState (AccentColor) to StepsContaine
 ## Task 5: PullQuoteNode.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/PullQuoteNode.tsx`
 
 **Step 1: import を追加する**
 
 ```typescript
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 ```
 
 **Step 2: pullQuoteColorState を追加する（State セクション末尾）**
 
 ```typescript
-export const pullQuoteColorState = createState('pullQuoteColor', {
+export const pullQuoteColorState = createState("pullQuoteColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 ```
 
 **Step 3: `$config()` の stateConfigs を更新する**
@@ -463,13 +496,16 @@ override $config() {
 **Step 4: `$convertPullQuoteElement` を更新する**
 
 ```typescript
-function $convertPullQuoteElement(element: HTMLElement): null | DOMConversionOutput {
-  const styleAttr = element.getAttribute('data-pull-quote-style')
-  const style = styleAttr && isPullQuoteStyle(styleAttr) ? styleAttr : 'classic'
-  const colorAttr = element.getAttribute('data-color')
-  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
-  const node = $createPullQuoteNode(style, color)
-  return { node }
+function $convertPullQuoteElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const styleAttr = element.getAttribute("data-pull-quote-style");
+  const style =
+    styleAttr && isPullQuoteStyle(styleAttr) ? styleAttr : "classic";
+  const colorAttr = element.getAttribute("data-color");
+  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
+  const node = $createPullQuoteNode(style, color);
+  return { node };
 }
 ```
 
@@ -523,14 +559,14 @@ override updateDOM(prevNode: PullQuoteNode, dom: HTMLElement): boolean {
 
 ```typescript
 export function $createPullQuoteNode(
-  quoteStyle: PullQuoteStyle = 'classic',
-  color: AccentColor = 'default',
+  quoteStyle: PullQuoteStyle = "classic",
+  color: AccentColor = "default",
 ): PullQuoteNode {
   return $setState(
     $setState($create(PullQuoteNode), quoteStyleState, quoteStyle),
     pullQuoteColorState,
     color,
-  )
+  );
 }
 ```
 
@@ -546,21 +582,22 @@ git commit -m "feat(lexical): add pullQuoteColorState (AccentColor) to PullQuote
 ## Task 6: TabsContainerNode.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/TabsContainerNode.tsx`
 
 **Step 1: import を追加する**
 
 ```typescript
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 ```
 
 **Step 2: tabsColorState を追加する（State セクション末尾）**
 
 ```typescript
-export const tabsColorState = createState('tabsColor', {
+export const tabsColorState = createState("tabsColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 ```
 
 **Step 3: `$config()` の stateConfigs を更新する**
@@ -583,19 +620,28 @@ override $config() {
 **Step 4: `$convertTabsContainerElement` を更新する**
 
 ```typescript
-function $convertTabsContainerElement(element: HTMLElement): null | DOMConversionOutput {
-  const activeAttr = element.getAttribute('data-tabs-active')
-  const activeIndex = activeAttr ? parseInt(activeAttr, 10) : 0
-  const styleAttr = element.getAttribute('data-tabs-style')
-  const style = styleAttr && isTabsStyle(styleAttr) ? styleAttr : 'underline'
-  const sizeAttr = element.getAttribute('data-tabs-size')
-  const size = sizeAttr && isTabsSize(sizeAttr) ? sizeAttr : 'auto'
-  const fixedWidthAttr = element.getAttribute('data-tabs-fixed-width')
-  const fixedWidth = fixedWidthAttr && isTabsFixedWidth(fixedWidthAttr) ? fixedWidthAttr : '120'
-  const colorAttr = element.getAttribute('data-color')
-  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
-  const node = $createTabsContainerNode(activeIndex, style, size, fixedWidth, color)
-  return { node }
+function $convertTabsContainerElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const activeAttr = element.getAttribute("data-tabs-active");
+  const activeIndex = activeAttr ? parseInt(activeAttr, 10) : 0;
+  const styleAttr = element.getAttribute("data-tabs-style");
+  const style = styleAttr && isTabsStyle(styleAttr) ? styleAttr : "underline";
+  const sizeAttr = element.getAttribute("data-tabs-size");
+  const size = sizeAttr && isTabsSize(sizeAttr) ? sizeAttr : "auto";
+  const fixedWidthAttr = element.getAttribute("data-tabs-fixed-width");
+  const fixedWidth =
+    fixedWidthAttr && isTabsFixedWidth(fixedWidthAttr) ? fixedWidthAttr : "120";
+  const colorAttr = element.getAttribute("data-color");
+  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
+  const node = $createTabsContainerNode(
+    activeIndex,
+    style,
+    size,
+    fixedWidth,
+    color,
+  );
+  return { node };
 }
 ```
 
@@ -644,10 +690,10 @@ override createDOM(_config: EditorConfig): HTMLElement {
 `fixedWidthChange` の if ブロックの後に追加:
 
 ```typescript
-const colorChange = $getStateChange(this, prevNode, tabsColorState)
+const colorChange = $getStateChange(this, prevNode, tabsColorState);
 if (colorChange) {
-  const [newColor] = colorChange
-  dom.setAttribute('data-color', newColor)
+  const [newColor] = colorChange;
+  dom.setAttribute("data-color", newColor);
 }
 ```
 
@@ -656,10 +702,10 @@ if (colorChange) {
 ```typescript
 export function $createTabsContainerNode(
   activeIndex: number = 0,
-  tabsStyle: TabsStyle = 'underline',
-  tabsSize: TabsSize = 'auto',
-  tabsFixedWidth: TabsFixedWidth = '120',
-  color: AccentColor = 'default',
+  tabsStyle: TabsStyle = "underline",
+  tabsSize: TabsSize = "auto",
+  tabsFixedWidth: TabsFixedWidth = "120",
+  color: AccentColor = "default",
 ): TabsContainerNode {
   return $setState(
     $setState(
@@ -677,7 +723,7 @@ export function $createTabsContainerNode(
     ),
     tabsColorState,
     color,
-  )
+  );
 }
 ```
 
@@ -693,17 +739,19 @@ git commit -m "feat(lexical): add tabsColorState (AccentColor) to TabsContainerN
 ## Task 7: CollapsibleContainerNode.tsx を更新する（破壊的変更）
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CollapsibleContainerNode.tsx`
 
 **Step 1: import を追加する**
 
 ```typescript
-import { isAccentColor, type AccentColor } from '../config/accent-colors'
+import { isAccentColor, type AccentColor } from "../config/accent-colors";
 ```
 
 **Step 2: Types セクションから CollapsibleTitleColor を完全削除する**
 
 削除対象:
+
 ```typescript
 // 削除
 export type CollapsibleTitleColor = 'default' | 'primary' | 'muted' | 'info' | 'warning' | 'success' | 'error' | 'custom'
@@ -714,12 +762,15 @@ export const COLLAPSIBLE_TITLE_COLORS: readonly CollapsibleTitleColor[] = [...]
 
 ```typescript
 // 削除
-export const isCollapsibleTitleColor = createEnumGuard<CollapsibleTitleColor>(COLLAPSIBLE_TITLE_COLORS)
+export const isCollapsibleTitleColor = createEnumGuard<CollapsibleTitleColor>(
+  COLLAPSIBLE_TITLE_COLORS,
+);
 ```
 
 **Step 4: State セクションの titleColor 関連 3 state を削除し collapsibleColorState を追加する**
 
 削除対象:
+
 ```typescript
 // 削除
 export const titleColorState = createState('titleColor', { ... })
@@ -728,26 +779,29 @@ export const titleCustomLightState = createState('titleCustomLight', { ... })
 ```
 
 追加:
+
 ```typescript
-export const collapsibleColorState = createState('collapsibleColor', {
+export const collapsibleColorState = createState("collapsibleColor", {
   parse: (v: unknown): AccentColor =>
-    typeof v === 'string' && isAccentColor(v) ? v : 'default',
-})
+    typeof v === "string" && isAccentColor(v) ? v : "default",
+});
 ```
 
 **Step 5: DOM Conversion の `$convertCollapsibleContainerElement` を更新する**
 
 ```typescript
-function $convertCollapsibleContainerElement(element: HTMLElement): null | DOMConversionOutput {
-  const rawStyle = element.getAttribute('data-collapsible-style')
-  const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : 'default'
-  const rawRadius = element.getAttribute('data-collapsible-radius')
-  const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : 'md'
-  const colorAttr = element.getAttribute('data-color')
-  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : 'default'
+function $convertCollapsibleContainerElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const rawStyle = element.getAttribute("data-collapsible-style");
+  const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : "default";
+  const rawRadius = element.getAttribute("data-collapsible-radius");
+  const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : "md";
+  const colorAttr = element.getAttribute("data-color");
+  const color = colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
-  const node = $createCollapsibleContainerNode(style, radius, color)
-  return { node }
+  const node = $createCollapsibleContainerNode(style, radius, color);
+  return { node };
 }
 ```
 
@@ -827,15 +881,15 @@ override updateDOM(prevNode: CollapsibleContainerNode, dom: HTMLElement): boolea
 
 ```typescript
 export function $createCollapsibleContainerNode(
-  style: CollapsibleStyle = 'default',
-  radius: CollapsibleRadius = 'md',
-  color: AccentColor = 'default',
+  style: CollapsibleStyle = "default",
+  radius: CollapsibleRadius = "md",
+  color: AccentColor = "default",
 ): CollapsibleContainerNode {
-  const node = $create(CollapsibleContainerNode)
-  $setState(node, collapsibleStyleState, style)
-  $setState(node, borderRadiusState, radius)
-  $setState(node, collapsibleColorState, color)
-  return node
+  const node = $create(CollapsibleContainerNode);
+  $setState(node, collapsibleStyleState, style);
+  $setState(node, borderRadiusState, radius);
+  $setState(node, collapsibleColorState, color);
+  return node;
 }
 ```
 
@@ -851,6 +905,7 @@ git commit -m "feat(lexical)!: replace titleColor 3-state with collapsibleColorS
 ## Task 8: StepsInspectorPanel.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/StepsInspectorPanel.tsx`
 
 **Step 1: import に stepsColorState と isAccentColor を追加する**
@@ -871,9 +926,9 @@ import {
   isStepsStyle,
   isStepsShape,
   isStepsFill,
-} from '../../nodes/StepsContainerNode'
-import { isAccentColor, type AccentColor } from '../../config/accent-colors'
-import { ColorSwatchPicker } from '../ColorSwatchPicker'
+} from "../../nodes/StepsContainerNode";
+import { isAccentColor, type AccentColor } from "../../config/accent-colors";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
 ```
 
 **Step 2: editor.getEditorState().read() の read 内に color 読み取りを追加する**
@@ -881,15 +936,23 @@ import { ColorSwatchPicker } from '../ColorSwatchPicker'
 既存の read ブロック内の return 文を更新して `currentColor` を追加:
 
 ```typescript
-const { currentStyle, currentLabel, currentShape, currentStartNumber, currentFill, currentColor, stepItems } = editor.getEditorState().read(() => {
+const {
+  currentStyle,
+  currentLabel,
+  currentShape,
+  currentStartNumber,
+  currentFill,
+  currentColor,
+  stepItems,
+} = editor.getEditorState().read(() => {
   // ...（既存コード）...
-  const color = $getState(node, stepsColorState)
+  const color = $getState(node, stepsColorState);
   return {
     // ...（既存フィールド）...
     currentColor: color,
     stepItems: items,
-  }
-})
+  };
+});
 ```
 
 **Step 3: handleColorChange ハンドラを追加する**
@@ -898,8 +961,10 @@ const { currentStyle, currentLabel, currentShape, currentStartNumber, currentFil
 
 ```typescript
 const handleColorChange = (color: AccentColor) => {
-  updateNode((n) => { $setState(n, stepsColorState, color) })
-}
+  updateNode((n) => {
+    $setState(n, stepsColorState, color);
+  });
+};
 ```
 
 **Step 4: JSX の「スタイル」セクションに ColorSwatchPicker を追加する**
@@ -907,10 +972,7 @@ const handleColorChange = (color: AccentColor) => {
 ステップスタイルの Select コントロールの後（または前）に追加:
 
 ```tsx
-<ColorSwatchPicker
-  value={currentColor}
-  onChange={handleColorChange}
-/>
+<ColorSwatchPicker value={currentColor} onChange={handleColorChange} />
 ```
 
 **Step 5: コミット**
@@ -925,6 +987,7 @@ git commit -m "feat(lexical): add ColorSwatchPicker to StepsInspectorPanel"
 ## Task 9: PullQuoteInspectorPanel.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/PullQuoteInspectorPanel.tsx`
 
 **Step 1: import に pullQuoteColorState と ColorSwatchPicker を追加する**
@@ -937,27 +1000,29 @@ import {
   quoteStyleState,
   pullQuoteColorState,
   isPullQuoteStyle,
-} from '../../nodes/PullQuoteNode'
-import { isAccentColor, type AccentColor } from '../../config/accent-colors'
-import { ColorSwatchPicker } from '../ColorSwatchPicker'
+} from "../../nodes/PullQuoteNode";
+import { isAccentColor, type AccentColor } from "../../config/accent-colors";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
 ```
 
 **Step 2: read ブロックに color を追加する**
 
 ```typescript
 const { currentStyle, currentColor } = editor.getEditorState().read(() => {
-  const style = $getState(node, quoteStyleState)
-  const color = $getState(node, pullQuoteColorState)
-  return { currentStyle: style, currentColor: color }
-})
+  const style = $getState(node, quoteStyleState);
+  const color = $getState(node, pullQuoteColorState);
+  return { currentStyle: style, currentColor: color };
+});
 ```
 
 **Step 3: handleColorChange を追加する**
 
 ```typescript
 const handleColorChange = (color: AccentColor) => {
-  updateNode((n) => { $setState(n, pullQuoteColorState, color) })
-}
+  updateNode((n) => {
+    $setState(n, pullQuoteColorState, color);
+  });
+};
 ```
 
 **Step 4: JSX に ColorSwatchPicker を追加する**
@@ -965,10 +1030,7 @@ const handleColorChange = (color: AccentColor) => {
 スタイル Select の後に追加:
 
 ```tsx
-<ColorSwatchPicker
-  value={currentColor}
-  onChange={handleColorChange}
-/>
+<ColorSwatchPicker value={currentColor} onChange={handleColorChange} />
 ```
 
 **Step 5: コミット**
@@ -983,6 +1045,7 @@ git commit -m "feat(lexical): add ColorSwatchPicker to PullQuoteInspectorPanel"
 ## Task 10: TabsInspectorPanel.tsx を更新する
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/TabsInspectorPanel.tsx`
 
 **Step 1: import に tabsColorState と ColorSwatchPicker を追加する**
@@ -1002,31 +1065,40 @@ import {
   tabsSizeState,
   tabsFixedWidthState,
   tabsColorState,
-} from '../../nodes/TabsContainerNode'
-import { isAccentColor, type AccentColor } from '../../config/accent-colors'
-import { ColorSwatchPicker } from '../ColorSwatchPicker'
+} from "../../nodes/TabsContainerNode";
+import { isAccentColor, type AccentColor } from "../../config/accent-colors";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
 ```
 
 **Step 2: read ブロックに tabsColor を追加する**
 
 ```typescript
-const { activeIndex, tabsStyle, tabsSize, tabsFixedWidth, tabsColor, tabItems } = editor.getEditorState().read(() => {
+const {
+  activeIndex,
+  tabsStyle,
+  tabsSize,
+  tabsFixedWidth,
+  tabsColor,
+  tabItems,
+} = editor.getEditorState().read(() => {
   // ...（既存コード）...
-  const color = $getState(node, tabsColorState)
+  const color = $getState(node, tabsColorState);
   return {
     // ...（既存フィールド）...
     tabsColor: color,
     tabItems: items,
-  }
-})
+  };
+});
 ```
 
 **Step 3: handleColorChange を追加する**
 
 ```typescript
 const handleColorChange = (color: AccentColor) => {
-  updateNode((n) => { $setState(n, tabsColorState, color) })
-}
+  updateNode((n) => {
+    $setState(n, tabsColorState, color);
+  });
+};
 ```
 
 **Step 4: JSX の「スタイル」セクションに ColorSwatchPicker を追加する**
@@ -1034,10 +1106,7 @@ const handleColorChange = (color: AccentColor) => {
 `{tabsSize === 'fixed' && ...}` ブロックの後に追加:
 
 ```tsx
-<ColorSwatchPicker
-  value={tabsColor}
-  onChange={handleColorChange}
-/>
+<ColorSwatchPicker value={tabsColor} onChange={handleColorChange} />
 ```
 
 **Step 5: コミット**
@@ -1052,11 +1121,13 @@ git commit -m "feat(lexical): add ColorSwatchPicker to TabsInspectorPanel"
 ## Task 11: CollapsibleInspectorPanel.tsx を更新する（破壊的変更）
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/CollapsibleInspectorPanel.tsx`
 
 **Step 1: import を全面的に更新する**
 
 旧 import:
+
 ```typescript
 import {
   $isCollapsibleContainerNode,
@@ -1072,13 +1143,24 @@ import {
   isCollapsibleStyle,
   isCollapsibleRadius,
   isCollapsibleTitleColor,
-} from '../../nodes/CollapsibleContainerNode'
-import { COLLAPSIBLE_STYLE_LABELS, COLLAPSIBLE_RADIUS_LABELS, COLLAPSIBLE_TITLE_COLOR_LABELS } from '../../config/node-labels'
-import { Label, Input, Switch } from '@/admin/components/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/admin/components/ui/select'
+} from "../../nodes/CollapsibleContainerNode";
+import {
+  COLLAPSIBLE_STYLE_LABELS,
+  COLLAPSIBLE_RADIUS_LABELS,
+  COLLAPSIBLE_TITLE_COLOR_LABELS,
+} from "../../config/node-labels";
+import { Label, Input, Switch } from "@/admin/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/admin/components/ui/select";
 ```
 
 新 import:
+
 ```typescript
 import {
   $isCollapsibleContainerNode,
@@ -1090,41 +1172,52 @@ import {
   collapsibleColorState,
   isCollapsibleStyle,
   isCollapsibleRadius,
-} from '../../nodes/CollapsibleContainerNode'
-import { COLLAPSIBLE_STYLE_LABELS, COLLAPSIBLE_RADIUS_LABELS } from '../../config/node-labels'
-import { isAccentColor, type AccentColor } from '../../config/accent-colors'
-import { ColorSwatchPicker } from '../ColorSwatchPicker'
-import { Label } from '@/admin/components/ui'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/admin/components/ui/select'
+} from "../../nodes/CollapsibleContainerNode";
+import {
+  COLLAPSIBLE_STYLE_LABELS,
+  COLLAPSIBLE_RADIUS_LABELS,
+} from "../../config/node-labels";
+import { isAccentColor, type AccentColor } from "../../config/accent-colors";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
+import { Label } from "@/admin/components/ui";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/admin/components/ui/select";
 ```
 
 **Step 2: read ブロックを更新する**
 
 ```typescript
-const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor.getEditorState().read(() => {
-  const style = $getState(node, collapsibleStyleState)
-  const radius = $getState(node, borderRadiusState)
-  const color = $getState(node, collapsibleColorState)
-  const items: CollapsibleItemInfo[] = []
-  const children = node.getChildren()
+const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor
+  .getEditorState()
+  .read(() => {
+    const style = $getState(node, collapsibleStyleState);
+    const radius = $getState(node, borderRadiusState);
+    const color = $getState(node, collapsibleColorState);
+    const items: CollapsibleItemInfo[] = [];
+    const children = node.getChildren();
 
-  for (const child of children) {
-    if ($isCollapsibleItemNode(child)) {
-      const titleNode = child.getChildren().find($isCollapsibleTitleNode)
-      items.push({
-        key: child.getKey(),
-        titleText: titleNode ? titleNode.getTextContent() : '',
-      })
+    for (const child of children) {
+      if ($isCollapsibleItemNode(child)) {
+        const titleNode = child.getChildren().find($isCollapsibleTitleNode);
+        items.push({
+          key: child.getKey(),
+          titleText: titleNode ? titleNode.getTextContent() : "",
+        });
+      }
     }
-  }
 
-  return {
-    currentStyle: style,
-    currentRadius: radius,
-    currentColor: color,
-    collapsibleItems: items,
-  }
-})
+    return {
+      currentStyle: style,
+      currentRadius: radius,
+      currentColor: color,
+      collapsibleItems: items,
+    };
+  });
 ```
 
 **Step 3: ハンドラを更新する**
@@ -1132,10 +1225,13 @@ const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor.g
 削除するハンドラ: `handleTitleColorChange`, `handleCustomColorChange`, `handleCustomLightChange`
 
 追加するハンドラ:
+
 ```typescript
 const handleColorChange = (color: AccentColor) => {
-  updateNode((n) => { $setState(n, collapsibleColorState, color) })
-}
+  updateNode((n) => {
+    $setState(n, collapsibleColorState, color);
+  });
+};
 ```
 
 **Step 4: JSX の「スタイル」セクションを更新する**
@@ -1196,6 +1292,7 @@ git commit -m "feat(lexical)!: replace title color controls with ColorSwatchPick
 ## Task 12: lexical-content.css を更新する
 
 **Files:**
+
 - Modify: `src/shared/styles/lexical-content.css`
 
 ### Step 1: [data-color] トークン定義をファイル先頭付近に追加する
@@ -1209,32 +1306,62 @@ git commit -m "feat(lexical)!: replace title color controls with ColorSwatchPick
    --accent / --accent-fg を子要素が継承して使用する。
    ============================================================================= */
 
-[data-color="default"] { --accent: var(--color-primary); --accent-fg: var(--color-primary-foreground); }
-[data-color="blue"]    { --accent: oklch(0.55 0.20 255); --accent-fg: oklch(1 0 0); }
-[data-color="teal"]    { --accent: oklch(0.60 0.15 195); --accent-fg: oklch(1 0 0); }
-[data-color="green"]   { --accent: oklch(0.58 0.18 142); --accent-fg: oklch(1 0 0); }
-[data-color="yellow"]  { --accent: oklch(0.82 0.17 90);  --accent-fg: oklch(0.15 0 0); }
-[data-color="orange"]  { --accent: oklch(0.72 0.18 55);  --accent-fg: oklch(1 0 0); }
-[data-color="red"]     { --accent: oklch(0.55 0.22 25);  --accent-fg: oklch(1 0 0); }
-[data-color="pink"]    { --accent: oklch(0.65 0.22 350); --accent-fg: oklch(1 0 0); }
-[data-color="purple"]  { --accent: oklch(0.55 0.20 300); --accent-fg: oklch(1 0 0); }
-[data-color="slate"]   { --accent: oklch(0.52 0.02 250); --accent-fg: oklch(1 0 0); }
+[data-color="default"] {
+  --accent: var(--color-primary);
+  --accent-fg: var(--color-primary-foreground);
+}
+[data-color="blue"] {
+  --accent: oklch(0.55 0.2 255);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="teal"] {
+  --accent: oklch(0.6 0.15 195);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="green"] {
+  --accent: oklch(0.58 0.18 142);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="yellow"] {
+  --accent: oklch(0.82 0.17 90);
+  --accent-fg: oklch(0.15 0 0);
+}
+[data-color="orange"] {
+  --accent: oklch(0.72 0.18 55);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="red"] {
+  --accent: oklch(0.55 0.22 25);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="pink"] {
+  --accent: oklch(0.65 0.22 350);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="purple"] {
+  --accent: oklch(0.55 0.2 300);
+  --accent-fg: oklch(1 0 0);
+}
+[data-color="slate"] {
+  --accent: oklch(0.52 0.02 250);
+  --accent-fg: oklch(1 0 0);
+}
 ```
 
 ### Step 2: Steps ブロックの var(--color-primary) を var(--accent, ...) に一括置換する
 
 以下の置換を行う（Steps セクション内のみ、`[data-steps` セレクターが含まれる箇所）:
 
-| 置換前 | 置換後 |
-|--------|--------|
-| `background-color: var(--color-primary);` （Steps 内） | `background-color: var(--accent, var(--color-primary));` |
-| `color: var(--color-primary-foreground);` （Steps 内） | `color: var(--accent-fg, var(--color-primary-foreground));` |
-| `color: var(--color-primary)` （Steps 内 icon/outline） | `color: var(--accent, var(--color-primary))` |
-| `border: 2px solid var(--color-primary)` | `border: 2px solid var(--accent, var(--color-primary))` |
+| 置換前                                                       | 置換後                                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `background-color: var(--color-primary);` （Steps 内）       | `background-color: var(--accent, var(--color-primary));`                    |
+| `color: var(--color-primary-foreground);` （Steps 内）       | `color: var(--accent-fg, var(--color-primary-foreground));`                 |
+| `color: var(--color-primary)` （Steps 内 icon/outline）      | `color: var(--accent, var(--color-primary))`                                |
+| `border: 2px solid var(--color-primary)`                     | `border: 2px solid var(--accent, var(--color-primary))`                     |
 | `color-mix(in oklch, var(--color-primary) 20%, transparent)` | `color-mix(in oklch, var(--accent, var(--color-primary)) 20%, transparent)` |
 | `color-mix(in oklch, var(--color-primary) 15%, transparent)` | `color-mix(in oklch, var(--accent, var(--color-primary)) 15%, transparent)` |
 | `color-mix(in oklch, var(--color-primary) 10%, transparent)` | `color-mix(in oklch, var(--accent, var(--color-primary)) 10%, transparent)` |
-| `color-mix(in oklch, var(--color-primary) 8%, transparent)` | `color-mix(in oklch, var(--accent, var(--color-primary)) 8%, transparent)` |
+| `color-mix(in oklch, var(--color-primary) 8%, transparent)`  | `color-mix(in oklch, var(--accent, var(--color-primary)) 8%, transparent)`  |
 
 ### Step 3: Collapsible ブロックの [data-collapsible-title-color] ルール群を削除し filled スタイルに accent を追加する
 
@@ -1245,13 +1372,15 @@ git commit -m "feat(lexical)!: replace title color controls with ColorSwatchPick
 
 ```css
 /* 置換前 */
-[data-tabs-container][data-tabs-style="underline"] [data-tab-title][aria-selected="true"] {
+[data-tabs-container][data-tabs-style="underline"]
+  [data-tab-title][aria-selected="true"] {
   border-bottom-color: var(--color-primary);
   color: var(--color-primary);
 }
 
 /* 置換後 */
-[data-tabs-container][data-tabs-style="underline"] [data-tab-title][aria-selected="true"] {
+[data-tabs-container][data-tabs-style="underline"]
+  [data-tab-title][aria-selected="true"] {
   border-bottom-color: var(--accent, var(--color-primary));
   color: var(--accent, var(--color-primary));
 }
@@ -1296,6 +1425,7 @@ Expected: 型エラーなし、lint エラーなし
 **Step 2: エラーがある場合は修正する**
 
 よくあるエラー:
+
 - `CollapsibleTitleColor` が他ファイルで import されている場合 → `AccentColor` に変更
 - `isCollapsibleTitleColor` が他ファイルで使われている場合 → `isAccentColor` に変更
 - `titleColorState` / `titleCustomColorState` / `titleCustomLightState` が他ファイルで参照されている場合 → 削除または `collapsibleColorState` に変更

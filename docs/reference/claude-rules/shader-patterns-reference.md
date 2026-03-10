@@ -9,22 +9,22 @@
 
 ## ユニフォーム命名規約
 
-| プレフィックス | 意味 | 例 |
-|-------------|------|-----|
-| `u` | ユニフォーム（外部から設定） | `uTime`, `uProgress`, `uColor` |
-| `v` | varying（頂点→フラグメント受け渡し） | `vUv`, `vNormal`, `vPosition` |
-| `a` | attribute（頂点属性） | `aPosition`, `aColor` |
+| プレフィックス | 意味                                 | 例                             |
+| -------------- | ------------------------------------ | ------------------------------ |
+| `u`            | ユニフォーム（外部から設定）         | `uTime`, `uProgress`, `uColor` |
+| `v`            | varying（頂点→フラグメント受け渡し） | `vUv`, `vNormal`, `vPosition`  |
+| `a`            | attribute（頂点属性）                | `aPosition`, `aColor`          |
 
 ### 共通ユニフォーム定義
 
-| ユニフォーム | 型 | Three.js | PixiJS | 説明 |
-|------------|-----|---------|--------|------|
-| `uTime` | float | `uniforms.uTime.value += delta` | `uTime += ticker.deltaTime * 0.01` | 経過時間 |
-| `uResolution` | vec2 | `[canvas.width, canvas.height]` | `uInputSize.xy` (PixiJS内蔵) | 画面サイズ |
-| `uMouse` | vec2 | 手動正規化 | `[mouseX/width, mouseY/height]` | マウス位置(0-1) |
-| `uProgress` | float | `scrollRef.current.progress` | `scrollRef.current.progress` | スクロール進行(0-1) |
-| `uScrollVelocity` | float | `scrollRef.current.velocity` | `scrollRef.current.velocity` | スクロール速度 |
-| `uIntensity` | float | uniform 直接設定 | `resources[].uniforms` | エフェクト強度 |
+| ユニフォーム      | 型    | Three.js                        | PixiJS                             | 説明                |
+| ----------------- | ----- | ------------------------------- | ---------------------------------- | ------------------- |
+| `uTime`           | float | `uniforms.uTime.value += delta` | `uTime += ticker.deltaTime * 0.01` | 経過時間            |
+| `uResolution`     | vec2  | `[canvas.width, canvas.height]` | `uInputSize.xy` (PixiJS内蔵)       | 画面サイズ          |
+| `uMouse`          | vec2  | 手動正規化                      | `[mouseX/width, mouseY/height]`    | マウス位置(0-1)     |
+| `uProgress`       | float | `scrollRef.current.progress`    | `scrollRef.current.progress`       | スクロール進行(0-1) |
+| `uScrollVelocity` | float | `scrollRef.current.velocity`    | `scrollRef.current.velocity`       | スクロール速度      |
+| `uIntensity`      | float | uniform 直接設定                | `resources[].uniforms`             | エフェクト強度      |
 
 ## ノイズ関数ライブラリ
 
@@ -106,11 +106,11 @@ float warpedFbm(vec2 p) {
 
 **用途**: 雲、煙、大理石、有機的テクスチャ。オクターブ数が多いほどディテールが増すがコストも増加。
 
-| オクターブ数 | コスト | ディテール | 推奨 |
-|-----------|--------|----------|------|
-| 3 | Low | 粗い | モバイル、リアルタイム |
-| 5 | Medium | 標準 | デスクトップ |
-| 8 | High | 精密 | 静的テクスチャ生成 |
+| オクターブ数 | コスト | ディテール | 推奨                   |
+| ------------ | ------ | ---------- | ---------------------- |
+| 3            | Low    | 粗い       | モバイル、リアルタイム |
+| 5            | Medium | 標準       | デスクトップ           |
+| 8            | High   | 精密       | 静的テクスチャ生成     |
 
 ## SDF（Signed Distance Functions）
 
@@ -344,21 +344,21 @@ precision mediump float;  // PixiJS デフォルト
 
 ### テクスチャバジェット
 
-| テクスチャ数 | パフォーマンス | 推奨 |
-|-----------|-------------|------|
-| 1-2 | Excellent | 制限なし |
-| 3-4 | Good | デスクトップのみ |
-| 5+ | Poor | 半解像度推奨 |
+| テクスチャ数 | パフォーマンス | 推奨             |
+| ------------ | -------------- | ---------------- |
+| 1-2          | Excellent      | 制限なし         |
+| 3-4          | Good           | デスクトップのみ |
+| 5+           | Poor           | 半解像度推奨     |
 
 ## デバッグツール
 
-| ツール | 用途 | URL |
-|--------|------|-----|
-| Spector.js | WebGL コール追跡、シェーダーデバッグ | Chrome拡張 |
-| WebGL Inspector | WebGL状態確認 | Chrome拡張 |
-| RenderDoc | GPU キャプチャ（ネイティブ） | renderdoc.org |
-| PixiJS DevTools | PixiJS ステージ/フィルター確認 | Chrome拡張 |
-| Three.js Editor | シーン確認 | threejs.org/editor |
+| ツール          | 用途                                 | URL                |
+| --------------- | ------------------------------------ | ------------------ |
+| Spector.js      | WebGL コール追跡、シェーダーデバッグ | Chrome拡張         |
+| WebGL Inspector | WebGL状態確認                        | Chrome拡張         |
+| RenderDoc       | GPU キャプチャ（ネイティブ）         | renderdoc.org      |
+| PixiJS DevTools | PixiJS ステージ/フィルター確認       | Chrome拡張         |
+| Three.js Editor | シーン確認                           | threejs.org/editor |
 
 ### シェーダーデバッグパターン
 

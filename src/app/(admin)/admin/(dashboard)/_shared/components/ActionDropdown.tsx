@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { MoreHorizontal } from 'lucide-react'
+import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -9,24 +9,24 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ActionDropdownProps = {
-  children: React.ReactNode
-  disabled?: boolean
-}
+  children: React.ReactNode;
+  disabled?: boolean;
+};
 
 type ActionDropdownItemProps = {
-  href?: string
-  onClick?: () => void
-  destructive?: boolean
-  disabled?: boolean
-  children: React.ReactNode
-}
+  href?: string;
+  onClick?: () => void;
+  destructive?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+};
 
 // =============================================================================
 // Components
@@ -56,7 +56,7 @@ export function ActionDropdown({ children, disabled }: ActionDropdownProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">{children}</DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 export function ActionDropdownItem({
@@ -66,21 +66,27 @@ export function ActionDropdownItem({
   disabled = false,
   children,
 }: ActionDropdownItemProps) {
-  const className = destructive ? 'text-destructive focus:text-destructive' : undefined
+  const className = destructive
+    ? "text-destructive focus:text-destructive"
+    : undefined;
 
   if (href) {
     return (
       <DropdownMenuItem asChild disabled={disabled} className={className}>
         <Link href={href}>{children}</Link>
       </DropdownMenuItem>
-    )
+    );
   }
 
   return (
-    <DropdownMenuItem onClick={onClick} disabled={disabled} className={className}>
+    <DropdownMenuItem
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+    >
       {children}
     </DropdownMenuItem>
-  )
+  );
 }
 
-export { DropdownMenuSeparator as ActionDropdownSeparator }
+export { DropdownMenuSeparator as ActionDropdownSeparator };

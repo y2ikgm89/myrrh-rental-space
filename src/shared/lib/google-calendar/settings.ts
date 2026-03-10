@@ -27,7 +27,9 @@ export async function testServiceAccountConnection(params: {
   calendarId: string;
 }): Promise<CalendarConnectionTestResult> {
   try {
-    const credentials = parseServiceAccountCredentials(params.serviceAccountJson);
+    const credentials = parseServiceAccountCredentials(
+      params.serviceAccountJson,
+    );
     if (!credentials) {
       throw new Error("Invalid service account credentials JSON");
     }

@@ -5,25 +5,26 @@
  * パンくず、戻るボタン、タイトル
  */
 
-import type { ReactNode } from 'react'
-import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { Button, Breadcrumb } from '@/admin/components/ui'
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button, Breadcrumb } from "@/admin/components/ui";
 
 interface SettingsLayoutProps {
-  title: string
-  description?: string
-  children: ReactNode
+  title: string;
+  description?: string;
+  children: ReactNode;
 }
 
-export function SettingsLayout({ title, description, children }: SettingsLayoutProps) {
+export function SettingsLayout({
+  title,
+  description,
+  children,
+}: SettingsLayoutProps) {
   return (
     <div className="space-y-6">
       <Breadcrumb
-        items={[
-          { label: '設定', href: '/admin/settings' },
-          { label: title },
-        ]}
+        items={[{ label: "設定", href: "/admin/settings" }, { label: title }]}
       />
 
       {/* ヘッダー */}
@@ -35,7 +36,9 @@ export function SettingsLayout({ title, description, children }: SettingsLayoutP
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {title}
+          </h1>
           {description && (
             <p className="text-muted-foreground">{description}</p>
           )}
@@ -43,9 +46,7 @@ export function SettingsLayout({ title, description, children }: SettingsLayoutP
       </div>
 
       {/* コンテンツ */}
-      <div className="space-y-6">
-        {children}
-      </div>
+      <div className="space-y-6">{children}</div>
     </div>
-  )
+  );
 }

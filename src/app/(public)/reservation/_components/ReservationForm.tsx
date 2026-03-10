@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ReservationForm — 3-step dummy reservation form
@@ -10,20 +10,20 @@
  * GSAP animation on step transitions.
  */
 
-import { useState, useRef, type ReactElement } from 'react'
-import { gsap } from '@/public/lib/gsap-config'
-import { useMotionPreference } from '@/public/hooks/use-motion-preference'
-import { MagneticButton } from '@/public/components/animations/MagneticButton'
-import { StepIndicator } from './StepIndicator'
-import { DURATION, EASE } from '@/public/lib/animations'
+import { useState, useRef, type ReactElement } from "react";
+import { gsap } from "@/public/lib/gsap-config";
+import { useMotionPreference } from "@/public/hooks/use-motion-preference";
+import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { StepIndicator } from "./StepIndicator";
+import { DURATION, EASE } from "@/public/lib/animations";
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary'
+  "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary";
 
 function DateTimeStep({
   onNext,
 }: {
-  readonly onNext: () => void
+  readonly onNext: () => void;
 }): ReactElement {
   return (
     <div>
@@ -33,13 +33,19 @@ function DateTimeStep({
 
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <label htmlFor="reservation-date" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          <label
+            htmlFor="reservation-date"
+            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+          >
             ご利用日
           </label>
           <input id="reservation-date" type="date" className={INPUT_CLASS} />
         </div>
         <div>
-          <label htmlFor="reservation-timeslot" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          <label
+            htmlFor="reservation-timeslot"
+            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+          >
             時間帯
           </label>
           <select id="reservation-timeslot" className={INPUT_CLASS}>
@@ -52,7 +58,10 @@ function DateTimeStep({
       </div>
 
       <div className="mt-5">
-        <label htmlFor="reservation-capacity" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <label
+          htmlFor="reservation-capacity"
+          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+        >
           利用人数
         </label>
         <input
@@ -71,15 +80,15 @@ function DateTimeStep({
         </MagneticButton>
       </div>
     </div>
-  )
+  );
 }
 
 function InfoStep({
   onNext,
   onBack,
 }: {
-  readonly onNext: () => void
-  readonly onBack: () => void
+  readonly onNext: () => void;
+  readonly onBack: () => void;
 }): ReactElement {
   return (
     <div>
@@ -89,7 +98,10 @@ function InfoStep({
 
       <div className="grid gap-5 md:grid-cols-2">
         <div>
-          <label htmlFor="reservation-name" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          <label
+            htmlFor="reservation-name"
+            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+          >
             お名前
           </label>
           <input
@@ -100,7 +112,10 @@ function InfoStep({
           />
         </div>
         <div>
-          <label htmlFor="reservation-email" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          <label
+            htmlFor="reservation-email"
+            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+          >
             メールアドレス
           </label>
           <input
@@ -113,7 +128,10 @@ function InfoStep({
       </div>
 
       <div className="mt-5">
-        <label htmlFor="reservation-phone" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <label
+          htmlFor="reservation-phone"
+          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+        >
           電話番号
         </label>
         <input
@@ -125,7 +143,10 @@ function InfoStep({
       </div>
 
       <div className="mt-5">
-        <label htmlFor="reservation-notes" className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <label
+          htmlFor="reservation-notes"
+          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+        >
           備考
         </label>
         <textarea
@@ -149,13 +170,13 @@ function InfoStep({
         </MagneticButton>
       </div>
     </div>
-  )
+  );
 }
 
 function ConfirmationStep({
   onBack,
 }: {
-  readonly onBack: () => void
+  readonly onBack: () => void;
 }): ReactElement {
   return (
     <div>
@@ -196,47 +217,50 @@ function ConfirmationStep({
         >
           戻る
         </button>
-        <MagneticButton strength={0.35}>
-          予約を確定する
-        </MagneticButton>
+        <MagneticButton strength={0.35}>予約を確定する</MagneticButton>
       </div>
 
       <p className="mt-4 text-center text-xs text-muted-foreground">
         ※ これはデモページです。実際の予約は行われません。
       </p>
     </div>
-  )
+  );
 }
 
 export function ReservationForm(): ReactElement {
-  const [step, setStep] = useState(1)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const motionOk = useMotionPreference()
+  const [step, setStep] = useState(1);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const motionOk = useMotionPreference();
 
   const animateTransition = () => {
-    const content = contentRef.current
-    if (!content) return
+    const content = contentRef.current;
+    if (!content) return;
 
-    const stepContent = content.querySelector('[data-step]')
-    if (!stepContent) return
+    const stepContent = content.querySelector("[data-step]");
+    if (!stepContent) return;
 
-    const reduced = !motionOk.current
+    const reduced = !motionOk.current;
     gsap.fromTo(
       stepContent,
       { opacity: 0, y: reduced ? 0 : 20 },
-      { opacity: 1, y: 0, duration: reduced ? DURATION.fast : DURATION.normal, ease: EASE.outQuart },
-    )
-  }
+      {
+        opacity: 1,
+        y: 0,
+        duration: reduced ? DURATION.fast : DURATION.normal,
+        ease: EASE.outQuart,
+      },
+    );
+  };
 
   const goNext = () => {
-    setStep((prev) => Math.min(3, prev + 1))
-    animateTransition()
-  }
+    setStep((prev) => Math.min(3, prev + 1));
+    animateTransition();
+  };
 
   const goBack = () => {
-    setStep((prev) => Math.max(1, prev - 1))
-    animateTransition()
-  }
+    setStep((prev) => Math.max(1, prev - 1));
+    animateTransition();
+  };
 
   return (
     <section className="py-16 md:py-24">
@@ -256,5 +280,5 @@ export function ReservationForm(): ReactElement {
         </div>
       </div>
     </section>
-  )
+  );
 }

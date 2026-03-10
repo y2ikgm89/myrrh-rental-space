@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 公開ページ用エラーページ
@@ -7,32 +7,32 @@
  * Header/Footerレイアウトは維持される。
  */
 
-import { useEffect, startTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { logger } from '@/shared/lib/logger'
+import { useEffect, startTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { logger } from "@/shared/lib/logger";
 
 interface ErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function PublicError({ error, reset }: ErrorProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    logger.error('Public page error boundary triggered', {
+    logger.error("Public page error boundary triggered", {
       error: error.message,
       digest: error.digest,
-    })
-  }, [error])
+    });
+  }, [error]);
 
   const handleReset = () => {
     startTransition(() => {
-      reset()
-      router.refresh()
-    })
-  }
+      reset();
+      router.refresh();
+    });
+  };
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 md:px-8">
@@ -70,7 +70,7 @@ export default function PublicError({ error, reset }: ErrorProps) {
           </p>
         )}
 
-        {process.env["NODE_ENV"] === 'development' && (
+        {process.env["NODE_ENV"] === "development" && (
           <details className="mb-8 text-left">
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               エラー詳細（開発環境のみ）
@@ -98,5 +98,5 @@ export default function PublicError({ error, reset }: ErrorProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
 import {
   ActionDropdown,
   ActionDropdownItem,
-} from '@/admin/components/ActionDropdown'
+} from "@/admin/components/ActionDropdown";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type CustomerActionCellProps = {
-  customerId: string
-}
+  customerId: string;
+};
 
 // =============================================================================
 // CustomerActionCell Component
@@ -27,5 +27,5 @@ export function CustomerActionCell({ customerId }: CustomerActionCellProps) {
         詳細
       </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

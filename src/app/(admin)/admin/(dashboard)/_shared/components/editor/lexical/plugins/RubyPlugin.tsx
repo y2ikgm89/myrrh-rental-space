@@ -4,11 +4,11 @@
  * @description ルビ（ふりがな）挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getSelection, $insertNodes, $isRangeSelection } from 'lexical'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
 import {
   Dialog,
   DialogContent,
@@ -18,55 +18,57 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createRubyNode } from '../nodes/RubyNode'
+} from "@/admin/components/ui";
+import { $createRubyNode } from "../nodes/RubyNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type RubyPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function RubyPlugin({ isOpen, onClose }: RubyPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [baseText, setBaseText] = useState('')
-  const [rubyText, setRubyText] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [baseText, setBaseText] = useState("");
+  const [rubyText, setRubyText] = useState("");
 
   const handleSubmit = () => {
-    if (!baseText || !rubyText) return
+    if (!baseText || !rubyText) return;
 
     editor.update(() => {
-      const selection = $getSelection()
+      const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        selection.removeText()
+        selection.removeText();
       }
-      $insertNodes([$createRubyNode(baseText, rubyText)])
-    })
+      $insertNodes([$createRubyNode(baseText, rubyText)]);
+    });
 
-    setBaseText('')
-    setRubyText('')
-    onClose()
-  }
+    setBaseText("");
+    setRubyText("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setBaseText('')
-    setRubyText('')
-    onClose()
-  }
+    setBaseText("");
+    setRubyText("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>ルビを挿入</DialogTitle>
-          <DialogDescription>ベーステキストとルビ（ふりがな）を入力してください</DialogDescription>
+          <DialogDescription>
+            ベーステキストとルビ（ふりがな）を入力してください
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -93,12 +95,16 @@ export function RubyPlugin({ isOpen, onClose }: RubyPluginProps) {
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={!baseText || !rubyText}>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!baseText || !rubyText}
+            >
               挿入
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

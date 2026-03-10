@@ -10,20 +10,20 @@
 
 ### ロールベースアクセス制御（RBAC）
 
-| ロール | 権限 |
-|-------|------|
-| ADMIN | 全管理機能 |
+| ロール | 権限           |
+| ------ | -------------- |
+| ADMIN  | 全管理機能     |
 | EDITOR | コンテンツ編集 |
-| VIEWER | 閲覧のみ |
+| VIEWER | 閲覧のみ       |
 
 ```typescript
 // Server Component
-const user = await verifyAdminSession() // ADMIN必須
+const user = await verifyAdminSession(); // ADMIN必須
 
 // Server Action
 export const updateItem = withAuth(async (user, data) => {
   // user は認証済み管理者
-})
+});
 ```
 
 ## 入力検証
@@ -34,11 +34,11 @@ export const updateItem = withAuth(async (user, data) => {
 const schema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
-})
+});
 
-const result = schema.safeParse(input)
+const result = schema.safeParse(input);
 if (!result.success) {
-  return createFailure('入力エラー', result.error.flatten().fieldErrors)
+  return createFailure("入力エラー", result.error.flatten().fieldErrors);
 }
 ```
 
@@ -55,10 +55,10 @@ if (!result.success) {
 ### APIキー・シークレット
 
 ```typescript
-import { encrypt, decrypt } from '@/lib/crypto'
+import { encrypt, decrypt } from "@/lib/crypto";
 
-const encryptedKey = encrypt(apiKey) // 保存時
-const apiKey = decrypt(encryptedKey) // 使用時
+const encryptedKey = encrypt(apiKey); // 保存時
+const apiKey = decrypt(encryptedKey); // 使用時
 ```
 
 - **アルゴリズム**: AES-256-GCM
@@ -69,10 +69,10 @@ const apiKey = decrypt(encryptedKey) // 使用時
 ```typescript
 // next.config.ts
 headers: [
-  { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-]
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+];
 ```
 
 ## CSRF対策
@@ -85,12 +85,12 @@ headers: [
 ### HTMLサニタイズ
 
 ```typescript
-import DOMPurify from 'dompurify'
+import DOMPurify from "dompurify";
 
 const sanitized = DOMPurify.sanitize(html, {
-  ALLOWED_TAGS: ['p', 'h1', 'h2', 'a', 'img'],
-  ALLOWED_ATTR: ['href', 'src', 'alt'],
-})
+  ALLOWED_TAGS: ["p", "h1", "h2", "a", "img"],
+  ALLOWED_ATTR: ["href", "src", "alt"],
+});
 ```
 
 ## 監査・ログ
@@ -105,12 +105,14 @@ const sanitized = DOMPurify.sanitize(html, {
 ### ログ形式（JSON）
 
 ```typescript
-console.log(JSON.stringify({
-  level: 'warn',
-  type: 'rate_limit_violation',
-  ip: ipAddress,
-  timestamp: new Date().toISOString(),
-}))
+console.log(
+  JSON.stringify({
+    level: "warn",
+    type: "rate_limit_violation",
+    ip: ipAddress,
+    timestamp: new Date().toISOString(),
+  }),
+);
 ```
 
 ## インシデント対応

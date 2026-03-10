@@ -29,6 +29,7 @@ import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { PostData } from "@/shared/domain/posts/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { PostPreviewData } from "@/shared/types";
 
 // 共有ユーティリティ
@@ -60,16 +61,19 @@ type UsePostEditorOptions = {
 };
 
 async function fetchPreviewHtml(contentJson: string): Promise<string> {
-  const response = await fetchAdminJson<{ html: string }>("/admin/api/preview/html", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetchAdminJson<{ html: string }>(
+    "/admin/api/preview/html",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contentJson,
+        resource: "post",
+      }),
     },
-    body: JSON.stringify({
-      contentJson,
-      resource: "post",
-    }),
-  });
+  );
 
   return response.html;
 }
@@ -223,22 +227,24 @@ export function usePostEditor({
 
         if (mode === "create") {
           const result = await createPost(payload);
-          if (result.success && "data" in result) {
-            toast.success(result.message);
-            router.push(`/admin/posts/${result.data.id}`);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          toast.success("投稿記事を作成しました");
+          router.push(`/admin/posts/${result.id}`);
         } else if (post) {
           const result = await updatePost(post.id, payload);
-          if (result.success) {
-            reset(formData);
-            core.setHasEditorChanges(false);
-            router.refresh();
-            toast.success(result.message);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          reset(formData);
+          core.setHasEditorChanges(false);
+          router.refresh();
+          toast.success("投稿記事を保存しました");
         }
       } catch (error) {
         logger.error("保存中にエラーが発生しました", {
@@ -258,13 +264,14 @@ export function usePostEditor({
     if (!post || core.isPending) return;
     core.startTransition(async () => {
       const result = await publishPost(post.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("status", PostStatus.PUBLISHED);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success(`公開しました（バージョン ${result.version}）`);
+      setValue("status", PostStatus.PUBLISHED);
+      router.refresh();
     });
   };
 
@@ -272,13 +279,14 @@ export function usePostEditor({
     if (!post || core.isPending) return;
     core.startTransition(async () => {
       const result = await unpublishPost(post.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("status", PostStatus.DRAFT);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success("下書きに戻しました");
+      setValue("status", PostStatus.DRAFT);
+      router.refresh();
     });
   };
 
@@ -287,12 +295,13 @@ export function usePostEditor({
     core.startTransition(async () => {
       try {
         const result = await deletePost(post.id);
-        if (result.success) {
-          toast.success(result.message);
-          router.push("/admin/posts");
-        } else {
+        if (isMutationError(result)) {
           toast.error(result.error);
+          return;
         }
+
+        toast.success("投稿記事を削除しました");
+        router.push("/admin/posts");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {
           error: getErrorMessage(error),

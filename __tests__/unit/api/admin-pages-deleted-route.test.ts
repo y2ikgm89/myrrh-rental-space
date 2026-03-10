@@ -16,8 +16,9 @@ mock.module("@/admin/lib/action-auth", () => ({
 }));
 
 mock.module("@/shared/domain/pages/admin-queries", () => ({
-  getDeletedPagesListQuery: (...args: Parameters<typeof mockGetDeletedPagesListQuery>) =>
-    mockGetDeletedPagesListQuery(...args),
+  getDeletedPagesListQuery: (
+    ...args: Parameters<typeof mockGetDeletedPagesListQuery>
+  ) => mockGetDeletedPagesListQuery(...args),
 }));
 
 mock.module("@/shared/domain/user-page-assignments/queries", () => ({
@@ -42,7 +43,9 @@ describe("GET /admin/api/pages/deleted", () => {
       error: { success: false, error: "権限がありません" },
     });
 
-    const response = await GET(new Request("http://localhost/admin/api/pages/deleted"));
+    const response = await GET(
+      new Request("http://localhost/admin/api/pages/deleted"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(403);
@@ -60,14 +63,21 @@ describe("GET /admin/api/pages/deleted", () => {
       user: { id: "editor-id", role: Role.EDITOR },
     });
     mockGetAssignedPageIdsForUser.mockResolvedValue(["page-1", "page-2"]);
-    mockGetDeletedPagesListQuery.mockResolvedValue([{ id: "page-1", slug: "about" }]);
+    mockGetDeletedPagesListQuery.mockResolvedValue([
+      { id: "page-1", slug: "about" },
+    ]);
 
-    const response = await GET(new Request("http://localhost/admin/api/pages/deleted"));
+    const response = await GET(
+      new Request("http://localhost/admin/api/pages/deleted"),
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(mockGetAssignedPageIdsForUser).toHaveBeenCalledWith("editor-id");
-    expect(mockGetDeletedPagesListQuery).toHaveBeenCalledWith(["page-1", "page-2"]);
+    expect(mockGetDeletedPagesListQuery).toHaveBeenCalledWith([
+      "page-1",
+      "page-2",
+    ]);
     expect(body).toEqual([{ id: "page-1", slug: "about" }]);
   });
 });

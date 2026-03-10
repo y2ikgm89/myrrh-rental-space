@@ -4,10 +4,10 @@
  * @description GalleryContainerNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isGalleryContainerNode,
   type GalleryContainerNode,
@@ -15,65 +15,69 @@ import {
   type GalleryStyle,
   galleryColumnsState,
   galleryStyleState,
-} from '../../nodes/GalleryNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Label } from '@/admin/components/ui'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "../../nodes/GalleryNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Label } from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const COLUMN_OPTIONS: readonly { value: GalleryColumns; label: string }[] = [
-  { value: 2, label: '2列' },
-  { value: 3, label: '3列' },
-  { value: 4, label: '4列' },
-]
+  { value: 2, label: "2列" },
+  { value: 3, label: "3列" },
+  { value: 4, label: "4列" },
+];
 
 const STYLE_OPTIONS: readonly { value: GalleryStyle; label: string }[] = [
-  { value: 'grid', label: 'グリッド' },
-  { value: 'masonry', label: 'メイソンリー' },
-]
+  { value: "grid", label: "グリッド" },
+  { value: "masonry", label: "メイソンリー" },
+];
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type GalleryContainerInspectorPanelProps = {
-  nodeKey: string
-  node: GalleryContainerNode
-}
+  nodeKey: string;
+  node: GalleryContainerNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function GalleryContainerInspectorPanel({ nodeKey, node }: GalleryContainerInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isGalleryContainerNode)
+export function GalleryContainerInspectorPanel({
+  nodeKey,
+  node,
+}: GalleryContainerInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isGalleryContainerNode);
 
   const { columns, galleryStyle } = editor.getEditorState().read(() => ({
     columns: $getState(node, galleryColumnsState),
     galleryStyle: $getState(node, galleryStyleState),
-  }))
+  }));
 
   const handleColumnsChange = (value: string) => {
-    const num = parseInt(value, 10)
+    const num = parseInt(value, 10);
     if (num === 2 || num === 3 || num === 4) {
-      updateNode((n) => { $setState(n, galleryColumnsState, num) })
+      updateNode((n) => {
+        $setState(n, galleryColumnsState, num);
+      });
     }
-  }
+  };
 
   const handleStyleChange = (value: string) => {
-    if (value === 'grid' || value === 'masonry') {
-      updateNode((n) => { $setState(n, galleryStyleState, value) })
+    if (value === "grid" || value === "masonry") {
+      updateNode((n) => {
+        $setState(n, galleryStyleState, value);
+      });
     }
-  }
+  };
 
   return (
     <div>
@@ -131,5 +135,5 @@ export function GalleryContainerInspectorPanel({ nodeKey, node }: GalleryContain
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

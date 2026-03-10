@@ -8,11 +8,16 @@
  * - 動的コンテンツ: 設定データ（Suspenseでラップ）
  */
 
-import { Suspense } from 'react'
-import { getSettings, getDiscountSettings, getTaxSettings } from '@/admin/queries/settings'
-import { getSocialLinks } from '@/admin/queries/navigation'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { SettingsTabs } from '../_components/SettingsTabs'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import {
+  getSettings,
+  getDiscountSettings,
+  getTaxSettings,
+} from "@/admin/queries/settings";
+import { getSocialLinks } from "@/admin/queries/navigation";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   BusinessInfoSection,
   BusinessHoursSection,
@@ -21,19 +26,20 @@ import {
   TaxSection,
   TermsAgreementSection,
   MeoSection,
-} from '../_components/sections'
-import type { ReactElement } from 'react'
+} from "../_components/sections";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: ビジネス設定
  */
 async function BusinessSettingsContent(): Promise<ReactElement> {
-  const [settings, discountSettings, taxSettings, socialLinks] = await Promise.all([
-    getSettings(),
-    getDiscountSettings(),
-    getTaxSettings(),
-    getSocialLinks({ activeOnly: true }),
-  ])
+  const [settings, discountSettings, taxSettings, socialLinks] =
+    await Promise.all([
+      getSettings(),
+      getDiscountSettings(),
+      getTaxSettings(),
+      getSocialLinks({ activeOnly: true }),
+    ]);
 
   if (!settings) {
     return (
@@ -45,23 +51,23 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
           設定を読み込めませんでした
         </div>
       </SettingsLayout>
-    )
+    );
   }
 
   const tabs = [
     {
-      value: 'info',
-      label: '事業者情報',
+      value: "info",
+      label: "事業者情報",
       content: <BusinessInfoSection settings={settings} />,
     },
     {
-      value: 'hours',
-      label: '営業時間',
+      value: "hours",
+      label: "営業時間",
       content: <BusinessHoursSection settings={settings} />,
     },
     {
-      value: 'reservation',
-      label: '予約',
+      value: "reservation",
+      label: "予約",
       content: (
         <div className="space-y-6">
           <ReservationSection settings={settings} />
@@ -70,21 +76,23 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
       ),
     },
     {
-      value: 'discount',
-      label: '割引',
+      value: "discount",
+      label: "割引",
       content: <DiscountSection settings={discountSettings} />,
     },
     {
-      value: 'tax',
-      label: '消費税',
+      value: "tax",
+      label: "消費税",
       content: <TaxSection settings={taxSettings} />,
     },
     {
-      value: 'meo',
-      label: 'MEO対策',
-      content: <MeoSection settings={settings} socialLinkCount={socialLinks.length} />,
+      value: "meo",
+      label: "MEO対策",
+      content: (
+        <MeoSection settings={settings} socialLinkCount={socialLinks.length} />
+      ),
     },
-  ]
+  ];
 
   return (
     <SettingsLayout
@@ -93,7 +101,7 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
     >
       <SettingsTabs tabs={tabs} defaultTab="info" />
     </SettingsLayout>
-  )
+  );
 }
 
 /**
@@ -114,16 +122,14 @@ function BusinessSettingsLoading(): ReactElement {
         <div className="h-48 bg-muted rounded" />
       </div>
     </SettingsLayout>
-  )
+  );
 }
 
 export default async function BusinessSettingsPage(): Promise<ReactElement> {
+  await connection();
   return (
     <Suspense fallback={<BusinessSettingsLoading />}>
       <BusinessSettingsContent />
     </Suspense>
-  )
+  );
 }
-
-
-

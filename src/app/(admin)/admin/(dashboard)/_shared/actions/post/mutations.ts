@@ -35,7 +35,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgePostCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "投稿IDが不正です" });
 const versionSchema = z.object({
@@ -50,7 +50,9 @@ const postCategoryOrderSchema = z.array(
 );
 
 function purgePostCaches(...slugs: Array<string | undefined>): void {
-  const uniqueSlugs = [...new Set(slugs.filter((slug): slug is string => Boolean(slug)))];
+  const uniqueSlugs = [
+    ...new Set(slugs.filter((slug): slug is string => Boolean(slug))),
+  ];
 
   for (const slug of uniqueSlugs) {
     fireAndForget(purgePostCache(slug), {
@@ -130,7 +132,9 @@ export async function updatePost(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    parsed.data.contentJson,
+  );
   let updatedPost: { oldSlug: string; slug: string } | null = null;
 
   return executeAdminMutationResult({

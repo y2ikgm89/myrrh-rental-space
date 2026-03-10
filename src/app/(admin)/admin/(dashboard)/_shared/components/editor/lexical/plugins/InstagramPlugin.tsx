@@ -4,11 +4,11 @@
  * @description Instagram投稿挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,17 +18,17 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createInstagramNode } from '../nodes/InstagramNode'
+} from "@/admin/components/ui";
+import { $createInstagramNode } from "../nodes/InstagramNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type InstagramPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Utilities
@@ -45,22 +45,22 @@ type InstagramPluginProps = {
  * - 直接postId入力（英数字、アンダースコア、ハイフン）
  */
 function extractInstagramPostId(url: string): string | null {
-  const trimmedUrl = url.trim()
+  const trimmedUrl = url.trim();
 
   // instagram.com/p/ または instagram.com/reel/ 形式
   const postMatch = trimmedUrl.match(
-    /(?:www\.)?instagram\.com\/(?:p|reel)\/([a-zA-Z0-9_-]+)/
-  )
+    /(?:www\.)?instagram\.com\/(?:p|reel)\/([a-zA-Z0-9_-]+)/,
+  );
   if (postMatch?.[1]) {
-    return postMatch[1]
+    return postMatch[1];
   }
 
   // 直接postIdが入力された場合（英数字、アンダースコア、ハイフンのみ、1-50文字）
   if (/^[a-zA-Z0-9_-]{1,50}$/.test(trimmedUrl)) {
-    return trimmedUrl
+    return trimmedUrl;
   }
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -68,38 +68,38 @@ function extractInstagramPostId(url: string): string | null {
 // =============================================================================
 
 export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
 
-  const postId = extractInstagramPostId(url)
+  const postId = extractInstagramPostId(url);
 
   const handleSubmit = () => {
     if (!postId) {
-      setError('有効なInstagram URLまたは投稿IDを入力してください')
-      return
+      setError("有効なInstagram URLまたは投稿IDを入力してください");
+      return;
     }
 
     editor.update(() => {
-      const node = $createInstagramNode({ postId })
-      $insertNodeToNearestRoot(node)
-    })
+      const node = $createInstagramNode({ postId });
+      $insertNodeToNearestRoot(node);
+    });
 
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUrl(e.target.value)
-    setError('')
-  }
+    setUrl(e.target.value);
+    setError("");
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -147,6 +147,5 @@ export function InstagramPlugin({ isOpen, onClose }: InstagramPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

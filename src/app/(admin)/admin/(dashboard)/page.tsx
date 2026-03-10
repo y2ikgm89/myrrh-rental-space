@@ -9,7 +9,7 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import { DashboardHeader } from "./_components/DashboardHeader";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
 import { DashboardChartSection } from "./_components/DashboardChartSection";
@@ -43,7 +43,7 @@ function DashboardHeaderSkeleton() {
 }
 
 export default async function AdminDashboard(): Promise<ReactElement> {
-  await headers();
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -80,4 +80,3 @@ export default async function AdminDashboard(): Promise<ReactElement> {
     </div>
   );
 }
-

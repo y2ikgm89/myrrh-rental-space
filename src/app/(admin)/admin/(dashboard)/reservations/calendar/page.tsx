@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { List } from "lucide-react";
 import {
   getReservationsForCalendar,
@@ -54,6 +55,7 @@ async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
 export default async function ReservationCalendarPage({
   searchParams,
 }: PageProps) {
+  await connection();
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col space-y-6">
       <Breadcrumb
@@ -90,4 +92,3 @@ export default async function ReservationCalendarPage({
     </div>
   );
 }
-

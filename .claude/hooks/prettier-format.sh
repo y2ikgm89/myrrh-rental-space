@@ -11,7 +11,7 @@ FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev
 
 # Only format source files (skip generated, lock files, etc.)
 [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx|css|json|md)$ ]] || exit 0
-[[ "$FILE_PATH" =~ (node_modules|\.next|bun\.lockb|\.generated\.) ]] && exit 0
+[[ "$FILE_PATH" =~ (node_modules|\.next|bun\.lock|\.generated\.) ]] && exit 0
 
 # Run Prettier from project root (hooks run with Claude Code's environment)
 cd "$CLAUDE_PROJECT_DIR" || exit 0

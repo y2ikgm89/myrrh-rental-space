@@ -13,31 +13,37 @@
  * @module shared/lib/analytics/ga-data-api
  */
 
-import 'server-only'
-import { BetaAnalyticsDataClient } from '@google-analytics/data'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
-import { serverEnv } from '@/shared/lib/env/server'
+import "server-only";
+import { BetaAnalyticsDataClient } from "@google-analytics/data";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
+import { serverEnv } from "@/shared/lib/env/server";
+import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type AnalyticsStats = {
-  pageViews: number
-  users: number
-  sessions: number
-  averageSessionDuration: number
+  pageViews: number;
+  users: number;
+  sessions: number;
+  averageSessionDuration: number;
   topPages: Array<{
-    path: string
-    title: string
-    views: number
-  }>
-}
+    path: string;
+    title: string;
+    views: number;
+  }>;
+};
 
 export type AnalyticsError = {
-  code: 'NO_CREDENTIALS' | 'INVALID_PROPERTY' | 'API_ERROR' | 'UNKNOWN'
-  message: string
-}
+  code: "NO_CREDENTIALS" | "INVALID_PROPERTY" | "API_ERROR" | "UNKNOWN";
+  message: string;
+};
 
 // =============================================================================
 // Client
@@ -49,23 +55,23 @@ export type AnalyticsError = {
  * 環境変数 GOOGLE_APPLICATION_CREDENTIALS_JSON からクレデンシャルを読み込む
  */
 function getAnalyticsClient(): BetaAnalyticsDataClient | null {
-  const credentialsJson = serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  const credentialsJson = serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 
   if (!credentialsJson) {
-    return null
+    return null;
   }
 
-  try {
-    const credentials = JSON.parse(credentialsJson)
-    return new BetaAnalyticsDataClient({ credentials })
-  } catch (error) {
-    logError(error instanceof Error ? error : new Error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON'), {
+  const credentials = parseGoogleServiceAccountCredentials(credentialsJson);
+  if (!credentials) {
+    logError(new Error("Invalid GOOGLE_APPLICATION_CREDENTIALS_JSON"), {
       category: ErrorCategory.VALIDATION,
       severity: ErrorSeverity.HIGH,
-      context: { operation: 'getAnalyticsClient' },
-    })
-    return null
+      context: { operation: "getAnalyticsClient" },
+    });
+    return null;
   }
+
+  return new BetaAnalyticsDataClient({ credentials });
 }
 
 // =============================================================================
@@ -81,29 +87,32 @@ function getAnalyticsClient(): BetaAnalyticsDataClient | null {
  */
 export async function getAnalyticsStats(
   propertyId: string,
-  startDate: string = '30daysAgo',
-  endDate: string = 'today'
-): Promise<{ success: true; data: AnalyticsStats } | { success: false; error: AnalyticsError }> {
-  const client = getAnalyticsClient()
+  startDate: string = "30daysAgo",
+  endDate: string = "today",
+): Promise<
+  | { success: true; data: AnalyticsStats }
+  | { success: false; error: AnalyticsError }
+> {
+  const client = getAnalyticsClient();
 
   if (!client) {
     return {
       success: false,
       error: {
-        code: 'NO_CREDENTIALS',
-        message: 'Google Analytics APIのクレデンシャルが設定されていません',
+        code: "NO_CREDENTIALS",
+        message: "Google Analytics APIのクレデンシャルが設定されていません",
       },
-    }
+    };
   }
 
   if (!propertyId || !/^\d+$/.test(propertyId)) {
     return {
       success: false,
       error: {
-        code: 'INVALID_PROPERTY',
-        message: 'GA4プロパティIDが無効です',
+        code: "INVALID_PROPERTY",
+        message: "GA4プロパティIDが無効です",
       },
-    }
+    };
   }
 
   try {
@@ -112,57 +121,57 @@ export async function getAnalyticsStats(
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
       metrics: [
-        { name: 'screenPageViews' },
-        { name: 'totalUsers' },
-        { name: 'sessions' },
-        { name: 'averageSessionDuration' },
+        { name: "screenPageViews" },
+        { name: "totalUsers" },
+        { name: "sessions" },
+        { name: "averageSessionDuration" },
       ],
-    })
+    });
 
     // 人気ページTop5
     const [pagesResponse] = await client.runReport({
       property: `properties/${propertyId}`,
       dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'pagePath' }, { name: 'pageTitle' }],
-      metrics: [{ name: 'screenPageViews' }],
-      orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+      dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
+      metrics: [{ name: "screenPageViews" }],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
       limit: 5,
-    })
+    });
 
-    const basicRow = basicResponse.rows?.[0]
+    const basicRow = basicResponse.rows?.[0];
 
     return {
       success: true,
       data: {
-        pageViews: parseInt(basicRow?.metricValues?.[0]?.value || '0'),
-        users: parseInt(basicRow?.metricValues?.[1]?.value || '0'),
-        sessions: parseInt(basicRow?.metricValues?.[2]?.value || '0'),
+        pageViews: parseInt(basicRow?.metricValues?.[0]?.value || "0"),
+        users: parseInt(basicRow?.metricValues?.[1]?.value || "0"),
+        sessions: parseInt(basicRow?.metricValues?.[2]?.value || "0"),
         averageSessionDuration: parseFloat(
-          basicRow?.metricValues?.[3]?.value || '0'
+          basicRow?.metricValues?.[3]?.value || "0",
         ),
         topPages: (pagesResponse.rows || []).map((row) => ({
-          path: row.dimensionValues?.[0]?.value || '',
-          title: row.dimensionValues?.[1]?.value || '',
-          views: parseInt(row.metricValues?.[0]?.value || '0'),
+          path: row.dimensionValues?.[0]?.value || "",
+          title: row.dimensionValues?.[1]?.value || "",
+          views: parseInt(row.metricValues?.[0]?.value || "0"),
         })),
       },
-    }
+    };
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'getAnalyticsStats', propertyId },
-    })
+      context: { operation: "getAnalyticsStats", propertyId },
+    });
     return {
       success: false,
       error: {
-        code: 'API_ERROR',
+        code: "API_ERROR",
         message:
           error instanceof Error
             ? error.message
-            : 'Google Analytics APIの呼び出しに失敗しました',
+            : "Google Analytics APIの呼び出しに失敗しました",
       },
-    }
+    };
   }
 }
 
@@ -170,5 +179,5 @@ export async function getAnalyticsStats(
  * GA Data APIが利用可能かチェック
  */
 export function isAnalyticsApiAvailable(): boolean {
-  return !!serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  return !!serverEnv.GOOGLE_APPLICATION_CREDENTIALS_JSON;
 }

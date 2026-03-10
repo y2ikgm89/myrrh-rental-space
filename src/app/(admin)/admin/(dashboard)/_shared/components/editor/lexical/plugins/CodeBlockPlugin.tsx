@@ -4,39 +4,44 @@
  * @description コードブロック強化プラグイン（言語セレクタ + コピーボタン）
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getNodeByKey, $getSelection, $isNodeSelection, $isRangeSelection } from 'lexical'
-import { $isCodeNode } from '@lexical/code'
-import { createPortal } from 'react-dom'
-import { Copy, Check } from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $getNodeByKey,
+  $getSelection,
+  $isNodeSelection,
+  $isRangeSelection,
+} from "lexical";
+import { $isCodeNode } from "@lexical/code";
+import { createPortal } from "react-dom";
+import { Copy, Check } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const CODE_LANGUAGES: Record<string, string> = {
-  '': 'プレーン',
-  javascript: 'JavaScript',
-  typescript: 'TypeScript',
-  python: 'Python',
-  html: 'HTML',
-  css: 'CSS',
-  json: 'JSON',
-  sql: 'SQL',
-  bash: 'Bash',
-  go: 'Go',
-  rust: 'Rust',
-  java: 'Java',
-  php: 'PHP',
-  ruby: 'Ruby',
-  yaml: 'YAML',
-  markdown: 'Markdown',
-  xml: 'XML',
-}
+  "": "プレーン",
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  python: "Python",
+  html: "HTML",
+  css: "CSS",
+  json: "JSON",
+  sql: "SQL",
+  bash: "Bash",
+  go: "Go",
+  rust: "Rust",
+  java: "Java",
+  php: "PHP",
+  ruby: "Ruby",
+  yaml: "YAML",
+  markdown: "Markdown",
+  xml: "XML",
+};
 
 // =============================================================================
 // Floating Code Toolbar
@@ -46,36 +51,36 @@ function CodeToolbar({
   codeNode,
   anchorElem,
 }: {
-  codeNode: { key: string; language: string; element: HTMLElement }
-  anchorElem: HTMLElement
+  codeNode: { key: string; language: string; element: HTMLElement };
+  anchorElem: HTMLElement;
 }) {
-  const [editor] = useLexicalComposerContext()
-  const [copied, setCopied] = useState(false)
+  const [editor] = useLexicalComposerContext();
+  const [copied, setCopied] = useState(false);
 
   const handleLanguageChange = (lang: string) => {
     editor.update(() => {
-      const node = $getNodeByKey(codeNode.key)
+      const node = $getNodeByKey(codeNode.key);
       if ($isCodeNode(node)) {
-        node.setLanguage(lang)
+        node.setLanguage(lang);
       }
-    })
-  }
+    });
+  };
 
   const handleCopy = () => {
     editor.getEditorState().read(() => {
-      const node = $getNodeByKey(codeNode.key)
+      const node = $getNodeByKey(codeNode.key);
       if ($isCodeNode(node)) {
-        const text = node.getTextContent()
+        const text = node.getTextContent();
         void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
-        })
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
       }
-    })
-  }
+    });
+  };
 
-  const rect = codeNode.element.getBoundingClientRect()
-  const anchorRect = anchorElem.getBoundingClientRect()
+  const rect = codeNode.element.getBoundingClientRect();
+  const anchorRect = anchorElem.getBoundingClientRect();
 
   return createPortal(
     <div
@@ -111,8 +116,8 @@ function CodeToolbar({
         )}
       </Button>
     </div>,
-    anchorElem
-  )
+    anchorElem,
+  );
 }
 
 // =============================================================================
@@ -122,72 +127,72 @@ function CodeToolbar({
 export function CodeBlockPlugin({
   anchorElem,
 }: {
-  anchorElem: HTMLElement | null
+  anchorElem: HTMLElement | null;
 }) {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
   const [selectedCode, setSelectedCode] = useState<{
-    key: string
-    language: string
-    element: HTMLElement
-  } | null>(null)
+    key: string;
+    language: string;
+    element: HTMLElement;
+  } | null>(null);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        const selection = $getSelection()
+        const selection = $getSelection();
         if ($isRangeSelection(selection)) {
-          const anchorNode = selection.anchor.getNode()
-          const parent = anchorNode.getParent()
+          const anchorNode = selection.anchor.getNode();
+          const parent = anchorNode.getParent();
           if ($isCodeNode(parent)) {
-            const element = editor.getElementByKey(parent.getKey())
+            const element = editor.getElementByKey(parent.getKey());
             if (element) {
               setSelectedCode({
                 key: parent.getKey(),
-                language: parent.getLanguage() ?? '',
+                language: parent.getLanguage() ?? "",
                 element,
-              })
-              return
+              });
+              return;
             }
           }
           if ($isCodeNode(anchorNode)) {
-            const element = editor.getElementByKey(anchorNode.getKey())
+            const element = editor.getElementByKey(anchorNode.getKey());
             if (element) {
               setSelectedCode({
                 key: anchorNode.getKey(),
-                language: anchorNode.getLanguage() ?? '',
+                language: anchorNode.getLanguage() ?? "",
                 element,
-              })
-              return
+              });
+              return;
             }
           }
-          setSelectedCode(null)
-          return
+          setSelectedCode(null);
+          return;
         }
 
         if (!$isNodeSelection(selection)) {
-          setSelectedCode(null)
-          return
+          setSelectedCode(null);
+          return;
         }
 
-        const nodes = selection.getNodes()
-        const firstNode = nodes[0]
+        const nodes = selection.getNodes();
+        const firstNode = nodes[0];
         if (firstNode && $isCodeNode(firstNode)) {
-          const element = editor.getElementByKey(firstNode.getKey())
+          const element = editor.getElementByKey(firstNode.getKey());
           if (element) {
             setSelectedCode({
               key: firstNode.getKey(),
-              language: firstNode.getLanguage() ?? '',
+              language: firstNode.getLanguage() ?? "",
               element,
-            })
-            return
+            });
+            return;
           }
         }
-        setSelectedCode(null)
-      })
-    })
-  }, [editor])
+        setSelectedCode(null);
+      });
+    });
+  }, [editor]);
 
-  if (!selectedCode || !anchorElem) return null
+  if (!selectedCode || !anchorElem) return null;
 
-  return <CodeToolbar codeNode={selectedCode} anchorElem={anchorElem} />
+  return <CodeToolbar codeNode={selectedCode} anchorElem={anchorElem} />;
 }

@@ -8,12 +8,17 @@
  * @module admin/lib/audit
  */
 
-import 'server-only'
+import "server-only";
 
-import { headers } from 'next/headers'
-import { AuditAction } from '@/shared/db/enums'
-import { createAuditLogRecord } from '@/shared/domain/audit-log/commands'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors/server'
+import { headers } from "next/headers";
+import { AuditAction } from "@/shared/db/enums";
+import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors/server";
 
 // =============================================================================
 // Types
@@ -26,24 +31,24 @@ import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared
  * - 型アサーション（as never）を排除するために導入
  */
 export type AuditUser = {
-  id: string
-}
+  id: string;
+};
 
 export type AuditLogInput = {
-  userId?: string
-  action: AuditAction
-  resource: string
-  resourceId?: string
-  oldValue?: object
-  newValue?: object
-  metadata?: object
-}
+  userId?: string;
+  action: AuditAction;
+  resource: string;
+  resourceId?: string;
+  oldValue?: object;
+  newValue?: object;
+  metadata?: object;
+};
 
 export type AuditLogMetadata = {
-  ipAddress?: string
-  userAgent?: string
-  [key: string]: unknown
-}
+  ipAddress?: string;
+  userAgent?: string;
+  [key: string]: unknown;
+};
 
 // =============================================================================
 // Helper Functions
@@ -54,13 +59,16 @@ export type AuditLogMetadata = {
  */
 async function getRequestMetadata(): Promise<AuditLogMetadata> {
   try {
-    const headersList = await headers()
+    const headersList = await headers();
     return {
-      ipAddress: headersList.get('x-forwarded-for') ?? headersList.get('x-real-ip') ?? undefined,
-      userAgent: headersList.get('user-agent') ?? undefined,
-    }
+      ipAddress:
+        headersList.get("x-forwarded-for") ??
+        headersList.get("x-real-ip") ??
+        undefined,
+      userAgent: headersList.get("user-agent") ?? undefined,
+    };
   } catch {
-    return {}
+    return {};
   }
 }
 
@@ -75,7 +83,7 @@ async function getRequestMetadata(): Promise<AuditLogMetadata> {
  */
 export async function createAuditLog(input: AuditLogInput): Promise<void> {
   try {
-    const metadata = await getRequestMetadata()
+    const metadata = await getRequestMetadata();
     await createAuditLogRecord({
       userId: input.userId,
       action: input.action,
@@ -84,14 +92,18 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
       oldValue: input.oldValue,
       newValue: input.newValue,
       metadata: { ...metadata, ...input.metadata },
-    })
+    });
   } catch (error) {
     // ログ記録失敗は無視（本番ではSentry等に送信推奨）
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,
-      context: { operation: 'createAuditLog', action: input.action, resource: input.resource },
-    })
+      context: {
+        operation: "createAuditLog",
+        action: input.action,
+        resource: input.resource,
+      },
+    });
   }
 }
 
@@ -111,7 +123,7 @@ export async function logUserAction(
   resource: string,
   resourceId?: string,
   oldValue?: object,
-  newValue?: object
+  newValue?: object,
 ): Promise<void> {
   await createAuditLog({
     userId: user.id,
@@ -120,7 +132,7 @@ export async function logUserAction(
     resourceId,
     oldValue,
     newValue,
-  })
+  });
 }
 
 // =============================================================================
@@ -134,7 +146,7 @@ export async function logPermissionDenied(
   userId: string,
   resource: string,
   action: string,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<void> {
   await createAuditLog({
     userId,
@@ -142,7 +154,7 @@ export async function logPermissionDenied(
     resource,
     resourceId,
     metadata: { attemptedAction: action },
-  })
+  });
 }
 
 /**
@@ -152,14 +164,14 @@ export async function logRoleChange(
   userId: string,
   targetUserId: string,
   oldRole: string,
-  newRole: string
+  newRole: string,
 ): Promise<void> {
   await createAuditLog({
     userId,
     action: AuditAction.ROLE_CHANGE,
-    resource: 'user',
+    resource: "user",
     resourceId: targetUserId,
     oldValue: { role: oldRole },
     newValue: { role: newRole },
-  })
+  });
 }

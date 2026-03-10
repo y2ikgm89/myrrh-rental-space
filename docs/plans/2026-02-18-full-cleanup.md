@@ -15,6 +15,7 @@
 ### Task 0: 現状テスト確認
 
 **Files:**
+
 - Run: `__tests__/`
 
 **Step 1: 全テスト実行**
@@ -46,6 +47,7 @@ context7 ライブラリ ID: `/microsoft/typescript`
 **Step 3: package.json 更新（stable リリース済みの場合）**
 
 Modify: `package.json`
+
 ```json
 "typescript": "^6.0.0"
 ```
@@ -74,6 +76,7 @@ Expected: 型エラー 0 件
 stable 3.x がリリースされている場合:
 
 Modify: `package.json`
+
 ```json
 "isomorphic-dompurify": "^3.0.0"
 ```
@@ -86,6 +89,7 @@ bun run type-check
 ```
 
 SanitizedHtml.tsx の動作確認:
+
 ```bash
 grep -n "sanitize" src/shared/components/SanitizedHtml.tsx
 ```
@@ -112,16 +116,16 @@ bun x npm-check-updates 2>&1 | head -100
 
 以下を並行確認（context7 + WebSearch）:
 
-| パッケージ | 現在 | 調査内容 |
-|-----------|------|---------|
-| `zod` | 4.3.6 | 最新パッチ版 |
-| `lexical` + `@lexical/*` | 0.40.0 | 最新版 + Node API 変更 |
-| `better-auth` | 1.4.18 | 最新版 + 破壊的変更 |
-| `@prisma/client` + `prisma` | 7.4.0 | 最新版 |
-| `react-hook-form` | ^7.71.1 | 最新版 |
-| `nuqs` | ^2.8.8 | 最新版 |
-| `lucide-react` | 0.564.0 (pinned) | 最新版（`^` に変更するか） |
-| `eslint` | 9.39.2 | ESLint 10 プラグイン対応状況 |
+| パッケージ                  | 現在             | 調査内容                     |
+| --------------------------- | ---------------- | ---------------------------- |
+| `zod`                       | 4.3.6            | 最新パッチ版                 |
+| `lexical` + `@lexical/*`    | 0.40.0           | 最新版 + Node API 変更       |
+| `better-auth`               | 1.4.18           | 最新版 + 破壊的変更          |
+| `@prisma/client` + `prisma` | 7.4.0            | 最新版                       |
+| `react-hook-form`           | ^7.71.1          | 最新版                       |
+| `nuqs`                      | ^2.8.8           | 最新版                       |
+| `lucide-react`              | 0.564.0 (pinned) | 最新版（`^` に変更するか）   |
+| `eslint`                    | 9.39.2           | ESLint 10 プラグイン対応状況 |
 
 **Step 3: ESLint 10 対応状況の確認（WebSearch）**
 
@@ -139,6 +143,7 @@ ESLint 10 が使用プラグインで対応済みなら更新候補。
 ### Task 4: Lexical 最新版への更新（変更がある場合）
 
 **Files:**
+
 - Modify: `package.json`
 - Potentially modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/**`
 
@@ -164,6 +169,7 @@ bun run type-check
 NodeState API (`$config`, `createState`, `$getState`, `$setState`) の変更がある場合はノードファイルを更新。
 
 破壊的変更パターン確認:
+
 ```bash
 grep -rn "createState\|getState\|setState\|config(" src/app/\(admin\)/admin/\(dashboard\)/_shared/components/editor/lexical/nodes/ --include="*.tsx" | head -20
 ```
@@ -197,6 +203,7 @@ bun run type-check
 ```
 
 エラーがあれば型修正:
+
 - `as` アサーション禁止 → 型ガード使用
 - API 変更 → 新 API に移行
 
@@ -221,6 +228,7 @@ grep -rn " as " src/ --include="*.ts" --include="*.tsx" \
 **Step 2: 許可パターンを除外した真の違反を特定**
 
 許可されたパターン（`type-safety.md` 参照）:
+
 - `event.target as HTMLElement`（DOM イベント）
 - `as Prisma.InputJsonObject`（Prisma JSON 型制約）
 - `as SectionConfig`（union widening、コメント必須）

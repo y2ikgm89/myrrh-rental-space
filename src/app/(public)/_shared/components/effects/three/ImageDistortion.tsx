@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import { useRef } from 'react'
-import { useFrame, useLoader } from '@react-three/fiber'
-import * as THREE from 'three'
-import { useScrollRef } from './ThreeCanvas'
+import { useRef } from "react";
+import { useFrame, useLoader } from "@react-three/fiber";
+import * as THREE from "three";
+import { useScrollRef } from "./ThreeCanvas";
 
 export interface ImageDistortionProps {
   /** 画像URL */
-  readonly src: string
+  readonly src: string;
   /** 幅 */
-  readonly width?: number
+  readonly width?: number;
   /** 高さ */
-  readonly height?: number
+  readonly height?: number;
   /** 歪み強度 */
-  readonly intensity?: number
+  readonly intensity?: number;
   /** 3D位置 */
-  readonly position?: readonly [number, number, number]
+  readonly position?: readonly [number, number, number];
 }
 
 const VERTEX_SHADER = /* glsl */ `
@@ -31,7 +31,7 @@ const VERTEX_SHADER = /* glsl */ `
     pos.z += cos(pos.y * 2.0 + uProgress * 3.14) * uDistortion * 0.1;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
-`
+`;
 
 const FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D uTexture;
@@ -46,7 +46,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec4 color = texture2D(uTexture, uv);
     gl_FragColor = color;
   }
-`
+`;
 
 /**
  * GLSL シェーダ画像歪みコンポーネント。
@@ -60,38 +60,35 @@ export function ImageDistortion({
   intensity = 1,
   position = [0, 0, 0],
 }: ImageDistortionProps) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const scrollRef = useScrollRef()
+  const meshRef = useRef<THREE.Mesh>(null);
+  const scrollRef = useScrollRef();
 
-  const texture = useLoader(THREE.TextureLoader, src)
+  const texture = useLoader(THREE.TextureLoader, src);
 
   const uniforms = {
     uTexture: { value: texture },
     uDistortion: { value: 0 },
     uProgress: { value: 0 },
-  }
+  };
 
   useFrame(() => {
-    const mesh = meshRef.current
-    if (!mesh) return
+    const mesh = meshRef.current;
+    if (!mesh) return;
 
-    const material = mesh.material
-    if (!(material instanceof THREE.ShaderMaterial)) return
+    const material = mesh.material;
+    if (!(material instanceof THREE.ShaderMaterial)) return;
 
-    const velocity = Math.abs(scrollRef.current.velocity)
-    const progress = scrollRef.current.progress
+    const velocity = Math.abs(scrollRef.current.velocity);
+    const progress = scrollRef.current.progress;
 
     // velocity を 0-1 範囲にクランプし intensity で乗算
-    material.uniforms['uDistortion']!.value =
-      Math.min(velocity * 0.01, 1) * intensity
-    material.uniforms['uProgress']!.value = progress
-  })
+    material.uniforms["uDistortion"]!.value =
+      Math.min(velocity * 0.01, 1) * intensity;
+    material.uniforms["uProgress"]!.value = progress;
+  });
 
   return (
-    <mesh
-      ref={meshRef}
-      position={[position[0], position[1], position[2]]}
-    >
+    <mesh ref={meshRef} position={[position[0], position[1], position[2]]}>
       <planeGeometry args={[width, height, 32, 32]} />
       <shaderMaterial
         vertexShader={VERTEX_SHADER}
@@ -100,5 +97,5 @@ export function ImageDistortion({
         transparent
       />
     </mesh>
-  )
+  );
 }

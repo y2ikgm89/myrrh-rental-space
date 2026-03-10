@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -11,115 +11,114 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updateCloudflareSettings,
   testCloudflareConnectionAction,
   clearCloudflareKeys,
-} from '@/admin/actions/api-keys'
-import type { CloudflareConfig } from '@/admin/types/api-keys'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
-import { CloudIcon } from 'lucide-react'
+} from "@/admin/actions/api-keys";
+import type { CloudflareConfig } from "@/admin/types/api-keys";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { CloudIcon } from "lucide-react";
 
 interface Props {
-  config: CloudflareConfig
+  config: CloudflareConfig;
 }
 
 export function CloudflareSection({ config }: Props) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
-    cloudflareZoneId: '',
-    cloudflareApiToken: '',
-  })
+    cloudflareZoneId: "",
+    cloudflareApiToken: "",
+  });
 
-  const [showTokenInput, setShowTokenInput] = useState(false)
+  const [showTokenInput, setShowTokenInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateCloudflareSettings({
         cloudflareZoneId: formData.cloudflareZoneId || null,
         cloudflareApiToken: formData.cloudflareApiToken || null,
-      })
-      if (result.success) {
-        setFormData({ cloudflareZoneId: '', cloudflareApiToken: '' })
-        setShowTokenInput(false)
+      });
+      if (!isMutationError(result)) {
+        setFormData({ cloudflareZoneId: "", cloudflareApiToken: "" });
+        setShowTokenInput(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Cloudflare設定を保存しました");
+    });
+  };
 
   const handleConnectionTest = async () => {
-    const zoneId = formData.cloudflareZoneId || config.zoneId
-    const apiToken = formData.cloudflareApiToken
+    const zoneId = formData.cloudflareZoneId || config.zoneId;
+    const apiToken = formData.cloudflareApiToken;
 
     if (!zoneId || !apiToken) {
       setTestResult({
         success: false,
-        message: 'Zone IDとAPI Tokenの両方を入力してください',
-      })
-      return
+        message: "Zone IDとAPI Tokenの両方を入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
-      const result = await testCloudflareConnectionAction(zoneId, apiToken)
-      if (result.success) {
-        const zoneName = result.data?.zoneName
+      const result = await testCloudflareConnectionAction(zoneId, apiToken);
+      if (!isMutationError(result)) {
+        const zoneName = result.zoneName;
         setTestResult({
           success: true,
-          message: zoneName
-            ? `接続成功 (Zone: ${zoneName})`
-            : result.data?.message || '接続成功',
-        })
-        refresh()
+          message: zoneName ? `接続成功 (Zone: ${zoneName})` : "接続成功",
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続に失敗しました',
-        })
+          message: result.error,
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearKeys = async () => {
     const confirmed = await confirm({
-      title: '設定をクリアしますか？',
-      description: 'Cloudflare設定をクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "設定をクリアしますか？",
+      description: "Cloudflare設定をクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearCloudflareKeys()
-      if (result.success) {
-        setFormData({ cloudflareZoneId: '', cloudflareApiToken: '' })
-        setTestResult(null)
+      const result = await clearCloudflareKeys();
+      if (!isMutationError(result)) {
+        setFormData({ cloudflareZoneId: "", cloudflareApiToken: "" });
+        setTestResult(null);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Cloudflare設定をクリアしました");
+    });
+  };
 
-  const hasExistingConfig = config.zoneId || config.apiTokenMasked
+  const hasExistingConfig = config.zoneId || config.apiTokenMasked;
 
   return (
     <Card>
@@ -215,23 +214,25 @@ export function CloudflareSection({ config }: Props) {
         </div>
 
         {config.connectionStatus && (
-          <StatusBanner success={config.connectionStatus === 'connected'}>
+          <StatusBanner success={config.connectionStatus === "connected"}>
             <div className="flex items-center gap-2">
               <span
                 className={`h-2 w-2 rounded-full ${
-                  config.connectionStatus === 'connected'
-                    ? 'bg-success'
-                    : 'bg-destructive'
+                  config.connectionStatus === "connected"
+                    ? "bg-success"
+                    : "bg-destructive"
                 }`}
               />
               <span
                 className={`text-sm font-medium ${
-                  config.connectionStatus === 'connected'
-                    ? 'text-success'
-                    : 'text-destructive'
+                  config.connectionStatus === "connected"
+                    ? "text-success"
+                    : "text-destructive"
                 }`}
               >
-                {config.connectionStatus === 'connected' ? '接続済み' : 'エラー'}
+                {config.connectionStatus === "connected"
+                  ? "接続済み"
+                  : "エラー"}
               </span>
             </div>
             {config.lastTestedAt && (
@@ -245,7 +246,7 @@ export function CloudflareSection({ config }: Props) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
             >
               {testResult.message}
             </p>
@@ -254,7 +255,7 @@ export function CloudflareSection({ config }: Props) {
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
           {formData.cloudflareApiToken && (
             <Button
@@ -262,7 +263,7 @@ export function CloudflareSection({ config }: Props) {
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '接続テスト'}
+              {isTesting ? "テスト中..." : "接続テスト"}
             </Button>
           )}
           {hasExistingConfig && (
@@ -277,5 +278,5 @@ export function CloudflareSection({ config }: Props) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

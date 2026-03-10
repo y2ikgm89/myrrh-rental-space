@@ -2,7 +2,7 @@
  * ダッシュボード統計カードのスケルトン
  */
 
-import { Card, CardContent, CardHeader } from '@/admin/components/ui/card'
+import { Card, CardContent, CardHeader } from "@/admin/components/ui/card";
 
 export function StatsCardsSkeleton() {
   return (
@@ -20,5 +20,5 @@ export function StatsCardsSkeleton() {
         </Card>
       ))}
     </div>
-  )
+  );
 }

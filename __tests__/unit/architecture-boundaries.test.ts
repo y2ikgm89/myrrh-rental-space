@@ -6,10 +6,59 @@ const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
 const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
 const SHARED_DOMAIN_ROOT = join(SRC_ROOT, "shared", "domain");
+const APP_ROUTE_ROOT = join(SRC_ROOT, "app");
+const API_CRON_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "cron");
+const API_WEBHOOK_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "webhooks");
 const PUBLIC_APP_ROOT = join(SRC_ROOT, "app", "(public)");
 const PUBLIC_LAYOUT_FILE = join(PUBLIC_APP_ROOT, "layout.tsx");
 const PACKAGE_JSON_FILE = join(ROOT, "package.json");
 const CLOUDBUILD_FILE = join(ROOT, "cloudbuild.yaml");
+const README_FILE = join(ROOT, "README.md");
+const DOCS_README_FILE = join(ROOT, "docs", "README.md");
+const GUIDES_README_FILE = join(ROOT, "docs", "guides", "README.md");
+const ARCHITECTURE_README_FILE = join(
+  ROOT,
+  "docs",
+  "architecture",
+  "README.md",
+);
+const AUTH_ROUTE_FILE = join(
+  SRC_ROOT,
+  "app",
+  "api",
+  "auth",
+  "[...all]",
+  "route.ts",
+);
+const CALENDAR_SYNC_CRON_ROUTE_FILE = join(
+  SRC_ROOT,
+  "app",
+  "api",
+  "cron",
+  "calendar-sync",
+  "route.ts",
+);
+const INSTAGRAM_REFRESH_CRON_ROUTE_FILE = join(
+  SRC_ROOT,
+  "app",
+  "api",
+  "cron",
+  "instagram-refresh",
+  "route.ts",
+);
+const GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE = join(
+  SRC_ROOT,
+  "app",
+  "api",
+  "webhooks",
+  "google-calendar",
+  "route.ts",
+);
+const GOOGLE_SERVICE_ACCOUNT_BOUNDARY_FILES = [
+  join(SRC_ROOT, "shared", "domain", "settings", "commands.ts"),
+  join(SRC_ROOT, "shared", "lib", "analytics", "ga-data-api.ts"),
+  join(SRC_ROOT, "shared", "lib", "google-calendar", "service-account.ts"),
+];
 const THIN_ADMIN_ACTION_FILES = [
   join(
     SRC_ROOT,
@@ -537,6 +586,28 @@ function collectSourceFiles(dir: string): string[] {
   return files;
 }
 
+function collectNonCommentOffenders(
+  files: string[],
+  pattern: RegExp,
+): string[] {
+  return files
+    .filter((file) => {
+      const lines = readFileSync(file, "utf8").split(/\r?\n/u);
+      return lines.some((line) => {
+        const trimmed = line.trim();
+        if (
+          trimmed.startsWith("//") ||
+          trimmed.startsWith("*") ||
+          trimmed.startsWith("/*")
+        ) {
+          return false;
+        }
+        return pattern.test(line);
+      });
+    })
+    .map((file) => relative(ROOT, file));
+}
+
 describe("architecture boundaries", () => {
   test("proxy.ts は Prisma を直接 import しない", () => {
     const source = readFileSync(join(SRC_ROOT, "proxy.ts"), "utf8");
@@ -721,5 +792,462 @@ describe("architecture boundaries", () => {
     expect(source).toContain(
       "NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:${_NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_SECRET_VERSION}",
     );
+  });
+
+  test("Better Auth の canonical route handler を app/api/auth/[...all] に固定する", () => {
+    expect(existsSync(AUTH_ROUTE_FILE)).toBe(true);
+
+    const source = readFileSync(AUTH_ROUTE_FILE, "utf8");
+    expect(source).toContain('import { auth } from "@/shared/lib/auth"');
+    expect(source).toContain("toNextJsHandler(auth)");
+  });
+
+  test("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タグ文字列を直書きしない", () => {
+    const sourceFiles = collectSourceFiles(SRC_ROOT).filter(
+      (file) => !file.endsWith(join("shared", "lib", "constants", "cache.ts")),
+    );
+    const offenders = collectNonCommentOffenders(
+      sourceFiles,
+      /\b(?:cacheTag|updateTag|revalidateTag)\(\s*["'][^"']+["']/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("cron route は shared helper 経由で認証する", () => {
+    for (const file of [
+      CALENDAR_SYNC_CRON_ROUTE_FILE,
+      INSTAGRAM_REFRESH_CRON_ROUTE_FILE,
+    ]) {
+      const source = readFileSync(file, "utf8");
+      expect(source).toContain("authorizeCronRequest");
+    }
+  });
+
+  test("Google Calendar webhook route は Zod schema でヘッダーを検証する", () => {
+    const source = readFileSync(GOOGLE_CALENDAR_WEBHOOK_ROUTE_FILE, "utf8");
+
+    expect(source).toContain("googleCalendarWebhookHeadersSchema");
+    expect(source).toContain(".safeParse(");
+  });
+
+  test("サービスアカウント JSON は shared validation helper 経由で検証する", () => {
+    const offenders = collectNonCommentOffenders(
+      GOOGLE_SERVICE_ACCOUNT_BOUNDARY_FILES,
+      /JSON\.parse\(/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("route handler は legacy success wrapper を返さない", () => {
+    const routeFiles = collectSourceFiles(APP_ROUTE_ROOT).filter((file) =>
+      file.endsWith(join("route.ts")),
+    );
+    const offenders = routeFiles
+      .filter((file) => readFileSync(file, "utf8").includes("createSuccess("))
+      .map((file) => relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("admin route handler は success boolean payload と fieldErrors を返さない", () => {
+    const adminRouteRoot = join(SRC_ROOT, "app", "(admin)", "admin", "api");
+    const routeFiles = collectSourceFiles(adminRouteRoot).filter((file) =>
+      file.endsWith(join("route.ts")),
+    );
+    const offenders = collectNonCommentOffenders(
+      routeFiles,
+      /\bsuccess\s*:\s*(?:true|false)\b|\bfieldErrors\b/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("cron / webhook route handler は legacy success boolean payload を返さない", () => {
+    const routeFiles = [
+      ...collectSourceFiles(API_CRON_ROUTE_ROOT),
+      ...collectSourceFiles(API_WEBHOOK_ROUTE_ROOT),
+    ].filter((file) => file.endsWith(join("route.ts")));
+    const offenders = routeFiles
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return /return\s+NextResponse\.json\(\s*\{\s*success\s*:\s*(?:true|false)\b/u.test(
+          source,
+        );
+      })
+      .map((file) => relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("route handler は request.json の parse error を catch(null) で握りつぶさない", () => {
+    const routeFiles = collectSourceFiles(APP_ROUTE_ROOT).filter((file) =>
+      file.endsWith(join("route.ts")),
+    );
+    const offenders = collectNonCommentOffenders(
+      routeFiles,
+      /request\.json\(\)\.catch\(\(\)\s*=>\s*null\)/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("admin app は JSON.parse(JSON.stringify(...)) による型逃がしを再導入しない", () => {
+    const adminAppRoot = join(SRC_ROOT, "app", "(admin)");
+    const offenders = collectNonCommentOffenders(
+      collectSourceFiles(adminAppRoot),
+      /JSON\.parse\(\s*JSON\.stringify\(/u,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("announcement-bar mutation action は legacy success wrapper を使わない", () => {
+    const source = readFileSync(
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "announcement-bar.ts",
+      ),
+      "utf8",
+    );
+
+    expect(source).not.toContain("createSuccess(");
+    expect(source).toContain("executeAdminMutationResult(");
+  });
+
+  test("settings basic/business/other mutation action は legacy success wrapper を使わない", () => {
+    const files = [
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "basic.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "business.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "other.ts",
+      ),
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain("createSuccess(");
+      expect(source).not.toContain("type ActionResult");
+      expect(source).not.toContain("executeAdminMutation(");
+      expect(source).toContain("executeAdminMutationResult(");
+    }
+  });
+
+  test("homepage-settings と navigation mutation action は legacy success wrapper を使わない", () => {
+    const files = [
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "homepage-settings.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "navigation.ts",
+      ),
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain("createSuccess(");
+      expect(source).not.toContain("type ActionResult");
+      expect(source).not.toContain("executeAdminMutation(");
+      expect(source).toContain("executeAdminMutationResult(");
+    }
+  });
+
+  test("external integration mutation action は legacy success wrapper を使わない", () => {
+    const files = [
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "api-keys",
+        "mutations.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "google-calendar.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "stripe.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "instagram.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "email.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "discount.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "tax.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "settings",
+        "robots-txt.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "ical-tokens.ts",
+      ),
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain("createSuccess(");
+      expect(source).not.toContain("type ActionResult");
+      expect(source).not.toContain("executeAdminMutation(");
+      expect(source).toContain("executeAdminMutationResult(");
+    }
+  });
+
+  test("post/news/terms/reservation/page/coupon/customer/faq/block-template mutation action は legacy success wrapper を使わない", () => {
+    const files = [
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "post",
+        "mutations.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "news.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "terms",
+        "mutations.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "reservation",
+        "admin.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "reservation",
+        "mutations.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "page.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "coupon.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "customer.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "faq.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "block-template.ts",
+      ),
+    ];
+
+    for (const file of files) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain("createSuccess(");
+      expect(source).not.toContain("type ActionResult");
+      expect(source).not.toContain("executeAdminMutation(");
+      expect(source).toContain("executeAdminMutationResult(");
+    }
+  });
+
+  test("README は旧トップレベル構成を案内しない", () => {
+    const source = readFileSync(README_FILE, "utf8");
+
+    expect(source).not.toContain("├── components/");
+    expect(source).not.toContain("├── lib/");
+    expect(source).not.toContain("├── actions/");
+    expect(source).not.toContain("├── hooks/");
+  });
+
+  test("docs index は存在する architecture index を参照する", () => {
+    expect(existsSync(ARCHITECTURE_README_FILE)).toBe(true);
+
+    const docsIndex = readFileSync(DOCS_README_FILE, "utf8");
+    expect(docsIndex).toContain("./architecture/README.md");
+  });
+
+  test("guides は generated Prisma import や旧 action helper を推奨しない", () => {
+    const source = readFileSync(GUIDES_README_FILE, "utf8");
+
+    expect(source).not.toContain("@/generated/prisma/client");
+    expect(source).not.toContain("@/types/server-actions");
   });
 });

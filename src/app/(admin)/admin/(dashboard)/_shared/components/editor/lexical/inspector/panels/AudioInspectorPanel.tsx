@@ -4,66 +4,74 @@
  * @description AudioNode のプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isAudioNode, audioUrlState, audioTitleState, audioArtistState } from '../../nodes/AudioNode'
-import type { AudioNode } from '../../nodes/AudioNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorFields } from '../InspectorFields'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+import { useEffect, useState } from "react";
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $isAudioNode,
+  audioUrlState,
+  audioTitleState,
+  audioArtistState,
+} from "../../nodes/AudioNode";
+import type { AudioNode } from "../../nodes/AudioNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorFields } from "../InspectorFields";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type AudioInspectorPanelProps = {
-  nodeKey: string
-  node: AudioNode
-}
+  nodeKey: string;
+  node: AudioNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function AudioInspectorPanel({ nodeKey, node }: AudioInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isAudioNode)
+export function AudioInspectorPanel({
+  nodeKey,
+  node,
+}: AudioInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isAudioNode);
 
   const [url, setUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioUrlState))
-  )
+    editor.getEditorState().read(() => $getState(node, audioUrlState)),
+  );
   const [title, setTitle] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioTitleState))
-  )
+    editor.getEditorState().read(() => $getState(node, audioTitleState)),
+  );
   const [artist, setArtist] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, audioArtistState))
-  )
+    editor.getEditorState().read(() => $getState(node, audioArtistState)),
+  );
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        setUrl($getState(node, audioUrlState))
-        setTitle($getState(node, audioTitleState))
-        setArtist($getState(node, audioArtistState))
-      })
-    })
-  }, [editor, node])
+        setUrl($getState(node, audioUrlState));
+        setTitle($getState(node, audioTitleState));
+        setArtist($getState(node, audioArtistState));
+      });
+    });
+  }, [editor, node]);
 
   const handleTitleChange = (value: string) => {
     updateNode((n) => {
-      $setState(n, audioTitleState, value)
-    })
-  }
+      $setState(n, audioTitleState, value);
+    });
+  };
 
   const handleArtistChange = (value: string) => {
     updateNode((n) => {
-      $setState(n, audioArtistState, value)
-    })
-  }
+      $setState(n, audioArtistState, value);
+    });
+  };
 
   return (
     <div>
@@ -102,5 +110,5 @@ export function AudioInspectorPanel({ nodeKey, node }: AudioInspectorPanelProps)
         </div>
       </InspectorFields>
     </div>
-  )
+  );
 }

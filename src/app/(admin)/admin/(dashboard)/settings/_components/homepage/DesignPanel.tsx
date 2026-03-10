@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * DesignPanel — セクション共通デザイン編集パネル
@@ -7,10 +7,10 @@
  * 余白、背景、テキストスタイリング、レイアウト、アニメーションを管理。
  */
 
-import { useEffect, useTransition } from 'react'
-import { toast } from 'sonner'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useTransition } from "react";
+import { toast } from "sonner";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Input,
@@ -20,12 +20,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { Save } from 'lucide-react'
+} from "@/admin/components/ui";
+import { Save } from "lucide-react";
 import {
   updateHomepageSection,
   type HomepageSectionData,
-} from '@/admin/actions/homepage-settings'
+} from "@/admin/actions/homepage-settings";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   sectionDesignSchema,
   parseSectionDesign,
@@ -35,16 +36,16 @@ import {
   type SectionDesign,
   type SectionDesignInput,
   type TitleSize,
-} from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
 
 // =============================================================================
 // 汎用型 — PageSection / HomepageSection 両対応
 // =============================================================================
 
 export interface SectionDesignTarget {
-  id: string
-  type: string
-  design: unknown
+  id: string;
+  type: string;
+  design: unknown;
 }
 
 // =============================================================================
@@ -52,54 +53,57 @@ export interface SectionDesignTarget {
 // =============================================================================
 
 const paddingOptions = [
-  { value: 'none', label: 'なし' },
-  { value: 'sm', label: '小' },
-  { value: 'md', label: '中' },
-  { value: 'lg', label: '大' },
-  { value: 'xl', label: '特大' },
-] as const
+  { value: "none", label: "なし" },
+  { value: "sm", label: "小" },
+  { value: "md", label: "中" },
+  { value: "lg", label: "大" },
+  { value: "xl", label: "特大" },
+] as const;
 
 const backgroundOptions = [
-  { value: 'default', label: 'デフォルト' },
-  { value: 'surface', label: 'サーフェス' },
-  { value: 'accent', label: 'アクセント' },
-  { value: 'primary', label: 'プライマリ' },
-  { value: 'dark', label: 'ダーク' },
-  { value: 'image', label: '画像' },
-  { value: 'gradient', label: 'グラデーション' },
-] as const
+  { value: "default", label: "デフォルト" },
+  { value: "surface", label: "サーフェス" },
+  { value: "accent", label: "アクセント" },
+  { value: "primary", label: "プライマリ" },
+  { value: "dark", label: "ダーク" },
+  { value: "image", label: "画像" },
+  { value: "gradient", label: "グラデーション" },
+] as const;
 
 const maxWidthOptions = [
-  { value: 'sm', label: '小 (768px)' },
-  { value: 'md', label: '中 (896px)' },
-  { value: 'lg', label: '大 (1152px)' },
-  { value: 'xl', label: '特大 (1280px)' },
-  { value: 'full', label: '全幅' },
-] as const
+  { value: "sm", label: "小 (768px)" },
+  { value: "md", label: "中 (896px)" },
+  { value: "lg", label: "大 (1152px)" },
+  { value: "xl", label: "特大 (1280px)" },
+  { value: "full", label: "全幅" },
+] as const;
 
 const titleSizeLabels = {
-  sm: '小',
-  md: '中',
-  lg: '大',
-  xl: '特大',
-  '2xl': '超特大',
-  '3xl': 'ヒーロー',
-} satisfies Record<TitleSize, string>
+  sm: "小",
+  md: "中",
+  lg: "大",
+  xl: "特大",
+  "2xl": "超特大",
+  "3xl": "ヒーロー",
+} satisfies Record<TitleSize, string>;
 
-const titleSizeOptions = titleSizeValues.map((v) => ({ value: v, label: titleSizeLabels[v] }))
+const titleSizeOptions = titleSizeValues.map((v) => ({
+  value: v,
+  label: titleSizeLabels[v],
+}));
 
 const textAlignOptions = [
-  { value: 'left', label: '左揃え' },
-  { value: 'center', label: '中央揃え' },
-  { value: 'right', label: '右揃え' },
-] as const
+  { value: "left", label: "左揃え" },
+  { value: "center", label: "中央揃え" },
+  { value: "right", label: "右揃え" },
+] as const;
 
 const animationOptions = [
-  { value: 'none', label: 'なし' },
-  { value: 'fade', label: 'フェード' },
-  { value: 'slide-up', label: 'スライドアップ' },
-  { value: 'parallax', label: 'パララックス' },
-] as const
+  { value: "none", label: "なし" },
+  { value: "fade", label: "フェード" },
+  { value: "slide-up", label: "スライドアップ" },
+  { value: "parallax", label: "パララックス" },
+] as const;
 
 // =============================================================================
 // Component
@@ -107,25 +111,25 @@ const animationOptions = [
 
 // ホームページセクション用（既存互換）
 interface HomepageDesignPanelProps {
-  readonly section: HomepageSectionData
-  readonly onSave: () => void
-  readonly onDesignSave?: never
+  readonly section: HomepageSectionData;
+  readonly onSave: () => void;
+  readonly onDesignSave?: never;
 }
 
 // 汎用（Page セクション等）
 interface GenericDesignPanelProps {
-  readonly section: SectionDesignTarget
-  readonly onDesignSave: (design: SectionDesign) => void
-  readonly onSave?: never
-  readonly onDirtyChange?: (dirty: boolean) => void
+  readonly section: SectionDesignTarget;
+  readonly onDesignSave: (design: SectionDesign) => void;
+  readonly onSave?: never;
+  readonly onDirtyChange?: (dirty: boolean) => void;
 }
 
-type DesignPanelProps = HomepageDesignPanelProps | GenericDesignPanelProps
+type DesignPanelProps = HomepageDesignPanelProps | GenericDesignPanelProps;
 
 export function DesignPanel(props: DesignPanelProps) {
-  const { section } = props
-  const [isPending, startTransition] = useTransition()
-  const currentDesign = parseSectionDesign(section.design)
+  const { section } = props;
+  const [isPending, startTransition] = useTransition();
+  const currentDesign = parseSectionDesign(section.design);
 
   const {
     register,
@@ -136,41 +140,42 @@ export function DesignPanel(props: DesignPanelProps) {
   } = useForm<SectionDesignInput, unknown, SectionDesign>({
     resolver: zodResolver(sectionDesignSchema),
     defaultValues: currentDesign,
-  })
+  });
 
   // Generic mode: dirty状態をバブルアップ
   useEffect(() => {
-    if ('onDirtyChange' in props && props.onDirtyChange) {
-      props.onDirtyChange(isDirty)
+    if ("onDirtyChange" in props && props.onDirtyChange) {
+      props.onDirtyChange(isDirty);
     }
-  }, [isDirty, props])
+  }, [isDirty, props]);
 
-  const background = useWatch({ control, name: 'background' })
-  const titleSize = useWatch({ control, name: 'titleSize' })
-  const titleColor = useWatch({ control, name: 'titleColor' })
-  const textColor = useWatch({ control, name: 'textColor' })
-  const animation = useWatch({ control, name: 'animation' })
+  const background = useWatch({ control, name: "background" });
+  const titleSize = useWatch({ control, name: "titleSize" });
+  const titleColor = useWatch({ control, name: "titleColor" });
+  const textColor = useWatch({ control, name: "textColor" });
+  const animation = useWatch({ control, name: "animation" });
 
   const handleDesignSave = (data: SectionDesign) => {
     // 汎用モード: onDesignSave コールバックに委譲
     if (props.onDesignSave) {
-      props.onDesignSave(data)
-      return
+      props.onDesignSave(data);
+      return;
     }
 
     // ホームページモード: 直接保存
     startTransition(async () => {
       const result = await updateHomepageSection(section.id, {
         design: data,
-      })
-      if (result.success) {
-        toast.success(result.message)
-        props.onSave()
-      } else {
-        toast.error(result.error)
+      });
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("デザインを保存しました");
+      props.onSave();
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit(handleDesignSave)} className="space-y-8">
@@ -186,7 +191,7 @@ export function DesignPanel(props: DesignPanelProps) {
                   <input
                     type="radio"
                     value={opt.value}
-                    {...register('paddingTop')}
+                    {...register("paddingTop")}
                     disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
@@ -202,7 +207,7 @@ export function DesignPanel(props: DesignPanelProps) {
                   <input
                     type="radio"
                     value={opt.value}
-                    {...register('paddingBottom')}
+                    {...register("paddingBottom")}
                     disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
@@ -224,7 +229,7 @@ export function DesignPanel(props: DesignPanelProps) {
                 <input
                   type="radio"
                   value={opt.value}
-                  {...register('background')}
+                  {...register("background")}
                   disabled={isPending}
                 />
                 <span className="text-xs">{opt.label}</span>
@@ -233,13 +238,13 @@ export function DesignPanel(props: DesignPanelProps) {
           </div>
         </div>
 
-        {background === 'image' && (
+        {background === "image" && (
           <>
             <div className="space-y-2">
               <Label htmlFor="design-bg-image">背景画像URL</Label>
               <Input
                 id="design-bg-image"
-                {...register('backgroundImageUrl')}
+                {...register("backgroundImageUrl")}
                 placeholder="https://..."
                 disabled={isPending}
               />
@@ -251,7 +256,9 @@ export function DesignPanel(props: DesignPanelProps) {
                 type="number"
                 min={0}
                 max={100}
-                {...register('backgroundOverlayOpacity', { valueAsNumber: true })}
+                {...register("backgroundOverlayOpacity", {
+                  valueAsNumber: true,
+                })}
                 disabled={isPending}
               />
             </div>
@@ -268,7 +275,7 @@ export function DesignPanel(props: DesignPanelProps) {
             <div className="flex items-center gap-2">
               <Input
                 id="design-title-color"
-                {...register('titleColor')}
+                {...register("titleColor")}
                 placeholder="#000000"
                 disabled={isPending}
                 className="flex-1"
@@ -280,16 +287,16 @@ export function DesignPanel(props: DesignPanelProps) {
                 />
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              空欄でデフォルト色
-            </p>
+            <p className="text-xs text-muted-foreground">空欄でデフォルト色</p>
           </div>
 
           <div className="space-y-2">
             <Label>タイトルサイズ</Label>
             <Select
               value={titleSize}
-              onValueChange={(val) => { if (isTitleSize(val)) setValue('titleSize', val) }}
+              onValueChange={(val) => {
+                if (isTitleSize(val)) setValue("titleSize", val);
+              }}
               disabled={isPending}
             >
               <SelectTrigger>
@@ -310,7 +317,7 @@ export function DesignPanel(props: DesignPanelProps) {
             <div className="flex items-center gap-2">
               <Input
                 id="design-text-color"
-                {...register('textColor')}
+                {...register("textColor")}
                 placeholder="#666666"
                 disabled={isPending}
                 className="flex-1"
@@ -322,9 +329,7 @@ export function DesignPanel(props: DesignPanelProps) {
                 />
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              空欄でデフォルト色
-            </p>
+            <p className="text-xs text-muted-foreground">空欄でデフォルト色</p>
           </div>
 
           <div className="space-y-2">
@@ -335,7 +340,7 @@ export function DesignPanel(props: DesignPanelProps) {
                   <input
                     type="radio"
                     value={opt.value}
-                    {...register('textAlign')}
+                    {...register("textAlign")}
                     disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
@@ -358,7 +363,7 @@ export function DesignPanel(props: DesignPanelProps) {
                   <input
                     type="radio"
                     value={opt.value}
-                    {...register('maxWidth')}
+                    {...register("maxWidth")}
                     disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
@@ -371,7 +376,9 @@ export function DesignPanel(props: DesignPanelProps) {
             <Label>アニメーション</Label>
             <Select
               value={animation}
-              onValueChange={(val) => { if (isSectionAnimation(val)) setValue('animation', val) }}
+              onValueChange={(val) => {
+                if (isSectionAnimation(val)) setValue("animation", val);
+              }}
               disabled={isPending}
             >
               <SelectTrigger>
@@ -394,7 +401,7 @@ export function DesignPanel(props: DesignPanelProps) {
         <Label htmlFor="design-custom-class">カスタムCSSクラス（任意）</Label>
         <Input
           id="design-custom-class"
-          {...register('customClass')}
+          {...register("customClass")}
           placeholder="追加のTailwindクラス"
           disabled={isPending}
         />
@@ -402,8 +409,8 @@ export function DesignPanel(props: DesignPanelProps) {
 
       <Button type="submit" disabled={isPending}>
         <Save className="h-4 w-4 mr-2" />
-        {isPending ? '保存中...' : 'デザインを保存'}
+        {isPending ? "保存中..." : "デザインを保存"}
       </Button>
     </form>
-  )
+  );
 }

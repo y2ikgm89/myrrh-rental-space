@@ -16,48 +16,50 @@
 
 ```typescript
 // Before
-const CONFIG = { key: 'value' } as const
+const CONFIG = { key: "value" } as const;
 
 // After
-interface ConfigType { key: string }
-const CONFIG: ConfigType = { key: 'value' }
+interface ConfigType {
+  key: string;
+}
+const CONFIG: ConfigType = { key: "value" };
 ```
 
 ### 2. 配列定数（readonly配列）
 
 ```typescript
 // Before
-const VALUES = ['a', 'b', 'c'] as const
-type Value = (typeof VALUES)[number]
+const VALUES = ["a", "b", "c"] as const;
+type Value = (typeof VALUES)[number];
 
 // After
-type Value = 'a' | 'b' | 'c'
-const VALUES: readonly Value[] = ['a', 'b', 'c']
+type Value = "a" | "b" | "c";
+const VALUES: readonly Value[] = ["a", "b", "c"];
 ```
 
 ### 3. Enum風定数（Union + Record）
 
 ```typescript
 // Before
-export const ErrorCategory = { DATABASE: 'DATABASE' } as const
-export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory]
+export const ErrorCategory = { DATABASE: "DATABASE" } as const;
+export type ErrorCategory = (typeof ErrorCategory)[keyof typeof ErrorCategory];
 
 // After
-export type ErrorCategory = 'DATABASE' | 'VALIDATION'
+export type ErrorCategory = "DATABASE" | "VALIDATION";
 export const ErrorCategory: Record<ErrorCategory, ErrorCategory> = {
-  DATABASE: 'DATABASE',
-  VALIDATION: 'VALIDATION',
-}
+  DATABASE: "DATABASE",
+  VALIDATION: "VALIDATION",
+};
 ```
 
 ### 4. インラインCSS（React.CSSProperties）
 
 ```typescript
 // Before
-const style = { whiteSpace: 'pre-wrap' as const }
+const style = { whiteSpace: "pre-wrap" as const };
 
 // After
-const style: React.CSSProperties = { whiteSpace: 'pre-wrap' }
+const style: React.CSSProperties = { whiteSpace: "pre-wrap" };
 ```
 
 ### 5. Prismaクエリ（satisfies使用）
@@ -65,18 +67,19 @@ const style: React.CSSProperties = { whiteSpace: 'pre-wrap' }
 ```typescript
 // Before
 const where = {
-  OR: [{ name: { contains: query, mode: 'insensitive' as const } }],
-}
+  OR: [{ name: { contains: query, mode: "insensitive" as const } }],
+};
 
 // After
 const where = {
-  OR: [{ name: { contains: query, mode: 'insensitive' } }],
-} satisfies Prisma.UserWhereInput
+  OR: [{ name: { contains: query, mode: "insensitive" } }],
+} satisfies Prisma.UserWhereInput;
 ```
 
 ## 変更ファイル一覧（31ファイル）
 
 ### lib/
+
 - `stripe.ts` - KEY_PREFIXES, SUPPORTED_CURRENCIES
 - `supabase.ts` - STORAGE_BUCKETS
 - `crypto.ts` - ENCODING
@@ -93,14 +96,17 @@ const where = {
 - `validations/homepage-section.ts` - sectionConfigSchemas
 
 ### actions/
+
 - `admin/user.ts` - ROLE_VALUES, Prisma検索
 
 ### components/
+
 - `admin/editor/inline/NewsSidePanel.tsx` - CONTENT_WIDTH_OPTIONS
 - `admin/editor/inline/side-panel/LayoutFields.tsx` - CONTENT_WIDTH_OPTIONS
 - `admin/editor/lexical/config/keyboard-shortcuts.ts` - KEYBOARD_SHORTCUTS
 
 ### app/
+
 - `(admin)/admin/(dashboard)/settings/_components/SettingsTabs.tsx` - SETTINGS_TABS
 - `(admin)/admin/(dashboard)/settings/_components/BusinessHoursSection.tsx` - DAYS_OF_WEEK
 - `(admin)/admin/(dashboard)/users/_components/UserForm.tsx` - ROLE_VALUES
@@ -110,9 +116,11 @@ const where = {
 - `(public)/spaces/page.tsx` - Prisma検索
 
 ### types/
+
 - `admin-layout.ts` - BREAKPOINTS
 
 ### emails/
+
 - `contact-confirmation.tsx` - messageText CSS
 - `admin-notification.tsx` - messageText, buttonSection CSS
 
@@ -178,32 +186,37 @@ const role = user.role  // Role型として推論される
 
 ```typescript
 // Before: 型アサーションで戻り値を強制
-export function createSuccess<T>(message: string, data?: T): ActionSuccess<void> | ActionSuccess<T> {
+export function createSuccess<T>(
+  message: string,
+  data?: T,
+): ActionSuccess<void> | ActionSuccess<T> {
   if (data === undefined) {
-    return { success: true, message } as ActionSuccess<void>
+    return { success: true, message } as ActionSuccess<void>;
   }
-  return { success: true, message, data } as ActionSuccess<T>
+  return { success: true, message, data } as ActionSuccess<T>;
 }
 
 // After: オーバーロードと具体的な戻り値型
-export function createSuccess(message: string): ActionSuccess<void>
-export function createSuccess<T>(message: string, data: T): ActionSuccess<T>
+export function createSuccess(message: string): ActionSuccess<void>;
+export function createSuccess<T>(message: string, data: T): ActionSuccess<T>;
 export function createSuccess<T>(
   message: string,
-  data?: T
-): { success: true; message: string } | { success: true; message: string; data: T } {
+  data?: T,
+):
+  | { success: true; message: string }
+  | { success: true; message: string; data: T } {
   if (data === undefined) {
-    return { success: true, message }
+    return { success: true, message };
   }
-  return { success: true, message, data }
+  return { success: true, message, data };
 }
 ```
 
 ### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/lib/auth.ts` | `User`型定義変更、`getSessionUser`型ガード追加、`isValidRole`追加 |
+| ファイル                      | 変更内容                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `src/lib/auth.ts`             | `User`型定義変更、`getSessionUser`型ガード追加、`isValidRole`追加            |
 | `src/types/server-actions.ts` | `getSessionUser`使用、HOF内の型アサーション削除、`createSuccess`戻り値型修正 |
 
 ### 許容される型アサーション
@@ -269,23 +282,23 @@ async function checkReadPermission(): Promise<boolean> {
 
 #### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/lib/auth.ts` | `getRoleFromSession`追加 |
-| `src/lib/permissions.ts` | `as Role`削除 |
-| `src/actions/admin/space.ts` | `getRoleFromSession`使用 |
-| `src/actions/admin/blog.ts` | 同上 |
-| `src/actions/admin/news.ts` | 同上 |
-| `src/actions/admin/user.ts` | 同上 |
-| `src/actions/admin/audit-log.ts` | 同上 |
-| `src/actions/admin/announcement-bar.ts` | 同上 |
-| `src/actions/admin/inquiry.ts` | 同上 |
-| `src/actions/admin/navigation.ts` | 同上 |
-| `src/actions/admin/customer.ts` | 同上 |
-| `src/actions/admin/faq.ts` | 同上 |
-| `src/actions/admin/homepage-settings.ts` | 同上 |
-| `src/actions/admin/reservation.ts` | 同上 |
-| `src/actions/admin/settings.ts` | 同上 |
+| ファイル                                 | 変更内容                 |
+| ---------------------------------------- | ------------------------ |
+| `src/lib/auth.ts`                        | `getRoleFromSession`追加 |
+| `src/lib/permissions.ts`                 | `as Role`削除            |
+| `src/actions/admin/space.ts`             | `getRoleFromSession`使用 |
+| `src/actions/admin/blog.ts`              | 同上                     |
+| `src/actions/admin/news.ts`              | 同上                     |
+| `src/actions/admin/user.ts`              | 同上                     |
+| `src/actions/admin/audit-log.ts`         | 同上                     |
+| `src/actions/admin/announcement-bar.ts`  | 同上                     |
+| `src/actions/admin/inquiry.ts`           | 同上                     |
+| `src/actions/admin/navigation.ts`        | 同上                     |
+| `src/actions/admin/customer.ts`          | 同上                     |
+| `src/actions/admin/faq.ts`               | 同上                     |
+| `src/actions/admin/homepage-settings.ts` | 同上                     |
+| `src/actions/admin/reservation.ts`       | 同上                     |
+| `src/actions/admin/settings.ts`          | 同上                     |
 
 ### 2. URLSearchParams: バリデーション関数追加（4ファイル）
 
@@ -295,28 +308,30 @@ enum型パラメータの型キャストをバリデーション関数で置き�
 
 ```typescript
 // Before
-const status = params.status as 'ALL' | 'PUBLISHED' | 'DRAFT' | undefined
+const status = params.status as "ALL" | "PUBLISHED" | "DRAFT" | undefined;
 
 // After
-type StatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT'
+type StatusFilter = "ALL" | "PUBLISHED" | "DRAFT";
 
 function validateStatus(value: string | undefined): StatusFilter | undefined {
-  if (!value) return undefined
-  const validStatuses: StatusFilter[] = ['ALL', 'PUBLISHED', 'DRAFT']
-  return validStatuses.includes(value as StatusFilter) ? (value as StatusFilter) : undefined
+  if (!value) return undefined;
+  const validStatuses: StatusFilter[] = ["ALL", "PUBLISHED", "DRAFT"];
+  return validStatuses.includes(value as StatusFilter)
+    ? (value as StatusFilter)
+    : undefined;
 }
 
-const status = validateStatus(params.status)
+const status = validateStatus(params.status);
 ```
 
 #### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/app/(admin)/admin/(dashboard)/users/page.tsx` | `validateRole`, `validateSortBy`, `validateSortOrder`追加 |
-| `src/app/(admin)/admin/(dashboard)/audit-logs/page.tsx` | `validateAuditAction`追加 |
-| `src/app/(admin)/admin/(dashboard)/blog/page.tsx` | `validateStatus`追加 |
-| `src/app/(admin)/admin/(dashboard)/news/page.tsx` | `validateStatus`追加 |
+| ファイル                                                | 変更内容                                                  |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| `src/app/(admin)/admin/(dashboard)/users/page.tsx`      | `validateRole`, `validateSortBy`, `validateSortOrder`追加 |
+| `src/app/(admin)/admin/(dashboard)/audit-logs/page.tsx` | `validateAuditAction`追加                                 |
+| `src/app/(admin)/admin/(dashboard)/blog/page.tsx`       | `validateStatus`追加                                      |
+| `src/app/(admin)/admin/(dashboard)/news/page.tsx`       | `validateStatus`追加                                      |
 
 ### 3. JSON config: 型ガード関数追加
 
@@ -348,10 +363,10 @@ const getValidConfig = <T,>(
 
 #### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/lib/validations/homepage-section.ts` | 7つの型ガード関数追加 |
-| `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/SectionEditor.tsx` | 型ガード使用 |
+| ファイル                                                                        | 変更内容              |
+| ------------------------------------------------------------------------------- | --------------------- |
+| `src/lib/validations/homepage-section.ts`                                       | 7つの型ガード関数追加 |
+| `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/SectionEditor.tsx` | 型ガード使用          |
 
 ### 4. FormData: ヘルパー関数追加
 
@@ -361,31 +376,38 @@ const getValidConfig = <T,>(
 
 ```typescript
 // utils.ts に追加
-export function getFormString(formData: FormData, key: string, defaultValue = ''): string {
-  const value = formData.get(key)
-  return typeof value === 'string' ? value : defaultValue
+export function getFormString(
+  formData: FormData,
+  key: string,
+  defaultValue = "",
+): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : defaultValue;
 }
 
-export function getFormStringOrNull(formData: FormData, key: string): string | null {
-  const value = formData.get(key)
-  return typeof value === 'string' && value !== '' ? value : null
+export function getFormStringOrNull(
+  formData: FormData,
+  key: string,
+): string | null {
+  const value = formData.get(key);
+  return typeof value === "string" && value !== "" ? value : null;
 }
 
 // Before
-const email = formData.get('email') as string
+const email = formData.get("email") as string;
 
 // After
-const email = getFormString(formData, 'email')
+const email = getFormString(formData, "email");
 ```
 
 #### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/lib/utils.ts` | `getFormString`, `getFormStringOrNull`, `getFormNumber`, `getFormBoolean`追加 |
-| `src/app/(admin)/admin/(dashboard)/audit-logs/_components/AuditLogFilters.tsx` | ヘルパー使用 |
-| `src/app/(public)/blog/[slug]/_components/CommentForm.tsx` | ヘルパー使用 |
-| `src/app/(admin)/admin/(dashboard)/blog/comments/_components/CommentFilters.tsx` | ヘルパー使用 |
+| ファイル                                                                         | 変更内容                                                                      |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/lib/utils.ts`                                                               | `getFormString`, `getFormStringOrNull`, `getFormNumber`, `getFormBoolean`追加 |
+| `src/app/(admin)/admin/(dashboard)/audit-logs/_components/AuditLogFilters.tsx`   | ヘルパー使用                                                                  |
+| `src/app/(public)/blog/[slug]/_components/CommentForm.tsx`                       | ヘルパー使用                                                                  |
+| `src/app/(admin)/admin/(dashboard)/blog/comments/_components/CommentFilters.tsx` | ヘルパー使用                                                                  |
 
 ### 5. localStorage: 型ガード追加
 
@@ -395,21 +417,23 @@ const email = getFormString(formData, 'email')
 
 ```typescript
 // Before
-return localStorage.getItem(STORAGE_KEY) as CookieConsentStatus
+return localStorage.getItem(STORAGE_KEY) as CookieConsentStatus;
 
 // After
-function isValidConsentStatus(value: string | null): value is 'accepted' | 'rejected' {
-  return value === 'accepted' || value === 'rejected'
+function isValidConsentStatus(
+  value: string | null,
+): value is "accepted" | "rejected" {
+  return value === "accepted" || value === "rejected";
 }
 
-const value = localStorage.getItem(STORAGE_KEY)
-return isValidConsentStatus(value) ? value : null
+const value = localStorage.getItem(STORAGE_KEY);
+return isValidConsentStatus(value) ? value : null;
 ```
 
 #### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
+| ファイル                                      | 変更内容                           |
+| --------------------------------------------- | ---------------------------------- |
 | `src/components/site/CookieConsentBanner.tsx` | `isValidConsentStatus`型ガード追加 |
 
 ### テスト結果

@@ -47,7 +47,13 @@ export const updateNewsSchema = z
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
     contentJson: lexicalJsonSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
-    contentWidthCustom: z.number().int().min(320).max(1920).nullable().optional(),
+    contentWidthCustom: z
+      .number()
+      .int()
+      .min(320)
+      .max(1920)
+      .nullable()
+      .optional(),
   })
   .merge(seoOgpFieldsSchema);
 

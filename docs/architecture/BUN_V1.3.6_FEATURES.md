@@ -26,9 +26,9 @@ const archive = new Bun.Archive({
 });
 
 // gzip圧縮付きアーカイブ
-const compressed = new Bun.Archive(files, { 
+const compressed = new Bun.Archive(files, {
   compress: "gzip",
-  level: 12 // 最大圧縮
+  level: 12, // 最大圧縮
 });
 
 // ファイルに書き込み
@@ -40,6 +40,7 @@ const fileCount = await tarball.extract("./output-dir");
 ```
 
 **プロジェクトでの活用例**:
+
 - 管理画面でのデータバックアップ機能
 - ブログ記事やニュースのエクスポート機能
 - 画像やファイルの一括ダウンロード
@@ -65,11 +66,13 @@ console.log(config.host); // "localhost"
 ```
 
 **プロジェクトでの活用例**:
+
 - `tsconfig.json`の動的読み込み
 - カスタム設定ファイルのサポート
 - コメント付きJSON設定の処理
 
 **現在の使用箇所**:
+
 - `src/lib/analytics/ga-data-api.ts`: `JSON.parse()`を使用 → `Bun.JSONC.parse()`に置き換え可能
 
 ---
@@ -99,11 +102,13 @@ await Bun.write("./dist/meta.json", JSON.stringify(result.metafile));
 ```
 
 **CLI使用例**:
+
 ```bash
 bun build ./src/index.ts --outdir ./dist --metafile ./dist/meta.json
 ```
 
 **プロジェクトでの活用例**:
+
 - ビルドサイズの監視
 - CI/CDでのバンドルサイズチェック
 - 依存関係の可視化
@@ -135,6 +140,7 @@ await Bun.build({
 ```
 
 **プロジェクトでの活用例**:
+
 - ビルドIDやビルド時刻の注入
 - 環境別設定の動的生成
 - テスト用のモックモジュール生成
@@ -151,10 +157,12 @@ await Bun.build({
 // 以前: Response.json()が3.5倍遅かった
 // 現在: JSON.stringify() + new Response()と同等のパフォーマンス
 
-const obj = { items: Array.from({ length: 100 }, (_, i) => ({ 
-  id: i, 
-  value: `item-${i}` 
-})) };
+const obj = {
+  items: Array.from({ length: 100 }, (_, i) => ({
+    id: i,
+    value: `item-${i}`,
+  })),
+};
 
 // 両方とも同等のパフォーマンス
 Response.json(obj);
@@ -162,6 +170,7 @@ new Response(JSON.stringify(obj));
 ```
 
 **プロジェクトでの影響**:
+
 - API RoutesでのJSONレスポンスが高速化
 - Server ActionsでのJSON返却が高速化
 
@@ -172,6 +181,7 @@ new Response(JSON.stringify(obj));
 **改善内容**: JavaScriptCoreの最適化により、async/awaitの処理が15%高速化
 
 **プロジェクトでの影響**:
+
 - すべての非同期処理が高速化
 - データベースクエリ、API呼び出しなど
 
@@ -182,6 +192,7 @@ new Response(JSON.stringify(obj));
 **改善内容**: Promise.race()の処理が30%高速化
 
 **プロジェクトでの活用例**:
+
 - タイムアウト処理
 - 複数APIの並列呼び出し
 - レースコンディションの処理
@@ -201,6 +212,7 @@ buffer.includes("needle");
 ```
 
 **プロジェクトでの影響**:
+
 - 大きなバッファの検索処理が高速化
 - バイナリデータの処理が高速化
 
@@ -216,6 +228,7 @@ Bun.hash.crc32(data); // 20倍高速化（2,644 μs → 124 μs）
 ```
 
 **プロジェクトでの活用例**:
+
 - ファイルの整合性チェック
 - データの検証
 - キャッシュキーの生成
@@ -227,12 +240,14 @@ Bun.hash.crc32(data); // 20倍高速化（2,644 μs → 124 μs）
 **改善内容**: 複数の内部APIでJSONシリアライゼーションが3倍高速化
 
 **影響を受けるAPI**:
+
 - `console.log` with `%j` format
 - PostgreSQL JSON/JSONB types
 - MySQL JSON type
 - Jest `%j/%o` format specifiers
 
 **プロジェクトでの影響**:
+
 - データベースのJSON/JSONB操作が高速化
 - デバッグ出力が高速化
 - テスト出力が高速化
@@ -258,6 +273,7 @@ const [record] = await sql`
 ```
 
 **プロジェクトでの影響**:
+
 - Prismaの代わりにBun SQLを使用する場合の改善
 - デフォルト値の扱いが改善
 
@@ -276,7 +292,7 @@ it("works with fake timers", async () => {
   jest.useFakeTimers();
   const { getByRole } = render(<button>Click me</button>);
   const user = userEvent.setup();
-  
+
   // 以前: ハングアップしていた
   // 現在: 正常に動作
   await user.click(getByRole("button"));
@@ -285,6 +301,7 @@ it("works with fake timers", async () => {
 ```
 
 **プロジェクトでの影響**:
+
 - Reactコンポーネントのテストが改善
 - タイマーを使用するコンポーネントのテストが容易に
 
@@ -302,6 +319,7 @@ bun test -t "should handle"
 ```
 
 **プロジェクトでの影響**:
+
 - テストの実行が柔軟に
 - 特定のテストのみを実行可能
 
@@ -324,6 +342,7 @@ const content = await file.text();
 ```
 
 **プロジェクトでの活用例**:
+
 - 大容量データのS3アクセス
 - コスト効率的なデータ転送
 
@@ -346,6 +365,7 @@ new WebSocket("wss://example.com", {
 ```
 
 **プロジェクトでの活用例**:
+
 - 企業環境でのWebSocket接続
 - プロキシ経由でのリアルタイム通信
 

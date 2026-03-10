@@ -8,38 +8,40 @@
  * 安全にHTMLを構築している。
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $generateHtmlFromNodes } from '@lexical/html'
-import { Eye, EyeOff } from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
+import { useEffect, useEffectEvent, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $generateHtmlFromNodes } from "@lexical/html";
+import { type EditorState } from "lexical";
+import { Eye, EyeOff } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function PreviewPane() {
-  const [editor] = useLexicalComposerContext()
-  const [isOpen, setIsOpen] = useState(false)
-  const [html, setHtml] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [isOpen, setIsOpen] = useState(false);
+  const [html, setHtml] = useState("");
+  const updatePreviewHtml = useEffectEvent((editorState?: EditorState) => {
+    const currentEditorState = editorState ?? editor.getEditorState();
+    currentEditorState.read(() => {
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      setHtml($generateHtmlFromNodes(editor, null));
+    });
+  });
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
-    const update = () => {
-      editor.getEditorState().read(() => {
-        setHtml($generateHtmlFromNodes(editor, null))
-      })
-    }
+    updatePreviewHtml();
 
-    update()
-
-    return editor.registerUpdateListener(() => {
-      update()
-    })
-  }, [editor, isOpen])
+    return editor.registerUpdateListener(({ editorState }) => {
+      updatePreviewHtml(editorState);
+    });
+  }, [editor, isOpen]);
 
   return (
     <div className="flex flex-col">
@@ -51,8 +53,12 @@ export function PreviewPane() {
           className="h-7 gap-1.5 text-xs"
           onClick={() => setIsOpen(!isOpen)}
         >
-          {isOpen ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          <span>{isOpen ? 'プレビューを閉じる' : 'プレビュー'}</span>
+          {isOpen ? (
+            <EyeOff className="h-3.5 w-3.5" />
+          ) : (
+            <Eye className="h-3.5 w-3.5" />
+          )}
+          <span>{isOpen ? "プレビューを閉じる" : "プレビュー"}</span>
         </Button>
       </div>
 
@@ -68,5 +74,5 @@ export function PreviewPane() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Tabs コンポーネント
@@ -10,14 +10,14 @@
  * @see https://www.radix-ui.com/primitives/docs/components/tabs
  */
 
-import * as TabsPrimitive from '@radix-ui/react-tabs'
-import { cn } from '@/shared/lib/cn'
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
 // Tabs Root
 // =============================================================================
 
-const Tabs = TabsPrimitive.Root
+const Tabs = TabsPrimitive.Root;
 
 // =============================================================================
 // Tabs List
@@ -32,14 +32,14 @@ function TabsList({
     <TabsPrimitive.List
       ref={ref}
       className={cn(
-        'inline-flex h-10 items-center justify-start gap-1 rounded-lg bg-muted p-1 text-muted-foreground',
+        "inline-flex h-10 items-center justify-start gap-1 rounded-lg bg-muted p-1 text-muted-foreground",
         // スクロール可能（モバイル対応）
-        'w-fit max-w-full overflow-x-auto scrollbar-hide',
-        className
+        "w-fit max-w-full overflow-x-auto scrollbar-hide",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
@@ -55,20 +55,20 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        'inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200',
+        "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200",
         // フォーカス
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         // 無効状態
-        'disabled:pointer-events-none disabled:opacity-50',
+        "disabled:pointer-events-none disabled:opacity-50",
         // アクティブ状態
-        'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+        "data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
         // ホバー
-        'hover:bg-background/50 data-[state=active]:hover:bg-background',
-        className
+        "hover:bg-background/50 data-[state=active]:hover:bg-background",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
@@ -84,20 +84,20 @@ function TabsContent({
     <TabsPrimitive.Content
       ref={ref}
       className={cn(
-        'mt-4 ring-offset-background',
+        "mt-4 ring-offset-background",
         // フォーカス
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         // アニメーション
-        'data-[state=inactive]:hidden',
-        className
+        "data-[state=inactive]:hidden",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
 // Export
 // =============================================================================
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent };

@@ -16,7 +16,9 @@ import {
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 
-function normalizeNullableString(value: string | null | undefined): string | null {
+function normalizeNullableString(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }
@@ -172,7 +174,9 @@ export async function deletePageCommand(slug: string): Promise<void> {
   });
 }
 
-export async function deletePagePermanentlyCommand(slug: string): Promise<void> {
+export async function deletePagePermanentlyCommand(
+  slug: string,
+): Promise<void> {
   if (isSystemPageSlug(slug)) {
     throw new DomainError("システムページは削除できません", "VALIDATION");
   }

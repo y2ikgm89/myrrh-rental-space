@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
 /**
  * メディアフィルター
  */
 
-import { useEffect, useRef, useState } from 'react'
-import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { Search, Grid, List, Upload } from 'lucide-react'
+import { useEffect, useRef, useState } from "react";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { Search, Grid, List, Upload } from "lucide-react";
 import {
   Button,
   Input,
@@ -15,44 +15,44 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/admin/components/ui'
-import { MediaUploadDialog } from './MediaUploadDialog'
-import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from './constants'
+} from "@/admin/components/ui";
+import { MediaUploadDialog } from "./MediaUploadDialog";
+import { TYPE_OPTIONS, USAGE_FILTER_OPTIONS } from "./constants";
 
 export function MediaFilters() {
-  const [isUploadOpen, setIsUploadOpen] = useState(false)
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      type: parseAsString.withDefault(''),
-      usage: parseAsString.withDefault(''),
-      view: parseAsString.withDefault('grid'),
+      search: parseAsString.withDefault(""),
+      type: parseAsString.withDefault(""),
+      usage: parseAsString.withDefault(""),
+      view: parseAsString.withDefault("grid"),
       page: parseAsInteger.withDefault(1),
     },
-    { history: 'push', shallow: false }
-  )
+    { history: "push", shallow: false },
+  );
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
+    const value = e.target.value;
 
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ search: value || null, page: 1 })
-    }, 300)
+      void setParams({ search: value || null, page: 1 });
+    }, 300);
   }
 
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <>
@@ -73,9 +73,9 @@ export function MediaFilters() {
 
           {/* Type Filter */}
           <Select
-            value={params.type || 'all'}
+            value={params.type || "all"}
             onValueChange={(v) =>
-              void setParams({ type: v === 'all' ? null : v, page: 1 })
+              void setParams({ type: v === "all" ? null : v, page: 1 })
             }
           >
             <SelectTrigger className="h-9 w-auto min-w-[140px]">
@@ -83,7 +83,7 @@ export function MediaFilters() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべての種別</SelectItem>
-              {TYPE_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
+              {TYPE_OPTIONS.filter((opt) => opt.value !== "").map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
@@ -93,9 +93,9 @@ export function MediaFilters() {
 
           {/* Usage Filter */}
           <Select
-            value={params.usage || 'all'}
+            value={params.usage || "all"}
             onValueChange={(v) =>
-              void setParams({ usage: v === 'all' ? null : v, page: 1 })
+              void setParams({ usage: v === "all" ? null : v, page: 1 })
             }
           >
             <SelectTrigger className="h-9 w-auto min-w-[140px]">
@@ -103,11 +103,13 @@ export function MediaFilters() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべての用途</SelectItem>
-              {USAGE_FILTER_OPTIONS.filter((opt) => opt.value !== '').map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
+              {USAGE_FILTER_OPTIONS.filter((opt) => opt.value !== "").map(
+                (opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -118,11 +120,11 @@ export function MediaFilters() {
           <div className="flex border rounded-md overflow-hidden">
             <button
               type="button"
-              onClick={() => void setParams({ view: 'grid' })}
+              onClick={() => void setParams({ view: "grid" })}
               className={`p-2 ${
-                params.view === 'grid'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background hover:bg-muted'
+                params.view === "grid"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background hover:bg-muted"
               }`}
               aria-label="グリッド表示"
             >
@@ -130,11 +132,11 @@ export function MediaFilters() {
             </button>
             <button
               type="button"
-              onClick={() => void setParams({ view: 'list' })}
+              onClick={() => void setParams({ view: "list" })}
               className={`p-2 ${
-                params.view === 'list'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-background hover:bg-muted'
+                params.view === "list"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background hover:bg-muted"
               }`}
               aria-label="リスト表示"
             >
@@ -155,5 +157,5 @@ export function MediaFilters() {
         onClose={() => setIsUploadOpen(false)}
       />
     </>
-  )
+  );
 }

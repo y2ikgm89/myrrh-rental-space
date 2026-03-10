@@ -4,4 +4,4 @@
  * URL パラメータパーサーを admin/public 両方で使用可能にする
  */
 
-export * from './parsers'
+export * from "./parsers";

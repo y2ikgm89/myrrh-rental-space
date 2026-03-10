@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Resend設定セクション
@@ -6,8 +6,8 @@
  * Resend APIキーの設定と接続テスト
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -17,23 +17,24 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updateResendSettings,
   testResendConnectionAction,
   clearResendKeys,
-} from '@/admin/actions/api-keys'
-import type { ResendConfig } from '@/admin/types/api-keys'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/api-keys";
+import type { ResendConfig } from "@/admin/types/api-keys";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface ResendSectionProps {
-  config: ResendConfig
+  config: ResendConfig;
 }
 
 // =============================================================================
@@ -41,88 +42,88 @@ interface ResendSectionProps {
 // =============================================================================
 
 export function ResendSection({ config }: ResendSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
-    resendApiKey: '',
-  })
+    resendApiKey: "",
+  });
 
-  const [showKeyInput, setShowKeyInput] = useState(false)
+  const [showKeyInput, setShowKeyInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateResendSettings({
         resendApiKey: formData.resendApiKey || null,
-      })
-      if (result.success) {
-        setFormData({ resendApiKey: '' })
-        setShowKeyInput(false)
+      });
+      if (!isMutationError(result)) {
+        setFormData({ resendApiKey: "" });
+        setShowKeyInput(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Resend設定を保存しました");
+    });
+  };
 
   const handleConnectionTest = async () => {
     if (!formData.resendApiKey) {
       setTestResult({
         success: false,
-        message: 'APIキーを入力してください',
-      })
-      return
+        message: "APIキーを入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
-      const result = await testResendConnectionAction(formData.resendApiKey)
-      if (result.success) {
+      const result = await testResendConnectionAction(formData.resendApiKey);
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
-          message: result.data?.message || '接続成功',
-        })
-        refresh()
+          message: "接続成功",
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続に失敗しました',
-        })
+          message: result.error,
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearKeys = async () => {
     const confirmed = await confirm({
-      title: 'APIキーをクリアしますか？',
-      description: 'Resend APIキーをクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "APIキーをクリアしますか？",
+      description: "Resend APIキーをクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearResendKeys()
-      if (result.success) {
-        setFormData({ resendApiKey: '' })
-        setTestResult(null)
+      const result = await clearResendKeys();
+      if (!isMutationError(result)) {
+        setFormData({ resendApiKey: "" });
+        setTestResult(null);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Resend設定をクリアしました");
+    });
+  };
 
   return (
     <Card>
@@ -171,9 +172,7 @@ export function ResendSection({ config }: ResendSectionProps) {
               data-form-type="other"
               className="font-mono [&:not(:placeholder-shown)]:[-webkit-text-security:disc]"
               value={formData.resendApiKey}
-              onChange={(e) =>
-                setFormData({ resendApiKey: e.target.value })
-              }
+              onChange={(e) => setFormData({ resendApiKey: e.target.value })}
               placeholder="re_..."
               disabled={isPending}
             />
@@ -185,9 +184,9 @@ export function ResendSection({ config }: ResendSectionProps) {
 
         {/* 接続ステータス */}
         {config.connectionStatus && (
-          <StatusBanner success={config.connectionStatus === 'connected'}>
+          <StatusBanner success={config.connectionStatus === "connected"}>
             <div className="flex items-center gap-2">
-              {config.connectionStatus === 'connected' ? (
+              {config.connectionStatus === "connected" ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-success" />
                   <span className="text-sm font-medium text-success">
@@ -215,7 +214,7 @@ export function ResendSection({ config }: ResendSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
             >
               {testResult.message}
             </p>
@@ -225,7 +224,7 @@ export function ResendSection({ config }: ResendSectionProps) {
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
           {formData.resendApiKey && (
             <Button
@@ -233,7 +232,7 @@ export function ResendSection({ config }: ResendSectionProps) {
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '接続テスト'}
+              {isTesting ? "テスト中..." : "接続テスト"}
             </Button>
           )}
           {config.apiKeyMasked && (
@@ -248,5 +247,5 @@ export function ResendSection({ config }: ResendSectionProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

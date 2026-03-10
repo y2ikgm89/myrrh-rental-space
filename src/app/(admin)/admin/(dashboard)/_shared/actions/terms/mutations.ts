@@ -21,7 +21,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeTermsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 import {
   createTermsSchema,

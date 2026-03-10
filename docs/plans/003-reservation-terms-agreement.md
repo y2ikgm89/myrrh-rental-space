@@ -19,10 +19,12 @@
 ### 変更ファイル
 
 **新規作成:**
+
 - `src/components/site/ui/Checkbox.tsx` - 公開サイト用チェックボックスコンポーネント
 - `src/app/admin/settings/_components/sections/TermsAgreementSection.tsx` - 管理画面設定UI
 
 **変更:**
+
 - `prisma/schema.prisma` - Reservationに`termsAgreedAt`、Settingsに規約同意設定フィールド追加
 - `src/components/site/ui/index.ts` - Checkboxエクスポート
 - `src/app/admin/settings/_components/sections/index.ts` - TermsAgreementSectionエクスポート
@@ -45,12 +47,12 @@ bunx prisma migrate dev --name add_terms_agreement
 
 管理画面 > 設定 > 予約タブ > 規約同意設定
 
-| 設定項目 | 説明 | デフォルト |
-|---------|------|-----------|
-| 予約時に規約同意を求める | チェックボックスの表示/非表示 | ON |
-| 同意文言（カスタム） | 任意のテキスト（空欄でデフォルト） | - |
-| 利用規約への同意を必須にする | 利用規約リンクを表示 | ON |
-| プライバシーポリシーへの同意を必須にする | プライバシーポリシーリンクを表示 | ON |
+| 設定項目                                 | 説明                               | デフォルト |
+| ---------------------------------------- | ---------------------------------- | ---------- |
+| 予約時に規約同意を求める                 | チェックボックスの表示/非表示      | ON         |
+| 同意文言（カスタム）                     | 任意のテキスト（空欄でデフォルト） | -          |
+| 利用規約への同意を必須にする             | 利用規約リンクを表示               | ON         |
+| プライバシーポリシーへの同意を必須にする | プライバシーポリシーリンクを表示   | ON         |
 
 ## ステータス
 

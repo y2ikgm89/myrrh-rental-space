@@ -15,16 +15,16 @@
 
 ## 編集可能フィールド
 
-| フィールド | 処理 |
-|-----------|------|
-| スペース | 変更時に重複チェック（自分を除く）+ Googleカレンダー更新 |
-| 日付・開始/終了時間 | 同上 |
-| 顧客 | 既存顧客から選択のみ |
-| クーポンコード | 変更時: 旧クーポン使用回数デクリメント、新クーポン検証・インクリメント |
-| 手動料金上書き | 空にすれば自動計算に戻る |
-| ステータス | PENDING / CONFIRMED / CANCELLED |
-| メモ | textarea |
-| 変更通知メール | チェックボックス（デフォルト off） |
+| フィールド          | 処理                                                                   |
+| ------------------- | ---------------------------------------------------------------------- |
+| スペース            | 変更時に重複チェック（自分を除く）+ Googleカレンダー更新               |
+| 日付・開始/終了時間 | 同上                                                                   |
+| 顧客                | 既存顧客から選択のみ                                                   |
+| クーポンコード      | 変更時: 旧クーポン使用回数デクリメント、新クーポン検証・インクリメント |
+| 手動料金上書き      | 空にすれば自動計算に戻る                                               |
+| ステータス          | PENDING / CONFIRMED / CANCELLED                                        |
+| メモ                | textarea                                                               |
+| 変更通知メール      | チェックボックス（デフォルト off）                                     |
 
 ## アーキテクチャ
 
@@ -69,6 +69,7 @@ withPermission('reservation', 'update')(async (user, id, input) => {
 ### Zod スキーマ: `updateReservationSchema`
 
 `adminReservationSchema` と同等だが以下が異なる:
+
 - `customerId`: 必須（`z.string().uuid()`）
 - `customerData`: 削除（既存顧客のみ）
 - `sendNotificationEmail`: 追加（`z.boolean().default(false)`）
@@ -77,6 +78,7 @@ withPermission('reservation', 'update')(async (user, id, input) => {
 ### コンポーネント: `ReservationEditForm`
 
 `ReservationForm` をベースに以下が異なる:
+
 - 初期値が既存予約データで pre-populate される
 - `CustomerSelector` は既存顧客選択のみ（`isNewCustomer` トグル削除）
 - 送信先 action: `updateAdminReservation(reservationId, data)`
@@ -108,12 +110,12 @@ reservation.ts (Server Action)
 
 ## クーポン使用回数の整合性
 
-| 変更前 | 変更後 | 処理 |
-|-------|-------|------|
-| クーポンなし | クーポンあり | increment のみ |
-| クーポンあり | 同じクーポン | なにもしない |
+| 変更前       | 変更後       | 処理                        |
+| ------------ | ------------ | --------------------------- |
+| クーポンなし | クーポンあり | increment のみ              |
+| クーポンあり | 同じクーポン | なにもしない                |
 | クーポンあり | 別のクーポン | 旧 decrement + 新 increment |
-| クーポンあり | なし | decrement のみ |
+| クーポンあり | なし         | decrement のみ              |
 
 `decrementCouponUsage` は既存関数がないため新規追加（`coupon.ts` に追加）。
 

@@ -26,19 +26,20 @@ graph TB
 **責務**: [説明]
 
 **インターフェース**:
+
 ```typescript
 interface Example {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 ```
 
 ## トレードオフ
 
 | 選択肢 | メリット | デメリット |
-|--------|---------|-----------|
-| A案 | xxx | yyy |
-| B案 | xxx | yyy |
+| ------ | -------- | ---------- |
+| A案    | xxx      | yyy        |
+| B案    | xxx      | yyy        |
 
 **採用**: A案（理由: xxx）
 

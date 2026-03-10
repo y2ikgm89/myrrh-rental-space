@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
@@ -14,21 +14,26 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from '@/admin/components/ui'
-import { Plus, Trash2 } from 'lucide-react'
+} from "@/admin/components/ui";
+import { Plus, Trash2 } from "lucide-react";
 import {
   featuresConfigSchema,
   getFeaturesConfig,
   parseFeaturesLayout,
   type FeaturesConfig,
   type FeaturesConfigInput,
-} from '@/shared/lib/validations/section'
-import { featuresLayoutLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import { featuresLayoutLabels } from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function FeaturesConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getFeaturesConfig(section.config)
+export default function FeaturesConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getFeaturesConfig(section.config);
 
   const {
     register,
@@ -39,21 +44,26 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
   } = useForm<FeaturesConfigInput, unknown, FeaturesConfig>({
     resolver: zodResolver(featuresConfigSchema),
     defaultValues: config,
-  })
+  });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'items',
-  })
+    name: "items",
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="features-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="features-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="features-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Features"
             disabled={isPending}
           />
@@ -63,7 +73,7 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
           <Label htmlFor="features-title">タイトル</Label>
           <Input
             id="features-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="Features"
             disabled={isPending}
           />
@@ -74,7 +84,7 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
             <Label htmlFor="features-layout">レイアウト</Label>
             <Select
               defaultValue={config.layout}
-              onValueChange={(v) => setValue('layout', parseFeaturesLayout(v))}
+              onValueChange={(v) => setValue("layout", parseFeaturesLayout(v))}
               disabled={isPending}
             >
               <SelectTrigger id="features-layout">
@@ -97,7 +107,7 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
               type="number"
               min={1}
               max={4}
-              {...register('columns', { valueAsNumber: true })}
+              {...register("columns", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -110,11 +120,13 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({
-                icon: '',
-                title: '',
-                description: '',
-              })}
+              onClick={() =>
+                append({
+                  icon: "",
+                  title: "",
+                  description: "",
+                })
+              }
               disabled={isPending}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -123,7 +135,9 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
           </div>
           {fields.length === 0 && (
             <div className="flex items-center justify-center py-8 border border-dashed rounded-lg">
-              <p className="text-sm text-muted-foreground">特徴アイテムが追加されていません</p>
+              <p className="text-sm text-muted-foreground">
+                特徴アイテムが追加されていません
+              </p>
             </div>
           )}
           {fields.map((field, index) => (
@@ -176,7 +190,11 @@ export default function FeaturesConfigForm({ section, onSave, isPending, onDirty
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

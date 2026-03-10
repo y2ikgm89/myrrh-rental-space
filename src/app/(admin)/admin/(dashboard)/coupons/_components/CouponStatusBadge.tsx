@@ -14,10 +14,7 @@ type CouponBadgeVariant =
 const couponTypeConfig = {
   PERCENTAGE: { label: "%割引", variant: "default" },
   FIXED_AMOUNT: { label: "定額割引", variant: "secondary" },
-} satisfies Record<
-  CouponType,
-  { label: string; variant: CouponBadgeVariant }
->;
+} satisfies Record<CouponType, { label: string; variant: CouponBadgeVariant }>;
 
 const couponActiveConfig = {
   active: { label: "有効", variant: "success" },

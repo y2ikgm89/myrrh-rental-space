@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * カテゴリ・タグフィールド
@@ -7,8 +7,13 @@
  * 投稿記事用
  */
 
-import type { UseFormRegister, UseFormSetValue, FieldErrors, Control } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
+import type {
+  UseFormRegister,
+  UseFormSetValue,
+  FieldErrors,
+  Control,
+} from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import {
   Input,
   Label,
@@ -17,17 +22,17 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import type { PostEditorFormData, PostCategoryOption } from '../types'
+} from "@/admin/components/ui";
+import type { PostEditorFormData, PostCategoryOption } from "../types";
 
 type CategoryTagFieldsProps = {
-  register: UseFormRegister<PostEditorFormData>
-  control: Control<PostEditorFormData>
-  setValue: UseFormSetValue<PostEditorFormData>
-  errors: FieldErrors<PostEditorFormData>
-  categories: PostCategoryOption[]
-  disabled?: boolean
-}
+  register: UseFormRegister<PostEditorFormData>;
+  control: Control<PostEditorFormData>;
+  setValue: UseFormSetValue<PostEditorFormData>;
+  errors: FieldErrors<PostEditorFormData>;
+  categories: PostCategoryOption[];
+  disabled?: boolean;
+};
 
 export function CategoryTagFields({
   register,
@@ -37,7 +42,7 @@ export function CategoryTagFields({
   categories,
   disabled,
 }: CategoryTagFieldsProps) {
-  const categoryId = useWatch({ control, name: 'categoryId' })
+  const categoryId = useWatch({ control, name: "categoryId" });
 
   return (
     <div className="space-y-4">
@@ -45,7 +50,9 @@ export function CategoryTagFields({
         <Label htmlFor="categoryId">カテゴリ</Label>
         <Select
           value={categoryId}
-          onValueChange={(value) => setValue('categoryId', value, { shouldDirty: true })}
+          onValueChange={(value) =>
+            setValue("categoryId", value, { shouldDirty: true })
+          }
           disabled={disabled}
         >
           <SelectTrigger>
@@ -60,7 +67,9 @@ export function CategoryTagFields({
           </SelectContent>
         </Select>
         {errors.categoryId && (
-          <p className="text-sm text-destructive">{errors.categoryId.message}</p>
+          <p className="text-sm text-destructive">
+            {errors.categoryId.message}
+          </p>
         )}
       </div>
 
@@ -68,14 +77,12 @@ export function CategoryTagFields({
         <Label htmlFor="tags">タグ</Label>
         <Input
           id="tags"
-          {...register('tags')}
+          {...register("tags")}
           placeholder="タグ1, タグ2, タグ3"
           disabled={disabled}
         />
-        <p className="text-xs text-muted-foreground">
-          カンマ区切りで入力
-        </p>
+        <p className="text-xs text-muted-foreground">カンマ区切りで入力</p>
       </div>
     </div>
-  )
+  );
 }

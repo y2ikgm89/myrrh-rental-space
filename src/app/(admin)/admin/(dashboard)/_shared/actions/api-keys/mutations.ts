@@ -40,7 +40,7 @@ import {
 } from "@/shared/domain/settings/api-key-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_TAGS } from "@/shared/lib/constants";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
@@ -305,9 +305,7 @@ export async function addCustomApiKey(
   });
 }
 
-export async function deleteCustomApiKey(
-  id: string,
-): Promise<MutationResult> {
+export async function deleteCustomApiKey(id: string): Promise<MutationResult> {
   const validated = apiKeyIdSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);

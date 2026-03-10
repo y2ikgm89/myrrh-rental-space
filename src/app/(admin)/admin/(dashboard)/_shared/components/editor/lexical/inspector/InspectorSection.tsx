@@ -4,28 +4,28 @@
  * @description 折りたたみ可能なセクション（Gutenberg PanelBody相当）
  */
 
-'use client'
+"use client";
 
-import { useState, type ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
-import { cn } from '@/shared/lib/cn'
+import { useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/shared/lib/cn";
 
 type InspectorSectionProps = {
-  title: string
-  defaultOpen?: boolean
-  children: ReactNode
-}
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+};
 
 export function InspectorSection({
   title,
   defaultOpen = true,
   children,
 }: InspectorSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const toggleOpen = () => {
-    setIsOpen((prev) => !prev)
-  }
+    setIsOpen((prev) => !prev);
+  };
 
   return (
     <div className="border-b border-border">
@@ -37,12 +37,12 @@ export function InspectorSection({
         <span>{title}</span>
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
+            "h-4 w-4 text-muted-foreground transition-transform",
+            isOpen && "rotate-180",
           )}
         />
       </button>
       {isOpen && <div className="px-4 pb-4 space-y-4">{children}</div>}
     </div>
-  )
+  );
 }

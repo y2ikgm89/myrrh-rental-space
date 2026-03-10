@@ -17,60 +17,60 @@ paths:
 
 ## カラーパレット
 
-| 役割 | 配分 | 値 | トークン |
-|------|------|-----|---------|
-| Dominant | 70% | `oklch(0.995 0.002 250)` White | `bg-background` |
-| Support | 20% | `oklch(0.97 0.003 250)` Surface | `bg-surface` |
-| Accent | 10% | `oklch(0.75 0.06 65)` Champagne Gold | `text-primary-dark` |
-| Accent dark | — | `oklch(0.55 0.08 65)` Darker Gold | `gold-line`, CTA border |
-| Muted text | — | `oklch(0.45 0.01 250)` | `text-muted-foreground` |
+| 役割        | 配分 | 値                                   | トークン                |
+| ----------- | ---- | ------------------------------------ | ----------------------- |
+| Dominant    | 70%  | `oklch(0.995 0.002 250)` White       | `bg-background`         |
+| Support     | 20%  | `oklch(0.97 0.003 250)` Surface      | `bg-surface`            |
+| Accent      | 10%  | `oklch(0.75 0.06 65)` Champagne Gold | `text-primary-dark`     |
+| Accent dark | —    | `oklch(0.55 0.08 65)` Darker Gold    | `gold-line`, CTA border |
+| Muted text  | —    | `oklch(0.45 0.01 250)`               | `text-muted-foreground` |
 
 **使用ルール**: Gold は `SectionLabel`、`MagneticButton`（CTA）、英語名、価格表示のみ。15%以下に抑える。
 
 ## タイポグラフィ
 
-| 要素 | フォント | クラス | 備考 |
-|------|---------|--------|------|
-| Heading | Noto Serif JP | `font-heading` | `font-bold`, `tracking-tight` |
-| Body | Noto Sans JP | `font-sans` | normal weight |
-| Label | — | `text-[11px] uppercase tracking-[0.25em]` | `gold-line` 装飾付き |
+| 要素    | フォント      | クラス                                    | 備考                          |
+| ------- | ------------- | ----------------------------------------- | ----------------------------- |
+| Heading | Noto Serif JP | `font-heading`                            | `font-bold`, `tracking-tight` |
+| Body    | Noto Sans JP  | `font-sans`                               | normal weight                 |
+| Label   | —             | `text-[11px] uppercase tracking-[0.25em]` | `gold-line` 装飾付き          |
 
 - **スケール比**: 1:4.5（body 16px → h1 72px）
 - **Heading サイズ**: `text-2xl md:text-3xl lg:text-4xl`（通常）/ `text-3xl sm:text-4xl md:text-5xl lg:text-7xl`（Hero）
 
 ## セクション設計
 
-| 要素 | 値 |
-|------|-----|
-| Section padding | `py-24 md:py-32 lg:py-40` |
-| Hero | `h-screen` |
-| Container | `mx-auto max-w-6xl px-5 md:px-8` |
-| セクション分離 | 背景色交互切替（white ↔ surface）、区切り線なし |
-| Grid 傾向 | 非対称 2カラム（Concept）/ 3カラム均等（SpaceShowcase） |
-| border-radius | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
+| 要素            | 値                                                                   |
+| --------------- | -------------------------------------------------------------------- |
+| Section padding | `py-24 md:py-32 lg:py-40`                                            |
+| Hero            | `h-screen`                                                           |
+| Container       | `mx-auto max-w-6xl px-5 md:px-8`                                     |
+| セクション分離  | 背景色交互切替（white ↔ surface）、区切り線なし                      |
+| Grid 傾向       | 非対称 2カラム（Concept）/ 3カラム均等（SpaceShowcase）              |
+| border-radius   | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
 
 ## コンポーネント規約
 
-| コンポーネント | スタイル | 備考 |
-|--------------|---------|------|
-| カード | `border border-border bg-card` + `hover:shadow-lg` | shadow 常時表示禁止 |
-| カード画像 | `aspect-[4/3]` + `group-hover:scale-105 duration-500` | — |
-| カード情報 | Label(11px Gold) → Heading → Body(muted) → Metadata(`border-t`) | — |
-| CTA ボタン | `MagneticButton`（`rounded-full border border-primary-dark`） | 1-2個/ページ |
-| Secondary ボタン | テキスト + 下線 reveal | — |
-| Form ボタン | `bg-primary text-primary-foreground rounded-lg` | — |
-| セクションタイトル | `SectionLabel` → `mt-4` heading → `mt-4` description(muted) | — |
-| 画像 | `object-cover`, ParallaxImage or `hover:scale-105` | Concept: `aspect-[4/5]` |
+| コンポーネント     | スタイル                                                        | 備考                    |
+| ------------------ | --------------------------------------------------------------- | ----------------------- |
+| カード             | `border border-border bg-card` + `hover:shadow-lg`              | shadow 常時表示禁止     |
+| カード画像         | `aspect-[4/3]` + `group-hover:scale-105 duration-500`           | —                       |
+| カード情報         | Label(11px Gold) → Heading → Body(muted) → Metadata(`border-t`) | —                       |
+| CTA ボタン         | `MagneticButton`（`rounded-full border border-primary-dark`）   | 1-2個/ページ            |
+| Secondary ボタン   | テキスト + 下線 reveal                                          | —                       |
+| Form ボタン        | `bg-primary text-primary-foreground rounded-lg`                 | —                       |
+| セクションタイトル | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)     | —                       |
+| 画像               | `object-cover`, ParallaxImage or `hover:scale-105`              | Concept: `aspect-[4/5]` |
 
 ## モーション設計
 
-| 役割 | コンポーネント | 定数 |
-|------|--------------|------|
-| 主役 | `SplitText` (words/lines/chars) | `STAGGER.char/word/line` |
-| 脇役 | `ScrollReveal` (y:40 + opacity) | `DURATION.normal`, `EASE.outQuart` |
-| 背景 | `ParallaxImage` (subtle: 0.3) | `PARALLAX.subtle/normal` |
-| CTA | `MagneticButton` (elastic snap-back) | `EASE.outElastic` |
-| ヒント | `ScrollIndicator` | Hero 下部 |
+| 役割   | コンポーネント                       | 定数                               |
+| ------ | ------------------------------------ | ---------------------------------- |
+| 主役   | `SplitText` (words/lines/chars)      | `STAGGER.char/word/line`           |
+| 脇役   | `ScrollReveal` (y:40 + opacity)      | `DURATION.normal`, `EASE.outQuart` |
+| 背景   | `ParallaxImage` (subtle: 0.3)        | `PARALLAX.subtle/normal`           |
+| CTA    | `MagneticButton` (elastic snap-back) | `EASE.outElastic`                  |
+| ヒント | `ScrollIndicator`                    | Hero 下部                          |
 
 - **Easing**: `animations.ts` の `EASE` / `DURATION` / `STAGGER` 定数を使用（マジックナンバー禁止）
 - **Duration**: fast=0.3, normal=0.6, slow=0.8, hero=1.5
@@ -86,10 +86,10 @@ paths:
 
 ## 参照ファイル
 
-| ファイル | 内容 |
-|----------|------|
-| `(public*)/_styles/public*.css` | 公開ページテーマ変数 |
-| `(public*)/_shared/lib/animations.ts` | DURATION / EASE / STAGGER / PARALLAX 定数 |
-| `(public*)/_shared/components/animations/` | SplitText, ParallaxImage, MagneticButton, ScrollReveal |
-| `(public*)/_shared/components/ui/SectionLabel.tsx` | ゴールドライン付きラベル |
-| `(admin)/_styles/admin.css` | 管理画面テーマ変数 |
+| ファイル                                           | 内容                                                   |
+| -------------------------------------------------- | ------------------------------------------------------ |
+| `(public*)/_styles/public*.css`                    | 公開ページテーマ変数                                   |
+| `(public*)/_shared/lib/animations.ts`              | DURATION / EASE / STAGGER / PARALLAX 定数              |
+| `(public*)/_shared/components/animations/`         | SplitText, ParallaxImage, MagneticButton, ScrollReveal |
+| `(public*)/_shared/components/ui/SectionLabel.tsx` | ゴールドライン付きラベル                               |
+| `(admin)/_styles/admin.css`                        | 管理画面テーマ変数                                     |

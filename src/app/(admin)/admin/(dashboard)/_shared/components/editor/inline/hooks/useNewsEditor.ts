@@ -27,6 +27,7 @@ import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { NewsData } from "@/shared/domain/news/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type { NewsPreviewData } from "@/shared/types";
 
 // 共有ユーティリティ
@@ -51,16 +52,19 @@ type UseNewsEditorOptions = {
 };
 
 async function fetchPreviewHtml(contentJson: string): Promise<string> {
-  const response = await fetchAdminJson<{ html: string }>("/admin/api/preview/html", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetchAdminJson<{ html: string }>(
+    "/admin/api/preview/html",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contentJson,
+        resource: "news",
+      }),
     },
-    body: JSON.stringify({
-      contentJson,
-      resource: "news",
-    }),
-  });
+  );
 
   return response.html;
 }
@@ -179,22 +183,24 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
         if (mode === "create") {
           const result = await createNews(payload);
-          if (result.success && "data" in result) {
-            toast.success(result.message);
-            router.push(`/admin/news/${result.data.id}`);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          toast.success("お知らせを作成しました");
+          router.push(`/admin/news/${result.id}`);
         } else if (news) {
           const result = await updateNews(news.id, payload);
-          if (result.success) {
-            reset(formData);
-            core.setHasEditorChanges(false);
-            router.refresh();
-            toast.success(result.message);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          reset(formData);
+          core.setHasEditorChanges(false);
+          router.refresh();
+          toast.success("お知らせを保存しました");
         }
       } catch (error) {
         logger.error("保存中にエラーが発生しました", {
@@ -214,13 +220,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     if (!news || core.isPending) return;
     core.startTransition(async () => {
       const result = await publishNews(news.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("isPublished", true);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success(`公開しました（バージョン ${result.version}）`);
+      setValue("isPublished", true);
+      router.refresh();
     });
   };
 
@@ -228,13 +235,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     if (!news || core.isPending) return;
     core.startTransition(async () => {
       const result = await unpublishNews(news.id);
-      if (result.success) {
-        toast.success(result.message);
-        setValue("isPublished", false);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success("下書きに戻しました");
+      setValue("isPublished", false);
+      router.refresh();
     });
   };
 
@@ -243,12 +251,13 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     core.startTransition(async () => {
       try {
         const result = await deleteNews(news.id);
-        if (result.success) {
-          toast.success(result.message);
-          router.push("/admin/news");
-        } else {
+        if (isMutationError(result)) {
           toast.error(result.error);
+          return;
         }
+
+        toast.success("お知らせを削除しました");
+        router.push("/admin/news");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {
           error: getErrorMessage(error),

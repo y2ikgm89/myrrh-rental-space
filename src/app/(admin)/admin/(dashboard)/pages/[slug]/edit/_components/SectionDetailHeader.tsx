@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
 /**
  * 右パネルのヘッダー（セクション名 + タイプバッジ）
  */
 
-import { Badge } from '@/admin/components/ui'
-import { sectionTypeLabels } from '@/shared/lib/validations/section'
-import type { PageSectionData } from '@/admin/actions/page-section'
-import { SectionTypeIcon } from '../../sections/_components/SectionTypeIcon'
+import { Badge } from "@/admin/components/ui";
+import { sectionTypeLabels } from "@/shared/lib/validations/section";
+import type { PageSectionData } from "@/admin/actions/page-section";
+import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
 
 interface SectionDetailHeaderProps {
-  section: PageSectionData
+  section: PageSectionData;
 }
 
 export function SectionDetailHeader({ section }: SectionDetailHeaderProps) {
-  const label = sectionTypeLabels[section.type]
+  const label = sectionTypeLabels[section.type];
 
   return (
     <div className="flex items-center gap-3 pb-4 border-b">
@@ -27,9 +27,9 @@ export function SectionDetailHeader({ section }: SectionDetailHeaderProps) {
         </h2>
         <p className="text-sm text-muted-foreground">{label}</p>
       </div>
-      <Badge variant={section.isActive ? 'default' : 'secondary'}>
-        {section.isActive ? '表示中' : '非表示'}
+      <Badge variant={section.isActive ? "default" : "secondary"}>
+        {section.isActive ? "表示中" : "非表示"}
       </Badge>
     </div>
-  )
+  );
 }

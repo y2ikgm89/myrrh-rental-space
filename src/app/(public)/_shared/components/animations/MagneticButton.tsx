@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * MagneticButton — Mouse-following magnetic hover effect
@@ -7,59 +7,59 @@
  * Supports both <a> and <button> elements.
  */
 
-import { useRef, type ReactElement, type ReactNode } from 'react'
-import { gsap } from '@/public/lib/gsap-config'
-import { useMotionPreference } from '@/public/hooks/use-motion-preference'
-import { EASE } from '@/public/lib/animations'
+import { useRef, type ReactElement, type ReactNode } from "react";
+import { gsap } from "@/public/lib/gsap-config";
+import { useMotionPreference } from "@/public/hooks/use-motion-preference";
+import { EASE } from "@/public/lib/animations";
 
 interface MagneticButtonProps {
-  readonly children: ReactNode
-  readonly className?: string
-  readonly strength?: number
-  readonly onClick?: () => void
-  readonly href?: string
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly strength?: number;
+  readonly onClick?: () => void;
+  readonly href?: string;
 }
 
 export function MagneticButton({
   children,
-  className = '',
+  className = "",
   strength = 0.3,
   onClick,
   href,
 }: MagneticButtonProps): ReactElement {
-  const ref = useRef<HTMLButtonElement & HTMLAnchorElement>(null)
-  const motionOk = useMotionPreference()
+  const ref = useRef<HTMLButtonElement & HTMLAnchorElement>(null);
+  const motionOk = useMotionPreference();
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!motionOk.current) return
-    const el = ref.current
-    if (!el) return
+    if (!motionOk.current) return;
+    const el = ref.current;
+    if (!el) return;
 
-    const rect = el.getBoundingClientRect()
-    const x = e.clientX - rect.left - rect.width / 2
-    const y = e.clientY - rect.top - rect.height / 2
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
 
     gsap.to(el, {
       x: x * strength,
       y: y * strength,
       duration: 0.4,
-      ease: 'power2.out',
-    })
-  }
+      ease: "power2.out",
+    });
+  };
 
   const handleMouseLeave = () => {
-    const el = ref.current
-    if (!el) return
+    const el = ref.current;
+    if (!el) return;
 
     gsap.to(el, {
       x: 0,
       y: 0,
       duration: 0.6,
       ease: EASE.outElastic,
-    })
-  }
+    });
+  };
 
-  const baseClassName = `relative inline-flex items-center justify-center overflow-hidden rounded-full border border-primary/40 bg-transparent px-8 py-3.5 font-heading text-xs uppercase tracking-[0.2em] text-primary-dark transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-dark focus-visible:ring-offset-2 focus-visible:ring-offset-background md:px-10 md:py-4 md:text-sm ${className}`
+  const baseClassName = `relative inline-flex items-center justify-center overflow-hidden rounded-full border border-primary/40 bg-transparent px-8 py-3.5 font-heading text-xs uppercase tracking-[0.2em] text-primary-dark transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-dark focus-visible:ring-offset-2 focus-visible:ring-offset-background md:px-10 md:py-4 md:text-sm ${className}`;
 
   if (href) {
     return (
@@ -72,7 +72,7 @@ export function MagneticButton({
       >
         {children}
       </a>
-    )
+    );
   }
 
   return (
@@ -86,5 +86,5 @@ export function MagneticButton({
     >
       {children}
     </button>
-  )
+  );
 }

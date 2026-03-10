@@ -37,8 +37,9 @@ export type InlineImagePosition = (typeof INLINE_IMAGE_POSITIONS)[number];
 // Type Guards
 // =============================================================================
 
-const isInlineImagePosition =
-  createEnumGuard<InlineImagePosition>(INLINE_IMAGE_POSITIONS);
+const isInlineImagePosition = createEnumGuard<InlineImagePosition>(
+  INLINE_IMAGE_POSITIONS,
+);
 
 // =============================================================================
 // State
@@ -170,10 +171,7 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
     span.setAttribute("data-src", $getState(this, inlineSrcState));
     span.setAttribute("data-alt", $getState(this, inlineAltTextState));
     span.setAttribute("data-position", $getState(this, inlinePositionState));
-    span.setAttribute(
-      "data-width",
-      String($getState(this, inlineWidthState)),
-    );
+    span.setAttribute("data-width", String($getState(this, inlineWidthState)));
 
     const img = document.createElement("img");
     img.setAttribute("src", $getState(this, inlineSrcState));
@@ -209,7 +207,6 @@ export class InlineImageNode extends DecoratorNode<ReactElement> {
       />
     );
   }
-
 }
 
 // =============================================================================

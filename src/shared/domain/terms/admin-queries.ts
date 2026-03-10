@@ -151,7 +151,9 @@ export async function getTermsDefaultsForType(
   };
 }
 
-export async function getAdminTermsById(id: string): Promise<TermsDetail | null> {
+export async function getAdminTermsById(
+  id: string,
+): Promise<TermsDetail | null> {
   const terms = await prisma.terms.findUnique({
     where: { id },
     include: {

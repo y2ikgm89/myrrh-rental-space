@@ -48,7 +48,7 @@
 
 #### 1.1.1 TypeScript Strict Modeの有効化
 
-- `**tsconfig.json`での設定**: `strict: true`を有効化
+- `**tsconfig.json`での設定\*\*: `strict: true`を有効化
 - **すべてのstrictオプションを有効化**:
   - `strict: true`（すべてのstrictオプションを有効化）
   - `noImplicitAny: true`（暗黙の`any`を禁止）
@@ -64,7 +64,7 @@
 - **関数のパラメータ**: すべての関数パラメータに明示的な型注釈を付与
 - **関数の戻り値**: すべての関数の戻り値に明示的な型注釈を付与
 - **変数**: 型が明確でない場合は明示的な型注釈を付与
-- `**any`型の使用禁止**: `any`型の使用を完全に禁止（`unknown`を使用）
+- `**any`型の使用禁止\*\*: `any`型の使用を完全に禁止（`unknown`を使用）
 
 #### 1.1.3 適用範囲
 
@@ -111,7 +111,7 @@
 #### 2.1.2 型定義の管理
 
 - **型定義の一元管理**: `src/types/`ディレクトリに型定義を集約
-- **型定義の命名規則の統一**: 
+- **型定義の命名規則の統一**:
   - エンティティ型: `Entity`（例: `Space`, `Reservation`）
   - 入力型: `EntityInput`（例: `CreateSpaceInput`, `UpdateSpaceInput`）
   - 出力型: `EntityOutput`（例: `SpacePublic`, `ReservationWithDetails`）
@@ -129,51 +129,51 @@
 ```typescript
 // ✅ 良い例: Zodスキーマから型を推論
 // src/lib/validations/space.ts
-import { z } from 'zod'
+import { z } from "zod";
 
 export const createSpaceSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().min(1).max(2000),
   capacity: z.number().int().positive(),
   hourlyPrice: z.number().nonnegative(),
-})
+});
 
 // src/types/space.ts
-import { z } from 'zod'
-import type { Prisma } from '@/generated/prisma/client'
-import { createSpaceSchema, updateSpaceSchema } from '@/lib/validations/space'
+import { z } from "zod";
+import type { Prisma } from "@/generated/prisma/client";
+import { createSpaceSchema, updateSpaceSchema } from "@/lib/validations/space";
 
 // Zodスキーマから型を推論
-export type CreateSpaceInput = z.infer<typeof createSpaceSchema>
-export type UpdateSpaceInput = z.infer<typeof updateSpaceSchema>
+export type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
+export type UpdateSpaceInput = z.infer<typeof updateSpaceSchema>;
 
 // Prisma型を再利用
-export type Space = Prisma.SpaceGetPayload<{}>
-export type SpaceCreateInput = Prisma.SpaceCreateInput
-export type SpaceUpdateInput = Prisma.SpaceUpdateInput
+export type Space = Prisma.SpaceGetPayload<{}>;
+export type SpaceCreateInput = Prisma.SpaceCreateInput;
+export type SpaceUpdateInput = Prisma.SpaceUpdateInput;
 
 // カスタム型を定義
 export type SpaceWithReservations = Prisma.SpaceGetPayload<{
   include: {
-    reservations: true
-  }
-}>
+    reservations: true;
+  };
+}>;
 
 export type SpacePublic = Prisma.SpaceGetPayload<{
   select: {
-    id: true
-    name: true
-    mainImageUrl: true
-    hourlyPrice: true
-  }
-}>
+    id: true;
+    name: true;
+    mainImageUrl: true;
+    hourlyPrice: true;
+  };
+}>;
 
 // Server Actionでの使用
 // src/actions/admin/spaces.ts
-import type { CreateSpaceInput } from '@/types/space'
+import type { CreateSpaceInput } from "@/types/space";
 
 export async function createSpace(
-  data: CreateSpaceInput
+  data: CreateSpaceInput,
 ): Promise<{ success: boolean; spaceId?: string; error?: string }> {
   // ...
 }
@@ -225,12 +225,12 @@ export async function createSpace(
 **推奨パターン**:
 
 ```typescript
-const input = { email: value, password: value }
-const result = credentialsSchema.safeParse(input)
+const input = { email: value, password: value };
+const result = credentialsSchema.safeParse(input);
 if (!result.success) {
-  return { error: '入力内容を確認してください' }
+  return { error: "入力内容を確認してください" };
 }
-const data = result.data // z.output<typeof credentialsSchema>
+const data = result.data; // z.output<typeof credentialsSchema>
 ```
 
 #### 3.1.2 バリデーションスキーマの管理
@@ -253,44 +253,46 @@ const data = result.data // z.output<typeof credentialsSchema>
 ```typescript
 // ✅ 良い例: クライアントとサーバーで同じスキーマを使用
 // src/lib/validations/reservation.ts
-import { z } from 'zod'
+import { z } from "zod";
 
-export const createReservationSchema = z.object({
-  spaceId: z.string().uuid(),
-  customerLastName: z.string().min(1).max(50),
-  customerFirstName: z.string().min(1).max(50),
-  customerEmail: z.string().email(),
-  startTime: z.date(),
-  endTime: z.date(),
-}).refine((data) => data.endTime > data.startTime, {
-  message: '終了時刻は開始時刻より後である必要があります',
-  path: ['endTime'],
-})
+export const createReservationSchema = z
+  .object({
+    spaceId: z.string().uuid(),
+    customerLastName: z.string().min(1).max(50),
+    customerFirstName: z.string().min(1).max(50),
+    customerEmail: z.string().email(),
+    startTime: z.date(),
+    endTime: z.date(),
+  })
+  .refine((data) => data.endTime > data.startTime, {
+    message: "終了時刻は開始時刻より後である必要があります",
+    path: ["endTime"],
+  });
 
 // 型推論
-export type CreateReservationInput = z.infer<typeof createReservationSchema>
+export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 
 // Server Actionでの使用
 // src/actions/reservation.ts
-'use server'
+("use server");
 
-import { createReservationSchema } from '@/lib/validations/reservation'
-import type { CreateReservationInput } from '@/lib/validations/reservation'
+import { createReservationSchema } from "@/lib/validations/reservation";
+import type { CreateReservationInput } from "@/lib/validations/reservation";
 
 export async function createReservation(
-  data: CreateReservationInput
+  data: CreateReservationInput,
 ): Promise<{ success: boolean; reservationId?: string; error?: string }> {
   try {
     // サーバーサイドで再度バリデーション
-    const validatedData = createReservationSchema.parse(data)
+    const validatedData = createReservationSchema.parse(data);
     // ...
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: 'バリデーションエラー',
+        error: "バリデーションエラー",
         details: error.errors,
-      }
+      };
     }
     // ...
   }
@@ -298,16 +300,16 @@ export async function createReservation(
 
 // Client Componentでの使用
 // src/components/public/ReservationForm.tsx
-'use client'
+("use client");
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createReservationSchema } from '@/lib/validations/reservation'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createReservationSchema } from "@/lib/validations/reservation";
 
 export function ReservationForm() {
   const form = useForm({
     resolver: zodResolver(createReservationSchema),
-  })
+  });
   // ...
 }
 ```
@@ -354,28 +356,28 @@ export function ReservationForm() {
 ```typescript
 // ✅ 良い例: Prisma 7の型インポート
 // src/types/space.ts
-import type { Prisma } from '@/generated/prisma/client'
+import type { Prisma } from "@/generated/prisma/client";
 
 // Prismaの生成型を使用
-export type SpaceCreateInput = Prisma.SpaceCreateInput
-export type SpaceUpdateInput = Prisma.SpaceUpdateInput
-export type SpaceWhereInput = Prisma.SpaceWhereInput
+export type SpaceCreateInput = Prisma.SpaceCreateInput;
+export type SpaceUpdateInput = Prisma.SpaceUpdateInput;
+export type SpaceWhereInput = Prisma.SpaceWhereInput;
 
 // カスタム型をPrisma型から構築
 export type SpaceWithReservations = Prisma.SpaceGetPayload<{
   include: {
-    reservations: true
-  }
-}>
+    reservations: true;
+  };
+}>;
 
 // 特定のフィールドのみを含む型
 export type SpacePublic = Prisma.SpaceGetPayload<{
   select: {
-    id: true
-    name: true
-    hourlyPrice: true
-  }
-}>
+    id: true;
+    name: true;
+    hourlyPrice: true;
+  };
+}>;
 ```
 
 **Prisma 7のドライバーアダプター設定**:
@@ -383,28 +385,31 @@ export type SpacePublic = Prisma.SpaceGetPayload<{
 ```typescript
 // ✅ 良い例: Prisma 7のドライバーアダプター設定
 // src/lib/prisma.ts
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client'
-import { Pool } from 'pg'
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
+import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-})
+});
 
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 
 **注意**: Prisma 7では、データベース接続にドライバーアダプターが必要です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。
@@ -443,80 +448,84 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 ```typescript
 // ✅ 良い例: Zod型の使い分け
-import { z } from 'zod'
+import { z } from "zod";
 
 const createSpaceSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().min(1).max(2000),
   capacity: z.number().int().positive(),
   hourlyPrice: z.number().nonnegative(),
-})
+});
 
 // z.infer: スキーマから推論される型（通常はz.outputと同じ）
-type CreateSpaceInput = z.infer<typeof createSpaceSchema>
+type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
 
 // z.input: 入力時の型（変換前、例: z.preprocessを使用する場合）
-type CreateSpaceInputRaw = z.input<typeof createSpaceSchema>
+type CreateSpaceInputRaw = z.input<typeof createSpaceSchema>;
 
 // z.output: 出力時の型（変換後、例: z.transformを使用する場合）
-type CreateSpaceOutput = z.output<typeof createSpaceSchema>
+type CreateSpaceOutput = z.output<typeof createSpaceSchema>;
 
 // Server Actionでの使用
 export async function createSpace(
-  data: CreateSpaceInput
+  data: CreateSpaceInput,
 ): Promise<{ success: boolean; spaceId?: string }> {
   // parse()はz.output型を返す
-  const validatedData = createSpaceSchema.parse(data)
-  
+  const validatedData = createSpaceSchema.parse(data);
+
   // validatedDataの型はCreateSpaceOutput（この場合はCreateSpaceInputと同じ）
   const space = await prisma.space.create({
     data: validatedData,
-  })
+  });
 
-  return { success: true, spaceId: space.id }
+  return { success: true, spaceId: space.id };
 }
 ```
 
 #### 5.1.2 型ガードとしてのZodスキーマ
 
 - **Zodスキーマを型ガードとして使用**: `safeParse`を使用して型ガード関数を作成
-- `**safeParse`の推奨**: 例外を投げずにバリデーション結果を返すため、より制御されたエラーハンドリングが可能
+- `**safeParse`の推奨\*\*: 例外を投げずにバリデーション結果を返すため、より制御されたエラーハンドリングが可能
 
 **実装例**:
 
 ```typescript
 // ✅ 良い例: Zodスキーマを型ガードとして使用
-import { z } from 'zod'
+import { z } from "zod";
 
 const spaceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   hourlyPrice: z.number().nonnegative(),
-})
+});
 
 // 型ガード関数
 function isSpace(data: unknown): data is z.infer<typeof spaceSchema> {
-  return spaceSchema.safeParse(data).success
+  return spaceSchema.safeParse(data).success;
 }
 
 // ✅ より良い例: safeParseを使用した関数型のエラーハンドリング
-function processSpace(data: unknown): { success: true; data: z.infer<typeof spaceSchema> } | { success: false; error: z.ZodError } {
-  const result = spaceSchema.safeParse(data)
+function processSpace(
+  data: unknown,
+):
+  | { success: true; data: z.infer<typeof spaceSchema> }
+  | { success: false; error: z.ZodError } {
+  const result = spaceSchema.safeParse(data);
   if (result.success) {
-    return { success: true, data: result.data }
+    return { success: true, data: result.data };
   } else {
-    return { success: false, error: result.error }
+    return { success: false, error: result.error };
   }
 }
 
 // 使用例
-const result = processSpace(data)
+const result = processSpace(data);
 if (result.success) {
   // result.dataの型が保証されている
-  console.log(result.data.name, result.data.hourlyPrice)
+  console.log(result.data.name, result.data.hourlyPrice);
 } else {
   // result.errorの型がz.ZodErrorに絞り込まれる
-  console.error('Validation errors:', result.error.errors)
+  console.error("Validation errors:", result.error.errors);
 }
 ```
 
@@ -537,8 +546,8 @@ if (result.success) {
 
 #### 6.1.1 Server Componentの型定義
 
-- `**params`はPromise**: Next.js 16では`params`が`Promise`型
-- `**searchParams`はPromise**: Next.js 16では`searchParams`が`Promise`型
+- `**params`はPromise\*\*: Next.js 16では`params`が`Promise`型
+- `**searchParams`はPromise\*\*: Next.js 16では`searchParams`が`Promise`型
 - **明示的な型注釈**: Server ComponentのPropsに明示的な型注釈を付与
 
 **実装例**:
@@ -556,7 +565,7 @@ interface PageProps {
 
 export default async function SpacePage({ params }: PageProps) {
   const { id } = await params // Next.js 16ではparamsはPromise
-  
+
   const space = await prisma.space.findUnique({
     where: { id },
     select: {
@@ -578,7 +587,7 @@ export default async function SpacePage({ params }: PageProps) {
 #### 6.1.2 Promise型の扱い（React 19の`use()`フック）
 
 - **Promise型を明示的に定義**: Client Componentに渡すPromise型を明示的に定義
-- `**use()`フックの型安全性**: React 19の`use()`フックでPromise型を型安全に処理
+- `**use()`フックの型安全性\*\*: React 19の`use()`フックでPromise型を型安全に処理
 - **Promiseの作成場所**: Promiseはrender内で作成せず、Server Componentで作成してClient Componentに渡す
 - **条件付き使用**: `use()`フックは条件付きで呼び出すことができる（従来のフックとは異なる）
 
@@ -627,7 +636,7 @@ interface CommentsProps {
 function Comments({ commentsPromise }: CommentsProps) {
   // ✅ 良い例: Promise型が保証されている
   const comments = use(commentsPromise)
-  
+
   return (
     <div>
       {comments.map(comment => (
@@ -647,6 +656,7 @@ function BadComments() {
 ```
 
 **重要な注意事項**:
+
 - **Promiseの作成**: PromiseはServer Componentで作成し、Client Componentにpropsとして渡す
 - **再レンダリング**: Client Componentのrender内でPromiseを作成すると、再レンダリングのたびに新しいPromiseが作成され、不安定な動作を引き起こす可能性がある
 - **条件付き使用**: `use()`フックは条件付きで呼び出すことができる（従来のフックとは異なる）
@@ -675,48 +685,48 @@ function BadComments() {
 
 ```typescript
 // ✅ 良い例: Server Actionの型安全性
-'use server'
+"use server";
 
-import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
-import { prisma } from '@/lib/prisma'
-import { createSpaceSchema } from '@/lib/validations/space'
+import { z } from "zod";
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { createSpaceSchema } from "@/lib/validations/space";
 
 // Zodスキーマから型を推論
-type CreateSpaceInput = z.infer<typeof createSpaceSchema>
+type CreateSpaceInput = z.infer<typeof createSpaceSchema>;
 
 // 戻り値の型を明示的に定義（判別可能なユニオン型）
 type CreateSpaceResult =
   | { success: true; spaceId: string }
-  | { success: false; error: string; details?: z.ZodError }
+  | { success: false; error: string; details?: z.ZodError };
 
 export async function createSpace(
-  data: CreateSpaceInput
+  data: CreateSpaceInput,
 ): Promise<CreateSpaceResult> {
   try {
     // サーバーサイドで再度バリデーション（型安全性の確保）
-    const validatedData = createSpaceSchema.parse(data)
-    
+    const validatedData = createSpaceSchema.parse(data);
+
     const space = await prisma.space.create({
       data: validatedData,
-    })
+    });
 
-    revalidatePath('/spaces')
-    
-    return { success: true, spaceId: space.id }
+    revalidatePath("/spaces");
+
+    return { success: true, spaceId: space.id };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: 'Validation error',
+        error: "Validation error",
         details: error,
-      }
+      };
     }
-    
+
     return {
       success: false,
-      error: 'Failed to create space',
-    }
+      error: "Failed to create space",
+    };
   }
 }
 ```
@@ -747,42 +757,48 @@ export async function createSpace(
 ```typescript
 // ✅ 良い例: Route Handlerの型安全性
 // src/app/api/spaces/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 
 const getSpacesQuerySchema = z.object({
-  page: z.string().optional().transform(val => (val ? parseInt(val, 10) : 1)),
-  limit: z.string().optional().transform(val => (val ? parseInt(val, 10) : 12)),
-})
+  page: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 1)),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 12)),
+});
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(request.url);
     const query = getSpacesQuerySchema.parse({
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
-    })
+      page: searchParams.get("page"),
+      limit: searchParams.get("limit"),
+    });
 
     const spaces = await prisma.space.findMany({
       where: { isPublished: true },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
-    })
+    });
 
-    return NextResponse.json({ spaces })
+    return NextResponse.json({ spaces });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid query parameters', details: error.errors },
-        { status: 400 }
-      )
+        { error: "Invalid query parameters", details: error.errors },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -887,6 +903,7 @@ export function PostResults() {
 ```
 
 **重要な注意事項**:
+
 - **ネストされたServer Components**: `createSearchParamsCache`の`get`メソッドを使用して、ネストされたServer Componentsでも型安全にクエリパラメータにアクセス可能
 - **Prop drillingの回避**: `get`メソッドを使用することで、propsとして渡す必要がなくなる
 
@@ -916,55 +933,55 @@ export function PostResults() {
 // ✅ 良い例: 判別可能なユニオン型
 type Result<T> =
   | { success: true; data: T }
-  | { success: false; error: string; code?: string; details?: unknown }
+  | { success: false; error: string; code?: string; details?: unknown };
 
 export async function createSpace(
-  data: CreateSpaceInput
+  data: CreateSpaceInput,
 ): Promise<Result<Space>> {
   try {
-    const validatedData = createSpaceSchema.parse(data)
+    const validatedData = createSpaceSchema.parse(data);
     const space = await prisma.space.create({
       data: validatedData,
-    })
+    });
 
-    return { success: true, data: space }
+    return { success: true, data: space };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: 'Validation error',
-        code: 'VALIDATION_ERROR',
+        error: "Validation error",
+        code: "VALIDATION_ERROR",
         details: error.errors,
-      }
+      };
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
+      if (error.code === "P2002") {
         return {
           success: false,
-          error: 'Duplicate entry',
-          code: 'DUPLICATE_ENTRY',
-        }
+          error: "Duplicate entry",
+          code: "DUPLICATE_ENTRY",
+        };
       }
     }
 
     return {
       success: false,
-      error: 'An unexpected error occurred',
-      code: 'UNKNOWN_ERROR',
+      error: "An unexpected error occurred",
+      code: "UNKNOWN_ERROR",
       details: error,
-    }
+    };
   }
 }
 
 // 使用例: 型安全性が保証される
-const result = await createSpace(data)
+const result = await createSpace(data);
 if (result.success) {
   // result.dataの型がSpaceに絞り込まれる
-  console.log(result.data.name)
+  console.log(result.data.name);
 } else {
   // result.errorの型がstringに絞り込まれる
-  console.error(result.error, result.code)
+  console.error(result.error, result.code);
 }
 ```
 
@@ -984,8 +1001,8 @@ if (result.success) {
 
 #### 11.1.1 Props型の定義パターン
 
-- `**interface`を使用**: オブジェクト形状で拡張可能な場合は`interface`を使用
-- `**type`を使用**: ユニオン型、交差型、計算型の場合は`type`を使用
+- `**interface`を使用\*\*: オブジェクト形状で拡張可能な場合は`interface`を使用
+- `**type`を使用\*\*: ユニオン型、交差型、計算型の場合は`type`を使用
 - **型のエクスポート**: Props型をエクスポートして再利用可能に
 
 **実装例**:
@@ -1177,16 +1194,21 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 **期間**: 1-2週間
 
 1. **TypeScript Strict Modeの徹底** (REQ-TYPE-001)
-  - `tsconfig.json`でstrict modeを有効化
-  - すべての関数に明示的な型注釈
-  - `any`型の使用を0件に
+
+- `tsconfig.json`でstrict modeを有効化
+- すべての関数に明示的な型注釈
+- `any`型の使用を0件に
+
 2. **型定義の統一** (REQ-TYPE-002)
-  - Prisma生成型の活用
-  - Zodスキーマからの型推論
-  - 型定義の一元管理
+
+- Prisma生成型の活用
+- Zodスキーマからの型推論
+- 型定義の一元管理
+
 3. **バリデーションスキーマの統一** (REQ-TYPE-003)
-  - クライアントとサーバーで同じZodスキーマを使用
-  - バリデーションエラーの型安全な処理
+
+- クライアントとサーバーで同じZodスキーマを使用
+- バリデーションエラーの型安全な処理
 
 **成功基準**:
 
@@ -1200,11 +1222,16 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 **期間**: 1-2週間
 
 1. **型定義のドキュメント化**
-  - すべての公開型定義にJSDocコメントを追加
+
+- すべての公開型定義にJSDocコメントを追加
+
 2. **型定義のセキュリティ対応**
-  - セキュリティ関連の型定義を追加
+
+- セキュリティ関連の型定義を追加
+
 3. **型定義の拡張性向上**
-  - 将来的な機能追加を考慮した型定義の設計
+
+- 将来的な機能追加を考慮した型定義の設計
 
 **成功基準**:
 
@@ -1217,9 +1244,12 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 **期間**: 1-2週間
 
 1. **型定義のテスト**
-  - 型定義のテストを追加
+
+- 型定義のテストを追加
+
 2. **型定義のマイグレーション手順**
-  - 型定義の変更時のマイグレーション手順を文書化
+
+- 型定義の変更時のマイグレーション手順を文書化
 
 **成功基準**:
 
@@ -1269,4 +1299,3 @@ export function SpaceCard({ space, onSelect, className }: SpaceCardProps) {
 - **2026-01-08**: nuqsバージョンを2.8.5から2.8.8に更新（nuqs.mdとの整合性）、ドキュメント相互参照パスを修正（BEST_PRACTICES.md、PROJECT_STRUCTURE.md、API.md、README.md、PRISMA_7.mdへのパスを正しいディレクトリに変更）
 - **2026-01-06**: 公式ドキュメント確認後、最新情報を反映（Prisma 7のドライバーアダプター、React 19の`use`フックの注意事項、nuqsのネストされたServer Componentsでの使用、Zodの`safeParse`の推奨事項）
 - **2026-01-06**: 初版作成、型安全・型定義の包括的な要件定義を追加
-

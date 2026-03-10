@@ -5,117 +5,132 @@
  * Plugin と InspectorPanel の両方からインポートして使用
  */
 
-import type { CalloutType } from '../nodes/CalloutNode'
-import type { ButtonVariant, ButtonSize, ButtonAlignment } from '../nodes/ButtonNode'
-import type { CollapsibleStyle, CollapsibleRadius } from '../nodes/CollapsibleContainerNode'
-import type { PullQuoteStyle } from '../nodes/PullQuoteNode'
-import type { StepsStyle, StepsShape, StepsFill } from '../nodes/StepsContainerNode'
-import type { TabsStyle, TabsSize, TabsFixedWidth } from '../nodes/TabsContainerNode'
+import type { CalloutType } from "../nodes/CalloutNode";
+import type {
+  ButtonVariant,
+  ButtonSize,
+  ButtonAlignment,
+} from "../nodes/ButtonNode";
+import type {
+  CollapsibleStyle,
+  CollapsibleRadius,
+} from "../nodes/CollapsibleContainerNode";
+import type { PullQuoteStyle } from "../nodes/PullQuoteNode";
+import type {
+  StepsStyle,
+  StepsShape,
+  StepsFill,
+} from "../nodes/StepsContainerNode";
+import type {
+  TabsStyle,
+  TabsSize,
+  TabsFixedWidth,
+} from "../nodes/TabsContainerNode";
 
 // =============================================================================
 // Callout
 // =============================================================================
 
 export const CALLOUT_TYPE_LABELS: Record<CalloutType, string> = {
-  info: '情報',
-  warning: '注意',
-  error: 'エラー',
-  success: '成功',
-}
+  info: "情報",
+  warning: "注意",
+  error: "エラー",
+  success: "成功",
+};
 
 // =============================================================================
 // Collapsible
 // =============================================================================
 
 export const COLLAPSIBLE_STYLE_LABELS: Record<CollapsibleStyle, string> = {
-  default: 'デフォルト',
-  minimal: 'ミニマル',
-  card: 'カード',
-  filled: '塗りつぶし',
-}
+  default: "デフォルト",
+  minimal: "ミニマル",
+  card: "カード",
+  filled: "塗りつぶし",
+};
 
 export const COLLAPSIBLE_RADIUS_LABELS: Record<CollapsibleRadius, string> = {
-  none: 'なし',
-  sm: '小（0.25rem）',
-  md: '中（0.5rem）',
-  lg: '大（0.75rem）',
-}
+  none: "なし",
+  sm: "小（0.25rem）",
+  md: "中（0.5rem）",
+  lg: "大（0.75rem）",
+};
 
 // =============================================================================
 // Button
 // =============================================================================
 
 export const BUTTON_VARIANT_LABELS: Record<ButtonVariant, string> = {
-  primary: 'プライマリ',
-  secondary: 'セカンダリ',
-  outline: 'アウトライン',
-}
+  primary: "プライマリ",
+  secondary: "セカンダリ",
+  outline: "アウトライン",
+};
 
 export const BUTTON_SIZE_LABELS: Record<ButtonSize, string> = {
-  sm: '小',
-  md: '中',
-  lg: '大',
-}
+  sm: "小",
+  md: "中",
+  lg: "大",
+};
 
 export const BUTTON_ALIGNMENT_LABELS: Record<ButtonAlignment, string> = {
-  left: '左',
-  center: '中央',
-  right: '右',
-}
+  left: "左",
+  center: "中央",
+  right: "右",
+};
 
 // =============================================================================
 // PullQuote
 // =============================================================================
 
 export const PULL_QUOTE_STYLE_LABELS: Record<PullQuoteStyle, string> = {
-  classic: 'クラシック',
-  modern: 'モダン',
-  minimal: 'ミニマル',
-}
+  classic: "クラシック",
+  modern: "モダン",
+  minimal: "ミニマル",
+};
 
 // =============================================================================
 // Steps
 // =============================================================================
 
 export const STEPS_STYLE_LABELS: Record<StepsStyle, string> = {
-  numbered: '番号',
-  big: 'ビッグ',
-  small: 'スモール',
-  icon: 'アイコン',
-  timeline: 'タイムライン',
-}
+  numbered: "番号",
+  big: "ビッグ",
+  small: "スモール",
+  icon: "アイコン",
+  timeline: "タイムライン",
+};
 
 export const STEPS_SHAPE_LABELS: Record<StepsShape, string> = {
-  circle: '丸',
-  square: '四角',
-}
+  circle: "丸",
+  square: "四角",
+};
 
 export const STEPS_FILL_LABELS: Record<StepsFill, string> = {
-  filled: '塗り',
-  outline: '線のみ',
-}
+  filled: "塗り",
+  outline: "線のみ",
+};
 
 // =============================================================================
 // Tabs
 // =============================================================================
 
 export const TABS_STYLE_LABELS: Record<TabsStyle, string> = {
-  underline: '下線',
-  pills: 'ピル',
-  boxed: 'ボックス',
-  minimal: 'ミニマル',
-}
+  underline: "下線",
+  pills: "ピル",
+  boxed: "ボックス",
+  minimal: "ミニマル",
+};
 
 export const TABS_SIZE_LABELS: Record<TabsSize, string> = {
-  auto: 'テキストにあわせる',
-  fixed: '固定幅',
-  fill: '端まで並べる',
-  uniform: '均等幅で端まで並べる',
-}
+  auto: "テキストにあわせる",
+  fixed: "固定幅",
+  fill: "端まで並べる",
+  uniform: "均等幅で端まで並べる",
+};
 
 export const TABS_FIXED_WIDTH_LABELS: Record<TabsFixedWidth, string> = {
-  '80': '80px（コンパクト）',
-  '120': '120px（標準）',
-  '160': '160px（ワイド）',
-  '200': '200px（エクストラワイド）',
-}
+  "80": "80px（コンパクト）",
+  "120": "120px（標準）",
+  "160": "160px（ワイド）",
+  "200": "200px（エクストラワイド）",
+};

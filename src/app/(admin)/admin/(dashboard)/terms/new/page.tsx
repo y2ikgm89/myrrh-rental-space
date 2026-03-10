@@ -1,14 +1,16 @@
-import { getSettings } from '@/admin/queries/settings'
-import { TermsInlineEditor } from '../_components/TermsInlineEditor'
-import type { BusinessInfo } from '@/shared/lib/terms-templates'
-import type { Metadata } from 'next'
+import { connection } from "next/server";
+import { getSettings } from "@/admin/queries/settings";
+import { TermsInlineEditor } from "../_components/TermsInlineEditor";
+import type { BusinessInfo } from "@/shared/lib/terms-templates";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: '規約作成 | Myrrh Rental Space',
-}
+  title: "規約作成 | Myrrh Rental Space",
+};
 
 export default async function NewTermsPage() {
-  const settings = await getSettings()
+  await connection();
+  const settings = await getSettings();
 
   // 事業者情報を抽出
   const businessInfo: BusinessInfo = settings
@@ -31,8 +33,7 @@ export default async function NewTermsPage() {
         city: null,
         streetAddress: null,
         buildingName: null,
-      }
+      };
 
-  return <TermsInlineEditor mode="create" businessInfo={businessInfo} />
+  return <TermsInlineEditor mode="create" businessInfo={businessInfo} />;
 }
-

@@ -4,11 +4,11 @@
  * @description X（Twitter）投稿挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,17 +18,17 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createXNode } from '../nodes/XNode'
+} from "@/admin/components/ui";
+import { $createXNode } from "../nodes/XNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type XPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Utilities
@@ -46,23 +46,27 @@ type XPluginProps = {
  */
 function extractTweetId(url: string): string | null {
   // twitter.com/x.com 標準形式（モバイル含む）
-  const standardMatch = url.match(/(?:mobile\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/)
+  const standardMatch = url.match(
+    /(?:mobile\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/,
+  );
   if (standardMatch?.[1]) {
-    return standardMatch[1]
+    return standardMatch[1];
   }
 
   // 埋め込みURL（既存埋め込みコードから）
-  const embedMatch = url.match(/platform\.twitter\.com\/embed\/Tweet\.html\?id=(\d+)/)
+  const embedMatch = url.match(
+    /platform\.twitter\.com\/embed\/Tweet\.html\?id=(\d+)/,
+  );
   if (embedMatch?.[1]) {
-    return embedMatch[1]
+    return embedMatch[1];
   }
 
   // 直接ツイートIDが入力された場合（15-19桁の数字のみ）
   if (/^\d{15,19}$/.test(url.trim())) {
-    return url.trim()
+    return url.trim();
   }
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -70,33 +74,33 @@ function extractTweetId(url: string): string | null {
 // =============================================================================
 
 export function XPlugin({ isOpen, onClose }: XPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    const tweetId = extractTweetId(url)
+    const tweetId = extractTweetId(url);
 
     if (!tweetId) {
-      setError('有効なX（Twitter）URLを入力してください')
-      return
+      setError("有効なX（Twitter）URLを入力してください");
+      return;
     }
 
     editor.update(() => {
-      const node = $createXNode({ tweetId })
-      $insertNodeToNearestRoot(node)
-    })
+      const node = $createXNode({ tweetId });
+      $insertNodeToNearestRoot(node);
+    });
 
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -116,8 +120,8 @@ export function XPlugin({ isOpen, onClose }: XPluginProps) {
               type="url"
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value)
-                setError('')
+                setUrl(e.target.value);
+                setError("");
               }}
               placeholder="https://x.com/user/status/..."
             />
@@ -135,6 +139,5 @@ export function XPlugin({ isOpen, onClose }: XPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

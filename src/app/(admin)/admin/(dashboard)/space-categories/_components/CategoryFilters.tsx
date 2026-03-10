@@ -1,47 +1,47 @@
-'use client'
+"use client";
 
-import { Search } from 'lucide-react'
-import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { parseAsBoolean } from '@/shared/lib/nuqs'
-import { useRef, useEffect } from 'react'
-import { Checkbox, Label, Input } from '@/admin/components/ui'
+import { Search } from "lucide-react";
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { parseAsBoolean } from "@/shared/lib/nuqs";
+import { useRef, useEffect } from "react";
+import { Checkbox, Label, Input } from "@/admin/components/ui";
 
 export function CategoryFilters() {
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
+      search: parseAsString.withDefault(""),
       includeInactive: parseAsBoolean.withDefault(false),
       page: parseAsInteger.withDefault(1),
-      tab: parseAsString.withDefault('categories'),
+      tab: parseAsString.withDefault("categories"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const setSearchDebounced = (value: string) => {
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ search: value || null, page: 1 })
-    }, 300)
-  }
+      void setParams({ search: value || null, page: 1 });
+    }, 300);
+  };
 
   const handleIncludeInactiveChange = (checked: boolean) => {
-    void setParams({ includeInactive: checked || null, page: 1 })
-  }
+    void setParams({ includeInactive: checked || null, page: 1 });
+  };
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -69,5 +69,5 @@ export function CategoryFilters() {
         />
       </div>
     </div>
-  )
+  );
 }

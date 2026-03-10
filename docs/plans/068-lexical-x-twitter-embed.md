@@ -17,12 +17,13 @@ LexicalエディタにX（Twitter）投稿の埋め込み機能を追加。公�
 
 **採用: 静的iframe方式**
 
-| 方式 | メリット | デメリット |
-|------|---------|-----------|
-| 静的iframe（採用） | 軽量、高速、レイアウトシフトなし | リッチ表示なし |
-| Twitter Widget API | 公式UIで完全再現 | 560KB JSロード、パフォーマンス影響 |
+| 方式               | メリット                         | デメリット                         |
+| ------------------ | -------------------------------- | ---------------------------------- |
+| 静的iframe（採用） | 軽量、高速、レイアウトシフトなし | リッチ表示なし                     |
+| Twitter Widget API | 公式UIで完全再現                 | 560KB JSロード、パフォーマンス影響 |
 
 **選択理由:**
+
 - YouTubeNodeとの一貫性
 - パフォーマンス優先（外部JS不要）
 - プライバシー保護（トラッキング削減）
@@ -30,6 +31,7 @@ LexicalエディタにX（Twitter）投稿の埋め込み機能を追加。公�
 ### アーキテクチャ
 
 YouTubeNodeパターンを完全踏襲:
+
 - DecoratorNode直接継承
 - 直接更新パターン（コマンド登録不要）
 - useXDialogフックによる状態管理
@@ -38,21 +40,21 @@ YouTubeNodeパターンを完全踏襲:
 
 ### 新規ファイル
 
-| ファイル | 内容 |
-|---------|------|
-| `nodes/XNode.tsx` | DecoratorNode実装、DOM変換、ファクトリ関数 |
-| `plugins/XPlugin.tsx` | ダイアログUI、URL抽出ロジック、フック |
+| ファイル              | 内容                                       |
+| --------------------- | ------------------------------------------ |
+| `nodes/XNode.tsx`     | DecoratorNode実装、DOM変換、ファクトリ関数 |
+| `plugins/XPlugin.tsx` | ダイアログUI、URL抽出ロジック、フック      |
 
 ### 変更ファイル
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `nodes/index.ts` | XNodeエクスポート追加 |
-| `plugins/index.ts` | XPlugin/useXDialogエクスポート追加 |
-| `ToolbarPlugin.tsx` | onInsertX Props、メニュー項目追加 |
+| ファイル                    | 変更内容                                  |
+| --------------------------- | ----------------------------------------- |
+| `nodes/index.ts`            | XNodeエクスポート追加                     |
+| `plugins/index.ts`          | XPlugin/useXDialogエクスポート追加        |
+| `ToolbarPlugin.tsx`         | onInsertX Props、メニュー項目追加         |
 | `ComponentPickerPlugin.tsx` | onInsertX Props、メディアカテゴリーに追加 |
-| `LexicalEditor.tsx` | XNode登録、フック/ダイアログ追加 |
-| `theme.ts` | X用テーマクラス追加 |
+| `LexicalEditor.tsx`         | XNode登録、フック/ダイアログ追加          |
+| `theme.ts`                  | X用テーマクラス追加                       |
 
 ### 対応URL形式
 
@@ -76,13 +78,15 @@ https://platform.twitter.com/embed/Tweet.html?id=1234567890123456789
 ```typescript
 // tweetIdバリデーション（XNode.tsx）
 function isValidTweetId(tweetId: string): boolean {
-  return /^\d{15,19}$/.test(tweetId)
+  return /^\d{15,19}$/.test(tweetId);
 }
 
 // URL抽出（XPlugin.tsx）
 function extractTweetId(url: string): string | null {
-  const standardMatch = url.match(/(?:mobile\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/)
-  if (standardMatch?.[1]) return standardMatch[1]
+  const standardMatch = url.match(
+    /(?:mobile\.)?(?:twitter|x)\.com\/\w+\/status\/(\d+)/,
+  );
+  if (standardMatch?.[1]) return standardMatch[1];
   // ... 他の形式
 }
 ```

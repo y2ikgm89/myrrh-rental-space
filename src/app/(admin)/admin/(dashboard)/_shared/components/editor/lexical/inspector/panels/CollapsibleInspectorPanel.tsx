@@ -5,11 +5,14 @@
  * 3-tier構造: Container → Item → Title + Content
  */
 
-'use client'
+"use client";
 
-import { $getNodeByKey, $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { SortableInspectorList, type SortableInspectorItem } from '../SortableInspectorList'
+import { $getNodeByKey, $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  SortableInspectorList,
+  type SortableInspectorItem,
+} from "../SortableInspectorList";
 import {
   $isCollapsibleContainerNode,
   type CollapsibleContainerNode,
@@ -20,116 +23,136 @@ import {
   collapsibleColorState,
   isCollapsibleStyle,
   isCollapsibleRadius,
-} from '../../nodes/CollapsibleContainerNode'
-import { type AccentColor } from '../../config/accent-colors'
-import { $isCollapsibleItemNode } from '../../nodes/CollapsibleItemNode'
-import { $isCollapsibleTitleNode } from '../../nodes/CollapsibleTitleNode'
-import { $addCollapsibleItem, $removeCollapsibleItem, $reorderCollapsibleItem } from '../../plugins/CollapsiblePlugin'
-import { COLLAPSIBLE_STYLE_LABELS, COLLAPSIBLE_RADIUS_LABELS } from '../../config/node-labels'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { ColorSwatchPicker } from '../ColorSwatchPicker'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Label } from '@/admin/components/ui'
+} from "../../nodes/CollapsibleContainerNode";
+import { type AccentColor } from "../../config/accent-colors";
+import { $isCollapsibleItemNode } from "../../nodes/CollapsibleItemNode";
+import { $isCollapsibleTitleNode } from "../../nodes/CollapsibleTitleNode";
+import {
+  $addCollapsibleItem,
+  $removeCollapsibleItem,
+  $reorderCollapsibleItem,
+} from "../../plugins/CollapsiblePlugin";
+import {
+  COLLAPSIBLE_STYLE_LABELS,
+  COLLAPSIBLE_RADIUS_LABELS,
+} from "../../config/node-labels";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { ColorSwatchPicker } from "../ColorSwatchPicker";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Label } from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
-const MAX_ITEMS = 10
-const MIN_ITEMS = 1
+const MAX_ITEMS = 10;
+const MIN_ITEMS = 1;
 
 type CollapsibleItemInfo = {
-  key: string
-  titleText: string
-}
+  key: string;
+  titleText: string;
+};
 
 type CollapsibleInspectorPanelProps = {
-  nodeKey: string
-  node: CollapsibleContainerNode
-}
+  nodeKey: string;
+  node: CollapsibleContainerNode;
+};
 
-export function CollapsibleInspectorPanel({ nodeKey, node }: CollapsibleInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isCollapsibleContainerNode)
+export function CollapsibleInspectorPanel({
+  nodeKey,
+  node,
+}: CollapsibleInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isCollapsibleContainerNode);
 
-  const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor.getEditorState().read(() => {
-    const style = $getState(node, collapsibleStyleState)
-    const radius = $getState(node, borderRadiusState)
-    const color = $getState(node, collapsibleColorState)
-    const items: CollapsibleItemInfo[] = []
-    const children = node.getChildren()
+  const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor
+    .getEditorState()
+    .read(() => {
+      const style = $getState(node, collapsibleStyleState);
+      const radius = $getState(node, borderRadiusState);
+      const color = $getState(node, collapsibleColorState);
+      const items: CollapsibleItemInfo[] = [];
+      const children = node.getChildren();
 
-    for (const child of children) {
-      if ($isCollapsibleItemNode(child)) {
-        const titleNode = child.getChildren().find($isCollapsibleTitleNode)
-        items.push({
-          key: child.getKey(),
-          titleText: titleNode ? titleNode.getTextContent() : '',
-        })
+      for (const child of children) {
+        if ($isCollapsibleItemNode(child)) {
+          const titleNode = child.getChildren().find($isCollapsibleTitleNode);
+          items.push({
+            key: child.getKey(),
+            titleText: titleNode ? titleNode.getTextContent() : "",
+          });
+        }
       }
-    }
 
-    return {
-      currentStyle: style,
-      currentRadius: radius,
-      currentColor: color,
-      collapsibleItems: items,
-    }
-  })
+      return {
+        currentStyle: style,
+        currentRadius: radius,
+        currentColor: color,
+        collapsibleItems: items,
+      };
+    });
 
-  const canRemove = collapsibleItems.length > MIN_ITEMS
-  const canAdd = collapsibleItems.length < MAX_ITEMS
+  const canRemove = collapsibleItems.length > MIN_ITEMS;
+  const canAdd = collapsibleItems.length < MAX_ITEMS;
 
   const handleStyleChange = (value: string) => {
     if (isCollapsibleStyle(value)) {
-      updateNode((n) => { $setState(n, collapsibleStyleState, value) })
+      updateNode((n) => {
+        $setState(n, collapsibleStyleState, value);
+      });
     }
-  }
+  };
 
   const handleRadiusChange = (value: string) => {
     if (isCollapsibleRadius(value)) {
-      updateNode((n) => { $setState(n, borderRadiusState, value) })
+      updateNode((n) => {
+        $setState(n, borderRadiusState, value);
+      });
     }
-  }
+  };
 
   const handleColorChange = (color: AccentColor) => {
-    updateNode((n) => { $setState(n, collapsibleColorState, color) })
-  }
+    updateNode((n) => {
+      $setState(n, collapsibleColorState, color);
+    });
+  };
 
   const handleAddCollapsible = () => {
     editor.update(() => {
-      const container = $getNodeByKey(nodeKey)
-      if (!$isCollapsibleContainerNode(container)) return
-      $addCollapsibleItem(container)
-    })
-  }
+      const container = $getNodeByKey(nodeKey);
+      if (!$isCollapsibleContainerNode(container)) return;
+      $addCollapsibleItem(container);
+    });
+  };
 
   const handleRemoveCollapsible = (id: string) => {
     editor.update(() => {
-      const container = $getNodeByKey(nodeKey)
-      if (!$isCollapsibleContainerNode(container)) return
-      const items = container.getChildren().filter($isCollapsibleItemNode)
-      const index = items.findIndex((item) => item.getKey() === id)
-      if (index !== -1) $removeCollapsibleItem(container, index)
-    })
-  }
+      const container = $getNodeByKey(nodeKey);
+      if (!$isCollapsibleContainerNode(container)) return;
+      const items = container.getChildren().filter($isCollapsibleItemNode);
+      const index = items.findIndex((item) => item.getKey() === id);
+      if (index !== -1) $removeCollapsibleItem(container, index);
+    });
+  };
 
   const handleReorderCollapsible = (fromIndex: number, toIndex: number) => {
     editor.update(() => {
-      const container = $getNodeByKey(nodeKey)
-      if (!$isCollapsibleContainerNode(container)) return
-      $reorderCollapsibleItem(container, fromIndex, toIndex)
-    })
-  }
+      const container = $getNodeByKey(nodeKey);
+      if (!$isCollapsibleContainerNode(container)) return;
+      $reorderCollapsibleItem(container, fromIndex, toIndex);
+    });
+  };
 
-  const sortableItems: SortableInspectorItem[] = collapsibleItems.map((item) => ({
-    id: item.key,
-    label: item.titleText,
-  }))
+  const sortableItems: SortableInspectorItem[] = collapsibleItems.map(
+    (item) => ({
+      id: item.key,
+      label: item.titleText,
+    }),
+  );
 
   return (
     <div>
@@ -189,5 +212,5 @@ export function CollapsibleInspectorPanel({ nodeKey, node }: CollapsibleInspecto
         />
       </InspectorSection>
     </div>
-  )
+  );
 }

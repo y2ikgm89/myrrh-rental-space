@@ -72,7 +72,9 @@ export async function getPageWithSections(
   return page;
 }
 
-export async function getPageForEdit(slug: string): Promise<PageForEdit | null> {
+export async function getPageForEdit(
+  slug: string,
+): Promise<PageForEdit | null> {
   await requireAdminPermission("page", "read");
   const page = await getPageForEditQuery(slug);
 
@@ -89,7 +91,9 @@ export async function getPublicPageSections(
   return getPublicPageSectionsQuery(pageId);
 }
 
-export async function getPageSection(id: string): Promise<PageSectionData | null> {
+export async function getPageSection(
+  id: string,
+): Promise<PageSectionData | null> {
   await requireAdminPermission("page", "read");
   const section = await getPageSectionQuery(id);
 

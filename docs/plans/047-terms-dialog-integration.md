@@ -37,9 +37,11 @@
 シンプルな規約プレビューダイアログを作成。TermsAgreementDialogとは異なり、スクロール完了検知なし。
 
 ### 新規ファイル
+
 - `src/public/components/TermsPreviewDialog.tsx`
 
 ### 仕様
+
 - Props: `open`, `onOpenChange`, `title`, `content`, `loading`
 - スクロール完了検知なし（読まなくてもOK）
 - 閉じるボタンのみ（同意ボタンなし）
@@ -52,6 +54,7 @@
 ReservationFormの規約同意UIを改修。
 
 ### 変更内容
+
 1. `renderTermsLabel`関数を削除
 2. 新しい`TermsLinkLabel`コンポーネントを作成
    - クリック可能なテキスト（青色、下線ホバー）
@@ -60,6 +63,7 @@ ReservationFormの規約同意UIを改修。
 4. チェック状態で「予約を確定する」ボタンの有効/無効を制御
 
 ### 変更ファイル
+
 - `src/app/(public)/reservation/_components/ReservationForm.tsx`
 - `src/public/actions/settings.ts` - 規約ページコンテンツ取得追加
 
@@ -81,14 +85,15 @@ ReservationFormの規約同意UIを改修。
 
 ### TermsAgreementDialogとの違い
 
-| 機能 | TermsAgreementDialog | TermsPreviewDialog |
-|------|---------------------|-------------------|
-| 用途 | スペース固有規約（必読） | サイト全体規約（任意参照） |
-| スクロール検知 | あり | なし |
-| 同意ボタン | あり | なし（閉じるのみ） |
-| チェックボックス連動 | ダイアログ内 | フォーム側 |
+| 機能                 | TermsAgreementDialog     | TermsPreviewDialog         |
+| -------------------- | ------------------------ | -------------------------- |
+| 用途                 | スペース固有規約（必読） | サイト全体規約（任意参照） |
+| スクロール検知       | あり                     | なし                       |
+| 同意ボタン           | あり                     | なし（閉じるのみ）         |
+| チェックボックス連動 | ダイアログ内             | フォーム側                 |
 
 ### なぜ別コンポーネントにするか
+
 - 責務が異なる（強制同意 vs 任意プレビュー）
 - TermsAgreementDialogを変更すると既存機能に影響
 - シンプルに保つ（単一責任原則）

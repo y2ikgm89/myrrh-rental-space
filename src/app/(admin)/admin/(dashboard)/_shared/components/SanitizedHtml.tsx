@@ -1,1 +1,1 @@
-export { SanitizedHtml } from '@/shared/components/SanitizedHtml'
+export { SanitizedHtml } from "@/shared/components/SanitizedHtml";

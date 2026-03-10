@@ -5,7 +5,7 @@
  * PullQuoteNodeの子として使用
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,16 +13,18 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, ElementNode } from 'lexical'
+} from "lexical";
+import { $create, ElementNode } from "lexical";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertPullQuoteTextElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createPullQuoteTextNode()
-  return { node }
+function $convertPullQuoteTextElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createPullQuoteTextNode();
+  return { node };
 }
 
 // =============================================================================
@@ -31,45 +33,45 @@ function $convertPullQuoteTextElement(_element: HTMLElement): null | DOMConversi
 
 export class PullQuoteTextNode extends ElementNode {
   override $config() {
-    return this.config('pull-quote-text', { extends: ElementNode })
+    return this.config("pull-quote-text", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       blockquote: (element: HTMLElement) => {
-        if (element.hasAttribute('data-pull-quote-text')) {
+        if (element.hasAttribute("data-pull-quote-text")) {
           return {
             conversion: $convertPullQuoteTextElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('blockquote')
-    element.setAttribute('data-pull-quote-text', 'true')
-    return { element }
+    const element = document.createElement("blockquote");
+    element.setAttribute("data-pull-quote-text", "true");
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('blockquote')
-    element.setAttribute('data-pull-quote-text', 'true')
-    return element
+    const element = document.createElement("blockquote");
+    element.setAttribute("data-pull-quote-text", "true");
+    return element;
   }
 
   override updateDOM(): boolean {
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -83,7 +85,7 @@ export class PullQuoteTextNode extends ElementNode {
  * @returns PullQuoteTextNode インスタンス
  */
 export function $createPullQuoteTextNode(): PullQuoteTextNode {
-  return $create(PullQuoteTextNode)
+  return $create(PullQuoteTextNode);
 }
 
 /**
@@ -93,7 +95,7 @@ export function $createPullQuoteTextNode(): PullQuoteTextNode {
  * @returns PullQuoteTextNodeの場合true
  */
 export function $isPullQuoteTextNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is PullQuoteTextNode {
-  return node instanceof PullQuoteTextNode
+  return node instanceof PullQuoteTextNode;
 }

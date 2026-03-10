@@ -1,22 +1,22 @@
-'use client'
+"use client";
 
-import { BaseFilters } from '@/admin/components/table'
+import { BaseFilters } from "@/admin/components/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import type { PostCategoryData } from '@/shared/domain/posts/types'
-import { useFilterParamsWithCategory } from '@/admin/hooks'
+} from "@/admin/components/ui";
+import type { PostCategoryData } from "@/shared/domain/posts/types";
+import { useFilterParamsWithCategory } from "@/admin/hooks";
 
 type PostFiltersProps = {
-  categories: PostCategoryData[]
-}
+  categories: PostCategoryData[];
+};
 
 export function PostFilters({ categories }: PostFiltersProps) {
-  const { params, setCategory } = useFilterParamsWithCategory()
+  const { params, setCategory } = useFilterParamsWithCategory();
 
   return (
     <BaseFilters searchPlaceholder="タイトル、本文で検索...">
@@ -37,5 +37,5 @@ export function PostFilters({ categories }: PostFiltersProps) {
         </Select>
       </div>
     </BaseFilters>
-  )
+  );
 }

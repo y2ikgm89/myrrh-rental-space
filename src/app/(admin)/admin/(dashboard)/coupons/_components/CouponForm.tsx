@@ -4,15 +4,13 @@ import { useActionState, useEffect, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  createCoupon,
-  updateCoupon,
-} from "@/admin/actions/coupon";
+import { createCoupon, updateCoupon } from "@/admin/actions/coupon";
 import type { CouponData } from "@/shared/domain/coupons/types";
 import {
   couponFormSchema,
   type CouponFormInput,
 } from "@/shared/lib/validations/coupon";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   Button,
   Input,
@@ -117,17 +115,25 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
 
     if (isEdit) {
       const result = await updateCoupon(coupon.id, input);
-      if (!result.success) {
+      if (isMutationError(result)) {
         return { success: false, message: result.error };
       }
-      return { success: true, message: result.message, couponId: coupon.id };
+      return {
+        success: true,
+        message: "クーポンを更新しました",
+        couponId: coupon.id,
+      };
     }
 
     const result = await createCoupon(input);
-    if (!result.success) {
+    if (isMutationError(result)) {
       return { success: false, message: result.error };
     }
-    return { success: true, message: result.message, couponId: result.data.id };
+    return {
+      success: true,
+      message: "クーポンを作成しました",
+      couponId: result.id,
+    };
   }
 
   const [state, formAction, isPending] = useActionState(submitAction, null);

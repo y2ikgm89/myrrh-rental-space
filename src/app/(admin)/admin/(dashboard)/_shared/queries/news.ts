@@ -36,7 +36,9 @@ export async function getNewsById(id: string): Promise<NewsData | null> {
   return getNewsByIdQuery(validated.data);
 }
 
-export async function getNewsVersions(newsId: string): Promise<NewsVersionData[]> {
+export async function getNewsVersions(
+  newsId: string,
+): Promise<NewsVersionData[]> {
   await requireAdminPermission("news", "read");
 
   const validated = idSchema.safeParse(newsId);

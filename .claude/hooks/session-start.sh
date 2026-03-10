@@ -14,3 +14,5 @@ if ! grep -rlE '実装中|設計承認済み' "$PLANS_DIR" 2>/dev/null \
     | head -5; then
   echo '(なし)'
 fi
+
+exit 0

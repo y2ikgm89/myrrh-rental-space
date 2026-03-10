@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * エディターコアフック
@@ -7,12 +7,16 @@
  * React Compiler対応
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import type { UseFormReturn, FieldValues } from 'react-hook-form'
-import { useConfirm } from '@/admin/contexts/confirm-context'
-import { useEditorPanels } from '../../hooks'
-import type { EditorCoreConfig, EditorCoreReturn } from './types'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type {
+  UseFormReturn,
+  FieldValues,
+  FieldPathByValue,
+} from "react-hook-form";
+import { useConfirm } from "@/admin/contexts/confirm-context";
+import { useEditorPanels } from "../../hooks";
+import type { EditorCoreConfig, EditorCoreReturn } from "./types";
 
 // =============================================================================
 // Hook
@@ -32,38 +36,39 @@ export function useEditorCore<TFormData extends FieldValues>({
   form,
   listPath,
 }: EditorCoreConfig<TFormData>): EditorCoreReturn {
-  const router = useRouter()
-  const confirm = useConfirm()
-  const [isPending, startTransition] = useTransition()
-  const [hasEditorChanges, setHasEditorChanges] = useState(false)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const router = useRouter();
+  const confirm = useConfirm();
+  const [isPending, startTransition] = useTransition();
+  const [hasEditorChanges, setHasEditorChanges] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // パネル管理
-  const panels = useEditorPanels()
+  const panels = useEditorPanels();
 
   // isDirty計算
-  const isDirty = form.formState.isDirty || hasEditorChanges
+  const isDirty = form.formState.isDirty || hasEditorChanges;
 
   // 戻るボタンハンドラー
   const handleBack = async () => {
     if (isDirty) {
       const confirmed = await confirm({
-        title: '変更を破棄しますか？',
-        description: '保存されていない変更があります。破棄してもよろしいですか？',
-        confirmLabel: '破棄',
-        variant: 'destructive',
-      })
-      if (!confirmed) return
+        title: "変更を破棄しますか？",
+        description:
+          "保存されていない変更があります。破棄してもよろしいですか？",
+        confirmLabel: "破棄",
+        variant: "destructive",
+      });
+      if (!confirmed) return;
     }
-    router.push(listPath)
-  }
+    router.push(listPath);
+  };
 
   // startTransitionを非同期対応でラップ
   const wrappedStartTransition = (callback: () => void | Promise<void>) => {
     startTransition(async () => {
-      await callback()
-    })
-  }
+      await callback();
+    });
+  };
 
   return {
     isPending,
@@ -74,7 +79,7 @@ export function useEditorCore<TFormData extends FieldValues>({
     setIsDeleteDialogOpen,
     panels,
     handleBack,
-  }
+  };
 }
 
 // =============================================================================
@@ -86,26 +91,31 @@ export function useEditorCore<TFormData extends FieldValues>({
  */
 export function computeIsDirty<TFormData extends FieldValues>(
   form: UseFormReturn<TFormData>,
-  hasEditorChanges: boolean
+  hasEditorChanges: boolean,
 ): boolean {
-  return form.formState.isDirty || hasEditorChanges
+  return form.formState.isDirty || hasEditorChanges;
 }
 
 /**
  * コンテンツ変更ハンドラーを生成するファクトリ
  */
-export function createContentChangeHandler<TFormData extends FieldValues>(
+export function createContentChangeHandler<
+  TFormData extends FieldValues,
+  TFieldName extends FieldPathByValue<TFormData, string | null | undefined>,
+>(
   form: UseFormReturn<TFormData>,
   setHasEditorChanges: (value: boolean) => void,
-  fieldName: keyof TFormData & string = 'content'
+  fieldName: TFieldName,
 ) {
+  const field = form.register(fieldName);
+
   return (html: string) => {
-    // 型安全にsetValueを呼び出す
-    // react-hook-formのsetValueは内部でanyを使用するため、
-    // このパターンは許容される
-    form.setValue(JSON.parse(JSON.stringify(fieldName)), JSON.parse(JSON.stringify(html)), { shouldDirty: true })
-    setHasEditorChanges(true)
-  }
+    field.onChange({
+      target: { name: field.name, value: html },
+      type: "change",
+    });
+    setHasEditorChanges(true);
+  };
 }
 
 /**
@@ -113,10 +123,10 @@ export function createContentChangeHandler<TFormData extends FieldValues>(
  */
 export function createResetHandler<TFormData extends FieldValues>(
   form: UseFormReturn<TFormData>,
-  setHasEditorChanges: (value: boolean) => void
+  setHasEditorChanges: (value: boolean) => void,
 ) {
   return (formData: TFormData) => {
-    form.reset(formData)
-    setHasEditorChanges(false)
-  }
+    form.reset(formData);
+    setHasEditorChanges(false);
+  };
 }

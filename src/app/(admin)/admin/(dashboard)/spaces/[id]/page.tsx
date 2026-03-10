@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import { Pencil, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { deleteSpace } from "@/admin/actions/space";
@@ -19,7 +19,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await headers();
+  await connection();
   const { id } = await params;
   const space = await getSpaceById(id);
 
@@ -35,6 +35,7 @@ export async function generateMetadata({
 }
 
 export default async function SpaceDetailPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const space = await getSpaceById(id);
 
@@ -74,4 +75,3 @@ export default async function SpaceDetailPage({ params }: PageProps) {
     </AdminDetailLayout>
   );
 }
-

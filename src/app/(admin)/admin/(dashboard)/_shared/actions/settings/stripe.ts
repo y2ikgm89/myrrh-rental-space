@@ -27,7 +27,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Actions

@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from '@/admin/components/ui'
-import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
+} from "@/admin/components/ui";
+import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   ctaConfigSchema,
   getCtaConfig,
@@ -21,13 +21,18 @@ import {
   type CtaConfig,
   type CtaConfigInput,
   type CTAButtonItem,
-} from '@/shared/lib/validations/section'
-import { ctaVariantLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import { ctaVariantLabels } from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function CtaConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getCtaConfig(section.config)
+export default function CtaConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getCtaConfig(section.config);
 
   const {
     register,
@@ -37,40 +42,71 @@ export default function CtaConfigForm({ section, onSave, isPending, onDirtyChang
   } = useForm<CtaConfigInput, unknown, CtaConfig>({
     resolver: zodResolver(ctaConfigSchema),
     defaultValues: config,
-  })
+  });
 
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
-    setButtons(newButtons)
-    setValue('buttons', newButtons)
-  }
+    setButtons(newButtons);
+    setValue("buttons", newButtons);
+  };
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="cta-section-label">セクションラベル（英語装飾）</Label>
-          <Input id="cta-section-label" {...register('sectionLabel')} placeholder="例: Ready to Begin?" disabled={isPending} />
+          <Label htmlFor="cta-section-label">
+            セクションラベル（英語装飾）
+          </Label>
+          <Input
+            id="cta-section-label"
+            {...register("sectionLabel")}
+            placeholder="例: Ready to Begin?"
+            disabled={isPending}
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="cta-title">タイトル</Label>
-          <Input id="cta-title" {...register('title')} placeholder="ご予約・お問い合わせ" disabled={isPending} />
-          {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+          <Input
+            id="cta-title"
+            {...register("title")}
+            placeholder="ご予約・お問い合わせ"
+            disabled={isPending}
+          />
+          {errors.title && (
+            <p className="text-sm text-destructive">{errors.title.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="cta-description">説明（任意）</Label>
-          <Textarea id="cta-description" {...register('description')} placeholder="説明文を入力" rows={2} disabled={isPending} />
+          <Textarea
+            id="cta-description"
+            {...register("description")}
+            placeholder="説明文を入力"
+            rows={2}
+            disabled={isPending}
+          />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="cta-variant">バリエーション</Label>
-          <Select defaultValue={config.variant} onValueChange={(v) => setValue('variant', parseCtaVariant(v))} disabled={isPending}>
-            <SelectTrigger id="cta-variant"><SelectValue /></SelectTrigger>
+          <Select
+            defaultValue={config.variant}
+            onValueChange={(v) => setValue("variant", parseCtaVariant(v))}
+            disabled={isPending}
+          >
+            <SelectTrigger id="cta-variant">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {keysOf(ctaVariantLabels).map((key) => (
-                <SelectItem key={key} value={key}>{ctaVariantLabels[key]}</SelectItem>
+                <SelectItem key={key} value={key}>
+                  {ctaVariantLabels[key]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -78,16 +114,29 @@ export default function CtaConfigForm({ section, onSave, isPending, onDirtyChang
 
         <div className="space-y-2">
           <Label htmlFor="cta-bg-color">背景色（任意）</Label>
-          <Input id="cta-bg-color" {...register('backgroundColor')} placeholder="例: #f5f5f5" disabled={isPending} />
+          <Input
+            id="cta-bg-color"
+            {...register("backgroundColor")}
+            placeholder="例: #f5f5f5"
+            disabled={isPending}
+          />
         </div>
 
         <div className="space-y-2">
           <Label>ボタン</Label>
-          <CTAButtonEditor buttons={buttons} onChange={handleButtonsChange} disabled={isPending} />
+          <CTAButtonEditor
+            buttons={buttons}
+            onChange={handleButtonsChange}
+            disabled={isPending}
+          />
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

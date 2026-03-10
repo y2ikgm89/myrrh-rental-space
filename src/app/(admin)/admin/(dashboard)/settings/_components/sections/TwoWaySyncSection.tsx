@@ -45,6 +45,7 @@ import {
 import { CalendarSyncMethod } from "@/shared/db/enums";
 import { useRefreshOnSuccess } from "../hooks";
 import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -85,17 +86,14 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateTwoWaySyncSettings(formData);
-      handleResult({
-        ...result,
-        message: result.success ? "双方向同期設定を更新しました" : undefined,
-      });
+      handleResult(result, "双方向同期設定を更新しました");
     });
   };
 
   const handleSetupWebhook = () => {
     startTransition(async () => {
       const result = await setupCalendarWebhook();
-      handleResult(result);
+      handleResult(result, "Webhookを設定しました");
     });
   };
 
@@ -110,7 +108,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
 
     startTransition(async () => {
       const result = await stopCalendarWebhook();
-      handleResult(result);
+      handleResult(result, "Webhookを停止しました");
     });
   };
 
@@ -120,17 +118,17 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
 
     try {
       const result = await triggerManualSync();
-      if (result.success) {
+      if (!isMutationError(result)) {
         setSyncResult({
           success: true,
-          message: `同期完了: ${result.data.processed}件処理 (更新: ${result.data.updated}件, 削除: ${result.data.deleted}件)`,
+          message: `同期完了: ${result.processed}件処理 (更新: ${result.updated}件, 削除: ${result.deleted}件)`,
         });
         toast.success("同期が完了しました");
         refresh();
       } else {
         setSyncResult({
           success: false,
-          message: result.error || "同期に失敗しました",
+          message: result.error,
         });
         toast.error("同期に失敗しました");
       }

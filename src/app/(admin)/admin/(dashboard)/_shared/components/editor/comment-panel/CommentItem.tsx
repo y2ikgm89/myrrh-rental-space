@@ -4,19 +4,19 @@
  * @description 個別のコメントを表示するコンポーネント
  */
 
-'use client'
+"use client";
 
-import { formatDistanceToNow } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { Trash2, User } from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
-import type { EditorComment } from '@/admin/types/editor-comment'
+import { formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
+import { Trash2, User } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
+import type { EditorComment } from "@/admin/types/editor-comment";
 
 type CommentItemProps = {
-  comment: EditorComment
-  onDelete?: (commentId: string) => void
-  canDelete?: boolean
-}
+  comment: EditorComment;
+  onDelete?: (commentId: string) => void;
+  canDelete?: boolean;
+};
 
 export function CommentItem({
   comment,
@@ -26,7 +26,7 @@ export function CommentItem({
   const timeAgo = formatDistanceToNow(new Date(comment.createdAt), {
     addSuffix: true,
     locale: ja,
-  })
+  });
 
   return (
     <div className="group flex gap-3 py-3">
@@ -39,7 +39,7 @@ export function CommentItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium truncate">
-            {comment.createdByUser?.name ?? '不明なユーザー'}
+            {comment.createdByUser?.name ?? "不明なユーザー"}
           </span>
           <span className="text-xs text-muted-foreground">{timeAgo}</span>
         </div>
@@ -64,5 +64,5 @@ export function CommentItem({
         </div>
       )}
     </div>
-  )
+  );
 }

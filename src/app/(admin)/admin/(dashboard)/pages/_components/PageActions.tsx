@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ページ操作メニュー
@@ -6,60 +6,74 @@
  * 削除、公開/非公開切り替えなどの操作
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { Eye, EyeOff, Trash2, ExternalLink, Pencil } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Eye, EyeOff, Trash2, ExternalLink, Pencil } from "lucide-react";
 import {
   ActionDropdown,
   ActionDropdownItem,
   ActionDropdownSeparator,
-} from '@/admin/components/ActionDropdown'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { deletePage, togglePagePublished } from '@/admin/actions/page'
+} from "@/admin/components/ActionDropdown";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { deletePage, togglePagePublished } from "@/admin/actions/page";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 type PageActionsProps = {
-  slug: string
-  title: string
-  isPublished: boolean
-  isSystemPage?: boolean
-  isHomepage?: boolean
-  editHref?: string
-}
+  slug: string;
+  title: string;
+  isPublished: boolean;
+  isSystemPage?: boolean;
+  isHomepage?: boolean;
+  editHref?: string;
+};
 
-export function PageActions({ slug, title, isPublished, isSystemPage = false, isHomepage = false, editHref }: PageActionsProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+export function PageActions({
+  slug,
+  title,
+  isPublished,
+  isSystemPage = false,
+  isHomepage = false,
+  editHref,
+}: PageActionsProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleTogglePublished = () => {
     startTransition(async () => {
-      const result = await togglePagePublished(slug)
-      if (result.success) {
-        toast.success(result.message)
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await togglePagePublished(slug);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success(
+        result.isPublished
+          ? "ページを公開しました"
+          : "ページを非公開にしました",
+      );
+      router.refresh();
+    });
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
-      const result = await deletePage(slug)
-      if (result.success) {
-        toast.success(result.message)
-        setShowDeleteDialog(false)
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await deletePage(slug);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("ページを削除しました");
+      setShowDeleteDialog(false);
+      router.refresh();
+    });
+  };
 
   const handlePreview = () => {
-    window.open(isHomepage ? '/' : `/${slug}`, '_blank')
-  }
+    window.open(isHomepage ? "/" : `/${slug}`, "_blank");
+  };
 
   return (
     <>
@@ -82,7 +96,10 @@ export function PageActions({ slug, title, isPublished, isSystemPage = false, is
         {!isHomepage && (
           <>
             <ActionDropdownSeparator />
-            <ActionDropdownItem onClick={handleTogglePublished} disabled={isPending}>
+            <ActionDropdownItem
+              onClick={handleTogglePublished}
+              disabled={isPending}
+            >
               {isPublished ? (
                 <>
                   <EyeOff className="h-4 w-4 mr-2" />
@@ -121,5 +138,5 @@ export function PageActions({ slug, title, isPublished, isSystemPage = false, is
         isPending={isPending}
       />
     </>
-  )
+  );
 }

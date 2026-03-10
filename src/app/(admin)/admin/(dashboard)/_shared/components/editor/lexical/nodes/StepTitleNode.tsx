@@ -5,7 +5,7 @@
  * StepItemNodeの子として使用
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,16 +13,18 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, ElementNode } from 'lexical'
+} from "lexical";
+import { $create, ElementNode } from "lexical";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepTitleElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createStepTitleNode()
-  return { node }
+function $convertStepTitleElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createStepTitleNode();
+  return { node };
 }
 
 // =============================================================================
@@ -31,47 +33,47 @@ function $convertStepTitleElement(_element: HTMLElement): null | DOMConversionOu
 
 export class StepTitleNode extends ElementNode {
   override $config() {
-    return this.config('step-title', { extends: ElementNode })
+    return this.config("step-title", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       h4: (element: HTMLElement) => {
-        if (element.hasAttribute('data-step-title')) {
+        if (element.hasAttribute("data-step-title")) {
           return {
             conversion: $convertStepTitleElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('h4')
-    element.setAttribute('data-step-title', 'true')
+    const element = document.createElement("h4");
+    element.setAttribute("data-step-title", "true");
 
-    return { element }
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('h4')
-    element.setAttribute('data-step-title', 'true')
+    const element = document.createElement("h4");
+    element.setAttribute("data-step-title", "true");
 
-    return element
+    return element;
   }
 
   override updateDOM(): boolean {
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -85,7 +87,7 @@ export class StepTitleNode extends ElementNode {
  * @returns StepTitleNode インスタンス
  */
 export function $createStepTitleNode(): StepTitleNode {
-  return $create(StepTitleNode)
+  return $create(StepTitleNode);
 }
 
 /**
@@ -95,7 +97,7 @@ export function $createStepTitleNode(): StepTitleNode {
  * @returns StepTitleNodeの場合true
  */
 export function $isStepTitleNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is StepTitleNode {
-  return node instanceof StepTitleNode
+  return node instanceof StepTitleNode;
 }

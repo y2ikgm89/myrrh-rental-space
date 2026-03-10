@@ -14,17 +14,18 @@
 
 **修正方針**:
 
-| ファイル | 現状 | 修正 |
-|---------|------|------|
-| `actions/page.ts` | 手動 `verifyAdminSession()` + 直接リテラル ~20箇所 | `withPermission` HOF + `createSuccess`/`createFailure` |
-| `actions/editor-comment.ts` | 手動認証 + ローカル `ActionResult<T>` 型 | `withPermission` + canonical `ActionResult<T>` |
-| `actions/fetch-ogp.ts` | 手動 `checkAdminAuth()` + ローカル `FetchOgpResult` 型 | `withPermission` + `ActionResult<OgpData>` |
-| `actions/media.ts` | `checkPermission()` 使用（正しいパターンだがHOF未使用）+ import先が `@/shared` | `withPermission` + import を `@/admin/types` に |
-| `actions/post-comment.ts` | 手動認証 + ローカル `AdminCommentActionResult`/`BulkDeleteResult` 型 | `withPermission` + canonical `ActionResult` |
-| `actions/dashboard.ts` | 手動 `verifyAdminSession()` (read-only) | `withReadPermission` |
-| `actions/audit-log.ts` | `checkAuditLogPermission()` | パターン準拠を確認、必要に応じて `withPermission` |
+| ファイル                    | 現状                                                                           | 修正                                                   |
+| --------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `actions/page.ts`           | 手動 `verifyAdminSession()` + 直接リテラル ~20箇所                             | `withPermission` HOF + `createSuccess`/`createFailure` |
+| `actions/editor-comment.ts` | 手動認証 + ローカル `ActionResult<T>` 型                                       | `withPermission` + canonical `ActionResult<T>`         |
+| `actions/fetch-ogp.ts`      | 手動 `checkAdminAuth()` + ローカル `FetchOgpResult` 型                         | `withPermission` + `ActionResult<OgpData>`             |
+| `actions/media.ts`          | `checkPermission()` 使用（正しいパターンだがHOF未使用）+ import先が `@/shared` | `withPermission` + import を `@/admin/types` に        |
+| `actions/post-comment.ts`   | 手動認証 + ローカル `AdminCommentActionResult`/`BulkDeleteResult` 型           | `withPermission` + canonical `ActionResult`            |
+| `actions/dashboard.ts`      | 手動 `verifyAdminSession()` (read-only)                                        | `withReadPermission`                                   |
+| `actions/audit-log.ts`      | `checkAuditLogPermission()`                                                    | パターン準拠を確認、必要に応じて `withPermission`      |
 
 **破壊的変更**:
+
 - `editor-comment.ts`: `{ success: true; data: T }` → `{ success: true; message: string; data?: T }`
 - `post-comment.ts`: `AdminCommentActionResult` / `BulkDeleteResult` 削除
 - `fetch-ogp.ts`: `FetchOgpResult` 削除 → `ActionResult<OgpData>`
@@ -32,20 +33,21 @@
 
 ### B. Zod 4 deprecated API 置換（中優先度）
 
-| ファイル | 現在 | 修正 |
-|---------|------|------|
+| ファイル                        | 現在                                            | 修正                                     |
+| ------------------------------- | ----------------------------------------------- | ---------------------------------------- |
 | `actions/block-template.ts:122` | `z.flattenError(validated.error).formErrors[0]` | `createValidationError(validated.error)` |
-| `actions/ical-tokens.ts:83` | `parsed.error.flatten().fieldErrors` | `createValidationError(parsed.error)` |
+| `actions/ical-tokens.ts:83`     | `parsed.error.flatten().fieldErrors`            | `createValidationError(parsed.error)`    |
 
 ### C. 型アサーション修正（低優先度）
 
-| ファイル | 現在 | 修正 |
-|---------|------|------|
+| ファイル           | 現在               | 修正                                |
+| ------------------ | ------------------ | ----------------------------------- |
 | `TagInput.tsx:215` | `e.target as Node` | `e.target instanceof Node` 型ガード |
 
 ### D. ハードコードカラー（修正なし）
 
 以下は公式パターンまたは例外として許容:
+
 - `bg-black/80` オーバーレイ: shadcn/ui 公式パターン
 - Lexical カラープリセット: カラーピッカースウォッチ（tailwind-patterns.md 例外）
 - Stripe ブランドカラー `text-[#635BFF]`: ブランドガイドライン色

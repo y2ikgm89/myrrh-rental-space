@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useState, useTransition, useEffect } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition, useEffect } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -12,88 +12,101 @@ import {
   Label,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { fetchAdminJson } from '@/admin/lib/admin-api-client'
+} from "@/admin/components/ui";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   updateRobotsTxtSettings,
   resetRobotsTxtToDefault,
-} from '@/admin/actions/settings'
-import type { RobotsTxtData } from '@/shared/domain/settings/types'
-import { checkRobotsTxtWarnings } from '@/admin/actions/settings/schemas'
-import { useRefreshOnSuccess } from '../hooks'
-import { AlertTriangle, RotateCcw, Info } from 'lucide-react'
+} from "@/admin/actions/settings";
+import type { RobotsTxtData } from "@/shared/domain/settings/types";
+import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas";
+import { useRefreshOnSuccess } from "../hooks";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { AlertTriangle, RotateCcw, Info } from "lucide-react";
 
 async function fetchRobotsTxtSettings(): Promise<RobotsTxtData> {
-  return fetchAdminJson('/admin/api/settings/robots-txt')
+  return fetchAdminJson("/admin/api/settings/robots-txt");
 }
 
 export function RobotsTxtSection() {
-  const confirm = useConfirm()
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isLoading, setIsLoading] = useState(true)
-  const [data, setData] = useState<RobotsTxtData | null>(null)
-  const [formData, setFormData] = useState({ robotsTxtEnabled: false, robotsTxtCustom: '' })
-  const [warnings, setWarnings] = useState<string[]>([])
+  const confirm = useConfirm();
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<RobotsTxtData | null>(null);
+  const [formData, setFormData] = useState({
+    robotsTxtEnabled: false,
+    robotsTxtCustom: "",
+  });
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     fetchRobotsTxtSettings()
       .then((result) => {
-        setData(result)
+        setData(result);
         setFormData({
           robotsTxtEnabled: result.robotsTxtEnabled,
           robotsTxtCustom: result.robotsTxtCustom ?? result.defaultRobotsTxt,
-        })
-        setWarnings(result.warnings)
+        });
+        setWarnings(result.warnings);
       })
       .finally(() => {
-        setIsLoading(false)
-      })
-  }, [])
+        setIsLoading(false);
+      });
+  }, []);
 
   function handleTextChange(text: string) {
-    setFormData({ ...formData, robotsTxtCustom: text })
-    setWarnings(checkRobotsTxtWarnings(text))
+    setFormData({ ...formData, robotsTxtCustom: text });
+    setWarnings(checkRobotsTxtWarnings(text));
   }
 
   function handleSave() {
     startTransition(async () => {
       const result = await updateRobotsTxtSettings({
         robotsTxtEnabled: formData.robotsTxtEnabled,
-        robotsTxtCustom: formData.robotsTxtEnabled ? formData.robotsTxtCustom : null,
-      })
-      handleResult(result)
-      if (result.success && result.data) {
-        setWarnings(result.data.warnings)
+        robotsTxtCustom: formData.robotsTxtEnabled
+          ? formData.robotsTxtCustom
+          : null,
+      });
+      if (!isMutationError(result)) {
+        setWarnings(result.warnings);
       }
-    })
+      handleResult(result, "robots.txt設定を更新しました");
+    });
   }
 
   async function handleReset() {
-    if (!data) return
+    if (!data) return;
     const confirmed = await confirm({
-      title: 'robots.txtをリセットしますか？',
-      description: 'robots.txtをデフォルトに戻しますか？カスタム設定は削除されます。',
-      confirmLabel: 'リセット',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "robots.txtをリセットしますか？",
+      description:
+        "robots.txtをデフォルトに戻しますか？カスタム設定は削除されます。",
+      confirmLabel: "リセット",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await resetRobotsTxtToDefault()
-      handleResult(result)
-      if (result.success) {
-        setFormData({ robotsTxtEnabled: false, robotsTxtCustom: data.defaultRobotsTxt })
-        setWarnings([])
+      const result = await resetRobotsTxtToDefault();
+      if (!isMutationError(result)) {
+        setFormData({
+          robotsTxtEnabled: false,
+          robotsTxtCustom: data.defaultRobotsTxt,
+        });
+        setWarnings([]);
       }
-    })
+      handleResult(result, "robots.txt設定をデフォルトに戻しました");
+    });
   }
 
   function handleToggle(checked: boolean) {
     if (checked && !formData.robotsTxtCustom && data) {
-      setFormData({ robotsTxtEnabled: checked, robotsTxtCustom: data.defaultRobotsTxt })
+      setFormData({
+        robotsTxtEnabled: checked,
+        robotsTxtCustom: data.defaultRobotsTxt,
+      });
     } else {
-      setFormData({ ...formData, robotsTxtEnabled: checked })
+      setFormData({ ...formData, robotsTxtEnabled: checked });
     }
   }
 
@@ -110,19 +123,21 @@ export function RobotsTxtSection() {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>robots.txt設定</CardTitle>
-        <CardDescription>検索エンジンのクローラーに対する指示を設定します</CardDescription>
+        <CardDescription>
+          検索エンジンのクローラーに対する指示を設定します
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div
           className={`flex items-center justify-between rounded-lg border p-4 ${
-            formData.robotsTxtEnabled ? 'border-primary bg-primary/5' : ''
+            formData.robotsTxtEnabled ? "border-primary bg-primary/5" : ""
           }`}
         >
           <div className="space-y-0.5">
@@ -146,7 +161,9 @@ export function RobotsTxtSection() {
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="text-sm font-medium text-warning">設定に関する警告</p>
+                <p className="text-sm font-medium text-warning">
+                  設定に関する警告
+                </p>
                 <ul className="text-xs text-warning/80 list-disc list-inside space-y-1">
                   {warnings.map((warning) => (
                     <li key={warning}>{warning}</li>
@@ -160,7 +177,9 @@ export function RobotsTxtSection() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="robotsTxtCustom">
-              {formData.robotsTxtEnabled ? 'robots.txt内容' : 'デフォルトrobots.txt（参照用）'}
+              {formData.robotsTxtEnabled
+                ? "robots.txt内容"
+                : "デフォルトrobots.txt（参照用）"}
             </Label>
             {formData.robotsTxtEnabled && (
               <Button
@@ -196,19 +215,33 @@ export function RobotsTxtSection() {
             <div className="text-xs text-muted-foreground space-y-1">
               <p className="font-medium">robots.txtについて</p>
               <ul className="list-disc list-inside space-y-0.5">
-                <li><code className="bg-muted px-1 rounded">User-agent: *</code> - すべてのクローラーに適用</li>
-                <li><code className="bg-muted px-1 rounded">Disallow: /path/</code> - 指定パスのクロールを禁止</li>
-                <li><code className="bg-muted px-1 rounded">Allow: /path/</code> - 指定パスのクロールを許可</li>
-                <li><code className="bg-muted px-1 rounded">Sitemap:</code> - サイトマップのURLを指定</li>
+                <li>
+                  <code className="bg-muted px-1 rounded">User-agent: *</code> -
+                  すべてのクローラーに適用
+                </li>
+                <li>
+                  <code className="bg-muted px-1 rounded">
+                    Disallow: /path/
+                  </code>{" "}
+                  - 指定パスのクロールを禁止
+                </li>
+                <li>
+                  <code className="bg-muted px-1 rounded">Allow: /path/</code> -
+                  指定パスのクロールを許可
+                </li>
+                <li>
+                  <code className="bg-muted px-1 rounded">Sitemap:</code> -
+                  サイトマップのURLを指定
+                </li>
               </ul>
             </div>
           </div>
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : 'robots.txt設定を保存'}
+          {isPending ? "保存中..." : "robots.txt設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

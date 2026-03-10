@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { format } from 'date-fns'
+import { format } from "date-fns";
 import {
   Button,
   Card,
@@ -15,20 +15,23 @@ import {
   TableRow,
   Switch,
   Badge,
-} from '@/admin/components/ui'
-import type { BarListProps } from './types'
+} from "@/admin/components/ui";
+import type { BarListProps } from "./types";
 
 function TypeBadge({ type }: { type: string }) {
-  const defaultBadge = { label: 'お知らせ', className: 'bg-primary/10 text-primary' }
+  const defaultBadge = {
+    label: "お知らせ",
+    className: "bg-primary/10 text-primary",
+  };
   const config: Record<string, { label: string; className: string }> = {
     info: defaultBadge,
-    warning: { label: '重要', className: 'bg-warning/10 text-warning' },
-    promo: { label: 'キャンペーン', className: 'bg-success/10 text-success' },
-  }
+    warning: { label: "重要", className: "bg-warning/10 text-warning" },
+    promo: { label: "キャンペーン", className: "bg-success/10 text-success" },
+  };
 
-  const { label, className } = config[type] ?? defaultBadge
+  const { label, className } = config[type] ?? defaultBadge;
 
-  return <Badge className={className}>{label}</Badge>
+  return <Badge className={className}>{label}</Badge>;
 }
 
 export function BarList({
@@ -42,9 +45,7 @@ export function BarList({
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <Button onClick={onCreate}>
-          新規作成
-        </Button>
+        <Button onClick={onCreate}>新規作成</Button>
       </div>
 
       <Card>
@@ -88,12 +89,14 @@ export function BarList({
                     <TableCell className="text-sm text-muted-foreground">
                       {bar.startAt || bar.endAt ? (
                         <>
-                          {bar.startAt && format(new Date(bar.startAt), 'MM/dd HH:mm')}
-                          {bar.startAt && bar.endAt && ' 〜 '}
-                          {bar.endAt && format(new Date(bar.endAt), 'MM/dd HH:mm')}
+                          {bar.startAt &&
+                            format(new Date(bar.startAt), "MM/dd HH:mm")}
+                          {bar.startAt && bar.endAt && " 〜 "}
+                          {bar.endAt &&
+                            format(new Date(bar.endAt), "MM/dd HH:mm")}
                         </>
                       ) : (
-                        '常時'
+                        "常時"
                       )}
                     </TableCell>
                     <TableCell>
@@ -125,5 +128,5 @@ export function BarList({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -3,7 +3,10 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { calculateReservationPrice, parseDurationDiscountRules } from "@/shared/lib/pricing";
+import {
+  calculateReservationPrice,
+  parseDurationDiscountRules,
+} from "@/shared/lib/pricing";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums";
 
@@ -55,7 +58,10 @@ async function validateCoupon(
     throw new DomainError("無効なクーポンコードです", "VALIDATION");
   }
 
-  if (coupon.validFrom > now || (coupon.validUntil && coupon.validUntil < now)) {
+  if (
+    coupon.validFrom > now ||
+    (coupon.validUntil && coupon.validUntil < now)
+  ) {
     throw new DomainError("無効なクーポンコードです", "VALIDATION");
   }
 
@@ -164,7 +170,9 @@ export async function createAdminReservationCommand(input: {
   const calculatedPrice = input.totalPrice ?? priceCalculation.totalPrice;
   const couponId = priceCalculation.appliedCoupon?.id ?? null;
   const couponDiscountAmount =
-    priceCalculation.couponDiscount > 0 ? priceCalculation.couponDiscount : null;
+    priceCalculation.couponDiscount > 0
+      ? priceCalculation.couponDiscount
+      : null;
   const durationDiscountAmount =
     priceCalculation.durationDiscount > 0
       ? priceCalculation.durationDiscount
@@ -208,8 +216,7 @@ export async function createAdminReservationCommand(input: {
           data: {
             lastName: input.customerData.lastName,
             firstName: input.customerData.firstName,
-            phoneNumber:
-              input.customerData.phoneNumber || customer.phoneNumber,
+            phoneNumber: input.customerData.phoneNumber || customer.phoneNumber,
           },
         });
       }
@@ -383,7 +390,9 @@ export async function updateAdminReservationCommand(
 
   const calculatedPrice = input.totalPrice ?? priceCalculation.totalPrice;
   const couponDiscountAmount =
-    priceCalculation.couponDiscount > 0 ? priceCalculation.couponDiscount : null;
+    priceCalculation.couponDiscount > 0
+      ? priceCalculation.couponDiscount
+      : null;
   const durationDiscountAmount =
     priceCalculation.durationDiscount > 0
       ? priceCalculation.durationDiscount

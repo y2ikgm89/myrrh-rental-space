@@ -23,7 +23,9 @@ export async function getCoupons(
   return getCouponsQuery(filters, pagination);
 }
 
-export async function getCouponById(id: string): Promise<CouponDetailData | null> {
+export async function getCouponById(
+  id: string,
+): Promise<CouponDetailData | null> {
   await requireAdminPermission("coupon", "read");
 
   const validated = idSchema.safeParse(id);

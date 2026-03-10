@@ -1,0 +1,7 @@
+generated/
+.next/
+out/
+build/
+node_modules/
+bun.lock
+.worktrees/

@@ -4,11 +4,11 @@
  * @description ファイル添付ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +18,9 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createFileNode } from '../nodes/FileNode'
-import type { DialogPluginProps } from '../config/dialog-registry'
+} from "@/admin/components/ui";
+import { $createFileNode } from "../nodes/FileNode";
+import type { DialogPluginProps } from "../config/dialog-registry";
 
 // =============================================================================
 // Helpers
@@ -28,10 +28,10 @@ import type { DialogPluginProps } from '../config/dialog-registry'
 
 function extractFilenameFromUrl(url: string): string {
   try {
-    const pathname = new URL(url).pathname
-    return decodeURIComponent(pathname.split('/').filter(Boolean).pop() ?? '')
+    const pathname = new URL(url).pathname;
+    return decodeURIComponent(pathname.split("/").filter(Boolean).pop() ?? "");
   } catch {
-    return ''
+    return "";
   }
 }
 
@@ -40,40 +40,41 @@ function extractFilenameFromUrl(url: string): string {
 // =============================================================================
 
 export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [fileName, setFileName] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [fileName, setFileName] = useState("");
 
   const handleUrlBlur = () => {
     if (!fileName.trim() && url.trim()) {
-      const extracted = extractFilenameFromUrl(url.trim())
+      const extracted = extractFilenameFromUrl(url.trim());
       if (extracted) {
-        setFileName(extracted)
+        setFileName(extracted);
       }
     }
-  }
+  };
 
   const handleInsert = () => {
-    if (!url.trim()) return
+    if (!url.trim()) return;
 
     editor.update(() => {
       const fileNode = $createFileNode({
         url: url.trim(),
-        fileName: fileName.trim() || extractFilenameFromUrl(url.trim()) || url.trim(),
+        fileName:
+          fileName.trim() || extractFilenameFromUrl(url.trim()) || url.trim(),
         fileSize: 0,
-        mime: '',
-      })
-      $insertNodeToNearestRoot(fileNode)
-    })
+        mime: "",
+      });
+      $insertNodeToNearestRoot(fileNode);
+    });
 
-    handleClose()
-  }
+    handleClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setFileName('')
-    onClose()
-  }
+    setUrl("");
+    setFileName("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -118,5 +119,5 @@ export function FilePlugin({ isOpen, onClose }: DialogPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

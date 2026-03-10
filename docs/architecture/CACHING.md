@@ -16,10 +16,10 @@ Next.js 16では、`cacheComponents: true`を有効にすることで、PPR（Pa
 
 ### コア概念
 
-| 概念 | 説明 |
-|-----|------|
-| **静的シェル** | 事前レンダリングされるHTML構造 |
-| **動的ストリーミング** | リクエスト時にストリーミングされるコンテンツ |
+| 概念                         | 説明                                               |
+| ---------------------------- | -------------------------------------------------- |
+| **静的シェル**               | 事前レンダリングされるHTML構造                     |
+| **動的ストリーミング**       | リクエスト時にストリーミングされるコンテンツ       |
 | **キャッシュコンポーネント** | `'use cache'`でキャッシュされるコンポーネント/関数 |
 
 ---
@@ -28,15 +28,15 @@ Next.js 16では、`cacheComponents: true`を有効にすることで、PPR（Pa
 
 ```typescript
 // next.config.ts
-import type { NextConfig } from 'next'
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // PPR/Cache Componentsを有効化
   // 'use cache' ディレクティブによる明示的キャッシュ制御
   cacheComponents: true,
-}
+};
 
-export default nextConfig
+export default nextConfig;
 ```
 
 ---
@@ -50,21 +50,22 @@ export default nextConfig
 **用途**: 関数やコンポーネントの結果をキャッシュ
 
 ```typescript
-import { cacheLife, cacheTag } from 'next/cache'
+import { cacheLife, cacheTag } from "next/cache";
 
 // 関数レベルでのキャッシュ
 async function getSpaces() {
-  'use cache'
-  cacheLife('hours')  // キャッシュ期間
-  cacheTag('spaces')  // 無効化用タグ
+  "use cache";
+  cacheLife("hours"); // キャッシュ期間
+  cacheTag("spaces"); // 無効化用タグ
 
   return await prisma.space.findMany({
     where: { isPublished: true },
-  })
+  });
 }
 ```
 
 **特徴**:
+
 - 明示的なオプトインキャッシュ
 - `cacheLife()`でキャッシュ期間を制御
 - `cacheTag()`で無効化用タグを設定
@@ -74,19 +75,19 @@ async function getSpaces() {
 
 **プロファイル一覧**:
 
-| プロファイル | stale | revalidate | expire | 用途 |
-|------------|-------|------------|--------|------|
-| `'seconds'` | - | 1秒 | 1分 | 高頻度更新データ |
-| `'minutes'` | 5分 | 1分 | 1時間 | 中頻度更新データ |
-| `'hours'` | 5分 | 1時間 | 1日 | 低頻度更新データ |
-| `'days'` | 5分 | 1日 | 1週間 | 準静的データ |
-| `'weeks'` | 5分 | 1週間 | 1ヶ月 | 静的データ |
-| `'max'` | 5分 | 1ヶ月 | 無期限 | 永続データ |
+| プロファイル | stale | revalidate | expire | 用途             |
+| ------------ | ----- | ---------- | ------ | ---------------- |
+| `'seconds'`  | -     | 1秒        | 1分    | 高頻度更新データ |
+| `'minutes'`  | 5分   | 1分        | 1時間  | 中頻度更新データ |
+| `'hours'`    | 5分   | 1時間      | 1日    | 低頻度更新データ |
+| `'days'`     | 5分   | 1日        | 1週間  | 準静的データ     |
+| `'weeks'`    | 5分   | 1週間      | 1ヶ月  | 静的データ       |
+| `'max'`      | 5分   | 1ヶ月      | 無期限 | 永続データ       |
 
 ```typescript
 async function getSettings() {
-  'use cache'
-  cacheLife('hours')  // 1時間ごとに再検証
+  "use cache";
+  cacheLife("hours"); // 1時間ごとに再検証
   // ...
 }
 ```
@@ -97,11 +98,11 @@ async function getSettings() {
 
 ```typescript
 async function getSpaceById(id: string) {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('spaces', `space-${id}`)  // 複数タグ
+  "use cache";
+  cacheLife("hours");
+  cacheTag("spaces", `space-${id}`); // 複数タグ
 
-  return await prisma.space.findUnique({ where: { id } })
+  return await prisma.space.findUnique({ where: { id } });
 }
 ```
 
@@ -123,36 +124,37 @@ async function UniqueContent() {
 ```
 
 **使用ケース**:
+
 - `Math.random()`, `Date.now()`, `crypto.randomUUID()` などの非決定的操作
 - 動的APIを使用せずに動的レンダリングが必要な場合
 
 #### 5. `revalidateTag()` - タグベースのキャッシュ無効化
 
 ```typescript
-import { revalidateTag } from 'next/cache'
+import { revalidateTag } from "next/cache";
 
 // Server Actionでキャッシュを無効化
 export async function updateSpace(id: string, data: UpdateSpaceData) {
-  await prisma.space.update({ where: { id }, data })
+  await prisma.space.update({ where: { id }, data });
 
   // 即座にキャッシュを無効化
-  revalidateTag('spaces', { expire: 0 })
+  revalidateTag("spaces", { expire: 0 });
 
   // または stale-while-revalidate
-  revalidateTag('spaces', 'max')
+  revalidateTag("spaces", "max");
 }
 ```
 
 #### 6. `revalidatePath()` - パスベースのキャッシュ無効化
 
 ```typescript
-import { revalidatePath } from 'next/cache'
+import { revalidatePath } from "next/cache";
 
 export async function updateSpace(id: string, data: UpdateSpaceData) {
-  await prisma.space.update({ where: { id }, data })
+  await prisma.space.update({ where: { id }, data });
 
-  revalidatePath('/spaces')
-  revalidatePath(`/spaces/${id}`)
+  revalidatePath("/spaces");
+  revalidatePath(`/spaces/${id}`);
 }
 ```
 
@@ -160,10 +162,10 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 
 > **Warning**: 以下のAPIは非推奨です。新規実装では使用しないでください。
 
-| レガシーAPI | 代替 |
-|------------|------|
-| `unstable_cache` | `'use cache'` + `cacheLife` + `cacheTag` |
-| `unstable_noStore` | `connection()` または `<Suspense>` |
+| レガシーAPI        | 代替                                     |
+| ------------------ | ---------------------------------------- |
+| `unstable_cache`   | `'use cache'` + `cacheLife` + `cacheTag` |
+| `unstable_noStore` | `connection()` または `<Suspense>`       |
 
 ---
 
@@ -175,20 +177,21 @@ export async function updateSpace(id: string, data: UpdateSpaceData) {
 
 ```typescript
 // src/lib/data.ts
-import { cacheLife, cacheTag } from 'next/cache'
+import { cacheLife, cacheTag } from "next/cache";
 
 export async function getSpaces() {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('spaces')
+  "use cache";
+  cacheLife("hours");
+  cacheTag("spaces");
 
   return await prisma.space.findMany({
     where: { isPublished: true },
-  })
+  });
 }
 ```
 
 **特徴**:
+
 - 静的シェルに含まれる
 - プリレンダリング時にデータ取得
 - 指定期間後に自動再検証
@@ -225,6 +228,7 @@ export default function SpacesPage({ searchParams }) {
 ```
 
 **特徴**:
+
 - fallback が静的シェルの一部
 - 実際のコンテンツはリクエスト時にストリーミング
 - searchParams, cookies, headers などのランタイムデータ用
@@ -424,26 +428,26 @@ export default function SettingsPage() {
 
 ```typescript
 // src/actions/admin/spaces.ts
-'use server'
+"use server";
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function updateSpace(id: string, data: UpdateSpaceData) {
   await prisma.space.update({
     where: { id },
     data,
-  })
+  });
 
   // タグベースの無効化（即座に）
-  revalidateTag('spaces', { expire: 0 })
-  revalidateTag(`space-${id}`, { expire: 0 })
+  revalidateTag("spaces", { expire: 0 });
+  revalidateTag(`space-${id}`, { expire: 0 });
 
   // パスベースの無効化
-  revalidatePath('/spaces')
-  revalidatePath(`/spaces/${id}`)
-  revalidatePath('/')
+  revalidatePath("/spaces");
+  revalidatePath(`/spaces/${id}`);
+  revalidatePath("/");
 
-  return { success: true }
+  return { success: true };
 }
 ```
 
@@ -487,13 +491,13 @@ async function CachedProfile({ userId }: { userId: string }) {
 
 ## キャッシュ階層
 
-| レベル | パターン | 用途 | 例 |
-|-------|---------|------|-----|
-| L1 | 静的 | 変更なし | プライバシーポリシー |
-| L2 | `'use cache'` + `cacheLife('hours')` | 1時間ごと | ナビゲーション、設定 |
-| L3 | `'use cache'` + `cacheLife('minutes')` | 15分ごと | スペース一覧 |
-| L4 | `<Suspense>` | リクエストごと | 検索結果、認証データ |
-| L5 | `connection()` | 非決定的操作 | Date.now(), Math.random() |
+| レベル | パターン                               | 用途           | 例                        |
+| ------ | -------------------------------------- | -------------- | ------------------------- |
+| L1     | 静的                                   | 変更なし       | プライバシーポリシー      |
+| L2     | `'use cache'` + `cacheLife('hours')`   | 1時間ごと      | ナビゲーション、設定      |
+| L3     | `'use cache'` + `cacheLife('minutes')` | 15分ごと       | スペース一覧              |
+| L4     | `<Suspense>`                           | リクエストごと | 検索結果、認証データ      |
+| L5     | `connection()`                         | 非決定的操作   | Date.now(), Math.random() |
 
 ---
 
@@ -504,14 +508,14 @@ async function CachedProfile({ userId }: { userId: string }) {
 ```typescript
 // ❌ ユーザー固有のデータをキャッシュ
 async function getUserReservations(userId: string) {
-  'use cache'  // 危険: 他のユーザーに見える可能性
-  return await prisma.reservation.findMany({ where: { userId } })
+  "use cache"; // 危険: 他のユーザーに見える可能性
+  return await prisma.reservation.findMany({ where: { userId } });
 }
 
 // ✅ ユーザー固有のデータはキャッシュしない
 async function getUserReservations(userId: string) {
   // キャッシュなし - 常に最新データ
-  return await prisma.reservation.findMany({ where: { userId } })
+  return await prisma.reservation.findMany({ where: { userId } });
 }
 ```
 
@@ -531,6 +535,7 @@ async function getUserReservations(userId: string) {
 **エラー**: `Route used 'new Date()' before accessing uncached data`
 
 **解決策**:
+
 1. `'use cache'` でラップ（キャッシュされた日付を使用）
 2. `<Suspense>` 内で使用（動的レンダリング）
 3. `connection()` でシグナル（非決定的操作）
@@ -538,10 +543,11 @@ async function getUserReservations(userId: string) {
 ### キャッシュが無効化されない
 
 **解決策**:
+
 ```typescript
 // タグとパスの両方を無効化
-revalidateTag('spaces', { expire: 0 })
-revalidatePath('/spaces')
+revalidateTag("spaces", { expire: 0 });
+revalidatePath("/spaces");
 ```
 
 ---

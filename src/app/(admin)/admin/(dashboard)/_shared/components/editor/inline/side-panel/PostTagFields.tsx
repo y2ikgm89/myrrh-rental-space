@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 投稿タグ入力フィールド
@@ -7,54 +7,55 @@
  * フォームのカンマ区切り文字列と配列形式を変換
  */
 
-import type { FieldValues, Path } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
-import { TagInput, type TagOption } from './TagInput'
-import { getFieldError, getErrorMessage } from '../types'
-import { setFieldString, type FieldComponentProps } from '../content-types/types'
+import type { FieldPathByValue, FieldValues } from "react-hook-form";
+import { useController } from "react-hook-form";
+import { TagInput, type TagOption } from "./TagInput";
+import { getFieldError, getErrorMessage } from "../types";
+import type { FieldComponentProps } from "../content-types/types";
 
 type PostTagFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
   /** フィールド名マッピング */
   fields: {
-    tags: Path<T>
-  }
+    tags: FieldPathByValue<T, string | null | undefined>;
+  };
   /** 利用可能なタグのリスト */
-  availableTags?: TagOption[]
+  availableTags?: TagOption[];
   /** 新規タグ作成時のコールバック */
-  onCreateTag?: (name: string) => Promise<TagOption | null>
+  onCreateTag?: (name: string) => Promise<TagOption | null>;
   /** ラベル */
-  label?: string
+  label?: string;
   /** プレースホルダー */
-  placeholder?: string
-}
+  placeholder?: string;
+};
 
 export function PostTagFields<T extends FieldValues>({
   control,
-  setValue,
   errors,
   disabled,
   fields,
   availableTags = [],
   onCreateTag,
-  label = 'タグ',
-  placeholder = 'タグを入力...',
+  label = "タグ",
+  placeholder = "タグを入力...",
 }: PostTagFieldsProps<T>) {
-  // フォームのカンマ区切り文字列を監視
-  // 型注釈 unknown で受け取り、typeof で string に絞り込む（as 不使用）
-  const rawTags: unknown = useWatch({ control, name: fields.tags })
-  const tagsString = typeof rawTags === 'string' ? rawTags : undefined
-  const tagsError = getFieldError(errors, fields.tags)
+  const tagsField = useController({ control, name: fields.tags });
+  const rawTags: unknown = tagsField.field.value;
+  const tagsString = typeof rawTags === "string" ? rawTags : undefined;
+  const tagsError = getFieldError(errors, fields.tags);
 
   // カンマ区切り文字列を配列に変換
   const tagsArray = tagsString
-    ? tagsString.split(',').map((t: string) => t.trim()).filter(Boolean)
-    : []
+    ? tagsString
+        .split(",")
+        .map((t: string) => t.trim())
+        .filter(Boolean)
+    : [];
 
   // 配列をカンマ区切り文字列に変換してフォームに設定
   const handleChange = (newTags: string[]) => {
-    const newValue = newTags.join(', ')
-    setFieldString(setValue, fields.tags, newValue, { shouldDirty: true })
-  }
+    const newValue = newTags.join(", ");
+    tagsField.field.onChange(newValue);
+  };
 
   return (
     <TagInput
@@ -67,5 +68,5 @@ export function PostTagFields<T extends FieldValues>({
       disabled={disabled}
       error={tagsError ? getErrorMessage(tagsError) : undefined}
     />
-  )
+  );
 }

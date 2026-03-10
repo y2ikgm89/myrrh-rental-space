@@ -10,6 +10,7 @@ import {
 } from "@/admin/components/ActionDropdown";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deleteTerms } from "@/admin/actions/terms";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 type TermsActionCellProps = {
   id: string;
@@ -29,12 +30,13 @@ export function TermsActionCell({
   const handleDelete = () => {
     startDeleteTransition(async () => {
       const result = await deleteTerms(id);
-      if (result.success) {
-        toast.success(result.message);
-        router.refresh();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success("規約を削除しました");
+      router.refresh();
     });
   };
 

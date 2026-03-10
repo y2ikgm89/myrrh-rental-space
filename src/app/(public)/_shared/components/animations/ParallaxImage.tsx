@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ParallaxImage — Parallax scrolling image
@@ -8,57 +8,57 @@
  * Overflow-hidden container clips the oversized image.
  */
 
-import { useRef, type ReactElement } from 'react'
-import Image from 'next/image'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { PARALLAX, SCROLL_TRIGGER } from '@/public/lib/animations'
+import { useRef, type ReactElement } from "react";
+import Image from "next/image";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { PARALLAX, SCROLL_TRIGGER } from "@/public/lib/animations";
 
 interface ParallaxImageProps {
-  readonly src: string
-  readonly alt: string
-  readonly className?: string
-  readonly speed?: number
+  readonly src: string;
+  readonly alt: string;
+  readonly className?: string;
+  readonly speed?: number;
 }
 
 export function ParallaxImage({
   src,
   alt,
-  className = '',
+  className = "",
   speed = PARALLAX.normal,
 }: ParallaxImageProps): ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const imageRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const container = containerRef.current
-      const image = imageRef.current
-      if (!container || !image) return
+      const container = containerRef.current;
+      const image = imageRef.current;
+      if (!container || !image) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
         // Scale up slightly to allow room for parallax movement
-        gsap.set(image, { scale: 1.15 })
+        gsap.set(image, { scale: 1.15 });
 
-        const yDistance = speed * 100
+        const yDistance = speed * 100;
 
         gsap.fromTo(
           image,
           { y: -yDistance },
           {
             y: yDistance,
-            ease: 'none',
+            ease: "none",
             scrollTrigger: {
               trigger: container,
               ...SCROLL_TRIGGER.scrub,
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: containerRef, dependencies: [speed] },
-  )
+  );
 
   return (
     <div ref={containerRef} className={`overflow-hidden ${className}`}>
@@ -72,5 +72,5 @@ export function ParallaxImage({
         />
       </div>
     </div>
-  )
+  );
 }

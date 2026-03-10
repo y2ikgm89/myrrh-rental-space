@@ -4,7 +4,10 @@ import { hashPassword } from "better-auth/crypto";
 import { Role } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import type { CreateUserInput, UpdateUserInput } from "@/admin/lib/validations/user";
+import type {
+  CreateUserInput,
+  UpdateUserInput,
+} from "@/admin/lib/validations/user";
 
 async function ensureUserExists(id: string): Promise<{
   id: string;
@@ -36,7 +39,10 @@ async function ensureUserExists(id: string): Promise<{
   };
 }
 
-async function ensureEmailAvailable(email: string, currentId?: string): Promise<void> {
+async function ensureEmailAvailable(
+  email: string,
+  currentId?: string,
+): Promise<void> {
   const existing = currentId
     ? await prisma.user.findFirst({
         where: {
@@ -51,7 +57,10 @@ async function ensureEmailAvailable(email: string, currentId?: string): Promise<
       });
 
   if (existing) {
-    throw new DomainError("このメールアドレスは既に使用されています", "CONFLICT");
+    throw new DomainError(
+      "このメールアドレスは既に使用されています",
+      "CONFLICT",
+    );
   }
 }
 

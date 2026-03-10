@@ -14,12 +14,12 @@ paths:
 
 ## Skill マップ
 
-| タスク | 使うもの |
-|------|----------|
-| 公開ページの新規 UI / 大幅リデザイン | `.agents/skills/frontend-design/SKILL.md` |
-| UI の方向性調査 | `.agents/skills/ui-ux-pro-max/SKILL.md` |
-| スクロール演出セクション | `.agents/skills/parallax-section/SKILL.md` |
-| Lexical 拡張 | `.agents/skills/lexical-*/SKILL.md` |
+| タスク                               | 使うもの                                   |
+| ------------------------------------ | ------------------------------------------ |
+| 公開ページの新規 UI / 大幅リデザイン | `.agents/skills/frontend-design/SKILL.md`  |
+| UI の方向性調査                      | `.agents/skills/ui-ux-pro-max/SKILL.md`    |
+| スクロール演出セクション             | `.agents/skills/parallax-section/SKILL.md` |
+| Lexical 拡張                         | `.agents/skills/lexical-*/SKILL.md`        |
 
 ## 基本フロー
 

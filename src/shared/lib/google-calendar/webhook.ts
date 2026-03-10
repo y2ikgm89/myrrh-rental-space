@@ -160,10 +160,7 @@ export async function renewWebhookIfNeeded(): Promise<WebhookRenewalResult> {
 
   try {
     // 既存Webhookを停止（エラーは無視 - Google側で自動期限切れになる）
-    if (
-      webhookState.channelId &&
-      webhookState.resourceId
-    ) {
+    if (webhookState.channelId && webhookState.resourceId) {
       await stopWebhookWatch(
         webhookState.channelId,
         webhookState.resourceId,

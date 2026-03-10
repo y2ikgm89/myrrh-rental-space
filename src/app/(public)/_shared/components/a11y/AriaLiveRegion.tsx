@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ARIAライブリージョンコンポーネント
@@ -7,9 +7,9 @@
  * 視覚的には非表示だが、スクリーンリーダーには読み上げられる
  */
 
-import { useAriaLiveOptional } from '@/shared/contexts'
-import { ARIA_LIVE_REGION_CLASSES } from '@/public/lib/a11y'
-import type { ReactElement } from 'react'
+import { useAriaLiveOptional } from "@/shared/contexts";
+import { ARIA_LIVE_REGION_CLASSES } from "@/public/lib/a11y";
+import type { ReactElement } from "react";
 
 /**
  * ARIAライブリージョン
@@ -18,10 +18,10 @@ import type { ReactElement } from 'react'
  * announceされたメッセージをスクリーンリーダーに通知
  */
 export function AriaLiveRegion(): ReactElement | null {
-  const context = useAriaLiveOptional()
+  const context = useAriaLiveOptional();
 
   // Provider外で使用された場合は何も表示しない
-  if (!context) return null
+  if (!context) return null;
 
   return (
     <>
@@ -32,7 +32,7 @@ export function AriaLiveRegion(): ReactElement | null {
         role="status"
         className={ARIA_LIVE_REGION_CLASSES}
       >
-        {context.politeness === 'polite' ? context.message : ''}
+        {context.politeness === "polite" ? context.message : ""}
       </div>
 
       {/* Assertiveリージョン */}
@@ -42,8 +42,8 @@ export function AriaLiveRegion(): ReactElement | null {
         role="alert"
         className={ARIA_LIVE_REGION_CLASSES}
       >
-        {context.politeness === 'assertive' ? context.message : ''}
+        {context.politeness === "assertive" ? context.message : ""}
       </div>
     </>
-  )
+  );
 }

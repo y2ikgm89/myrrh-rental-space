@@ -1,7 +1,7 @@
 type LoadingStateProps = {
-  message?: string
-  variant?: 'table' | 'inline'
-}
+  message?: string;
+  variant?: "table" | "inline";
+};
 
 /**
  * 統一されたローディング状態コンポーネント
@@ -16,20 +16,20 @@ type LoadingStateProps = {
  * ```
  */
 export function LoadingState({
-  message = '読み込み中...',
-  variant = 'table',
+  message = "読み込み中...",
+  variant = "table",
 }: LoadingStateProps) {
-  if (variant === 'inline') {
+  if (variant === "inline") {
     return (
       <div className="animate-pulse text-sm text-muted-foreground">
         {message}
       </div>
-    )
+    );
   }
 
   return (
     <div className="rounded-lg border bg-card p-12 text-center">
       <p className="text-muted-foreground">{message}</p>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ベースフィルターコンポーネント
@@ -10,9 +10,9 @@
  * @description nuqs を使用した型安全な URL パラメータ管理
  */
 
-import type { ReactNode } from 'react'
-import { Search } from 'lucide-react'
-import { useFilterParams } from '@/admin/hooks'
+import type { ReactNode } from "react";
+import { Search } from "lucide-react";
+import { useFilterParams } from "@/admin/hooks";
 import {
   Select,
   SelectContent,
@@ -20,35 +20,35 @@ import {
   SelectTrigger,
   SelectValue,
   Input,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type StatusOption = {
-  value: string
-  label: string
-}
+  value: string;
+  label: string;
+};
 
 type BaseFiltersProps = {
   /** ステータスオプション */
-  statusOptions?: StatusOption[]
+  statusOptions?: StatusOption[];
   /** 検索プレースホルダー */
-  searchPlaceholder?: string
+  searchPlaceholder?: string;
   /** 追加フィルター（カテゴリなど） */
-  children?: ReactNode
-}
+  children?: ReactNode;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
-  { value: 'ALL', label: 'すべて' },
-  { value: 'PUBLISHED', label: '公開中' },
-  { value: 'DRAFT', label: '下書き' },
-]
+  { value: "ALL", label: "すべて" },
+  { value: "PUBLISHED", label: "公開中" },
+  { value: "DRAFT", label: "下書き" },
+];
 
 // =============================================================================
 // BaseFilters Component
@@ -56,10 +56,10 @@ const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
 
 export function BaseFilters({
   statusOptions = DEFAULT_STATUS_OPTIONS,
-  searchPlaceholder = 'タイトル、本文で検索...',
+  searchPlaceholder = "タイトル、本文で検索...",
   children,
 }: BaseFiltersProps) {
-  const { params, setSearchDebounced, setStatus } = useFilterParams()
+  const { params, setSearchDebounced, setStatus } = useFilterParams();
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -96,11 +96,11 @@ export function BaseFilters({
         />
       </div>
     </div>
-  )
+  );
 }
 
 // =============================================================================
 // Re-export types for consumers
 // =============================================================================
 
-export type { StatusOption, BaseFiltersProps }
+export type { StatusOption, BaseFiltersProps };

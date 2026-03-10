@@ -4,5 +4,5 @@
  * GA4/GTMスクリプト埋め込み用コンポーネント
  */
 
-export { AnalyticsProvider } from './AnalyticsProvider'
-export { WebVitalsReporter } from './WebVitalsReporter'
+export { AnalyticsProvider } from "./AnalyticsProvider";
+export { WebVitalsReporter } from "./WebVitalsReporter";

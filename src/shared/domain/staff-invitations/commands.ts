@@ -55,7 +55,10 @@ async function ensureInvitationAvailable(email: string): Promise<void> {
     select: { id: true },
   });
   if (existingUser) {
-    throw new DomainError("このメールアドレスは既に登録されています", "CONFLICT");
+    throw new DomainError(
+      "このメールアドレスは既に登録されています",
+      "CONFLICT",
+    );
   }
 
   const existingInvitation = await prisma.staffInvitation.findFirst({
@@ -145,15 +148,18 @@ async function sendInvitationEmailOrThrow(params: {
   });
 
   if (!emailResult.success) {
-    logError(new Error(emailResult.error || "Failed to send invitation email"), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: params.operation,
-        invitationId: params.invitationId,
-        email: params.email,
+    logError(
+      new Error(emailResult.error || "Failed to send invitation email"),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: params.operation,
+          invitationId: params.invitationId,
+          email: params.email,
+        },
       },
-    });
+    );
     throw new DomainError("招待メールの送信に失敗しました", "UNEXPECTED");
   }
 }
@@ -252,7 +258,10 @@ export async function setupPassword(
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
-      throw new DomainError("このメールアドレスは既に登録されています", "CONFLICT");
+      throw new DomainError(
+        "このメールアドレスは既に登録されています",
+        "CONFLICT",
+      );
     }
 
     throw error;

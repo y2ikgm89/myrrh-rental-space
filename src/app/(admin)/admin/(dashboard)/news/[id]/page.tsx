@@ -1,52 +1,62 @@
-import { notFound } from 'next/navigation'
-import { headers } from "next/headers";
-import { getNewsById } from '@/admin/queries/news'
-import { NewsEditor } from '../_components/NewsEditor'
-import { getLayoutSettings } from '@/shared/domain/settings/queries'
-import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
-import type { ContentWidth } from '@/shared/types'
-import type { Metadata } from 'next'
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { getNewsById } from "@/admin/queries/news";
+import { NewsEditor } from "../_components/NewsEditor";
+import { getLayoutSettings } from "@/shared/domain/settings/queries";
+import {
+  getValidLayoutWidth,
+  LayoutWidth,
+} from "@/shared/lib/validations/enums";
+import type { ContentWidth } from "@/shared/types";
+import type { Metadata } from "next";
 
-
-type Params = Promise<{ id: string }>
+type Params = Promise<{ id: string }>;
 
 type PageProps = {
-  params: Params
-}
+  params: Params;
+};
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await headers();
-  const { id } = await params
-  const news = await getNewsById(id)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const news = await getNewsById(id);
 
   if (!news) {
     return {
-      title: 'お知らせが見つかりません | Myrrh Rental Space',
-    }
+      title: "お知らせが見つかりません | Myrrh Rental Space",
+    };
   }
 
   return {
     title: `${news.title} | お知らせ管理 | Myrrh Rental Space`,
-  }
+  };
 }
 
 export default async function EditNewsPage({ params }: PageProps) {
-  const { id } = await params
+  await connection();
+  const { id } = await params;
 
   const [news, settings] = await Promise.all([
     getNewsById(id),
     getLayoutSettings(),
-  ])
+  ]);
 
   if (!news) {
-    notFound()
+    notFound();
   }
 
   const fallbackContentWidth: ContentWidth = {
     width: getValidLayoutWidth(settings?.contentWidth, LayoutWidth.MD),
     customPx: settings?.contentWidthCustom ?? null,
-  }
+  };
 
-  return <NewsEditor news={news} mode="edit" fallbackContentWidth={fallbackContentWidth} />
+  return (
+    <NewsEditor
+      news={news}
+      mode="edit"
+      fallbackContentWidth={fallbackContentWidth}
+    />
+  );
 }
-

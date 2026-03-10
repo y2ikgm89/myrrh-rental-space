@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * カスタムAPIキーセクション
@@ -6,8 +6,8 @@
  * 汎用的なAPIキーの管理
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -18,7 +18,7 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Dialog,
   DialogContent,
@@ -27,66 +27,62 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui/dialog'
-import { Plus, Trash2 } from 'lucide-react'
-import {
-  addCustomApiKey,
-  deleteCustomApiKey,
-} from '@/admin/actions/api-keys'
-import type { CustomApiKeyData } from '@/admin/types/api-keys'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui/dialog";
+import { Plus, Trash2 } from "lucide-react";
+import { addCustomApiKey, deleteCustomApiKey } from "@/admin/actions/api-keys";
+import type { CustomApiKeyData } from "@/admin/types/api-keys";
+import { useRefreshOnSuccess } from "../hooks";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface CustomApiKeysSectionProps {
-  keys: CustomApiKeyData[]
+  keys: CustomApiKeyData[];
 }
 
 // =============================================================================
 // Main Component
 // =============================================================================
 
-export function CustomApiKeysSection({
-  keys,
-}: CustomApiKeysSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
+  const confirm = useConfirm();
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    keyName: '',
-    keyValue: '',
-    description: '',
-  })
+    name: "",
+    keyName: "",
+    keyValue: "",
+    description: "",
+  });
 
   const handleAdd = () => {
     startTransition(async () => {
-      const result = await addCustomApiKey(formData)
-      if (result.success) {
-        setFormData({ name: '', keyName: '', keyValue: '', description: '' })
-        setIsDialogOpen(false)
+      const result = await addCustomApiKey(formData);
+      if (!isMutationError(result)) {
+        setFormData({ name: "", keyName: "", keyValue: "", description: "" });
+        setIsDialogOpen(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "APIキーを追加しました");
+    });
+  };
 
   const handleDelete = async (id: string, name: string) => {
     const confirmed = await confirm({
-      title: 'APIキーを削除しますか？',
+      title: "APIキーを削除しますか？",
       description: `「${name}」を削除しますか？`,
-      confirmLabel: '削除',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      confirmLabel: "削除",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await deleteCustomApiKey(id)
-      handleResult(result)
-    })
-  }
+      const result = await deleteCustomApiKey(id);
+      handleResult(result, "APIキーを削除しました");
+    });
+  };
 
   return (
     <Card>
@@ -195,7 +191,7 @@ export function CustomApiKeysSection({
                     !formData.keyValue
                   }
                 >
-                  {isPending ? '追加中...' : '追加'}
+                  {isPending ? "追加中..." : "追加"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -225,7 +221,7 @@ export function CustomApiKeysSection({
                     </div>
                   )}
                   <div className="mt-1 text-xs text-muted-foreground">
-                    作成: {new Date(data.createdAt).toLocaleString('ja-JP')}
+                    作成: {new Date(data.createdAt).toLocaleString("ja-JP")}
                   </div>
                 </div>
                 <Button
@@ -243,5 +239,5 @@ export function CustomApiKeysSection({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

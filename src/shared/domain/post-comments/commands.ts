@@ -15,7 +15,9 @@ type CommentWithPostSlug = {
   post: { slug: string };
 };
 
-async function getCommentOrThrow(commentId: string): Promise<CommentWithPostSlug> {
+async function getCommentOrThrow(
+  commentId: string,
+): Promise<CommentWithPostSlug> {
   const comment = await prisma.postComment.findUnique({
     where: { id: commentId },
     select: {
@@ -80,7 +82,9 @@ export async function deleteComments(
       },
     });
 
-    const postSlugs = [...new Set(comments.map((comment) => comment.post.slug))];
+    const postSlugs = [
+      ...new Set(comments.map((comment) => comment.post.slug)),
+    ];
 
     const result = await prisma.postComment.updateMany({
       where: { id: { in: commentIds } },
@@ -96,7 +100,10 @@ export async function deleteComments(
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: "deletePostComments", commentCount: commentIds.length },
+      context: {
+        operation: "deletePostComments",
+        commentCount: commentIds.length,
+      },
     });
 
     throw new DomainError("コメントの削除中にエラーが発生しました");

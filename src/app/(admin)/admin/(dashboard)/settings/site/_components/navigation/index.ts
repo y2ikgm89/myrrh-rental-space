@@ -1,1 +1,1 @@
-export { NavigationManager } from './NavigationManager'
+export { NavigationManager } from "./NavigationManager";

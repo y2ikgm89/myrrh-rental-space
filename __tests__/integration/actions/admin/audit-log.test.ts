@@ -170,9 +170,9 @@ describe("Audit Log Admin Action Integration", () => {
       });
 
       test("空文字は許可", () => {
-        expect(filtersSchema.safeParse({ dateFrom: "", dateTo: "" }).success).toBe(
-          true,
-        );
+        expect(
+          filtersSchema.safeParse({ dateFrom: "", dateTo: "" }).success,
+        ).toBe(true);
       });
 
       test("YYYY-MM-DD 以外はエラー", () => {

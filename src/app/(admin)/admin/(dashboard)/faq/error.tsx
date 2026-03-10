@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { Button } from '@/admin/components/ui/button'
-import { AlertTriangle } from 'lucide-react'
-import { logger } from '@/shared/lib/logger'
+import { useEffect } from "react";
+import { Button } from "@/admin/components/ui/button";
+import { AlertTriangle } from "lucide-react";
+import { logger } from "@/shared/lib/logger";
 
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
-    logger.error('Admin error boundary triggered', {
+    logger.error("Admin error boundary triggered", {
       error: error.message,
       digest: error.digest,
-    })
-  }, [error])
+    });
+  }, [error]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
@@ -30,5 +30,5 @@ export default function Error({
         再試行
       </Button>
     </div>
-  )
+  );
 }

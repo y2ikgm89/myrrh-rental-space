@@ -1,10 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
+    "lib": ["dom", "esnext"],
     "skipLibCheck": true,
     "noEmit": true,
     // ── Strict type-checking ──────────────────────────────────────────────
@@ -37,21 +34,11 @@
     ],
     // ── Path aliases ──────────────────────────────────────────────────────
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@generated/*": [
-        "./generated/*"
-      ],
-      "@/admin/*": [
-        "./src/app/(admin)/admin/(dashboard)/_shared/*"
-      ],
-      "@/public/*": [
-        "./src/app/(public)/_shared/*"
-      ],
-      "@/shared/*": [
-        "./src/shared/*"
-      ]
+      "@/*": ["./src/*"],
+      "@generated/*": ["./generated/*"],
+      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
+      "@/public/*": ["./src/app/(public)/_shared/*"],
+      "@/shared/*": ["./src/shared/*"]
     },
     // ── Next.js 自動注入（Next.js が上書きするが明示して意図を示す） ───────
     "allowJs": true,
@@ -66,9 +53,5 @@
     "**/*.mts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "__tests__",
-    "generated"
-  ]
+  "exclude": ["node_modules", "__tests__", "generated"]
 }

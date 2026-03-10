@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse hook: Block edits to sensitive files (.env*, bun.lockb)
+# PreToolUse hook: Block edits to sensitive files (.env*, bun.lock)
 # Receives tool event JSON on stdin
 
 set -euo pipefail
@@ -17,9 +17,9 @@ if [[ "$BASENAME" =~ ^\.env(\..*)?$ ]]; then
   exit 2
 fi
 
-# Block bun.lockb (must only be updated via bun install)
-if [[ "$BASENAME" == "bun.lockb" ]]; then
-  echo "Blocked: bun.lockb の直接編集は禁止されています。依存関係の変更には bun add / bun install を使用してください。" >&2
+# Block bun.lock (must only be updated via bun install)
+if [[ "$BASENAME" == "bun.lock" ]]; then
+  echo "Blocked: bun.lock の直接編集は禁止されています。依存関係の変更には bun add / bun install を使用してください。" >&2
   exit 2
 fi
 

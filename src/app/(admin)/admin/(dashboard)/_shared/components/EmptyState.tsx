@@ -1,14 +1,14 @@
-import Link from 'next/link'
-import { Button } from './ui/button'
+import Link from "next/link";
+import { Button } from "./ui/button";
 
 type EmptyStateProps = {
-  message: string
-  description?: string
+  message: string;
+  description?: string;
   action?: {
-    label: string
-    href: string
-  }
-}
+    label: string;
+    href: string;
+  };
+};
 
 /**
  * 統一された空状態コンポーネント
@@ -38,5 +38,5 @@ export function EmptyState({ message, description, action }: EmptyStateProps) {
         </Button>
       )}
     </div>
-  )
+  );
 }

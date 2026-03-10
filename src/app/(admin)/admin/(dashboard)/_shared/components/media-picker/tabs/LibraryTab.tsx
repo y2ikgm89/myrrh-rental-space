@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * LibraryTab
@@ -7,15 +7,20 @@
  * React 19 use API + Suspense パターン
  */
 
-import { use, useState, Suspense } from 'react'
-import { useMediaLibrary } from '@/admin/hooks/use-media-library'
-import { MediaGrid, SearchBar, ViewToggle, MediaGridSkeleton } from '../components'
-import type { GetMediaResult, MediaData } from '@/admin/types/media-picker'
+import { use, useState, Suspense } from "react";
+import { useMediaLibrary } from "@/admin/hooks/use-media-library";
+import {
+  MediaGrid,
+  SearchBar,
+  ViewToggle,
+  MediaGridSkeleton,
+} from "../components";
+import type { GetMediaResult, MediaData } from "@/admin/types/media-picker";
 
 interface LibraryTabProps {
-  selectedIds: Set<string>
-  onSelect: (media: MediaData) => void
-  canSelectMore: boolean
+  selectedIds: Set<string>;
+  onSelect: (media: MediaData) => void;
+  canSelectMore: boolean;
 }
 
 /**
@@ -28,13 +33,13 @@ function MediaGridContent({
   viewMode,
   canSelectMore,
 }: {
-  mediaPromise: Promise<GetMediaResult>
-  selectedIds: Set<string>
-  onSelect: (media: MediaData) => void
-  viewMode: 'grid' | 'list'
-  canSelectMore: boolean
+  mediaPromise: Promise<GetMediaResult>;
+  selectedIds: Set<string>;
+  onSelect: (media: MediaData) => void;
+  viewMode: "grid" | "list";
+  canSelectMore: boolean;
 }) {
-  const result = use(mediaPromise)
+  const result = use(mediaPromise);
 
   return (
     <MediaGrid
@@ -45,7 +50,7 @@ function MediaGridContent({
       isLoading={false}
       canSelectMore={canSelectMore}
     />
-  )
+  );
 }
 
 export function LibraryTab({
@@ -53,17 +58,17 @@ export function LibraryTab({
   onSelect,
   canSelectMore,
 }: LibraryTabProps) {
-  const [search, setSearch] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { mediaPromise, isInitialLoading, searchMedia } = useMediaLibrary({
-    initialFilters: { type: 'IMAGE' },
-  })
+    initialFilters: { type: "IMAGE" },
+  });
 
   const handleSearchChange = (value: string) => {
-    setSearch(value)
-    searchMedia(value)
-  }
+    setSearch(value);
+    searchMedia(value);
+  };
 
   return (
     <div className="space-y-4">
@@ -86,5 +91,5 @@ export function LibraryTab({
         </Suspense>
       )}
     </div>
-  )
+  );
 }

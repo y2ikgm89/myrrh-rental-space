@@ -1,15 +1,20 @@
-'use client'
+"use client";
 
-import { ActionDropdown, ActionDropdownItem } from '@/admin/components/ActionDropdown'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+} from "@/admin/components/ActionDropdown";
 
 type InquiryActionCellProps = {
-  inquiryId: string
-}
+  inquiryId: string;
+};
 
 export function InquiryActionCell({ inquiryId }: InquiryActionCellProps) {
   return (
     <ActionDropdown>
-      <ActionDropdownItem href={`/admin/inquiries/${inquiryId}`}>詳細</ActionDropdownItem>
+      <ActionDropdownItem href={`/admin/inquiries/${inquiryId}`}>
+        詳細
+      </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

@@ -4,10 +4,10 @@
  * Prisma.JsonValueを型安全に変換するヘルパー関数
  */
 
-import { z } from 'zod'
-import type { Prisma } from '@/shared/db/prisma'
+import { z } from "zod";
+import type { Prisma } from "@/shared/db/prisma";
 
-const stringArraySchema = z.array(z.string())
+const stringArraySchema = z.array(z.string());
 
 /**
  * 営業時間帯スキーマ（開始・終了時刻のペア）
@@ -18,7 +18,7 @@ const stringArraySchema = z.array(z.string())
 const businessTimeSlotSchema = z.object({
   openTime: z.string(),
   closeTime: z.string(),
-})
+});
 
 /**
  * 営業時間の1日分の型（新形式: slots配列）
@@ -26,7 +26,7 @@ const businessTimeSlotSchema = z.object({
 const businessHoursDaySchema = z.object({
   isOpen: z.boolean(),
   slots: z.array(businessTimeSlotSchema),
-})
+});
 
 /**
  * 営業時間（週間）スキーマ
@@ -39,12 +39,12 @@ const businessHoursSchema = z.object({
   friday: businessHoursDaySchema,
   saturday: businessHoursDaySchema,
   sunday: businessHoursDaySchema,
-})
+});
 
 /** 営業時間帯（開始・終了時刻のペア）*/
-export type BusinessTimeSlot = z.infer<typeof businessTimeSlotSchema>
-export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>
-export type BusinessHours = z.infer<typeof businessHoursSchema>
+export type BusinessTimeSlot = z.infer<typeof businessTimeSlotSchema>;
+export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>;
+export type BusinessHours = z.infer<typeof businessHoursSchema>;
 
 /**
  * unknown値をstring[]に安全に変換
@@ -58,8 +58,8 @@ export type BusinessHours = z.infer<typeof businessHoursSchema>
  * const tags = parseStringArray(post.tags)
  */
 export function parseStringArray(value: unknown): string[] {
-  const result = stringArraySchema.safeParse(value)
-  return result.success ? result.data : []
+  const result = stringArraySchema.safeParse(value);
+  return result.success ? result.data : [];
 }
 
 /**
@@ -71,9 +71,9 @@ export function parseStringArray(value: unknown): string[] {
  * const holidays = parseStringArrayOrNull(settings.regularHolidays)
  */
 export function parseStringArrayOrNull(value: unknown): string[] | null {
-  if (value === null || value === undefined) return null
-  const result = stringArraySchema.safeParse(value)
-  return result.success ? result.data : null
+  if (value === null || value === undefined) return null;
+  const result = stringArraySchema.safeParse(value);
+  return result.success ? result.data : null;
 }
 
 /**
@@ -83,25 +83,26 @@ export function parseStringArrayOrNull(value: unknown): string[] | null {
  * const hours = parseBusinessHours(settings.businessHours)
  */
 export function parseBusinessHours(
-  value: Prisma.JsonValue | null | undefined
+  value: Prisma.JsonValue | null | undefined,
 ): BusinessHours | null {
-  const result = businessHoursSchema.safeParse(value)
-  return result.success ? result.data : null
+  const result = businessHoursSchema.safeParse(value);
+  return result.success ? result.data : null;
 }
-
 
 // =============================================================================
 // Business Attributes (MEO)
 // =============================================================================
 
-const businessAttributesSchema = z.record(z.string(), z.boolean())
+const businessAttributesSchema = z.record(z.string(), z.boolean());
 
 /**
  * JSON値をRecord<string, boolean>にパース（施設属性用）
  */
-export function parseBusinessAttributes(value: unknown): Record<string, boolean> | null {
-  if (value === null || value === undefined) return null
-  const result = businessAttributesSchema.safeParse(value)
-  if (!result.success) return null
-  return Object.keys(result.data).length > 0 ? result.data : null
+export function parseBusinessAttributes(
+  value: unknown,
+): Record<string, boolean> | null {
+  if (value === null || value === undefined) return null;
+  const result = businessAttributesSchema.safeParse(value);
+  if (!result.success) return null;
+  return Object.keys(result.data).length > 0 ? result.data : null;
 }

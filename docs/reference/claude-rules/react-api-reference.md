@@ -10,7 +10,7 @@
 ```typescript
 // Step 1: 'use no memo' で問題コンポーネントのみ除外して問題を特定
 function SuspectedComponent() {
-  "use no memo" // 一時的に除外して問題が解消するか確認
+  "use no memo"; // 一時的に除外して問題が解消するか確認
   // ...
 }
 
@@ -97,40 +97,41 @@ Effect 内で最新の props/state にアクセスしつつ、依存配列に含
 Effect Event は「Effect の中で起きたことに反応するが、それ自体は非リアクティブ」。
 
 ```typescript
-import { useEffect, useEffectEvent } from 'react'
+import { useEffect, useEffectEvent } from "react";
 
 // OK: Effect Event で最新値にアクセス（roomId の変化のみでエフェクトを再実行）
 function ChatRoom({ roomId, theme }: { roomId: string; theme: string }) {
   const onConnected = useEffectEvent(() => {
-    showNotification('Connected!', theme)  // theme は常に最新値
-  })
+    showNotification("Connected!", theme); // theme は常に最新値
+  });
 
   useEffect(() => {
-    const connection = createConnection(serverUrl, roomId)
-    connection.on('connected', () => {
-      onConnected()  // Effect 内でローカルに呼び出す
-    })
-    connection.connect()
-    return () => connection.disconnect()
-  }, [roomId])  // theme を依存配列に含めない（onConnected も含めない）
+    const connection = createConnection(serverUrl, roomId);
+    connection.on("connected", () => {
+      onConnected(); // Effect 内でローカルに呼び出す
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId]); // theme を依存配列に含めない（onConnected も含めない）
 }
 ```
 
 ```typescript
 // NG: 依存配列に Effect Event を含める（不要な再実行）
 useEffect(() => {
-  onConnected()
-}, [onConnected])  // エラー: Effect Event を deps に含めてはいけない
+  onConnected();
+}, [onConnected]); // エラー: Effect Event を deps に含めてはいけない
 
 // NG: Effect Event を別のフックや関数に props として渡す
 function useTimer(callback: () => void, delay: number) {
-  const onTick = useEffectEvent(callback)
+  const onTick = useEffectEvent(callback);
   // ...
 }
-useTimer(onTick, 1000)  // onTick を渡してはいけない
+useTimer(onTick, 1000); // onTick を渡してはいけない
 ```
 
 **ルール:**
+
 - 同じコンポーネント/フック内で宣言し、Effect 内でローカルに呼び出す
 - 依存配列（`[]`）に Effect Event を含めない
 - 他のフックやコンポーネントに props として渡さない
@@ -277,6 +278,7 @@ function TabPanel({ activeTab }: { activeTab: string }) {
 ```
 
 **使い分け**:
+
 - 状態を保持しながら非表示 → `Activity`
 - 状態のリセットが必要 → 条件レンダリング（`&&`）
 - アニメーション付き表示切替 → CSS `visibility` / `opacity` + `Activity`
@@ -368,11 +370,16 @@ function VideoDetail({ video }: { video: Video }) {
 
 ```css
 /* ViewTransition の enter/exit で CSS クラスが付与される */
-::view-transition-old(root) { animation: fade-out 0.3s ease; }
-::view-transition-new(root) { animation: fade-in 0.3s ease; }
+::view-transition-old(root) {
+  animation: fade-out 0.3s ease;
+}
+::view-transition-new(root) {
+  animation: fade-in 0.3s ease;
+}
 ```
 
 **制約:**
+
 - `startTransition` で囲まれた状態更新のみ対象（通常の `setState` は対象外）
 - Chrome 111+ / Safari 18+ 対応（ブラウザサポートを確認する）
 - `prefers-reduced-motion` 対応は CSS で行う（`accessibility.md` §prefers-reduced-motion 参照）
@@ -421,6 +428,7 @@ function AutoCleanup({ onActivate }: { onActivate: () => void }) {
 ```
 
 **ユースケース**:
+
 - 複数要素のグループにイベントリスナーを付与（イベント委譲）
 - `focus()` / `focusLast()` でグループ内の最初・最後の要素にフォーカス
 - 単一の DOM ノードを返せないコンポーネントへの `ref` 付与
@@ -455,12 +463,12 @@ function MyApp() {
 
 **使い分け:**
 
-| API | 動作 | 用途 |
-|-----|------|------|
-| `prefetchDNS` | DNS ルックアップのみ | 後で使うかもしれない外部ドメイン |
-| `preconnect` | DNS + TCP + TLS | ほぼ確実に使う外部オリジン |
-| `preload` | リソースを fetch（ブラウザキャッシュへ） | 重要なフォント・画像・JS |
-| `preinit` | fetch + 即時実行/適用 | 分析スクリプト・クリティカル CSS |
+| API           | 動作                                     | 用途                             |
+| ------------- | ---------------------------------------- | -------------------------------- |
+| `prefetchDNS` | DNS ルックアップのみ                     | 後で使うかもしれない外部ドメイン |
+| `preconnect`  | DNS + TCP + TLS                          | ほぼ確実に使う外部オリジン       |
+| `preload`     | リソースを fetch（ブラウザキャッシュへ） | 重要なフォント・画像・JS         |
+| `preinit`     | fetch + 即時実行/適用                    | 分析スクリプト・クリティカル CSS |
 
 ---
 
@@ -488,21 +496,21 @@ export default async function PostList() {
 詳細は `server-actions.md` を参照。基本構造のみ示す:
 
 ```typescript
-'use server'
+"use server";
 
 // OK: 型安全な Server Action
 export async function createPost(formData: FormData): Promise<ActionResult> {
-  const auth = await checkPermission('post', 'create')
-  if (!auth.success) return auth.error
+  const auth = await checkPermission("post", "create");
+  if (!auth.success) return auth.error;
 
-  const validated = postSchema.safeParse(Object.fromEntries(formData))
+  const validated = postSchema.safeParse(Object.fromEntries(formData));
   if (!validated.success) {
-    return { success: false, error: z.flattenError(validated.error) }
+    return { success: false, error: z.flattenError(validated.error) };
   }
 
-  const post = await prisma.post.create({ data: validated.data })
-  updateTag(CACHE_TAGS.POSTS)
-  return { success: true, data: post }
+  const post = await prisma.post.create({ data: validated.data });
+  updateTag(CACHE_TAGS.POSTS);
+  return { success: true, data: post };
 }
 ```
 

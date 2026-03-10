@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 管理画面用エラーページ
@@ -7,33 +7,33 @@
  * サイドバーレイアウトは維持される。
  */
 
-import { useEffect, startTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/admin/components/ui'
-import { logger } from '@/shared/lib/logger'
+import { useEffect, startTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/admin/components/ui";
+import { logger } from "@/shared/lib/logger";
 
 interface ErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function AdminError({ error, reset }: ErrorProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    logger.error('Admin error boundary triggered', {
+    logger.error("Admin error boundary triggered", {
       error: error.message,
       digest: error.digest,
-    })
-  }, [error])
+    });
+  }, [error]);
 
   const handleReset = () => {
     startTransition(() => {
-      reset()
-      router.refresh()
-    })
-  }
+      reset();
+      router.refresh();
+    });
+  };
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
@@ -70,7 +70,7 @@ export default function AdminError({ error, reset }: ErrorProps) {
           </p>
         )}
 
-        {process.env["NODE_ENV"] === 'development' && (
+        {process.env["NODE_ENV"] === "development" && (
           <details className="mb-6 text-left">
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               エラー詳細（開発環境のみ）
@@ -83,16 +83,12 @@ export default function AdminError({ error, reset }: ErrorProps) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button onClick={handleReset}>
-            再試行
-          </Button>
+          <Button onClick={handleReset}>再試行</Button>
           <Button variant="outline" asChild>
-            <Link href="/admin">
-              ダッシュボードへ
-            </Link>
+            <Link href="/admin">ダッシュボードへ</Link>
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

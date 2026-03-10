@@ -151,23 +151,33 @@ import { createSuccess, createFailure } from "@/shared/types/server-actions";
 
 **例外**: `src/app/(admin)/admin/(dashboard)/_shared/types/server-actions.ts` バレルファイル自体（このファイルのみ `@/shared` から import する）。
 
-## ActionResult での withPermission パターン
+## Server Actions の認証パターン
 
-管理画面の書き込み系 Server Actions は必ず `withPermission` HOF を使用:
+管理画面の書き込み系 Server Actions は `executeAdminMutation` を使用（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:
 
 ```typescript
-// OK
-export const createItem = withPermission<[ItemInput], { id: string }>(
-  "item",
-  "create",
-)(async (_user, input) => {
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createSuccess } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+
+// OK: executeAdminMutation パターン
+export const createItem = async (input: ItemInput) => {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return createValidationError(parsed.error);
-  // ...
-  return createSuccess("作成しました", { id: item.id });
-});
 
-// NG: 直接 checkPermission を使う（withPermission が使える場面では禁止）
+  return executeAdminMutation({
+    resource: "item",
+    action: "create",
+    execute: async () => createItemCommand(parsed.data),
+    success: (result) => createSuccess("作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ITEMS);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+};
+
+// NG: 直接 checkPermission（executeAdminMutation を使う）
 export async function createItem(input: ItemInput): Promise<ActionResult> {
   const auth = await checkPermission("item", "create");
   if (!auth.success) return auth.error;
@@ -175,31 +185,7 @@ export async function createItem(input: ItemInput): Promise<ActionResult> {
 }
 ```
 
-## 読み取り系 Actions の権限チェック
-
-- 認証のみ必要（権限ログ不要）: `checkReadPermissionFor()` または `verifyAdminSession()` + プレーン return
-- 読み取り + 監査不要: `withPermission(..., { audit: false })`
-
-```typescript
-// 単純な読み取り（plain return型）
-const checkReadPermission = checkReadPermissionFor("media");
-
-export async function getMediaList(): Promise<MediaData[]> {
-  const permError = await checkReadPermission();
-  if (permError) return [];
-  // ...
-}
-
-// ActionResult を返す読み取り（audit: false）
-export const getCommentThreads = withPermission<[Query], Thread[]>(
-  "post",
-  "read",
-  { audit: false },
-)(async (_user, query) => {
-  // ...
-  return createSuccess("取得しました", threads);
-});
-```
+詳細は `auth-patterns.md` を参照。
 
 ## テーブルレスポンシブ対応パターン
 

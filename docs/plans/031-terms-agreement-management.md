@@ -44,6 +44,7 @@ Terms (規約マスター)
 ### 4. Server Actions
 
 **管理用 (`src/actions/admin/terms.ts`)**:
+
 - `getTermsList` - 規約一覧取得
 - `getActiveTermsForSelect` - ドロップダウン用
 - `getTermsById` - 規約詳細
@@ -59,12 +60,14 @@ Terms (規約マスター)
 - `deleteTermsVersion` - バージョン削除
 
 **公開用 (`src/actions/public/terms.ts`)**:
+
 - `getTermsForReservation` - 予約時の規約取得
 - `recordTermsAgreement` - 同意記録
 
 ### 5. 権限設定（RBAC）
 
 `src/lib/permissions.ts` に `terms` リソースを追加:
+
 - SUPER_ADMIN: 全権限
 - ADMIN: 全権限
 - VIEWER: 閲覧のみ

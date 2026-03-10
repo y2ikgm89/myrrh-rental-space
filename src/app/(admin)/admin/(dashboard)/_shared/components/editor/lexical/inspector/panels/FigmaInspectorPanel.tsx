@@ -4,56 +4,63 @@
  * @description FigmaNode のプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isFigmaNode, figmaEmbedUrlState, figmaLabelState } from '../../nodes/FigmaNode'
-import type { FigmaNode } from '../../nodes/FigmaNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorFields } from '../InspectorFields'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+import { useEffect, useState } from "react";
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $isFigmaNode,
+  figmaEmbedUrlState,
+  figmaLabelState,
+} from "../../nodes/FigmaNode";
+import type { FigmaNode } from "../../nodes/FigmaNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorFields } from "../InspectorFields";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type FigmaInspectorPanelProps = {
-  nodeKey: string
-  node: FigmaNode
-}
+  nodeKey: string;
+  node: FigmaNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function FigmaInspectorPanel({ nodeKey, node }: FigmaInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isFigmaNode)
+export function FigmaInspectorPanel({
+  nodeKey,
+  node,
+}: FigmaInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isFigmaNode);
 
   const [embedUrl, setEmbedUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, figmaEmbedUrlState))
-  )
+    editor.getEditorState().read(() => $getState(node, figmaEmbedUrlState)),
+  );
   const [label, setLabel] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, figmaLabelState))
-  )
+    editor.getEditorState().read(() => $getState(node, figmaLabelState)),
+  );
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        setEmbedUrl($getState(node, figmaEmbedUrlState))
-        setLabel($getState(node, figmaLabelState))
-      })
-    })
-  }, [editor, node])
+        setEmbedUrl($getState(node, figmaEmbedUrlState));
+        setLabel($getState(node, figmaLabelState));
+      });
+    });
+  }, [editor, node]);
 
   const handleLabelChange = (value: string) => {
     updateNode((n) => {
-      $setState(n, figmaLabelState, value)
-    })
-  }
+      $setState(n, figmaLabelState, value);
+    });
+  };
 
   return (
     <div>
@@ -79,5 +86,5 @@ export function FigmaInspectorPanel({ nodeKey, node }: FigmaInspectorPanelProps)
         </div>
       </InspectorFields>
     </div>
-  )
+  );
 }

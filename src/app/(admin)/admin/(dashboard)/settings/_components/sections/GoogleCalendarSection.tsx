@@ -29,6 +29,7 @@ import {
 import { useRefreshOnSuccess } from "../hooks";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -53,6 +54,7 @@ export function GoogleCalendarSection({
     success: boolean;
     message: string;
     calendarName?: string;
+    accountEmail?: string;
   } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -74,19 +76,14 @@ export function GoogleCalendarSection({
         icalAttachmentEnabled: formData.icalAttachmentEnabled,
         addToCalendarLinksEnabled: formData.addToCalendarLinksEnabled,
       });
-      if (result.success) {
+      if (!isMutationError(result)) {
         setFormData((prev) => ({
           ...prev,
           serviceAccountJson: "",
         }));
         setShowServiceAccountInput(false);
       }
-      handleResult({
-        ...result,
-        message: result.success
-          ? "Google Calendar設定を更新しました"
-          : undefined,
-      });
+      handleResult(result, "Google Calendar設定を更新しました");
     });
   };
 
@@ -107,17 +104,18 @@ export function GoogleCalendarSection({
         serviceAccountJson: formData.serviceAccountJson,
         calendarId: formData.googleCalendarId,
       });
-      if (result.success) {
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
           message: "接続成功",
-          calendarName: result.data.calendarName,
+          calendarName: result.calendarName,
+          accountEmail: result.accountEmail,
         });
         refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || "接続に失敗しました",
+          message: result.error,
         });
       }
     } catch {
@@ -141,17 +139,14 @@ export function GoogleCalendarSection({
 
     startTransition(async () => {
       const result = await clearGoogleCalendarServiceAccount();
-      if (result.success) {
+      if (!isMutationError(result)) {
         setFormData((prev) => ({
           ...prev,
           serviceAccountJson: "",
         }));
         setTestResult(null);
       }
-      handleResult({
-        ...result,
-        message: result.success ? "認証情報をクリアしました" : undefined,
-      });
+      handleResult(result, "認証情報をクリアしました");
     });
   };
 
@@ -310,6 +305,11 @@ export function GoogleCalendarSection({
               {testResult.calendarName && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   カレンダー名: {testResult.calendarName}
+                </p>
+              )}
+              {testResult.accountEmail && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  サービスアカウント: {testResult.accountEmail}
                 </p>
               )}
             </StatusBanner>

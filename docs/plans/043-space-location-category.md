@@ -5,6 +5,7 @@
 スペース管理に「場所（Location）」と「用途カテゴリー（SpaceCategory）」の2つの分類軸を追加する。
 
 **目的**:
+
 - 複数の建物・店舗を持つ事業者に対応
 - 用途（会議室、スタジオ、セミナー室など）での分類
 - 公開サイトでの絞り込み・グループ表示
@@ -84,17 +85,20 @@ model Space {
 ### 管理画面
 
 #### スペース管理
+
 - スペースフォームに「場所」「用途」の選択フィールド追加
 - スペース一覧に場所・用途でのフィルター追加
 - 場所・用途列を一覧テーブルに追加
 
 #### 場所管理（新規ページ）
+
 - `/admin/locations` - 場所一覧・CRUD
 - 場所ごとのスペース数表示
 - 並び替え（D&D）
 - 公開/非公開切り替え
 
 #### 用途カテゴリー管理（新規ページ）
+
 - `/admin/space-categories` - カテゴリー一覧・CRUD
 - アイコン・色選択UI
 - 並び替え（D&D）
@@ -102,6 +106,7 @@ model Space {
 ### 公開サイト
 
 #### スペース一覧ページ
+
 - 場所でグループ表示（オプション）
 - 用途でフィルター
 - 場所でフィルター
@@ -117,6 +122,7 @@ model Space {
 ```
 
 #### 場所詳細ページ（オプション）
+
 - `/locations/[id]` - 場所の詳細 + 所属スペース一覧
 - 地図表示（Google Maps連携）
 
@@ -186,6 +192,7 @@ model Space {
 ## 影響範囲
 
 ### 新規ファイル
+
 - `src/admin/lib/validations/location.ts`
 - `src/admin/lib/validations/space-category.ts`
 - `src/admin/actions/location.ts`
@@ -195,6 +202,7 @@ model Space {
 - `src/app/(public)/locations/[id]/page.tsx`（オプション）
 
 ### 変更ファイル
+
 - `prisma/schema.prisma`
 - `src/admin/lib/permissions.ts`
 - `src/admin/lib/validations/space.ts`

@@ -2,24 +2,24 @@
  * 共有エディター型定義
  */
 
-import type { UseFormReturn, FieldValues } from 'react-hook-form'
-import type { AddCommentPayload } from '../../../lexical/types'
+import type { UseFormReturn, FieldValues } from "react-hook-form";
+import type { AddCommentPayload } from "../../../lexical/types";
 
 // =============================================================================
 // カテゴリ/タグオプション
 // =============================================================================
 
 export type CategoryOption = {
-  id: string
-  name: string
-  slug?: string
-}
+  id: string;
+  name: string;
+  slug?: string;
+};
 
 export type TagOption = {
-  id: string
-  name: string
-  slug?: string
-}
+  id: string;
+  name: string;
+  slug?: string;
+};
 
 // =============================================================================
 // エディターコア設定
@@ -27,10 +27,10 @@ export type TagOption = {
 
 export type EditorCoreConfig<TFormData extends FieldValues> = {
   /** react-hook-form インスタンス */
-  form: UseFormReturn<TFormData>
+  form: UseFormReturn<TFormData>;
   /** リスト画面のパス（例: '/admin/posts'） */
-  listPath: string
-}
+  listPath: string;
+};
 
 // =============================================================================
 // エディターコア戻り値
@@ -38,39 +38,39 @@ export type EditorCoreConfig<TFormData extends FieldValues> = {
 
 export type EditorCoreReturn = {
   /** 非同期処理中フラグ */
-  isPending: boolean
+  isPending: boolean;
   /** 非同期処理を開始するtransition */
-  startTransition: (callback: () => void | Promise<void>) => void
+  startTransition: (callback: () => void | Promise<void>) => void;
   /** エディター変更フラグ */
-  hasEditorChanges: boolean
+  hasEditorChanges: boolean;
   /** エディター変更フラグのセッター */
-  setHasEditorChanges: (value: boolean) => void
+  setHasEditorChanges: (value: boolean) => void;
   /** 削除ダイアログ表示フラグ */
-  isDeleteDialogOpen: boolean
+  isDeleteDialogOpen: boolean;
   /** 削除ダイアログ表示フラグのセッター */
-  setIsDeleteDialogOpen: (value: boolean) => void
+  setIsDeleteDialogOpen: (value: boolean) => void;
   /** パネル管理 */
-  panels: EditorPanelsReturn
+  panels: EditorPanelsReturn;
   /** 戻るボタンハンドラー */
-  handleBack: () => void
-}
+  handleBack: () => void;
+};
 
 // =============================================================================
 // パネル管理戻り値
 // =============================================================================
 
 export type EditorPanelsReturn = {
-  activePanel: 'settings' | 'comments' | null
-  isSettingsPanelOpen: boolean
-  isCommentsPanelOpen: boolean
-  openSettings: () => void
-  toggleSettings: () => void
-  openComments: () => void
-  toggleComments: () => void
-  closePanel: () => void
-  activeMarkId: string | null
-  selectMark: (markId: string | null) => void
-  pendingComment: AddCommentPayload | null
-  handleAddComment: (payload: AddCommentPayload) => void
-  clearPendingComment: () => void
-}
+  activePanel: "settings" | "comments" | null;
+  isSettingsPanelOpen: boolean;
+  isCommentsPanelOpen: boolean;
+  openSettings: () => void;
+  toggleSettings: () => void;
+  openComments: () => void;
+  toggleComments: () => void;
+  closePanel: () => void;
+  activeMarkId: string | null;
+  selectMark: (markId: string | null) => void;
+  pendingComment: AddCommentPayload | null;
+  handleAddComment: (payload: AddCommentPayload) => void;
+  clearPendingComment: () => void;
+};

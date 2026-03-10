@@ -56,6 +56,7 @@ import {
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { TERMS_TYPES, parseTermsType } from "@/shared/lib/validations/terms";
 import {
   getTemplatesForType,
@@ -324,21 +325,22 @@ export function TermsInlineEditor({
           termsId: terms.id,
           contentJson: contentJson || "",
         });
-        if (!result.success) {
-          toast.error(result.error ?? "バージョンの作成に失敗しました");
-        } else {
-          const newVersionSummary: TermsVersionSummary = {
-            id: result.data.id,
-            version: result.data.version,
-            status: TermsStatus.DRAFT,
-            isCurrentVersion: false,
-            publishedAt: null,
-            createdAt: new Date(),
-          };
-          setLocalVersions((prev) => [newVersionSummary, ...prev]);
-          await handleVersionSwitch(result.data.id);
-          toast.success(`v${result.data.version} を作成しました`);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        const newVersionSummary: TermsVersionSummary = {
+          id: result.id,
+          version: result.version,
+          status: TermsStatus.DRAFT,
+          isCurrentVersion: false,
+          publishedAt: null,
+          createdAt: new Date(),
+        };
+        setLocalVersions((prev) => [newVersionSummary, ...prev]);
+        await handleVersionSwitch(result.id);
+        toast.success(`v${result.version} を作成しました`);
       } catch (error) {
         logger.error("バージョン作成に失敗しました", {
           error: getErrorMessage(error),
@@ -360,29 +362,30 @@ export function TermsInlineEditor({
 
       try {
         const result = await publishTermsVersion(selectedVersionId);
-        if (result.success) {
-          setLocalVersions((prev) =>
-            prev.map((v) => ({
-              ...v,
-              status:
-                v.id === selectedVersionId ? TermsStatus.PUBLISHED : v.status,
-              isCurrentVersion: v.id === selectedVersionId,
-            })),
-          );
-          setSelectedVersionContent((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  status: TermsStatus.PUBLISHED,
-                  isCurrentVersion: true,
-                }
-              : null,
-          );
-          toast.success("バージョンを公開しました");
-          router.refresh();
-        } else {
-          toast.error(result.error ?? "公開に失敗しました");
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        setLocalVersions((prev) =>
+          prev.map((v) => ({
+            ...v,
+            status:
+              v.id === selectedVersionId ? TermsStatus.PUBLISHED : v.status,
+            isCurrentVersion: v.id === selectedVersionId,
+          })),
+        );
+        setSelectedVersionContent((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: TermsStatus.PUBLISHED,
+                isCurrentVersion: true,
+              }
+            : null,
+        );
+        toast.success("バージョンを公開しました");
+        router.refresh();
       } catch (error) {
         logger.error("公開に失敗しました", { error: getErrorMessage(error) });
         toast.error("公開に失敗しました");
@@ -404,31 +407,32 @@ export function TermsInlineEditor({
 
       try {
         const result = await archiveTermsVersion(selectedVersionId);
-        if (result.success) {
-          setLocalVersions((prev) =>
-            prev.map((v) =>
-              v.id === selectedVersionId
-                ? {
-                    ...v,
-                    status: TermsStatus.ARCHIVED,
-                    isCurrentVersion: false,
-                  }
-                : v,
-            ),
-          );
-          setSelectedVersionContent((prev) =>
-            prev
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        setLocalVersions((prev) =>
+          prev.map((v) =>
+            v.id === selectedVersionId
               ? {
-                  ...prev,
+                  ...v,
                   status: TermsStatus.ARCHIVED,
                   isCurrentVersion: false,
                 }
-              : null,
-          );
-          toast.success("バージョンをアーカイブしました");
-        } else {
-          toast.error(result.error ?? "アーカイブに失敗しました");
-        }
+              : v,
+          ),
+        );
+        setSelectedVersionContent((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: TermsStatus.ARCHIVED,
+                isCurrentVersion: false,
+              }
+            : null,
+        );
+        toast.success("バージョンをアーカイブしました");
       } catch (error) {
         logger.error("アーカイブに失敗しました", {
           error: getErrorMessage(error),
@@ -451,23 +455,24 @@ export function TermsInlineEditor({
 
       try {
         const result = await deleteTermsVersion(selectedVersionId);
-        if (result.success) {
-          const newVersions = localVersions.filter(
-            (v) => v.id !== selectedVersionId,
-          );
-          setLocalVersions(newVersions);
-          const firstVersion = newVersions[0];
-          if (firstVersion) {
-            await handleVersionSwitch(firstVersion.id);
-          } else {
-            setSelectedVersionId("");
-            setSelectedVersionContent(null);
-            setEditorKey((k) => k + 1);
-          }
-          toast.success("バージョンを削除しました");
-        } else {
-          toast.error(result.error ?? "削除に失敗しました");
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        const newVersions = localVersions.filter(
+          (v) => v.id !== selectedVersionId,
+        );
+        setLocalVersions(newVersions);
+        const firstVersion = newVersions[0];
+        if (firstVersion) {
+          await handleVersionSwitch(firstVersion.id);
+        } else {
+          setSelectedVersionId("");
+          setSelectedVersionContent(null);
+          setEditorKey((k) => k + 1);
+        }
+        toast.success("バージョンを削除しました");
       } catch (error) {
         logger.error("バージョン削除に失敗しました", {
           error: getErrorMessage(error),
@@ -503,12 +508,13 @@ export function TermsInlineEditor({
             isActive: true,
             contentJson: data.contentJson,
           });
-          if (result.success) {
-            toast.success("規約を作成しました");
-            router.push(`/admin/terms/${result.data.id}/edit`);
-          } else {
+          if (isMutationError(result)) {
             toast.error(result.error);
+            return;
           }
+
+          toast.success("規約を作成しました");
+          router.push(`/admin/terms/${result.id}/edit`);
           return;
         }
 
@@ -520,7 +526,7 @@ export function TermsInlineEditor({
             title: data.title,
             slug: data.slug,
           });
-          if (!updateResult.success) {
+          if (isMutationError(updateResult)) {
             toast.error(updateResult.error);
             return;
           }
@@ -534,7 +540,7 @@ export function TermsInlineEditor({
           const versionResult = await updateTermsVersion(selectedVersionId, {
             contentJson: data.contentJson,
           });
-          if (!versionResult.success) {
+          if (isMutationError(versionResult)) {
             toast.error(versionResult.error);
             return;
           }
@@ -558,24 +564,22 @@ export function TermsInlineEditor({
             termsId: terms.id,
             contentJson: data.contentJson,
           });
-          if (!versionResult.success) {
-            toast.error(
-              versionResult.error ?? "バージョンの作成に失敗しました",
-            );
+          if (isMutationError(versionResult)) {
+            toast.error(versionResult.error);
             return;
           }
 
           const newVersionSummary: TermsVersionSummary = {
-            id: versionResult.data.id,
-            version: versionResult.data.version,
+            id: versionResult.id,
+            version: versionResult.version,
             status: TermsStatus.DRAFT,
             isCurrentVersion: false,
             publishedAt: null,
             createdAt: new Date(),
           };
           setLocalVersions((prev) => [newVersionSummary, ...prev]);
-          await handleVersionSwitch(versionResult.data.id);
-          toast.success(`v${versionResult.data.version} として保存しました`);
+          await handleVersionSwitch(versionResult.id);
+          toast.success(`v${versionResult.version} として保存しました`);
           return;
         }
 
@@ -629,12 +633,13 @@ export function TermsInlineEditor({
     startTransition(async () => {
       try {
         const result = await deleteTerms(terms.id);
-        if (result.success) {
-          toast.success("規約を削除しました");
-          router.push("/admin/terms");
-        } else {
+        if (isMutationError(result)) {
           toast.error(result.error);
+          return;
         }
+
+        toast.success("規約を削除しました");
+        router.push("/admin/terms");
       } catch (error) {
         logger.error("削除中にエラーが発生しました", {
           error: getErrorMessage(error),

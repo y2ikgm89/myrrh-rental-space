@@ -21,21 +21,30 @@
 ### Myrrh パターン（推奨）
 
 **ConceptSection 型（非対称 2 カラム）:**
+
 ```tsx
 <section className="py-24 md:py-32 lg:py-40">
   <div className="mx-auto max-w-6xl px-5 md:px-8">
     <div className="grid items-center gap-12 md:grid-cols-2 md:gap-16 lg:gap-20">
       <div>
-        <ScrollReveal><SectionLabel>Our Philosophy</SectionLabel></ScrollReveal>
+        <ScrollReveal>
+          <SectionLabel>Our Philosophy</SectionLabel>
+        </ScrollReveal>
         <h2 className="mt-6 font-heading text-2xl font-bold leading-[1.2] tracking-tight md:text-3xl lg:text-4xl">
           <SplitText variant="lines">{heading}</SplitText>
         </h2>
         <ScrollReveal delay={0.2}>
-          <p className="mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base">{body}</p>
+          <p className="mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base">
+            {body}
+          </p>
         </ScrollReveal>
       </div>
       <ScrollReveal delay={0.1}>
-        <ParallaxImage src={url} alt={alt} className="relative aspect-[4/5] rounded-lg" />
+        <ParallaxImage
+          src={url}
+          alt={alt}
+          className="relative aspect-[4/5] rounded-lg"
+        />
       </ScrollReveal>
     </div>
   </div>
@@ -43,6 +52,7 @@
 ```
 
 特徴:
+
 - テキスト列 vs 画像列の非対称（視覚的重さのバランス）
 - gap が `12 → 16 → 20` とレスポンシブで拡大
 - 画像 `aspect-[4/5]`（縦長）でカード `aspect-[4/3]`（横長）と差別化
@@ -60,13 +70,14 @@
 
 **3 層ヒエラルキー:**
 
-| 層 | フォント | サイズ | tracking |
-|----|---------|--------|----------|
-| Label | Noto Sans JP | 11px uppercase | `tracking-[0.25em]` |
-| Heading | Noto Serif JP (`font-heading`) | `text-2xl md:text-3xl lg:text-4xl` | `tracking-tight` |
-| Body | Noto Sans JP | `text-sm md:text-base` | normal |
+| 層      | フォント                       | サイズ                             | tracking            |
+| ------- | ------------------------------ | ---------------------------------- | ------------------- |
+| Label   | Noto Sans JP                   | 11px uppercase                     | `tracking-[0.25em]` |
+| Heading | Noto Serif JP (`font-heading`) | `text-2xl md:text-3xl lg:text-4xl` | `tracking-tight`    |
+| Body    | Noto Sans JP                   | `text-sm md:text-base`             | normal              |
 
 **Hero スケール差（4x+）:**
+
 ```tsx
 <p className="text-[11px] uppercase tracking-[0.3em] text-primary-dark">Luxury Rental Space</p>
 <h1 className="font-heading text-3xl font-bold leading-[1.15] tracking-tight
@@ -93,11 +104,11 @@ body 16px → h1 72px = **4.5x スケール差**
 
 **60-30-10 実装:**
 
-| 配分 | 色 | 用途 |
-|------|----|------|
-| 70% | `bg-background` (white) | セクション背景 |
-| 20% | `bg-surface` / `text-muted-foreground` | 交互セクション背景、補助テキスト |
-| 10% | `text-primary-dark` / `gold-line` | SectionLabel、CTA、価格 |
+| 配分 | 色                                     | 用途                             |
+| ---- | -------------------------------------- | -------------------------------- |
+| 70%  | `bg-background` (white)                | セクション背景                   |
+| 20%  | `bg-surface` / `text-muted-foreground` | 交互セクション背景、補助テキスト |
+| 10%  | `text-primary-dark` / `gold-line`      | SectionLabel、CTA、価格          |
 
 ```tsx
 // Gold アクセントの限定使用
@@ -116,13 +127,15 @@ body 16px → h1 72px = **4.5x スケール差**
 
 ```tsx
 // NG: 全要素が同じ fade-in-up
-{items.map((item, i) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: i * 0.1 }}
-  />
-))}
+{
+  items.map((item, i) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: i * 0.1 }}
+    />
+  ));
+}
 ```
 
 ### Myrrh パターン（推奨）
@@ -143,18 +156,24 @@ Time →
 - **静止 or スクロール連動**: `ParallaxImage` — `PARALLAX.subtle` (0.3)
 
 **SpaceShowcase カード stagger:**
+
 ```typescript
 gsap.fromTo(
   cards,
   { y: 50, opacity: 0 },
   {
-    y: 0, opacity: 1,
-    duration: DURATION.slow,      // 0.8s
-    ease: EASE.outQuart,          // power4.out
-    stagger: STAGGER.card,        // 0.12s
-    scrollTrigger: { trigger: grid, start: 'top 80%', toggleActions: 'play none none none' },
+    y: 0,
+    opacity: 1,
+    duration: DURATION.slow, // 0.8s
+    ease: EASE.outQuart, // power4.out
+    stagger: STAGGER.card, // 0.12s
+    scrollTrigger: {
+      trigger: grid,
+      start: "top 80%",
+      toggleActions: "play none none none",
+    },
   },
-)
+);
 ```
 
 ---
@@ -167,13 +186,13 @@ gsap.fromTo(
 
 ### Myrrh パターン（推奨）
 
-| 要素 | radius | 理由 |
-|------|--------|------|
-| カード container | `rounded-lg` | コンテンツを包むコンテナ |
-| 画像（standalone） | `rounded-lg` | ConceptSection ParallaxImage |
-| ボタン（CTA） | `rounded-full` | MagneticButton は pill shape |
-| フォーム input | `rounded-lg` | 一貫性 |
-| セクション | なし (sharp) | セクション区切りは背景色切替 |
+| 要素               | radius         | 理由                         |
+| ------------------ | -------------- | ---------------------------- |
+| カード container   | `rounded-lg`   | コンテンツを包むコンテナ     |
+| 画像（standalone） | `rounded-lg`   | ConceptSection ParallaxImage |
+| ボタン（CTA）      | `rounded-full` | MagneticButton は pill shape |
+| フォーム input     | `rounded-lg`   | 一貫性                       |
+| セクション         | なし (sharp)   | セクション区切りは背景色切替 |
 
 **混合のルール**: コンテナ/画像 = `rounded-lg`、CTA = `rounded-full`、セクション境界 = sharp
 
@@ -235,13 +254,17 @@ gsap.fromTo(
 
   {/* 情報 */}
   <div className="p-5 md:p-6">
-    <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">{englishName}</p>
+    <p className="text-[11px] uppercase tracking-[0.15em] text-primary-dark">
+      {englishName}
+    </p>
     <h3 className="mt-1 font-heading text-lg tracking-tight">{japaneseName}</h3>
     <p className="mt-2 text-sm text-muted-foreground">{tagline}</p>
 
     {/* メタデータ区切り線 */}
     <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-      <span className="text-xs text-muted-foreground">{capacity}名 / {area}m²</span>
+      <span className="text-xs text-muted-foreground">
+        {capacity}名 / {area}m²
+      </span>
       <span className="text-sm font-medium text-primary-dark">¥{price}/h</span>
     </div>
   </div>
@@ -249,6 +272,7 @@ gsap.fromTo(
 ```
 
 特徴:
+
 - `border border-border`（常時）+ `hover:shadow-lg`（hover のみ）
 - 英語名 Label → 日本語名 Heading → tagline Body の 3 層
 - 画像 `duration-500`、container `duration-300` で速度差
@@ -292,6 +316,7 @@ gsap.fromTo(
 - SplitText `trigger={false}` でページロード時に即時 reveal
 
 **Mini Hero 型（Contact / Reservation）:**
+
 - `min-h-[40vh]`
 - gradient 背景（画像なし）
 - SplitText `variant="chars"` + `trigger={false}`
@@ -306,13 +331,13 @@ gsap.fromTo(
 
 ### Myrrh パターン（推奨）
 
-| セクション | padding | 背景 |
-|-----------|---------|------|
-| Hero | `h-screen` | 画像 + gradient overlay |
-| Concept | `py-24 md:py-32 lg:py-40` | `bg-background` (white) |
+| セクション    | padding                   | 背景                      |
+| ------------- | ------------------------- | ------------------------- |
+| Hero          | `h-screen`                | 画像 + gradient overlay   |
+| Concept       | `py-24 md:py-32 lg:py-40` | `bg-background` (white)   |
 | SpaceShowcase | `py-24 md:py-32 lg:py-40` | `bg-surface` (light gray) |
-| Features | `py-24 md:py-32 lg:py-40` | `bg-background` (white) |
-| CTA | `py-16 md:py-20` | `bg-accent` (gold tint) |
+| Features      | `py-24 md:py-32 lg:py-40` | `bg-background` (white)   |
+| CTA           | `py-16 md:py-20`          | `bg-accent` (gold tint)   |
 
 - 区切り線なし — **背景色の交互切替** で視覚的に分離
 - CTA セクションのみ padding を小さく + accent 背景で差別化
@@ -321,13 +346,13 @@ gsap.fromTo(
 
 ## セルフチェック早見表
 
-| # | 質問 | yes / no |
-|---|------|----------|
-| 1 | Serif/Sans の対比があるか？ | |
-| 2 | Gold アクセントが控えめ（15% 以下）か？ | |
-| 3 | セクション間で padding/背景に変化があるか？ | |
-| 4 | アニメーションに主役/脇役の差があるか？ | |
-| 5 | カードに hover インタラクションがあるか？ | |
-| 6 | SectionLabel コンポーネントを使っているか？ | |
+| #   | 質問                                        | yes / no |
+| --- | ------------------------------------------- | -------- |
+| 1   | Serif/Sans の対比があるか？                 |          |
+| 2   | Gold アクセントが控えめ（15% 以下）か？     |          |
+| 3   | セクション間で padding/背景に変化があるか？ |          |
+| 4   | アニメーションに主役/脇役の差があるか？     |          |
+| 5   | カードに hover インタラクションがあるか？   |          |
+| 6   | SectionLabel コンポーネントを使っているか？ |          |
 
 **3/6 以上 yes → PASS**

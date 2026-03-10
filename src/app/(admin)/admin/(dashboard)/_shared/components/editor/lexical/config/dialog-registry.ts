@@ -12,7 +12,7 @@
  * このレジストリには含まない。LexicalEditor.tsx で直接管理。
  */
 
-import type { ComponentType } from 'react'
+import type { ComponentType } from "react";
 import {
   ImagePlugin,
   YouTubePlugin,
@@ -42,16 +42,16 @@ import {
   TestimonialPlugin,
   FeatureIconListPlugin,
   CoverPlugin,
-} from '../plugins'
+} from "../plugins";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type DialogPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 /**
  * レジストリのダイアログIDリテラルタプル（型安全性の源泉）
@@ -59,74 +59,74 @@ export type DialogPluginProps = {
  * DialogId 型はここから導出されるため、ID追加時はここに記載必須。
  */
 export const REGISTRY_DIALOG_IDS = [
-  'image',
-  'youtube',
-  'vimeo',
-  'x',
-  'instagram',
-  'link',
-  'table',
-  'layout',
-  'callout',
-  'button',
-  'pullQuote',
-  'bookmark',
-  'steps',
-  'tabs',
-  'mapEmbed',
-  'ruby',
-  'tooltip',
-  'audio',
-  'file',
-  'figma',
-  'spotify',
-  'gallery',
-  'timeline',
-  'pricingTable',
-  'inlineImage',
-  'testimonial',
-  'feature-icon-list',
-  'cover',
-] as const
+  "image",
+  "youtube",
+  "vimeo",
+  "x",
+  "instagram",
+  "link",
+  "table",
+  "layout",
+  "callout",
+  "button",
+  "pullQuote",
+  "bookmark",
+  "steps",
+  "tabs",
+  "mapEmbed",
+  "ruby",
+  "tooltip",
+  "audio",
+  "file",
+  "figma",
+  "spotify",
+  "gallery",
+  "timeline",
+  "pricingTable",
+  "inlineImage",
+  "testimonial",
+  "feature-icon-list",
+  "cover",
+] as const;
 
-export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number]
+export type RegistryDialogId = (typeof REGISTRY_DIALOG_IDS)[number];
 
 type DialogRegistryEntry = {
-  dialogId: RegistryDialogId
-  component: ComponentType<DialogPluginProps>
-}
+  dialogId: RegistryDialogId;
+  component: ComponentType<DialogPluginProps>;
+};
 
 // =============================================================================
 // Registry
 // =============================================================================
 
 export const DIALOG_REGISTRY: readonly DialogRegistryEntry[] = [
-  { dialogId: 'image', component: ImagePlugin },
-  { dialogId: 'youtube', component: YouTubePlugin },
-  { dialogId: 'vimeo', component: VimeoPlugin },
-  { dialogId: 'x', component: XPlugin },
-  { dialogId: 'instagram', component: InstagramPlugin },
-  { dialogId: 'link', component: LinkDialogPlugin },
-  { dialogId: 'table', component: TableInsertPlugin },
-  { dialogId: 'layout', component: LayoutPlugin },
-  { dialogId: 'callout', component: CalloutPlugin },
-  { dialogId: 'button', component: ButtonPlugin },
-  { dialogId: 'pullQuote', component: PullQuotePlugin },
-  { dialogId: 'bookmark', component: BookmarkPlugin },
-  { dialogId: 'steps', component: StepsPlugin },
-  { dialogId: 'tabs', component: TabsPlugin },
-  { dialogId: 'mapEmbed', component: MapEmbedPlugin },
-  { dialogId: 'ruby', component: RubyPlugin },
-  { dialogId: 'tooltip', component: TooltipPlugin },
-  { dialogId: 'audio', component: AudioPlugin },
-  { dialogId: 'file', component: FilePlugin },
-  { dialogId: 'figma', component: FigmaPlugin },
-  { dialogId: 'spotify', component: SpotifyPlugin },
-  { dialogId: 'gallery', component: GalleryPlugin },
-  { dialogId: 'timeline', component: TimelinePlugin },
-  { dialogId: 'pricingTable', component: PricingTablePlugin },
-  { dialogId: 'inlineImage', component: InlineImagePlugin },
-  { dialogId: 'testimonial', component: TestimonialPlugin },
-  { dialogId: 'feature-icon-list', component: FeatureIconListPlugin },
-  { dialogId: 'cover', component: CoverPlugin },
-]
+  { dialogId: "image", component: ImagePlugin },
+  { dialogId: "youtube", component: YouTubePlugin },
+  { dialogId: "vimeo", component: VimeoPlugin },
+  { dialogId: "x", component: XPlugin },
+  { dialogId: "instagram", component: InstagramPlugin },
+  { dialogId: "link", component: LinkDialogPlugin },
+  { dialogId: "table", component: TableInsertPlugin },
+  { dialogId: "layout", component: LayoutPlugin },
+  { dialogId: "callout", component: CalloutPlugin },
+  { dialogId: "button", component: ButtonPlugin },
+  { dialogId: "pullQuote", component: PullQuotePlugin },
+  { dialogId: "bookmark", component: BookmarkPlugin },
+  { dialogId: "steps", component: StepsPlugin },
+  { dialogId: "tabs", component: TabsPlugin },
+  { dialogId: "mapEmbed", component: MapEmbedPlugin },
+  { dialogId: "ruby", component: RubyPlugin },
+  { dialogId: "tooltip", component: TooltipPlugin },
+  { dialogId: "audio", component: AudioPlugin },
+  { dialogId: "file", component: FilePlugin },
+  { dialogId: "figma", component: FigmaPlugin },
+  { dialogId: "spotify", component: SpotifyPlugin },
+  { dialogId: "gallery", component: GalleryPlugin },
+  { dialogId: "timeline", component: TimelinePlugin },
+  { dialogId: "pricingTable", component: PricingTablePlugin },
+  { dialogId: "inlineImage", component: InlineImagePlugin },
+  { dialogId: "testimonial", component: TestimonialPlugin },
+  { dialogId: "feature-icon-list", component: FeatureIconListPlugin },
+  { dialogId: "cover", component: CoverPlugin },
+];

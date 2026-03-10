@@ -8,16 +8,16 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
+} from "@react-email/components";
 
 type Props = {
-  customerName: string
-  spaceName: string
-  reservationDate: string
-  startTime: string
-  endTime: string
-  reservationId: string
-}
+  customerName: string;
+  spaceName: string;
+  reservationDate: string;
+  startTime: string;
+  endTime: string;
+  reservationId: string;
+};
 
 export function ReservationCancelledEmail({
   customerName,
@@ -35,13 +35,9 @@ export function ReservationCancelledEmail({
         <Container style={container}>
           <Heading style={heading}>予約キャンセルのお知らせ</Heading>
 
-          <Text style={text}>
-            {customerName} 様
-          </Text>
+          <Text style={text}>{customerName} 様</Text>
 
-          <Text style={text}>
-            以下のご予約がキャンセルされました。
-          </Text>
+          <Text style={text}>以下のご予約がキャンセルされました。</Text>
 
           <Section style={detailsSection}>
             <Text style={detailsHeading}>キャンセルされた予約</Text>
@@ -62,74 +58,71 @@ export function ReservationCancelledEmail({
 
           <Hr style={hr} />
 
-          <Text style={text}>
-            またのご利用をお待ちしております。
-          </Text>
+          <Text style={text}>またのご利用をお待ちしております。</Text>
 
-          <Text style={footer}>
-            Myrrh Rental Space
-          </Text>
+          <Text style={footer}>Myrrh Rental Space</Text>
         </Container>
       </Body>
     </Html>
-  )
+  );
 }
 
 const main = {
-  backgroundColor: '#f6f9fc',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-}
+  backgroundColor: "#f6f9fc",
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
+};
 
 const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  padding: '40px 20px',
-  maxWidth: '560px',
-}
+  backgroundColor: "#ffffff",
+  margin: "0 auto",
+  padding: "40px 20px",
+  maxWidth: "560px",
+};
 
 const heading = {
-  fontSize: '24px',
-  fontWeight: '600',
-  color: '#1a1a1a',
-  marginBottom: '24px',
-}
+  fontSize: "24px",
+  fontWeight: "600",
+  color: "#1a1a1a",
+  marginBottom: "24px",
+};
 
 const text = {
-  fontSize: '16px',
-  lineHeight: '26px',
-  color: '#484848',
-}
+  fontSize: "16px",
+  lineHeight: "26px",
+  color: "#484848",
+};
 
 const detailsSection = {
-  backgroundColor: '#fef2f2',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '24px 0',
-}
+  backgroundColor: "#fef2f2",
+  borderRadius: "8px",
+  padding: "20px",
+  margin: "24px 0",
+};
 
 const detailsHeading = {
-  fontSize: '18px',
-  fontWeight: '600',
-  color: '#991b1b',
-  marginBottom: '12px',
-}
+  fontSize: "18px",
+  fontWeight: "600",
+  color: "#991b1b",
+  marginBottom: "12px",
+};
 
 const detailItem = {
-  fontSize: '14px',
-  lineHeight: '24px',
-  color: '#484848',
-  margin: '8px 0',
-}
+  fontSize: "14px",
+  lineHeight: "24px",
+  color: "#484848",
+  margin: "8px 0",
+};
 
 const hr = {
-  borderColor: '#e6e6e6',
-  margin: '16px 0',
-}
+  borderColor: "#e6e6e6",
+  margin: "16px 0",
+};
 
 const footer = {
-  fontSize: '12px',
-  color: '#8898aa',
-  marginTop: '32px',
-}
+  fontSize: "12px",
+  color: "#8898aa",
+  marginTop: "32px",
+};
 
-export default ReservationCancelledEmail
+export default ReservationCancelledEmail;

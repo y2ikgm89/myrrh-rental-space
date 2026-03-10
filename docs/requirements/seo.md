@@ -19,6 +19,7 @@
 #### 基本メタタグ
 
 **すべてのページに必須**:
+
 - `<title>`: ページタイトル（1-60文字推奨、50-60文字が最適）
 - `<meta name="description">`: メタディスクリプション（1-160文字推奨、120-160文字が最適）
 - `<meta name="keywords">`: メタキーワード（カンマ区切り、オプション、主要検索エンジンでは重要度が低い）
@@ -26,18 +27,21 @@
 - `<meta name="viewport">`: レスポンシブデザイン対応（`width=device-width, initial-scale=1`）
 
 **モバイル最適化メタタグ**:
+
 - `<meta name="theme-color">`: モバイルブラウザのテーマカラー（例: `#000000`）
 - `<meta name="apple-mobile-web-app-capable">`: iOS SafariのWeb Appモード（`content="yes"`）
 - `<meta name="apple-mobile-web-app-status-bar-style">`: iOSステータスバーのスタイル（`default`、`black`、`black-translucent`）
 - `<meta name="format-detection">`: 電話番号やメールアドレスの自動リンク（`telephone=no`、`email=no`）
 
 **実装場所**:
+
 - Next.js 16の`Metadata` APIを使用（`generateMetadata`関数）
 - ページ固有のメタデータを優先、設定されていない場合はデフォルト値を使用
 
 #### OGP（Open Graph Protocol）タグ
 
 **すべてのページに推奨**:
+
 - `<meta property="og:title">`: OGPタイトル（1-60文字）
 - `<meta property="og:description">`: OGP説明（1-200文字）
 - `<meta property="og:image">`: OGP画像（推奨サイズ: 1200x630px、最小: 600x315px）
@@ -51,6 +55,7 @@
 - `<meta property="og:locale:alternate">`: 代替ロケール（将来的に多言語対応時）
 
 **実装場所**:
+
 - Next.js 16の`Metadata` APIで`openGraph`プロパティを使用
 - ページ固有のOGP設定を優先、設定されていない場合はデフォルト値を使用
 - 画像は複数指定可能（配列形式）
@@ -58,6 +63,7 @@
 #### Twitter Cardタグ
 
 **すべてのページに推奨**:
+
 - `<meta name="twitter:card">`: カードタイプ（`summary_large_image`推奨、`summary`、`app`、`player`も可）
 - `<meta name="twitter:title">`: Twitterタイトル（70文字以内）
 - `<meta name="twitter:description">`: Twitter説明（200文字以内）
@@ -67,6 +73,7 @@
 - `<meta name="twitter:creator">`: コンテンツ作成者のTwitterアカウント（`@username`形式、オプション）
 
 **実装場所**:
+
 - Next.js 16の`Metadata` APIで`twitter`プロパティを使用
 - OGPタグと併用可能（Twitter Cardが優先される）
 
@@ -77,61 +84,73 @@
 #### 実装するスキーマタイプ
 
 **1. Organization（組織情報）**
+
 - サイト全体の組織情報
 - 実装場所: ルートレイアウト（`src/app/layout.tsx`）
 - 使用フィールド: サイト名、ロゴ、連絡先情報、SNSリンク
 
 **2. WebSite（ウェブサイト情報）**
+
 - サイト全体の基本情報
 - 実装場所: ルートレイアウト（`src/app/layout.tsx`）
 - 使用フィールド: サイト名、URL、検索機能（将来的に）
 
 **3. LocalBusiness（ローカルビジネス情報）**
+
 - レンタルスペースのビジネス情報
 - 実装場所: トップページ（`src/app/(public)/page.tsx`）
 - 使用フィールド: 名前、住所、電話番号、営業時間、価格帯
 
 **4. Article（記事情報）**
+
 - ブログ記事の詳細情報
 - 実装場所: ブログ詳細ページ（`src/app/(public)/posts/[slug]/page.tsx`）
 - 使用フィールド: タイトル、公開日時、更新日時、著者、カテゴリ、画像
 
 **5. BreadcrumbList（パンくずリスト）**
+
 - ページ階層の表示
 - 実装場所: すべてのページ（必須）
 - 使用フィールド: 階層構造、各階層の名前とURL
 
 **6. FAQPage（よくある質問）**
+
 - FAQページの構造化データ
 - 実装場所: FAQページ（`/faq`、将来的に実装）
 - 使用フィールド: 質問と回答のペア
 
 **7. Review/Rating（レビュー・評価）**
+
 - 顧客レビューと評価の構造化データ
 - 実装場所: スペース詳細ページ（将来的に実装）
 - 使用フィールド: 評価値、レビュー数、個別レビュー
 
 **8. Event（イベント情報）**
+
 - イベント情報の構造化データ
 - 実装場所: イベント告知ページ（将来的に実装）
 - 使用フィールド: イベント名、日時、場所、価格
 
 **9. Service（サービス情報）**
+
 - サービス提供情報の構造化データ
 - 実装場所: スペース詳細ページ、サービスページ
 - 使用フィールド: サービス名、説明、価格、提供エリア
 
 **10. ItemList（リストページ）**
+
 - リスト形式のコンテンツの構造化データ
 - 実装場所: スペース一覧ページ、ブログ一覧ページ
 - 使用フィールド: リスト項目、順序、説明
 
 **11. VideoObject（動画コンテンツ）**
+
 - 動画コンテンツの構造化データ
 - 実装場所: 動画を含むページ（将来的に実装）
 - 使用フィールド: 動画URL、サムネイル、再生時間、説明
 
 **実装方法**:
+
 - Next.js 16のServer ComponentsでJSON-LD形式で出力
 - `<script type="application/ld+json">`タグで埋め込み
 - 複数の構造化データを同じページに配置可能
@@ -143,6 +162,7 @@
 #### 要件
 
 **必須ページ**:
+
 - トップページ（`/`）
 - スペース一覧ページ（`/spaces`）
 - 各スペース詳細ページ（`/spaces/[id]`）
@@ -153,6 +173,7 @@
 - 静的ページ（`/privacy`、`/terms`など）
 
 **実装方法**:
+
 - Next.js 16の`app/sitemap.ts`（または`app/sitemap.xml/route.ts`）を使用
 - 動的ルート（スペース、ブログ記事）はデータベースから取得
 - 公開済み（`isPublished = true`）のコンテンツのみ含める
@@ -160,6 +181,7 @@
 - 大量のページがある場合は、サイトマップインデックス（`sitemap-index.xml`）を使用して複数のサイトマップに分割
 
 **サイトマップの分割**:
+
 - 1つのサイトマップに含めるURL数: 最大50,000件（推奨: 10,000件以下）
 - サイトマップファイルサイズ: 最大50MB（圧縮時: 10MB）
 - 分割例:
@@ -169,10 +191,12 @@
   - `sitemap-static.xml`: 静的ページ
 
 **画像サイトマップ**:
+
 - 画像を含むページ（スペース詳細、ブログ記事）には画像情報を含める
 - `images`プロパティで画像URL、タイトル、キャプションを指定
 
 **更新頻度の設定**:
+
 - トップページ: `daily`
 - スペース一覧・詳細: `weekly`
 - ブログ一覧・記事: `daily`
@@ -180,6 +204,7 @@
 - 静的ページ: `monthly`
 
 **優先度の設定**:
+
 - トップページ: `1.0`
 - スペース一覧・詳細: `0.8`
 - ブログ一覧・記事: `0.7`
@@ -193,6 +218,7 @@
 #### 要件
 
 **許可するパス**:
+
 - `/`（トップページ）
 - `/spaces`（スペース一覧）
 - `/spaces/*`（スペース詳細）
@@ -203,12 +229,14 @@
 - `/privacy`、`/terms`（静的ページ）
 
 **禁止するパス**:
+
 - `/admin/*`（管理画面）
 - `/api/*`（APIエンドポイント、認証が必要なもの）
 - `/_next/*`（Next.js内部ファイル）
 - `/favicon.ico`、`/robots.txt`、`/sitemap.xml`（除外不要）
 
 **実装方法**:
+
 - Next.js 16の`app/robots.ts`（または`app/robots.txt/route.ts`）を使用
 - サイトマップのURLを指定（`Sitemap: https://example.com/sitemap.xml`）
 
@@ -219,11 +247,13 @@
 #### 要件
 
 **すべてのページに実装**:
+
 - `<link rel="canonical">`タグを追加
 - 重複コンテンツの防止
 - パラメータ付きURLの正規化（例: `/posts?page=1` → `/posts`）
 
 **実装方法**:
+
 - Next.js 16の`Metadata` APIで`alternates.canonical`プロパティを使用
 - 絶対URLで指定（`https://example.com/path`）
 
@@ -234,16 +264,19 @@
 #### トップページ（`/`）
 
 **メタタグ**:
+
 - タイトル: サイト名 + キャッチコピー（例: `Myrrh Rental Space - 会議室・イベントスペースのレンタル`）
 - 説明: サイトの概要（1-160文字）
 - キーワード: レンタルスペース、会議室、イベントスペースなど
 
 **構造化データ**:
+
 - Organization
 - WebSite
 - LocalBusiness
 
 **OGP**:
+
 - タイトル: サイト名
 - 説明: サイトの概要
 - 画像: デフォルトOGP画像（設定画面で設定）
@@ -251,11 +284,13 @@
 #### スペース一覧ページ（`/spaces`）
 
 **メタタグ**:
+
 - タイトル: `スペース一覧 | サイト名`
 - 説明: 利用可能なスペースの概要
 - キーワード: スペース一覧、会議室、イベントスペース
 
 **構造化データ**:
+
 - WebSite
 - ItemList（スペース一覧の構造化データ）
   - リスト項目（各スペースへのリンク）
@@ -263,6 +298,7 @@
 - BreadcrumbList（必須）
 
 **OGP**:
+
 - タイトル: `スペース一覧 | サイト名`
 - 説明: 利用可能なスペースの概要
 - 画像: デフォルトOGP画像
@@ -270,11 +306,13 @@
 #### スペース詳細ページ（`/spaces/[id]`）
 
 **メタタグ**:
+
 - タイトル: `{スペース名} | サイト名`
 - 説明: スペースの詳細説明（1-160文字）
 - キーワード: スペース名、設備、料金など
 
 **構造化データ**:
+
 - LocalBusiness（各スペースの情報、詳細なフィールドを使用）
   - 名前、説明、住所、電話番号、営業時間
   - 価格帯（`priceRange`）
@@ -285,6 +323,7 @@
 - BreadcrumbList（必須）
 
 **OGP**:
+
 - タイトル: `{スペース名} | サイト名`
 - 説明: スペースの詳細説明
 - 画像: スペースのメイン画像（複数可能）
@@ -293,11 +332,13 @@
 #### ブログ一覧ページ（`/posts`）
 
 **メタタグ**:
+
 - タイトル: `ブログ | サイト名`
 - 説明: ブログの概要（1-160文字）
 - キーワード: ブログ、記事、レンタルスペース情報など
 
 **構造化データ**:
+
 - WebSite
 - ItemList（ブログ記事一覧の構造化データ）
   - リスト項目（各記事へのリンク）
@@ -305,6 +346,7 @@
 - BreadcrumbList（必須）
 
 **OGP**:
+
 - タイトル: `ブログ | サイト名`
 - 説明: ブログの概要
 - 画像: デフォルトOGP画像
@@ -314,15 +356,18 @@
 #### ブログ記事詳細ページ（`/posts/[slug]`）
 
 **メタタグ**:
+
 - タイトル: `{記事タイトル} | サイト名`（`ogpTitle`があれば優先）
 - 説明: メタディスクリプション（`metaDescription`があれば優先、なければ`excerpt`）
 - キーワード: メタキーワード（`metaKeywords`があれば使用）
 
 **構造化データ**:
+
 - Article（記事情報）
 - BreadcrumbList
 
 **OGP**:
+
 - タイトル: OGPタイトル（`ogpTitle`があれば優先、なければ`title`）
 - 説明: OGP説明（`ogpDescription`があれば優先、なければ`excerpt`）
 - 画像: OGP画像（`ogpImageUrl`があれば優先、なければ`thumbnailUrl`）
@@ -333,16 +378,19 @@
 #### お知らせページ（`/news`、`/news/[id]`）
 
 **メタタグ**:
+
 - タイトル: `お知らせ | サイト名`（一覧）、`{お知らせタイトル} | サイト名`（詳細）
 - 説明: お知らせの概要または詳細
 - キーワード: お知らせ、ニュースなど
 
 **構造化データ**:
+
 - WebSite
 - ItemList（一覧ページ、お知らせ一覧の構造化データ）
 - BreadcrumbList（必須）
 
 **OGP**:
+
 - タイトル: お知らせタイトル
 - 説明: お知らせの概要
 - 画像: デフォルトOGP画像
@@ -354,6 +402,7 @@
 #### 管理画面での設定項目
 
 **SEO設定タブ** (`/admin/settings/seo`):
+
 - デフォルトメタディスクリプション（1-160文字）
 - デフォルトメタキーワード（カンマ区切り）
 - デフォルトOGPタイトル（1-60文字）
@@ -370,40 +419,42 @@
 #### Next.js 16 Metadata API
 
 **実装方法**:
+
 - Server Componentsで`generateMetadata`関数を使用
 - ページ固有のメタデータを優先、設定されていない場合はデフォルト値を使用
 - 動的ルート（`[id]`、`[slug]`）ではデータベースから取得
 
 **例**:
+
 ```typescript
 // src/app/(public)/posts/[slug]/page.tsx
-export async function generateMetadata(
-  props: { params: Promise<{ slug: string }> }
-): Promise<Metadata> {
-  const { slug } = await props.params
-  const post = await getBlogPost(slug)
-  
+export async function generateMetadata(props: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await props.params;
+  const post = await getBlogPost(slug);
+
   if (!post) {
     return {
-      title: '記事が見つかりません',
-    }
+      title: "記事が見つかりません",
+    };
   }
 
   return {
     title: post.ogpTitle || post.title,
     description: post.metaDescription || post.excerpt,
-    keywords: post.metaKeywords?.split(',').map(k => k.trim()),
+    keywords: post.metaKeywords?.split(",").map((k) => k.trim()),
     openGraph: {
       title: post.ogpTitle || post.title,
       description: post.ogpDescription || post.excerpt,
       images: [post.ogpImageUrl || post.thumbnailUrl],
-      type: 'article',
+      type: "article",
       publishedTime: post.publishedAt?.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
       authors: [post.author.name],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: post.ogpTitle || post.title,
       description: post.ogpDescription || post.excerpt,
       images: [post.ogpImageUrl || post.thumbnailUrl],
@@ -411,17 +462,19 @@ export async function generateMetadata(
     alternates: {
       canonical: `https://example.com/posts/${post.slug}`,
     },
-  }
+  };
 }
 ```
 
 #### 構造化データ（JSON-LD）の実装
 
 **実装方法**:
+
 - Server ComponentsでJSON-LD形式のデータを生成
 - `<script type="application/ld+json">`タグで埋め込み
 
 **例**:
+
 ```typescript
 // src/app/(public)/posts/[slug]/page.tsx
 export default async function BlogPostPage(
@@ -429,7 +482,7 @@ export default async function BlogPostPage(
 ) {
   const { slug } = await props.params
   const post = await getBlogPost(slug)
-  
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -467,86 +520,90 @@ export default async function BlogPostPage(
 #### サイトマップの実装
 
 **実装方法**:
+
 - Next.js 16の`app/sitemap.ts`を使用
 
 **例**:
+
 ```typescript
 // src/app/sitemap.ts
-import { MetadataRoute } from 'next'
-import { prisma } from '@/lib/prisma'
+import { MetadataRoute } from "next";
+import { prisma } from "@/lib/prisma";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://example.com'
+  const baseUrl = "https://example.com";
 
   // 静的ページ
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily',
+      changeFrequency: "daily",
       priority: 1.0,
     },
     {
       url: `${baseUrl}/spaces`,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
+      changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${baseUrl}/posts`,
       lastModified: new Date(),
-      changeFrequency: 'daily',
+      changeFrequency: "daily",
       priority: 0.7,
     },
-  ]
+  ];
 
   // 動的ページ（スペース）
   const spaces = await prisma.space.findMany({
     where: { isPublished: true },
     select: { id: true, updatedAt: true },
-  })
-  const spacePages: MetadataRoute.Sitemap = spaces.map(space => ({
+  });
+  const spacePages: MetadataRoute.Sitemap = spaces.map((space) => ({
     url: `${baseUrl}/spaces/${space.id}`,
     lastModified: space.updatedAt,
-    changeFrequency: 'weekly',
+    changeFrequency: "weekly",
     priority: 0.8,
-  }))
+  }));
 
   // 動的ページ（ブログ記事）
   const blogPosts = await prisma.blogPost.findMany({
     where: { isPublished: true },
     select: { slug: true, updatedAt: true },
-  })
-  const blogPages: MetadataRoute.Sitemap = blogPosts.map(post => ({
+  });
+  const blogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
     url: `${baseUrl}/posts/${post.slug}`,
     lastModified: post.updatedAt,
-    changeFrequency: 'daily',
+    changeFrequency: "daily",
     priority: 0.7,
-  }))
+  }));
 
-  return [...staticPages, ...spacePages, ...blogPages]
+  return [...staticPages, ...spacePages, ...blogPages];
 }
 ```
 
 #### robots.txtの実装
 
 **実装方法**:
+
 - Next.js 16の`app/robots.ts`を使用
 
 **例**:
+
 ```typescript
 // src/app/robots.ts
-import { MetadataRoute } from 'next'
+import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/admin/', '/api/'],
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/admin/", "/api/"],
     },
-    sitemap: 'https://example.com/sitemap.xml',
-  }
+    sitemap: "https://example.com/sitemap.xml",
+  };
 }
 ```
 
@@ -557,15 +614,18 @@ export default function robots(): MetadataRoute.Robots {
 #### 要件
 
 **実装方法**:
+
 - Google Analytics 4（GA4）を使用
 - Next.js 16の`next/script`コンポーネントで読み込み
 - 設定画面（`/admin/settings/seo`）でGoogle Analytics IDを設定
 
 **実装場所**:
+
 - ルートレイアウト（`src/app/layout.tsx`）
 - 設定画面でIDが設定されている場合のみ読み込み
 
 **例**:
+
 ```typescript
 // src/app/layout.tsx
 import Script from 'next/script'
@@ -573,7 +633,7 @@ import { getSettings } from '@/actions/admin/settings'
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings()
-  
+
   return (
     <html lang="ja">
       <body>
@@ -607,25 +667,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 #### 要件
 
 **実装方法**:
+
 - Google Search Consoleの検証用メタタグを追加
 - 設定画面（`/admin/settings/seo`）でGoogle Search Console IDを設定
 
 **実装場所**:
+
 - ルートレイアウト（`src/app/layout.tsx`）
 - 設定画面でIDが設定されている場合のみ追加
 
 **例**:
+
 ```typescript
 // src/app/layout.tsx
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings()
-  
+  const settings = await getSettings();
+
   return {
     // ... その他のメタデータ
     verification: {
       google: settings.googleSearchConsoleId || undefined,
     },
-  }
+  };
 }
 ```
 
@@ -636,11 +699,13 @@ export async function generateMetadata(): Promise<Metadata> {
 #### Core Web Vitals
 
 **重要指標**:
+
 - **LCP（Largest Contentful Paint）**: 2.5秒以内
 - **FID（First Input Delay）**: 100ミリ秒以内
 - **CLS（Cumulative Layout Shift）**: 0.1以内
 
 **最適化方法**:
+
 - Next.js Imageコンポーネントの使用（自動最適化、遅延読み込み）
 - 画像の最適化（WebP形式、適切なサイズ、`srcset`対応）
 - フォントの最適化（`next/font`、`font-display: swap`）
@@ -652,10 +717,12 @@ export async function generateMetadata(): Promise<Metadata> {
 #### ページ速度
 
 **要件**:
+
 - ページ読み込み時間: 3秒以内（モバイル）
 - Time to First Byte（TTFB）: 600ミリ秒以内
 
 **最適化方法**:
+
 - ISR（Incremental Static Regeneration）の活用
 - キャッシュ戦略の最適化（Next.js Cache API、CDNキャッシュ）
 - CDNの活用（Cloudflare）
@@ -670,6 +737,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### レスポンシブデザイン
 
 **要件**:
+
 - すべてのページがモバイル対応
 - タッチフレンドリーなUI
 - 適切なフォントサイズ（最小16px）
@@ -677,6 +745,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### モバイルフレンドリーテスト
 
 **要件**:
+
 - Google Search Consoleのモバイルフレンドリーテストで合格
 - モバイルでの表示確認
 
@@ -687,6 +756,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### 要件
 
 **WCAG 2.1 AA準拠**:
+
 - 適切な見出し構造（H1-H6、1ページにH1は1つのみ、階層構造を維持）
 - 画像のalt属性（装飾画像は空文字列、意味のある画像は適切な説明）
 - キーボードナビゲーション対応（フォーカス順序、スキップリンク）
@@ -695,6 +765,7 @@ export async function generateMetadata(): Promise<Metadata> {
 - ARIA属性の適切な使用（必要に応じて）
 
 **SEOへの影響**:
+
 - アクセシビリティの向上はSEOにも寄与
 - 検索エンジンがコンテンツを理解しやすくなる
 - セマンティックHTMLは検索エンジンがコンテンツの構造を理解するのに重要
@@ -706,12 +777,14 @@ export async function generateMetadata(): Promise<Metadata> {
 #### HTTPS
 
 **要件**:
+
 - すべてのページがHTTPSで配信
 - 混合コンテンツ（HTTPリソース）の排除
 
 #### セキュリティヘッダー
 
 **要件**:
+
 - 適切なセキュリティヘッダーの設定
 - 詳細は[`SECURITY.md`](../security/README.md)を参照
 
@@ -722,6 +795,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### 多言語対応
 
 **将来的な要件**:
+
 - 多言語対応（日本語、英語など）
 - `hreflang`タグの実装
 - 言語別のサイトマップ
@@ -735,6 +809,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### 見出し構造の最適化
 
 **要件**:
+
 - 1ページにH1は1つのみ（ページタイトル）
 - H2-H6は階層構造を維持（H2の後にH3、H3の後にH4など）
 - 見出しタグはコンテンツの構造を反映
@@ -743,6 +818,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### 内部リンク戦略
 
 **要件**:
+
 - 関連コンテンツへの内部リンクを適切に配置
 - アンカーテキストは意味のあるテキストを使用（`クリック here`は避ける）
 - リンク先のコンテンツと関連性がある
@@ -751,6 +827,7 @@ export async function generateMetadata(): Promise<Metadata> {
 #### コンテンツの深さと階層
 
 **要件**:
+
 - トップページから3クリック以内で主要コンテンツにアクセス可能
 - サイト構造が論理的で分かりやすい
 - カテゴリとタグによる分類（ブログ、スペース）
@@ -762,34 +839,40 @@ export async function generateMetadata(): Promise<Metadata> {
 #### 実装するリソースヒント
 
 **dns-prefetch**:
+
 - 外部ドメインへのDNS解決を事前に行う
 - 例: Google Analytics、外部フォント、CDN
 
 **preconnect**:
+
 - 外部リソースへの接続を事前に確立
 - 例: Google Fonts、外部API
 
 **preload**:
+
 - クリティカルリソースを事前に読み込む
 - 例: クリティカルCSS、重要なフォント、ヒーロー画像
 
 **prefetch**:
+
 - 次のページ遷移で使用される可能性の高いリソースを事前に読み込む
 - 例: 次のページのJavaScript、画像
 
 **実装方法**:
+
 - Next.js 16の`Metadata` APIで`other`プロパティを使用
 - または`<link>`タグを直接追加
 
 **例**:
+
 ```typescript
 // src/app/layout.tsx
 export const metadata: Metadata = {
   other: {
-    'dns-prefetch': 'https://www.googletagmanager.com',
-    'preconnect': 'https://fonts.googleapis.com',
+    "dns-prefetch": "https://www.googletagmanager.com",
+    preconnect: "https://fonts.googleapis.com",
   },
-}
+};
 ```
 
 ---
@@ -799,6 +882,7 @@ export const metadata: Metadata = {
 #### 404エラーページ
 
 **要件**:
+
 - カスタム404ページ（`app/not-found.tsx`）
 - 適切なメタタグ（`noindex`を設定）
 - ユーザーフレンドリーなエラーメッセージ
@@ -807,6 +891,7 @@ export const metadata: Metadata = {
 #### 500エラーページ
 
 **要件**:
+
 - カスタム500ページ（`app/error.tsx`）
 - 適切なメタタグ（`noindex`を設定）
 - エラーログの記録
@@ -814,6 +899,7 @@ export const metadata: Metadata = {
 #### メタタグの設定
 
 **エラーページ**:
+
 - `<meta name="robots" content="noindex, nofollow">`: 検索エンジンにインデックスさせない
 
 ---
@@ -889,6 +975,7 @@ export const metadata: Metadata = {
 ### SEOテスト
 
 **テスト項目**:
+
 - メタタグの存在確認（すべてのページ）
 - OGPタグの存在確認（すべてのページ）
 - 構造化データの検証（Google Rich Results Test）
@@ -897,6 +984,7 @@ export const metadata: Metadata = {
 - カノニカルURLの確認
 
 **テストツール**:
+
 - Google Search Console（インデックス状況、検索パフォーマンス、エラー確認）
 - Google Rich Results Test（構造化データの検証）
 - PageSpeed Insights（パフォーマンス、Core Web Vitals）
@@ -908,6 +996,7 @@ export const metadata: Metadata = {
 ### 実装後の確認
 
 **確認項目**:
+
 - すべてのページがGoogle Search Consoleに登録されているか
 - サイトマップが正しく生成されているか（サイトマップインデックス含む）
 - 構造化データが正しく認識されているか（Google Rich Results Testで検証）
@@ -946,6 +1035,7 @@ export const metadata: Metadata = {
 **自動使用ルール**: SEO関連のライブラリドキュメント（Next.js Metadata API、構造化データ、OGP設定など）が必要な場合、Context7 MCPを自動的に使用して最新のドキュメントとコード例を取得してください。
 
 **使用タイミング**:
+
 - Next.js Metadata APIの詳細な使用方法
 - 構造化データ（JSON-LD）の最新スキーマ仕様
 - OGPタグの実装パターン
@@ -974,4 +1064,3 @@ export const metadata: Metadata = {
   - パフォーマンス最適化の詳細化
   - テストツールと確認項目の拡充
 - **2026-01-07**: 初版作成、包括的なSEO要件定義を追加
-

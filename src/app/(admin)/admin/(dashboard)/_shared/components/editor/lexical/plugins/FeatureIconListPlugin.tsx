@@ -7,12 +7,12 @@
  * FeatureIconListContainerNode と初期アイテムを挿入する
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-import { $createParagraphNode } from 'lexical'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $createParagraphNode } from "lexical";
 import {
   $createFeatureIconListContainerNode,
   $createFeatureIconItemNode,
@@ -20,9 +20,13 @@ import {
   type FeatureIconListColumns,
   type IconSize,
   ICON_SIZES,
-} from '../nodes/FeatureIconListNode'
-import { type AccentColor, ACCENT_COLORS, ACCENT_COLOR_LABELS } from '../config/accent-colors'
-import { isAccentColor } from '../config/accent-colors'
+} from "../nodes/FeatureIconListNode";
+import {
+  type AccentColor,
+  ACCENT_COLORS,
+  ACCENT_COLOR_LABELS,
+} from "../config/accent-colors";
+import { isAccentColor } from "../config/accent-colors";
 import {
   Dialog,
   DialogContent,
@@ -31,106 +35,119 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type FeatureIconListPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const COLUMNS_OPTIONS: readonly { value: FeatureIconListColumns; label: string }[] = [
-  { value: 1, label: '1列' },
-  { value: 2, label: '2列' },
-  { value: 3, label: '3列' },
-]
+const COLUMNS_OPTIONS: readonly {
+  value: FeatureIconListColumns;
+  label: string;
+}[] = [
+  { value: 1, label: "1列" },
+  { value: 2, label: "2列" },
+  { value: 3, label: "3列" },
+];
 
 const ICON_SIZE_LABELS: Record<IconSize, string> = {
-  sm: '小 (sm)',
-  md: '中 (md)',
-  lg: '大 (lg)',
-}
+  sm: "小 (sm)",
+  md: "中 (md)",
+  lg: "大 (lg)",
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function FeatureIconListPlugin({ isOpen, onClose }: FeatureIconListPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [columns, setColumns] = useState<FeatureIconListColumns>(2)
-  const [accentColor, setAccentColor] = useState<AccentColor>('default')
-  const [iconSize, setIconSize] = useState<IconSize>('md')
+export function FeatureIconListPlugin({
+  isOpen,
+  onClose,
+}: FeatureIconListPluginProps) {
+  const [editor] = useLexicalComposerContext();
+  const [columns, setColumns] = useState<FeatureIconListColumns>(2);
+  const [accentColor, setAccentColor] = useState<AccentColor>("default");
+  const [iconSize, setIconSize] = useState<IconSize>("md");
 
   // ノードトランスフォーム: 空のコンテナにアイテムを追加
   useEffect(() => {
-    return editor.registerNodeTransform(FeatureIconListContainerNode, (node) => {
-      if (node.getChildren().length === 0) {
-        const item = $createFeatureIconItemNode()
-        const para = $createParagraphNode()
-        item.append(para)
-        node.append(item)
-      }
-    })
-  }, [editor])
+    return editor.registerNodeTransform(
+      FeatureIconListContainerNode,
+      (node) => {
+        if (node.getChildren().length === 0) {
+          const item = $createFeatureIconItemNode();
+          const para = $createParagraphNode();
+          item.append(para);
+          node.append(item);
+        }
+      },
+    );
+  }, [editor]);
 
   const handleInsert = () => {
     editor.update(() => {
-      const container = $createFeatureIconListContainerNode({ columns, accentColor, iconSize })
-      const item1 = $createFeatureIconItemNode({ iconName: 'Wifi' })
-      const para1 = $createParagraphNode()
-      item1.append(para1)
-      const item2 = $createFeatureIconItemNode({ iconName: 'ParkingCircle' })
-      const para2 = $createParagraphNode()
-      item2.append(para2)
-      container.append(item1)
-      container.append(item2)
-      $insertNodeToNearestRoot(container)
-    })
-    setColumns(2)
-    setAccentColor('default')
-    setIconSize('md')
-    onClose()
-  }
+      const container = $createFeatureIconListContainerNode({
+        columns,
+        accentColor,
+        iconSize,
+      });
+      const item1 = $createFeatureIconItemNode({ iconName: "Wifi" });
+      const para1 = $createParagraphNode();
+      item1.append(para1);
+      const item2 = $createFeatureIconItemNode({ iconName: "ParkingCircle" });
+      const para2 = $createParagraphNode();
+      item2.append(para2);
+      container.append(item1);
+      container.append(item2);
+      $insertNodeToNearestRoot(container);
+    });
+    setColumns(2);
+    setAccentColor("default");
+    setIconSize("md");
+    onClose();
+  };
 
   const handleClose = () => {
-    setColumns(2)
-    setAccentColor('default')
-    setIconSize('md')
-    onClose()
-  }
+    setColumns(2);
+    setAccentColor("default");
+    setIconSize("md");
+    onClose();
+  };
 
   const handleColumnsChange = (value: string) => {
-    const parsed = parseInt(value, 10)
+    const parsed = parseInt(value, 10);
     if (parsed === 1 || parsed === 2 || parsed === 3) {
-      setColumns(parsed)
+      setColumns(parsed);
     }
-  }
+  };
 
   const handleColorChange = (value: string) => {
     if (isAccentColor(value)) {
-      setAccentColor(value)
+      setAccentColor(value);
     }
-  }
+  };
 
   const handleIconSizeChange = (value: string) => {
-    if (value === 'sm' || value === 'md' || value === 'lg') {
-      setIconSize(value)
+    if (value === "sm" || value === "md" || value === "lg") {
+      setIconSize(value);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -157,7 +174,9 @@ export function FeatureIconListPlugin({ isOpen, onClose }: FeatureIconListPlugin
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium block">アクセントカラー</Label>
+            <Label className="text-sm font-medium block">
+              アクセントカラー
+            </Label>
             <Select value={accentColor} onValueChange={handleColorChange}>
               <SelectTrigger className="h-9">
                 <SelectValue />
@@ -199,5 +218,5 @@ export function FeatureIconListPlugin({ isOpen, onClose }: FeatureIconListPlugin
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

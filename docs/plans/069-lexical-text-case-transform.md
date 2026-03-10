@@ -18,12 +18,13 @@ LexicalエディタにテキストのCase変換機能を追加。Lexical Playgro
 
 Lexicalコアの`FORMAT_TEXT_COMMAND`を使用。Lexical Playgroundと同じパターン。
 
-| 方式 | メリット | デメリット |
-|------|---------|-----------|
-| FORMAT_TEXT_COMMAND（採用） | 公式パターン、シンプル | なし |
-| Node Transform | カスタマイズ可能 | オーバーエンジニアリング |
+| 方式                        | メリット               | デメリット               |
+| --------------------------- | ---------------------- | ------------------------ |
+| FORMAT_TEXT_COMMAND（採用） | 公式パターン、シンプル | なし                     |
+| Node Transform              | カスタマイズ可能       | オーバーエンジニアリング |
 
 **選択理由:**
+
 - Lexical Playgroundとの一貫性
 - 追加のコマンド登録不要
 - 既存のHighlightPlugin/TextColorPluginパターンと整合
@@ -37,38 +38,38 @@ Lexicalコアの`FORMAT_TEXT_COMMAND`を使用。Lexical Playgroundと同じパ�
 
 ### 新規ファイル
 
-| ファイル | 内容 |
-|---------|------|
+| ファイル                     | 内容                                                    |
+| ---------------------------- | ------------------------------------------------------- |
 | `plugins/TextCasePlugin.tsx` | ドロップダウンUI、useTextCaseフック、ユーティリティ関数 |
 
 ### 変更ファイル
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `plugins/index.ts` | TextCasePluginエクスポート追加 |
-| `plugins/ToolbarPlugin.tsx` | TextCasePluginインポート・配置 |
+| ファイル                            | 変更内容                                        |
+| ----------------------------------- | ----------------------------------------------- |
+| `plugins/index.ts`                  | TextCasePluginエクスポート追加                  |
+| `plugins/ToolbarPlugin.tsx`         | TextCasePluginインポート・配置                  |
 | `plugins/ComponentPickerPlugin.tsx` | formatカテゴリ追加、3つのスラッシュコマンド追加 |
 
 ### 対応変換タイプ
 
-| タイプ | 説明 | コマンド |
-|--------|------|---------|
-| lowercase | 全て小文字 | /lowercase |
-| uppercase | 全て大文字 | /uppercase |
+| タイプ     | 説明       | コマンド    |
+| ---------- | ---------- | ----------- |
+| lowercase  | 全て小文字 | /lowercase  |
+| uppercase  | 全て大文字 | /uppercase  |
 | capitalize | 先頭大文字 | /capitalize |
 
 ### 技術詳細
 
 ```typescript
 // FORMAT_TEXT_COMMANDで変換を適用
-editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'lowercase')
-editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'uppercase')
-editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'capitalize')
+editor.dispatchCommand(FORMAT_TEXT_COMMAND, "lowercase");
+editor.dispatchCommand(FORMAT_TEXT_COMMAND, "uppercase");
+editor.dispatchCommand(FORMAT_TEXT_COMMAND, "capitalize");
 
 // 状態チェック
-selection.hasFormat('lowercase')
-selection.hasFormat('uppercase')
-selection.hasFormat('capitalize')
+selection.hasFormat("lowercase");
+selection.hasFormat("uppercase");
+selection.hasFormat("capitalize");
 ```
 
 ## コードレビュー結果

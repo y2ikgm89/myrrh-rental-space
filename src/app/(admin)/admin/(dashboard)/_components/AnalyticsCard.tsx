@@ -5,21 +5,30 @@
  * Server Componentとして動作
  */
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { getAnalyticsStats, isAnalyticsApiAvailable } from '@/shared/lib/analytics/ga-data-api'
-import { getAnalyticsConfig } from '@/shared/lib/analytics/config'
-import Link from 'next/link'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/admin/components/ui/card";
+import {
+  getAnalyticsStats,
+  isAnalyticsApiAvailable,
+} from "@/shared/lib/analytics/ga-data-api";
+import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
+import Link from "next/link";
 
 /**
  * 平均セッション時間をフォーマット
  */
 function formatDuration(seconds: number): string {
   if (seconds < 60) {
-    return `${Math.round(seconds)}秒`
+    return `${Math.round(seconds)}秒`;
   }
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.round(seconds % 60)
-  return `${minutes}分${remainingSeconds}秒`
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}分${remainingSeconds}秒`;
 }
 
 export async function AnalyticsCard() {
@@ -36,15 +45,19 @@ export async function AnalyticsCard() {
             GA Data APIのクレデンシャルが設定されていません。
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            環境変数 <code className="bg-muted px-1 rounded">GOOGLE_APPLICATION_CREDENTIALS_JSON</code> を設定してください。
+            環境変数{" "}
+            <code className="bg-muted px-1 rounded">
+              GOOGLE_APPLICATION_CREDENTIALS_JSON
+            </code>{" "}
+            を設定してください。
           </p>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // 設定からGA4プロパティIDを取得
-  const config = await getAnalyticsConfig()
+  const config = await getAnalyticsConfig();
 
   if (!config.gaPropertyId) {
     return (
@@ -65,11 +78,11 @@ export async function AnalyticsCard() {
           </Link>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // GA Data APIから統計を取得
-  const result = await getAnalyticsStats(config.gaPropertyId)
+  const result = await getAnalyticsStats(config.gaPropertyId);
 
   if (!result.success) {
     return (
@@ -80,17 +93,17 @@ export async function AnalyticsCard() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-destructive">{result.error.message}</p>
-          {result.error.code === 'API_ERROR' && (
+          {result.error.code === "API_ERROR" && (
             <p className="text-xs text-muted-foreground mt-2">
               サービスアカウントにGA4プロパティへのアクセス権があることを確認してください。
             </p>
           )}
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const stats = result.data
+  const stats = result.data;
 
   return (
     <Card>
@@ -103,7 +116,9 @@ export async function AnalyticsCard() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div>
             <p className="text-sm text-muted-foreground">PV数</p>
-            <p className="text-2xl font-bold">{stats.pageViews.toLocaleString()}</p>
+            <p className="text-2xl font-bold">
+              {stats.pageViews.toLocaleString()}
+            </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">ユーザー数</p>
@@ -111,11 +126,15 @@ export async function AnalyticsCard() {
           </div>
           <div>
             <p className="text-sm text-muted-foreground">セッション数</p>
-            <p className="text-2xl font-bold">{stats.sessions.toLocaleString()}</p>
+            <p className="text-2xl font-bold">
+              {stats.sessions.toLocaleString()}
+            </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">平均滞在時間</p>
-            <p className="text-2xl font-bold">{formatDuration(stats.averageSessionDuration)}</p>
+            <p className="text-2xl font-bold">
+              {formatDuration(stats.averageSessionDuration)}
+            </p>
           </div>
         </div>
 
@@ -126,10 +145,15 @@ export async function AnalyticsCard() {
             <ul className="space-y-1">
               {stats.topPages.map((page) => (
                 <li key={page.path} className="flex justify-between text-sm">
-                  <span className="truncate flex-1 mr-2" title={page.title || page.path}>
+                  <span
+                    className="truncate flex-1 mr-2"
+                    title={page.title || page.path}
+                  >
                     {page.title || page.path}
                   </span>
-                  <span className="text-muted-foreground">{page.views.toLocaleString()}</span>
+                  <span className="text-muted-foreground">
+                    {page.views.toLocaleString()}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -137,5 +161,5 @@ export async function AnalyticsCard() {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

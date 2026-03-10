@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { getBlockTemplates } from "@/shared/domain/block-template/queries";
@@ -8,14 +8,11 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-
-function getErrorStatus(message: string): number {
-  if (message.includes("ログイン") || message.includes("権限")) {
-    return 403;
-  }
-
-  return 400;
-}
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+} from "@/shared/lib/route-responses";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -25,13 +22,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       request.headers,
     );
     if (!auth.success) {
-      return NextResponse.json(
-        { error: auth.error.error },
-        { status: getErrorStatus(auth.error.error) },
-      );
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
-    return NextResponse.json(await getBlockTemplates());
+    return jsonSuccess(await getBlockTemplates());
   } catch (error: unknown) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
@@ -40,9 +34,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       context: { operation: "adminBlockTemplatesGet" },
     });
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return jsonError("Internal server error", 500);
   }
 }

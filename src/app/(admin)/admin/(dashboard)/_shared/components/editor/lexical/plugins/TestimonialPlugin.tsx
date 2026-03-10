@@ -7,19 +7,19 @@
  * TestimonialContainerNode と初期アイテムを挿入する
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-import { $createParagraphNode } from 'lexical'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $createParagraphNode } from "lexical";
 import {
   $createTestimonialContainerNode,
   $createTestimonialItemNode,
   TestimonialContainerNode,
   type TestimonialLayout,
   type TestimonialColumns,
-} from '../nodes/TestimonialNode'
+} from "../nodes/TestimonialNode";
 import {
   Dialog,
   DialogContent,
@@ -28,100 +28,104 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TestimonialPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const LAYOUT_OPTIONS: readonly { value: TestimonialLayout; label: string }[] = [
-  { value: 'grid', label: 'グリッド' },
-  { value: 'list', label: 'リスト' },
-]
+  { value: "grid", label: "グリッド" },
+  { value: "list", label: "リスト" },
+];
 
-const COLUMNS_OPTIONS: readonly { value: TestimonialColumns; label: string }[] = [
-  { value: 1, label: '1列' },
-  { value: 2, label: '2列' },
-  { value: 3, label: '3列' },
-]
+const COLUMNS_OPTIONS: readonly { value: TestimonialColumns; label: string }[] =
+  [
+    { value: 1, label: "1列" },
+    { value: 2, label: "2列" },
+    { value: 3, label: "3列" },
+  ];
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function TestimonialPlugin({ isOpen, onClose }: TestimonialPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [layout, setLayout] = useState<TestimonialLayout>('grid')
-  const [columns, setColumns] = useState<TestimonialColumns>(2)
+  const [editor] = useLexicalComposerContext();
+  const [layout, setLayout] = useState<TestimonialLayout>("grid");
+  const [columns, setColumns] = useState<TestimonialColumns>(2);
 
   // ノードトランスフォーム: 空のコンテナにアイテムを追加
   useEffect(() => {
     return editor.registerNodeTransform(TestimonialContainerNode, (node) => {
       if (node.getChildren().length === 0) {
-        const item = $createTestimonialItemNode()
-        const para = $createParagraphNode()
-        item.append(para)
-        node.append(item)
+        const item = $createTestimonialItemNode();
+        const para = $createParagraphNode();
+        item.append(para);
+        node.append(item);
       }
-    })
-  }, [editor])
+    });
+  }, [editor]);
 
   const handleInsert = () => {
     editor.update(() => {
-      const container = $createTestimonialContainerNode({ layout, columns })
-      const item1 = $createTestimonialItemNode({ authorName: '山田太郎', rating: 5 })
-      const para1 = $createParagraphNode()
-      item1.append(para1)
-      const item2 = $createTestimonialItemNode({ authorName: '鈴木花子', rating: 5 })
-      const para2 = $createParagraphNode()
-      item2.append(para2)
-      container.append(item1)
-      container.append(item2)
-      $insertNodeToNearestRoot(container)
-    })
-    setLayout('grid')
-    setColumns(2)
-    onClose()
-  }
+      const container = $createTestimonialContainerNode({ layout, columns });
+      const item1 = $createTestimonialItemNode({
+        authorName: "山田太郎",
+        rating: 5,
+      });
+      const para1 = $createParagraphNode();
+      item1.append(para1);
+      const item2 = $createTestimonialItemNode({
+        authorName: "鈴木花子",
+        rating: 5,
+      });
+      const para2 = $createParagraphNode();
+      item2.append(para2);
+      container.append(item1);
+      container.append(item2);
+      $insertNodeToNearestRoot(container);
+    });
+    setLayout("grid");
+    setColumns(2);
+    onClose();
+  };
 
   const handleClose = () => {
-    setLayout('grid')
-    setColumns(2)
-    onClose()
-  }
+    setLayout("grid");
+    setColumns(2);
+    onClose();
+  };
 
   const handleLayoutChange = (value: string) => {
-    if (value === 'grid' || value === 'list') {
-      setLayout(value)
+    if (value === "grid" || value === "list") {
+      setLayout(value);
     }
-  }
+  };
 
   const handleColumnsChange = (value: string) => {
-    const parsed = parseInt(value, 10)
+    const parsed = parseInt(value, 10);
     if (parsed === 1 || parsed === 2 || parsed === 3) {
-      setColumns(parsed)
+      setColumns(parsed);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -182,5 +186,5 @@ export function TestimonialPlugin({ isOpen, onClose }: TestimonialPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

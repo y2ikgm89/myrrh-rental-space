@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   AlertDialog,
@@ -9,18 +9,18 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './ui/alert-dialog'
-import { buttonVariants } from './ui/button'
+} from "./ui/alert-dialog";
+import { buttonVariants } from "./ui/button";
 
 type DeleteConfirmDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title?: string
-  description?: string
-  itemName?: string
-  onConfirm: () => void
-  isPending?: boolean
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title?: string;
+  description?: string;
+  itemName?: string;
+  onConfirm: () => void;
+  isPending?: boolean;
+};
 
 /**
  * 統一された削除確認ダイアログ
@@ -45,12 +45,12 @@ export function DeleteConfirmDialog({
   onConfirm,
   isPending = false,
 }: DeleteConfirmDialogProps) {
-  const displayTitle = title ?? '削除しますか？'
+  const displayTitle = title ?? "削除しますか？";
   const displayDescription =
     description ??
     (itemName
       ? `「${itemName}」を削除します。この操作は取り消せません。`
-      : 'この操作は取り消せません。')
+      : "この操作は取り消せません。");
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -64,12 +64,12 @@ export function DeleteConfirmDialog({
           <AlertDialogAction
             onClick={onConfirm}
             disabled={isPending}
-            className={buttonVariants({ variant: 'destructive' })}
+            className={buttonVariants({ variant: "destructive" })}
           >
-            {isPending ? '削除中...' : '削除'}
+            {isPending ? "削除中..." : "削除"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

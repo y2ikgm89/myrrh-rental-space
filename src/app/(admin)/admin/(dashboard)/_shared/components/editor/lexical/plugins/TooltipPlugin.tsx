@@ -4,11 +4,11 @@
  * @description ツールチップ挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $getSelection, $insertNodes, $isRangeSelection } from 'lexical'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getSelection, $insertNodes, $isRangeSelection } from "lexical";
 import {
   Dialog,
   DialogContent,
@@ -19,55 +19,57 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/admin/components/ui'
-import { $createTooltipNode } from '../nodes/TooltipNode'
+} from "@/admin/components/ui";
+import { $createTooltipNode } from "../nodes/TooltipNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TooltipPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function TooltipPlugin({ isOpen, onClose }: TooltipPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [baseText, setBaseText] = useState('')
-  const [tooltipText, setTooltipText] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [baseText, setBaseText] = useState("");
+  const [tooltipText, setTooltipText] = useState("");
 
   const handleSubmit = () => {
-    if (!baseText || !tooltipText) return
+    if (!baseText || !tooltipText) return;
 
     editor.update(() => {
-      const selection = $getSelection()
+      const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        selection.removeText()
+        selection.removeText();
       }
-      $insertNodes([$createTooltipNode(baseText, tooltipText)])
-    })
+      $insertNodes([$createTooltipNode(baseText, tooltipText)]);
+    });
 
-    setBaseText('')
-    setTooltipText('')
-    onClose()
-  }
+    setBaseText("");
+    setTooltipText("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setBaseText('')
-    setTooltipText('')
-    onClose()
-  }
+    setBaseText("");
+    setTooltipText("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>ツールチップを挿入</DialogTitle>
-          <DialogDescription>表示テキストとツールチップの説明文を入力してください</DialogDescription>
+          <DialogDescription>
+            表示テキストとツールチップの説明文を入力してください
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -95,12 +97,16 @@ export function TooltipPlugin({ isOpen, onClose }: TooltipPluginProps) {
             <Button type="button" variant="outline" onClick={handleClose}>
               キャンセル
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={!baseText || !tooltipText}>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!baseText || !tooltipText}
+            >
               挿入
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

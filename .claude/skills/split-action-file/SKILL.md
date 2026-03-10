@@ -25,20 +25,21 @@ actions/<name>/
 ### Step 1: 元ファイルを Read して全体を把握
 
 対象ファイルを Read し、以下を特定する:
+
 - import 文（どちらのファイルが必要か）
-- 関数一覧（get* 系 vs mutation 系）
+- 関数一覧（get\* 系 vs mutation 系）
 - 共有定数・型・ヘルパー関数（どちらに置くか）
 
 **注意: MINGW64 制約** — `()` を含むパスはシェルに渡さず、Read/Edit/Grep ツールを使用。
 
 ### Step 2: 振り分け基準
 
-| queries.ts | mutations.ts |
-|------------|--------------|
-| `get*`, `getPublic*`, `getActive*` 系 | `create*`, `update*`, `delete*` 系 |
-| `checkReadPermissionFor` ヘルパー | `publish*`, `archive*`, `toggle*` 系 |
-| Public 型（`PublicPost` 等）| `restore*`, `reorder*` 系 |
-| `ITEMS_PER_PAGE` 等の定数 | `withPermission` HOF を使う関数 |
+| queries.ts                            | mutations.ts                         |
+| ------------------------------------- | ------------------------------------ |
+| `get*`, `getPublic*`, `getActive*` 系 | `create*`, `update*`, `delete*` 系   |
+| 読み取り権限チェック（該当時）        | `publish*`, `archive*`, `toggle*` 系 |
+| Public 型（`PublicPost` 等）          | `restore*`, `reorder*` 系            |
+| `ITEMS_PER_PAGE` 等の定数             | `executeAdminMutation` を使う関数    |
 
 ### Step 3: queries.ts を作成
 
@@ -47,8 +48,6 @@ actions/<name>/
 
 import { prisma } from "@/shared/lib/prisma";
 // ... 必要な import のみ
-
-const checkReadPermission = checkReadPermissionFor("<resource>");
 
 export async function get<Resource>(...) { ... }
 ```
@@ -59,12 +58,16 @@ export async function get<Resource>(...) { ... }
 "use server";
 
 import { prisma } from "@/shared/lib/prisma";
-import { withPermission } from "@/admin/lib/server-action-helpers";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
 // ... 必要な import のみ
 
-export const create<Resource> = withPermission<[...]>("<resource>", "create")(
-  async (_user, ...) => { ... }
-);
+export const create<Resource> = async (...) =>
+  executeAdminMutation({
+    resource: "<resource>",
+    action: "create",
+    execute: async () => { ... },
+    success: (result) => createSuccess("作成しました", result),
+  });
 ```
 
 ### Step 5: index.ts（barrel）を作成
@@ -91,17 +94,17 @@ git add ... && git commit -m "refactor(actions): split <name>.ts into queries/mu
 
 ## プロジェクト固有の注意点
 
-- `checkReadPermissionFor` ヘルパーは queries.ts で定義
-- mutations.ts 内の関数はすべて `withPermission` または `withReadPermission` HOF 経由
+- 読み取り系はレイアウトの認証ガードに依存（個別の権限チェック不要）
+- mutations.ts 内の関数はすべて `executeAdminMutation` / `executeAdminMutationResult` 経由
 - 両ファイルで使う型は queries.ts で export（mutations.ts は queries.ts から import 可）
 - `toPlainObject` / `toPlainArray` は必ず使う（Prisma オブジェクトを直接 return 禁止）
 - helpers が必要な場合（shared 型ガード等）は `helpers.ts` に抽出（`"use server"` なし）
 
 ## 分割優先ファイル（2026-03-06 時点）
 
-| ファイル | 行数 | 優先度 |
-|---------|------|--------|
-| `page.ts` | 732L | 🔴 高 |
-| `editor-comment.ts` | 645L | 🟡 中 |
-| `faq.ts` | 640L | 🟡 中 |
-| `space.ts` | 632L | 🟡 中 |
+| ファイル            | 行数 | 優先度 |
+| ------------------- | ---- | ------ |
+| `page.ts`           | 732L | 🔴 高  |
+| `editor-comment.ts` | 645L | 🟡 中  |
+| `faq.ts`            | 640L | 🟡 中  |
+| `space.ts`          | 632L | 🟡 中  |

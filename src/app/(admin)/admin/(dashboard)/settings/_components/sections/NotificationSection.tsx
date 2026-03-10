@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 通知設定セクション
@@ -6,7 +6,7 @@
  * 各種イベント通知のオン/オフ設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -16,31 +16,31 @@ import {
   CardTitle,
   Label,
   Switch,
-} from '@/admin/components/ui'
-import { updateNotificationSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateNotificationSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface NotificationSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 export function NotificationSection({ settings }: NotificationSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     notifyNewReservation: settings.notifyNewReservation,
     notifyReservationChange: settings.notifyReservationChange,
     notifyReservationCancel: settings.notifyReservationCancel,
     notifyNewInquiry: settings.notifyNewInquiry,
-  })
+  });
 
   const handleSave = () => {
     startTransition(async () => {
-      const result = await updateNotificationSettings(formData)
-      handleResult(result)
-    })
-  }
+      const result = await updateNotificationSettings(formData);
+      handleResult(result, "通知設定を更新しました");
+    });
+  };
 
   return (
     <Card>
@@ -130,9 +130,9 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '通知設定を保存'}
+          {isPending ? "保存中..." : "通知設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

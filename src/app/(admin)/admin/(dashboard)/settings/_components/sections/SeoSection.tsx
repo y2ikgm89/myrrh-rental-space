@@ -79,7 +79,7 @@ export function SeoSection({ settings }: SeoSectionProps) {
         googleSearchConsoleId: formData.googleSearchConsoleId || null,
         bingWebmasterToolsId: formData.bingWebmasterToolsId || null,
       });
-      handleResult(result);
+      handleResult(result, "SEO・Analytics設定を保存しました");
     });
   };
 

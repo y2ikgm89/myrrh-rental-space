@@ -8,6 +8,7 @@ import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
 import { MediaListWrapper } from "./_components/MediaListWrapper";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "メディア管理",
@@ -29,12 +30,15 @@ async function MediaListWithLoader({
 }
 
 export default async function MediaPage({ searchParams }: PageProps) {
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">メディア管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            メディア管理
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             画像・動画・ドキュメントの一元管理
           </p>
@@ -67,4 +71,3 @@ function MediaGridSkeleton() {
     </div>
   );
 }
-

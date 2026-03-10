@@ -2,7 +2,7 @@
 name: create-server-action
 description: >
   管理画面の Server Action ファイルをフルスキャフォールドで生成する。
-  withPermission パターンに準拠した CRUD アクションと Zod スキーマを一括作成する。
+  executeAdminMutation パターンに準拠した CRUD アクションと Zod スキーマを一括作成する。
   新しいリソース（モデル）を管理画面に追加する際に使用。
 argument-hint: "<resource-name>"
 ---
@@ -74,143 +74,67 @@ export type <ResourcePascal>FormOutput = z.output<typeof <name>FormSchema>
 
 ### `src/app/(admin)/admin/(dashboard)/_shared/actions/<name>.ts`
 
-withPermission CRUD のテンプレート:
+executeAdminMutation CRUD のテンプレート:
 
 ```typescript
 'use server'
 
-import { prisma } from '@/shared/lib/prisma'
 import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { executeAdminMutation } from '@/admin/lib/admin-action'
+import { createSuccess } from '@/admin/types/server-actions'
 import { createValidationError } from '@/shared/lib/action-helpers'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { checkReadPermissionFor } from '@/admin/lib/permissions'
+import { CACHE_TAGS } from '@/shared/lib/constants'
+import {
+  create<ResourcePascal>Command,
+  update<ResourcePascal>Command,
+  delete<ResourcePascal>Command,
+} from '@/shared/domain/<name>/commands'
 import {
   <name>FormSchema,
   type <ResourcePascal>FormInput,
 } from '@/shared/lib/validations/<name>'
-import { logError, ErrorCategory, ErrorSeverity } from '@/shared/lib/errors'
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type <ResourcePascal>Data = {
-  id: string
-  name: string
-  createdAt: string  // toISOString() 済み（Server→Client 境界）
-  updatedAt: string
-}
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-const checkReadPermission = checkReadPermissionFor('<name>')
-
-// =============================================================================
-// Read Actions
-// =============================================================================
-
-export async function getAdmin<ResourcePascals>(): Promise<<ResourcePascal>Data[]> {
-  if (!(await checkReadPermission())) return []
-
-  try {
-    const items = await prisma.<name>.findMany({
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    return items.map((item) => ({
-      ...item,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-    }))
-  } catch (error) {
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'getAdmin<ResourcePascals>' },
-    })
-    return []
-  }
-}
 
 // =============================================================================
 // Write Actions
 // =============================================================================
 
-export const create<ResourcePascal> = withPermission<[<ResourcePascal>FormInput], { id: string }>(
-  '<name>',
-  'create',
-)(async (_user, input) => {
+export const create<ResourcePascal> = async (input: <ResourcePascal>FormInput) => {
   const parsed = <name>FormSchema.safeParse(input)
   if (!parsed.success) return createValidationError(parsed.error)
 
-  try {
-    const item = await prisma.<name>.create({ data: parsed.data })
-    updateTag(CACHE_TAGS.<NAME_UPPER>)
-    return createSuccess('<ResourceLabel>を作成しました', { id: item.id })
-  } catch (error) {
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: 'create<ResourcePascal>' },
-    })
-    return createFailure('<ResourceLabel>の作成に失敗しました')
-  }
-})
+  return executeAdminMutation({
+    resource: '<name>',
+    action: 'create',
+    execute: async () => create<ResourcePascal>Command(parsed.data),
+    success: (result) => createSuccess('<ResourceLabel>を作成しました', result),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
+    resolveAuditResourceId: (data) => data.id,
+  })
+}
 
-export const update<ResourcePascal> = withPermission<[string, <ResourcePascal>FormInput]>(
-  '<name>',
-  'update',
-)(async (_user, id, input) => {
+export const update<ResourcePascal> = async (id: string, input: <ResourcePascal>FormInput) => {
   const parsed = <name>FormSchema.safeParse(input)
   if (!parsed.success) return createValidationError(parsed.error)
 
-  const existing = await prisma.<name>.findUnique({ where: { id }, select: { id: true } })
-  if (!existing) return createFailure('<ResourceLabel>が見つかりません')
+  return executeAdminMutation({
+    resource: '<name>',
+    action: 'update',
+    resourceId: id,
+    execute: async () => update<ResourcePascal>Command(id, parsed.data),
+    success: () => createSuccess('<ResourceLabel>を更新しました'),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
+  })
+}
 
-  try {
-    await prisma.<name>.update({ where: { id }, data: parsed.data })
-    updateTag(CACHE_TAGS.<NAME_UPPER>)
-    return createSuccess('<ResourceLabel>を更新しました')
-  } catch (error) {
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: 'update<ResourcePascal>', id },
-    })
-    return createFailure('<ResourceLabel>の更新に失敗しました')
-  }
-})
-
-export const delete<ResourcePascal> = withPermission<[string]>(
-  '<name>',
-  'delete',
-)(async (_user, id) => {
-  const existing = await prisma.<name>.findUnique({ where: { id }, select: { id: true } })
-  if (!existing) return createFailure('<ResourceLabel>が見つかりません')
-
-  try {
-    await prisma.<name>.delete({ where: { id } })
-    updateTag(CACHE_TAGS.<NAME_UPPER>)
-    return createSuccess('<ResourceLabel>を削除しました')
-  } catch (error) {
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      context: { operation: 'delete<ResourcePascal>', id },
-    })
-    return createFailure('<ResourceLabel>の削除に失敗しました')
-  }
-})
+export const delete<ResourcePascal> = async (id: string) =>
+  executeAdminMutation({
+    resource: '<name>',
+    action: 'delete',
+    resourceId: id,
+    execute: async () => delete<ResourcePascal>Command(id),
+    success: () => createSuccess('<ResourceLabel>を削除しました'),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<NAME_UPPER>) },
+  })
 ```
 
 ## Step 5: テンプレート変数の置換
@@ -245,5 +169,5 @@ export const delete<ResourcePascal> = withPermission<[string]>(
 
 - **`'use server'` ファイルは `import 'server-only'` 不要** — `'use server'` ディレクティブで境界制御済み
 - **Date フィールドは `string` 型で宣言** — Server→Client 境界シリアライゼーション（`prisma-patterns.md` 参照）
-- **`withPermission` の第1引数はリソース名、第2引数は操作名** — `permissions.ts` の定義と一致させる
+- **`executeAdminMutation` の `resource` / `action` は `permissions.ts` の定義と一致させる**
 - **`CACHE_TAGS.<NAME_UPPER>` が存在しない場合は `cache.ts` に追加してから `updateTag` を呼ぶ**

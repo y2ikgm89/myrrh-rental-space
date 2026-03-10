@@ -1,10 +1,17 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { DiscountType, DurationDiscountOverride, TaxRateType } from "@/shared/db/enums";
+import {
+  DiscountType,
+  DurationDiscountOverride,
+  TaxRateType,
+} from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
-import { checkSlugAvailability, getSlugErrorMessage } from "@/shared/lib/slug-validation";
+import {
+  checkSlugAvailability,
+  getSlugErrorMessage,
+} from "@/shared/lib/slug-validation";
 
 type SpaceCommandInput = {
   slug: string;
@@ -34,7 +41,9 @@ type SpaceCommandInput = {
   ogpImageUrl?: string | null;
 };
 
-function normalizeNullableString(value: string | null | undefined): string | null {
+function normalizeNullableString(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }
@@ -74,7 +83,10 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
   };
 }
 
-async function ensureSlugAvailable(slug: string, currentId?: string): Promise<void> {
+async function ensureSlugAvailable(
+  slug: string,
+  currentId?: string,
+): Promise<void> {
   const slugCheck = await checkSlugAvailability(slug, {
     currentType: "space",
     currentId,

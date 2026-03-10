@@ -37,36 +37,36 @@ DDoS対策・レート制限・Bot保護の統合ガイド。
 ### @upstash/ratelimit
 
 ```typescript
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, '10 s'),
+  limiter: Ratelimit.slidingWindow(10, "10 s"),
   analytics: true,
-})
+});
 ```
 
 ### エンドポイント別設定
 
-| エンドポイント | 制限 |
-|--------------|------|
-| ログイン | 10回/10秒 |
-| 予約フォーム | 5回/分 |
-| お問い合わせ | 3回/分 |
-| API一般 | 100回/分 |
+| エンドポイント | 制限      |
+| -------------- | --------- |
+| ログイン       | 10回/10秒 |
+| 予約フォーム   | 5回/分    |
+| お問い合わせ   | 3回/分    |
+| API一般        | 100回/分  |
 
 ### 実装例
 
 ```typescript
 export async function createReservation(data: Input) {
-  const headersList = await headers()
-  const ip = headersList.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
 
-  const { success, remaining } = await ratelimit.limit(ip)
+  const { success, remaining } = await ratelimit.limit(ip);
 
   if (!success) {
-    return createFailure('リクエストが多すぎます。しばらくお待ちください。')
+    return createFailure("リクエストが多すぎます。しばらくお待ちください。");
   }
 
   // 処理続行
@@ -88,25 +88,25 @@ bun add @marsidev/react-turnstile
 ### クライアント
 
 ```tsx
-'use client'
-import { Turnstile } from '@marsidev/react-turnstile'
+"use client";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 <Turnstile
   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
   onSuccess={(token) => setTurnstileToken(token)}
-/>
+/>;
 ```
 
 ### サーバー検証
 
 ```typescript
-import { verifyTurnstileToken } from '@/lib/turnstile'
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export async function handleSubmit(data: Input) {
-  const isValid = await verifyTurnstileToken(data.turnstileToken)
+  const isValid = await verifyTurnstileToken(data.turnstileToken);
 
   if (!isValid) {
-    return createFailure('Bot検証に失敗しました')
+    return createFailure("Bot検証に失敗しました");
   }
 
   // 処理続行
@@ -118,19 +118,19 @@ export async function handleSubmit(data: Input) {
 ```typescript
 export async function verifyTurnstileToken(token: string): Promise<boolean> {
   const response = await fetch(
-    'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         secret: process.env.TURNSTILE_SECRET_KEY,
         response: token,
       }),
-    }
-  )
+    },
+  );
 
-  const data = await response.json()
-  return data.success === true
+  const data = await response.json();
+  return data.success === true;
 }
 ```
 
@@ -141,10 +141,10 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
 ```typescript
 const BLOCKED_IPS = new Set([
   // 悪意のあるIPを追加
-])
+]);
 
 export function isBlocked(ip: string): boolean {
-  return BLOCKED_IPS.has(ip)
+  return BLOCKED_IPS.has(ip);
 }
 ```
 

@@ -73,28 +73,31 @@ const handleFallback = useCallback((_api: PerformanceMonitorApi) => {
 <meshBasicMaterial color={color} wireframe transparent opacity={0.3} />
 ```
 
-| マテリアル | 特徴 | パフォーマンス |
-|-----------|------|-------------|
-| `meshBasicMaterial` | ライティング不要 | Excellent |
-| `meshStandardMaterial` | PBR | Moderate |
-| `meshPhysicalMaterial` | 透過/クリアコート | Poor |
-| `MeshTransmissionMaterial` (drei) | ガラス/屈折 | Poor |
+| マテリアル                        | 特徴              | パフォーマンス |
+| --------------------------------- | ----------------- | -------------- |
+| `meshBasicMaterial`               | ライティング不要  | Excellent      |
+| `meshStandardMaterial`            | PBR               | Moderate       |
+| `meshPhysicalMaterial`            | 透過/クリアコート | Poor           |
+| `MeshTransmissionMaterial` (drei) | ガラス/屈折       | Poor           |
 
 ## パーティクル生成（決定的ハッシュ）
 
 ```typescript
 function generateParticles(count: number, spread: number) {
-  const positions = []
+  const positions = [];
   for (let i = 0; i < count; i++) {
-    const hash1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453
-    const hash2 = Math.sin(i * 45.164 + 93.233) * 43758.5453
-    positions.push({ x: (fract(hash1) - 0.5) * spread, y: (fract(hash2) - 0.5) * spread })
+    const hash1 = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+    const hash2 = Math.sin(i * 45.164 + 93.233) * 43758.5453;
+    positions.push({
+      x: (fract(hash1) - 0.5) * spread,
+      y: (fract(hash2) - 0.5) * spread,
+    });
   }
-  return positions
+  return positions;
 }
 
 function fract(x: number): number {
-  return x - Math.floor(x)
+  return x - Math.floor(x);
 }
 ```
 
@@ -111,43 +114,43 @@ InstancedMesh で描画（単一ドローコール）:
 
 ```typescript
 // モジュールスコープで定義（useFrame 内で new しない）
-const DUMMY_OBJECT = new THREE.Object3D()
-const TEMP_VEC = new THREE.Vector3()
+const DUMMY_OBJECT = new THREE.Object3D();
+const TEMP_VEC = new THREE.Vector3();
 
 useFrame((_state, delta) => {
-  const mesh = meshRef.current
-  if (!mesh) return
+  const mesh = meshRef.current;
+  if (!mesh) return;
   // delta 基準でフレームレート非依存
-  DUMMY_OBJECT.position.set(x, y, z)
-  DUMMY_OBJECT.updateMatrix()
-  mesh.setMatrixAt(i, DUMMY_OBJECT.matrix)
-  mesh.instanceMatrix.needsUpdate = true
-})
+  DUMMY_OBJECT.position.set(x, y, z);
+  DUMMY_OBJECT.updateMatrix();
+  mesh.setMatrixAt(i, DUMMY_OBJECT.matrix);
+  mesh.instanceMatrix.needsUpdate = true;
+});
 ```
 
 ## hooks 要約
 
-| フック | 定義場所 | 用途 |
-|--------|---------|------|
-| `useScrollRef()` | `ThreeCanvas.tsx`（export） | R3F ツリー内で ScrollState ref にアクセス |
-| `useThemeColors()` | `hooks/use-theme-colors.ts` | CSSカスタムプロパティ → THREE.Color 用文字列取得 |
-| `useScrollUniforms()` | `hooks/use-scroll-uniforms.ts` | Lenis → mutable ref 同期（再レンダリングゼロ） |
+| フック                | 定義場所                       | 用途                                             |
+| --------------------- | ------------------------------ | ------------------------------------------------ |
+| `useScrollRef()`      | `ThreeCanvas.tsx`（export）    | R3F ツリー内で ScrollState ref にアクセス        |
+| `useThemeColors()`    | `hooks/use-theme-colors.ts`    | CSSカスタムプロパティ → THREE.Color 用文字列取得 |
+| `useScrollUniforms()` | `hooks/use-scroll-uniforms.ts` | Lenis → mutable ref 同期（再レンダリングゼロ）   |
 
 ### useScrollRef パターン
 
 ```typescript
 // ThreeCanvas.tsx が ScrollRefContext.Provider を提供
 // R3F ツリー内のコンポーネントで使用
-import { useScrollRef } from './ThreeCanvas'
+import { useScrollRef } from "./ThreeCanvas";
 
 function ParticleField() {
-  const scrollRef = useScrollRef()  // RefObject<ScrollState>
+  const scrollRef = useScrollRef(); // RefObject<ScrollState>
 
   useFrame(() => {
-    const velocity = Math.abs(scrollRef.current.velocity)
-    const progress = scrollRef.current.progress
+    const velocity = Math.abs(scrollRef.current.velocity);
+    const progress = scrollRef.current.progress;
     // ... React state を使わない（再レンダリングゼロ）
-  })
+  });
 }
 ```
 
@@ -162,18 +165,18 @@ const handleCreated = useCallback(
     webGLContextManager.register({
       id,
       canvas: state.gl.domElement,
-      type: 'three',
+      type: "three",
       createdAt: Date.now(),
-    })
+    });
   },
   [id],
-)
+);
 
 useEffect(() => {
   return () => {
-    webGLContextManager.unregister(id)
-  }
-}, [id])
+    webGLContextManager.unregister(id);
+  };
+}, [id]);
 ```
 
 ## リソース破棄
@@ -182,13 +185,13 @@ R3F はアンマウント時に `.dispose()` 自動呼出。グローバル共�
 
 ## モバイル調整ルール
 
-| 項目 | デスクトップ | モバイル |
-|------|------------|--------|
-| DPR | `[1, 2]` | `[1, 1.5]` |
-| パーティクル数 | `count` | `count * 0.4` |
-| ジオメトリセグメント | 6 | 4 |
-| FOV | 50 | 60 |
-| ポインターイベント | 有効可 | 常に `'none'` |
+| 項目                 | デスクトップ | モバイル      |
+| -------------------- | ------------ | ------------- |
+| DPR                  | `[1, 2]`     | `[1, 1.5]`    |
+| パーティクル数       | `count`      | `count * 0.4` |
+| ジオメトリセグメント | 6            | 4             |
+| FOV                  | 50           | 60            |
+| ポインターイベント   | 有効可       | 常に `'none'` |
 
 ## CLS対策
 
@@ -205,25 +208,27 @@ ScrollTrigger → Three.js 連携はスクロールref経由が推奨。`gsap.to
 
 ```typescript
 // 推奨: ScrollTrigger onUpdate → ref → useFrame で参照
-const scrollRef = useScrollRef()
+const scrollRef = useScrollRef();
 
 ScrollTrigger.create({
-  trigger: '.section',
+  trigger: ".section",
   scrub: true,
-  onUpdate: (self) => { scrollRef.current.progress = self.progress },
-})
+  onUpdate: (self) => {
+    scrollRef.current.progress = self.progress;
+  },
+});
 
 // useFrame 内で ref を参照
 useFrame(() => {
-  camera.position.z = 5 - scrollRef.current.progress * 3
-})
+  camera.position.z = 5 - scrollRef.current.progress * 3;
+});
 ```
 
-| 方式 | 推奨度 | 理由 |
-|------|--------|------|
-| ScrollTrigger → ref → useFrame | ✅ 推奨 | R3F更新サイクルと同期 |
-| gsap.to(mesh.position, {...}) | ⚠️ 非推奨 | R3Fのフレームループと競合する可能性 |
-| gsap.to(uniforms, {...}) | ✅ OK | uniform値の更新は安全 |
+| 方式                           | 推奨度    | 理由                                |
+| ------------------------------ | --------- | ----------------------------------- |
+| ScrollTrigger → ref → useFrame | ✅ 推奨   | R3F更新サイクルと同期               |
+| gsap.to(mesh.position, {...})  | ⚠️ 非推奨 | R3Fのフレームループと競合する可能性 |
+| gsap.to(uniforms, {...})       | ✅ OK     | uniform値の更新は安全               |
 
 > **詳細（カメラパス、shader uniform制御、セクション別シーン切替）**: → `docs/reference/claude-rules/threejs-reference.md` §GSAP ↔ Three.js 統合パターン
 
@@ -275,42 +280,42 @@ const ThreeCanvas = dynamic(() => import('./ThreeCanvas').then(m => m.ThreeCanva
 ```typescript
 // NG: useFrame 内で new THREE.Object3D()（フレームごとに GC プレッシャー）
 useFrame(() => {
-  const dummy = new THREE.Object3D()
-  dummy.position.set(x, y, z)
-})
+  const dummy = new THREE.Object3D();
+  dummy.position.set(x, y, z);
+});
 
 // OK: モジュールスコープで1回だけ生成
-const DUMMY_OBJECT = new THREE.Object3D()
+const DUMMY_OBJECT = new THREE.Object3D();
 useFrame(() => {
-  DUMMY_OBJECT.position.set(x, y, z)
-})
+  DUMMY_OBJECT.position.set(x, y, z);
+});
 ```
 
 ```typescript
 // NG: useFrame 内で React state 更新（毎フレーム再レンダリング）
 useFrame(() => {
-  setPosition(mesh.current.position.x)
-})
+  setPosition(mesh.current.position.x);
+});
 
 // OK: ref.current を直接操作
 useFrame(() => {
-  mesh.current.position.x += 0.01
-})
+  mesh.current.position.x += 0.01;
+});
 ```
 
 ## ファイル配置
 
 パスは `src/app/(public)/_shared/components/` を起点とした相対パス。
 
-| パス | 内容 |
-|------|------|
-| `effects/three/ThreeCanvas.tsx` | SSRゲート + effectLevel チェック + `useScrollRef()` export |
-| `effects/three/ThreeCanvasInner.tsx` | R3F Canvas + PerformanceMonitor + WebGL登録 |
-| `effects/three/ParticleField.tsx` | InstancedMesh パーティクル |
-| `effects/three/FloatingGeometry.tsx` | Drei Float ワイヤフレーム（octahedron / icosahedron / tetrahedron / torus） |
-| `effects/three/ImageDistortion.tsx` | 画像シェーダー歪みエフェクト |
-| `effects/three/ScrollScene.tsx` | スクロール連動シーン切替 |
-| `effects/three/hooks/use-scroll-uniforms.ts` | Lenis → mutable ref 同期（`useScrollUniforms()`） |
-| `effects/three/hooks/use-theme-colors.ts` | CSS変数 → THREE.Color 用文字列変換（`useThemeColors()`） |
+| パス                                         | 内容                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `effects/three/ThreeCanvas.tsx`              | SSRゲート + effectLevel チェック + `useScrollRef()` export                  |
+| `effects/three/ThreeCanvasInner.tsx`         | R3F Canvas + PerformanceMonitor + WebGL登録                                 |
+| `effects/three/ParticleField.tsx`            | InstancedMesh パーティクル                                                  |
+| `effects/three/FloatingGeometry.tsx`         | Drei Float ワイヤフレーム（octahedron / icosahedron / tetrahedron / torus） |
+| `effects/three/ImageDistortion.tsx`          | 画像シェーダー歪みエフェクト                                                |
+| `effects/three/ScrollScene.tsx`              | スクロール連動シーン切替                                                    |
+| `effects/three/hooks/use-scroll-uniforms.ts` | Lenis → mutable ref 同期（`useScrollUniforms()`）                           |
+| `effects/three/hooks/use-theme-colors.ts`    | CSS変数 → THREE.Color 用文字列変換（`useThemeColors()`）                    |
 
 > **詳細パターン（マテリアルカタログ8種、ジオメトリカタログ7種+波面例、Dreiカタログ15種、ライティングレシピ4種、Float詳細、オンデマンドレンダリング、PostProcessing/EffectComposer、カスタムShaderMaterial 3パターン、ScrollScene、シェーダースニペット、ui-ux-pro-maxマッピング）**: → `docs/reference/claude-rules/threejs-reference.md`

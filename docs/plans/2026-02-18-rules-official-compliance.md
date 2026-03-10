@@ -5,6 +5,7 @@
 **Goal:** Claude Code 公式ドキュメントの `.claude/rules/` ベストプラクティスに完全準拠し、条件付きルールを `paths:` フロントマターで制御・サブディレクトリで整理する。
 
 **Architecture:**
+
 - 公式仕様: `.claude/rules/*.md` は全て自動ロード。条件付きロードは `paths:` YAML フロントマターで制御。
 - 実装方針: 12 個の条件付きルールに `paths:` 追加 → `frontend/` / `ops/` サブディレクトリへ移動 → CLAUDE.md 簡略化。
 - 副作用なし: `bun run validate` でコンパイル・lint エラーなし（`.claude/rules/` は TS に影響しない）。
@@ -60,26 +61,27 @@
 
 ## paths: フロントマター定義一覧
 
-| ファイル | paths: パターン |
-|---------|---------------|
-| `frontend/anti-ai-design.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/project-design-config.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/design-system-memory.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/gsap-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/visual-effects-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/threejs-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/pixijs-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/accessibility.md` | `src/app/(public)/**`, `src/app/(public-*)/**`, `src/app/(admin)/**` |
-| `frontend/ui-ux-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**`, `src/app/(admin)/**` |
-| `frontend/seo-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**` |
-| `frontend/lexical-patterns.md` | `src/app/(admin)/**/lexical/**` |
-| `ops/deployment-patterns.md` | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**` |
+| ファイル                              | paths: パターン                                                                         |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| `frontend/anti-ai-design.md`          | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/project-design-config.md`   | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/design-system-memory.md`    | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/gsap-patterns.md`           | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/visual-effects-patterns.md` | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/threejs-patterns.md`        | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/pixijs-patterns.md`         | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/accessibility.md`           | `src/app/(public)/**`, `src/app/(public-*)/**`, `src/app/(admin)/**`                    |
+| `frontend/ui-ux-patterns.md`          | `src/app/(public)/**`, `src/app/(public-*)/**`, `src/app/(admin)/**`                    |
+| `frontend/seo-patterns.md`            | `src/app/(public)/**`, `src/app/(public-*)/**`                                          |
+| `frontend/lexical-patterns.md`        | `src/app/(admin)/**/lexical/**`                                                         |
+| `ops/deployment-patterns.md`          | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**` |
 
 ---
 
 ## Task 1: `frontend/` サブディレクトリへ移動 + `paths:` フロントマター追加
 
 **Files:**
+
 - Create dir: `.claude/rules/frontend/`
 - Move + edit: `.claude/rules/anti-ai-design.md` → `.claude/rules/frontend/anti-ai-design.md`
 - Move + edit: `.claude/rules/project-design-config.md` → `.claude/rules/frontend/project-design-config.md`
@@ -106,7 +108,6 @@ paths:
   - "src/app/(public)/**"
   - "src/app/(public-*)/**"
 ---
-
 ```
 
 **Step 2: 公開ページ + 管理画面共通ルール（2ファイル）にフロントマターを追加**
@@ -120,7 +121,6 @@ paths:
   - "src/app/(public-*)/**"
   - "src/app/(admin)/**"
 ---
-
 ```
 
 **Step 3: SEOルールにフロントマターを追加**
@@ -133,7 +133,6 @@ paths:
   - "src/app/(public)/**"
   - "src/app/(public-*)/**"
 ---
-
 ```
 
 **Step 4: Lexicalルールにフロントマターを追加**
@@ -145,7 +144,6 @@ paths:
 paths:
   - "src/app/(admin)/**/lexical/**"
 ---
-
 ```
 
 **Step 5: git mv で frontend/ サブディレクトリへ移動（11ファイル一括）**
@@ -173,6 +171,7 @@ git status
 ```
 
 期待出力:
+
 ```
 renamed: .claude/rules/anti-ai-design.md -> .claude/rules/frontend/anti-ai-design.md
 renamed: .claude/rules/accessibility.md -> .claude/rules/frontend/accessibility.md
@@ -200,6 +199,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Task 2: `ops/` サブディレクトリへ移動 + `paths:` フロントマター追加
 
 **Files:**
+
 - Create dir: `.claude/rules/ops/`
 - Move + edit: `.claude/rules/deployment-patterns.md` → `.claude/rules/ops/deployment-patterns.md`
 
@@ -216,7 +216,6 @@ paths:
   - ".gcloudignore"
   - "docs/operations/**"
 ---
-
 ```
 
 **Step 2: git mv で ops/ サブディレクトリへ移動**
@@ -241,6 +240,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Task 3: CLAUDE.md の簡略化
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 公式ドキュメントより、ルールの列挙は不要（Claude Code が自動検出）。
@@ -256,7 +256,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 #### 常時ロード（全作業共通）
 
 - `.claude/rules/type-safety.md` - 型安全ルール
-（中略 13行）
+  （中略 13行）
 
 #### 条件付きロード（対象ファイル作業時のみ）
 
@@ -273,11 +273,11 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ルールは `.claude/rules/` ディレクトリで管理。Claude Code が自動ロード（再帰的）:
 
-| ディレクトリ | ロード条件 | 内容 |
-|------------|-----------|------|
-| `.claude/rules/*.md` | **常時** | 型安全・実装品質・Server Actions 等（全作業共通） |
-| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時** | UI・アニメーション・アクセシビリティ・SEO 等 |
-| `.claude/rules/ops/*.md` | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build |
+| ディレクトリ                  | ロード条件                | 内容                                              |
+| ----------------------------- | ------------------------- | ------------------------------------------------- |
+| `.claude/rules/*.md`          | **常時**                  | 型安全・実装品質・Server Actions 等（全作業共通） |
+| `.claude/rules/frontend/*.md` | **`src/app/**` 作業時\*\* | UI・アニメーション・アクセシビリティ・SEO 等      |
+| `.claude/rules/ops/*.md`      | **`Dockerfile` 等作業時** | Docker / Cloud Run / Cloud Build                  |
 
 > 詳細リファレンス: `docs/reference/codex-rules/` に配置（必要時に参照）
 ```
@@ -305,6 +305,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Task 4: `docs/reference/codex-rules/` の参照更新
 
 **Files:**
+
 - Modify: `docs/reference/codex-rules/accessibility.md` — ヘッダーに移動先メモ追加
 - Modify: `docs/reference/codex-rules/deployment-patterns.md` — 同上
 - Modify: `docs/reference/codex-rules/README.md` (存在する場合) — 構造更新
@@ -342,6 +343,7 @@ find .claude/rules -name "*.md" | sort
 ```
 
 期待出力:
+
 ```
 .claude/rules/auth-patterns.md
 .claude/rules/bun-patterns.md
@@ -379,6 +381,7 @@ head -6 .claude/rules/ops/deployment-patterns.md
 ```
 
 期待出力（anti-ai-design.md）:
+
 ```yaml
 ---
 paths:
@@ -404,6 +407,7 @@ bun run validate
 
 ```markdown
 ## .claude/rules/ 公式準拠アーキテクチャ（完了済み）
+
 - **常時ロード**: `.claude/rules/*.md`（ルートレベル、12ファイル）
 - **条件付きロード**: `.claude/rules/frontend/*.md`（11ファイル、`paths:` フロントマター付き）
 - **条件付きロード**: `.claude/rules/ops/*.md`（1ファイル、`paths:` フロントマター付き）
@@ -414,9 +418,9 @@ bun run validate
 
 ## 変更サマリー
 
-| 指標 | 変更前 | 変更後 |
-|------|--------|--------|
-| 常時ロードルール | 13ファイル（全ロード） | **12ファイル**（本当に常時） |
-| 条件付きルール | 12ファイル（実際は全ロード） | **12ファイル**（paths: で真の条件付き） |
-| CLAUDE.md ルールセクション | 35行（明示的列挙） | **5行**（アーキテクチャ説明のみ） |
-| 公式準拠 | 部分的 | **完全準拠** |
+| 指標                       | 変更前                       | 変更後                                  |
+| -------------------------- | ---------------------------- | --------------------------------------- |
+| 常時ロードルール           | 13ファイル（全ロード）       | **12ファイル**（本当に常時）            |
+| 条件付きルール             | 12ファイル（実際は全ロード） | **12ファイル**（paths: で真の条件付き） |
+| CLAUDE.md ルールセクション | 35行（明示的列挙）           | **5行**（アーキテクチャ説明のみ）       |
+| 公式準拠                   | 部分的                       | **完全準拠**                            |

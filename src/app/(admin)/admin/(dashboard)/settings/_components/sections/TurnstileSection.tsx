@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Cloudflare Turnstile設定セクション
@@ -6,8 +6,8 @@
  * Bot対策のためのTurnstile設定
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
   Card,
@@ -17,23 +17,24 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updateTurnstileSettings,
   testTurnstileConnectionAction,
   clearTurnstileKeys,
-} from '@/admin/actions/api-keys'
-import type { TurnstileConfig } from '@/admin/types/api-keys'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/api-keys";
+import type { TurnstileConfig } from "@/admin/types/api-keys";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface TurnstileSectionProps {
-  config: TurnstileConfig
+  config: TurnstileConfig;
 }
 
 // =============================================================================
@@ -41,98 +42,98 @@ interface TurnstileSectionProps {
 // =============================================================================
 
 export function TurnstileSection({ config }: TurnstileSectionProps) {
-  const confirm = useConfirm()
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [isTesting, setIsTesting] = useState(false)
+  const confirm = useConfirm();
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-    note?: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+    note?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
-    turnstileSiteKey: config.siteKey || '',
-    turnstileSecretKey: '',
-  })
+    turnstileSiteKey: config.siteKey || "",
+    turnstileSecretKey: "",
+  });
 
-  const [showSecretKeyInput, setShowSecretKeyInput] = useState(false)
+  const [showSecretKeyInput, setShowSecretKeyInput] = useState(false);
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateTurnstileSettings({
         turnstileSiteKey: formData.turnstileSiteKey || null,
         turnstileSecretKey: formData.turnstileSecretKey || null,
-      })
-      if (result.success) {
+      });
+      if (!isMutationError(result)) {
         setFormData((prev) => ({
           ...prev,
-          turnstileSecretKey: '',
-        }))
-        setShowSecretKeyInput(false)
+          turnstileSecretKey: "",
+        }));
+        setShowSecretKeyInput(false);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Turnstile設定を保存しました");
+    });
+  };
 
   const handleConnectionTest = async () => {
     if (!formData.turnstileSiteKey || !formData.turnstileSecretKey) {
       setTestResult({
         success: false,
-        message: 'Site KeyとSecret Keyの両方を入力してください',
-      })
-      return
+        message: "Site KeyとSecret Keyの両方を入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
       const result = await testTurnstileConnectionAction(
         formData.turnstileSiteKey,
-        formData.turnstileSecretKey
-      )
-      if (result.success) {
+        formData.turnstileSecretKey,
+      );
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
-          message: result.data?.message || '検証成功',
-          note: result.data?.note,
-        })
-        refresh()
+          message: "検証成功",
+          note: result.note,
+        });
+        refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || '検証に失敗しました',
-        })
+          message: result.error,
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleClearKeys = async () => {
     const confirmed = await confirm({
-      title: 'キーをクリアしますか？',
-      description: 'Turnstileキーをクリアしますか？',
-      confirmLabel: 'クリア',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "キーをクリアしますか？",
+      description: "Turnstileキーをクリアしますか？",
+      confirmLabel: "クリア",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await clearTurnstileKeys()
-      if (result.success) {
-        setFormData({ turnstileSiteKey: '', turnstileSecretKey: '' })
-        setTestResult(null)
+      const result = await clearTurnstileKeys();
+      if (!isMutationError(result)) {
+        setFormData({ turnstileSiteKey: "", turnstileSecretKey: "" });
+        setTestResult(null);
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result, "Turnstile設定をクリアしました");
+    });
+  };
 
   return (
     <Card>
@@ -211,9 +212,9 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
 
         {/* 接続ステータス */}
         {config.connectionStatus && (
-          <StatusBanner success={config.connectionStatus === 'connected'}>
+          <StatusBanner success={config.connectionStatus === "connected"}>
             <div className="flex items-center gap-2">
-              {config.connectionStatus === 'connected' ? (
+              {config.connectionStatus === "connected" ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-success" />
                   <span className="text-sm font-medium text-success">
@@ -241,7 +242,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         {testResult && (
           <StatusBanner success={testResult.success}>
             <p
-              className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
+              className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
             >
               {testResult.message}
             </p>
@@ -256,7 +257,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
           {formData.turnstileSiteKey && formData.turnstileSecretKey && (
             <Button
@@ -264,7 +265,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
               onClick={handleConnectionTest}
               disabled={isPending || isTesting}
             >
-              {isTesting ? 'テスト中...' : '形式検証'}
+              {isTesting ? "テスト中..." : "形式検証"}
             </Button>
           )}
           {(config.siteKey || config.secretKeyMasked) && (
@@ -279,5 +280,5 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

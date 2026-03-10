@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { getUsers } from "@/admin/queries/user";
 import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
@@ -87,12 +88,15 @@ async function InvitationSection() {
 // =============================================================================
 
 export default async function StaffPage({ searchParams }: PageProps) {
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">スタッフ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            スタッフ管理
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             管理画面にアクセスできるスタッフアカウントを管理します
           </p>
@@ -124,4 +128,3 @@ export default async function StaffPage({ searchParams }: PageProps) {
     </div>
   );
 }
-

@@ -4,11 +4,11 @@
 
 ## ドキュメント一覧
 
-| ドキュメント | 説明 |
-|-------------|------|
-| [ポリシー](./policies.md) | セキュリティ原則・チェックリスト |
-| [認証](./authentication.md) | Better Auth・Session・RBAC |
-| [保護](./protection.md) | DDoS対策・レート制限・Turnstile |
+| ドキュメント                | 説明                             |
+| --------------------------- | -------------------------------- |
+| [ポリシー](./policies.md)   | セキュリティ原則・チェックリスト |
+| [認証](./authentication.md) | Better Auth・Session・RBAC       |
+| [保護](./protection.md)     | DDoS対策・レート制限・Turnstile  |
 
 ## セキュリティ原則
 

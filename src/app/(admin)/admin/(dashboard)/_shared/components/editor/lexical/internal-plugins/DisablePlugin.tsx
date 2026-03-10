@@ -4,17 +4,17 @@
  * @description エディタの編集を無効化するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
 export function DisablePlugin({ disabled }: { disabled: boolean }) {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
-    editor.setEditable(!disabled)
-  }, [editor, disabled])
+    editor.setEditable(!disabled);
+  }, [editor, disabled]);
 
-  return null
+  return null;
 }

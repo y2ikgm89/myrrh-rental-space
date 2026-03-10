@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 割引設定セクション
@@ -6,8 +6,8 @@
  * 長時間割引ルールと割引併用モードの設定
  */
 
-import { useState, useTransition } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -23,33 +23,37 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateDiscountSettings, type DiscountSettingsData } from '@/admin/actions/settings'
-import { DiscountCombinationMode } from '@/shared/db/enums'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import {
+  updateDiscountSettings,
+  type DiscountSettingsData,
+} from "@/admin/actions/settings";
+import { DiscountCombinationMode } from "@/shared/db/enums";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface DiscountSectionProps {
-  settings: DiscountSettingsData
+  settings: DiscountSettingsData;
 }
 
 type DurationRule = {
-  hours: number
-  discountRate: number
-}
+  hours: number;
+  discountRate: number;
+};
 
 export function DiscountSection({ settings }: DiscountSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
 
   const [formData, setFormData] = useState({
     durationDiscountEnabled: settings.durationDiscountEnabled,
-    durationDiscountRules: settings.durationDiscountRules.length > 0
-      ? settings.durationDiscountRules
-      : [{ hours: 4, discountRate: 10 }],
+    durationDiscountRules:
+      settings.durationDiscountRules.length > 0
+        ? settings.durationDiscountRules
+        : [{ hours: 4, discountRate: 10 }],
     discountCombinationMode: settings.discountCombinationMode,
     showOriginalPrice: settings.showOriginalPrice,
     discountWarningEnabled: settings.discountWarningEnabled,
-  })
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -59,36 +63,45 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
         discountCombinationMode: formData.discountCombinationMode,
         showOriginalPrice: formData.showOriginalPrice,
         discountWarningEnabled: formData.discountWarningEnabled,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "割引設定を更新しました");
+    });
+  };
 
   const addRule = () => {
-    const maxHours = Math.max(...formData.durationDiscountRules.map((r) => r.hours), 0)
+    const maxHours = Math.max(
+      ...formData.durationDiscountRules.map((r) => r.hours),
+      0,
+    );
     setFormData({
       ...formData,
       durationDiscountRules: [
         ...formData.durationDiscountRules,
         { hours: maxHours + 2, discountRate: 5 },
       ],
-    })
-  }
+    });
+  };
 
   const removeRule = (index: number) => {
     setFormData({
       ...formData,
-      durationDiscountRules: formData.durationDiscountRules.filter((_, i) => i !== index),
-    })
-  }
+      durationDiscountRules: formData.durationDiscountRules.filter(
+        (_, i) => i !== index,
+      ),
+    });
+  };
 
-  const updateRule = (index: number, field: keyof DurationRule, value: number) => {
-    const newRules = [...formData.durationDiscountRules]
-    const current = newRules[index]
-    if (!current) return
-    newRules[index] = { ...current, [field]: value }
-    setFormData({ ...formData, durationDiscountRules: newRules })
-  }
+  const updateRule = (
+    index: number,
+    field: keyof DurationRule,
+    value: number,
+  ) => {
+    const newRules = [...formData.durationDiscountRules];
+    const current = newRules[index];
+    if (!current) return;
+    newRules[index] = { ...current, [field]: value };
+    setFormData({ ...formData, durationDiscountRules: newRules });
+  };
 
   return (
     <div className="space-y-6">
@@ -149,28 +162,40 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                             type="number"
                             value={rule.hours}
                             onChange={(e) =>
-                              updateRule(index, 'hours', parseInt(e.target.value) || 1)
+                              updateRule(
+                                index,
+                                "hours",
+                                parseInt(e.target.value) || 1,
+                              )
                             }
                             min={1}
                             max={24}
                             className="w-20"
                             disabled={isPending}
                           />
-                          <span className="text-sm text-muted-foreground">時間以上で</span>
+                          <span className="text-sm text-muted-foreground">
+                            時間以上で
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
                             value={rule.discountRate}
                             onChange={(e) =>
-                              updateRule(index, 'discountRate', parseInt(e.target.value) || 1)
+                              updateRule(
+                                index,
+                                "discountRate",
+                                parseInt(e.target.value) || 1,
+                              )
                             }
                             min={1}
                             max={100}
                             className="w-20"
                             disabled={isPending}
                           />
-                          <span className="text-sm text-muted-foreground">% OFF</span>
+                          <span className="text-sm text-muted-foreground">
+                            % OFF
+                          </span>
                         </div>
                       </div>
                       <Button
@@ -178,7 +203,10 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => removeRule(index)}
-                        disabled={isPending || formData.durationDiscountRules.length <= 1}
+                        disabled={
+                          isPending ||
+                          formData.durationDiscountRules.length <= 1
+                        }
                         className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -227,8 +255,8 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
             </Select>
             <p className="text-xs text-muted-foreground">
               {formData.discountCombinationMode === DiscountCombinationMode.best
-                ? '長時間割引とクーポンのうち、割引額が大きい方のみ適用されます'
-                : '長時間割引とクーポンの両方が適用されます（クーポンの併用設定が優先されます）'}
+                ? "長時間割引とクーポンのうち、割引額が大きい方のみ適用されます"
+                : "長時間割引とクーポンの両方が適用されます（クーポンの併用設定が優先されます）"}
             </p>
           </div>
 
@@ -270,8 +298,8 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
 
       {/* 保存ボタン */}
       <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? '保存中...' : '割引設定を保存'}
+        {isPending ? "保存中..." : "割引設定を保存"}
       </Button>
     </div>
-  )
+  );
 }

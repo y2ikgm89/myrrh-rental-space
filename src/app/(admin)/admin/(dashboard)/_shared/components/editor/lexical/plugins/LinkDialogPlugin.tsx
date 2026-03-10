@@ -4,12 +4,12 @@
  * @description リンク挿入・編集ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $findMatchingParent, $getSelection, $isRangeSelection } from 'lexical'
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from '@lexical/link'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $findMatchingParent, $getSelection, $isRangeSelection } from "lexical";
+import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
 import {
   Dialog,
   DialogContent,
@@ -19,79 +19,77 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type LinkDialogPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function LinkDialogPlugin({ isOpen, onClose }: LinkDialogPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [isEdit, setIsEdit] = useState(false)
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [isEdit, setIsEdit] = useState(false);
 
   // ダイアログを開いた時に現在のリンクURLを取得
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
 
-      const node = selection.anchor.getNode()
-      const linkNode = $findMatchingParent(node, $isLinkNode)
+      const node = selection.anchor.getNode();
+      const linkNode = $findMatchingParent(node, $isLinkNode);
 
       if (linkNode) {
-        setUrl(linkNode.getURL())
-        setIsEdit(true)
+        setUrl(linkNode.getURL());
+        setIsEdit(true);
       } else {
-        setUrl('')
-        setIsEdit(false)
+        setUrl("");
+        setIsEdit(false);
       }
-    })
-  }, [editor, isOpen])
+    });
+  }, [editor, isOpen]);
 
   const handleSubmit = () => {
     if (!url.trim()) {
       // URLが空の場合はリンクを解除
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
     } else {
       // URLを設定
-      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url)
+      editor.dispatchCommand(TOGGLE_LINK_COMMAND, url);
     }
 
-    setUrl('')
-    onClose()
-  }
+    setUrl("");
+    onClose();
+  };
 
   const handleRemoveLink = () => {
-    editor.dispatchCommand(TOGGLE_LINK_COMMAND, null)
-    setUrl('')
-    onClose()
-  }
+    editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
+    setUrl("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    onClose()
-  }
+    setUrl("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'リンクを編集' : 'リンクを挿入'}</DialogTitle>
-          <DialogDescription>
-            リンク先のURLを入力してください
-          </DialogDescription>
+          <DialogTitle>{isEdit ? "リンクを編集" : "リンクを挿入"}</DialogTitle>
+          <DialogDescription>リンク先のURLを入力してください</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -121,13 +119,13 @@ export function LinkDialogPlugin({ isOpen, onClose }: LinkDialogPluginProps) {
               キャンセル
             </Button>
             <Button type="button" onClick={handleSubmit}>
-              {isEdit ? '更新' : '挿入'}
+              {isEdit ? "更新" : "挿入"}
             </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // =============================================================================
@@ -138,14 +136,14 @@ export function LinkDialogPlugin({ isOpen, onClose }: LinkDialogPluginProps) {
  * リンクダイアログの状態管理フック
  */
 export function useLinkDialog() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
-  const openLinkDialog = () => setIsOpen(true)
-  const closeLinkDialog = () => setIsOpen(false)
+  const openLinkDialog = () => setIsOpen(true);
+  const closeLinkDialog = () => setIsOpen(false);
 
   return {
     isLinkDialogOpen: isOpen,
     openLinkDialog,
     closeLinkDialog,
-  }
+  };
 }

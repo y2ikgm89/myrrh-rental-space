@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * MediaGrid
@@ -6,16 +6,16 @@
  * メディアのグリッド/リスト表示
  */
 
-import { MediaItem } from './MediaItem'
-import type { MediaData } from '@/admin/types/media-picker'
+import { MediaItem } from "./MediaItem";
+import type { MediaData } from "@/admin/types/media-picker";
 
 interface MediaGridProps {
-  items: MediaData[]
-  selectedIds: Set<string>
-  onSelect: (media: MediaData) => void
-  viewMode: 'grid' | 'list'
-  isLoading?: boolean
-  canSelectMore: boolean
+  items: MediaData[];
+  selectedIds: Set<string>;
+  onSelect: (media: MediaData) => void;
+  viewMode: "grid" | "list";
+  isLoading?: boolean;
+  canSelectMore: boolean;
 }
 
 /**
@@ -34,7 +34,7 @@ export function MediaGridSkeleton() {
         />
       ))}
     </div>
-  )
+  );
 }
 
 export function MediaGrid({
@@ -46,7 +46,7 @@ export function MediaGrid({
   canSelectMore,
 }: MediaGridProps) {
   if (isLoading) {
-    return <MediaGridSkeleton />
+    return <MediaGridSkeleton />;
   }
 
   if (items.length === 0) {
@@ -54,10 +54,10 @@ export function MediaGrid({
       <div className="py-12 text-center text-muted-foreground">
         画像が見つかりません
       </div>
-    )
+    );
   }
 
-  if (viewMode === 'grid') {
+  if (viewMode === "grid") {
     return (
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6">
         {items.map((item) => (
@@ -71,7 +71,7 @@ export function MediaGrid({
           />
         ))}
       </div>
-    )
+    );
   }
 
   return (
@@ -87,5 +87,5 @@ export function MediaGrid({
         />
       ))}
     </div>
-  )
+  );
 }

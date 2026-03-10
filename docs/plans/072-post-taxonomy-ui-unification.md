@@ -5,6 +5,7 @@
 **Goal:** 投稿カテゴリー・タグ管理のUI/UXを他の管理画面と統一し、nuqsを正しく使用する
 
 **Architecture:**
+
 - スペースカテゴリー管理（`space-categories`）のパターンを参考に統一
 - Server Component + nuqs Client Componentのハイブリッド構造
 - カテゴリーはD&D順序変更を維持しつつ、検索・フィルター機能を追加
@@ -15,14 +16,14 @@
 
 ## 現状の問題
 
-| 項目 | カテゴリー | タグ | 目標 |
-|------|----------|-----|------|
-| nuqs使用 | ❌ なし | ✅ あり | ✅ 両方使用 |
-| 検索 | ❌ なし | ✅ あり | ✅ 両方追加 |
-| ソート | ❌ なし | ✅ あり | ✅ 統一 |
-| D&D並替 | ✅ あり | ❌ なし | ✅ カテゴリーのみ維持 |
-| URLリロード復元 | ❌ | ✅ | ✅ 両方対応 |
-| コンポーネント分離 | ❌ 単一ファイル | ❌ 単一ファイル | ✅ 分離 |
+| 項目               | カテゴリー      | タグ            | 目標                  |
+| ------------------ | --------------- | --------------- | --------------------- |
+| nuqs使用           | ❌ なし         | ✅ あり         | ✅ 両方使用           |
+| 検索               | ❌ なし         | ✅ あり         | ✅ 両方追加           |
+| ソート             | ❌ なし         | ✅ あり         | ✅ 統一               |
+| D&D並替            | ✅ あり         | ❌ なし         | ✅ カテゴリーのみ維持 |
+| URLリロード復元    | ❌              | ✅              | ✅ 両方対応           |
+| コンポーネント分離 | ❌ 単一ファイル | ❌ 単一ファイル | ✅ 分離               |
 
 ## 改善方針
 
@@ -36,6 +37,7 @@
 ## Task 1: 共通フィルターhook作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_hooks/use-taxonomy-filters.ts`
 - Delete: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_hooks/use-tag-filters.ts`
 
@@ -43,24 +45,24 @@
 
 ```typescript
 // use-taxonomy-filters.ts
-'use client'
+"use client";
 
-import { useQueryStates, parseAsString, parseAsBoolean } from 'nuqs'
-import { useRef, useEffect, useCallback } from 'react'
+import { useQueryStates, parseAsString, parseAsBoolean } from "nuqs";
+import { useRef, useEffect, useCallback } from "react";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type TaxonomySortField = 'name' | 'postCount' | 'createdAt'
-export type SortOrder = 'asc' | 'desc'
+export type TaxonomySortField = "name" | "postCount" | "createdAt";
+export type SortOrder = "asc" | "desc";
 
 export type TaxonomyFilterParams = {
-  search: string
-  sortBy: TaxonomySortField
-  sortOrder: SortOrder
-  unusedOnly: boolean
-}
+  search: string;
+  sortBy: TaxonomySortField;
+  sortOrder: SortOrder;
+  unusedOnly: boolean;
+};
 
 // =============================================================================
 // Debounce Hook
@@ -68,26 +70,29 @@ export type TaxonomyFilterParams = {
 
 function useDebouncedCallback(
   callback: (value: string) => void,
-  delayMs: number
+  delayMs: number,
 ): (value: string) => void {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+        clearTimeout(timeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
-  return useCallback((value: string) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-    }
-    timeoutRef.current = setTimeout(() => {
-      callback(value)
-    }, delayMs)
-  }, [callback, delayMs])
+  return useCallback(
+    (value: string) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        callback(value);
+      }, delayMs);
+    },
+    [callback, delayMs],
+  );
 }
 
 // =============================================================================
@@ -97,24 +102,27 @@ function useDebouncedCallback(
 export function useCategoryFilters() {
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      tab: parseAsString.withDefault('categories'),
+      search: parseAsString.withDefault(""),
+      tab: parseAsString.withDefault("categories"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
-  const setSearch = useCallback((value: string) => {
-    void setParams({ search: value || null })
-  }, [setParams])
+  const setSearch = useCallback(
+    (value: string) => {
+      void setParams({ search: value || null });
+    },
+    [setParams],
+  );
 
-  const setSearchDebounced = useDebouncedCallback(setSearch, 300)
+  const setSearchDebounced = useDebouncedCallback(setSearch, 300);
 
   const reset = useCallback(() => {
-    void setParams({ search: null })
-  }, [setParams])
+    void setParams({ search: null });
+  }, [setParams]);
 
   return {
     params: {
@@ -123,7 +131,7 @@ export function useCategoryFilters() {
     setSearch,
     setSearchDebounced,
     reset,
-  }
+  };
 }
 
 // =============================================================================
@@ -133,35 +141,46 @@ export function useCategoryFilters() {
 export function useTagFilters() {
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      sortBy: parseAsString.withDefault('name'),
-      sortOrder: parseAsString.withDefault('asc'),
+      search: parseAsString.withDefault(""),
+      sortBy: parseAsString.withDefault("name"),
+      sortOrder: parseAsString.withDefault("asc"),
       unusedOnly: parseAsBoolean.withDefault(false),
-      tab: parseAsString.withDefault('tags'),
+      tab: parseAsString.withDefault("tags"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
-  const setSearch = useCallback((value: string) => {
-    void setParams({ search: value || null })
-  }, [setParams])
+  const setSearch = useCallback(
+    (value: string) => {
+      void setParams({ search: value || null });
+    },
+    [setParams],
+  );
 
-  const setSearchDebounced = useDebouncedCallback(setSearch, 300)
+  const setSearchDebounced = useDebouncedCallback(setSearch, 300);
 
-  const toggleSort = useCallback((field: TaxonomySortField) => {
-    if (params.sortBy === field) {
-      void setParams({ sortOrder: params.sortOrder === 'asc' ? 'desc' : 'asc' })
-    } else {
-      void setParams({ sortBy: field, sortOrder: 'asc' })
-    }
-  }, [params.sortBy, params.sortOrder, setParams])
+  const toggleSort = useCallback(
+    (field: TaxonomySortField) => {
+      if (params.sortBy === field) {
+        void setParams({
+          sortOrder: params.sortOrder === "asc" ? "desc" : "asc",
+        });
+      } else {
+        void setParams({ sortBy: field, sortOrder: "asc" });
+      }
+    },
+    [params.sortBy, params.sortOrder, setParams],
+  );
 
-  const setUnusedOnly = useCallback((value: boolean) => {
-    void setParams({ unusedOnly: value || null })
-  }, [setParams])
+  const setUnusedOnly = useCallback(
+    (value: boolean) => {
+      void setParams({ unusedOnly: value || null });
+    },
+    [setParams],
+  );
 
   const reset = useCallback(() => {
     void setParams({
@@ -169,8 +188,8 @@ export function useTagFilters() {
       sortBy: null,
       sortOrder: null,
       unusedOnly: null,
-    })
-  }, [setParams])
+    });
+  }, [setParams]);
 
   return {
     params: {
@@ -184,7 +203,7 @@ export function useTagFilters() {
     toggleSort,
     setUnusedOnly,
     reset,
-  }
+  };
 }
 ```
 
@@ -205,6 +224,7 @@ git commit -m "feat(posts): add unified taxonomy filter hooks with nuqs"
 ## Task 2: カテゴリーフィルターコンポーネント作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/CategoryFilters.tsx`
 
 **Step 1: フィルターコンポーネント作成**
@@ -266,6 +286,7 @@ git commit -m "feat(posts): add CategoryFilters component with nuqs"
 ## Task 3: タグフィルターコンポーネント分離
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/TagFilters.tsx`
 
 **Step 1: フィルターコンポーネント作成**
@@ -343,17 +364,20 @@ git commit -m "feat(posts): add TagFilters component with nuqs"
 ## Task 4: CategoryManagerのリファクタリング
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/CategoryManager.tsx`
 
 **Step 1: 検索機能とnuqs対応を追加**
 
 CategoryManagerを以下のように修正:
+
 1. `useCategoryFilters` hookを使用
 2. 検索機能を追加（クライアント側フィルタリング）
 3. D&D機能は維持
 4. Card構造を維持しつつ、フィルターを上部に配置
 
 主な変更点:
+
 - `useCategoryFilters` hookをインポート・使用
 - `filteredCategories` を `useMemo` で計算
 - 検索UIを追加（CategoryFiltersコンポーネントをインライン化）
@@ -376,16 +400,19 @@ git commit -m "feat(posts): add search and nuqs support to CategoryManager"
 ## Task 5: TagManagerのリファクタリング
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/TagManager.tsx`
 
 **Step 1: 共通hookに切り替え**
 
 TagManagerを以下のように修正:
+
 1. `use-tag-filters.ts` から `use-taxonomy-filters.ts` に切り替え
 2. フィルター部分を `TagFilters` コンポーネントに分離（既にTask 3で作成）
 3. SortableTableHeadはそのまま維持
 
 主な変更点:
+
 - import文を `use-taxonomy-filters` に変更
 - インラインのフィルターUIを削除（TagFiltersコンポーネントを使用するため、外部から渡すか統合）
 
@@ -406,6 +433,7 @@ git commit -m "refactor(posts): use unified taxonomy filters in TagManager"
 ## Task 6: 旧hookファイル削除
 
 **Files:**
+
 - Delete: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_hooks/use-tag-filters.ts`
 
 **Step 1: ファイル削除**
@@ -431,6 +459,7 @@ git commit -m "chore(posts): remove deprecated use-tag-filters hook"
 ## Task 7: 共通SortableTableHeadコンポーネント抽出
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/SortableTableHead.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/TagManager.tsx`
 
@@ -547,10 +576,10 @@ posts/taxonomy/
 
 ## 期待される改善
 
-| 項目 | Before | After |
-|------|--------|-------|
-| カテゴリー検索 | ❌ | ✅ |
-| カテゴリーURL状態 | ❌ | ✅ |
-| タグURL状態 | ✅ | ✅ |
-| コード共通化 | ❌ | ✅ |
-| 一貫したUX | ❌ | ✅ |
+| 項目              | Before | After |
+| ----------------- | ------ | ----- |
+| カテゴリー検索    | ❌     | ✅    |
+| カテゴリーURL状態 | ❌     | ✅    |
+| タグURL状態       | ✅     | ✅    |
+| コード共通化      | ❌     | ✅    |
+| 一貫したUX        | ❌     | ✅    |

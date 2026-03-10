@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * CTAボタン配列エディタ
@@ -9,55 +9,55 @@
  * CSS変数に依存しないスタイリング
  */
 
-import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
-import { cn } from '@/shared/lib/cn'
+import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
+import { cn } from "@/shared/lib/cn";
 import type {
   CTAButtonItem,
   CTAButtonVariant,
   CTAButtonSize,
-} from '@/shared/lib/validations/section-design'
+} from "@/shared/lib/validations/section-design";
 import {
   ctaButtonVariants,
   ctaButtonSizes,
   isValidHexColor,
-} from '@/shared/lib/validations/section-design'
+} from "@/shared/lib/validations/section-design";
 
 // =============================================================================
 // 定数
 // =============================================================================
 
 const VARIANT_LABELS: Record<CTAButtonVariant, string> = {
-  primary: 'プライマリ',
-  secondary: 'セカンダリ',
-  outline: 'アウトライン',
-  ghost: 'ゴースト',
-}
+  primary: "プライマリ",
+  secondary: "セカンダリ",
+  outline: "アウトライン",
+  ghost: "ゴースト",
+};
 
 const SIZE_LABELS: Record<CTAButtonSize, string> = {
-  sm: 'S',
-  md: 'M',
-  lg: 'L',
-}
+  sm: "S",
+  md: "M",
+  lg: "L",
+};
 
 const DEFAULT_BUTTON: CTAButtonItem = {
-  text: '',
-  url: '',
-  variant: 'primary',
-  size: 'lg',
+  text: "",
+  url: "",
+  variant: "primary",
+  size: "lg",
   openInNewTab: false,
-}
+};
 
 // =============================================================================
 // コンポーネント
 // =============================================================================
 
 interface CTAButtonEditorProps {
-  buttons: CTAButtonItem[]
-  onChange: (buttons: CTAButtonItem[]) => void
-  maxButtons?: number
-  disabled?: boolean
+  buttons: CTAButtonItem[];
+  onChange: (buttons: CTAButtonItem[]) => void;
+  maxButtons?: number;
+  disabled?: boolean;
   /** コンパクト表示（インスペクタパネル用） */
-  compact?: boolean
+  compact?: boolean;
 }
 
 export function CTAButtonEditor({
@@ -69,36 +69,37 @@ export function CTAButtonEditor({
 }: CTAButtonEditorProps) {
   const updateButton = (index: number, updates: Partial<CTAButtonItem>) => {
     const next = buttons.map((btn, i) =>
-      i === index ? { ...btn, ...updates } : btn
-    )
-    onChange(next)
-  }
+      i === index ? { ...btn, ...updates } : btn,
+    );
+    onChange(next);
+  };
 
   const removeButton = (index: number) => {
-    onChange(buttons.filter((_, i) => i !== index))
-  }
+    onChange(buttons.filter((_, i) => i !== index));
+  };
 
-  const moveButton = (index: number, direction: 'up' | 'down') => {
-    const target = direction === 'up' ? index - 1 : index + 1
-    if (target < 0 || target >= buttons.length) return
-    const next = [...buttons]
-    const current = next[index]
-    const swapWith = next[target]
-    if (!current || !swapWith) return
-    next[index] = swapWith
-    next[target] = current
-    onChange(next)
-  }
+  const moveButton = (index: number, direction: "up" | "down") => {
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= buttons.length) return;
+    const next = [...buttons];
+    const current = next[index];
+    const swapWith = next[target];
+    if (!current || !swapWith) return;
+    next[index] = swapWith;
+    next[target] = current;
+    onChange(next);
+  };
 
   const addButton = () => {
-    if (buttons.length >= maxButtons) return
+    if (buttons.length >= maxButtons) return;
     // 2番目以降はsecondaryをデフォルトに
-    const variant: CTAButtonVariant = buttons.length === 0 ? 'primary' : 'secondary'
-    onChange([...buttons, { ...DEFAULT_BUTTON, variant }])
-  }
+    const variant: CTAButtonVariant =
+      buttons.length === 0 ? "primary" : "secondary";
+    onChange([...buttons, { ...DEFAULT_BUTTON, variant }]);
+  };
 
   return (
-    <div className={compact ? 'space-y-2' : 'space-y-3'}>
+    <div className={compact ? "space-y-2" : "space-y-3"}>
       {buttons.map((button, index) => (
         <ButtonItemEditor
           /* eslint-disable-next-line @eslint-react/no-array-index-key */
@@ -126,7 +127,7 @@ export function CTAButtonEditor({
         </button>
       )}
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -134,14 +135,14 @@ export function CTAButtonEditor({
 // =============================================================================
 
 interface ButtonItemEditorProps {
-  button: CTAButtonItem
-  index: number
-  total: number
-  disabled: boolean
-  compact: boolean
-  onUpdate: (updates: Partial<CTAButtonItem>) => void
-  onRemove: () => void
-  onMove: (direction: 'up' | 'down') => void
+  button: CTAButtonItem;
+  index: number;
+  total: number;
+  disabled: boolean;
+  compact: boolean;
+  onUpdate: (updates: Partial<CTAButtonItem>) => void;
+  onRemove: () => void;
+  onMove: (direction: "up" | "down") => void;
 }
 
 function ButtonItemEditor({
@@ -155,15 +156,15 @@ function ButtonItemEditor({
   onMove,
 }: ButtonItemEditorProps) {
   const inputClass = compact
-    ? 'w-full rounded border border-current/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-current/40'
-    : 'w-full rounded-md border border-current/15 bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-current/30'
+    ? "w-full rounded border border-current/15 bg-transparent px-2 py-1 text-sm outline-none focus:border-current/40"
+    : "w-full rounded-md border border-current/15 bg-transparent px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-current/30";
 
   const selectClass = compact
-    ? 'rounded border border-current/15 bg-transparent px-1.5 py-1 text-xs outline-none'
-    : 'rounded-md border border-current/15 bg-transparent px-2 py-1.5 text-sm outline-none'
+    ? "rounded border border-current/15 bg-transparent px-1.5 py-1 text-xs outline-none"
+    : "rounded-md border border-current/15 bg-transparent px-2 py-1.5 text-sm outline-none";
 
   const iconBtnClass =
-    'inline-flex items-center justify-center rounded p-1 opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none disabled:opacity-30'
+    "inline-flex items-center justify-center rounded p-1 opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none disabled:opacity-30";
 
   return (
     <div className="rounded-md border border-current/10 p-3">
@@ -174,8 +175,8 @@ function ButtonItemEditor({
         <select
           value={button.variant}
           onChange={(e) => {
-            const parsed = ctaButtonVariants.find((v) => v === e.target.value)
-            if (parsed) onUpdate({ variant: parsed })
+            const parsed = ctaButtonVariants.find((v) => v === e.target.value);
+            if (parsed) onUpdate({ variant: parsed });
           }}
           disabled={disabled}
           className={selectClass}
@@ -190,8 +191,8 @@ function ButtonItemEditor({
         <select
           value={button.size}
           onChange={(e) => {
-            const parsed = ctaButtonSizes.find((s) => s === e.target.value)
-            if (parsed) onUpdate({ size: parsed })
+            const parsed = ctaButtonSizes.find((s) => s === e.target.value);
+            if (parsed) onUpdate({ size: parsed });
           }}
           disabled={disabled}
           className={selectClass}
@@ -206,7 +207,7 @@ function ButtonItemEditor({
         <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
-            onClick={() => onMove('up')}
+            onClick={() => onMove("up")}
             disabled={disabled || index === 0}
             className={iconBtnClass}
             aria-label="上に移動"
@@ -215,7 +216,7 @@ function ButtonItemEditor({
           </button>
           <button
             type="button"
-            onClick={() => onMove('down')}
+            onClick={() => onMove("down")}
             disabled={disabled || index === total - 1}
             className={iconBtnClass}
             aria-label="下に移動"
@@ -235,7 +236,7 @@ function ButtonItemEditor({
       </div>
 
       {/* テキスト & URL */}
-      <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      <div className={compact ? "space-y-1.5" : "space-y-2"}>
         <div>
           <label className="mb-0.5 block text-xs opacity-60">テキスト</label>
           <input
@@ -293,14 +294,14 @@ function ButtonItemEditor({
           <div className="mt-1.5 space-y-1.5 rounded border border-current/10 p-2">
             <ColorInput
               label="背景色"
-              value={button.backgroundColor ?? ''}
+              value={button.backgroundColor ?? ""}
               onChange={(v) => onUpdate({ backgroundColor: v || undefined })}
               disabled={disabled}
               compact={compact}
             />
             <ColorInput
               label="文字色"
-              value={button.textColor ?? ''}
+              value={button.textColor ?? ""}
               onChange={(v) => onUpdate({ textColor: v || undefined })}
               disabled={disabled}
               compact={compact}
@@ -312,7 +313,7 @@ function ButtonItemEditor({
         </details>
       </div>
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -320,15 +321,21 @@ function ButtonItemEditor({
 // =============================================================================
 
 interface ColorInputProps {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  disabled: boolean
-  compact: boolean
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  compact: boolean;
 }
 
-function ColorInput({ label, value, onChange, disabled, compact }: ColorInputProps) {
-  const valid = isValidHexColor(value)
+function ColorInput({
+  label,
+  value,
+  onChange,
+  disabled,
+  compact,
+}: ColorInputProps) {
+  const valid = isValidHexColor(value);
 
   return (
     <div>
@@ -343,9 +350,11 @@ function ColorInput({ label, value, onChange, disabled, compact }: ColorInputPro
           maxLength={7}
           className={cn(
             compact
-              ? 'w-full rounded border bg-transparent px-2 py-0.5 font-mono text-xs outline-none'
-              : 'w-full rounded-md border bg-transparent px-2 py-1 font-mono text-xs outline-none',
-            valid ? 'border-current/15 focus:border-current/40' : 'border-destructive'
+              ? "w-full rounded border bg-transparent px-2 py-0.5 font-mono text-xs outline-none"
+              : "w-full rounded-md border bg-transparent px-2 py-1 font-mono text-xs outline-none",
+            valid
+              ? "border-current/15 focus:border-current/40"
+              : "border-destructive",
           )}
         />
         {value && valid && (
@@ -356,5 +365,5 @@ function ColorInput({ label, value, onChange, disabled, compact }: ColorInputPro
         )}
       </div>
     </div>
-  )
+  );
 }

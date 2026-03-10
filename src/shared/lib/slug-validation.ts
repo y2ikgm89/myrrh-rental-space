@@ -6,24 +6,24 @@
  * @module shared/lib/slug-validation
  */
 
-import { findSlugConflict } from '@/shared/domain/slugs/queries'
+import { findSlugConflict } from "@/shared/domain/slugs/queries";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 /** コンテンツタイプ */
-export type ContentType = 'post' | 'news' | 'page' | 'space'
+export type ContentType = "post" | "news" | "page" | "space";
 
 /** スラッグチェック結果 */
 export type SlugCheckResult =
   | { available: true }
-  | { available: false; reason: SlugUnavailableReason }
+  | { available: false; reason: SlugUnavailableReason };
 
 /** スラッグが使用できない理由 */
 export type SlugUnavailableReason =
-  | { type: 'reserved'; path: string }
-  | { type: 'conflict'; contentType: ContentType; id: string }
+  | { type: "reserved"; path: string }
+  | { type: "conflict"; contentType: ContentType; id: string };
 
 // =============================================================================
 // Reserved Paths
@@ -36,38 +36,38 @@ export type SlugUnavailableReason =
  */
 const RESERVED_PATHS: ReadonlySet<string> = new Set([
   // System routes
-  'admin',
-  'api',
-  '_next',
+  "admin",
+  "api",
+  "_next",
   // Public routes (fixed)
-  'about',
-  'contact',
-  'faq',
-  'news',
-  'reservation',
-  'spaces',
-  'terms',
-  'privacy',
-  'posts',
-  'p',
+  "about",
+  "contact",
+  "faq",
+  "news",
+  "reservation",
+  "spaces",
+  "terms",
+  "privacy",
+  "posts",
+  "p",
   // SEO/Static
-  'sitemap.xml',
-  'robots.txt',
-  'favicon.ico',
-])
+  "sitemap.xml",
+  "robots.txt",
+  "favicon.ico",
+]);
 
 /**
  * 予約済みパスかどうかをチェック
  */
 export function isReservedPath(slug: string): boolean {
-  return RESERVED_PATHS.has(slug.toLowerCase())
+  return RESERVED_PATHS.has(slug.toLowerCase());
 }
 
 /**
  * 予約済みパス一覧を取得（UI表示用）
  */
 export function getReservedPaths(): readonly string[] {
-  return Array.from(RESERVED_PATHS).sort()
+  return Array.from(RESERVED_PATHS).sort();
 }
 
 // =============================================================================
@@ -76,10 +76,10 @@ export function getReservedPaths(): readonly string[] {
 
 type CheckOptions = {
   /** 現在のコンテンツタイプ（自分自身のチェックを除外） */
-  currentType: ContentType
+  currentType: ContentType;
   /** 更新時の現在のID（自分自身を除外） */
-  currentId?: string
-}
+  currentId?: string;
+};
 
 /**
  * スラッグが使用可能かチェック
@@ -107,34 +107,38 @@ type CheckOptions = {
  */
 export async function checkSlugAvailability(
   slug: string,
-  options: CheckOptions
+  options: CheckOptions,
 ): Promise<SlugCheckResult> {
-  const normalizedSlug = slug.toLowerCase()
-  const { currentType, currentId } = options
+  const normalizedSlug = slug.toLowerCase();
+  const { currentType, currentId } = options;
 
   // 1. 予約済みパスチェック
   if (isReservedPath(normalizedSlug)) {
     return {
       available: false,
-      reason: { type: 'reserved', path: normalizedSlug },
-    }
+      reason: { type: "reserved", path: normalizedSlug },
+    };
   }
 
   // 2. 全コンテンツタイプでの重複チェック
-  const conflict = await findSlugConflict(normalizedSlug, currentType, currentId)
+  const conflict = await findSlugConflict(
+    normalizedSlug,
+    currentType,
+    currentId,
+  );
 
   if (conflict) {
     return {
       available: false,
       reason: {
-        type: 'conflict',
+        type: "conflict",
         contentType: conflict.contentType,
         id: conflict.id,
       },
-    }
+    };
   }
 
-  return { available: true }
+  return { available: true };
 }
 
 // =============================================================================
@@ -142,20 +146,20 @@ export async function checkSlugAvailability(
 // =============================================================================
 
 const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  post: '投稿',
-  news: 'お知らせ',
-  page: 'ページ',
-  space: 'スペース',
-}
+  post: "投稿",
+  news: "お知らせ",
+  page: "ページ",
+  space: "スペース",
+};
 
 /**
  * スラッグ衝突理由からエラーメッセージを生成
  */
 export function getSlugErrorMessage(reason: SlugUnavailableReason): string {
   switch (reason.type) {
-    case 'reserved':
-      return `「${reason.path}」はシステムで予約されているため使用できません`
-    case 'conflict':
-      return `このスラッグは既に${CONTENT_TYPE_LABELS[reason.contentType]}で使用されています`
+    case "reserved":
+      return `「${reason.path}」はシステムで予約されているため使用できません`;
+    case "conflict":
+      return `このスラッグは既に${CONTENT_TYPE_LABELS[reason.contentType]}で使用されています`;
   }
 }

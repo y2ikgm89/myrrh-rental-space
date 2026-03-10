@@ -11,7 +11,10 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
-import { idParamSchema, slugParamSchema } from "@/shared/lib/validations/params";
+import {
+  idParamSchema,
+  slugParamSchema,
+} from "@/shared/lib/validations/params";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 
 export type PublicSection = {

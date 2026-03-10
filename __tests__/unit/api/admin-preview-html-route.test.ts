@@ -63,6 +63,21 @@ describe("POST /admin/api/preview/html", () => {
     expect(body).toEqual({ error: "権限がありません" });
   });
 
+  test("不正な JSON は 400 を返す", async () => {
+    const response = await POST(
+      new Request("http://localhost/admin/api/preview/html", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{invalid",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(mockCheckPermission).not.toHaveBeenCalled();
+    expect(body).toEqual({ error: "JSON が不正です" });
+  });
+
   test("空の contentJson は空 HTML を返す", async () => {
     mockCheckPermission.mockResolvedValue({
       success: true,
@@ -119,7 +134,9 @@ describe("POST /admin/api/preview/html", () => {
       success: true,
       user: { id: "admin-user" },
     });
-    mockRenderEditorStateToHtmlLazy.mockRejectedValue(new Error("render failed"));
+    mockRenderEditorStateToHtmlLazy.mockRejectedValue(
+      new Error("render failed"),
+    );
 
     const response = await POST(
       new Request("http://localhost/admin/api/preview/html", {

@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import type { ComponentPropsWithRef } from 'react'
-import { createContext, use, useId } from 'react'
+import type { ComponentPropsWithRef } from "react";
+import { createContext, use, useId } from "react";
 import {
   Controller,
   FormProvider,
@@ -9,16 +9,16 @@ import {
   type ControllerProps,
   type FieldPath,
   type FieldValues,
-} from 'react-hook-form'
-import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/shared/lib/cn'
-import { Label } from '@/admin/components/ui/label'
+} from "react-hook-form";
+import { Slot } from "@radix-ui/react-slot";
+import { cn } from "@/shared/lib/cn";
+import { Label } from "@/admin/components/ui/label";
 
 // =============================================================================
 // Form（FormProvider の re-export）
 // =============================================================================
 
-const Form = FormProvider
+const Form = FormProvider;
 
 // =============================================================================
 // FormField（Controller + FormFieldContext）
@@ -28,10 +28,12 @@ type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
-  name: TName
-}
+  name: TName;
+};
 
-const FormFieldContext = createContext<FormFieldContextValue | undefined>(undefined)
+const FormFieldContext = createContext<FormFieldContextValue | undefined>(
+  undefined,
+);
 
 function FormField<
   TFieldValues extends FieldValues = FieldValues,
@@ -41,7 +43,7 @@ function FormField<
     <FormFieldContext value={{ name: props.name }}>
       <Controller {...props} />
     </FormFieldContext>
-  )
+  );
 }
 
 // =============================================================================
@@ -49,18 +51,20 @@ function FormField<
 // =============================================================================
 
 type FormItemContextValue = {
-  id: string
-}
+  id: string;
+};
 
-const FormItemContext = createContext<FormItemContextValue | undefined>(undefined)
+const FormItemContext = createContext<FormItemContextValue | undefined>(
+  undefined,
+);
 
-function FormItem({ ref, className, ...props }: ComponentPropsWithRef<'div'>) {
-  const id = useId()
+function FormItem({ ref, className, ...props }: ComponentPropsWithRef<"div">) {
+  const id = useId();
   return (
     <FormItemContext value={{ id }}>
-      <div ref={ref} className={cn('space-y-2', className)} {...props} />
+      <div ref={ref} className={cn("space-y-2", className)} {...props} />
     </FormItemContext>
-  )
+  );
 }
 
 // =============================================================================
@@ -68,16 +72,16 @@ function FormItem({ ref, className, ...props }: ComponentPropsWithRef<'div'>) {
 // =============================================================================
 
 function useFormField() {
-  const fieldContext = use(FormFieldContext)
-  const itemContext = use(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
+  const fieldContext = use(FormFieldContext);
+  const itemContext = use(FormItemContext);
+  const { getFieldState, formState } = useFormContext();
 
   if (!fieldContext) {
-    throw new Error('useFormField should be used within <FormField>')
+    throw new Error("useFormField should be used within <FormField>");
   }
 
-  const fieldState = getFieldState(fieldContext.name, formState)
-  const id = itemContext?.id ?? ''
+  const fieldState = getFieldState(fieldContext.name, formState);
+  const id = itemContext?.id ?? "";
 
   return {
     id,
@@ -86,23 +90,27 @@ function useFormField() {
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
     ...fieldState,
-  }
+  };
 }
 
 // =============================================================================
 // FormLabel（エラー時 text-destructive + 自動 htmlFor）
 // =============================================================================
 
-function FormLabel({ ref, className, ...props }: ComponentPropsWithRef<typeof Label>) {
-  const { error, formItemId } = useFormField()
+function FormLabel({
+  ref,
+  className,
+  ...props
+}: ComponentPropsWithRef<typeof Label>) {
+  const { error, formItemId } = useFormField();
   return (
     <Label
       ref={ref}
-      className={cn(error && 'text-destructive', className)}
+      className={cn(error && "text-destructive", className)}
       htmlFor={formItemId}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
@@ -110,7 +118,8 @@ function FormLabel({ ref, className, ...props }: ComponentPropsWithRef<typeof La
 // =============================================================================
 
 function FormControl({ ref, ...props }: ComponentPropsWithRef<typeof Slot>) {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const { error, formItemId, formDescriptionId, formMessageId } =
+    useFormField();
   return (
     <Slot
       ref={ref}
@@ -121,23 +130,27 @@ function FormControl({ ref, ...props }: ComponentPropsWithRef<typeof Slot>) {
       aria-invalid={!!error}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
 // FormDescription（ヒントテキスト）
 // =============================================================================
 
-function FormDescription({ ref, className, ...props }: ComponentPropsWithRef<'p'>) {
-  const { formDescriptionId } = useFormField()
+function FormDescription({
+  ref,
+  className,
+  ...props
+}: ComponentPropsWithRef<"p">) {
+  const { formDescriptionId } = useFormField();
   return (
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 // =============================================================================
@@ -149,22 +162,22 @@ function FormMessage({
   className,
   children,
   ...props
-}: ComponentPropsWithRef<'p'>) {
-  const { error, formMessageId } = useFormField()
-  const body = error ? String(error?.message ?? '') : children
+}: ComponentPropsWithRef<"p">) {
+  const { error, formMessageId } = useFormField();
+  const body = error ? String(error?.message ?? "") : children;
 
-  if (!body) return null
+  if (!body) return null;
 
   return (
     <p
       ref={ref}
       id={formMessageId}
-      className={cn('text-xs text-destructive', className)}
+      className={cn("text-xs text-destructive", className)}
       {...props}
     >
       {body}
     </p>
-  )
+  );
 }
 
 // =============================================================================
@@ -180,4 +193,4 @@ export {
   FormControl,
   FormDescription,
   FormMessage,
-}
+};

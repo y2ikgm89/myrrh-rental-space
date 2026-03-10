@@ -1,3 +1,3 @@
-export { StatsCardsSkeleton } from './StatsCardsSkeleton'
-export { TodayReservationsSkeleton } from './TodayReservationsSkeleton'
-export { RecentItemsSkeleton } from './RecentItemsSkeleton'
+export { StatsCardsSkeleton } from "./StatsCardsSkeleton";
+export { TodayReservationsSkeleton } from "./TodayReservationsSkeleton";
+export { RecentItemsSkeleton } from "./RecentItemsSkeleton";

@@ -1,7 +1,8 @@
 import "server-only";
 
 import { TermsStatus } from "@/shared/db/enums";
-import { Prisma, prisma } from "@/shared/db/prisma";
+import { parsePrismaInputJson } from "@/shared/db/json";
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type {
   CreateTermsInput,
@@ -23,40 +24,8 @@ type UpdateTermsVersionWithHtmlInput = UpdateTermsVersionInput & {
   contentHtml: string;
 };
 
-function isInputJsonValue(value: unknown): value is Prisma.InputJsonValue {
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isInputJsonValue);
-  }
-
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-
-  return Object.values(value).every(isInputJsonValue);
-}
-
-function parseEditorStateJson(contentJson: string): Prisma.InputJsonValue {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(contentJson);
-  } catch {
-    throw new DomainError("コンテンツJSONが不正です", "VALIDATION");
-  }
-
-  if (!isInputJsonValue(parsed)) {
-    throw new DomainError("コンテンツJSONが不正です", "VALIDATION");
-  }
-
-  return parsed;
+function parseEditorStateJson(contentJson: string) {
+  return parsePrismaInputJson(contentJson, "コンテンツJSONが不正です");
 }
 
 async function ensureUniqueSlug(

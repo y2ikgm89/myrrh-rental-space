@@ -9,34 +9,40 @@ type-check で発生していた `isSystemPage` 関連のエラーと、build �
 ### 1. isSystemPage 型エラー
 
 **エラー内容**:
+
 ```
 Property 'isSystemPage' is missing in type '...' but required in type 'PageData'.
 Object literal may only specify known properties, and 'isSystemPage' does not exist in type 'PageCreateInput'.
 ```
 
 **原因**:
+
 - `prisma/schema.prisma` に `isSystemPage` フィールドが定義されていたが、マイグレーションが作成されていなかった
 - Prisma クライアントが古く、スキーマと同期していなかった
 
 ### 2. Server Actions での同期関数エラー
 
 **エラー内容**:
+
 ```
 Server Actions must be async functions.
 ```
 
 **原因**:
+
 - `src/actions/admin/page.ts` に同期関数 `canDeletePage()` が定義されていた
 - `'use server'` ディレクティブのあるファイルでは、エクスポートされる関数はすべて async である必要がある
 
 ### 3. Next.js 16 PPR new Date() エラー
 
 **エラー内容**:
+
 ```
 Route "/contact" used `new Date()` before accessing either uncached data or Request data.
 ```
 
 **原因**:
+
 - `generateMetadata` 内で Prisma クエリを実行
 - Next.js 16 PPR では、プリレンダリング時に `new Date()` が使用されると（Prisma の内部ログ等で）エラーになる
 - `'use cache'` ディレクティブでキャッシュ化することで回避が必要
@@ -59,7 +65,7 @@ bunx prisma migrate dev --name add_is_system_page_to_pages
 ```typescript
 // src/lib/validations/page.ts に追加
 export function canDeletePage(slug: string): boolean {
-  return !isSystemPageSlug(slug)
+  return !isSystemPageSlug(slug);
 }
 ```
 
@@ -87,12 +93,12 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
 
 ## 変更ファイル
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `prisma/migrations/20260115154941_add_is_system_page_to_pages/` | 新規マイグレーション |
-| `src/actions/admin/page.ts` | `canDeletePage` 削除、`isSystemPageSlug` インポート削除 |
-| `src/lib/validations/page.ts` | `canDeletePage` 関数追加 |
-| `src/lib/page-metadata.ts` | `'use cache'` ディレクティブ追加、`React.cache()` → `cacheLife/cacheTag` |
+| ファイル                                                        | 変更内容                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `prisma/migrations/20260115154941_add_is_system_page_to_pages/` | 新規マイグレーション                                                     |
+| `src/actions/admin/page.ts`                                     | `canDeletePage` 削除、`isSystemPageSlug` インポート削除                  |
+| `src/lib/validations/page.ts`                                   | `canDeletePage` 関数追加                                                 |
+| `src/lib/page-metadata.ts`                                      | `'use cache'` ディレクティブ追加、`React.cache()` → `cacheLife/cacheTag` |
 
 ## テスト結果
 

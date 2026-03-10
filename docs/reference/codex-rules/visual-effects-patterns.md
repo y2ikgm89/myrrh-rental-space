@@ -17,23 +17,43 @@ paths:
 
 ## エフェクトレベル定義
 
-| レベル | 技術 | 対象デバイス | 内容 |
-|--------|------|-------------|------|
-| L1 | CSS only | 低性能 / `prefers-reduced-motion` | CSS transition, @keyframes, SVG animation, scroll-driven animation, backdrop-filter, mix-blend-mode |
-| L2 | GSAP + Lenis | 中性能 | ScrollTrigger, スムーススクロール, パララックス |
-| L3 | Three.js (R3F) | 高性能 | 3D パーティクル, 浮遊ジオメトリ, WebGL |
-| L4 | PixiJS v8 | 最高性能（デスクトップ専用GPU） | 2D GLSLフィルター, グレイン, ビネット, スプライト |
+| レベル | 技術           | 対象デバイス                      | 内容                                                                                                |
+| ------ | -------------- | --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| L1     | CSS only       | 低性能 / `prefers-reduced-motion` | CSS transition, @keyframes, SVG animation, scroll-driven animation, backdrop-filter, mix-blend-mode |
+| L2     | GSAP + Lenis   | 中性能                            | ScrollTrigger, スムーススクロール, パララックス                                                     |
+| L3     | Three.js (R3F) | 高性能                            | 3D パーティクル, 浮遊ジオメトリ, WebGL                                                              |
+| L4     | PixiJS v8      | 最高性能（デスクトップ専用GPU）   | 2D GLSLフィルター, グレイン, ビネット, スプライト                                                   |
 
 ## パフォーマンスバジェット
 
 ```typescript
 // src/app/(public)/_shared/components/effects/core/types.ts
 export const PERFORMANCE_BUDGETS: Record<EffectLevel, PerformanceBudget> = {
-  1: { targetFps: 30, maxWebGLContexts: 0, allowThreeJs: false, allowPixiJs: false },
-  2: { targetFps: 45, maxWebGLContexts: 0, allowThreeJs: false, allowPixiJs: false },
-  3: { targetFps: 60, maxWebGLContexts: 4, allowThreeJs: true,  allowPixiJs: false },
-  4: { targetFps: 60, maxWebGLContexts: 8, allowThreeJs: true,  allowPixiJs: true  },
-}
+  1: {
+    targetFps: 30,
+    maxWebGLContexts: 0,
+    allowThreeJs: false,
+    allowPixiJs: false,
+  },
+  2: {
+    targetFps: 45,
+    maxWebGLContexts: 0,
+    allowThreeJs: false,
+    allowPixiJs: false,
+  },
+  3: {
+    targetFps: 60,
+    maxWebGLContexts: 4,
+    allowThreeJs: true,
+    allowPixiJs: false,
+  },
+  4: {
+    targetFps: 60,
+    maxWebGLContexts: 8,
+    allowThreeJs: true,
+    allowPixiJs: true,
+  },
+};
 ```
 
 ## GPU検出フロー
@@ -52,11 +72,10 @@ detect-gpu（ベンチマーク）→ gpuTier (0-3) → effectLevel 変換
 
 ```typescript
 // device-capabilities.ts
-const baseLevel = gpuTier === 3 && !isMobile ? 4 : gpuTier
-const rawLevel = toEffectLevel(baseLevel)
-const effectLevel = isMobile && rawLevel > 1
-  ? toEffectLevel(baseLevel - 1)
-  : rawLevel
+const baseLevel = gpuTier === 3 && !isMobile ? 4 : gpuTier;
+const rawLevel = toEffectLevel(baseLevel);
+const effectLevel =
+  isMobile && rawLevel > 1 ? toEffectLevel(baseLevel - 1) : rawLevel;
 ```
 
 **注意**: デスクトップ tier 3 のみが L4 に到達する。tier 2 → L2、tier 1 → L1。
@@ -64,6 +83,7 @@ const effectLevel = isMobile && rawLevel > 1
 ### WebGL直接検出フォールバック
 
 detect-gpu がベンチマーク失敗（type: "FALLBACK"）または tier 0 の場合:
+
 - WebGL2 + 専用GPU（NVIDIA/Radeon/GeForce/RTX/GTX キーワード） → tier 3
 - WebGL2 → tier 2
 - WebGL1 のみ → tier 1
@@ -74,12 +94,12 @@ detect-gpu がベンチマーク失敗（type: "FALLBACK"）または tier 0 の
 ```typescript
 // src/app/(public)/_shared/components/effects/core/types.ts
 interface DeviceCapabilities {
-  readonly gpuTier: 0 | 1 | 2 | 3
-  readonly isMobile: boolean
-  readonly prefersReducedMotion: boolean
-  readonly effectLevel: EffectLevel
-  readonly gpuModel: string | null
-  readonly estimatedFps: number | null
+  readonly gpuTier: 0 | 1 | 2 | 3;
+  readonly isMobile: boolean;
+  readonly prefersReducedMotion: boolean;
+  readonly effectLevel: EffectLevel;
+  readonly gpuModel: string | null;
+  readonly estimatedFps: number | null;
 }
 ```
 
@@ -87,16 +107,19 @@ interface DeviceCapabilities {
 
 ```typescript
 // src/app/(public)/_shared/components/effects/core/VisualEffectsProvider.tsx
-const { effectLevel, budget, capabilities, isReady, degradeTo } = useVisualEffects()
+const { effectLevel, budget, capabilities, isReady, degradeTo } =
+  useVisualEffects();
 
 // L3以上でThree.js有効
-if (effectLevel >= 3 && budget.allowThreeJs) { /* ThreeCanvas描画 */ }
+if (effectLevel >= 3 && budget.allowThreeJs) {
+  /* ThreeCanvas描画 */
+}
 
 // ダウングレードのみ許可（Math.min でガード）
-degradeTo(toEffectLevel(effectLevel - 1))
+degradeTo(toEffectLevel(effectLevel - 1));
 
 // Provider外でも安全に使いたい場合
-const ctx = useVisualEffectsOptional()  // null | VisualEffectsContextValue
+const ctx = useVisualEffectsOptional(); // null | VisualEffectsContextValue
 ```
 
 > **VisualEffectsProvider 実装**: `src/app/(public)/_shared/components/effects/core/VisualEffectsProvider.tsx`
@@ -110,24 +133,29 @@ const ctx = useVisualEffectsOptional()  // null | VisualEffectsContextValue
 
 ```typescript
 // src/app/(public)/_shared/components/effects/core/webgl-context-manager.ts
-import { webGLContextManager } from '../core/webgl-context-manager'
+import { webGLContextManager } from "../core/webgl-context-manager";
 
-webGLContextManager.register({ id, canvas, type: 'three', createdAt: Date.now() })
-webGLContextManager.unregister(id)
+webGLContextManager.register({
+  id,
+  canvas,
+  type: "three",
+  createdAt: Date.now(),
+});
+webGLContextManager.unregister(id);
 ```
 
 `type` は `'three' | 'pixi' | 'raw'`。maxWebGLContexts（budget）を超えた場合に最古コンテキストをLRU削除。
 
 ## Z-index ベースライン
 
-| z-index | 用途 |
-|---------|------|
-| 0 | 背景レイヤー |
-| 2 | Three.js Canvas |
-| 3 | PixiJS Canvas |
-| 5 | 装飾アクセント |
-| 10 | コンテンツ（テキスト、ボタン） |
-| 20 | スクロールインジケーター |
+| z-index | 用途                           |
+| ------- | ------------------------------ |
+| 0       | 背景レイヤー                   |
+| 2       | Three.js Canvas                |
+| 3       | PixiJS Canvas                  |
+| 5       | 装飾アクセント                 |
+| 10      | コンテンツ（テキスト、ボタン） |
+| 20      | スクロールインジケーター       |
 
 ## ゼロコピースクロールパターン
 
@@ -136,12 +164,12 @@ Three.js / PixiJS は React state を使わず mutable ref でスクロール値
 ```typescript
 // types.ts の ScrollState 型
 interface ScrollState {
-  readonly scroll: number
-  readonly limit: number
-  readonly velocity: number
-  readonly progress: number
-  readonly direction: -1 | 0 | 1
-  readonly isScrolling: boolean
+  readonly scroll: number;
+  readonly limit: number;
+  readonly velocity: number;
+  readonly progress: number;
+  readonly direction: -1 | 0 | 1;
+  readonly isScrolling: boolean;
 }
 ```
 
@@ -169,29 +197,29 @@ async function detectDeviceCapabilities(): Promise<DeviceCapabilities> {
 
 ## レスポンシブ戦略
 
-| コンテキスト | ブレークポイント | 備考 |
-|-------------|----------------|------|
-| Tailwind CSS | `md: 768px` | CSS レイアウト用 |
-| `gsap.matchMedia()` | `800px` | アニメーション分岐用 |
-| `detect-gpu` | UA + 画面サイズ | 自動判定 |
+| コンテキスト        | ブレークポイント | 備考                 |
+| ------------------- | ---------------- | -------------------- |
+| Tailwind CSS        | `md: 768px`      | CSS レイアウト用     |
+| `gsap.matchMedia()` | `800px`          | アニメーション分岐用 |
+| `detect-gpu`        | UA + 画面サイズ  | 自動判定             |
 
 ### モバイルでの各レベル挙動
 
-| レベル | モバイルでの挙動 |
-|--------|----------------|
-| L1 | CSS transition のみ。パララックスなし |
-| L2 | GSAP パララックス量50%削減、ピン固定回避 |
-| L3 | Three.js DPR制限（1.5）、パーティクル数40% |
-| L4 | **モバイルでは到達不可**（isMobile ペナルティで最高 L3） |
+| レベル | モバイルでの挙動                                         |
+| ------ | -------------------------------------------------------- |
+| L1     | CSS transition のみ。パララックスなし                    |
+| L2     | GSAP パララックス量50%削減、ピン固定回避                 |
+| L3     | Three.js DPR制限（1.5）、パーティクル数40%               |
+| L4     | **モバイルでは到達不可**（isMobile ペナルティで最高 L3） |
 
 ## Web Vitals 目標
 
-| 指標 | 目標値 |
-|------|--------|
-| LCP | < 2.5s |
-| FID | < 100ms |
-| CLS | < 0.1 |
-| INP | < 200ms |
+| 指標 | 目標値  |
+| ---- | ------- |
+| LCP  | < 2.5s  |
+| FID  | < 100ms |
+| CLS  | < 0.1   |
+| INP  | < 200ms |
 
 ## クロスレベルオーケストレーション要約
 
@@ -226,12 +254,12 @@ import { useLenis } from 'lenis/react'
 
 各レベルでのユーザー体験保証:
 
-| デグラデーション | ビジュアル変化 | ユーザー体験 |
-|---------------|-------------|------------|
-| L4 → L3 | PixiJS フィルター消失 → CSS `radial-gradient` + noise texture | 微量な質感低下、機能影響なし |
-| L3 → L2 | Three.js Canvas 非表示 → CSS gradient + GSAP transform | 3Dエフェクト消失、レイアウト維持 |
-| L2 → L1 | GSAP 無効化 → CSS `animation-timeline: scroll()` or 静的 | アニメーション簡略化、コンテンツ完全アクセス可 |
-| L1 (minimum) | CSS transition + `prefers-reduced-motion` 対応 | 全コンテンツアクセス可能 |
+| デグラデーション | ビジュアル変化                                                | ユーザー体験                                   |
+| ---------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| L4 → L3          | PixiJS フィルター消失 → CSS `radial-gradient` + noise texture | 微量な質感低下、機能影響なし                   |
+| L3 → L2          | Three.js Canvas 非表示 → CSS gradient + GSAP transform        | 3Dエフェクト消失、レイアウト維持               |
+| L2 → L1          | GSAP 無効化 → CSS `animation-timeline: scroll()` or 静的      | アニメーション簡略化、コンテンツ完全アクセス可 |
+| L1 (minimum)     | CSS transition + `prefers-reduced-motion` 対応                | 全コンテンツアクセス可能                       |
 
 **要件**: L3/L4エフェクトは必ずL2/L1フォールバックを用意。視覚的な「ジャンプ」を防ぐため、CSS opacity crossfade でデグラデーション時のトランジションを提供。
 
@@ -266,25 +294,25 @@ export function MyEffect() {
 
 ```typescript
 // NG: effectLevel をアップグレード（degradeTo は昇格不可）
-degradeTo(5)  // 現在が L3 でも L5 に昇格しようとする
+degradeTo(5); // 現在が L3 でも L5 に昇格しようとする
 
 // OK: ダウングレードのみ（内部で Math.min により昇格は無効）
-degradeTo(2)  // L4 → L2 にダウングレード
+degradeTo(2); // L4 → L2 にダウングレード
 ```
 
 ## ファイル配置
 
 パスは `src/app/(public)/_shared/components/` を起点とした相対パス。
 
-| パス | 内容 |
-|------|------|
-| `effects/core/types.ts` | EffectLevel, DeviceCapabilities, ScrollState, PerformanceBudget 型、PERFORMANCE_BUDGETS定数、toEffectLevel |
-| `effects/core/device-capabilities.ts` | GPU検出ロジック（detect-gpu + WebGL直接検出フォールバック） |
-| `effects/core/webgl-context-manager.ts` | WebGLコンテキストLRU管理 |
-| `effects/core/VisualEffectsProvider.tsx` | エフェクトレベルProvider + `useVisualEffects()` + `useVisualEffectsOptional()` |
-| `effects/core/PerformanceMonitor.tsx` | FPS監視UI（開発ツール） |
-| `effects/core/ScrollOrchestrator.tsx` | スクロールオーケストレーション |
-| `effects/three/` | Three.js / R3F コンポーネント |
-| `effects/pixi/` | PixiJS v8 コンポーネント |
+| パス                                     | 内容                                                                                                       |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `effects/core/types.ts`                  | EffectLevel, DeviceCapabilities, ScrollState, PerformanceBudget 型、PERFORMANCE_BUDGETS定数、toEffectLevel |
+| `effects/core/device-capabilities.ts`    | GPU検出ロジック（detect-gpu + WebGL直接検出フォールバック）                                                |
+| `effects/core/webgl-context-manager.ts`  | WebGLコンテキストLRU管理                                                                                   |
+| `effects/core/VisualEffectsProvider.tsx` | エフェクトレベルProvider + `useVisualEffects()` + `useVisualEffectsOptional()`                             |
+| `effects/core/PerformanceMonitor.tsx`    | FPS監視UI（開発ツール）                                                                                    |
+| `effects/core/ScrollOrchestrator.tsx`    | スクロールオーケストレーション                                                                             |
+| `effects/three/`                         | Three.js / R3F コンポーネント                                                                              |
+| `effects/pixi/`                          | PixiJS v8 コンポーネント                                                                                   |
 
 > **詳細パターン**: `src/app/(public)/_shared/components/effects/` 以下の実装を優先して読む。

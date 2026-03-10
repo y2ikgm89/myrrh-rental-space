@@ -6,7 +6,7 @@
  * @see https://developers.facebook.com/docs/sharing/webmasters/
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 
 // =============================================================================
 // SEO/OGP 制限値（業界標準に基づく）
@@ -25,7 +25,7 @@ export const SEO_LIMITS = {
   META_KEYWORDS: 500,
   OGP_TITLE: 70,
   OGP_DESCRIPTION: 200,
-} as const
+} as const;
 
 // =============================================================================
 // 基本スキーマ
@@ -35,23 +35,31 @@ export const SEO_LIMITS = {
  * SEO フィールドスキーマ（Server Action用）
  */
 export const seoFieldsSchema = z.object({
-  metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).nullable().optional(),
+  metaDescription: z
+    .string()
+    .max(SEO_LIMITS.META_DESCRIPTION)
+    .nullable()
+    .optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).nullable().optional(),
-})
+});
 
 /**
  * OGP フィールドスキーマ（Server Action用）
  */
 export const ogpFieldsSchema = z.object({
   ogpTitle: z.string().max(SEO_LIMITS.OGP_TITLE).nullable().optional(),
-  ogpDescription: z.string().max(SEO_LIMITS.OGP_DESCRIPTION).nullable().optional(),
+  ogpDescription: z
+    .string()
+    .max(SEO_LIMITS.OGP_DESCRIPTION)
+    .nullable()
+    .optional(),
   ogpImageUrl: z.string().url().nullable().optional(),
-})
+});
 
 /**
  * SEO/OGP 統合スキーマ（Server Action用）
  */
-export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema)
+export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema);
 
 // =============================================================================
 // フォーム用スキーマ（optional で空文字許可）
@@ -63,7 +71,7 @@ export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema)
 export const seoFieldsFormSchema = z.object({
   metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).optional(),
-})
+});
 
 /**
  * OGP フィールドスキーマ（フォーム用）
@@ -72,23 +80,24 @@ export const ogpFieldsFormSchema = z.object({
   ogpTitle: z.string().max(SEO_LIMITS.OGP_TITLE).optional(),
   ogpDescription: z.string().max(SEO_LIMITS.OGP_DESCRIPTION).optional(),
   ogpImageUrl: z.string().optional(),
-})
+});
 
 /**
  * SEO/OGP 統合スキーマ（フォーム用）
  */
-export const seoOgpFieldsFormSchema = seoFieldsFormSchema.merge(ogpFieldsFormSchema)
+export const seoOgpFieldsFormSchema =
+  seoFieldsFormSchema.merge(ogpFieldsFormSchema);
 
 // =============================================================================
 // 型定義
 // =============================================================================
 
-export type SeoFields = z.infer<typeof seoFieldsSchema>
-export type OgpFields = z.infer<typeof ogpFieldsSchema>
-export type SeoOgpFields = z.infer<typeof seoOgpFieldsSchema>
-export type SeoFieldsForm = z.infer<typeof seoFieldsFormSchema>
-export type OgpFieldsForm = z.infer<typeof ogpFieldsFormSchema>
-export type SeoOgpFieldsForm = z.infer<typeof seoOgpFieldsFormSchema>
+export type SeoFields = z.infer<typeof seoFieldsSchema>;
+export type OgpFields = z.infer<typeof ogpFieldsSchema>;
+export type SeoOgpFields = z.infer<typeof seoOgpFieldsSchema>;
+export type SeoFieldsForm = z.infer<typeof seoFieldsFormSchema>;
+export type OgpFieldsForm = z.infer<typeof ogpFieldsFormSchema>;
+export type SeoOgpFieldsForm = z.infer<typeof seoOgpFieldsFormSchema>;
 
 // =============================================================================
 // デフォルト値
@@ -100,12 +109,12 @@ export const defaultSeoOgpValues: SeoOgpFields = {
   ogpTitle: null,
   ogpDescription: null,
   ogpImageUrl: null,
-}
+};
 
 export const defaultSeoOgpFormValues: SeoOgpFieldsForm = {
-  metaDescription: '',
-  metaKeywords: '',
-  ogpTitle: '',
-  ogpDescription: '',
-  ogpImageUrl: '',
-}
+  metaDescription: "",
+  metaKeywords: "",
+  ogpTitle: "",
+  ogpDescription: "",
+  ogpImageUrl: "",
+};

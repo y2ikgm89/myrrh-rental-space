@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -16,49 +16,49 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateBusinessInfo } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from './hooks'
-import { toDateString } from '@/shared/lib/serialize'
+} from "@/admin/components/ui";
+import { updateBusinessInfo } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "./hooks";
+import { toDateString } from "@/shared/lib/serialize";
 
 interface BusinessInfoSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 const BUSINESS_TYPES = [
-  { value: 'individual', label: '個人事業主' },
-  { value: 'corporation', label: '法人' },
-  { value: 'llc', label: '合同会社' },
-  { value: 'npo', label: 'NPO法人' },
-  { value: 'other', label: 'その他' },
-]
+  { value: "individual", label: "個人事業主" },
+  { value: "corporation", label: "法人" },
+  { value: "llc", label: "合同会社" },
+  { value: "npo", label: "NPO法人" },
+  { value: "other", label: "その他" },
+];
 
 const INDUSTRY_TYPES = [
-  { value: 'rental_space', label: 'レンタルスペース' },
-  { value: 'event_venue', label: 'イベント会場' },
-  { value: 'coworking', label: 'コワーキングスペース' },
-  { value: 'meeting_room', label: '貸会議室' },
-  { value: 'studio', label: 'スタジオ' },
-  { value: 'other', label: 'その他' },
-]
+  { value: "rental_space", label: "レンタルスペース" },
+  { value: "event_venue", label: "イベント会場" },
+  { value: "coworking", label: "コワーキングスペース" },
+  { value: "meeting_room", label: "貸会議室" },
+  { value: "studio", label: "スタジオ" },
+  { value: "other", label: "その他" },
+];
 
 export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState(() => ({
-    businessName: settings.businessName || '',
-    businessNameKana: settings.businessNameKana || '',
-    representativeName: settings.representativeName || '',
-    businessType: settings.businessType || '',
-    industryType: settings.industryType || '',
+    businessName: settings.businessName || "",
+    businessNameKana: settings.businessNameKana || "",
+    representativeName: settings.representativeName || "",
+    businessType: settings.businessType || "",
+    industryType: settings.industryType || "",
     establishedDate: settings.establishedDate
       ? toDateString(new Date(settings.establishedDate))
-      : '',
-    registrationNumber: settings.registrationNumber || '',
-    invoiceNumber: settings.invoiceNumber || '',
-    businessDescription: settings.businessDescription || '',
-  }))
+      : "",
+    registrationNumber: settings.registrationNumber || "",
+    invoiceNumber: settings.invoiceNumber || "",
+    businessDescription: settings.businessDescription || "",
+  }));
 
   const handleSave = () => {
     startTransition(async () => {
@@ -72,16 +72,18 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
         registrationNumber: formData.registrationNumber || null,
         invoiceNumber: formData.invoiceNumber || null,
         businessDescription: formData.businessDescription || null,
-      })
-      handleResult({ ...result, message: result.success ? '事業者情報を保存しました' : undefined })
-    })
-  }
+      });
+      handleResult(result, "事業者情報を保存しました");
+    });
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>事業者情報</CardTitle>
-        <CardDescription>事業者の基本情報を設定します（特定商取引法表示などに使用）</CardDescription>
+        <CardDescription>
+          事業者の基本情報を設定します（特定商取引法表示などに使用）
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -90,7 +92,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Input
               id="businessName"
               value={formData.businessName}
-              onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, businessName: e.target.value })
+              }
               placeholder="株式会社サンプル"
               disabled={isPending}
             />
@@ -100,7 +104,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Input
               id="businessNameKana"
               value={formData.businessNameKana}
-              onChange={(e) => setFormData({ ...formData, businessNameKana: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, businessNameKana: e.target.value })
+              }
               placeholder="カブシキガイシャサンプル"
               disabled={isPending}
             />
@@ -113,7 +119,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Input
               id="representativeName"
               value={formData.representativeName}
-              onChange={(e) => setFormData({ ...formData, representativeName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, representativeName: e.target.value })
+              }
               placeholder="山田 太郎"
               disabled={isPending}
             />
@@ -122,7 +130,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Label htmlFor="businessType">事業形態</Label>
             <Select
               value={formData.businessType}
-              onValueChange={(value) => setFormData({ ...formData, businessType: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, businessType: value })
+              }
               disabled={isPending}
             >
               <SelectTrigger>
@@ -141,7 +151,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Label htmlFor="industryType">業種</Label>
             <Select
               value={formData.industryType}
-              onValueChange={(value) => setFormData({ ...formData, industryType: value })}
+              onValueChange={(value) =>
+                setFormData({ ...formData, industryType: value })
+              }
               disabled={isPending}
             >
               <SelectTrigger>
@@ -165,7 +177,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
               id="establishedDate"
               type="date"
               value={formData.establishedDate}
-              onChange={(e) => setFormData({ ...formData, establishedDate: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, establishedDate: e.target.value })
+              }
               disabled={isPending}
             />
           </div>
@@ -174,7 +188,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Input
               id="registrationNumber"
               value={formData.registrationNumber}
-              onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, registrationNumber: e.target.value })
+              }
               placeholder="1234567890123"
               disabled={isPending}
             />
@@ -184,7 +200,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
             <Input
               id="invoiceNumber"
               value={formData.invoiceNumber}
-              onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, invoiceNumber: e.target.value })
+              }
               placeholder="T1234567890123"
               disabled={isPending}
             />
@@ -196,7 +214,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
           <Textarea
             id="businessDescription"
             value={formData.businessDescription}
-            onChange={(e) => setFormData({ ...formData, businessDescription: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, businessDescription: e.target.value })
+            }
             placeholder="事業内容の説明..."
             rows={3}
             disabled={isPending}
@@ -204,9 +224,9 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '事業者情報を保存'}
+          {isPending ? "保存中..." : "事業者情報を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

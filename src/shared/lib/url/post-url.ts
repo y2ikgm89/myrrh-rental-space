@@ -7,7 +7,7 @@
  * @module shared/lib/url/post-url
  */
 
-import { PostPermalinkStructure } from '@/shared/db/enums'
+import { PostPermalinkStructure } from "@/shared/db/enums";
 
 // =============================================================================
 // Types
@@ -15,18 +15,18 @@ import { PostPermalinkStructure } from '@/shared/db/enums'
 
 /** URL生成に必要な記事データ */
 export interface PostUrlData {
-  slug: string
-  publishedAt?: Date | string | null
+  slug: string;
+  publishedAt?: Date | string | null;
   category?: {
-    slug: string
-  } | null
+    slug: string;
+  } | null;
 }
 
 /** パーマリンク設定 */
 export interface PermalinkConfig {
-  structure: PostPermalinkStructure
+  structure: PostPermalinkStructure;
   /** プレフィックス（'/posts' または ''） */
-  prefix?: string
+  prefix?: string;
 }
 
 // =============================================================================
@@ -57,36 +57,36 @@ export interface PermalinkConfig {
  */
 export function generatePostUrl(
   post: PostUrlData,
-  config: PermalinkConfig
+  config: PermalinkConfig,
 ): string {
-  const { slug, publishedAt, category } = post
-  const { structure, prefix = '/posts' } = config
+  const { slug, publishedAt, category } = post;
+  const { structure, prefix = "/posts" } = config;
 
-  let path: string
+  let path: string;
   switch (structure) {
     case PostPermalinkStructure.date_name: {
       // /2026/01/article-title
-      const date = publishedAt ? new Date(publishedAt) : new Date()
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      path = `/${year}/${month}/${slug}`
-      break
+      const date = publishedAt ? new Date(publishedAt) : new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      path = `/${year}/${month}/${slug}`;
+      break;
     }
 
     case PostPermalinkStructure.category_name: {
       // /category-slug/article-title
-      const categorySlug = category?.slug ?? 'uncategorized'
-      path = `/${categorySlug}/${slug}`
-      break
+      const categorySlug = category?.slug ?? "uncategorized";
+      path = `/${categorySlug}/${slug}`;
+      break;
     }
 
     case PostPermalinkStructure.post_name:
     default:
       // /article-title
-      path = `/${slug}`
+      path = `/${slug}`;
   }
 
-  return `${prefix}${path}`
+  return `${prefix}${path}`;
 }
 
 /**
@@ -98,18 +98,18 @@ export function generatePostUrl(
  */
 export function generatePostListUrl(
   prefix: string,
-  params?: { category?: string; tags?: string; q?: string }
+  params?: { category?: string; tags?: string; q?: string },
 ): string {
-  const base = prefix || '/'
-  if (!params) return base
+  const base = prefix || "/";
+  if (!params) return base;
 
-  const searchParams = new URLSearchParams()
-  if (params.category) searchParams.set('category', params.category)
-  if (params.tags) searchParams.set('tags', params.tags)
-  if (params.q) searchParams.set('q', params.q)
+  const searchParams = new URLSearchParams();
+  if (params.category) searchParams.set("category", params.category);
+  if (params.tags) searchParams.set("tags", params.tags);
+  if (params.q) searchParams.set("q", params.q);
 
-  const query = searchParams.toString()
-  return query ? `${base}?${query}` : base
+  const query = searchParams.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 /**
@@ -119,8 +119,11 @@ export function generatePostListUrl(
  * @param prefix - プレフィックス（'/posts' または ''）
  * @returns カテゴリページURL
  */
-export function generateCategoryUrl(categorySlug: string, prefix: string): string {
-  return `${prefix}/category/${categorySlug}`
+export function generateCategoryUrl(
+  categorySlug: string,
+  prefix: string,
+): string {
+  return `${prefix}/category/${categorySlug}`;
 }
 
 /**
@@ -131,7 +134,7 @@ export function generateCategoryUrl(categorySlug: string, prefix: string): strin
  * @returns タグページURL
  */
 export function generateTagUrl(tagSlug: string, prefix: string): string {
-  return `${prefix}/tag/${tagSlug}`
+  return `${prefix}/tag/${tagSlug}`;
 }
 
 /**
@@ -143,12 +146,12 @@ export function generateTagUrl(tagSlug: string, prefix: string): string {
 export function getUrlPattern(structure: PostPermalinkStructure): string {
   switch (structure) {
     case PostPermalinkStructure.date_name:
-      return '/:year/:month/:slug'
+      return "/:year/:month/:slug";
     case PostPermalinkStructure.category_name:
-      return '/:category/:slug'
+      return "/:category/:slug";
     case PostPermalinkStructure.post_name:
     default:
-      return '/:slug'
+      return "/:slug";
   }
 }
 
@@ -161,42 +164,42 @@ export function getUrlPattern(structure: PostPermalinkStructure): string {
  */
 export function extractSlugFromUrl(
   pathname: string,
-  config: PermalinkConfig
+  config: PermalinkConfig,
 ): string | null {
-  const { structure } = config
-  const segments = pathname.split('/').filter(Boolean)
+  const { structure } = config;
+  const segments = pathname.split("/").filter(Boolean);
 
   switch (structure) {
     case PostPermalinkStructure.date_name: {
       // /2026/01/article-title → segments = ['2026', '01', 'article-title']
-      const slug = segments[2]
+      const slug = segments[2];
       if (segments.length === 3 && slug) {
-        return slug
+        return slug;
       }
-      break
+      break;
     }
 
     case PostPermalinkStructure.category_name: {
       // /category-slug/article-title → segments = ['category-slug', 'article-title']
-      const first = segments[0]
-      const second = segments[1]
+      const first = segments[0];
+      const second = segments[1];
       if (segments.length === 2 && first && !isReservedPath(first) && second) {
-        return second
+        return second;
       }
-      break
+      break;
     }
 
     case PostPermalinkStructure.post_name:
     default: {
       // /article-title → segments = ['article-title']
-      const first = segments[0]
+      const first = segments[0];
       if (segments.length === 1 && first && !isReservedPath(first)) {
-        return first
+        return first;
       }
     }
   }
 
-  return null
+  return null;
 }
 
 /**
@@ -208,41 +211,41 @@ export function extractSlugFromUrl(
  */
 export function matchesPostUrl(
   pathname: string,
-  config: PermalinkConfig
+  config: PermalinkConfig,
 ): boolean {
-  const { structure } = config
-  const segments = pathname.split('/').filter(Boolean)
+  const { structure } = config;
+  const segments = pathname.split("/").filter(Boolean);
 
   switch (structure) {
     case PostPermalinkStructure.date_name: {
       // /yyyy/mm/slug の形式
-      if (segments.length !== 3) return false
-      const seg0 = segments[0]
-      const seg1 = segments[1]
-      const seg2 = segments[2]
-      if (!seg0 || !seg1 || !seg2) return false
-      const year = parseInt(seg0, 10)
-      const month = parseInt(seg1, 10)
+      if (segments.length !== 3) return false;
+      const seg0 = segments[0];
+      const seg1 = segments[1];
+      const seg2 = segments[2];
+      if (!seg0 || !seg1 || !seg2) return false;
+      const year = parseInt(seg0, 10);
+      const month = parseInt(seg1, 10);
       return (
         year >= 2000 &&
         year <= 2100 &&
         month >= 1 &&
         month <= 12 &&
         !isReservedPath(seg2)
-      )
+      );
     }
 
     case PostPermalinkStructure.category_name: {
       // /category/slug の形式（カテゴリが予約語でないこと）
-      const first = segments[0]
-      return segments.length === 2 && !!first && !isReservedPath(first)
+      const first = segments[0];
+      return segments.length === 2 && !!first && !isReservedPath(first);
     }
 
     case PostPermalinkStructure.post_name:
     default: {
       // /slug の形式（予約語でないこと）
-      const first = segments[0]
-      return segments.length === 1 && !!first && !isReservedPath(first)
+      const first = segments[0];
+      return segments.length === 1 && !!first && !isReservedPath(first);
     }
   }
 }
@@ -253,27 +256,27 @@ export function matchesPostUrl(
 
 /** 予約済みパス（simple構造で除外） */
 const RESERVED_PATHS = new Set([
-  'about',
-  'contact',
-  'faq',
-  'news',
-  'reservation',
-  'spaces',
-  'terms',
-  'privacy',
-  'posts',
-  'p',
-  'category',
-  'tag',
-  'preview',
-  'api',
-  'admin',
-  '_next',
-])
+  "about",
+  "contact",
+  "faq",
+  "news",
+  "reservation",
+  "spaces",
+  "terms",
+  "privacy",
+  "posts",
+  "p",
+  "category",
+  "tag",
+  "preview",
+  "api",
+  "admin",
+  "_next",
+]);
 
 /**
  * 予約済みパスかどうかを判定
  */
 function isReservedPath(segment: string): boolean {
-  return RESERVED_PATHS.has(segment.toLowerCase())
+  return RESERVED_PATHS.has(segment.toLowerCase());
 }

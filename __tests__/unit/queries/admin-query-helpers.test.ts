@@ -25,23 +25,22 @@ mock.module("@/shared/lib/auth", () => ({
 }));
 
 mock.module("@/admin/lib/permissions", () => ({
-  hasPermission: (...args: Parameters<typeof mockHasPermission>) => mockHasPermission(...args),
-  isEditorRole: (...args: Parameters<typeof mockIsEditorRole>) => mockIsEditorRole(...args),
+  hasPermission: (...args: Parameters<typeof mockHasPermission>) =>
+    mockHasPermission(...args),
+  isEditorRole: (...args: Parameters<typeof mockIsEditorRole>) =>
+    mockIsEditorRole(...args),
   userHasResourceAccess: (
     ...args: Parameters<typeof mockUserHasResourceAccess>
   ) => mockUserHasResourceAccess(...args),
 }));
 
 mock.module("@/admin/lib/audit", () => ({
-  logPermissionDenied: (
-    ...args: Parameters<typeof mockLogPermissionDenied>
-  ) => mockLogPermissionDenied(...args),
+  logPermissionDenied: (...args: Parameters<typeof mockLogPermissionDenied>) =>
+    mockLogPermissionDenied(...args),
 }));
 
-const {
-  requireAdminPermission,
-  requireAdminResourcePermission,
-} = await import("@/admin/queries/_helpers");
+const { requireAdminPermission, requireAdminResourcePermission } =
+  await import("@/admin/queries/_helpers");
 
 describe("admin query helpers", () => {
   beforeEach(() => {

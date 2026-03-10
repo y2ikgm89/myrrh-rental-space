@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from "react";
 
 /**
  * メディアクエリの状態を監視するフック
@@ -14,19 +14,19 @@ import { useSyncExternalStore } from 'react'
  */
 export function useMediaQuery(query: string): boolean {
   const subscribe = (callback: () => void) => {
-    const mediaQuery = window.matchMedia(query)
-    mediaQuery.addEventListener('change', callback)
-    return () => mediaQuery.removeEventListener('change', callback)
-  }
+    const mediaQuery = window.matchMedia(query);
+    mediaQuery.addEventListener("change", callback);
+    return () => mediaQuery.removeEventListener("change", callback);
+  };
 
   const getSnapshot = () => {
-    return window.matchMedia(query).matches
-  }
+    return window.matchMedia(query).matches;
+  };
 
   const getServerSnapshot = () => {
     // SSRでは常にfalseを返す（デスクトップ想定）
-    return false
-  }
+    return false;
+  };
 
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

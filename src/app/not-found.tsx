@@ -7,24 +7,26 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/not-found
  */
 
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'ページが見つかりません',
-  description: 'お探しのページは存在しないか、移動した可能性があります。',
+  title: "ページが見つかりません",
+  description: "お探しのページは存在しないか、移動した可能性があります。",
   robots: {
     index: false,
     follow: false,
   },
-}
+};
 
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="w-full max-w-md text-center">
         <div className="mb-8">
-          <span className="text-8xl font-bold text-muted-foreground/20">404</span>
+          <span className="text-8xl font-bold text-muted-foreground/20">
+            404
+          </span>
         </div>
 
         <h1 className="mb-4 text-2xl font-bold text-foreground">
@@ -53,5 +55,5 @@ export default function NotFound() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -6,12 +6,12 @@
  * ダイアログで列数を選択し、空のギャラリーコンテナを挿入する
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $setState } from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $setState } from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createGalleryContainerNode,
   $createGalleryItemNode,
@@ -19,7 +19,7 @@ import {
   galleryStyleState,
   type GalleryColumns,
   type GalleryStyle,
-} from '../nodes/GalleryNode'
+} from "../nodes/GalleryNode";
 import {
   Dialog,
   DialogContent,
@@ -28,44 +28,41 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type GalleryPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const COLUMN_OPTIONS: readonly { value: GalleryColumns; label: string }[] = [
-  { value: 2, label: '2列' },
-  { value: 3, label: '3列' },
-  { value: 4, label: '4列' },
-]
+  { value: 2, label: "2列" },
+  { value: 3, label: "3列" },
+  { value: 4, label: "4列" },
+];
 
 const STYLE_OPTIONS: readonly { value: GalleryStyle; label: string }[] = [
-  { value: 'grid', label: 'グリッド' },
-  { value: 'masonry', label: 'メイソンリー' },
-]
+  { value: "grid", label: "グリッド" },
+  { value: "masonry", label: "メイソンリー" },
+];
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [columns, setColumns] = useState<GalleryColumns>(3)
-  const [style, setStyle] = useState<GalleryStyle>('grid')
+  const [editor] = useLexicalComposerContext();
+  const [columns, setColumns] = useState<GalleryColumns>(3);
+  const [style, setStyle] = useState<GalleryStyle>("grid");
 
   // ノードトランスフォーム: 空のギャラリーコンテナへの安全網
   // handleInsert では明示的に item を追加するが、外部からコンテナが空になった場合
@@ -73,43 +70,43 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
   useEffect(() => {
     return editor.registerNodeTransform(GalleryContainerNode, (node) => {
       if (node.getChildren().length === 0) {
-        const item = $createGalleryItemNode()
-        node.append(item)
+        const item = $createGalleryItemNode();
+        node.append(item);
       }
-    })
-  }, [editor])
+    });
+  }, [editor]);
 
   const handleInsert = () => {
     editor.update(() => {
-      const container = $createGalleryContainerNode(columns)
-      $setState(container, galleryStyleState, style)
-      const item = $createGalleryItemNode()
-      container.append(item)
-      $insertNodeToNearestRoot(container)
-    })
-    setColumns(3)
-    setStyle('grid')
-    onClose()
-  }
+      const container = $createGalleryContainerNode(columns);
+      $setState(container, galleryStyleState, style);
+      const item = $createGalleryItemNode();
+      container.append(item);
+      $insertNodeToNearestRoot(container);
+    });
+    setColumns(3);
+    setStyle("grid");
+    onClose();
+  };
 
   const handleClose = () => {
-    setColumns(3)
-    setStyle('grid')
-    onClose()
-  }
+    setColumns(3);
+    setStyle("grid");
+    onClose();
+  };
 
   const handleColumnsChange = (value: string) => {
-    const num = parseInt(value, 10)
+    const num = parseInt(value, 10);
     if (num === 2 || num === 3 || num === 4) {
-      setColumns(num)
+      setColumns(num);
     }
-  }
+  };
 
   const handleStyleChange = (value: string) => {
-    if (value === 'grid' || value === 'masonry') {
-      setStyle(value)
+    if (value === "grid" || value === "masonry") {
+      setStyle(value);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -132,7 +129,10 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
                     value={String(option.value)}
                     id={`gallery-columns-${option.value}`}
                   />
-                  <Label htmlFor={`gallery-columns-${option.value}`} className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`gallery-columns-${option.value}`}
+                    className="font-normal cursor-pointer"
+                  >
                     {option.label}
                   </Label>
                 </div>
@@ -153,7 +153,10 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
                     value={option.value}
                     id={`gallery-style-${option.value}`}
                   />
-                  <Label htmlFor={`gallery-style-${option.value}`} className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`gallery-style-${option.value}`}
+                    className="font-normal cursor-pointer"
+                  >
                     {option.label}
                   </Label>
                 </div>
@@ -172,5 +175,5 @@ export function GalleryPlugin({ isOpen, onClose }: GalleryPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

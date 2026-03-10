@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * カテゴリ選択フィールド
@@ -8,10 +8,10 @@
  * - 新規カテゴリのインライン作成（オプション）
  */
 
-import { useState } from 'react'
-import type { FieldValues, Path } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
-import { Plus } from 'lucide-react'
+import { useState } from "react";
+import type { FieldPathByValue, FieldValues } from "react-hook-form";
+import { useController } from "react-hook-form";
+import { Plus } from "lucide-react";
 import {
   Label,
   Select,
@@ -26,10 +26,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/admin/components/ui'
-import { getFieldError, getErrorMessage } from '../types'
-import { setFieldString, type FieldComponentProps } from '../content-types/types'
-import { generateSlug } from '@/shared/lib/utils'
+} from "@/admin/components/ui";
+import { getFieldError, getErrorMessage } from "../types";
+import type { FieldComponentProps } from "../content-types/types";
+import { generateSlug } from "@/shared/lib/utils";
 
 // =============================================================================
 // Constants
@@ -39,36 +39,36 @@ import { generateSlug } from '@/shared/lib/utils'
  * Select.Item は空文字列を value として許可しないため、
  * 「なし」選択用の特別な値を定義
  */
-const SELECT_NONE_VALUE = '__none__'
+const SELECT_NONE_VALUE = "__none__";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type CategoryOption = {
-  id: string
-  name: string
-  slug?: string
-}
+  id: string;
+  name: string;
+  slug?: string;
+};
 
 type CategoryFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
   /** フィールド名マッピング */
   fields: {
-    categoryId: Path<T>
-  }
+    categoryId: FieldPathByValue<T, string | null | undefined>;
+  };
   /** カテゴリオプション */
-  categories: CategoryOption[]
+  categories: CategoryOption[];
   /** ラベル */
-  label?: string
+  label?: string;
   /** プレースホルダー */
-  placeholder?: string
+  placeholder?: string;
   /** オプション: なしを選択可能にするか */
-  allowEmpty?: boolean
+  allowEmpty?: boolean;
   /** なしのラベル */
-  emptyLabel?: string
+  emptyLabel?: string;
   /** 新規カテゴリ作成時のコールバック（設定すると作成ボタンが表示される） */
-  onCreateCategory?: (name: string) => Promise<CategoryOption | null>
-}
+  onCreateCategory?: (name: string) => Promise<CategoryOption | null>;
+};
 
 // =============================================================================
 // Component
@@ -76,55 +76,56 @@ type CategoryFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
 
 export function CategoryFields<T extends FieldValues>({
   control,
-  setValue,
   errors,
   disabled,
   fields,
   categories,
-  label = 'カテゴリ',
-  placeholder = 'カテゴリを選択',
+  label = "カテゴリ",
+  placeholder = "カテゴリを選択",
   allowEmpty = false,
-  emptyLabel = 'なし',
+  emptyLabel = "なし",
   onCreateCategory,
 }: CategoryFieldsProps<T>) {
-  const rawCategoryId = useWatch({ control, name: fields.categoryId })
-  // useWatch の戻り値を安全に文字列として取得
-  const categoryId = typeof rawCategoryId === 'string' ? rawCategoryId : ''
-  const categoryError = getFieldError(errors, fields.categoryId)
+  const categoryField = useController({ control, name: fields.categoryId });
+  const categoryId =
+    typeof categoryField.field.value === "string"
+      ? categoryField.field.value
+      : "";
+  const categoryError = getFieldError(errors, fields.categoryId);
 
   // 新規作成ダイアログ
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreateCategory = async () => {
-    if (!onCreateCategory || !newCategoryName.trim()) return
+    if (!onCreateCategory || !newCategoryName.trim()) return;
 
-    setIsCreating(true)
-    setCreateError(null)
+    setIsCreating(true);
+    setCreateError(null);
 
     try {
-      const newCategory = await onCreateCategory(newCategoryName.trim())
+      const newCategory = await onCreateCategory(newCategoryName.trim());
       if (newCategory) {
-        setFieldString(setValue, fields.categoryId, newCategory.id, { shouldDirty: true })
-        setIsDialogOpen(false)
-        setNewCategoryName('')
+        categoryField.field.onChange(newCategory.id);
+        setIsDialogOpen(false);
+        setNewCategoryName("");
       }
     } catch (error) {
       setCreateError(
-        error instanceof Error ? error.message : 'カテゴリの作成に失敗しました'
-      )
+        error instanceof Error ? error.message : "カテゴリの作成に失敗しました",
+      );
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const handleDialogClose = () => {
-    setIsDialogOpen(false)
-    setNewCategoryName('')
-    setCreateError(null)
-  }
+    setIsDialogOpen(false);
+    setNewCategoryName("");
+    setCreateError(null);
+  };
 
   return (
     <div className="space-y-2">
@@ -132,10 +133,10 @@ export function CategoryFields<T extends FieldValues>({
 
       <div className="flex gap-2">
         <Select
-          value={categoryId || (allowEmpty ? SELECT_NONE_VALUE : '')}
+          value={categoryId || (allowEmpty ? SELECT_NONE_VALUE : "")}
           onValueChange={(value) => {
-            const newValue = value === SELECT_NONE_VALUE ? '' : value
-            setFieldString(setValue, fields.categoryId, newValue, { shouldDirty: true })
+            const newValue = value === SELECT_NONE_VALUE ? "" : value;
+            categoryField.field.onChange(newValue);
           }}
           disabled={disabled}
         >
@@ -143,7 +144,9 @@ export function CategoryFields<T extends FieldValues>({
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
           <SelectContent>
-            {allowEmpty && <SelectItem value={SELECT_NONE_VALUE}>{emptyLabel}</SelectItem>}
+            {allowEmpty && (
+              <SelectItem value={SELECT_NONE_VALUE}>{emptyLabel}</SelectItem>
+            )}
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id}>
                 {category.name}
@@ -168,7 +171,9 @@ export function CategoryFields<T extends FieldValues>({
       </div>
 
       {categoryError && (
-        <p className="text-sm text-destructive">{getErrorMessage(categoryError)}</p>
+        <p className="text-sm text-destructive">
+          {getErrorMessage(categoryError)}
+        </p>
       )}
 
       {/* 新規作成ダイアログ */}
@@ -188,15 +193,15 @@ export function CategoryFields<T extends FieldValues>({
                 placeholder="カテゴリ名を入力"
                 disabled={isCreating}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newCategoryName.trim()) {
-                    e.preventDefault()
-                    void handleCreateCategory()
+                  if (e.key === "Enter" && newCategoryName.trim()) {
+                    e.preventDefault();
+                    void handleCreateCategory();
                   }
                 }}
               />
               {newCategoryName.trim() && (
                 <p className="text-xs text-muted-foreground">
-                  スラッグ: {generateSlug(newCategoryName, 'category')}
+                  スラッグ: {generateSlug(newCategoryName, "category")}
                 </p>
               )}
             </div>
@@ -220,11 +225,11 @@ export function CategoryFields<T extends FieldValues>({
               onClick={handleCreateCategory}
               disabled={isCreating || !newCategoryName.trim()}
             >
-              {isCreating ? '作成中...' : '作成'}
+              {isCreating ? "作成中..." : "作成"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

@@ -5,27 +5,35 @@
  * 型アサーション完全排除
  */
 
-import { useWatch, type Control, type FieldValues, type Path } from 'react-hook-form'
-import { resolveWidthStyles, type WidthStyles } from '@/shared/lib/styles/layout-mapper'
-import { LayoutWidth } from '@/shared/types/prisma'
-import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
-import type { ContentWidth } from '@/shared/types/layout'
+import {
+  useWatch,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
+import {
+  resolveWidthStyles,
+  type WidthStyles,
+} from "@/shared/lib/styles/layout-mapper";
+import { LayoutWidth } from "@/shared/types/prisma";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
+import type { ContentWidth } from "@/shared/types/layout";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type UseContentWidthStylesOptions<T extends FieldValues> = {
-  control: Control<T>
-  widthFieldName: Path<T>
-  customFieldName: Path<T>
-  fallback?: ContentWidth
-}
+  control: Control<T>;
+  widthFieldName: Path<T>;
+  customFieldName: Path<T>;
+  fallback?: ContentWidth;
+};
 
 const DEFAULT_FALLBACK: ContentWidth = {
   width: LayoutWidth.MD,
   customPx: null,
-}
+};
 
 // =============================================================================
 // Hook
@@ -46,21 +54,24 @@ export function useContentWidthStyles<T extends FieldValues>({
   fallback = DEFAULT_FALLBACK,
 }: UseContentWidthStylesOptions<T>): WidthStyles {
   // Path<T> により型安全 — 型アサーション不要
-  const rawWidth = useWatch({ control, name: widthFieldName })
-  const rawCustom = useWatch({ control, name: customFieldName })
+  const rawWidth = useWatch({ control, name: widthFieldName });
+  const rawCustom = useWatch({ control, name: customFieldName });
 
   // typeof ナローイング（型アサーション不要）
   const effectiveWidth =
-    typeof rawWidth === 'string' && isValidLayoutWidth(rawWidth)
+    typeof rawWidth === "string" && isValidLayoutWidth(rawWidth)
       ? rawWidth
-      : fallback.width
+      : fallback.width;
 
-  const rawCustomStr = typeof rawCustom === 'string' ? rawCustom : null
-  const parsedCustom = rawCustomStr ? parseInt(rawCustomStr, 10) : null
+  const rawCustomStr = typeof rawCustom === "string" ? rawCustom : null;
+  const parsedCustom = rawCustomStr ? parseInt(rawCustomStr, 10) : null;
   const effectiveCustomPx =
     parsedCustom !== null && !Number.isNaN(parsedCustom)
       ? parsedCustom
-      : fallback.customPx
+      : fallback.customPx;
 
-  return resolveWidthStyles({ width: effectiveWidth, customPx: effectiveCustomPx })
+  return resolveWidthStyles({
+    width: effectiveWidth,
+    customPx: effectiveCustomPx,
+  });
 }

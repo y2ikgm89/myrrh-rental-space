@@ -96,19 +96,21 @@ const adminReservationSchema = z.object({
 
   // 顧客情報（既存 or 新規）
   customerId: z.string().uuid().optional(),
-  customerData: z.object({
-    lastName: z.string().min(1),
-    firstName: z.string().min(1),
-    email: z.string().email(),
-    phoneNumber: z.string().optional(),
-  }).optional(),
+  customerData: z
+    .object({
+      lastName: z.string().min(1),
+      firstName: z.string().min(1),
+      email: z.string().email(),
+      phoneNumber: z.string().optional(),
+    })
+    .optional(),
 
   // オプション
   totalPrice: z.number().positive().optional(), // 手動調整時
-  status: z.enum(['PENDING', 'CONFIRMED']).default('CONFIRMED'),
+  status: z.enum(["PENDING", "CONFIRMED"]).default("CONFIRMED"),
   notes: z.string().optional(),
   sendEmail: z.boolean().default(true),
-})
+});
 ```
 
 ## 実装フェーズ
@@ -195,13 +197,13 @@ const adminReservationSchema = z.object({
 
 ### 公開サイトとの違い
 
-| 項目 | 公開サイト | 管理画面 |
-|------|-----------|---------|
-| Turnstile | 必須 | 不要（認証済み） |
-| 規約同意 | 必須（設定時） | 不要（電話確認済み想定） |
-| ステータス | PENDING固定 | 選択可能 |
-| 料金 | 自動計算のみ | 手動調整可 |
-| 顧客 | 新規入力 | 検索+新規 |
+| 項目       | 公開サイト     | 管理画面                 |
+| ---------- | -------------- | ------------------------ |
+| Turnstile  | 必須           | 不要（認証済み）         |
+| 規約同意   | 必須（設定時） | 不要（電話確認済み想定） |
+| ステータス | PENDING固定    | 選択可能                 |
+| 料金       | 自動計算のみ   | 手動調整可               |
+| 顧客       | 新規入力       | 検索+新規                |
 
 ### 既存ロジックの活用
 

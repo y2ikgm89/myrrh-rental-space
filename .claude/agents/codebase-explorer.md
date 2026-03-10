@@ -33,22 +33,22 @@ src/shared/          — Shared utilities (no CSS variable dependency)
 
 ### Public URL routes
 
-| URL pattern | Location |
-|-------------|----------|
-| `/` | `src/app/(public)/page.tsx` |
-| `/[slug]` | `src/app/(public)/[slug]/page.tsx` (DB-driven custom pages) |
-| `/faq` | `src/app/(public)/faq/` |
-| `/about` | `src/app/(public)/about/` |
-| `/contact` | `src/app/(public)/contact/` |
-| `/spaces` | `src/app/(public)/spaces/` |
-| `/spaces/[slug]` | `src/app/(public)/spaces/[slug]/` |
-| `/reservation` | `src/app/(public)/reservation/` |
-| `/privacy` | `src/app/(public)/privacy/` |
-| `/terms` | `src/app/(public)/terms/` |
-| `/news` | `src/app/(public)/news/` |
-| `/news/[slug]` | `src/app/(public)/news/[slug]/` |
-| `/posts` | `src/app/(public)/posts/` |
-| `/posts/[slug]` | `src/app/(public)/posts/[slug]/` |
+| URL pattern      | Location                                                    |
+| ---------------- | ----------------------------------------------------------- |
+| `/`              | `src/app/(public)/page.tsx`                                 |
+| `/[slug]`        | `src/app/(public)/[slug]/page.tsx` (DB-driven custom pages) |
+| `/faq`           | `src/app/(public)/faq/`                                     |
+| `/about`         | `src/app/(public)/about/`                                   |
+| `/contact`       | `src/app/(public)/contact/`                                 |
+| `/spaces`        | `src/app/(public)/spaces/`                                  |
+| `/spaces/[slug]` | `src/app/(public)/spaces/[slug]/`                           |
+| `/reservation`   | `src/app/(public)/reservation/`                             |
+| `/privacy`       | `src/app/(public)/privacy/`                                 |
+| `/terms`         | `src/app/(public)/terms/`                                   |
+| `/news`          | `src/app/(public)/news/`                                    |
+| `/news/[slug]`   | `src/app/(public)/news/[slug]/`                             |
+| `/posts`         | `src/app/(public)/posts/`                                   |
+| `/posts/[slug]`  | `src/app/(public)/posts/[slug]/`                            |
 
 ### Key patterns
 
@@ -70,16 +70,19 @@ src/shared/          — Shared utilities (no CSS variable dependency)
 ## What to remember
 
 ### File location maps
+
 - Where specific features are implemented
 - Which files contain specific symbols (classes, functions, types)
 - Import/export relationships between modules
 
 ### Architecture patterns
+
 - Data flow paths (DB -> Server Action -> 'use cache' -> Component)
 - Component hierarchies and composition patterns
 - Which sections/pages share which components
 
 ### Frequently accessed paths
+
 - Track which files/paths are queried most often
 - Create shortcuts in memory for common lookups
 
@@ -93,6 +96,7 @@ architecture.md    — Data flows, component trees, import graphs
 ```
 
 Keep entries in this format for fast scanning:
+
 ```
 ## [Feature Area]
 - component: src/app/(public)/_components/HeroSection.tsx

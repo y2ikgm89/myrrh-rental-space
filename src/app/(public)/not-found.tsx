@@ -5,17 +5,17 @@
  * 公開ページのレイアウト（Header/Footer）内で表示される。
  */
 
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'ページが見つかりません',
-  description: 'お探しのページは存在しないか、移動した可能性があります。',
+  title: "ページが見つかりません",
+  description: "お探しのページは存在しないか、移動した可能性があります。",
   robots: {
     index: false,
     follow: false,
   },
-}
+};
 
 export default function NotFound() {
   return (
@@ -53,5 +53,5 @@ export default function NotFound() {
         </div>
       </div>
     </div>
-  )
+  );
 }

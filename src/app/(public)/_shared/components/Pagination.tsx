@@ -1,10 +1,10 @@
-import type { ReactElement } from 'react'
-import Link from 'next/link'
+import type { ReactElement } from "react";
+import Link from "next/link";
 
 interface PaginationProps {
-  currentPage: number
-  totalPages: number
-  basePath: string
+  currentPage: number;
+  totalPages: number;
+  basePath: string;
 }
 
 export function Pagination({
@@ -12,22 +12,25 @@ export function Pagination({
   totalPages,
   basePath,
 }: PaginationProps): ReactElement | null {
-  if (totalPages <= 1) return null
+  if (totalPages <= 1) return null;
 
-  const pages: number[] = []
-  const start = Math.max(1, currentPage - 2)
-  const end = Math.min(totalPages, currentPage + 2)
+  const pages: number[] = [];
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
 
   for (let i = start; i <= end; i++) {
-    pages.push(i)
+    pages.push(i);
   }
 
   function getHref(page: number): string {
-    return page === 1 ? basePath : `${basePath}?page=${page}`
+    return page === 1 ? basePath : `${basePath}?page=${page}`;
   }
 
   return (
-    <nav aria-label="ページネーション" className="mt-16 flex items-center justify-center gap-2">
+    <nav
+      aria-label="ページネーション"
+      className="mt-16 flex items-center justify-center gap-2"
+    >
       {currentPage > 1 && (
         <Link
           href={getHref(currentPage - 1)}
@@ -57,10 +60,10 @@ export function Pagination({
           href={getHref(page)}
           className={`rounded-md border px-3 py-2 text-sm transition-colors ${
             page === currentPage
-              ? 'border-primary bg-primary text-primary-foreground'
-              : 'border-border text-muted-foreground hover:bg-accent'
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border text-muted-foreground hover:bg-accent"
           }`}
-          aria-current={page === currentPage ? 'page' : undefined}
+          aria-current={page === currentPage ? "page" : undefined}
         >
           {page}
         </Link>
@@ -89,5 +92,5 @@ export function Pagination({
         </Link>
       )}
     </nav>
-  )
+  );
 }

@@ -10,7 +10,7 @@ import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   updateEmailSettings as updateEmailSettingsCommand,
   updateNotificationSettings as updateNotificationSettingsCommand,

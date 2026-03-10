@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * CategoryManager - カテゴリ管理コンポーネント
@@ -6,13 +6,13 @@
  * @description nuqs対応、検索機能付き、D&D並べ替え対応
  */
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
-import { Search, X, Settings } from 'lucide-react'
-import Link from 'next/link'
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Search, X, Settings } from "lucide-react";
+import Link from "next/link";
 import {
   Button,
   Card,
@@ -46,45 +46,49 @@ import {
   arrayMove,
   CSS,
   type DragEndEvent,
-} from '@/admin/components/ui'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { DragHandle } from '@/admin/components/ui/sortable'
-import { fetchAdminJson } from '@/admin/lib/admin-api-client'
+} from "@/admin/components/ui";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { DragHandle } from "@/admin/components/ui/sortable";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   createPostCategory,
   updatePostCategory,
   deletePostCategory,
   updatePostCategoryOrder,
-} from '@/admin/actions/post'
-import type { PostCategoryData } from '@/shared/domain/posts/types'
-import type { PostCategoryInput } from '@/admin/lib/validations/post'
-import { cn } from '@/shared/lib/cn'
-import { useCategoryFilters } from '../_hooks/use-taxonomy-filters'
+} from "@/admin/actions/post";
+import type { PostCategoryData } from "@/shared/domain/posts/types";
+import type { PostCategoryInput } from "@/admin/lib/validations/post";
+import { cn } from "@/shared/lib/cn";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { useCategoryFilters } from "../_hooks/use-taxonomy-filters";
 
 // =============================================================================
 // Types & Schemas
 // =============================================================================
 
 type CategoryFormData = {
-  name: string
-  slug: string
-  description?: string
-  order: number
-}
+  name: string;
+  slug: string;
+  description?: string;
+  order: number;
+};
 
 const categoryFormSchema = z.object({
-  name: z.string().min(1, { error: 'カテゴリ名は必須です' }).max(50, { error: 'カテゴリ名は50文字以内' }),
+  name: z
+    .string()
+    .min(1, { error: "カテゴリ名は必須です" })
+    .max(50, { error: "カテゴリ名は50文字以内" }),
   slug: z
     .string()
-    .min(1, { error: 'スラッグは必須です' })
+    .min(1, { error: "スラッグは必須です" })
     .max(50)
-    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   description: z.string().max(200).optional(),
   order: z.number().int().min(0),
-}) satisfies z.ZodType<CategoryFormData>
+}) satisfies z.ZodType<CategoryFormData>;
 
 async function fetchPostCategories(): Promise<PostCategoryData[]> {
-  return fetchAdminJson('/admin/api/post-categories')
+  return fetchAdminJson("/admin/api/post-categories");
 }
 
 // =============================================================================
@@ -92,11 +96,11 @@ async function fetchPostCategories(): Promise<PostCategoryData[]> {
 // =============================================================================
 
 type SortableCategoryRowProps = {
-  category: PostCategoryData
-  onEdit: (category: PostCategoryData) => void
-  onDelete: (id: string) => void
-  isPending: boolean
-}
+  category: PostCategoryData;
+  onEdit: (category: PostCategoryData) => void;
+  onDelete: (id: string) => void;
+  isPending: boolean;
+};
 
 function SortableCategoryRow({
   category,
@@ -104,21 +108,27 @@ function SortableCategoryRow({
   onDelete,
   isPending,
 }: SortableCategoryRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: category.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
     <TableRow
       ref={setNodeRef}
       style={style}
-      className={cn(isDragging && 'z-50 bg-muted/80 shadow-lg')}
+      className={cn(isDragging && "z-50 bg-muted/80 shadow-lg")}
     >
       <TableCell className="w-12">
         <div {...attributes} {...listeners}>
@@ -163,15 +173,15 @@ function SortableCategoryRow({
             onOpenChange={setDeleteDialogOpen}
             itemName={category.name}
             onConfirm={() => {
-              onDelete(category.id)
-              setDeleteDialogOpen(false)
+              onDelete(category.id);
+              setDeleteDialogOpen(false);
             }}
             isPending={isPending}
           />
         </div>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 // =============================================================================
@@ -179,59 +189,73 @@ function SortableCategoryRow({
 // =============================================================================
 
 type CategoryManagerProps = {
-  initialCategories: PostCategoryData[]
-}
+  initialCategories: PostCategoryData[];
+};
 
 export function CategoryManager({ initialCategories }: CategoryManagerProps) {
-  const [isPending, startTransition] = useTransition()
-  const [categories, setCategories] = useState<PostCategoryData[]>(initialCategories)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<PostCategoryData | null>(null)
+  const [isPending, startTransition] = useTransition();
+  const [categories, setCategories] =
+    useState<PostCategoryData[]>(initialCategories);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] =
+    useState<PostCategoryData | null>(null);
 
   // Filters (nuqs)
-  const { params: filterParams, setSearchDebounced, reset: resetFilters } = useCategoryFilters()
+  const {
+    params: filterParams,
+    setSearchDebounced,
+    reset: resetFilters,
+  } = useCategoryFilters();
 
   // Filtered Categories
   const filteredCategories = (() => {
-    if (!filterParams.search) return categories
+    if (!filterParams.search) return categories;
 
-    const searchLower = filterParams.search.toLowerCase()
+    const searchLower = filterParams.search.toLowerCase();
     return categories.filter(
       (cat) =>
         cat.name.toLowerCase().includes(searchLower) ||
         cat.slug.toLowerCase().includes(searchLower) ||
-        (cat.description && cat.description.toLowerCase().includes(searchLower))
-    )
-  })()
+        (cat.description &&
+          cat.description.toLowerCase().includes(searchLower)),
+    );
+  })();
 
   // D&D Sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   // Form
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categoryFormSchema),
-    defaultValues: { name: '', slug: '', description: '', order: 0 },
-  })
+    defaultValues: { name: "", slug: "", description: "", order: 0 },
+  });
 
   const openCreateDialog = () => {
-    setEditingCategory(null)
-    form.reset({ name: '', slug: '', description: '', order: categories.length })
-    setIsDialogOpen(true)
-  }
+    setEditingCategory(null);
+    form.reset({
+      name: "",
+      slug: "",
+      description: "",
+      order: categories.length,
+    });
+    setIsDialogOpen(true);
+  };
 
   const openEditDialog = (category: PostCategoryData) => {
-    setEditingCategory(category)
+    setEditingCategory(category);
     form.reset({
       name: category.name,
       slug: category.slug,
-      description: category.description ?? '',
+      description: category.description ?? "",
       order: category.order,
-    })
-    setIsDialogOpen(true)
-  }
+    });
+    setIsDialogOpen(true);
+  };
 
   const onSubmit = (data: CategoryFormData) => {
     startTransition(async () => {
@@ -240,94 +264,100 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         slug: data.slug,
         description: data.description || null,
         order: data.order,
-      }
+      };
 
       if (editingCategory) {
-        const result = await updatePostCategory(editingCategory.id, payload)
-        if (result.success) {
-          toast.success(result.message)
-          const newCategories = await fetchPostCategories()
-          startTransition(() => {
-            setIsDialogOpen(false)
-            setCategories(newCategories)
-          })
-        } else {
-          toast.error(result.error)
+        const result = await updatePostCategory(editingCategory.id, payload);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        toast.success("カテゴリを更新しました");
+        const newCategories = await fetchPostCategories();
+        startTransition(() => {
+          setIsDialogOpen(false);
+          setCategories(newCategories);
+        });
       } else {
-        const result = await createPostCategory(payload)
-        if (result.success) {
-          toast.success(result.message)
-          const newCategories = await fetchPostCategories()
-          startTransition(() => {
-            setIsDialogOpen(false)
-            setCategories(newCategories)
-          })
-        } else {
-          toast.error(result.error)
+        const result = await createPostCategory(payload);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        toast.success("カテゴリを作成しました");
+        const newCategories = await fetchPostCategories();
+        startTransition(() => {
+          setIsDialogOpen(false);
+          setCategories(newCategories);
+        });
       }
-    })
-  }
+    });
+  };
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
-      const result = await deletePostCategory(id)
-      if (result.success) {
-        toast.success(result.message)
-        const newCategories = await fetchPostCategories()
-        startTransition(() => {
-          setCategories(newCategories)
-        })
-      } else {
-        toast.error(result.error)
+      const result = await deletePostCategory(id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("カテゴリを削除しました");
+      const newCategories = await fetchPostCategories();
+      startTransition(() => {
+        setCategories(newCategories);
+      });
+    });
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const oldIndex = categories.findIndex((cat) => cat.id === active.id)
-    const newIndex = categories.findIndex((cat) => cat.id === over.id)
+    const oldIndex = categories.findIndex((cat) => cat.id === active.id);
+    const newIndex = categories.findIndex((cat) => cat.id === over.id);
 
-    if (oldIndex === -1 || newIndex === -1) return
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    const reordered = arrayMove(categories, oldIndex, newIndex)
-    setCategories(reordered)
+    const reordered = arrayMove(categories, oldIndex, newIndex);
+    setCategories(reordered);
 
-    const updates = reordered.map((cat, index) => ({ id: cat.id, order: index }))
+    const updates = reordered.map((cat, index) => ({
+      id: cat.id,
+      order: index,
+    }));
 
     startTransition(async () => {
-      const result = await updatePostCategoryOrder(updates)
-      if (!result.success) {
-        toast.error(result.error)
-        const newCategories = await fetchPostCategories()
+      const result = await updatePostCategoryOrder(updates);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        const newCategories = await fetchPostCategories();
         startTransition(() => {
-          setCategories(newCategories)
-        })
+          setCategories(newCategories);
+        });
       }
-    })
-  }
+    });
+  };
 
   const generateSlug = () => {
-    const name = form.getValues('name')
+    const name = form.getValues("name");
     if (name) {
       const slug = name
         .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 50)
-      form.setValue('slug', slug)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 50);
+      form.setValue("slug", slug);
     }
-  }
+  };
 
-  const hasFilters = filterParams.search !== ''
+  const hasFilters = filterParams.search !== "";
 
   return (
     <>
@@ -423,7 +453,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>
-                {editingCategory ? 'カテゴリー編集' : 'カテゴリー作成'}
+                {editingCategory ? "カテゴリー編集" : "カテゴリー作成"}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -431,7 +461,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                 <Label htmlFor="category-name">カテゴリー名</Label>
                 <Input
                   id="category-name"
-                  {...form.register('name')}
+                  {...form.register("name")}
                   placeholder="カテゴリー名"
                   disabled={isPending}
                 />
@@ -457,7 +487,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                 </div>
                 <Input
                   id="category-slug"
-                  {...form.register('slug')}
+                  {...form.register("slug")}
                   placeholder="category-slug"
                   disabled={isPending}
                 />
@@ -472,7 +502,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                 <Label htmlFor="category-description">説明</Label>
                 <Textarea
                   id="category-description"
-                  {...form.register('description')}
+                  {...form.register("description")}
                   placeholder="カテゴリーの説明"
                   rows={2}
                   disabled={isPending}
@@ -491,16 +521,16 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               <Button type="submit" disabled={isPending}>
                 {isPending
                   ? editingCategory
-                    ? '更新中...'
-                    : '作成中...'
+                    ? "更新中..."
+                    : "作成中..."
                   : editingCategory
-                    ? '更新'
-                    : '作成'}
+                    ? "更新"
+                    : "作成"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

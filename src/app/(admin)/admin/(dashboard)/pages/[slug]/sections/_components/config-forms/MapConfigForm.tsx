@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   mapConfigSchema,
   getMapConfig,
@@ -19,13 +19,21 @@ import {
   parseBorderRadius,
   type MapConfig,
   type MapConfigInput,
-} from '@/shared/lib/validations/section'
-import { borderRadiusLabels, mapHeightLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import {
+  borderRadiusLabels,
+  mapHeightLabels,
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function MapConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getMapConfig(section.config)
+export default function MapConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getMapConfig(section.config);
 
   const {
     register,
@@ -35,20 +43,22 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
   } = useForm<MapConfigInput, unknown, MapConfig>({
     resolver: zodResolver(mapConfigSchema),
     defaultValues: config,
-  })
+  });
 
   const handleFormSave = handleSubmit((data) => {
-    onSave({ config: data })
-  })
+    onSave({ config: data });
+  });
 
   return (
     <form onSubmit={handleFormSave} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="map-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="map-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="map-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Location"
             disabled={isPending}
           />
@@ -58,7 +68,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
           <Label htmlFor="map-title">タイトル（任意）</Label>
           <Input
             id="map-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="アクセス"
             disabled={isPending}
           />
@@ -68,7 +78,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
           <Label htmlFor="map-address">住所（任意）</Label>
           <Input
             id="map-address"
-            {...register('address')}
+            {...register("address")}
             placeholder="東京都渋谷区..."
             disabled={isPending}
           />
@@ -81,7 +91,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
               id="map-lat"
               type="number"
               step="any"
-              {...register('latitude', { valueAsNumber: true })}
+              {...register("latitude", { valueAsNumber: true })}
               placeholder="35.6762"
               disabled={isPending}
             />
@@ -92,7 +102,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
               id="map-lng"
               type="number"
               step="any"
-              {...register('longitude', { valueAsNumber: true })}
+              {...register("longitude", { valueAsNumber: true })}
               placeholder="139.6503"
               disabled={isPending}
             />
@@ -107,7 +117,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
               type="number"
               min={1}
               max={20}
-              {...register('zoom', { valueAsNumber: true })}
+              {...register("zoom", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -115,7 +125,7 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
             <Label htmlFor="map-height">高さ</Label>
             <Select
               defaultValue={config.height}
-              onValueChange={(v) => setValue('height', parseMapHeight(v))}
+              onValueChange={(v) => setValue("height", parseMapHeight(v))}
               disabled={isPending}
             >
               <SelectTrigger id="map-height">
@@ -123,7 +133,9 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
               </SelectTrigger>
               <SelectContent>
                 {keysOf(mapHeightLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{mapHeightLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {mapHeightLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -134,7 +146,9 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
           <Label htmlFor="map-border-radius">角丸</Label>
           <Select
             defaultValue={config.borderRadius}
-            onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+            onValueChange={(v) =>
+              setValue("borderRadius", parseBorderRadius(v))
+            }
             disabled={isPending}
           >
             <SelectTrigger id="map-border-radius">
@@ -142,7 +156,9 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
             </SelectTrigger>
             <SelectContent>
               {keysOf(borderRadiusLabels).map((key) => (
-                <SelectItem key={key} value={key}>{borderRadiusLabels[key]}</SelectItem>
+                <SelectItem key={key} value={key}>
+                  {borderRadiusLabels[key]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -152,14 +168,18 @@ export default function MapConfigForm({ section, onSave, isPending, onDirtyChang
           <Switch
             id="map-show-address"
             checked={config.showAddressBelow}
-            onCheckedChange={(checked) => setValue('showAddressBelow', checked)}
+            onCheckedChange={(checked) => setValue("showAddressBelow", checked)}
             disabled={isPending}
           />
           <Label htmlFor="map-show-address">地図下に住所を表示</Label>
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

@@ -4,18 +4,21 @@
  * @description VimeoNodeの情報表示パネル（読み取り専用）
  */
 
-'use client'
+"use client";
 
-import type { VimeoNode } from '../../nodes/VimeoNode'
-import { vimeoVideoIdState } from '../../nodes/VimeoNode'
-import { EmbedInspectorPanel } from './EmbedInspectorPanel'
+import type { VimeoNode } from "../../nodes/VimeoNode";
+import { vimeoVideoIdState } from "../../nodes/VimeoNode";
+import { EmbedInspectorPanel } from "./EmbedInspectorPanel";
 
 type VimeoInspectorPanelProps = {
-  nodeKey: string
-  node: VimeoNode
-}
+  nodeKey: string;
+  node: VimeoNode;
+};
 
-export function VimeoInspectorPanel({ nodeKey, node }: VimeoInspectorPanelProps) {
+export function VimeoInspectorPanel({
+  nodeKey,
+  node,
+}: VimeoInspectorPanelProps) {
   return (
     <EmbedInspectorPanel
       nodeKey={nodeKey}
@@ -25,5 +28,5 @@ export function VimeoInspectorPanel({ nodeKey, node }: VimeoInspectorPanelProps)
       idState={vimeoVideoIdState}
       buildUrl={(id) => `https://player.vimeo.com/video/${id}`}
     />
-  )
+  );
 }

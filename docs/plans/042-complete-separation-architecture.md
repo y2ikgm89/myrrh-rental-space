@@ -80,28 +80,28 @@ src/
 
 ### 共有を許可するもの（shared/）
 
-| カテゴリ | ファイル | 理由 |
-|---------|---------|------|
-| **DB** | prisma.ts, supabase.ts | 同一DB接続 |
-| **認証** | auth.ts, auth-client.ts | 共通認証基盤 |
-| **暗号化** | crypto.ts | セキュリティ共通 |
-| **メール** | email-service.ts, email.ts | 送信基盤 |
-| **ユーティリティ** | utils.ts | 汎用関数 |
-| **型** | Prisma生成型, 共通ID型 | 型安全性 |
+| カテゴリ           | ファイル                   | 理由             |
+| ------------------ | -------------------------- | ---------------- |
+| **DB**             | prisma.ts, supabase.ts     | 同一DB接続       |
+| **認証**           | auth.ts, auth-client.ts    | 共通認証基盤     |
+| **暗号化**         | crypto.ts                  | セキュリティ共通 |
+| **メール**         | email-service.ts, email.ts | 送信基盤         |
+| **ユーティリティ** | utils.ts                   | 汎用関数         |
+| **型**             | Prisma生成型, 共通ID型     | 型安全性         |
 
 ### 分離するもの
 
-| カテゴリ | 移動先 | 理由 |
-|---------|--------|------|
-| **Header/Footer** | public/components/layouts/ | 公開ページ専用デザイン |
-| **a11y** | public/components/a11y/ | 公開ページのa11y |
-| **analytics** | public/components/analytics/ | 公開ページ分析 |
-| **seo** | public/components/seo/ | 公開ページSEO |
-| **Turnstile** | public/components/ | 公開フォーム専用 |
-| **permissions** | admin/lib/ | 管理専用 |
-| **audit** | admin/lib/ | 管理専用 |
-| **utils (formatChange等)** | admin/lib/ | ダッシュボード・メディア管理専用 |
-| **blog-queries** | public/lib/ | 公開専用 |
+| カテゴリ                   | 移動先                       | 理由                             |
+| -------------------------- | ---------------------------- | -------------------------------- |
+| **Header/Footer**          | public/components/layouts/   | 公開ページ専用デザイン           |
+| **a11y**                   | public/components/a11y/      | 公開ページのa11y                 |
+| **analytics**              | public/components/analytics/ | 公開ページ分析                   |
+| **seo**                    | public/components/seo/       | 公開ページSEO                    |
+| **Turnstile**              | public/components/           | 公開フォーム専用                 |
+| **permissions**            | admin/lib/                   | 管理専用                         |
+| **audit**                  | admin/lib/                   | 管理専用                         |
+| **utils (formatChange等)** | admin/lib/                   | ダッシュボード・メディア管理専用 |
+| **blog-queries**           | public/lib/                  | 公開専用                         |
 
 ---
 
@@ -371,23 +371,23 @@ src/shared/
 
 ## 見積もり
 
-| Phase | 工数（時間） | 備考 |
-|-------|-------------|------|
-| Phase 1 | 0.5 | ディレクトリ作成のみ |
-| Phase 2 | 2 | 共有ファイル移動 |
-| Phase 3 | 4 | 管理ファイル移動（最大） |
-| Phase 4 | 3 | 公開ファイル移動 |
-| Phase 5 | 1 | 型定義分離 |
-| Phase 6 | 1 | クリーンアップ |
-| Phase 7 | 1 | ドキュメント |
-| **合計** | **12.5** | 約2日 |
+| Phase    | 工数（時間） | 備考                     |
+| -------- | ------------ | ------------------------ |
+| Phase 1  | 0.5          | ディレクトリ作成のみ     |
+| Phase 2  | 2            | 共有ファイル移動         |
+| Phase 3  | 4            | 管理ファイル移動（最大） |
+| Phase 4  | 3            | 公開ファイル移動         |
+| Phase 5  | 1            | 型定義分離               |
+| Phase 6  | 1            | クリーンアップ           |
+| Phase 7  | 1            | ドキュメント             |
+| **合計** | **12.5**     | 約2日                    |
 
 ---
 
 ## リスクと対策
 
-| リスク | 対策 |
-|--------|------|
+| リスク          | 対策                        |
+| --------------- | --------------------------- |
 | import パス漏れ | 各 Phase で type-check 実行 |
-| 循環依存 | shared/ への依存のみ許可 |
-| 動作不良 | Phase ごとに動作確認 |
+| 循環依存        | shared/ への依存のみ許可    |
+| 動作不良        | Phase ごとに動作確認        |

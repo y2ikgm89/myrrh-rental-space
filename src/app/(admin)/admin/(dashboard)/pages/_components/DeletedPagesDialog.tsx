@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 削除済みページ復元ダイアログ
@@ -6,18 +6,18 @@
  * ゴミ箱に移動されたページの一覧表示・復元・完全削除
  */
 
-import { useEffect, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { Trash2, RotateCcw, Loader2, AlertTriangle } from 'lucide-react'
-import { Button } from '@/admin/components/ui'
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Trash2, RotateCcw, Loader2, AlertTriangle } from "lucide-react";
+import { Button } from "@/admin/components/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui/dialog'
+} from "@/admin/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +27,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/admin/components/ui/alert-dialog'
+} from "@/admin/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -35,75 +35,84 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/admin/components/ui/table'
-import { restorePage, deletePagePermanently } from '@/admin/actions/page'
-import type { PageData } from '@/shared/domain/pages/types'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/components/ui/table";
+import { restorePage, deletePagePermanently } from "@/admin/actions/page";
+import type { PageData } from "@/shared/domain/pages/types";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 async function fetchDeletedPages(): Promise<PageData[]> {
-  const response = await fetch('/admin/api/pages/deleted', {
-    credentials: 'same-origin',
-  })
+  const response = await fetch("/admin/api/pages/deleted", {
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
+    const body: unknown = await response.json().catch(() => null);
     const message =
-      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
         ? body.error
-        : '削除済みページの取得に失敗しました'
-    throw new Error(message)
+        : "削除済みページの取得に失敗しました";
+    throw new Error(message);
   }
 
-  const data: PageData[] = await response.json()
-  return data
+  const data: PageData[] = await response.json();
+  return data;
 }
 
 export function DeletedPagesDialog() {
-  const router = useRouter()
-  const [isOpen, setIsOpen] = useState(false)
-  const [pages, setPages] = useState<PageData[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const [confirmSlug, setConfirmSlug] = useState<string | null>(null)
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [pages, setPages] = useState<PageData[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [confirmSlug, setConfirmSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      startTransition(() => setIsLoading(true))
+      startTransition(() => setIsLoading(true));
       fetchDeletedPages()
         .then(setPages)
         .catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : '削除済みページの取得に失敗しました'
-          toast.error(message)
+          const message =
+            error instanceof Error
+              ? error.message
+              : "削除済みページの取得に失敗しました";
+          toast.error(message);
         })
-        .finally(() => startTransition(() => setIsLoading(false)))
+        .finally(() => startTransition(() => setIsLoading(false)));
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   const handleRestore = (slug: string) => {
     startTransition(async () => {
-      const result = await restorePage(slug)
-      if (result.success) {
-        toast.success(result.message)
-        setPages((prev) => prev.filter((p) => p.slug !== slug))
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await restorePage(slug);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("ページを復元しました");
+      setPages((prev) => prev.filter((p) => p.slug !== slug));
+      router.refresh();
+    });
+  };
 
   const handlePermanentDelete = (slug: string) => {
     startTransition(async () => {
-      const result = await deletePagePermanently(slug)
-      if (result.success) {
-        toast.success(result.message)
-        setPages((prev) => prev.filter((p) => p.slug !== slug))
-        setConfirmSlug(null)
-      } else {
-        toast.error(result.error)
+      const result = await deletePagePermanently(slug);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("ページを完全に削除しました");
+      setPages((prev) => prev.filter((p) => p.slug !== slug));
+      setConfirmSlug(null);
+    });
+  };
 
   return (
     <>
@@ -142,7 +151,9 @@ export function DeletedPagesDialog() {
                 <TableBody>
                   {pages.map((page) => (
                     <TableRow key={page.id}>
-                      <TableCell className="font-medium">{page.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {page.title}
+                      </TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         /{page.slug}
                       </TableCell>
@@ -181,7 +192,10 @@ export function DeletedPagesDialog() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={confirmSlug !== null} onOpenChange={() => setConfirmSlug(null)}>
+      <AlertDialog
+        open={confirmSlug !== null}
+        onOpenChange={() => setConfirmSlug(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -193,7 +207,9 @@ export function DeletedPagesDialog() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isPending}>キャンセル</AlertDialogCancel>
+            <AlertDialogCancel disabled={isPending}>
+              キャンセル
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmSlug && handlePermanentDelete(confirmSlug)}
               disabled={isPending}
@@ -205,12 +221,12 @@ export function DeletedPagesDialog() {
                   削除中...
                 </>
               ) : (
-                '完全に削除する'
+                "完全に削除する"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }

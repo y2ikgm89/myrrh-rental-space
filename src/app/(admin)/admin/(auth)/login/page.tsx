@@ -6,39 +6,41 @@
  * - Trust Blue アクセント
  */
 
-import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { ADMIN_GATE_COOKIE_NAME } from '@/shared/lib/admin-login-gate-cookie'
-import { getSession } from '@/shared/lib/auth'
-import { LoginForm } from './LoginForm'
-import { CopyrightYear } from './CopyrightYear'
-import type { ReactElement } from 'react'
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { ADMIN_GATE_COOKIE_NAME } from "@/shared/lib/admin-login-gate-cookie";
+import { getSession } from "@/shared/lib/auth";
+import { LoginForm } from "./LoginForm";
+import { CopyrightYear } from "./CopyrightYear";
+import type { ReactElement } from "react";
 
 export const metadata: Metadata = {
-  title: 'ログイン | 管理画面',
-}
+  title: "ログイン | 管理画面",
+};
 
 type Props = {
-  searchParams: Promise<{ token?: string }>
-}
+  searchParams: Promise<{ token?: string }>;
+};
 
 export default async function LoginPage({
   searchParams,
 }: Props): Promise<ReactElement> {
-  const cookieStore = await cookies()
-  const params = await searchParams
-  const session = await getSession()
+  const cookieStore = await cookies();
+  const params = await searchParams;
+  const session = await getSession();
 
   // 既にログイン済みならダッシュボードへ
   if (session?.user) {
-    redirect('/admin')
+    redirect("/admin");
   }
 
-  const token = params.token
-  const adminGateCookie = cookieStore.get(ADMIN_GATE_COOKIE_NAME)?.value
-  if (token && adminGateCookie !== '1') {
-    redirect(`/api/admin/login-tokens/authorize?token=${encodeURIComponent(token)}`)
+  const token = params.token;
+  const adminGateCookie = cookieStore.get(ADMIN_GATE_COOKIE_NAME)?.value;
+  if (token && adminGateCookie !== "1") {
+    redirect(
+      `/api/admin/login-tokens/authorize?token=${encodeURIComponent(token)}`,
+    );
   }
 
   return (
@@ -52,7 +54,7 @@ export default async function LoginPage({
             style={{
               backgroundImage: `linear-gradient(var(--color-sidebar-text) 1px, transparent 1px),
                                linear-gradient(90deg, var(--color-sidebar-text) 1px, transparent 1px)`,
-              backgroundSize: '48px 48px',
+              backgroundSize: "48px 48px",
             }}
           />
         </div>
@@ -130,7 +132,9 @@ export default async function LoginPage({
           {/* フォームカード */}
           <div className="bg-card rounded-md border shadow-sm p-6 sm:p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-foreground">ログイン</h2>
+              <h2 className="text-xl font-semibold text-foreground">
+                ログイン
+              </h2>
               <p className="text-muted-foreground text-sm mt-1">
                 アカウント情報を入力してください
               </p>
@@ -143,6 +147,5 @@ export default async function LoginPage({
         </div>
       </div>
     </div>
-  )
+  );
 }
-

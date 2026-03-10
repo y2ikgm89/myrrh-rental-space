@@ -10,27 +10,27 @@ import {
   createMockSession,
   clearMockSession,
   type MockUser,
-} from '../mocks/auth'
+} from "../mocks/auth";
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,
   EDITOR_USER,
   VIEWER_USER,
   REGULAR_USER,
-} from '../fixtures/users'
+} from "../fixtures/users";
 
 /**
  * SUPER_ADMINセッションをモック
  */
 export function mockSuperAdminSession(): void {
-  setMockSession(createMockSession(SUPER_ADMIN_USER))
+  setMockSession(createMockSession(SUPER_ADMIN_USER));
 }
 
 /**
  * ADMINセッションをモック
  */
 export function mockAdminSession(): void {
-  setMockSession(createMockSession(ADMIN_USER))
+  setMockSession(createMockSession(ADMIN_USER));
 }
 
 /**
@@ -42,34 +42,34 @@ export function mockEditorSession(assignedPages?: string[]): void {
     createMockSession({
       ...EDITOR_USER,
       assignedPages: assignedPages ?? [],
-    })
-  )
+    }),
+  );
 }
 
 /**
  * VIEWERセッションをモック
  */
 export function mockViewerSession(): void {
-  setMockSession(createMockSession(VIEWER_USER))
+  setMockSession(createMockSession(VIEWER_USER));
 }
 
 /**
  * 一般ユーザーセッションをモック
  */
 export function mockUserSession(): void {
-  setMockSession(createMockSession(REGULAR_USER))
+  setMockSession(createMockSession(REGULAR_USER));
 }
 
 /**
  * 未認証状態をモック
  */
 export function mockNoSession(): void {
-  clearMockSession()
+  clearMockSession();
 }
 
 /**
  * カスタムユーザーでセッションをモック
  */
 export function mockCustomSession(user: Partial<MockUser>): void {
-  setMockSession(createMockSession(user))
+  setMockSession(createMockSession(user));
 }

@@ -9,10 +9,12 @@ GrapesJSビジュアルエディターの完全廃止 + ホームページセク
 ### A. GrapesJS完全廃止
 
 **パッケージ削除**:
+
 - `grapesjs`, `@grapesjs/react` をpackage.jsonから削除
 - GrapesJS関連の型定義を削除
 
 **Prismaスキーマ変更**:
+
 - `GrapesPage`, `GrapesPageVersion` モデル削除
 - `GrapesPageStatus` enum削除
 - Blog/NewsからprojectDataフィールド削除
@@ -20,6 +22,7 @@ GrapesJSビジュアルエディターの完全廃止 + ホームページセク
 - 権限リソースからgrapesPage削除
 
 **ファイル削除**:
+
 - `src/components/admin/editor/grapesjs/` - GrapesJSエディターコンポーネント
 - `src/lib/validations/grapes-page.ts` - GrapesページZodスキーマ
 - `src/lib/grapesjs-renderer.ts` - GrapesJSレンダラー
@@ -30,12 +33,14 @@ GrapesJSビジュアルエディターの完全廃止 + ホームページセク
 - GrapesJS関連docs（016, 017, 018, 020）
 
 **エディター移行**:
+
 - Blog/News/PageインラインエディターをLexicalに統一
 - GrapesJSEditorWrapperの参照をLexicalEditorに変更
 
 ### B. ホームページセクション設定
 
 **Prismaスキーマ追加**:
+
 ```prisma
 model HomepageFaq {
   id       String @id @default(cuid())
@@ -74,6 +79,7 @@ homepageNewsCount        Int @default(5)
 ```
 
 **Server Actions** (`src/actions/admin/homepage-settings.ts`):
+
 - `getHomepageSectionsSettings()` - 管理画面用設定取得
 - `getPublicHomepageSections()` - 公開ページ用設定取得（認証不要）
 - `updateCtaSection()` - CTAセクション更新
@@ -86,6 +92,7 @@ homepageNewsCount        Int @default(5)
 - `updateFaqItemOrder()` - FAQ項目順序変更（ドラッグ＆ドロップ）
 
 **管理画面UI** (`src/app/(admin)/admin/(dashboard)/settings/_components/tabs/HomepageTab.tsx`):
+
 - 「ホームページ」タブを設定画面に追加
 - CTAセクション: isActive, title, description, primaryText/Url, secondaryText/Url
 - ブログセクション: isActive, title, count(1-10)
@@ -95,12 +102,14 @@ homepageNewsCount        Int @default(5)
 - AlertDialogで削除確認
 
 **公開ページコンポーネント**:
+
 - `src/components/site/sections/CTA.tsx` - 設定ベースのCTAセクション
 - `src/components/site/sections/BlogSection.tsx` - 最新ブログ記事セクション（NEW）
 - `src/components/site/sections/NewsSection.tsx` - お知らせセクション（NEW）
 - `src/components/site/sections/FAQSection.tsx` - FAQアコーディオンセクション（NEW）
 
 **公開用データ取得関数**:
+
 - `getPublishedBlogPosts()` - 公開済みブログ記事（認証不要）
 - `getPublishedNewsList()` - 公開済みお知らせ（認証不要）
 
@@ -164,15 +173,18 @@ bunx prisma migrate dev --name remove_grapesjs_add_homepage_settings
 ## 技術的考慮事項
 
 ### Next.js 16対応
+
 - `connection()` を使用してdynamic renderingを明示（new Date()問題回避）
 - Server Componentsで設定取得、セクションコンポーネントに分離
 
 ### セキュリティ
+
 - URL検証: 内部パス(`/`)またはhttp/httpsのみ許可
 - withPermission HOFで権限チェック
 - AlertDialogで削除確認（confirm()置換）
 
 ### 型安全性
+
 - Zod schemaによるバリデーション
 - PublicBlogPost/PublicNews型でpublishedAtをnon-null保証
 

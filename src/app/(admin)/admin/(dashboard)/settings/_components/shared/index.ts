@@ -2,4 +2,4 @@
  * 共有コンポーネント エクスポート
  */
 
-export { StatusBanner } from './StatusBanner'
+export { StatusBanner } from "./StatusBanner";

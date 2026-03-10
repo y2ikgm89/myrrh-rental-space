@@ -2,10 +2,19 @@
  * 最近の予約・お問い合わせセクション
  */
 
-import Link from 'next/link'
-import { getRecentReservations, getRecentInquiries } from '@/admin/queries/dashboard'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
-import { Button } from '@/admin/components/ui/button'
+import Link from "next/link";
+import {
+  getRecentReservations,
+  getRecentInquiries,
+} from "@/admin/queries/dashboard";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/admin/components/ui/card";
+import { Button } from "@/admin/components/ui/button";
 import {
   Table,
   TableBody,
@@ -13,21 +22,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/admin/components/ui/table'
+} from "@/admin/components/ui/table";
 import {
   ReservationStatusBadge,
   InquiryStatusBadge,
-} from '@/admin/components/status-badges'
-import { EmptyState } from '@/admin/components/EmptyState'
-import { format } from 'date-fns'
-import { ja } from 'date-fns/locale'
+} from "@/admin/components/status-badges";
+import { EmptyState } from "@/admin/components/EmptyState";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 
 export async function DashboardRecentSection() {
   // 関連データを並列取得
   const [recentReservations, recentInquiries] = await Promise.all([
     getRecentReservations(5),
     getRecentInquiries(5),
-  ])
+  ]);
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -58,7 +67,9 @@ export async function DashboardRecentSection() {
                 {recentReservations.map((reservation) => (
                   <TableRow key={reservation.id}>
                     <TableCell className="text-sm">
-                      {format(reservation.startTime, 'M/d HH:mm', { locale: ja })}
+                      {format(reservation.startTime, "M/d HH:mm", {
+                        locale: ja,
+                      })}
                     </TableCell>
                     <TableCell>
                       <Link
@@ -106,7 +117,7 @@ export async function DashboardRecentSection() {
                 {recentInquiries.map((inquiry) => (
                   <TableRow key={inquiry.id}>
                     <TableCell className="text-sm">
-                      {format(inquiry.createdAt, 'M/d HH:mm', { locale: ja })}
+                      {format(inquiry.createdAt, "M/d HH:mm", { locale: ja })}
                     </TableCell>
                     <TableCell>
                       <Link
@@ -127,5 +138,5 @@ export async function DashboardRecentSection() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

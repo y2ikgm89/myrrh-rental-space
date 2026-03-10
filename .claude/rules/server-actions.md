@@ -224,108 +224,112 @@ const [post, latestVersion] = await Promise.all([
 
 > **注意**: `prisma.$transaction` 内では順次実行が必要なケースがある。
 
-### 基本構造（withPermission HOF パターン）
+### 基本構造（executeAdminMutation パターン）
 
-`withPermission` HOF は認証・認可・監査ログを自動化する。**最も推奨されるパターン**:
+`executeAdminMutation` は認証・認可・監査ログ・DomainError ハンドリングを一括処理する。**全 Server Actions で必須のパターン**:
 
 ```typescript
 "use server";
 
-import { prisma } from "@/shared/lib/prisma";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import {
-  createSuccess,
-  createFailure,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { postSchema } from "@/admin/lib/validations/post";
-import type { User } from "@/shared/lib/auth";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createSuccess } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { postFormSchema } from "@/admin/lib/validations/post";
+import { createPostCommand } from "@/shared/domain/posts/commands";
 
-// withPermission HOF: リソース・アクションを指定して権限チェックを自動化
-export const createPost = withPermission<[CreatePostInput], { id: string }>(
-  "post", // Resource
-  "create", // Action（'create' | 'update' | 'delete' | 'publish' | 'read'）
-)(async (
-  _user: User,
-  data: CreatePostInput,
-): Promise<ActionResult<{ id: string }>> => {
-  // withPermission が認証・権限チェック・監査ログを処理済み
+export const createPost = async (input: CreatePostInput) => {
+  // 1. バリデーション（executeAdminMutation の外で実施）
+  const parsed = postFormSchema.safeParse(input);
+  if (!parsed.success) return createValidationError(parsed.error);
 
-  // 1. バリデーション
-  const validated = postSchema.safeParse(data);
-  if (!validated.success) {
-    return createFailure(
-      "入力内容を確認してください",
-      validated.error.flatten().fieldErrors,
-    );
-  }
-
-  // 2. DB 操作
-  const post = await prisma.post.create({ data: validated.data });
-
-  // 3. キャッシュ即時失効
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  return createSuccess("投稿を作成しました", { id: post.id });
-});
+  // 2. executeAdminMutation で認証・権限チェック・監査ログ・実行を一括処理
+  return executeAdminMutation({
+    resource: "post",
+    action: "create",
+    execute: async () => createPostCommand(parsed.data),
+    success: (result) => createSuccess("投稿を作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.POSTS);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+};
 ```
 
-### checkPermission パターン（命令型）
+### checkPermission パターン（API Routes 専用）
 
-HOF が使いにくいケース（条件分岐・複数権限チェックなど）では命令型を使用:
+`checkPermission` を直接使用するのは **API Routes のみ**。Server Actions では `executeAdminMutation` を使用する:
 
 ```typescript
-"use server";
+// API Route（src/app/(admin)/admin/api/...）での使用例
+import { checkPermission } from "@/admin/lib/action-auth";
 
-import { checkPermission, logAction } from "@/admin/lib/action-auth";
-
-export async function publishPost(id: string): Promise<ActionResult> {
-  // 1. 権限チェック
-  const auth = await checkPermission("post", "publish");
-  if (!auth.success) return auth.error;
+export async function POST(request: Request) {
+  const auth = await checkPermission("media", "create");
+  if (!auth.success) return new Response("Unauthorized", { status: 401 });
 
   const { user } = auth;
-
-  // 2. バリデーション・ビジネスロジック
-  const post = await prisma.post.findUnique({ where: { id } });
-  if (!post) return createFailure("投稿が見つかりません");
-  if (post.status === PostStatus.PUBLISHED)
-    return createFailure("すでに公開済みです");
-
-  // 3. DB 操作
-  await prisma.post.update({
-    where: { id },
-    data: { status: PostStatus.PUBLISHED, publishedAt: new Date() },
-  });
-
-  // 4. キャッシュ即時失効
-  updateTag(CACHE_TAGS.POSTS);
-  updateTag(getCacheTag.posts.detail(post.slug));
-
-  // 5. 監査ログ（手動）
-  logAction(user.id, "publish", "post", id);
-
-  return createSuccess("公開しました");
+  // ... API Route の処理
 }
 ```
 
-### withPermission のオプション
+### executeAdminMutation のオプション
 
 ```typescript
-export const updatePage = withPermission<[string, PageInput]>(
-  "page",
-  "update",
-  {
-    checkResourceAccess: true, // EDITOR ロールのリソースアクセス制限を有効化
-    audit: true, // 監査ログを記録（デフォルト: create/update/delete/publish で true）
-    auditAction: AuditAction.UPDATE, // 監査アクション種別（省略時は action から自動推定）
-  },
-)(async (_user: User, id: string, data: PageInput) => {
-  // ...
-});
+type ExecuteAdminMutationOptions<TData> = {
+  resource: Resource; // リソース種別（'post' | 'page' | 'reservation' 等）
+  action: Action; // アクション種別（'create' | 'update' | 'delete' | 'publish' | 'read'）
+  resourceId?: string; // リソースID（EDITOR ロールのアクセス制限・監査ログに使用）
+  checkResourceAccess?: boolean; // true で EDITOR ロールのリソースアクセス制限を有効化
+  execute: (user: User) => Promise<TData>; // DB 操作等の実行関数（認証済みユーザーを受け取る）
+  success: (data: TData) => ActionSuccess<TData>; // 成功時の ActionResult 生成
+  afterSuccess?: (data: TData) => Promise<void> | void; // 成功後の副作用（キャッシュ無効化等）
+  resolveAuditResourceId?: (data: TData) => string | undefined; // 監査ログ用リソースID（create 時に使用）
+};
+```
+
+#### EDITOR ロールのリソースアクセス制限
+
+`checkResourceAccess: true` を指定すると、EDITOR ロールが他ユーザーのリソースを操作できないよう制限する:
+
+```typescript
+export const updatePage = async (id: string, input: PageInput) => {
+  const parsed = pageFormSchema.safeParse(input);
+  if (!parsed.success) return createValidationError(parsed.error);
+
+  return executeAdminMutation({
+    resource: "page",
+    action: "update",
+    resourceId: id, // リソースIDを指定
+    checkResourceAccess: true, // EDITOR アクセス制限を有効化
+    execute: async (user) => updatePageCommand(id, parsed.data),
+    success: (result) => createSuccess("更新しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.PAGES);
+    },
+  });
+};
+```
+
+### executeAdminMutationResult（MutationResult を返す場合）
+
+`ActionResult` ではなく `MutationResult<TData>` を返す場合に使用。`success` コールバックが不要で、`execute` の戻り値をそのまま返す:
+
+```typescript
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+
+export const updateSettings = async (input: SettingsInput) => {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => updateSettingsCommand(input),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SETTINGS);
+    },
+  });
+};
 ```
 
 ### ActionResult 型と createSuccess / createFailure
@@ -479,8 +483,9 @@ updateTag(CACHE_TAGS.POSTS);
    - `cacheLife('hours')` → `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`
 
 2. **認証チェック漏れ禁止**
-   - 管理画面の変更系アクションは必ず `withPermission` HOF または `checkPermission()` を使用
-   - 読み取りアクションは `checkReadPermissionFor` を使用
+   - 管理画面の変更系 Server Actions は必ず `executeAdminMutation` を使用
+   - API Routes のみ `checkPermission()` を直接使用
+   - 読み取りアクションはレイアウトの認証ガード（`verifySession()`）に依存
 
    ```typescript
    // NG: 認証なしで直接 DB 操作
@@ -488,14 +493,19 @@ updateTag(CACHE_TAGS.POSTS);
      await prisma.post.delete({ where: { id } });
      return createSuccess("削除しました");
    }
-   // OK: withPermission で認証・権限チェック
-   export const deletePost = withPermission(
-     "post",
-     "delete",
-   )(async (_user, id: string) => {
-     await prisma.post.delete({ where: { id } });
-     return createSuccess("削除しました");
-   });
+   // OK: executeAdminMutation で認証・権限チェック・監査ログを一括処理
+   export const deletePost = async (id: string) => {
+     return executeAdminMutation({
+       resource: "post",
+       action: "delete",
+       resourceId: id,
+       execute: async () => deletePostCommand(id),
+       success: () => createSuccess("削除しました"),
+       afterSuccess: () => {
+         updateTag(CACHE_TAGS.POSTS);
+       },
+     });
+   };
    ```
 
 3. **エラー握りつぶし禁止**
@@ -574,12 +584,12 @@ updateTag(CACHE_TAGS.POSTS);
 
 ## ファイル配置
 
-| パス                                   | 内容                                                                               |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `@/shared/lib/constants/cache.ts`      | `CACHE_TAGS`, `CACHE_LIFE`, `getCacheTag` 定数                                     |
-| `@/admin/lib/server-action-helpers.ts` | `withPermission`, `withReadPermission`, `withRole` HOF                             |
-| `@/admin/lib/action-auth.ts`           | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`            |
-| `@/shared/types/server-actions.ts`     | `ActionResult`, `ActionSuccess`, `ActionFailure`, `createSuccess`, `createFailure` |
-| `@/admin/types/server-actions.ts`      | 上記の re-export（admin 用エントリポイント）                                       |
-| `@/shared/lib/errors`                  | `safeFetch`, `ErrorCategory`, `ErrorSeverity`                                      |
-| `@/shared/lib/serialize.ts`            | `toPlainObject`, `toPlainArray`                                                    |
+| パス                               | 内容                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `@/shared/lib/constants/cache.ts`  | `CACHE_TAGS`, `CACHE_LIFE`, `getCacheTag` 定数                                     |
+| `@/admin/lib/admin-action.ts`      | `executeAdminMutation`, `executeAdminMutationResult`                               |
+| `@/admin/lib/action-auth.ts`       | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`            |
+| `@/shared/types/server-actions.ts` | `ActionResult`, `ActionSuccess`, `ActionFailure`, `createSuccess`, `createFailure` |
+| `@/admin/types/server-actions.ts`  | 上記の re-export（admin 用エントリポイント）                                       |
+| `@/shared/lib/errors`              | `safeFetch`, `ErrorCategory`, `ErrorSeverity`                                      |
+| `@/shared/lib/serialize.ts`        | `toPlainObject`, `toPlainArray`                                                    |

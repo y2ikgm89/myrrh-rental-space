@@ -7,11 +7,13 @@
 ## 背景
 
 ### エラー内容
+
 ```
 Only plain objects can be passed to Client Components from Server Components. Decimal objects are not supported.
 ```
 
 ### 原因
+
 - `prisma.space.findMany()` が返す `Space` オブジェクトに Prisma Decimal 型のフィールドが含まれていた
 - 該当フィールド: `area`, `hourlyPrice`, `dailyPrice`
 - Prisma の `Decimal` 型は `decimal.js` ライブラリのオブジェクトで、JSON シリアライズ不可
@@ -19,20 +21,23 @@ Only plain objects can be passed to Client Components from Server Components. De
 ## 実施内容
 
 ### 変更ファイル
+
 - `src/components/site/sections/SpaceListSection.tsx`
 
 ### 変更内容
 
 #### 1. SerializedSpace 型の定義
+
 ```typescript
-type SerializedSpace = Omit<Space, 'area' | 'hourlyPrice' | 'dailyPrice'> & {
-  area: number | null
-  hourlyPrice: number
-  dailyPrice: number | null
-}
+type SerializedSpace = Omit<Space, "area" | "hourlyPrice" | "dailyPrice"> & {
+  area: number | null;
+  hourlyPrice: number;
+  dailyPrice: number | null;
+};
 ```
 
 #### 2. getSpaces 関数での変換処理追加
+
 ```typescript
 async function getSpaces(
   maxItems: number,
@@ -59,9 +64,10 @@ async function getSpaces(
 ```
 
 #### 3. SpaceCardProps の型更新
+
 ```typescript
 interface SpaceCardProps {
-  space: SerializedSpace  // Space → SerializedSpace
+  space: SerializedSpace; // Space → SerializedSpace
 }
 ```
 
@@ -77,7 +83,7 @@ const formattedSpaces: SpaceWithStats[] = spaces.map((s) => ({
   hourlyPrice: Number(s.hourlyPrice),
   dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
   // ...
-}))
+}));
 ```
 
 ## テスト結果

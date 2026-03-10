@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SpaceShowcase — Space card grid with stagger reveal
@@ -6,50 +6,66 @@
  * Cards with hover scale animation. ScrollReveal stagger for sequential entrance.
  */
 
-import { useRef, type ReactElement } from 'react'
-import Image from 'next/image'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
-import { CARD_STYLE_MAP, IMAGE_ASPECT_MAP, getGridColsClass } from '@/public/lib/section-style-maps'
-import { parseCardStyle, parseShowcaseImageAspect } from '@/shared/lib/validations/section'
-import type { SpaceShowcaseConfig } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { useRef, type ReactElement } from "react";
+import Image from "next/image";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import {
+  SectionWrapper,
+  getTitleClasses,
+  getTitleStyle,
+  getTextStyle,
+} from "@/public/components/sections/SectionWrapper";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import {
+  CARD_STYLE_MAP,
+  IMAGE_ASPECT_MAP,
+  getGridColsClass,
+} from "@/public/lib/section-style-maps";
+import {
+  parseCardStyle,
+  parseShowcaseImageAspect,
+} from "@/shared/lib/validations/section";
+import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 export interface SpaceData {
-  readonly id: string
-  readonly name: string
-  readonly nameJa: string
-  readonly tagline: string | null
-  readonly capacity: number | null
-  readonly hourlyPrice: number | null
-  readonly area: number | null
-  readonly imageUrl: string
-  readonly imageAlt: string
-  readonly slug: string
+  readonly id: string;
+  readonly name: string;
+  readonly nameJa: string;
+  readonly tagline: string | null;
+  readonly capacity: number | null;
+  readonly hourlyPrice: number | null;
+  readonly area: number | null;
+  readonly imageUrl: string;
+  readonly imageAlt: string;
+  readonly slug: string;
 }
 
 interface SpaceShowcaseProps {
-  readonly config: SpaceShowcaseConfig
-  readonly spaces: readonly SpaceData[]
-  readonly design: SectionDesign
+  readonly config: SpaceShowcaseConfig;
+  readonly spaces: readonly SpaceData[];
+  readonly design: SectionDesign;
 }
 
-export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): ReactElement {
-  const gridRef = useRef<HTMLDivElement>(null)
+export function SpaceShowcase({
+  config,
+  spaces,
+  design,
+}: SpaceShowcaseProps): ReactElement {
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const grid = gridRef.current
-      if (!grid) return
+      const grid = gridRef.current;
+      if (!grid) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const cards = grid.querySelectorAll('[data-space-card]')
-        if (cards.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const cards = grid.querySelectorAll("[data-space-card]");
+        if (cards.length === 0) return;
 
         gsap.fromTo(
           cards,
@@ -62,21 +78,23 @@ export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): R
             stagger: STAGGER.card,
             scrollTrigger: {
               trigger: grid,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: gridRef },
-  )
+  );
 
   return (
     <SectionWrapper design={design}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
-          {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+          {config.sectionLabel && (
+            <SectionLabel>{config.sectionLabel}</SectionLabel>
+          )}
           <h2
             className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
             style={getTitleStyle(design)}
@@ -86,14 +104,19 @@ export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): R
         </ScrollReveal>
       </div>
 
-      <div ref={gridRef} className={`grid gap-6 ${getGridColsClass(config.columns)} md:gap-8`}>
+      <div
+        ref={gridRef}
+        className={`grid gap-6 ${getGridColsClass(config.columns)} md:gap-8`}
+      >
         {spaces.map((space) => (
           <div
             key={space.id}
             data-space-card=""
             className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 hover:shadow-lg`}
           >
-            <div className={`${IMAGE_ASPECT_MAP[parseShowcaseImageAspect(config.imageAspect)]} overflow-hidden`}>
+            <div
+              className={`${IMAGE_ASPECT_MAP[parseShowcaseImageAspect(config.imageAspect)]} overflow-hidden`}
+            >
               <Image
                 src={space.imageUrl}
                 alt={space.imageAlt}
@@ -122,7 +145,7 @@ export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): R
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                   <span className="text-xs text-muted-foreground">
                     {space.capacity != null && `${space.capacity}名`}
-                    {space.capacity != null && space.area != null && ' / '}
+                    {space.capacity != null && space.area != null && " / "}
                     {space.area != null && <>{space.area}m&sup2;</>}
                   </span>
                   {space.hourlyPrice != null && (
@@ -137,5 +160,5 @@ export function SpaceShowcase({ config, spaces, design }: SpaceShowcaseProps): R
         ))}
       </div>
     </SectionWrapper>
-  )
+  );
 }

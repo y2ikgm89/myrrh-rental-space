@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useWatch } from 'react-hook-form'
+import { useWatch } from "react-hook-form";
 import {
   Button,
   Input,
@@ -17,10 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
-import { AnnouncementBarType } from '@/shared/db/enums'
-import { isValidAnnouncementBarType } from '@/shared/lib/validations/enums'
-import type { BarDialogProps, DeleteDialogProps } from './types'
+} from "@/admin/components/ui";
+import { AnnouncementBarType } from "@/shared/db/enums";
+import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums";
+import type { BarDialogProps, DeleteDialogProps } from "./types";
 
 export function BarDialog({
   isOpen,
@@ -32,15 +32,15 @@ export function BarDialog({
   control,
   errors,
   onSubmit,
-}: Omit<BarDialogProps, 'formValues'>) {
-  const formValues = useWatch({ control })
+}: Omit<BarDialogProps, "formValues">) {
+  const formValues = useWatch({ control });
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {editingBar ? 'お知らせバーを編集' : 'お知らせバーを作成'}
+            {editingBar ? "お知らせバーを編集" : "お知らせバーを作成"}
           </DialogTitle>
           <DialogDescription>
             サイト上部に表示するお知らせバーの内容を設定します
@@ -54,12 +54,14 @@ export function BarDialog({
               <Label htmlFor="message">メッセージ *</Label>
               <Input
                 id="message"
-                {...register('message')}
+                {...register("message")}
                 placeholder="お知らせのメッセージを入力"
                 disabled={isPending}
               />
               {errors.message && (
-                <p className="text-sm text-destructive">{errors.message.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.message.message}
+                </p>
               )}
             </div>
 
@@ -69,7 +71,7 @@ export function BarDialog({
                 value={formValues.type}
                 onValueChange={(value) => {
                   if (isValidAnnouncementBarType(value)) {
-                    setValue('type', value)
+                    setValue("type", value);
                   }
                 }}
                 disabled={isPending}
@@ -78,9 +80,15 @@ export function BarDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={AnnouncementBarType.info}>お知らせ（青）</SelectItem>
-                  <SelectItem value={AnnouncementBarType.warning}>重要（黄）</SelectItem>
-                  <SelectItem value={AnnouncementBarType.promo}>キャンペーン（緑）</SelectItem>
+                  <SelectItem value={AnnouncementBarType.info}>
+                    お知らせ（青）
+                  </SelectItem>
+                  <SelectItem value={AnnouncementBarType.warning}>
+                    重要（黄）
+                  </SelectItem>
+                  <SelectItem value={AnnouncementBarType.promo}>
+                    キャンペーン（緑）
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -93,7 +101,7 @@ export function BarDialog({
               <Input
                 id="priority"
                 type="number"
-                {...register('priority', { valueAsNumber: true })}
+                {...register("priority", { valueAsNumber: true })}
                 min={0}
                 max={100}
                 disabled={isPending}
@@ -110,12 +118,14 @@ export function BarDialog({
               <Label htmlFor="linkUrl">リンクURL</Label>
               <Input
                 id="linkUrl"
-                {...register('linkUrl')}
+                {...register("linkUrl")}
                 placeholder="https://example.com"
                 disabled={isPending}
               />
               {errors.linkUrl && (
-                <p className="text-sm text-destructive">{errors.linkUrl.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.linkUrl.message}
+                </p>
               )}
             </div>
 
@@ -123,7 +133,7 @@ export function BarDialog({
               <Label htmlFor="linkText">リンクテキスト</Label>
               <Input
                 id="linkText"
-                {...register('linkText')}
+                {...register("linkText")}
                 placeholder="詳しくはこちら"
                 disabled={isPending}
               />
@@ -137,7 +147,7 @@ export function BarDialog({
               <Input
                 id="startAt"
                 type="datetime-local"
-                {...register('startAt')}
+                {...register("startAt")}
                 disabled={isPending}
               />
             </div>
@@ -147,7 +157,7 @@ export function BarDialog({
               <Input
                 id="endAt"
                 type="datetime-local"
-                {...register('endAt')}
+                {...register("endAt")}
                 disabled={isPending}
               />
             </div>
@@ -156,7 +166,9 @@ export function BarDialog({
           {/* Active */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="isActive" className="text-base">有効にする</Label>
+              <Label htmlFor="isActive" className="text-base">
+                有効にする
+              </Label>
               <p className="text-sm text-muted-foreground">
                 オフにするとサイトに表示されません
               </p>
@@ -164,7 +176,7 @@ export function BarDialog({
             <Switch
               id="isActive"
               checked={formValues.isActive}
-              onCheckedChange={(checked) => setValue('isActive', checked)}
+              onCheckedChange={(checked) => setValue("isActive", checked)}
               disabled={isPending}
             />
           </div>
@@ -179,13 +191,13 @@ export function BarDialog({
               キャンセル
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? '保存中...' : editingBar ? '更新' : '作成'}
+              {isPending ? "保存中..." : editingBar ? "更新" : "作成"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 export function DeleteDialog({
@@ -216,10 +228,10 @@ export function DeleteDialog({
             onClick={onConfirm}
             disabled={isPending}
           >
-            {isPending ? '削除中...' : '削除'}
+            {isPending ? "削除中..." : "削除"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 基本情報セクション
@@ -6,7 +6,7 @@
  * サイト名、ロゴ、ファビコン、OGP画像などの基本設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -18,29 +18,29 @@ import {
   Label,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { updateBasicInfo } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateBasicInfo } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface BasicInfoSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
-    siteName: settings.siteName || '',
-    siteDescription: settings.siteDescription || '',
-    faviconUrl: settings.faviconUrl || '',
-    defaultOgpImageUrl: settings.defaultOgpImageUrl || '',
-    headerLogoUrl: settings.headerLogoUrl || '',
-    footerLogoUrl: settings.footerLogoUrl || '',
-    footerCopyright: settings.footerCopyright || '',
+    siteName: settings.siteName || "",
+    siteDescription: settings.siteDescription || "",
+    faviconUrl: settings.faviconUrl || "",
+    defaultOgpImageUrl: settings.defaultOgpImageUrl || "",
+    headerLogoUrl: settings.headerLogoUrl || "",
+    footerLogoUrl: settings.footerLogoUrl || "",
+    footerCopyright: settings.footerCopyright || "",
     useHeaderLogo: settings.useHeaderLogo,
     useFooterLogo: settings.useFooterLogo,
-  })
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -54,10 +54,10 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
         footerCopyright: formData.footerCopyright || null,
         useHeaderLogo: formData.useHeaderLogo,
         useFooterLogo: formData.useFooterLogo,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "基本情報を保存しました");
+    });
+  };
 
   return (
     <Card>
@@ -72,7 +72,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="siteName"
               value={formData.siteName}
-              onChange={(e) => setFormData({ ...formData, siteName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, siteName: e.target.value })
+              }
               placeholder="Myrrh Rental Space"
               disabled={isPending}
             />
@@ -82,7 +84,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="footerCopyright"
               value={formData.footerCopyright}
-              onChange={(e) => setFormData({ ...formData, footerCopyright: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, footerCopyright: e.target.value })
+              }
               placeholder="2024 Myrrh Rental Space"
               disabled={isPending}
             />
@@ -94,7 +98,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
           <Textarea
             id="siteDescription"
             value={formData.siteDescription}
-            onChange={(e) => setFormData({ ...formData, siteDescription: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, siteDescription: e.target.value })
+            }
             placeholder="サイトの説明文"
             rows={2}
             disabled={isPending}
@@ -107,12 +113,17 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="headerLogoUrl"
               value={formData.headerLogoUrl}
-              onChange={(e) => setFormData({ ...formData, headerLogoUrl: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, headerLogoUrl: e.target.value })
+              }
               placeholder="/images/logo.svg"
               disabled={isPending}
             />
             <div className="flex items-center justify-between pt-1">
-              <Label htmlFor="useHeaderLogo" className="text-sm text-muted-foreground">
+              <Label
+                htmlFor="useHeaderLogo"
+                className="text-sm text-muted-foreground"
+              >
                 ヘッダーでロゴを使用
               </Label>
               <Switch
@@ -133,12 +144,17 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="footerLogoUrl"
               value={formData.footerLogoUrl}
-              onChange={(e) => setFormData({ ...formData, footerLogoUrl: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, footerLogoUrl: e.target.value })
+              }
               placeholder="/images/logo-footer.svg"
               disabled={isPending}
             />
             <div className="flex items-center justify-between pt-1">
-              <Label htmlFor="useFooterLogo" className="text-sm text-muted-foreground">
+              <Label
+                htmlFor="useFooterLogo"
+                className="text-sm text-muted-foreground"
+              >
                 フッターでロゴを使用
               </Label>
               <Switch
@@ -162,7 +178,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="faviconUrl"
               value={formData.faviconUrl}
-              onChange={(e) => setFormData({ ...formData, faviconUrl: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, faviconUrl: e.target.value })
+              }
               placeholder="/favicon.ico"
               disabled={isPending}
             />
@@ -172,7 +190,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
             <Input
               id="defaultOgpImageUrl"
               value={formData.defaultOgpImageUrl}
-              onChange={(e) => setFormData({ ...formData, defaultOgpImageUrl: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, defaultOgpImageUrl: e.target.value })
+              }
               placeholder="/images/ogp.jpg"
               disabled={isPending}
             />
@@ -180,9 +200,9 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '基本情報を保存'}
+          {isPending ? "保存中..." : "基本情報を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

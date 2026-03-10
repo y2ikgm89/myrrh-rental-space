@@ -19,13 +19,13 @@
 
 ## SectionType → コンポーネントマッピング
 
-| SectionType | コンポーネント | データソース |
-|-------------|---------------|-------------|
-| `HERO_PARALLAX` | `HeroSection` | `config` のみ |
-| `CONCEPT` | `ConceptSection` | `config` のみ |
-| `SPACE_SHOWCASE` | `SpaceShowcase` | `config` + DB `Space` テーブル |
-| `FEATURES` | `FeaturesSection` | `config` のみ |
-| `CTA` | `CTASection` | `config` のみ |
+| SectionType      | コンポーネント    | データソース                   |
+| ---------------- | ----------------- | ------------------------------ |
+| `HERO_PARALLAX`  | `HeroSection`     | `config` のみ                  |
+| `CONCEPT`        | `ConceptSection`  | `config` のみ                  |
+| `SPACE_SHOWCASE` | `SpaceShowcase`   | `config` + DB `Space` テーブル |
+| `FEATURES`       | `FeaturesSection` | `config` のみ                  |
+| `CTA`            | `CTASection`      | `config` のみ                  |
 
 ## 新規ファイル
 

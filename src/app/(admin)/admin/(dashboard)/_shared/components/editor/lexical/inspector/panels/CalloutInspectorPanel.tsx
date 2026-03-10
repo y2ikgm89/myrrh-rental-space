@@ -4,48 +4,61 @@
  * @description CalloutNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isCalloutNode, type CalloutNode, CALLOUT_TYPES, calloutTypeState, isCalloutType } from '../../nodes/CalloutNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Label } from '@/admin/components/ui'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $isCalloutNode,
+  type CalloutNode,
+  CALLOUT_TYPES,
+  calloutTypeState,
+  isCalloutType,
+} from "../../nodes/CalloutNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Label } from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { CALLOUT_TYPE_LABELS } from '../../config/node-labels'
+} from "@/admin/components/ui/select";
+import { CALLOUT_TYPE_LABELS } from "../../config/node-labels";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type CalloutInspectorPanelProps = {
-  nodeKey: string
-  node: CalloutNode
-}
+  nodeKey: string;
+  node: CalloutNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function CalloutInspectorPanel({ nodeKey, node }: CalloutInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isCalloutNode)
+export function CalloutInspectorPanel({
+  nodeKey,
+  node,
+}: CalloutInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isCalloutNode);
 
-  const calloutType = editor.getEditorState().read(() => $getState(node, calloutTypeState))
+  const calloutType = editor
+    .getEditorState()
+    .read(() => $getState(node, calloutTypeState));
 
   const handleTypeChange = (value: string) => {
     if (isCalloutType(value)) {
-      updateNode((n) => { $setState(n, calloutTypeState, value) })
+      updateNode((n) => {
+        $setState(n, calloutTypeState, value);
+      });
     }
-  }
+  };
 
   return (
     <div>
@@ -69,5 +82,5 @@ export function CalloutInspectorPanel({ nodeKey, node }: CalloutInspectorPanelPr
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

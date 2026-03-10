@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * UrlTab
@@ -6,67 +6,67 @@
  * URL入力タブ
  */
 
-import { useState } from 'react'
-import { Link, AlertCircle, Image as ImageIcon } from 'lucide-react'
-import { Button } from '@/admin/components/ui'
+import { useState } from "react";
+import { Link, AlertCircle, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/admin/components/ui";
 
 interface UrlTabProps {
-  onAdd: (url: string, alt?: string) => void
-  canAddMore: boolean
+  onAdd: (url: string, alt?: string) => void;
+  canAddMore: boolean;
 }
 
 export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
-  const [url, setUrl] = useState('')
-  const [alt, setAlt] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [url, setUrl] = useState("");
+  const [alt, setAlt] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const validateUrl = (value: string): boolean => {
     if (!value.trim()) {
-      setError('URLを入力してください')
-      setPreviewUrl(null)
-      return false
+      setError("URLを入力してください");
+      setPreviewUrl(null);
+      return false;
     }
 
     try {
-      new URL(value)
-      setError(null)
-      setPreviewUrl(value)
-      return true
+      new URL(value);
+      setError(null);
+      setPreviewUrl(value);
+      return true;
     } catch {
-      setError('有効なURLを入力してください')
-      setPreviewUrl(null)
-      return false
+      setError("有効なURLを入力してください");
+      setPreviewUrl(null);
+      return false;
     }
-  }
+  };
 
   const handleUrlChange = (value: string) => {
-    setUrl(value)
+    setUrl(value);
     if (value.trim()) {
-      validateUrl(value)
+      validateUrl(value);
     } else {
-      setError(null)
-      setPreviewUrl(null)
+      setError(null);
+      setPreviewUrl(null);
     }
-  }
+  };
 
   const handleAdd = () => {
-    if (!validateUrl(url)) return
-    if (!canAddMore) return
+    if (!validateUrl(url)) return;
+    if (!canAddMore) return;
 
-    onAdd(url.trim(), alt.trim() || undefined)
-    setUrl('')
-    setAlt('')
-    setPreviewUrl(null)
-    setError(null)
-  }
+    onAdd(url.trim(), alt.trim() || undefined);
+    setUrl("");
+    setAlt("");
+    setPreviewUrl(null);
+    setError(null);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleAdd()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd();
     }
-  }
+  };
 
   return (
     <div className="space-y-4">
@@ -106,14 +106,13 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium">プレビュー</label>
           <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg border bg-muted">
-            
             <img
               src={previewUrl}
-              alt={alt || 'プレビュー'}
+              alt={alt || "プレビュー"}
               className="max-h-full max-w-full object-contain"
               onError={() => {
-                setError('画像を読み込めませんでした')
-                setPreviewUrl(null)
+                setError("画像を読み込めませんでした");
+                setPreviewUrl(null);
               }}
             />
           </div>
@@ -124,7 +123,9 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed bg-muted/30">
           <div className="text-center text-muted-foreground">
             <ImageIcon className="mx-auto h-8 w-8" />
-            <p className="mt-2 text-sm">URLを入力するとプレビューが表示されます</p>
+            <p className="mt-2 text-sm">
+              URLを入力するとプレビューが表示されます
+            </p>
           </div>
         </div>
       )}
@@ -144,5 +145,5 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         </p>
       )}
     </div>
-  )
+  );
 }

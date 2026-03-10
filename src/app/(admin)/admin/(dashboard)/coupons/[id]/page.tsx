@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
-import { deleteCoupon } from "@/admin/actions/coupon";
+import { connection } from "next/server";
 import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
 import { CouponForm } from "../_components/CouponForm";
+import { CouponDangerZone } from "./_components/CouponDangerZone";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { formatPrice } from "@/shared/lib/price-format";
@@ -17,7 +16,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await headers();
+  await connection();
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -31,6 +30,7 @@ export async function generateMetadata({
 }
 
 export default async function EditCouponPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -74,14 +74,14 @@ export default async function EditCouponPage({ params }: PageProps) {
           />
           <DetailField
             label="開始日"
-            value={
-              <span className="text-lg">{coupon.validFromLabel}</span>
-            }
+            value={<span className="text-lg">{coupon.validFromLabel}</span>}
           />
           <DetailField
             label="終了日"
             value={
-              <span className="text-lg">{coupon.validUntilLabel ?? "無期限"}</span>
+              <span className="text-lg">
+                {coupon.validUntilLabel ?? "無期限"}
+              </span>
             }
           />
         </div>
@@ -90,13 +90,7 @@ export default async function EditCouponPage({ params }: PageProps) {
       {/* フォーム */}
       <CouponForm coupon={coupon} />
 
-      <DangerZone
-        deleteLabel="クーポンを削除"
-        itemName={coupon.code}
-        onDelete={deleteCoupon.bind(null, coupon.id)}
-        redirectTo="/admin/coupons"
-      />
+      <CouponDangerZone couponId={coupon.id} itemName={coupon.code} />
     </AdminDetailLayout>
   );
 }
-

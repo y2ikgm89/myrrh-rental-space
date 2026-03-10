@@ -3,12 +3,12 @@
  */
 
 // メインエディタ
-export { LexicalEditor } from './LexicalEditor'
-export { LazyLexicalEditor } from './LazyLexicalEditor'
-export type { LexicalEditorProps } from './types'
+export { LexicalEditor } from "./LexicalEditor";
+export { LazyLexicalEditor } from "./LazyLexicalEditor";
+export type { LexicalEditorProps } from "./types";
 
 // ノード
-export { ImageNode, YouTubeNode } from './nodes'
+export { ImageNode, YouTubeNode } from "./nodes";
 
 // プラグイン
-export { ToolbarPlugin, ImagePlugin, YouTubePlugin } from './plugins'
+export { ToolbarPlugin, ImagePlugin, YouTubePlugin } from "./plugins";

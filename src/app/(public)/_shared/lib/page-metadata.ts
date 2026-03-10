@@ -9,40 +9,37 @@
  * - 'use cache' ディレクティブでキャッシュし、プリレンダリング時の動的データアクセスを回避
  */
 
-import type { Metadata } from 'next'
-import {
-  getBaseUrl,
-  SITE_DEFAULTS,
-} from '@/shared/lib/constants'
-import { getSeoSettings } from '@/public/lib/seo/metadata-factory'
+import type { Metadata } from "next";
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getSeoSettings } from "@/public/lib/seo/metadata-factory";
 import {
   SYSTEM_PAGES,
   getSystemPageDefinition,
   type SystemPageDefinition,
-} from '@/shared/lib/validations/page'
-import { getPageSeo } from '@/shared/domain/pages/queries'
+} from "@/shared/lib/validations/page";
+import { getPageSeo } from "@/shared/domain/pages/queries";
 
-const BASE_URL = getBaseUrl()
+const BASE_URL = getBaseUrl();
 
 /**
  * SEOデータ型
  */
 export interface PageSeoData {
-  title: string
-  description: string | null
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
+  title: string;
+  description: string | null;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
 }
 
 /**
  * システムページのデフォルトSEO設定を取得
  */
 export function getDefaultPageSeo(slug: string): PageSeoData | null {
-  const definition = getSystemPageDefinition(slug)
-  if (!definition) return null
+  const definition = getSystemPageDefinition(slug);
+  if (!definition) return null;
 
   return {
     title: definition.title,
@@ -52,7 +49,7 @@ export function getDefaultPageSeo(slug: string): PageSeoData | null {
     ogpTitle: null,
     ogpDescription: null,
     ogpImageUrl: null,
-  }
+  };
 }
 
 /**
@@ -72,13 +69,13 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
   const [seo, settings] = await Promise.all([
     getPageSeo(slug),
     getSeoSettings(),
-  ])
-  const defaultSeo = getDefaultPageSeo(slug)
+  ]);
+  const defaultSeo = getDefaultPageSeo(slug);
 
-  const siteName = settings?.siteName ?? SITE_DEFAULTS.name
+  const siteName = settings?.siteName ?? SITE_DEFAULTS.name;
 
   // タイトル: DB > デフォルト > slug
-  const title = seo?.title || defaultSeo?.title || slug
+  const title = seo?.title || defaultSeo?.title || slug;
 
   // 説明文: DB metaDescription > DB description > Settings > デフォルト
   const description =
@@ -86,17 +83,18 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
     seo?.description ||
     settings?.defaultMetaDescription ||
     defaultSeo?.description ||
-    undefined
+    undefined;
 
   // OGP タイトル/説明: DB OGP > Settings OGP > 通常値
-  const ogTitle = seo?.ogpTitle || settings?.defaultOgpTitle || title
-  const ogDescription = seo?.ogpDescription || settings?.defaultOgpDescription || description
+  const ogTitle = seo?.ogpTitle || settings?.defaultOgpTitle || title;
+  const ogDescription =
+    seo?.ogpDescription || settings?.defaultOgpDescription || description;
 
   // OGP 画像: DB > Settings デフォルト
-  const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined
+  const ogImage = seo?.ogpImageUrl || settings?.defaultOgpImageUrl || undefined;
 
   // canonical URL: 'home' はルート URL、それ以外は /{slug}
-  const canonicalUrl = slug === 'home' ? `${BASE_URL}/` : `${BASE_URL}/${slug}`
+  const canonicalUrl = slug === "home" ? `${BASE_URL}/` : `${BASE_URL}/${slug}`;
 
   const metadata: Metadata = {
     title,
@@ -109,30 +107,30 @@ export async function generatePageMetadata(slug: string): Promise<Metadata> {
       description: ogDescription ?? undefined,
       url: canonicalUrl,
       siteName,
-      locale: 'ja_JP',
-      type: 'website',
+      locale: "ja_JP",
+      type: "website",
       ...(ogImage && { images: [{ url: ogImage }] }),
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: ogTitle,
       description: ogDescription ?? undefined,
       ...(ogImage && { images: [ogImage] }),
     },
-  }
+  };
 
   // メタキーワード
   if (seo?.metaKeywords || settings?.defaultMetaKeywords) {
-    const keywords = seo?.metaKeywords || settings?.defaultMetaKeywords || ''
-    metadata.keywords = keywords.split(',').map((k) => k.trim())
+    const keywords = seo?.metaKeywords || settings?.defaultMetaKeywords || "";
+    metadata.keywords = keywords.split(",").map((k) => k.trim());
   }
 
-  return metadata
+  return metadata;
 }
 
 /**
  * すべてのシステムページ定義を取得
  */
 export function getAllSystemPages(): readonly SystemPageDefinition[] {
-  return SYSTEM_PAGES
+  return SYSTEM_PAGES;
 }

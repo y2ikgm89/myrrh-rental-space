@@ -7,10 +7,12 @@
 ## 主要テーブル
 
 ### Users（認証ユーザー）
+
 - `id`, `email`, `name`, `role` (admin, user), `createdAt`, `updatedAt`
 - Better Auth のセッション管理と統合
 
 ### Spaces（レンタルスペース）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `name`: スペース名（String, 必須）
@@ -38,6 +40,7 @@
   - `updatedAt`: 更新日時（DateTime）
 
 ### Reservations（予約）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `spaceId`: スペースID（String, FK, 必須）
@@ -62,12 +65,15 @@
   - 複合インデックス: `[customerId, startTime]`（顧客別予約履歴検索用）
 
 ### Inquiries（お問い合わせ）
+
 - `id`, `name`, `email`, `subject`, `message`, `status`, `createdAt`, `updatedAt`
 
 ### News（お知らせ）
+
 - `id`, `title`, `content`, `publishedAt`, `isPublished`, `createdAt`, `updatedAt`
 
 ### Posts（投稿記事）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `title`: タイトル（String, 必須, 1-200文字）
@@ -104,6 +110,7 @@
   - `viewCount`: 人気記事検索用
 
 ### PostCategories（投稿カテゴリ）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `name`: カテゴリ名（String, 必須, 1-50文字, ユニーク）
@@ -118,6 +125,7 @@
   - `order`: 表示順序ソート用
 
 ### PostTags（投稿タグ）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `name`: タグ名（String, 必須, 1-30文字, ユニーク）
@@ -129,6 +137,7 @@
   - `slug`: ユニークインデックス
 
 ### Settings（設定）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `createdAt`: 作成日時（DateTime）
@@ -185,6 +194,7 @@
 - **詳細**: [`SETTINGS_REQUIREMENTS.md`](../requirements/settings.md) を参照してください
 
 ### Pages（公開ページコンテンツ）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `slug`: URLスラッグ（String, unique, 例: 'home', 'reservation', 'privacy'）
@@ -222,6 +232,7 @@
   - **SEO対応**: 各ページでメタタグ、OGP設定を管理可能
 
 ### Customers（顧客）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `lastName`: 姓（String, 必須, 1-50文字）
@@ -262,66 +273,86 @@
     - **ソート・検索の精度向上**: 姓でのソート、姓のみ・名のみでの検索が可能。複合インデックス`[lastName, firstName]`で効率的な検索・ソートを実現
     - **ビジネス環境での一般的な慣習**: 日本のビジネス環境では姓名を分けて管理することが一般的。データベース設計のベストプラクティスとしても正規化の観点から柔軟性が高い
   - **表示用フルネーム**: アプリケーション層で`${lastName} ${firstName}`として結合（日本）、`${firstName} ${lastName}`として結合（国際化対応時）
+
     ```typescript
     // src/lib/customer.ts
     export function getCustomerFullName(
       customer: { lastName: string; firstName: string },
-      locale: string = 'ja'
+      locale: string = "ja",
     ): string {
-      if (locale === 'ja') {
+      if (locale === "ja") {
         // 日本語: 姓 名
-        return `${customer.lastName} ${customer.firstName}`
+        return `${customer.lastName} ${customer.firstName}`;
       } else {
         // 英語など: FirstName LastName
-        return `${customer.firstName} ${customer.lastName}`
+        return `${customer.firstName} ${customer.lastName}`;
       }
     }
-    
+
     // 敬称付きフルネーム
     export function getCustomerFullNameWithHonorific(
       customer: { lastName: string; firstName: string },
-      locale: string = 'ja'
+      locale: string = "ja",
     ): string {
-      const fullName = getCustomerFullName(customer, locale)
-      return locale === 'ja' ? `${fullName}様` : `${fullName}様`
+      const fullName = getCustomerFullName(customer, locale);
+      return locale === "ja" ? `${fullName}様` : `${fullName}様`;
     }
     ```
+
   - **バリデーション**: Zodスキーマで型安全なバリデーションを実装
+
     ```typescript
     // src/lib/validations/customer.ts
-    import { z } from 'zod'
-    
+    import { z } from "zod";
+
     export const customerSchema = z.object({
-      lastName: z.string().min(1, '姓を入力してください').max(50, '姓は50文字以内で入力してください'),
-      firstName: z.string().min(1, '名を入力してください').max(50, '名は50文字以内で入力してください'),
-      email: z.string().email('有効なメールアドレスを入力してください').max(255),
-      phoneNumber: z.string().regex(/^[0-9-+()]+$/).max(20).optional().nullable(),
+      lastName: z
+        .string()
+        .min(1, "姓を入力してください")
+        .max(50, "姓は50文字以内で入力してください"),
+      firstName: z
+        .string()
+        .min(1, "名を入力してください")
+        .max(50, "名は50文字以内で入力してください"),
+      email: z
+        .string()
+        .email("有効なメールアドレスを入力してください")
+        .max(255),
+      phoneNumber: z
+        .string()
+        .regex(/^[0-9-+()]+$/)
+        .max(20)
+        .optional()
+        .nullable(),
       address: z.string().max(200).optional().nullable(),
       status: customerStatusEnum.optional(),
       notes: z.string().optional().nullable(),
       isActive: z.boolean().optional(),
-    })
+    });
     ```
+
   - **検索・ソート機能**: 型安全なPrismaクエリで実装
+
     ```typescript
     // 型安全なwhere条件の構築
-    const where: Prisma.CustomerWhereInput = {}
+    const where: Prisma.CustomerWhereInput = {};
     if (searchParams.search) {
       where.OR = [
-        { lastName: { contains: searchParams.search, mode: 'insensitive' } },
-        { firstName: { contains: searchParams.search, mode: 'insensitive' } },
-        { email: { contains: searchParams.search, mode: 'insensitive' } },
-        { phoneNumber: { contains: searchParams.search, mode: 'insensitive' } },
-      ]
+        { lastName: { contains: searchParams.search, mode: "insensitive" } },
+        { firstName: { contains: searchParams.search, mode: "insensitive" } },
+        { email: { contains: searchParams.search, mode: "insensitive" } },
+        { phoneNumber: { contains: searchParams.search, mode: "insensitive" } },
+      ];
     }
-    
+
     // 型安全なorderBy条件の構築
-    const orderBy: Prisma.CustomerOrderByWithRelationInput = {}
-    if (searchParams.sortBy === 'name') {
-      orderBy.lastName = searchParams.sortOrder || 'asc'
-      orderBy.firstName = searchParams.sortOrder || 'asc'
+    const orderBy: Prisma.CustomerOrderByWithRelationInput = {};
+    if (searchParams.sortBy === "name") {
+      orderBy.lastName = searchParams.sortOrder || "asc";
+      orderBy.firstName = searchParams.sortOrder || "asc";
     }
     ```
+
   - **将来の拡張**: 多言語対応、ミドルネーム対応など、柔軟に拡張可能
     - 多言語対応時は言語ごとの名前表示順序を実装可能
     - ミドルネームが必要になった場合は`middleName`フィールドを追加可能
@@ -330,6 +361,7 @@
   - **統計情報の自動更新**: 予約作成・更新・削除時に顧客の統計情報を自動更新（トランザクション内で実行）
 
 ### NavigationItems（ナビゲーションメニュー）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `type`: タイプ（Enum: 'header', 'footer'）
@@ -346,6 +378,7 @@
   - ヘッダーメニューは最大10項目、フッターメニューは最大15項目
 
 ### SocialLinks（SNSアイコン）
+
 - **基本フィールド**:
   - `id`: 一意識別子（String, UUID）
   - `platform`: プラットフォーム（Enum: 'twitter', 'facebook', 'instagram', 'youtube', 'line', 'tiktok', 'other'）
@@ -429,7 +462,7 @@ model Reservation {
   spaceId   String
   startTime DateTime
   endTime   DateTime
-  
+
   @@index([spaceId])
   @@index([startTime])
   @@index([endTime])
@@ -445,7 +478,7 @@ model Reservation {
   startTime DateTime
   endTime   DateTime
   status    String
-  
+
   // スペースと日時範囲での検索を最適化
   @@index([spaceId, startTime, endTime])
   // ステータスと日時での検索を最適化
@@ -456,6 +489,7 @@ model Reservation {
 #### 推奨インデックス設定
 
 **Reservationsテーブル**:
+
 - `spaceId`: スペース別の予約検索
 - `startTime`, `endTime`: 日時範囲での検索
 - `status`: ステータス別の検索
@@ -464,22 +498,26 @@ model Reservation {
 - 複合インデックス: `[customerId, startTime]`（顧客別予約履歴検索用）
 
 **Customersテーブル**:
+
 - `email`: ユニークインデックス（メールアドレス検索用）
 - `status`: ステータス別検索用
 - `isActive`: アクティブ/非アクティブ検索用
 - `lastReservationAt`: 最終予約日時順ソート用
 
 **Spacesテーブル**:
+
 - `isPublished`: 公開済みスペースの検索
 - `isActive`: アクティブなスペースの検索
 - 複合インデックス: `[isPublished, isActive]`
 
 **Newsテーブル**:
+
 - `publishedAt`: 公開日時順のソート
 - `isPublished`: 公開済みお知らせの検索
 - 複合インデックス: `[isPublished, publishedAt]`
 
 **Postsテーブル**:
+
 - `slug`: ユニークインデックス（スラッグ検索用）
 - `isPublished`: 公開済み記事の検索
 - `publishedAt`: 公開日時順のソート
@@ -489,13 +527,16 @@ model Reservation {
 - 複合インデックス: `[categoryId, isPublished, publishedAt]`（カテゴリ別公開済み記事の日時順ソート）
 
 **PostCategoriesテーブル**:
+
 - `slug`: ユニークインデックス（スラッグ検索用）
 - `order`: 表示順序でのソート
 
 **PostTagsテーブル**:
+
 - `slug`: ユニークインデックス（スラッグ検索用）
 
 **NavigationItemsテーブル**:
+
 - `type`: ヘッダー/フッター別の検索
 - `order`: 表示順序でのソート
 - 複合インデックス: `[type, order]`
@@ -523,31 +564,35 @@ datasource db {
 
 ```typescript
 // src/lib/prisma.ts
-import { PrismaPg } from '@prisma/adapter-pg'
-import { PrismaClient } from '@/generated/prisma/client'
-import { Pool } from 'pg'
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@/generated/prisma/client";
+import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-})
+});
 
-const adapter = new PrismaPg(pool)
+const adapter = new PrismaPg(pool);
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+  prisma: PrismaClient | undefined;
+};
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+    log:
+      process.env.NODE_ENV === "development"
+        ? ["query", "error", "warn"]
+        : ["error"],
+  });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
 
-**注意**: 
+**注意**:
+
 - Prisma 7では、カスタム出力パス（`output`）の指定が必須です。詳細は[`PRISMA_7_IMPORT_GUIDE.md`](./PRISMA_7_IMPORT_GUIDE.md)を参照してください。
 - Prisma 7では、データベース接続にドライバーアダプターが必要です。PostgreSQLの場合は`@prisma/adapter-pg`を使用します。詳細は[`TYPE_SAFETY_REQUIREMENTS.md`](../guides/type-safety.md)を参照してください。
 
@@ -566,10 +611,10 @@ const spaces = await prisma.space.findMany({
     mainImageUrl: true,
     hourlyPrice: true,
   },
-})
+});
 
 // ❌ 悪い例: すべてのフィールドを取得
-const spaces = await prisma.space.findMany()
+const spaces = await prisma.space.findMany();
 ```
 
 #### includeの適切な使用（N+1問題の回避）
@@ -593,14 +638,14 @@ const reservations = await prisma.reservation.findMany({
       },
     },
   },
-})
+});
 
 // ❌ 悪い例: N+1問題が発生
-const reservations = await prisma.reservation.findMany()
+const reservations = await prisma.reservation.findMany();
 for (const reservation of reservations) {
   const space = await prisma.space.findUnique({
     where: { id: reservation.spaceId },
-  })
+  });
 }
 ```
 
@@ -608,22 +653,22 @@ for (const reservation of reservations) {
 
 ```typescript
 // ✅ 良い例: 効率的なページネーション
-const page = 1
-const pageSize = 12
+const page = 1;
+const pageSize = 12;
 
 const [spaces, total] = await Promise.all([
   prisma.space.findMany({
     where: { isPublished: true },
     skip: (page - 1) * pageSize,
     take: pageSize,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   }),
   prisma.space.count({
     where: { isPublished: true },
   }),
-])
+]);
 
-const totalPages = Math.ceil(total / pageSize)
+const totalPages = Math.ceil(total / pageSize);
 ```
 
 #### トランザクションの使用
@@ -633,17 +678,17 @@ const totalPages = Math.ceil(total / pageSize)
 await prisma.$transaction(async (tx) => {
   const space = await tx.space.create({
     data: spaceData,
-  })
+  });
 
   await tx.reservation.create({
     data: {
       spaceId: space.id,
       // ...
     },
-  })
+  });
 
-  return space
-})
+  return space;
+});
 ```
 
 ### マイグレーション管理
@@ -686,6 +731,7 @@ datasource db {
 ```
 
 **接続プーリングURLの形式**:
+
 ```
 postgresql://user:password@host:6543/database?pgbouncer=true
 ```
@@ -696,32 +742,32 @@ postgresql://user:password@host:6543/database?pgbouncer=true
 try {
   const space = await prisma.space.create({
     data: spaceData,
-  })
-  return { success: true, data: { id: space.id } }
+  });
+  return { success: true, data: { id: space.id } };
 } catch (error) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
+    if (error.code === "P2002") {
       // 一意制約違反
       return {
         success: false,
-        error: 'Duplicate entry',
-        code: 'CONFLICT',
-      }
+        error: "Duplicate entry",
+        code: "CONFLICT",
+      };
     }
-    if (error.code === 'P2025') {
+    if (error.code === "P2025") {
       return {
         success: false,
-        error: 'Record not found',
-        code: 'NOT_FOUND',
-      }
+        error: "Record not found",
+        code: "NOT_FOUND",
+      };
     }
   }
-  console.error('Unexpected error:', error)
+  console.error("Unexpected error:", error);
   return {
     success: false,
-    error: 'An unexpected error occurred',
-    code: 'INTERNAL_ERROR',
-  }
+    error: "An unexpected error occurred",
+    code: "INTERNAL_ERROR",
+  };
 }
 ```
 
@@ -747,4 +793,3 @@ try {
 ### ベストプラクティス
 
 Prisma 7の詳細なベストプラクティスについては、[`BEST_PRACTICES.md`](./BEST_PRACTICES.md) の「Prisma 7 ベストプラクティス」セクションを参照してください。
-

@@ -1,92 +1,93 @@
-'use client'
+"use client";
 
-import { useOptimistic, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { updateReservationStatus } from '@/admin/actions/reservation'
-import type { CalendarEvent } from '@/admin/lib/calendar'
-import type { ReservationStatus } from '@/shared/db/enums'
+import { useOptimistic, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { updateReservationStatus } from "@/admin/actions/reservation";
+import type { CalendarEvent } from "@/admin/lib/calendar";
+import type { ReservationStatus } from "@/shared/db/enums";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 type OptimisticAction = {
-  type: 'UPDATE_STATUS'
-  eventId: string
-  newStatus: ReservationStatus
-}
+  type: "UPDATE_STATUS";
+  eventId: string;
+  newStatus: ReservationStatus;
+};
 
 function eventsReducer(
   events: CalendarEvent[],
-  action: OptimisticAction
+  action: OptimisticAction,
 ): CalendarEvent[] {
   switch (action.type) {
-    case 'UPDATE_STATUS':
+    case "UPDATE_STATUS":
       return events.map((event) =>
         event.id === action.eventId
           ? { ...event, status: action.newStatus }
-          : event
-      )
+          : event,
+      );
     default:
-      return events
+      return events;
   }
 }
 
 interface UseEventActionsOptions {
-  events: CalendarEvent[]
+  events: CalendarEvent[];
 }
 
 export function useEventActions({ events }: UseEventActionsOptions) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [optimisticEvents, setOptimisticEvents] = useOptimistic(
     events,
-    eventsReducer
-  )
-  const [selectedEvent, setSelectedEventState] = useOptimistic<CalendarEvent | null, CalendarEvent | null>(
-    null,
-    (_, newEvent) => newEvent
-  )
+    eventsReducer,
+  );
+  const [selectedEvent, setSelectedEventState] = useOptimistic<
+    CalendarEvent | null,
+    CalendarEvent | null
+  >(null, (_, newEvent) => newEvent);
 
   const handleEventClick = (event: CalendarEvent) => {
     // 楽観的更新されたイベントを取得
-    const optimisticEvent = optimisticEvents.find((e) => e.id === event.id)
-    setSelectedEventState(optimisticEvent || event)
-  }
+    const optimisticEvent = optimisticEvents.find((e) => e.id === event.id);
+    setSelectedEventState(optimisticEvent || event);
+  };
 
   const handleCloseDialog = () => {
-    setSelectedEventState(null)
-  }
+    setSelectedEventState(null);
+  };
 
   const handleStatusChange = async (
     eventId: string,
-    newStatus: ReservationStatus
+    newStatus: ReservationStatus,
   ) => {
     // 重複実行を防止
-    if (isPending) return
+    if (isPending) return;
 
     startTransition(async () => {
       // 楽観的にUIを更新
       setOptimisticEvents({
-        type: 'UPDATE_STATUS',
+        type: "UPDATE_STATUS",
         eventId,
         newStatus,
-      })
+      });
 
       // 選択中のイベントも楽観的に更新
       if (selectedEvent?.id === eventId) {
-        setSelectedEventState({ ...selectedEvent, status: newStatus })
+        setSelectedEventState({ ...selectedEvent, status: newStatus });
       }
 
-      const result = await updateReservationStatus(eventId, newStatus)
-      if (result.success) {
-        toast.success(result.message || 'ステータスを更新しました')
-        router.refresh()
-        setSelectedEventState(null)
-      } else {
-        toast.error(result.error || 'エラーが発生しました')
-        // エラー時はrouter.refresh()でサーバーの状態にロールバック
-        router.refresh()
+      const result = await updateReservationStatus(eventId, newStatus);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        router.refresh();
+        return;
       }
-    })
-  }
+
+      toast.success("ステータスを更新しました");
+      router.refresh();
+      setSelectedEventState(null);
+    });
+  };
 
   return {
     isPending,
@@ -95,5 +96,5 @@ export function useEventActions({ events }: UseEventActionsOptions) {
     handleEventClick,
     handleCloseDialog,
     handleStatusChange,
-  }
+  };
 }

@@ -4,10 +4,10 @@
  * タイポ防止とIDE補完を有効にするための型定義
  */
 
-import type { Prisma } from '@/shared/db/prisma'
+import type { Prisma } from "@/shared/db/prisma";
 
 // Re-export LayoutWidth from Prisma generated enums
-export { LayoutWidth } from '@/shared/db/enums'
+export { LayoutWidth } from "@/shared/db/enums";
 
 /**
  * Where Input Types
@@ -21,13 +21,13 @@ export { LayoutWidth } from '@/shared/db/enums'
  *   isPublished: true,
  * }
  */
-export type SpaceWhereInput = Prisma.SpaceWhereInput
-export type ReservationWhereInput = Prisma.ReservationWhereInput
-export type PostWhereInput = Prisma.PostWhereInput
-export type PostCategoryWhereInput = Prisma.PostCategoryWhereInput
-export type PostCommentWhereInput = Prisma.PostCommentWhereInput
-export type CustomerWhereInput = Prisma.CustomerWhereInput
-export type InquiryWhereInput = Prisma.InquiryWhereInput
-export type NewsWhereInput = Prisma.NewsWhereInput
-export type UserWhereInput = Prisma.UserWhereInput
-export type PageWhereInput = Prisma.PageWhereInput
+export type SpaceWhereInput = Prisma.SpaceWhereInput;
+export type ReservationWhereInput = Prisma.ReservationWhereInput;
+export type PostWhereInput = Prisma.PostWhereInput;
+export type PostCategoryWhereInput = Prisma.PostCategoryWhereInput;
+export type PostCommentWhereInput = Prisma.PostCommentWhereInput;
+export type CustomerWhereInput = Prisma.CustomerWhereInput;
+export type InquiryWhereInput = Prisma.InquiryWhereInput;
+export type NewsWhereInput = Prisma.NewsWhereInput;
+export type UserWhereInput = Prisma.UserWhereInput;
+export type PageWhereInput = Prisma.PageWhereInput;

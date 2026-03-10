@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * iCalフィード設定セクション
@@ -6,9 +6,9 @@
  * 外部カレンダーアプリ（TimeTree等）で購読可能なiCalフィードの管理
  */
 
-import { useState, useTransition, useEffect } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
-import { toast } from 'sonner'
+import { useState, useTransition, useEffect } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
+import { toast } from "sonner";
 import {
   Button,
   Card,
@@ -18,15 +18,15 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { Switch } from '@/admin/components/ui/switch'
+} from "@/admin/components/ui";
+import { Switch } from "@/admin/components/ui/switch";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -35,63 +35,67 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui/dialog'
+} from "@/admin/components/ui/dialog";
 import {
   createICalToken,
   deleteICalToken,
   updateICalFeedSettings,
-} from '@/admin/actions/ical-tokens'
-import { Copy, Trash2, Plus, ExternalLink, Calendar } from 'lucide-react'
+} from "@/admin/actions/ical-tokens";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { Copy, Trash2, Plus, ExternalLink, Calendar } from "lucide-react";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface ICalFeedSectionProps {
-  onUpdate?: () => void
+  onUpdate?: () => void;
 }
 
 interface SpaceOption {
-  id: string
-  name: string
+  id: string;
+  name: string;
 }
 
 type ICalFeedResponse = {
   tokens: Array<{
-    id: string
-    token: string
-    name: string
-    spaceId: string | null
-    spaceName: string | null
-    createdBy: string
-    createdByName: string | null
-    createdAt: string
-    expiresAt: string | null
-    lastUsedAt: string | null
-  }>
+    id: string;
+    token: string;
+    name: string;
+    spaceId: string | null;
+    spaceName: string | null;
+    createdBy: string;
+    createdByName: string | null;
+    createdAt: string;
+    expiresAt: string | null;
+    lastUsedAt: string | null;
+  }>;
   settings: {
-    icalFeedEnabled: boolean
-    icalFeedIncludeCustomerInfo: boolean
-  }
-  spaces: SpaceOption[]
-}
+    icalFeedEnabled: boolean;
+    icalFeedIncludeCustomerInfo: boolean;
+  };
+  spaces: SpaceOption[];
+};
 
 async function fetchICalFeedData(): Promise<ICalFeedResponse> {
-  const response = await fetch('/admin/api/ical-feed', {
-    credentials: 'same-origin',
-  })
+  const response = await fetch("/admin/api/ical-feed", {
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
+    const body: unknown = await response.json().catch(() => null);
     const message =
-      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
         ? body.error
-        : 'iCalフィード設定の取得に失敗しました'
-    throw new Error(message)
+        : "iCalフィード設定の取得に失敗しました";
+    throw new Error(message);
   }
 
-  const data: ICalFeedResponse = await response.json()
-  return data
+  const data: ICalFeedResponse = await response.json();
+  return data;
 }
 
 // =============================================================================
@@ -99,68 +103,70 @@ async function fetchICalFeedData(): Promise<ICalFeedResponse> {
 // =============================================================================
 
 export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
-  const confirm = useConfirm()
-  const [isPending, startTransition] = useTransition()
-  const [tokens, setTokens] = useState<ICalFeedResponse['tokens']>([])
-  const [spaces, setSpaces] = useState<SpaceOption[]>([])
+  const confirm = useConfirm();
+  const [isPending, startTransition] = useTransition();
+  const [tokens, setTokens] = useState<ICalFeedResponse["tokens"]>([]);
+  const [spaces, setSpaces] = useState<SpaceOption[]>([]);
   const [settings, setSettings] = useState({
     icalFeedEnabled: false,
     icalFeedIncludeCustomerInfo: false,
-  })
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  });
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTokenData, setNewTokenData] = useState<{
-    name: string
-    spaceId: string | null
-    expiresInDays: number | null
+    name: string;
+    spaceId: string | null;
+    expiresInDays: number | null;
   }>({
-    name: '',
-    spaceId: '',
+    name: "",
+    spaceId: "",
     expiresInDays: null,
-  })
-  const [createdTokenUrl, setCreatedTokenUrl] = useState<string | null>(null)
+  });
+  const [createdTokenUrl, setCreatedTokenUrl] = useState<string | null>(null);
 
   // 初回読み込み
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const data = await fetchICalFeedData()
-        setTokens(data.tokens)
-        setSettings(data.settings)
-        setSpaces(data.spaces)
+        const data = await fetchICalFeedData();
+        setTokens(data.tokens);
+        setSettings(data.settings);
+        setSpaces(data.spaces);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'iCalフィード設定の取得に失敗しました'
-        toast.error(message)
+          error instanceof Error
+            ? error.message
+            : "iCalフィード設定の取得に失敗しました";
+        toast.error(message);
       }
-    }
-    void loadInitialData()
-  }, [])
+    };
+    void loadInitialData();
+  }, []);
 
   const refreshTokens = async () => {
-    const data = await fetchICalFeedData()
-    setTokens(data.tokens)
-  }
+    const data = await fetchICalFeedData();
+    setTokens(data.tokens);
+  };
 
   const handleSettingsChange = (key: keyof typeof settings, value: boolean) => {
-    const newSettings = { ...settings, [key]: value }
-    setSettings(newSettings)
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
 
     startTransition(async () => {
-      const result = await updateICalFeedSettings(newSettings)
-      if (!result.success) {
-        toast.error(result.error)
-        setSettings(settings) // ロールバック
+      const result = await updateICalFeedSettings(newSettings);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        setSettings(settings); // ロールバック
       } else {
-        toast.success('設定を保存しました')
-        onUpdate?.()
+        toast.success("設定を保存しました");
+        onUpdate?.();
       }
-    })
-  }
+    });
+  };
 
   const handleCreateToken = () => {
     if (!newTokenData.name.trim()) {
-      toast.error('トークン名を入力してください')
-      return
+      toast.error("トークン名を入力してください");
+      return;
     }
 
     startTransition(async () => {
@@ -168,55 +174,56 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
         name: newTokenData.name,
         spaceId: newTokenData.spaceId || null,
         expiresInDays: newTokenData.expiresInDays,
-      })
+      });
 
-      if (!result.success) {
-        toast.error(result.error)
+      if (isMutationError(result)) {
+        toast.error(result.error);
       } else {
-        toast.success('トークンを作成しました')
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-        setCreatedTokenUrl(`${baseUrl}/api/ical/${result.data?.token}`)
-        await refreshTokens()
-        setNewTokenData({ name: '', spaceId: null, expiresInDays: null })
-        onUpdate?.()
+        toast.success("トークンを作成しました");
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        setCreatedTokenUrl(`${baseUrl}/api/ical/${result.token}`);
+        await refreshTokens();
+        setNewTokenData({ name: "", spaceId: null, expiresInDays: null });
+        onUpdate?.();
       }
-    })
-  }
+    });
+  };
 
   const handleDeleteToken = async (id: string, name: string) => {
     const confirmed = await confirm({
-      title: 'トークンを削除しますか？',
+      title: "トークンを削除しますか？",
       description: `トークン「${name}」を削除しますか？このURLで購読しているカレンダーは更新されなくなります。`,
-      confirmLabel: '削除',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      confirmLabel: "削除",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await deleteICalToken(id)
-      if (!result.success) {
-        toast.error(result.error)
+      const result = await deleteICalToken(id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
       } else {
-        toast.success('トークンを削除しました')
-        await refreshTokens()
-        onUpdate?.()
+        toast.success("トークンを削除しました");
+        await refreshTokens();
+        onUpdate?.();
       }
-    })
-  }
+    });
+  };
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
-      toast.success('URLをコピーしました')
+      await navigator.clipboard.writeText(text);
+      toast.success("URLをコピーしました");
     } catch {
-      toast.error('コピーに失敗しました')
+      toast.error("コピーに失敗しました");
     }
-  }
+  };
 
   const getTokenUrl = (token: string) => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${baseUrl}/api/ical/${token}`
-  }
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return `${baseUrl}/api/ical/${token}`;
+  };
 
   return (
     <Card>
@@ -226,7 +233,8 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
           iCalフィード（外部カレンダー連携）
         </CardTitle>
         <CardDescription>
-          TimeTree、Google Calendar等の外部カレンダーアプリから購読可能なiCalフィードを管理します
+          TimeTree、Google
+          Calendar等の外部カレンダーアプリから購読可能なiCalフィードを管理します
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -242,14 +250,18 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
             <Switch
               id="icalFeedEnabled"
               checked={settings.icalFeedEnabled}
-              onCheckedChange={(checked) => handleSettingsChange('icalFeedEnabled', checked)}
+              onCheckedChange={(checked) =>
+                handleSettingsChange("icalFeedEnabled", checked)
+              }
               disabled={isPending}
             />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">
-              <Label htmlFor="icalFeedIncludeCustomerInfo">顧客情報を含む</Label>
+              <Label htmlFor="icalFeedIncludeCustomerInfo">
+                顧客情報を含む
+              </Label>
               <p className="text-sm text-muted-foreground">
                 予約者の氏名をカレンダーイベントに表示（無効時は「予約済み」と表示）
               </p>
@@ -258,7 +270,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
               id="icalFeedIncludeCustomerInfo"
               checked={settings.icalFeedIncludeCustomerInfo}
               onCheckedChange={(checked) =>
-                handleSettingsChange('icalFeedIncludeCustomerInfo', checked)
+                handleSettingsChange("icalFeedIncludeCustomerInfo", checked)
               }
               disabled={isPending || !settings.icalFeedEnabled}
             />
@@ -270,13 +282,20 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">公開トークン</h4>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+              >
                 <DialogTrigger asChild>
                   <Button
                     size="sm"
                     onClick={() => {
-                      setCreatedTokenUrl(null)
-                      setNewTokenData({ name: '', spaceId: null, expiresInDays: null })
+                      setCreatedTokenUrl(null);
+                      setNewTokenData({
+                        name: "",
+                        spaceId: null,
+                        expiresInDays: null,
+                      });
                     }}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -286,19 +305,23 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>
-                      {createdTokenUrl ? 'トークン作成完了' : '新規トークン作成'}
+                      {createdTokenUrl
+                        ? "トークン作成完了"
+                        : "新規トークン作成"}
                     </DialogTitle>
                     <DialogDescription>
                       {createdTokenUrl
-                        ? 'このURLを外部カレンダーアプリに登録してください'
-                        : 'iCalフィード用のトークンを作成します'}
+                        ? "このURLを外部カレンダーアプリに登録してください"
+                        : "iCalフィード用のトークンを作成します"}
                     </DialogDescription>
                   </DialogHeader>
 
                   {createdTokenUrl ? (
                     <div className="space-y-4">
                       <div className="rounded-lg border bg-muted p-4">
-                        <code className="break-all text-sm">{createdTokenUrl}</code>
+                        <code className="break-all text-sm">
+                          {createdTokenUrl}
+                        </code>
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -310,7 +333,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => window.open(createdTokenUrl, '_blank')}
+                          onClick={() => window.open(createdTokenUrl, "_blank")}
                         >
                           <ExternalLink className="mr-2 h-4 w-4" />
                           開く
@@ -329,7 +352,10 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                           placeholder="例: TimeTree用"
                           value={newTokenData.name}
                           onChange={(e) =>
-                            setNewTokenData((prev) => ({ ...prev, name: e.target.value }))
+                            setNewTokenData((prev) => ({
+                              ...prev,
+                              name: e.target.value,
+                            }))
                           }
                         />
                       </div>
@@ -337,11 +363,11 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                       <div className="space-y-2">
                         <Label htmlFor="tokenSpace">対象スペース</Label>
                         <Select
-                          value={newTokenData.spaceId || 'all'}
+                          value={newTokenData.spaceId || "all"}
                           onValueChange={(value) =>
                             setNewTokenData((prev) => ({
                               ...prev,
-                              spaceId: value === 'all' ? null : value,
+                              spaceId: value === "all" ? null : value,
                             }))
                           }
                         >
@@ -349,7 +375,9 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                             <SelectValue placeholder="すべてのスペース" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">すべてのスペース</SelectItem>
+                            <SelectItem value="all">
+                              すべてのスペース
+                            </SelectItem>
                             {spaces.map((space) => (
                               <SelectItem key={space.id} value={space.id}>
                                 {space.name}
@@ -362,11 +390,12 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                       <div className="space-y-2">
                         <Label htmlFor="tokenExpires">有効期限</Label>
                         <Select
-                          value={String(newTokenData.expiresInDays ?? 'never')}
+                          value={String(newTokenData.expiresInDays ?? "never")}
                           onValueChange={(value) =>
                             setNewTokenData((prev) => ({
                               ...prev,
-                              expiresInDays: value === 'never' ? null : Number(value),
+                              expiresInDays:
+                                value === "never" ? null : Number(value),
                             }))
                           }
                         >
@@ -386,13 +415,21 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
 
                   <DialogFooter>
                     {createdTokenUrl ? (
-                      <Button onClick={() => setIsCreateDialogOpen(false)}>閉じる</Button>
+                      <Button onClick={() => setIsCreateDialogOpen(false)}>
+                        閉じる
+                      </Button>
                     ) : (
                       <>
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsCreateDialogOpen(false)}
+                        >
                           キャンセル
                         </Button>
-                        <Button onClick={handleCreateToken} disabled={isPending}>
+                        <Button
+                          onClick={handleCreateToken}
+                          disabled={isPending}
+                        >
                           作成
                         </Button>
                       </>
@@ -420,16 +457,23 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                     <div className="space-y-1">
                       <div className="font-medium">{token.name}</div>
                       <div className="text-sm text-muted-foreground">
-                        {token.spaceName ? `スペース: ${token.spaceName}` : '全スペース'}
+                        {token.spaceName
+                          ? `スペース: ${token.spaceName}`
+                          : "全スペース"}
                         {token.expiresAt && (
                           <span className="ml-2">
-                            ・有効期限: {new Date(token.expiresAt).toLocaleDateString('ja-JP')}
+                            ・有効期限:{" "}
+                            {new Date(token.expiresAt).toLocaleDateString(
+                              "ja-JP",
+                            )}
                           </span>
                         )}
                         {token.lastUsedAt && (
                           <span className="ml-2">
-                            ・最終アクセス:{' '}
-                            {new Date(token.lastUsedAt).toLocaleDateString('ja-JP')}
+                            ・最終アクセス:{" "}
+                            {new Date(token.lastUsedAt).toLocaleDateString(
+                              "ja-JP",
+                            )}
                           </span>
                         )}
                       </div>
@@ -438,14 +482,18 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyToClipboard(getTokenUrl(token.token))}
+                        onClick={() =>
+                          copyToClipboard(getTokenUrl(token.token))
+                        }
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(getTokenUrl(token.token), '_blank')}
+                        onClick={() =>
+                          window.open(getTokenUrl(token.token), "_blank")
+                        }
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -466,5 +514,5 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

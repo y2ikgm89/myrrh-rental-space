@@ -1,13 +1,12 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
-import { deleteCustomer } from "@/admin/actions/customer";
 import { getCustomerById } from "@/admin/queries/customer";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
 import { Button } from "@/admin/components/ui/button";
 import { CustomerDetail } from "./_components/CustomerDetail";
+import { CustomerDangerZone } from "./_components/CustomerDangerZone";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -19,7 +18,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await headers();
+  await connection();
   const { id } = await params;
   const customer = await getCustomerById(id);
 
@@ -35,6 +34,7 @@ export async function generateMetadata({
 }
 
 export default async function CustomerDetailPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const customer = await getCustomerById(id);
 
@@ -57,13 +57,10 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       }
     >
       <CustomerDetail customer={customer} />
-      <DangerZone
-        deleteLabel="顧客を削除"
+      <CustomerDangerZone
+        customerId={customer.id}
         itemName={`${customer.lastName} ${customer.firstName}`}
-        onDelete={deleteCustomer.bind(null, customer.id)}
-        redirectTo="/admin/customers"
       />
     </AdminDetailLayout>
   );
 }
-

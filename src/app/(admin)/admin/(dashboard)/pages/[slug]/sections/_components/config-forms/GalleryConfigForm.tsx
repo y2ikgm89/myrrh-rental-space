@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import Image from "next/image";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Input,
@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
-import { Plus, Trash2 } from 'lucide-react'
-import { useMultipleMediaPicker } from '@/admin/hooks/use-media-picker'
+} from "@/admin/components/ui";
+import { Plus, Trash2 } from "lucide-react";
+import { useMultipleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   galleryConfigSchema,
   getGalleryConfig,
@@ -25,13 +25,23 @@ import {
   parseGalleryHoverEffect,
   type GalleryConfig,
   type GalleryConfigInput,
-} from '@/shared/lib/validations/section'
-import { galleryLayoutLabels, galleryGapLabels, galleryImageAspectLabels, galleryHoverEffectLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import {
+  galleryLayoutLabels,
+  galleryGapLabels,
+  galleryImageAspectLabels,
+  galleryHoverEffectLabels,
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function GalleryConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getGalleryConfig(section.config)
+export default function GalleryConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getGalleryConfig(section.config);
 
   const {
     register,
@@ -42,40 +52,42 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
   } = useForm<GalleryConfigInput, unknown, GalleryConfig>({
     resolver: zodResolver(galleryConfigSchema),
     defaultValues: config,
-  })
+  });
 
-  const images = useWatch({ control, name: 'images' }) ?? []
+  const images = useWatch({ control, name: "images" }) ?? [];
 
   const imagePicker = useMultipleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     maxSelections: 20,
     onSelect: (media) => {
       const newImages = media.map((m) => ({
         url: m.url,
-        alt: m.alt ?? '',
-        caption: '',
-      }))
-      setValue('images', [...images, ...newImages])
+        alt: m.alt ?? "",
+        caption: "",
+      }));
+      setValue("images", [...images, ...newImages]);
     },
-  })
+  });
 
   const removeImage = (index: number) => {
-    const updated = images.filter((_, i) => i !== index)
-    setValue('images', updated)
-  }
+    const updated = images.filter((_, i) => i !== index);
+    setValue("images", updated);
+  };
 
   const handleFormSave = handleSubmit((data) => {
-    onSave({ config: data })
-  })
+    onSave({ config: data });
+  });
 
   return (
     <form onSubmit={handleFormSave} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="gallery-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="gallery-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="gallery-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Gallery"
             disabled={isPending}
           />
@@ -85,7 +97,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
           <Label htmlFor="gallery-title">タイトル（任意）</Label>
           <Input
             id="gallery-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="ギャラリー"
             disabled={isPending}
           />
@@ -96,7 +108,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="gallery-layout">レイアウト</Label>
             <Select
               defaultValue={config.layout}
-              onValueChange={(v) => setValue('layout', parseGalleryLayout(v))}
+              onValueChange={(v) => setValue("layout", parseGalleryLayout(v))}
               disabled={isPending}
             >
               <SelectTrigger id="gallery-layout">
@@ -104,7 +116,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(galleryLayoutLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{galleryLayoutLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {galleryLayoutLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -117,7 +131,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
               type="number"
               min={1}
               max={6}
-              {...register('columns', { valueAsNumber: true })}
+              {...register("columns", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -126,7 +140,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="gallery-gap">間隔</Label>
             <Select
               defaultValue={config.gap}
-              onValueChange={(v) => setValue('gap', parseGalleryGap(v))}
+              onValueChange={(v) => setValue("gap", parseGalleryGap(v))}
               disabled={isPending}
             >
               <SelectTrigger id="gallery-gap">
@@ -134,7 +148,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(galleryGapLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{galleryGapLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {galleryGapLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -146,7 +162,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="gallery-image-aspect">画像比率</Label>
             <Select
               defaultValue={config.imageAspect}
-              onValueChange={(v) => setValue('imageAspect', parseGalleryImageAspect(v))}
+              onValueChange={(v) =>
+                setValue("imageAspect", parseGalleryImageAspect(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="gallery-image-aspect">
@@ -154,7 +172,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(galleryImageAspectLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{galleryImageAspectLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {galleryImageAspectLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -164,7 +184,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="gallery-hover-effect">ホバーエフェクト</Label>
             <Select
               defaultValue={config.hoverEffect}
-              onValueChange={(v) => setValue('hoverEffect', parseGalleryHoverEffect(v))}
+              onValueChange={(v) =>
+                setValue("hoverEffect", parseGalleryHoverEffect(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="gallery-hover-effect">
@@ -172,7 +194,9 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(galleryHoverEffectLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{galleryHoverEffectLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {galleryHoverEffectLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -183,7 +207,7 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
           <Switch
             id="gallery-lightbox"
             checked={config.enableLightbox}
-            onCheckedChange={(checked) => setValue('enableLightbox', checked)}
+            onCheckedChange={(checked) => setValue("enableLightbox", checked)}
             disabled={isPending}
           />
           <Label htmlFor="gallery-lightbox">ライトボックスを有効化</Label>
@@ -206,10 +230,13 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
           {images.length > 0 ? (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {images.map((img, index) => (
-                <div key={img.url} className="group relative aspect-square overflow-hidden rounded-lg border">
+                <div
+                  key={img.url}
+                  className="group relative aspect-square overflow-hidden rounded-lg border"
+                >
                   <Image
                     src={img.url}
-                    alt={img.alt ?? ''}
+                    alt={img.alt ?? ""}
                     fill
                     className="object-cover"
                   />
@@ -225,15 +252,21 @@ export default function GalleryConfigForm({ section, onSave, isPending, onDirtyC
             </div>
           ) : (
             <div className="flex items-center justify-center py-8 border border-dashed rounded-lg">
-              <p className="text-sm text-muted-foreground">画像が追加されていません</p>
+              <p className="text-sm text-muted-foreground">
+                画像が追加されていません
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
 
       <imagePicker.MediaPicker />
     </form>
-  )
+  );
 }

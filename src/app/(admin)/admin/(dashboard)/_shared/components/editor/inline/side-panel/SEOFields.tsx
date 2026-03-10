@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SEO設定フィールド
@@ -7,10 +7,10 @@
  * フィールド名をpropsで受け取ることで完全な型安全性を確保
  */
 
-import type { FieldValues } from 'react-hook-form'
-import { Input, Label, Textarea } from '@/admin/components/ui'
-import { getFieldError, getErrorMessage } from '../types'
-import type { SEOFieldsProps } from '../types'
+import type { FieldValues } from "react-hook-form";
+import { Input, Label, Textarea } from "@/admin/components/ui";
+import { getFieldError, getErrorMessage } from "../types";
+import type { SEOFieldsProps } from "../types";
 
 export function SEOFields<T extends FieldValues>({
   register,
@@ -18,8 +18,8 @@ export function SEOFields<T extends FieldValues>({
   disabled,
   fields,
 }: SEOFieldsProps<T>) {
-  const metaDescriptionError = getFieldError(errors, fields.metaDescription)
-  const metaKeywordsError = getFieldError(errors, fields.metaKeywords)
+  const metaDescriptionError = getFieldError(errors, fields.metaDescription);
+  const metaKeywordsError = getFieldError(errors, fields.metaKeywords);
 
   return (
     <div className="space-y-4">
@@ -60,5 +60,5 @@ export function SEOFields<T extends FieldValues>({
         </p>
       </div>
     </div>
-  )
+  );
 }

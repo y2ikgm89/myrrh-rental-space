@@ -75,6 +75,23 @@ export const mediaUploadSchema = z.object({
 
 export type MediaUploadInput = z.infer<typeof mediaUploadSchema>;
 
+export type ParsedMediaUploadFormData =
+  | {
+      kind: "success";
+      data: {
+        file: File;
+        metadata: MediaUploadInput;
+      };
+    }
+  | {
+      kind: "error";
+      error: string;
+    }
+  | {
+      kind: "validation-error";
+      error: z.ZodError<MediaUploadInput>;
+    };
+
 /**
  * メディア更新入力
  */
@@ -116,8 +133,17 @@ export type MediaFilters = z.infer<typeof mediaFiltersSchema>;
  * メディアページネーション
  */
 export const mediaPaginationSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(24),
+  page: z.coerce
+    .number()
+    .int({ error: "ページ番号が不正です" })
+    .min(1, { error: "ページ番号は1以上で入力してください" })
+    .default(1),
+  limit: z.coerce
+    .number()
+    .int({ error: "表示件数が不正です" })
+    .min(1, { error: "表示件数は1以上で入力してください" })
+    .max(100, { error: "表示件数は100件以下で入力してください" })
+    .default(24),
 });
 
 export type MediaPagination = z.infer<typeof mediaPaginationSchema>;
@@ -198,4 +224,79 @@ export function parseMediaUsageFilter(
 ): MediaUsage | undefined {
   if (!value) return undefined;
   return isValidMediaUsage(value) ? value : undefined;
+}
+
+const mediaTagsInputSchema = z
+  .array(z.string())
+  .max(10, { error: "タグは最大10個まで設定できます" });
+
+export function parseMediaTagsInput(
+  value: FormDataEntryValue | null | undefined,
+): { success: true; data: string[] } | { success: false; error: string } {
+  if (value == null) {
+    return { success: true, data: [] };
+  }
+
+  if (typeof value !== "string") {
+    return { success: false, error: "tags は JSON 文字列で指定してください" };
+  }
+
+  let parsedValue: unknown;
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    return { success: false, error: "tags は JSON 配列で指定してください" };
+  }
+
+  const parsedTags = mediaTagsInputSchema.safeParse(parsedValue);
+  if (!parsedTags.success) {
+    return {
+      success: false,
+      error:
+        parsedTags.error.issues[0]?.message ??
+        "tags は文字列配列で指定してください",
+    };
+  }
+
+  return { success: true, data: parsedTags.data };
+}
+
+function getFormString(formData: FormData, key: string): string | undefined {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : undefined;
+}
+
+export function parseMediaUploadFormData(
+  formData: FormData,
+): ParsedMediaUploadFormData {
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { kind: "error", error: "ファイルが選択されていません" };
+  }
+
+  const tagsResult = parseMediaTagsInput(formData.get("tags"));
+  if (!tagsResult.success) {
+    return { kind: "error", error: tagsResult.error };
+  }
+
+  const metadataResult = mediaUploadSchema.safeParse({
+    type: getFormString(formData, "type"),
+    usage: getFormString(formData, "usage"),
+    alt: getFormString(formData, "alt"),
+    title: getFormString(formData, "title"),
+    description: getFormString(formData, "description"),
+    tags: tagsResult.data,
+  });
+
+  if (!metadataResult.success) {
+    return { kind: "validation-error", error: metadataResult.error };
+  }
+
+  return {
+    kind: "success",
+    data: {
+      file,
+      metadata: metadataResult.data,
+    },
+  };
 }

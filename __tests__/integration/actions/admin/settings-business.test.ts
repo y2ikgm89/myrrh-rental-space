@@ -10,8 +10,8 @@
  * - meoSettingsSchema（MEO設定）
  */
 
-import { describe, test, expect } from 'bun:test'
-import { z } from 'zod'
+import { describe, test, expect } from "bun:test";
+import { z } from "zod";
 
 // =============================================================================
 // スキーマ再現（schemas.ts から）
@@ -27,38 +27,50 @@ const businessInfoSchema = z.object({
   registrationNumber: z.string().max(50).nullable(),
   invoiceNumber: z.string().max(20).nullable(),
   businessDescription: z.string().max(2000).nullable(),
-})
+});
 
 const contactInfoSchema = z.object({
   phoneNumber: z.string().max(20).nullable(),
   faxNumber: z.string().max(20).nullable(),
-  email: z.string().email().max(100).nullable().or(z.literal('')),
+  email: z.string().email().max(100).nullable().or(z.literal("")),
   address: z.string().max(500).nullable(),
   postalCode: z.string().max(10).nullable(),
   prefecture: z.string().max(10).nullable(),
   city: z.string().max(50).nullable(),
   streetAddress: z.string().max(100).nullable(),
   buildingName: z.string().max(100).nullable(),
-})
+});
 
 // 時刻フォーマット: HH:mm（00:00-23:59）
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const timeSlotSchema = z.object({
-  openTime: z.string().regex(TIME_REGEX, { error: '正しい時刻形式（HH:mm）で入力してください' }),
-  closeTime: z.string().regex(TIME_REGEX, { error: '正しい時刻形式（HH:mm）で入力してください' }),
-}).refine((data) => data.closeTime > data.openTime, {
-  error: '終了時刻は開始時刻より後にしてください',
-  path: ['closeTime'],
-})
+const timeSlotSchema = z
+  .object({
+    openTime: z
+      .string()
+      .regex(TIME_REGEX, {
+        error: "正しい時刻形式（HH:mm）で入力してください",
+      }),
+    closeTime: z
+      .string()
+      .regex(TIME_REGEX, {
+        error: "正しい時刻形式（HH:mm）で入力してください",
+      }),
+  })
+  .refine((data) => data.closeTime > data.openTime, {
+    error: "終了時刻は開始時刻より後にしてください",
+    path: ["closeTime"],
+  });
 
 const businessHoursDayBaseSchema = z.object({
   isOpen: z.boolean(),
-  slots: z.array(z.object({
-    openTime: z.string().regex(TIME_REGEX),
-    closeTime: z.string().regex(TIME_REGEX),
-  })),
-})
+  slots: z.array(
+    z.object({
+      openTime: z.string().regex(TIME_REGEX),
+      closeTime: z.string().regex(TIME_REGEX),
+    }),
+  ),
+});
 
 const businessHoursWeekSchema = z.object({
   monday: businessHoursDayBaseSchema,
@@ -68,55 +80,87 @@ const businessHoursWeekSchema = z.object({
   friday: businessHoursDayBaseSchema,
   saturday: businessHoursDayBaseSchema,
   sunday: businessHoursDayBaseSchema,
-})
+});
 
 const businessHoursSettingsSchema = z.object({
   businessHours: businessHoursWeekSchema,
   regularHolidays: z.array(z.string()).nullable(),
   specialHolidays: z.array(z.string()).nullable(),
-  holidayNotice: z.string().max(1000).regex(/^[^<>]*$/, { error: 'HTMLタグは使用できません' }).nullable().or(z.literal('')).transform((v) => v || null),
-})
+  holidayNotice: z
+    .string()
+    .max(1000)
+    .regex(/^[^<>]*$/, { error: "HTMLタグは使用できません" })
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => v || null),
+});
 
 const meoSettingsSchema = z.object({
-  latitude: z.number().min(-90, { error: '緯度は-90~90の範囲で入力してください' }).max(90, { error: '緯度は-90~90の範囲で入力してください' }).nullable(),
-  longitude: z.number().min(-180, { error: '経度は-180~180の範囲で入力してください' }).max(180, { error: '経度は-180~180の範囲で入力してください' }).nullable(),
-  priceRange: z.string().max(100, { error: '価格帯は100文字以内で入力してください' }).nullable(),
-  googleBusinessPlaceId: z.string().max(200, { error: 'Place IDは200文字以内で入力してください' }).nullable(),
-  googleReviewUrl: z.string().url({ error: '有効なURLを入力してください' }).max(500, { error: 'URLは500文字以内で入力してください' }).nullable().or(z.literal('')),
+  latitude: z
+    .number()
+    .min(-90, { error: "緯度は-90~90の範囲で入力してください" })
+    .max(90, { error: "緯度は-90~90の範囲で入力してください" })
+    .nullable(),
+  longitude: z
+    .number()
+    .min(-180, { error: "経度は-180~180の範囲で入力してください" })
+    .max(180, { error: "経度は-180~180の範囲で入力してください" })
+    .nullable(),
+  priceRange: z
+    .string()
+    .max(100, { error: "価格帯は100文字以内で入力してください" })
+    .nullable(),
+  googleBusinessPlaceId: z
+    .string()
+    .max(200, { error: "Place IDは200文字以内で入力してください" })
+    .nullable(),
+  googleReviewUrl: z
+    .string()
+    .url({ error: "有効なURLを入力してください" })
+    .max(500, { error: "URLは500文字以内で入力してください" })
+    .nullable()
+    .or(z.literal("")),
   businessAttributes: z.record(z.string(), z.boolean()).nullable(),
-  paymentAccepted: z.string().max(500, { error: '決済方法は500文字以内で入力してください' }).nullable().or(z.literal('')),
-})
+  paymentAccepted: z
+    .string()
+    .max(500, { error: "決済方法は500文字以内で入力してください" })
+    .nullable()
+    .or(z.literal("")),
+});
 
 // =============================================================================
 // テストデータ
 // =============================================================================
 
 const VALID_BUSINESS_INFO_INPUT = {
-  businessName: 'ミルレンタルスペース',
-  businessNameKana: 'ミルレンタルスペース',
-  representativeName: '山田太郎',
-  businessType: '株式会社',
-  industryType: 'レンタルスペース',
-  establishedDate: '2020-01-01',
-  registrationNumber: '1234567890123',
-  invoiceNumber: 'T1234567890123',
-  businessDescription: 'レンタルスペースの運営を行っています。',
-}
+  businessName: "ミルレンタルスペース",
+  businessNameKana: "ミルレンタルスペース",
+  representativeName: "山田太郎",
+  businessType: "株式会社",
+  industryType: "レンタルスペース",
+  establishedDate: "2020-01-01",
+  registrationNumber: "1234567890123",
+  invoiceNumber: "T1234567890123",
+  businessDescription: "レンタルスペースの運営を行っています。",
+};
 
 const VALID_CONTACT_INFO_INPUT = {
-  phoneNumber: '03-1234-5678',
-  faxNumber: '03-1234-5679',
-  email: 'info@example.com',
-  address: '東京都渋谷区1-2-3',
-  postalCode: '150-0001',
-  prefecture: '東京都',
-  city: '渋谷区',
-  streetAddress: '1-2-3',
-  buildingName: 'テストビル5F',
-}
+  phoneNumber: "03-1234-5678",
+  faxNumber: "03-1234-5679",
+  email: "info@example.com",
+  address: "東京都渋谷区1-2-3",
+  postalCode: "150-0001",
+  prefecture: "東京都",
+  city: "渋谷区",
+  streetAddress: "1-2-3",
+  buildingName: "テストビル5F",
+};
 
-const DEFAULT_DAY = { isOpen: true, slots: [{ openTime: '09:00', closeTime: '21:00' }] }
-const CLOSED_DAY = { isOpen: false, slots: [] }
+const DEFAULT_DAY = {
+  isOpen: true,
+  slots: [{ openTime: "09:00", closeTime: "21:00" }],
+};
+const CLOSED_DAY = { isOpen: false, slots: [] };
 
 const VALID_BUSINESS_HOURS_SETTINGS_INPUT = {
   businessHours: {
@@ -128,38 +172,38 @@ const VALID_BUSINESS_HOURS_SETTINGS_INPUT = {
     saturday: DEFAULT_DAY,
     sunday: CLOSED_DAY,
   },
-  regularHolidays: ['sunday'],
-  specialHolidays: ['2026-01-01', '2026-01-02'],
-  holidayNotice: '年末年始は休業いたします。',
-}
+  regularHolidays: ["sunday"],
+  specialHolidays: ["2026-01-01", "2026-01-02"],
+  holidayNotice: "年末年始は休業いたします。",
+};
 
 const VALID_MEO_SETTINGS_INPUT = {
   latitude: 35.6762,
   longitude: 139.6503,
-  priceRange: '1000-5000',
-  googleBusinessPlaceId: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
-  googleReviewUrl: 'https://g.page/r/example/review',
+  priceRange: "1000-5000",
+  googleBusinessPlaceId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
+  googleReviewUrl: "https://g.page/r/example/review",
   businessAttributes: { wifi: true, parking: false, elevator: true },
-  paymentAccepted: 'クレジットカード, 現金, QRコード決済',
-}
+  paymentAccepted: "クレジットカード, 現金, QRコード決済",
+};
 
 // =============================================================================
 // テスト
 // =============================================================================
 
-describe('Settings Business Admin Action Integration', () => {
+describe("Settings Business Admin Action Integration", () => {
   // ===========================================================================
   // businessInfoSchema
   // ===========================================================================
 
-  describe('businessInfoSchema バリデーション', () => {
-    describe('正常系', () => {
-      test('有効なデータはバリデーション通過', () => {
-        const result = businessInfoSchema.safeParse(VALID_BUSINESS_INFO_INPUT)
-        expect(result.success).toBe(true)
-      })
+  describe("businessInfoSchema バリデーション", () => {
+    describe("正常系", () => {
+      test("有効なデータはバリデーション通過", () => {
+        const result = businessInfoSchema.safeParse(VALID_BUSINESS_INFO_INPUT);
+        expect(result.success).toBe(true);
+      });
 
-      test('全フィールドnullでもバリデーション通過', () => {
+      test("全フィールドnullでもバリデーション通過", () => {
         const result = businessInfoSchema.safeParse({
           businessName: null,
           businessNameKana: null,
@@ -170,96 +214,96 @@ describe('Settings Business Admin Action Integration', () => {
           registrationNumber: null,
           invoiceNumber: null,
           businessDescription: null,
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('businessName', () => {
-      test('100文字はOK', () => {
+    describe("businessName", () => {
+      test("100文字はOK", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          businessName: 'あ'.repeat(100),
-        })
-        expect(result.success).toBe(true)
-      })
+          businessName: "あ".repeat(100),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('101文字はエラー', () => {
+      test("101文字はエラー", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          businessName: 'あ'.repeat(101),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          businessName: "あ".repeat(101),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('representativeName', () => {
-      test('50文字はOK', () => {
+    describe("representativeName", () => {
+      test("50文字はOK", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          representativeName: 'あ'.repeat(50),
-        })
-        expect(result.success).toBe(true)
-      })
+          representativeName: "あ".repeat(50),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('51文字はエラー', () => {
+      test("51文字はエラー", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          representativeName: 'あ'.repeat(51),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          representativeName: "あ".repeat(51),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('invoiceNumber', () => {
-      test('20文字はOK', () => {
+    describe("invoiceNumber", () => {
+      test("20文字はOK", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          invoiceNumber: 'T'.repeat(20),
-        })
-        expect(result.success).toBe(true)
-      })
+          invoiceNumber: "T".repeat(20),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('21文字はエラー', () => {
+      test("21文字はエラー", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          invoiceNumber: 'T'.repeat(21),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          invoiceNumber: "T".repeat(21),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('businessDescription', () => {
-      test('2000文字はOK', () => {
+    describe("businessDescription", () => {
+      test("2000文字はOK", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          businessDescription: 'あ'.repeat(2000),
-        })
-        expect(result.success).toBe(true)
-      })
+          businessDescription: "あ".repeat(2000),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('2001文字はエラー', () => {
+      test("2001文字はエラー", () => {
         const result = businessInfoSchema.safeParse({
           ...VALID_BUSINESS_INFO_INPUT,
-          businessDescription: 'あ'.repeat(2001),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
-  })
+          businessDescription: "あ".repeat(2001),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
+  });
 
   // ===========================================================================
   // contactInfoSchema
   // ===========================================================================
 
-  describe('contactInfoSchema バリデーション', () => {
-    describe('正常系', () => {
-      test('有効なデータはバリデーション通過', () => {
-        const result = contactInfoSchema.safeParse(VALID_CONTACT_INFO_INPUT)
-        expect(result.success).toBe(true)
-      })
+  describe("contactInfoSchema バリデーション", () => {
+    describe("正常系", () => {
+      test("有効なデータはバリデーション通過", () => {
+        const result = contactInfoSchema.safeParse(VALID_CONTACT_INFO_INPUT);
+        expect(result.success).toBe(true);
+      });
 
-      test('全フィールドnullでもバリデーション通過', () => {
+      test("全フィールドnullでもバリデーション通過", () => {
         const result = contactInfoSchema.safeParse({
           phoneNumber: null,
           faxNumber: null,
@@ -270,137 +314,139 @@ describe('Settings Business Admin Action Integration', () => {
           city: null,
           streetAddress: null,
           buildingName: null,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('emailは空文字列を許可', () => {
+      test("emailは空文字列を許可", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          email: '',
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+          email: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('email', () => {
-      test('有効なメールアドレスはOK', () => {
+    describe("email", () => {
+      test("有効なメールアドレスはOK", () => {
         const validEmails = [
-          'test@example.com',
-          'user+tag@domain.co.jp',
-          'admin@sub.domain.com',
-        ]
+          "test@example.com",
+          "user+tag@domain.co.jp",
+          "admin@sub.domain.com",
+        ];
         for (const email of validEmails) {
           const result = contactInfoSchema.safeParse({
             ...VALID_CONTACT_INFO_INPUT,
             email,
-          })
-          expect(result.success).toBe(true)
+          });
+          expect(result.success).toBe(true);
         }
-      })
+      });
 
-      test('無効なメールアドレスはエラー', () => {
+      test("無効なメールアドレスはエラー", () => {
         const invalidEmails = [
-          'invalid-email',
-          '@domain.com',
-          'user@',
-          'user@.com',
-        ]
+          "invalid-email",
+          "@domain.com",
+          "user@",
+          "user@.com",
+        ];
         for (const email of invalidEmails) {
           const result = contactInfoSchema.safeParse({
             ...VALID_CONTACT_INFO_INPUT,
             email,
-          })
-          expect(result.success).toBe(false)
+          });
+          expect(result.success).toBe(false);
         }
-      })
+      });
 
-      test('100文字のメールアドレスはOK', () => {
-        const email = 'a'.repeat(88) + '@example.com'
+      test("100文字のメールアドレスはOK", () => {
+        const email = "a".repeat(88) + "@example.com";
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
           email,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('101文字のメールアドレスはエラー', () => {
-        const email = 'a'.repeat(89) + '@example.com'
+      test("101文字のメールアドレスはエラー", () => {
+        const email = "a".repeat(89) + "@example.com";
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
           email,
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('phoneNumber / faxNumber', () => {
-      test('20文字はOK', () => {
+    describe("phoneNumber / faxNumber", () => {
+      test("20文字はOK", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          phoneNumber: '0'.repeat(20),
-        })
-        expect(result.success).toBe(true)
-      })
+          phoneNumber: "0".repeat(20),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('21文字はエラー', () => {
+      test("21文字はエラー", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          phoneNumber: '0'.repeat(21),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          phoneNumber: "0".repeat(21),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('postalCode', () => {
-      test('10文字はOK', () => {
+    describe("postalCode", () => {
+      test("10文字はOK", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          postalCode: '1234567890',
-        })
-        expect(result.success).toBe(true)
-      })
+          postalCode: "1234567890",
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('11文字はエラー', () => {
+      test("11文字はエラー", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          postalCode: '12345678901',
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          postalCode: "12345678901",
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('address', () => {
-      test('500文字はOK', () => {
+    describe("address", () => {
+      test("500文字はOK", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          address: 'あ'.repeat(500),
-        })
-        expect(result.success).toBe(true)
-      })
+          address: "あ".repeat(500),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('501文字はエラー', () => {
+      test("501文字はエラー", () => {
         const result = contactInfoSchema.safeParse({
           ...VALID_CONTACT_INFO_INPUT,
-          address: 'あ'.repeat(501),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
-  })
+          address: "あ".repeat(501),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
+  });
 
   // ===========================================================================
   // businessHoursSettingsSchema
   // ===========================================================================
 
-  describe('businessHoursSettingsSchema バリデーション', () => {
-    describe('正常系', () => {
-      test('有効なデータはバリデーション通過', () => {
-        const result = businessHoursSettingsSchema.safeParse(VALID_BUSINESS_HOURS_SETTINGS_INPUT)
-        expect(result.success).toBe(true)
-      })
+  describe("businessHoursSettingsSchema バリデーション", () => {
+    describe("正常系", () => {
+      test("有効なデータはバリデーション通過", () => {
+        const result = businessHoursSettingsSchema.safeParse(
+          VALID_BUSINESS_HOURS_SETTINGS_INPUT,
+        );
+        expect(result.success).toBe(true);
+      });
 
-      test('全日定休でもバリデーション通過', () => {
+      test("全日定休でもバリデーション通過", () => {
         const result = businessHoursSettingsSchema.safeParse({
           businessHours: {
             monday: CLOSED_DAY,
@@ -414,11 +460,11 @@ describe('Settings Business Admin Action Integration', () => {
           regularHolidays: null,
           specialHolidays: null,
           holidayNotice: null,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('複数時間帯の営業日', () => {
+      test("複数時間帯の営業日", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           businessHours: {
@@ -426,168 +472,169 @@ describe('Settings Business Admin Action Integration', () => {
             monday: {
               isOpen: true,
               slots: [
-                { openTime: '09:00', closeTime: '12:00' },
-                { openTime: '13:00', closeTime: '18:00' },
+                { openTime: "09:00", closeTime: "12:00" },
+                { openTime: "13:00", closeTime: "18:00" },
               ],
             },
           },
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('timeSlot バリデーション', () => {
-      test('有効な時刻形式', () => {
-        const validTimes = ['00:00', '09:00', '12:30', '23:59']
+    describe("timeSlot バリデーション", () => {
+      test("有効な時刻形式", () => {
+        const validTimes = ["00:00", "09:00", "12:30", "23:59"];
         for (const time of validTimes) {
           const result = timeSlotSchema.safeParse({
-            openTime: '00:00',
-            closeTime: time === '00:00' ? '01:00' : time,
-          })
+            openTime: "00:00",
+            closeTime: time === "00:00" ? "01:00" : time,
+          });
           // 00:00-00:00 は closeTime > openTime で失敗するため別途扱う
-          if (time === '00:00') {
+          if (time === "00:00") {
             // openTime: 00:00, closeTime: 01:00
-            expect(result.success).toBe(true)
+            expect(result.success).toBe(true);
           } else {
-            expect(result.success).toBe(true)
+            expect(result.success).toBe(true);
           }
         }
-      })
+      });
 
-      test('無効な時刻形式はエラー', () => {
-        const invalidTimes = ['24:00', '9:00', '09:60', 'abc', '']
+      test("無効な時刻形式はエラー", () => {
+        const invalidTimes = ["24:00", "9:00", "09:60", "abc", ""];
         for (const time of invalidTimes) {
           const result = timeSlotSchema.safeParse({
             openTime: time,
-            closeTime: '18:00',
-          })
-          expect(result.success).toBe(false)
+            closeTime: "18:00",
+          });
+          expect(result.success).toBe(false);
         }
-      })
+      });
 
-      test('終了時刻が開始時刻と同じはエラー', () => {
+      test("終了時刻が開始時刻と同じはエラー", () => {
         const result = timeSlotSchema.safeParse({
-          openTime: '09:00',
-          closeTime: '09:00',
-        })
-        expect(result.success).toBe(false)
-      })
+          openTime: "09:00",
+          closeTime: "09:00",
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('終了時刻が開始時刻より前はエラー', () => {
+      test("終了時刻が開始時刻より前はエラー", () => {
         const result = timeSlotSchema.safeParse({
-          openTime: '18:00',
-          closeTime: '09:00',
-        })
-        expect(result.success).toBe(false)
-      })
+          openTime: "18:00",
+          closeTime: "09:00",
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('終了時刻が開始時刻より後はOK', () => {
+      test("終了時刻が開始時刻より後はOK", () => {
         const result = timeSlotSchema.safeParse({
-          openTime: '09:00',
-          closeTime: '18:00',
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+          openTime: "09:00",
+          closeTime: "18:00",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('businessHours 曜日', () => {
-      test('曜日欠落はエラー', () => {
-        const { sunday: _, ...incomplete } = VALID_BUSINESS_HOURS_SETTINGS_INPUT.businessHours
+    describe("businessHours 曜日", () => {
+      test("曜日欠落はエラー", () => {
+        const { sunday: _, ...incomplete } =
+          VALID_BUSINESS_HOURS_SETTINGS_INPUT.businessHours;
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           businessHours: incomplete,
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('holidayNotice', () => {
-      test('1000文字はOK', () => {
+    describe("holidayNotice", () => {
+      test("1000文字はOK", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
-          holidayNotice: 'あ'.repeat(1000),
-        })
-        expect(result.success).toBe(true)
-      })
+          holidayNotice: "あ".repeat(1000),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('1001文字はエラー', () => {
+      test("1001文字はエラー", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
-          holidayNotice: 'あ'.repeat(1001),
-        })
-        expect(result.success).toBe(false)
-      })
+          holidayNotice: "あ".repeat(1001),
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('HTMLタグを含むとエラー', () => {
+      test("HTMLタグを含むとエラー", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           holidayNotice: '<script>alert("xss")</script>',
-        })
-        expect(result.success).toBe(false)
-      })
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('空文字列はnullに変換', () => {
+      test("空文字列はnullに変換", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
-          holidayNotice: '',
-        })
-        expect(result.success).toBe(true)
+          holidayNotice: "",
+        });
+        expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.holidayNotice).toBe(null)
+          expect(result.data.holidayNotice).toBe(null);
         }
-      })
+      });
 
-      test('nullは許可', () => {
+      test("nullは許可", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           holidayNotice: null,
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('regularHolidays / specialHolidays', () => {
-      test('文字列配列はOK', () => {
+    describe("regularHolidays / specialHolidays", () => {
+      test("文字列配列はOK", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
-          regularHolidays: ['monday', 'sunday'],
-          specialHolidays: ['2026-01-01'],
-        })
-        expect(result.success).toBe(true)
-      })
+          regularHolidays: ["monday", "sunday"],
+          specialHolidays: ["2026-01-01"],
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('nullは許可', () => {
+      test("nullは許可", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           regularHolidays: null,
           specialHolidays: null,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('空配列はOK', () => {
+      test("空配列はOK", () => {
         const result = businessHoursSettingsSchema.safeParse({
           ...VALID_BUSINESS_HOURS_SETTINGS_INPUT,
           regularHolidays: [],
           specialHolidays: [],
-        })
-        expect(result.success).toBe(true)
-      })
-    })
-  })
+        });
+        expect(result.success).toBe(true);
+      });
+    });
+  });
 
   // ===========================================================================
   // meoSettingsSchema
   // ===========================================================================
 
-  describe('meoSettingsSchema バリデーション', () => {
-    describe('正常系', () => {
-      test('有効なデータはバリデーション通過', () => {
-        const result = meoSettingsSchema.safeParse(VALID_MEO_SETTINGS_INPUT)
-        expect(result.success).toBe(true)
-      })
+  describe("meoSettingsSchema バリデーション", () => {
+    describe("正常系", () => {
+      test("有効なデータはバリデーション通過", () => {
+        const result = meoSettingsSchema.safeParse(VALID_MEO_SETTINGS_INPUT);
+        expect(result.success).toBe(true);
+      });
 
-      test('全フィールドnullでもバリデーション通過', () => {
+      test("全フィールドnullでもバリデーション通過", () => {
         const result = meoSettingsSchema.safeParse({
           latitude: null,
           longitude: null,
@@ -596,229 +643,229 @@ describe('Settings Business Admin Action Integration', () => {
           googleReviewUrl: null,
           businessAttributes: null,
           paymentAccepted: null,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('googleReviewUrlは空文字列を許可', () => {
+      test("googleReviewUrlは空文字列を許可", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: '',
-        })
-        expect(result.success).toBe(true)
-      })
+          googleReviewUrl: "",
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('paymentAcceptedは空文字列を許可', () => {
+      test("paymentAcceptedは空文字列を許可", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: '',
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+          paymentAccepted: "",
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('latitude', () => {
-      test('-90（最小値）はOK', () => {
+    describe("latitude", () => {
+      test("-90（最小値）はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           latitude: -90,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('90（最大値）はOK', () => {
+      test("90（最大値）はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           latitude: 90,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('-90.1はエラー', () => {
+      test("-90.1はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           latitude: -90.1,
-        })
-        expect(result.success).toBe(false)
-      })
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('90.1はエラー', () => {
+      test("90.1はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           latitude: 90.1,
-        })
-        expect(result.success).toBe(false)
-      })
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('0はOK', () => {
+      test("0はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           latitude: 0,
-        })
-        expect(result.success).toBe(true)
-      })
-    })
+        });
+        expect(result.success).toBe(true);
+      });
+    });
 
-    describe('longitude', () => {
-      test('-180（最小値）はOK', () => {
+    describe("longitude", () => {
+      test("-180（最小値）はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           longitude: -180,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('180（最大値）はOK', () => {
+      test("180（最大値）はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           longitude: 180,
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('-180.1はエラー', () => {
+      test("-180.1はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           longitude: -180.1,
-        })
-        expect(result.success).toBe(false)
-      })
+        });
+        expect(result.success).toBe(false);
+      });
 
-      test('180.1はエラー', () => {
+      test("180.1はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           longitude: 180.1,
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('priceRange', () => {
-      test('100文字はOK', () => {
+    describe("priceRange", () => {
+      test("100文字はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          priceRange: 'a'.repeat(100),
-        })
-        expect(result.success).toBe(true)
-      })
+          priceRange: "a".repeat(100),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('101文字はエラー', () => {
+      test("101文字はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          priceRange: 'a'.repeat(101),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          priceRange: "a".repeat(101),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('googleBusinessPlaceId', () => {
-      test('200文字はOK', () => {
+    describe("googleBusinessPlaceId", () => {
+      test("200文字はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          googleBusinessPlaceId: 'a'.repeat(200),
-        })
-        expect(result.success).toBe(true)
-      })
+          googleBusinessPlaceId: "a".repeat(200),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('201文字はエラー', () => {
+      test("201文字はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          googleBusinessPlaceId: 'a'.repeat(201),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          googleBusinessPlaceId: "a".repeat(201),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('googleReviewUrl', () => {
-      test('有効なURLはOK', () => {
+    describe("googleReviewUrl", () => {
+      test("有効なURLはOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: 'https://g.page/r/example/review',
-        })
-        expect(result.success).toBe(true)
-      })
+          googleReviewUrl: "https://g.page/r/example/review",
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('無効なURLはエラー', () => {
+      test("無効なURLはエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          googleReviewUrl: 'not-a-url',
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          googleReviewUrl: "not-a-url",
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('businessAttributes', () => {
-      test('Record<string, boolean>はOK', () => {
+    describe("businessAttributes", () => {
+      test("Record<string, boolean>はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           businessAttributes: { wifi: true, parking: false },
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('空オブジェクトはOK', () => {
+      test("空オブジェクトはOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
           businessAttributes: {},
-        })
-        expect(result.success).toBe(true)
-      })
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('boolean以外の値はエラー', () => {
+      test("boolean以外の値はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          businessAttributes: { wifi: 'yes' },
-        })
-        expect(result.success).toBe(false)
-      })
-    })
+          businessAttributes: { wifi: "yes" },
+        });
+        expect(result.success).toBe(false);
+      });
+    });
 
-    describe('paymentAccepted', () => {
-      test('500文字はOK', () => {
+    describe("paymentAccepted", () => {
+      test("500文字はOK", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: 'a'.repeat(500),
-        })
-        expect(result.success).toBe(true)
-      })
+          paymentAccepted: "a".repeat(500),
+        });
+        expect(result.success).toBe(true);
+      });
 
-      test('501文字はエラー', () => {
+      test("501文字はエラー", () => {
         const result = meoSettingsSchema.safeParse({
           ...VALID_MEO_SETTINGS_INPUT,
-          paymentAccepted: 'a'.repeat(501),
-        })
-        expect(result.success).toBe(false)
-      })
-    })
-  })
+          paymentAccepted: "a".repeat(501),
+        });
+        expect(result.success).toBe(false);
+      });
+    });
+  });
 
   // ===========================================================================
   // 型エラーテスト
   // ===========================================================================
 
-  describe('型エラー', () => {
-    test('businessInfoSchema: businessName に数値はエラー', () => {
+  describe("型エラー", () => {
+    test("businessInfoSchema: businessName に数値はエラー", () => {
       const result = businessInfoSchema.safeParse({
         ...VALID_BUSINESS_INFO_INPUT,
         businessName: 12345,
-      })
-      expect(result.success).toBe(false)
-    })
+      });
+      expect(result.success).toBe(false);
+    });
 
-    test('contactInfoSchema: email にbooleanはエラー', () => {
+    test("contactInfoSchema: email にbooleanはエラー", () => {
       const result = contactInfoSchema.safeParse({
         ...VALID_CONTACT_INFO_INPUT,
         email: true,
-      })
-      expect(result.success).toBe(false)
-    })
+      });
+      expect(result.success).toBe(false);
+    });
 
-    test('meoSettingsSchema: latitude に文字列はエラー', () => {
+    test("meoSettingsSchema: latitude に文字列はエラー", () => {
       const result = meoSettingsSchema.safeParse({
         ...VALID_MEO_SETTINGS_INPUT,
-        latitude: '35.6762',
-      })
-      expect(result.success).toBe(false)
-    })
-  })
-})
+        latitude: "35.6762",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+});

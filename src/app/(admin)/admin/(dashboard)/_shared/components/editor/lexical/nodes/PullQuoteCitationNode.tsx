@@ -5,7 +5,7 @@
  * PullQuoteNodeの子として使用
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,16 +13,18 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, ElementNode } from 'lexical'
+} from "lexical";
+import { $create, ElementNode } from "lexical";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertPullQuoteCitationElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createPullQuoteCitationNode()
-  return { node }
+function $convertPullQuoteCitationElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createPullQuoteCitationNode();
+  return { node };
 }
 
 // =============================================================================
@@ -31,45 +33,45 @@ function $convertPullQuoteCitationElement(_element: HTMLElement): null | DOMConv
 
 export class PullQuoteCitationNode extends ElementNode {
   override $config() {
-    return this.config('pull-quote-citation', { extends: ElementNode })
+    return this.config("pull-quote-citation", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       figcaption: (element: HTMLElement) => {
-        if (element.hasAttribute('data-pull-quote-citation')) {
+        if (element.hasAttribute("data-pull-quote-citation")) {
           return {
             conversion: $convertPullQuoteCitationElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('figcaption')
-    element.setAttribute('data-pull-quote-citation', 'true')
-    return { element }
+    const element = document.createElement("figcaption");
+    element.setAttribute("data-pull-quote-citation", "true");
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('figcaption')
-    element.setAttribute('data-pull-quote-citation', 'true')
-    return element
+    const element = document.createElement("figcaption");
+    element.setAttribute("data-pull-quote-citation", "true");
+    return element;
   }
 
   override updateDOM(): boolean {
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -83,7 +85,7 @@ export class PullQuoteCitationNode extends ElementNode {
  * @returns PullQuoteCitationNode インスタンス
  */
 export function $createPullQuoteCitationNode(): PullQuoteCitationNode {
-  return $create(PullQuoteCitationNode)
+  return $create(PullQuoteCitationNode);
 }
 
 /**
@@ -93,7 +95,7 @@ export function $createPullQuoteCitationNode(): PullQuoteCitationNode {
  * @returns PullQuoteCitationNodeの場合true
  */
 export function $isPullQuoteCitationNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is PullQuoteCitationNode {
-  return node instanceof PullQuoteCitationNode
+  return node instanceof PullQuoteCitationNode;
 }

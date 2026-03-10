@@ -9,39 +9,39 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
+} from "@react-email/components";
 
 type ReservationNotificationProps = {
-  type: 'reservation'
-  action: 'new' | 'update' | 'cancel'
-  customerName: string
-  customerEmail: string
-  spaceName: string
-  reservationDate: string
-  startTime: string
-  endTime: string
-  totalPrice: string
-  reservationId: string
-  adminUrl: string
-}
+  type: "reservation";
+  action: "new" | "update" | "cancel";
+  customerName: string;
+  customerEmail: string;
+  spaceName: string;
+  reservationDate: string;
+  startTime: string;
+  endTime: string;
+  totalPrice: string;
+  reservationId: string;
+  adminUrl: string;
+};
 
 type InquiryNotificationProps = {
-  type: 'inquiry'
-  name: string
-  email: string
-  subject: string
-  message: string
-  inquiryId: string
-  adminUrl: string
-}
+  type: "inquiry";
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  inquiryId: string;
+  adminUrl: string;
+};
 
-type Props = ReservationNotificationProps | InquiryNotificationProps
+type Props = ReservationNotificationProps | InquiryNotificationProps;
 
 export function AdminNotificationEmail(props: Props) {
-  if (props.type === 'inquiry') {
-    return <InquiryNotification {...props} />
+  if (props.type === "inquiry") {
+    return <InquiryNotification {...props} />;
   }
-  return <ReservationNotification {...props} />
+  return <ReservationNotification {...props} />;
 }
 
 function ReservationNotification({
@@ -57,21 +57,23 @@ function ReservationNotification({
   adminUrl,
 }: ReservationNotificationProps) {
   const actionText = {
-    new: '新規予約',
-    update: '予約変更',
-    cancel: '予約キャンセル',
-  }[action]
+    new: "新規予約",
+    update: "予約変更",
+    cancel: "予約キャンセル",
+  }[action];
 
   const actionColor = {
-    new: '#16a34a',
-    update: '#ca8a04',
-    cancel: '#dc2626',
-  }[action]
+    new: "#16a34a",
+    update: "#ca8a04",
+    cancel: "#dc2626",
+  }[action];
 
   return (
     <Html>
       <Head />
-      <Preview>[{actionText}] {spaceName} - {customerName}様</Preview>
+      <Preview>
+        [{actionText}] {spaceName} - {customerName}様
+      </Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={{ ...heading, color: actionColor }}>
@@ -107,13 +109,11 @@ function ReservationNotification({
             </Link>
           </Section>
 
-          <Text style={footer}>
-            Myrrh Rental Space 管理システム
-          </Text>
+          <Text style={footer}>Myrrh Rental Space 管理システム</Text>
         </Container>
       </Body>
     </Html>
-  )
+  );
 }
 
 function InquiryNotification({
@@ -127,10 +127,12 @@ function InquiryNotification({
   return (
     <Html>
       <Head />
-      <Preview>[新規お問い合わせ] {subject} - {name}様</Preview>
+      <Preview>
+        [新規お問い合わせ] {subject} - {name}様
+      </Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={{ ...heading, color: '#2563eb' }}>
+          <Heading style={{ ...heading, color: "#2563eb" }}>
             新規お問い合わせ
           </Heading>
 
@@ -152,9 +154,7 @@ function InquiryNotification({
             <Text style={detailItem}>
               <strong>内容:</strong>
             </Text>
-            <Text style={messageText}>
-              {message}
-            </Text>
+            <Text style={messageText}>{message}</Text>
           </Section>
 
           <Section style={buttonSection}>
@@ -163,90 +163,89 @@ function InquiryNotification({
             </Link>
           </Section>
 
-          <Text style={footer}>
-            Myrrh Rental Space 管理システム
-          </Text>
+          <Text style={footer}>Myrrh Rental Space 管理システム</Text>
         </Container>
       </Body>
     </Html>
-  )
+  );
 }
 
 const main = {
-  backgroundColor: '#f6f9fc',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-}
+  backgroundColor: "#f6f9fc",
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
+};
 
 const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  padding: '40px 20px',
-  maxWidth: '560px',
-}
+  backgroundColor: "#ffffff",
+  margin: "0 auto",
+  padding: "40px 20px",
+  maxWidth: "560px",
+};
 
 const heading = {
-  fontSize: '24px',
-  fontWeight: '600',
-  marginBottom: '24px',
-}
+  fontSize: "24px",
+  fontWeight: "600",
+  marginBottom: "24px",
+};
 
 const detailsSection = {
-  backgroundColor: '#f9fafb',
-  borderRadius: '8px',
-  padding: '20px',
-  margin: '24px 0',
-}
+  backgroundColor: "#f9fafb",
+  borderRadius: "8px",
+  padding: "20px",
+  margin: "24px 0",
+};
 
 const detailsHeading = {
-  fontSize: '18px',
-  fontWeight: '600',
-  color: '#1a1a1a',
-  marginBottom: '12px',
-}
+  fontSize: "18px",
+  fontWeight: "600",
+  color: "#1a1a1a",
+  marginBottom: "12px",
+};
 
 const detailItem = {
-  fontSize: '14px',
-  lineHeight: '24px',
-  color: '#484848',
-  margin: '8px 0',
-}
+  fontSize: "14px",
+  lineHeight: "24px",
+  color: "#484848",
+  margin: "8px 0",
+};
 
 const messageText: React.CSSProperties = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#484848',
-  whiteSpace: 'pre-wrap',
-  backgroundColor: '#ffffff',
-  padding: '12px',
-  borderRadius: '4px',
-  border: '1px solid #e6e6e6',
-}
+  fontSize: "14px",
+  lineHeight: "22px",
+  color: "#484848",
+  whiteSpace: "pre-wrap",
+  backgroundColor: "#ffffff",
+  padding: "12px",
+  borderRadius: "4px",
+  border: "1px solid #e6e6e6",
+};
 
 const hr = {
-  borderColor: '#e6e6e6',
-  margin: '16px 0',
-}
+  borderColor: "#e6e6e6",
+  margin: "16px 0",
+};
 
 const buttonSection: React.CSSProperties = {
-  textAlign: 'center',
-  margin: '24px 0',
-}
+  textAlign: "center",
+  margin: "24px 0",
+};
 
 const button = {
-  backgroundColor: '#1a1a1a',
-  borderRadius: '6px',
-  color: '#ffffff',
-  fontSize: '14px',
-  fontWeight: '600',
-  padding: '12px 24px',
-  textDecoration: 'none',
-  display: 'inline-block',
-}
+  backgroundColor: "#1a1a1a",
+  borderRadius: "6px",
+  color: "#ffffff",
+  fontSize: "14px",
+  fontWeight: "600",
+  padding: "12px 24px",
+  textDecoration: "none",
+  display: "inline-block",
+};
 
 const footer = {
-  fontSize: '12px',
-  color: '#8898aa',
-  marginTop: '32px',
-}
+  fontSize: "12px",
+  color: "#8898aa",
+  marginTop: "32px",
+};
 
-export default AdminNotificationEmail
+export default AdminNotificationEmail;

@@ -14,4 +14,4 @@ export {
   matchesPostUrl,
   type PostUrlData,
   type PermalinkConfig,
-} from './post-url'
+} from "./post-url";

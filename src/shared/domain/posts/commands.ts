@@ -1,7 +1,8 @@
 import "server-only";
 
 import { PostStatus } from "@/shared/db/enums";
-import { Prisma, prisma } from "@/shared/db/prisma";
+import { parsePrismaInputJson } from "@/shared/db/json";
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import {
   checkSlugAvailability,
@@ -22,49 +23,17 @@ import type {
   UpdatePostResult,
 } from "@/shared/domain/posts/types";
 
-function isInputJsonValue(value: unknown): value is Prisma.InputJsonValue {
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isInputJsonValue);
-  }
-
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-
-  return Object.values(value).every(isInputJsonValue);
-}
-
-function parseContentJson(
-  contentJson: string,
-): Prisma.InputJsonValue | undefined {
+function parseContentJson(contentJson: string) {
   if (!contentJson) {
     return undefined;
   }
 
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(contentJson);
-  } catch {
-    throw new DomainError("本文データが不正です", "VALIDATION");
-  }
-
-  if (!isInputJsonValue(parsed)) {
-    throw new DomainError("本文データが不正です", "VALIDATION");
-  }
-
-  return parsed;
+  return parsePrismaInputJson(contentJson, "本文データが不正です");
 }
 
-function normalizeNullableString(value: string | null | undefined): string | null {
+function normalizeNullableString(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }
@@ -176,9 +145,7 @@ async function ensurePostTagUnique(
   throw new DomainError("このスラッグは既に使用されています", "CONFLICT");
 }
 
-function buildPostData(
-  input: CreatePostCommandInput | UpdatePostCommandInput,
-) {
+function buildPostData(input: CreatePostCommandInput | UpdatePostCommandInput) {
   return {
     title: input.title,
     slug: input.slug,

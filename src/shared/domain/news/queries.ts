@@ -38,7 +38,9 @@ const newsDetailSelect = {
   ogpImageUrl: true,
 } as const;
 
-function attachNewsUrl<T extends { slug: string }>(item: T): T & { url: string } {
+function attachNewsUrl<T extends { slug: string }>(
+  item: T,
+): T & { url: string } {
   return {
     ...item,
     url: `/news/${item.slug}`,

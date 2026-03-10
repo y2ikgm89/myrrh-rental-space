@@ -10,6 +10,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
+import { z } from "zod";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
 import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
@@ -25,6 +27,13 @@ import {
 } from "@/shared/lib/errors/server";
 
 const STATE_COOKIE_NAME = "instagram_oauth_state";
+const instagramOAuthCallbackQuerySchema = z.object({
+  code: z.string().trim().min(1).optional(),
+  state: z.string().trim().min(1).optional(),
+  error: z.string().trim().min(1).optional(),
+  error_reason: z.string().trim().min(1).optional(),
+  error_description: z.string().trim().min(1).optional(),
+});
 
 /**
  * Instagram OAuth コールバック
@@ -40,17 +49,28 @@ const STATE_COOKIE_NAME = "instagram_oauth_state";
  * 8. 設定ページにリダイレクト
  */
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const code = searchParams.get("code");
-  const state = searchParams.get("state");
-  const error = searchParams.get("error");
-  const errorReason = searchParams.get("error_reason");
-  const errorDescription = searchParams.get("error_description");
+  const parsedQuery = instagramOAuthCallbackQuerySchema.safeParse({
+    code: request.nextUrl.searchParams.get("code") ?? undefined,
+    state: request.nextUrl.searchParams.get("state") ?? undefined,
+    error: request.nextUrl.searchParams.get("error") ?? undefined,
+    error_reason: request.nextUrl.searchParams.get("error_reason") ?? undefined,
+    error_description:
+      request.nextUrl.searchParams.get("error_description") ?? undefined,
+  });
+
+  if (!parsedQuery.success) {
+    return redirectToSettings({ error: "認証パラメータが不正です" });
+  }
+
+  const { code, state, error, error_reason, error_description } =
+    parsedQuery.data;
 
   // エラーチェック（ユーザーが認証をキャンセルした場合など）
   if (error) {
     const errorMessage =
-      errorDescription || errorReason || "Instagram認証がキャンセルされました";
+      error_description ||
+      error_reason ||
+      "Instagram認証がキャンセルされました";
     return redirectToSettings({ error: errorMessage });
   }
 
@@ -116,6 +136,7 @@ export async function GET(request: NextRequest) {
       success: `@${userInfo.username} として接続されました`,
     });
   } catch (error) {
+    unstable_rethrow(error);
     logError(error instanceof Error ? error : new Error(String(error)), {
       category: ErrorCategory.EXTERNAL_API,
       severity: ErrorSeverity.HIGH,

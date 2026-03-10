@@ -6,10 +6,10 @@
  * 選択中のブロックをテンプレートとして保存し、後から挿入できる
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState, useTransition } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState, useTransition } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
   $isRangeSelection,
@@ -21,9 +21,9 @@ import {
   COMMAND_PRIORITY_EDITOR,
   type LexicalCommand,
   type SerializedLexicalNode,
-} from 'lexical'
-import { z } from 'zod'
-import { Blocks, Trash2, Loader2, Save } from 'lucide-react'
+} from "lexical";
+import { z } from "zod";
+import { Blocks, Trash2, Loader2, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,13 +34,14 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   createBlockTemplate,
   deleteBlockTemplate,
-} from '@/admin/actions/block-template'
-import type { BlockTemplateListItem } from '@/shared/domain/block-template/types'
-import { toast } from 'sonner'
+} from "@/admin/actions/block-template";
+import type { BlockTemplateListItem } from "@/shared/domain/block-template/types";
+import { toast } from "sonner";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Validation
@@ -51,51 +52,61 @@ const serializedNodeSchema = z
     type: z.string(),
     version: z.number(),
   })
-  .passthrough()
+  .passthrough();
 
-const serializedNodeArraySchema = z.array(serializedNodeSchema)
+const serializedNodeArraySchema = z.array(serializedNodeSchema);
 
 // =============================================================================
 // Commands
 // =============================================================================
 
-export const SAVE_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> = createCommand('SAVE_BLOCK_TEMPLATE')
-export const INSERT_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> = createCommand('INSERT_BLOCK_TEMPLATE')
+export const SAVE_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> =
+  createCommand("SAVE_BLOCK_TEMPLATE");
+export const INSERT_BLOCK_TEMPLATE_COMMAND: LexicalCommand<undefined> =
+  createCommand("INSERT_BLOCK_TEMPLATE");
 
 async function fetchBlockTemplates(): Promise<BlockTemplateListItem[]> {
-  const response = await fetch('/admin/api/block-templates', {
-    credentials: 'same-origin',
-  })
+  const response = await fetch("/admin/api/block-templates", {
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
+    const body: unknown = await response.json().catch(() => null);
     const message =
-      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
         ? body.error
-        : 'テンプレートの取得に失敗しました'
-    throw new Error(message)
+        : "テンプレートの取得に失敗しました";
+    throw new Error(message);
   }
 
-  const data: BlockTemplateListItem[] = await response.json()
-  return data
+  const data: BlockTemplateListItem[] = await response.json();
+  return data;
 }
 
-async function fetchBlockTemplateById(id: string): Promise<{ nodeJson: unknown }> {
+async function fetchBlockTemplateById(
+  id: string,
+): Promise<{ nodeJson: unknown }> {
   const response = await fetch(`/admin/api/block-templates/${id}`, {
-    credentials: 'same-origin',
-  })
+    credentials: "same-origin",
+  });
 
   if (!response.ok) {
-    const body: unknown = await response.json().catch(() => null)
+    const body: unknown = await response.json().catch(() => null);
     const message =
-      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
         ? body.error
-        : 'テンプレートの取得に失敗しました'
-    throw new Error(message)
+        : "テンプレートの取得に失敗しました";
+    throw new Error(message);
   }
 
-  const data: { nodeJson: unknown } = await response.json()
-  return data
+  const data: { nodeJson: unknown } = await response.json();
+  return data;
 }
 
 // =============================================================================
@@ -106,53 +117,53 @@ function SaveTemplateDialog({
   isOpen,
   onClose,
 }: {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }) {
-  const [editor] = useLexicalComposerContext()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [isPending, startTransition] = useTransition()
+  const [editor] = useLexicalComposerContext();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const resetForm = () => {
-    setName('')
-    setDescription('')
-  }
+    setName("");
+    setDescription("");
+  };
 
   const handleSave = () => {
-    if (!name.trim()) return
+    if (!name.trim()) return;
 
     editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      let serializedNodes: SerializedLexicalNode[] = []
+      const selection = $getSelection();
+      let serializedNodes: SerializedLexicalNode[] = [];
 
       if ($isRangeSelection(selection) || $isNodeSelection(selection)) {
-        const nodes = selection.getNodes()
+        const nodes = selection.getNodes();
         // 選択されたノードの最上位要素を取得してシリアライズ
-        const topLevelNodes = new Set<string>()
+        const topLevelNodes = new Set<string>();
         for (const node of nodes) {
-          const topLevel = node.getTopLevelElement()
+          const topLevel = node.getTopLevelElement();
           if (topLevel) {
-            topLevelNodes.add(topLevel.getKey())
+            topLevelNodes.add(topLevel.getKey());
           }
         }
-        const root = $getRoot()
+        const root = $getRoot();
         for (const child of root.getChildren()) {
           if (topLevelNodes.has(child.getKey())) {
-            serializedNodes.push(child.exportJSON())
+            serializedNodes.push(child.exportJSON());
           }
         }
       }
 
       if (serializedNodes.length === 0) {
         // 選択がない場合は全ブロックを保存
-        const root = $getRoot()
-        serializedNodes = root.getChildren().map((child) => child.exportJSON())
+        const root = $getRoot();
+        serializedNodes = root.getChildren().map((child) => child.exportJSON());
       }
 
       if (serializedNodes.length === 0) {
-        toast.error('保存するブロックがありません')
-        return
+        toast.error("保存するブロックがありません");
+        return;
       }
 
       startTransition(async () => {
@@ -160,23 +171,24 @@ function SaveTemplateDialog({
           name: name.trim(),
           description: description.trim() || undefined,
           nodeJson: serializedNodes,
-        })
+        });
 
-        if (result.success) {
-          toast.success(result.message)
-          resetForm()
-          onClose()
-        } else {
-          toast.error(result.error)
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
-      })
-    })
-  }
+
+        toast.success("テンプレートを保存しました");
+        resetForm();
+        onClose();
+      });
+    });
+  };
 
   const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -233,7 +245,7 @@ function SaveTemplateDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // =============================================================================
@@ -244,72 +256,83 @@ function InsertTemplateDialog({
   isOpen,
   onClose,
 }: {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }) {
-  const [editor] = useLexicalComposerContext()
-  const [templates, setTemplates] = useState<BlockTemplateListItem[] | null>(null)
-  const [isInserting, setIsInserting] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editor] = useLexicalComposerContext();
+  const [templates, setTemplates] = useState<BlockTemplateListItem[] | null>(
+    null,
+  );
+  const [isInserting, setIsInserting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const isLoading = isOpen && templates === null
+  const isLoading = isOpen && templates === null;
 
   useEffect(() => {
     if (!isOpen) {
       return () => {
-        setTemplates(null)
-      }
+        setTemplates(null);
+      };
     }
     void fetchBlockTemplates()
       .then(setTemplates)
       .catch((error: unknown) => {
         const message =
-          error instanceof Error ? error.message : 'テンプレートの取得に失敗しました'
-        toast.error(message)
-        setTemplates([])
-      })
-  }, [isOpen])
+          error instanceof Error
+            ? error.message
+            : "テンプレートの取得に失敗しました";
+        toast.error(message);
+        setTemplates([]);
+      });
+  }, [isOpen]);
 
   const handleInsert = (templateId: string) => {
-    setIsInserting(true)
-    void fetchBlockTemplateById(templateId).then((result) => {
-      setIsInserting(false)
+    setIsInserting(true);
+    void fetchBlockTemplateById(templateId)
+      .then((result) => {
+        setIsInserting(false);
 
-      const parsed = serializedNodeArraySchema.safeParse(result.nodeJson)
-      if (!parsed.success) {
-        toast.error('テンプレートデータが不正です')
-        return
-      }
+        const parsed = serializedNodeArraySchema.safeParse(result.nodeJson);
+        if (!parsed.success) {
+          toast.error("テンプレートデータが不正です");
+          return;
+        }
 
-      editor.update(() => {
-        const nodes = parsed.data.map((serialized) =>
-          $parseSerializedNode(serialized)
-        )
-        $insertNodes(nodes)
+        editor.update(() => {
+          const nodes = parsed.data.map((serialized) =>
+            $parseSerializedNode(serialized),
+          );
+          $insertNodes(nodes);
+        });
+
+        toast.success("テンプレートを挿入しました");
+        onClose();
       })
-
-      toast.success('テンプレートを挿入しました')
-      onClose()
-    }).catch((error: unknown) => {
-      setIsInserting(false)
-      const message =
-        error instanceof Error ? error.message : 'テンプレートの取得に失敗しました'
-      toast.error(message)
-    })
-  }
+      .catch((error: unknown) => {
+        setIsInserting(false);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "テンプレートの取得に失敗しました";
+        toast.error(message);
+      });
+  };
 
   const handleDelete = (templateId: string) => {
-    setDeletingId(templateId)
+    setDeletingId(templateId);
     void deleteBlockTemplate(templateId).then((result) => {
-      setDeletingId(null)
-      if (result.success) {
-        setTemplates((prev) => prev !== null ? prev.filter((t) => t.id !== templateId) : null)
-        toast.success(result.message)
-      } else {
-        toast.error(result.error)
+      setDeletingId(null);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      setTemplates((prev) =>
+        prev !== null ? prev.filter((t) => t.id !== templateId) : null,
+      );
+      toast.success("テンプレートを削除しました");
+    });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -342,7 +365,9 @@ function InsertTemplateDialog({
                   >
                     <div className="flex items-center gap-2">
                       <Blocks className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{template.name}</span>
+                      <span className="text-sm font-medium">
+                        {template.name}
+                      </span>
                     </div>
                     {template.description && (
                       <p className="mt-0.5 pl-6 text-xs text-muted-foreground line-clamp-1">
@@ -378,7 +403,7 @@ function InsertTemplateDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 // =============================================================================
@@ -390,58 +415,61 @@ export function BlockTemplatePlugin({
   isInsertOpen,
   onClose,
 }: {
-  isSaveOpen: boolean
-  isInsertOpen: boolean
-  onClose: () => void
+  isSaveOpen: boolean;
+  isInsertOpen: boolean;
+  onClose: () => void;
 }) {
-  const [editor] = useLexicalComposerContext()
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false)
-  const [insertDialogOpen, setInsertDialogOpen] = useState(false)
+  const [editor] = useLexicalComposerContext();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [insertDialogOpen, setInsertDialogOpen] = useState(false);
 
   // コマンド登録
   useEffect(() => {
     const unregisterSave = editor.registerCommand(
       SAVE_BLOCK_TEMPLATE_COMMAND,
       () => {
-        setSaveDialogOpen(true)
-        return true
+        setSaveDialogOpen(true);
+        return true;
       },
-      COMMAND_PRIORITY_EDITOR
-    )
+      COMMAND_PRIORITY_EDITOR,
+    );
 
     const unregisterInsert = editor.registerCommand(
       INSERT_BLOCK_TEMPLATE_COMMAND,
       () => {
-        setInsertDialogOpen(true)
-        return true
+        setInsertDialogOpen(true);
+        return true;
       },
-      COMMAND_PRIORITY_EDITOR
-    )
+      COMMAND_PRIORITY_EDITOR,
+    );
 
     return () => {
-      unregisterSave()
-      unregisterInsert()
-    }
-  }, [editor])
+      unregisterSave();
+      unregisterInsert();
+    };
+  }, [editor]);
 
   // Props経由 or コマンド経由、どちらでもダイアログが開く
-  const isSaveDialogOpen = isSaveOpen || saveDialogOpen
-  const isInsertDialogOpen = isInsertOpen || insertDialogOpen
+  const isSaveDialogOpen = isSaveOpen || saveDialogOpen;
+  const isInsertDialogOpen = isInsertOpen || insertDialogOpen;
 
   const handleSaveClose = () => {
-    setSaveDialogOpen(false)
-    onClose()
-  }
+    setSaveDialogOpen(false);
+    onClose();
+  };
 
   const handleInsertClose = () => {
-    setInsertDialogOpen(false)
-    onClose()
-  }
+    setInsertDialogOpen(false);
+    onClose();
+  };
 
   return (
     <>
       <SaveTemplateDialog isOpen={isSaveDialogOpen} onClose={handleSaveClose} />
-      <InsertTemplateDialog isOpen={isInsertDialogOpen} onClose={handleInsertClose} />
+      <InsertTemplateDialog
+        isOpen={isInsertDialogOpen}
+        onClose={handleInsertClose}
+      />
     </>
-  )
+  );
 }

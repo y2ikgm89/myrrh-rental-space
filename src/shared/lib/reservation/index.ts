@@ -15,7 +15,7 @@
  */
 
 // Constants
-export { DEFAULT_BUSINESS_HOURS, type BusinessHours } from './constants'
+export { DEFAULT_BUSINESS_HOURS, type BusinessHours } from "./constants";
 
 // Types
 export type {
@@ -24,13 +24,13 @@ export type {
   OverlapCheckParams,
   OverlapCheckResult,
   PrismaTransactionClient,
-} from './types'
+} from "./types";
 
 // Functions
-export { checkReservationOverlap } from './overlap-check'
+export { checkReservationOverlap } from "./overlap-check";
 export {
   getAvailableTimeSlots,
   getAvailableDatesInMonth,
   isBusinessDay,
   getBusinessHoursSettings,
-} from './time-slots'
+} from "./time-slots";

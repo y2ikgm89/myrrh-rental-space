@@ -37,26 +37,33 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 # Design System Decisions
 
 ## Brand Direction
+
 - **Mood**: (project-design-config.md §ブランド から)
 - **Personality**: (同上)
 - **Reference URLs**: (セッション中に決定)
 
 ## Typography
+
 (project-design-config.md §タイポグラフィ の値 + セッション中の追加決定)
 
 ## Color Allocation
+
 (project-design-config.md §カラーパレット の値 + セッション中の追加決定)
 
 ## Spatial Design
+
 (project-design-config.md §セクション設計 の値 + セッション中の追加決定)
 
 ## Motion Design
+
 (project-design-config.md §モーション設計 の値 + セッション中の追加決定)
 
 ## Component Conventions
+
 (project-design-config.md §コンポーネント規約 の値 + セッション中の追加決定)
 
 ## Forbidden Patterns
+
 (→ anti-ai-design.md のセルフレビュー・禁止パターン参照 + セッション中に追加判明したパターン)
 ```
 
@@ -66,12 +73,12 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 
 ### 更新タイミング
 
-| タイミング | 操作 |
-|-----------|------|
+| タイミング                                    | 操作                                                                              |
+| --------------------------------------------- | --------------------------------------------------------------------------------- |
 | Memory 未存在 + `/frontend-design` 初回実行後 | `write_memory('design-system', ...)` で `project-design-config.md` の値を書き込み |
-| ユーザーがデザイン方針を変更した時 | `edit_memory('design-system', ...)` で該当セクション更新 |
-| 新コンポーネント規約が追加された時 | `edit_memory('design-system', ...)` の Component Conventions に追記 |
-| 新 Forbidden Pattern が判明した時 | `edit_memory('design-system', ...)` の Forbidden Patterns に追記 |
+| ユーザーがデザイン方針を変更した時            | `edit_memory('design-system', ...)` で該当セクション更新                          |
+| 新コンポーネント規約が追加された時            | `edit_memory('design-system', ...)` の Component Conventions に追記               |
+| 新 Forbidden Pattern が判明した時             | `edit_memory('design-system', ...)` の Forbidden Patterns に追記                  |
 
 ### 更新ルール
 

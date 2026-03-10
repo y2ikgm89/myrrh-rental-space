@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * TagManager - タグ管理コンポーネント
@@ -6,13 +6,13 @@
  * @description nuqs対応、検索・ソート・フィルター機能付き
  */
 
-import { useState, useTransition } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
-import { Search, X, Settings } from 'lucide-react'
-import Link from 'next/link'
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Search, X, Settings } from "lucide-react";
+import Link from "next/link";
 import {
   Button,
   Card,
@@ -33,39 +33,46 @@ import {
   DialogHeader,
   DialogTitle,
   Checkbox,
-} from '@/admin/components/ui'
-import { DeleteConfirmDialog } from '@/admin/components/DeleteConfirmDialog'
-import { SortableTableHead } from '@/admin/components/SortableTableHead'
-import { fetchAdminJson } from '@/admin/lib/admin-api-client'
+} from "@/admin/components/ui";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
+import { SortableTableHead } from "@/admin/components/SortableTableHead";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   createPostTag,
   updatePostTag,
   deletePostTag,
-} from '@/admin/actions/post'
-import type { PostTagData } from '@/shared/domain/posts/types'
-import type { PostTagInput } from '@/admin/lib/validations/post'
-import { useTagFilters, type TaxonomySortField } from '../_hooks/use-taxonomy-filters'
+} from "@/admin/actions/post";
+import type { PostTagData } from "@/shared/domain/posts/types";
+import type { PostTagInput } from "@/admin/lib/validations/post";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import {
+  useTagFilters,
+  type TaxonomySortField,
+} from "../_hooks/use-taxonomy-filters";
 
 // =============================================================================
 // Types & Schemas
 // =============================================================================
 
 type TagFormData = {
-  name: string
-  slug: string
-}
+  name: string;
+  slug: string;
+};
 
 const tagFormSchema = z.object({
-  name: z.string().min(1, { error: 'タグ名は必須です' }).max(50, { error: 'タグ名は50文字以内' }),
+  name: z
+    .string()
+    .min(1, { error: "タグ名は必須です" })
+    .max(50, { error: "タグ名は50文字以内" }),
   slug: z
     .string()
-    .min(1, { error: 'スラッグは必須です' })
+    .min(1, { error: "スラッグは必須です" })
     .max(50)
-    .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
-}) satisfies z.ZodType<TagFormData>
+    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
+}) satisfies z.ZodType<TagFormData>;
 
 async function fetchPostTags(): Promise<PostTagData[]> {
-  return fetchAdminJson('/admin/api/post-tags')
+  return fetchAdminJson("/admin/api/post-tags");
 }
 
 // =============================================================================
@@ -73,20 +80,20 @@ async function fetchPostTags(): Promise<PostTagData[]> {
 // =============================================================================
 
 type TagRowProps = {
-  tag: PostTagData
-  onEdit: (tag: PostTagData) => void
-  onDelete: (id: string) => void
-  isPending: boolean
-}
+  tag: PostTagData;
+  onEdit: (tag: PostTagData) => void;
+  onDelete: (id: string) => void;
+  isPending: boolean;
+};
 
 function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const formattedDate = new Date(tag.createdAt).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const formattedDate = new Date(tag.createdAt).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 
   return (
     <TableRow>
@@ -129,15 +136,15 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
             onOpenChange={setDeleteDialogOpen}
             itemName={tag.name}
             onConfirm={() => {
-              onDelete(tag.id)
-              setDeleteDialogOpen(false)
+              onDelete(tag.id);
+              setDeleteDialogOpen(false);
             }}
             isPending={isPending}
           />
         </div>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 // =============================================================================
@@ -145,14 +152,14 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
 // =============================================================================
 
 type TagManagerProps = {
-  initialTags: PostTagData[]
-}
+  initialTags: PostTagData[];
+};
 
 export function TagManager({ initialTags }: TagManagerProps) {
-  const [isPending, startTransition] = useTransition()
-  const [tags, setTags] = useState<PostTagData[]>(initialTags)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingTag, setEditingTag] = useState<PostTagData | null>(null)
+  const [isPending, startTransition] = useTransition();
+  const [tags, setTags] = useState<PostTagData[]>(initialTags);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTag, setEditingTag] = useState<PostTagData | null>(null);
 
   // Filters (nuqs)
   const {
@@ -161,133 +168,138 @@ export function TagManager({ initialTags }: TagManagerProps) {
     toggleSort,
     setUnusedOnly,
     reset: resetFilters,
-  } = useTagFilters()
+  } = useTagFilters();
 
   // Filtered & Sorted Tags
   const filteredTags = (() => {
-    let result = [...tags]
+    let result = [...tags];
 
     // Search filter
     if (filterParams.search) {
-      const searchLower = filterParams.search.toLowerCase()
+      const searchLower = filterParams.search.toLowerCase();
       result = result.filter(
         (tag) =>
           tag.name.toLowerCase().includes(searchLower) ||
-          tag.slug.toLowerCase().includes(searchLower)
-      )
+          tag.slug.toLowerCase().includes(searchLower),
+      );
     }
 
     // Unused only filter
     if (filterParams.unusedOnly) {
-      result = result.filter((tag) => tag._count.posts === 0)
+      result = result.filter((tag) => tag._count.posts === 0);
     }
 
     // Sort
     result.sort((a, b) => {
-      let comparison = 0
+      let comparison = 0;
       switch (filterParams.sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name, 'ja')
-          break
-        case 'postCount':
-          comparison = a._count.posts - b._count.posts
-          break
-        case 'createdAt':
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          break
+        case "name":
+          comparison = a.name.localeCompare(b.name, "ja");
+          break;
+        case "postCount":
+          comparison = a._count.posts - b._count.posts;
+          break;
+        case "createdAt":
+          comparison =
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
       }
-      return filterParams.sortOrder === 'desc' ? -comparison : comparison
-    })
+      return filterParams.sortOrder === "desc" ? -comparison : comparison;
+    });
 
-    return result
-  })()
+    return result;
+  })();
 
   // Form
   const form = useForm<TagFormData>({
     resolver: zodResolver(tagFormSchema),
-    defaultValues: { name: '', slug: '' },
-  })
+    defaultValues: { name: "", slug: "" },
+  });
 
   const openCreateDialog = () => {
-    setEditingTag(null)
-    form.reset({ name: '', slug: '' })
-    setIsDialogOpen(true)
-  }
+    setEditingTag(null);
+    form.reset({ name: "", slug: "" });
+    setIsDialogOpen(true);
+  };
 
   const openEditDialog = (tag: PostTagData) => {
-    setEditingTag(tag)
-    form.reset({ name: tag.name, slug: tag.slug })
-    setIsDialogOpen(true)
-  }
+    setEditingTag(tag);
+    form.reset({ name: tag.name, slug: tag.slug });
+    setIsDialogOpen(true);
+  };
 
   const onSubmit = (data: TagFormData) => {
     startTransition(async () => {
-      const payload: PostTagInput = { name: data.name, slug: data.slug }
+      const payload: PostTagInput = { name: data.name, slug: data.slug };
 
-        if (editingTag) {
-          const result = await updatePostTag(editingTag.id, payload)
-          if (result.success) {
-            toast.success(result.message)
-            const newTags = await fetchPostTags()
-            startTransition(() => {
-              setIsDialogOpen(false)
-              setTags(newTags)
-          })
-        } else {
-          toast.error(result.error)
+      if (editingTag) {
+        const result = await updatePostTag(editingTag.id, payload);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
-        } else {
-          const result = await createPostTag(payload)
-          if (result.success) {
-            toast.success(result.message)
-            const newTags = await fetchPostTags()
-            startTransition(() => {
-              setIsDialogOpen(false)
-              setTags(newTags)
-          })
-        } else {
-          toast.error(result.error)
-        }
+
+        toast.success("タグを更新しました");
+        const newTags = await fetchPostTags();
+        startTransition(() => {
+          setIsDialogOpen(false);
+          setTags(newTags);
+        });
+        return;
       }
-    })
-  }
+
+      const result = await createPostTag(payload);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("タグを作成しました");
+      const newTags = await fetchPostTags();
+      startTransition(() => {
+        setIsDialogOpen(false);
+        setTags(newTags);
+      });
+    });
+  };
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
-      const result = await deletePostTag(id)
-      if (result.success) {
-        toast.success(result.message)
-        const newTags = await fetchPostTags()
-        startTransition(() => {
-          setTags(newTags)
-        })
-      } else {
-        toast.error(result.error)
+      const result = await deletePostTag(id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("タグを削除しました");
+      const newTags = await fetchPostTags();
+      startTransition(() => {
+        setTags(newTags);
+      });
+    });
+  };
 
   const generateSlug = () => {
-    const name = form.getValues('name')
+    const name = form.getValues("name");
     if (name) {
       const slug = name
         .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 50)
-      form.setValue('slug', slug)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 50);
+      form.setValue("slug", slug);
     }
-  }
+  };
 
   const hasFilters =
-    filterParams.search !== '' ||
+    filterParams.search !== "" ||
     filterParams.unusedOnly ||
-    filterParams.sortBy !== 'name' ||
-    filterParams.sortOrder !== 'asc'
+    filterParams.sortBy !== "name" ||
+    filterParams.sortOrder !== "asc";
 
   return (
     <>
@@ -342,7 +354,9 @@ export function TagManager({ initialTags }: TagManagerProps) {
 
           {/* テーブル */}
           {tags.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">タグがありません</div>
+            <div className="py-8 text-center text-muted-foreground">
+              タグがありません
+            </div>
           ) : filteredTags.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               条件に一致するタグがありません
@@ -402,14 +416,14 @@ export function TagManager({ initialTags }: TagManagerProps) {
         <DialogContent>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>{editingTag ? 'タグ編集' : 'タグ作成'}</DialogTitle>
+              <DialogTitle>{editingTag ? "タグ編集" : "タグ作成"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="tag-name">タグ名</Label>
                 <Input
                   id="tag-name"
-                  {...form.register('name')}
+                  {...form.register("name")}
                   placeholder="タグ名"
                   disabled={isPending}
                 />
@@ -435,7 +449,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
                 </div>
                 <Input
                   id="tag-slug"
-                  {...form.register('slug')}
+                  {...form.register("slug")}
                   placeholder="tag-slug"
                   disabled={isPending}
                 />
@@ -458,16 +472,16 @@ export function TagManager({ initialTags }: TagManagerProps) {
               <Button type="submit" disabled={isPending}>
                 {isPending
                   ? editingTag
-                    ? '更新中...'
-                    : '作成中...'
+                    ? "更新中..."
+                    : "作成中..."
                   : editingTag
-                    ? '更新'
-                    : '作成'}
+                    ? "更新"
+                    : "作成"}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

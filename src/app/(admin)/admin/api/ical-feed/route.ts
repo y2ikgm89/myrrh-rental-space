@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import {
@@ -12,23 +12,17 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-
-function getErrorStatus(message: string): number {
-  if (message.includes("ログイン") || message.includes("権限")) {
-    return 403;
-  }
-
-  return 400;
-}
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+} from "@/shared/lib/route-responses";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const auth = await checkPermission("settings", "read", request.headers);
     if (!auth.success) {
-      return NextResponse.json(
-        { error: auth.error.error },
-        { status: getErrorStatus(auth.error.error) },
-      );
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const [tokens, settings, spaces] = await Promise.all([
@@ -37,7 +31,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       getSpacesQuery({ isPublished: true }, { page: 1, limit: 100 }),
     ]);
 
-    return NextResponse.json({
+    return jsonSuccess({
       tokens,
       settings,
       spaces: spaces.spaces.map((space) => ({
@@ -53,9 +47,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       context: { operation: "adminICalFeedGet" },
     });
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return jsonError("Internal server error", 500);
   }
 }

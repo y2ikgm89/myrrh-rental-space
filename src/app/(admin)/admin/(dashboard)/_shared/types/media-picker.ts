@@ -4,7 +4,7 @@
  * メディアピッカー機能とメディアデータの型定義
  */
 
-import type { MediaType, MediaUsage } from '@/admin/lib/validations/media'
+import type { MediaType, MediaUsage } from "@/admin/lib/validations/media";
 
 // =============================================================================
 // Media Data Types (Server Actionsから分離してHMRの問題を回避)
@@ -15,37 +15,37 @@ import type { MediaType, MediaUsage } from '@/admin/lib/validations/media'
  * Server Actionsとクライアントコンポーネント間で共有される型
  */
 export type MediaData = {
-  id: string
-  filename: string
-  url: string
-  mimeType: string
-  size: number
-  width: number | null
-  height: number | null
-  type: string
-  usage: string
-  alt: string | null
-  title: string | null
-  description: string | null
-  tags: string[]
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  filename: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+  type: string;
+  usage: string;
+  alt: string | null;
+  title: string | null;
+  description: string | null;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
   uploader: {
-    id: string
-    name: string
-  } | null
-}
+    id: string;
+    name: string;
+  } | null;
+};
 
 /**
  * メディア一覧取得結果
  */
 export type GetMediaResult = {
-  items: MediaData[]
-  total: number
-  page: number
-  limit: number
-  totalPages: number
-}
+  items: MediaData[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
 
 // =============================================================================
 // Media Picker Types
@@ -54,27 +54,27 @@ export type GetMediaResult = {
 /**
  * 選択モード
  */
-export type SelectionMode = 'single' | 'multiple'
+export type SelectionMode = "single" | "multiple";
 
 /**
  * タブ種別
  */
-export type MediaPickerTab = 'library' | 'url' | 'upload'
+export type MediaPickerTab = "library" | "url" | "upload";
 
 /**
  * 選択されたメディアの情報
  */
 export interface SelectedMedia {
   /** メディアID（ライブラリ選択時のみ、URL入力/新規アップロード時はnull） */
-  id: string | null
+  id: string | null;
   /** メディアURL */
-  url: string
+  url: string;
   /** 代替テキスト */
-  alt?: string
+  alt?: string;
   /** ファイル名 */
-  filename?: string
+  filename?: string;
   /** 選択元 */
-  source: 'library' | 'url' | 'upload'
+  source: "library" | "url" | "upload";
 }
 
 /**
@@ -82,40 +82,40 @@ export interface SelectedMedia {
  */
 export interface MediaPickerConfig {
   /** 選択モード */
-  selectionMode: SelectionMode
+  selectionMode: SelectionMode;
   /** 複数選択時の最大数 */
-  maxSelections?: number
+  maxSelections?: number;
   /** 許可するメディアタイプ */
-  acceptedTypes?: MediaType[]
+  acceptedTypes?: MediaType[];
   /** デフォルトの用途 */
-  defaultUsage?: MediaUsage
+  defaultUsage?: MediaUsage;
   /** URLタブを表示するか */
-  showUrlTab?: boolean
+  showUrlTab?: boolean;
 }
 
 /**
  * メディアメタデータ（アップロード時）
  */
 export interface MediaMetadata {
-  alt?: string
-  title?: string
-  description?: string
-  tags?: string[]
+  alt?: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
 }
 
 /**
  * フィルター条件
  */
 export interface MediaFilters {
-  type?: MediaType
-  usage?: MediaUsage
-  search?: string
+  type?: MediaType;
+  usage?: MediaUsage;
+  search?: string;
 }
 
 /**
  * ページネーション
  */
 export interface MediaPagination {
-  page: number
-  limit: number
+  page: number;
+  limit: number;
 }

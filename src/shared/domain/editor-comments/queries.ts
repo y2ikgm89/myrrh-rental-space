@@ -3,11 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { EditorCommentStatus } from "@/shared/db/enums";
-import type {
-  EditorCommentThread,
-  MarkInfo,
-  ThreadListItem,
-} from "./types";
+import type { EditorCommentThread, MarkInfo, ThreadListItem } from "./types";
 
 export async function getCommentThreadsQuery(input: {
   contentType: string;
@@ -18,7 +14,9 @@ export async function getCommentThreadsQuery(input: {
     where: {
       contentType: input.contentType,
       contentId: input.contentId,
-      ...(input.status ? { status: input.status } : { status: { not: "DELETED" } }),
+      ...(input.status
+        ? { status: input.status }
+        : { status: { not: "DELETED" } }),
     },
     select: {
       id: true,
@@ -52,7 +50,9 @@ export async function getCommentThreadsQuery(input: {
     ...new Set(
       [
         ...threads.map((thread) => thread.createdBy),
-        ...threads.flatMap((thread) => thread.comments.map((comment) => comment.createdBy)),
+        ...threads.flatMap((thread) =>
+          thread.comments.map((comment) => comment.createdBy),
+        ),
       ].filter((id): id is string => id !== null),
     ),
   ];
@@ -78,14 +78,14 @@ export async function getCommentThreadsQuery(input: {
             createdAt: latestComment.createdAt,
             createdByName:
               latestComment.createdBy && userMap.has(latestComment.createdBy)
-                ? userMap.get(latestComment.createdBy)?.name ?? "不明"
+                ? (userMap.get(latestComment.createdBy)?.name ?? "不明")
                 : "不明",
           }
         : undefined,
       createdAt: thread.createdAt,
       createdByName:
         thread.createdBy && userMap.has(thread.createdBy)
-          ? userMap.get(thread.createdBy)?.name ?? "不明"
+          ? (userMap.get(thread.createdBy)?.name ?? "不明")
           : "不明",
     };
   });
@@ -146,7 +146,9 @@ export async function getThreadDetailQuery(
     ...thread,
     comments: thread.comments.map((comment) => ({
       ...comment,
-      createdByUser: comment.createdBy ? userMap.get(comment.createdBy) : undefined,
+      createdByUser: comment.createdBy
+        ? userMap.get(comment.createdBy)
+        : undefined,
     })),
     createdByUser: thread.createdBy ? userMap.get(thread.createdBy) : undefined,
     resolvedByUser: thread.resolvedBy ? userMap.get(thread.resolvedBy) : null,

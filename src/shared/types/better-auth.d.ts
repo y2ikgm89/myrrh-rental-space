@@ -7,10 +7,10 @@
  * このファイルでは追加のユーザーフィールドのみ定義
  */
 
-import type { Role } from '@/shared/db/enums'
+import type { Role } from "@/shared/db/enums";
 
-declare module 'better-auth' {
+declare module "better-auth" {
   interface User {
-    role: Role
+    role: Role;
   }
 }

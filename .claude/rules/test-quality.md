@@ -198,25 +198,27 @@ const plain: unknown = result;
 expect(plain).toEqual({ id: 1 });
 ```
 
-### 5. カリー化 HOF の型引数明示
+### 5. `executeAdminMutation` の型推論
 
-`withPermission('space', 'create')` のように外側の呼び出しで型変数が固定されるカリー化 HOF では、TypeScript がハンドラ引数の型を `unknown[]` に推論してしまう。明示的な型引数で解決する。
+`executeAdminMutation` はジェネリクスで戻り値型を推論する。`execute` コールバックの戻り値型が複雑な場合、TypeScript が `unknown` に推論することがある。明示的な型引数で解決する。
 
 ```typescript
-// NG: TArgs = unknown[] に推論され、ハンドラ引数の型が衝突
-const action = withPermission(
-  "space",
-  "create",
-)(async (user, name: string) => {
-  return createSuccess({ name }); // TS2345
+// NG: 戻り値型が unknown に推論される
+const result = await executeAdminMutation({
+  resource: "space",
+  action: "create",
+  execute: async () => {
+    return createSuccess({ name }); // 型が推論されない場合あり
+  },
 });
 
-// OK: 外側の呼び出しで TArgs を明示
-const action = withPermission<[string], { name: string }>(
-  "space",
-  "create",
-)(async (user, name: string) => {
-  return createSuccess({ name });
+// OK: 型引数を明示
+const result = await executeAdminMutation<{ name: string }>({
+  resource: "space",
+  action: "create",
+  execute: async () => {
+    return createSuccess({ name });
+  },
 });
 ```
 

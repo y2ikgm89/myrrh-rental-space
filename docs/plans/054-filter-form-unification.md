@@ -4,10 +4,10 @@
 
 ## 概要
 
-| 項目 | 内容 |
-|------|------|
-| 対象 | 管理画面フィルター・フォーム |
-| 状態 | **完了** |
+| 項目   | 内容                             |
+| ------ | -------------------------------- |
+| 対象   | 管理画面フィルター・フォーム     |
+| 状態   | **完了**                         |
 | リスク | 低（UI層のみ、ロジック変更なし） |
 
 ---
@@ -19,6 +19,7 @@
 **対象**: CustomerFilters, SpaceFilters, ReservationFilters, InquiryFilters, LocationFilters
 
 **完了タスク**:
+
 - [x] CustomerFilters → BaseFilters（ステータスオプションカスタム）
 - [x] SpaceFilters → BaseFilters（公開状態フィルター、デバウンスバグ修正）
 - [x] ReservationFilters → BaseFilters（ステータスオプションカスタム）
@@ -26,6 +27,7 @@
 - [x] LocationFilters → BaseFilters（statusParamName, preserveParams 拡張）
 
 **BaseFilters 拡張**:
+
 - `statusParamName`: カスタムステータスパラメータ名
 - `preserveParams`: URL遷移時に保持するパラメータ
 - `statusOptions={[]}`: ステータスフィルター非表示
@@ -35,16 +37,17 @@
 **対象**: BlogFilters, CategoryFilters
 
 **完了タスク**:
+
 - [x] BlogFilters → BaseFilters + CategorySelect（children）
 - [x] CategoryFilters → BaseFilters + IncludeInactiveCheckbox（children、statusOptions=[]）
 
 ### Phase A3: 見送り（将来検討）
 
-| フィルター | 理由 |
-|-----------|------|
-| CommentFilters | ボタンUI、別パターン |
-| MediaFilters | ビュー切替・アップロード機能統合 |
-| AuditLogFilters | 日付範囲・フォーム形式 |
+| フィルター      | 理由                             |
+| --------------- | -------------------------------- |
+| CommentFilters  | ボタンUI、別パターン             |
+| MediaFilters    | ビュー切替・アップロード機能統合 |
+| AuditLogFilters | 日付範囲・フォーム形式           |
 
 ---
 
@@ -58,11 +61,12 @@
 export function useFormAction<TInput extends FieldValues, TOutput = void>(
   schema: ZodSchema<TInput>,
   action: (data: TInput) => Promise<ActionResult<TOutput>>,
-  options?: UseFormActionOptions<TInput, TOutput>
-): UseFormActionReturn<TInput, TOutput>
+  options?: UseFormActionOptions<TInput, TOutput>,
+): UseFormActionReturn<TInput, TOutput>;
 ```
 
 **機能**:
+
 - react-hook-form + Zod + useTransition + toast 統合
 - フィールドエラー自動設定
 - リダイレクト / リフレッシュオプション
@@ -71,31 +75,35 @@ export function useFormAction<TInput extends FieldValues, TOutput = void>(
 ### Phase B2: シンプルフォーム移行 ✅
 
 **完了タスク**:
+
 - [x] FaqCategoryForm → useFormAction
 - [x] FaqItemForm → useFormAction
 
 **見送り**:
+
 - CategoryForm: 既にクリーン（親がロジック制御）
 - TermsVersionForm: react-hook-form不使用、単一フィールド
 
 ### Phase B3: 中規模フォーム移行 ✅
 
 **完了タスク**:
+
 - [x] UserForm → useFormAction
 
 **見送り**:
+
 - InviteForm: 成功時の特殊UI（3秒待機後リダイレクト）
 - TermsForm: react-hook-form未使用、変換コスト大
 - CustomerForm: useActionState + IME自動カナ入力、特殊要件
 
 ### Phase B4: 複雑フォーム（見送り）
 
-| フォーム | 行数 | 理由 |
-|---------|------|------|
-| SpaceForm | 758 | 複雑すぎる、別途分割検討 |
-| LocationForm | 495 | 複雑、別途分割検討 |
-| ReservationForm | 531 | fieldErrors 特殊処理あり |
-| PageSeoForm | 267 | 動作中、優先度低 |
+| フォーム        | 行数 | 理由                     |
+| --------------- | ---- | ------------------------ |
+| SpaceForm       | 758  | 複雑すぎる、別途分割検討 |
+| LocationForm    | 495  | 複雑、別途分割検討       |
+| ReservationForm | 531  | fieldErrors 特殊処理あり |
+| PageSeoForm     | 267  | 動作中、優先度低         |
 
 ---
 
@@ -103,11 +111,11 @@ export function useFormAction<TInput extends FieldValues, TOutput = void>(
 
 ### コード削減
 
-| 対象 | 削減行数 |
-|------|---------|
-| フィルター（7個） | ~400行 |
-| フォーム（5個） | ~150行 |
-| **合計** | ~550行 |
+| 対象              | 削減行数 |
+| ----------------- | -------- |
+| フィルター（7個） | ~400行   |
+| フォーム（5個）   | ~150行   |
+| **合計**          | ~550行   |
 
 ### 品質向上
 

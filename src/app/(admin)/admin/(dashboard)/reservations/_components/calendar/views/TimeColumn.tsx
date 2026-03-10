@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
 interface TimeColumnProps {
-  timeSlots: string[]
+  timeSlots: string[];
 }
 
 export function TimeColumn({ timeSlots }: TimeColumnProps) {
@@ -16,5 +16,5 @@ export function TimeColumn({ timeSlots }: TimeColumnProps) {
         </div>
       ))}
     </div>
-  )
+  );
 }

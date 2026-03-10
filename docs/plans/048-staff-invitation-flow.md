@@ -28,14 +28,17 @@
 ### Phase 1: 招待トークン・メール送信基盤
 
 **新規ファイル:**
+
 - `src/admin/actions/staff-invitation.ts` - 招待Server Actions
 - `src/admin/lib/validations/staff-invitation.ts` - Zodスキーマ
 - `src/public/emails/staff-invitation.tsx` - 招待メールテンプレート
 
 **変更ファイル:**
+
 - `prisma/schema.prisma` - StaffInvitation モデル追加
 
 **モデル設計:**
+
 ```prisma
 model StaffInvitation {
   id        String   @id @default(cuid())
@@ -54,10 +57,12 @@ model StaffInvitation {
 ### Phase 2: パスワード設定画面
 
 **新規ファイル:**
+
 - `src/app/(admin)/admin/setup/[token]/page.tsx` - パスワード設定ページ
 - `src/app/(admin)/admin/setup/[token]/_components/SetupForm.tsx` - パスワード設定フォーム
 
 **機能:**
+
 - トークン検証（有効期限、使用済みチェック）
 - パスワード入力（確認入力付き）
 - ユーザー作成 + 招待トークン消費
@@ -66,10 +71,12 @@ model StaffInvitation {
 ### Phase 3: 登録フォーム変更（招待フロー）
 
 **変更ファイル:**
+
 - `src/app/(admin)/admin/(dashboard)/staff/new/page.tsx` - 招待フォームに変更
 - `src/app/(admin)/admin/(dashboard)/staff/_components/InviteForm.tsx` - 新規: 招待フォーム
 
 **UIの変更:**
+
 - 「新規スタッフ」→「スタッフを招待」
 - パスワード欄削除
 - ロール選択のみ（ADMIN/USER）
@@ -86,6 +93,7 @@ model StaffInvitation {
 すべてのフェーズが完了しました。
 
 **新規ファイル:**
+
 - `prisma/migrations/20260118153836_add_staff_invitation/` - DBマイグレーション
 - `src/admin/actions/staff-invitation.ts` - 招待Server Actions（送信/検証/パスワード設定/再送/削除）
 - `src/admin/lib/validations/staff-invitation.ts` - Zodバリデーションスキーマ
@@ -98,6 +106,7 @@ model StaffInvitation {
 - `src/app/(admin)/admin/(dashboard)/staff/_components/UserActions.tsx` - ユーザー操作
 
 **変更ファイル:**
+
 - `prisma/schema.prisma` - StaffInvitationモデル追加
 - `src/shared/lib/email-service.ts` - sendStaffInvitationEmail関数追加
 

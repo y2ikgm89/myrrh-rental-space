@@ -4,79 +4,92 @@
  * @description TimelineContainerNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isTimelineContainerNode,
   type TimelineContainerNode,
   type TimelineDirection,
   timelineDirectionState,
   timelineColorState,
-} from '../../nodes/TimelineNode'
-import { isAccentColor, ACCENT_COLORS, ACCENT_COLOR_LABELS } from '../../config/accent-colors'
-import type { AccentColor } from '../../config/accent-colors'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Label } from '@/admin/components/ui'
+} from "../../nodes/TimelineNode";
 import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+  isAccentColor,
+  ACCENT_COLORS,
+  ACCENT_COLOR_LABELS,
+} from "../../config/accent-colors";
+import type { AccentColor } from "../../config/accent-colors";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Label } from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const DIRECTION_OPTIONS: readonly { value: TimelineDirection; label: string }[] = [
-  { value: 'vertical', label: '縦（垂直）' },
-  { value: 'horizontal', label: '横（水平）' },
-]
+const DIRECTION_OPTIONS: readonly {
+  value: TimelineDirection;
+  label: string;
+}[] = [
+  { value: "vertical", label: "縦（垂直）" },
+  { value: "horizontal", label: "横（水平）" },
+];
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TimelineContainerInspectorPanelProps = {
-  nodeKey: string
-  node: TimelineContainerNode
-}
+  nodeKey: string;
+  node: TimelineContainerNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function TimelineContainerInspectorPanel({ nodeKey, node }: TimelineContainerInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isTimelineContainerNode)
+export function TimelineContainerInspectorPanel({
+  nodeKey,
+  node,
+}: TimelineContainerInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isTimelineContainerNode);
 
   const { direction, color } = editor.getEditorState().read(() => ({
     direction: $getState(node, timelineDirectionState),
     color: $getState(node, timelineColorState),
-  }))
+  }));
 
   const handleDirectionChange = (value: string) => {
-    if (value === 'vertical' || value === 'horizontal') {
-      updateNode((n) => { $setState(n, timelineDirectionState, value) })
+    if (value === "vertical" || value === "horizontal") {
+      updateNode((n) => {
+        $setState(n, timelineDirectionState, value);
+      });
     }
-  }
+  };
 
   const handleColorChange = (value: string) => {
     if (isAccentColor(value)) {
-      updateNode((n) => { $setState(n, timelineColorState, value) })
+      updateNode((n) => {
+        $setState(n, timelineColorState, value);
+      });
     }
-  }
+  };
 
-  const accentColorValue: AccentColor = isAccentColor(color) ? color : 'default'
+  const accentColorValue: AccentColor = isAccentColor(color)
+    ? color
+    : "default";
 
   return (
     <div>
@@ -126,5 +139,5 @@ export function TimelineContainerInspectorPanel({ nodeKey, node }: TimelineConta
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

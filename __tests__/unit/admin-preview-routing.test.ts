@@ -16,12 +16,18 @@ describe("preview routing", () => {
   test("投稿 preview は dedicated route を開く", () => {
     openPreview("post", "hello-world", "/posts");
 
-    expect(openSpy).toHaveBeenCalledWith("/posts/preview/hello-world", "_blank");
+    expect(openSpy).toHaveBeenCalledWith(
+      "/posts/preview/hello-world",
+      "_blank",
+    );
   });
 
   test("ニュース preview は dedicated route を開く", () => {
     openPreview("news", "release-note", "/news");
 
-    expect(openSpy).toHaveBeenCalledWith("/news/preview/release-note", "_blank");
+    expect(openSpy).toHaveBeenCalledWith(
+      "/news/preview/release-note",
+      "_blank",
+    );
   });
 });

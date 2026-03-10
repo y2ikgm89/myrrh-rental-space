@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * OGP設定フィールド
@@ -7,40 +7,41 @@
  * OGP画像はメディアピッカーで選択
  */
 
-import Image from 'next/image'
-import { ImagePlus } from 'lucide-react'
-import type { FieldValues } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
-import { Button, Input, Label, Textarea } from '@/admin/components/ui'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import { getFieldError, getErrorMessage } from '../types'
-import type { OGPFieldsProps } from '../types'
-import { setFieldString } from '../content-types/types'
+import Image from "next/image";
+import { ImagePlus } from "lucide-react";
+import type { FieldValues } from "react-hook-form";
+import { useController } from "react-hook-form";
+import { Button, Input, Label, Textarea } from "@/admin/components/ui";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { getFieldError, getErrorMessage } from "../types";
+import type { OGPFieldsProps } from "../types";
 
 export function OGPFields<T extends FieldValues>({
   register,
   control,
   errors,
-  setValue,
   disabled,
   fields,
 }: OGPFieldsProps<T>) {
-  const ogpTitleError = getFieldError(errors, fields.ogpTitle)
-  const ogpDescriptionError = getFieldError(errors, fields.ogpDescription)
-  const ogpImageUrlError = getFieldError(errors, fields.ogpImageUrl)
+  const ogpTitleError = getFieldError(errors, fields.ogpTitle);
+  const ogpDescriptionError = getFieldError(errors, fields.ogpDescription);
+  const ogpImageUrlError = getFieldError(errors, fields.ogpImageUrl);
 
-  const ogpImageUrl = useWatch({ control, name: fields.ogpImageUrl })
-  const ogpImageUrlStr = typeof ogpImageUrl === 'string' ? ogpImageUrl : ''
+  const ogpImageField = useController({ control, name: fields.ogpImageUrl });
+  const ogpImageUrlStr =
+    typeof ogpImageField.field.value === "string"
+      ? ogpImageField.field.value
+      : "";
 
   const ogpPicker = useSingleMediaPicker({
-    defaultUsage: 'POST',
+    defaultUsage: "POST",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setFieldString(setValue, fields.ogpImageUrl, selected.url)
+        ogpImageField.field.onChange(selected.url);
       }
     },
-  })
+  });
 
   return (
     <div className="space-y-4">
@@ -115,12 +116,10 @@ export function OGPFields<T extends FieldValues>({
             {getErrorMessage(ogpImageUrlError)}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
-          推奨サイズ: 1200x630px
-        </p>
+        <p className="text-xs text-muted-foreground">推奨サイズ: 1200x630px</p>
       </div>
 
       <ogpPicker.MediaPicker />
     </div>
-  )
+  );
 }

@@ -1,53 +1,62 @@
-import { notFound } from 'next/navigation'
-import { headers } from "next/headers";
-import { getPostById, getPostCategories, getPostTags } from '@/admin/queries/post'
-import { PostEditor } from '../_components/PostEditor'
-import { getLayoutSettings } from '@/shared/domain/settings/queries'
-import { getValidLayoutWidth, LayoutWidth } from '@/shared/lib/validations/enums'
-import type { ContentWidth } from '@/shared/types'
-import type { Metadata } from 'next'
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import {
+  getPostById,
+  getPostCategories,
+  getPostTags,
+} from "@/admin/queries/post";
+import { PostEditor } from "../_components/PostEditor";
+import { getLayoutSettings } from "@/shared/domain/settings/queries";
+import {
+  getValidLayoutWidth,
+  LayoutWidth,
+} from "@/shared/lib/validations/enums";
+import type { ContentWidth } from "@/shared/types";
+import type { Metadata } from "next";
 
-
-type Params = Promise<{ id: string }>
+type Params = Promise<{ id: string }>;
 
 type PageProps = {
-  params: Params
-}
+  params: Params;
+};
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  await headers();
-  const { id } = await params
-  const post = await getPostById(id)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  await connection();
+  const { id } = await params;
+  const post = await getPostById(id);
 
   if (!post) {
     return {
-      title: '投稿が見つかりません | Myrrh Rental Space',
-    }
+      title: "投稿が見つかりません | Myrrh Rental Space",
+    };
   }
 
   return {
     title: `${post.title} | 投稿管理 | Myrrh Rental Space`,
-  }
+  };
 }
 
 export default async function EditPostPage({ params }: PageProps) {
-  const { id } = await params
+  await connection();
+  const { id } = await params;
 
   const [post, categories, tags, settings] = await Promise.all([
     getPostById(id),
     getPostCategories(),
     getPostTags(),
     getLayoutSettings(),
-  ])
+  ]);
 
   if (!post) {
-    notFound()
+    notFound();
   }
 
   const fallbackContentWidth: ContentWidth = {
     width: getValidLayoutWidth(settings?.contentWidth, LayoutWidth.MD),
     customPx: settings?.contentWidthCustom ?? null,
-  }
+  };
 
   return (
     <PostEditor
@@ -57,6 +66,5 @@ export default async function EditPostPage({ params }: PageProps) {
       mode="edit"
       fallbackContentWidth={fallbackContentWidth}
     />
-  )
+  );
 }
-

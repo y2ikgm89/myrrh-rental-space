@@ -81,80 +81,80 @@ export function MonthView({
           const firstDay = week[0];
           if (!firstDay) return null;
           return (
-          <div
-            key={format(firstDay, 'yyyy-MM-dd')}
-            className="grid flex-1 grid-cols-7 border-b last:border-b-0"
-          >
-            {week.map((day, dayIndex) => {
-              const dayEvents = getEventsForDay(day);
-              const dayId = format(day, "yyyy-MM-dd");
-              const dayExpanded = isExpanded(dayId);
-              const visibleEvents = dayExpanded
-                ? dayEvents
-                : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
-              const hiddenCount = dayEvents.length - MAX_VISIBLE_EVENTS;
-              const isCurrentMonth = isSameMonth(day, currentDate);
+            <div
+              key={format(firstDay, "yyyy-MM-dd")}
+              className="grid flex-1 grid-cols-7 border-b last:border-b-0"
+            >
+              {week.map((day, dayIndex) => {
+                const dayEvents = getEventsForDay(day);
+                const dayId = format(day, "yyyy-MM-dd");
+                const dayExpanded = isExpanded(dayId);
+                const visibleEvents = dayExpanded
+                  ? dayEvents
+                  : dayEvents.slice(0, MAX_VISIBLE_EVENTS);
+                const hiddenCount = dayEvents.length - MAX_VISIBLE_EVENTS;
+                const isCurrentMonth = isSameMonth(day, currentDate);
 
-              return (
-                <div
-                  key={dayId}
-                  className={cn(
-                    "relative flex min-h-[100px] flex-col border-r p-1 last:border-r-0",
-                    !isCurrentMonth && "bg-muted/50",
-                    isToday(day) && "bg-primary/5",
-                  )}
-                >
-                  {/* 日付ラベル */}
-                  <button
-                    type="button"
+                return (
+                  <div
+                    key={dayId}
                     className={cn(
-                      "mb-1 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-accent",
-                      !isCurrentMonth && "text-muted-foreground",
-                      isToday(day) &&
-                        "bg-primary text-primary-foreground hover:bg-primary/90",
-                      getWeekdayColorClass(dayIndex),
+                      "relative flex min-h-[100px] flex-col border-r p-1 last:border-r-0",
+                      !isCurrentMonth && "bg-muted/50",
+                      isToday(day) && "bg-primary/5",
                     )}
-                    onClick={() => handleDayClick(day)}
                   >
-                    {format(day, "d")}
-                  </button>
+                    {/* 日付ラベル */}
+                    <button
+                      type="button"
+                      className={cn(
+                        "mb-1 flex h-6 w-6 items-center justify-center rounded-full text-sm transition-colors hover:bg-accent",
+                        !isCurrentMonth && "text-muted-foreground",
+                        isToday(day) &&
+                          "bg-primary text-primary-foreground hover:bg-primary/90",
+                        getWeekdayColorClass(dayIndex),
+                      )}
+                      onClick={() => handleDayClick(day)}
+                    >
+                      {format(day, "d")}
+                    </button>
 
-                  {/* イベント一覧 */}
-                  <div className="flex-1 overflow-hidden">
-                    {visibleEvents.map((event) => (
-                      <EventBadge
-                        key={event.id}
-                        event={event}
-                        onClick={onEventClick}
-                      />
-                    ))}
+                    {/* イベント一覧 */}
+                    <div className="flex-1 overflow-hidden">
+                      {visibleEvents.map((event) => (
+                        <EventBadge
+                          key={event.id}
+                          event={event}
+                          onClick={onEventClick}
+                        />
+                      ))}
 
-                    {/* 「他N件」ボタン */}
-                    {hiddenCount > 0 && !dayExpanded && (
-                      <button
-                        type="button"
-                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
-                        onClick={() => toggleExpandDay(dayId)}
-                      >
-                        他 {hiddenCount} 件
-                      </button>
-                    )}
+                      {/* 「他N件」ボタン */}
+                      {hiddenCount > 0 && !dayExpanded && (
+                        <button
+                          type="button"
+                          className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
+                          onClick={() => toggleExpandDay(dayId)}
+                        >
+                          他 {hiddenCount} 件
+                        </button>
+                      )}
 
-                    {/* 折りたたみボタン */}
-                    {dayExpanded && hiddenCount > 0 && (
-                      <button
-                        type="button"
-                        className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
-                        onClick={() => toggleExpandDay(dayId)}
-                      >
-                        折りたたむ
-                      </button>
-                    )}
+                      {/* 折りたたみボタン */}
+                      {dayExpanded && hiddenCount > 0 && (
+                        <button
+                          type="button"
+                          className="mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] text-primary hover:bg-accent"
+                          onClick={() => toggleExpandDay(dayId)}
+                        >
+                          折りたたむ
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           );
         })}
       </div>

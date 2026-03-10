@@ -5,7 +5,7 @@
  * StepItemNodeの子として使用
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,16 +13,18 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, ElementNode } from 'lexical'
+} from "lexical";
+import { $create, ElementNode } from "lexical";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepContentElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createStepContentNode()
-  return { node }
+function $convertStepContentElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createStepContentNode();
+  return { node };
 }
 
 // =============================================================================
@@ -31,51 +33,51 @@ function $convertStepContentElement(_element: HTMLElement): null | DOMConversion
 
 export class StepContentNode extends ElementNode {
   override $config() {
-    return this.config('step-content', { extends: ElementNode })
+    return this.config("step-content", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute('data-step-content')) {
+        if (element.hasAttribute("data-step-content")) {
           return {
             conversion: $convertStepContentElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('div')
-    element.setAttribute('data-step-content', 'true')
+    const element = document.createElement("div");
+    element.setAttribute("data-step-content", "true");
 
-    return { element }
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('div')
-    element.setAttribute('data-step-content', 'true')
+    const element = document.createElement("div");
+    element.setAttribute("data-step-content", "true");
 
-    return element
+    return element;
   }
 
   override updateDOM(): boolean {
-    return false
+    return false;
   }
 
   override isShadowRoot(): boolean {
-    return true
+    return true;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -89,7 +91,7 @@ export class StepContentNode extends ElementNode {
  * @returns StepContentNode インスタンス
  */
 export function $createStepContentNode(): StepContentNode {
-  return $create(StepContentNode)
+  return $create(StepContentNode);
 }
 
 /**
@@ -99,7 +101,7 @@ export function $createStepContentNode(): StepContentNode {
  * @returns StepContentNodeの場合true
  */
 export function $isStepContentNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is StepContentNode {
-  return node instanceof StepContentNode
+  return node instanceof StepContentNode;
 }

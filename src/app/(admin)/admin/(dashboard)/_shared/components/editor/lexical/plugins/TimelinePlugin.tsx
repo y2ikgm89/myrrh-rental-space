@@ -6,17 +6,17 @@
  * ダイアログで方向（縦/横）を選択し、TimelineContainerNode と初期アイテムを挿入する
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createTimelineContainerNode,
   $createTimelineItemNode,
   TimelineContainerNode,
   type TimelineDirection,
-} from '../nodes/TimelineNode'
+} from "../nodes/TimelineNode";
 import {
   Dialog,
   DialogContent,
@@ -25,71 +25,77 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TimelinePluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const DIRECTION_OPTIONS: readonly { value: TimelineDirection; label: string }[] = [
-  { value: 'vertical', label: '縦（垂直）' },
-  { value: 'horizontal', label: '横（水平）' },
-]
+const DIRECTION_OPTIONS: readonly {
+  value: TimelineDirection;
+  label: string;
+}[] = [
+  { value: "vertical", label: "縦（垂直）" },
+  { value: "horizontal", label: "横（水平）" },
+];
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function TimelinePlugin({ isOpen, onClose }: TimelinePluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [direction, setDirection] = useState<TimelineDirection>('vertical')
+  const [editor] = useLexicalComposerContext();
+  const [direction, setDirection] = useState<TimelineDirection>("vertical");
 
   // ノードトランスフォーム: 空のコンテナにアイテムを追加
   useEffect(() => {
     return editor.registerNodeTransform(TimelineContainerNode, (node) => {
       if (node.getChildren().length === 0) {
-        const item = $createTimelineItemNode()
-        node.append(item)
+        const item = $createTimelineItemNode();
+        node.append(item);
       }
-    })
-  }, [editor])
+    });
+  }, [editor]);
 
   const handleInsert = () => {
     editor.update(() => {
-      const container = $createTimelineContainerNode(direction)
-      const item1 = $createTimelineItemNode({ year: '2024', label: 'ステップ 1' })
-      const item2 = $createTimelineItemNode({ year: '2025', label: 'ステップ 2' })
-      container.append(item1)
-      container.append(item2)
-      $insertNodeToNearestRoot(container)
-    })
-    setDirection('vertical')
-    onClose()
-  }
+      const container = $createTimelineContainerNode(direction);
+      const item1 = $createTimelineItemNode({
+        year: "2024",
+        label: "ステップ 1",
+      });
+      const item2 = $createTimelineItemNode({
+        year: "2025",
+        label: "ステップ 2",
+      });
+      container.append(item1);
+      container.append(item2);
+      $insertNodeToNearestRoot(container);
+    });
+    setDirection("vertical");
+    onClose();
+  };
 
   const handleClose = () => {
-    setDirection('vertical')
-    onClose()
-  }
+    setDirection("vertical");
+    onClose();
+  };
 
   const handleDirectionChange = (value: string) => {
-    if (value === 'vertical' || value === 'horizontal') {
-      setDirection(value)
+    if (value === "vertical" || value === "horizontal") {
+      setDirection(value);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -134,5 +140,5 @@ export function TimelinePlugin({ isOpen, onClose }: TimelinePluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * FeaturesSection — Multiple layout modes for feature items
@@ -11,58 +11,63 @@
  * ScrollReveal stagger for sequential reveal.
  */
 
-import { useRef, type ReactElement } from 'react'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
-import { getGridColsClass } from '@/public/lib/section-style-maps'
-import { parseFeaturesLayout } from '@/shared/lib/validations/section'
-import type { FeaturesConfig } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import { useRef, type ReactElement } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import {
+  SectionWrapper,
+  getTitleClasses,
+  getTitleStyle,
+  getTextStyle,
+} from "@/public/components/sections/SectionWrapper";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { getGridColsClass } from "@/public/lib/section-style-maps";
+import { parseFeaturesLayout } from "@/shared/lib/validations/section";
+import type { FeaturesConfig } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 function FeatureIcon({
   icon,
-  size = 'default',
+  size = "default",
 }: {
-  readonly icon: string | undefined
-  readonly size?: 'hero' | 'default'
+  readonly icon: string | undefined;
+  readonly size?: "hero" | "default";
 }): ReactElement {
-  const isHero = size === 'hero'
+  const isHero = size === "hero";
 
   return (
     <div
       className={`flex items-center justify-center ${
         isHero
-          ? 'h-16 w-16 rounded-lg bg-accent/50'
-          : 'h-10 w-10 rounded-lg bg-accent/50'
+          ? "h-16 w-16 rounded-lg bg-accent/50"
+          : "h-10 w-10 rounded-lg bg-accent/50"
       }`}
     >
       <svg
-        className={`${isHero ? 'h-7 w-7' : 'h-4 w-4'} text-primary-dark`}
+        className={`${isHero ? "h-7 w-7" : "h-4 w-4"} text-primary-dark`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={1.5}
         aria-hidden="true"
       >
-        {icon === 'clock' && (
+        {icon === "clock" && (
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
           />
         )}
-        {icon === 'shield' && (
+        {icon === "shield" && (
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
           />
         )}
-        {icon === 'sparkles' && (
+        {icon === "sparkles" && (
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -71,26 +76,29 @@ function FeatureIcon({
         )}
       </svg>
     </div>
-  )
+  );
 }
 
 interface FeaturesSectionProps {
-  readonly config: FeaturesConfig
-  readonly design: SectionDesign
+  readonly config: FeaturesConfig;
+  readonly design: SectionDesign;
 }
 
-export function FeaturesSection({ config, design }: FeaturesSectionProps): ReactElement {
-  const gridRef = useRef<HTMLDivElement>(null)
+export function FeaturesSection({
+  config,
+  design,
+}: FeaturesSectionProps): ReactElement {
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const grid = gridRef.current
-      if (!grid) return
+      const grid = gridRef.current;
+      if (!grid) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const items = grid.querySelectorAll('[data-feature]')
-        if (items.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const items = grid.querySelectorAll("[data-feature]");
+        if (items.length === 0) return;
 
         gsap.fromTo(
           items,
@@ -103,32 +111,34 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
             stagger: STAGGER.element + 0.05,
             scrollTrigger: {
               trigger: grid,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: gridRef },
-  )
+  );
 
-  const items = config.items
-  if (items.length === 0) return <></>
+  const items = config.items;
+  if (items.length === 0) return <></>;
 
-  const layout = parseFeaturesLayout(config.layout)
+  const layout = parseFeaturesLayout(config.layout);
 
   // hero-first requires at least 1 item for the hero
-  const heroFeature = items[0]
-  if (layout === 'hero-first' && !heroFeature) return <></>
+  const heroFeature = items[0];
+  if (layout === "hero-first" && !heroFeature) return <></>;
 
-  const restFeatures = items.slice(1)
+  const restFeatures = items.slice(1);
 
   return (
     <SectionWrapper design={design}>
       <div className="mb-12 md:mb-16">
         <ScrollReveal>
-          {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
+          {config.sectionLabel && (
+            <SectionLabel>{config.sectionLabel}</SectionLabel>
+          )}
           <h2
             className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
             style={getTitleStyle(design)}
@@ -139,7 +149,7 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
       </div>
 
       <div ref={gridRef}>
-        {layout === 'hero-first' && heroFeature && (
+        {layout === "hero-first" && heroFeature && (
           <div className="space-y-8 md:space-y-12">
             {/* Hero feature — horizontal layout on md+ */}
             <div
@@ -188,7 +198,7 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
           </div>
         )}
 
-        {layout === 'equal-grid' && (
+        {layout === "equal-grid" && (
           <div className={`grid gap-8 ${getGridColsClass(config.columns)}`}>
             {items.map((feature) => (
               <div
@@ -211,7 +221,7 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
           </div>
         )}
 
-        {layout === 'icon-left' && (
+        {layout === "icon-left" && (
           <div className="flex flex-col gap-6">
             {items.map((feature) => (
               <div
@@ -237,5 +247,5 @@ export function FeaturesSection({ config, design }: FeaturesSectionProps): React
         )}
       </div>
     </SectionWrapper>
-  )
+  );
 }

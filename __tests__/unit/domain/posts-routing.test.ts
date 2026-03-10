@@ -40,10 +40,18 @@ describe("posts routing", () => {
   });
 
   test("不正な日付形式は解決しない", () => {
-    expect(resolvePostDetailRoute(["2026", "13", "spring-campaign"])).toBeNull();
-    expect(resolvePostDetailRoute(["1999", "12", "spring-campaign"])).toBeNull();
-    expect(resolvePostDetailRoute(["2026", "march", "spring-campaign"])).toBeNull();
-    expect(resolvePostDetailRoute(["too", "many", "segments", "here"])).toBeNull();
+    expect(
+      resolvePostDetailRoute(["2026", "13", "spring-campaign"]),
+    ).toBeNull();
+    expect(
+      resolvePostDetailRoute(["1999", "12", "spring-campaign"]),
+    ).toBeNull();
+    expect(
+      resolvePostDetailRoute(["2026", "march", "spring-campaign"]),
+    ).toBeNull();
+    expect(
+      resolvePostDetailRoute(["too", "many", "segments", "here"]),
+    ).toBeNull();
   });
 
   test("canonical path は permalink 設定に従って生成する", () => {

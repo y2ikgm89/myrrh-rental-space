@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * サイドバー設定セクション
@@ -6,9 +6,9 @@
  * サイドバーの有効/無効、ウィジェット設定、表示件数設定
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Button,
   Card,
@@ -18,18 +18,22 @@ import {
   CardTitle,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { Switch } from '@/admin/components/ui/switch'
-import { updateSidebarSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { sidebarWidgetsSchema, type SidebarWidgets } from '@/shared/lib/validations/sidebar'
+} from "@/admin/components/ui";
+import { Switch } from "@/admin/components/ui/switch";
+import { updateSidebarSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import {
+  sidebarWidgetsSchema,
+  type SidebarWidgets,
+} from "@/shared/lib/validations/sidebar";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface SidebarSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 // =============================================================================
@@ -37,8 +41,8 @@ interface SidebarSectionProps {
 // =============================================================================
 
 export function SidebarSection({ settings }: SidebarSectionProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // デフォルト値の設定
   const defaultWidgets: SidebarWidgets = {
@@ -47,20 +51,20 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     popular: true,
     categories: true,
     tags: true,
-  }
+  };
 
   // JSONパースの安全な処理（Zodバリデーション）
   const parseWidgets = (widgetsData: unknown): SidebarWidgets => {
-    const result = sidebarWidgetsSchema.safeParse(widgetsData)
-    return result.success ? result.data : defaultWidgets
-  }
+    const result = sidebarWidgetsSchema.safeParse(widgetsData);
+    return result.success ? result.data : defaultWidgets;
+  };
 
   const [formData, setFormData] = useState(() => ({
     sidebarEnabled: settings.sidebarEnabled ?? true,
     sidebarWidgets: parseWidgets(settings.sidebarWidgets),
     sidebarRecentCount: settings.sidebarRecentCount ?? 5,
     sidebarPopularCount: settings.sidebarPopularCount ?? 5,
-  }))
+  }));
 
   const handleSave = () => {
     startTransition(async () => {
@@ -69,16 +73,16 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         sidebarWidgets: formData.sidebarWidgets,
         sidebarRecentCount: formData.sidebarRecentCount,
         sidebarPopularCount: formData.sidebarPopularCount,
-      })
+      });
 
-      if (!result.success) {
-        toast.error(result.error)
+      if (isMutationError(result)) {
+        toast.error(result.error);
       } else {
-        toast.success('サイドバー設定を保存しました')
-        router.refresh()
+        toast.success("サイドバー設定を保存しました");
+        router.refresh();
       }
-    })
-  }
+    });
+  };
 
   return (
     <Card>
@@ -127,7 +131,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   onCheckedChange={(checked) =>
                     setFormData({
                       ...formData,
-                      sidebarWidgets: { ...formData.sidebarWidgets, search: checked },
+                      sidebarWidgets: {
+                        ...formData.sidebarWidgets,
+                        search: checked,
+                      },
                     })
                   }
                   disabled={isPending}
@@ -148,7 +155,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   onCheckedChange={(checked) =>
                     setFormData({
                       ...formData,
-                      sidebarWidgets: { ...formData.sidebarWidgets, recent: checked },
+                      sidebarWidgets: {
+                        ...formData.sidebarWidgets,
+                        recent: checked,
+                      },
                     })
                   }
                   disabled={isPending}
@@ -169,7 +179,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   onCheckedChange={(checked) =>
                     setFormData({
                       ...formData,
-                      sidebarWidgets: { ...formData.sidebarWidgets, popular: checked },
+                      sidebarWidgets: {
+                        ...formData.sidebarWidgets,
+                        popular: checked,
+                      },
                     })
                   }
                   disabled={isPending}
@@ -179,7 +192,9 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
               {/* カテゴリーウィジェット */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
-                  <Label htmlFor="widgetCategories">カテゴリーウィジェット</Label>
+                  <Label htmlFor="widgetCategories">
+                    カテゴリーウィジェット
+                  </Label>
                   <p className="text-sm text-muted-foreground">
                     カテゴリー一覧を表示します
                   </p>
@@ -190,7 +205,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   onCheckedChange={(checked) =>
                     setFormData({
                       ...formData,
-                      sidebarWidgets: { ...formData.sidebarWidgets, categories: checked },
+                      sidebarWidgets: {
+                        ...formData.sidebarWidgets,
+                        categories: checked,
+                      },
                     })
                   }
                   disabled={isPending}
@@ -211,7 +229,10 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   onCheckedChange={(checked) =>
                     setFormData({
                       ...formData,
-                      sidebarWidgets: { ...formData.sidebarWidgets, tags: checked },
+                      sidebarWidgets: {
+                        ...formData.sidebarWidgets,
+                        tags: checked,
+                      },
                     })
                   }
                   disabled={isPending}
@@ -250,7 +271,9 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
               {/* 人気記事の表示件数 */}
               {formData.sidebarWidgets.popular && (
                 <div className="space-y-2">
-                  <Label htmlFor="sidebarPopularCount">人気記事の表示件数</Label>
+                  <Label htmlFor="sidebarPopularCount">
+                    人気記事の表示件数
+                  </Label>
                   <Input
                     id="sidebarPopularCount"
                     type="number"
@@ -277,7 +300,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         {/* 保存ボタン */}
         <div className="flex items-center gap-4">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : 'サイドバー設定を保存'}
+            {isPending ? "保存中..." : "サイドバー設定を保存"}
           </Button>
         </div>
 
@@ -295,5 +318,5 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         </Card>
       </CardContent>
     </Card>
-  )
+  );
 }

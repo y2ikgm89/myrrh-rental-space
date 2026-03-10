@@ -225,9 +225,7 @@ export async function createOAuthCalendarEvent(
 /**
  * 特定のイベントを取得
  */
-export async function getCalendarEvent(
-  eventId: string,
-): Promise<{
+export async function getCalendarEvent(eventId: string): Promise<{
   success: boolean;
   event?: calendar_v3.Schema$Event;
   error?: string;

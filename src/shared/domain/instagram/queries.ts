@@ -4,10 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { InstagramFeedLayout } from "@/shared/db/enums";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { getValidInstagramFeedLayout } from "@/shared/lib/validations/enums";
-import {
-  getTokenExpiryDays,
-  shouldRefreshToken,
-} from "@/shared/lib/instagram";
+import { getTokenExpiryDays, shouldRefreshToken } from "@/shared/lib/instagram";
 import type {
   InstagramConfig,
   InstagramPostData,

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SanitizedHtml
@@ -9,32 +9,32 @@
  * @security XSS対策済み - DOMPurifyによる厳格なサニタイズを実施
  */
 
-import { sanitize } from 'isomorphic-dompurify'
+import { sanitize } from "isomorphic-dompurify";
 
 // DOMPurify設定
 const DOMPURIFY_CONFIG = {
-  ADD_TAGS: ['iframe'],
+  ADD_TAGS: ["iframe"],
   ADD_ATTR: [
-    'allow',
-    'allowfullscreen',
-    'frameborder',
-    'scrolling',
-    'target',
-    'rel',
-    'loading',
+    "allow",
+    "allowfullscreen",
+    "frameborder",
+    "scrolling",
+    "target",
+    "rel",
+    "loading",
   ],
   ALLOWED_URI_REGEXP:
     /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-}
+};
 
 interface SanitizedHtmlProps {
-  html: string
-  className?: string
+  html: string;
+  className?: string;
 }
 
 export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
   // DOMPurifyでXSS対策済み - 全てのHTML入力をサニタイズ
-  const cleanHtml = sanitize(html, DOMPURIFY_CONFIG)
+  const cleanHtml = sanitize(html, DOMPURIFY_CONFIG);
 
   return (
     <div
@@ -43,5 +43,5 @@ export function SanitizedHtml({ html, className }: SanitizedHtmlProps) {
       // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{ __html: cleanHtml }}
     />
-  )
+  );
 }

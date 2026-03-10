@@ -6,4 +6,4 @@
  * このファイルは import/export を含まないスクリプトコンテキストで
  * ambient module declaration として機能する。
  */
-declare module '*.css' {}
+declare module "*.css" {}

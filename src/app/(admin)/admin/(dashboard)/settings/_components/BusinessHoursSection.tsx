@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { Plus, X, Copy } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { Plus, X, Copy } from "lucide-react";
 import {
   Button,
   Card,
@@ -18,71 +18,79 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateBusinessHoursSettings } from '@/admin/actions/settings'
-import type { SettingsData, BusinessHours, BusinessHoursDay, BusinessTimeSlot } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from './hooks'
+} from "@/admin/components/ui";
+import { updateBusinessHoursSettings } from "@/admin/actions/settings";
+import type {
+  SettingsData,
+  BusinessHours,
+  BusinessHoursDay,
+  BusinessTimeSlot,
+} from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "./hooks";
 
 interface BusinessHoursSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 interface DayOfWeek {
-  key: keyof BusinessHours
-  label: string
+  key: keyof BusinessHours;
+  label: string;
 }
 
 const DAYS_OF_WEEK: readonly DayOfWeek[] = [
-  { key: 'monday', label: '月曜日' },
-  { key: 'tuesday', label: '火曜日' },
-  { key: 'wednesday', label: '水曜日' },
-  { key: 'thursday', label: '木曜日' },
-  { key: 'friday', label: '金曜日' },
-  { key: 'saturday', label: '土曜日' },
-  { key: 'sunday', label: '日曜日' },
-]
+  { key: "monday", label: "月曜日" },
+  { key: "tuesday", label: "火曜日" },
+  { key: "wednesday", label: "水曜日" },
+  { key: "thursday", label: "木曜日" },
+  { key: "friday", label: "金曜日" },
+  { key: "saturday", label: "土曜日" },
+  { key: "sunday", label: "日曜日" },
+];
 
 // テンプレート定義
-const TEMPLATE_KEYS = ['continuous', 'lunch-break', 'custom'] as const
-type TemplateKey = (typeof TEMPLATE_KEYS)[number]
-const TEMPLATE_KEY_SET = new Set<string>(TEMPLATE_KEYS)
+const TEMPLATE_KEYS = ["continuous", "lunch-break", "custom"] as const;
+type TemplateKey = (typeof TEMPLATE_KEYS)[number];
+const TEMPLATE_KEY_SET = new Set<string>(TEMPLATE_KEYS);
 function isTemplateKey(value: string): value is TemplateKey {
-  return TEMPLATE_KEY_SET.has(value)
+  return TEMPLATE_KEY_SET.has(value);
 }
 
 interface Template {
-  label: string
-  description: string
-  slots: BusinessTimeSlot[]
+  label: string;
+  description: string;
+  slots: BusinessTimeSlot[];
 }
 
 const TEMPLATES: Record<TemplateKey, Template> = {
   continuous: {
-    label: '連続営業',
-    description: '9:00〜21:00（休憩なし）',
-    slots: [{ openTime: '09:00', closeTime: '21:00' }],
+    label: "連続営業",
+    description: "9:00〜21:00（休憩なし）",
+    slots: [{ openTime: "09:00", closeTime: "21:00" }],
   },
-  'lunch-break': {
-    label: '昼休憩あり',
-    description: '9:00〜12:00 / 13:00〜18:00',
+  "lunch-break": {
+    label: "昼休憩あり",
+    description: "9:00〜12:00 / 13:00〜18:00",
     slots: [
-      { openTime: '09:00', closeTime: '12:00' },
-      { openTime: '13:00', closeTime: '18:00' },
+      { openTime: "09:00", closeTime: "12:00" },
+      { openTime: "13:00", closeTime: "18:00" },
     ],
   },
   custom: {
-    label: 'カスタム',
-    description: '個別に設定',
+    label: "カスタム",
+    description: "個別に設定",
     slots: [],
   },
-}
+};
 
-const DEFAULT_SLOT: BusinessTimeSlot = { openTime: '09:00', closeTime: '18:00' }
+const DEFAULT_SLOT: BusinessTimeSlot = {
+  openTime: "09:00",
+  closeTime: "18:00",
+};
 
 function createDefaultDay(isOpen: boolean): BusinessHoursDay {
   return isOpen
-    ? { isOpen: true, slots: [{ openTime: '09:00', closeTime: '21:00' }] }
-    : { isOpen: false, slots: [] }
+    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
+    : { isOpen: false, slots: [] };
 }
 
 const DEFAULT_BUSINESS_HOURS: BusinessHours = {
@@ -93,40 +101,40 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
   friday: createDefaultDay(true),
   saturday: createDefaultDay(true),
   sunday: createDefaultDay(false),
-}
+};
 
 // 時刻フォーマット検証
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 // 時間帯の重複チェック
 function hasOverlappingSlots(slots: BusinessTimeSlot[]): boolean {
   for (let i = 0; i < slots.length; i++) {
     for (let j = i + 1; j < slots.length; j++) {
-      const a = slots[i]
-      const b = slots[j]
+      const a = slots[i];
+      const b = slots[j];
       if (a && b && a.openTime < b.closeTime && a.closeTime > b.openTime) {
-        return true
+        return true;
       }
     }
   }
-  return false
+  return false;
 }
 
 // エラー型
 type SlotError = {
-  day: keyof BusinessHours
-  slotIndex: number
-  field: 'openTime' | 'closeTime' | 'overlap'
-  message: string
-}
+  day: keyof BusinessHours;
+  slotIndex: number;
+  field: "openTime" | "closeTime" | "overlap";
+  message: string;
+};
 
 export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
 
-  const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS
-  const initialRegularHolidays = settings.regularHolidays ?? []
-  const initialSpecialHolidays = settings.specialHolidays ?? []
+  const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
+  const initialRegularHolidays = settings.regularHolidays ?? [];
+  const initialSpecialHolidays = settings.specialHolidays ?? [];
 
   /**
    * 定休日設定を営業時間に反映
@@ -141,78 +149,119 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
    * これにより、どちらのフィールドからアクセスしても一貫した状態を保証
    */
   const businessHoursWithHolidays = (() => {
-    const hours = { ...initialBusinessHours }
-    const isBusinessHoursDay = (d: string): d is keyof BusinessHours => d in hours
+    const hours = { ...initialBusinessHours };
+    const isBusinessHoursDay = (d: string): d is keyof BusinessHours =>
+      d in hours;
     for (const day of initialRegularHolidays) {
       if (isBusinessHoursDay(day)) {
         hours[day] = {
           ...hours[day],
           isOpen: false,
-        }
+        };
       }
     }
-    return hours
-  })()
+    return hours;
+  })();
 
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(businessHoursWithHolidays)
-  const [specialHolidays, setSpecialHolidays] = useState<string[]>(initialSpecialHolidays)
-  const [newHolidayDate, setNewHolidayDate] = useState('')
-  const [holidayNotice, setHolidayNotice] = useState(settings.holidayNotice || '')
-  const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>('custom')
-  const [slotErrors, setSlotErrors] = useState<SlotError[]>([])
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(
+    businessHoursWithHolidays,
+  );
+  const [specialHolidays, setSpecialHolidays] = useState<string[]>(
+    initialSpecialHolidays,
+  );
+  const [newHolidayDate, setNewHolidayDate] = useState("");
+  const [holidayNotice, setHolidayNotice] = useState(
+    settings.holidayNotice || "",
+  );
+  const [selectedTemplate, setSelectedTemplate] =
+    useState<TemplateKey>("custom");
+  const [slotErrors, setSlotErrors] = useState<SlotError[]>([]);
 
   // 特定のスロットのエラーを取得
-  const getSlotError = (day: keyof BusinessHours, slotIndex: number, field: 'openTime' | 'closeTime' | 'overlap') => {
-    return slotErrors.find((e) => e.day === day && e.slotIndex === slotIndex && e.field === field)
-  }
+  const getSlotError = (
+    day: keyof BusinessHours,
+    slotIndex: number,
+    field: "openTime" | "closeTime" | "overlap",
+  ) => {
+    return slotErrors.find(
+      (e) => e.day === day && e.slotIndex === slotIndex && e.field === field,
+    );
+  };
 
   // エラー検証
   const validateSlots = (hours: BusinessHours): SlotError[] => {
-    const errors: SlotError[] = []
+    const errors: SlotError[] = [];
     for (const { key } of DAYS_OF_WEEK) {
-      const day = hours[key]
-      if (!day.isOpen) continue
+      const day = hours[key];
+      if (!day.isOpen) continue;
 
       for (let i = 0; i < day.slots.length; i++) {
-        const slot = day.slots[i]
-        if (!slot) continue
+        const slot = day.slots[i];
+        if (!slot) continue;
         // 時刻フォーマットチェック
         if (!TIME_REGEX.test(slot.openTime)) {
-          errors.push({ day: key, slotIndex: i, field: 'openTime', message: '不正な時刻形式' })
+          errors.push({
+            day: key,
+            slotIndex: i,
+            field: "openTime",
+            message: "不正な時刻形式",
+          });
         }
         if (!TIME_REGEX.test(slot.closeTime)) {
-          errors.push({ day: key, slotIndex: i, field: 'closeTime', message: '不正な時刻形式' })
+          errors.push({
+            day: key,
+            slotIndex: i,
+            field: "closeTime",
+            message: "不正な時刻形式",
+          });
         }
         // 終了時刻 > 開始時刻チェック
-        if (slot.openTime && slot.closeTime && slot.closeTime <= slot.openTime) {
-          errors.push({ day: key, slotIndex: i, field: 'closeTime', message: '終了は開始より後' })
+        if (
+          slot.openTime &&
+          slot.closeTime &&
+          slot.closeTime <= slot.openTime
+        ) {
+          errors.push({
+            day: key,
+            slotIndex: i,
+            field: "closeTime",
+            message: "終了は開始より後",
+          });
         }
       }
       // 重複チェック
       if (day.slots.length > 1 && hasOverlappingSlots(day.slots)) {
-        errors.push({ day: key, slotIndex: 0, field: 'overlap', message: '時間帯が重複' })
+        errors.push({
+          day: key,
+          slotIndex: 0,
+          field: "overlap",
+          message: "時間帯が重複",
+        });
       }
     }
-    return errors
-  }
+    return errors;
+  };
 
   // 営業/休業の切り替え
   const handleIsOpenChange = (day: keyof BusinessHours, isOpen: boolean) => {
     setBusinessHours((prev) => {
-      const currentSlots = prev[day].slots
-      const slots = isOpen && currentSlots.length === 0 ? [{ ...DEFAULT_SLOT }] : currentSlots
-      const updated = { ...prev, [day]: { isOpen, slots } }
-      setSlotErrors(validateSlots(updated))
-      return updated
-    })
-  }
+      const currentSlots = prev[day].slots;
+      const slots =
+        isOpen && currentSlots.length === 0
+          ? [{ ...DEFAULT_SLOT }]
+          : currentSlots;
+      const updated = { ...prev, [day]: { isOpen, slots } };
+      setSlotErrors(validateSlots(updated));
+      return updated;
+    });
+  };
 
   // 時間帯の更新（即時検証付き）
   const handleSlotChange = (
     day: keyof BusinessHours,
     slotIndex: number,
     field: keyof BusinessTimeSlot,
-    value: string
+    value: string,
   ) => {
     setBusinessHours((prev) => {
       const updated = {
@@ -220,34 +269,34 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
         [day]: {
           ...prev[day],
           slots: prev[day].slots.map((slot, i) =>
-            i === slotIndex ? { ...slot, [field]: value } : slot
+            i === slotIndex ? { ...slot, [field]: value } : slot,
           ),
         },
-      }
-      setSlotErrors(validateSlots(updated))
-      return updated
-    })
-  }
+      };
+      setSlotErrors(validateSlots(updated));
+      return updated;
+    });
+  };
 
   // 時間帯を追加
   const handleAddSlot = (day: keyof BusinessHours) => {
     setBusinessHours((prev) => {
-      const daySlots = prev[day].slots
-      const lastSlot = daySlots[daySlots.length - 1]
+      const daySlots = prev[day].slots;
+      const lastSlot = daySlots[daySlots.length - 1];
       const newSlot: BusinessTimeSlot = lastSlot
-        ? { openTime: lastSlot.closeTime, closeTime: '21:00' }
-        : { ...DEFAULT_SLOT }
+        ? { openTime: lastSlot.closeTime, closeTime: "21:00" }
+        : { ...DEFAULT_SLOT };
       const updated = {
         ...prev,
         [day]: {
           ...prev[day],
           slots: [...prev[day].slots, newSlot],
         },
-      }
-      setSlotErrors(validateSlots(updated))
-      return updated
-    })
-  }
+      };
+      setSlotErrors(validateSlots(updated));
+      return updated;
+    });
+  };
 
   // 時間帯を削除
   const handleRemoveSlot = (day: keyof BusinessHours, slotIndex: number) => {
@@ -258,99 +307,103 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           ...prev[day],
           slots: prev[day].slots.filter((_, i) => i !== slotIndex),
         },
-      }
-      setSlotErrors(validateSlots(updated))
-      return updated
-    })
-  }
+      };
+      setSlotErrors(validateSlots(updated));
+      return updated;
+    });
+  };
 
   // テンプレートを全曜日に適用
   const applyTemplateToAll = () => {
-    if (selectedTemplate === 'custom') return
-    const template = TEMPLATES[selectedTemplate]
+    if (selectedTemplate === "custom") return;
+    const template = TEMPLATES[selectedTemplate];
     setBusinessHours((prev) => {
-      const updated = { ...prev }
+      const updated = { ...prev };
       for (const { key } of DAYS_OF_WEEK) {
         // 日曜日は休業のままにするオプション
-        if (key === 'sunday') {
+        if (key === "sunday") {
           updated[key] = {
             isOpen: false,
             slots: [],
-          }
+          };
         } else {
           updated[key] = {
             isOpen: true,
             slots: template.slots.map((s) => ({ ...s })),
-          }
+          };
         }
       }
-      return updated
-    })
-  }
+      return updated;
+    });
+  };
 
   // ある曜日の設定を全曜日にコピー
   const copyToAllDays = (sourceDay: keyof BusinessHours) => {
-    const source = businessHours[sourceDay]
+    const source = businessHours[sourceDay];
     setBusinessHours((prev) => {
-      const updated = { ...prev }
+      const updated = { ...prev };
       for (const { key } of DAYS_OF_WEEK) {
         updated[key] = {
           isOpen: source.isOpen,
           slots: source.slots.map((s) => ({ ...s })),
-        }
+        };
       }
-      return updated
-    })
-  }
+      return updated;
+    });
+  };
 
   const handleAddHoliday = () => {
-    if (!newHolidayDate) return
+    if (!newHolidayDate) return;
     if (specialHolidays.includes(newHolidayDate)) {
-      setNewHolidayDate('')
-      return
+      setNewHolidayDate("");
+      return;
     }
-    const updated = [...specialHolidays, newHolidayDate].sort()
-    setSpecialHolidays(updated)
-    setNewHolidayDate('')
-  }
+    const updated = [...specialHolidays, newHolidayDate].sort();
+    setSpecialHolidays(updated);
+    setNewHolidayDate("");
+  };
 
   const handleRemoveHoliday = (dateToRemove: string) => {
-    setSpecialHolidays((prev) => prev.filter((date) => date !== dateToRemove))
-  }
+    setSpecialHolidays((prev) => prev.filter((date) => date !== dateToRemove));
+  };
 
   const handleSave = () => {
     // 保存前に最終バリデーション
-    const errors = validateSlots(businessHours)
-    setSlotErrors(errors)
+    const errors = validateSlots(businessHours);
+    setSlotErrors(errors);
     if (errors.length > 0) {
-      handleResult({ success: false, error: '入力エラーがあります。時間帯を確認してください。' })
-      return
+      handleResult({
+        error: "入力エラーがあります。時間帯を確認してください。",
+      });
+      return;
     }
 
     startTransition(async () => {
-      const regularHolidays = DAYS_OF_WEEK
-        .filter(({ key }) => !businessHours[key].isOpen)
-        .map(({ key }) => key)
+      const regularHolidays = DAYS_OF_WEEK.filter(
+        ({ key }) => !businessHours[key].isOpen,
+      ).map(({ key }) => key);
 
       const result = await updateBusinessHoursSettings({
         businessHours,
         regularHolidays: regularHolidays.length > 0 ? regularHolidays : null,
         specialHolidays: specialHolidays.length > 0 ? specialHolidays : null,
         holidayNotice: holidayNotice || null,
-      })
+      });
 
-      handleResult({ ...result, message: result.success ? '営業時間設定を保存しました' : undefined })
-    })
-  }
+      handleResult(result, "営業時間設定を保存しました");
+    });
+  };
 
   // エラーがあるか
-  const hasErrors = slotErrors.length > 0
+  const hasErrors = slotErrors.length > 0;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>営業日・時間設定</CardTitle>
-        <CardDescription>曜日ごとの営業時間と定休日を設定します</CardDescription>
+        <CardDescription>
+          曜日ごとの営業時間と定休日を設定します
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* 一括設定テンプレート */}
@@ -359,7 +412,9 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           <div className="flex items-center gap-3">
             <Select
               value={selectedTemplate}
-              onValueChange={(v) => { if (isTemplateKey(v)) setSelectedTemplate(v) }}
+              onValueChange={(v) => {
+                if (isTemplateKey(v)) setSelectedTemplate(v);
+              }}
               disabled={isPending}
             >
               <SelectTrigger className="w-48">
@@ -377,12 +432,12 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
               type="button"
               variant="outline"
               onClick={applyTemplateToAll}
-              disabled={isPending || selectedTemplate === 'custom'}
+              disabled={isPending || selectedTemplate === "custom"}
             >
               全曜日に適用
             </Button>
           </div>
-          {selectedTemplate !== 'custom' && (
+          {selectedTemplate !== "custom" && (
             <p className="text-xs text-muted-foreground">
               {TEMPLATES[selectedTemplate].description}（日曜は休業）
             </p>
@@ -394,10 +449,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           <h3 className="text-sm font-medium">曜日別営業時間</h3>
           <div className="space-y-3">
             {DAYS_OF_WEEK.map(({ key, label }) => (
-              <div
-                key={key}
-                className="rounded-lg border p-3"
-              >
+              <div key={key} className="rounded-lg border p-3">
                 <div className="flex items-center gap-4">
                   <div className="w-20">
                     <span className="font-medium">{label}</span>
@@ -405,11 +457,13 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={businessHours[key].isOpen}
-                      onCheckedChange={(checked) => handleIsOpenChange(key, checked)}
+                      onCheckedChange={(checked) =>
+                        handleIsOpenChange(key, checked)
+                      }
                       disabled={isPending}
                     />
                     <span className="text-sm text-muted-foreground">
-                      {businessHours[key].isOpen ? '営業' : '休業'}
+                      {businessHours[key].isOpen ? "営業" : "休業"}
                     </span>
                   </div>
                   {businessHours[key].isOpen && (
@@ -430,12 +484,22 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                 {businessHours[key].isOpen && (
                   <div className="mt-3 space-y-2 pl-24">
                     {/* 重複エラー表示 */}
-                    {getSlotError(key, 0, 'overlap') && (
-                      <p className="text-sm text-destructive">時間帯が重複しています</p>
+                    {getSlotError(key, 0, "overlap") && (
+                      <p className="text-sm text-destructive">
+                        時間帯が重複しています
+                      </p>
                     )}
                     {businessHours[key].slots.map((slot, slotIndex) => {
-                      const openError = getSlotError(key, slotIndex, 'openTime')
-                      const closeError = getSlotError(key, slotIndex, 'closeTime')
+                      const openError = getSlotError(
+                        key,
+                        slotIndex,
+                        "openTime",
+                      );
+                      const closeError = getSlotError(
+                        key,
+                        slotIndex,
+                        "closeTime",
+                      );
                       return (
                         // eslint-disable-next-line @eslint-react/no-array-index-key
                         <div key={slotIndex} className="flex flex-col gap-1">
@@ -444,9 +508,14 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                               type="time"
                               value={slot.openTime}
                               onChange={(e) =>
-                                handleSlotChange(key, slotIndex, 'openTime', e.target.value)
+                                handleSlotChange(
+                                  key,
+                                  slotIndex,
+                                  "openTime",
+                                  e.target.value,
+                                )
                               }
-                              className={`w-32 ${openError ? 'border-destructive' : ''}`}
+                              className={`w-32 ${openError ? "border-destructive" : ""}`}
                               disabled={isPending}
                             />
                             <span>〜</span>
@@ -454,9 +523,14 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                               type="time"
                               value={slot.closeTime}
                               onChange={(e) =>
-                                handleSlotChange(key, slotIndex, 'closeTime', e.target.value)
+                                handleSlotChange(
+                                  key,
+                                  slotIndex,
+                                  "closeTime",
+                                  e.target.value,
+                                )
                               }
-                              className={`w-32 ${closeError ? 'border-destructive' : ''}`}
+                              className={`w-32 ${closeError ? "border-destructive" : ""}`}
                               disabled={isPending}
                             />
                             {businessHours[key].slots.length > 1 && (
@@ -473,10 +547,12 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                             )}
                           </div>
                           {closeError && (
-                            <p className="text-xs text-destructive pl-1">{closeError.message}</p>
+                            <p className="text-xs text-destructive pl-1">
+                              {closeError.message}
+                            </p>
                           )}
                         </div>
-                      )
+                      );
                     })}
                     <Button
                       type="button"
@@ -558,9 +634,9 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending || hasErrors}>
-          {isPending ? '保存中...' : '営業時間設定を保存'}
+          {isPending ? "保存中..." : "営業時間設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -1,22 +1,24 @@
-import type { Metadata } from 'next'
-import { getFaqCategories } from '@/admin/queries/faq'
-import { FaqItemInlineEditor } from '../../_components/FaqItemInlineEditor'
+import { connection } from "next/server";
+import type { Metadata } from "next";
+import { getFaqCategories } from "@/admin/queries/faq";
+import { FaqItemInlineEditor } from "../../_components/FaqItemInlineEditor";
 
 export const metadata: Metadata = {
-  title: '質問作成 | FAQ管理 | Myrrh Rental Space',
-}
+  title: "質問作成 | FAQ管理 | Myrrh Rental Space",
+};
 
 type SearchParams = Promise<{
-  categoryId?: string
-}>
+  categoryId?: string;
+}>;
 
 type PageProps = {
-  searchParams: SearchParams
-}
+  searchParams: SearchParams;
+};
 
 export default async function NewFaqItemPage({ searchParams }: PageProps) {
-  const params = await searchParams
-  const { categories } = await getFaqCategories()
+  await connection();
+  const params = await searchParams;
+  const { categories } = await getFaqCategories();
 
   return (
     <FaqItemInlineEditor
@@ -24,6 +26,5 @@ export default async function NewFaqItemPage({ searchParams }: PageProps) {
       mode="create"
       defaultCategoryId={params.categoryId}
     />
-  )
+  );
 }
-

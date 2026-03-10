@@ -8,34 +8,46 @@ import {
   TRANSFORMERS,
   type ElementTransformer,
   type TextMatchTransformer,
-} from '@lexical/markdown'
+} from "@lexical/markdown";
 import {
   $createHorizontalRuleNode,
   $isHorizontalRuleNode,
-} from '@lexical/react/LexicalHorizontalRuleNode'
+} from "@lexical/react/LexicalHorizontalRuleNode";
 
-import { $getState } from 'lexical'
+import { $getState } from "lexical";
 
-import { $createImageNode, $isImageNode, altState, ImageNode, srcState } from './nodes/ImageNode'
-import { $createYouTubeNode, $isYouTubeNode, videoIdState, YouTubeNode } from './nodes/YouTubeNode'
+import {
+  $createImageNode,
+  $isImageNode,
+  altState,
+  ImageNode,
+  srcState,
+} from "./nodes/ImageNode";
+import {
+  $createYouTubeNode,
+  $isYouTubeNode,
+  videoIdState,
+  YouTubeNode,
+} from "./nodes/YouTubeNode";
 
 // =============================================================================
 // Validation Helpers
 // =============================================================================
 
 // YouTube Video ID: 11文字、英数字と_-のみ
-const YOUTUBE_ID_REGEX = /^[A-Za-z0-9_-]{11}$/
+const YOUTUBE_ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
 
 function isValidYouTubeId(id: string): boolean {
-  return YOUTUBE_ID_REGEX.test(id)
+  return YOUTUBE_ID_REGEX.test(id);
 }
 
 // 危険なURLスキームをブロック
 function isValidImageUrl(url: string): boolean {
-  if (!url || url.trim() === '') return false
-  const lower = url.toLowerCase().trim()
-  if (lower.startsWith('javascript:') || lower.startsWith('data:')) return false
-  return true
+  if (!url || url.trim() === "") return false;
+  const lower = url.toLowerCase().trim();
+  if (lower.startsWith("javascript:") || lower.startsWith("data:"))
+    return false;
+  return true;
 }
 
 // =============================================================================
@@ -45,49 +57,55 @@ function isValidImageUrl(url: string): boolean {
 // ![alt](url) -> ImageNode
 const IMAGE: TextMatchTransformer = {
   dependencies: [ImageNode],
-  export: (node) => ($isImageNode(node) ? `![${$getState(node, altState) || ''}](${$getState(node, srcState)})` : null),
+  export: (node) =>
+    $isImageNode(node)
+      ? `![${$getState(node, altState) || ""}](${$getState(node, srcState)})`
+      : null,
   importRegExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))/,
   regExp: /!(?:\[([^\[\]]*)\])(?:\(([^()]+)\))$/,
   replace: (textNode, match) => {
-    const alt = match[1]
-    const src = match[2]
-    if (!src || !isValidImageUrl(src)) return
-    textNode.replace($createImageNode({ src: src.trim(), alt: alt ?? '' }))
+    const alt = match[1];
+    const src = match[2];
+    if (!src || !isValidImageUrl(src)) return;
+    textNode.replace($createImageNode({ src: src.trim(), alt: alt ?? "" }));
   },
-  trigger: ')',
-  type: 'text-match',
-}
+  trigger: ")",
+  type: "text-match",
+};
 
 // @[youtube](videoId) -> YouTubeNode
 const YOUTUBE: TextMatchTransformer = {
   dependencies: [YouTubeNode],
-  export: (node) => ($isYouTubeNode(node) ? `@[youtube](${$getState(node, videoIdState)})` : null),
+  export: (node) =>
+    $isYouTubeNode(node)
+      ? `@[youtube](${$getState(node, videoIdState)})`
+      : null,
   importRegExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)/,
   regExp: /@\[youtube\]\(([A-Za-z0-9_-]{11})\)$/,
   replace: (textNode, match) => {
-    const videoId = match[1]
-    if (!videoId || !isValidYouTubeId(videoId)) return
-    textNode.replace($createYouTubeNode({ videoId }))
+    const videoId = match[1];
+    if (!videoId || !isValidYouTubeId(videoId)) return;
+    textNode.replace($createYouTubeNode({ videoId }));
   },
-  trigger: ')',
-  type: 'text-match',
-}
+  trigger: ")",
+  type: "text-match",
+};
 
 // --- or *** or ___ -> HorizontalRuleNode
 const HR: ElementTransformer = {
   dependencies: [],
-  export: (node) => ($isHorizontalRuleNode(node) ? '---' : null),
+  export: (node) => ($isHorizontalRuleNode(node) ? "---" : null),
   regExp: /^(?:---|\*\*\*|___)$/,
   replace: (parentNode, _children, _match, isImport) => {
-    const hrNode = $createHorizontalRuleNode()
+    const hrNode = $createHorizontalRuleNode();
     if (isImport || parentNode.getNextSibling() != null) {
-      parentNode.replace(hrNode)
+      parentNode.replace(hrNode);
     } else {
-      parentNode.insertBefore(hrNode)
+      parentNode.insertBefore(hrNode);
     }
-    hrNode.selectNext()
+    hrNode.selectNext();
   },
-  type: 'element',
-}
+  type: "element",
+};
 
-export const EDITOR_TRANSFORMERS = [IMAGE, YOUTUBE, HR, ...TRANSFORMERS]
+export const EDITOR_TRANSFORMERS = [IMAGE, YOUTUBE, HR, ...TRANSFORMERS];

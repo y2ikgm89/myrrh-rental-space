@@ -10,9 +10,9 @@ import type {
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
 
-function serializeFaqItem<T extends { publishedAt: Date | null; createdAt: Date; updatedAt: Date }>(
-  item: T,
-) {
+function serializeFaqItem<
+  T extends { publishedAt: Date | null; createdAt: Date; updatedAt: Date },
+>(item: T) {
   return {
     ...item,
     publishedAt: item.publishedAt?.toISOString() ?? null,

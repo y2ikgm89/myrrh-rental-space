@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { ReservationStatus } from '@/shared/db/enums'
+import { z } from "zod";
+import { ReservationStatus } from "@/shared/db/enums";
 
 /**
  * 管理者用予約作成バリデーションスキーマ
@@ -15,12 +15,14 @@ import { ReservationStatus } from '@/shared/db/enums'
 // 日付文字列のバリデーション（YYYY-MM-DD形式）
 const dateStringSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: '日付の形式が正しくありません' })
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "日付の形式が正しくありません" });
 
 // 時間文字列のバリデーション（HH:MM形式）
 const timeStringSchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: '時間の形式が正しくありません' })
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, {
+    error: "時間の形式が正しくありません",
+  });
 
 /**
  * 新規顧客情報スキーマ
@@ -28,22 +30,22 @@ const timeStringSchema = z
 export const newCustomerSchema = z.object({
   lastName: z
     .string()
-    .min(1, { error: '姓を入力してください' })
-    .max(50, { error: '姓は50文字以内で入力してください' }),
+    .min(1, { error: "姓を入力してください" })
+    .max(50, { error: "姓は50文字以内で入力してください" }),
   firstName: z
     .string()
-    .min(1, { error: '名を入力してください' })
-    .max(50, { error: '名は50文字以内で入力してください' }),
+    .min(1, { error: "名を入力してください" })
+    .max(50, { error: "名は50文字以内で入力してください" }),
   email: z
     .string()
-    .min(1, { error: 'メールアドレスを入力してください' })
-    .email({ error: '有効なメールアドレスを入力してください' }),
+    .min(1, { error: "メールアドレスを入力してください" })
+    .email({ error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z
     .string()
-    .max(20, { error: '電話番号は20文字以内で入力してください' })
+    .max(20, { error: "電話番号は20文字以内で入力してください" })
     .optional()
-    .or(z.literal('')),
-})
+    .or(z.literal("")),
+});
 
 /**
  * 管理者用予約作成スキーマ
@@ -51,7 +53,7 @@ export const newCustomerSchema = z.object({
 export const adminReservationSchema = z
   .object({
     // スペース
-    spaceId: z.string().uuid({ error: 'スペースを選択してください' }),
+    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
 
     // 日時
     date: dateStringSchema,
@@ -63,67 +65,77 @@ export const adminReservationSchema = z
     customerData: newCustomerSchema.optional(),
 
     // 料金オプション
-    totalPrice: z.number().nonnegative({ error: '料金は0以上で入力してください' }).optional(),
+    totalPrice: z
+      .number()
+      .nonnegative({ error: "料金は0以上で入力してください" })
+      .optional(),
 
     // 割引オプション
-    couponCode: z.string().max(20).optional().or(z.literal('')),
-    manualDiscountAmount: z.number().nonnegative({ error: '割引額は0以上で入力してください' }).optional(),
-    manualDiscountReason: z.string().max(200, { error: '割引理由は200文字以内で入力してください' }).optional().or(z.literal('')),
+    couponCode: z.string().max(20).optional().or(z.literal("")),
+    manualDiscountAmount: z
+      .number()
+      .nonnegative({ error: "割引額は0以上で入力してください" })
+      .optional(),
+    manualDiscountReason: z
+      .string()
+      .max(200, { error: "割引理由は200文字以内で入力してください" })
+      .optional()
+      .or(z.literal("")),
 
     // その他オプション
-    status: z.enum(ReservationStatus).default('CONFIRMED'),
-    notes: z.string().max(1000, { error: 'メモは1000文字以内で入力してください' }).optional(),
+    status: z.enum(ReservationStatus).default("CONFIRMED"),
+    notes: z
+      .string()
+      .max(1000, { error: "メモは1000文字以内で入力してください" })
+      .optional(),
     sendEmail: z.boolean().default(true),
   })
+  .refine((data) => data.customerId || data.customerData, {
+    error: "顧客を選択するか、新規顧客情報を入力してください",
+    path: ["customerId"],
+  })
   .refine(
-    (data) => data.customerId || data.customerData,
+    (data) => {
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      return end > start;
+    },
     {
-      error: '顧客を選択するか、新規顧客情報を入力してください',
-      path: ['customerId'],
-    }
+      error: "終了時間は開始時間より後に設定してください",
+      path: ["endTime"],
+    },
   )
   .refine(
     (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      return end > start
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return diffHours >= 1;
     },
     {
-      error: '終了時間は開始時間より後に設定してください',
-      path: ['endTime'],
-    }
-  )
-  .refine(
-    (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-      return diffHours >= 1
+      error: "最低1時間以上の予約が必要です",
+      path: ["endTime"],
     },
-    {
-      error: '最低1時間以上の予約が必要です',
-      path: ['endTime'],
-    }
-  )
+  );
 
-export type AdminReservationInput = z.input<typeof adminReservationSchema>
-export type AdminReservationData = z.output<typeof adminReservationSchema>
-export type NewCustomerInput = z.input<typeof newCustomerSchema>
+export type AdminReservationInput = z.input<typeof adminReservationSchema>;
+export type AdminReservationData = z.output<typeof adminReservationSchema>;
+export type NewCustomerInput = z.input<typeof newCustomerSchema>;
 
 /**
  * 管理者用予約作成の結果型
  */
 export type AdminReservationResult =
   | {
-      success: true
-      message: string
-      reservationId: string
+      success: true;
+      message: string;
+      reservationId: string;
     }
   | {
-      success: false
-      error: string
-      fieldErrors?: Record<string, string[]>
-    }
+      success: false;
+      error: string;
+      fieldErrors?: Record<string, string[]>;
+    };
 
 // =============================================================================
 // 予約編集スキーマ（既存予約の更新用）
@@ -140,47 +152,47 @@ export type AdminReservationResult =
  */
 export const updateReservationSchema = z
   .object({
-    spaceId: z.string().uuid({ error: 'スペースを選択してください' }),
+    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
     endTime: timeStringSchema,
-    customerId: z.string().uuid({ error: '顧客を選択してください' }),
+    customerId: z.string().uuid({ error: "顧客を選択してください" }),
     totalPrice: z
       .number()
-      .nonnegative({ error: '料金は0以上で入力してください' })
+      .nonnegative({ error: "料金は0以上で入力してください" })
       .optional(),
-    couponCode: z.string().max(20).optional().or(z.literal('')),
-    status: z.enum(ReservationStatus).default('CONFIRMED'),
+    couponCode: z.string().max(20).optional().or(z.literal("")),
+    status: z.enum(ReservationStatus).default("CONFIRMED"),
     notes: z
       .string()
-      .max(1000, { error: 'メモは1000文字以内で入力してください' })
+      .max(1000, { error: "メモは1000文字以内で入力してください" })
       .optional()
-      .or(z.literal('')),
+      .or(z.literal("")),
     sendNotificationEmail: z.boolean().default(false),
   })
   .refine(
     (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      return end > start
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      return end > start;
     },
     {
-      error: '終了時間は開始時間より後に設定してください',
-      path: ['endTime'],
-    }
+      error: "終了時間は開始時間より後に設定してください",
+      path: ["endTime"],
+    },
   )
   .refine(
     (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-      return diffHours >= 1
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return diffHours >= 1;
     },
     {
-      error: '最低1時間以上の予約が必要です',
-      path: ['endTime'],
-    }
-  )
+      error: "最低1時間以上の予約が必要です",
+      path: ["endTime"],
+    },
+  );
 
-export type UpdateReservationInput = z.input<typeof updateReservationSchema>
-export type UpdateReservationData = z.output<typeof updateReservationSchema>
+export type UpdateReservationInput = z.input<typeof updateReservationSchema>;
+export type UpdateReservationData = z.output<typeof updateReservationSchema>;

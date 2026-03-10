@@ -4,17 +4,22 @@
  * Promiseの火消し・エラーハンドリングを統一
  */
 
-import { logError, normalizeError, ErrorCategory, ErrorSeverity } from './errors/server'
+import {
+  logError,
+  normalizeError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "./errors/server";
 
 interface FireAndForgetOptions {
   /** 操作名（ログ用） */
-  operation: string
+  operation: string;
   /** エラーカテゴリ */
-  category?: ErrorCategory
+  category?: ErrorCategory;
   /** エラー重要度 */
-  severity?: ErrorSeverity
+  severity?: ErrorSeverity;
   /** 追加コンテキスト */
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>;
 }
 
 /**
@@ -32,7 +37,7 @@ interface FireAndForgetOptions {
  */
 export function fireAndForget<T>(
   promise: Promise<T>,
-  options: FireAndForgetOptions
+  options: FireAndForgetOptions,
 ): void {
   promise.catch((err) => {
     logError(normalizeError(err), {
@@ -42,8 +47,8 @@ export function fireAndForget<T>(
         operation: options.operation,
         ...options.context,
       },
-    })
-  })
+    });
+  });
 }
 
 /**
@@ -54,12 +59,14 @@ export function fireAndForget<T>(
  */
 export async function settleAllWithLogging<T>(
   promises: Promise<T>[],
-  options: Omit<FireAndForgetOptions, 'operation'> & { operationPrefix: string }
+  options: Omit<FireAndForgetOptions, "operation"> & {
+    operationPrefix: string;
+  },
 ): Promise<PromiseSettledResult<T>[]> {
-  const results = await Promise.allSettled(promises)
+  const results = await Promise.allSettled(promises);
 
   results.forEach((result, index) => {
-    if (result.status === 'rejected') {
+    if (result.status === "rejected") {
       logError(normalizeError(result.reason), {
         category: options.category ?? ErrorCategory.UNKNOWN,
         severity: options.severity ?? ErrorSeverity.LOW,
@@ -67,11 +74,11 @@ export async function settleAllWithLogging<T>(
           operation: `${options.operationPrefix}[${index}]`,
           ...options.context,
         },
-      })
+      });
     }
-  })
+  });
 
-  return results
+  return results;
 }
 
 /**
@@ -80,13 +87,13 @@ export async function settleAllWithLogging<T>(
 export async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  timeoutMessage = 'Operation timed out'
+  timeoutMessage = "Operation timed out",
 ): Promise<T> {
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs)
-  })
+    setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
 
-  return Promise.race([promise, timeoutPromise])
+  return Promise.race([promise, timeoutPromise]);
 }
 
 /**
@@ -95,36 +102,36 @@ export async function withTimeout<T>(
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: {
-    maxRetries?: number
-    delayMs?: number
-    backoffMultiplier?: number
-    shouldRetry?: (error: unknown) => boolean
-  } = {}
+    maxRetries?: number;
+    delayMs?: number;
+    backoffMultiplier?: number;
+    shouldRetry?: (error: unknown) => boolean;
+  } = {},
 ): Promise<T> {
   const {
     maxRetries = 3,
     delayMs = 1000,
     backoffMultiplier = 2,
     shouldRetry = () => true,
-  } = options
+  } = options;
 
-  let lastError: unknown
-  let currentDelay = delayMs
+  let lastError: unknown;
+  let currentDelay = delayMs;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn()
+      return await fn();
     } catch (error) {
-      lastError = error
+      lastError = error;
 
       if (attempt === maxRetries || !shouldRetry(error)) {
-        throw error
+        throw error;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, currentDelay))
-      currentDelay *= backoffMultiplier
+      await new Promise((resolve) => setTimeout(resolve, currentDelay));
+      currentDelay *= backoffMultiplier;
     }
   }
 
-  throw lastError
+  throw lastError;
 }

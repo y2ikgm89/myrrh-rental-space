@@ -4,26 +4,26 @@
  * 管理画面・公開ページ両方で使用される型
  */
 
-import type { ReservationStatus } from '@/shared/lib/validations/enums'
+import type { ReservationStatus } from "@/shared/lib/validations/enums";
 
 /**
  * Prismaトランザクションクライアント型
- * 
+ *
  * Prisma拡張クライアントとの互換性を確保するため、
  * reservationモデルのfindFirstメソッドのみを要求する型定義
  */
 export interface PrismaTransactionClient {
   reservation: {
     findFirst: (args: {
-      where: Record<string, unknown>
-      select?: Record<string, boolean>
+      where: Record<string, unknown>;
+      select?: Record<string, boolean>;
     }) => Promise<{
-      id: string
-      startTime: Date
-      endTime: Date
-      status: ReservationStatus
-    } | null>
-  }
+      id: string;
+      startTime: Date;
+      endTime: Date;
+      status: ReservationStatus;
+    } | null>;
+  };
 }
 
 /**
@@ -31,43 +31,43 @@ export interface PrismaTransactionClient {
  */
 export interface TimeSlot {
   /** 時間（HH:MM形式） */
-  time: string
+  time: string;
   /** 利用可能かどうか */
-  available: boolean
+  available: boolean;
 }
 
 /**
  * カレンダー日付の型定義
  */
 export interface CalendarDate {
-  date: Date
-  isCurrentMonth: boolean
-  isToday: boolean
-  isSelected: boolean
-  isPast: boolean
-  hasAvailability: boolean
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isSelected: boolean;
+  isPast: boolean;
+  hasAvailability: boolean;
 }
 
 /**
  * 重複チェックのパラメータ
  */
 export interface OverlapCheckParams {
-  spaceId: string
-  startTime: Date
-  endTime: Date
+  spaceId: string;
+  startTime: Date;
+  endTime: Date;
   /** 更新時は自分自身を除外 */
-  excludeReservationId?: string
+  excludeReservationId?: string;
 }
 
 /**
  * 重複チェックの結果
  */
 export interface OverlapCheckResult {
-  hasOverlap: boolean
+  hasOverlap: boolean;
   conflictingReservation?: {
-    id: string
-    startTime: Date
-    endTime: Date
-    status: ReservationStatus
-  }
+    id: string;
+    startTime: Date;
+    endTime: Date;
+    status: ReservationStatus;
+  };
 }

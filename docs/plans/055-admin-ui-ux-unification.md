@@ -22,6 +22,7 @@
 - ReservationTable.tsx
 
 **変更点**:
+
 - インラインの空状態表示を `<EmptyState />` コンポーネントに置換
 - `description` プロパティを追加（追加説明文に対応）
 - 相対インポートを `@/admin/components/EmptyState` エイリアスに統一
@@ -45,10 +46,12 @@
 - audit-logs/page.tsx
 
 **パターン**:
+
 - フィルター: `<Suspense fallback={<LoadingState variant="inline" />}>`
 - リスト: `<Suspense fallback={<LoadingState />}>`
 
 **型修正**:
+
 - 未使用の `'default'` variant を削除（`'table' | 'inline'` のみに）
 
 ### 3. 日付・金額フォーマット統一
@@ -62,6 +65,7 @@
 - CustomerDetail.tsx → `formatDateShort`, `formatDateTimeShort`, `formatPrice`
 
 **使用関数** (`@/shared/lib/utils`):
+
 - `formatDateShort`: `2024/01/15` 形式
 - `formatDateTimeShort`: `2024/01/15 14:30` 形式
 - `formatDate(date, true)`: `2024年1月15日 14:30` 形式（詳細ページ用）
@@ -69,6 +73,7 @@
 - `formatPrice`: null/undefined 対応の金額フォーマット
 
 **追加対象**（詳細ページ）:
+
 - staff/[id]/page.tsx → `formatDate(date, true)`
 - InquiryDetail.tsx → `formatDate(date, true)`
 
@@ -81,6 +86,7 @@
 - SetupForm.tsx
 
 **変更点**:
+
 - `bg-red-50` → `bg-destructive/10`
 - `border-red-200` → `border-destructive/50`
 - `text-red-600` → `text-destructive`
@@ -97,6 +103,7 @@
 - TurnstileSection.tsx
 
 **変更点**:
+
 - 各セクションの重複定義を削除
 - `settings/_components/shared/StatusBanner.tsx` を使用
 - エラー状態で `bg-destructive/10` を使用

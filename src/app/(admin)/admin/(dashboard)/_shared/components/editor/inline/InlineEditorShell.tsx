@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * InlineEditorShell
@@ -10,27 +10,31 @@
  * - レイアウト（ヘッダー + エディタ + サイドパネル）
  */
 
-import type { FormEvent, ReactNode } from 'react'
-import { useFullscreenMode, useKeyboardShortcuts, useBeforeUnload } from './hooks'
-import { SIDE_PANEL_WIDTH } from './SidePanelShell'
-import { useMediaQuery } from '@/shared/hooks'
+import type { FormEvent, ReactNode } from "react";
+import {
+  useFullscreenMode,
+  useKeyboardShortcuts,
+  useBeforeUnload,
+} from "./hooks";
+import { SIDE_PANEL_WIDTH } from "./SidePanelShell";
+import { useMediaQuery } from "@/shared/hooks";
 
 type InlineEditorShellProps = {
   /** フォーム送信ハンドラ */
-  onSubmit?: (e: FormEvent<HTMLFormElement>) => void
+  onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
   /** Ctrl+S で呼ばれる保存ハンドラ */
-  onSave?: () => void
+  onSave?: () => void;
   /** 未保存の変更があるか */
-  isDirty?: boolean
+  isDirty?: boolean;
   /** ヘッダー部分 */
-  header: ReactNode
+  header: ReactNode;
   /** メインコンテンツ（LexicalEditor等） */
-  children: ReactNode
+  children: ReactNode;
   /** サイドパネル（設定/コメント） */
-  panel?: ReactNode
+  panel?: ReactNode;
   /** パネルが開いているか */
-  isPanelOpen?: boolean
-}
+  isPanelOpen?: boolean;
+};
 
 export function InlineEditorShell({
   onSubmit,
@@ -42,27 +46,25 @@ export function InlineEditorShell({
   isPanelOpen = false,
 }: InlineEditorShellProps) {
   // フルスクリーンモード（サイドバー・ヘッダー非表示）
-  useFullscreenMode()
+  useFullscreenMode();
 
   // キーボードショートカット
-  useKeyboardShortcuts({ onSave })
+  useKeyboardShortcuts({ onSave });
 
   // 離脱警告
-  useBeforeUnload({ isDirty })
+  useBeforeUnload({ isDirty });
 
   // デスクトップかどうか（lg: 1024px以上）
-  const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   // デスクトップでパネルが開いている場合のみエディタ幅を狭くする
-  const editorWidth = isDesktop && isPanelOpen
-    ? `calc(100% - ${SIDE_PANEL_WIDTH.default}px)`
-    : '100%'
+  const editorWidth =
+    isDesktop && isPanelOpen
+      ? `calc(100% - ${SIDE_PANEL_WIDTH.default}px)`
+      : "100%";
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="h-screen flex flex-col pt-14"
-    >
+    <form onSubmit={onSubmit} className="h-screen flex flex-col pt-14">
       {/* ヘッダー（固定） */}
       {header}
 
@@ -80,5 +82,5 @@ export function InlineEditorShell({
         {panel}
       </div>
     </form>
-  )
+  );
 }

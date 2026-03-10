@@ -16,7 +16,10 @@ async function ensureCustomerExists(id: string): Promise<void> {
   }
 }
 
-async function ensureEmailAvailable(email: string, currentId?: string): Promise<void> {
+async function ensureEmailAvailable(
+  email: string,
+  currentId?: string,
+): Promise<void> {
   const existing = currentId
     ? await prisma.customer.findFirst({
         where: {

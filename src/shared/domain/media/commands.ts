@@ -25,7 +25,10 @@ export async function uploadMediaCommand(input: {
     });
 
     if (!result.success || !result.url || !result.path) {
-      throw new DomainError(result.error || "アップロードに失敗しました", "UNEXPECTED");
+      throw new DomainError(
+        result.error || "アップロードに失敗しました",
+        "UNEXPECTED",
+      );
     }
 
     uploadedPath = result.path;
@@ -88,7 +91,10 @@ export async function updateMediaCommand(input: {
   }
 
   if (input.restrictToOwnUploads && existing.uploadedBy !== input.userId) {
-    throw new DomainError("このメディアを編集する権限がありません", "UNAUTHORIZED");
+    throw new DomainError(
+      "このメディアを編集する権限がありません",
+      "UNAUTHORIZED",
+    );
   }
 
   await prisma.media.update({
@@ -120,7 +126,9 @@ export async function deleteMediaCommand(id: string): Promise<void> {
   });
 }
 
-export async function bulkDeleteMediaCommand(ids: string[]): Promise<{ deleted: number }> {
+export async function bulkDeleteMediaCommand(
+  ids: string[],
+): Promise<{ deleted: number }> {
   if (ids.length === 0) {
     return { deleted: 0 };
   }

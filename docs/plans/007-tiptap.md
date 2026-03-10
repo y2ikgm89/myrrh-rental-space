@@ -48,14 +48,14 @@ dompurify              # HTMLサニタイズ
 
 ### 2.2 エクステンション構成
 
-| エクステンション | 機能 | 優先度 |
-|---------------|------|-------|
-| StarterKit | 見出し/太字/斜体/リスト/引用/コードブロック | 必須 |
-| Image | 画像挿入（URL指定） | 必須 |
-| Link | リンク挿入 | 必須 |
-| Placeholder | プレースホルダーテキスト | 必須 |
-| CodeBlockLowlight | シンタックスハイライト | 推奨 |
-| Typography | スマート引用符 | オプション |
+| エクステンション  | 機能                                        | 優先度     |
+| ----------------- | ------------------------------------------- | ---------- |
+| StarterKit        | 見出し/太字/斜体/リスト/引用/コードブロック | 必須       |
+| Image             | 画像挿入（URL指定）                         | 必須       |
+| Link              | リンク挿入                                  | 必須       |
+| Placeholder       | プレースホルダーテキスト                    | 必須       |
+| CodeBlockLowlight | シンタックスハイライト                      | 推奨       |
+| Typography        | スマート引用符                              | オプション |
 
 ---
 
@@ -81,36 +81,36 @@ src/components/admin/
 
 ```tsx
 interface RichTextEditorProps {
-  content: string              // 初期コンテンツ（HTML）
-  onChange: (html: string) => void
-  placeholder?: string
-  disabled?: boolean
-  className?: string
+  content: string; // 初期コンテンツ（HTML）
+  onChange: (html: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 ```
 
 #### ツールバー機能
 
-| グループ | 機能 |
-|---------|------|
+| グループ | 機能                              |
+| -------- | --------------------------------- |
 | テキスト | 太字 / 斜体 / 取り消し線 / コード |
-| 見出し | H1 / H2 / H3 |
-| リスト | 箇条書き / 番号付き |
-| 挿入 | リンク / 画像 / 水平線 |
-| ブロック | 引用 / コードブロック |
-| その他 | 元に戻す / やり直し |
+| 見出し   | H1 / H2 / H3                      |
+| リスト   | 箇条書き / 番号付き               |
+| 挿入     | リンク / 画像 / 水平線            |
+| ブロック | 引用 / コードブロック             |
+| その他   | 元に戻す / やり直し               |
 
 ### 3.3 実装ステップ
 
-| # | タスク | 詳細 |
-|---|-------|------|
-| 1 | パッケージインストール | Tiptap関連パッケージ + DOMPurify |
-| 2 | RichTextEditor作成 | メインエディタコンポーネント |
-| 3 | EditorToolbar作成 | ツールバーUI |
-| 4 | スタイリング | Tailwind CSSでエディタスタイル |
-| 5 | BlogFormに統合 | Textareaを置き換え |
-| 6 | 公開ページ対応 | HTMLサニタイズ + prose設定 |
-| 7 | テスト | 動作確認 |
+| #   | タスク                 | 詳細                             |
+| --- | ---------------------- | -------------------------------- |
+| 1   | パッケージインストール | Tiptap関連パッケージ + DOMPurify |
+| 2   | RichTextEditor作成     | メインエディタコンポーネント     |
+| 3   | EditorToolbar作成      | ツールバーUI                     |
+| 4   | スタイリング           | Tailwind CSSでエディタスタイル   |
+| 5   | BlogFormに統合         | Textareaを置き換え               |
+| 6   | 公開ページ対応         | HTMLサニタイズ + prose設定       |
+| 7   | テスト                 | 動作確認                         |
 
 ---
 
@@ -142,7 +142,7 @@ DB → HTML文字列 → DOMPurify.sanitize() → 安全なHTML → prose CSS �
 
 ### 5.1 エディタレイアウト
 
-```
+````
 ┌─────────────────────────────────────────────────────────────┐
 │ [B] [I] [S] │ H1 H2 H3 │ • ─ │ 🔗 🖼 ─ │ " </> │ ↩ ↪    │
 ├─────────────────────────────────────────────────────────────┤
@@ -163,7 +163,7 @@ DB → HTML文字列 → DOMPurify.sanitize() → 安全なHTML → prose CSS �
 │  ```                                                        │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
-```
+````
 
 ### 5.2 スタイル方針
 
@@ -186,19 +186,35 @@ bun add @tailwindcss/typography
 
 ```tsx
 // src/components/site/SafeHtml.tsx
-import DOMPurify from 'dompurify'
+import DOMPurify from "dompurify";
 
 interface SafeHtmlProps {
-  html: string
-  className?: string
+  html: string;
+  className?: string;
 }
 
 export function SafeHtml({ html, className }: SafeHtmlProps) {
   // DOMPurifyでサニタイズしてから表示
   const sanitizedHtml = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'a', 'img', 'blockquote', 'pre', 'code', 'strong', 'em', 'hr'],
-    ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'target', 'rel'],
-  })
+    ALLOWED_TAGS: [
+      "h1",
+      "h2",
+      "h3",
+      "p",
+      "ul",
+      "ol",
+      "li",
+      "a",
+      "img",
+      "blockquote",
+      "pre",
+      "code",
+      "strong",
+      "em",
+      "hr",
+    ],
+    ALLOWED_ATTR: ["href", "src", "alt", "class", "target", "rel"],
+  });
 
   return (
     <div
@@ -206,7 +222,7 @@ export function SafeHtml({ html, className }: SafeHtmlProps) {
       // サニタイズ済みのHTMLを安全に表示
       {...{ dangerouslySetInnerHTML: { __html: sanitizedHtml } }}
     />
-  )
+  );
 }
 ```
 
@@ -214,26 +230,26 @@ export function SafeHtml({ html, className }: SafeHtmlProps) {
 
 ## 7. 成果物
 
-| ファイル | 説明 |
-|---------|------|
-| `src/components/admin/editor/RichTextEditor.tsx` | メインエディタ |
-| `src/components/admin/editor/EditorToolbar.tsx` | ツールバー |
-| `src/components/admin/editor/index.ts` | エクスポート |
-| `src/components/site/SafeHtml.tsx` | 安全なHTML表示 |
-| `src/app/admin/blog/_components/BlogForm.tsx` | 統合後のフォーム |
+| ファイル                                         | 説明             |
+| ------------------------------------------------ | ---------------- |
+| `src/components/admin/editor/RichTextEditor.tsx` | メインエディタ   |
+| `src/components/admin/editor/EditorToolbar.tsx`  | ツールバー       |
+| `src/components/admin/editor/index.ts`           | エクスポート     |
+| `src/components/site/SafeHtml.tsx`               | 安全なHTML表示   |
+| `src/app/admin/blog/_components/BlogForm.tsx`    | 統合後のフォーム |
 
 ---
 
 ## 8. 将来の拡張
 
-| 機能 | 説明 | 優先度 |
-|-----|------|-------|
-| 画像アップロード | Supabase Storage連携 | 高 |
-| YouTube埋め込み | URLから自動埋め込み | 中 |
-| テーブル挿入 | 表の作成 | 中 |
-| Markdown入力 | ショートカット対応 | 低 |
-| 共同編集 | Yjs連携 | 将来 |
+| 機能             | 説明                 | 優先度 |
+| ---------------- | -------------------- | ------ |
+| 画像アップロード | Supabase Storage連携 | 高     |
+| YouTube埋め込み  | URLから自動埋め込み  | 中     |
+| テーブル挿入     | 表の作成             | 中     |
+| Markdown入力     | ショートカット対応   | 低     |
+| 共同編集         | Yjs連携              | 将来   |
 
 ---
 
-*作成日: 2026-01-09*
+_作成日: 2026-01-09_

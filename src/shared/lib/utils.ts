@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 /**
  * Tailwind CSS クラスをマージするユーティリティ関数
@@ -11,7 +11,7 @@ import { twMerge } from 'tailwind-merge'
  * cn('text-red-500', isActive && 'text-blue-500') // → 条件付き
  */
 export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -21,11 +21,11 @@ export function cn(...inputs: ClassValue[]): string {
  */
 export function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // =============================================================================
@@ -44,9 +44,13 @@ export function escapeHtml(text: string): string {
  * const email = getFormString(formData, 'email')
  * const name = getFormString(formData, 'name', 'Guest')
  */
-export function getFormString(formData: FormData, key: string, defaultValue = ''): string {
-  const value = formData.get(key)
-  return typeof value === 'string' ? value : defaultValue
+export function getFormString(
+  formData: FormData,
+  key: string,
+  defaultValue = "",
+): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : defaultValue;
 }
 
 /**
@@ -59,9 +63,12 @@ export function getFormString(formData: FormData, key: string, defaultValue = ''
  * @example
  * const guestName = getFormStringOrNull(formData, 'guestName')
  */
-export function getFormStringOrNull(formData: FormData, key: string): string | null {
-  const value = formData.get(key)
-  return typeof value === 'string' && value !== '' ? value : null
+export function getFormStringOrNull(
+  formData: FormData,
+  key: string,
+): string | null {
+  const value = formData.get(key);
+  return typeof value === "string" && value !== "" ? value : null;
 }
 
 /**
@@ -75,11 +82,15 @@ export function getFormStringOrNull(formData: FormData, key: string): string | n
  * @example
  * const page = getFormNumber(formData, 'page', 1)
  */
-export function getFormNumber(formData: FormData, key: string, defaultValue: number): number {
-  const value = formData.get(key)
-  if (typeof value !== 'string') return defaultValue
-  const parsed = Number(value)
-  return Number.isNaN(parsed) ? defaultValue : parsed
+export function getFormNumber(
+  formData: FormData,
+  key: string,
+  defaultValue: number,
+): number {
+  const value = formData.get(key);
+  if (typeof value !== "string") return defaultValue;
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? defaultValue : parsed;
 }
 
 /**
@@ -93,8 +104,8 @@ export function getFormNumber(formData: FormData, key: string, defaultValue: num
  * const isPublished = getFormBoolean(formData, 'isPublished')
  */
 export function getFormBoolean(formData: FormData, key: string): boolean {
-  const value = formData.get(key)
-  return value === 'true' || value === 'on'
+  const value = formData.get(key);
+  return value === "true" || value === "on";
 }
 
 // =============================================================================
@@ -108,10 +119,10 @@ export function getFormBoolean(formData: FormData, key: string): boolean {
  * formatCurrency(12345) // → '¥12,345'
  */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(value)
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency: "JPY",
+  }).format(value);
 }
 
 /**
@@ -126,10 +137,10 @@ export function formatCurrency(value: number): string {
  */
 export function formatPrice(
   value: number | null | undefined,
-  fallback = '要問合せ'
+  fallback = "要問合せ",
 ): string {
-  if (value === null || value === undefined) return fallback
-  return formatCurrency(value)
+  if (value === null || value === undefined) return fallback;
+  return formatCurrency(value);
 }
 
 /**
@@ -142,24 +153,24 @@ export function formatPrice(
  */
 export function formatDate(
   date: Date | string | null | undefined,
-  includeTime = false
+  includeTime = false,
 ): string {
-  if (!date) return ''
+  if (!date) return "";
 
-  const d = typeof date === 'string' ? new Date(date) : date
+  const d = typeof date === "string" ? new Date(date) : date;
 
   const options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  }
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
 
   if (includeTime) {
-    options.hour = '2-digit'
-    options.minute = '2-digit'
+    options.hour = "2-digit";
+    options.minute = "2-digit";
   }
 
-  return d.toLocaleDateString('ja-JP', options)
+  return d.toLocaleDateString("ja-JP", options);
 }
 
 /**
@@ -169,14 +180,16 @@ export function formatDate(
  * formatDateShort(new Date())      // → '2024/01/15'
  * formatDateShort('2024-01-15')    // → '2024/01/15'
  */
-export function formatDateShort(date: Date | string | null | undefined): string {
-  if (!date) return '-'
-  const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(d)
+export function formatDateShort(
+  date: Date | string | null | undefined,
+): string {
+  if (!date) return "-";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 /**
@@ -185,16 +198,18 @@ export function formatDateShort(date: Date | string | null | undefined): string 
  * @example
  * formatDateTimeShort(new Date())  // → '2024/01/15 14:30'
  */
-export function formatDateTimeShort(date: Date | string | null | undefined): string {
-  if (!date) return '-'
-  const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d)
+export function formatDateTimeShort(
+  date: Date | string | null | undefined,
+): string {
+  if (!date) return "-";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
 }
 
 /**
@@ -203,17 +218,19 @@ export function formatDateTimeShort(date: Date | string | null | undefined): str
  * @example
  * formatDateTimeFull(new Date())   // → '2024/01/15(月) 14:30'
  */
-export function formatDateTimeFull(date: Date | string | null | undefined): string {
-  if (!date) return '-'
-  const d = typeof date === 'string' ? new Date(date) : date
-  return new Intl.DateTimeFormat('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d)
+export function formatDateTimeFull(
+  date: Date | string | null | undefined,
+): string {
+  if (!date) return "-";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
 }
 
 // =============================================================================
@@ -236,22 +253,26 @@ export function formatDateTimeFull(date: Date | string | null | undefined): stri
  * generateSlug('日本語タグ', 'tag') // → 'tag-a1b2c3d4'
  * generateSlug('Mix 混合', 'tag')   // → 'mix'
  */
-export function generateSlug(text: string, prefix = 'item', maxLength = 50): string {
+export function generateSlug(
+  text: string,
+  prefix = "item",
+  maxLength = 50,
+): string {
   const slug = text
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // アクセント記号削除
-    .replace(/[^a-z0-9\s-]/g, '')    // 英数字・スペース・ハイフン以外削除
-    .replace(/\s+/g, '-')            // スペースをハイフンに
-    .replace(/-+/g, '-')             // 連続ハイフンを1つに
-    .replace(/^-+|-+$/g, '')         // 先頭・末尾のハイフン削除
-    .slice(0, maxLength)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // アクセント記号削除
+    .replace(/[^a-z0-9\s-]/g, "") // 英数字・スペース・ハイフン以外削除
+    .replace(/\s+/g, "-") // スペースをハイフンに
+    .replace(/-+/g, "-") // 連続ハイフンを1つに
+    .replace(/^-+|-+$/g, "") // 先頭・末尾のハイフン削除
+    .slice(0, maxLength);
 
   // 空の場合はランダムIDでフォールバック
   if (!slug) {
-    const randomId = crypto.randomUUID().slice(0, 8)
-    return `${prefix}-${randomId}`
+    const randomId = crypto.randomUUID().slice(0, 8);
+    return `${prefix}-${randomId}`;
   }
 
-  return slug
+  return slug;
 }

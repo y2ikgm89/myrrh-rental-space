@@ -7,13 +7,13 @@
  * - EDITOR用のページ割り当てアクセス制御
  */
 
-import 'server-only'
+import "server-only";
 
-import { Role } from '@/shared/db/enums'
-import { getSession, getRoleFromSession, type User } from '@/shared/lib/auth'
-import { getAssignedPageIdsForUser } from '@/shared/domain/user-page-assignments/queries'
-import { logPermissionDenied } from '@/admin/lib/audit'
-import { isEditorRole } from './role-guards'
+import { Role } from "@/shared/db/enums";
+import { getSession, getRoleFromSession, type User } from "@/shared/lib/auth";
+import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
+import { logPermissionDenied } from "@/admin/lib/audit";
+import { isEditorRole } from "./role-guards";
 
 // =============================================================================
 // Types
@@ -21,34 +21,40 @@ import { isEditorRole } from './role-guards'
 
 /** リソース種別 */
 export type Resource =
-  | 'space'
-  | 'location'
-  | 'spaceCategory'
-  | 'reservation'
-  | 'customer'
-  | 'inquiry'
-  | 'post'
-  | 'news'
-  | 'page'
-  | 'faq'
-  | 'terms'
-  | 'settings'
-  | 'user'
-  | 'auditLog'
-  | 'navigation'
-  | 'announcementBar'
-  | 'media'
-  | 'coupon'
-  | 'blockTemplate'
+  | "space"
+  | "location"
+  | "spaceCategory"
+  | "reservation"
+  | "customer"
+  | "inquiry"
+  | "post"
+  | "news"
+  | "page"
+  | "faq"
+  | "terms"
+  | "settings"
+  | "user"
+  | "auditLog"
+  | "navigation"
+  | "announcementBar"
+  | "media"
+  | "coupon"
+  | "blockTemplate";
 
 /** アクション種別 */
-export type Action = 'create' | 'read' | 'update' | 'delete' | 'publish' | 'manage'
+export type Action =
+  | "create"
+  | "read"
+  | "update"
+  | "delete"
+  | "publish"
+  | "manage";
 
 /** 権限キー（resource:action） */
-export type PermissionKey = `${Resource}:${Action}`
+export type PermissionKey = `${Resource}:${Action}`;
 
 /** ロール別権限定義 */
-export type RolePermissions = Record<Role, PermissionKey[]>
+export type RolePermissions = Record<Role, PermissionKey[]>;
 
 // =============================================================================
 // 権限定義（コードベース、UIから参照可能）
@@ -66,129 +72,274 @@ export type RolePermissions = Record<Role, PermissionKey[]>
 export const ROLE_PERMISSIONS: RolePermissions = {
   SUPER_ADMIN: [
     // 全リソース × 全アクション
-    'space:create', 'space:read', 'space:update', 'space:delete', 'space:publish',
-    'location:create', 'location:read', 'location:update', 'location:delete', 'location:publish',
-    'spaceCategory:create', 'spaceCategory:read', 'spaceCategory:update', 'spaceCategory:delete', 'spaceCategory:manage',
-    'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
-    'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
-    'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
-    'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
-    'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
-    'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
-    'terms:create', 'terms:read', 'terms:update', 'terms:delete', 'terms:publish',
-    'settings:read', 'settings:update', 'settings:manage',
-    'user:create', 'user:read', 'user:update', 'user:delete', 'user:manage',
-    'auditLog:read', 'auditLog:manage',
-    'navigation:create', 'navigation:read', 'navigation:update', 'navigation:delete', 'navigation:manage',
-    'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
-    'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
-    'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
-    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', 'blockTemplate:manage',
+    "space:create",
+    "space:read",
+    "space:update",
+    "space:delete",
+    "space:publish",
+    "location:create",
+    "location:read",
+    "location:update",
+    "location:delete",
+    "location:publish",
+    "spaceCategory:create",
+    "spaceCategory:read",
+    "spaceCategory:update",
+    "spaceCategory:delete",
+    "spaceCategory:manage",
+    "reservation:create",
+    "reservation:read",
+    "reservation:update",
+    "reservation:delete",
+    "reservation:manage",
+    "customer:create",
+    "customer:read",
+    "customer:update",
+    "customer:delete",
+    "customer:manage",
+    "inquiry:read",
+    "inquiry:update",
+    "inquiry:delete",
+    "inquiry:manage",
+    "post:create",
+    "post:read",
+    "post:update",
+    "post:delete",
+    "post:publish",
+    "news:create",
+    "news:read",
+    "news:update",
+    "news:delete",
+    "news:publish",
+    "page:create",
+    "page:read",
+    "page:update",
+    "page:delete",
+    "page:publish",
+    "faq:create",
+    "faq:read",
+    "faq:update",
+    "faq:delete",
+    "faq:manage",
+    "terms:create",
+    "terms:read",
+    "terms:update",
+    "terms:delete",
+    "terms:publish",
+    "settings:read",
+    "settings:update",
+    "settings:manage",
+    "user:create",
+    "user:read",
+    "user:update",
+    "user:delete",
+    "user:manage",
+    "auditLog:read",
+    "auditLog:manage",
+    "navigation:create",
+    "navigation:read",
+    "navigation:update",
+    "navigation:delete",
+    "navigation:manage",
+    "announcementBar:create",
+    "announcementBar:read",
+    "announcementBar:update",
+    "announcementBar:delete",
+    "announcementBar:manage",
+    "media:create",
+    "media:read",
+    "media:update",
+    "media:delete",
+    "media:manage",
+    "coupon:create",
+    "coupon:read",
+    "coupon:update",
+    "coupon:delete",
+    "coupon:manage",
+    "blockTemplate:create",
+    "blockTemplate:read",
+    "blockTemplate:delete",
+    "blockTemplate:manage",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
-    'space:create', 'space:read', 'space:update', 'space:delete', 'space:publish',
-    'location:create', 'location:read', 'location:update', 'location:delete', 'location:publish',
-    'spaceCategory:create', 'spaceCategory:read', 'spaceCategory:update', 'spaceCategory:delete', 'spaceCategory:manage',
-    'reservation:create', 'reservation:read', 'reservation:update', 'reservation:delete', 'reservation:manage',
-    'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:manage',
-    'inquiry:read', 'inquiry:update', 'inquiry:delete', 'inquiry:manage',
-    'post:create', 'post:read', 'post:update', 'post:delete', 'post:publish',
-    'news:create', 'news:read', 'news:update', 'news:delete', 'news:publish',
-    'page:create', 'page:read', 'page:update', 'page:delete', 'page:publish',
-    'faq:create', 'faq:read', 'faq:update', 'faq:delete', 'faq:manage',
-    'terms:create', 'terms:read', 'terms:update', 'terms:delete', 'terms:publish',
-    'settings:read', 'settings:update',
-    'user:read', // 閲覧のみ
-    'navigation:create', 'navigation:read', 'navigation:update', 'navigation:delete', 'navigation:manage',
-    'announcementBar:create', 'announcementBar:read', 'announcementBar:update', 'announcementBar:delete', 'announcementBar:manage',
-    'media:create', 'media:read', 'media:update', 'media:delete', 'media:manage',
-    'coupon:create', 'coupon:read', 'coupon:update', 'coupon:delete', 'coupon:manage',
-    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', 'blockTemplate:manage',
+    "space:create",
+    "space:read",
+    "space:update",
+    "space:delete",
+    "space:publish",
+    "location:create",
+    "location:read",
+    "location:update",
+    "location:delete",
+    "location:publish",
+    "spaceCategory:create",
+    "spaceCategory:read",
+    "spaceCategory:update",
+    "spaceCategory:delete",
+    "spaceCategory:manage",
+    "reservation:create",
+    "reservation:read",
+    "reservation:update",
+    "reservation:delete",
+    "reservation:manage",
+    "customer:create",
+    "customer:read",
+    "customer:update",
+    "customer:delete",
+    "customer:manage",
+    "inquiry:read",
+    "inquiry:update",
+    "inquiry:delete",
+    "inquiry:manage",
+    "post:create",
+    "post:read",
+    "post:update",
+    "post:delete",
+    "post:publish",
+    "news:create",
+    "news:read",
+    "news:update",
+    "news:delete",
+    "news:publish",
+    "page:create",
+    "page:read",
+    "page:update",
+    "page:delete",
+    "page:publish",
+    "faq:create",
+    "faq:read",
+    "faq:update",
+    "faq:delete",
+    "faq:manage",
+    "terms:create",
+    "terms:read",
+    "terms:update",
+    "terms:delete",
+    "terms:publish",
+    "settings:read",
+    "settings:update",
+    "user:read", // 閲覧のみ
+    "navigation:create",
+    "navigation:read",
+    "navigation:update",
+    "navigation:delete",
+    "navigation:manage",
+    "announcementBar:create",
+    "announcementBar:read",
+    "announcementBar:update",
+    "announcementBar:delete",
+    "announcementBar:manage",
+    "media:create",
+    "media:read",
+    "media:update",
+    "media:delete",
+    "media:manage",
+    "coupon:create",
+    "coupon:read",
+    "coupon:update",
+    "coupon:delete",
+    "coupon:manage",
+    "blockTemplate:create",
+    "blockTemplate:read",
+    "blockTemplate:delete",
+    "blockTemplate:manage",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
-    'post:read', 'post:update',
-    'news:read', 'news:update',
-    'page:read', 'page:update',
-    'faq:read', 'faq:update',
-    'media:create', 'media:read', 'media:update', // アップロード・閲覧・編集のみ
-    'blockTemplate:create', 'blockTemplate:read', 'blockTemplate:delete', // テンプレート管理
+    "post:read",
+    "post:update",
+    "news:read",
+    "news:update",
+    "page:read",
+    "page:update",
+    "faq:read",
+    "faq:update",
+    "media:create",
+    "media:read",
+    "media:update", // アップロード・閲覧・編集のみ
+    "blockTemplate:create",
+    "blockTemplate:read",
+    "blockTemplate:delete", // テンプレート管理
   ],
   VIEWER: [
     // 閲覧のみ
-    'space:read',
-    'location:read',
-    'spaceCategory:read',
-    'reservation:read',
-    'customer:read',
-    'inquiry:read',
-    'post:read',
-    'news:read',
-    'page:read',
-    'faq:read',
-    'terms:read',
-    'settings:read',
-    'navigation:read',
-    'announcementBar:read',
-    'media:read',
+    "space:read",
+    "location:read",
+    "spaceCategory:read",
+    "reservation:read",
+    "customer:read",
+    "inquiry:read",
+    "post:read",
+    "news:read",
+    "page:read",
+    "faq:read",
+    "terms:read",
+    "settings:read",
+    "navigation:read",
+    "announcementBar:read",
+    "media:read",
   ],
   USER: [],
-}
+};
 
 /**
  * 管理画面アクセス可能なロール
  */
-export const ADMIN_ROLES: Role[] = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER]
+export const ADMIN_ROLES: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ADMIN,
+  Role.EDITOR,
+  Role.VIEWER,
+];
 
 /**
  * リソース説明（UI表示用）
  */
 export const RESOURCE_LABELS: Record<Resource, string> = {
-  space: 'スペース',
-  location: '場所',
-  spaceCategory: 'スペースカテゴリー',
-  reservation: '予約',
-  customer: '顧客',
-  inquiry: 'お問い合わせ',
-  post: '投稿',
-  news: 'お知らせ',
-  page: '固定ページ',
-  faq: 'FAQ',
-  terms: '利用規約',
-  settings: '設定',
-  user: 'ユーザー',
-  auditLog: '監査ログ',
-  navigation: 'ナビゲーション',
-  announcementBar: 'お知らせバー',
-  media: 'メディア',
-  coupon: 'クーポン',
-  blockTemplate: 'ブロックテンプレート',
-}
+  space: "スペース",
+  location: "場所",
+  spaceCategory: "スペースカテゴリー",
+  reservation: "予約",
+  customer: "顧客",
+  inquiry: "お問い合わせ",
+  post: "投稿",
+  news: "お知らせ",
+  page: "固定ページ",
+  faq: "FAQ",
+  terms: "利用規約",
+  settings: "設定",
+  user: "ユーザー",
+  auditLog: "監査ログ",
+  navigation: "ナビゲーション",
+  announcementBar: "お知らせバー",
+  media: "メディア",
+  coupon: "クーポン",
+  blockTemplate: "ブロックテンプレート",
+};
 
 /**
  * アクション説明（UI表示用）
  */
 export const ACTION_LABELS: Record<Action, string> = {
-  create: '作成',
-  read: '閲覧',
-  update: '編集',
-  delete: '削除',
-  publish: '公開',
-  manage: '管理',
-}
+  create: "作成",
+  read: "閲覧",
+  update: "編集",
+  delete: "削除",
+  publish: "公開",
+  manage: "管理",
+};
 
 /**
  * ロール説明（UI表示用）
  */
 export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: 'スーパー管理者',
-  ADMIN: '管理者',
-  EDITOR: '編集者',
-  VIEWER: '閲覧者',
-  USER: 'ユーザー',
-}
+  SUPER_ADMIN: "スーパー管理者",
+  ADMIN: "管理者",
+  EDITOR: "編集者",
+  VIEWER: "閲覧者",
+  USER: "ユーザー",
+};
 
 // =============================================================================
 // 権限チェック関数
@@ -205,11 +356,11 @@ export const ROLE_LABELS: Record<Role, string> = {
 export function hasPermission(
   role: Role,
   resource: Resource,
-  action: Action
+  action: Action,
 ): boolean {
-  const permissions = ROLE_PERMISSIONS[role]
-  const key: PermissionKey = `${resource}:${action}`
-  return permissions.includes(key)
+  const permissions = ROLE_PERMISSIONS[role];
+  const key: PermissionKey = `${resource}:${action}`;
+  return permissions.includes(key);
 }
 
 /**
@@ -223,9 +374,9 @@ export function hasPermission(
 export function userHasPermission(
   user: User,
   resource: Resource,
-  action: Action
+  action: Action,
 ): boolean {
-  return hasPermission(user.role, resource, action)
+  return hasPermission(user.role, resource, action);
 }
 
 /**
@@ -243,28 +394,28 @@ export async function userHasResourceAccess(
   user: User,
   resource: Resource,
   action: Action,
-  resourceId?: string
+  resourceId?: string,
 ): Promise<boolean> {
   // まず基本権限をチェック
   if (!userHasPermission(user, resource, action)) {
-    return false
+    return false;
   }
 
   // EDITOR以外は全リソースにアクセス可能
   if (!isEditorRole(user.role)) {
-    return true
+    return true;
   }
 
   // EDITORはpageAssignmentsに含まれるリソースのみアクセス可能
   // ただし、resourceIdなしの場合（一覧表示など）は許可
   // 一覧表示時はフィルタリングで対応
   if (!resourceId) {
-    return true
+    return true;
   }
 
   // DBからページ割り当てを取得
-  const assignedPageIds = await getAssignedPageIdsForUser(user.id)
-  return assignedPageIds.includes(resourceId)
+  const assignedPageIds = await getAssignedPageIdsForUser(user.id);
+  return assignedPageIds.includes(resourceId);
 }
 
 /**
@@ -274,7 +425,7 @@ export async function userHasResourceAccess(
  * @returns 管理画面アクセス可能ならtrue
  */
 export function canAccessAdmin(role: Role): boolean {
-  return ADMIN_ROLES.includes(role)
+  return ADMIN_ROLES.includes(role);
 }
 
 // =============================================================================
@@ -298,23 +449,25 @@ export function canAccessAdmin(role: Role): boolean {
  *   // ...
  * }
  */
-export function checkReadPermissionFor(resource: Resource): () => Promise<boolean> {
+export function checkReadPermissionFor(
+  resource: Resource,
+): () => Promise<boolean> {
   return async (): Promise<boolean> => {
-    const session = await getSession()
-    if (!session?.user) return false
-    const role = getRoleFromSession(session)
-    if (!role) return false
-    if (!canAccessAdmin(role)) return false
-    if (!hasPermission(role, resource, 'read')) {
-      void logPermissionDenied(session.user.id, resource, 'read')
-      return false
+    const session = await getSession();
+    if (!session?.user) return false;
+    const role = getRoleFromSession(session);
+    if (!role) return false;
+    if (!canAccessAdmin(role)) return false;
+    if (!hasPermission(role, resource, "read")) {
+      void logPermissionDenied(session.user.id, resource, "read");
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 }
 
 // =============================================================================
 // Role Type Guards (re-exported from role-guards.ts for client compatibility)
 // =============================================================================
 
-export { isEditorRole, isAdminRole, isSuperAdminRole } from './role-guards'
+export { isEditorRole, isAdminRole, isSuperAdminRole } from "./role-guards";

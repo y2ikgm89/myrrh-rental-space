@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Calendar, Plus } from "lucide-react";
 import { getReservations } from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
@@ -46,12 +47,15 @@ async function ReservationList({
 }
 
 export default async function ReservationsPage({ searchParams }: PageProps) {
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">予約管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            予約管理
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             予約の確認・ステータス変更・キャンセル処理を行います
           </p>
@@ -84,4 +88,3 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
     </div>
   );
 }
-

@@ -4,7 +4,7 @@
  * @description JSON primary storage 用の Zod スキーマ
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 
 /**
  * Lexical EditorState JSON 文字列のバリデーション
@@ -14,15 +14,11 @@ import { z } from 'zod'
 export const lexicalJsonSchema = z.string().refine(
   (val) => {
     try {
-      const parsed: unknown = JSON.parse(val)
-      return (
-        typeof parsed === 'object' &&
-        parsed !== null &&
-        'root' in parsed
-      )
+      const parsed: unknown = JSON.parse(val);
+      return typeof parsed === "object" && parsed !== null && "root" in parsed;
     } catch {
-      return false
+      return false;
     }
   },
-  { error: '有効なLexical EditorState JSONではありません' }
-)
+  { error: "有効なLexical EditorState JSONではありません" },
+);

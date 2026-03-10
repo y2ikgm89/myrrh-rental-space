@@ -10,11 +10,7 @@ import {
 } from "@/shared/domain/navigation/queries";
 import { requireAdminPermission } from "./_helpers";
 
-export type {
-  GetSocialLinksOptions,
-  NavigationItemData,
-  SocialLinkData,
-};
+export type { GetSocialLinksOptions, NavigationItemData, SocialLinkData };
 
 export async function getNavigationItems(
   type?: NavigationType,

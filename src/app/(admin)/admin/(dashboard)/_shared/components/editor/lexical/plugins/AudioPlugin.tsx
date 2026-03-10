@@ -4,11 +4,11 @@
  * @description 音声プレイヤー挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,48 +18,50 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createAudioNode } from '../nodes/AudioNode'
-import type { DialogPluginProps } from '../config/dialog-registry'
+} from "@/admin/components/ui";
+import { $createAudioNode } from "../nodes/AudioNode";
+import type { DialogPluginProps } from "../config/dialog-registry";
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
 
   const handleInsert = () => {
-    if (!url.trim()) return
+    if (!url.trim()) return;
 
     editor.update(() => {
       const audioNode = $createAudioNode({
         url: url.trim(),
         title: title.trim(),
         artist: artist.trim(),
-      })
-      $insertNodeToNearestRoot(audioNode)
-    })
+      });
+      $insertNodeToNearestRoot(audioNode);
+    });
 
-    handleClose()
-  }
+    handleClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setTitle('')
-    setArtist('')
-    onClose()
-  }
+    setUrl("");
+    setTitle("");
+    setArtist("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>音声プレイヤーを挿入</DialogTitle>
-          <DialogDescription>音声ファイルのURLを入力してください</DialogDescription>
+          <DialogDescription>
+            音声ファイルのURLを入力してください
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -107,5 +109,5 @@ export function AudioPlugin({ isOpen, onClose }: DialogPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   spaceShowcaseConfigSchema,
   getSpaceShowcaseConfig,
@@ -19,16 +19,21 @@ import {
   parseShowcaseImageAspect,
   type SpaceShowcaseConfig,
   type SpaceShowcaseConfigInput,
-} from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
 import {
   cardStyleLabels,
   showcaseImageAspectLabels,
-} from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function SpaceShowcaseConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getSpaceShowcaseConfig(section.config)
+export default function SpaceShowcaseConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getSpaceShowcaseConfig(section.config);
 
   const {
     register,
@@ -38,16 +43,21 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
   } = useForm<SpaceShowcaseConfigInput, unknown, SpaceShowcaseConfig>({
     resolver: zodResolver(spaceShowcaseConfigSchema),
     defaultValues: config,
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="showcase-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="showcase-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="showcase-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Spaces"
             disabled={isPending}
           />
@@ -57,7 +67,7 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
           <Label htmlFor="showcase-title">タイトル</Label>
           <Input
             id="showcase-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="Our Spaces"
             disabled={isPending}
           />
@@ -74,7 +84,7 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
               type="number"
               min={1}
               max={12}
-              {...register('maxItems', { valueAsNumber: true })}
+              {...register("maxItems", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -86,7 +96,7 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
               type="number"
               min={2}
               max={4}
-              {...register('columns', { valueAsNumber: true })}
+              {...register("columns", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -97,7 +107,7 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
             <Label htmlFor="showcase-card-style">カードスタイル</Label>
             <Select
               defaultValue={config.cardStyle}
-              onValueChange={(v) => setValue('cardStyle', parseCardStyle(v))}
+              onValueChange={(v) => setValue("cardStyle", parseCardStyle(v))}
               disabled={isPending}
             >
               <SelectTrigger id="showcase-card-style">
@@ -117,7 +127,9 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
             <Label htmlFor="showcase-image-aspect">画像アスペクト比</Label>
             <Select
               defaultValue={config.imageAspect}
-              onValueChange={(v) => setValue('imageAspect', parseShowcaseImageAspect(v))}
+              onValueChange={(v) =>
+                setValue("imageAspect", parseShowcaseImageAspect(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="showcase-image-aspect">
@@ -138,14 +150,20 @@ export default function SpaceShowcaseConfigForm({ section, onSave, isPending, on
           <Switch
             id="showcase-published"
             checked={config.showOnlyPublished}
-            onCheckedChange={(checked) => setValue('showOnlyPublished', checked)}
+            onCheckedChange={(checked) =>
+              setValue("showOnlyPublished", checked)
+            }
             disabled={isPending}
           />
           <Label htmlFor="showcase-published">公開済みのみ表示</Label>
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

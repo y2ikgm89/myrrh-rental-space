@@ -11,10 +11,10 @@
  * - 矢印キーでの境界脱出
  */
 
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $createParagraphNode,
   $getNodeByKey,
@@ -31,39 +31,40 @@ import {
   type LexicalCommand,
   mergeRegister,
   type NodeKey,
-} from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+} from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createCollapsibleContainerNode,
   $isCollapsibleContainerNode,
   CollapsibleContainerNode,
-} from '../nodes/CollapsibleContainerNode'
+} from "../nodes/CollapsibleContainerNode";
 import {
   $createCollapsibleItemNode,
   $isCollapsibleItemNode,
   CollapsibleItemNode,
   openState,
-} from '../nodes/CollapsibleItemNode'
+} from "../nodes/CollapsibleItemNode";
 import {
   $createCollapsibleTitleNode,
   $isCollapsibleTitleNode,
   CollapsibleTitleNode,
-} from '../nodes/CollapsibleTitleNode'
+} from "../nodes/CollapsibleTitleNode";
 import {
   $createCollapsibleContentNode,
   $isCollapsibleContentNode,
   CollapsibleContentNode,
-} from '../nodes/CollapsibleContentNode'
+} from "../nodes/CollapsibleContentNode";
 
 // =============================================================================
 // Commands
 // =============================================================================
 
-export const INSERT_COLLAPSIBLE_COMMAND: LexicalCommand<void> =
-  createCommand('INSERT_COLLAPSIBLE_COMMAND')
+export const INSERT_COLLAPSIBLE_COMMAND: LexicalCommand<void> = createCommand(
+  "INSERT_COLLAPSIBLE_COMMAND",
+);
 
 export const TOGGLE_COLLAPSIBLE_COMMAND: LexicalCommand<NodeKey> =
-  createCommand('TOGGLE_COLLAPSIBLE_COMMAND')
+  createCommand("TOGGLE_COLLAPSIBLE_COMMAND");
 
 // =============================================================================
 // Utilities
@@ -72,87 +73,87 @@ export const TOGGLE_COLLAPSIBLE_COMMAND: LexicalCommand<NodeKey> =
 /**
  * 矢印キーでCollapsible境界を脱出
  */
-function $onEscape(direction: 'up' | 'down'): boolean {
-  const selection = $getSelection()
+function $onEscape(direction: "up" | "down"): boolean {
+  const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
-    return false
+    return false;
   }
 
-  const node = selection.anchor.getNode()
+  const node = selection.anchor.getNode();
 
   // CollapsibleContainer内かチェック
-  let containerNode: CollapsibleContainerNode | null = null
-  let current = node.getParent()
+  let containerNode: CollapsibleContainerNode | null = null;
+  let current = node.getParent();
 
   while (current) {
     if ($isCollapsibleContainerNode(current)) {
-      containerNode = current
-      break
+      containerNode = current;
+      break;
     }
-    current = current.getParent()
+    current = current.getParent();
   }
 
-  if (!containerNode) return false
+  if (!containerNode) return false;
 
-  const isAtStart = selection.anchor.offset === 0
+  const isAtStart = selection.anchor.offset === 0;
   const isAtEnd =
-    selection.anchor.offset === selection.anchor.getNode().getTextContentSize()
+    selection.anchor.offset === selection.anchor.getNode().getTextContentSize();
 
   // Title内で上キー → コンテナ外へ移動
   // Content内の最後で下キー → コンテナ外へ移動
-  let inTitle = false
-  let inContent = false
-  current = node.getParent()
+  let inTitle = false;
+  let inContent = false;
+  current = node.getParent();
   while (current && current !== containerNode) {
     if ($isCollapsibleTitleNode(current)) {
-      inTitle = true
-      break
+      inTitle = true;
+      break;
     }
     if ($isCollapsibleContentNode(current)) {
-      inContent = true
-      break
+      inContent = true;
+      break;
     }
-    current = current.getParent()
+    current = current.getParent();
   }
 
   // First item's title + up key → escape before container
-  if (direction === 'up' && inTitle && isAtStart) {
+  if (direction === "up" && inTitle && isAtStart) {
     // Only escape if this is the first item in the container
-    let itemNode = node.getParent()
+    let itemNode = node.getParent();
     while (itemNode && !$isCollapsibleItemNode(itemNode)) {
-      itemNode = itemNode.getParent()
+      itemNode = itemNode.getParent();
     }
     if (itemNode && $isCollapsibleItemNode(itemNode)) {
-      const items = containerNode.getChildren().filter($isCollapsibleItemNode)
-      const firstItem = items[0]
+      const items = containerNode.getChildren().filter($isCollapsibleItemNode);
+      const firstItem = items[0];
       if (firstItem && firstItem.getKey() === itemNode.getKey()) {
-        const paragraph = $createParagraphNode()
-        containerNode.insertBefore(paragraph)
-        paragraph.select()
-        return true
+        const paragraph = $createParagraphNode();
+        containerNode.insertBefore(paragraph);
+        paragraph.select();
+        return true;
       }
     }
   }
 
   // Last item's content + down key → escape after container
-  if (direction === 'down' && inContent && isAtEnd) {
-    let itemNode = node.getParent()
+  if (direction === "down" && inContent && isAtEnd) {
+    let itemNode = node.getParent();
     while (itemNode && !$isCollapsibleItemNode(itemNode)) {
-      itemNode = itemNode.getParent()
+      itemNode = itemNode.getParent();
     }
     if (itemNode && $isCollapsibleItemNode(itemNode)) {
-      const items = containerNode.getChildren().filter($isCollapsibleItemNode)
-      const lastItem = items[items.length - 1]
+      const items = containerNode.getChildren().filter($isCollapsibleItemNode);
+      const lastItem = items[items.length - 1];
       if (lastItem && lastItem.getKey() === itemNode.getKey()) {
-        const paragraph = $createParagraphNode()
-        containerNode.insertAfter(paragraph)
-        paragraph.select()
-        return true
+        const paragraph = $createParagraphNode();
+        containerNode.insertAfter(paragraph);
+        paragraph.select();
+        return true;
       }
     }
   }
 
-  return false
+  return false;
 }
 
 // =============================================================================
@@ -162,35 +163,40 @@ function $onEscape(direction: 'up' | 'down'): boolean {
 /**
  * コンテナにCollapsibleアイテムを追加
  */
-export function $addCollapsibleItem(container: CollapsibleContainerNode): CollapsibleItemNode {
-  const item = $createCollapsibleItemNode(true)
+export function $addCollapsibleItem(
+  container: CollapsibleContainerNode,
+): CollapsibleItemNode {
+  const item = $createCollapsibleItemNode(true);
 
-  const title = $createCollapsibleTitleNode()
-  const titleParagraph = $createParagraphNode()
-  title.append(titleParagraph)
+  const title = $createCollapsibleTitleNode();
+  const titleParagraph = $createParagraphNode();
+  title.append(titleParagraph);
 
-  const content = $createCollapsibleContentNode()
-  const contentParagraph = $createParagraphNode()
-  content.append(contentParagraph)
+  const content = $createCollapsibleContentNode();
+  const contentParagraph = $createParagraphNode();
+  content.append(contentParagraph);
 
-  item.append(title, content)
-  container.append(item)
+  item.append(title, content);
+  container.append(item);
 
-  titleParagraph.select()
-  return item
+  titleParagraph.select();
+  return item;
 }
 
 /**
  * コンテナから指定インデックスのアイテムを削除
  * 最低1つは残す
  */
-export function $removeCollapsibleItem(container: CollapsibleContainerNode, index: number): boolean {
-  const items = container.getChildren().filter($isCollapsibleItemNode)
-  if (items.length <= 1) return false
-  const target = items[index]
-  if (!target) return false
-  target.remove()
-  return true
+export function $removeCollapsibleItem(
+  container: CollapsibleContainerNode,
+  index: number,
+): boolean {
+  const items = container.getChildren().filter($isCollapsibleItemNode);
+  if (items.length <= 1) return false;
+  const target = items[index];
+  if (!target) return false;
+  target.remove();
+  return true;
 }
 
 /**
@@ -201,16 +207,16 @@ export function $reorderCollapsibleItem(
   fromIndex: number,
   toIndex: number,
 ): void {
-  if (fromIndex === toIndex) return
-  const items = container.getChildren().filter($isCollapsibleItemNode)
-  const movedItem = items[fromIndex]
-  const targetItem = items[toIndex]
-  if (!movedItem || !targetItem) return
+  if (fromIndex === toIndex) return;
+  const items = container.getChildren().filter($isCollapsibleItemNode);
+  const movedItem = items[fromIndex];
+  const targetItem = items[toIndex];
+  if (!movedItem || !targetItem) return;
 
   if (fromIndex < toIndex) {
-    targetItem.insertAfter(movedItem)
+    targetItem.insertAfter(movedItem);
   } else {
-    targetItem.insertBefore(movedItem)
+    targetItem.insertBefore(movedItem);
   }
 }
 
@@ -219,7 +225,7 @@ export function $reorderCollapsibleItem(
 // =============================================================================
 
 export function CollapsiblePlugin() {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
     // ノードが登録されているか確認
@@ -232,8 +238,8 @@ export function CollapsiblePlugin() {
       ])
     ) {
       throw new Error(
-        'CollapsiblePlugin: CollapsibleContainerNode, CollapsibleItemNode, CollapsibleTitleNode, CollapsibleContentNode が登録されていません'
-      )
+        "CollapsiblePlugin: CollapsibleContainerNode, CollapsibleItemNode, CollapsibleTitleNode, CollapsibleContentNode が登録されていません",
+      );
     }
 
     return mergeRegister(
@@ -242,29 +248,29 @@ export function CollapsiblePlugin() {
         INSERT_COLLAPSIBLE_COMMAND,
         () => {
           editor.update(() => {
-            const container = $createCollapsibleContainerNode()
+            const container = $createCollapsibleContainerNode();
 
-            const item = $createCollapsibleItemNode(true)
+            const item = $createCollapsibleItemNode(true);
 
-            const title = $createCollapsibleTitleNode()
-            const titleParagraph = $createParagraphNode()
-            titleParagraph.append($createTextNode('タイトル'))
-            title.append(titleParagraph)
+            const title = $createCollapsibleTitleNode();
+            const titleParagraph = $createParagraphNode();
+            titleParagraph.append($createTextNode("タイトル"));
+            title.append(titleParagraph);
 
-            const content = $createCollapsibleContentNode()
-            const contentParagraph = $createParagraphNode()
-            content.append(contentParagraph)
+            const content = $createCollapsibleContentNode();
+            const contentParagraph = $createParagraphNode();
+            content.append(contentParagraph);
 
-            item.append(title, content)
-            container.append(item)
+            item.append(title, content);
+            container.append(item);
 
-            $insertNodeToNearestRoot(container)
+            $insertNodeToNearestRoot(container);
 
-            titleParagraph.select()
-          })
-          return true
+            titleParagraph.select();
+          });
+          return true;
         },
-        COMMAND_PRIORITY_EDITOR
+        COMMAND_PRIORITY_EDITOR,
       ),
 
       // TOGGLE_COLLAPSIBLE_COMMAND — targets CollapsibleItemNode
@@ -272,121 +278,121 @@ export function CollapsiblePlugin() {
         TOGGLE_COLLAPSIBLE_COMMAND,
         (nodeKey) => {
           editor.update(() => {
-            const node = $getNodeByKey(nodeKey)
+            const node = $getNodeByKey(nodeKey);
             if ($isCollapsibleItemNode(node)) {
-              $setState(node, openState, !$getState(node, openState))
+              $setState(node, openState, !$getState(node, openState));
             }
-          })
-          return true
+          });
+          return true;
         },
-        COMMAND_PRIORITY_EDITOR
+        COMMAND_PRIORITY_EDITOR,
       ),
 
       // 矢印キーリスナー
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => $onEscape('up'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape("up"),
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => $onEscape('down'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape("down"),
+        COMMAND_PRIORITY_LOW,
       ),
 
       // 構造検証: CollapsibleContainerNode
       editor.registerNodeTransform(CollapsibleContainerNode, (node) => {
-        const children = node.getChildren()
+        const children = node.getChildren();
 
         // CollapsibleItemNode以外の子は除去
         for (const child of children) {
           if (!$isCollapsibleItemNode(child)) {
-            child.remove()
+            child.remove();
           }
         }
 
         // 少なくとも1つのItemが必要
         if (node.getChildren().filter($isCollapsibleItemNode).length === 0) {
-          const item = $createCollapsibleItemNode(true)
-          const titleNode = $createCollapsibleTitleNode()
-          const titleParagraph = $createParagraphNode()
-          titleNode.append(titleParagraph)
+          const item = $createCollapsibleItemNode(true);
+          const titleNode = $createCollapsibleTitleNode();
+          const titleParagraph = $createParagraphNode();
+          titleNode.append(titleParagraph);
 
-          const contentNode = $createCollapsibleContentNode()
-          const contentParagraph = $createParagraphNode()
-          contentNode.append(contentParagraph)
+          const contentNode = $createCollapsibleContentNode();
+          const contentParagraph = $createParagraphNode();
+          contentNode.append(contentParagraph);
 
-          item.append(titleNode, contentNode)
-          node.append(item)
+          item.append(titleNode, contentNode);
+          node.append(item);
         }
       }),
 
       // 構造検証: CollapsibleItemNode
       editor.registerNodeTransform(CollapsibleItemNode, (node) => {
-        const children = node.getChildren()
-        const hasTitle = children.some($isCollapsibleTitleNode)
-        const hasContent = children.some($isCollapsibleContentNode)
+        const children = node.getChildren();
+        const hasTitle = children.some($isCollapsibleTitleNode);
+        const hasContent = children.some($isCollapsibleContentNode);
 
         if (!hasTitle) {
-          const titleNode = $createCollapsibleTitleNode()
-          const paragraph = $createParagraphNode()
-          titleNode.append(paragraph)
-          const firstChild = node.getFirstChild()
+          const titleNode = $createCollapsibleTitleNode();
+          const paragraph = $createParagraphNode();
+          titleNode.append(paragraph);
+          const firstChild = node.getFirstChild();
           if (firstChild) {
-            firstChild.insertBefore(titleNode)
+            firstChild.insertBefore(titleNode);
           } else {
-            node.append(titleNode)
+            node.append(titleNode);
           }
         }
         if (!hasContent) {
-          const contentNode = $createCollapsibleContentNode()
-          const paragraph = $createParagraphNode()
-          contentNode.append(paragraph)
-          node.append(contentNode)
+          const contentNode = $createCollapsibleContentNode();
+          const paragraph = $createParagraphNode();
+          contentNode.append(paragraph);
+          node.append(contentNode);
         }
       }),
 
       // 構造検証: CollapsibleTitleNode
       editor.registerNodeTransform(CollapsibleTitleNode, (node) => {
-        const parent = node.getParent()
+        const parent = node.getParent();
         // 親がCollapsibleItemでない場合、アンラップ
         if (!$isCollapsibleItemNode(parent)) {
-          const children = node.getChildren()
+          const children = node.getChildren();
           for (const child of children) {
-            node.insertBefore(child)
+            node.insertBefore(child);
           }
-          node.remove()
-          return
+          node.remove();
+          return;
         }
 
         // 空のTitleに段落を追加
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
+          const paragraph = $createParagraphNode();
+          node.append(paragraph);
         }
       }),
 
       // 構造検証: CollapsibleContentNode
       editor.registerNodeTransform(CollapsibleContentNode, (node) => {
-        const parent = node.getParent()
+        const parent = node.getParent();
         // 親がCollapsibleItemでない場合、アンラップ
         if (!$isCollapsibleItemNode(parent)) {
-          const children = node.getChildren()
+          const children = node.getChildren();
           for (const child of children) {
-            node.insertBefore(child)
+            node.insertBefore(child);
           }
-          node.remove()
-          return
+          node.remove();
+          return;
         }
 
         // 空のContentに段落を追加
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
+          const paragraph = $createParagraphNode();
+          node.append(paragraph);
         }
-      })
-    )
-  }, [editor])
+      }),
+    );
+  }, [editor]);
 
-  return null
+  return null;
 }

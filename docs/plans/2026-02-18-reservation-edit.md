@@ -13,6 +13,7 @@
 ## Task 1: `decrementCouponUsage` を coupon.ts に追加
 
 **Files:**
+
 - Modify: `src/shared/actions/coupon.ts`
 
 クーポン変更時に旧クーポンの使用回数を戻す関数が存在しないため追加する。
@@ -34,7 +35,7 @@ export async function decrementCouponUsage(couponId: string): Promise<void> {
   await prisma.coupon.updateMany({
     where: { id: couponId, usageCount: { gt: 0 } },
     data: { usageCount: { decrement: 1 } },
-  })
+  });
 }
 ```
 
@@ -60,6 +61,7 @@ git commit -m "feat(coupon): add decrementCouponUsage function"
 ## Task 2: `updateReservationSchema` を admin-reservation.ts に追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/admin-reservation.ts`
 
 **Step 1: ファイル末尾に追加**
@@ -82,50 +84,50 @@ git commit -m "feat(coupon): add decrementCouponUsage function"
  */
 export const updateReservationSchema = z
   .object({
-    spaceId: z.string().uuid({ error: 'スペースを選択してください' }),
+    spaceId: z.string().uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
     endTime: timeStringSchema,
-    customerId: z.string().uuid({ error: '顧客を選択してください' }),
+    customerId: z.string().uuid({ error: "顧客を選択してください" }),
     totalPrice: z
       .number()
-      .nonnegative({ error: '料金は0以上で入力してください' })
+      .nonnegative({ error: "料金は0以上で入力してください" })
       .optional(),
-    couponCode: z.string().max(20).optional().or(z.literal('')),
-    status: z.enum(ReservationStatus).default('CONFIRMED'),
+    couponCode: z.string().max(20).optional().or(z.literal("")),
+    status: z.enum(ReservationStatus).default("CONFIRMED"),
     notes: z
       .string()
-      .max(1000, { error: 'メモは1000文字以内で入力してください' })
+      .max(1000, { error: "メモは1000文字以内で入力してください" })
       .optional()
-      .or(z.literal('')),
+      .or(z.literal("")),
     sendNotificationEmail: z.boolean().default(false),
   })
   .refine(
     (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      return end > start
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      return end > start;
     },
     {
-      error: '終了時間は開始時間より後に設定してください',
-      path: ['endTime'],
-    }
+      error: "終了時間は開始時間より後に設定してください",
+      path: ["endTime"],
+    },
   )
   .refine(
     (data) => {
-      const start = new Date(`${data.date}T${data.startTime}`)
-      const end = new Date(`${data.date}T${data.endTime}`)
-      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-      return diffHours >= 1
+      const start = new Date(`${data.date}T${data.startTime}`);
+      const end = new Date(`${data.date}T${data.endTime}`);
+      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      return diffHours >= 1;
     },
     {
-      error: '最低1時間以上の予約が必要です',
-      path: ['endTime'],
-    }
-  )
+      error: "最低1時間以上の予約が必要です",
+      path: ["endTime"],
+    },
+  );
 
-export type UpdateReservationInput = z.input<typeof updateReservationSchema>
-export type UpdateReservationData = z.output<typeof updateReservationSchema>
+export type UpdateReservationInput = z.input<typeof updateReservationSchema>;
+export type UpdateReservationData = z.output<typeof updateReservationSchema>;
 ```
 
 **Step 2: 型チェック**
@@ -148,6 +150,7 @@ git commit -m "feat(validation): add updateReservationSchema for reservation edi
 ## Task 3: `CustomerSelector` に `allowNewCustomer` prop を追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/reservations/_components/CustomerSelector.tsx`
 
 編集フォームでは「新規顧客として入力」ボタンが不要なため、オプショナルな prop で制御する。
@@ -156,18 +159,22 @@ git commit -m "feat(validation): add updateReservationSchema for reservation edi
 
 ```typescript
 interface CustomerSelectorProps {
-  selectedCustomer: { id: string; name: string; email: string } | null
-  onSelectCustomer: (customer: { id: string; name: string; email: string } | null) => void
-  onNewCustomerData: (data: {
-    lastName: string
-    firstName: string
-    email: string
-    phoneNumber?: string
-  } | null) => void
-  isNewCustomer: boolean
-  onToggleNewCustomer: (isNew: boolean) => void
-  errors?: Record<string, string[] | undefined>
-  allowNewCustomer?: boolean  // ← 追加（デフォルト true）
+  selectedCustomer: { id: string; name: string; email: string } | null;
+  onSelectCustomer: (
+    customer: { id: string; name: string; email: string } | null,
+  ) => void;
+  onNewCustomerData: (
+    data: {
+      lastName: string;
+      firstName: string;
+      email: string;
+      phoneNumber?: string;
+    } | null,
+  ) => void;
+  isNewCustomer: boolean;
+  onToggleNewCustomer: (isNew: boolean) => void;
+  errors?: Record<string, string[] | undefined>;
+  allowNewCustomer?: boolean; // ← 追加（デフォルト true）
 }
 ```
 
@@ -190,45 +197,53 @@ export function CustomerSelector({
 モード切り替えボタン部分（`<Button type="button" variant="outline" size="sm" onClick={handleToggleNewCustomer}>...`）を条件レンダリングに変更:
 
 ```tsx
-{/* モード切り替えボタン（allowNewCustomer=true の場合のみ表示） */}
-{allowNewCustomer && (
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={handleToggleNewCustomer}
-  >
-    {isNewCustomer ? (
-      <>
-        <Search className="mr-1 h-4 w-4" />
-        既存顧客を検索
-      </>
-    ) : (
-      <>
-        <Plus className="mr-1 h-4 w-4" />
-        新規顧客として入力
-      </>
-    )}
-  </Button>
-)}
+{
+  /* モード切り替えボタン（allowNewCustomer=true の場合のみ表示） */
+}
+{
+  allowNewCustomer && (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={handleToggleNewCustomer}
+    >
+      {isNewCustomer ? (
+        <>
+          <Search className="mr-1 h-4 w-4" />
+          既存顧客を検索
+        </>
+      ) : (
+        <>
+          <Plus className="mr-1 h-4 w-4" />
+          新規顧客として入力
+        </>
+      )}
+    </Button>
+  );
+}
 ```
 
 また、`isNewCustomer` が `true` の状態（新規顧客フォーム）も `allowNewCustomer=true` の場合のみ表示されるよう変更:
 
 ```tsx
-{/* 新規顧客入力モード（allowNewCustomer=true の場合のみ） */}
-{allowNewCustomer && isNewCustomer && (
-  <div className="space-y-4">
-    {/* ... 既存の新規顧客フォーム ... */}
-  </div>
-)}
+{
+  /* 新規顧客入力モード（allowNewCustomer=true の場合のみ） */
+}
+{
+  allowNewCustomer && isNewCustomer && (
+    <div className="space-y-4">{/* ... 既存の新規顧客フォーム ... */}</div>
+  );
+}
 
-{/* 既存顧客検索モード */}
-{(!allowNewCustomer || !isNewCustomer) && (
-  <div className="space-y-3">
-    {/* ... 既存の検索UI ... */}
-  </div>
-)}
+{
+  /* 既存顧客検索モード */
+}
+{
+  (!allowNewCustomer || !isNewCustomer) && (
+    <div className="space-y-3">{/* ... 既存の検索UI ... */}</div>
+  );
+}
 ```
 
 **Step 3: 型チェック**
@@ -251,6 +266,7 @@ git commit -m "feat(CustomerSelector): add allowNewCustomer prop for edit mode"
 ## Task 4: `updateAdminReservation` Server Action を追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/reservation.ts`
 
 **Step 1: import に `decrementCouponUsage` を追加**
@@ -258,7 +274,11 @@ git commit -m "feat(CustomerSelector): add allowNewCustomer prop for edit mode"
 ファイル先頭の import 行（`incrementCouponUsage` の部分）を修正:
 
 ```typescript
-import { incrementCouponUsage, validateCouponCode, decrementCouponUsage } from '@/shared/actions/coupon'
+import {
+  incrementCouponUsage,
+  validateCouponCode,
+  decrementCouponUsage,
+} from "@/shared/actions/coupon";
 ```
 
 また、`updateReservationSchema` と `UpdateReservationInput` の import を追加:
@@ -269,13 +289,13 @@ import {
   type AdminReservationInput,
   updateReservationSchema,
   type UpdateReservationInput,
-} from '@/admin/lib/validations/admin-reservation'
+} from "@/admin/lib/validations/admin-reservation";
 ```
 
 `updateReservationSchema` の型エクスポートも必要:
 
 ```typescript
-export type { UpdateReservationInput }
+export type { UpdateReservationInput };
 ```
 
 **Step 2: `updateAdminReservation` 関数を追加（ファイル末尾）**
@@ -298,13 +318,16 @@ export const updateAdminReservation = withPermission<
   [id: string, input: UpdateReservationInput],
   void
 >(
-  'reservation',
-  'update'
+  "reservation",
+  "update",
 )(async (_user, id, input): Promise<ActionResult<void>> => {
   // バリデーション
-  const validation = updateReservationSchema.safeParse(input)
+  const validation = updateReservationSchema.safeParse(input);
   if (!validation.success) {
-    return createFailure('入力内容に誤りがあります', extractFieldErrors(validation.error))
+    return createFailure(
+      "入力内容に誤りがあります",
+      extractFieldErrors(validation.error),
+    );
   }
 
   const {
@@ -318,10 +341,10 @@ export const updateAdminReservation = withPermission<
     status,
     notes,
     sendNotificationEmail,
-  } = validation.data
+  } = validation.data;
 
-  const startDateTime = new Date(`${date}T${startTime}:00`)
-  const endDateTime = new Date(`${date}T${endTime}:00`)
+  const startDateTime = new Date(`${date}T${startTime}:00`);
+  const endDateTime = new Date(`${date}T${endTime}:00`);
 
   // 現在の予約・スペース・設定を並列取得
   const [currentReservation, space, settings] = await Promise.all([
@@ -344,20 +367,20 @@ export const updateAdminReservation = withPermission<
       select: { id: true, name: true, address: true, hourlyPrice: true },
     }),
     prisma.settings.findUnique({
-      where: { id: 'singleton' },
+      where: { id: "singleton" },
       select: {
         durationDiscountEnabled: true,
         durationDiscountRules: true,
         discountCombinationMode: true,
       },
     }),
-  ])
+  ]);
 
   if (!currentReservation) {
-    return createFailure('予約が見つかりません')
+    return createFailure("予約が見つかりません");
   }
   if (!space) {
-    return createFailure('指定されたスペースが見つかりません')
+    return createFailure("指定されたスペースが見つかりません");
   }
 
   // 重複チェック（自分を除く）
@@ -366,29 +389,32 @@ export const updateAdminReservation = withPermission<
     startTime: startDateTime,
     endTime: endDateTime,
     excludeReservationId: id,
-  })
+  });
   if (overlapCheck.hasOverlap) {
     return createFailure(
-      '選択された時間帯は既に予約されています。別の時間帯をお選びください。'
-    )
+      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+    );
   }
 
   // 料金計算
-  const hours = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60)
-  const hourlyPrice = space.hourlyPrice
-  const basePrice = Math.floor(hourlyPrice * hours)
+  const hours =
+    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+  const hourlyPrice = space.hourlyPrice;
+  const basePrice = Math.floor(hourlyPrice * hours);
 
   // クーポン検証
-  let validatedCoupon: Parameters<typeof calculateReservationPrice>[0]['coupon'] = null
-  let newCouponId: string | null = null
+  let validatedCoupon: Parameters<
+    typeof calculateReservationPrice
+  >[0]["coupon"] = null;
+  let newCouponId: string | null = null;
 
   if (couponCode && couponCode.trim()) {
-    const couponResult = await validateCouponCode(couponCode, basePrice)
+    const couponResult = await validateCouponCode(couponCode, basePrice);
     if (!couponResult.success) {
-      return createFailure(couponResult.error)
+      return createFailure(couponResult.error);
     }
-    validatedCoupon = couponResult.data?.coupon ?? null
-    newCouponId = validatedCoupon?.id ?? null
+    validatedCoupon = couponResult.data?.coupon ?? null;
+    newCouponId = validatedCoupon?.id ?? null;
   }
 
   const priceCalculation = calculateReservationPrice({
@@ -397,29 +423,40 @@ export const updateAdminReservation = withPermission<
     durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
     durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
     coupon: validatedCoupon,
-    combinationMode: getValidDiscountCombinationMode(settings?.discountCombinationMode),
+    combinationMode: getValidDiscountCombinationMode(
+      settings?.discountCombinationMode,
+    ),
     showWarning: false,
-  })
+  });
 
-  const calculatedPrice = totalPrice ?? priceCalculation.totalPrice
+  const calculatedPrice = totalPrice ?? priceCalculation.totalPrice;
   const couponDiscountAmount =
-    priceCalculation.couponDiscount > 0 ? priceCalculation.couponDiscount : null
+    priceCalculation.couponDiscount > 0
+      ? priceCalculation.couponDiscount
+      : null;
   const durationDiscountAmount =
-    priceCalculation.durationDiscount > 0 ? priceCalculation.durationDiscount : null
+    priceCalculation.durationDiscount > 0
+      ? priceCalculation.durationDiscount
+      : null;
 
-  const oldCouponId = currentReservation.couponId
-  const couponChanged = oldCouponId !== newCouponId
+  const oldCouponId = currentReservation.couponId;
+  const couponChanged = oldCouponId !== newCouponId;
 
   // トランザクション更新
   try {
     await prisma.$transaction(async (tx) => {
       // Race Condition防止: トランザクション内で再チェック
       const overlapCheckTx = await checkReservationOverlap(
-        { spaceId, startTime: startDateTime, endTime: endDateTime, excludeReservationId: id },
-        tx
-      )
+        {
+          spaceId,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          excludeReservationId: id,
+        },
+        tx,
+      );
       if (overlapCheckTx.hasOverlap) {
-        throw new ReservationOverlapError()
+        throw new ReservationOverlapError();
       }
 
       await tx.reservation.update({
@@ -437,33 +474,33 @@ export const updateAdminReservation = withPermission<
           durationDiscountAmount,
           notes: notes || null,
         },
-      })
+      });
 
       // クーポン使用回数をアトミックに調整
       if (couponChanged) {
         if (oldCouponId) {
-          await decrementCouponUsage(oldCouponId)
+          await decrementCouponUsage(oldCouponId);
         }
         if (newCouponId) {
-          await incrementCouponUsage(newCouponId)
+          await incrementCouponUsage(newCouponId);
         }
       }
-    })
+    });
   } catch (error) {
     if (isReservationOverlapError(error)) {
       return createFailure(
-        '選択された時間帯は既に予約されています。別の時間帯をお選びください。'
-      )
+        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+      );
     }
     logError(error, {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.HIGH,
-      context: { operation: 'updateAdminReservation', reservationId: id },
-    })
-    return createFailure('予約の更新に失敗しました')
+      context: { operation: "updateAdminReservation", reservationId: id },
+    });
+    return createFailure("予約の更新に失敗しました");
   }
 
-  updateTag(CACHE_TAGS.RESERVATIONS)
+  updateTag(CACHE_TAGS.RESERVATIONS);
 
   // Googleカレンダー更新（バックグラウンド）
   const calendarData: ReservationSyncData = {
@@ -476,17 +513,17 @@ export const updateAdminReservation = withPermission<
     location: space.address ?? undefined,
     notes: notes ?? undefined,
     totalPrice: calculatedPrice,
-  }
+  };
 
   fireAndForget(
     updateCalendarSync(calendarData).catch((error) => {
       logError(error, {
         category: ErrorCategory.EXTERNAL_API,
         severity: ErrorSeverity.LOW,
-        context: { operation: 'updateCalendarSync', reservationId: id },
-      })
-    })
-  )
+        context: { operation: "updateCalendarSync", reservationId: id },
+      });
+    }),
+  );
 
   // 変更通知メール（オプション）
   if (sendNotificationEmail) {
@@ -505,20 +542,29 @@ export const updateAdminReservation = withPermission<
         logError(error, {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
-          context: { operation: 'sendReservationConfirmationEmail', reservationId: id },
-        })
-      })
-    )
+          context: {
+            operation: "sendReservationConfirmationEmail",
+            reservationId: id,
+          },
+        });
+      }),
+    );
   }
 
-  return createSuccess('予約を更新しました')
-})
+  return createSuccess("予約を更新しました");
+});
 ```
 
 また、ファイル上部の `import` に `logError` `ErrorCategory` `ErrorSeverity` が必要。既存の import に含まれているか確認し、なければ追加:
 
 ```typescript
-import { ErrorCategory, ErrorSeverity, ReservationOverlapError, isReservationOverlapError, logError } from '@/shared/lib/errors'
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  ReservationOverlapError,
+  isReservationOverlapError,
+  logError,
+} from "@/shared/lib/errors";
 ```
 
 **Step 3: 型チェック**
@@ -541,9 +587,11 @@ git commit -m "feat(reservation): add updateAdminReservation Server Action"
 ## Task 5: `ReservationEditForm.tsx` コンポーネントを作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/reservations/_components/ReservationEditForm.tsx`
 
 `ReservationForm.tsx` をベースに、編集用の変更を加えた新コンポーネント。主な差分:
+
 - `defaultValues` が既存予約データから pre-populate される
 - `CustomerSelector` に `allowNewCustomer={false}` を渡す
 - submit が `updateAdminReservation(reservationId, data)` を呼ぶ
@@ -1021,6 +1069,7 @@ git commit -m "feat(reservation): add ReservationEditForm component"
 ## Task 6: 編集ページ `/admin/reservations/[id]/edit/page.tsx` を作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/reservations/[id]/edit/page.tsx`
 
 **Step 1: ファイル作成**
@@ -1113,6 +1162,7 @@ git commit -m "feat(reservation): add reservation edit page"
 ## Task 7: `ReservationDetail.tsx` に「編集」ボタンを追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/reservations/[id]/_components/ReservationDetail.tsx`
 
 **Step 1: import に Link を追加**
@@ -1120,8 +1170,8 @@ git commit -m "feat(reservation): add reservation edit page"
 ファイル先頭の import を確認し、`Link` が未 import なら追加:
 
 ```typescript
-import Link from 'next/link'
-import { Pencil } from 'lucide-react'
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 ```
 
 **Step 2: ステータスカードのヘッダーに編集ボタンを追加**

@@ -57,8 +57,6 @@ export function ScrollOrchestratorProvider({
   });
 
   return (
-    <ScrollStateContext value={scrollState}>
-      {children}
-    </ScrollStateContext>
+    <ScrollStateContext value={scrollState}>{children}</ScrollStateContext>
   );
 }

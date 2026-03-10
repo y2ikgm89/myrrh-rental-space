@@ -23,7 +23,9 @@ export async function ensurePageSectionsCommand(
     where: { pageId },
     select: { type: true },
   });
-  const existingTypes = new Set(existingSections.map((section) => section.type));
+  const existingTypes = new Set(
+    existingSections.map((section) => section.type),
+  );
   const missingSections = defaults.filter(
     (section) => !existingTypes.has(section.type),
   );

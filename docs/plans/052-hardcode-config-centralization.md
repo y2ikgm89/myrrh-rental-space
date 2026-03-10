@@ -17,21 +17,21 @@
 
 ### 環境変数バリデーション
 
-| ファイル | 説明 |
-|---------|------|
+| ファイル                       | 説明                                                           |
+| ------------------------------ | -------------------------------------------------------------- |
 | `src/shared/lib/env/server.ts` | サーバー専用環境変数（DATABASE_URL, BETTER_AUTH_SECRET, etc.） |
-| `src/shared/lib/env/client.ts` | クライアント環境変数（NEXT_PUBLIC_*） |
-| `src/shared/lib/env/index.ts` | 統合エクスポート |
+| `src/shared/lib/env/client.ts` | クライアント環境変数（NEXT*PUBLIC*\*）                         |
+| `src/shared/lib/env/index.ts`  | 統合エクスポート                                               |
 
 ### 定数ファイル
 
-| ファイル | 説明 |
-|---------|------|
-| `src/shared/lib/constants/defaults.ts` | サイトデフォルト値（name, description） |
-| `src/shared/lib/constants/session.ts` | セッション設定（expiresIn, updateAge, cookieCacheMaxAge） |
-| `src/shared/lib/constants/pagination.ts` | ページネーション設定（admin/public） |
-| `src/shared/lib/constants/urls.ts` | URL ヘルパー関数（getBaseUrl, getAppUrl, getAdminUrl, getPublicUrl） |
-| `src/shared/lib/constants/index.ts` | バレルエクスポート |
+| ファイル                                 | 説明                                                                 |
+| ---------------------------------------- | -------------------------------------------------------------------- |
+| `src/shared/lib/constants/defaults.ts`   | サイトデフォルト値（name, description）                              |
+| `src/shared/lib/constants/session.ts`    | セッション設定（expiresIn, updateAge, cookieCacheMaxAge）            |
+| `src/shared/lib/constants/pagination.ts` | ページネーション設定（admin/public）                                 |
+| `src/shared/lib/constants/urls.ts`       | URL ヘルパー関数（getBaseUrl, getAppUrl, getAdminUrl, getPublicUrl） |
+| `src/shared/lib/constants/index.ts`      | バレルエクスポート                                                   |
 
 ## 変更ファイル
 
@@ -73,71 +73,76 @@
 ### 環境変数
 
 ```typescript
-import { env } from '@/shared/lib/env'
+import { env } from "@/shared/lib/env";
 
 // サーバーサイド
-console.log(env.DATABASE_URL)
-console.log(env.BETTER_AUTH_SECRET)
+console.log(env.DATABASE_URL);
+console.log(env.BETTER_AUTH_SECRET);
 
 // クライアントサイド
-console.log(env.NEXT_PUBLIC_BASE_URL)
+console.log(env.NEXT_PUBLIC_BASE_URL);
 ```
 
 ### 定数
 
 ```typescript
-import { SITE_DEFAULTS, SESSION_CONFIG, getBaseUrl, getAdminUrl } from '@/shared/lib/constants'
+import {
+  SITE_DEFAULTS,
+  SESSION_CONFIG,
+  getBaseUrl,
+  getAdminUrl,
+} from "@/shared/lib/constants";
 
 // サイト名フォールバック
-const siteName = settings?.siteName ?? SITE_DEFAULTS.name
+const siteName = settings?.siteName ?? SITE_DEFAULTS.name;
 
 // URL 構築
-const url = getBaseUrl()  // 'https://example.com' or env value
-const adminUrl = getAdminUrl('/reservations/123')  // 'https://example.com/admin/reservations/123'
+const url = getBaseUrl(); // 'https://example.com' or env value
+const adminUrl = getAdminUrl("/reservations/123"); // 'https://example.com/admin/reservations/123'
 
 // セッション設定
 const session = {
-  expiresIn: SESSION_CONFIG.expiresIn,  // 30日（秒）
-  updateAge: SESSION_CONFIG.updateAge,   // 1日（秒）
-}
+  expiresIn: SESSION_CONFIG.expiresIn, // 30日（秒）
+  updateAge: SESSION_CONFIG.updateAge, // 1日（秒）
+};
 ```
 
 ## 環境変数定義
 
 ### サーバー専用（必須）
 
-| 変数 | 説明 | 検証 |
-|------|------|------|
-| `DATABASE_URL` | PostgreSQL接続URL | `z.string().url()` |
-| `BETTER_AUTH_SECRET` | 認証シークレット | `z.string().min(32)` |
+| 変数                 | 説明              | 検証                 |
+| -------------------- | ----------------- | -------------------- |
+| `DATABASE_URL`       | PostgreSQL接続URL | `z.string().url()`   |
+| `BETTER_AUTH_SECRET` | 認証シークレット  | `z.string().min(32)` |
 
 ### サーバー専用（オプション）
 
-| 変数 | 説明 |
-|------|------|
-| `BETTER_AUTH_URL` | 認証ベースURL |
-| `RESEND_API_KEY` | Resend APIキー |
-| `GOOGLE_CLIENT_ID` | Google OAuth |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth |
-| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile |
-| `ENCRYPTION_KEY` | 暗号化キー（64文字hex） |
-| `CRON_SECRET` | Cronジョブ認証 |
+| 変数                   | 説明                    |
+| ---------------------- | ----------------------- |
+| `BETTER_AUTH_URL`      | 認証ベースURL           |
+| `RESEND_API_KEY`       | Resend APIキー          |
+| `GOOGLE_CLIENT_ID`     | Google OAuth            |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth            |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile    |
+| `ENCRYPTION_KEY`       | 暗号化キー（64文字hex） |
+| `CRON_SECRET`          | Cronジョブ認証          |
 
 ### クライアント（必須）
 
-| 変数 | 説明 |
-|------|------|
-| `NEXT_PUBLIC_BASE_URL` | 公開サイトURL |
-| `NEXT_PUBLIC_APP_URL` | アプリURL |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL |
+| 変数                            | 説明              |
+| ------------------------------- | ----------------- |
+| `NEXT_PUBLIC_BASE_URL`          | 公開サイトURL     |
+| `NEXT_PUBLIC_APP_URL`           | アプリURL         |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase URL      |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key |
 
 ### クライアント（オプション）
 
-| 変数 | 説明 |
-|------|------|
+| 変数                             | 説明               |
+| -------------------------------- | ------------------ |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile Site Key |
-| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Google Analytics |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`  | Google Analytics   |
 
 ## 検証
 

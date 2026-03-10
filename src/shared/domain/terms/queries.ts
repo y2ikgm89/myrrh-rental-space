@@ -1,16 +1,16 @@
-import 'server-only'
+import "server-only";
 
-import { cacheLife, cacheTag } from 'next/cache'
-import { TermsStatus } from '@/shared/db/enums'
-import { prisma } from '@/shared/db/prisma'
-import { CACHE_LIFE, CACHE_TAGS } from '@/shared/lib/constants'
+import { cacheLife, cacheTag } from "next/cache";
+import { TermsStatus } from "@/shared/db/enums";
+import { prisma } from "@/shared/db/prisma";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
   safeFetch,
-} from '@/shared/lib/errors/server'
-import { toPlainObject } from '@/shared/lib/serialize'
-import { slugParamSchema } from '@/shared/lib/validations/params'
+} from "@/shared/lib/errors/server";
+import { toPlainObject } from "@/shared/lib/serialize";
+import { slugParamSchema } from "@/shared/lib/validations/params";
 
 const publicTermsSelect = {
   id: true,
@@ -30,31 +30,31 @@ const publicTermsSelect = {
       publishedAt: true,
     },
   },
-} as const
+} as const;
 
 export type PublicTermsData = {
-  id: string
-  title: string
-  slug: string
-  type: string
+  id: string;
+  title: string;
+  slug: string;
+  type: string;
   currentVersion: {
-    id: string
-    version: number
-    contentHtml: string
-    publishedAt: Date | null
-  } | null
-}
+    id: string;
+    version: number;
+    contentHtml: string;
+    publishedAt: Date | null;
+  } | null;
+};
 
 export async function getPublicTermsBySlug(
   slug: string,
 ): Promise<PublicTermsData | null> {
-  'use cache'
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
-  cacheTag(CACHE_TAGS.TERMS)
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.TERMS);
 
-  const validated = slugParamSchema.safeParse(slug)
+  const validated = slugParamSchema.safeParse(slug);
   if (!validated.success) {
-    return null
+    return null;
   }
 
   const result = await safeFetch({
@@ -66,14 +66,14 @@ export async function getPublicTermsBySlug(
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.HIGH,
-    operationName: 'getPublicTermsBySlug',
-  })
+    operationName: "getPublicTermsBySlug",
+  });
 
   if (!result) {
-    return null
+    return null;
   }
 
-  const currentVersion = result.versions[0] ?? null
+  const currentVersion = result.versions[0] ?? null;
 
   return toPlainObject({
     id: result.id,
@@ -88,5 +88,5 @@ export async function getPublicTermsBySlug(
           publishedAt: currentVersion.publishedAt,
         }
       : null,
-  })
+  });
 }

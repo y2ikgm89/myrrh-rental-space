@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import Image from "next/image";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Input,
@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from '@/admin/components/ui'
-import { ImagePlus } from 'lucide-react'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
+} from "@/admin/components/ui";
+import { ImagePlus } from "lucide-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   conceptConfigSchema,
   getConceptConfig,
@@ -25,18 +25,23 @@ import {
   parseTextAlign,
   type ConceptConfig,
   type ConceptConfigInput,
-} from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
 import {
   conceptLayoutLabels,
   imageAspectLabels,
   imagePositionLabels,
   textAlignLabels,
-} from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function ConceptConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getConceptConfig(section.config)
+export default function ConceptConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getConceptConfig(section.config);
 
   const {
     register,
@@ -47,28 +52,33 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
   } = useForm<ConceptConfigInput, unknown, ConceptConfig>({
     resolver: zodResolver(conceptConfigSchema),
     defaultValues: config,
-  })
+  });
 
-  const imageUrl = useWatch({ control, name: 'imageUrl' })
+  const imageUrl = useWatch({ control, name: "imageUrl" });
 
   const imagePicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('imageUrl', selected.url)
+        setValue("imageUrl", selected.url);
       }
     },
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="concept-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="concept-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="concept-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Our Philosophy"
             disabled={isPending}
           />
@@ -78,7 +88,7 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
           <Label htmlFor="concept-heading">見出し</Label>
           <Input
             id="concept-heading"
-            {...register('heading')}
+            {...register("heading")}
             placeholder="空間が、体験を変える"
             disabled={isPending}
           />
@@ -91,7 +101,7 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
           <Label htmlFor="concept-body">本文</Label>
           <Textarea
             id="concept-body"
-            {...register('body')}
+            {...register("body")}
             placeholder="コンセプトの説明文を入力..."
             rows={5}
             disabled={isPending}
@@ -134,7 +144,7 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setValue('imageUrl', '')}
+                  onClick={() => setValue("imageUrl", "")}
                   disabled={isPending}
                 >
                   削除
@@ -149,7 +159,7 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="concept-layout">レイアウト</Label>
             <Select
               defaultValue={config.layout}
-              onValueChange={(v) => setValue('layout', parseConceptLayout(v))}
+              onValueChange={(v) => setValue("layout", parseConceptLayout(v))}
               disabled={isPending}
             >
               <SelectTrigger id="concept-layout">
@@ -169,7 +179,9 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="concept-image-aspect">画像アスペクト比</Label>
             <Select
               defaultValue={config.imageAspect}
-              onValueChange={(v) => setValue('imageAspect', parseImageAspect(v))}
+              onValueChange={(v) =>
+                setValue("imageAspect", parseImageAspect(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="concept-image-aspect">
@@ -191,7 +203,9 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="concept-image-position">画像配置</Label>
             <Select
               defaultValue={config.imagePosition}
-              onValueChange={(v) => setValue('imagePosition', parseImagePosition(v))}
+              onValueChange={(v) =>
+                setValue("imagePosition", parseImagePosition(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="concept-image-position">
@@ -199,7 +213,9 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(imagePositionLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{imagePositionLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {imagePositionLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -209,7 +225,7 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
             <Label htmlFor="concept-text-align">テキスト配置</Label>
             <Select
               defaultValue={config.textAlign}
-              onValueChange={(v) => setValue('textAlign', parseTextAlign(v))}
+              onValueChange={(v) => setValue("textAlign", parseTextAlign(v))}
               disabled={isPending}
             >
               <SelectTrigger id="concept-text-align">
@@ -217,7 +233,9 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
               </SelectTrigger>
               <SelectContent>
                 {keysOf(textAlignLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{textAlignLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {textAlignLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -225,8 +243,12 @@ export default function ConceptConfigForm({ section, onSave, isPending, onDirtyC
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
       <imagePicker.MediaPicker />
     </form>
-  )
+  );
 }

@@ -8,7 +8,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { ReservationStatus } from "@/shared/db/enums";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   deleteReservationCommand,
   updateReservationNotesCommand,
@@ -164,7 +164,9 @@ export const updateReservationNotes = async (
   });
 };
 
-export const deleteReservation = async (id: string): Promise<MutationResult> => {
+export const deleteReservation = async (
+  id: string,
+): Promise<MutationResult> => {
   let googleCalendarEventId: string | null = null;
 
   return executeAdminMutationResult({

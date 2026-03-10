@@ -1,12 +1,17 @@
-'use client'
+"use client";
 
-import { ActionDropdown, ActionDropdownItem } from '@/admin/components/ActionDropdown'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+} from "@/admin/components/ActionDropdown";
 
 type ReservationActionCellProps = {
-  reservationId: string
-}
+  reservationId: string;
+};
 
-export function ReservationActionCell({ reservationId }: ReservationActionCellProps) {
+export function ReservationActionCell({
+  reservationId,
+}: ReservationActionCellProps) {
   return (
     <ActionDropdown>
       <ActionDropdownItem href={`/admin/reservations/${reservationId}/edit`}>
@@ -16,5 +21,5 @@ export function ReservationActionCell({ reservationId }: ReservationActionCellPr
         詳細
       </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

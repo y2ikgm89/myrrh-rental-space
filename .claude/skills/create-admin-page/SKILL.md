@@ -18,7 +18,7 @@ description: >
 1. **リソース名**: 英語 camelCase（例: `coupon`, `spaceCategory`）
 2. **Prisma モデル名**: 同名または異なる場合（例: `Coupon`）
 3. **主要フィールド**: 一覧表示に使うカラム（name, title, status 等）
-4. **権限設定**: `withPermission` の resource 名（通常リソース名と同じ）
+4. **権限設定**: `executeAdminMutation` の resource 名（通常リソース名と同じ）
 5. **既存 Server Action**: `_shared/actions/` に既存ファイルがあるか確認
 6. **ルートパス**: `/admin/<resource>` のパス（複数形が一般的）
 
@@ -371,10 +371,10 @@ export function <Resource>ActionCell({ id, name }: Props) {
 ```typescript
 "use server";
 
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
 import { updateTag } from "next/cache";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createSuccess } from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import prisma from "@/shared/lib/prisma";
 import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
@@ -415,44 +415,45 @@ export async function get<Resource>ById(id: string) {
   return toPlainObject({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() });
 }
 
-export const create<Resource> = withPermission<[FormData], { id: string }>(
-  "<resource>",
-  "create",
-)(async (_user, data) => {
+export const create<Resource> = async (data: FormData) => {
   const parsed = <resource>Schema.safeParse(data);
   if (!parsed.success) return createValidationError(parsed.error);
 
-  const item = await prisma.<resource>.create({ data: parsed.data });
-  updateTag(CACHE_TAGS.<RESOURCES>);
-  return createSuccess("作成しました", { id: item.id });
-});
+  return executeAdminMutation({
+    resource: "<resource>",
+    action: "create",
+    execute: async () => prisma.<resource>.create({ data: parsed.data }),
+    success: (item) => createSuccess("作成しました", { id: item.id }),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
+    resolveAuditResourceId: (data) => data.id,
+  });
+};
 
-export const update<Resource> = withPermission<[string, FormData]>(
-  "<resource>",
-  "update",
-)(async (_user, id, data) => {
+export const update<Resource> = async (id: string, data: FormData) => {
   const parsed = <resource>Schema.safeParse(data);
   if (!parsed.success) return createValidationError(parsed.error);
 
-  const exists = await prisma.<resource>.findUnique({ where: { id }, select: { id: true } });
-  if (!exists) return createFailure("<Resource>が見つかりません");
+  return executeAdminMutation({
+    resource: "<resource>",
+    action: "update",
+    resourceId: id,
+    execute: async () => {
+      await prisma.<resource>.update({ where: { id }, data: parsed.data });
+    },
+    success: () => createSuccess("更新しました"),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
+  });
+};
 
-  await prisma.<resource>.update({ where: { id }, data: parsed.data });
-  updateTag(CACHE_TAGS.<RESOURCES>);
-  return createSuccess("更新しました");
-});
-
-export const delete<Resource> = withPermission<[string]>(
-  "<resource>",
-  "delete",
-)(async (_user, id) => {
-  const exists = await prisma.<resource>.findUnique({ where: { id }, select: { id: true } });
-  if (!exists) return createFailure("<Resource>が見つかりません");
-
-  await prisma.<resource>.delete({ where: { id } });
-  updateTag(CACHE_TAGS.<RESOURCES>);
-  return createSuccess("削除しました");
-});
+export const delete<Resource> = async (id: string) =>
+  executeAdminMutation({
+    resource: "<resource>",
+    action: "delete",
+    resourceId: id,
+    execute: async () => { await prisma.<resource>.delete({ where: { id } }); },
+    success: () => createSuccess("削除しました"),
+    afterSuccess: () => { updateTag(CACHE_TAGS.<RESOURCES>); },
+  });
 ```
 
 ## nuqs パーサー追加（`@/shared/lib/nuqs/parsers.ts`）

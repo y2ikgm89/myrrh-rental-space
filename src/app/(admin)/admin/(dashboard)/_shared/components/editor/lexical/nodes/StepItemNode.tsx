@@ -5,7 +5,7 @@
  * 子ノード: StepTitleNode + StepContentNode
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -13,27 +13,36 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, $getState, $getStateChange, $setState, createState, ElementNode } from 'lexical'
+} from "lexical";
+import {
+  $create,
+  $getState,
+  $getStateChange,
+  $setState,
+  createState,
+  ElementNode,
+} from "lexical";
 
 // =============================================================================
 // State
 // =============================================================================
 
-export const stepNumberState = createState('stepNumber', {
+export const stepNumberState = createState("stepNumber", {
   parse: (v: unknown): number =>
-    typeof v === 'number' && Number.isFinite(v) ? v : 1,
-})
+    typeof v === "number" && Number.isFinite(v) ? v : 1,
+});
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertStepItemElement(element: HTMLElement): null | DOMConversionOutput {
-  const stepAttr = element.getAttribute('data-step')
-  const stepNumber = stepAttr ? parseInt(stepAttr, 10) : 1
-  const node = $createStepItemNode(stepNumber)
-  return { node }
+function $convertStepItemElement(
+  element: HTMLElement,
+): null | DOMConversionOutput {
+  const stepAttr = element.getAttribute("data-step");
+  const stepNumber = stepAttr ? parseInt(stepAttr, 10) : 1;
+  const node = $createStepItemNode(stepNumber);
+  return { node };
 }
 
 // =============================================================================
@@ -42,57 +51,57 @@ function $convertStepItemElement(element: HTMLElement): null | DOMConversionOutp
 
 export class StepItemNode extends ElementNode {
   override $config() {
-    return this.config('step-item', {
+    return this.config("step-item", {
       extends: ElementNode,
       stateConfigs: [{ flat: true, stateConfig: stepNumberState }],
-    })
+    });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute('data-step')) {
+        if (element.hasAttribute("data-step")) {
           return {
             conversion: $convertStepItemElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const stepNumber = $getState(this, stepNumberState)
-    const element = document.createElement('div')
-    element.setAttribute('data-step', String(stepNumber))
+    const stepNumber = $getState(this, stepNumberState);
+    const element = document.createElement("div");
+    element.setAttribute("data-step", String(stepNumber));
 
-    return { element }
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const stepNumber = $getState(this, stepNumberState)
-    const element = document.createElement('div')
-    element.setAttribute('data-step', String(stepNumber))
+    const stepNumber = $getState(this, stepNumberState);
+    const element = document.createElement("div");
+    element.setAttribute("data-step", String(stepNumber));
 
-    return element
+    return element;
   }
 
   override updateDOM(prevNode: StepItemNode, dom: HTMLElement): boolean {
-    const change = $getStateChange(this, prevNode, stepNumberState)
+    const change = $getStateChange(this, prevNode, stepNumberState);
     if (change) {
-      const [newStepNumber] = change
-      dom.setAttribute('data-step', String(newStepNumber))
+      const [newStepNumber] = change;
+      dom.setAttribute("data-step", String(newStepNumber));
     }
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -107,7 +116,7 @@ export class StepItemNode extends ElementNode {
  * @returns StepItemNode インスタンス
  */
 export function $createStepItemNode(stepNumber: number = 1): StepItemNode {
-  return $setState($create(StepItemNode), stepNumberState, stepNumber)
+  return $setState($create(StepItemNode), stepNumberState, stepNumber);
 }
 
 /**
@@ -117,7 +126,7 @@ export function $createStepItemNode(stepNumber: number = 1): StepItemNode {
  * @returns StepItemNodeの場合true
  */
 export function $isStepItemNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is StepItemNode {
-  return node instanceof StepItemNode
+  return node instanceof StepItemNode;
 }

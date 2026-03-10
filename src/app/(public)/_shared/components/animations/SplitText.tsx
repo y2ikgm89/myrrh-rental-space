@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SplitText — Character/word/line scroll reveal animation
@@ -7,66 +7,66 @@
  * Uses GSAP ScrollTrigger for scroll-linked entrance.
  */
 
-import { useRef, type ReactElement } from 'react'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { useRef, type ReactElement } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 
 interface SplitTextProps {
-  readonly children: string
-  readonly className?: string
-  readonly variant?: 'chars' | 'words' | 'lines'
-  readonly delay?: number
+  readonly children: string;
+  readonly className?: string;
+  readonly variant?: "chars" | "words" | "lines";
+  readonly delay?: number;
   /** Whether to use ScrollTrigger. When false, animates immediately. */
-  readonly trigger?: boolean
+  readonly trigger?: boolean;
 }
 
 export function SplitText({
   children,
   className,
-  variant = 'chars',
+  variant = "chars",
   delay = 0,
   trigger = true,
 }: SplitTextProps): ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const segments = (() => {
-    if (variant === 'chars') {
-      return children.split('').map((char, i) => ({
+    if (variant === "chars") {
+      return children.split("").map((char, i) => ({
         key: `${i}-${char}`,
-        content: char === ' ' ? '\u00A0' : char,
-      }))
+        content: char === " " ? "\u00A0" : char,
+      }));
     }
-    if (variant === 'words') {
-      return children.split(' ').map((word, i) => ({
+    if (variant === "words") {
+      return children.split(" ").map((word, i) => ({
         key: `${i}-${word}`,
         content: word,
-      }))
+      }));
     }
-    return children.split('\n').map((line, i) => ({
+    return children.split("\n").map((line, i) => ({
       key: `${i}-${line}`,
       content: line,
-    }))
-  })()
+    }));
+  })();
 
   const staggerAmount =
-    variant === 'chars'
+    variant === "chars"
       ? STAGGER.char
-      : variant === 'words'
+      : variant === "words"
         ? STAGGER.word
-        : STAGGER.line
+        : STAGGER.line;
 
   useGSAP(
     () => {
-      const container = containerRef.current
-      if (!container) return
+      const container = containerRef.current;
+      if (!container) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const targets = container.querySelectorAll('[data-split-segment]')
-        if (targets.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const targets = container.querySelectorAll("[data-split-segment]");
+        if (targets.length === 0) return;
 
-        const fromVars: gsap.TweenVars = { y: 30, opacity: 0 }
+        const fromVars: gsap.TweenVars = { y: 30, opacity: 0 };
         const toVars: gsap.TweenVars = {
           y: 0,
           opacity: 1,
@@ -74,32 +74,32 @@ export function SplitText({
           ease: EASE.outQuart,
           stagger: staggerAmount,
           delay,
-        }
+        };
 
         if (trigger) {
           gsap.fromTo(targets, fromVars, {
             ...toVars,
             scrollTrigger: {
               trigger: container,
-              start: 'top 85%',
-              toggleActions: 'play none none none',
+              start: "top 85%",
+              toggleActions: "play none none none",
             },
-          })
+          });
         } else {
-          gsap.fromTo(targets, fromVars, toVars)
+          gsap.fromTo(targets, fromVars, toVars);
         }
-      })
+      });
     },
     { scope: containerRef, dependencies: [trigger, delay, staggerAmount] },
-  )
+  );
 
   return (
     <div
       ref={containerRef}
       className={className}
       style={{
-        display: variant === 'lines' ? 'block' : 'inline-flex',
-        flexWrap: variant !== 'lines' ? 'wrap' : undefined,
+        display: variant === "lines" ? "block" : "inline-flex",
+        flexWrap: variant !== "lines" ? "wrap" : undefined,
       }}
     >
       <span className="sr-only">{children}</span>
@@ -111,9 +111,9 @@ export function SplitText({
           aria-hidden="true"
         >
           {segment.content}
-          {variant === 'words' && <span>&nbsp;</span>}
+          {variant === "words" && <span>&nbsp;</span>}
         </span>
       ))}
     </div>
-  )
+  );
 }

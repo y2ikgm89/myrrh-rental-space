@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { getTermsList } from "@/admin/queries/terms";
 import { TermsTable } from "./_components/TermsTable";
 import { Button } from "@/admin/components/ui";
@@ -11,18 +12,12 @@ export const metadata: Metadata = {
 };
 
 async function TermsListContent() {
-  const result = await getTermsList();
-  if (!result.success) {
-    return (
-      <div className="rounded-lg border bg-card p-12 text-center">
-        <p className="text-destructive">{result.error}</p>
-      </div>
-    );
-  }
-  return <TermsTable terms={result.data ?? []} />;
+  const terms = await getTermsList();
+  return <TermsTable terms={terms} />;
 }
 
 export default async function TermsPage() {
+  await connection();
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -44,4 +39,3 @@ export default async function TermsPage() {
     </div>
   );
 }
-

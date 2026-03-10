@@ -165,9 +165,7 @@ export async function recordCalendarSyncStarted(): Promise<void> {
   });
 }
 
-export async function saveCalendarSyncToken(
-  syncToken: string,
-): Promise<void> {
+export async function saveCalendarSyncToken(syncToken: string): Promise<void> {
   await prisma.settings.update({
     where: { id: "singleton" },
     data: {

@@ -6,7 +6,7 @@
  * スタイルは lexical-content.css の [data-collapsible-content] セレクターで管理
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -14,16 +14,18 @@ import type {
   DOMExportOutput,
   EditorConfig,
   LexicalNode,
-} from 'lexical'
-import { $create, ElementNode } from 'lexical'
+} from "lexical";
+import { $create, ElementNode } from "lexical";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleContentElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createCollapsibleContentNode()
-  return { node }
+function $convertCollapsibleContentElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createCollapsibleContentNode();
+  return { node };
 }
 
 // =============================================================================
@@ -32,49 +34,49 @@ function $convertCollapsibleContentElement(_element: HTMLElement): null | DOMCon
 
 export class CollapsibleContentNode extends ElementNode {
   override $config() {
-    return this.config('collapsible-content', { extends: ElementNode })
+    return this.config("collapsible-content", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
     return {
       div: (element: HTMLElement) => {
-        if (element.hasAttribute('data-collapsible-content')) {
+        if (element.hasAttribute("data-collapsible-content")) {
           return {
             conversion: $convertCollapsibleContentElement,
             priority: 1,
-          }
+          };
         }
-        return null
+        return null;
       },
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-content', 'true')
-    return { element }
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-content", "true");
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-content', 'true')
-    return element
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-content", "true");
+    return element;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override isShadowRoot(): boolean {
-    return true
+    return true;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 }
 
@@ -83,11 +85,11 @@ export class CollapsibleContentNode extends ElementNode {
 // =============================================================================
 
 export function $createCollapsibleContentNode(): CollapsibleContentNode {
-  return $create(CollapsibleContentNode)
+  return $create(CollapsibleContentNode);
 }
 
 export function $isCollapsibleContentNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is CollapsibleContentNode {
-  return node instanceof CollapsibleContentNode
+  return node instanceof CollapsibleContentNode;
 }

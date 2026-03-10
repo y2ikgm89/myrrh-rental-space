@@ -79,6 +79,10 @@ import {
   sectionTypeLabels,
   defaultSectionConfigs,
 } from "@/admin/lib/validations/homepage-section";
+import {
+  isMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
@@ -369,43 +373,41 @@ export function HomepageTab({
   // Shared action handler: execute action, toast result, reload on success
   // React 19: nested startTransition is required for state updates after await
   function runActionAndReload(
-    action: () => Promise<{
-      success: boolean;
-      message?: string;
-      error?: string;
-    }>,
+    action: () => Promise<MutationResult<unknown>>,
+    successMessage: string,
   ) {
     startTransition(async () => {
       const result = await action();
-      if (result.success) {
-        toast.success(result.message);
-        const data = await fetchHomepageSections();
-        startTransition(() => {
-          setSections(data);
-        });
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success(successMessage);
+      const data = await fetchHomepageSections();
+      startTransition(() => {
+        setSections(data);
+      });
     });
   }
 
   // Shared optimistic handler: apply optimistic update, execute action, revert on error
   function runOptimisticAction(
     optimisticUpdate: () => void,
-    action: () => Promise<{
-      success: boolean;
-      message?: string;
-      error?: string;
-    }>,
+    action: () => Promise<MutationResult<unknown>>,
+    successMessage?: string,
   ) {
     optimisticUpdate();
     startTransition(async () => {
       const result = await action();
-      if (result.success) {
-        toast.success(result.message);
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
         reloadSections();
+        return;
+      }
+
+      if (successMessage) {
+        toast.success(successMessage);
       }
     });
   }
@@ -419,6 +421,7 @@ export function HomepageTab({
             prev?.map((s) => (s.id === id ? { ...s, isActive } : s)) ?? null,
         ),
       () => toggleHomepageSection(id, isActive),
+      isActive ? "セクションを有効にしました" : "セクションを無効にしました",
     );
   };
 
@@ -430,22 +433,41 @@ export function HomepageTab({
     runOptimisticAction(
       () => setSections((prev) => prev?.filter((s) => s.id !== id) ?? null),
       () => deleteHomepageSection(id),
+      "セクションを削除しました",
     );
   };
 
   const handleAddSection = (type: SectionType) => {
-    runActionAndReload(() =>
-      createHomepageSection({
-        type,
-        config: defaultSectionConfigs[type],
-        design: {},
-        isActive: true,
-      }),
+    runActionAndReload(
+      () =>
+        createHomepageSection({
+          type,
+          config: defaultSectionConfigs[type],
+          design: {},
+          isActive: true,
+        }),
+      "セクションを作成しました",
     );
   };
 
   const handleInitializeDefaults = () => {
-    runActionAndReload(() => initializeDefaultSections());
+    startTransition(async () => {
+      const result = await initializeDefaultSections();
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success(
+        result.created
+          ? "デフォルトセクションを作成しました"
+          : "既にセクションが存在します",
+      );
+      const data = await fetchHomepageSections();
+      startTransition(() => {
+        setSections(data);
+      });
+    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -466,10 +488,13 @@ export function HomepageTab({
 
     startTransition(async () => {
       const result = await updateSectionOrder({ sections: orderUpdates });
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
         reloadSections();
+        return;
       }
+
+      toast.success("順序を更新しました");
     });
   };
 

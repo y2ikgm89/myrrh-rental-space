@@ -1,49 +1,50 @@
-'use client'
+"use client";
 
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_LOW,
   PASTE_COMMAND,
-} from 'lexical'
-import { useEffect } from 'react'
-import { INSERT_BOOKMARK_COMMAND } from './BookmarkPlugin'
+} from "lexical";
+import { useEffect } from "react";
+import { INSERT_BOOKMARK_COMMAND } from "./BookmarkPlugin";
 
-const URL_PATTERN = /^https?:\/\/[^\s]+$/
+const URL_PATTERN = /^https?:\/\/[^\s]+$/;
 
 export function PasteUrlPlugin() {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
     return editor.registerCommand(
       PASTE_COMMAND,
       (event) => {
         const clipboardData =
-          event instanceof ClipboardEvent ? event.clipboardData : null
-        const text = clipboardData?.getData('text/plain')?.trim()
+          event instanceof ClipboardEvent ? event.clipboardData : null;
+        const text = clipboardData?.getData("text/plain")?.trim();
 
-        if (!text || !URL_PATTERN.test(text)) return false
+        if (!text || !URL_PATTERN.test(text)) return false;
 
-        const selection = $getSelection()
-        if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
-        const node = selection.anchor.getNode()
-        const parent = node.getParent()
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection) || !selection.isCollapsed())
+          return false;
+        const node = selection.anchor.getNode();
+        const parent = node.getParent();
         const isEmptyParagraph =
           parent != null &&
           $isRootOrShadowRoot(parent.getParent()) &&
-          node.getTextContent() === ''
+          node.getTextContent() === "";
 
-        if (!isEmptyParagraph) return false
+        if (!isEmptyParagraph) return false;
 
-        editor.dispatchCommand(INSERT_BOOKMARK_COMMAND, { url: text })
-        event.preventDefault()
-        return true
+        editor.dispatchCommand(INSERT_BOOKMARK_COMMAND, { url: text });
+        event.preventDefault();
+        return true;
       },
       COMMAND_PRIORITY_LOW,
-    )
-  }, [editor])
+    );
+  }, [editor]);
 
-  return null
+  return null;
 }

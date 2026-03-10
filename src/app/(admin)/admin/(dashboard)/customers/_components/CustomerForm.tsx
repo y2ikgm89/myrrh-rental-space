@@ -1,67 +1,62 @@
-'use client'
+"use client";
 
-import { useActionState, useEffect, type ReactElement } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createCustomer } from '@/admin/actions/customer'
+import { useActionState, useEffect, type ReactElement } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createCustomer } from "@/admin/actions/customer";
 import {
   customerFormSchema,
   type CustomerFormData,
   type CustomerFormInput,
-} from '@/admin/lib/validations/customer'
-import {
-  Button,
-  Input,
-  Label,
-  Card,
-  Textarea,
-} from '@/admin/components/ui'
-import { cn } from '@/shared/lib/cn'
-import { useKanaInput } from '@/admin/hooks'
+} from "@/admin/lib/validations/customer";
+import { Button, Input, Label, Card, Textarea } from "@/admin/components/ui";
+import { cn } from "@/shared/lib/cn";
+import { useKanaInput } from "@/admin/hooks";
 import {
   getFormString,
   getFormStringRequired,
   getFormStringOrDefault,
-} from '@/shared/lib/form-data'
+} from "@/shared/lib/form-data";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 type FormState = {
-  success: boolean
-  message: string
-  customerId?: string
-} | null
+  success: boolean;
+  message: string;
+  customerId?: string;
+} | null;
 
 async function submitAction(
   _prevState: FormState,
-  formData: FormData
+  formData: FormData,
 ): Promise<FormState> {
   const input: CustomerFormInput = {
-    lastName: getFormStringRequired(formData, 'lastName'),
-    firstName: getFormStringRequired(formData, 'firstName'),
-    lastNameKana: getFormString(formData, 'lastNameKana'),
-    firstNameKana: getFormString(formData, 'firstNameKana'),
-    email: getFormStringRequired(formData, 'email'),
-    phoneNumber: getFormStringOrDefault(formData, 'phoneNumber', ''),
-    address: getFormStringOrDefault(formData, 'address', ''),
-    notes: getFormStringOrDefault(formData, 'notes', ''),
-  }
+    lastName: getFormStringRequired(formData, "lastName"),
+    firstName: getFormStringRequired(formData, "firstName"),
+    lastNameKana: getFormString(formData, "lastNameKana"),
+    firstNameKana: getFormString(formData, "firstNameKana"),
+    email: getFormStringRequired(formData, "email"),
+    phoneNumber: getFormStringOrDefault(formData, "phoneNumber", ""),
+    address: getFormStringOrDefault(formData, "address", ""),
+    notes: getFormStringOrDefault(formData, "notes", ""),
+  };
 
-  const result = await createCustomer(input)
+  const result = await createCustomer(input);
 
-  if (!result.success) {
-    return { success: false, message: result.error }
+  if (isMutationError(result)) {
+    return { success: false, message: result.error };
   }
 
   return {
     success: true,
-    message: result.message,
-    customerId: result.data?.id,
-  }
+    message: "顧客を作成しました",
+    customerId: result.id,
+  };
 }
 
 export function CustomerForm(): ReactElement {
-  const router = useRouter()
-  const [state, formAction, isPending] = useActionState(submitAction, null)
+  const router = useRouter();
+  const [state, formAction, isPending] = useActionState(submitAction, null);
 
   const {
     register,
@@ -70,30 +65,30 @@ export function CustomerForm(): ReactElement {
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerFormSchema),
     defaultValues: {
-      lastName: '',
-      firstName: '',
-      lastNameKana: '',
-      firstNameKana: '',
-      email: '',
-      phoneNumber: '',
-      address: '',
-      notes: '',
+      lastName: "",
+      firstName: "",
+      lastNameKana: "",
+      firstNameKana: "",
+      email: "",
+      phoneNumber: "",
+      address: "",
+      notes: "",
     },
-  })
+  });
 
   // IME 自動カナ入力
   const lastNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setValue('lastNameKana', kana),
-  })
+    onKanaChange: (kana) => setValue("lastNameKana", kana),
+  });
   const firstNameKanaInput = useKanaInput({
-    onKanaChange: (kana) => setValue('firstNameKana', kana),
-  })
+    onKanaChange: (kana) => setValue("firstNameKana", kana),
+  });
 
   useEffect(() => {
     if (state?.success) {
-      router.push('/admin/customers')
+      router.push("/admin/customers");
     }
-  }, [state?.success, router])
+  }, [state?.success, router]);
 
   return (
     <form action={formAction}>
@@ -114,12 +109,18 @@ export function CustomerForm(): ReactElement {
               </Label>
               <Input
                 id="lastName"
-                {...register('lastName')}
+                {...register("lastName")}
                 placeholder="山田"
                 aria-invalid={!!errors.lastName}
-                aria-describedby={errors.lastName ? 'lastName-error' : undefined}
-                onCompositionStart={lastNameKanaInput.inputProps.onCompositionStart}
-                onCompositionUpdate={lastNameKanaInput.inputProps.onCompositionUpdate}
+                aria-describedby={
+                  errors.lastName ? "lastName-error" : undefined
+                }
+                onCompositionStart={
+                  lastNameKanaInput.inputProps.onCompositionStart
+                }
+                onCompositionUpdate={
+                  lastNameKanaInput.inputProps.onCompositionUpdate
+                }
                 onCompositionEnd={lastNameKanaInput.inputProps.onCompositionEnd}
                 onInput={lastNameKanaInput.inputProps.onInput}
               />
@@ -135,13 +136,21 @@ export function CustomerForm(): ReactElement {
               </Label>
               <Input
                 id="firstName"
-                {...register('firstName')}
+                {...register("firstName")}
                 placeholder="太郎"
                 aria-invalid={!!errors.firstName}
-                aria-describedby={errors.firstName ? 'firstName-error' : undefined}
-                onCompositionStart={firstNameKanaInput.inputProps.onCompositionStart}
-                onCompositionUpdate={firstNameKanaInput.inputProps.onCompositionUpdate}
-                onCompositionEnd={firstNameKanaInput.inputProps.onCompositionEnd}
+                aria-describedby={
+                  errors.firstName ? "firstName-error" : undefined
+                }
+                onCompositionStart={
+                  firstNameKanaInput.inputProps.onCompositionStart
+                }
+                onCompositionUpdate={
+                  firstNameKanaInput.inputProps.onCompositionUpdate
+                }
+                onCompositionEnd={
+                  firstNameKanaInput.inputProps.onCompositionEnd
+                }
                 onInput={firstNameKanaInput.inputProps.onInput}
               />
               {errors.firstName && (
@@ -157,7 +166,9 @@ export function CustomerForm(): ReactElement {
             <div className="space-y-2">
               <Label htmlFor="lastNameKana">
                 セイ
-                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  （自動入力）
+                </span>
               </Label>
               <Input
                 id="lastNameKana"
@@ -170,7 +181,9 @@ export function CustomerForm(): ReactElement {
             <div className="space-y-2">
               <Label htmlFor="firstNameKana">
                 メイ
-                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  （自動入力）
+                </span>
               </Label>
               <Input
                 id="firstNameKana"
@@ -190,10 +203,10 @@ export function CustomerForm(): ReactElement {
             <Input
               id="email"
               type="email"
-              {...register('email')}
+              {...register("email")}
               placeholder="example@example.com"
               aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'email-error' : undefined}
+              aria-describedby={errors.email ? "email-error" : undefined}
             />
             {errors.email && (
               <p id="email-error" className="text-xs text-destructive">
@@ -208,10 +221,12 @@ export function CustomerForm(): ReactElement {
             <Input
               id="phoneNumber"
               type="tel"
-              {...register('phoneNumber')}
+              {...register("phoneNumber")}
               placeholder="090-1234-5678"
               aria-invalid={!!errors.phoneNumber}
-              aria-describedby={errors.phoneNumber ? 'phoneNumber-error' : undefined}
+              aria-describedby={
+                errors.phoneNumber ? "phoneNumber-error" : undefined
+              }
             />
             {errors.phoneNumber && (
               <p id="phoneNumber-error" className="text-xs text-destructive">
@@ -225,10 +240,10 @@ export function CustomerForm(): ReactElement {
             <Label htmlFor="address">住所</Label>
             <Input
               id="address"
-              {...register('address')}
+              {...register("address")}
               placeholder="東京都渋谷区..."
               aria-invalid={!!errors.address}
-              aria-describedby={errors.address ? 'address-error' : undefined}
+              aria-describedby={errors.address ? "address-error" : undefined}
             />
             {errors.address && (
               <p id="address-error" className="text-xs text-destructive">
@@ -242,11 +257,11 @@ export function CustomerForm(): ReactElement {
             <Label htmlFor="notes">メモ</Label>
             <Textarea
               id="notes"
-              {...register('notes')}
+              {...register("notes")}
               placeholder="顧客に関するメモ..."
               rows={4}
               aria-invalid={!!errors.notes}
-              aria-describedby={errors.notes ? 'notes-error' : undefined}
+              aria-describedby={errors.notes ? "notes-error" : undefined}
             />
             {errors.notes && (
               <p id="notes-error" className="text-xs text-destructive">
@@ -267,13 +282,13 @@ export function CustomerForm(): ReactElement {
             <Button
               type="submit"
               disabled={isPending}
-              className={cn(isPending && 'opacity-50')}
+              className={cn(isPending && "opacity-50")}
             >
-              {isPending ? '作成中...' : '顧客を作成'}
+              {isPending ? "作成中..." : "顧客を作成"}
             </Button>
           </div>
         </div>
       </Card>
     </form>
-  )
+  );
 }

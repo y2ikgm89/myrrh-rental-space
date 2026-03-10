@@ -205,7 +205,7 @@
 ```prisma
 model Settings {
   id              String   @id @default(uuid())
-  
+
   // サイト基本情報
   siteName        String?  @db.VarChar(100)
   siteDescription String?  @db.VarChar(500)
@@ -213,13 +213,13 @@ model Settings {
   defaultOgpImageUrl String?
   headerLogoUrl   String?
   footerCopyright String?  @db.VarChar(200)
-  
+
   // 連絡先情報
   phoneNumber     String?
   email           String?
   address         String?  @db.VarChar(200)
   defaultBusinessHours Json? // 曜日別の開始/終了時間
-  
+
   // メール設定
   senderEmail     String?
   senderName      String?  @db.VarChar(100)
@@ -229,7 +229,7 @@ model Settings {
   reservationCancelledTemplateId    String?
   reservationUpdatedTemplateId      String?
   adminNotificationTemplateId       String?
-  
+
   // SEO設定
   defaultMetaDescription String? @db.VarChar(160)
   defaultMetaKeywords    String?
@@ -237,7 +237,7 @@ model Settings {
   defaultOgpDescription String? @db.VarChar(200)
   googleAnalyticsId      String?
   googleSearchConsoleId String?
-  
+
   // 予約設定
   defaultTimeSlot        Int?     @default(60) // 分単位
   minReservationDuration Int?     @default(60) // 分単位
@@ -245,20 +245,20 @@ model Settings {
   cancellationTermsId    String?  // Terms.idへの参照
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail      Boolean @default(true)
-  
+
   // 通知設定
   notifyNewReservation      Boolean @default(true)
   notifyReservationChange   Boolean @default(true)
   notifyReservationCancel    Boolean @default(true)
   notifyNewInquiry          Boolean @default(true)
   notificationEmailAddresses String? // カンマ区切りのメールアドレス
-  
+
   // その他の設定
   timezone          String?  @default("Asia/Tokyo")
   language          String?  @default("ja")
   maintenanceMode   Boolean  @default(false)
   maintenanceMessage String? @db.Text
-  
+
   updatedAt         DateTime @updatedAt
   createdAt         DateTime @default(now())
 }
@@ -387,19 +387,19 @@ export function SettingsTabs() {
 #### 設定取得
 
 ```typescript
-'use server'
+"use server";
 
-import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
 export async function getSettings() {
-  const session = await auth()
-  if (!session || session.user.role !== 'admin') {
-    throw new Error('Unauthorized')
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
   }
 
   // Settingsテーブルは1レコードのみ存在
-  let settings = await prisma.settings.findFirst()
+  let settings = await prisma.settings.findFirst();
 
   // レコードが存在しない場合はデフォルト値で作成
   if (!settings) {
@@ -414,14 +414,14 @@ export async function getSettings() {
         notifyReservationChange: true,
         notifyReservationCancel: true,
         notifyNewInquiry: true,
-        timezone: 'Asia/Tokyo',
-        language: 'ja',
+        timezone: "Asia/Tokyo",
+        language: "ja",
         maintenanceMode: false,
       },
-    })
+    });
   }
 
-  return settings
+  return settings;
 }
 ```
 
@@ -429,47 +429,47 @@ export async function getSettings() {
 
 ```typescript
 export async function updateBasicSettings(data: {
-  siteName?: string
-  siteDescription?: string
-  faviconUrl?: string
-  defaultOgpImageUrl?: string
-  headerLogoUrl?: string
-  footerCopyright?: string
+  siteName?: string;
+  siteDescription?: string;
+  faviconUrl?: string;
+  defaultOgpImageUrl?: string;
+  headerLogoUrl?: string;
+  footerCopyright?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const session = await auth()
-  if (!session || session.user.role !== 'admin') {
-    throw new Error('Unauthorized')
+  const session = await auth();
+  if (!session || session.user.role !== "admin") {
+    throw new Error("Unauthorized");
   }
 
   try {
-    const { basicSettingsSchema } = await import('@/lib/validations/settings')
-    const validatedData = basicSettingsSchema.parse(data)
+    const { basicSettingsSchema } = await import("@/lib/validations/settings");
+    const validatedData = basicSettingsSchema.parse(data);
 
     await prisma.settings.upsert({
       where: { id: (await getSettings()).id },
       update: validatedData,
       create: validatedData,
-    })
+    });
 
-    revalidatePath('/')
-    revalidateTag('site-settings', 'max') // stale-while-revalidate semantics
+    revalidatePath("/");
+    revalidateTag("site-settings", "max"); // stale-while-revalidate semantics
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
         success: false,
-        error: 'Validation error',
-        code: 'VALIDATION_ERROR',
+        error: "Validation error",
+        code: "VALIDATION_ERROR",
         details: error.errors,
-      }
+      };
     }
-    console.error('Error updating basic settings:', error)
+    console.error("Error updating basic settings:", error);
     return {
       success: false,
-      error: 'Failed to update settings',
-      code: 'INTERNAL_ERROR',
-    }
+      error: "Failed to update settings",
+      code: "INTERNAL_ERROR",
+    };
   }
 }
 ```
@@ -494,7 +494,7 @@ export async function updateBasicSettings(data: {
 ### Zodスキーマ: `src/lib/validations/settings.ts`
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 export const basicSettingsSchema = z.object({
   siteName: z.string().min(1).max(100).optional(),
@@ -503,17 +503,26 @@ export const basicSettingsSchema = z.object({
   defaultOgpImageUrl: z.string().url().optional().nullable(),
   headerLogoUrl: z.string().url().optional().nullable(),
   footerCopyright: z.string().min(1).max(200).optional().nullable(),
-})
+});
 
 export const contactSettingsSchema = z.object({
-  phoneNumber: z.string().regex(/^[0-9-+()]+$/).optional().nullable(),
+  phoneNumber: z
+    .string()
+    .regex(/^[0-9-+()]+$/)
+    .optional()
+    .nullable(),
   email: z.string().email().optional().nullable(),
   address: z.string().min(1).max(200).optional().nullable(),
-  defaultBusinessHours: z.record(z.object({
-    start: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
-    end: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
-  })).optional().nullable(),
-})
+  defaultBusinessHours: z
+    .record(
+      z.object({
+        start: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
+        end: z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/),
+      }),
+    )
+    .optional()
+    .nullable(),
+});
 
 export const emailSettingsSchema = z.object({
   senderEmail: z.string().email().optional(),
@@ -524,58 +533,76 @@ export const emailSettingsSchema = z.object({
   reservationCancelledTemplateId: z.string().optional().nullable(),
   reservationUpdatedTemplateId: z.string().optional().nullable(),
   adminNotificationTemplateId: z.string().optional().nullable(),
-})
+});
 
 export const seoSettingsSchema = z.object({
   defaultMetaDescription: z.string().min(1).max(160).optional().nullable(),
   defaultMetaKeywords: z.string().optional().nullable(),
   defaultOgpTitle: z.string().min(1).max(60).optional().nullable(),
   defaultOgpDescription: z.string().min(1).max(200).optional().nullable(),
-  googleAnalyticsId: z.string().regex(/^G-[A-Z0-9]+$/).optional().nullable(),
+  googleAnalyticsId: z
+    .string()
+    .regex(/^G-[A-Z0-9]+$/)
+    .optional()
+    .nullable(),
   googleSearchConsoleId: z.string().optional().nullable(),
-})
+});
 
-export const reservationSettingsSchema = z.object({
-  defaultTimeSlot: z.number().int().positive().max(1440).refine(
-    (val) => [15, 30, 60].includes(val),
-    { message: 'デフォルト時間枠は15分、30分、60分のいずれかである必要があります' }
-  ).optional(),
-  minReservationDuration: z.number().int().positive().max(1440).optional(),
-  maxReservationDuration: z.number().int().positive().max(1440).optional(),
-  cancellationTermsId: z.string().uuid().optional().nullable(),
-  sendReservationConfirmationEmail: z.boolean().optional(),
-  sendAdminNotificationEmail: z.boolean().optional(),
-}).refine(
-  (data) => {
-    if (data.minReservationDuration && data.maxReservationDuration) {
-      return data.minReservationDuration <= data.maxReservationDuration
-    }
-    return true
-  },
-  { message: '最小時間は最大時間以下である必要があります' }
-)
+export const reservationSettingsSchema = z
+  .object({
+    defaultTimeSlot: z
+      .number()
+      .int()
+      .positive()
+      .max(1440)
+      .refine((val) => [15, 30, 60].includes(val), {
+        message:
+          "デフォルト時間枠は15分、30分、60分のいずれかである必要があります",
+      })
+      .optional(),
+    minReservationDuration: z.number().int().positive().max(1440).optional(),
+    maxReservationDuration: z.number().int().positive().max(1440).optional(),
+    cancellationTermsId: z.string().uuid().optional().nullable(),
+    sendReservationConfirmationEmail: z.boolean().optional(),
+    sendAdminNotificationEmail: z.boolean().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.minReservationDuration && data.maxReservationDuration) {
+        return data.minReservationDuration <= data.maxReservationDuration;
+      }
+      return true;
+    },
+    { message: "最小時間は最大時間以下である必要があります" },
+  );
 
 export const notificationSettingsSchema = z.object({
   notifyNewReservation: z.boolean().optional(),
   notifyReservationChange: z.boolean().optional(),
   notifyReservationCancel: z.boolean().optional(),
   notifyNewInquiry: z.boolean().optional(),
-  notificationEmailAddresses: z.string().refine(
-    (val) => {
-      if (!val) return true
-      const emails = val.split(',').map(e => e.trim())
-      return emails.every(email => z.string().email().safeParse(email).success)
-    },
-    { message: '有効なメールアドレスをカンマ区切りで入力してください' }
-  ).optional().nullable(),
-})
+  notificationEmailAddresses: z
+    .string()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const emails = val.split(",").map((e) => e.trim());
+        return emails.every(
+          (email) => z.string().email().safeParse(email).success,
+        );
+      },
+      { message: "有効なメールアドレスをカンマ区切りで入力してください" },
+    )
+    .optional()
+    .nullable(),
+});
 
 export const otherSettingsSchema = z.object({
   timezone: z.string().optional(),
   language: z.string().length(2).optional(),
   maintenanceMode: z.boolean().optional(),
   maintenanceMessage: z.string().optional().nullable(),
-})
+});
 ```
 
 ---
@@ -585,20 +612,20 @@ export const otherSettingsSchema = z.object({
 設定更新時は以下のパスとタグを無効化：
 
 ```typescript
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from "next/cache";
 
 // 基本情報、連絡先情報、SEO設定更新時
-revalidatePath('/')
-revalidatePath('/spaces')
-revalidatePath('/posts')
-revalidatePath('/news')
-revalidateTag('site-settings', 'max') // stale-while-revalidate semantics
+revalidatePath("/");
+revalidatePath("/spaces");
+revalidatePath("/posts");
+revalidatePath("/news");
+revalidateTag("site-settings", "max"); // stale-while-revalidate semantics
 
 // メール設定、予約設定、通知設定更新時
-revalidateTag('site-settings', 'max') // stale-while-revalidate semantics
+revalidateTag("site-settings", "max"); // stale-while-revalidate semantics
 
 // その他の設定（メンテナンスモード）更新時
-revalidatePath('/')
+revalidatePath("/");
 ```
 
 詳細は [`CACHING.md`](../architecture/CACHING.md) を参照してください。

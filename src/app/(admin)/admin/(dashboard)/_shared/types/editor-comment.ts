@@ -9,4 +9,4 @@ export {
   type GetThreadsQuery,
   type MarkInfo,
   type ThreadListItem,
-} from '@/shared/domain/editor-comments/types'
+} from "@/shared/domain/editor-comments/types";

@@ -68,44 +68,44 @@
 ```typescript
 // Before: 手動認証パターン（各アクションで繰り返し）
 async function checkPermission() {
-  const session = await getSession()
-  if (!session?.user) return null
-  const role = session.user.role as Role
-  if (!canAccessAdmin(role)) return null
-  if (!hasPermission(role, 'resource', 'update')) {
-    void logPermissionDenied(session.user.id, 'resource', 'update')
-    return null
+  const session = await getSession();
+  if (!session?.user) return null;
+  const role = session.user.role as Role;
+  if (!canAccessAdmin(role)) return null;
+  if (!hasPermission(role, "resource", "update")) {
+    void logPermissionDenied(session.user.id, "resource", "update");
+    return null;
   }
-  return session.user
+  return session.user;
 }
 
 export async function updateResource(id: string, data: Input) {
-  const user = await checkPermission()
-  if (!user) return createFailure('権限がありません')
+  const user = await checkPermission();
+  if (!user) return createFailure("権限がありません");
   // ... business logic
-  void logUserAction(user as never, AuditAction.UPDATE, 'resource', id)
-  return createSuccess('更新しました')
+  void logUserAction(user as never, AuditAction.UPDATE, "resource", id);
+  return createSuccess("更新しました");
 }
 
 // After: withPermission HOF（自動処理）
 export const updateResource = withPermission<[id: string, data: Input], void>(
-  'resource',
-  'update'
+  "resource",
+  "update",
 )(async (user, id, data) => {
   // business logic only - auth/audit automatic
-  return createSuccess('更新しました')
-})
+  return createSuccess("更新しました");
+});
 ```
 
 ## 改善メトリクス
 
-| 項目 | Before | After |
-|------|--------|-------|
-| `as never` アサーション | 30+ | 0 |
-| 手動checkPermission関数 | 13 | 0 |
-| forwardRef使用 | 1 | 0 |
-| FC型使用 | 1 | 0 |
-| 型安全性スコア | B+ | A |
+| 項目                    | Before | After |
+| ----------------------- | ------ | ----- |
+| `as never` アサーション | 30+    | 0     |
+| 手動checkPermission関数 | 13     | 0     |
+| forwardRef使用          | 1      | 0     |
+| FC型使用                | 1      | 0     |
+| 型安全性スコア          | B+     | A     |
 
 ## 検証
 

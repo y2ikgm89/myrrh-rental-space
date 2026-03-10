@@ -10,19 +10,19 @@
 
 ### 2層キャッシュ構造
 
-| 層 | 技術 | 役割 |
-|----|------|------|
-| **サーバーサイド** | `use cache` + `cacheLife()` + `cacheTag()` | 高速化の主役 |
-| **CDN（Cloudflare）** | Cache-Control ヘッダー | 補助的役割 + 帯域幅削減 |
+| 層                    | 技術                                       | 役割                    |
+| --------------------- | ------------------------------------------ | ----------------------- |
+| **サーバーサイド**    | `use cache` + `cacheLife()` + `cacheTag()` | 高速化の主役            |
+| **CDN（Cloudflare）** | Cache-Control ヘッダー                     | 補助的役割 + 帯域幅削減 |
 
 ### 期待される効果
 
-| 項目 | 効果 |
-|------|------|
-| **帯域幅削減** | 約95% |
+| 項目               | 効果        |
+| ------------------ | ----------- |
+| **帯域幅削減**     | 約95%       |
 | **無料枠内PV目安** | 〜50万PV/月 |
-| **TTFB改善** | 50%以上 |
-| **LCP改善** | 30%以上 |
+| **TTFB改善**       | 50%以上     |
+| **LCP改善**        | 30%以上     |
 
 ---
 
@@ -34,13 +34,13 @@
 
 ### ページ分類
 
-| 分類 | ページ | サーバーキャッシュ | CDNキャッシュ |
-|------|--------|------------------|---------------|
-| **PPRベース** | `/spaces/[id]`, `/news/[id]`, `/posts/[slug]`, `/p/[slug]` | `cacheLife('hours')` | 1時間 |
-| **PPRハイブリッド** | `/posts`, `/faq`, `/terms` | `cacheLife('hours')` | 1時間 |
-| **動的** | `/`, `/spaces`, `/news`, `/contact`, `/about` | なし | 1時間 |
-| **認証必須** | `/admin/*`, `/reservation/*` | なし | キャッシュ禁止 |
-| **API** | `/api/*` | なし | キャッシュ禁止 |
+| 分類                | ページ                                                     | サーバーキャッシュ   | CDNキャッシュ  |
+| ------------------- | ---------------------------------------------------------- | -------------------- | -------------- |
+| **PPRベース**       | `/spaces/[id]`, `/news/[id]`, `/posts/[slug]`, `/p/[slug]` | `cacheLife('hours')` | 1時間          |
+| **PPRハイブリッド** | `/posts`, `/faq`, `/terms`                                 | `cacheLife('hours')` | 1時間          |
+| **動的**            | `/`, `/spaces`, `/news`, `/contact`, `/about`              | なし                 | 1時間          |
+| **認証必須**        | `/admin/*`, `/reservation/*`                               | なし                 | キャッシュ禁止 |
+| **API**             | `/api/*`                                                   | なし                 | キャッシュ禁止 |
 
 ---
 
@@ -89,12 +89,12 @@ PPRページでは `use cache` ディレクティブと `cacheLife()` を使用�
 
 ```typescript
 // src/app/(public)/spaces/[id]/page.tsx
-import { cacheLife, cacheTag } from 'next/cache'
+import { cacheLife, cacheTag } from "next/cache";
 
 export default async function SpacePage({ params }: Props) {
-  'use cache'
-  cacheLife('hours')
-  cacheTag('space', `space:${params.id}`)
+  "use cache";
+  cacheLife("hours");
+  cacheTag("space", `space:${params.id}`);
 
   // ... コンポーネントの実装
 }
@@ -121,9 +121,9 @@ export default async function SpacePage({ params }: Props) {
 
 ### 必要な権限
 
-| 項目 | 設定 |
-|------|------|
-| **Permissions** | Zone > Cache Purge > Purge |
+| 項目               | 設定                                     |
+| ------------------ | ---------------------------------------- |
+| **Permissions**    | Zone > Cache Purge > Purge               |
 | **Zone Resources** | Include > Specific zone > (対象ドメイン) |
 
 ---
@@ -139,37 +139,38 @@ export default async function SpacePage({ params }: Props) {
 
 ### パージ関数
 
-| 関数 | 対象パス |
-|------|----------|
-| `purgeSpaceCache(id?)` | `/spaces`, `/spaces/[id]`, `/` |
-| `purgePostCache(slug?)` | `/posts`, `/posts/[slug]`, `/` |
-| `purgeNewsCache(id?)` | `/news`, `/news/[id]`, `/` |
-| `purgePageCache(slug)` | `/p/[slug]` |
-| `purgeFaqCache()` | `/faq` |
-| `purgeTermsCache()` | `/terms` |
-| `purgeHomeCache()` | `/` |
-| `purgeAllCloudflareCache()` | 全キャッシュ |
+| 関数                        | 対象パス                       |
+| --------------------------- | ------------------------------ |
+| `purgeSpaceCache(id?)`      | `/spaces`, `/spaces/[id]`, `/` |
+| `purgePostCache(slug?)`     | `/posts`, `/posts/[slug]`, `/` |
+| `purgeNewsCache(id?)`       | `/news`, `/news/[id]`, `/`     |
+| `purgePageCache(slug)`      | `/p/[slug]`                    |
+| `purgeFaqCache()`           | `/faq`                         |
+| `purgeTermsCache()`         | `/terms`                       |
+| `purgeHomeCache()`          | `/`                            |
+| `purgeAllCloudflareCache()` | 全キャッシュ                   |
 
 ### 実装例
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts
-import { revalidateTag } from 'next/cache'
-import { purgeSpaceCache } from '@/shared/lib/cloudflare'
+import { revalidateTag } from "next/cache";
+import { purgeSpaceCache } from "@/shared/lib/cloudflare";
 
-export const updateSpace = withPermission('space', 'update')(
-  async (user, id, data) => {
-    // ... 更新処理
+export const updateSpace = withPermission(
+  "space",
+  "update",
+)(async (user, id, data) => {
+  // ... 更新処理
 
-    // サーバーキャッシュ無効化
-    revalidateTag(CACHE_TAGS.SPACES, 'default')
+  // サーバーキャッシュ無効化
+  revalidateTag(CACHE_TAGS.SPACES, "default");
 
-    // Cloudflare CDN キャッシュパージ
-    void purgeSpaceCache(id)
+  // Cloudflare CDN キャッシュパージ
+  void purgeSpaceCache(id);
 
-    return createSuccess('スペースを更新しました')
-  }
-)
+  return createSuccess("スペースを更新しました");
+});
 ```
 
 ### Fire-and-Forget パターン
@@ -193,11 +194,11 @@ export const updateSpace = withPermission('space', 'update')(
 
 ### SSL/TLS設定
 
-| 設定 | 推奨値 |
-|------|--------|
-| **SSL/TLSモード** | Full (strict) |
-| **Always Use HTTPS** | 有効 |
-| **Minimum TLS Version** | TLS 1.2 |
+| 設定                    | 推奨値        |
+| ----------------------- | ------------- |
+| **SSL/TLSモード**       | Full (strict) |
+| **Always Use HTTPS**    | 有効          |
+| **Minimum TLS Version** | TLS 1.2       |
 
 ### Cache Rules設定（推奨）
 
@@ -234,6 +235,7 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 **原因**: Cloudflare APIの接続問題
 
 **解決策**:
+
 1. 管理画面でCloudflare接続テストを実行
 2. Zone IDとAPI Tokenが正しいか確認
 3. ログで `Cloudflare cache purge failed` を確認
@@ -243,6 +245,7 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 **原因**: APIトークンの権限不足
 
 **解決策**:
+
 1. Cloudflare DashboardでAPIトークンの権限を確認
 2. `Zone > Cache Purge > Purge` 権限があるか確認
 3. Zone Resourcesが正しいドメインを指しているか確認
@@ -252,6 +255,7 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 **原因**: stale-while-revalidateによる遅延
 
 **解決策**:
+
 - これは正常な動作です
 - 更新後、最大で `stale-while-revalidate` の時間（1時間）だけ古いコンテンツが表示される可能性があります
 - 即座に反映が必要な場合は、Cloudflare Dashboardで手動パージを実行
@@ -282,11 +286,11 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 
 ### モニタリング
 
-| 確認項目 | 場所 |
-|----------|------|
-| **キャッシュヒット率** | Cloudflare Dashboard → Analytics |
-| **パージログ** | アプリケーションログで `Cloudflare cache purged` を検索 |
-| **パージエラー** | アプリケーションログで `Cloudflare cache purge failed` を検索 |
+| 確認項目               | 場所                                                          |
+| ---------------------- | ------------------------------------------------------------- |
+| **キャッシュヒット率** | Cloudflare Dashboard → Analytics                              |
+| **パージログ**         | アプリケーションログで `Cloudflare cache purged` を検索       |
+| **パージエラー**       | アプリケーションログで `Cloudflare cache purge failed` を検索 |
 
 ---
 
@@ -294,13 +298,13 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 
 ### Cloudflare無料プラン
 
-| 機能 | 利用可否 |
-|------|----------|
-| **帯域幅** | 無制限 |
+| 機能                | 利用可否                       |
+| ------------------- | ------------------------------ |
+| **帯域幅**          | 無制限                         |
 | **Cache Purge API** | 利用可能（1,000リクエスト/月） |
-| **DDoS保護** | 基本機能あり |
-| **Bot Fight Mode** | 利用可能 |
-| **Cache Rules** | 10ルールまで |
+| **DDoS保護**        | 基本機能あり                   |
+| **Bot Fight Mode**  | 利用可能                       |
+| **Cache Rules**     | 10ルールまで                   |
 
 ### Cloud Run帯域幅削減
 

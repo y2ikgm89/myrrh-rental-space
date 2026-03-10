@@ -4,10 +4,10 @@
  * @description FeatureIconItemNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isFeatureIconItemNode,
   type FeatureIconItemNode,
@@ -15,33 +15,30 @@ import {
   ICON_LIBRARIES,
   featureIconItemNameState,
   featureIconItemLibraryState,
-} from '../../nodes/FeatureIconListNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "../../nodes/FeatureIconListNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const LIBRARY_LABELS: Record<IconLibrary, string> = {
-  lucide: 'Lucide',
-  'simple-icons': 'Simple Icons',
-}
+  lucide: "Lucide",
+  "simple-icons": "Simple Icons",
+};
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type FeatureIconListItemInspectorPanelProps = {
-  nodeKey: string
-  node: FeatureIconItemNode
-}
+  nodeKey: string;
+  node: FeatureIconItemNode;
+};
 
 // =============================================================================
 // Component
@@ -51,27 +48,27 @@ export function FeatureIconListItemInspectorPanel({
   nodeKey,
   node,
 }: FeatureIconListItemInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isFeatureIconItemNode)
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isFeatureIconItemNode);
 
   const { iconName, iconLibrary } = editor.getEditorState().read(() => ({
     iconName: $getState(node, featureIconItemNameState),
     iconLibrary: $getState(node, featureIconItemLibraryState),
-  }))
+  }));
 
   const handleIconNameChange = (value: string) => {
     updateNode((n) => {
-      $setState(n, featureIconItemNameState, value)
-    })
-  }
+      $setState(n, featureIconItemNameState, value);
+    });
+  };
 
   const handleIconLibraryChange = (value: string) => {
-    if (value === 'lucide' || value === 'simple-icons') {
+    if (value === "lucide" || value === "simple-icons") {
       updateNode((n) => {
-        $setState(n, featureIconItemLibraryState, value)
-      })
+        $setState(n, featureIconItemLibraryState, value);
+      });
     }
-  }
+  };
 
   return (
     <div>
@@ -115,5 +112,5 @@ export function FeatureIconListItemInspectorPanel({
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

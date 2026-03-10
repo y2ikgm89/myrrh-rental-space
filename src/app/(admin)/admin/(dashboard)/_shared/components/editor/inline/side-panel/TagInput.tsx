@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * タグ入力コンポーネント
@@ -10,42 +10,42 @@
  * - キーボード操作対応
  */
 
-import { useState, useRef, useEffect } from 'react'
-import { X, Plus, Check } from 'lucide-react'
-import { Input, Label, Badge } from '@/admin/components/ui'
-import { cn } from '@/shared/lib/cn'
+import { useState, useRef, useEffect } from "react";
+import { X, Plus, Check } from "lucide-react";
+import { Input, Label, Badge } from "@/admin/components/ui";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type TagOption = {
-  id: string
-  name: string
-  slug: string
-  _count?: { posts: number }
-}
+  id: string;
+  name: string;
+  slug: string;
+  _count?: { posts: number };
+};
 
 type TagInputProps = {
   /** 選択中のタグ名リスト */
-  value: string[]
+  value: string[];
   /** タグ変更時のコールバック */
-  onChange: (tags: string[]) => void
+  onChange: (tags: string[]) => void;
   /** 既存タグのリスト（サジェスト用） */
-  availableTags: TagOption[]
+  availableTags: TagOption[];
   /** 新規タグ作成時のコールバック（スラッグも含めて作成） */
-  onCreateTag?: (name: string) => Promise<TagOption | null>
+  onCreateTag?: (name: string) => Promise<TagOption | null>;
   /** ラベル */
-  label?: string
+  label?: string;
   /** プレースホルダー */
-  placeholder?: string
+  placeholder?: string;
   /** 無効状態 */
-  disabled?: boolean
+  disabled?: boolean;
   /** エラーメッセージ */
-  error?: string
+  error?: string;
   /** よく使うタグの最大表示数 */
-  mostUsedLimit?: number
-}
+  mostUsedLimit?: number;
+};
 
 // =============================================================================
 // Component
@@ -56,178 +56,184 @@ export function TagInput({
   onChange,
   availableTags,
   onCreateTag,
-  label = 'タグ',
-  placeholder = 'タグを入力...',
+  label = "タグ",
+  placeholder = "タグを入力...",
   disabled = false,
   error,
   mostUsedLimit = 5,
 }: TagInputProps) {
-  const [inputValue, setInputValue] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
-  const [highlightedIndex, setHighlightedIndex] = useState(-1)
-  const [isCreating, setIsCreating] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [inputValue, setInputValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [isCreating, setIsCreating] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // フィルタリング済みサジェスト
-  const query = inputValue.toLowerCase().trim()
+  const query = inputValue.toLowerCase().trim();
   const filteredSuggestions = query
     ? availableTags
         .filter(
           (tag) =>
             !value.includes(tag.name) &&
             (tag.name.toLowerCase().includes(query) ||
-              tag.slug.toLowerCase().includes(query))
+              tag.slug.toLowerCase().includes(query)),
         )
         .slice(0, 10)
-    : []
+    : [];
 
   // よく使うタグ（使用回数順、選択済み除外）
   const mostUsedTags = availableTags
     .filter((tag) => !value.includes(tag.name) && (tag._count?.posts ?? 0) > 0)
     .sort((a, b) => (b._count?.posts ?? 0) - (a._count?.posts ?? 0))
-    .slice(0, mostUsedLimit)
+    .slice(0, mostUsedLimit);
 
   // 入力値が新規タグかどうか
-  const trimmedInput = inputValue.trim()
+  const trimmedInput = inputValue.trim();
   const isNewTag = trimmedInput
     ? !availableTags.some(
-        (tag) => tag.name.toLowerCase() === trimmedInput.toLowerCase()
-      ) &&
-      !value.some((v) => v.toLowerCase() === trimmedInput.toLowerCase())
-    : false
+        (tag) => tag.name.toLowerCase() === trimmedInput.toLowerCase(),
+      ) && !value.some((v) => v.toLowerCase() === trimmedInput.toLowerCase())
+    : false;
 
   // サジェストリスト（フィルタ結果 + 新規作成オプション）
-  const suggestions: Array<{ type: 'existing' | 'create'; tag?: TagOption; name?: string }> = [
-    ...filteredSuggestions.map((tag) => ({ type: 'existing' as const, tag })),
-    ...(isNewTag && trimmedInput ? [{ type: 'create' as const, name: trimmedInput }] : []),
-  ]
+  const suggestions: Array<{
+    type: "existing" | "create";
+    tag?: TagOption;
+    name?: string;
+  }> = [
+    ...filteredSuggestions.map((tag) => ({ type: "existing" as const, tag })),
+    ...(isNewTag && trimmedInput
+      ? [{ type: "create" as const, name: trimmedInput }]
+      : []),
+  ];
 
   // タグ追加
   const addTag = (tagName: string) => {
-    const trimmed = tagName.trim()
-    if (!trimmed) return
-    if (value.some((v) => v.toLowerCase() === trimmed.toLowerCase())) return
+    const trimmed = tagName.trim();
+    if (!trimmed) return;
+    if (value.some((v) => v.toLowerCase() === trimmed.toLowerCase())) return;
 
-    onChange([...value, trimmed])
-    setInputValue('')
-    setHighlightedIndex(-1)
-    inputRef.current?.focus()
-  }
+    onChange([...value, trimmed]);
+    setInputValue("");
+    setHighlightedIndex(-1);
+    inputRef.current?.focus();
+  };
 
   // 新規タグ作成して追加
   const createAndAddTag = async (name: string) => {
-    if (!onCreateTag || isCreating) return
+    if (!onCreateTag || isCreating) return;
 
-    setIsCreating(true)
+    setIsCreating(true);
     try {
-      const newTag = await onCreateTag(name)
+      const newTag = await onCreateTag(name);
       if (newTag) {
-        addTag(newTag.name)
+        addTag(newTag.name);
       }
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   // タグ削除
   const removeTag = (tagName: string) => {
-    onChange(value.filter((v) => v !== tagName))
-    inputRef.current?.focus()
-  }
+    onChange(value.filter((v) => v !== tagName));
+    inputRef.current?.focus();
+  };
 
   // キーボード操作
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (disabled) return
+    if (disabled) return;
 
     switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault()
+      case "ArrowDown":
+        e.preventDefault();
         if (suggestions.length > 0) {
-          setIsOpen(true)
+          setIsOpen(true);
           setHighlightedIndex((prev) =>
-            prev < suggestions.length - 1 ? prev + 1 : 0
-          )
+            prev < suggestions.length - 1 ? prev + 1 : 0,
+          );
         }
-        break
+        break;
 
-      case 'ArrowUp':
-        e.preventDefault()
+      case "ArrowUp":
+        e.preventDefault();
         if (suggestions.length > 0) {
-          setIsOpen(true)
+          setIsOpen(true);
           setHighlightedIndex((prev) =>
-            prev > 0 ? prev - 1 : suggestions.length - 1
-          )
+            prev > 0 ? prev - 1 : suggestions.length - 1,
+          );
         }
-        break
+        break;
 
-      case 'Enter':
-        e.preventDefault()
+      case "Enter":
+        e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
-          const item = suggestions[highlightedIndex]
-          if (!item) break
-          if (item.type === 'existing' && item.tag) {
-            addTag(item.tag.name)
-          } else if (item.type === 'create' && item.name) {
+          const item = suggestions[highlightedIndex];
+          if (!item) break;
+          if (item.type === "existing" && item.tag) {
+            addTag(item.tag.name);
+          } else if (item.type === "create" && item.name) {
             if (onCreateTag) {
-              void createAndAddTag(item.name)
+              void createAndAddTag(item.name);
             } else {
-              addTag(item.name)
+              addTag(item.name);
             }
           }
         } else if (inputValue.trim()) {
           // 直接入力で追加
-          const trimmed = inputValue.trim()
+          const trimmed = inputValue.trim();
           const existingTag = availableTags.find(
-            (t) => t.name.toLowerCase() === trimmed.toLowerCase()
-          )
+            (t) => t.name.toLowerCase() === trimmed.toLowerCase(),
+          );
           if (existingTag) {
-            addTag(existingTag.name)
+            addTag(existingTag.name);
           } else if (onCreateTag) {
-            void createAndAddTag(trimmed)
+            void createAndAddTag(trimmed);
           } else {
-            addTag(trimmed)
+            addTag(trimmed);
           }
         }
-        setIsOpen(false)
-        break
+        setIsOpen(false);
+        break;
 
-      case 'Escape':
-        setIsOpen(false)
-        setHighlightedIndex(-1)
-        break
+      case "Escape":
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        break;
 
-      case 'Backspace': {
-        const lastTag = value[value.length - 1]
+      case "Backspace": {
+        const lastTag = value[value.length - 1];
         if (!inputValue && lastTag) {
-          removeTag(lastTag)
+          removeTag(lastTag);
         }
-        break
+        break;
       }
     }
-  }
+  };
 
   // 外側クリックでドロップダウンを閉じる
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
-        e.target instanceof Node && !containerRef.current.contains(e.target)
+        e.target instanceof Node &&
+        !containerRef.current.contains(e.target)
       ) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // 入力変更時にドロップダウンを開く
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value)
-    setIsOpen(true)
-    setHighlightedIndex(-1)
-  }
+    setInputValue(e.target.value);
+    setIsOpen(true);
+    setHighlightedIndex(-1);
+  };
 
   return (
     <div className="space-y-2" ref={containerRef}>
@@ -237,11 +243,7 @@ export function TagInput({
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map((tagName) => (
-            <Badge
-              key={tagName}
-              variant="secondary"
-              className="gap-1 pr-1"
-            >
+            <Badge key={tagName} variant="secondary" className="gap-1 pr-1">
               {tagName}
               <button
                 type="button"
@@ -288,28 +290,29 @@ export function TagInput({
                   )}
                   {suggestions.map((item, index) => (
                     <button
-                      key={item.type === 'existing' ? item.tag?.id : 'create'}
+                      key={item.type === "existing" ? item.tag?.id : "create"}
                       type="button"
                       className={cn(
-                        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm',
-                        'hover:bg-accent hover:text-accent-foreground',
-                        highlightedIndex === index && 'bg-accent text-accent-foreground'
+                        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                        "hover:bg-accent hover:text-accent-foreground",
+                        highlightedIndex === index &&
+                          "bg-accent text-accent-foreground",
                       )}
                       onClick={() => {
-                        if (item.type === 'existing' && item.tag) {
-                          addTag(item.tag.name)
-                        } else if (item.type === 'create' && item.name) {
+                        if (item.type === "existing" && item.tag) {
+                          addTag(item.tag.name);
+                        } else if (item.type === "create" && item.name) {
                           if (onCreateTag) {
-                            void createAndAddTag(item.name)
+                            void createAndAddTag(item.name);
                           } else {
-                            addTag(item.name)
+                            addTag(item.name);
                           }
                         }
-                        setIsOpen(false)
+                        setIsOpen(false);
                       }}
                       disabled={isCreating}
                     >
-                      {item.type === 'existing' ? (
+                      {item.type === "existing" ? (
                         <>
                           <Check className="h-4 w-4 opacity-0" />
                           <span>{item.tag?.name}</span>
@@ -322,9 +325,7 @@ export function TagInput({
                       ) : (
                         <>
                           <Plus className="h-4 w-4 text-primary" />
-                          <span>
-                            「{item.name}」を作成
-                          </span>
+                          <span>「{item.name}」を作成</span>
                         </>
                       )}
                     </button>
@@ -343,12 +344,12 @@ export function TagInput({
                       key={tag.id}
                       type="button"
                       className={cn(
-                        'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm',
-                        'hover:bg-accent hover:text-accent-foreground'
+                        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
+                        "hover:bg-accent hover:text-accent-foreground",
                       )}
                       onClick={() => {
-                        addTag(tag.name)
-                        setIsOpen(false)
+                        addTag(tag.name);
+                        setIsOpen(false);
                       }}
                       disabled={disabled}
                     >
@@ -374,5 +375,5 @@ export function TagInput({
       {/* エラー */}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
-  )
+  );
 }

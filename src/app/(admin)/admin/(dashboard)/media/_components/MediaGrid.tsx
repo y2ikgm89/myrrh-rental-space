@@ -52,7 +52,7 @@ export function MediaGrid({ items }: Props) {
                     e.stopPropagation();
                     handleCopyUrl(item.url);
                   }}
-                  className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
+                  className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
                   title="URLをコピー"
                 >
                   <Copy className="h-4 w-4 text-primary-foreground" />
@@ -63,7 +63,7 @@ export function MediaGrid({ items }: Props) {
                     e.stopPropagation();
                     setDetailItem(item);
                   }}
-                  className="p-1.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
+                  className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
                   title="詳細"
                 >
                   <Eye className="h-4 w-4 text-primary-foreground" />

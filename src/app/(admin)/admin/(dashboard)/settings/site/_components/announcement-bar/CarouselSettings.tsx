@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   Button,
@@ -15,15 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
-import { AnnouncementBarDesignStyle } from '@/shared/db/enums'
-import { isValidAnnouncementBarAnimation, isValidAnnouncementBarDesignStyle } from '@/shared/lib/validations/enums'
-import { DesignPreview } from './DesignPreview'
+} from "@/admin/components/ui";
+import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import {
+  isValidAnnouncementBarAnimation,
+  isValidAnnouncementBarDesignStyle,
+} from "@/shared/lib/validations/enums";
+import { DesignPreview } from "./DesignPreview";
 import {
   ANIMATION_OPTIONS,
   DESIGN_STYLE_OPTIONS,
   type CarouselSettingsProps,
-} from './types'
+} from "./types";
 
 export function CarouselSettingsPanel({
   settings,
@@ -31,7 +34,7 @@ export function CarouselSettingsPanel({
   onSettingsChange,
   onSave,
 }: CarouselSettingsProps) {
-  const durationSeconds = settings.announcementBarDuration / 1000
+  const durationSeconds = settings.announcementBarDuration / 1000;
 
   return (
     <div className="space-y-4">
@@ -50,7 +53,10 @@ export function CarouselSettingsPanel({
               value={settings.announcementBarDesignStyle}
               onValueChange={(value) => {
                 if (isValidAnnouncementBarDesignStyle(value))
-                  onSettingsChange({ ...settings, announcementBarDesignStyle: value })
+                  onSettingsChange({
+                    ...settings,
+                    announcementBarDesignStyle: value,
+                  });
               }}
               disabled={isPending}
             >
@@ -66,7 +72,11 @@ export function CarouselSettingsPanel({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {DESIGN_STYLE_OPTIONS.find((o) => o.value === settings.announcementBarDesignStyle)?.description}
+              {
+                DESIGN_STYLE_OPTIONS.find(
+                  (o) => o.value === settings.announcementBarDesignStyle,
+                )?.description
+              }
             </p>
           </div>
 
@@ -96,7 +106,12 @@ export function CarouselSettingsPanel({
                 <Input
                   id="bgColor"
                   value={settings.announcementBarBgColor}
-                  onChange={(e) => onSettingsChange({ ...settings, announcementBarBgColor: e.target.value })}
+                  onChange={(e) =>
+                    onSettingsChange({
+                      ...settings,
+                      announcementBarBgColor: e.target.value,
+                    })
+                  }
                   placeholder="#2563eb"
                   disabled={isPending}
                 />
@@ -118,14 +133,21 @@ export function CarouselSettingsPanel({
                 <Input
                   id="textColor"
                   value={settings.announcementBarTextColor}
-                  onChange={(e) => onSettingsChange({ ...settings, announcementBarTextColor: e.target.value })}
+                  onChange={(e) =>
+                    onSettingsChange({
+                      ...settings,
+                      announcementBarTextColor: e.target.value,
+                    })
+                  }
                   placeholder="#ffffff"
                   disabled={isPending}
                 />
                 {settings.announcementBarTextColor && (
                   <div
                     className="h-10 w-10 shrink-0 rounded border"
-                    style={{ backgroundColor: settings.announcementBarTextColor }}
+                    style={{
+                      backgroundColor: settings.announcementBarTextColor,
+                    }}
                   />
                 )}
               </div>
@@ -133,7 +155,8 @@ export function CarouselSettingsPanel({
           </div>
 
           {/* ストライプ設定（stripedスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.striped && (
+          {settings.announcementBarDesignStyle ===
+            AnnouncementBarDesignStyle.striped && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">ストライプ設定</h4>
 
@@ -143,14 +166,21 @@ export function CarouselSettingsPanel({
                   <Input
                     id="stripeColor"
                     value={settings.announcementBarStripeColor}
-                    onChange={(e) => onSettingsChange({ ...settings, announcementBarStripeColor: e.target.value })}
+                    onChange={(e) =>
+                      onSettingsChange({
+                        ...settings,
+                        announcementBarStripeColor: e.target.value,
+                      })
+                    }
                     placeholder="#ffffff"
                     disabled={isPending}
                   />
                   {settings.announcementBarStripeColor && (
                     <div
                       className="h-10 w-10 shrink-0 rounded border"
-                      style={{ backgroundColor: settings.announcementBarStripeColor }}
+                      style={{
+                        backgroundColor: settings.announcementBarStripeColor,
+                      }}
                     />
                   )}
                 </div>
@@ -172,7 +202,10 @@ export function CarouselSettingsPanel({
                   id="stripeAnimation"
                   checked={settings.announcementBarStripeAnimation}
                   onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, announcementBarStripeAnimation: checked })
+                    onSettingsChange({
+                      ...settings,
+                      announcementBarStripeAnimation: checked,
+                    })
                   }
                   disabled={isPending}
                 />
@@ -181,7 +214,8 @@ export function CarouselSettingsPanel({
           )}
 
           {/* グラデーション設定（gradientスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.gradient && (
+          {settings.announcementBarDesignStyle ===
+            AnnouncementBarDesignStyle.gradient && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラデーション設定</h4>
 
@@ -198,7 +232,10 @@ export function CarouselSettingsPanel({
                   id="gradientAnimation"
                   checked={settings.announcementBarGradientAnimation}
                   onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, announcementBarGradientAnimation: checked })
+                    onSettingsChange({
+                      ...settings,
+                      announcementBarGradientAnimation: checked,
+                    })
                   }
                   disabled={isPending}
                 />
@@ -207,7 +244,8 @@ export function CarouselSettingsPanel({
           )}
 
           {/* グラス設定（glassスタイル選択時のみ） */}
-          {settings.announcementBarDesignStyle === AnnouncementBarDesignStyle.glass && (
+          {settings.announcementBarDesignStyle ===
+            AnnouncementBarDesignStyle.glass && (
             <div className="rounded-lg border p-4 space-y-4">
               <h4 className="font-medium">グラス設定</h4>
 
@@ -224,7 +262,10 @@ export function CarouselSettingsPanel({
                   id="glassAnimation"
                   checked={settings.announcementBarGlassAnimation}
                   onCheckedChange={(checked) =>
-                    onSettingsChange({ ...settings, announcementBarGlassAnimation: checked })
+                    onSettingsChange({
+                      ...settings,
+                      announcementBarGlassAnimation: checked,
+                    })
                   }
                   disabled={isPending}
                 />
@@ -256,7 +297,10 @@ export function CarouselSettingsPanel({
               id="sticky"
               checked={settings.announcementBarSticky}
               onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, announcementBarSticky: checked })
+                onSettingsChange({
+                  ...settings,
+                  announcementBarSticky: checked,
+                })
               }
               disabled={isPending}
             />
@@ -269,7 +313,10 @@ export function CarouselSettingsPanel({
               value={settings.announcementBarAnimation}
               onValueChange={(value) => {
                 if (isValidAnnouncementBarAnimation(value))
-                  onSettingsChange({ ...settings, announcementBarAnimation: value })
+                  onSettingsChange({
+                    ...settings,
+                    announcementBarAnimation: value,
+                  });
               }}
               disabled={isPending}
             >
@@ -285,7 +332,11 @@ export function CarouselSettingsPanel({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {ANIMATION_OPTIONS.find((o) => o.value === settings.announcementBarAnimation)?.description}
+              {
+                ANIMATION_OPTIONS.find(
+                  (o) => o.value === settings.announcementBarAnimation,
+                )?.description
+              }
             </p>
           </div>
 
@@ -303,7 +354,10 @@ export function CarouselSettingsPanel({
               id="autoPlay"
               checked={settings.announcementBarAutoPlay}
               onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, announcementBarAutoPlay: checked })
+                onSettingsChange({
+                  ...settings,
+                  announcementBarAutoPlay: checked,
+                })
               }
               disabled={isPending}
             />
@@ -321,12 +375,14 @@ export function CarouselSettingsPanel({
                 step={0.5}
                 value={durationSeconds}
                 onChange={(e) => {
-                  const seconds = parseFloat(e.target.value)
-                  const validSeconds = isNaN(seconds) ? 5 : Math.max(1, Math.min(30, seconds))
+                  const seconds = parseFloat(e.target.value);
+                  const validSeconds = isNaN(seconds)
+                    ? 5
+                    : Math.max(1, Math.min(30, seconds));
                   onSettingsChange({
                     ...settings,
                     announcementBarDuration: Math.round(validSeconds * 1000),
-                  })
+                  });
                 }}
                 disabled={isPending}
               />
@@ -351,7 +407,10 @@ export function CarouselSettingsPanel({
                 id="pauseOnHover"
                 checked={settings.announcementBarPauseOnHover}
                 onCheckedChange={(checked) =>
-                  onSettingsChange({ ...settings, announcementBarPauseOnHover: checked })
+                  onSettingsChange({
+                    ...settings,
+                    announcementBarPauseOnHover: checked,
+                  })
                 }
                 disabled={isPending}
               />
@@ -372,7 +431,10 @@ export function CarouselSettingsPanel({
               id="showArrows"
               checked={settings.announcementBarShowArrows}
               onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, announcementBarShowArrows: checked })
+                onSettingsChange({
+                  ...settings,
+                  announcementBarShowArrows: checked,
+                })
               }
               disabled={isPending}
             />
@@ -392,17 +454,20 @@ export function CarouselSettingsPanel({
               id="showIndicator"
               checked={settings.announcementBarShowIndicator}
               onCheckedChange={(checked) =>
-                onSettingsChange({ ...settings, announcementBarShowIndicator: checked })
+                onSettingsChange({
+                  ...settings,
+                  announcementBarShowIndicator: checked,
+                })
               }
               disabled={isPending}
             />
           </div>
 
           <Button onClick={onSave} disabled={isPending}>
-            {isPending ? '保存中...' : 'デザイン・カルーセル設定を保存'}
+            {isPending ? "保存中..." : "デザイン・カルーセル設定を保存"}
           </Button>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

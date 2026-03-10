@@ -133,10 +133,7 @@ export function InlineImageInspectorPanel({
         </div>
       </InspectorSection>
 
-      <InspectorFields
-        title="幅"
-        defaultOpen={position !== "full"}
-      >
+      <InspectorFields title="幅" defaultOpen={position !== "full"}>
         <div className="space-y-2">
           <Label htmlFor="inspector-inline-image-width" className="text-xs">
             幅（px）

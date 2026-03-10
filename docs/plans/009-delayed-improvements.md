@@ -17,6 +17,7 @@
 5つの重複するStatusBadgeコンポーネントを統一コンポーネントに集約。
 
 **新規ファイル**:
+
 - `src/components/admin/status-badges.tsx`
   - `CustomerStatusBadge` - 顧客ステータス用
   - `InquiryStatusBadge` - お問い合わせステータス用
@@ -24,6 +25,7 @@
   - `PublishStatusBadge` - 公開/下書きステータス用
 
 **削除ファイル**:
+
 - `src/app/admin/customers/_components/StatusBadge.tsx`
 - `src/app/admin/inquiries/_components/StatusBadge.tsx`
 - `src/app/admin/reservations/_components/StatusBadge.tsx`
@@ -31,6 +33,7 @@
 - `src/app/admin/news/_components/StatusBadge.tsx`
 
 **更新ファイル**:
+
 - `src/app/admin/customers/_components/CustomerTable.tsx`
 - `src/app/admin/customers/[id]/_components/CustomerDetail.tsx`
 - `src/app/admin/inquiries/_components/InquiryTable.tsx`
@@ -46,14 +49,16 @@
 Server Actions用の認証ラッパー関数を追加。
 
 **変更ファイル**:
+
 - `src/types/server-actions.ts` - `withAuth` HOF追加
 
 **使用例**:
+
 ```typescript
 // Before: 各アクションで個別に認証
 export async function updateUser(id: string, data: UserInput) {
   try {
-    await requireAdmin()
+    await requireAdmin();
     // ... 処理
   } catch (error) {
     // ... エラーハンドリング
@@ -61,11 +66,13 @@ export async function updateUser(id: string, data: UserInput) {
 }
 
 // After: withAuthで統一
-export const updateUser = withAuth(async (user, id: string, data: UserInput) => {
-  // user は認証済み管理者
-  // ... 処理
-  return createSuccess('更新しました')
-})
+export const updateUser = withAuth(
+  async (user, id: string, data: UserInput) => {
+    // user は認証済み管理者
+    // ... 処理
+    return createSuccess("更新しました");
+  },
+);
 ```
 
 **注意**: 既存のServer Actionsは変更なし。新規アクションで使用可能。
@@ -75,6 +82,7 @@ export const updateUser = withAuth(async (user, id: string, data: UserInput) => 
 kebab-caseのコンポーネントファイルをPascalCaseにリネーム。
 
 **リネームファイル**:
+
 - `src/app/admin/login/login-form.tsx` → `LoginForm.tsx`
 - `src/app/admin/users/_components/user-form.tsx` → `UserForm.tsx`
 - `src/app/admin/users/_components/user-actions.tsx` → `UserActions.tsx`
@@ -82,6 +90,7 @@ kebab-caseのコンポーネントファイルをPascalCaseにリネーム。
 - `src/components/turnstile.tsx` → `Turnstile.tsx`
 
 **インポート更新ファイル**:
+
 - `src/app/admin/login/page.tsx`
 - `src/app/admin/users/new/page.tsx`
 - `src/app/admin/users/[id]/edit/page.tsx`
@@ -101,6 +110,7 @@ kebab-caseのコンポーネントファイルをPascalCaseにリネーム。
 categories/navigationページはD&D機能（@dnd-kit）を使用しており、'use client'が必須のため延期継続。
 
 技術的制約:
+
 - `useSortable`, `useSensor` などのフックはClient Componentでのみ使用可能
 - Server Componentへの変換には大幅なアーキテクチャ変更が必要
 

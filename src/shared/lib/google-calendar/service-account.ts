@@ -1,7 +1,6 @@
 import "server-only";
 
 import { google, type calendar_v3 } from "googleapis";
-import { z } from "zod";
 import {
   logError,
   ErrorCategory,
@@ -10,25 +9,15 @@ import {
 } from "@/shared/lib/errors/server";
 import { safeDecrypt, encryptApiKey } from "@/shared/lib/crypto";
 import { getGoogleCalendarServiceAccountConfig } from "@/shared/domain/settings/admin-queries";
-
-const serviceAccountCredentialsSchema = z
-  .object({
-    client_email: z.string().optional(),
-  })
-  .passthrough();
-
-type ServiceAccountCredentials = z.output<typeof serviceAccountCredentialsSchema>;
+import {
+  parseGoogleServiceAccountCredentials,
+  type GoogleServiceAccountCredentials,
+} from "@/shared/lib/validations/google-service-account";
 
 export function parseServiceAccountCredentials(
   json: string,
-): ServiceAccountCredentials | null {
-  try {
-    const parsed = JSON.parse(json);
-    const result = serviceAccountCredentialsSchema.safeParse(parsed);
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
+): GoogleServiceAccountCredentials | null {
+  return parseGoogleServiceAccountCredentials(json);
 }
 
 /**
@@ -37,10 +26,7 @@ export function parseServiceAccountCredentials(
 export async function getServiceAccountClient(): Promise<calendar_v3.Calendar | null> {
   const settings = await getGoogleCalendarServiceAccountConfig();
 
-  if (
-    !settings.enabled ||
-    !settings.encryptedServiceAccountJson
-  ) {
+  if (!settings.enabled || !settings.encryptedServiceAccountJson) {
     return null;
   }
 

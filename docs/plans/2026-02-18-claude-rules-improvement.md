@@ -13,12 +13,14 @@
 ### Task 1: react-api-reference.md 新規作成
 
 **Files:**
+
 - Create: `docs/reference/claude-rules/react-api-reference.md`
 
 **Step 1: ファイルを作成**
 
 以下の内容で `docs/reference/claude-rules/react-api-reference.md` を作成する。
 コンテンツは `.claude/rules/react-patterns.md` の以下セクションをコピー:
+
 - § コンパイル問題の診断フロー（lines 219–235）
 - § React Compiler 制限事項（lines 237–298）
 - § React 19.2 新機能（lines 332–749: useEffectEvent / useOptimistic / useActionState / useFormStatus / Activity / use() / ViewTransition / Fragment refs / Resource Preloading）
@@ -48,6 +50,7 @@ Expected: 440〜480行
 ### Task 2: react-patterns.md 削減 + リンク追加
 
 **Files:**
+
 - Modify: `.claude/rules/react-patterns.md`
 
 **Step 1: paths: フロントマターを先頭に追加**
@@ -59,7 +62,6 @@ Expected: 440〜480行
 paths:
   - src/**
 ---
-
 ```
 
 **Step 2: § コンパイル問題の診断フロー を削除**
@@ -82,7 +84,6 @@ lines 237–298（`### React Compiler 制限事項（コンパイルをスキッ
 > **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
 
 ---
-
 ```
 
 **Step 6: § 参考 リンクを Compiler 関連のみに整理**
@@ -127,12 +128,14 @@ git commit -m "refactor(rules): move React 19.2 API details to reference, add pa
 ### Task 3: bun-test-reference.md 新規作成
 
 **Files:**
+
 - Create: `docs/reference/claude-rules/bun-test-reference.md`
 
 **Step 1: ファイルを作成**
 
 以下のヘッダーで `docs/reference/claude-rules/bun-test-reference.md` を作成する。
 コンテンツは `.claude/rules/bun-patterns.md` の以下セクションをコピー:
+
 - § 戻り値の設定（`fn.mockResolvedValueOnce` 等の詳細 API）
 - § Prisma モック（`createMockPrismaClient` 詳細実装例）
 - § 認証モック（`createMockUser`, `setMockSession` 詳細実装例）
@@ -162,6 +165,7 @@ Expected: 250〜320行
 ### Task 4: bun-patterns.md 削減 + リンク追加
 
 **Files:**
+
 - Modify: `.claude/rules/bun-patterns.md`
 
 **Step 1: paths: フロントマターを先頭に追加**
@@ -172,7 +176,6 @@ paths:
   - __tests__/**
   - e2e/**
 ---
-
 ```
 
 **Step 2: 以下のセクションを削除**
@@ -190,7 +193,6 @@ paths:
 > **詳細リファレンス（Prisma/Auth/Next.js モック詳細・Bun 固有機能）**: `docs/reference/claude-rules/bun-test-reference.md`
 
 ---
-
 ```
 
 **Step 4: 行数を確認**
@@ -215,6 +217,7 @@ git commit -m "refactor(rules): move Bun mock details to reference, add paths: f
 ### Task 5: 残り7ファイルに paths: フロントマター追加
 
 **Files:**
+
 - Modify: `.claude/rules/server-actions.md`
 - Modify: `.claude/rules/zod-patterns.md`
 - Modify: `.claude/rules/nuqs-patterns.md`
@@ -231,7 +234,6 @@ paths:
   - src/app/**
   - src/shared/**
 ---
-
 ```
 
 **Step 2: zod-patterns.md 先頭に追加**
@@ -241,7 +243,6 @@ paths:
 paths:
   - src/**
 ---
-
 ```
 
 **Step 3: nuqs-patterns.md 先頭に追加**
@@ -251,7 +252,6 @@ paths:
 paths:
   - src/app/**
 ---
-
 ```
 
 **Step 4: prisma-patterns.md 先頭に追加**
@@ -261,7 +261,6 @@ paths:
 paths:
   - src/**
 ---
-
 ```
 
 **Step 5: test-quality.md 先頭に追加**
@@ -272,7 +271,6 @@ paths:
   - __tests__/**
   - e2e/**
 ---
-
 ```
 
 **Step 6: auth-patterns.md 先頭に追加**
@@ -283,7 +281,6 @@ paths:
   - src/app/**
   - src/shared/**
 ---
-
 ```
 
 **Step 7: tailwind-patterns.md 先頭に追加**
@@ -293,7 +290,6 @@ paths:
 paths:
   - src/**
 ---
-
 ```
 
 **Step 8: 全7ファイルのフロントマターを確認**
@@ -330,6 +326,7 @@ git commit -m "refactor(rules): add paths: frontmatter to 7 conditional rule fil
 ### Task 6: 設計ドキュメントのコミット
 
 **Files:**
+
 - Commit: `docs/plans/2026-02-18-claude-rules-improvement-design.md`
 - Commit: `docs/plans/2026-02-18-claude-rules-improvement.md`
 

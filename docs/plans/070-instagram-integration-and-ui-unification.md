@@ -37,39 +37,39 @@ Instagram投稿を公開ページに表示する機能と、管理画面のUI統
 
 #### 1.1 API連携設定（管理画面）
 
-| 項目 | 説明 |
-|------|------|
-| OAuth認証 | Instagramアカウントでワンクリック連携 |
-| 手動トークン入力 | 開発者向け、Meta開発者コンソールから取得 |
-| トークン自動更新 | 50日ごとにCronジョブでリフレッシュ |
-| 接続ステータス表示 | 連携状態、有効期限、ユーザー名表示 |
+| 項目               | 説明                                     |
+| ------------------ | ---------------------------------------- |
+| OAuth認証          | Instagramアカウントでワンクリック連携    |
+| 手動トークン入力   | 開発者向け、Meta開発者コンソールから取得 |
+| トークン自動更新   | 50日ごとにCronジョブでリフレッシュ       |
+| 接続ステータス表示 | 連携状態、有効期限、ユーザー名表示       |
 
 #### 1.2 フィード取得
 
-| 項目 | 説明 |
-|------|------|
-| 自動取得 | 最新N件のフィードを自動取得 |
-| 手動選択 | 個別投稿URLを指定して追加 |
-| キャッシュ | 1時間のキャッシュでAPI呼び出し削減 |
+| 項目           | 説明                                |
+| -------------- | ----------------------------------- |
+| 自動取得       | 最新N件のフィードを自動取得         |
+| 手動選択       | 個別投稿URLを指定して追加           |
+| キャッシュ     | 1時間のキャッシュでAPI呼び出し削減  |
 | メディアタイプ | IMAGE / VIDEO / CAROUSEL_ALBUM 対応 |
 
 #### 1.3 ホームページセクション
 
-| 設定項目 | 選択肢 |
-|----------|--------|
-| レイアウト | グリッド / カルーセル / カード |
-| 列数（PC） | 3 / 4 / 6 |
-| 表示件数 | 4 / 6 / 8 / 12 |
-| キャプション表示 | ON / OFF |
-| 「もっと見る」リンク | ON / OFF |
+| 設定項目             | 選択肢                         |
+| -------------------- | ------------------------------ |
+| レイアウト           | グリッド / カルーセル / カード |
+| 列数（PC）           | 3 / 4 / 6                      |
+| 表示件数             | 4 / 6 / 8 / 12                 |
+| キャプション表示     | ON / OFF                       |
+| 「もっと見る」リンク | ON / OFF                       |
 
 #### 1.4 Lexical埋め込み
 
-| 項目 | 説明 |
-|------|------|
-| ノード | InstagramNode（DecoratorNode） |
-| プラグイン | InstagramPlugin（ダイアログ形式） |
-| 埋め込み方式 | oEmbed API（公式HTML取得） |
+| 項目         | 説明                              |
+| ------------ | --------------------------------- |
+| ノード       | InstagramNode（DecoratorNode）    |
+| プラグイン   | InstagramPlugin（ダイアログ形式） |
+| 埋め込み方式 | oEmbed API（公式HTML取得）        |
 
 ### 2. 管理画面UI統一
 
@@ -77,12 +77,12 @@ Instagram投稿を公開ページに表示する機能と、管理画面のUI統
 
 **対象箇所（4箇所）**:
 
-| ファイル | 選択肢 | 現状 |
-|----------|--------|------|
-| ReservationForm.tsx | 予約ステータス（2択） | ネイティブradio |
-| SeoSection.tsx | トラッキング方式（3択） | ネイティブradio |
-| PermalinkSection.tsx | URL構造（3択） | ネイティブradio |
-| LayoutPlugin.tsx | カラムレイアウト（5択） | Radix RadioGroup |
+| ファイル             | 選択肢                  | 現状             |
+| -------------------- | ----------------------- | ---------------- |
+| ReservationForm.tsx  | 予約ステータス（2択）   | ネイティブradio  |
+| SeoSection.tsx       | トラッキング方式（3択） | ネイティブradio  |
+| PermalinkSection.tsx | URL構造（3択）          | ネイティブradio  |
+| LayoutPlugin.tsx     | カラムレイアウト（5択） | Radix RadioGroup |
 
 #### 2.2 ボックスリストコンポーネント
 
@@ -90,18 +90,19 @@ Instagram投稿を公開ページに表示する機能と、管理画面のUI統
 // 新規コンポーネント: SelectionBox
 interface SelectionBoxProps {
   options: {
-    value: string
-    label: string
-    description?: string
-    icon?: ReactNode
-  }[]
-  value: string
-  onChange: (value: string) => void
-  columns?: 1 | 2 | 3
+    value: string;
+    label: string;
+    description?: string;
+    icon?: ReactNode;
+  }[];
+  value: string;
+  onChange: (value: string) => void;
+  columns?: 1 | 2 | 3;
 }
 ```
 
 **デザイン仕様**:
+
 - 選択状態: 枠線ハイライト + 背景色変更
 - ホバー: 軽い背景色変更
 - アイコン: オプション（左側に配置）
@@ -160,13 +161,13 @@ enum HomepageSectionType {
 
 #### Instagram連携
 
-| エンドポイント | メソッド | 用途 |
-|---------------|---------|------|
-| `/api/instagram/oauth/authorize` | GET | OAuth認証開始 |
-| `/api/instagram/oauth/callback` | GET | OAuth認証コールバック |
-| `/api/instagram/feed` | GET | フィード取得（キャッシュ付き） |
-| `/api/instagram/oembed` | GET | oEmbed HTML取得 |
-| `/api/cron/instagram-refresh` | POST | トークン自動更新 |
+| エンドポイント                   | メソッド | 用途                           |
+| -------------------------------- | -------- | ------------------------------ |
+| `/api/instagram/oauth/authorize` | GET      | OAuth認証開始                  |
+| `/api/instagram/oauth/callback`  | GET      | OAuth認証コールバック          |
+| `/api/instagram/feed`            | GET      | フィード取得（キャッシュ付き） |
+| `/api/instagram/oembed`          | GET      | oEmbed HTML取得                |
+| `/api/cron/instagram-refresh`    | POST     | トークン自動更新               |
 
 #### Server Actions
 
@@ -174,19 +175,25 @@ enum HomepageSectionType {
 // src/app/(admin)/admin/(dashboard)/_shared/actions/instagram.ts
 
 // 設定
-export async function getInstagramConfig(): Promise<InstagramConfig>
-export async function updateInstagramSettings(data: InstagramSettingsInput): Promise<ActionResult>
-export async function disconnectInstagram(): Promise<ActionResult>
+export async function getInstagramConfig(): Promise<InstagramConfig>;
+export async function updateInstagramSettings(
+  data: InstagramSettingsInput,
+): Promise<ActionResult>;
+export async function disconnectInstagram(): Promise<ActionResult>;
 
 // 手動トークン
-export async function saveManualToken(token: string): Promise<ActionResult>
-export async function testInstagramConnection(token: string): Promise<ActionResult>
+export async function saveManualToken(token: string): Promise<ActionResult>;
+export async function testInstagramConnection(
+  token: string,
+): Promise<ActionResult>;
 
 // 手動選択投稿
-export async function getInstagramPosts(): Promise<InstagramPost[]>
-export async function addInstagramPost(url: string): Promise<ActionResult>
-export async function removeInstagramPost(id: string): Promise<ActionResult>
-export async function reorderInstagramPosts(ids: string[]): Promise<ActionResult>
+export async function getInstagramPosts(): Promise<InstagramPost[]>;
+export async function addInstagramPost(url: string): Promise<ActionResult>;
+export async function removeInstagramPost(id: string): Promise<ActionResult>;
+export async function reorderInstagramPosts(
+  ids: string[],
+): Promise<ActionResult>;
 ```
 
 ### OAuth認証フロー
@@ -257,18 +264,20 @@ src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/
 
 ```typescript
 class InstagramNode extends DecoratorNode<ReactElement> {
-  __postId: string
-  __embedHtml: string
+  __postId: string;
+  __embedHtml: string;
 
-  static getType(): string { return 'instagram' }
-  static clone(node: InstagramNode): InstagramNode
-  static importJSON(data: SerializedInstagramNode): InstagramNode
-  static importDOM(): DOMConversionMap | null
+  static getType(): string {
+    return "instagram";
+  }
+  static clone(node: InstagramNode): InstagramNode;
+  static importJSON(data: SerializedInstagramNode): InstagramNode;
+  static importDOM(): DOMConversionMap | null;
 
-  exportJSON(): SerializedInstagramNode
-  exportDOM(): DOMExportOutput
+  exportJSON(): SerializedInstagramNode;
+  exportDOM(): DOMExportOutput;
 
-  decorate(): ReactElement // InstagramComponent
+  decorate(): ReactElement; // InstagramComponent
 }
 ```
 
@@ -508,8 +517,8 @@ export function SelectionBox({
 
 ### レート制限
 
-| 項目 | 値 |
-|------|-----|
+| 項目 | 値                          |
+| ---- | --------------------------- |
 | 制限 | 200リクエスト/時間/ユーザー |
 | 対策 | 1時間キャッシュ、バッチ取得 |
 
@@ -517,25 +526,25 @@ export function SelectionBox({
 
 ```typescript
 // フィード取得時
-const CACHE_TTL = 60 * 60 // 1時間
+const CACHE_TTL = 60 * 60; // 1時間
 
 async function getInstagramFeed(maxItems: number) {
-  const cached = await redis.get('instagram:feed')
-  if (cached) return JSON.parse(cached)
+  const cached = await redis.get("instagram:feed");
+  if (cached) return JSON.parse(cached);
 
-  const feed = await fetchFromInstagramAPI(maxItems)
-  await redis.setex('instagram:feed', CACHE_TTL, JSON.stringify(feed))
-  return feed
+  const feed = await fetchFromInstagramAPI(maxItems);
+  await redis.setex("instagram:feed", CACHE_TTL, JSON.stringify(feed));
+  return feed;
 }
 ```
 
 ### エラーハンドリング
 
-| エラーコード | 対応 |
-|------------|------|
-| 190 | トークン再認証を促す |
-| 429 | 指数バックオフでリトライ |
-| 200 | 権限不足を通知 |
+| エラーコード | 対応                     |
+| ------------ | ------------------------ |
+| 190          | トークン再認証を促す     |
+| 429          | 指数バックオフでリトライ |
+| 200          | 権限不足を通知           |
 
 ---
 
@@ -568,6 +577,7 @@ async function getInstagramFeed(maxItems: number) {
 ### Task 1: SelectionBoxコンポーネント作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/ui/selection-box.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/ui/index.ts`
 
@@ -575,25 +585,25 @@ async function getInstagramFeed(maxItems: number) {
 
 ```tsx
 // src/app/(admin)/admin/(dashboard)/_shared/components/ui/selection-box.tsx
-'use client'
+"use client";
 
-import type { ReactNode } from 'react'
-import { cn } from '@/shared/lib/utils'
+import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/utils";
 
 interface SelectionBoxOption {
-  value: string
-  label: string
-  description?: string
-  icon?: ReactNode
+  value: string;
+  label: string;
+  description?: string;
+  icon?: ReactNode;
 }
 
 interface SelectionBoxProps {
-  options: SelectionBoxOption[]
-  value: string
-  onChange: (value: string) => void
-  columns?: 1 | 2 | 3
-  disabled?: boolean
-  name?: string
+  options: SelectionBoxOption[];
+  value: string;
+  onChange: (value: string) => void;
+  columns?: 1 | 2 | 3;
+  disabled?: boolean;
+  name?: string;
 }
 
 export function SelectionBox({
@@ -609,10 +619,10 @@ export function SelectionBox({
       role="radiogroup"
       aria-label={name}
       className={cn(
-        'grid gap-3',
-        columns === 1 && 'grid-cols-1',
-        columns === 2 && 'grid-cols-1 sm:grid-cols-2',
-        columns === 3 && 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+        "grid gap-3",
+        columns === 1 && "grid-cols-1",
+        columns === 2 && "grid-cols-1 sm:grid-cols-2",
+        columns === 3 && "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
       )}
     >
       {options.map((option) => (
@@ -624,13 +634,13 @@ export function SelectionBox({
           onClick={() => onChange(option.value)}
           disabled={disabled}
           className={cn(
-            'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
-            'hover:border-primary/50 hover:bg-muted/50',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+            "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
+            "hover:border-primary/50 hover:bg-muted/50",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
             value === option.value
-              ? 'border-primary bg-primary/5 ring-1 ring-primary'
-              : 'border-border',
-            disabled && 'cursor-not-allowed opacity-50',
+              ? "border-primary bg-primary/5 ring-1 ring-primary"
+              : "border-border",
+            disabled && "cursor-not-allowed opacity-50",
           )}
         >
           {option.icon && (
@@ -646,10 +656,10 @@ export function SelectionBox({
           </div>
           <div
             className={cn(
-              'mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition-colors',
+              "mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 transition-colors",
               value === option.value
-                ? 'border-primary bg-primary'
-                : 'border-muted-foreground/30',
+                ? "border-primary bg-primary"
+                : "border-muted-foreground/30",
             )}
           >
             {value === option.value && (
@@ -659,7 +669,7 @@ export function SelectionBox({
         </button>
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -667,7 +677,7 @@ export function SelectionBox({
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/components/ui/index.ts に追加
-export { SelectionBox } from './selection-box'
+export { SelectionBox } from "./selection-box";
 ```
 
 **Step 3: 動作確認**
@@ -688,6 +698,7 @@ git commit -m "feat(ui): add SelectionBox component for box-list style selection
 ### Task 2: Prismaスキーマ更新（Instagram関連）
 
 **Files:**
+
 - Modify: `prisma/schema.prisma`
 
 **Step 1: Settingsモデルに Instagram フィールド追加**
@@ -755,6 +766,7 @@ git commit -m "feat(db): add Instagram integration schema"
 ### Task 3: 環境変数スキーマ更新
 
 **Files:**
+
 - Modify: `src/shared/lib/env/server.ts`
 
 **Step 1: Instagram環境変数追加**
@@ -785,6 +797,7 @@ git commit -m "feat(env): add Instagram API environment variables"
 ### Task 4: Instagram Server Actions作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/actions/instagram.ts`
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/lib/instagram.ts`
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/instagram.ts`
@@ -793,63 +806,69 @@ git commit -m "feat(env): add Instagram API environment variables"
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/lib/validations/instagram.ts
-import { z } from 'zod'
+import { z } from "zod";
 
 export const instagramSettingsSchema = z.object({
   feedEnabled: z.boolean(),
-  feedLayout: z.enum(['grid', 'carousel', 'card']),
+  feedLayout: z.enum(["grid", "carousel", "card"]),
   feedColumns: z.number().int().min(2).max(6),
   feedMaxItems: z.number().int().min(1).max(24),
   showCaption: z.boolean(),
   showViewAll: z.boolean(),
-})
+});
 
-export type InstagramSettingsInput = z.infer<typeof instagramSettingsSchema>
+export type InstagramSettingsInput = z.infer<typeof instagramSettingsSchema>;
 
-export const instagramPostUrlSchema = z.string().url().refine(
-  (url) => {
-    const pattern = /^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+\/?/
-    return pattern.test(url)
-  },
-  { message: '有効なInstagram投稿URLを入力してください' }
-)
+export const instagramPostUrlSchema = z
+  .string()
+  .url()
+  .refine(
+    (url) => {
+      const pattern = /^https:\/\/(www\.)?instagram\.com\/(p|reel)\/[\w-]+\/?/;
+      return pattern.test(url);
+    },
+    { message: "有効なInstagram投稿URLを入力してください" },
+  );
 
-export const instagramTokenSchema = z.string().min(1, 'トークンを入力してください')
+export const instagramTokenSchema = z
+  .string()
+  .min(1, "トークンを入力してください");
 ```
 
 **Step 2: Instagramユーティリティ作成**
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/lib/instagram.ts
-import { env } from '@/shared/lib/env/server'
+import { env } from "@/shared/lib/env/server";
 
-const INSTAGRAM_API_BASE = 'https://graph.instagram.com'
-const FACEBOOK_GRAPH_BASE = 'https://graph.facebook.com/v24.0'
+const INSTAGRAM_API_BASE = "https://graph.instagram.com";
+const FACEBOOK_GRAPH_BASE = "https://graph.facebook.com/v24.0";
 
 export interface InstagramMedia {
-  id: string
-  caption?: string
-  mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM'
-  mediaUrl?: string
-  thumbnailUrl?: string
-  permalink: string
-  timestamp: string
+  id: string;
+  caption?: string;
+  mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+  mediaUrl?: string;
+  thumbnailUrl?: string;
+  permalink: string;
+  timestamp: string;
 }
 
 export async function fetchInstagramFeed(
   accessToken: string,
-  limit: number = 12
+  limit: number = 12,
 ): Promise<InstagramMedia[]> {
-  const fields = 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp'
-  const url = `${INSTAGRAM_API_BASE}/me/media?fields=${fields}&limit=${limit}&access_token=${accessToken}`
+  const fields =
+    "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp";
+  const url = `${INSTAGRAM_API_BASE}/me/media?fields=${fields}&limit=${limit}&access_token=${accessToken}`;
 
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error?.message || 'Failed to fetch Instagram feed')
+    const error = await response.json();
+    throw new Error(error.error?.message || "Failed to fetch Instagram feed");
   }
 
-  const data = await response.json()
+  const data = await response.json();
   return data.data.map((item: Record<string, unknown>) => ({
     id: item.id,
     caption: item.caption,
@@ -858,102 +877,102 @@ export async function fetchInstagramFeed(
     thumbnailUrl: item.thumbnail_url,
     permalink: item.permalink,
     timestamp: item.timestamp,
-  }))
+  }));
 }
 
 export async function fetchInstagramOembed(
   postUrl: string,
-  accessToken: string
+  accessToken: string,
 ): Promise<string> {
-  const url = `${FACEBOOK_GRAPH_BASE}/instagram_oembed?url=${encodeURIComponent(postUrl)}&access_token=${accessToken}`
+  const url = `${FACEBOOK_GRAPH_BASE}/instagram_oembed?url=${encodeURIComponent(postUrl)}&access_token=${accessToken}`;
 
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.error?.message || 'Failed to fetch oEmbed')
+    const error = await response.json();
+    throw new Error(error.error?.message || "Failed to fetch oEmbed");
   }
 
-  const data = await response.json()
-  return data.html
+  const data = await response.json();
+  return data.html;
 }
 
 export async function exchangeCodeForToken(code: string): Promise<{
-  accessToken: string
-  userId: string
+  accessToken: string;
+  userId: string;
 }> {
-  const response = await fetch('https://api.instagram.com/oauth/access_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  const response = await fetch("https://api.instagram.com/oauth/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: env.INSTAGRAM_APP_ID!,
       client_secret: env.INSTAGRAM_APP_SECRET!,
-      grant_type: 'authorization_code',
+      grant_type: "authorization_code",
       redirect_uri: env.INSTAGRAM_REDIRECT_URI!,
       code,
     }),
-  })
+  });
 
   if (!response.ok) {
-    throw new Error('Failed to exchange code for token')
+    throw new Error("Failed to exchange code for token");
   }
 
-  const data = await response.json()
+  const data = await response.json();
   return {
     accessToken: data.access_token,
     userId: data.user_id,
-  }
+  };
 }
 
 export async function exchangeForLongLivedToken(
-  shortLivedToken: string
+  shortLivedToken: string,
 ): Promise<{ accessToken: string; expiresIn: number }> {
-  const url = `${INSTAGRAM_API_BASE}/access_token?grant_type=ig_exchange_token&client_secret=${env.INSTAGRAM_APP_SECRET}&access_token=${shortLivedToken}`
+  const url = `${INSTAGRAM_API_BASE}/access_token?grant_type=ig_exchange_token&client_secret=${env.INSTAGRAM_APP_SECRET}&access_token=${shortLivedToken}`;
 
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Failed to exchange for long-lived token')
+    throw new Error("Failed to exchange for long-lived token");
   }
 
-  const data = await response.json()
+  const data = await response.json();
   return {
     accessToken: data.access_token,
     expiresIn: data.expires_in,
-  }
+  };
 }
 
 export async function refreshLongLivedToken(
-  token: string
+  token: string,
 ): Promise<{ accessToken: string; expiresIn: number }> {
-  const url = `${INSTAGRAM_API_BASE}/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`
+  const url = `${INSTAGRAM_API_BASE}/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`;
 
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Failed to refresh token')
+    throw new Error("Failed to refresh token");
   }
 
-  const data = await response.json()
+  const data = await response.json();
   return {
     accessToken: data.access_token,
     expiresIn: data.expires_in,
-  }
+  };
 }
 
 export async function fetchInstagramUserInfo(
-  accessToken: string
+  accessToken: string,
 ): Promise<{ id: string; username: string; accountType: string }> {
-  const url = `${INSTAGRAM_API_BASE}/me?fields=id,username,account_type&access_token=${accessToken}`
+  const url = `${INSTAGRAM_API_BASE}/me?fields=id,username,account_type&access_token=${accessToken}`;
 
-  const response = await fetch(url)
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Failed to fetch user info')
+    throw new Error("Failed to fetch user info");
   }
 
-  const data = await response.json()
+  const data = await response.json();
   return {
     id: data.id,
     username: data.username,
     accountType: data.account_type,
-  }
+  };
 }
 ```
 
@@ -961,59 +980,59 @@ export async function fetchInstagramUserInfo(
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/_shared/actions/instagram.ts
-'use server'
+"use server";
 
-import { revalidatePath } from 'next/cache'
-import { prisma } from '@/shared/lib/prisma'
-import { encrypt, safeDecrypt } from '@/shared/lib/crypto'
-import { withAuth } from '@/admin/lib/action-auth'
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/shared/lib/prisma";
+import { encrypt, safeDecrypt } from "@/shared/lib/crypto";
+import { withAuth } from "@/admin/lib/action-auth";
 import {
   instagramSettingsSchema,
   instagramPostUrlSchema,
   instagramTokenSchema,
   type InstagramSettingsInput,
-} from '@/admin/lib/validations/instagram'
+} from "@/admin/lib/validations/instagram";
 import {
   fetchInstagramFeed,
   fetchInstagramUserInfo,
   refreshLongLivedToken,
   exchangeForLongLivedToken,
-} from '@/admin/lib/instagram'
-import type { ActionResult } from '@/admin/types/server-actions'
+} from "@/admin/lib/instagram";
+import type { ActionResult } from "@/admin/types/server-actions";
 
 export interface InstagramConfig {
-  connected: boolean
-  username?: string
-  accountType?: string
-  tokenExpiresAt?: Date
-  feedEnabled: boolean
-  feedLayout: 'grid' | 'carousel' | 'card'
-  feedColumns: number
-  feedMaxItems: number
-  showCaption: boolean
-  showViewAll: boolean
+  connected: boolean;
+  username?: string;
+  accountType?: string;
+  tokenExpiresAt?: Date;
+  feedEnabled: boolean;
+  feedLayout: "grid" | "carousel" | "card";
+  feedColumns: number;
+  feedMaxItems: number;
+  showCaption: boolean;
+  showViewAll: boolean;
 }
 
 export async function getInstagramConfig(): Promise<InstagramConfig> {
   return withAuth(async () => {
-    const settings = await prisma.settings.findFirst()
+    const settings = await prisma.settings.findFirst();
 
     if (!settings) {
       return {
         connected: false,
         feedEnabled: false,
-        feedLayout: 'grid',
+        feedLayout: "grid",
         feedColumns: 4,
         feedMaxItems: 8,
         showCaption: false,
         showViewAll: true,
-      }
+      };
     }
 
-    const hasToken = !!settings.instagramAccessToken
+    const hasToken = !!settings.instagramAccessToken;
     const decryptedToken = hasToken
       ? safeDecrypt(settings.instagramAccessToken!)
-      : null
+      : null;
 
     return {
       connected: !!decryptedToken,
@@ -1021,20 +1040,22 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
       accountType: settings.instagramAccountType ?? undefined,
       tokenExpiresAt: settings.instagramTokenExpiresAt ?? undefined,
       feedEnabled: settings.instagramFeedEnabled ?? false,
-      feedLayout: (settings.instagramFeedLayout as 'grid' | 'carousel' | 'card') ?? 'grid',
+      feedLayout:
+        (settings.instagramFeedLayout as "grid" | "carousel" | "card") ??
+        "grid",
       feedColumns: settings.instagramFeedColumns ?? 4,
       feedMaxItems: settings.instagramFeedMaxItems ?? 8,
       showCaption: settings.instagramShowCaption ?? false,
       showViewAll: settings.instagramShowViewAll ?? true,
-    }
-  })
+    };
+  });
 }
 
 export async function updateInstagramSettings(
-  input: InstagramSettingsInput
+  input: InstagramSettingsInput,
 ): Promise<ActionResult> {
   return withAuth(async () => {
-    const validated = instagramSettingsSchema.parse(input)
+    const validated = instagramSettingsSchema.parse(input);
 
     await prisma.settings.updateMany({
       data: {
@@ -1045,28 +1066,28 @@ export async function updateInstagramSettings(
         instagramShowCaption: validated.showCaption,
         instagramShowViewAll: validated.showViewAll,
       },
-    })
+    });
 
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
 
-    return { success: true, message: 'Instagram設定を更新しました' }
-  })
+    return { success: true, message: "Instagram設定を更新しました" };
+  });
 }
 
 export async function saveManualToken(token: string): Promise<ActionResult> {
   return withAuth(async () => {
-    instagramTokenSchema.parse(token)
+    instagramTokenSchema.parse(token);
 
     // トークンをテスト
-    const userInfo = await fetchInstagramUserInfo(token)
+    const userInfo = await fetchInstagramUserInfo(token);
 
     // 長期トークンに交換
-    const longLived = await exchangeForLongLivedToken(token)
-    const expiresAt = new Date(Date.now() + longLived.expiresIn * 1000)
+    const longLived = await exchangeForLongLivedToken(token);
+    const expiresAt = new Date(Date.now() + longLived.expiresIn * 1000);
 
     // 暗号化して保存
-    const encryptedToken = encrypt(longLived.accessToken)
+    const encryptedToken = encrypt(longLived.accessToken);
 
     await prisma.settings.updateMany({
       data: {
@@ -1076,31 +1097,31 @@ export async function saveManualToken(token: string): Promise<ActionResult> {
         instagramUsername: userInfo.username,
         instagramAccountType: userInfo.accountType,
       },
-    })
+    });
 
-    revalidatePath('/admin/settings')
+    revalidatePath("/admin/settings");
 
     return {
       success: true,
       message: `Instagram連携完了: @${userInfo.username}`,
-    }
-  })
+    };
+  });
 }
 
 export async function testInstagramConnection(
-  token: string
+  token: string,
 ): Promise<ActionResult<{ username: string }>> {
   return withAuth(async () => {
-    instagramTokenSchema.parse(token)
+    instagramTokenSchema.parse(token);
 
-    const userInfo = await fetchInstagramUserInfo(token)
+    const userInfo = await fetchInstagramUserInfo(token);
 
     return {
       success: true,
       message: `接続成功: @${userInfo.username}`,
       data: { username: userInfo.username },
-    }
-  })
+    };
+  });
 }
 
 export async function disconnectInstagram(): Promise<ActionResult> {
@@ -1113,79 +1134,79 @@ export async function disconnectInstagram(): Promise<ActionResult> {
         instagramUsername: null,
         instagramAccountType: null,
       },
-    })
+    });
 
-    revalidatePath('/admin/settings')
+    revalidatePath("/admin/settings");
 
-    return { success: true, message: 'Instagram連携を解除しました' }
-  })
+    return { success: true, message: "Instagram連携を解除しました" };
+  });
 }
 
 // 手動選択投稿
 export async function getInstagramPosts() {
   return withAuth(async () => {
     return prisma.instagramPost.findMany({
-      orderBy: { sortOrder: 'asc' },
-    })
-  })
+      orderBy: { sortOrder: "asc" },
+    });
+  });
 }
 
 export async function addInstagramPost(url: string): Promise<ActionResult> {
   return withAuth(async () => {
-    instagramPostUrlSchema.parse(url)
+    instagramPostUrlSchema.parse(url);
 
     // postIdを抽出
-    const match = url.match(/instagram\.com\/(p|reel)\/([\w-]+)/)
+    const match = url.match(/instagram\.com\/(p|reel)\/([\w-]+)/);
     if (!match) {
-      return { success: false, error: '無効なInstagram URLです' }
+      return { success: false, error: "無効なInstagram URLです" };
     }
-    const postId = match[2]
+    const postId = match[2];
 
     // 重複チェック
     const existing = await prisma.instagramPost.findUnique({
       where: { postId },
-    })
+    });
     if (existing) {
-      return { success: false, error: 'この投稿は既に追加されています' }
+      return { success: false, error: "この投稿は既に追加されています" };
     }
 
     // 最大sortOrderを取得
     const maxOrder = await prisma.instagramPost.aggregate({
       _max: { sortOrder: true },
-    })
+    });
 
     await prisma.instagramPost.create({
       data: {
         postId,
         postUrl: url,
-        mediaType: 'IMAGE', // oEmbedで取得時に更新
+        mediaType: "IMAGE", // oEmbedで取得時に更新
         permalink: url,
         sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
       },
-    })
+    });
 
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
 
-    return { success: true, message: '投稿を追加しました' }
-  })
+    return { success: true, message: "投稿を追加しました" };
+  });
 }
 
 export async function removeInstagramPost(id: string): Promise<ActionResult> {
   return withAuth(async () => {
     await prisma.instagramPost.delete({
       where: { id },
-    })
+    });
 
-    revalidatePath('/admin/settings')
-    revalidatePath('/')
+    revalidatePath("/admin/settings");
+    revalidatePath("/");
 
-    return { success: true, message: '投稿を削除しました' }
-  })
+    return { success: true, message: "投稿を削除しました" };
+  });
 }
 
 export async function reorderInstagramPosts(
-  ids: string[]
+  ids: string[],
 ): Promise<ActionResult> {
   return withAuth(async () => {
     await prisma.$transaction(
@@ -1193,14 +1214,14 @@ export async function reorderInstagramPosts(
         prisma.instagramPost.update({
           where: { id },
           data: { sortOrder: index },
-        })
-      )
-    )
+        }),
+      ),
+    );
 
-    revalidatePath('/admin/settings')
+    revalidatePath("/admin/settings");
 
-    return { success: true, message: '並び順を更新しました' }
-  })
+    return { success: true, message: "並び順を更新しました" };
+  });
 }
 ```
 
@@ -1223,6 +1244,7 @@ git commit -m "feat(instagram): add server actions and utilities"
 ### Task 5: Instagram OAuth APIルート作成
 
 **Files:**
+
 - Create: `src/app/api/instagram/oauth/authorize/route.ts`
 - Create: `src/app/api/instagram/oauth/callback/route.ts`
 
@@ -1230,39 +1252,39 @@ git commit -m "feat(instagram): add server actions and utilities"
 
 ```typescript
 // src/app/api/instagram/oauth/authorize/route.ts
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { env } from '@/shared/lib/env/server'
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { env } from "@/shared/lib/env/server";
 
 export async function GET() {
   if (!env.INSTAGRAM_APP_ID || !env.INSTAGRAM_REDIRECT_URI) {
     return NextResponse.json(
-      { error: 'Instagram API not configured' },
-      { status: 500 }
-    )
+      { error: "Instagram API not configured" },
+      { status: 500 },
+    );
   }
 
   // CSRF対策用のstate生成
-  const state = crypto.randomUUID()
-  const cookieStore = await cookies()
-  cookieStore.set('instagram_oauth_state', state, {
+  const state = crypto.randomUUID();
+  const cookieStore = await cookies();
+  cookieStore.set("instagram_oauth_state", state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 60 * 10, // 10分
-  })
+  });
 
   const params = new URLSearchParams({
     client_id: env.INSTAGRAM_APP_ID,
     redirect_uri: env.INSTAGRAM_REDIRECT_URI,
-    scope: 'instagram_business_basic',
-    response_type: 'code',
+    scope: "instagram_business_basic",
+    response_type: "code",
     state,
-  })
+  });
 
-  const authUrl = `https://www.instagram.com/oauth/authorize?${params}`
+  const authUrl = `https://www.instagram.com/oauth/authorize?${params}`;
 
-  return NextResponse.redirect(authUrl)
+  return NextResponse.redirect(authUrl);
 }
 ```
 
@@ -1270,61 +1292,67 @@ export async function GET() {
 
 ```typescript
 // src/app/api/instagram/oauth/callback/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { prisma } from '@/shared/lib/prisma'
-import { encrypt } from '@/shared/lib/crypto'
-import { env } from '@/shared/lib/env/server'
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { prisma } from "@/shared/lib/prisma";
+import { encrypt } from "@/shared/lib/crypto";
+import { env } from "@/shared/lib/env/server";
 import {
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   fetchInstagramUserInfo,
-} from '@/admin/lib/instagram'
+} from "@/admin/lib/instagram";
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const code = searchParams.get('code')
-  const state = searchParams.get('state')
-  const error = searchParams.get('error')
+  const searchParams = request.nextUrl.searchParams;
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const error = searchParams.get("error");
 
   // エラーチェック
   if (error) {
-    const errorDescription = searchParams.get('error_description') || 'Unknown error'
+    const errorDescription =
+      searchParams.get("error_description") || "Unknown error";
     return NextResponse.redirect(
-      new URL(`/admin/settings/api?error=${encodeURIComponent(errorDescription)}`, request.url)
-    )
+      new URL(
+        `/admin/settings/api?error=${encodeURIComponent(errorDescription)}`,
+        request.url,
+      ),
+    );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      new URL('/admin/settings/api?error=Invalid+callback', request.url)
-    )
+      new URL("/admin/settings/api?error=Invalid+callback", request.url),
+    );
   }
 
   // CSRF検証
-  const cookieStore = await cookies()
-  const savedState = cookieStore.get('instagram_oauth_state')?.value
-  cookieStore.delete('instagram_oauth_state')
+  const cookieStore = await cookies();
+  const savedState = cookieStore.get("instagram_oauth_state")?.value;
+  cookieStore.delete("instagram_oauth_state");
 
   if (state !== savedState) {
     return NextResponse.redirect(
-      new URL('/admin/settings/api?error=Invalid+state', request.url)
-    )
+      new URL("/admin/settings/api?error=Invalid+state", request.url),
+    );
   }
 
   try {
     // 短期トークン取得
-    const { accessToken: shortToken, userId } = await exchangeCodeForToken(code)
+    const { accessToken: shortToken, userId } =
+      await exchangeCodeForToken(code);
 
     // 長期トークンに交換
-    const { accessToken: longToken, expiresIn } = await exchangeForLongLivedToken(shortToken)
+    const { accessToken: longToken, expiresIn } =
+      await exchangeForLongLivedToken(shortToken);
 
     // ユーザー情報取得
-    const userInfo = await fetchInstagramUserInfo(longToken)
+    const userInfo = await fetchInstagramUserInfo(longToken);
 
     // 暗号化して保存
-    const encryptedToken = encrypt(longToken)
-    const expiresAt = new Date(Date.now() + expiresIn * 1000)
+    const encryptedToken = encrypt(longToken);
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
     await prisma.settings.updateMany({
       data: {
@@ -1334,16 +1362,19 @@ export async function GET(request: NextRequest) {
         instagramUsername: userInfo.username,
         instagramAccountType: userInfo.accountType,
       },
-    })
+    });
 
     return NextResponse.redirect(
-      new URL(`/admin/settings/api?success=Instagram連携が完了しました&tab=instagram`, request.url)
-    )
+      new URL(
+        `/admin/settings/api?success=Instagram連携が完了しました&tab=instagram`,
+        request.url,
+      ),
+    );
   } catch (err) {
-    console.error('Instagram OAuth error:', err)
+    console.error("Instagram OAuth error:", err);
     return NextResponse.redirect(
-      new URL('/admin/settings/api?error=認証に失敗しました', request.url)
-    )
+      new URL("/admin/settings/api?error=認証に失敗しました", request.url),
+    );
   }
 }
 ```
@@ -1365,6 +1396,7 @@ git commit -m "feat(instagram): add OAuth routes"
 ### Task 6: Instagram設定UIコンポーネント作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/InstagramSection.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts`
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/api/page.tsx`
@@ -1373,10 +1405,10 @@ git commit -m "feat(instagram): add OAuth routes"
 
 ```tsx
 // src/app/(admin)/admin/(dashboard)/settings/_components/sections/InstagramSection.tsx
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { Instagram, Link2, Key, Unlink } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { Instagram, Link2, Key, Unlink } from "lucide-react";
 import {
   Button,
   Card,
@@ -1387,8 +1419,8 @@ import {
   Input,
   Label,
   Switch,
-} from '@/admin/components/ui'
-import { SelectionBox } from '@/admin/components/ui/selection-box'
+} from "@/admin/components/ui";
+import { SelectionBox } from "@/admin/components/ui/selection-box";
 import {
   getInstagramConfig,
   updateInstagramSettings,
@@ -1396,54 +1428,59 @@ import {
   testInstagramConnection,
   disconnectInstagram,
   type InstagramConfig,
-} from '@/admin/actions/instagram'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
+} from "@/admin/actions/instagram";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
 
 interface InstagramSectionProps {
-  config: InstagramConfig
+  config: InstagramConfig;
 }
 
 const CONNECTION_OPTIONS = [
   {
-    value: 'oauth',
-    label: 'Instagramアカウントで連携',
-    description: 'ワンクリックで簡単連携（推奨）',
+    value: "oauth",
+    label: "Instagramアカウントで連携",
+    description: "ワンクリックで簡単連携（推奨）",
     icon: <Instagram className="h-5 w-5" />,
   },
   {
-    value: 'manual',
-    label: 'アクセストークンを入力',
-    description: 'Meta開発者コンソールから取得',
+    value: "manual",
+    label: "アクセストークンを入力",
+    description: "Meta開発者コンソールから取得",
     icon: <Key className="h-5 w-5" />,
   },
-]
+];
 
 const LAYOUT_OPTIONS = [
   {
-    value: 'grid',
-    label: 'グリッド',
-    description: '正方形タイルを並べる（Instagram風）',
+    value: "grid",
+    label: "グリッド",
+    description: "正方形タイルを並べる（Instagram風）",
   },
   {
-    value: 'carousel',
-    label: 'カルーセル',
-    description: '横スクロールで表示',
+    value: "carousel",
+    label: "カルーセル",
+    description: "横スクロールで表示",
   },
   {
-    value: 'card',
-    label: 'カード',
-    description: 'キャプション付きカード形式',
+    value: "card",
+    label: "カード",
+    description: "キャプション付きカード形式",
   },
-]
+];
 
 export function InstagramSection({ config }: InstagramSectionProps) {
-  const { handleResult, refresh } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
-  const [connectionMethod, setConnectionMethod] = useState<'oauth' | 'manual'>('oauth')
-  const [manualToken, setManualToken] = useState('')
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const { handleResult, refresh } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
+  const [connectionMethod, setConnectionMethod] = useState<"oauth" | "manual">(
+    "oauth",
+  );
+  const [manualToken, setManualToken] = useState("");
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const [settings, setSettings] = useState({
     feedEnabled: config.feedEnabled,
@@ -1452,48 +1489,48 @@ export function InstagramSection({ config }: InstagramSectionProps) {
     feedMaxItems: config.feedMaxItems,
     showCaption: config.showCaption,
     showViewAll: config.showViewAll,
-  })
+  });
 
   const handleOAuthConnect = () => {
-    window.location.href = '/api/instagram/oauth/authorize'
-  }
+    window.location.href = "/api/instagram/oauth/authorize";
+  };
 
   const handleManualSave = () => {
     startTransition(async () => {
-      const result = await saveManualToken(manualToken)
+      const result = await saveManualToken(manualToken);
       if (result.success) {
-        setManualToken('')
+        setManualToken("");
       }
-      handleResult(result)
-    })
-  }
+      handleResult(result);
+    });
+  };
 
   const handleTestConnection = async () => {
     if (!manualToken) {
-      setTestResult({ success: false, message: 'トークンを入力してください' })
-      return
+      setTestResult({ success: false, message: "トークンを入力してください" });
+      return;
     }
-    const result = await testInstagramConnection(manualToken)
+    const result = await testInstagramConnection(manualToken);
     setTestResult({
       success: result.success,
       message: result.success ? result.message! : result.error!,
-    })
-  }
+    });
+  };
 
   const handleDisconnect = () => {
-    if (!confirm('Instagram連携を解除しますか？')) return
+    if (!confirm("Instagram連携を解除しますか？")) return;
     startTransition(async () => {
-      const result = await disconnectInstagram()
-      handleResult(result)
-    })
-  }
+      const result = await disconnectInstagram();
+      handleResult(result);
+    });
+  };
 
   const handleSettingsSave = () => {
     startTransition(async () => {
-      const result = await updateInstagramSettings(settings)
-      handleResult(result)
-    })
-  }
+      const result = await updateInstagramSettings(settings);
+      handleResult(result);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -1520,11 +1557,16 @@ export function InstagramSection({ config }: InstagramSectionProps) {
                 </div>
                 {config.tokenExpiresAt && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    トークン有効期限: {formatDateTimeShort(config.tokenExpiresAt)}
+                    トークン有効期限:{" "}
+                    {formatDateTimeShort(config.tokenExpiresAt)}
                   </p>
                 )}
               </StatusBanner>
-              <Button variant="destructive" onClick={handleDisconnect} disabled={isPending}>
+              <Button
+                variant="destructive"
+                onClick={handleDisconnect}
+                disabled={isPending}
+              >
                 <Unlink className="mr-2 h-4 w-4" />
                 連携を解除
               </Button>
@@ -1535,11 +1577,11 @@ export function InstagramSection({ config }: InstagramSectionProps) {
               <SelectionBox
                 options={CONNECTION_OPTIONS}
                 value={connectionMethod}
-                onChange={(v) => setConnectionMethod(v as 'oauth' | 'manual')}
+                onChange={(v) => setConnectionMethod(v as "oauth" | "manual")}
                 disabled={isPending}
               />
 
-              {connectionMethod === 'oauth' ? (
+              {connectionMethod === "oauth" ? (
                 <Button onClick={handleOAuthConnect} disabled={isPending}>
                   <Link2 className="mr-2 h-4 w-4" />
                   Instagramと連携
@@ -1559,21 +1601,31 @@ export function InstagramSection({ config }: InstagramSectionProps) {
                       disabled={isPending}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Meta開発者コンソールの「API Setup with Instagram Login」から取得
+                      Meta開発者コンソールの「API Setup with Instagram
+                      Login」から取得
                     </p>
                   </div>
 
                   {testResult && (
                     <StatusBanner success={testResult.success}>
-                      <p className={testResult.success ? 'text-green-700' : 'text-destructive'}>
+                      <p
+                        className={
+                          testResult.success
+                            ? "text-green-700"
+                            : "text-destructive"
+                        }
+                      >
                         {testResult.message}
                       </p>
                     </StatusBanner>
                   )}
 
                   <div className="flex gap-2">
-                    <Button onClick={handleManualSave} disabled={isPending || !manualToken}>
-                      {isPending ? '保存中...' : '保存'}
+                    <Button
+                      onClick={handleManualSave}
+                      disabled={isPending || !manualToken}
+                    >
+                      {isPending ? "保存中..." : "保存"}
                     </Button>
                     <Button
                       variant="outline"
@@ -1595,7 +1647,9 @@ export function InstagramSection({ config }: InstagramSectionProps) {
         <Card>
           <CardHeader>
             <CardTitle>フィード設定</CardTitle>
-            <CardDescription>ホームページに表示するフィードの設定</CardDescription>
+            <CardDescription>
+              ホームページに表示するフィードの設定
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
@@ -1616,7 +1670,10 @@ export function InstagramSection({ config }: InstagramSectionProps) {
                 options={LAYOUT_OPTIONS}
                 value={settings.feedLayout}
                 onChange={(v) =>
-                  setSettings((s) => ({ ...s, feedLayout: v as 'grid' | 'carousel' | 'card' }))
+                  setSettings((s) => ({
+                    ...s,
+                    feedLayout: v as "grid" | "carousel" | "card",
+                  }))
                 }
                 columns={3}
                 disabled={isPending}
@@ -1633,7 +1690,10 @@ export function InstagramSection({ config }: InstagramSectionProps) {
                   max={6}
                   value={settings.feedColumns}
                   onChange={(e) =>
-                    setSettings((s) => ({ ...s, feedColumns: parseInt(e.target.value) || 4 }))
+                    setSettings((s) => ({
+                      ...s,
+                      feedColumns: parseInt(e.target.value) || 4,
+                    }))
                   }
                   disabled={isPending}
                 />
@@ -1647,7 +1707,10 @@ export function InstagramSection({ config }: InstagramSectionProps) {
                   max={24}
                   value={settings.feedMaxItems}
                   onChange={(e) =>
-                    setSettings((s) => ({ ...s, feedMaxItems: parseInt(e.target.value) || 8 }))
+                    setSettings((s) => ({
+                      ...s,
+                      feedMaxItems: parseInt(e.target.value) || 8,
+                    }))
                   }
                   disabled={isPending}
                 />
@@ -1680,13 +1743,13 @@ export function InstagramSection({ config }: InstagramSectionProps) {
             </div>
 
             <Button onClick={handleSettingsSave} disabled={isPending}>
-              {isPending ? '保存中...' : '設定を保存'}
+              {isPending ? "保存中..." : "設定を保存"}
             </Button>
           </CardContent>
         </Card>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1694,7 +1757,7 @@ export function InstagramSection({ config }: InstagramSectionProps) {
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/settings/_components/sections/index.ts に追加
-export { InstagramSection } from './InstagramSection'
+export { InstagramSection } from "./InstagramSection";
 ```
 
 **Step 3: API設定ページにタブ追加**
@@ -1728,12 +1791,14 @@ git commit -m "feat(instagram): add settings UI with SelectionBox"
 ### Task 7-10: 既存ラジオボタンのSelectionBox移行
 
 **移行対象**:
+
 1. ReservationForm.tsx（予約ステータス）
 2. SeoSection.tsx（トラッキング方式）
 3. PermalinkSection.tsx（URL構造）
 4. LayoutPlugin.tsx（カラムレイアウト）
 
 各ファイルで:
+
 1. `SelectionBox`をインポート
 2. ラジオボタンを`SelectionBox`に置換
 3. オプション配列を定義（label, description付き）
@@ -1744,6 +1809,7 @@ git commit -m "feat(instagram): add settings UI with SelectionBox"
 ### Task 11: InstagramNode実装（Lexical）
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/InstagramNode.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/index.ts`
 
@@ -1754,6 +1820,7 @@ XNodeを参考に、DecoratorNodeパターンで実装。oEmbed HTMLを保持し
 ### Task 12: InstagramPlugin実装（Lexical）
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/InstagramPlugin.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/index.ts`
 
@@ -1764,6 +1831,7 @@ XNodeを参考に、DecoratorNodeパターンで実装。oEmbed HTMLを保持し
 ### Task 13: ホームページセクション実装
 
 **Files:**
+
 - Create: `src/app/(public)/_shared/components/sections/InstagramSectionRenderer.tsx`
 - Modify: `src/app/(public)/_shared/components/sections/SectionRenderer.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/homepage/SectionEditor.tsx`
@@ -1773,6 +1841,7 @@ XNodeを参考に、DecoratorNodeパターンで実装。oEmbed HTMLを保持し
 ### Task 14: トークン自動更新Cron
 
 **Files:**
+
 - Create: `src/app/api/cron/instagram-refresh/route.ts`
 - Modify: `vercel.json`
 
@@ -1781,6 +1850,7 @@ XNodeを参考に、DecoratorNodeパターンで実装。oEmbed HTMLを保持し
 ### Task 15: テスト追加
 
 **Files:**
+
 - Create: `__tests__/unit/lib/validations/instagram.test.ts`
 - Create: `__tests__/integration/actions/admin/instagram.test.ts`
 

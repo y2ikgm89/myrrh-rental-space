@@ -13,6 +13,7 @@
 ## Task 1: Zod 4 deprecated API 修正（block-template.ts, ical-tokens.ts）
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/block-template.ts:122`
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/ical-tokens.ts:83`
 
@@ -20,10 +21,12 @@
 
 ```typescript
 // 現在（line 122）:
-return createFailure(z.flattenError(validated.error).formErrors[0] ?? 'バリデーションエラー')
+return createFailure(
+  z.flattenError(validated.error).formErrors[0] ?? "バリデーションエラー",
+);
 
 // 修正後:
-return createValidationError(validated.error)
+return createValidationError(validated.error);
 ```
 
 `createValidationError` は `@/shared/lib/action-helpers` から既に import 済みか確認。なければ追加。
@@ -32,15 +35,16 @@ return createValidationError(validated.error)
 
 ```typescript
 // 現在（line 83）:
-return createFailure('入力が不正です', parsed.error.flatten().fieldErrors)
+return createFailure("入力が不正です", parsed.error.flatten().fieldErrors);
 
 // 修正後:
-return createValidationError(parsed.error)
+return createValidationError(parsed.error);
 ```
 
 `createValidationError` の import を追加:
+
 ```typescript
-import { createValidationError } from '@/shared/lib/action-helpers'
+import { createValidationError } from "@/shared/lib/action-helpers";
 ```
 
 **Step 3: 検証**
@@ -60,6 +64,7 @@ git commit -m "fix: replace Zod 4 deprecated flatten/flattenError with createVal
 ## Task 2: TagInput.tsx 型アサーション修正
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/side-panel/TagInput.tsx:212-218`
 
 **Step 1: `e.target as Node` → `instanceof` 型ガード**
@@ -71,9 +76,9 @@ const handleClickOutside = (e: MouseEvent) => {
     containerRef.current &&
     !containerRef.current.contains(e.target as Node)
   ) {
-    setIsOpen(false)
+    setIsOpen(false);
   }
-}
+};
 
 // 修正後:
 const handleClickOutside = (e: MouseEvent) => {
@@ -82,9 +87,9 @@ const handleClickOutside = (e: MouseEvent) => {
     e.target instanceof Node &&
     !containerRef.current.contains(e.target)
   ) {
-    setIsOpen(false)
+    setIsOpen(false);
   }
-}
+};
 ```
 
 **Step 2: 検証**
@@ -103,16 +108,25 @@ git commit -m "fix: replace type assertion with instanceof type guard in TagInpu
 ## Task 3: media.ts import パス修正
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/media.ts:25`
 
 **Step 1: import パスを `@/shared` → `@/admin` に修正**
 
 ```typescript
 // 現在（line 25）:
-import { createSuccess, createFailure, type ActionResult } from '@/shared/types/server-actions'
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/shared/types/server-actions";
 
 // 修正後:
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 ```
 
 **Step 2: 検証**
@@ -131,9 +145,11 @@ git commit -m "fix: correct import path for ActionResult in media.ts to @/admin"
 ## Task 4: fetch-ogp.ts — withPermission + canonical ActionResult
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/fetch-ogp.ts`
 
 **破壊的変更:**
+
 - `FetchOgpResult` 型削除 → `ActionResult<OgpData>`
 - 成功レスポンスに `message` フィールド追加
 - **BookmarkPlugin.tsx は変更不要**（`.data` / `.error` アクセスパターンは canonical ActionResult と互換）
@@ -141,11 +157,15 @@ git commit -m "fix: correct import path for ActionResult in media.ts to @/admin"
 **Step 1: import セクション書き換え**
 
 ```typescript
-'use server'
+"use server";
 
-import { z } from 'zod'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { z } from "zod";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 ```
 
 `checkAdminAuth` import を削除。
@@ -157,60 +177,58 @@ Lines 19-21 の `type FetchOgpResult = ...` を完全削除。`OgpData` 型は e
 **Step 3: `fetchOgp` 関数を withPermission でラップ**
 
 ```typescript
-export const fetchOgp = withPermission<[string], OgpData>(
-  'media',
-  'read',
-  { audit: false }
-)(async (_user, url) => {
+export const fetchOgp = withPermission<[string], OgpData>("media", "read", {
+  audit: false,
+})(async (_user, url) => {
   // バリデーション
-  const validated = urlSchema.safeParse(url)
+  const validated = urlSchema.safeParse(url);
   if (!validated.success) {
-    return createFailure('有効なURLを入力してください')
+    return createFailure("有効なURLを入力してください");
   }
 
   // SSRF対策: URLの安全性を検証
-  const safetyCheck = isUrlSafe(url)
+  const safetyCheck = isUrlSafe(url);
   if (!safetyCheck.safe) {
-    return createFailure(safetyCheck.error ?? 'URLの検証に失敗しました')
+    return createFailure(safetyCheck.error ?? "URLの検証に失敗しました");
   }
 
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; BookmarkBot/1.0)',
-        Accept: 'text/html,application/xhtml+xml',
+        "User-Agent": "Mozilla/5.0 (compatible; BookmarkBot/1.0)",
+        Accept: "text/html,application/xhtml+xml",
       },
       signal: AbortSignal.timeout(10000),
-    })
+    });
 
     if (!response.ok) {
-      return createFailure(`URLの取得に失敗しました: ${response.status}`)
+      return createFailure(`URLの取得に失敗しました: ${response.status}`);
     }
 
-    const html = await response.text()
+    const html = await response.text();
 
-    const title = extractTitle(html)
-    const description = extractDescription(html)
-    const imageUrlRaw = extractImage(html)
-    const imageUrl = resolveUrl(url, imageUrlRaw)
-    const faviconUrl = getFaviconUrl(url, html)
-    const siteName = extractSiteName(html)
+    const title = extractTitle(html);
+    const description = extractDescription(html);
+    const imageUrlRaw = extractImage(html);
+    const imageUrl = resolveUrl(url, imageUrlRaw);
+    const faviconUrl = getFaviconUrl(url, html);
+    const siteName = extractSiteName(html);
 
-    return createSuccess('OGP情報を取得しました', {
+    return createSuccess("OGP情報を取得しました", {
       url,
       title,
       description,
       imageUrl,
       faviconUrl,
       siteName,
-    })
+    });
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return createFailure('URLの取得がタイムアウトしました')
+    if (error instanceof Error && error.name === "AbortError") {
+      return createFailure("URLの取得がタイムアウトしました");
     }
-    return createFailure('URLの取得に失敗しました')
+    return createFailure("URLの取得に失敗しました");
   }
-})
+});
 ```
 
 **Step 4: 検証**
@@ -231,9 +249,11 @@ git commit -m "refactor(fetch-ogp): migrate to withPermission HOF and canonical 
 ## Task 5: editor-comment.ts — ローカル ActionResult 削除 + withPermission
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/editor-comment.ts`
 
 **破壊的変更:**
+
 - ローカル `ActionResult<T>` 型削除（line 58-60）
 - 成功レスポンスに `message` フィールド追加
 - void 操作: `{ success: true, data: undefined }` → `{ success: true, message: '...' }`
@@ -241,13 +261,18 @@ git commit -m "refactor(fetch-ogp): migrate to withPermission HOF and canonical 
 **Step 1: import セクション書き換え**
 
 ```typescript
-'use server'
+"use server";
 
 // ... (既存 JSDoc コメント保持)
 
-import { prisma } from '@/shared/lib/prisma'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
-import type { EditorCommentStatus } from '@/shared/generated/prisma/client'
+import { prisma } from "@/shared/lib/prisma";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors";
+import type { EditorCommentStatus } from "@/shared/generated/prisma/client";
 import type {
   EditorCommentThread,
   EditorComment,
@@ -257,12 +282,19 @@ import type {
   ThreadListItem,
   MarkInfo,
   CommentableContentType,
-} from '@/admin/types/editor-comment'
-import { isCommentableContentType } from '@/admin/types/editor-comment'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { z } from 'zod/v4'
-import { withPermission, withReadPermission } from '@/admin/lib/server-action-helpers'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+} from "@/admin/types/editor-comment";
+import { isCommentableContentType } from "@/admin/types/editor-comment";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { z } from "zod/v4";
+import {
+  withPermission,
+  withReadPermission,
+} from "@/admin/lib/server-action-helpers";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 ```
 
 `verifyAdminSession` import を削除。
@@ -286,22 +318,28 @@ Lines 54-61 の Result Types セクションを完全削除:
 export const createCommentThread = withPermission<
   [CreateThreadInput],
   EditorCommentThread
->('post', 'update')(async (user, input) => {
-  const validation = createThreadSchema.safeParse(input)
+>(
+  "post",
+  "update",
+)(async (user, input) => {
+  const validation = createThreadSchema.safeParse(input);
   if (!validation.success) {
-    return createValidationError(validation.error)
+    return createValidationError(validation.error);
   }
 
-  const { markId, contentType, contentId, quotedText, initialComment } = validation.data
+  const { markId, contentType, contentId, quotedText, initialComment } =
+    validation.data;
 
   try {
     const existingThread = await prisma.editorCommentThread.findUnique({
-      where: { markId_contentType_contentId: { markId, contentType, contentId } },
+      where: {
+        markId_contentType_contentId: { markId, contentType, contentId },
+      },
       select: { id: true },
-    })
+    });
 
     if (existingThread) {
-      return createFailure('このマークには既にコメントスレッドが存在します')
+      return createFailure("このマークには既にコメントスレッドが存在します");
     }
 
     const thread = await prisma.editorCommentThread.create({
@@ -317,36 +355,46 @@ export const createCommentThread = withPermission<
       },
       include: {
         comments: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: "asc" },
           select: {
-            id: true, threadId: true, content: true, isDeleted: true,
-            deletedAt: true, deletedBy: true, createdAt: true, updatedAt: true, createdBy: true,
+            id: true,
+            threadId: true,
+            content: true,
+            isDeleted: true,
+            deletedAt: true,
+            deletedBy: true,
+            createdAt: true,
+            updatedAt: true,
+            createdBy: true,
           },
         },
       },
-    })
+    });
 
-    return createSuccess('コメントスレッドを作成しました', toEditorCommentThread(thread))
+    return createSuccess(
+      "コメントスレッドを作成しました",
+      toEditorCommentThread(thread),
+    );
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'createCommentThread', contentType, contentId },
-    })
-    return createFailure('コメントスレッドの作成中にエラーが発生しました')
+      context: { operation: "createCommentThread", contentType, contentId },
+    });
+    return createFailure("コメントスレッドの作成中にエラーが発生しました");
   }
-})
+});
 ```
 
 同様に以下の関数もラップ:
 
-| 関数 | HOF | 変更点 |
-|------|-----|--------|
-| `addComment` | `withPermission<[AddCommentInput], EditorComment>('post', 'update')` | `user.id` は HOF 引数から取得 |
-| `resolveThread` | `withPermission<[string], void>('post', 'update')` | `return createSuccess('スレッドを解決しました')` |
-| `reopenThread` | `withPermission<[string], void>('post', 'update')` | `return createSuccess('スレッドを再オープンしました')` |
-| `deleteThread` | `withPermission<[string], void>('post', 'delete')` | `return createSuccess('スレッドを削除しました')` |
-| `deleteComment` | `withPermission<[string], void>('post', 'delete')` | `user.id` は HOF 引数から取得 |
+| 関数            | HOF                                                                  | 変更点                                                 |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| `addComment`    | `withPermission<[AddCommentInput], EditorComment>('post', 'update')` | `user.id` は HOF 引数から取得                          |
+| `resolveThread` | `withPermission<[string], void>('post', 'update')`                   | `return createSuccess('スレッドを解決しました')`       |
+| `reopenThread`  | `withPermission<[string], void>('post', 'update')`                   | `return createSuccess('スレッドを再オープンしました')` |
+| `deleteThread`  | `withPermission<[string], void>('post', 'delete')`                   | `return createSuccess('スレッドを削除しました')`       |
+| `deleteComment` | `withPermission<[string], void>('post', 'delete')`                   | `user.id` は HOF 引数から取得                          |
 
 **Step 4: Read 操作を withReadPermission に移行**
 
@@ -360,37 +408,40 @@ Read 操作は `withReadPermission('post')` でラップ。戻り値型は `Acti
 export const getCommentThreads = withPermission<
   [GetThreadsQuery],
   ThreadListItem[]
->('post', 'read', { audit: false })(async (_user, query) => {
-  const { contentType, contentId, status } = query
+>("post", "read", { audit: false })(async (_user, query) => {
+  const { contentType, contentId, status } = query;
 
   if (!isCommentableContentType(contentType)) {
-    return createFailure('無効なコンテンツタイプです')
+    return createFailure("無効なコンテンツタイプです");
   }
 
   try {
     const threads = await prisma.editorCommentThread.findMany({
       // ... 既存クエリ
-    })
+    });
 
     // ... ユーザー情報取得ロジック
 
-    return createSuccess('スレッド一覧を取得しました', items.map(toThreadListItem))
+    return createSuccess(
+      "スレッド一覧を取得しました",
+      items.map(toThreadListItem),
+    );
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'getCommentThreads', contentType, contentId },
-    })
-    return createFailure('スレッド一覧の取得中にエラーが発生しました')
+      context: { operation: "getCommentThreads", contentType, contentId },
+    });
+    return createFailure("スレッド一覧の取得中にエラーが発生しました");
   }
-})
+});
 ```
 
-| 関数 | HOF |
-|------|-----|
-| `getCommentThreads` | `withPermission<[GetThreadsQuery], ThreadListItem[]>('post', 'read', { audit: false })` |
-| `getThreadDetail` | `withPermission<[string], EditorCommentThread>('post', 'read', { audit: false })` |
-| `getMarkInfoList` | `withPermission<[CommentableContentType, string], MarkInfo[]>('post', 'read', { audit: false })` |
+| 関数                | HOF                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| `getCommentThreads` | `withPermission<[GetThreadsQuery], ThreadListItem[]>('post', 'read', { audit: false })`          |
+| `getThreadDetail`   | `withPermission<[string], EditorCommentThread>('post', 'read', { audit: false })`                |
+| `getMarkInfoList`   | `withPermission<[CommentableContentType, string], MarkInfo[]>('post', 'read', { audit: false })` |
 
 **Step 5: 検証**
 
@@ -408,26 +459,43 @@ git commit -m "refactor(editor-comment): migrate to withPermission HOF and canon
 ## Task 6: post-comment.ts — カスタム型削除 + withPermission
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/post-comment.ts`
 
 **破壊的変更:**
+
 - `AdminCommentActionResult` 型削除 → `ActionResult`
 - `BulkDeleteResult` 型削除 → `ActionResult<{ count: number }>`
 
 **Step 1: import セクション書き換え**
 
 ```typescript
-'use server'
+"use server";
 
 // ... (既存 JSDoc コメント保持)
 
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { prisma } from '@/shared/lib/prisma'
-import { toCommentAuthor, type CommentAuthor } from '@/shared/lib/validations/comment'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
-import { withPermission, withReadPermission } from '@/admin/lib/server-action-helpers'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
+import { updateTag } from "next/cache";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { prisma } from "@/shared/lib/prisma";
+import {
+  toCommentAuthor,
+  type CommentAuthor,
+} from "@/shared/lib/validations/comment";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors";
+import {
+  withPermission,
+  withReadPermission,
+} from "@/admin/lib/server-action-helpers";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
 ```
 
 `verifyAdminSession` import を削除。
@@ -452,21 +520,21 @@ Read 操作は plain 型を返すため `verifyAdminSession()` パターンを�
 export const getAdminComments = withReadPermission<
   [CommentFilters, { page?: number; limit?: number }],
   GetCommentsResult
->('post')(async (_user, filters = {}, pagination = {}) => {
+>("post")(async (_user, filters = {}, pagination = {}) => {
   // ... 既存ロジック（verifyAdminSession() 行を削除）
-})
+});
 
-export const getCommentStats = withReadPermission<[], CommentStats>(
-  'post'
-)(async () => {
-  // ... 既存ロジック
-})
+export const getCommentStats = withReadPermission<[], CommentStats>("post")(
+  async () => {
+    // ... 既存ロジック
+  },
+);
 
 export const getCommentCountByPost = withReadPermission<[string], number>(
-  'post'
+  "post",
 )(async (_user, postId) => {
   // ... 既存ロジック
-})
+});
 ```
 
 **注意**: `withReadPermission` は `TReturn | ActionFailure` を返す。呼び出し側で `'success' in result && !result.success` チェックが必要になる場合がある。
@@ -475,48 +543,51 @@ export const getCommentCountByPost = withReadPermission<[string], number>(
 
 ```typescript
 export const deleteCommentAdmin = withPermission<[string], void>(
-  'post',
-  'delete'
+  "post",
+  "delete",
 )(async (user, commentId) => {
   try {
     const comment = await prisma.postComment.findUnique({
       where: { id: commentId },
       select: { id: true, post: { select: { slug: true } } },
-    })
+    });
 
     if (!comment) {
-      return createFailure('コメントが見つかりません')
+      return createFailure("コメントが見つかりません");
     }
 
     await prisma.postComment.update({
       where: { id: commentId },
       data: { isDeleted: true, deletedAt: new Date(), deletedBy: user.id },
-    })
+    });
 
-    updateTag(CACHE_TAGS.POST_COMMENTS)
-    updateTag(getCacheTag.posts.comments(comment.post.slug))
+    updateTag(CACHE_TAGS.POST_COMMENTS);
+    updateTag(getCacheTag.posts.comments(comment.post.slug));
 
-    return createSuccess('コメントを削除しました')
+    return createSuccess("コメントを削除しました");
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'deleteCommentAdmin', commentId },
-    })
-    return createFailure('コメントの削除中にエラーが発生しました')
+      context: { operation: "deleteCommentAdmin", commentId },
+    });
+    return createFailure("コメントの削除中にエラーが発生しました");
   }
-})
+});
 ```
 
-| 関数 | HOF | 戻り値 |
-|------|-----|--------|
-| `deleteCommentAdmin` | `withPermission<[string], void>('post', 'delete')` | `ActionResult` |
+| 関数                  | HOF                                                               | 戻り値                            |
+| --------------------- | ----------------------------------------------------------------- | --------------------------------- |
+| `deleteCommentAdmin`  | `withPermission<[string], void>('post', 'delete')`                | `ActionResult`                    |
 | `deleteCommentsAdmin` | `withPermission<[string[]], { count: number }>('post', 'delete')` | `ActionResult<{ count: number }>` |
-| `restoreCommentAdmin` | `withPermission<[string], void>('post', 'update')` | `ActionResult` |
+| `restoreCommentAdmin` | `withPermission<[string], void>('post', 'update')`                | `ActionResult`                    |
 
 `deleteCommentsAdmin` の成功レスポンス:
+
 ```typescript
-return createSuccess(`${result.count}件のコメントを削除しました`, { count: result.count })
+return createSuccess(`${result.count}件のコメントを削除しました`, {
+  count: result.count,
+});
 ```
 
 **Step 5: 検証**
@@ -535,6 +606,7 @@ git commit -m "refactor(post-comment): migrate to withPermission HOF, remove cus
 ## Task 7: page.ts — withPermission + createSuccess/createFailure 統一
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts`
 
 **これが最大のファイル（867行、18関数）。Write 操作を withPermission に、エラー処理を統一。**
@@ -542,18 +614,26 @@ git commit -m "refactor(post-comment): migrate to withPermission HOF, remove cus
 **Step 1: import セクション書き換え**
 
 ```typescript
-'use server'
+"use server";
 
 // ... (既存 JSDoc コメント保持)
 
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS, getCacheTag } from '@/shared/lib/constants'
-import { prisma } from '@/shared/lib/prisma'
-import { logError, ErrorCategory, ErrorSeverity, normalizeError } from '@/shared/lib/errors'
-import { purgePageCache } from '@/shared/lib/cloudflare'
-import { fireAndForget } from '@/shared/lib/async-utils'
-import { checkSlugAvailability, getSlugErrorMessage } from '@/shared/lib/slug-validation'
-import { toPlainObject, toPlainArray } from '@/shared/lib/serialize'
+import { updateTag } from "next/cache";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { prisma } from "@/shared/lib/prisma";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+  normalizeError,
+} from "@/shared/lib/errors";
+import { purgePageCache } from "@/shared/lib/cloudflare";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import {
+  checkSlugAvailability,
+  getSlugErrorMessage,
+} from "@/shared/lib/slug-validation";
+import { toPlainObject, toPlainArray } from "@/shared/lib/serialize";
 import {
   updatePageSchema,
   updatePageSeoSchema,
@@ -563,13 +643,17 @@ import {
   type UpdatePageInput,
   type UpdatePageSeoInput,
   type CreatePageInput,
-} from '@/shared/lib/validations/page'
-import type { PageModel as PageData } from '@/shared/generated/prisma/models/Page'
-import type { Prisma } from '@/shared/generated/prisma/client'
-import { withPermission } from '@/admin/lib/server-action-helpers'
-import { createSuccess, createFailure, type ActionResult } from '@/admin/types/server-actions'
-import { createValidationError } from '@/shared/lib/action-helpers'
-import { verifyAdminSession } from '@/shared/lib/auth'
+} from "@/shared/lib/validations/page";
+import type { PageModel as PageData } from "@/shared/generated/prisma/models/Page";
+import type { Prisma } from "@/shared/generated/prisma/client";
+import { withPermission } from "@/admin/lib/server-action-helpers";
+import {
+  createSuccess,
+  createFailure,
+  type ActionResult,
+} from "@/admin/types/server-actions";
+import { createValidationError } from "@/shared/lib/action-helpers";
+import { verifyAdminSession } from "@/shared/lib/auth";
 ```
 
 **注意**: `verifyAdminSession` は read 操作と内部ヘルパーで引き続き使用するため import を保持。
@@ -580,22 +664,22 @@ import { verifyAdminSession } from '@/shared/lib/auth'
 
 ```typescript
 export const updatePage = withPermission<[string, UpdatePageInput], void>(
-  'page',
-  'update'
+  "page",
+  "update",
 )(async (_user, slug, input) => {
-  const parsed = updatePageSchema.safeParse(input)
+  const parsed = updatePageSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
   try {
     const existingPage = await prisma.page.findUnique({
       where: { slug },
       select: { id: true },
-    })
+    });
 
     if (!existingPage) {
-      return createFailure('ページが見つかりません')
+      return createFailure("ページが見つかりません");
     }
 
     await prisma.page.update({
@@ -614,67 +698,71 @@ export const updatePage = withPermission<[string, UpdatePageInput], void>(
         contentWidthCustom: parsed.data.contentWidthCustom ?? null,
         showSidebar: parsed.data.showSidebar ?? null,
       },
-    })
+    });
 
-    updateTag(CACHE_TAGS.PAGES)
-    updateTag(getCacheTag.pages.detail(slug))
-    fireAndForget(purgePageCache(slug), { operation: 'purgePageCache', category: ErrorCategory.EXTERNAL_API, severity: ErrorSeverity.LOW })
+    updateTag(CACHE_TAGS.PAGES);
+    updateTag(getCacheTag.pages.detail(slug));
+    fireAndForget(purgePageCache(slug), {
+      operation: "purgePageCache",
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+    });
 
-    return createSuccess('ページを更新しました')
+    return createSuccess("ページを更新しました");
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
-      context: { operation: 'updatePage', slug },
-    })
-    return createFailure('ページの更新中にエラーが発生しました')
+      context: { operation: "updatePage", slug },
+    });
+    return createFailure("ページの更新中にエラーが発生しました");
   }
-})
+});
 ```
 
 ### 全 Write 操作の対応表
 
-| 関数 | HOF | バリデーション | 備考 |
-|------|-----|---------------|------|
-| `updatePage` | `withPermission<[string, UpdatePageInput], void>('page', 'update')` | `createValidationError(parsed.error)` | 手動 fieldErrors 構築を削除 |
-| `createPage` | `withPermission<[CreatePageInput], { slug: string }>('page', 'create')` | `createValidationError(parsed.error)` | |
-| `deletePage` | `withPermission<[string], void>('page', 'delete')` | — | システムページチェック保持 |
-| `deletePagePermanently` | `withPermission<[string], void>('page', 'delete')` | — | |
-| `restorePage` | `withPermission<[string], void>('page', 'update')` | — | |
-| `togglePagePublished` | `withPermission<[string], void>('page', 'publish')` | — | |
-| `bulkTogglePagePublished` | `withPermission<[string[], boolean], void>('page', 'publish')` | — | |
-| `bulkDeletePages` | `withPermission<[string[]], void>('page', 'delete')` | — | |
-| `updatePageSeo` | `withPermission<[string, UpdatePageSeoInput], void>('page', 'update')` | `createValidationError(parsed.error)` | 手動 fieldErrors 構築を削除 |
+| 関数                      | HOF                                                                     | バリデーション                        | 備考                        |
+| ------------------------- | ----------------------------------------------------------------------- | ------------------------------------- | --------------------------- |
+| `updatePage`              | `withPermission<[string, UpdatePageInput], void>('page', 'update')`     | `createValidationError(parsed.error)` | 手動 fieldErrors 構築を削除 |
+| `createPage`              | `withPermission<[CreatePageInput], { slug: string }>('page', 'create')` | `createValidationError(parsed.error)` |                             |
+| `deletePage`              | `withPermission<[string], void>('page', 'delete')`                      | —                                     | システムページチェック保持  |
+| `deletePagePermanently`   | `withPermission<[string], void>('page', 'delete')`                      | —                                     |                             |
+| `restorePage`             | `withPermission<[string], void>('page', 'update')`                      | —                                     |                             |
+| `togglePagePublished`     | `withPermission<[string], void>('page', 'publish')`                     | —                                     |                             |
+| `bulkTogglePagePublished` | `withPermission<[string[], boolean], void>('page', 'publish')`          | —                                     |                             |
+| `bulkDeletePages`         | `withPermission<[string[]], void>('page', 'delete')`                    | —                                     |                             |
+| `updatePageSeo`           | `withPermission<[string, UpdatePageSeoInput], void>('page', 'update')`  | `createValidationError(parsed.error)` | 手動 fieldErrors 構築を削除 |
 
 **共通パターン**（全 Write 操作で統一）:
 
 ```typescript
 // バリデーション: 手動 fieldErrors 構築 → createValidationError
 // BEFORE:
-const fieldErrors: Record<string, string[]> = {}
+const fieldErrors: Record<string, string[]> = {};
 for (const error of parsed.error.issues) {
-  const field = error.path.join('.')
-  if (!fieldErrors[field]) fieldErrors[field] = []
-  fieldErrors[field].push(error.message)
+  const field = error.path.join(".");
+  if (!fieldErrors[field]) fieldErrors[field] = [];
+  fieldErrors[field].push(error.message);
 }
-return { success: false, error: 'バリデーションエラー', fieldErrors }
+return { success: false, error: "バリデーションエラー", fieldErrors };
 
 // AFTER:
-return createValidationError(parsed.error)
+return createValidationError(parsed.error);
 
 // 成功レスポンス: オブジェクトリテラル → createSuccess
 // BEFORE:
-return { success: true, message: 'ページを更新しました' }
+return { success: true, message: "ページを更新しました" };
 
 // AFTER:
-return createSuccess('ページを更新しました')
+return createSuccess("ページを更新しました");
 
 // 失敗レスポンス: オブジェクトリテラル → createFailure
 // BEFORE:
-return { success: false, error: 'ページが見つかりません' }
+return { success: false, error: "ページが見つかりません" };
 
 // AFTER:
-return createFailure('ページが見つかりません')
+return createFailure("ページが見つかりません");
 ```
 
 **Step 3: Read 操作と内部ヘルパーは verifyAdminSession() を維持**
@@ -723,13 +811,13 @@ rg "from.*actions/fetch-ogp" --type ts --type tsx
 
 **Step 2: 各 caller の影響を評価**
 
-| 変更ファイル | 主な破壊的変更 | caller 対応 |
-|-------------|---------------|------------|
-| `fetch-ogp.ts` | `FetchOgpResult` → `ActionResult<OgpData>` | BookmarkPlugin: `.data`/`.error` 互換 → **変更不要** |
-| `editor-comment.ts` | ローカル `ActionResult<T>` 削除, `.message` 追加 | 各 caller で `result.message` を活用可能（additive change） |
-| `post-comment.ts` | `AdminCommentActionResult` 削除, `BulkDeleteResult` 削除 | `AdminCommentActionResult` を使用していた caller は `ActionResult` に変更 |
-| `post-comment.ts` | `BulkDeleteResult.count` → `ActionResult<{ count: number }>.data.count` | `result.count` → `result.data?.count` に変更 |
-| `page.ts` | 構造変更なし（既に ActionResult 互換） | **変更不要** |
+| 変更ファイル        | 主な破壊的変更                                                          | caller 対応                                                               |
+| ------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `fetch-ogp.ts`      | `FetchOgpResult` → `ActionResult<OgpData>`                              | BookmarkPlugin: `.data`/`.error` 互換 → **変更不要**                      |
+| `editor-comment.ts` | ローカル `ActionResult<T>` 削除, `.message` 追加                        | 各 caller で `result.message` を活用可能（additive change）               |
+| `post-comment.ts`   | `AdminCommentActionResult` 削除, `BulkDeleteResult` 削除                | `AdminCommentActionResult` を使用していた caller は `ActionResult` に変更 |
+| `post-comment.ts`   | `BulkDeleteResult.count` → `ActionResult<{ count: number }>.data.count` | `result.count` → `result.data?.count` に変更                              |
+| `page.ts`           | 構造変更なし（既に ActionResult 互換）                                  | **変更不要**                                                              |
 
 **Step 3: 型エラーが出た caller を修正**
 
@@ -737,15 +825,15 @@ post-comment.ts の `BulkDeleteResult` を使用していた caller:
 
 ```typescript
 // BEFORE:
-const result = await deleteCommentsAdmin(ids)
+const result = await deleteCommentsAdmin(ids);
 if (result.success) {
-  toast.success(`${result.count}件削除しました`)
+  toast.success(`${result.count}件削除しました`);
 }
 
 // AFTER:
-const result = await deleteCommentsAdmin(ids)
+const result = await deleteCommentsAdmin(ids);
 if (result.success) {
-  toast.success(result.message)
+  toast.success(result.message);
   // count が必要なら: result.data?.count
 }
 ```
@@ -754,10 +842,10 @@ post-comment.ts の `AdminCommentActionResult` を import していた caller:
 
 ```typescript
 // BEFORE:
-import type { AdminCommentActionResult } from '@/admin/actions/post-comment'
+import type { AdminCommentActionResult } from "@/admin/actions/post-comment";
 
 // AFTER:
-import type { ActionResult } from '@/admin/types/server-actions'
+import type { ActionResult } from "@/admin/types/server-actions";
 ```
 
 **Step 4: 検証**
@@ -809,10 +897,10 @@ git commit -m "verify: all official best practices cleanup completed"
 
 ## スコープ外（変更なし）
 
-| ファイル | 理由 |
-|---------|------|
-| `audit-log.ts` | 既に `createSuccess`/`createFailure` 使用。カスタム `checkAuditLogPermission` は監査ログ特有の要件で適切 |
-| `dashboard.ts` | read-only 操作で `verifyAdminSession()` は適切。`withReadPermission` への変更は caller に破壊的変更を要求するため別タスクとする |
-| Lexical カラープリセット | カラーピッカースウォッチ — tailwind-patterns.md 例外 |
-| `bg-black/80` オーバーレイ | shadcn/ui 公式パターン |
-| Stripe ブランドカラー | ブランドガイドライン色 |
+| ファイル                   | 理由                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `audit-log.ts`             | 既に `createSuccess`/`createFailure` 使用。カスタム `checkAuditLogPermission` は監査ログ特有の要件で適切                        |
+| `dashboard.ts`             | read-only 操作で `verifyAdminSession()` は適切。`withReadPermission` への変更は caller に破壊的変更を要求するため別タスクとする |
+| Lexical カラープリセット   | カラーピッカースウォッチ — tailwind-patterns.md 例外                                                                            |
+| `bg-black/80` オーバーレイ | shadcn/ui 公式パターン                                                                                                          |
+| Stripe ブランドカラー      | ブランドガイドライン色                                                                                                          |

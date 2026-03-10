@@ -13,6 +13,7 @@ SEOとアクセシビリティの包括的な最適化を実装。メタデー�
 ### 1. SEO基盤構築
 
 #### 新規ファイル
+
 - `src/lib/seo/metadata-factory.ts` - SEOメタデータ生成ファクトリ
   - `getSeoSettings()`: Settings DBからSEO設定を取得（use cache対応）
   - `generateHomeMetadata()`: ホームページ用メタデータ生成
@@ -27,6 +28,7 @@ SEOとアクセシビリティの包括的な最適化を実装。メタデー�
 - `src/lib/seo/index.ts` - SEOライブラリエクスポート
 
 #### 修正ファイル
+
 - `src/components/seo/JsonLd.tsx`
   - `NewsArticleJsonLd`コンポーネント追加
   - XSSサニタイズ強化（< > & U+2028 U+2029をエスケープ）
@@ -44,6 +46,7 @@ SEOとアクセシビリティの包括的な最適化を実装。メタデー�
 ### 2. アクセシビリティ基盤構築
 
 #### 新規ファイル
+
 - `src/lib/a11y/skip-link.ts` - スキップリンク設定
 - `src/lib/a11y/motion-utils.ts` - prefers-reduced-motionユーティリティ
 - `src/lib/a11y/aria-live.ts` - ARIAライブリージョン設定
@@ -55,6 +58,7 @@ SEOとアクセシビリティの包括的な最適化を実装。メタデー�
 - `src/components/a11y/index.ts` - A11yコンポーネントエクスポート
 
 #### 修正ファイル
+
 - `src/app/globals.css`
   - コントラスト比改善（WCAG AA準拠: 45.1% → 40%）
   - `prefers-reduced-motion`サポート追加
@@ -67,16 +71,19 @@ SEOとアクセシビリティの包括的な最適化を実装。メタデー�
 ## 技術的詳細
 
 ### キャッシュ戦略
+
 - `use cache`ディレクティブ + `cacheLife('hours')` + `cacheTag`
 - 設定更新時にキャッシュ無効化可能
 
 ### アクセシビリティ機能
+
 1. **スキップリンク**: 初回Tab押下時に表示、メインコンテンツへジャンプ
 2. **ARIAライブリージョン**: polite/assertive両方のアナウンスメント対応
 3. **prefers-reduced-motion**: 全アニメーション・トランジションを無効化
 4. **コントラスト比**: WCAG 2.1 AA基準（4.5:1以上）準拠
 
 ### JSON-LD構造化データ
+
 - `WebSite`: サイト全体の情報 + 検索アクション
 - `Article`: ブログ記事（著者、公開日、更新日）
 - `NewsArticle`: ニュース記事（公開者情報）
@@ -110,25 +117,27 @@ src/
 ## 使用方法
 
 ### SEOメタデータ
+
 ```typescript
 // ページでのメタデータ生成
-import { generateHomeMetadata, generateArticleMetadata } from '@/lib/seo'
+import { generateHomeMetadata, generateArticleMetadata } from "@/lib/seo";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generateHomeMetadata()
+  return generateHomeMetadata();
 }
 ```
 
 ### ARIA通知
+
 ```typescript
-import { useAriaLive } from '@/contexts'
+import { useAriaLive } from "@/contexts";
 
 function MyComponent() {
-  const { announce } = useAriaLive()
+  const { announce } = useAriaLive();
 
   const handleAction = () => {
-    announce('操作が完了しました', 'polite')
-  }
+    announce("操作が完了しました", "polite");
+  };
 }
 ```
 

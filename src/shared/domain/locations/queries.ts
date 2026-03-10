@@ -6,7 +6,10 @@ import type {
   LocationWithStats,
   PublishedLocationOption,
 } from "@/shared/domain/locations/types";
-import { parseBusinessHours, parseStringArray } from "@/shared/lib/json-validators";
+import {
+  parseBusinessHours,
+  parseStringArray,
+} from "@/shared/lib/json-validators";
 
 function formatLocation(location: {
   id: string;

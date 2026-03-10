@@ -31,6 +31,7 @@ import {
   updateHomepageSection,
   type HomepageSectionData,
 } from "@/admin/actions/homepage-settings";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   SectionType,
   sectionTypeLabels,
@@ -104,12 +105,13 @@ export function SectionEditor({
         config,
         contentJson,
       });
-      if (result.success) {
-        toast.success(result.message);
-        onSave();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success("セクションを更新しました");
+      onSave();
     });
   };
 
@@ -361,12 +363,13 @@ function TitleForm({
       const result = await updateHomepageSection(section.id, {
         title: data.title || undefined,
       });
-      if (result.success) {
-        toast.success("タイトルを更新しました");
-        onSave();
-      } else {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+
+      toast.success("タイトルを更新しました");
+      onSave();
     });
   };
 

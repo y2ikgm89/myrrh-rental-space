@@ -3,6 +3,7 @@ import { z } from "zod";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { isCommentableContentType } from "@/admin/types/editor-comment";
 import { getCommentThreadsQuery } from "@/shared/domain/editor-comments/queries";
+import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
   contentType: z
@@ -17,7 +18,7 @@ const searchSchema = z.object({
 export async function GET(request: Request) {
   const auth = await checkPermission("post", "read", request.headers);
   if (!auth.success) {
-    return NextResponse.json({ error: auth.error.error }, { status: 403 });
+    return jsonError(auth.error.error, 403);
   }
 
   const url = new URL(request.url);
@@ -28,10 +29,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "クエリが不正です" },
-      { status: 400 },
-    );
+    return jsonValidationError(parsed.error, "クエリが不正です");
   }
 
   const threads = await getCommentThreadsQuery(parsed.data);

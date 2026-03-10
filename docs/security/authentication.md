@@ -6,12 +6,12 @@ Better Auth による認証システム。セッション管理 + ロールベ�
 
 ## 技術スタック
 
-| コンポーネント | 技術 |
-|--------------|------|
-| 認証ライブラリ | Better Auth 1.4.13 |
-| セッション | Cookie-based (scrypt) |
-| データベース | Prisma Adapter |
-| プロバイダー | Email/Password, Google |
+| コンポーネント | 技術                   |
+| -------------- | ---------------------- |
+| 認証ライブラリ | Better Auth 1.4.13     |
+| セッション     | Cookie-based (scrypt)  |
+| データベース   | Prisma Adapter         |
+| プロバイダー   | Email/Password, Google |
 
 ## 認証フロー
 
@@ -49,13 +49,13 @@ export default async function AdminPage() {
 ### Server Action
 
 ```typescript
-import { withAuth, createSuccess } from '@/types/server-actions'
+import { withAuth, createSuccess } from "@/types/server-actions";
 
 export const updateSettings = withAuth(async (user, data: Input) => {
   // user: 認証済み管理者
   // 未認証→ActionFailure返却
-  return createSuccess('更新しました')
-})
+  return createSuccess("更新しました");
+});
 ```
 
 ### オプショナル認証
@@ -95,10 +95,10 @@ session: {
 
 ```typescript
 enum Role {
-  ADMIN = 'ADMIN',   // 全権限
-  EDITOR = 'EDITOR', // コンテンツ編集
-  VIEWER = 'VIEWER', // 閲覧のみ
-  USER = 'USER',     // デフォルト
+  ADMIN = "ADMIN", // 全権限
+  EDITOR = "EDITOR", // コンテンツ編集
+  VIEWER = "VIEWER", // 閲覧のみ
+  USER = "USER", // デフォルト
 }
 ```
 
@@ -109,13 +109,13 @@ enum Role {
 export const verifySession = cache(async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
-  })
+  });
 
   if (!session?.user || session.user.role !== Role.ADMIN) {
-    redirect('/admin/login')
+    redirect("/admin/login");
   }
-  return session.user
-})
+  return session.user;
+});
 ```
 
 ## Google OAuth連携

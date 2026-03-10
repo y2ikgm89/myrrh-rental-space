@@ -39,6 +39,7 @@ src/app/
 > — [Next.js Documentation](https://nextjs.org/docs/app/building-your-application/routing/route-groups#creating-multiple-root-layouts)
 
 **注意点:**
+
 - 異なるRoot Layout間のナビゲーションは**フルページリロード**になる
 - `/admin` と `/` の遷移はフルリロード → 管理画面と公開ページの分離に最適
 
@@ -88,30 +89,30 @@ src/app/globals.css             # 削除
 #### 1. `(admin)/layout.tsx` - 管理画面Root Layout
 
 ```tsx
-import type { Metadata } from 'next'
-import type { ReactElement, ReactNode } from 'react'
-import { Noto_Sans_JP } from 'next/font/google'
-import { NuqsAdapter } from 'nuqs/adapters/next/app'
-import './_styles/admin.css'
+import type { Metadata } from "next";
+import type { ReactElement, ReactNode } from "react";
+import { Noto_Sans_JP } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+import "./_styles/admin.css";
 
 const notoSansJP = Noto_Sans_JP({
-  variable: '--font-noto-sans-jp',
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-})
+  variable: "--font-noto-sans-jp",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: {
-    default: '管理画面',
-    template: '%s | 管理画面',
+    default: "管理画面",
+    template: "%s | 管理画面",
   },
   robots: { index: false, follow: false },
-}
+};
 
 export default function AdminRootLayout({
   children,
 }: {
-  children: ReactNode
+  children: ReactNode;
 }): ReactElement {
   return (
     <html lang="ja">
@@ -119,7 +120,7 @@ export default function AdminRootLayout({
         <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>
-  )
+  );
 }
 ```
 
@@ -137,15 +138,15 @@ export default function AdminRootLayout({
 @theme {
   /* カラーシステム */
   --color-background: oklch(0.98 0.01 240);
-  --color-foreground: oklch(0.20 0.02 260);
-  --color-primary: oklch(0.55 0.20 260);
+  --color-foreground: oklch(0.2 0.02 260);
+  --color-primary: oklch(0.55 0.2 260);
   --color-primary-foreground: oklch(1 0 0);
   /* ... 他のカラー定義 */
 
   /* サイドバー専用 */
   --color-sidebar-bg: oklch(0.15 0.03 260);
-  --color-sidebar-text: oklch(0.90 0.01 260);
-  --color-sidebar-accent: oklch(0.55 0.20 260);
+  --color-sidebar-text: oklch(0.9 0.01 260);
+  --color-sidebar-accent: oklch(0.55 0.2 260);
 
   /* シャドウ・イージング */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
@@ -167,18 +168,18 @@ export default function AdminRootLayout({
 #### 3. `(public)/layout.tsx` - 公開ページRoot Layout
 
 ```tsx
-import type { Metadata } from 'next'
-import type { ReactElement, ReactNode } from 'react'
-import { Noto_Sans_JP } from 'next/font/google'
-import { NuqsAdapter } from 'nuqs/adapters/next/app'
-import { SITE_DEFAULTS } from '@/shared/lib/constants'
-import './_styles/public.css'
+import type { Metadata } from "next";
+import type { ReactElement, ReactNode } from "react";
+import { Noto_Sans_JP } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { SITE_DEFAULTS } from "@/shared/lib/constants";
+import "./_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
-  variable: '--font-noto-sans-jp',
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-})
+  variable: "--font-noto-sans-jp",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
 
 export const metadata: Metadata = {
   title: {
@@ -186,23 +187,21 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_DEFAULTS.name}`,
   },
   description: SITE_DEFAULTS.description,
-}
+};
 
 export default async function PublicRootLayout({
   children,
 }: {
-  children: ReactNode
+  children: ReactNode;
 }): Promise<ReactElement> {
   return (
     <html lang="ja">
-      <head>
-        {/* Preconnect hints */}
-      </head>
+      <head>{/* Preconnect hints */}</head>
       <body className={`${notoSansJP.variable} font-sans antialiased`}>
         <NuqsAdapter>{children}</NuqsAdapter>
       </body>
     </html>
-  )
+  );
 }
 ```
 
@@ -220,7 +219,7 @@ export default async function PublicRootLayout({
 @theme {
   /* 顧客ブランドカラー（例） */
   --color-brand-primary: oklch(0.65 0.15 145);
-  --color-brand-secondary: oklch(0.75 0.10 180);
+  --color-brand-secondary: oklch(0.75 0.1 180);
 
   /* 基本カラー */
   --color-background: oklch(1 0 0);
@@ -273,26 +272,26 @@ export default async function PublicRootLayout({
 
 ### 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `src/app/layout.tsx` | **削除** |
-| `src/app/globals.css` | **削除** |
-| `src/app/(admin)/layout.tsx` | **新規作成** (Root Layout) |
-| `src/app/(admin)/_styles/admin.css` | **新規作成** |
-| `src/app/(admin)/admin/layout.tsx` | 簡略化 |
-| `src/app/(public)/layout.tsx` | Root Layout化 |
-| `src/app/(public)/_styles/public.css` | **新規作成** |
-| `CLAUDE.md` | 構造説明更新 |
-| `.claude/rules/*.md` | 関連ルール更新 |
+| ファイル                              | 変更内容                   |
+| ------------------------------------- | -------------------------- |
+| `src/app/layout.tsx`                  | **削除**                   |
+| `src/app/globals.css`                 | **削除**                   |
+| `src/app/(admin)/layout.tsx`          | **新規作成** (Root Layout) |
+| `src/app/(admin)/_styles/admin.css`   | **新規作成**               |
+| `src/app/(admin)/admin/layout.tsx`    | 簡略化                     |
+| `src/app/(public)/layout.tsx`         | Root Layout化              |
+| `src/app/(public)/_styles/public.css` | **新規作成**               |
+| `CLAUDE.md`                           | 構造説明更新               |
+| `.claude/rules/*.md`                  | 関連ルール更新             |
 
 ### 動作変更
 
-| 操作 | Before | After |
-|------|--------|-------|
+| 操作                | Before                     | After                  |
+| ------------------- | -------------------------- | ---------------------- |
 | `/` → `/admin` 遷移 | クライアントナビゲーション | **フルページリロード** |
 | `/admin` → `/` 遷移 | クライアントナビゲーション | **フルページリロード** |
-| 公開ページ内遷移 | クライアントナビゲーション | 変更なし |
-| 管理画面内遷移 | クライアントナビゲーション | 変更なし |
+| 公開ページ内遷移    | クライアントナビゲーション | 変更なし               |
+| 管理画面内遷移      | クライアントナビゲーション | 変更なし               |
 
 ## リスクと対策
 

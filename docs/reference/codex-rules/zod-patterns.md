@@ -14,133 +14,144 @@ paths:
 **重要**: Zod 4では `message` パラメータは非推奨。`error` パラメータを使用:
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 // NG: Zod 3スタイル（非推奨）
-z.string().min(1, 'タイトルは必須です')
-z.string().min(1, { message: 'タイトルは必須です' })
+z.string().min(1, "タイトルは必須です");
+z.string().min(1, { message: "タイトルは必須です" });
 
 // OK: Zod 4スタイル
-z.string().min(1, { error: 'タイトルは必須です' })
-z.string({ error: 'フィールドは必須です' })
-z.uuid({ error: '有効なUUIDを入力してください' })
+z.string().min(1, { error: "タイトルは必須です" });
+z.string({ error: "フィールドは必須です" });
+z.uuid({ error: "有効なUUIDを入力してください" });
 
 // OK: 動的エラーメッセージ（コンテキスト依存）
 z.string({
-  error: (iss) => iss.input === undefined ? 'フィールドは必須です' : '入力が無効です',
-})
+  error: (iss) =>
+    iss.input === undefined ? "フィールドは必須です" : "入力が無効です",
+});
 ```
 
 ### スキーマ定義
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 // 必須フィールド
-const titleSchema = z.string()
-  .min(1, { error: 'タイトルは必須です' })
-  .max(200, { error: 'タイトルは200文字以内です' })
+const titleSchema = z
+  .string()
+  .min(1, { error: "タイトルは必須です" })
+  .max(200, { error: "タイトルは200文字以内です" });
 
 // オプショナルフィールド
-const descriptionSchema = z.string()
-  .max(500, { error: '説明は500文字以内です' })
-  .optional()
+const descriptionSchema = z
+  .string()
+  .max(500, { error: "説明は500文字以内です" })
+  .optional();
 
 // nullable（DBのnullを許容）
-const metaDescriptionSchema = z.string().max(160).nullable().optional()
+const metaDescriptionSchema = z.string().max(160).nullable().optional();
 
 // カスタムバリデーション（refine）
 const lexicalJsonSchema = z.string().refine(
   (val) => {
     try {
-      const parsed: unknown = JSON.parse(val)
-      return typeof parsed === 'object' && parsed !== null && 'root' in parsed
+      const parsed: unknown = JSON.parse(val);
+      return typeof parsed === "object" && parsed !== null && "root" in parsed;
     } catch {
-      return false
+      return false;
     }
   },
-  { error: '有効なLexical EditorState JSONではありません' }
-)
+  { error: "有効なLexical EditorState JSONではありません" },
+);
 ```
 
 ### 複合スキーマ（実際のプロジェクト例）
 
 ```typescript
-import { z } from 'zod'
-import { PostStatus, LayoutWidth } from '@/shared/generated/prisma/enums'
-import { seoOgpFieldsSchema } from '@/shared/lib/validations/seo'
-import { lexicalJsonSchema } from '@/shared/lib/validations/lexical'
+import { z } from "zod";
+import { PostStatus, LayoutWidth } from "@/shared/generated/prisma/enums";
+import { seoOgpFieldsSchema } from "@/shared/lib/validations/seo";
+import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 // Server Action用スキーマ（型厳格）
 export const updatePostSchema = z
   .object({
-    title: z.string()
-      .min(1, { error: 'タイトルは必須です' })
-      .max(200, { error: 'タイトルは200文字以内' }),
-    slug: z.string()
-      .min(1, { error: 'スラッグは必須です' })
+    title: z
+      .string()
+      .min(1, { error: "タイトルは必須です" })
+      .max(200, { error: "タイトルは200文字以内" }),
+    slug: z
+      .string()
+      .min(1, { error: "スラッグは必須です" })
       .max(200)
-      .regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+      .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
     contentJson: lexicalJsonSchema,
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
-    tags: z.array(z.string().uuid({ error: 'タグIDが不正です' })).default([]),
+    tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
   })
-  .merge(seoOgpFieldsSchema)  // SEO/OGPフィールドを合成
+  .merge(seoOgpFieldsSchema); // SEO/OGPフィールドを合成
 
-export type UpdatePostInput = z.infer<typeof updatePostSchema>
+export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 
 // フォーム用スキーマ（空文字許可・文字列型）
 export const postFormSchema = z
   .object({
-    title: z.string().min(1, { error: 'タイトルは必須です' }),
-    slug: z.string().min(1, { error: 'スラッグは必須です' }),
+    title: z.string().min(1, { error: "タイトルは必須です" }),
+    slug: z.string().min(1, { error: "スラッグは必須です" }),
     status: z.enum(PostStatus),
-    contentJson: z.string().min(1, { error: '本文は必須です' }),
-    tags: z.string().optional(),       // フォーム: comma-separated string
+    contentJson: z.string().min(1, { error: "本文は必須です" }),
+    tags: z.string().optional(), // フォーム: comma-separated string
     publishedAt: z.string().optional(), // フォーム: 文字列のまま
   })
-  .merge(seoOgpFieldsFormSchema)
+  .merge(seoOgpFieldsFormSchema);
 
-export type PostFormData = z.infer<typeof postFormSchema>
+export type PostFormData = z.infer<typeof postFormSchema>;
 ```
 
 **Server Action用スキーマ vs フォーム用スキーマの使い分け**:
 
-| 用途 | 特徴 | 例 |
-|------|------|-----|
-| Server Action | 型厳格（Date, number, UUID検証） | `updatePostSchema` |
-| フォーム (React Hook Form) | 空文字許可・文字列型 | `postFormSchema` |
+| 用途                       | 特徴                             | 例                 |
+| -------------------------- | -------------------------------- | ------------------ |
+| Server Action              | 型厳格（Date, number, UUID検証） | `updatePostSchema` |
+| フォーム (React Hook Form) | 空文字許可・文字列型             | `postFormSchema`   |
 
 ### Server Actions での使用
 
 ```typescript
-'use server'
+"use server";
 
-import { z } from 'zod'
-import { updateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
-import { checkPermission } from '@/admin/lib/action-auth'
-import { createSuccess, createFailure } from '@/shared/lib/errors'
-import type { ActionResult } from '@/shared/types/server-actions'
+import { z } from "zod";
+import { updateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
+import { checkPermission } from "@/admin/lib/action-auth";
+import { createSuccess, createFailure } from "@/shared/lib/errors";
+import type { ActionResult } from "@/shared/types/server-actions";
 
-export async function updatePost(id: string, input: unknown): Promise<ActionResult<Post>> {
+export async function updatePost(
+  id: string,
+  input: unknown,
+): Promise<ActionResult<Post>> {
   // 1. 認証・権限チェック
-  const auth = await checkPermission('post', 'update')
-  if (!auth.success) return auth.error
+  const auth = await checkPermission("post", "update");
+  if (!auth.success) return auth.error;
 
   // 2. バリデーション（safeParse + flattenError）
-  const validated = updatePostSchema.safeParse(input)
+  const validated = updatePostSchema.safeParse(input);
   if (!validated.success) {
-    return { success: false, error: z.flattenError(validated.error) }
+    return { success: false, error: z.flattenError(validated.error) };
   }
 
   // 3. データ操作
-  const post = await prisma.post.update({ where: { id }, data: validated.data })
+  const post = await prisma.post.update({
+    where: { id },
+    data: validated.data,
+  });
 
   // 4. キャッシュ無効化
-  updateTag(CACHE_TAGS.POSTS)
+  updateTag(CACHE_TAGS.POSTS);
 
-  return createSuccess(post)
+  return createSuccess(post);
 }
 ```
 
@@ -162,34 +173,38 @@ export async function updatePost(id: string, input: unknown): Promise<ActionResu
 Zod 4 では `z.nativeEnum()` は非推奨。Prisma 7 の `@map` enum は TypeScript 側で `as const` オブジェクトとして生成されるため、`z.enum()` で直接受け付ける:
 
 ```typescript
-import { z } from 'zod'
-import { DiscountType, TaxRateType, PostStatus } from '@/shared/generated/prisma/enums'
+import { z } from "zod";
+import {
+  DiscountType,
+  TaxRateType,
+  PostStatus,
+} from "@/shared/generated/prisma/enums";
 
 // NG: z.nativeEnum()（Zod 4 非推奨）
-z.nativeEnum(DiscountType)
+z.nativeEnum(DiscountType);
 
 // NG: 文字列リテラル配列（Prisma enum と乖離するリスク）
-z.enum(['none', 'percentage', 'fixed'])
+z.enum(["none", "percentage", "fixed"]);
 
 // OK: Prisma enum を z.enum() に渡す
-z.enum(DiscountType)
-z.enum(PostStatus)
+z.enum(DiscountType);
+z.enum(PostStatus);
 
 // OK: Zodスキーマのフィールドで使用
-discountType: z.enum(DiscountType).default(DiscountType.none)
-status: z.enum(PostStatus)
-taxRateType: z.enum(TaxRateType).default(TaxRateType.standard)
+discountType: z.enum(DiscountType).default(DiscountType.none);
+status: z.enum(PostStatus);
+taxRateType: z.enum(TaxRateType).default(TaxRateType.standard);
 ```
 
 ### デフォルト値もenum定数で
 
 ```typescript
 // NG: 文字列リテラルのデフォルト（Prisma enum と乖離するリスク）
-discountType: z.enum(DiscountType).default('none')
+discountType: z.enum(DiscountType).default("none");
 
 // OK: enum定数のデフォルト（型安全）
-discountType: z.enum(DiscountType).default(DiscountType.none)
-taxRateType: z.enum(TaxRateType).default(TaxRateType.standard)
+discountType: z.enum(DiscountType).default(DiscountType.none);
+taxRateType: z.enum(TaxRateType).default(TaxRateType.standard);
 ```
 
 ## 共通スキーマの再利用
@@ -203,55 +218,68 @@ export const SEO_LIMITS = {
   META_KEYWORDS: 500,
   OGP_TITLE: 70,
   OGP_DESCRIPTION: 200,
-} as const
+} as const;
 
 // Server Action用（nullable）
 export const seoFieldsSchema = z.object({
-  metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).nullable().optional(),
+  metaDescription: z
+    .string()
+    .max(SEO_LIMITS.META_DESCRIPTION)
+    .nullable()
+    .optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).nullable().optional(),
-})
+});
 
 export const ogpFieldsSchema = z.object({
   ogpTitle: z.string().max(SEO_LIMITS.OGP_TITLE).nullable().optional(),
-  ogpDescription: z.string().max(SEO_LIMITS.OGP_DESCRIPTION).nullable().optional(),
+  ogpDescription: z
+    .string()
+    .max(SEO_LIMITS.OGP_DESCRIPTION)
+    .nullable()
+    .optional(),
   ogpImageUrl: z.string().url().nullable().optional(),
-})
+});
 
 // 統合スキーマ（merge で合成）
-export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema)
+export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema);
 
 // フォーム用（空文字許可）
 export const seoFieldsFormSchema = z.object({
   metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).optional(),
-})
-export const seoOgpFieldsFormSchema = seoFieldsFormSchema.merge(ogpFieldsFormSchema)
+});
+export const seoOgpFieldsFormSchema =
+  seoFieldsFormSchema.merge(ogpFieldsFormSchema);
 ```
 
 **スキーマ合成の使い分け**:
 
-| 方法 | 用途 | 備考 |
-|------|------|------|
-| `.merge(other)` | 既存 `ZodObject` どうし | Zod 4 推奨（型推論効率） |
-| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成 | tsc 効率優先時 |
+| 方法                                   | 用途                         | 備考                     |
+| -------------------------------------- | ---------------------------- | ------------------------ |
+| `.merge(other)`                        | 既存 `ZodObject` どうし      | Zod 4 推奨（型推論効率） |
+| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成 | tsc 効率優先時           |
 
 ### URLバリデーション
 
 ```typescript
 // 空文字列も許可するURL（フォーム用）
-const optionalUrlSchema = z.string().url().optional().or(z.literal(''))
+const optionalUrlSchema = z.string().url().optional().or(z.literal(""));
 
 // nullable + 空文字も許可（DB nullable フィールドのフォーム用）
-const imageUrlSchema = z.string().url().nullable().optional()
-  .or(z.literal(''))
-  .or(z.literal(null))
+const imageUrlSchema = z
+  .string()
+  .url()
+  .nullable()
+  .optional()
+  .or(z.literal(""))
+  .or(z.literal(null));
 
 // 安全なURL（相対パスも許可）
-const safeUrlSchema = z.string()
-  .refine(
-    (val) => !val || val.startsWith('/') || val.startsWith('http'),
-    { error: 'URLは / または http で始まる必要があります' }
-  )
+const safeUrlSchema = z
+  .string()
+  .refine((val) => !val || val.startsWith("/") || val.startsWith("http"), {
+    error: "URLは / または http で始まる必要があります",
+  });
 ```
 
 ### URLパラメータバリデーション
@@ -262,17 +290,17 @@ export const slugParamSchema = z
   .string()
   .min(1)
   .max(100)
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
-export const idParamSchema = z.string().min(1).max(100)
+export const idParamSchema = z.string().min(1).max(100);
 
 // 使用例（'use cache' 関数内）
 export async function getPublishedPost(slug: string) {
-  'use cache'
-  const validated = slugParamSchema.safeParse(slug)
-  if (!validated.success) return null  // 不正な入力をDB到達前にブロック
+  "use cache";
+  const validated = slugParamSchema.safeParse(slug);
+  if (!validated.success) return null; // 不正な入力をDB到達前にブロック
 
-  return prisma.post.findUnique({ where: { slug: validated.data } })
+  return prisma.post.findUnique({ where: { slug: validated.data } });
 }
 ```
 
@@ -306,12 +334,12 @@ Prisma enum に対応しない値のみローカル定義可:
 
 ```typescript
 // OK: Prisma に対応するenumがない場合
-const CONNECTION_METHODS = ['oauth', 'manual'] as const
-type ConnectionMethod = (typeof CONNECTION_METHODS)[number]
-const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS)
+const CONNECTION_METHODS = ["oauth", "manual"] as const;
+type ConnectionMethod = (typeof CONNECTION_METHODS)[number];
+const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS);
 
 function isConnectionMethod(value: string): value is ConnectionMethod {
-  return CONNECTION_METHOD_SET.has(value)
+  return CONNECTION_METHOD_SET.has(value);
 }
 ```
 
@@ -319,43 +347,43 @@ function isConnectionMethod(value: string): value is ConnectionMethod {
 
 ```typescript
 // Zod safeParse 推奨（型安全）
-const result = schema.safeParse(unknownValue)
+const result = schema.safeParse(unknownValue);
 if (result.success) {
   // result.data は型安全
 }
 
 // 型ガード関数（シンプルなケース）
 function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((v) => typeof v === 'string')
+  return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
 ```
 
 ## React Hook Form 連携
 
 ```typescript
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 
 // フォーム用スキーマ（空文字許可・文字列型）を resolver に渡す
 const form = useForm<PostFormData>({
   resolver: zodResolver(postFormSchema),
   defaultValues: {
-    title: '',
-    slug: '',
+    title: "",
+    slug: "",
     status: PostStatus.draft,
-    contentJson: '',
-    metaDescription: '',
-    ogpTitle: '',
-    ogpDescription: '',
-    ogpImageUrl: '',
+    contentJson: "",
+    metaDescription: "",
+    ogpTitle: "",
+    ogpDescription: "",
+    ogpImageUrl: "",
   },
-})
+});
 
 // フォーム送信時は Server Action 用スキーマで再バリデーション
 const onSubmit = async (formData: PostFormData) => {
-  const result = await updatePost(id, transformFormData(formData))
+  const result = await updatePost(id, transformFormData(formData));
   // ...
-}
+};
 ```
 
 **注意**: React Hook Form に渡すスキーマはフォーム用（空文字許可・文字列型）。
@@ -368,20 +396,20 @@ Server Action 側で改めてサーバー用スキーマで検証する二段構
 既存の JSON Schema 定義を Zod スキーマに変換:
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 // 外部ライブラリや OpenAPI spec の JSON Schema を Zod へ変換
 const jsonSchema = {
-  type: 'object',
+  type: "object",
   properties: {
-    name: { type: 'string', minLength: 1 },
-    age: { type: 'number', minimum: 0 },
+    name: { type: "string", minLength: 1 },
+    age: { type: "number", minimum: 0 },
   },
-  required: ['name'],
-}
+  required: ["name"],
+};
 
-const schema = z.fromJSONSchema(jsonSchema)
-type Schema = z.infer<typeof schema>
+const schema = z.fromJSONSchema(jsonSchema);
+type Schema = z.infer<typeof schema>;
 // => { name: string; age?: number }
 ```
 
@@ -412,13 +440,13 @@ type Schema = z.infer<typeof schema>
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@/shared/lib/validations/enums.ts` | Prisma enum型ガード（`isValid*` / `getValid*`）、re-export |
-| `@/shared/lib/validations/seo.ts` | SEO/OGP 共通スキーマ（Server Action用 + フォーム用） |
-| `@/shared/lib/validations/section.ts` | セクション設定スキーマ |
-| `@/shared/lib/validations/lexical.ts` | Lexical EditorState JSON バリデーション |
-| `@/shared/lib/validations/params.ts` | URL パラメータバリデーション（slugParamSchema等） |
-| `@/shared/lib/validations/` | その他共有スキーマ |
-| `@/admin/lib/validations/` | 管理画面専用スキーマ |
-| `@/public/lib/validations/` | 公開ページ専用スキーマ |
+| パス                                  | 内容                                                       |
+| ------------------------------------- | ---------------------------------------------------------- |
+| `@/shared/lib/validations/enums.ts`   | Prisma enum型ガード（`isValid*` / `getValid*`）、re-export |
+| `@/shared/lib/validations/seo.ts`     | SEO/OGP 共通スキーマ（Server Action用 + フォーム用）       |
+| `@/shared/lib/validations/section.ts` | セクション設定スキーマ                                     |
+| `@/shared/lib/validations/lexical.ts` | Lexical EditorState JSON バリデーション                    |
+| `@/shared/lib/validations/params.ts`  | URL パラメータバリデーション（slugParamSchema等）          |
+| `@/shared/lib/validations/`           | その他共有スキーマ                                         |
+| `@/admin/lib/validations/`            | 管理画面専用スキーマ                                       |
+| `@/public/lib/validations/`           | 公開ページ専用スキーマ                                     |

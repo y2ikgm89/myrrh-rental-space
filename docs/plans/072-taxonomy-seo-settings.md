@@ -13,6 +13,7 @@
 ## Task 1: Prismaスキーマ拡張
 
 **Files:**
+
 - Modify: `prisma/schema.prisma:607-630`
 
 **Step 1: PostCategoryモデルにSEOフィールド追加**
@@ -80,6 +81,7 @@ Expected: No errors
 ## Task 2: バリデーションスキーマ・型定義更新
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/post.ts`
 
 **Step 1: PostCategoryスキーマにSEOフィールド追加**
@@ -87,17 +89,24 @@ Expected: No errors
 `postCategorySchema` を以下に更新:
 
 ```typescript
-import { seoOgpFieldsSchema } from '@/shared/lib/validations/seo'
+import { seoOgpFieldsSchema } from "@/shared/lib/validations/seo";
 
 /**
  * 投稿カテゴリスキーマ（基本情報）
  */
 export const postCategoryBaseSchema = z.object({
-  name: z.string().min(1, 'カテゴリ名は必須です').max(50, 'カテゴリ名は50文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
+  name: z
+    .string()
+    .min(1, "カテゴリ名は必須です")
+    .max(50, "カテゴリ名は50文字以内"),
+  slug: z
+    .string()
+    .min(1, "スラッグは必須です")
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, "スラッグは小文字英数字とハイフンのみ"),
   description: z.string().max(500).nullable().optional(),
   order: z.number().int().min(0).default(0),
-})
+});
 
 /**
  * 投稿カテゴリスキーマ（SEO含む）
@@ -106,11 +115,11 @@ export const postCategorySchema = postCategoryBaseSchema.merge(
   z.object({
     metaTitle: z.string().max(70).nullable().optional(),
     metaDescription: z.string().max(160).nullable().optional(),
-    ogpImageUrl: z.string().url().nullable().optional().or(z.literal('')),
-  })
-)
+    ogpImageUrl: z.string().url().nullable().optional().or(z.literal("")),
+  }),
+);
 
-export type PostCategoryInput = z.infer<typeof postCategorySchema>
+export type PostCategoryInput = z.infer<typeof postCategorySchema>;
 ```
 
 **Step 2: PostTagスキーマにSEOフィールド追加**
@@ -120,9 +129,13 @@ export type PostCategoryInput = z.infer<typeof postCategorySchema>
  * 投稿タグスキーマ（基本情報）
  */
 export const postTagBaseSchema = z.object({
-  name: z.string().min(1, 'タグ名は必須です').max(50, 'タグ名は50文字以内'),
-  slug: z.string().min(1, 'スラッグは必須です').max(50).regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ'),
-})
+  name: z.string().min(1, "タグ名は必須です").max(50, "タグ名は50文字以内"),
+  slug: z
+    .string()
+    .min(1, "スラッグは必須です")
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, "スラッグは小文字英数字とハイフンのみ"),
+});
 
 /**
  * 投稿タグスキーマ（SEO含む）
@@ -132,11 +145,11 @@ export const postTagSchema = postTagBaseSchema.merge(
     description: z.string().max(500).nullable().optional(),
     metaTitle: z.string().max(70).nullable().optional(),
     metaDescription: z.string().max(160).nullable().optional(),
-    ogpImageUrl: z.string().url().nullable().optional().or(z.literal('')),
-  })
-)
+    ogpImageUrl: z.string().url().nullable().optional().or(z.literal("")),
+  }),
+);
 
-export type PostTagInput = z.infer<typeof postTagSchema>
+export type PostTagInput = z.infer<typeof postTagSchema>;
 ```
 
 **Step 3: 型定義更新**
@@ -148,38 +161,38 @@ export type PostTagInput = z.infer<typeof postTagSchema>
  * 投稿カテゴリデータ型
  */
 export type PostCategoryData = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  order: number
-  metaTitle: string | null
-  metaDescription: string | null
-  ogpImageUrl: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  order: number;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogpImageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   _count: {
-    posts: number
-  }
-}
+    posts: number;
+  };
+};
 
 /**
  * 投稿タグデータ型
  */
 export type PostTagData = {
-  id: string
-  name: string
-  slug: string
-  description: string | null
-  metaTitle: string | null
-  metaDescription: string | null
-  ogpImageUrl: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogpImageUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   _count: {
-    posts: number
-  }
-}
+    posts: number;
+  };
+};
 ```
 
 **Step 4: 型チェック**
@@ -192,6 +205,7 @@ Expected: No errors
 ## Task 3: Server Actions更新
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/post.ts`
 
 **Step 1: getPostCategoryById を更新してSEOフィールドを含める**
@@ -204,27 +218,27 @@ Expected: No errors
 
 ```typescript
 export async function getPostTagById(id: string): Promise<PostTagData | null> {
-  const hasPermission = await checkReadPermission()
+  const hasPermission = await checkReadPermission();
   if (!hasPermission) {
-    return null
+    return null;
   }
 
   const tag = await prisma.postTag.findUnique({
     where: { id },
-  })
+  });
 
-  if (!tag) return null
+  if (!tag) return null;
 
   const count = await prisma.post.count({
     where: {
       tags: { array_contains: [tag.name] },
     },
-  })
+  });
 
   return {
     ...tag,
     _count: { posts: count },
-  }
+  };
 }
 ```
 
@@ -246,6 +260,7 @@ Expected: No errors
 ## Task 4: カテゴリ編集ページ作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/posts/categories/[id]/page.tsx`
 - Create: `src/app/(admin)/admin/(dashboard)/posts/categories/_components/CategoryEditor.tsx`
 
@@ -649,6 +664,7 @@ Expected: No errors
 ## Task 5: タグ編集ページ作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/posts/tags/[id]/page.tsx`
 - Create: `src/app/(admin)/admin/(dashboard)/posts/tags/_components/TagEditor.tsx`
 
@@ -1048,6 +1064,7 @@ Expected: No errors
 ## Task 6: TaxonomyManager（一覧）から編集ページへのリンク追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/CategoryManager.tsx`
 - Modify: `src/app/(admin)/admin/(dashboard)/posts/taxonomy/_components/TagManager.tsx`
 
@@ -1103,6 +1120,7 @@ Expected: No errors
 ## Task 7: 公開ページのメタデータ改善
 
 **Files:**
+
 - Modify: `src/app/(public)/posts/category/[slug]/page.tsx`
 - Modify: `src/app/(public)/posts/tag/[slug]/page.tsx`
 
@@ -1111,18 +1129,23 @@ Expected: No errors
 `generateMetadata` 関数を更新:
 
 ```typescript
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params
-  const category = await getCategoryBySlug(slug)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const category = await getCategoryBySlug(slug);
 
   if (!category) {
     return {
-      title: 'カテゴリーが見つかりません',
-    }
+      title: "カテゴリーが見つかりません",
+    };
   }
 
-  const title = category.metaTitle || `${category.name} - ブログ`
-  const description = category.metaDescription || category.description || `${category.name}カテゴリーの記事一覧`
+  const title = category.metaTitle || `${category.name} - ブログ`;
+  const description =
+    category.metaDescription ||
+    category.description ||
+    `${category.name}カテゴリーの記事一覧`;
 
   return {
     title,
@@ -1132,7 +1155,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       ...(category.ogpImageUrl && { images: [{ url: category.ogpImageUrl }] }),
     },
-  }
+  };
 }
 ```
 
@@ -1140,9 +1163,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 ```typescript
 async function getCategoryBySlug(slug: string) {
-  'use cache'
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
-  cacheTag(CACHE_TAGS.POSTS)
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POSTS);
 
   return prisma.postCategory.findUnique({
     where: { slug },
@@ -1155,7 +1178,7 @@ async function getCategoryBySlug(slug: string) {
       metaDescription: true,
       ogpImageUrl: true,
     },
-  })
+  });
 }
 ```
 
@@ -1164,19 +1187,22 @@ async function getCategoryBySlug(slug: string) {
 `generateMetadata` 関数を更新:
 
 ```typescript
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params
-  const decodedSlug = decodeURIComponent(slug)
-  const tag = await getTagBySlugOrName(decodedSlug)
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const decodedSlug = decodeURIComponent(slug);
+  const tag = await getTagBySlugOrName(decodedSlug);
 
   if (!tag) {
     return {
-      title: 'タグが見つかりません',
-    }
+      title: "タグが見つかりません",
+    };
   }
 
-  const title = tag.metaTitle || `#${tag.name} - ブログ`
-  const description = tag.metaDescription || tag.description || `${tag.name}タグが付いた記事一覧`
+  const title = tag.metaTitle || `#${tag.name} - ブログ`;
+  const description =
+    tag.metaDescription || tag.description || `${tag.name}タグが付いた記事一覧`;
 
   return {
     title,
@@ -1186,7 +1212,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       ...(tag.ogpImageUrl && { images: [{ url: tag.ogpImageUrl }] }),
     },
-  }
+  };
 }
 ```
 
@@ -1194,16 +1220,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 ```typescript
 async function getTagBySlugOrName(slugOrName: string) {
-  'use cache'
-  cacheLife(CACHE_LIFE.PUBLIC_CONTENT)
-  cacheTag(CACHE_TAGS.POST_TAGS)
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POST_TAGS);
 
   return prisma.postTag.findFirst({
     where: {
-      OR: [
-        { slug: slugOrName },
-        { name: slugOrName },
-      ],
+      OR: [{ slug: slugOrName }, { name: slugOrName }],
     },
     select: {
       id: true,
@@ -1214,7 +1237,7 @@ async function getTagBySlugOrName(slugOrName: string) {
       metaDescription: true,
       ogpImageUrl: true,
     },
-  })
+  });
 }
 ```
 
@@ -1305,14 +1328,14 @@ EOF
 
 ## まとめ
 
-| タスク | 内容 |
-|--------|------|
+| タスク | 内容                                    |
+| ------ | --------------------------------------- |
 | Task 1 | Prismaスキーマ拡張（SEOフィールド追加） |
-| Task 2 | バリデーション・型定義更新 |
-| Task 3 | Server Actions更新 |
-| Task 4 | カテゴリ編集ページ作成 |
-| Task 5 | タグ編集ページ作成 |
-| Task 6 | 一覧から編集ページへのリンク追加 |
-| Task 7 | 公開ページのメタデータ改善 |
-| Task 8 | テスト・検証 |
-| Task 9 | コミット |
+| Task 2 | バリデーション・型定義更新              |
+| Task 3 | Server Actions更新                      |
+| Task 4 | カテゴリ編集ページ作成                  |
+| Task 5 | タグ編集ページ作成                      |
+| Task 6 | 一覧から編集ページへのリンク追加        |
+| Task 7 | 公開ページのメタデータ改善              |
+| Task 8 | テスト・検証                            |
+| Task 9 | コミット                                |

@@ -18,11 +18,11 @@
 
 ### タブ構成
 
-| タブ | 内容 |
-|------|------|
-| 基本 | タイトル/スラッグ、抜粋、カテゴリ、タグ、画像など |
+| タブ     | 内容                                                      |
+| -------- | --------------------------------------------------------- |
+| 基本     | タイトル/スラッグ、抜粋、カテゴリ、タグ、画像など         |
 | SEO・OGP | メタディスクリプション、キーワード、OGPタイトル/説明/画像 |
-| 公開 | 公開状態、公開日時、レイアウト設定 |
+| 公開     | 公開状態、公開日時、レイアウト設定                        |
 
 ### 公開方式
 
@@ -34,6 +34,7 @@
 ### 1. Core Infrastructure
 
 **新規ファイル:**
+
 - `content-types/types.ts` - ContentTypeConfig型定義
 - `UnifiedSidePanel.tsx` - 統一サイドパネルコンポーネント
 - `side-panel/*.tsx` - 再利用可能フィールドコンポーネント群
@@ -43,6 +44,7 @@
 ### 2. Content Type Configs
 
 **新規ファイル:**
+
 - `content-types/blog-config.ts`
 - `content-types/news-config.ts`
 - `content-types/page-config.ts`
@@ -52,6 +54,7 @@
 ### 3. DB Schema更新
 
 **Prisma schema変更:**
+
 - News: `NewsStatus` enum → `isPublished: Boolean`
 - News: SEO/OGPフィールド追加
 - FaqItem: `isActive` → `isPublished`
@@ -59,6 +62,7 @@
 ### 4. エディター更新
 
 **変更ファイル:**
+
 - `BlogInlineEditor.tsx` - UnifiedSidePanel使用
 - `NewsInlineEditor.tsx` - UnifiedSidePanel使用 + SEO/OGP対応
 - `PageInlineEditor.tsx` - UnifiedSidePanel使用

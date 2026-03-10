@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   Button,
@@ -16,27 +16,31 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   type DragEndEvent,
-} from '@/admin/components/ui'
-import type { SensorDescriptor, SensorOptions } from '@dnd-kit/core'
-import type { NavigationType } from '@/shared/db/enums'
-import type { NavigationItemData, SocialLinkData, FlatNavigationItem } from './types'
-import { SortableNavRow, SortableSocialRow } from './SortableNavItem'
+} from "@/admin/components/ui";
+import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
+import type { NavigationType } from "@/shared/db/enums";
+import type {
+  NavigationItemData,
+  SocialLinkData,
+  FlatNavigationItem,
+} from "./types";
+import { SortableNavRow, SortableSocialRow } from "./SortableNavItem";
 
 // =============================================================================
 // Navigation List Component
 // =============================================================================
 
 type NavigationListProps = {
-  items: FlatNavigationItem[]
-  type: NavigationType
-  emptyMessage: string
-  sensors: SensorDescriptor<SensorOptions>[]
-  isPending: boolean
-  onAdd: (type: NavigationType) => void
-  onEdit: (item: NavigationItemData) => void
-  onDelete: (id: string) => void
-  onDragEnd: (event: DragEndEvent) => void
-}
+  items: FlatNavigationItem[];
+  type: NavigationType;
+  emptyMessage: string;
+  sensors: SensorDescriptor<SensorOptions>[];
+  isPending: boolean;
+  onAdd: (type: NavigationType) => void;
+  onEdit: (item: NavigationItemData) => void;
+  onDelete: (id: string) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+};
 
 export function NavigationList({
   items,
@@ -50,10 +54,10 @@ export function NavigationList({
   onDragEnd,
 }: NavigationListProps) {
   const title = {
-    HEADER_DESKTOP: 'デスクトップメニュー',
-    HEADER_MOBILE: 'モバイルメニュー',
-    FOOTER: 'フッターメニュー',
-  }[type]
+    HEADER_DESKTOP: "デスクトップメニュー",
+    HEADER_MOBILE: "モバイルメニュー",
+    FOOTER: "フッターメニュー",
+  }[type];
 
   return (
     <Card>
@@ -65,7 +69,9 @@ export function NavigationList({
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <p className="py-4 text-center text-muted-foreground">{emptyMessage}</p>
+          <p className="py-4 text-center text-muted-foreground">
+            {emptyMessage}
+          </p>
         ) : (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
@@ -110,7 +116,7 @@ export function NavigationList({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // =============================================================================
@@ -118,14 +124,14 @@ export function NavigationList({
 // =============================================================================
 
 type SocialLinkListProps = {
-  links: SocialLinkData[]
-  sensors: SensorDescriptor<SensorOptions>[]
-  isPending: boolean
-  onAdd: () => void
-  onEdit: (link: SocialLinkData) => void
-  onDelete: (id: string) => void
-  onDragEnd: (event: DragEndEvent) => void
-}
+  links: SocialLinkData[];
+  sensors: SensorDescriptor<SensorOptions>[];
+  isPending: boolean;
+  onAdd: () => void;
+  onEdit: (link: SocialLinkData) => void;
+  onDelete: (id: string) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+};
 
 export function SocialLinkList({
   links,
@@ -193,5 +199,5 @@ export function SocialLinkList({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

@@ -7,9 +7,9 @@
  * - next/dynamic公式パターン準拠
  */
 
-'use client'
+"use client";
 
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 
 /**
  * 遅延読み込みLexicalエディタ
@@ -20,7 +20,7 @@ import dynamic from 'next/dynamic'
  */
 export const LazyLexicalEditor = dynamic(
   () =>
-    import('./LexicalEditor').then((mod) => ({
+    import("./LexicalEditor").then((mod) => ({
       default: mod.LexicalEditor,
     })),
   {
@@ -32,5 +32,5 @@ export const LazyLexicalEditor = dynamic(
         </div>
       </div>
     ),
-  }
-)
+  },
+);

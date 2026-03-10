@@ -19,7 +19,7 @@ You are a security specialist for the Myrrh Rental Space project (Next.js 16 / B
 
 ### Server Actions & API Routes
 
-- Every admin Server Action uses `withPermission` HOF — no bare `async function` without auth check
+- Every admin Server Action uses `executeAdminMutation` — no bare `async function` without auth check
 - `server-only` import present in files that access secrets (`prisma.ts`, `auth.ts`, `crypto.ts`, `env/server.ts`, etc.)
 - API routes in `src/app/api/` validate input with Zod before processing
 - Webhook routes verify signatures before trusting payload
@@ -27,7 +27,7 @@ You are a security specialist for the Myrrh Rental Space project (Next.js 16 / B
 ### Auth & Sessions (Better Auth)
 
 - Session tokens not exposed to client components
-- RBAC: `withPermission(resource, action)` covers all write operations
+- RBAC: `executeAdminMutation({ resource, action })` covers all write operations
 - No IDOR: resource access checks that the user owns the resource
 - OAuth callbacks (Instagram `src/app/api/instagram/`) have CSRF state parameter validation
 - Role checks include BOTH `Role.ADMIN` and `Role.SUPER_ADMIN` — checking only `Role.ADMIN` locks out SUPER_ADMIN (full-access role)

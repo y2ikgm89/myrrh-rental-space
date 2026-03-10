@@ -13,9 +13,10 @@
  * @param editorStateJson - JSON string from Lexical editor.getEditorState().toJSON()
  * @returns HTML string, or the original JSON if not valid EditorState format
  */
-export async function renderEditorStateToHtmlLazy(editorStateJson: string): Promise<string> {
-  const { renderEditorStateToHtml } = await import(
-    '@/admin/components/editor/lexical/preview/headless-renderer'
-  )
-  return renderEditorStateToHtml(editorStateJson)
+export async function renderEditorStateToHtmlLazy(
+  editorStateJson: string,
+): Promise<string> {
+  const { renderEditorStateToHtml } =
+    await import("@/admin/components/editor/lexical/preview/headless-renderer");
+  return renderEditorStateToHtml(editorStateJson);
 }

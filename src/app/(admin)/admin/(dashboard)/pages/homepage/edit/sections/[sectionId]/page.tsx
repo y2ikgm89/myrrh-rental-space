@@ -5,41 +5,43 @@
  * ヘッダー重複を解消するために HomepageTab 内のインライン表示から分離。
  */
 
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { getHomepageSection } from '@/admin/queries/homepage-settings'
-import { sectionTypeLabels } from '@/admin/lib/validations/homepage-section'
-import { toPlainObject } from '@/shared/lib/serialize'
-import { Button, Breadcrumb } from '@/admin/components/ui'
-import { SectionEditWrapper } from './_components/SectionEditWrapper'
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { getHomepageSection } from "@/admin/queries/homepage-settings";
+import { sectionTypeLabels } from "@/admin/lib/validations/homepage-section";
+import { toPlainObject } from "@/shared/lib/serialize";
+import { Button, Breadcrumb } from "@/admin/components/ui";
+import { SectionEditWrapper } from "./_components/SectionEditWrapper";
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
 
 export const metadata: Metadata = {
-  title: 'セクション編集',
-}
+  title: "セクション編集",
+};
 
 interface PageProps {
-  params: Promise<{ sectionId: string }>
+  params: Promise<{ sectionId: string }>;
 }
 
 export default async function HomepageSectionEditPage({
   params,
 }: PageProps): Promise<ReactElement> {
-  const { sectionId } = await params
-  const section = await getHomepageSection(sectionId)
+  await connection();
+  const { sectionId } = await params;
+  const section = await getHomepageSection(sectionId);
 
-  if (!section) notFound()
+  if (!section) notFound();
 
-  const label = sectionTypeLabels[section.type]
+  const label = sectionTypeLabels[section.type];
 
   return (
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: 'ページ管理', href: '/admin/pages' },
-          { label: 'ホームページ', href: '/admin/pages/homepage/edit' },
+          { label: "ページ管理", href: "/admin/pages" },
+          { label: "ホームページ", href: "/admin/pages/homepage/edit" },
           { label: `${section.title || label}の設定` },
         ]}
       />
@@ -68,6 +70,5 @@ export default async function HomepageSectionEditPage({
 
       <SectionEditWrapper section={toPlainObject(section)} />
     </div>
-  )
+  );
 }
-

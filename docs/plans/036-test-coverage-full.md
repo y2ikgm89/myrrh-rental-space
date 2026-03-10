@@ -11,18 +11,21 @@
 ## 現状
 
 ### 既存テスト基盤（024-bun-test-framework.md で導入済み）
+
 - `__tests__/setup.ts` - グローバルセットアップ
 - `__tests__/mocks/` - Prisma, Auth, Next.js モック
 - `__tests__/fixtures/` - users, reservations フィクスチャ
 - `__tests__/helpers/` - session-mock, assertions ヘルパー
 
 ### 既存テストファイル（4ファイル）
+
 - `__tests__/unit/lib/permissions.test.ts`
 - `__tests__/unit/lib/validations/reservation.test.ts`
 - `__tests__/unit/lib/reservation-utils.test.ts`
 - `__tests__/unit/types/server-actions.test.ts`
 
 ### テスト対象（未テスト）
+
 - **Server Actions**: 27ファイル（`src/actions/`）
 - **Zodバリデーション**: 14ファイル（`src/lib/validations/`）
 - **ユーティリティ**: 認証ヘルパー、カレンダー同期、メール送信など
@@ -37,24 +40,25 @@
 
 #### テストケース設計
 
-| ファイル | テストケース | 優先度 |
-|---------|-------------|--------|
-| `reservation.ts` | ✅ 既存 | - |
-| `contact.ts` | 正常系、必須フィールド、メール形式、電話番号形式 | 高 |
-| `auth.ts` | ログイントークン、セッション検証 | 高 |
-| `space.ts` | スペース作成、価格バリデーション | 中 |
-| `comment.ts` | コメント投稿、長さ制限 | 中 |
-| `faq.ts` | FAQ作成、カテゴリ | 中 |
-| `media.ts` | ファイルタイプ、サイズ制限 | 中 |
-| `page.ts` | ページ作成、slug形式 | 中 |
-| `terms.ts` | 利用規約、バージョン | 中 |
-| `homepage-section.ts` | セクション設定 | 低 |
-| `api-keys.ts` | APIキー形式 | 低 |
-| `stripe.ts` | Stripe設定 | 低 |
-| `enums.ts` | Enum型ガード | 低 |
-| `search-params.ts` | URLパラメータ | 低 |
+| ファイル              | テストケース                                     | 優先度 |
+| --------------------- | ------------------------------------------------ | ------ |
+| `reservation.ts`      | ✅ 既存                                          | -      |
+| `contact.ts`          | 正常系、必須フィールド、メール形式、電話番号形式 | 高     |
+| `auth.ts`             | ログイントークン、セッション検証                 | 高     |
+| `space.ts`            | スペース作成、価格バリデーション                 | 中     |
+| `comment.ts`          | コメント投稿、長さ制限                           | 中     |
+| `faq.ts`              | FAQ作成、カテゴリ                                | 中     |
+| `media.ts`            | ファイルタイプ、サイズ制限                       | 中     |
+| `page.ts`             | ページ作成、slug形式                             | 中     |
+| `terms.ts`            | 利用規約、バージョン                             | 中     |
+| `homepage-section.ts` | セクション設定                                   | 低     |
+| `api-keys.ts`         | APIキー形式                                      | 低     |
+| `stripe.ts`           | Stripe設定                                       | 低     |
+| `enums.ts`            | Enum型ガード                                     | 低     |
+| `search-params.ts`    | URLパラメータ                                    | 低     |
 
 #### 実装タスク
+
 - [x] `__tests__/unit/lib/validations/contact.test.ts`
 - [x] `__tests__/unit/lib/validations/auth.test.ts`
 - [x] `__tests__/unit/lib/validations/space.test.ts`
@@ -76,10 +80,10 @@
 **permissions.ts**（✅ 一部既存）
 | テストケース | 入力 | 期待出力 | 備考 |
 |-------------|------|---------|------|
-| SUPER_ADMIN全権限 | role=SUPER_ADMIN, resource=*, action=* | true | 全アクセス可 |
+| SUPER_ADMIN全権限 | role=SUPER_ADMIN, resource=_, action=_ | true | 全アクセス可 |
 | ADMIN制限 | role=ADMIN, resource=user, action=manage | false | ユーザー管理権限なし |
 | EDITOR制限 | role=EDITOR, resource=blog, action=delete | false | 削除権限なし |
-| VIEWER読み取りのみ | role=VIEWER, resource=*, action=read | true | 読み取りのみ |
+| VIEWER読み取りのみ | role=VIEWER, resource=\*, action=read | true | 読み取りのみ |
 | resourceAccess（EDITOR） | resourceId指定 | assignedPages確認 | リソース単位制御 |
 
 **auth.ts**
@@ -92,6 +96,7 @@
 | isValidRole | 文字列 | boolean | ロール検証 |
 
 #### 実装タスク
+
 - [x] `__tests__/unit/lib/permissions.test.ts` 拡張（resourceAccess追加）- 既存テストで十分にカバー
 - [x] `__tests__/unit/lib/auth.test.ts` 新規作成
 
@@ -102,6 +107,7 @@
 **対象**: `src/actions/` 27ファイル
 
 #### テスト戦略
+
 - バリデーションスキーマ + action-helpers の組み合わせをテスト
 - Bunの`mock.module`制限によりServer Actionsの直接モックは困難
 - 認証・認可テストは`permissions.test.ts`で網羅済み
@@ -129,12 +135,14 @@
 | `admin/media.ts` | アップロード、削除 |
 
 **低優先度（設定・ユーティリティ）**
+
 - `admin/settings.ts`, `admin/navigation.ts`, `admin/announcement-bar.ts`
 - `admin/dashboard.ts`, `admin/audit-log.ts`, `admin/export.ts`
 - `admin/api-keys.ts`, `admin/ical-tokens.ts`, `admin/homepage-settings.ts`
 - `public/settings.ts`, `public/terms.ts`, `blog-comment.ts`
 
 #### 実装タスク
+
 - [x] `__tests__/integration/actions/admin/user.test.ts` - バリデーション + Role整合性
 - [x] `__tests__/integration/actions/admin/reservation.test.ts` - updateStatusSchema, updateNotesSchema
 - [x] `__tests__/integration/actions/reservation.test.ts` - バリデーション + 日時/顧客情報
@@ -154,6 +162,7 @@
 ### Phase 4: E2E Tests - Playwright導入 `cc:DONE`
 
 #### セットアップ
+
 - [x] Playwright インストール (`bun add -D @playwright/test`)
 - [x] `playwright.config.ts` 作成
 - [x] `e2e/` ディレクトリ構造作成
@@ -187,6 +196,7 @@
 | ユーザー管理 | 一覧表示 → ロール変更 → 権限反映確認 |
 
 #### 実装タスク
+
 - [x] `e2e/auth.spec.ts` - 認証フロー（31テスト）
 - [x] `e2e/reservation.spec.ts` - 予約フロー（11テスト）
 - [x] `e2e/admin/spaces.spec.ts` - スペース管理（25テスト）
@@ -200,6 +210,7 @@
 ### Phase 5: CI/CD統合 `cc:DONE`
 
 #### GitHub Actions設定
+
 - [x] `.github/workflows/ci.yml` 作成
 - [x] Unit/Integration テスト（bun test）
 - [x] E2Eテスト（Playwright）

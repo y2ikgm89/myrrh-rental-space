@@ -13,18 +13,18 @@
 
 調査の結果、以下の項目は完璧に実装済みであることが確認された:
 
-| 項目 | 状態 |
-|------|------|
-| error.tsx / global-error.tsx / not-found.tsx / loading.tsx | ✅ 全ルートで実装済み |
-| useActionState / useOptimistic / useTransition | ✅ 適切に使用 |
-| Suspense バウンダリ（PPR 対応） | ✅ Root Layout で完璧 |
-| updateTag() による全 Server Actions のキャッシュ無効化 | ✅ 全33ファイル準拠 |
-| 'use cache' + cacheTag() + cacheLife() カバレッジ | ✅ 全公開アクション完璧 |
-| PixiJS 型安全性 | ✅ 型アサーションなし |
-| SectionType 型安全性 | ✅ isValidSectionType() 実装済み |
-| console.* 除去 | ✅ プロダクションコードで完全除去 |
-| any 型 | ✅ プロダクションコードで完全除去 |
-| バレルエクスポート設計 | ✅ tree-shaking 対応 |
+| 項目                                                       | 状態                              |
+| ---------------------------------------------------------- | --------------------------------- |
+| error.tsx / global-error.tsx / not-found.tsx / loading.tsx | ✅ 全ルートで実装済み             |
+| useActionState / useOptimistic / useTransition             | ✅ 適切に使用                     |
+| Suspense バウンダリ（PPR 対応）                            | ✅ Root Layout で完璧             |
+| updateTag() による全 Server Actions のキャッシュ無効化     | ✅ 全33ファイル準拠               |
+| 'use cache' + cacheTag() + cacheLife() カバレッジ          | ✅ 全公開アクション完璧           |
+| PixiJS 型安全性                                            | ✅ 型アサーションなし             |
+| SectionType 型安全性                                       | ✅ isValidSectionType() 実装済み  |
+| console.\* 除去                                            | ✅ プロダクションコードで完全除去 |
+| any 型                                                     | ✅ プロダクションコードで完全除去 |
+| バレルエクスポート設計                                     | ✅ tree-shaking 対応              |
 
 ### 残存する改善項目（6項目）
 
@@ -41,6 +41,7 @@
 Next.js 公式 [Data Access Layer](https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns#keeping-server-only-code-out-of-the-client-environment) ドキュメントは、サーバー専用モジュールに `import 'server-only'` を付けることを必須推奨している。
 
 `'use server'` / `'use cache'` ディレクティブはランタイム境界を制御するが、`server-only` はバンドラーレベルでクライアントバンドルへの混入を**ビルド時エラー**で防ぐ。これにより:
+
 - DB 接続情報がクライアントバンドルに含まれるリスクをゼロにする
 - 誤って import した場合にビルドが即座に失敗する（サイレント漏洩を防ぐ）
 
@@ -64,17 +65,18 @@ bun add server-only
 
 ```typescript
 // 各ファイル先頭に追加（1行のみ）
-import 'server-only'
+import "server-only";
 
 // 例: src/shared/lib/prisma.ts
-import 'server-only'
-import { PrismaPg } from '@prisma/adapter-pg'
+import "server-only";
+import { PrismaPg } from "@prisma/adapter-pg";
 // ...
 ```
 
 ### 除外対象
 
 以下のファイルは `'use server'` / `'use cache'` で境界制御されているため `server-only` 不要:
+
 - `src/app/(admin)/.../actions/*.ts` — `'use server'` ディレクティブあり
 - `src/app/(public)/_shared/actions/*.ts` — `'use cache'` ディレクティブあり
 
@@ -102,12 +104,12 @@ src/app/api/webhooks/google-calendar/route.ts — 同上
 ### 実装方法
 
 ```typescript
-import { revalidateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 
 // Route Handler 内（syncFromCalendar() 後に追加）
-await syncFromCalendar()
-revalidateTag(CACHE_TAGS.RESERVATIONS)
+await syncFromCalendar();
+revalidateTag(CACHE_TAGS.RESERVATIONS);
 // 必要に応じて: revalidateTag(CACHE_TAGS.RESERVATION_SLOTS)
 ```
 
@@ -195,7 +197,7 @@ React Hook Form + `useTransition` パターンでは不要（`isPending` が既�
 ```typescript
 // 現状
 declare global {
-  var gtag: ((...args: any[]) => void) | undefined
+  var gtag: ((...args: any[]) => void) | undefined;
 }
 ```
 
@@ -205,11 +207,13 @@ declare global {
 
 ```typescript
 // 改善後
-type GtagCommand = 'config' | 'event' | 'get' | 'set' | 'consent'
-type GtagParams = Record<string, string | number | boolean | null | undefined>
+type GtagCommand = "config" | "event" | "get" | "set" | "consent";
+type GtagParams = Record<string, string | number | boolean | null | undefined>;
 
 declare global {
-  var gtag: ((command: GtagCommand, target: string, params?: GtagParams) => void) | undefined
+  var gtag:
+    | ((command: GtagCommand, target: string, params?: GtagParams) => void)
+    | undefined;
 }
 ```
 
@@ -224,11 +228,14 @@ declare global {
 ### 変更内容
 
 #### `.claude/rules/server-actions.md`
+
 - Route Handler での `revalidateTag()` 使用例を実際のファイルパターンに合わせて更新
 - `server-only` と `revalidateTag()` の使い分けを補完
 
 #### `.claude/rules/` への追加（新規ファイル）
+
 `server-only-patterns.md` を追加:
+
 - `server-only` が必要なファイルの判断基準
 - `'use server'` / `'use cache'` との違い
 - 対象ファイルリスト
@@ -238,24 +245,29 @@ declare global {
 ## 実装フェーズ計画
 
 ### Phase 1: セキュリティ（即時）
+
 1. `bun add server-only`
 2. 6ファイルに `import 'server-only'` 追加
 3. ビルド確認 + 型チェック
 
 ### Phase 2: キャッシュ正確性（即時）
+
 1. `calendar-sync/route.ts` に `revalidateTag()` 追加
 2. `google-calendar/route.ts` に `revalidateTag()` 追加
 3. 既存 `CACHE_TAGS.RESERVATIONS` 定数の確認
 
 ### Phase 3: 開発体験（設定変更1行）
+
 1. `next.config.ts` に `turbopackFileSystemCacheForDev: true` 追加
 
 ### Phase 4: React 19 パターン
+
 1. Submit ボタンコンポーネントの特定
 2. `useFormStatus` への変更
 3. 不要になった `isPending` props の削除
 
 ### Phase 5: 型安全性 + ドキュメント
+
 1. `global.d.ts` の gtag 型改善
 2. ルールファイル更新
 
@@ -263,13 +275,13 @@ declare global {
 
 ## 期待される最終状態
 
-| 指標 | 改善前 | 改善後 |
-|------|--------|--------|
-| セキュリティスコア | 88/100 | 95/100 |
-| キャッシュ正確性 | 85/100 | 97/100 |
-| 型安全性 | 94/100 | 97/100 |
-| 開発体験 | 90/100 | 95/100 |
-| **総合スコア** | **91/100** | **97/100** |
+| 指標               | 改善前     | 改善後     |
+| ------------------ | ---------- | ---------- |
+| セキュリティスコア | 88/100     | 95/100     |
+| キャッシュ正確性   | 85/100     | 97/100     |
+| 型安全性           | 94/100     | 97/100     |
+| 開発体験           | 90/100     | 95/100     |
+| **総合スコア**     | **91/100** | **97/100** |
 
 ---
 

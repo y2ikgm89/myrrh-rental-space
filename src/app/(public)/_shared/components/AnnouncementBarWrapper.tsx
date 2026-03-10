@@ -6,29 +6,35 @@
  * AnnouncementBarCarouselを動的インポートでMotionライブラリを遅延読み込み
  */
 
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 import {
   getActiveAnnouncementBars,
   getAnnouncementBarCarouselSettings,
-} from '@/shared/domain/settings/announcement-bar'
-import type { CarouselSettings } from './AnnouncementBarCarousel'
-import type { ReactElement } from 'react'
-import { validateAnimation, validateDesignStyle } from '@/shared/lib/announcement-bar-utils'
-import { toISOString } from '@/shared/lib/serialize'
+} from "@/shared/domain/settings/announcement-bar";
+import type { CarouselSettings } from "./AnnouncementBarCarousel";
+import type { ReactElement } from "react";
+import {
+  validateAnimation,
+  validateDesignStyle,
+} from "@/shared/lib/announcement-bar-utils";
+import { toISOString } from "@/shared/lib/serialize";
 
 const AnnouncementBarCarousel = dynamic(
-  () => import('./AnnouncementBarCarousel').then((mod) => mod.AnnouncementBarCarousel),
-  { ssr: true }
-)
+  () =>
+    import("./AnnouncementBarCarousel").then(
+      (mod) => mod.AnnouncementBarCarousel,
+    ),
+  { ssr: true },
+);
 
 export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
   const [bars, dbSettings] = await Promise.all([
     getActiveAnnouncementBars(),
     getAnnouncementBarCarouselSettings(),
-  ])
+  ]);
 
   if (bars.length === 0) {
-    return null
+    return null;
   }
 
   // DB設定をCarouselSettings形式に変換
@@ -52,7 +58,7 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
     glassAnimation: dbSettings.announcementBarGlassAnimation,
     // Sticky Settings
     sticky: dbSettings.announcementBarSticky,
-  }
+  };
 
   return (
     <AnnouncementBarCarousel
@@ -69,5 +75,5 @@ export async function AnnouncementBarWrapper(): Promise<ReactElement | null> {
       }))}
       settings={settings}
     />
-  )
+  );
 }

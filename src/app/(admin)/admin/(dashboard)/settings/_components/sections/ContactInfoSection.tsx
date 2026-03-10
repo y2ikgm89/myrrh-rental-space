@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 連絡先情報セクション
@@ -6,7 +6,7 @@
  * 電話番号、メールアドレス、住所などの連絡先設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -17,29 +17,29 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/admin/components/ui'
-import { updateContactInfo } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateContactInfo } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface ContactInfoSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
-    phoneNumber: settings.phoneNumber || '',
-    faxNumber: settings.faxNumber || '',
-    email: settings.email || '',
-    address: settings.address || '',
-    postalCode: settings.postalCode || '',
-    prefecture: settings.prefecture || '',
-    city: settings.city || '',
-    streetAddress: settings.streetAddress || '',
-    buildingName: settings.buildingName || '',
-  })
+    phoneNumber: settings.phoneNumber || "",
+    faxNumber: settings.faxNumber || "",
+    email: settings.email || "",
+    address: settings.address || "",
+    postalCode: settings.postalCode || "",
+    prefecture: settings.prefecture || "",
+    city: settings.city || "",
+    streetAddress: settings.streetAddress || "",
+    buildingName: settings.buildingName || "",
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -53,10 +53,10 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
         city: formData.city || null,
         streetAddress: formData.streetAddress || null,
         buildingName: formData.buildingName || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "連絡先情報を保存しました");
+    });
+  };
 
   return (
     <Card>
@@ -71,7 +71,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="phoneNumber"
               value={formData.phoneNumber}
-              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phoneNumber: e.target.value })
+              }
               placeholder="03-1234-5678"
               disabled={isPending}
             />
@@ -81,7 +83,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="faxNumber"
               value={formData.faxNumber}
-              onChange={(e) => setFormData({ ...formData, faxNumber: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, faxNumber: e.target.value })
+              }
               placeholder="03-1234-5679"
               disabled={isPending}
             />
@@ -92,7 +96,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
               id="contactEmail"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               placeholder="info@example.com"
               disabled={isPending}
             />
@@ -105,7 +111,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="postalCode"
               value={formData.postalCode}
-              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, postalCode: e.target.value })
+              }
               placeholder="123-4567"
               disabled={isPending}
             />
@@ -115,7 +123,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="prefecture"
               value={formData.prefecture}
-              onChange={(e) => setFormData({ ...formData, prefecture: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, prefecture: e.target.value })
+              }
               placeholder="東京都"
               disabled={isPending}
             />
@@ -125,7 +135,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="city"
               value={formData.city}
-              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, city: e.target.value })
+              }
               placeholder="渋谷区"
               disabled={isPending}
             />
@@ -135,7 +147,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="streetAddress"
               value={formData.streetAddress}
-              onChange={(e) => setFormData({ ...formData, streetAddress: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, streetAddress: e.target.value })
+              }
               placeholder="1-2-3"
               disabled={isPending}
             />
@@ -148,7 +162,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
             <Input
               id="buildingName"
               value={formData.buildingName}
-              onChange={(e) => setFormData({ ...formData, buildingName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, buildingName: e.target.value })
+              }
               placeholder="○○ビル 3F"
               disabled={isPending}
             />
@@ -160,7 +176,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
           <Textarea
             id="address"
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, address: e.target.value })
+            }
             placeholder="東京都渋谷区..."
             rows={2}
             disabled={isPending}
@@ -171,9 +189,9 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '連絡先情報を保存'}
+          {isPending ? "保存中..." : "連絡先情報を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

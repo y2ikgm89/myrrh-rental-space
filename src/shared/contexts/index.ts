@@ -9,4 +9,4 @@ export {
   useAriaLive,
   useAriaLiveOptional,
   type AriaLivePoliteness,
-} from './aria-live-context'
+} from "./aria-live-context";

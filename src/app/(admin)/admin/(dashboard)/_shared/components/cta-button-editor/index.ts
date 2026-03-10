@@ -1,1 +1,1 @@
-export { CTAButtonEditor } from './CTAButtonEditor'
+export { CTAButtonEditor } from "./CTAButtonEditor";

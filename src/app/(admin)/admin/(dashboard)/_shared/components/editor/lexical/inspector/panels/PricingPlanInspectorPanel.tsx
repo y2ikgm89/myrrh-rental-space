@@ -4,10 +4,10 @@
  * @description PricingPlanNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isPricingPlanNode,
   type PricingPlanNode,
@@ -16,69 +16,90 @@ import {
   planPeriodState,
   planFeaturedState,
   planColorState,
-} from '../../nodes/PricingTableNode'
-import { isAccentColor, ACCENT_COLORS, ACCENT_COLOR_LABELS } from '../../config/accent-colors'
-import type { AccentColor } from '../../config/accent-colors'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label, Switch } from '@/admin/components/ui'
+} from "../../nodes/PricingTableNode";
+import {
+  isAccentColor,
+  ACCENT_COLORS,
+  ACCENT_COLOR_LABELS,
+} from "../../config/accent-colors";
+import type { AccentColor } from "../../config/accent-colors";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label, Switch } from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type PricingPlanInspectorPanelProps = {
-  nodeKey: string
-  node: PricingPlanNode
-}
+  nodeKey: string;
+  node: PricingPlanNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function PricingPlanInspectorPanel({ nodeKey, node }: PricingPlanInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isPricingPlanNode)
+export function PricingPlanInspectorPanel({
+  nodeKey,
+  node,
+}: PricingPlanInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isPricingPlanNode);
 
-  const { name, price, period, featured, color } = editor.getEditorState().read(() => ({
-    name: $getState(node, planNameState),
-    price: $getState(node, planPriceState),
-    period: $getState(node, planPeriodState),
-    featured: $getState(node, planFeaturedState),
-    color: $getState(node, planColorState),
-  }))
+  const { name, price, period, featured, color } = editor
+    .getEditorState()
+    .read(() => ({
+      name: $getState(node, planNameState),
+      price: $getState(node, planPriceState),
+      period: $getState(node, planPeriodState),
+      featured: $getState(node, planFeaturedState),
+      color: $getState(node, planColorState),
+    }));
 
   const handleNameChange = (value: string) => {
-    updateNode((n) => { $setState(n, planNameState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, planNameState, value);
+    });
+  };
 
   const handlePriceChange = (value: string) => {
-    updateNode((n) => { $setState(n, planPriceState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, planPriceState, value);
+    });
+  };
 
   const handlePeriodChange = (value: string) => {
-    updateNode((n) => { $setState(n, planPeriodState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, planPeriodState, value);
+    });
+  };
 
   const handleFeaturedChange = (checked: boolean) => {
-    updateNode((n) => { $setState(n, planFeaturedState, checked) })
-  }
+    updateNode((n) => {
+      $setState(n, planFeaturedState, checked);
+    });
+  };
 
   const handleColorChange = (value: string) => {
     if (isAccentColor(value)) {
-      updateNode((n) => { $setState(n, planColorState, value) })
+      updateNode((n) => {
+        $setState(n, planColorState, value);
+      });
     }
-  }
+  };
 
-  const accentColorValue: AccentColor = isAccentColor(color) ? color : 'default'
+  const accentColorValue: AccentColor = isAccentColor(color)
+    ? color
+    : "default";
 
   return (
     <div>
@@ -121,7 +142,9 @@ export function PricingPlanInspectorPanel({ nodeKey, node }: PricingPlanInspecto
       <InspectorSection title="表示設定">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="inspector-plan-featured" className="text-xs">おすすめ</Label>
+            <Label htmlFor="inspector-plan-featured" className="text-xs">
+              おすすめ
+            </Label>
             <Switch
               id="inspector-plan-featured"
               checked={featured}
@@ -147,5 +170,5 @@ export function PricingPlanInspectorPanel({ nodeKey, node }: PricingPlanInspecto
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

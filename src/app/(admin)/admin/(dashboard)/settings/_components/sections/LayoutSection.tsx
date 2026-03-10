@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * レイアウト設定セクション
@@ -7,9 +7,9 @@
  * リアルタイムプレビュー付き
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Button,
   Card,
@@ -24,29 +24,30 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateLayoutSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
+} from "@/admin/components/ui";
+import { updateLayoutSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
 import {
   LayoutWidth,
   isValidLayoutWidth,
   getValidLayoutWidth,
-} from '@/shared/lib/validations/enums'
+} from "@/shared/lib/validations/enums";
 import {
   SITE_WIDTH_PRESETS,
   CONTENT_WIDTH_PRESETS,
   resolveWidthStyles,
-} from '@/shared/lib/styles/layout-mapper'
-import { keysOf } from '@/shared/lib/serialize'
-import { LazyLexicalEditor } from '@/admin/components/editor/lexical'
-import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
+} from "@/shared/lib/styles/layout-mapper";
+import { keysOf } from "@/shared/lib/serialize";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
+import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface LayoutSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 // =============================================================================
@@ -56,88 +57,90 @@ interface LayoutSectionProps {
 const siteWidthOptions = keysOf(SITE_WIDTH_PRESETS)
   .filter((key) => key !== LayoutWidth.XS)
   .map((key) => {
-    const preset = SITE_WIDTH_PRESETS[key]
+    const preset = SITE_WIDTH_PRESETS[key];
     return {
       value: key,
       label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
       description: preset.description,
-    }
-  })
+    };
+  });
 
 const contentWidthOptions = keysOf(CONTENT_WIDTH_PRESETS)
   .filter((key) => key !== LayoutWidth.FULL)
   .map((key) => {
-    const preset = CONTENT_WIDTH_PRESETS[key]
+    const preset = CONTENT_WIDTH_PRESETS[key];
     return {
       value: key,
       label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
       description: preset.description,
-    }
-  })
+    };
+  });
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function LayoutSection({ settings }: LayoutSectionProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-  const [containerWidth, setContainerWidth] = useState<LayoutWidth>(
-    () => getValidLayoutWidth(settings.containerWidth, LayoutWidth.LG)
-  )
+  const [containerWidth, setContainerWidth] = useState<LayoutWidth>(() =>
+    getValidLayoutWidth(settings.containerWidth, LayoutWidth.LG),
+  );
   const [containerWidthCustom, setContainerWidthCustom] = useState<string>(
-    settings.containerWidthCustom?.toString() || ''
-  )
-  const [contentWidth, setContentWidth] = useState<LayoutWidth>(
-    () => getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD)
-  )
+    settings.containerWidthCustom?.toString() || "",
+  );
+  const [contentWidth, setContentWidth] = useState<LayoutWidth>(() =>
+    getValidLayoutWidth(settings.contentWidth, LayoutWidth.MD),
+  );
   const [contentWidthCustom, setContentWidthCustom] = useState<string>(
-    settings.contentWidthCustom?.toString() || ''
-  )
+    settings.contentWidthCustom?.toString() || "",
+  );
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateLayoutSettings({
         containerWidth,
-        containerWidthCustom: containerWidth === LayoutWidth.CUSTOM
-          ? parseInt(containerWidthCustom, 10) || null
-          : null,
+        containerWidthCustom:
+          containerWidth === LayoutWidth.CUSTOM
+            ? parseInt(containerWidthCustom, 10) || null
+            : null,
         contentWidth,
-        contentWidthCustom: contentWidth === LayoutWidth.CUSTOM
-          ? parseInt(contentWidthCustom, 10) || null
-          : null,
-      })
+        contentWidthCustom:
+          contentWidth === LayoutWidth.CUSTOM
+            ? parseInt(contentWidthCustom, 10) || null
+            : null,
+      });
 
-      if (!result.success) {
-        toast.error(result.error)
+      if (isMutationError(result)) {
+        toast.error(result.error);
       } else {
-        toast.success('レイアウト設定を保存しました')
-        router.refresh()
+        toast.success("レイアウト設定を保存しました");
+        router.refresh();
       }
-    })
-  }
+    });
+  };
 
   const handlePreview = () => {
-    window.open('/posts', '_blank')
-  }
+    window.open("/posts", "_blank");
+  };
 
   // リアルタイムプレビュー用スタイル計算（React Compilerが自動メモ化）
   const parsedCustomWidth = contentWidthCustom
     ? parseInt(contentWidthCustom, 10)
-    : null
+    : null;
   const validCustomWidth =
     parsedCustomWidth !== null && !Number.isNaN(parsedCustomWidth)
       ? parsedCustomWidth
-      : null
+      : null;
 
   const previewStyles = resolveWidthStyles({
     width: contentWidth,
     customPx: validCustomWidth,
-  })
+  });
 
   // サンプルコンテンツ（HTMLを直接生成）
-  const sampleContent = `<p>これはコンテンツ幅のプレビューです。設定を変更すると、このエディタの幅がリアルタイムで変わります。</p><p>実際のブログ記事やお知らせは、ここに表示されるのと同じ幅で公開ページに表示されます。</p>`
+  const sampleContent = `<p>これはコンテンツ幅のプレビューです。設定を変更すると、このエディタの幅がリアルタイムで変わります。</p><p>実際のブログ記事やお知らせは、ここに表示されるのと同じ幅で公開ページに表示されます。</p>`;
 
   return (
     <Card>
@@ -163,7 +166,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               <Select
                 value={containerWidth}
                 onValueChange={(value) => {
-                  if (isValidLayoutWidth(value)) setContainerWidth(value)
+                  if (isValidLayoutWidth(value)) setContainerWidth(value);
                 }}
                 disabled={isPending}
               >
@@ -218,7 +221,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               <Select
                 value={contentWidth}
                 onValueChange={(value) => {
-                  if (isValidLayoutWidth(value)) setContentWidth(value)
+                  if (isValidLayoutWidth(value)) setContentWidth(value);
                 }}
                 disabled={isPending}
               >
@@ -285,9 +288,13 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
         {/* アクションボタン */}
         <div className="flex items-center gap-4">
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
-          <Button variant="outline" onClick={handlePreview} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={handlePreview}
+            disabled={isPending}
+          >
             プレビュー
           </Button>
         </div>
@@ -304,5 +311,5 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

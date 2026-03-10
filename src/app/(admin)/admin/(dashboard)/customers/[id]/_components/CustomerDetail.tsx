@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   formatDateShort,
   formatDateTimeShort,
@@ -41,6 +42,7 @@ import {
   toggleCustomerActive,
 } from "@/admin/actions/customer";
 import type { CustomerWithReservations } from "@/shared/domain/customers/types";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   isValidCustomerStatus,
   type CustomerStatus,
@@ -51,33 +53,43 @@ type CustomerDetailProps = {
 };
 
 export function CustomerDetail({ customer }: CustomerDetailProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [notes, setNotes] = useState(customer.notes || "");
 
   const handleStatusChange = async (status: CustomerStatus) => {
     startTransition(async () => {
       const result = await updateCustomerStatus(customer.id, status);
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("ステータスを更新しました");
+      router.refresh();
     });
   };
 
   const handleNotesUpdate = async () => {
     startTransition(async () => {
       const result = await updateCustomerNotes(customer.id, notes || null);
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("メモを更新しました");
+      router.refresh();
     });
   };
 
   const handleToggleActive = async () => {
     startTransition(async () => {
       const result = await toggleCustomerActive(customer.id);
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
+        return;
       }
+      toast.success("アクティブ状態を変更しました");
+      router.refresh();
     });
   };
 

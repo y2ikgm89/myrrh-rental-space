@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 投稿エディター
@@ -7,7 +7,7 @@
  * 型アサーション完全排除
  */
 
-import { toast } from 'sonner'
+import { toast } from "sonner";
 import {
   Button,
   Dialog,
@@ -17,10 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui'
-import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
-import { CommentPanel } from '@/admin/components/editor/comment-panel'
-import { LazyLexicalEditor } from '@/admin/components/editor/lexical'
+} from "@/admin/components/ui";
+import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
+import { CommentPanel } from "@/admin/components/editor/comment-panel";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -28,88 +28,99 @@ import {
   usePostEditor,
   useContentWidthStyles,
   postConfig,
-} from '@/admin/components/editor/inline'
-import { createPostCategory, createPostTag } from '@/admin/actions/post'
+} from "@/admin/components/editor/inline";
+import { createPostCategory, createPostTag } from "@/admin/actions/post";
 import type {
   PostCategoryData,
   PostData,
   PostTagData,
-} from '@/shared/domain/posts/types'
-import { generateSlug } from '@/shared/lib/utils'
-import { isValidPostStatus } from '@/shared/lib/validations/enums'
-import type { ContentWidth } from '@/shared/types'
+} from "@/shared/domain/posts/types";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { generateSlug } from "@/shared/lib/utils";
+import { isValidPostStatus } from "@/shared/lib/validations/enums";
+import type { ContentWidth } from "@/shared/types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type PostEditorProps = {
-  post?: PostData
-  categories: PostCategoryData[]
-  tags: PostTagData[]
-  mode?: 'create' | 'edit'
+  post?: PostData;
+  categories: PostCategoryData[];
+  tags: PostTagData[];
+  mode?: "create" | "edit";
   /** グローバルレイアウト設定（フォールバック値として使用） */
-  fallbackContentWidth?: ContentWidth
-}
+  fallbackContentWidth?: ContentWidth;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function PostEditor({ post, categories, tags, mode = 'edit', fallbackContentWidth }: PostEditorProps) {
+export function PostEditor({
+  post,
+  categories,
+  tags,
+  mode = "edit",
+  fallbackContentWidth,
+}: PostEditorProps) {
   // カテゴリ/タグ作成ハンドラー
   const handleCreateCategory = async (name: string) => {
-    const slug = generateSlug(name, 'category')
+    const slug = generateSlug(name, "category");
     const result = await createPostCategory({
       name,
       slug,
       description: null,
       order: categories.length,
-    })
+    });
 
-    if (result.success && result.data) {
-      toast.success('カテゴリを作成しました')
-      return { id: result.data.id, name, slug }
+    if (!isMutationError(result)) {
+      toast.success("カテゴリを作成しました");
+      return { id: result.id, name, slug };
     }
-    toast.error(!result.success ? result.error : 'カテゴリの作成に失敗しました')
-    return null
-  }
+    toast.error(result.error);
+    return null;
+  };
 
   const handleCreateTag = async (name: string) => {
-    const slug = generateSlug(name, 'tag')
-    const result = await createPostTag({ name, slug })
+    const slug = generateSlug(name, "tag");
+    const result = await createPostTag({ name, slug });
 
-    if (result.success && result.data) {
-      toast.success('タグを作成しました')
-      return { id: result.data.id, name, slug }
+    if (!isMutationError(result)) {
+      toast.success("タグを作成しました");
+      return { id: result.id, name, slug };
     }
-    toast.error(!result.success ? result.error : 'タグの作成に失敗しました')
-    return null
-  }
+    toast.error(result.error);
+    return null;
+  };
 
   // 専用フック使用（型アサーション不要）
   const editor = usePostEditor({
     post,
     mode,
-    initialCategories: categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug })),
+    initialCategories: categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+    })),
     initialTags: tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
     onCreateCategory: handleCreateCategory,
     onCreateTag: handleCreateTag,
-  })
+  });
 
   // 公開アクションの設定
   const publishActions =
-    mode === 'edit' && post
+    mode === "edit" && post
       ? {
           status: editor.status,
           onPublish: editor.handlePublish,
           onUnpublish: editor.handleUnpublish,
         }
-      : undefined
+      : undefined;
 
   // 削除ダイアログ
   const deleteDialog =
-    mode === 'edit' && post ? (
+    mode === "edit" && post ? (
       <Dialog
         open={editor.isDeleteDialogOpen}
         onOpenChange={editor.setIsDeleteDialogOpen}
@@ -145,37 +156,40 @@ export function PostEditor({ post, categories, tags, mode = 'edit', fallbackCont
               onClick={editor.handleDelete}
               disabled={editor.isPending}
             >
-              {editor.isPending ? '削除中...' : '削除'}
+              {editor.isPending ? "削除中..." : "削除"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    ) : undefined
+    ) : undefined;
 
   // スラッグの表示
-  const displaySlug = `posts/${editor.slug}`
+  const displaySlug = `posts/${editor.slug}`;
 
   // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
   const contentStyles = useContentWidthStyles({
     control: editor.form.control,
-    widthFieldName: 'contentWidth',
-    customFieldName: 'contentWidthCustom',
+    widthFieldName: "contentWidth",
+    customFieldName: "contentWidthCustom",
     fallback: fallbackContentWidth,
-  })
+  });
 
   // サイドパネル用extraProps
   const sidePanelExtraProps = {
-    categories: editor.categories.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })),
+    categories: editor.categories.map((c: { id: string; name: string }) => ({
+      id: c.id,
+      name: c.name,
+    })),
     availableTags: editor.tags,
     onCreateCategory: editor.handleCreateCategory,
     onCreateTag: editor.handleCreateTag,
     statusValue: editor.status,
     onStatusChange: (value: string) => {
       if (isValidPostStatus(value)) {
-        editor.form.setValue('status', value)
+        editor.form.setValue("status", value);
       }
     },
-  }
+  };
 
   return (
     <InlineEditorShell
@@ -195,7 +209,7 @@ export function PostEditor({ post, categories, tags, mode = 'edit', fallbackCont
           onPreview={editor.handlePreview}
           onBack={editor.handleBack}
           publishActions={publishActions}
-          showCommentButton={mode === 'edit' && !!post}
+          showCommentButton={mode === "edit" && !!post}
           isCommentPanelOpen={editor.isCommentsPanelOpen}
           onToggleCommentPanel={editor.toggleComments}
           extraActions={deleteDialog}
@@ -215,7 +229,7 @@ export function PostEditor({ post, categories, tags, mode = 'edit', fallbackCont
             disabled={editor.isPending}
             extraProps={sidePanelExtraProps}
           />
-          {mode === 'edit' && post && (
+          {mode === "edit" && post && (
             <CommentPanel
               isOpen={editor.isCommentsPanelOpen}
               contentType="post"
@@ -237,11 +251,13 @@ export function PostEditor({ post, categories, tags, mode = 'edit', fallbackCont
         className={EDITOR_PROSE_CLASSES}
         showToolbar
         height="100%"
-        onMarkClick={mode === 'edit' && post ? editor.selectMark : undefined}
-        onAddComment={mode === 'edit' && post ? editor.handleAddComment : undefined}
+        onMarkClick={mode === "edit" && post ? editor.selectMark : undefined}
+        onAddComment={
+          mode === "edit" && post ? editor.handleAddComment : undefined
+        }
         contentWidthClassName={contentStyles.className}
         contentWidthStyle={contentStyles.style}
       />
     </InlineEditorShell>
-  )
+  );
 }

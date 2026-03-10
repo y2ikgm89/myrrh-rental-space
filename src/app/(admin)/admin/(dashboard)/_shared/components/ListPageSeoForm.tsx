@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * リストページ用SEO設定フォーム
@@ -7,13 +7,13 @@
  * Pageテーブルに保存されたSEO設定を更新
  */
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { ImagePlus } from 'lucide-react'
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { ImagePlus } from "lucide-react";
 import {
   Button,
   Card,
@@ -24,33 +24,34 @@ import {
   Input,
   Textarea,
   Label,
-} from '@/admin/components/ui'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
+} from "@/admin/components/ui";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   updatePageSeoSchema,
   type UpdatePageSeoInput,
-} from '@/shared/lib/validations/page'
-import { updatePageSeo } from '@/admin/actions/page'
+} from "@/shared/lib/validations/page";
+import { updatePageSeo } from "@/admin/actions/page";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface SeoData {
-  title: string
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
+  title: string;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
 }
 
 interface ListPageSeoFormProps {
   /** ページスラッグ（'posts' または 'news'） */
-  slug: 'posts' | 'news'
+  slug: "posts" | "news";
   /** 現在のSEO設定 */
-  seoData: SeoData
+  seoData: SeoData;
 }
 
 export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const {
     register,
@@ -62,37 +63,38 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
     resolver: zodResolver(updatePageSeoSchema),
     defaultValues: {
       title: seoData.title,
-      metaDescription: seoData.metaDescription || '',
-      metaKeywords: seoData.metaKeywords || '',
-      ogpTitle: seoData.ogpTitle || '',
-      ogpDescription: seoData.ogpDescription || '',
-      ogpImageUrl: seoData.ogpImageUrl || '',
+      metaDescription: seoData.metaDescription || "",
+      metaKeywords: seoData.metaKeywords || "",
+      ogpTitle: seoData.ogpTitle || "",
+      ogpDescription: seoData.ogpDescription || "",
+      ogpImageUrl: seoData.ogpImageUrl || "",
     },
-  })
+  });
 
-  const ogpImageUrl = useWatch({ control, name: 'ogpImageUrl' })
+  const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
 
   const ogpPicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('ogpImageUrl', selected.url)
+        setValue("ogpImageUrl", selected.url);
       }
     },
-  })
+  });
 
   const onSubmit = async (data: UpdatePageSeoInput) => {
     startTransition(async () => {
-      const result = await updatePageSeo(slug, data)
-      if (result.success) {
-        toast.success(result.message)
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await updatePageSeo(slug, data);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("SEO設定を更新しました");
+      router.refresh();
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -109,7 +111,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
             <Label htmlFor="title">ページタイトル *</Label>
             <Input
               id="title"
-              {...register('title')}
+              {...register("title")}
               placeholder="ページタイトル"
               disabled={isPending}
             />
@@ -125,7 +127,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
             <Label htmlFor="metaDescription">メタディスクリプション</Label>
             <Textarea
               id="metaDescription"
-              {...register('metaDescription')}
+              {...register("metaDescription")}
               placeholder="ページの説明文を入力..."
               rows={3}
               disabled={isPending}
@@ -144,7 +146,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
             <Label htmlFor="metaKeywords">メタキーワード</Label>
             <Input
               id="metaKeywords"
-              {...register('metaKeywords')}
+              {...register("metaKeywords")}
               placeholder="キーワード1, キーワード2, キーワード3"
               disabled={isPending}
             />
@@ -164,16 +166,14 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>SNS共有設定</CardTitle>
-          <CardDescription>
-            SNSでシェアされた際に表示される情報
-          </CardDescription>
+          <CardDescription>SNSでシェアされた際に表示される情報</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="ogpTitle">OGPタイトル</Label>
             <Input
               id="ogpTitle"
-              {...register('ogpTitle')}
+              {...register("ogpTitle")}
               placeholder="SNSシェア用タイトル（空欄時はページタイトルを使用）"
               disabled={isPending}
             />
@@ -188,7 +188,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
             <Label htmlFor="ogpDescription">OGP説明文</Label>
             <Textarea
               id="ogpDescription"
-              {...register('ogpDescription')}
+              {...register("ogpDescription")}
               placeholder="SNSシェア用説明文（空欄時はメタディスクリプションを使用）"
               rows={2}
               disabled={isPending}
@@ -237,7 +237,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setValue('ogpImageUrl', '')}
+                      onClick={() => setValue("ogpImageUrl", "")}
                       disabled={isPending}
                     >
                       削除
@@ -261,12 +261,12 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
       {/* 送信ボタン */}
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>
-          {isPending ? '保存中...' : '保存'}
+          {isPending ? "保存中..." : "保存"}
         </Button>
       </div>
 
       {/* メディアピッカーダイアログ */}
       <ogpPicker.MediaPicker />
     </form>
-  )
+  );
 }

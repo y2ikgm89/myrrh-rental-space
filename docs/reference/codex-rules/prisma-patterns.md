@@ -57,10 +57,10 @@ const type = getValidDiscountType(rawValue, DiscountType.percentage)  // カス�
 
 ```typescript
 // enums.ts 内部（編集禁止。パターン参照のみ）
-const VALID_DISCOUNT_TYPES = new Set<string>(Object.values(DiscountType))
+const VALID_DISCOUNT_TYPES = new Set<string>(Object.values(DiscountType));
 
 export function isValidDiscountType(value: unknown): value is DiscountType {
-  return typeof value === 'string' && VALID_DISCOUNT_TYPES.has(value)
+  return typeof value === "string" && VALID_DISCOUNT_TYPES.has(value);
 }
 ```
 
@@ -70,11 +70,11 @@ export function isValidDiscountType(value: unknown): value is DiscountType {
 
 ```typescript
 // NG: 型エイリアス（削除済み。追加禁止）
-export type SpaceDiscountType = DiscountType
+export type SpaceDiscountType = DiscountType;
 
 // OK: Prisma enum を直接使用
-import { DiscountType } from '@/shared/db/enums'
-type Foo = { discountType: DiscountType }
+import { DiscountType } from "@/shared/db/enums";
+type Foo = { discountType: DiscountType };
 ```
 
 ### 4. SelectItem 値に enum 定数を使用
@@ -89,23 +89,23 @@ type Foo = { discountType: DiscountType }
 
 ### 5. 禁止事項（enum 関連）
 
-| 禁止 | 代替 |
-|------|------|
-| `'none'`, `'polling'` 等の文字列リテラル比較 | `DiscountType.none`, `CalendarSyncMethod.polling` |
-| `new Set(['none', 'percentage', 'fixed'])` | `enums.ts` の `isValid*` / `getValid*` を使用 |
-| `export type Foo = 'a' \| 'b'`（Prisma enum と同じ値） | Prisma enum を直接使用 |
-| `.default('none')` （Zod スキーマ） | `.default(DiscountType.none)` |
-| ローカルファイルに `isValid*` / `new Set(Object.values(...))` 定義 | `enums.ts` から import |
-| `export type Foo = PrismaEnum`（不要な型エイリアス） | Prisma enum を直接使用 |
-| `z.nativeEnum(DiscountType)` （Zod 4 非推奨） | `z.enum(DiscountType)` |
+| 禁止                                                               | 代替                                              |
+| ------------------------------------------------------------------ | ------------------------------------------------- |
+| `'none'`, `'polling'` 等の文字列リテラル比較                       | `DiscountType.none`, `CalendarSyncMethod.polling` |
+| `new Set(['none', 'percentage', 'fixed'])`                         | `enums.ts` の `isValid*` / `getValid*` を使用     |
+| `export type Foo = 'a' \| 'b'`（Prisma enum と同じ値）             | Prisma enum を直接使用                            |
+| `.default('none')` （Zod スキーマ）                                | `.default(DiscountType.none)`                     |
+| ローカルファイルに `isValid*` / `new Set(Object.values(...))` 定義 | `enums.ts` から import                            |
+| `export type Foo = PrismaEnum`（不要な型エイリアス）               | Prisma enum を直接使用                            |
+| `z.nativeEnum(DiscountType)` （Zod 4 非推奨）                      | `z.enum(DiscountType)`                            |
 
 ### 6. 配置規則（enum 関連）
 
-| ファイル | 内容 |
-|----------|------|
-| `@/shared/generated/prisma/client` | Prisma 生成 enum 定数（自動生成、編集禁止） |
+| ファイル                            | 内容                                                                                             |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `@/shared/generated/prisma/client`  | Prisma 生成 enum 定数（自動生成、編集禁止）                                                      |
 | `@/shared/lib/validations/enums.ts` | 全 enum の型ガード（`isValid*`）、デフォルト値取得（`getValid*`）、re-export、フィルターヘルパー |
-| 各ドメインファイル | enum 定数の import のみ。型ガードは `enums.ts` から import |
+| 各ドメインファイル                  | enum 定数の import のみ。型ガードは `enums.ts` から import                                       |
 
 ---
 
@@ -117,15 +117,18 @@ type Foo = { discountType: DiscountType }
 全パース関数は `@/shared/lib/json-validators.ts` に集約:
 
 ```typescript
-import { parseStringArray, parseBusinessHours } from '@/shared/lib/json-validators'
+import {
+  parseStringArray,
+  parseBusinessHours,
+} from "@/shared/lib/json-validators";
 
 // string[] へのパース（失敗時は空配列を返す）
-const imageUrls = parseStringArray(space.imageUrls)   // string[]
-const facilities = parseStringArray(space.facilities)  // string[]
-const tags = parseStringArray(post.tags)               // string[]
+const imageUrls = parseStringArray(space.imageUrls); // string[]
+const facilities = parseStringArray(space.facilities); // string[]
+const tags = parseStringArray(post.tags); // string[]
 
 // 複雑な JSON フィールドのパース（失敗時は null を返す）
-const businessHours = parseBusinessHours(settings.businessHours)  // BusinessHours | null
+const businessHours = parseBusinessHours(settings.businessHours); // BusinessHours | null
 ```
 
 ### 複雑な JSON フィールド（Zod スキーマ + 型推論）
@@ -137,12 +140,12 @@ Zod スキーマから型を推論し、パース関数を提供:
 const businessTimeSlotSchema = z.object({
   openTime: z.string(),
   closeTime: z.string(),
-})
+});
 
 const businessHoursDaySchema = z.object({
   isOpen: z.boolean(),
   slots: z.array(businessTimeSlotSchema),
-})
+});
 
 const businessHoursSchema = z.object({
   monday: businessHoursDaySchema,
@@ -152,16 +155,16 @@ const businessHoursSchema = z.object({
   friday: businessHoursDaySchema,
   saturday: businessHoursDaySchema,
   sunday: businessHoursDaySchema,
-})
+});
 
 // 型は Zod スキーマから推論（手動型定義禁止）
-export type BusinessTimeSlot = z.infer<typeof businessTimeSlotSchema>
-export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>
-export type BusinessHours = z.infer<typeof businessHoursSchema>
+export type BusinessTimeSlot = z.infer<typeof businessTimeSlotSchema>;
+export type BusinessHoursDay = z.infer<typeof businessHoursDaySchema>;
+export type BusinessHours = z.infer<typeof businessHoursSchema>;
 
 export function parseBusinessHours(value: unknown): BusinessHours | null {
-  const result = businessHoursSchema.safeParse(value)
-  return result.success ? result.data : null
+  const result = businessHoursSchema.safeParse(value);
+  return result.success ? result.data : null;
 }
 ```
 
@@ -186,10 +189,10 @@ return toPlainArray(items)
 
 ### JSON フィールド配置規則
 
-| ファイル | 内容 |
-|----------|------|
-| `@/shared/lib/json-validators.ts` | Zod スキーマ、型推論、パース関数 |
-| `@/shared/lib/serialize.ts` | `toPlainObject`、`toPlainArray`、`keysOf` |
+| ファイル                          | 内容                                      |
+| --------------------------------- | ----------------------------------------- |
+| `@/shared/lib/json-validators.ts` | Zod スキーマ、型推論、パース関数          |
+| `@/shared/lib/serialize.ts`       | `toPlainObject`、`toPlainArray`、`keysOf` |
 
 ---
 
@@ -200,18 +203,20 @@ return toPlainArray(items)
 
 ```typescript
 // NG: 手動変換（不要）
-const price = Number(space.pricePerHour)
+const price = Number(space.pricePerHour);
 
 // OK: $extends が自動変換済み
-const price = space.pricePerHour  // number 型
+const price = space.pricePerHour; // number 型
 ```
 
 **例外**: 集計結果（`_sum`, `_avg` 等）は `$extends` が効かないため、手動で `Number()` を使用:
 
 ```typescript
 // 集計結果のみ手動変換が必要
-const totalRevenue = await prisma.reservation.aggregate({ _sum: { totalPrice: true } })
-const total = Number(totalRevenue._sum.totalPrice ?? 0)
+const totalRevenue = await prisma.reservation.aggregate({
+  _sum: { totalPrice: true },
+});
+const total = Number(totalRevenue._sum.totalPrice ?? 0);
 ```
 
 ### 対象モデルと型エクスポート
@@ -219,11 +224,17 @@ const total = Number(totalRevenue._sum.totalPrice ?? 0)
 `src/shared/db` から `ConvertDecimalFields<T>` 適用済みの型をエクスポート済み:
 
 ```typescript
-import type { Space, Reservation, Customer, Settings, Coupon } from '@/shared/db/prisma'
+import type {
+  Space,
+  Reservation,
+  Customer,
+  Settings,
+  Coupon,
+} from "@/shared/db/prisma";
 
 // これらの型は Decimal が number に変換済み
-const space: Space = await prisma.space.findUniqueOrThrow({ where: { id } })
-space.pricePerHour  // number（Decimal ではない）
+const space: Space = await prisma.space.findUniqueOrThrow({ where: { id } });
+space.pricePerHour; // number（Decimal ではない）
 ```
 
 ---
@@ -242,17 +253,17 @@ contentJson Json?                              // Lexical EditorState JSON（プ
 Editor の `onChange` は JSON 文字列を返す。Server Actions で `renderEditorStateToHtmlLazy()` を使い HTML を生成し、DB に同時保存する:
 
 ```typescript
-import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 
 export async function updatePost(id: string, data: PostInput) {
   // contentJson（プライマリ）と contentHtml（キャッシュ）を同時保存
-  const contentJson = JSON.parse(data.contentJson) as Prisma.InputJsonObject
-  const contentHtml = await renderEditorStateToHtmlLazy(data.contentJson)
+  const contentJson = JSON.parse(data.contentJson) as Prisma.InputJsonObject;
+  const contentHtml = await renderEditorStateToHtmlLazy(data.contentJson);
 
   await prisma.post.update({
     where: { id },
     data: { contentJson, contentHtml },
-  })
+  });
 }
 ```
 
@@ -263,11 +274,11 @@ export async function updatePost(id: string, data: PostInput) {
 
 ```typescript
 // NG: トップレベル import（ビルドエラー）
-import { renderEditorStateToHtml } from '@/admin/components/editor/lexical/preview/headless-renderer'
+import { renderEditorStateToHtml } from "@/admin/components/editor/lexical/preview/headless-renderer";
 
 // OK: lazy-renderer 経由の動的 import
-import { renderEditorStateToHtmlLazy } from '@/admin/lib/lazy-renderer'
-const html = await renderEditorStateToHtmlLazy(jsonString)
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+const html = await renderEditorStateToHtmlLazy(jsonString);
 ```
 
 ### 公開表示でのレンダリング
@@ -300,10 +311,10 @@ const post = await prisma.post.findUnique({
     title: true,
     contentHtml: true,
   },
-})
+});
 
 // NG: 全フィールド取得（パフォーマンス低下・不要なデータ転送）
-const post = await prisma.post.findUnique({ where: { id } })
+const post = await prisma.post.findUnique({ where: { id } });
 ```
 
 ### Include vs Select
@@ -313,7 +324,7 @@ const post = await prisma.post.findUnique({ where: { id } })
 const post = await prisma.post.findUnique({
   where: { id },
   include: { author: true },
-})
+});
 
 // OK: リレーションの一部フィールドのみ（推奨）
 const post = await prisma.post.findUnique({
@@ -325,7 +336,7 @@ const post = await prisma.post.findUnique({
       select: { name: true },
     },
   },
-})
+});
 ```
 
 ### トランザクション
@@ -335,16 +346,16 @@ const post = await prisma.post.findUnique({
 const [post, auditLog] = await prisma.$transaction([
   prisma.post.create({ data: postData }),
   prisma.auditLog.create({ data: auditData }),
-])
+]);
 
 // インタラクティブトランザクション（依存関係あり）
 await prisma.$transaction(async (tx) => {
-  const post = await tx.post.create({ data: postData })
+  const post = await tx.post.create({ data: postData });
   await tx.postTag.createMany({
     data: tags.map((tagId) => ({ postId: post.id, tagId })),
-  })
-  return post
-})
+  });
+  return post;
+});
 ```
 
 ---
@@ -376,12 +387,12 @@ await prisma.$transaction(async (tx) => {
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@generated/prisma/client` | Prisma 生成クライアント・enum（自動生成、編集禁止） |
-| `@/shared/db/prisma.ts` | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート |
-| `@/shared/db/enums.ts` | Prisma enum の公開窓口 |
-| `@/shared/lib/json-validators.ts` | JSON フィールド Zod スキーマ・型・パース関数 |
-| `@/shared/lib/serialize.ts` | `toPlainObject`、`toPlainArray`、`keysOf` |
+| パス                                | 内容                                                                       |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| `@generated/prisma/client`          | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
+| `@/shared/db/prisma.ts`             | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート        |
+| `@/shared/db/enums.ts`              | Prisma enum の公開窓口                                                     |
+| `@/shared/lib/json-validators.ts`   | JSON フィールド Zod スキーマ・型・パース関数                               |
+| `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
 | `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
-| `@/admin/lib/lazy-renderer.ts` | `renderEditorStateToHtmlLazy`（動的 import ラッパー） |
+| `@/admin/lib/lazy-renderer.ts`      | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |

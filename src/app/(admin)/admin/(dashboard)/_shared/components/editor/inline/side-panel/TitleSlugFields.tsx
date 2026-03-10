@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * タイトル・スラッグフィールド
@@ -7,58 +7,64 @@
  * スラッグの自動生成機能付き
  */
 
-import type { FieldValues, Path } from 'react-hook-form'
-import { Input, Label, Button } from '@/admin/components/ui'
-import { getFieldError, getErrorMessage } from '../types'
-import { setFieldString, type FieldComponentProps } from '../content-types/types'
+import type { FieldPathByValue, FieldValues } from "react-hook-form";
+import { Input, Label, Button } from "@/admin/components/ui";
+import { getFieldError, getErrorMessage } from "../types";
+import type { FieldComponentProps } from "../content-types/types";
 
 type TitleSlugFieldsProps<T extends FieldValues> = FieldComponentProps<T> & {
   /** フィールド名マッピング */
   fields: {
-    title: Path<T>
-    slug?: Path<T>
-  }
+    title: FieldPathByValue<T, string | null | undefined>;
+    slug?: FieldPathByValue<T, string | null | undefined>;
+  };
   /** スラッグフィールドを表示するか */
-  showSlug?: boolean
+  showSlug?: boolean;
   /** スラッグのURLプレビューパス */
-  slugPreviewPath?: string
+  slugPreviewPath?: string;
   /** タイトルのプレースホルダー */
-  titlePlaceholder?: string
+  titlePlaceholder?: string;
   /** スラッグのプレースホルダー */
-  slugPlaceholder?: string
-}
+  slugPlaceholder?: string;
+};
 
 export function TitleSlugFields<T extends FieldValues>({
   register,
   errors,
-  setValue,
   getValues,
   disabled,
   fields,
   showSlug = true,
-  slugPreviewPath = '',
-  titlePlaceholder = 'タイトルを入力',
-  slugPlaceholder = 'url-slug',
+  slugPreviewPath = "",
+  titlePlaceholder = "タイトルを入力",
+  slugPlaceholder = "url-slug",
 }: TitleSlugFieldsProps<T>) {
-  const titleError = getFieldError(errors, fields.title)
-  const slugError = fields.slug ? getFieldError(errors, fields.slug) : undefined
+  const titleError = getFieldError(errors, fields.title);
+  const slugError = fields.slug
+    ? getFieldError(errors, fields.slug)
+    : undefined;
+  const titleField = register(fields.title);
+  const slugField = fields.slug ? register(fields.slug) : undefined;
 
   const generateSlug = () => {
-    if (!getValues || !setValue || !fields.slug) return
+    if (!getValues || !slugField || !fields.slug) return;
 
-    const title = getValues(fields.title)
-    if (typeof title === 'string' && title) {
+    const title = getValues(fields.title);
+    if (typeof title === "string" && title) {
       const slug = title
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim()
-      setFieldString(setValue, fields.slug, slug, { shouldDirty: true })
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+      slugField.onChange({
+        target: { name: slugField.name, value: slug },
+        type: "change",
+      });
     }
-  }
+  };
 
-  const currentSlug = getValues && fields.slug ? getValues(fields.slug) : ''
+  const currentSlug = getValues && fields.slug ? getValues(fields.slug) : "";
 
   return (
     <div className="space-y-4">
@@ -66,12 +72,14 @@ export function TitleSlugFields<T extends FieldValues>({
         <Label htmlFor={fields.title}>タイトル</Label>
         <Input
           id={fields.title}
-          {...register(fields.title)}
+          {...titleField}
           placeholder={titlePlaceholder}
           disabled={disabled}
         />
         {titleError && (
-          <p className="text-sm text-destructive">{getErrorMessage(titleError)}</p>
+          <p className="text-sm text-destructive">
+            {getErrorMessage(titleError)}
+          </p>
         )}
       </div>
 
@@ -91,7 +99,7 @@ export function TitleSlugFields<T extends FieldValues>({
           </div>
           <Input
             id={fields.slug}
-            {...register(fields.slug)}
+            {...slugField}
             placeholder={slugPlaceholder}
             disabled={disabled}
           />
@@ -101,10 +109,12 @@ export function TitleSlugFields<T extends FieldValues>({
             </p>
           )}
           {slugError && (
-            <p className="text-sm text-destructive">{getErrorMessage(slugError)}</p>
+            <p className="text-sm text-destructive">
+              {getErrorMessage(slugError)}
+            </p>
           )}
         </div>
       )}
     </div>
-  )
+  );
 }

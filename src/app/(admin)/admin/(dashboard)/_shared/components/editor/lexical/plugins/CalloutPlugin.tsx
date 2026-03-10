@@ -6,10 +6,10 @@
  * ダイアログでタイプを選択し、Calloutノードを挿入
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $createParagraphNode,
   $getSelection,
@@ -22,8 +22,8 @@ import {
   mergeRegister,
   type LexicalCommand,
   type LexicalEditor,
-} from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+} from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createCalloutNode,
   $isCalloutNode,
@@ -31,7 +31,7 @@ import {
   CalloutNode,
   type CalloutType,
   CALLOUT_TYPES,
-} from '../nodes/CalloutNode'
+} from "../nodes/CalloutNode";
 import {
   Dialog,
   DialogContent,
@@ -40,31 +40,30 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { CALLOUT_TYPE_LABELS } from '../config/node-labels'
+} from "@/admin/components/ui/select";
+import { CALLOUT_TYPE_LABELS } from "../config/node-labels";
 
 // =============================================================================
 // Commands
 // =============================================================================
 
 export type InsertCalloutPayload = {
-  calloutType: CalloutType
-}
+  calloutType: CalloutType;
+};
 
 export const INSERT_CALLOUT_COMMAND: LexicalCommand<InsertCalloutPayload> =
-  createCommand('INSERT_CALLOUT_COMMAND')
+  createCommand("INSERT_CALLOUT_COMMAND");
 
 // =============================================================================
 // Callout Templates
 // =============================================================================
-
 
 // =============================================================================
 // Utilities
@@ -73,45 +72,42 @@ export const INSERT_CALLOUT_COMMAND: LexicalCommand<InsertCalloutPayload> =
 /**
  * 矢印キーでCallout境界を脱出
  */
-function $onEscape(
-  editor: LexicalEditor,
-  direction: 'up' | 'down'
-): boolean {
-  const selection = $getSelection()
+function $onEscape(editor: LexicalEditor, direction: "up" | "down"): boolean {
+  const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
-    return false
+    return false;
   }
 
-  const node = selection.anchor.getNode()
-  let calloutNode: CalloutNode | null = null
-  let current = node.getParent()
+  const node = selection.anchor.getNode();
+  let calloutNode: CalloutNode | null = null;
+  let current = node.getParent();
 
   while (current) {
     if ($isCalloutNode(current)) {
-      calloutNode = current
-      break
+      calloutNode = current;
+      break;
     }
-    current = current.getParent()
+    current = current.getParent();
   }
 
-  if (!calloutNode) return false
+  if (!calloutNode) return false;
 
-  const isAtStart = selection.anchor.offset === 0
+  const isAtStart = selection.anchor.offset === 0;
   const isAtEnd =
-    selection.anchor.offset === selection.anchor.getNode().getTextContentSize()
+    selection.anchor.offset === selection.anchor.getNode().getTextContentSize();
 
-  if ((direction === 'up' && isAtStart) || (direction === 'down' && isAtEnd)) {
-    const paragraph = $createParagraphNode()
-    if (direction === 'up') {
-      calloutNode.insertBefore(paragraph)
+  if ((direction === "up" && isAtStart) || (direction === "down" && isAtEnd)) {
+    const paragraph = $createParagraphNode();
+    if (direction === "up") {
+      calloutNode.insertBefore(paragraph);
     } else {
-      calloutNode.insertAfter(paragraph)
+      calloutNode.insertAfter(paragraph);
     }
-    paragraph.select()
-    return true
+    paragraph.select();
+    return true;
   }
 
-  return false
+  return false;
 }
 
 // =============================================================================
@@ -119,17 +115,17 @@ function $onEscape(
 // =============================================================================
 
 type CalloutPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [selectedType, setSelectedType] = useState<CalloutType>('info')
+  const [editor] = useLexicalComposerContext();
+  const [selectedType, setSelectedType] = useState<CalloutType>("info");
 
   // コマンドリスナー登録
   useEffect(() => {
@@ -139,58 +135,55 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
         INSERT_CALLOUT_COMMAND,
         (payload) => {
           editor.update(() => {
-            const callout = $createCalloutNode(payload.calloutType)
-            const paragraph = $createParagraphNode()
-            callout.append(paragraph)
+            const callout = $createCalloutNode(payload.calloutType);
+            const paragraph = $createParagraphNode();
+            callout.append(paragraph);
 
-            $insertNodeToNearestRoot(callout)
+            $insertNodeToNearestRoot(callout);
 
             // Callout内の段落を選択
-            paragraph.selectEnd()
-          })
-          return true
+            paragraph.selectEnd();
+          });
+          return true;
         },
-        COMMAND_PRIORITY_EDITOR
+        COMMAND_PRIORITY_EDITOR,
       ),
 
       // 矢印キーリスナー
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => $onEscape(editor, 'up'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape(editor, "up"),
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => $onEscape(editor, 'down'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape(editor, "down"),
+        COMMAND_PRIORITY_LOW,
       ),
 
       // 構造検証トランスフォーマー: Callout
-      editor.registerNodeTransform(
-        CalloutNode,
-        (node) => {
-          // 空のCalloutに段落を追加
-          if (node.getChildren().length === 0) {
-            const paragraph = $createParagraphNode()
-            node.append(paragraph)
-          }
+      editor.registerNodeTransform(CalloutNode, (node) => {
+        // 空のCalloutに段落を追加
+        if (node.getChildren().length === 0) {
+          const paragraph = $createParagraphNode();
+          node.append(paragraph);
         }
-      ),
-    )
-  }, [editor])
+      }),
+    );
+  }, [editor]);
 
   const handleInsert = () => {
     editor.dispatchCommand(INSERT_CALLOUT_COMMAND, {
       calloutType: selectedType,
-    })
-    setSelectedType('info')
-    onClose()
-  }
+    });
+    setSelectedType("info");
+    onClose();
+  };
 
   const handleClose = () => {
-    setSelectedType('info')
-    onClose()
-  }
+    setSelectedType("info");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -200,10 +193,13 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
         </DialogHeader>
 
         <div className="py-4">
-          <Label className="text-sm font-medium mb-3 block">
-            種類を選択
-          </Label>
-          <Select value={selectedType} onValueChange={(value) => { if (isCalloutType(value)) setSelectedType(value) }}>
+          <Label className="text-sm font-medium mb-3 block">種類を選択</Label>
+          <Select
+            value={selectedType}
+            onValueChange={(value) => {
+              if (isCalloutType(value)) setSelectedType(value);
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -227,5 +223,5 @@ export function CalloutPlugin({ isOpen, onClose }: CalloutPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -4,24 +4,24 @@
  * admin/public両方で使用する検索パラメータスキーマ
  */
 
-import { z } from 'zod'
-import { sortOrders } from '@/shared/lib/nuqs'
+import { z } from "zod";
+import { sortOrders } from "@/shared/lib/nuqs";
 
-export const sortOrderSchema = z.enum(sortOrders)
+export const sortOrderSchema = z.enum(sortOrders);
 
 export const spaceSearchParamsSchema = z.object({
   q: z.string(),
   page: z.number().int().positive(),
   perPage: z.number().int().positive(),
   sort: sortOrderSchema,
-})
+});
 
 export const spaceSearchParamsDefaults = {
-  q: '',
+  q: "",
   page: 1,
   perPage: 10,
-  sort: 'desc',
-} satisfies z.output<typeof spaceSearchParamsSchema>
+  sort: "desc",
+} satisfies z.output<typeof spaceSearchParamsSchema>;
 
 export const blogSearchParamsSchema = z.object({
   q: z.string(),
@@ -30,13 +30,13 @@ export const blogSearchParamsSchema = z.object({
   category: z.string(),
   tags: z.array(z.string()),
   sort: sortOrderSchema,
-})
+});
 
 export const blogSearchParamsDefaults = {
-  q: '',
+  q: "",
   page: 1,
   perPage: 10,
-  category: '',
+  category: "",
   tags: [],
-  sort: 'desc',
-} satisfies z.output<typeof blogSearchParamsSchema>
+  sort: "desc",
+} satisfies z.output<typeof blogSearchParamsSchema>;

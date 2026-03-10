@@ -5,44 +5,47 @@
 
 ## ムード別イージング選択ガイド
 
-| イージング | ムード | 用途例 |
-|-----------|--------|--------|
-| `power1.out` | 自然/控えめ | 微妙なフェードイン、背景パララックス |
-| `power2.out` | 落ち着いた | 汎用入場アニメーション、カード表示 |
-| `power3.out` | 印象的 | Hero入場、ヒーローテキスト |
-| `power4.out` | 力強い | アクション要素、スクロール連動 |
-| `expo.out` | ドラマチック | 全画面リビール、画面切替 |
-| `circ.out` | 技術的 | ダッシュボード、円形UI |
-| `sine.inOut` | 穏やか | ループアニメーション、呼吸エフェクト |
-| `back.out(1.7)` | 遊び心 | バウンス感のある登場、アイコン |
-| `elastic.out(1, 0.3)` | プレイフル | キャラクター登場、祝福演出 |
-| `bounce.out` | 弾む | 通知バッジ、ゲーム的UI |
-| `steps(12)` | 機械的 | タイプライター、テレタイプ |
-| `none` | — | スクラブパララックス（scrub:true必須） |
+| イージング            | ムード       | 用途例                                 |
+| --------------------- | ------------ | -------------------------------------- |
+| `power1.out`          | 自然/控えめ  | 微妙なフェードイン、背景パララックス   |
+| `power2.out`          | 落ち着いた   | 汎用入場アニメーション、カード表示     |
+| `power3.out`          | 印象的       | Hero入場、ヒーローテキスト             |
+| `power4.out`          | 力強い       | アクション要素、スクロール連動         |
+| `expo.out`            | ドラマチック | 全画面リビール、画面切替               |
+| `circ.out`            | 技術的       | ダッシュボード、円形UI                 |
+| `sine.inOut`          | 穏やか       | ループアニメーション、呼吸エフェクト   |
+| `back.out(1.7)`       | 遊び心       | バウンス感のある登場、アイコン         |
+| `elastic.out(1, 0.3)` | プレイフル   | キャラクター登場、祝福演出             |
+| `bounce.out`          | 弾む         | 通知バッジ、ゲーム的UI                 |
+| `steps(12)`           | 機械的       | タイプライター、テレタイプ             |
+| `none`                | —            | スクラブパララックス（scrub:true必須） |
 
 ### CustomEase パターン
 
 gsap-config.ts でCustomEaseを登録して再利用:
 
 ```typescript
-import { CustomEase } from 'gsap/CustomEase'
+import { CustomEase } from "gsap/CustomEase";
 
-gsap.registerPlugin(CustomEase)
+gsap.registerPlugin(CustomEase);
 
-CustomEase.create('brand-ease', 'M0,0 C0.22,0.61 0.36,1 1,1')
-CustomEase.create('dramatic-reveal', 'M0,0 C0.12,0 0.39,0 0.45,0.13 0.5,0.25 0.56,1 0.56,1 0.72,1 1,1 1,1')
+CustomEase.create("brand-ease", "M0,0 C0.22,0.61 0.36,1 1,1");
+CustomEase.create(
+  "dramatic-reveal",
+  "M0,0 C0.12,0 0.39,0 0.45,0.13 0.5,0.25 0.56,1 0.56,1 0.72,1 1,1 1,1",
+);
 
 // 使用
-gsap.to(el, { y: 0, ease: 'brand-ease' })
+gsap.to(el, { y: 0, ease: "brand-ease" });
 ```
 
 ### イージング設計3原則
 
-| 方向 | 推奨イージング | 理由 |
-|------|-------------|------|
-| 入場（登場） | `.out` 系 | 速い開始→緩やかな停止で自然 |
-| 退場（消失） | `.in` 系 | 緩やかな開始→加速して消失 |
-| 遷移（状態変化） | `.inOut` 系 | 滑らかな開始→滑らかな停止 |
+| 方向             | 推奨イージング | 理由                        |
+| ---------------- | -------------- | --------------------------- |
+| 入場（登場）     | `.out` 系      | 速い開始→緩やかな停止で自然 |
+| 退場（消失）     | `.in` 系       | 緩やかな開始→加速して消失   |
+| 遷移（状態変化） | `.inOut` 系    | 滑らかな開始→滑らかな停止   |
 
 ## 多層パララックスアーキテクチャ
 
@@ -58,23 +61,38 @@ Layer 5 (前景):  最も速い/逆方向（浮遊ドット）
 
 ```typescript
 // 背景: ゆっくり上方向（正のy）
-gsap.to('.hero-layer-1', {
+gsap.to(".hero-layer-1", {
   yPercent: 30,
-  scrollTrigger: { trigger: section, start: 'top top', end: 'bottom top', scrub: true },
-})
+  scrollTrigger: {
+    trigger: section,
+    start: "top top",
+    end: "bottom top",
+    scrub: true,
+  },
+});
 
 // コンテンツ: スクロールでフェードアウト
-gsap.to('.hero-content', {
+gsap.to(".hero-content", {
   opacity: 0,
   y: -50,
-  scrollTrigger: { trigger: section, start: '20% top', end: '60% top', scrub: true },
-})
+  scrollTrigger: {
+    trigger: section,
+    start: "20% top",
+    end: "60% top",
+    scrub: true,
+  },
+});
 
 // 前景: 速く逆方向（コンテンツとの視差を強調）
-gsap.to('.hero-layer-5', {
+gsap.to(".hero-layer-5", {
   yPercent: -50,
-  scrollTrigger: { trigger: section, start: 'top top', end: 'bottom top', scrub: true },
-})
+  scrollTrigger: {
+    trigger: section,
+    start: "top top",
+    end: "bottom top",
+    scrub: true,
+  },
+});
 ```
 
 ## CSS固定パララックス（position: fixed 型）
@@ -174,11 +192,25 @@ export function FixedParallaxHero() {
 .fixed-layer-characters > * {
   opacity: 0;
   transform: translateY(40px) scale(0.8);
-  transition: opacity 0.6s ease-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.is-active .fixed-layer-characters > *:nth-child(1) { transition-delay: 0.2s; opacity: 1; transform: none; }
-.is-active .fixed-layer-characters > *:nth-child(2) { transition-delay: 0.4s; opacity: 1; transform: none; }
-.is-active .fixed-layer-characters > *:nth-child(3) { transition-delay: 0.6s; opacity: 1; transform: none; }
+.is-active .fixed-layer-characters > *:nth-child(1) {
+  transition-delay: 0.2s;
+  opacity: 1;
+  transform: none;
+}
+.is-active .fixed-layer-characters > *:nth-child(2) {
+  transition-delay: 0.4s;
+  opacity: 1;
+  transform: none;
+}
+.is-active .fixed-layer-characters > *:nth-child(3) {
+  transition-delay: 0.6s;
+  opacity: 1;
+  transform: none;
+}
 
 /* 自律CSS animation（スクロール非連動） */
 .floating-animation {
@@ -186,8 +218,13 @@ export function FixedParallaxHero() {
 }
 
 @keyframes floating-y {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
 }
 ```
 
@@ -197,7 +234,7 @@ export function FixedParallaxHero() {
 
 ```css
 .masked-image {
-  mask-image: url('/masks/puzzle-shape.svg');
+  mask-image: url("/masks/puzzle-shape.svg");
   mask-size: cover;
   mask-repeat: no-repeat;
 }
@@ -205,11 +242,11 @@ export function FixedParallaxHero() {
 
 ### GSAP scrub 型との使い分け
 
-| 手法 | 実装 | 用途 | パフォーマンス |
-|------|------|------|-------------|
-| **CSS固定パララックス** | `position: fixed` + `height: 300vh` | イラスト分割、入場演出重視 | Excellent（CSS主体） |
-| **GSAP scrub パララックス** | `scrub: true` + `yPercent` | スクロール位置と精密同期 | Good（GSAPフレーム処理） |
-| **CSS scroll-driven** | `animation-timeline: scroll()` | L1 軽量パララックス | Excellent（メインスレッド外） |
+| 手法                        | 実装                                | 用途                       | パフォーマンス                |
+| --------------------------- | ----------------------------------- | -------------------------- | ----------------------------- |
+| **CSS固定パララックス**     | `position: fixed` + `height: 300vh` | イラスト分割、入場演出重視 | Excellent（CSS主体）          |
+| **GSAP scrub パララックス** | `scrub: true` + `yPercent`          | スクロール位置と精密同期   | Good（GSAPフレーム処理）      |
+| **CSS scroll-driven**       | `animation-timeline: scroll()`      | L1 軽量パララックス        | Excellent（メインスレッド外） |
 
 **選択基準**: 入場タイミング制御が主目的ならCSS固定型、スクロール位置との連続同期が必要ならGSAP scrub型。
 
@@ -218,18 +255,21 @@ export function FixedParallaxHero() {
 同一クラスの複数要素に対して、ビューポートに入った順にバッチ処理。
 
 ```typescript
-ScrollTrigger.batch('.batch-item', {
-  onEnter: (elements) => gsap.to(elements, {
-    opacity: 1,
-    y: 0,
-    stagger: 0.15,
-    overwrite: true,
-  }),
-  onLeave: (elements) => gsap.to(elements, { opacity: 0, y: 100, overwrite: true }),
-  onEnterBack: (elements) => gsap.to(elements, { opacity: 1, y: 0, stagger: 0.15, overwrite: true }),
-  start: 'top 90%',
-  end: 'top 10%',
-})
+ScrollTrigger.batch(".batch-item", {
+  onEnter: (elements) =>
+    gsap.to(elements, {
+      opacity: 1,
+      y: 0,
+      stagger: 0.15,
+      overwrite: true,
+    }),
+  onLeave: (elements) =>
+    gsap.to(elements, { opacity: 0, y: 100, overwrite: true }),
+  onEnterBack: (elements) =>
+    gsap.to(elements, { opacity: 1, y: 0, stagger: 0.15, overwrite: true }),
+  start: "top 90%",
+  end: "top 10%",
+});
 ```
 
 **使い分け**: 個別の `scrollTrigger` ではなく、カード一覧やギャラリーなど同種要素の入場に使用。
@@ -238,30 +278,30 @@ ScrollTrigger.batch('.batch-item', {
 
 ```typescript
 // GPU acceleration を強制
-gsap.set('.accelerated', { force3D: true })
+gsap.set(".accelerated", { force3D: true });
 
 // willChange を一時的に設定（完了後に解除）
-gsap.to('.optimized', {
+gsap.to(".optimized", {
   x: 300,
-  willChange: 'transform',
-  onComplete: () => gsap.set('.optimized', { willChange: 'auto' }),
-})
+  willChange: "transform",
+  onComplete: () => gsap.set(".optimized", { willChange: "auto" }),
+});
 
 // autoAlpha で visibility も制御（opacity: 0 時に visibility: hidden）
-gsap.to('.hidden', { autoAlpha: 0 })
+gsap.to(".hidden", { autoAlpha: 0 });
 
 // 特定要素のアニメーションを破棄
-gsap.killTweensOf('.element')
-gsap.killTweensOf('.element', 'x,y')  // 特定プロパティのみ
+gsap.killTweensOf(".element");
+gsap.killTweensOf(".element", "x,y"); // 特定プロパティのみ
 
 // グローバル設定
 gsap.config({
   force3D: true,
-  autoSleep: 60,  // アイドル時にスリープ（デフォルト: 120フレーム）
-})
+  autoSleep: 60, // アイドル時にスリープ（デフォルト: 120フレーム）
+});
 
 // DOM変更後にScrollTriggerをリフレッシュ
-ScrollTrigger.refresh()
+ScrollTrigger.refresh();
 ```
 
 ## ScrollTrigger コールバック
@@ -286,20 +326,21 @@ scrollTrigger: {
 ## 横スクロール snap パターン
 
 ```typescript
-const sections = gsap.utils.toArray<HTMLElement>('.horizontal-section')
+const sections = gsap.utils.toArray<HTMLElement>(".horizontal-section");
 
 gsap.to(sections, {
   xPercent: -100 * (sections.length - 1),
-  ease: 'none',
+  ease: "none",
   scrollTrigger: {
-    trigger: '.horizontal-container',
+    trigger: ".horizontal-container",
     pin: true,
     scrub: 1,
-    snap: 1 / (sections.length - 1),  // セクション単位でスナップ
-    end: () => `+=${document.querySelector('.horizontal-container')!.offsetWidth}`,
+    snap: 1 / (sections.length - 1), // セクション単位でスナップ
+    end: () =>
+      `+=${document.querySelector(".horizontal-container")!.offsetWidth}`,
     invalidateOnRefresh: true,
   },
-})
+});
 ```
 
 ## セクション重なりアニメーション（Sticky Stacking）
@@ -320,18 +361,20 @@ gsap.to(sections, {
 ### GSAP + ScrollTrigger（複雑な制御）
 
 ```typescript
-const sections = gsap.utils.toArray<HTMLElement>('.stacking-section')
+const sections = gsap.utils.toArray<HTMLElement>(".stacking-section");
 
 sections.forEach((section, i) => {
   ScrollTrigger.create({
     trigger: section,
-    start: 'top top',
-    end: i === sections.length - 1 ? 'bottom bottom' : 'bottom top',
-    pin: i < sections.length - 1,  // 最後のセクション以外をピン
+    start: "top top",
+    end: i === sections.length - 1 ? "bottom bottom" : "bottom top",
+    pin: i < sections.length - 1, // 最後のセクション以外をピン
     pinSpacing: false,
-    onEnter: () => { section.style.zIndex = String(sections.length - i) },
-  })
-})
+    onEnter: () => {
+      section.style.zIndex = String(sections.length - i);
+    },
+  });
+});
 ```
 
 **使い分け**: シンプルな重なりは CSS `sticky`、スケール変化やフェード付きは GSAP で制御。
@@ -345,39 +388,39 @@ sections.forEach((section, i) => {
 // CSS: .text-reveal { overflow: hidden; }
 
 gsap.fromTo(
-  '.text-reveal-inner',
+  ".text-reveal-inner",
   { yPercent: 100 },
   {
     yPercent: 0,
     duration: 0.8,
-    ease: 'power3.out',
+    ease: "power3.out",
     stagger: 0.12,
     scrollTrigger: {
-      trigger: '.text-reveal',
-      start: 'top 80%',
-      toggleActions: 'play none none none',
+      trigger: ".text-reveal",
+      start: "top 80%",
+      toggleActions: "play none none none",
     },
-  }
-)
+  },
+);
 ```
 
 ### clip-path マスクリビール
 
 ```typescript
 gsap.fromTo(
-  '.reveal-element',
-  { clipPath: 'inset(0 100% 0 0)' },     // 右から隠す
+  ".reveal-element",
+  { clipPath: "inset(0 100% 0 0)" }, // 右から隠す
   {
-    clipPath: 'inset(0 0% 0 0)',           // 全体表示
+    clipPath: "inset(0 0% 0 0)", // 全体表示
     duration: 1.2,
-    ease: 'power3.inOut',
+    ease: "power3.inOut",
     scrollTrigger: {
-      trigger: '.reveal-element',
-      start: 'top 75%',
-      toggleActions: 'play none none none',
+      trigger: ".reveal-element",
+      start: "top 75%",
+      toggleActions: "play none none none",
     },
-  }
-)
+  },
+);
 ```
 
 **バリエーション**: `inset(100% 0 0 0)`（下から）、`inset(0 0 100% 0)`（上から）、`circle(0% at 50% 50%)`（円形リビール）
@@ -388,18 +431,20 @@ GSAPでクラスを付与し、CSS transitionでアニメーション。軽量�
 
 ```typescript
 ScrollTrigger.create({
-  trigger: '.animate-on-scroll',
-  start: 'top 80%',
-  toggleClass: 'is-visible',
-  once: true,  // 1回のみ発火
-})
+  trigger: ".animate-on-scroll",
+  start: "top 80%",
+  toggleClass: "is-visible",
+  once: true, // 1回のみ発火
+});
 ```
 
 ```css
 .animate-on-scroll {
   opacity: 0;
   transform: translateY(40px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s ease;
 }
 .animate-on-scroll.is-visible {
   opacity: 1;
@@ -424,29 +469,29 @@ HTML属性でパララックス速度を宣言し、JSで一括適用する軽�
 // HTML: <div data-speed="0.5">遅い要素</div>
 //       <div data-speed="1.2">速い要素</div>
 
-gsap.utils.toArray<HTMLElement>('[data-speed]').forEach((el) => {
-  const speed = parseFloat(el.getAttribute('data-speed') ?? '1')
+gsap.utils.toArray<HTMLElement>("[data-speed]").forEach((el) => {
+  const speed = parseFloat(el.getAttribute("data-speed") ?? "1");
 
   gsap.to(el, {
     y: () => (1 - speed) * ScrollTrigger.maxScroll(window) * 0.5,
-    ease: 'none',
+    ease: "none",
     scrollTrigger: {
       trigger: el,
-      start: 'top bottom',
-      end: 'max',
+      start: "top bottom",
+      end: "max",
       scrub: true,
-      invalidateOnRefresh: true,  // リサイズ時に再計算
+      invalidateOnRefresh: true, // リサイズ時に再計算
     },
-  })
-})
+  });
+});
 ```
 
-| `data-speed` | 挙動 |
-|-------------|------|
-| `0` | 固定（スクロールに連動しない） |
-| `0.5` | 通常の半分の速度（背景向き） |
-| `1` | 通常速度（基準、移動なし） |
-| `1.5` | 通常の1.5倍速（前景向き） |
+| `data-speed` | 挙動                           |
+| ------------ | ------------------------------ |
+| `0`          | 固定（スクロールに連動しない） |
+| `0.5`        | 通常の半分の速度（背景向き）   |
+| `1`          | 通常速度（基準、移動なし）     |
+| `1.5`        | 通常の1.5倍速（前景向き）      |
 
 **使いどころ**: 多数の要素に個別の速度を設定する場合。JS側のロジックが1箇所で済む。
 
@@ -458,16 +503,16 @@ ScrollTrigger の `onUpdate` で CSS変数を更新し、CSS側で複数プロ�
 ```typescript
 ScrollTrigger.create({
   trigger: section,
-  start: 'top top',
-  end: 'bottom top',
+  start: "top top",
+  end: "bottom top",
   scrub: true,
   pin: true,
   onUpdate: (self) => {
     // イージング付き progress を CSS変数に書き込み
-    const eased = gsap.parseEase('power1.inOut')(self.progress)
-    section.style.setProperty('--progress', String(eased))
+    const eased = gsap.parseEase("power1.inOut")(self.progress);
+    section.style.setProperty("--progress", String(eased));
   },
-})
+});
 ```
 
 ```css
@@ -494,26 +539,27 @@ ScrollTrigger.create({
 ```typescript
 // CSS: .zoom-container { perspective: 100vh; }
 
-const images = gsap.utils.toArray<HTMLElement>('.zoom-layer')
+const images = gsap.utils.toArray<HTMLElement>(".zoom-layer");
 const tl = gsap.timeline({
   scrollTrigger: {
-    trigger: '.zoom-container',
-    start: 'top top',
-    end: 'bottom top',
+    trigger: ".zoom-container",
+    start: "top top",
+    end: "bottom top",
     scrub: true,
     pin: true,
   },
-})
+});
 
 tl.to(images, {
-  z: '100vh',                       // Z軸で手前に移動
+  z: "100vh", // Z軸で手前に移動
   duration: 1,
-  ease: 'power1.inOut',
-  stagger: { amount: 0.2, from: 'center' },  // 中央から波及
-})
+  ease: "power1.inOut",
+  stagger: { amount: 0.2, from: "center" }, // 中央から波及
+});
 ```
 
 **レイヤー構成**:
+
 ```
 Layer 1: scale(1.0)  — 最前面、最大サイズ
 Layer 2: scale(0.85) — マスク付き
@@ -528,39 +574,39 @@ Canvas に画像シーケンスを描画し、スクロールでフレームを�
 Apple 製品ページ風のスクロール動画効果。
 
 ```typescript
-const canvas = canvasRef.current!
-const ctx = canvas.getContext('2d')!
-const frameCount = 120  // 総フレーム数
-const images: HTMLImageElement[] = []
+const canvas = canvasRef.current!;
+const ctx = canvas.getContext("2d")!;
+const frameCount = 120; // 総フレーム数
+const images: HTMLImageElement[] = [];
 
 // 画像プリロード
 for (let i = 0; i < frameCount; i++) {
-  const img = new Image()
-  img.src = `/sequences/frame-${String(i).padStart(4, '0')}.webp`
-  images.push(img)
+  const img = new Image();
+  img.src = `/sequences/frame-${String(i).padStart(4, "0")}.webp`;
+  images.push(img);
 }
 
-const playhead = { frame: 0 }
+const playhead = { frame: 0 };
 
 gsap.to(playhead, {
   frame: frameCount - 1,
-  snap: 'frame',              // 整数フレームにスナップ
-  ease: 'none',
+  snap: "frame", // 整数フレームにスナップ
+  ease: "none",
   scrollTrigger: {
     trigger: canvas,
-    start: 'top top',
-    end: '+=3000',             // スクロール距離
+    start: "top top",
+    end: "+=3000", // スクロール距離
     pin: true,
     scrub: 0.5,
   },
   onUpdate: () => {
-    const img = images[Math.round(playhead.frame)]
+    const img = images[Math.round(playhead.frame)];
     if (img?.complete) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
   },
-})
+});
 ```
 
 **注意**: 画像は WebP 形式で最適化、モバイルでは解像度を下げるかフレーム数を削減。
@@ -572,35 +618,35 @@ SVGパスに沿ってオブジェクトを移動させるアニメーション�
 ### gsap-config.ts への登録
 
 ```typescript
-import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
-gsap.registerPlugin(MotionPathPlugin)
+import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+gsap.registerPlugin(MotionPathPlugin);
 ```
 
 ### 基本パターン（SVGパス追従）
 
 ```typescript
-gsap.to('.moving-element', {
+gsap.to(".moving-element", {
   motionPath: {
-    path: '#svg-path',        // SVG path要素のID
-    align: '#svg-path',       // パスにアライン
-    alignOrigin: [0.5, 0.5],  // 要素の中心をパスに合わせる
-    autoRotate: true,          // パスの接線方向に回転
+    path: "#svg-path", // SVG path要素のID
+    align: "#svg-path", // パスにアライン
+    alignOrigin: [0.5, 0.5], // 要素の中心をパスに合わせる
+    autoRotate: true, // パスの接線方向に回転
   },
   duration: 3,
-  ease: 'none',
+  ease: "none",
   scrollTrigger: {
-    trigger: '.path-section',
-    start: 'top center',
-    end: 'bottom center',
+    trigger: ".path-section",
+    start: "top center",
+    end: "bottom center",
     scrub: true,
   },
-})
+});
 ```
 
 ### 座標配列パターン（SVGなし）
 
 ```typescript
-gsap.to('.element', {
+gsap.to(".element", {
   motionPath: {
     path: [
       { x: 0, y: 0 },
@@ -608,12 +654,12 @@ gsap.to('.element', {
       { x: 400, y: 50 },
       { x: 600, y: 0 },
     ],
-    curviness: 1.25,  // パスの滑らかさ（0: 直線, 2: 強い曲線）
-    autoRotate: 90,    // 90度オフセット
+    curviness: 1.25, // パスの滑らかさ（0: 直線, 2: 強い曲線）
+    autoRotate: 90, // 90度オフセット
   },
   duration: 2,
-  ease: 'power2.inOut',
-})
+  ease: "power2.inOut",
+});
 ```
 
 ### フローチャート進行（スクロール連動）
@@ -621,24 +667,24 @@ gsap.to('.element', {
 ```typescript
 // SVG上のドットがフローチャートのパスに沿って進行
 const setupFlowAnimation = useCallback(() => {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion()) return;
 
-  gsap.set('.flow-dot', { xPercent: -50, yPercent: -50 })
-  gsap.to('.flow-dot', {
+  gsap.set(".flow-dot", { xPercent: -50, yPercent: -50 });
+  gsap.to(".flow-dot", {
     motionPath: {
-      path: '.flow-path',
-      align: '.flow-path',
+      path: ".flow-path",
+      align: ".flow-path",
       alignOrigin: [0.5, 0.5],
     },
-    ease: 'none',
+    ease: "none",
     scrollTrigger: {
-      trigger: '.flow-section',
-      start: 'top 60%',
-      end: 'bottom 40%',
+      trigger: ".flow-section",
+      start: "top 60%",
+      end: "bottom 40%",
       scrub: 1,
     },
-  })
-}, [])
+  });
+}, []);
 ```
 
 ## SVGアニメーション
@@ -648,27 +694,27 @@ const setupFlowAnimation = useCallback(() => {
 ```typescript
 // stroke-dasharray + stroke-dashoffset をGSAP制御
 const setupStrokeDraw = useCallback(() => {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion()) return;
 
-  const paths = gsap.utils.toArray<SVGPathElement>('.draw-path')
+  const paths = gsap.utils.toArray<SVGPathElement>(".draw-path");
   paths.forEach((path) => {
-    const length = path.getTotalLength()
+    const length = path.getTotalLength();
     gsap.set(path, {
       strokeDasharray: length,
       strokeDashoffset: length,
-    })
+    });
     gsap.to(path, {
       strokeDashoffset: 0,
       duration: 2,
-      ease: 'power2.inOut',
+      ease: "power2.inOut",
       scrollTrigger: {
-        trigger: path.closest('svg'),
-        start: 'top 70%',
-        toggleActions: 'play none none none',
+        trigger: path.closest("svg"),
+        start: "top 70%",
+        toggleActions: "play none none none",
       },
-    })
-  })
-}, [])
+    });
+  });
+}, []);
 ```
 
 ### SVGフィルターアニメーション（feTurbulence 歪み）
@@ -676,16 +722,16 @@ const setupStrokeDraw = useCallback(() => {
 ```typescript
 // SVGフィルター属性をGSAPでアニメーション
 const setupSvgFilter = useCallback(() => {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion()) return;
 
-  gsap.to('#turbulence', {
-    attr: { baseFrequency: '0.02 0.05' },  // attr プラグインで属性制御
+  gsap.to("#turbulence", {
+    attr: { baseFrequency: "0.02 0.05" }, // attr プラグインで属性制御
     duration: 4,
-    ease: 'sine.inOut',
+    ease: "sine.inOut",
     repeat: -1,
     yoyo: true,
-  })
-}, [])
+  });
+}, []);
 ```
 
 ```html
@@ -711,7 +757,9 @@ GSAPなしでCSS animationでストロークを描画する軽量パターン:
 }
 
 @keyframes draw-stroke {
-  to { stroke-dashoffset: 0; }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* スクロール連動（CSS scroll-driven, L1） */
@@ -731,57 +779,58 @@ DOMレイアウト変更を滑らかにアニメーション化。フィルタ�
 ### gsap-config.ts への登録
 
 ```typescript
-import { Flip } from 'gsap/Flip'
-gsap.registerPlugin(Flip)
+import { Flip } from "gsap/Flip";
+gsap.registerPlugin(Flip);
 ```
 
 ### 基本パターン（フィルタリングUI）
 
 ```typescript
 const handleFilter = useCallback((category: string) => {
-  const items = gsap.utils.toArray<HTMLElement>('.grid-item')
+  const items = gsap.utils.toArray<HTMLElement>(".grid-item");
 
   // 1. 現在の状態を保存
-  const state = Flip.getState(items)
+  const state = Flip.getState(items);
 
   // 2. DOMを変更（フィルタリング）
   items.forEach((item) => {
-    const match = item.dataset.category === category || category === 'all'
-    item.style.display = match ? '' : 'none'
-  })
+    const match = item.dataset.category === category || category === "all";
+    item.style.display = match ? "" : "none";
+  });
 
   // 3. 差分アニメーション
   Flip.from(state, {
     duration: 0.6,
-    ease: 'power2.inOut',
+    ease: "power2.inOut",
     stagger: 0.05,
-    absolute: true,       // アニメーション中は position: absolute
-    onEnter: (elements) => gsap.fromTo(elements,
-      { opacity: 0, scale: 0.8 },
-      { opacity: 1, scale: 1, duration: 0.4 }
-    ),
-    onLeave: (elements) => gsap.to(elements,
-      { opacity: 0, scale: 0.8, duration: 0.3 }
-    ),
-  })
-}, [])
+    absolute: true, // アニメーション中は position: absolute
+    onEnter: (elements) =>
+      gsap.fromTo(
+        elements,
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 0.4 },
+      ),
+    onLeave: (elements) =>
+      gsap.to(elements, { opacity: 0, scale: 0.8, duration: 0.3 }),
+  });
+}, []);
 ```
 
 ### タブ切替のハイライトアニメーション
 
 ```typescript
 const handleTabChange = useCallback((newTab: HTMLElement) => {
-  const highlight = document.querySelector('.tab-highlight')!
-  const state = Flip.getState(highlight)
+  const highlight = document.querySelector(".tab-highlight")!;
+  const state = Flip.getState(highlight);
 
   // ハイライト要素を新しいタブに移動
-  newTab.appendChild(highlight)
+  newTab.appendChild(highlight);
 
   Flip.from(state, {
     duration: 0.4,
-    ease: 'power2.out',
-  })
-}, [])
+    ease: "power2.out",
+  });
+}, []);
 ```
 
 ## 横スクロールギャラリー（詳細パターン）
@@ -792,61 +841,71 @@ const handleTabChange = useCallback((newTab: HTMLElement) => {
 
 ```typescript
 const setupHorizontalScroll = useCallback(() => {
-  if (prefersReducedMotion()) return
+  if (prefersReducedMotion()) return;
 
-  const container = containerRef.current
-  if (!container) return
-  const track = container.querySelector('.horizontal-track') as HTMLElement
-  const items = gsap.utils.toArray<HTMLElement>('.horizontal-item', container)
+  const container = containerRef.current;
+  if (!container) return;
+  const track = container.querySelector(".horizontal-track") as HTMLElement;
+  const items = gsap.utils.toArray<HTMLElement>(".horizontal-item", container);
 
-  const mm = gsap.matchMedia()
-  mm.add({
-    isDesktop: '(min-width: 800px)',
-    isMobile: '(max-width: 799px)',
-  }, (context) => {
-    const { isDesktop } = context.conditions!
+  const mm = gsap.matchMedia();
+  mm.add(
+    {
+      isDesktop: "(min-width: 800px)",
+      isMobile: "(max-width: 799px)",
+    },
+    (context) => {
+      const { isDesktop } = context.conditions!;
 
-    if (isDesktop) {
-      const totalWidth = items.reduce((acc, item) => acc + item.offsetWidth + 24, 0)
-      const scrollDistance = totalWidth - container.offsetWidth
+      if (isDesktop) {
+        const totalWidth = items.reduce(
+          (acc, item) => acc + item.offsetWidth + 24,
+          0,
+        );
+        const scrollDistance = totalWidth - container.offsetWidth;
 
-      const horizontalTween = gsap.to(track, {
-        x: -scrollDistance,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: container,
-          start: 'top top',
-          end: () => `+=${scrollDistance}`,
-          pin: true,
-          scrub: 1,
-          invalidateOnRefresh: true,
-          onUpdate: (self) => {
-            container.style.setProperty('--scroll-progress', String(self.progress))
-          },
-        },
-      })
-
-      // 各カードのスケール効果（中央が最大）
-      items.forEach((item) => {
-        gsap.fromTo(item,
-          { scale: 0.92, opacity: 0.6 },
-          {
-            scale: 1,
-            opacity: 1,
-            scrollTrigger: {
-              trigger: item,
-              containerAnimation: horizontalTween,  // 変数参照で確実に連携
-              start: 'left center',
-              end: 'right center',
-              scrub: true,
+        const horizontalTween = gsap.to(track, {
+          x: -scrollDistance,
+          ease: "none",
+          scrollTrigger: {
+            trigger: container,
+            start: "top top",
+            end: () => `+=${scrollDistance}`,
+            pin: true,
+            scrub: 1,
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              container.style.setProperty(
+                "--scroll-progress",
+                String(self.progress),
+              );
             },
-          }
-        )
-      })
-    }
-    // モバイル: overflow-x-auto + scroll-snap
-  })
-}, [])
+          },
+        });
+
+        // 各カードのスケール効果（中央が最大）
+        items.forEach((item) => {
+          gsap.fromTo(
+            item,
+            { scale: 0.92, opacity: 0.6 },
+            {
+              scale: 1,
+              opacity: 1,
+              scrollTrigger: {
+                trigger: item,
+                containerAnimation: horizontalTween, // 変数参照で確実に連携
+                start: "left center",
+                end: "right center",
+                scrub: true,
+              },
+            },
+          );
+        });
+      }
+      // モバイル: overflow-x-auto + scroll-snap
+    },
+  );
+}, []);
 ```
 
 ### モバイルフォールバック（CSS scroll-snap）
@@ -869,17 +928,17 @@ const setupHorizontalScroll = useCallback(() => {
 
 ## scrub 値の使い分けガイド
 
-| 値 | 挙動 | 用途 |
-|----|------|------|
-| `true` | スクロールと1:1同期（即時追従） | 精密なパララックス、clipPath リビール |
-| `0.5` | 0.5秒の追従ラグ | 自然な背景パララックス |
-| `1` | 1秒の追従ラグ | ピン固定横スクロール、テキストアニメーション |
-| `2` | 2秒の追従ラグ | ゆったりした装飾アニメーション |
+| 値     | 挙動                            | 用途                                         |
+| ------ | ------------------------------- | -------------------------------------------- |
+| `true` | スクロールと1:1同期（即時追従） | 精密なパララックス、clipPath リビール        |
+| `0.5`  | 0.5秒の追従ラグ                 | 自然な背景パララックス                       |
+| `1`    | 1秒の追従ラグ                   | ピン固定横スクロール、テキストアニメーション |
+| `2`    | 2秒の追従ラグ                   | ゆったりした装飾アニメーション               |
 
 ```typescript
 // 追従ラグのイメージ
-scrub: true   // スクロール位置 = アニメーション位置（完全同期）
-scrub: 1      // スクロール位置に1秒かけて追いつく（スムーズ）
+scrub: true; // スクロール位置 = アニメーション位置（完全同期）
+scrub: 1; // スクロール位置に1秒かけて追いつく（スムーズ）
 ```
 
 ## anticipatePin（ピン固定の遅延対策）
@@ -903,14 +962,14 @@ scrollTrigger: {
 
 ```typescript
 // フォールバック検出
-const supportsScrollTimeline = CSS.supports('animation-timeline', 'scroll()')
+const supportsScrollTimeline = CSS.supports("animation-timeline", "scroll()");
 
 if (!supportsScrollTimeline) {
   // GSAP ScrollTrigger でパララックスを実装
-  gsap.to('.parallax-bg', {
+  gsap.to(".parallax-bg", {
     yPercent: -20,
-    scrollTrigger: { trigger: '.hero', scrub: true },
-  })
+    scrollTrigger: { trigger: ".hero", scrub: true },
+  });
 }
 ```
 
@@ -924,8 +983,12 @@ if (!supportsScrollTimeline) {
   }
 
   @keyframes parallax-move {
-    from { transform: translateY(0); }
-    to { transform: translateY(-20%); }
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-20%);
+    }
   }
 }
 ```
@@ -946,8 +1009,14 @@ if (!supportsScrollTimeline) {
   }
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 ```
@@ -958,19 +1027,25 @@ CSS Houdini `@property` で数値型カスタムプロパティを定義し、�
 
 ```css
 @property --gradient-angle {
-  syntax: '<angle>';
+  syntax: "<angle>";
   inherits: false;
   initial-value: 0deg;
 }
 
 .gradient-rotate {
-  background: conic-gradient(from var(--gradient-angle), oklch(0.7 0.2 240), oklch(0.6 0.15 300));
+  background: conic-gradient(
+    from var(--gradient-angle),
+    oklch(0.7 0.2 240),
+    oklch(0.6 0.15 300)
+  );
   animation: rotate-gradient linear;
   animation-timeline: scroll();
 }
 
 @keyframes rotate-gradient {
-  to { --gradient-angle: 360deg; }
+  to {
+    --gradient-angle: 360deg;
+  }
 }
 ```
 
@@ -1056,26 +1131,26 @@ export function HeroHeadline({ text }: { text: string }) {
 
 #### SplitText 分割タイプ
 
-| type | 生成要素 | 用途 |
-|------|---------|------|
-| `'chars'` | 各文字を `<div>` でラップ | 文字単位の入場、ランダム散乱 |
-| `'words'` | 各単語を `<div>` でラップ | 単語単位のフェードイン |
-| `'lines'` | 各行を `<div>` でラップ | 行単位のマスクリビール |
-| `'chars,words'` | 文字＋単語の二重ラップ | 文字アニメーション + 単語単位の位置制御 |
-| `'chars,words,lines'` | 三重ラップ | 最大制御（行マスク + 文字アニメーション） |
+| type                  | 生成要素                  | 用途                                      |
+| --------------------- | ------------------------- | ----------------------------------------- |
+| `'chars'`             | 各文字を `<div>` でラップ | 文字単位の入場、ランダム散乱              |
+| `'words'`             | 各単語を `<div>` でラップ | 単語単位のフェードイン                    |
+| `'lines'`             | 各行を `<div>` でラップ   | 行単位のマスクリビール                    |
+| `'chars,words'`       | 文字＋単語の二重ラップ    | 文字アニメーション + 単語単位の位置制御   |
+| `'chars,words,lines'` | 三重ラップ                | 最大制御（行マスク + 文字アニメーション） |
 
 #### 行マスクリビールパターン
 
 ```typescript
-const split = new SplitText(element, { type: 'lines' })
+const split = new SplitText(element, { type: "lines" });
 
 // 各行の親に overflow: hidden を適用
 split.lines.forEach((line) => {
-  const wrapper = document.createElement('div')
-  wrapper.style.overflow = 'hidden'
-  line.parentNode?.insertBefore(wrapper, line)
-  wrapper.appendChild(line)
-})
+  const wrapper = document.createElement("div");
+  wrapper.style.overflow = "hidden";
+  line.parentNode?.insertBefore(wrapper, line);
+  wrapper.appendChild(line);
+});
 
 gsap.fromTo(
   split.lines,
@@ -1084,20 +1159,20 @@ gsap.fromTo(
     yPercent: 0,
     duration: 0.8,
     stagger: 0.12,
-    ease: 'power3.out',
+    ease: "power3.out",
     scrollTrigger: {
       trigger: element,
-      start: 'top 80%',
-      toggleActions: 'play none none none',
+      start: "top 80%",
+      toggleActions: "play none none none",
     },
-  }
-)
+  },
+);
 ```
 
 #### スクラブ連動テキストリビール
 
 ```typescript
-const split = new SplitText(element, { type: 'chars' })
+const split = new SplitText(element, { type: "chars" });
 
 gsap.fromTo(
   split.chars,
@@ -1107,12 +1182,12 @@ gsap.fromTo(
     stagger: 0.05,
     scrollTrigger: {
       trigger: element,
-      start: 'top 60%',
-      end: 'bottom 40%',
-      scrub: true,   // スクロールに連動して1文字ずつ表示
+      start: "top 60%",
+      end: "bottom 40%",
+      scrub: true, // スクロールに連動して1文字ずつ表示
     },
-  }
-)
+  },
+);
 ```
 
 ### B. 手動分割（SplitText 未使用）
@@ -1149,31 +1224,33 @@ gsap.fromTo(
 
 ### A vs B 使い分け
 
-| 基準 | SplitText（A） | 手動分割（B） |
-|------|---------------|-------------|
-| 行分割 | `type: 'lines'` で自動 | 実装困難（レスポンシブで行が変わる） |
-| リバート | `split.revert()` でDOM復元 | DOM変更なし |
-| 日本語 | 単語分割に課題（句読点区切り） | 文字分割は問題なし |
-| バンドルサイズ | +15KB（SplitTextプラグイン） | 0（追加なし） |
-| 推奨 | 行マスクリビール、scrub連動 | 単純な文字入場アニメーション |
+| 基準           | SplitText（A）                 | 手動分割（B）                        |
+| -------------- | ------------------------------ | ------------------------------------ |
+| 行分割         | `type: 'lines'` で自動         | 実装困難（レスポンシブで行が変わる） |
+| リバート       | `split.revert()` でDOM復元     | DOM変更なし                          |
+| 日本語         | 単語分割に課題（句読点区切り） | 文字分割は問題なし                   |
+| バンドルサイズ | +15KB（SplitTextプラグイン）   | 0（追加なし）                        |
+| 推奨           | 行マスクリビール、scrub連動    | 単純な文字入場アニメーション         |
 
 ## Lenis モバイル設定
 
 ```typescript
 const lenis = new Lenis({
-  lerp: isMobile ? 0.12 : 0.08,       // モバイルはやや速い補間（慣性軽減）
-  duration: isMobile ? 1.0 : 1.4,     // モバイルは短い持続時間
-  touchMultiplier: 2,                   // タッチスクロール感度
+  lerp: isMobile ? 0.12 : 0.08, // モバイルはやや速い補間（慣性軽減）
+  duration: isMobile ? 1.0 : 1.4, // モバイルは短い持続時間
+  touchMultiplier: 2, // タッチスクロール感度
   wheelMultiplier: 1,
   smoothWheel: true,
-  syncTouch: true,                      // タッチでもスムーズ（iOS対応）
-})
+  syncTouch: true, // タッチでもスムーズ（iOS対応）
+});
 
 // Lenis 公式推奨 GSAP 統合パターン
-lenis.on('scroll', ScrollTrigger.update)
-gsap.ticker.add((time) => { lenis.raf(time * 1000) })
-gsap.ticker.lagSmoothing(0)
-gsap.config({ autoSleep: 0 })  // ticker スリープ防止（必須）
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((time) => {
+  lenis.raf(time * 1000);
+});
+gsap.ticker.lagSmoothing(0);
+gsap.config({ autoSleep: 0 }); // ticker スリープ防止（必須）
 ```
 
 **注意**: `gsap.config({ autoSleep: 0 })` は必須。デフォルト（120フレーム ~2秒）ではアイドル後に ticker が停止し、`lenis.raf()` が呼ばれなくなりスクロールがデッドロックする。
@@ -1181,28 +1258,31 @@ gsap.config({ autoSleep: 0 })  // ticker スリープ防止（必須）
 ## セクション重なり（Stacking）のモバイル対応
 
 ```typescript
-const mm = gsap.matchMedia()
+const mm = gsap.matchMedia();
 
-mm.add({
-  isDesktop: '(min-width: 800px)',
-  isMobile: '(max-width: 799px)',
-}, (context) => {
-  const { isDesktop } = context.conditions!
+mm.add(
+  {
+    isDesktop: "(min-width: 800px)",
+    isMobile: "(max-width: 799px)",
+  },
+  (context) => {
+    const { isDesktop } = context.conditions!;
 
-  if (isDesktop) {
-    // デスクトップ: sticky stacking + scale/fade演出
-    sections.forEach((section, i) => {
-      ScrollTrigger.create({
-        trigger: section,
-        start: 'top top',
-        pin: i < sections.length - 1,
-        pinSpacing: false,
-      })
-    })
-  }
-  // モバイル: sticky/pinなし、通常スクロールでセクション遷移
-  // CSS `scroll-snap-type: y mandatory` で代替可能
-})
+    if (isDesktop) {
+      // デスクトップ: sticky stacking + scale/fade演出
+      sections.forEach((section, i) => {
+        ScrollTrigger.create({
+          trigger: section,
+          start: "top top",
+          pin: i < sections.length - 1,
+          pinSpacing: false,
+        });
+      });
+    }
+    // モバイル: sticky/pinなし、通常スクロールでセクション遷移
+    // CSS `scroll-snap-type: y mandatory` で代替可能
+  },
+);
 ```
 
 ## ui-ux-pro-max スタイル対応
@@ -1212,25 +1292,25 @@ GSAP パターンと `ui-ux-pro-max` スタイルデータベースの対応関�
 
 ### スタイル → GSAP パターン マッピング
 
-| スタイル | GSAP パターン | 推奨 scrub | 推奨 ease | 注意事項 |
-|---------|-------------|-----------|----------|---------|
-| **Motion-Driven** (15) | useGSAP + ScrollTrigger 全般 | `true` / `0.5` | `power2.out` | GSAP 10/10。パララックス3-5層、ページトランジション |
-| **Parallax Storytelling** (49) | pin + scrub + stacking | `1` | `none` | セクション進行型。position:fixed/sticky + scroll-triggered |
-| **Kinetic Typography** (48) | SplitText + stagger + scrub | `true` | `power3.out` | GSAP 10/10。background-clip:text、文字分割アニメーション |
-| **Dimensional Layering** (46) | z-index stacking + translateZ | `true` | `none` | 深度表現。box-shadow + perspective + parallax |
-| **Liquid Glass** (14) | morphing + blur + scrub | `0.5` | `power1.inOut` | GSAP 10/10。backdrop-filter連動、CSS --progress 推奨 |
-| **Hero-Centric Design** (20) | hero入場 + 背景パララックス | `true`（BG）| `power2.out`（入場）| CTA pulse、value prop stagger |
-| **Storytelling-Driven** (27) | chapter transition + scroll reveal | `1` | `power1.inOut` | 感情的遷移。section-to-section のグラデーション変化 |
+| スタイル                       | GSAP パターン                      | 推奨 scrub     | 推奨 ease            | 注意事項                                                   |
+| ------------------------------ | ---------------------------------- | -------------- | -------------------- | ---------------------------------------------------------- |
+| **Motion-Driven** (15)         | useGSAP + ScrollTrigger 全般       | `true` / `0.5` | `power2.out`         | GSAP 10/10。パララックス3-5層、ページトランジション        |
+| **Parallax Storytelling** (49) | pin + scrub + stacking             | `1`            | `none`               | セクション進行型。position:fixed/sticky + scroll-triggered |
+| **Kinetic Typography** (48)    | SplitText + stagger + scrub        | `true`         | `power3.out`         | GSAP 10/10。background-clip:text、文字分割アニメーション   |
+| **Dimensional Layering** (46)  | z-index stacking + translateZ      | `true`         | `none`               | 深度表現。box-shadow + perspective + parallax              |
+| **Liquid Glass** (14)          | morphing + blur + scrub            | `0.5`          | `power1.inOut`       | GSAP 10/10。backdrop-filter連動、CSS --progress 推奨       |
+| **Hero-Centric Design** (20)   | hero入場 + 背景パララックス        | `true`（BG）   | `power2.out`（入場） | CTA pulse、value prop stagger                              |
+| **Storytelling-Driven** (27)   | chapter transition + scroll reveal | `1`            | `power1.inOut`       | 感情的遷移。section-to-section のグラデーション変化        |
 
 ### ランディングパターン → GSAP 構成
 
-| パターン | セクション構成 | 主要GSAPアニメーション |
-|---------|-------------|---------------------|
-| **Hero + Features + CTA** (1) | hero(pin) → features(batch) → cta(scale) | `scrub`パララックス + `toggleActions`入場 + CTA glow |
-| **Scroll-Triggered Storytelling** (10) | intro → chapter×3 → climax | `pin` + `scrub: 1` + progressive disclosure + `--progress` |
-| **Video-First Hero** (9) | video-hero(pin) → features → cta | video autoplay + `scrub`パララックス + text fade-in |
-| **Horizontal Scroll Journey** (27) | intro(vertical) → journey(horizontal) → footer | `pin` + `scrub` + `x: () => -(scrollWidth - viewWidth)` |
-| **Bento Grid Showcase** (28) | hero → bento-grid → detail → cta | `ScrollTrigger.batch` + hover scale(1.02) + stagger reveal |
+| パターン                               | セクション構成                                 | 主要GSAPアニメーション                                     |
+| -------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| **Hero + Features + CTA** (1)          | hero(pin) → features(batch) → cta(scale)       | `scrub`パララックス + `toggleActions`入場 + CTA glow       |
+| **Scroll-Triggered Storytelling** (10) | intro → chapter×3 → climax                     | `pin` + `scrub: 1` + progressive disclosure + `--progress` |
+| **Video-First Hero** (9)               | video-hero(pin) → features → cta               | video autoplay + `scrub`パララックス + text fade-in        |
+| **Horizontal Scroll Journey** (27)     | intro(vertical) → journey(horizontal) → footer | `pin` + `scrub` + `x: () => -(scrollWidth - viewWidth)`    |
+| **Bento Grid Showcase** (28)           | hero → bento-grid → detail → cta               | `ScrollTrigger.batch` + hover scale(1.02) + stagger reveal |
 
 ### 検索コマンド例
 
@@ -1252,25 +1332,25 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll animation lazy" -
 ### gsap.timeline() 基本チェーン
 
 ```typescript
-const tl = gsap.timeline({ defaults: { duration: 0.8, ease: 'power2.out' } })
+const tl = gsap.timeline({ defaults: { duration: 0.8, ease: "power2.out" } });
 
-tl.to('.element-a', { opacity: 1, y: 0 })
-  .to('.element-b', { opacity: 1, y: 0 }, '-=0.4')  // 0.4秒前から重複開始
-  .to('.element-c', { scale: 1 }, '<')                // 前のアニメと同時
-  .to('.element-d', { x: 100 }, '>')                  // 前のアニメ完了後
+tl.to(".element-a", { opacity: 1, y: 0 })
+  .to(".element-b", { opacity: 1, y: 0 }, "-=0.4") // 0.4秒前から重複開始
+  .to(".element-c", { scale: 1 }, "<") // 前のアニメと同時
+  .to(".element-d", { x: 100 }, ">"); // 前のアニメ完了後
 ```
 
 ### ラベル + `.add()` タイムオフセット
 
 ```typescript
-const tl = gsap.timeline()
+const tl = gsap.timeline();
 
-tl.addLabel('intro')
-  .to('.logo', { opacity: 1, duration: 0.5 }, 'intro')
-  .to('.tagline', { opacity: 1, y: 0 }, 'intro+=0.3')
-  .addLabel('content', '+=0.5')  // 前のアニメから0.5秒後にラベル
-  .to('.card', { opacity: 1, y: 0, stagger: 0.12 }, 'content')
-  .to('.cta', { scale: 1 }, 'content+=0.8')
+tl.addLabel("intro")
+  .to(".logo", { opacity: 1, duration: 0.5 }, "intro")
+  .to(".tagline", { opacity: 1, y: 0 }, "intro+=0.3")
+  .addLabel("content", "+=0.5") // 前のアニメから0.5秒後にラベル
+  .to(".card", { opacity: 1, y: 0, stagger: 0.12 }, "content")
+  .to(".cta", { scale: 1 }, "content+=0.8");
 ```
 
 ### ScrollTrigger 連動タイムライン（scrub timeline）
@@ -1280,21 +1360,21 @@ tl.addLabel('intro')
 ```typescript
 const tl = gsap.timeline({
   scrollTrigger: {
-    trigger: '.story-section',
-    start: 'top top',
-    end: '+=3000',          // 3000pxのスクロール距離
+    trigger: ".story-section",
+    start: "top top",
+    end: "+=3000", // 3000pxのスクロール距離
     pin: true,
     scrub: 1,
     invalidateOnRefresh: true,
   },
-})
+});
 
-tl.to('.step-1', { opacity: 1, y: 0 })
-  .to('.step-1-img', { scale: 1.1 }, '<')
-  .addLabel('step2', '+=0.2')
-  .to('.step-1', { opacity: 0 }, 'step2')
-  .to('.step-2', { opacity: 1, y: 0 }, 'step2+=0.1')
-  .to('.step-2-img', { scale: 1.1 }, '<')
+tl.to(".step-1", { opacity: 1, y: 0 })
+  .to(".step-1-img", { scale: 1.1 }, "<")
+  .addLabel("step2", "+=0.2")
+  .to(".step-1", { opacity: 0 }, "step2")
+  .to(".step-2", { opacity: 1, y: 0 }, "step2+=0.1")
+  .to(".step-2-img", { scale: 1.1 }, "<");
 ```
 
 ### ネストタイムライン（セクション単位）
@@ -1303,59 +1383,72 @@ tl.to('.step-1', { opacity: 1, y: 0 })
 
 ```typescript
 function createSectionTimeline(section: HTMLElement): gsap.core.Timeline {
-  const tl = gsap.timeline()
-  tl.fromTo(section.querySelector('.title'), { opacity: 0, y: 30 }, { opacity: 1, y: 0 })
-    .fromTo(section.querySelector('.body'), { opacity: 0 }, { opacity: 1 }, '-=0.3')
-  return tl
+  const tl = gsap.timeline();
+  tl.fromTo(
+    section.querySelector(".title"),
+    { opacity: 0, y: 30 },
+    { opacity: 1, y: 0 },
+  ).fromTo(
+    section.querySelector(".body"),
+    { opacity: 0 },
+    { opacity: 1 },
+    "-=0.3",
+  );
+  return tl;
 }
 
 const masterTl = gsap.timeline({
-  scrollTrigger: { trigger: '.container', start: 'top top', end: 'bottom bottom', scrub: 1 },
-})
+  scrollTrigger: {
+    trigger: ".container",
+    start: "top top",
+    end: "bottom bottom",
+    scrub: 1,
+  },
+});
 
 sections.forEach((section, i) => {
-  masterTl.add(createSectionTimeline(section), i * 0.25)
-})
+  masterTl.add(createSectionTimeline(section), i * 0.25);
+});
 ```
 
 ### タイムライン制御API
 
-| メソッド | 用途 | 例 |
-|---------|------|-----|
-| `tl.pause()` | 一時停止 | モーダル表示時 |
-| `tl.resume()` | 再開 | モーダル閉じ時 |
-| `tl.seek('label')` | ラベル位置にジャンプ | ナビゲーション |
-| `tl.progress(0.5)` | 50%位置にジャンプ | スライダー連動 |
-| `tl.timeScale(0.5)` | 半速再生 | ドラマチック演出 |
-| `tl.reverse()` | 逆再生 | 退場アニメーション |
-| `tl.restart()` | 最初から再生 | リピート演出 |
-| `tl.totalDuration()` | 合計時間取得 | プログレスバー計算 |
+| メソッド             | 用途                 | 例                 |
+| -------------------- | -------------------- | ------------------ |
+| `tl.pause()`         | 一時停止             | モーダル表示時     |
+| `tl.resume()`        | 再開                 | モーダル閉じ時     |
+| `tl.seek('label')`   | ラベル位置にジャンプ | ナビゲーション     |
+| `tl.progress(0.5)`   | 50%位置にジャンプ    | スライダー連動     |
+| `tl.timeScale(0.5)`  | 半速再生             | ドラマチック演出   |
+| `tl.reverse()`       | 逆再生               | 退場アニメーション |
+| `tl.restart()`       | 最初から再生         | リピート演出       |
+| `tl.totalDuration()` | 合計時間取得         | プログレスバー計算 |
 
 ## Advanced Lenis 設定
 
 ### アンカースクロール
 
 ```typescript
-lenis.scrollTo('#section-about', {
-  offset: -80,            // ヘッダー高さ分オフセット
+lenis.scrollTo("#section-about", {
+  offset: -80, // ヘッダー高さ分オフセット
   duration: 1.5,
-  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),  // easeOutExpo
-  immediate: false,       // アニメーション付き
-  lock: true,             // スクロール中にユーザーのスクロールをロック
-})
+  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // easeOutExpo
+  immediate: false, // アニメーション付き
+  lock: true, // スクロール中にユーザーのスクロールをロック
+});
 ```
 
 ### プログラマティックスクロール
 
 ```typescript
 // ページトップへ
-lenis.scrollTo(0, { duration: 2 })
+lenis.scrollTo(0, { duration: 2 });
 
 // 特定のDOM要素へ
-lenis.scrollTo(document.querySelector('.target-section')!, { offset: -100 })
+lenis.scrollTo(document.querySelector(".target-section")!, { offset: -100 });
 
 // 相対スクロール（Lenisは相対文字列未対応、数値で指定）
-lenis.scrollTo(lenis.scroll + 500, { duration: 1 })  // 現在位置から500px下（lenis.scroll で内部状態と整合）
+lenis.scrollTo(lenis.scroll + 500, { duration: 1 }); // 現在位置から500px下（lenis.scroll で内部状態と整合）
 ```
 
 ### Lenis stop/start（モーダル/オーバーレイ管理）
@@ -1363,13 +1456,13 @@ lenis.scrollTo(lenis.scroll + 500, { duration: 1 })  // 現在位置から500px�
 ```typescript
 // モーダルオープン時: スクロール停止
 function openModal() {
-  lenis.stop()
+  lenis.stop();
   // モーダル表示処理
 }
 
 // モーダルクローズ時: スクロール再開
 function closeModal() {
-  lenis.start()
+  lenis.start();
 }
 
 // ネストスクロール領域（モーダル内スクロール）
@@ -1377,8 +1470,8 @@ function closeModal() {
 const modalLenis = new Lenis({
   wrapper: modalRef.current!,
   content: modalContentRef.current!,
-  autoRaf: true,  // メインのLenisとは別にrAFを管理
-})
+  autoRaf: true, // メインのLenisとは別にrAFを管理
+});
 ```
 
 ### ハッシュナビゲーション連携
@@ -1386,18 +1479,18 @@ const modalLenis = new Lenis({
 ```typescript
 useEffect(() => {
   const handleHashChange = () => {
-    const hash = window.location.hash
+    const hash = window.location.hash;
     if (hash) {
-      lenis.scrollTo(hash, { offset: -80, duration: 1.2 })
+      lenis.scrollTo(hash, { offset: -80, duration: 1.2 });
     }
-  }
+  };
 
-  window.addEventListener('hashchange', handleHashChange)
+  window.addEventListener("hashchange", handleHashChange);
   // 初期ロード時のハッシュ処理
-  if (window.location.hash) handleHashChange()
+  if (window.location.hash) handleHashChange();
 
-  return () => window.removeEventListener('hashchange', handleHashChange)
-}, [lenis])
+  return () => window.removeEventListener("hashchange", handleHashChange);
+}, [lenis]);
 ```
 
 ### ネストスクロール領域
@@ -1406,12 +1499,12 @@ useEffect(() => {
 
 ```typescript
 // ネストスクロールコンテナでLenisの介入を防止
-const nestedContainer = document.querySelector('.horizontal-scroll')!
-nestedContainer.setAttribute('data-lenis-prevent', '')
+const nestedContainer = document.querySelector(".horizontal-scroll")!;
+nestedContainer.setAttribute("data-lenis-prevent", "");
 
 // 特定の方向のみ防止
-nestedContainer.setAttribute('data-lenis-prevent-wheel', '')    // ホイールのみ
-nestedContainer.setAttribute('data-lenis-prevent-touch', '')    // タッチのみ
+nestedContainer.setAttribute("data-lenis-prevent-wheel", ""); // ホイールのみ
+nestedContainer.setAttribute("data-lenis-prevent-touch", ""); // タッチのみ
 ```
 
 ## パフォーマンス最適化拡張
@@ -1420,22 +1513,24 @@ nestedContainer.setAttribute('data-lenis-prevent-touch', '')    // タッチの�
 
 ```typescript
 // アニメーション開始時にwill-changeを設定、完了時に解除
-gsap.to('.optimized', {
+gsap.to(".optimized", {
   x: 300,
-  onStart: () => gsap.set('.optimized', { willChange: 'transform' }),
-  onComplete: () => gsap.set('.optimized', { willChange: 'auto' }),
-})
+  onStart: () => gsap.set(".optimized", { willChange: "transform" }),
+  onComplete: () => gsap.set(".optimized", { willChange: "auto" }),
+});
 
 // 大量要素: ScrollTrigger enter/leave で管理
 ScrollTrigger.create({
   trigger: section,
-  start: 'top bottom',
-  end: 'bottom top',
-  onEnter: () => gsap.set('.animate-items', { willChange: 'transform, opacity' }),
-  onLeave: () => gsap.set('.animate-items', { willChange: 'auto' }),
-  onEnterBack: () => gsap.set('.animate-items', { willChange: 'transform, opacity' }),
-  onLeaveBack: () => gsap.set('.animate-items', { willChange: 'auto' }),
-})
+  start: "top bottom",
+  end: "bottom top",
+  onEnter: () =>
+    gsap.set(".animate-items", { willChange: "transform, opacity" }),
+  onLeave: () => gsap.set(".animate-items", { willChange: "auto" }),
+  onEnterBack: () =>
+    gsap.set(".animate-items", { willChange: "transform, opacity" }),
+  onLeaveBack: () => gsap.set(".animate-items", { willChange: "auto" }),
+});
 ```
 
 ### gsap.context() 一括クリーンアップ
@@ -1464,28 +1559,28 @@ const observer = new IntersectionObserver(
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         // ビューポート進入時にScrollTriggerを作成
-        createSectionAnimations(entry.target as HTMLElement)
-        observer.unobserve(entry.target)  // 1回のみ
+        createSectionAnimations(entry.target as HTMLElement);
+        observer.unobserve(entry.target); // 1回のみ
       }
-    })
+    });
   },
-  { rootMargin: '200px' }  // 200px手前から初期化
-)
+  { rootMargin: "200px" }, // 200px手前から初期化
+);
 
-document.querySelectorAll('.lazy-section').forEach((section) => {
-  observer.observe(section)
-})
+document.querySelectorAll(".lazy-section").forEach((section) => {
+  observer.observe(section);
+});
 ```
 
 ### バッチ vs 個別 ScrollTrigger 判断基準
 
-| 基準 | `ScrollTrigger.batch()` | 個別 `ScrollTrigger` |
-|------|------------------------|---------------------|
-| 同種要素 | カード一覧、ギャラリー | 過剰 |
-| 異なるアニメーション | 不向き | 各セクション固有のアニメーション |
-| 大量要素（50+） | パフォーマンス良好 | 要Lazyゲート |
-| stagger制御 | 自動stagger | 手動設定必要 |
-| scrub連動 | 非対応 | scrub対応 |
+| 基準                 | `ScrollTrigger.batch()` | 個別 `ScrollTrigger`             |
+| -------------------- | ----------------------- | -------------------------------- |
+| 同種要素             | カード一覧、ギャラリー  | 過剰                             |
+| 異なるアニメーション | 不向き                  | 各セクション固有のアニメーション |
+| 大量要素（50+）      | パフォーマンス良好      | 要Lazyゲート                     |
+| stagger制御          | 自動stagger             | 手動設定必要                     |
+| scrub連動            | 非対応                  | scrub対応                        |
 
 ### rAF バジェット意識
 
@@ -1494,15 +1589,15 @@ document.querySelectorAll('.lazy-section').forEach((section) => {
 gsap.ticker.add((time, deltaTime) => {
   // 軽量な処理のみ: CSS変数更新、ref更新
   // 重い処理（DOM測定、レイアウト計算）はここに入れない
-})
+});
 
 // フレームスキップ検出
 gsap.ticker.add((time, deltaTime) => {
   if (deltaTime > 50) {
     // 50ms以上のフレームスキップ → パフォーマンス警告
-    console.warn('Frame skip detected:', deltaTime, 'ms')
+    console.warn("Frame skip detected:", deltaTime, "ms");
   }
-})
+});
 ```
 
 ## ページ/セクション遷移アニメーション
@@ -1512,15 +1607,15 @@ gsap.ticker.add((time, deltaTime) => {
 ```typescript
 async function navigateWithTransition(url: string) {
   // 1. Exit アニメーション
-  await gsap.to('.page-content', {
+  await gsap.to(".page-content", {
     opacity: 0,
     y: -30,
     duration: 0.4,
-    ease: 'power2.in',
-  })
+    ease: "power2.in",
+  });
 
   // 2. ルーティング
-  router.push(url)
+  router.push(url);
 
   // 3. Enter アニメーション（ページ遷移後）
   // → 遷移先ページの useGSAP で入場アニメーションが自動実行
@@ -1532,17 +1627,17 @@ async function navigateWithTransition(url: string) {
 ```typescript
 async function navigateTo(url: string) {
   if (!document.startViewTransition) {
-    router.push(url)
-    return
+    router.push(url);
+    return;
   }
 
   // GSAP exit アニメーションを View Transition の前に実行
-  await gsap.to('.hero-image', { scale: 0.9, opacity: 0, duration: 0.3 })
+  await gsap.to(".hero-image", { scale: 0.9, opacity: 0, duration: 0.3 });
 
   // View Transition のコールバックはDOM更新のみ（同期的）
   document.startViewTransition(() => {
-    router.push(url)
-  })
+    router.push(url);
+  });
 }
 ```
 
@@ -1574,30 +1669,30 @@ async function navigateTo(url: string) {
 
 ```typescript
 const sectionColors = [
-  { l: 0.1, c: 0.2, h: 240 },   // セクション1: ダークブルー
-  { l: 0.08, c: 0.15, h: 150 },  // セクション2: ダークグリーン
-  { l: 0.12, c: 0.25, h: 30 },   // セクション3: ダークオレンジ
-]
+  { l: 0.1, c: 0.2, h: 240 }, // セクション1: ダークブルー
+  { l: 0.08, c: 0.15, h: 150 }, // セクション2: ダークグリーン
+  { l: 0.12, c: 0.25, h: 30 }, // セクション3: ダークオレンジ
+];
 
 sections.forEach((section, i) => {
-  if (i >= sectionColors.length - 1) return
-  const from = sectionColors[i]
-  const to = sectionColors[i + 1]
+  if (i >= sectionColors.length - 1) return;
+  const from = sectionColors[i];
+  const to = sectionColors[i + 1];
 
   ScrollTrigger.create({
     trigger: section,
-    start: 'top center',
-    end: 'bottom center',
+    start: "top center",
+    end: "bottom center",
     scrub: true,
     onUpdate: (self) => {
-      const p = self.progress
-      const l = from.l + (to.l - from.l) * p
-      const c = from.c + (to.c - from.c) * p
-      const h = from.h + (to.h - from.h) * p
-      document.body.style.setProperty('--section-bg', `oklch(${l} ${c} ${h})`)
+      const p = self.progress;
+      const l = from.l + (to.l - from.l) * p;
+      const c = from.c + (to.c - from.c) * p;
+      const h = from.h + (to.h - from.h) * p;
+      document.body.style.setProperty("--section-bg", `oklch(${l} ${c} ${h})`);
     },
-  })
-})
+  });
+});
 ```
 
 ## スクロール連動ビデオ/メディア
@@ -1605,24 +1700,24 @@ sections.forEach((section, i) => {
 ### HTML5 video.currentTime = progress x duration
 
 ```typescript
-const video = videoRef.current!
-const duration = video.duration || 10  // フォールバック
+const video = videoRef.current!;
+const duration = video.duration || 10; // フォールバック
 
 ScrollTrigger.create({
-  trigger: '.video-section',
-  start: 'top top',
-  end: '+=3000',
+  trigger: ".video-section",
+  start: "top top",
+  end: "+=3000",
   pin: true,
   scrub: true,
   onUpdate: (self) => {
-    video.currentTime = self.progress * duration
+    video.currentTime = self.progress * duration;
   },
-})
+});
 
 // 動画のmetadata読み込みを待機
-video.addEventListener('loadedmetadata', () => {
-  ScrollTrigger.refresh()
-})
+video.addEventListener("loadedmetadata", () => {
+  ScrollTrigger.refresh();
+});
 ```
 
 ### IntersectionObserver play/pause
@@ -1633,20 +1728,20 @@ video.addEventListener('loadedmetadata', () => {
 const videoObserver = new IntersectionObserver(
   (entries) => {
     entries.forEach((entry) => {
-      const video = entry.target as HTMLVideoElement
+      const video = entry.target as HTMLVideoElement;
       if (entry.isIntersecting) {
-        video.play().catch(() => {})  // autoplay制限でのエラーを無視
+        video.play().catch(() => {}); // autoplay制限でのエラーを無視
       } else {
-        video.pause()
+        video.pause();
       }
-    })
+    });
   },
-  { threshold: 0.25 }  // 25%表示で再生開始
-)
+  { threshold: 0.25 }, // 25%表示で再生開始
+);
 
-document.querySelectorAll('video[data-autoplay]').forEach((video) => {
-  videoObserver.observe(video)
-})
+document.querySelectorAll("video[data-autoplay]").forEach((video) => {
+  videoObserver.observe(video);
+});
 ```
 
 ### ビデオ + オーバーレイテキスト協調
@@ -1654,22 +1749,32 @@ document.querySelectorAll('video[data-autoplay]').forEach((video) => {
 ```typescript
 const tl = gsap.timeline({
   scrollTrigger: {
-    trigger: '.video-hero',
-    start: 'top top',
-    end: '+=4000',
+    trigger: ".video-hero",
+    start: "top top",
+    end: "+=4000",
     pin: true,
     scrub: 1,
   },
-})
+});
 
 // ビデオ進行
-tl.to(video, { currentTime: video.duration, duration: 1, ease: 'none' })
+tl.to(video, { currentTime: video.duration, duration: 1, ease: "none" });
 
 // テキストオーバーレイ（ビデオの特定タイミングに同期）
-tl.fromTo('.overlay-title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.1 }, 0.2)
-  .to('.overlay-title', { opacity: 0, y: -30, duration: 0.1 }, 0.4)
-  .fromTo('.overlay-subtitle', { opacity: 0 }, { opacity: 1, duration: 0.1 }, 0.5)
-  .to('.overlay-subtitle', { opacity: 0, duration: 0.1 }, 0.8)
+tl.fromTo(
+  ".overlay-title",
+  { opacity: 0, y: 30 },
+  { opacity: 1, y: 0, duration: 0.1 },
+  0.2,
+)
+  .to(".overlay-title", { opacity: 0, y: -30, duration: 0.1 }, 0.4)
+  .fromTo(
+    ".overlay-subtitle",
+    { opacity: 0 },
+    { opacity: 1, duration: 0.1 },
+    0.5,
+  )
+  .to(".overlay-subtitle", { opacity: 0, duration: 0.1 }, 0.8);
 ```
 
 ## デバッグ & よくある落とし穴
@@ -1680,59 +1785,59 @@ tl.fromTo('.overlay-title', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration:
 // 1. ScrollTrigger マーカー表示
 ScrollTrigger.create({
   trigger: section,
-  markers: true,        // start/end 位置を可視化（開発時のみ）
+  markers: true, // start/end 位置を可視化（開発時のみ）
   // ...
-})
+});
 
 // 2. 全ScrollTriggerインスタンスの確認
-console.log(ScrollTrigger.getAll())
+console.log(ScrollTrigger.getAll());
 ScrollTrigger.getAll().forEach((st) => {
-  console.log(st.trigger, st.start, st.end, st.progress)
-})
+  console.log(st.trigger, st.start, st.end, st.progress);
+});
 
 // 3. グローバルタイムライン制御
-gsap.globalTimeline.timeScale(0.2)  // 全アニメーションを5倍スロー
-gsap.globalTimeline.pause()         // 全停止
-gsap.globalTimeline.resume()        // 再開
+gsap.globalTimeline.timeScale(0.2); // 全アニメーションを5倍スロー
+gsap.globalTimeline.pause(); // 全停止
+gsap.globalTimeline.resume(); // 再開
 
 // 4. タイムライン進行デバッグ
-tl.eventCallback('onUpdate', () => {
-  console.log('progress:', tl.progress(), 'time:', tl.time())
-})
+tl.eventCallback("onUpdate", () => {
+  console.log("progress:", tl.progress(), "time:", tl.time());
+});
 
 // 5. 特定要素のアニメーション確認
-gsap.getTweensOf('.target-element').forEach((tween) => {
-  console.log(tween.vars, tween.progress(), tween.isActive())
-})
+gsap.getTweensOf(".target-element").forEach((tween) => {
+  console.log(tween.vars, tween.progress(), tween.isActive());
+});
 ```
 
 ### 症状別トラブルシューティング
 
-| 症状 | 原因候補 | 対策 |
-|------|---------|------|
-| ScrollTrigger が不発火 | `scope` 未設定（useGSAP） | `useGSAP(fn, { scope: ref })` で scope 指定 |
-| | Lenis 未初期化時にST作成 | Lenis ready 後に ST 作成 / `lenis.on('scroll', ST.update)` |
-| | DOM が非表示 | `display: none` → `visibility: hidden` + `opacity: 0` |
-| pin でジャンプする | 高速スクロール時の遅延 | `anticipatePin: 1` |
-| | リサイズ時の再計算漏れ | `invalidateOnRefresh: true` |
-| | Lenis との二重スクロール | Lenis ticker 内で `ScrollTrigger.update()` |
-| Lenis との競合 | 複数スクロールインスタンス | 単一 Lenis インスタンスに統一 |
-| | ネストスクロール | `data-lenis-prevent` 属性 |
-| モバイルで pin 破壊 | iOS Safari の描画問題 | `gsap.matchMedia()` でモバイルは pin 回避 |
-| SSR エラー | サーバーで window 参照 | `'use client'` + `typeof window !== 'undefined'` |
-| CLS（レイアウトシフト） | pin の pinSpacing 不足 | `pinSpacing: true`（デフォルト維持） |
-| | 画像未ロードで高さ不定 | `width`/`height` 属性 + `aspect-ratio` |
-| SplitText 崩れ | リサイズで行が変わる | `split.revert()` → 再分割 → `ScrollTrigger.refresh()` |
-| markers 本番残存 | 条件分岐漏れ | `markers: process.env.NODE_ENV === 'development'` |
+| 症状                    | 原因候補                   | 対策                                                       |
+| ----------------------- | -------------------------- | ---------------------------------------------------------- |
+| ScrollTrigger が不発火  | `scope` 未設定（useGSAP）  | `useGSAP(fn, { scope: ref })` で scope 指定                |
+|                         | Lenis 未初期化時にST作成   | Lenis ready 後に ST 作成 / `lenis.on('scroll', ST.update)` |
+|                         | DOM が非表示               | `display: none` → `visibility: hidden` + `opacity: 0`      |
+| pin でジャンプする      | 高速スクロール時の遅延     | `anticipatePin: 1`                                         |
+|                         | リサイズ時の再計算漏れ     | `invalidateOnRefresh: true`                                |
+|                         | Lenis との二重スクロール   | Lenis ticker 内で `ScrollTrigger.update()`                 |
+| Lenis との競合          | 複数スクロールインスタンス | 単一 Lenis インスタンスに統一                              |
+|                         | ネストスクロール           | `data-lenis-prevent` 属性                                  |
+| モバイルで pin 破壊     | iOS Safari の描画問題      | `gsap.matchMedia()` でモバイルは pin 回避                  |
+| SSR エラー              | サーバーで window 参照     | `'use client'` + `typeof window !== 'undefined'`           |
+| CLS（レイアウトシフト） | pin の pinSpacing 不足     | `pinSpacing: true`（デフォルト維持）                       |
+|                         | 画像未ロードで高さ不定     | `width`/`height` 属性 + `aspect-ratio`                     |
+| SplitText 崩れ          | リサイズで行が変わる       | `split.revert()` → 再分割 → `ScrollTrigger.refresh()`      |
+| markers 本番残存        | 条件分岐漏れ               | `markers: process.env.NODE_ENV === 'development'`          |
 
 ### markers 本番防止パターン
 
 ```typescript
-const isDev = process.env.NODE_ENV === 'development'
+const isDev = process.env.NODE_ENV === "development";
 
 ScrollTrigger.create({
   trigger: section,
-  markers: isDev,  // 開発時のみマーカー表示
+  markers: isDev, // 開発時のみマーカー表示
   // ...
-})
+});
 ```

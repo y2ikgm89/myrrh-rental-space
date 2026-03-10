@@ -8,12 +8,13 @@
  * - 動的コンテンツ: お知らせバーデータ（Suspenseでラップ）
  */
 
-import { Suspense } from 'react'
-import { getAnnouncementBars } from '@/admin/queries/announcement-bar'
-import { getAnnouncementBarCarouselSettings } from '@/admin/queries/settings'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { AnnouncementBarManager } from '../site/_components/announcement-bar'
-import type { ReactElement } from 'react'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { getAnnouncementBars } from "@/admin/queries/announcement-bar";
+import { getAnnouncementBarCarouselSettings } from "@/admin/queries/settings";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { AnnouncementBarManager } from "../site/_components/announcement-bar";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: お知らせバー管理
@@ -22,14 +23,14 @@ async function AnnouncementBarContent(): Promise<ReactElement> {
   const [{ items: announcementBars }, carouselSettings] = await Promise.all([
     getAnnouncementBars(),
     getAnnouncementBarCarouselSettings(),
-  ])
+  ]);
 
   return (
     <AnnouncementBarManager
       initialBars={announcementBars}
       initialCarouselSettings={carouselSettings}
     />
-  )
+  );
 }
 
 /**
@@ -49,10 +50,11 @@ function AnnouncementBarLoading(): ReactElement {
         <div className="h-64 rounded bg-muted" />
       </div>
     </div>
-  )
+  );
 }
 
 export default async function AnnouncementBarPage(): Promise<ReactElement> {
+  await connection();
   return (
     <SettingsLayout
       title="お知らせバー管理"
@@ -62,8 +64,5 @@ export default async function AnnouncementBarPage(): Promise<ReactElement> {
         <AnnouncementBarContent />
       </Suspense>
     </SettingsLayout>
-  )
+  );
 }
-
-
-

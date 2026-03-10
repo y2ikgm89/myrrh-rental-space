@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Button,
   Dialog,
@@ -11,35 +11,36 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui'
-import { updateSpaceCategory } from '@/admin/actions/space-category'
+} from "@/admin/components/ui";
+import { updateSpaceCategory } from "@/admin/actions/space-category";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import type {
   SpaceCategoryFormInput,
   SpaceCategoryWithStats,
-} from '@/admin/lib/validations/space-category'
-import { CategoryForm } from './CategoryForm'
+} from "@/admin/lib/validations/space-category";
+import { CategoryForm } from "./CategoryForm";
 
 type EditCategoryDialogProps = {
-  category: SpaceCategoryWithStats
-}
+  category: SpaceCategoryWithStats;
+};
 
 export function EditCategoryDialog({ category }: EditCategoryDialogProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleSubmit = (data: SpaceCategoryFormInput) => {
     startTransition(async () => {
-      const result = await updateSpaceCategory(category.id, data)
-      if (result.success) {
-        toast.success(result.message)
-        setIsOpen(false)
-        router.refresh()
+      const result = await updateSpaceCategory(category.id, data);
+      if (!isMutationError(result)) {
+        toast.success("更新しました");
+        setIsOpen(false);
+        router.refresh();
       } else {
-        toast.error(result.error)
+        toast.error(result.error);
       }
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -67,10 +68,10 @@ export function EditCategoryDialog({ category }: EditCategoryDialogProps) {
             キャンセル
           </Button>
           <Button type="submit" form="category-form" disabled={isPending}>
-            {isPending ? '更新中...' : '更新'}
+            {isPending ? "更新中..." : "更新"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -9,14 +9,14 @@ export {
   DEFAULT_SKIP_TARGETS,
   SKIP_LINK_CLASSES,
   type SkipLinkTarget,
-} from './skip-link'
+} from "./skip-link";
 
 // モーション設定
 export {
   REDUCED_MOTION_CSS,
   prefersReducedMotion,
   getAnimationDuration,
-} from './motion-utils'
+} from "./motion-utils";
 
 // ARIAライブリージョン
 export {
@@ -25,4 +25,4 @@ export {
   type AriaLivePoliteness,
   type AriaLiveRole,
   type AriaLiveAnnouncement,
-} from './aria-live'
+} from "./aria-live";

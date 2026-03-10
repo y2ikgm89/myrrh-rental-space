@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getActiveTermsForSelect } from "@/admin/queries/terms";
 import { getPublishedLocations } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
@@ -11,20 +12,14 @@ export const metadata: Metadata = {
 };
 
 export default async function NewSpacePage() {
-  const [availableTerms, locationsResult, categoriesResult, taxSettings] =
+  await connection();
+  const [availableTerms, availableLocations, availableCategories, taxSettings] =
     await Promise.all([
       getActiveTermsForSelect(),
       getPublishedLocations(),
       getActiveSpaceCategories(),
       getTaxSettings(),
     ]);
-
-  const availableLocations = locationsResult.success
-    ? locationsResult.data
-    : [];
-  const availableCategories = categoriesResult.success
-    ? categoriesResult.data
-    : [];
 
   return (
     <AdminDetailLayout
@@ -42,4 +37,3 @@ export default async function NewSpacePage() {
     </AdminDetailLayout>
   );
 }
-

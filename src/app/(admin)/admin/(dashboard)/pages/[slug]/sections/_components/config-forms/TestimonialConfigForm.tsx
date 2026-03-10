@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useState } from 'react'
-import { useForm, useWatch, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import Image from "next/image";
+import { useState } from "react";
+import { useForm, useWatch, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Card,
@@ -17,9 +17,9 @@ import {
   SelectValue,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { ImagePlus, Plus, Trash2, Star } from 'lucide-react'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
+} from "@/admin/components/ui";
+import { ImagePlus, Plus, Trash2, Star } from "lucide-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   testimonialConfigSchema,
   getTestimonialConfig,
@@ -27,13 +27,21 @@ import {
   parseTestimonialVariant,
   type TestimonialConfig,
   type TestimonialConfigInput,
-} from '@/shared/lib/validations/section'
-import { testimonialLayoutLabels, testimonialVariantLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import {
+  testimonialLayoutLabels,
+  testimonialVariantLabels,
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function TestimonialConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getTestimonialConfig(section.config)
+export default function TestimonialConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getTestimonialConfig(section.config);
 
   const {
     register,
@@ -44,40 +52,42 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
   } = useForm<TestimonialConfigInput, unknown, TestimonialConfig>({
     resolver: zodResolver(testimonialConfigSchema),
     defaultValues: config,
-  })
+  });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'items',
-  })
+    name: "items",
+  });
 
-  const watchedItems = useWatch({ control, name: 'items' })
+  const watchedItems = useWatch({ control, name: "items" });
 
-  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
+  const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
 
   const authorImagePicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (activeImageIndex !== null && selected) {
-        setValue(`items.${activeImageIndex}.authorImageUrl`, selected.url)
+        setValue(`items.${activeImageIndex}.authorImageUrl`, selected.url);
       }
-      setActiveImageIndex(null)
+      setActiveImageIndex(null);
     },
-  })
+  });
 
   const handleFormSave = handleSubmit((data) => {
-    onSave({ config: data })
-  })
+    onSave({ config: data });
+  });
 
   return (
     <form onSubmit={handleFormSave} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="testimonial-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="testimonial-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="testimonial-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Testimonials"
             disabled={isPending}
           />
@@ -87,7 +97,7 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
           <Label htmlFor="testimonial-title">タイトル</Label>
           <Input
             id="testimonial-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="お客様の声"
             disabled={isPending}
           />
@@ -98,7 +108,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
             <Label htmlFor="testimonial-layout">レイアウト</Label>
             <Select
               defaultValue={config.layout}
-              onValueChange={(v) => setValue('layout', parseTestimonialLayout(v))}
+              onValueChange={(v) =>
+                setValue("layout", parseTestimonialLayout(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="testimonial-layout">
@@ -106,7 +118,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
               </SelectTrigger>
               <SelectContent>
                 {keysOf(testimonialLayoutLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{testimonialLayoutLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {testimonialLayoutLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -116,7 +130,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
             <Label htmlFor="testimonial-variant">バリエーション</Label>
             <Select
               defaultValue={config.variant}
-              onValueChange={(v) => setValue('variant', parseTestimonialVariant(v))}
+              onValueChange={(v) =>
+                setValue("variant", parseTestimonialVariant(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="testimonial-variant">
@@ -124,7 +140,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
               </SelectTrigger>
               <SelectContent>
                 {keysOf(testimonialVariantLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{testimonialVariantLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {testimonialVariantLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -135,7 +153,7 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
           <Switch
             id="testimonial-rating"
             checked={config.showRating}
-            onCheckedChange={(checked) => setValue('showRating', checked)}
+            onCheckedChange={(checked) => setValue("showRating", checked)}
             disabled={isPending}
           />
           <Label htmlFor="testimonial-rating">評価（星）を表示</Label>
@@ -148,13 +166,15 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({
-                content: '',
-                authorName: '',
-                authorTitle: '',
-                authorImageUrl: '',
-                rating: 5,
-              })}
+              onClick={() =>
+                append({
+                  content: "",
+                  authorName: "",
+                  authorTitle: "",
+                  authorImageUrl: "",
+                  rating: 5,
+                })
+              }
               disabled={isPending}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -163,7 +183,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
           </div>
           {fields.length === 0 && (
             <div className="flex items-center justify-center py-8 border border-dashed rounded-lg">
-              <p className="text-sm text-muted-foreground">お客様の声が追加されていません</p>
+              <p className="text-sm text-muted-foreground">
+                お客様の声が追加されていません
+              </p>
             </div>
           )}
           {fields.map((field, index) => (
@@ -217,7 +239,7 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                     {watchedItems?.[index]?.authorImageUrl ? (
                       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border">
                         <Image
-                          src={watchedItems[index]?.authorImageUrl ?? ''}
+                          src={watchedItems[index]?.authorImageUrl ?? ""}
                           alt=""
                           fill
                           className="object-cover"
@@ -233,8 +255,8 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setActiveImageIndex(index)
-                        authorImagePicker.openPicker()
+                        setActiveImageIndex(index);
+                        authorImagePicker.openPicker();
                       }}
                       disabled={isPending}
                     >
@@ -246,7 +268,9 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => setValue(`items.${index}.authorImageUrl`, '')}
+                        onClick={() =>
+                          setValue(`items.${index}.authorImageUrl`, "")
+                        }
                         disabled={isPending}
                       >
                         <Trash2 className="h-3 w-3 text-destructive" />
@@ -269,8 +293,8 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
                         <Star
                           className={`h-5 w-5 ${
                             star <= (field.rating ?? 0)
-                              ? 'fill-warning text-warning'
-                              : 'text-muted-foreground'
+                              ? "fill-warning text-warning"
+                              : "text-muted-foreground"
                           }`}
                         />
                       </button>
@@ -283,9 +307,13 @@ export default function TestimonialConfigForm({ section, onSave, isPending, onDi
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
 
       <authorImagePicker.MediaPicker />
     </form>
-  )
+  );
 }

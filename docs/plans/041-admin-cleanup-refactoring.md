@@ -8,6 +8,7 @@
 2025-2026年のベストプラクティスに準拠したクリーンな実装へリファクタリング。
 
 **参照**:
+
 - [Admin Dashboard UI/UX Best Practices 2025](https://medium.com/@CarlosSmith24/admin-dashboard-ui-ux-best-practices-for-2025-8bdc6090c57d)
 - [SaaS Dashboard UX Guidelines](https://arounda.agency/blog/saas-dashboard-ux-trends-guidelines-and-fundamentals)
 - [Vercel Admin Dashboard Template](https://vercel.com/templates/next.js/admin-dashboard)
@@ -28,6 +29,7 @@
 - [ ] メニュー順序の見直し（論理的グルーピング）
 
 **変更ファイル**:
+
 - `src/app/(admin)/admin/(dashboard)/_components/sidebar-items.tsx`
 
 #### 1-2. 廃止予定コンポーネント削除
@@ -38,6 +40,7 @@
 - [ ] 関連するimport/exportの整理
 
 **削除ファイル**:
+
 - `src/app/(admin)/admin/(dashboard)/blog/_components/BlogForm.tsx`
 - `src/app/(admin)/admin/(dashboard)/news/_components/NewsForm.tsx`
 - `src/app/(admin)/admin/(dashboard)/settings/_components/sections/AnnouncementBarCarouselSection.tsx`
@@ -46,9 +49,10 @@
 
 - [ ] `/settings/navigation/` のリダイレクト動作確認
 - [ ] `/settings/announcement-bar/` のリダイレクト動作確認
-- [ ] 不要な_componentsフォルダがあれば削除
+- [ ] 不要な\_componentsフォルダがあれば削除
 
 **確認ファイル**:
+
 - `src/app/(admin)/admin/(dashboard)/settings/navigation/page.tsx`
 - `src/app/(admin)/admin/(dashboard)/settings/announcement-bar/page.tsx`
 
@@ -78,6 +82,7 @@
 - [ ] 他のkebab-caseファイルをPascalCaseに統一
 
 **対象ファイル調査**:
+
 - `src/app/(public)/blog/_components/`
 - `src/app/(public)/spaces/_components/`
 - `src/app/(public)/news/_components/`
@@ -102,13 +107,14 @@
 - [ ] tanstack/react-table パターン検討（既存確認）
 
 **設計**:
+
 ```typescript
 interface DataTableProps<T> {
-  columns: ColumnDef<T>[]
-  data: T[]
-  actions?: (row: T) => ReactNode
-  filters?: ReactNode
-  pagination?: PaginationProps
+  columns: ColumnDef<T>[];
+  data: T[];
+  actions?: (row: T) => ReactNode;
+  filters?: ReactNode;
+  pagination?: PaginationProps;
 }
 ```
 
@@ -142,6 +148,7 @@ interface DataTableProps<T> {
 #### 6-1. Paginationコンポーネント統一
 
 現状:
+
 - `blog-pagination.tsx`
 - `Pagination.tsx` (spaces)
 - `NewsPagination.tsx`
@@ -193,27 +200,27 @@ interface DataTableProps<T> {
 
 ### 削除
 
-| ファイル | 理由 |
-|---------|------|
-| `blog/_components/BlogForm.tsx` | @deprecated |
-| `news/_components/NewsForm.tsx` | @deprecated |
+| ファイル                                                           | 理由        |
+| ------------------------------------------------------------------ | ----------- |
+| `blog/_components/BlogForm.tsx`                                    | @deprecated |
+| `news/_components/NewsForm.tsx`                                    | @deprecated |
 | `settings/_components/sections/AnnouncementBarCarouselSection.tsx` | @deprecated |
-| `components/admin/features/.gitkeep` | 未使用 |
-| `components/admin/forms/.gitkeep` | 未使用 |
-| `components/admin/layouts/.gitkeep` | 未使用 |
+| `components/admin/features/.gitkeep`                               | 未使用      |
+| `components/admin/forms/.gitkeep`                                  | 未使用      |
+| `components/admin/layouts/.gitkeep`                                | 未使用      |
 
 ### 変更
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `_components/sidebar-items.tsx` | ユーザー管理・監査ログ追加 |
-| 各フィルター/ページネーションファイル | 命名統一 |
+| ファイル                              | 変更内容                   |
+| ------------------------------------- | -------------------------- |
+| `_components/sidebar-items.tsx`       | ユーザー管理・監査ログ追加 |
+| 各フィルター/ページネーションファイル | 命名統一                   |
 
 ### 新規
 
-| ファイル | 目的 |
-|---------|------|
-| `components/admin/ui/DataTable.tsx` | 汎用テーブル |
+| ファイル                            | 目的                       |
+| ----------------------------------- | -------------------------- |
+| `components/admin/ui/DataTable.tsx` | 汎用テーブル               |
 | `components/site/ui/Pagination.tsx` | 公開用汎用ページネーション |
 
 ---

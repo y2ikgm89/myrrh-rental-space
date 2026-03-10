@@ -5,6 +5,7 @@
 **Goal:** LexicalエディタにWordPress Gutenberg方式の右サイドバーを追加し、選択中ノードのプロパティをリアルタイム編集可能にする
 
 **Architecture:**
+
 - `NodeInspectorPlugin`: 選択中ノードを検出し、対応するパネルを表示
 - `InspectorSidebar`: サイドバーUI（折りたたみ可能なセクション構造）
 - `*InspectorPanel`: 各ノードタイプ専用の編集パネル（ButtonInspectorPanel等）
@@ -17,14 +18,16 @@
 ## 実装方針
 
 ### 対象ノード（Phase 1）
-| ノード | プロパティ数 | 優先度 |
-|--------|-------------|--------|
-| ButtonNode | 6 | 高 |
-| ImageNode | 4 | 高 |
-| CalloutNode | 1 | 中 |
-| BookmarkNode | 6 | 中 |
+
+| ノード       | プロパティ数 | 優先度 |
+| ------------ | ------------ | ------ |
+| ButtonNode   | 6            | 高     |
+| ImageNode    | 4            | 高     |
+| CalloutNode  | 1            | 中     |
+| BookmarkNode | 6            | 中     |
 
 ### ディレクトリ構造
+
 ```
 lexical/
 ├── LexicalEditor.tsx          # サイドバー統合
@@ -50,6 +53,7 @@ lexical/
 ## Task 1: 選択ノード検出フック作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/hooks/use-selected-node.ts`
 
 **Step 1: フック実装**
@@ -61,10 +65,10 @@ lexical/
  * @description SELECTION_CHANGE_COMMANDを監視し、選択中のDecoratorNode/ElementNodeを返す
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState, useCallback } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
   $isNodeSelection,
@@ -74,42 +78,46 @@ import {
   COMMAND_PRIORITY_LOW,
   type LexicalNode,
   type NodeKey,
-} from 'lexical'
-import { mergeRegister } from '@lexical/utils'
+} from "lexical";
+import { mergeRegister } from "@lexical/utils";
 
-import { $isButtonNode, type ButtonNode } from '../../nodes/ButtonNode'
-import { $isImageNode, type ImageNode } from '../../nodes/ImageNode'
-import { $isCalloutNode, type CalloutNode } from '../../nodes/CalloutNode'
-import { $isBookmarkNode, type BookmarkNode } from '../../nodes/BookmarkNode'
+import { $isButtonNode, type ButtonNode } from "../../nodes/ButtonNode";
+import { $isImageNode, type ImageNode } from "../../nodes/ImageNode";
+import { $isCalloutNode, type CalloutNode } from "../../nodes/CalloutNode";
+import { $isBookmarkNode, type BookmarkNode } from "../../nodes/BookmarkNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type InspectableNode = ButtonNode | ImageNode | CalloutNode | BookmarkNode
+export type InspectableNode =
+  | ButtonNode
+  | ImageNode
+  | CalloutNode
+  | BookmarkNode;
 
-export type InspectableNodeType = 'button' | 'image' | 'callout' | 'bookmark'
+export type InspectableNodeType = "button" | "image" | "callout" | "bookmark";
 
 export type SelectedNodeInfo = {
-  node: InspectableNode
-  nodeKey: NodeKey
-  nodeType: InspectableNodeType
-} | null
+  node: InspectableNode;
+  nodeKey: NodeKey;
+  nodeType: InspectableNodeType;
+} | null;
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
 function getInspectableNodeType(node: LexicalNode): InspectableNodeType | null {
-  if ($isButtonNode(node)) return 'button'
-  if ($isImageNode(node)) return 'image'
-  if ($isCalloutNode(node)) return 'callout'
-  if ($isBookmarkNode(node)) return 'bookmark'
-  return null
+  if ($isButtonNode(node)) return "button";
+  if ($isImageNode(node)) return "image";
+  if ($isCalloutNode(node)) return "callout";
+  if ($isBookmarkNode(node)) return "bookmark";
+  return null;
 }
 
 function isInspectableNode(node: LexicalNode): node is InspectableNode {
-  return getInspectableNodeType(node) !== null
+  return getInspectableNodeType(node) !== null;
 }
 
 // =============================================================================
@@ -117,75 +125,75 @@ function isInspectableNode(node: LexicalNode): node is InspectableNode {
 // =============================================================================
 
 export function useSelectedNode(): SelectedNodeInfo {
-  const [editor] = useLexicalComposerContext()
-  const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo>(null)
+  const [editor] = useLexicalComposerContext();
+  const [selectedNode, setSelectedNode] = useState<SelectedNodeInfo>(null);
 
   const updateSelectedNode = useCallback(() => {
     editor.getEditorState().read(() => {
-      const selection = $getSelection()
+      const selection = $getSelection();
 
       // NodeSelection: DecoratorNode（Button, Image等）が選択された場合
       if ($isNodeSelection(selection)) {
-        const nodes = selection.getNodes()
+        const nodes = selection.getNodes();
         if (nodes.length === 1) {
-          const node = nodes[0]
-          const nodeType = getInspectableNodeType(node)
+          const node = nodes[0];
+          const nodeType = getInspectableNodeType(node);
           if (nodeType && isInspectableNode(node)) {
             setSelectedNode({
               node,
               nodeKey: node.getKey(),
               nodeType,
-            })
-            return
+            });
+            return;
           }
         }
       }
 
       // RangeSelection: ElementNode（Callout等）内にカーソルがある場合
       if ($isRangeSelection(selection)) {
-        const anchorNode = selection.anchor.getNode()
+        const anchorNode = selection.anchor.getNode();
         // 親をたどってInspectableNodeを探す
-        let current: LexicalNode | null = anchorNode
+        let current: LexicalNode | null = anchorNode;
         while (current !== null) {
-          const nodeType = getInspectableNodeType(current)
+          const nodeType = getInspectableNodeType(current);
           if (nodeType && isInspectableNode(current)) {
             setSelectedNode({
               node: current,
               nodeKey: current.getKey(),
               nodeType,
-            })
-            return
+            });
+            return;
           }
-          current = current.getParent()
+          current = current.getParent();
         }
       }
 
       // 該当なし
-      setSelectedNode(null)
-    })
-  }, [editor])
+      setSelectedNode(null);
+    });
+  }, [editor]);
 
   useEffect(() => {
     // 初回実行
-    updateSelectedNode()
+    updateSelectedNode();
 
     // リスナー登録
     return mergeRegister(
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateSelectedNode()
-          return false
+          updateSelectedNode();
+          return false;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerUpdateListener(() => {
-        updateSelectedNode()
-      })
-    )
-  }, [editor, updateSelectedNode])
+        updateSelectedNode();
+      }),
+    );
+  }, [editor, updateSelectedNode]);
 
-  return selectedNode
+  return selectedNode;
 }
 ```
 
@@ -206,6 +214,7 @@ git commit -m "feat(lexical): add useSelectedNode hook for inspector"
 ## Task 2: インスペクターセクションコンポーネント
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/InspectorSection.tsx`
 
 **Step 1: コンポーネント実装**
@@ -274,6 +283,7 @@ git commit -m "feat(lexical): add InspectorSection component"
 ## Task 3: ButtonInspectorPanel
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/ButtonInspectorPanel.tsx`
 
 **Step 1: パネル実装**
@@ -511,6 +521,7 @@ git commit -m "feat(lexical): add ButtonInspectorPanel"
 ## Task 4: ImageInspectorPanel
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/ImageInspectorPanel.tsx`
 
 **Step 1: パネル実装**
@@ -709,31 +720,31 @@ ImageNodeに以下のメソッドを追加（`decorate()`の後、ファクト�
 **Step 3: ImageInspectorPanelを更新（getter使用）**
 
 ```typescript
-  const src = node.getSrc()
-  const alt = node.getAlt()
-  const width = node.getWidth()
-  const height = node.getHeight()
+const src = node.getSrc();
+const alt = node.getAlt();
+const width = node.getWidth();
+const height = node.getHeight();
 
-  const handleAltChange = useCallback(
-    (value: string) => updateNode((n) => n.setAlt(value)),
-    [updateNode]
-  )
+const handleAltChange = useCallback(
+  (value: string) => updateNode((n) => n.setAlt(value)),
+  [updateNode],
+);
 
-  const handleWidthChange = useCallback(
-    (value: string) => {
-      const numValue = value ? parseInt(value, 10) : undefined
-      updateNode((n) => n.setWidth(numValue))
-    },
-    [updateNode]
-  )
+const handleWidthChange = useCallback(
+  (value: string) => {
+    const numValue = value ? parseInt(value, 10) : undefined;
+    updateNode((n) => n.setWidth(numValue));
+  },
+  [updateNode],
+);
 
-  const handleHeightChange = useCallback(
-    (value: string) => {
-      const numValue = value ? parseInt(value, 10) : undefined
-      updateNode((n) => n.setHeight(numValue))
-    },
-    [updateNode]
-  )
+const handleHeightChange = useCallback(
+  (value: string) => {
+    const numValue = value ? parseInt(value, 10) : undefined;
+    updateNode((n) => n.setHeight(numValue));
+  },
+  [updateNode],
+);
 ```
 
 **Step 4: 型チェック実行**
@@ -754,6 +765,7 @@ git commit -m "feat(lexical): add ImageInspectorPanel with getter/setter"
 ## Task 5: CalloutInspectorPanel
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/CalloutInspectorPanel.tsx`
 
 **Step 1: パネル実装**
@@ -872,6 +884,7 @@ git commit -m "feat(lexical): add CalloutInspectorPanel"
 ## Task 6: BookmarkInspectorPanel
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/BookmarkInspectorPanel.tsx`
 
 **Step 1: パネル実装**
@@ -1013,6 +1026,7 @@ git commit -m "feat(lexical): add BookmarkInspectorPanel"
 ## Task 7: パネルインデックス作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/panels/index.ts`
 
 **Step 1: エクスポート**
@@ -1022,10 +1036,10 @@ git commit -m "feat(lexical): add BookmarkInspectorPanel"
  * Inspector Panels エクスポート
  */
 
-export { ButtonInspectorPanel } from './ButtonInspectorPanel'
-export { ImageInspectorPanel } from './ImageInspectorPanel'
-export { CalloutInspectorPanel } from './CalloutInspectorPanel'
-export { BookmarkInspectorPanel } from './BookmarkInspectorPanel'
+export { ButtonInspectorPanel } from "./ButtonInspectorPanel";
+export { ImageInspectorPanel } from "./ImageInspectorPanel";
+export { CalloutInspectorPanel } from "./CalloutInspectorPanel";
+export { BookmarkInspectorPanel } from "./BookmarkInspectorPanel";
 ```
 
 **Step 2: コミット**
@@ -1040,6 +1054,7 @@ git commit -m "feat(lexical): add inspector panels index"
 ## Task 8: InspectorSidebar
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/InspectorSidebar.tsx`
 
 **Step 1: サイドバー実装**
@@ -1132,6 +1147,7 @@ git commit -m "feat(lexical): add InspectorSidebar component"
 ## Task 9: Inspectorインデックス作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/inspector/index.ts`
 
 **Step 1: エクスポート**
@@ -1141,13 +1157,17 @@ git commit -m "feat(lexical): add InspectorSidebar component"
  * Inspector エクスポート
  */
 
-export { InspectorSidebar } from './InspectorSidebar'
-export { InspectorSection } from './InspectorSection'
-export { useSelectedNode } from './hooks/use-selected-node'
-export type { SelectedNodeInfo, InspectableNode, InspectableNodeType } from './hooks/use-selected-node'
+export { InspectorSidebar } from "./InspectorSidebar";
+export { InspectorSection } from "./InspectorSection";
+export { useSelectedNode } from "./hooks/use-selected-node";
+export type {
+  SelectedNodeInfo,
+  InspectableNode,
+  InspectableNodeType,
+} from "./hooks/use-selected-node";
 
 // Panels
-export * from './panels'
+export * from "./panels";
 ```
 
 **Step 2: コミット**
@@ -1162,12 +1182,13 @@ git commit -m "feat(lexical): add inspector index"
 ## Task 10: LexicalEditorにサイドバー統合
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`
 
 **Step 1: インポート追加**
 
 ```typescript
-import { InspectorSidebar } from './inspector'
+import { InspectorSidebar } from "./inspector";
 ```
 
 **Step 2: LexicalEditorPropsに追加**
@@ -1176,8 +1197,8 @@ import { InspectorSidebar } from './inspector'
 export type LexicalEditorProps = {
   // ... 既存プロパティ
   /** インスペクターサイドバーを表示するかどうか */
-  showInspector?: boolean
-}
+  showInspector?: boolean;
+};
 ```
 
 **Step 3: EditorInner修正**
@@ -1298,12 +1319,14 @@ git commit -m "feat(lexical): complete inspector sidebar implementation
 ## 将来の拡張
 
 ### Phase 2 対象ノード
+
 - YouTubeNode: videoId編集
 - XNode: postId編集
 - InstagramNode: postId編集
 - LayoutContainerNode: カラム数変更
 
 ### Phase 3 機能追加
+
 - サイドバー折りたたみ（レスポンシブ対応）
 - ノード削除ボタン
 - ノード複製ボタン

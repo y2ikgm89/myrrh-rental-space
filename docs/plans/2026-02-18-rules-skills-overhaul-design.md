@@ -13,19 +13,19 @@
 
 ## リサーチ対象
 
-| ライブラリ | context7 ID | 確認事項 |
-|-----------|------------|---------|
-| Next.js 16 | `/vercel/next.js` | `'use cache'` / `cacheLife` / `cacheTag` / `updateTag` / PPR |
-| React 19.2 | `/facebook/react` | `useEffectEvent` / `Activity` / Server Actions / Compiler |
-| TypeScript 6.0 | `/microsoft/typescript` | `noUncheckedIndexedAccess` / `stableTypeOrdering` / 新エラー |
-| Prisma 7 | `/prisma/prisma` | WASM / `$extends` / mapped enums / JSON型安全 |
-| Zod 4 | `/colinhacks/zod` | `z.enum()` / `error:` / `safeParse` / Prisma統合 |
-| Better Auth 1.4 | `/better-auth/better-auth` | RBAC / nextCookies / Server Action パターン |
-| Lexical 0.40 | `/facebook/lexical` | NodeState API / `$config` / `createState` |
-| Bun 1.3 | `/oven-sh/bun` | テスト API / `mock` / `mock.module` / `mockReset` |
-| Tailwind CSS 4 | `/tailwindlabs/tailwindcss` | `@theme` / OKLCH / CSS-first |
-| GSAP 3.14 | `/greensock/gsap` | `useGSAP` / `ScrollTrigger` / `matchMedia` |
-| nuqs 2 | `/47ng/nuqs` | `createSearchParamsCache` / Zod統合 |
+| ライブラリ      | context7 ID                 | 確認事項                                                     |
+| --------------- | --------------------------- | ------------------------------------------------------------ |
+| Next.js 16      | `/vercel/next.js`           | `'use cache'` / `cacheLife` / `cacheTag` / `updateTag` / PPR |
+| React 19.2      | `/facebook/react`           | `useEffectEvent` / `Activity` / Server Actions / Compiler    |
+| TypeScript 6.0  | `/microsoft/typescript`     | `noUncheckedIndexedAccess` / `stableTypeOrdering` / 新エラー |
+| Prisma 7        | `/prisma/prisma`            | WASM / `$extends` / mapped enums / JSON型安全                |
+| Zod 4           | `/colinhacks/zod`           | `z.enum()` / `error:` / `safeParse` / Prisma統合             |
+| Better Auth 1.4 | `/better-auth/better-auth`  | RBAC / nextCookies / Server Action パターン                  |
+| Lexical 0.40    | `/facebook/lexical`         | NodeState API / `$config` / `createState`                    |
+| Bun 1.3         | `/oven-sh/bun`              | テスト API / `mock` / `mock.module` / `mockReset`            |
+| Tailwind CSS 4  | `/tailwindlabs/tailwindcss` | `@theme` / OKLCH / CSS-first                                 |
+| GSAP 3.14       | `/greensock/gsap`           | `useGSAP` / `ScrollTrigger` / `matchMedia`                   |
+| nuqs 2          | `/47ng/nuqs`                | `createSearchParamsCache` / Zod統合                          |
 
 ---
 
@@ -33,11 +33,11 @@
 
 ### 新規作成（3ファイル）
 
-| ファイル | 内容 |
-|---------|------|
-| `.claude/rules/bun-patterns.md` | Bun テスト API・ランタイム・Bun.SQL |
-| `.claude/rules/error-handling.md` | `safeFetch` / `logger` / エラー分類 |
-| `.claude/rules/accessibility.md` | `aria-*` / フォーカス管理 / reduced-motion |
+| ファイル                          | 内容                                       |
+| --------------------------------- | ------------------------------------------ |
+| `.claude/rules/bun-patterns.md`   | Bun テスト API・ランタイム・Bun.SQL        |
+| `.claude/rules/error-handling.md` | `safeFetch` / `logger` / エラー分類        |
+| `.claude/rules/accessibility.md`  | `aria-*` / フォーカス管理 / reduced-motion |
 
 ### 更新（全22ファイル + agents/skills）
 

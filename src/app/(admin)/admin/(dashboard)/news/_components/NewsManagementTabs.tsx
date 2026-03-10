@@ -62,10 +62,18 @@ export function NewsManagementTabs({
         )}
       </div>
 
-      <TabsContent value="posts" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent
+        value="posts"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         {postsContent}
       </TabsContent>
-      <TabsContent value="meta" forceMount className="data-[state=inactive]:hidden">
+      <TabsContent
+        value="meta"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         {seoContent}
       </TabsContent>
     </Tabs>

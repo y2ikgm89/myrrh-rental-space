@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ページSEO編集フォーム
@@ -7,13 +7,13 @@
  * CharCount / SerpPreview / SNSシェアプレビューを統合。
  */
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useEffect, useTransition } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { ImagePlus, Save } from 'lucide-react'
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEffect, useTransition } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { ImagePlus, Save } from "lucide-react";
 import {
   Button,
   Card,
@@ -25,32 +25,33 @@ import {
   Textarea,
   Label,
   CharCount,
-} from '@/admin/components/ui'
-import { SerpPreview } from '@/admin/components/seo/SerpPreview'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
+} from "@/admin/components/ui";
+import { SerpPreview } from "@/admin/components/seo/SerpPreview";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   updatePageSeoSchema,
   type UpdatePageSeoInput,
-} from '@/shared/lib/validations/page'
-import { updatePageSeo } from '@/admin/actions/page'
+} from "@/shared/lib/validations/page";
+import { updatePageSeo } from "@/admin/actions/page";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface PageSeoData {
-  slug: string
-  title: string
-  metaDescription: string | null
-  metaKeywords: string | null
-  ogpTitle: string | null
-  ogpDescription: string | null
-  ogpImageUrl: string | null
+  slug: string;
+  title: string;
+  metaDescription: string | null;
+  metaKeywords: string | null;
+  ogpTitle: string | null;
+  ogpDescription: string | null;
+  ogpImageUrl: string | null;
 }
 
 interface PageSeoFormProps {
-  page: PageSeoData
+  page: PageSeoData;
 }
 
 export function PageSeoForm({ page }: PageSeoFormProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const {
     register,
@@ -62,52 +63,55 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
     resolver: zodResolver(updatePageSeoSchema),
     defaultValues: {
       title: page.title,
-      metaDescription: page.metaDescription || '',
-      metaKeywords: page.metaKeywords || '',
-      ogpTitle: page.ogpTitle || '',
-      ogpDescription: page.ogpDescription || '',
-      ogpImageUrl: page.ogpImageUrl || '',
+      metaDescription: page.metaDescription || "",
+      metaKeywords: page.metaKeywords || "",
+      ogpTitle: page.ogpTitle || "",
+      ogpDescription: page.ogpDescription || "",
+      ogpImageUrl: page.ogpImageUrl || "",
     },
-  })
+  });
 
   // リアルタイム監視（CharCount / SerpPreview 用）
-  const watchedTitle = useWatch({ control, name: 'title' }) || ''
-  const watchedMetaDescription = useWatch({ control, name: 'metaDescription' }) || ''
-  const watchedOgpTitle = useWatch({ control, name: 'ogpTitle' }) || ''
-  const watchedOgpDescription = useWatch({ control, name: 'ogpDescription' }) || ''
-  const ogpImageUrl = useWatch({ control, name: 'ogpImageUrl' })
+  const watchedTitle = useWatch({ control, name: "title" }) || "";
+  const watchedMetaDescription =
+    useWatch({ control, name: "metaDescription" }) || "";
+  const watchedOgpTitle = useWatch({ control, name: "ogpTitle" }) || "";
+  const watchedOgpDescription =
+    useWatch({ control, name: "ogpDescription" }) || "";
+  const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
 
   const ogpPicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('ogpImageUrl', selected.url)
+        setValue("ogpImageUrl", selected.url);
       }
     },
-  })
+  });
 
   // beforeunload protection for unsaved changes
   useEffect(() => {
-    if (!isDirty) return
+    if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-    }
-    window.addEventListener('beforeunload', handler)
-    return () => window.removeEventListener('beforeunload', handler)
-  }, [isDirty])
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const onSubmit = async (data: UpdatePageSeoInput) => {
     startTransition(async () => {
-      const result = await updatePageSeo(page.slug, data)
-      if (result.success) {
-        toast.success(result.message)
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await updatePageSeo(page.slug, data);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("SEO設定を更新しました");
+      router.refresh();
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -134,12 +138,13 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             </div>
             <Input
               id="title"
-              {...register('title')}
+              {...register("title")}
               placeholder="ページタイトル"
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              検索結果やブラウザタブに表示されるタイトル（推奨: 30-60文字、上限200文字）
+              検索結果やブラウザタブに表示されるタイトル（推奨:
+              30-60文字、上限200文字）
             </p>
             {errors.title && (
               <p className="text-sm text-destructive">{errors.title.message}</p>
@@ -153,7 +158,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             </div>
             <Textarea
               id="metaDescription"
-              {...register('metaDescription')}
+              {...register("metaDescription")}
               placeholder="ページの説明文を入力..."
               rows={3}
               disabled={isPending}
@@ -172,7 +177,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             <Label htmlFor="metaKeywords">メタキーワード</Label>
             <Input
               id="metaKeywords"
-              {...register('metaKeywords')}
+              {...register("metaKeywords")}
               placeholder="キーワード1, キーワード2, キーワード3"
               disabled={isPending}
             />
@@ -192,9 +197,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>OGP設定</CardTitle>
-          <CardDescription>
-            SNSでシェアされた際に表示される情報
-          </CardDescription>
+          <CardDescription>SNSでシェアされた際に表示される情報</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -204,7 +207,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             </div>
             <Input
               id="ogpTitle"
-              {...register('ogpTitle')}
+              {...register("ogpTitle")}
               placeholder="SNSシェア用タイトル（空欄時はページタイトルを使用）"
               disabled={isPending}
             />
@@ -222,7 +225,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
             </div>
             <Textarea
               id="ogpDescription"
-              {...register('ogpDescription')}
+              {...register("ogpDescription")}
               placeholder="SNSシェア用説明文（空欄時はメタディスクリプションを使用）"
               rows={2}
               disabled={isPending}
@@ -271,7 +274,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setValue('ogpImageUrl', '')}
+                      onClick={() => setValue("ogpImageUrl", "")}
                       disabled={isPending}
                     >
                       削除
@@ -314,10 +317,12 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
               {/* テキスト部分 */}
               <div className="space-y-1 p-3">
                 <p className="truncate text-sm font-medium">
-                  {watchedOgpTitle || watchedTitle || 'OGPタイトル'}
+                  {watchedOgpTitle || watchedTitle || "OGPタイトル"}
                 </p>
                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {watchedOgpDescription || watchedMetaDescription || 'OGP説明文'}
+                  {watchedOgpDescription ||
+                    watchedMetaDescription ||
+                    "OGP説明文"}
                 </p>
               </div>
             </div>
@@ -328,7 +333,9 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
       {/* 送信ボタン */}
       <div className="flex items-center justify-end gap-4">
         {isDirty && (
-          <span className="text-sm text-warning font-medium">未保存の変更があります</span>
+          <span className="text-sm text-warning font-medium">
+            未保存の変更があります
+          </span>
         )}
         <Button
           type="button"
@@ -340,12 +347,12 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
         </Button>
         <Button type="submit" disabled={isPending || !isDirty}>
           <Save className="h-4 w-4 mr-2" />
-          {isPending ? '保存中...' : '保存'}
+          {isPending ? "保存中..." : "保存"}
         </Button>
       </div>
 
       {/* メディアピッカーダイアログ */}
       <ogpPicker.MediaPicker />
     </form>
-  )
+  );
 }

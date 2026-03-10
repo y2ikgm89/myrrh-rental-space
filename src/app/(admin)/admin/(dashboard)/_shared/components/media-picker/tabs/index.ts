@@ -2,6 +2,6 @@
  * Media Picker Tabs
  */
 
-export { LibraryTab } from './LibraryTab'
-export { UrlTab } from './UrlTab'
-export { UploadTab } from './UploadTab'
+export { LibraryTab } from "./LibraryTab";
+export { UrlTab } from "./UrlTab";
+export { UploadTab } from "./UploadTab";

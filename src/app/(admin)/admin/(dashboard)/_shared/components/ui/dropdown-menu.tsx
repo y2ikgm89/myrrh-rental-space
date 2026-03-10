@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
-import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
-import { tv } from 'tailwind-variants'
-import { cn } from '@/shared/lib/cn'
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { tv } from "tailwind-variants";
+import { cn } from "@/shared/lib/cn";
 
 const dropdownMenuContentVariants = tv({
-  base: 'z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-})
+  base: "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+});
 
 const dropdownMenuItemVariants = tv({
-  base: 'relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors duration-200 focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0',
-})
+  base: "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors duration-200 focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+});
 
-const DropdownMenu = DropdownMenuPrimitive.Root
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
-const DropdownMenuGroup = DropdownMenuPrimitive.Group
-const DropdownMenuPortal = DropdownMenuPrimitive.Portal
-const DropdownMenuSub = DropdownMenuPrimitive.Sub
-const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup
+const DropdownMenu = DropdownMenuPrimitive.Root;
+const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+const DropdownMenuGroup = DropdownMenuPrimitive.Group;
+const DropdownMenuPortal = DropdownMenuPrimitive.Portal;
+const DropdownMenuSub = DropdownMenuPrimitive.Sub;
+const DropdownMenuRadioGroup = DropdownMenuPrimitive.RadioGroup;
 
 function DropdownMenuContent({
   className,
@@ -34,14 +34,14 @@ function DropdownMenuContent({
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
-  )
+  );
 }
 
 type DropdownMenuItemProps = React.ComponentPropsWithRef<
   typeof DropdownMenuPrimitive.Item
 > & {
-  inset?: boolean
-}
+  inset?: boolean;
+};
 
 function DropdownMenuItem({
   className,
@@ -52,10 +52,10 @@ function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       ref={ref}
-      className={cn(dropdownMenuItemVariants(), inset && 'pl-8', className)}
+      className={cn(dropdownMenuItemVariants(), inset && "pl-8", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DropdownMenuCheckboxItem({
@@ -68,7 +68,7 @@ function DropdownMenuCheckboxItem({
   return (
     <DropdownMenuPrimitive.CheckboxItem
       ref={ref}
-      className={cn(dropdownMenuItemVariants(), 'pl-8', className)}
+      className={cn(dropdownMenuItemVariants(), "pl-8", className)}
       checked={checked}
       {...props}
     >
@@ -91,7 +91,7 @@ function DropdownMenuCheckboxItem({
       </span>
       {children}
     </DropdownMenuPrimitive.CheckboxItem>
-  )
+  );
 }
 
 function DropdownMenuRadioItem({
@@ -103,7 +103,7 @@ function DropdownMenuRadioItem({
   return (
     <DropdownMenuPrimitive.RadioItem
       ref={ref}
-      className={cn(dropdownMenuItemVariants(), 'pl-8', className)}
+      className={cn(dropdownMenuItemVariants(), "pl-8", className)}
       {...props}
     >
       <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
@@ -121,14 +121,14 @@ function DropdownMenuRadioItem({
       </span>
       {children}
     </DropdownMenuPrimitive.RadioItem>
-  )
+  );
 }
 
 type DropdownMenuLabelProps = React.ComponentPropsWithRef<
   typeof DropdownMenuPrimitive.Label
 > & {
-  inset?: boolean
-}
+  inset?: boolean;
+};
 
 function DropdownMenuLabel({
   className,
@@ -140,13 +140,13 @@ function DropdownMenuLabel({
     <DropdownMenuPrimitive.Label
       ref={ref}
       className={cn(
-        'px-2 py-1.5 text-sm font-semibold',
-        inset && 'pl-8',
-        className
+        "px-2 py-1.5 text-sm font-semibold",
+        inset && "pl-8",
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function DropdownMenuSeparator({
@@ -157,10 +157,10 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       ref={ref}
-      className={cn('-mx-1 my-1 h-px bg-muted', className)}
+      className={cn("-mx-1 my-1 h-px bg-muted", className)}
       {...props}
     />
-  )
+  );
 }
 
 function DropdownMenuShortcut({
@@ -169,10 +169,10 @@ function DropdownMenuShortcut({
 }: React.HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn('ml-auto text-xs tracking-widest opacity-60', className)}
+      className={cn("ml-auto text-xs tracking-widest opacity-60", className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -189,4 +189,4 @@ export {
   DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuRadioGroup,
-}
+};

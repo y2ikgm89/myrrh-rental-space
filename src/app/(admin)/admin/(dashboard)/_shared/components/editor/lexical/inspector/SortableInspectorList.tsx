@@ -5,9 +5,9 @@
  * Tabs / Steps / Collapsible のインスペクターパネルで共通使用
  */
 
-'use client'
+"use client";
 
-import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -21,30 +21,30 @@ import {
   useSortable,
   CSS,
   type DragEndEvent,
-} from '@/admin/components/ui/sortable'
-import { cn } from '@/shared/lib/cn'
+} from "@/admin/components/ui/sortable";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export type SortableInspectorItem = {
-  id: string
-  label: string
-  isActive?: boolean
-}
+  id: string;
+  label: string;
+  isActive?: boolean;
+};
 
 type SortableInspectorListProps = {
-  items: SortableInspectorItem[]
-  onReorder: (fromIndex: number, toIndex: number) => void
-  onRemove: (id: string) => void
-  onAdd: () => void
-  canAdd: boolean
-  canRemove: boolean
-  addLabel: string
-  maxMessage?: string
-  minMessage?: string
-}
+  items: SortableInspectorItem[];
+  onReorder: (fromIndex: number, toIndex: number) => void;
+  onRemove: (id: string) => void;
+  onAdd: () => void;
+  canAdd: boolean;
+  canRemove: boolean;
+  addLabel: string;
+  maxMessage?: string;
+  minMessage?: string;
+};
 
 // =============================================================================
 // Sortable List Item
@@ -57,11 +57,11 @@ function SortableListItem({
   onRemove,
   minMessage,
 }: {
-  item: SortableInspectorItem
-  position: number
-  canRemove: boolean
-  onRemove: (id: string) => void
-  minMessage?: string
+  item: SortableInspectorItem;
+  position: number;
+  canRemove: boolean;
+  onRemove: (id: string) => void;
+  minMessage?: string;
 }) {
   const {
     attributes,
@@ -70,21 +70,21 @@ function SortableListItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id })
+  } = useSortable({ id: item.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group/item flex items-center gap-1 rounded-md border px-1.5 h-9',
-        item.isActive ? 'border-primary/30 bg-primary/5' : 'border-border',
-        isDragging && 'z-50 opacity-50',
+        "group/item flex items-center gap-1 rounded-md border px-1.5 h-9",
+        item.isActive ? "border-primary/30 bg-primary/5" : "border-border",
+        isDragging && "z-50 opacity-50",
       )}
       {...attributes}
     >
@@ -98,14 +98,14 @@ function SortableListItem({
       </button>
       <span
         className={cn(
-          'shrink-0 w-4 text-xs font-mono',
-          item.isActive ? 'text-primary' : 'text-muted-foreground',
+          "shrink-0 w-4 text-xs font-mono",
+          item.isActive ? "text-primary" : "text-muted-foreground",
         )}
       >
         {position}
       </span>
       <span className="min-w-0 flex-1 truncate text-xs" title={item.label}>
-        {item.label || '(未入力)'}
+        {item.label || "(未入力)"}
       </span>
       <button
         type="button"
@@ -117,7 +117,7 @@ function SortableListItem({
         <Trash2 className="h-3.5 w-3.5" />
       </button>
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -142,18 +142,18 @@ export function SortableInspectorList({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-  )
+  );
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const fromIndex = items.findIndex((item) => item.id === String(active.id))
-    const toIndex = items.findIndex((item) => item.id === String(over.id))
-    if (fromIndex === -1 || toIndex === -1) return
+    const fromIndex = items.findIndex((item) => item.id === String(active.id));
+    const toIndex = items.findIndex((item) => item.id === String(over.id));
+    if (fromIndex === -1 || toIndex === -1) return;
 
-    onReorder(fromIndex, toIndex)
-  }
+    onReorder(fromIndex, toIndex);
+  };
 
   return (
     <>
@@ -192,5 +192,5 @@ export function SortableInspectorList({
         {addLabel}
       </button>
     </>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ページ管理フィルター
@@ -6,9 +6,9 @@
  * 検索・ステータス・種別フィルターをnuqsで管理
  */
 
-import { useEffect, useRef } from 'react'
-import { useQueryStates } from 'nuqs'
-import { Search } from 'lucide-react'
+import { useEffect, useRef } from "react";
+import { useQueryStates } from "nuqs";
+import { Search } from "lucide-react";
 import {
   Input,
   Select,
@@ -16,36 +16,36 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/admin/components/ui'
-import { adminPageParsers } from '@/shared/lib/nuqs'
+} from "@/admin/components/ui";
+import { adminPageParsers } from "@/shared/lib/nuqs";
 
 export function PageFilters() {
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [params, setParams] = useQueryStates(adminPageParsers, {
-    history: 'push',
+    history: "push",
     shallow: false,
-  })
+  });
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value
+    const value = e.target.value;
 
     if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
+      clearTimeout(searchTimeoutRef.current);
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ q: value || null, page: 1 })
-    }, 300)
+      void setParams({ q: value || null, page: 1 });
+    }, 300);
   }
 
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
+        clearTimeout(searchTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
@@ -65,7 +65,7 @@ export function PageFilters() {
       <Select
         value={params.status}
         onValueChange={(v) =>
-          void setParams({ status: v === 'all' ? null : v, page: 1 })
+          void setParams({ status: v === "all" ? null : v, page: 1 })
         }
       >
         <SelectTrigger className="h-9 w-auto min-w-[130px]">
@@ -82,7 +82,7 @@ export function PageFilters() {
       <Select
         value={params.type}
         onValueChange={(v) =>
-          void setParams({ type: v === 'all' ? null : v, page: 1 })
+          void setParams({ type: v === "all" ? null : v, page: 1 })
         }
       >
         <SelectTrigger className="h-9 w-auto min-w-[130px]">
@@ -95,5 +95,5 @@ export function PageFilters() {
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }

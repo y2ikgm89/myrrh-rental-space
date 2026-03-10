@@ -4,53 +4,54 @@
  * メンテナンス・Cookie同意・権限をタブで切り替え
  */
 
-import { Suspense } from 'react'
-import { getSettings } from '@/admin/queries/settings'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { SettingsTabs } from '../_components/SettingsTabs'
-import { MaintenanceSection } from '../_components/sections/MaintenanceSection'
-import { CookieConsentSection } from '../_components/sections/CookieConsentSection'
-import { PermissionsSection } from '../_components/sections/PermissionsSection'
-import type { ReactElement } from 'react'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { getSettings } from "@/admin/queries/settings";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { SettingsTabs } from "../_components/SettingsTabs";
+import { MaintenanceSection } from "../_components/sections/MaintenanceSection";
+import { CookieConsentSection } from "../_components/sections/CookieConsentSection";
+import { PermissionsSection } from "../_components/sections/PermissionsSection";
+import type { ReactElement } from "react";
 
 export const metadata = {
-  title: 'システム管理 | 管理画面',
-}
+  title: "システム管理 | 管理画面",
+};
 
 // =============================================================================
 // 動的コンテンツ
 // =============================================================================
 
 async function SystemSettingsContent(): Promise<ReactElement> {
-  const settings = await getSettings()
+  const settings = await getSettings();
 
   if (!settings) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         設定を読み込めませんでした
       </div>
-    )
+    );
   }
 
   const tabs = [
     {
-      value: 'maintenance',
-      label: 'メンテナンス',
+      value: "maintenance",
+      label: "メンテナンス",
       content: <MaintenanceSection settings={settings} />,
     },
     {
-      value: 'cookie',
-      label: 'Cookie',
+      value: "cookie",
+      label: "Cookie",
       content: <CookieConsentSection settings={settings} />,
     },
     {
-      value: 'permissions',
-      label: '権限',
+      value: "permissions",
+      label: "権限",
       content: <PermissionsSection />,
     },
-  ]
+  ];
 
-  return <SettingsTabs tabs={tabs} defaultTab="maintenance" />
+  return <SettingsTabs tabs={tabs} defaultTab="maintenance" />;
 }
 
 // =============================================================================
@@ -67,7 +68,7 @@ function SystemSettingsLoading(): ReactElement {
       </div>
       <div className="h-48 bg-muted rounded" />
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -75,14 +76,12 @@ function SystemSettingsLoading(): ReactElement {
 // =============================================================================
 
 export default async function SystemSettingsPage(): Promise<ReactElement> {
+  await connection();
   return (
     <SettingsLayout title="システム管理" description="システム全体の設定を管理">
       <Suspense fallback={<SystemSettingsLoading />}>
         <SystemSettingsContent />
       </Suspense>
     </SettingsLayout>
-  )
+  );
 }
-
-
-

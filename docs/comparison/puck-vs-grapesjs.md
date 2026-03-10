@@ -10,16 +10,16 @@
 
 ## 1. 基本情報
 
-| 項目 | Puck | GrapesJS |
-|------|------|----------|
-| **ライセンス** | MIT（完全オープンソース） | MIT（完全オープンソース） |
+| 項目               | Puck                                                  | GrapesJS                                          |
+| ------------------ | ----------------------------------------------------- | ------------------------------------------------- |
+| **ライセンス**     | MIT（完全オープンソース）                             | MIT（完全オープンソース）                         |
 | **公式リポジトリ** | [puckeditor/puck](https://github.com/puckeditor/puck) | [artf/grapesjs](https://github.com/artf/grapesjs) |
-| **初回リリース** | 2023年 | 2014年 |
-| **最新バージョン** | v2.x（2025年1月時点） | v0.22.14（2025年1月時点） |
-| **TypeScript対応** | ✅ 完全対応 | ✅ 完全対応 |
-| **React統合** | ✅ ネイティブ（React専用） | ⚠️ プラグイン経由（`@grapesjs/react`） |
-| **Next.js対応** | ✅ 優秀 | ⚠️ やや複雑（SSR回避が必要） |
-| **日本語対応** | ⚠️ 部分対応（カスタムラベル可、UIは英語） | ✅ 完全対応（プラグインで日本語化可能） |
+| **初回リリース**   | 2023年                                                | 2014年                                            |
+| **最新バージョン** | v2.x（2025年1月時点）                                 | v0.22.14（2025年1月時点）                         |
+| **TypeScript対応** | ✅ 完全対応                                           | ✅ 完全対応                                       |
+| **React統合**      | ✅ ネイティブ（React専用）                            | ⚠️ プラグイン経由（`@grapesjs/react`）            |
+| **Next.js対応**    | ✅ 優秀                                               | ⚠️ やや複雑（SSR回避が必要）                      |
+| **日本語対応**     | ⚠️ 部分対応（カスタムラベル可、UIは英語）             | ✅ 完全対応（プラグインで日本語化可能）           |
 
 ---
 
@@ -28,6 +28,7 @@
 ### 1.5.1 Puck
 
 **現状：**
+
 - **標準i18n機能**: ❌ なし（組み込みの国際化機能なし）
 - **カスタムラベル**: ✅ 可能（コンポーネントの`label`プロパティで日本語設定可能）
 - **エディターUI**: ⚠️ 英語のまま（ボタン、メニューなどは英語）
@@ -64,6 +65,7 @@ const config = {
 ```
 
 **制限事項：**
+
 - エディターUI（「Add」、「Delete」、「Duplicate」などのボタン）は英語のまま
 - サイドバーのカテゴリ名なども英語
 - 完全な日本語化には外部ライブラリとの統合が必要
@@ -72,21 +74,22 @@ const config = {
 
 ```typescript
 // react-i18nextを使用した例（推奨）
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from "react-i18next";
 
 const config = {
   components: {
     HeadingBlock: {
-      label: t('components.heading'), // 翻訳キーから取得
+      label: t("components.heading"), // 翻訳キーから取得
       // ...
-    }
-  }
-}
+    },
+  },
+};
 ```
 
 ### 1.5.2 GrapesJS
 
 **現状：**
+
 - **標準i18n機能**: ✅ あり（プラグインで日本語化可能）
 - **エディターUI**: ✅ 完全日本語化可能
 - **カスタムラベル**: ✅ 可能（ブロック、カテゴリ、トレイトなど）
@@ -96,28 +99,29 @@ const config = {
 ```typescript
 // プラグインオプションで日本語化
 const pluginsOpts = {
-  'grapesjs-preset-webpage': {
-    modalImportTitle: 'HTMLをインポート',
-    modalImportButton: 'インポート',
+  "grapesjs-preset-webpage": {
+    modalImportTitle: "HTMLをインポート",
+    modalImportButton: "インポート",
   },
-  'grapesjs-blocks-basic': {
-    category: '基本',
-    blocks: ['column1', 'column2', 'column3'],
+  "grapesjs-blocks-basic": {
+    category: "基本",
+    blocks: ["column1", "column2", "column3"],
   },
-  'grapesjs-plugin-forms': {
-    category: 'フォーム',
-  }
-}
+  "grapesjs-plugin-forms": {
+    category: "フォーム",
+  },
+};
 
 // カスタムブロックの日本語ラベル
-blockManager.add('reservation-form', {
-  label: '予約フォーム',
-  category: 'フォーム',
+blockManager.add("reservation-form", {
+  label: "予約フォーム",
+  category: "フォーム",
   // ...
-})
+});
 ```
 
 **メリット：**
+
 - エディターUI全体を日本語化可能
 - プラグイン経由で簡単に設定可能
 - コミュニティプラグインで日本語対応済みのものもある
@@ -129,12 +133,14 @@ blockManager.add('reservation-form', {
 ### 2.1 Puck
 
 **設計思想：**
+
 - **Reactファースト**: Reactコンポーネントを直接使用
 - **コンポーネントベース**: 既存のReactコンポーネントを再利用可能
 - **シンプルなデータ構造**: JSON形式でコンポーネントツリーを保存
 - **軽量**: 最小限の機能に特化
 
 **アーキテクチャ：**
+
 ```
 Puck Editor
   ├── Component Config (React Components)
@@ -143,6 +149,7 @@ Puck Editor
 ```
 
 **データ形式：**
+
 ```typescript
 // Puckのデータ構造
 {
@@ -160,12 +167,14 @@ Puck Editor
 ### 2.2 GrapesJS
 
 **設計思想：**
+
 - **フレームワーク非依存**: バニラJSベース、Reactは後付け
 - **HTML/CSS直接編集**: 低レベルなHTML/CSS操作をサポート
 - **プラグインシステム**: 豊富なプラグインエコシステム
 - **包括的**: エディター、スタイルマネージャー、レイヤーパネルなど
 
 **アーキテクチャ：**
+
 ```
 GrapesJS Editor
   ├── Core (Vanilla JS)
@@ -175,6 +184,7 @@ GrapesJS Editor
 ```
 
 **データ形式：**
+
 ```typescript
 // GrapesJSのProjectData構造
 {
@@ -270,6 +280,7 @@ const config = {
 ```
 
 **メリット：**
+
 - 既存のReactコンポーネントをそのまま再利用
 - TypeScriptの型安全性が保たれる
 - テスト済みコンポーネントを活用可能
@@ -279,35 +290,36 @@ const config = {
 ```typescript
 // カスタムブロックの登録が必要
 function registerReservationFormBlock(editor: Editor): void {
-  const blockManager = editor.BlockManager
-  
-  blockManager.add('reservation-form', {
-    label: '予約フォーム',
-    category: 'フォーム',
+  const blockManager = editor.BlockManager;
+
+  blockManager.add("reservation-form", {
+    label: "予約フォーム",
+    category: "フォーム",
     content: {
-      type: 'reservation-form',
-      components: '<div class="gjs-reservation-form">...</div>'
-    }
-  })
-  
-  editor.DomComponents.addType('reservation-form', {
-    isComponent: (el) => el.classList?.contains('gjs-reservation-form'),
+      type: "reservation-form",
+      components: '<div class="gjs-reservation-form">...</div>',
+    },
+  });
+
+  editor.DomComponents.addType("reservation-form", {
+    isComponent: (el) => el.classList?.contains("gjs-reservation-form"),
     model: {
       defaults: {
         traits: [
-          { type: 'text', name: 'space-id', label: 'スペースID' },
-          { type: 'number', name: 'hourly-price', label: '時間単価' }
-        ]
-      }
+          { type: "text", name: "space-id", label: "スペースID" },
+          { type: "number", name: "hourly-price", label: "時間単価" },
+        ],
+      },
     },
     view: {
       // 複雑なビュー定義
-    }
-  })
+    },
+  });
 }
 ```
 
 **デメリット：**
+
 - 既存のReactコンポーネントを直接使用できない
 - HTML文字列ベースの定義が必要
 - レンダリング時にReactコンポーネントへの変換が必要
@@ -359,7 +371,7 @@ export default function EditorPage() {
 // Server Componentでデータ取得
 async function EditorPage({ params }: { params: { id: string } }) {
   const page = await getPage(params.id)
-  
+
   return (
     <ClientEditor initialData={page.puckData} />
   )
@@ -372,7 +384,7 @@ async function EditorPage({ params }: { params: { id: string } }) {
 // 同様にServer Componentで取得可能
 async function EditorPage({ params }: { params: { id: string } }) {
   const page = await getGrapesPage(params.id)
-  
+
   return (
     <GrapesJSEditorWrapper projectData={page.projectData} />
   )
@@ -387,19 +399,21 @@ async function EditorPage({ params }: { params: { id: string } }) {
 
 ### 5.1 バンドルサイズ
 
-| ライブラリ | バンドルサイズ（gzip） | 依存関係 |
-|-----------|---------------------|---------|
-| **Puck** | ~50KB | 最小限（Reactのみ） |
-| **GrapesJS** | ~200KB+ | 多数（プラグイン含む） |
+| ライブラリ   | バンドルサイズ（gzip） | 依存関係               |
+| ------------ | ---------------------- | ---------------------- |
+| **Puck**     | ~50KB                  | 最小限（Reactのみ）    |
+| **GrapesJS** | ~200KB+                | 多数（プラグイン含む） |
 
 **詳細：**
 
 **Puck:**
+
 - コアライブラリのみ
 - React依存のみ
 - プラグイン不要
 
 **GrapesJS:**
+
 - コアライブラリ: ~150KB
 - `@grapesjs/react`: ~20KB
 - `grapesjs-preset-webpage`: ~30KB
@@ -464,6 +478,7 @@ model Page {
 ```
 
 **メリット：**
+
 - 構造がシンプルで理解しやすい
 - TypeScript型定義が容易
 - バージョン管理が簡単
@@ -496,6 +511,7 @@ model GrapesPage {
 ```
 
 **デメリット：**
+
 - 構造が複雑で理解が困難
 - 型定義が複雑
 - バージョン管理時の差分が大きい
@@ -514,6 +530,7 @@ export default function PublicPage({ page }: { page: Page }) {
 ```
 
 **メリット：**
+
 - Reactコンポーネントとして直接レンダリング
 - サーバーサイドレンダリング可能
 - 既存のReactコンポーネントをそのまま使用
@@ -527,7 +544,7 @@ import { renderGrapesJSContent } from '@/lib/grapesjs-renderer'
 export default function PublicPage({ page }: { page: GrapesPage }) {
   // HTML文字列をサニタイズ・変換
   const html = renderGrapesJSContent(page.content)
-  
+
   return (
     <div dangerouslySetInnerHTML={{ __html: html }} />
   )
@@ -535,6 +552,7 @@ export default function PublicPage({ page }: { page: GrapesPage }) {
 ```
 
 **デメリット：**
+
 - HTML文字列ベース（Reactの利点を活かせない）
 - サニタイズが必要
 - プレースホルダーの置換処理が必要
@@ -584,6 +602,7 @@ const config = {
 ```
 
 **制限：**
+
 - プラグインシステムなし
 - 機能追加はコードベースでの実装が必要
 
@@ -591,14 +610,15 @@ const config = {
 
 ```typescript
 // プラグインの追加
-import customPlugin from './custom-plugin'
+import customPlugin from "./custom-plugin";
 
 editor.use(customPlugin, {
   // プラグインオプション
-})
+});
 ```
 
 **メリット：**
+
 - 豊富なプラグインエコシステム
 - コミュニティプラグインの利用可能
 - 機能追加が容易
@@ -632,6 +652,7 @@ function Editor({ data }: { data: Data }) {
 ```
 
 **メリット：**
+
 - 完全な型推論
 - コンポーネントのprops型が自動推論
 - エディタでの補完が完璧
@@ -640,16 +661,17 @@ function Editor({ data }: { data: Data }) {
 
 ```typescript
 // 型定義が複雑
-import type { Editor, ProjectData } from 'grapesjs'
+import type { Editor, ProjectData } from "grapesjs";
 
 // ProjectDataの型が複雑で推論が困難
 function handleProjectChange(data: ProjectData) {
   // 型安全性が低い
-  const pages = data.pages // any型に近い
+  const pages = data.pages; // any型に近い
 }
 ```
 
 **デメリット：**
+
 - 型定義が複雑
 - 型推論が困難
 - エディタでの補完が限定的
@@ -682,13 +704,14 @@ test('renders heading', () => {
     root: { id: "root" },
     content: [{ type: "HeadingBlock", props: { title: "Test" }, id: "1" }]
   }
-  
+
   render(<Render config={config} data={data} />)
   expect(screen.getByText("Test")).toBeInTheDocument()
 })
 ```
 
 **メリット：**
+
 - 標準的なReactテストツールを使用可能
 - コンポーネント単体テストが容易
 
@@ -696,15 +719,16 @@ test('renders heading', () => {
 
 ```typescript
 // HTML文字列のテストが必要
-import { renderGrapesJSContent } from '@/lib/grapesjs-renderer'
+import { renderGrapesJSContent } from "@/lib/grapesjs-renderer";
 
-test('renders heading', () => {
-  const html = renderGrapesJSContent('<h1>Test</h1>')
-  expect(html).toContain('Test')
-})
+test("renders heading", () => {
+  const html = renderGrapesJSContent("<h1>Test</h1>");
+  expect(html).toContain("Test");
+});
 ```
 
 **デメリット：**
+
 - HTML文字列ベースのテスト
 - Reactコンポーネントとしてテストできない
 
@@ -714,22 +738,22 @@ test('renders heading', () => {
 
 ### 9.1 開発者
 
-| 項目 | Puck | GrapesJS |
-|------|------|----------|
-| **基本セットアップ** | 30分 | 2-3時間 |
-| **カスタムコンポーネント追加** | 1時間 | 3-4時間 |
-| **高度な機能実装** | 2-3時間 | 1-2日 |
-| **ドキュメントの充実度** | 中 | 高 |
-| **コミュニティサポート** | 小規模 | 大規模 |
+| 項目                           | Puck    | GrapesJS |
+| ------------------------------ | ------- | -------- |
+| **基本セットアップ**           | 30分    | 2-3時間  |
+| **カスタムコンポーネント追加** | 1時間   | 3-4時間  |
+| **高度な機能実装**             | 2-3時間 | 1-2日    |
+| **ドキュメントの充実度**       | 中      | 高       |
+| **コミュニティサポート**       | 小規模  | 大規模   |
 
 ### 9.2 コンテンツ作成者（エンドユーザー）
 
-| 項目 | Puck | GrapesJS |
-|------|------|----------|
-| **UIの直感性** | ⭐⭐⭐⭐☆ | ⭐⭐⭐☆☆ |
-| **学習時間** | 30分 | 1-2時間 |
-| **機能の多さ** | シンプル | 豊富（複雑） |
-| **エラーの発生頻度** | 低 | 中 |
+| 項目                 | Puck      | GrapesJS     |
+| -------------------- | --------- | ------------ |
+| **UIの直感性**       | ⭐⭐⭐⭐☆ | ⭐⭐⭐☆☆     |
+| **学習時間**         | 30分      | 1-2時間      |
+| **機能の多さ**       | シンプル  | 豊富（複雑） |
+| **エラーの発生頻度** | 低        | 中           |
 
 ---
 
@@ -738,6 +762,7 @@ test('renders heading', () => {
 ### 10.1 現在のプロジェクト要件
 
 **技術スタック：**
+
 - Next.js 16.1.1
 - React 19.2.3
 - TypeScript 5.9.3
@@ -745,6 +770,7 @@ test('renders heading', () => {
 - Bun 1.3.5
 
 **既存実装：**
+
 - GrapesJSが既に実装済み
 - カスタムブロック（予約フォーム、お問い合わせフォームなど）
 - バージョン管理機能
@@ -753,6 +779,7 @@ test('renders heading', () => {
 ### 10.2 Puckへの移行メリット
 
 ✅ **メリット：**
+
 1. **React統合が自然**: 既存のReactコンポーネントを直接使用可能
 2. **バンドルサイズ削減**: ~200KB削減可能
 3. **型安全性向上**: TypeScriptの型推論が完璧
@@ -761,6 +788,7 @@ test('renders heading', () => {
 6. **保守性向上**: シンプルなコードベース
 
 ❌ **デメリット：**
+
 1. **移行コスト**: 既存のGrapesJS実装を書き直しが必要
 2. **機能の再実装**: カスタムブロックをReactコンポーネントとして再実装
 3. **学習コスト**: チームメンバーの学習が必要
@@ -769,12 +797,14 @@ test('renders heading', () => {
 ### 10.3 GrapesJS継続のメリット
 
 ✅ **メリット：**
+
 1. **既存実装の活用**: 移行コストなし
 2. **豊富な機能**: プラグインエコシステム
 3. **柔軟性**: HTML/CSS直接編集可能
 4. **コミュニティ**: 大規模なコミュニティサポート
 
 ❌ **デメリット：**
+
 1. **バンドルサイズ**: 大きい（~235KB+）
 2. **型安全性**: 限定的
 3. **SSR対応**: 複雑（`ssr: false`が必要）
@@ -787,31 +817,34 @@ test('renders heading', () => {
 ### 11.1 段階的移行（推奨）
 
 **フェーズ1: プロトタイプ（1-2週間）**
+
 - 小規模なページでPuckを試用
 - 既存のReactコンポーネントをPuckコンポーネントとして登録
 - パフォーマンス比較
 
 **フェーズ2: 並行運用（1-2ヶ月）**
+
 - 新規ページはPuckで作成
 - 既存ページはGrapesJSで継続
 - データベースに両方の形式を保存
 
 **フェーズ3: 完全移行（2-3ヶ月）**
+
 - 既存ページをPuck形式に変換
 - GrapesJSコードを削除
 - ドキュメント更新
 
 ### 11.2 移行コスト見積もり
 
-| 作業項目 | 工数 | 備考 |
-|---------|------|------|
-| **Puckセットアップ** | 1日 | 基本実装 |
-| **カスタムコンポーネント移行** | 3-5日 | 予約フォーム、お問い合わせフォームなど |
-| **データ移行スクリプト** | 2-3日 | GrapesJS → Puck形式変換 |
-| **既存ページの移行** | 5-10日 | ページ数による |
-| **テスト・デバッグ** | 3-5日 | 品質保証 |
-| **ドキュメント更新** | 1-2日 | 開発者向けドキュメント |
-| **合計** | **15-26日** | 約3-5週間 |
+| 作業項目                       | 工数        | 備考                                   |
+| ------------------------------ | ----------- | -------------------------------------- |
+| **Puckセットアップ**           | 1日         | 基本実装                               |
+| **カスタムコンポーネント移行** | 3-5日       | 予約フォーム、お問い合わせフォームなど |
+| **データ移行スクリプト**       | 2-3日       | GrapesJS → Puck形式変換                |
+| **既存ページの移行**           | 5-10日      | ページ数による                         |
+| **テスト・デバッグ**           | 3-5日       | 品質保証                               |
+| **ドキュメント更新**           | 1-2日       | 開発者向けドキュメント                 |
+| **合計**                       | **15-26日** | 約3-5週間                              |
 
 ---
 
@@ -845,12 +878,14 @@ test('renders heading', () => {
 ### 13.1 技術的観点
 
 **Puckの優位性：**
+
 - React/Next.js統合が自然
 - 型安全性が高い
 - バンドルサイズが小さい
 - テストが容易
 
 **GrapesJSの優位性：**
+
 - 機能が豊富
 - プラグインエコシステム
 - HTML/CSS直接編集
@@ -859,6 +894,7 @@ test('renders heading', () => {
 ### 13.2 プロジェクト観点
 
 **現時点での推奨：**
+
 - **短期（3-6ヶ月）**: GrapesJS継続
   - 既存実装が安定
   - 移行コストを避ける

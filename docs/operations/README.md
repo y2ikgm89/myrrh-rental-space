@@ -4,12 +4,12 @@
 
 ## ドキュメント一覧
 
-| ドキュメント | 説明 |
-|-------------|------|
-| [デプロイ](./deployment.md) | Google Cloud Runへのデプロイ手順 |
-| [Docker](./docker.md) | Dockerイメージのビルド・実行 |
-| [Cloudflare](./cloudflare.md) | CDN・DDoS保護設定 |
-| [Bun](./bun.md) | Bunランタイム設定 |
+| ドキュメント                  | 説明                             |
+| ----------------------------- | -------------------------------- |
+| [デプロイ](./deployment.md)   | Google Cloud Runへのデプロイ手順 |
+| [Docker](./docker.md)         | Dockerイメージのビルド・実行     |
+| [Cloudflare](./cloudflare.md) | CDN・DDoS保護設定                |
+| [Bun](./bun.md)               | Bunランタイム設定                |
 
 ## 環境構成
 

@@ -4,28 +4,28 @@
  * src/lib/validations/faq.ts のユニットテスト
  */
 
-import { describe, test, expect } from 'bun:test'
+import { describe, test, expect } from "bun:test";
 import {
   faqCategoryFormSchema,
   faqItemFormSchema,
   defaultFaqCategoryFormValues,
   defaultFaqItemFormValues,
-} from '@/admin/lib/validations/faq'
+} from "@/admin/lib/validations/faq";
 
 // 有効なFAQカテゴリデータ
 const VALID_FAQ_CATEGORY = {
-  name: 'よくある質問',
-  slug: 'general-faq',
-  description: 'よくある質問カテゴリの説明',
+  name: "よくある質問",
+  slug: "general-faq",
+  description: "よくある質問カテゴリの説明",
   order: 0,
   isActive: true,
-}
+};
 
 // 有効なFAQアイテムデータ（SEO/OGPフィールドを含む）
 const VALID_FAQ_ITEM = {
-  categoryId: '123e4567-e89b-12d3-a456-426614174000',
-  question: 'これはテスト質問ですか？',
-  answerJson: 'はい、これはテスト回答です。',
+  categoryId: "123e4567-e89b-12d3-a456-426614174000",
+  question: "これはテスト質問ですか？",
+  answerJson: "はい、これはテスト回答です。",
   order: 0,
   isPublished: true,
   metaDescription: null,
@@ -33,315 +33,317 @@ const VALID_FAQ_ITEM = {
   ogpTitle: null,
   ogpDescription: null,
   ogpImageUrl: null,
-}
+};
 
-describe('faqCategoryFormSchema', () => {
-  describe('正常系', () => {
-    test('有効なデータは検証を通過', () => {
-      const result = faqCategoryFormSchema.safeParse(VALID_FAQ_CATEGORY)
-      expect(result.success).toBe(true)
-    })
+describe("faqCategoryFormSchema", () => {
+  describe("正常系", () => {
+    test("有効なデータは検証を通過", () => {
+      const result = faqCategoryFormSchema.safeParse(VALID_FAQ_CATEGORY);
+      expect(result.success).toBe(true);
+    });
 
-    test('descriptionがnullでも許可', () => {
+    test("descriptionがnullでも許可", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
         description: null,
-      })
-      expect(result.success).toBe(true)
-    })
+      });
+      expect(result.success).toBe(true);
+    });
 
-    test('descriptionがundefinedでも許可', () => {
-      const { description, ...withoutDescription } = VALID_FAQ_CATEGORY
-      const result = faqCategoryFormSchema.safeParse(withoutDescription)
-      expect(result.success).toBe(true)
-    })
-  })
+    test("descriptionがundefinedでも許可", () => {
+      const { description, ...withoutDescription } = VALID_FAQ_CATEGORY;
+      const result = faqCategoryFormSchema.safeParse(withoutDescription);
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('name', () => {
-    test('空文字はエラー', () => {
+  describe("name", () => {
+    test("空文字はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        name: '',
-      })
-      expect(result.success).toBe(false)
+        name: "",
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('カテゴリ名')
+        expect(result.error.issues[0].message).toContain("カテゴリ名");
       }
-    })
+    });
 
-    test('100文字超過はエラー', () => {
+    test("100文字超過はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        name: 'あ'.repeat(101),
-      })
-      expect(result.success).toBe(false)
+        name: "あ".repeat(101),
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('100文字以内')
+        expect(result.error.issues[0].message).toContain("100文字以内");
       }
-    })
+    });
 
-    test('100文字ちょうどは許可', () => {
+    test("100文字ちょうどは許可", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        name: 'あ'.repeat(100),
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+        name: "あ".repeat(100),
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('slug', () => {
-    test('空文字はエラー', () => {
+  describe("slug", () => {
+    test("空文字はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        slug: '',
-      })
-      expect(result.success).toBe(false)
+        slug: "",
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('スラッグ')
+        expect(result.error.issues[0].message).toContain("スラッグ");
       }
-    })
+    });
 
-    test('100文字超過はエラー', () => {
+    test("100文字超過はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        slug: 'a'.repeat(101),
-      })
-      expect(result.success).toBe(false)
+        slug: "a".repeat(101),
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('100文字以内')
+        expect(result.error.issues[0].message).toContain("100文字以内");
       }
-    })
+    });
 
-    test('無効な文字を含むとエラー', () => {
-      const invalidSlugs = ['Test', 'test_slug', 'test slug', 'テスト']
+    test("無効な文字を含むとエラー", () => {
+      const invalidSlugs = ["Test", "test_slug", "test slug", "テスト"];
 
       for (const slug of invalidSlugs) {
         const result = faqCategoryFormSchema.safeParse({
           ...VALID_FAQ_CATEGORY,
           slug,
-        })
-        expect(result.success).toBe(false)
+        });
+        expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain('半角英数字とハイフン')
+          expect(result.error.issues[0].message).toContain(
+            "半角英数字とハイフン",
+          );
         }
       }
-    })
+    });
 
-    test('有効なスラッグ形式', () => {
-      const validSlugs = ['general', 'general-faq', 'faq-123', '123']
+    test("有効なスラッグ形式", () => {
+      const validSlugs = ["general", "general-faq", "faq-123", "123"];
 
       for (const slug of validSlugs) {
         const result = faqCategoryFormSchema.safeParse({
           ...VALID_FAQ_CATEGORY,
           slug,
-        })
-        expect(result.success).toBe(true)
+        });
+        expect(result.success).toBe(true);
       }
-    })
-  })
+    });
+  });
 
-  describe('description', () => {
-    test('500文字超過はエラー', () => {
+  describe("description", () => {
+    test("500文字超過はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        description: 'あ'.repeat(501),
-      })
-      expect(result.success).toBe(false)
+        description: "あ".repeat(501),
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('500文字以内')
+        expect(result.error.issues[0].message).toContain("500文字以内");
       }
-    })
+    });
 
-    test('500文字ちょうどは許可', () => {
+    test("500文字ちょうどは許可", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
-        description: 'あ'.repeat(500),
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+        description: "あ".repeat(500),
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('order', () => {
-    test('負の値はエラー', () => {
+  describe("order", () => {
+    test("負の値はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
         order: -1,
-      })
-      expect(result.success).toBe(false)
-    })
+      });
+      expect(result.success).toBe(false);
+    });
 
-    test('小数はエラー', () => {
+    test("小数はエラー", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
         order: 1.5,
-      })
-      expect(result.success).toBe(false)
-    })
+      });
+      expect(result.success).toBe(false);
+    });
 
-    test('0は許可', () => {
+    test("0は許可", () => {
       const result = faqCategoryFormSchema.safeParse({
         ...VALID_FAQ_CATEGORY,
         order: 0,
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('isActive', () => {
-    test('true/falseは許可', () => {
+  describe("isActive", () => {
+    test("true/falseは許可", () => {
       for (const isActive of [true, false]) {
         const result = faqCategoryFormSchema.safeParse({
           ...VALID_FAQ_CATEGORY,
           isActive,
-        })
-        expect(result.success).toBe(true)
+        });
+        expect(result.success).toBe(true);
       }
-    })
-  })
-})
+    });
+  });
+});
 
-describe('faqItemFormSchema', () => {
-  describe('正常系', () => {
-    test('有効なデータは検証を通過', () => {
-      const result = faqItemFormSchema.safeParse(VALID_FAQ_ITEM)
-      expect(result.success).toBe(true)
-    })
-  })
+describe("faqItemFormSchema", () => {
+  describe("正常系", () => {
+    test("有効なデータは検証を通過", () => {
+      const result = faqItemFormSchema.safeParse(VALID_FAQ_ITEM);
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('categoryId', () => {
-    test('無効なUUIDはエラー', () => {
+  describe("categoryId", () => {
+    test("無効なUUIDはエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        categoryId: 'invalid-uuid',
-      })
-      expect(result.success).toBe(false)
+        categoryId: "invalid-uuid",
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('カテゴリを選択')
+        expect(result.error.issues[0].message).toContain("カテゴリを選択");
       }
-    })
+    });
 
-    test('空文字はエラー', () => {
+    test("空文字はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        categoryId: '',
-      })
-      expect(result.success).toBe(false)
-    })
-  })
+        categoryId: "",
+      });
+      expect(result.success).toBe(false);
+    });
+  });
 
-  describe('question', () => {
-    test('空文字はエラー', () => {
+  describe("question", () => {
+    test("空文字はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        question: '',
-      })
-      expect(result.success).toBe(false)
+        question: "",
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('質問')
+        expect(result.error.issues[0].message).toContain("質問");
       }
-    })
+    });
 
-    test('500文字超過はエラー', () => {
+    test("500文字超過はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        question: 'あ'.repeat(501),
-      })
-      expect(result.success).toBe(false)
+        question: "あ".repeat(501),
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('500文字以内')
+        expect(result.error.issues[0].message).toContain("500文字以内");
       }
-    })
+    });
 
-    test('500文字ちょうどは許可', () => {
+    test("500文字ちょうどは許可", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        question: 'あ'.repeat(500),
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+        question: "あ".repeat(500),
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('answerJson', () => {
-    test('空文字はエラー', () => {
+  describe("answerJson", () => {
+    test("空文字はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: '',
-      })
-      expect(result.success).toBe(false)
+        answerJson: "",
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('回答')
+        expect(result.error.issues[0].message).toContain("回答");
       }
-    })
+    });
 
-    test('500000文字超過はエラー', () => {
+    test("500000文字超過はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: 'あ'.repeat(500001),
-      })
-      expect(result.success).toBe(false)
+        answerJson: "あ".repeat(500001),
+      });
+      expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain('大きすぎます')
+        expect(result.error.issues[0].message).toContain("大きすぎます");
       }
-    })
+    });
 
-    test('500000文字ちょうどは許可', () => {
+    test("500000文字ちょうどは許可", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: 'あ'.repeat(500000),
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+        answerJson: "あ".repeat(500000),
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('order', () => {
-    test('負の値はエラー', () => {
+  describe("order", () => {
+    test("負の値はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
         order: -1,
-      })
-      expect(result.success).toBe(false)
-    })
+      });
+      expect(result.success).toBe(false);
+    });
 
-    test('0は許可', () => {
+    test("0は許可", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
         order: 0,
-      })
-      expect(result.success).toBe(true)
-    })
-  })
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 
-  describe('isPublished', () => {
-    test('true/falseは許可', () => {
+  describe("isPublished", () => {
+    test("true/falseは許可", () => {
       for (const isPublished of [true, false]) {
         const result = faqItemFormSchema.safeParse({
           ...VALID_FAQ_ITEM,
           isPublished,
-        })
-        expect(result.success).toBe(true)
+        });
+        expect(result.success).toBe(true);
       }
-    })
-  })
-})
+    });
+  });
+});
 
-describe('defaultFaqCategoryFormValues', () => {
-  test('デフォルト値が正しく定義されている', () => {
+describe("defaultFaqCategoryFormValues", () => {
+  test("デフォルト値が正しく定義されている", () => {
     expect(defaultFaqCategoryFormValues).toEqual({
-      name: '',
-      slug: '',
+      name: "",
+      slug: "",
       description: null,
       order: 0,
       isActive: true,
-    })
-  })
-})
+    });
+  });
+});
 
-describe('defaultFaqItemFormValues', () => {
-  test('デフォルト値が正しく定義されている', () => {
+describe("defaultFaqItemFormValues", () => {
+  test("デフォルト値が正しく定義されている", () => {
     expect(defaultFaqItemFormValues).toEqual({
-      categoryId: '',
-      question: '',
-      answerJson: '',
+      categoryId: "",
+      question: "",
+      answerJson: "",
       order: 0,
       isPublished: true,
       metaDescription: null,
@@ -349,6 +351,6 @@ describe('defaultFaqItemFormValues', () => {
       ogpTitle: null,
       ogpDescription: null,
       ogpImageUrl: null,
-    })
-  })
-})
+    });
+  });
+});

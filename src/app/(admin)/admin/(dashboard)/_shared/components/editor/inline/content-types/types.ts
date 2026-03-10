@@ -130,8 +130,7 @@ export type ContentFeatures = {
 /**
  * 公開/非公開アクションの結果型
  */
-export type PublishActionResult =
-  MutationResult<{ version: number } | null>;
+export type PublishActionResult = MutationResult<{ version: number } | null>;
 
 /**
  * コンテンツタイプのServer Actions
@@ -406,4 +405,3 @@ export function isBooleanPublishControl(
 ): control is BooleanPublishControl {
   return control.type === "isPublished";
 }
-

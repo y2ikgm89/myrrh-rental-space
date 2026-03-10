@@ -1,8 +1,6 @@
 import "server-only";
 
-import {
-  getAnnouncementBarCarouselSettings as getAnnouncementBarCarouselSettingsQuery,
-} from "@/shared/domain/settings/announcement-bar";
+import { getAnnouncementBarCarouselSettings as getAnnouncementBarCarouselSettingsQuery } from "@/shared/domain/settings/announcement-bar";
 import {
   getAdminPermalinkSettings as getAdminPermalinkSettingsQuery,
   getAdminSettings as getAdminSettingsQuery,
@@ -64,9 +62,7 @@ export async function getPublicTaxSettings(): Promise<TaxSettingsData> {
   return getPublicTaxSettingsQuery();
 }
 
-export async function getTermsAgreementSettings(): Promise<
-  TermsAgreementSettingsData | null
-> {
+export async function getTermsAgreementSettings(): Promise<TermsAgreementSettingsData | null> {
   await requireAdminPermission("settings", "read");
   return getTermsAgreementSettingsQuery();
 }

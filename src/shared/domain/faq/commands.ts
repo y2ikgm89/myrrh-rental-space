@@ -1,6 +1,7 @@
 import "server-only";
 
-import { Prisma, prisma } from "@/shared/db/prisma";
+import { parsePrismaInputJson } from "@/shared/db/json";
+import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type {
   CreateFaqCategoryResult,
@@ -10,43 +11,13 @@ import type {
   ToggleFaqItemPublishedResult,
 } from "@/shared/domain/faq/types";
 
-function isInputJsonValue(value: unknown): value is Prisma.InputJsonValue {
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isInputJsonValue);
-  }
-
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-
-  return Object.values(value).every(isInputJsonValue);
+function parseAnswerJson(answerJson: string) {
+  return parsePrismaInputJson(answerJson, "回答データが不正です");
 }
 
-function parseAnswerJson(answerJson: string): Prisma.InputJsonValue {
-  let parsed: unknown;
-
-  try {
-    parsed = JSON.parse(answerJson);
-  } catch {
-    throw new DomainError("回答データが不正です", "VALIDATION");
-  }
-
-  if (!isInputJsonValue(parsed)) {
-    throw new DomainError("回答データが不正です", "VALIDATION");
-  }
-
-  return parsed;
-}
-
-function normalizeNullableString(value: string | null | undefined): string | null {
+function normalizeNullableString(
+  value: string | null | undefined,
+): string | null {
   if (!value) {
     return null;
   }
@@ -159,7 +130,9 @@ export async function deleteFaqCategory(id: string): Promise<void> {
   });
 }
 
-export async function reorderFaqCategories(orderedIds: string[]): Promise<void> {
+export async function reorderFaqCategories(
+  orderedIds: string[],
+): Promise<void> {
   if (orderedIds.length === 0) {
     return;
   }

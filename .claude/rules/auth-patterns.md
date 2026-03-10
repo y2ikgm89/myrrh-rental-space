@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.4 / RBAC / Next.js 16 対応
+> Better Auth 1.5.3 / RBAC / Next.js 16 対応
 
 ## Better Auth 公式パターン
 
@@ -15,16 +15,16 @@ paths:
 Server Actions で `Set-Cookie` を正しく処理するために必須。**`plugins` 配列の最後に配置すること**:
 
 ```typescript
-import { betterAuth } from 'better-auth'
-import { nextCookies } from 'better-auth/next-js'
+import { betterAuth } from "better-auth";
+import { nextCookies } from "better-auth/next-js";
 
 export const auth = betterAuth({
   // ...config
   plugins: [
     // 他のプラグイン,
-    nextCookies(),  // 必ず配列の最後
+    nextCookies(), // 必ず配列の最後
   ],
-})
+});
 ```
 
 ### 遅延非同期初期化パターン（本プロジェクト固有）
@@ -32,11 +32,11 @@ export const auth = betterAuth({
 Better Auth インスタンスは `betterAuth()` をモジュールロード時に同期生成するが、
 Google OAuth 資格情報は DB に保存されるため非同期読取が必要。
 
-| 関数 | 用途 |
-|------|------|
-| `baseAuth` | 型推論専用（`socialProviders` なしで同期生成） |
-| `getAuth()` | 実リクエスト用（DB から資格情報を読み、キャッシュ済みインスタンスを返す） |
-| `resetAuthInstance()` | 管理画面で OAuth 設定変更時にキャッシュ破棄 |
+| 関数                  | 用途                                                                      |
+| --------------------- | ------------------------------------------------------------------------- |
+| `baseAuth`            | 型推論専用（`socialProviders` なしで同期生成）                            |
+| `getAuth()`           | 実リクエスト用（DB から資格情報を読み、キャッシュ済みインスタンスを返す） |
+| `resetAuthInstance()` | 管理画面で OAuth 設定変更時にキャッシュ破棄                               |
 
 ### Server Components でのセッション取得（auth.api 直接呼び出し）
 
@@ -62,16 +62,16 @@ export default async function DashboardPage() {
 ### Server Actions でのセッション取得（auth.api 直接呼び出し）
 
 ```typescript
-import { getAuth } from '@/shared/lib/auth'
-import { headers } from 'next/headers'
+import { getAuth } from "@/shared/lib/auth";
+import { headers } from "next/headers";
 
 const someAuthenticatedAction = async () => {
-  'use server'
-  const auth = await getAuth()
+  "use server";
+  const auth = await getAuth();
   const session = await auth.api.getSession({
     headers: await headers(),
-  })
-}
+  });
+};
 ```
 
 ---
@@ -82,13 +82,13 @@ const someAuthenticatedAction = async () => {
 SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER
 ```
 
-| ロール | 権限 |
-|--------|------|
-| `SUPER_ADMIN` | システム全体の管理（ユーザー管理・監査ログ含む） |
-| `ADMIN` | コンテンツ管理全般（ユーザー管理除く） |
-| `EDITOR` | 割り当てられたページのみ編集可能（`userPageAssignment` でリソース単位制御） |
-| `VIEWER` | 閲覧のみ（編集不可） |
-| `USER` | 公開ユーザー（管理画面アクセス不可） |
+| ロール        | 権限                                                                        |
+| ------------- | --------------------------------------------------------------------------- |
+| `SUPER_ADMIN` | システム全体の管理（ユーザー管理・監査ログ含む）                            |
+| `ADMIN`       | コンテンツ管理全般（ユーザー管理除く）                                      |
+| `EDITOR`      | 割り当てられたページのみ編集可能（`userPageAssignment` でリソース単位制御） |
+| `VIEWER`      | 閲覧のみ（編集不可）                                                        |
+| `USER`        | 公開ユーザー（管理画面アクセス不可）                                        |
 
 ### リソース別アクション一覧
 
@@ -96,99 +96,129 @@ SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER
 
 ```typescript
 type Resource =
-  | 'space' | 'location' | 'spaceCategory' | 'reservation' | 'customer'
-  | 'inquiry' | 'post' | 'news' | 'page' | 'faq' | 'terms' | 'settings'
-  | 'user' | 'auditLog' | 'navigation' | 'announcementBar' | 'media'
-  | 'coupon' | 'blockTemplate'
+  | "space"
+  | "location"
+  | "spaceCategory"
+  | "reservation"
+  | "customer"
+  | "inquiry"
+  | "post"
+  | "news"
+  | "page"
+  | "faq"
+  | "terms"
+  | "settings"
+  | "user"
+  | "auditLog"
+  | "navigation"
+  | "announcementBar"
+  | "media"
+  | "coupon"
+  | "blockTemplate";
 
-type Action = 'create' | 'read' | 'update' | 'delete' | 'publish' | 'manage'
+type Action = "create" | "read" | "update" | "delete" | "publish" | "manage";
 
 // 権限キー: "resource:action" 形式
-type PermissionKey = `${Resource}:${Action}`
+type PermissionKey = `${Resource}:${Action}`;
 ```
 
 ---
 
 ## Server Action の認証パターン
 
-HOF（Higher-Order Function）パターンは廃止済み。
-各 Server Action 内で `checkAdminAuth` / `checkPermission` / `checkResourceAccess` を**直接呼び出す**。
+### executeAdminMutation（書き込み系 — 標準パターン）
 
-### checkAdminAuth（認証のみ、権限チェックなし）
+権限チェック・実行・監査ログ・DomainError ハンドリングを一括処理する。
+`@/admin/lib/admin-action` から import。**Server Actions の書き込み操作は原則これを使用**:
 
 ```typescript
-import { checkAdminAuth } from '@/admin/lib/action-auth'
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createSuccess } from "@/admin/types/server-actions";
 
-export async function myAction(input: Input) {
-  // 1. 認証チェック（管理画面アクセス可能なロールか確認）
-  const auth = await checkAdminAuth()
-  if (!auth.success) return auth.error
+export const createSpace = async (input: SpaceFormData) => {
+  const parsed = spaceFormSchema.safeParse(input);
+  if (!parsed.success) return createValidationError(parsed.error);
 
-  const { user } = auth
-  // 2. アクション実行
+  return executeAdminMutation({
+    resource: "space",
+    action: "create",
+    execute: async () => createSpaceCommand(parsed.data),
+    success: (result) => createSuccess("作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACES);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+};
+```
+
+**`executeAdminMutationResult`** — `ActionResult` ではなく `MutationResult<T>` を返す変種（API Route 呼び出し等）:
+
+```typescript
+import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+
+export const updateItem = async (id: string, input: ItemInput) =>
+  executeAdminMutationResult({
+    resource: "item",
+    action: "update",
+    resourceId: id,
+    execute: async () => updateItemCommand(id, input),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ITEMS);
+    },
+  });
+```
+
+**EDITOR ロール用リソース単位アクセス制御**:
+
+```typescript
+return executeAdminMutation({
+  resource: "page",
+  action: "update",
+  resourceId: id,
+  checkResourceAccess: true, // ← EDITOR の userPageAssignment チェックを有効化
+  execute: async (user) => updatePageCommand(id, parsed.data),
+  success: (result) => createSuccess("更新しました", result),
+});
+```
+
+### checkPermission（API Route 用 — 直接呼び出し）
+
+API Route は `executeAdminMutation` を使わず `checkPermission` を直接呼び出す。
+`request.headers` を第3引数に渡す（Server Actions と異なり `headers()` が使えないため）:
+
+```typescript
+import { checkPermission } from "@/admin/lib/action-auth";
+
+export async function POST(request: Request) {
+  const auth = await checkPermission("media", "create", request.headers);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error.error }, { status: 403 });
+  }
+  // API処理
 }
 ```
 
-### checkPermission（リソース × アクションの権限チェック — 通常はこちらを使用）
-
-```typescript
-import { checkPermission } from '@/admin/lib/action-auth'
-
-export async function createSpace(data: SpaceInput) {
-  const auth = await checkPermission('space', 'create')
-  if (!auth.success) return auth.error
-
-  const { user } = auth
-  // アクション実行
-}
-```
-
-### checkResourceAccess（EDITOR ロール用のリソース単位アクセス制御）
-
-EDITOR は `userPageAssignment` テーブルで許可されたリソース ID のみアクセス可能。
-
-```typescript
-import { checkResourceAccess } from '@/admin/lib/action-auth'
-
-export async function updatePage(id: string, data: PageInput) {
-  // EDITOR の場合、id が userPageAssignment に含まれるかチェック
-  const auth = await checkResourceAccess('page', 'update', id)
-  if (!auth.success) return auth.error
-
-  const { user } = auth
-  // アクション実行
-}
-```
-
-### checkRole（特定ロール以上が必要なケース）
-
-```typescript
-import { checkRole } from '@/admin/lib/action-auth'
-import { Role } from '@/shared/generated/prisma/enums'
-
-export async function deleteAuditLog(id: string) {
-  // SUPER_ADMIN のみ実行可能な操作
-  const auth = await checkRole(Role.SUPER_ADMIN)
-  if (!auth.success) return auth.error
-
-  const { user } = auth
-  // アクション実行
-}
-```
-
-### NG パターン（認証チェックなし）
+### NG パターン
 
 ```typescript
 // NG: 認証チェックなし
 export async function deleteSpace(id: string) {
-  await prisma.space.delete({ where: { id } })
-  return createSuccess('削除しました')
+  await prisma.space.delete({ where: { id } });
+  return createSuccess("削除しました");
 }
 
 // NG: 権限ハードコード
 export async function deleteSpace(id: string) {
-  const session = await getSession()
-  if (session?.user.role !== 'SUPER_ADMIN') return createFailure('権限がありません')
+  const session = await getSession();
+  if (session?.user.role !== "SUPER_ADMIN")
+    return createFailure("権限がありません");
+}
+
+// NG: Server Actions で checkPermission 直接呼び出し（executeAdminMutation を使う）
+export async function createItem(input: ItemInput) {
+  const auth = await checkPermission("item", "create");
+  if (!auth.success) return auth.error;
   // ...
 }
 ```
@@ -222,14 +252,14 @@ export default async function SuperAdminPage() {
 Server Actions は複数リクエストにまたがるため `cache()` を使用しない:
 
 ```typescript
-import { getSession, getSessionUser } from '@/shared/lib/auth'
-import { createFailure } from '@/shared/types/server-actions'
+import { getSession, getSessionUser } from "@/shared/lib/auth";
+import { createFailure } from "@/shared/types/server-actions";
 
 export async function myAction() {
-  const session = await getSession()
-  const user = getSessionUser(session)
+  const session = await getSession();
+  const user = getSessionUser(session);
   if (!user) {
-    return createFailure('ログインが必要です')
+    return createFailure("ログインが必要です");
   }
   // アクション実行（通常は checkAdminAuth/checkPermission を使用）
 }
@@ -251,14 +281,14 @@ export default async function Page() {
 
 ### セッション取得関数の使い分け
 
-| 関数 | キャッシュ | 未認証時 | 用途 |
-|------|----------|---------|------|
-| `verifySession()` | `cache()` あり | リダイレクト | Server Components（認証必須） |
-| `verifyAdminSession()` | `cache()` あり | リダイレクト | Server Components（SUPER_ADMIN 必須） |
-| `getCurrentUser()` | `cache()` あり | `undefined` を返す | Server Components（オプショナル） |
-| `getSession()` | なし | `null` を返す | Server Actions（直接使用は稀） |
-| `checkAdminAuth()` | なし | `ActionFailure` を返す | Server Actions（認証のみ） |
-| `checkPermission()` | なし | `ActionFailure` を返す | Server Actions（権限チェック付き — 通常はこれ） |
+| 関数                           | キャッシュ     | 未認証時               | 用途                                             |
+| ------------------------------ | -------------- | ---------------------- | ------------------------------------------------ |
+| `verifySession()`              | `cache()` あり | リダイレクト           | Server Components（認証必須）                    |
+| `verifyAdminSession()`         | `cache()` あり | リダイレクト           | Server Components（SUPER_ADMIN 必須）            |
+| `getCurrentUser()`             | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）                |
+| `executeAdminMutation()`       | なし           | `ActionFailure` を返す | Server Actions（書き込み系 — **標準パターン**）  |
+| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（`MutationResult<T>` を返す変種） |
+| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）   |
 
 ---
 
@@ -268,17 +298,21 @@ Better Auth の `additionalFields` は `string` 型で定義されるため、
 `getRoleFromSession` / `getSessionUser` で型安全に `Role` enum に変換する:
 
 ```typescript
-import { isValidRole, getRoleFromSession, getSessionUser } from '@/shared/lib/auth'
+import {
+  isValidRole,
+  getRoleFromSession,
+  getSessionUser,
+} from "@/shared/lib/auth";
 
 // セッションから Role を取得（string → Role enum）
-const role = getRoleFromSession(session)  // Role | null
+const role = getRoleFromSession(session); // Role | null
 
 // ユーザー取得（role が Role 型に変換済み）
-const user = getSessionUser(session)  // User | null
+const user = getSessionUser(session); // User | null
 
 // isValidRole で個別検証
 if (isValidRole(session?.user?.role)) {
-  const role = session.user.role  // Role 型に narrowed
+  const role = session.user.role; // Role 型に narrowed
 }
 ```
 
@@ -286,45 +320,38 @@ if (isValidRole(session?.user?.role)) {
 
 ```typescript
 // Better Auth の Session['user'] の role を Role enum に置き換えた型
-export type User = Omit<Session['user'], 'role'> & {
-  role: Role
-}
+export type User = Omit<Session["user"], "role"> & {
+  role: Role;
+};
 ```
 
 ---
 
 ## 監査ログ
 
-`logAction()` は非同期（fire-and-forget）で実行。失敗時はエラーログに記録するが、
-アクション自体には影響しない:
+`executeAdminMutation` は `logAction()` を内部で自動呼び出しするため、手動呼び出し不要。
+`resolveAuditResourceId` でリソース ID を動的解決できる:
 
 ```typescript
-import { checkPermission, logAction } from '@/admin/lib/action-auth'
-import { createSuccess } from '@/shared/types/server-actions'
-
-export async function deleteSpace(id: string) {
-  const auth = await checkPermission('space', 'delete')
-  if (!auth.success) return auth.error
-
-  await prisma.space.delete({ where: { id } })
-  updateTag(CACHE_TAGS.SPACES)
-
-  // 監査ログ記録（非同期、失敗しても処理を止めない）
-  logAction(auth.user.id, 'delete', 'space', id)
-
-  return createSuccess('削除しました')
-}
+return executeAdminMutation({
+  resource: "space",
+  action: "create",
+  execute: async () => createSpaceCommand(parsed.data),
+  success: (result) => createSuccess("作成しました", result),
+  // create 操作では execute 後に ID が確定するため resolveAuditResourceId で解決
+  resolveAuditResourceId: (data) => data.id,
+});
 ```
 
-**`logAction` のシグネチャ:**
+API Route 等で `executeAdminMutation` を使わない場合のみ `logAction()` を直接呼び出す:
 
 ```typescript
 function logAction(
   userId: string,
-  action: Action,           // 'create' | 'update' | 'delete' | 'publish' | 'manage'
+  action: Action,
   resource: Resource,
-  resourceId?: string       // オプション（一覧操作の場合は省略）
-): void
+  resourceId?: string,
+): void;
 ```
 
 ---
@@ -332,33 +359,38 @@ function logAction(
 ## 禁止事項
 
 1. **認証チェック漏れ禁止**
-   - 管理画面のすべての Server Actions は必ず `checkAdminAuth()` または `checkPermission()` を呼び出す
+   - 管理画面の書き込み系 Server Actions は `executeAdminMutation` / `executeAdminMutationResult` を使用
+   - API Route は `checkPermission()` を直接呼び出す
 
-2. **直接的な role アクセス禁止**
+2. **Server Actions での `checkPermission` 直接呼び出し禁止**
+   - `executeAdminMutation` が権限チェック・監査ログ・DomainError ハンドリングを一括処理する
+   - 直接 `checkPermission` を使うと監査ログが漏れる
+
+3. **直接的な role アクセス禁止**
    - `session.user.role` を直接比較しない
    - `getRoleFromSession(session)` または `getSessionUser(session)` を使用
 
-3. **`cache()` の誤用禁止**
+4. **`cache()` の誤用禁止**
    - Server Actions 内では `getSession()` を使用（`cache()` 不使用）
    - Server Components では `verifySession()` / `getCurrentUser()` を使用（`cache()` あり）
 
-4. **権限ハードコード禁止**
-   - `user.role === 'ADMIN'` → `checkPermission()` または `hasPermission(user.role, resource, action)`
-   - `user.role === Role.ADMIN` の直接比較 → `checkRole(Role.ADMIN)` を使用
+5. **権限ハードコード禁止**
+   - `user.role === 'ADMIN'` → `executeAdminMutation` の `resource`/`action` で宣言的に指定
+   - `user.role === Role.ADMIN` の直接比較禁止
 
-5. **HOF（`withPermission`）パターン禁止**
+6. **HOF（`withPermission` / `withReadPermission`）パターン禁止**
    - Turbopack HMR との互換性のため廃止済み
-   - 各 Server Action 内で `checkAdminAuth` / `checkPermission` を直接呼び出す
 
 ---
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@/shared/lib/auth.ts` | Better Auth 設定・遅延初期化・セッション検証ユーティリティ |
-| `@/shared/lib/auth-client.ts` | クライアント用認証フック（`authClient`） |
-| `@/admin/lib/action-auth.ts` | Server Action 用認証ヘルパー（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
-| `@/admin/lib/permissions.ts` | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`） |
-| `@/admin/lib/audit.ts` | 監査ログ記録（`logUserAction`, `logPermissionDenied`） |
-| `@/admin/lib/role-guards.ts` | ロール判定ヘルパー（`isEditorRole` 等） |
+| パス                          | 内容                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `@/shared/lib/auth.ts`        | Better Auth 設定・遅延初期化・セッション検証ユーティリティ                                               |
+| `@/shared/lib/auth-client.ts` | クライアント用認証フック（`authClient`）                                                                 |
+| `@/admin/lib/admin-action.ts` | `executeAdminMutation` / `executeAdminMutationResult`（Server Actions 標準認証パターン）                 |
+| `@/admin/lib/action-auth.ts`  | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
+| `@/admin/lib/permissions.ts`  | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`）                                 |
+| `@/admin/lib/audit.ts`        | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |
+| `@/admin/lib/role-guards.ts`  | ロール判定ヘルパー（`isEditorRole` 等）                                                                  |

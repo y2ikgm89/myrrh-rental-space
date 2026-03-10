@@ -1,8 +1,14 @@
 import "server-only";
 
 import { prisma, type Prisma } from "@/shared/db/prisma";
-import { parseBusinessHours, parseStringArray } from "@/shared/lib/json-validators";
-import { getValidDiscountType, getValidDurationDiscountOverride } from "@/shared/lib/validations/enums";
+import {
+  parseBusinessHours,
+  parseStringArray,
+} from "@/shared/lib/json-validators";
+import {
+  getValidDiscountType,
+  getValidDurationDiscountOverride,
+} from "@/shared/lib/validations/enums";
 import type { TaxRateType } from "@/shared/db/enums";
 
 function formatSpaceToPlain(s: {

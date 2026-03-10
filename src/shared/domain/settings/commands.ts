@@ -18,6 +18,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import { encrypt } from "@/shared/lib/crypto";
 import { encryptServiceAccountJson } from "@/shared/lib/google-calendar/service-account";
+import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { DurationDiscountRule } from "@/shared/lib/pricing";
 import { checkRobotsTxtWarnings } from "@/shared/domain/settings/robots-txt";
@@ -269,7 +270,9 @@ export async function updateBusinessInfo(
 ): Promise<void> {
   const updateData = {
     ...data,
-    establishedDate: data.establishedDate ? new Date(data.establishedDate) : null,
+    establishedDate: data.establishedDate
+      ? new Date(data.establishedDate)
+      : null,
   };
 
   await prisma.settings.upsert({
@@ -327,7 +330,9 @@ export async function updateMeoSettings(data: MeoSettingsInput): Promise<void> {
   });
 }
 
-export async function updateEmailSettings(data: EmailSettingsInput): Promise<void> {
+export async function updateEmailSettings(
+  data: EmailSettingsInput,
+): Promise<void> {
   const updateData = {
     ...data,
     senderEmail: normalizeNullableString(data.senderEmail),
@@ -604,9 +609,7 @@ export async function updateGoogleCalendarSettings(
   };
 
   if (data.serviceAccountJson) {
-    try {
-      JSON.parse(data.serviceAccountJson);
-    } catch {
+    if (!parseGoogleServiceAccountCredentials(data.serviceAccountJson)) {
       throw new DomainError(
         "サービスアカウントJSONの形式が無効です",
         "VALIDATION",

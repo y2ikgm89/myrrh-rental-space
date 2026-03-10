@@ -1,51 +1,54 @@
-'use client'
+"use client";
 
-import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
-import { toast } from 'sonner'
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { updateReservationStatus } from '@/admin/actions/reservation'
+} from "@/admin/components/ui";
+import { updateReservationStatus } from "@/admin/actions/reservation";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   isValidReservationStatus,
   type ReservationStatus,
-} from '@/shared/lib/validations/enums'
+} from "@/shared/lib/validations/enums";
 
 type ReservationStatusSelectProps = {
-  reservationId: string
-  currentStatus: ReservationStatus
-}
+  reservationId: string;
+  currentStatus: ReservationStatus;
+};
 
 export function ReservationStatusSelect({
   reservationId,
   currentStatus,
 }: ReservationStatusSelectProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const handleStatusChange = (newStatus: ReservationStatus) => {
-    if (newStatus === currentStatus) return
+    if (newStatus === currentStatus) return;
 
     startTransition(async () => {
-      const result = await updateReservationStatus(reservationId, newStatus)
-      if (result.success) {
-        router.refresh()
-      } else {
-        toast.error(result.error || 'エラーが発生しました')
+      const result = await updateReservationStatus(reservationId, newStatus);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("ステータスを更新しました");
+      router.refresh();
+    });
+  };
 
   return (
     <Select
       value={currentStatus}
       onValueChange={(value) => {
-        if (isValidReservationStatus(value)) handleStatusChange(value)
+        if (isValidReservationStatus(value)) handleStatusChange(value);
       }}
       disabled={isPending}
     >
@@ -58,5 +61,5 @@ export function ReservationStatusSelect({
         <SelectItem value="CANCELLED">キャンセル</SelectItem>
       </SelectContent>
     </Select>
-  )
+  );
 }

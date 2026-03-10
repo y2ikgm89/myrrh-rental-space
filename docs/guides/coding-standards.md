@@ -2,13 +2,13 @@
 
 ## 命名規則
 
-| 対象 | 規則 | 例 |
-|-----|------|-----|
-| コンポーネント | PascalCase.tsx | `UserForm.tsx` |
-| その他ファイル | kebab-case.ts | `api-keys.ts` |
-| 関数 | camelCase | `getUserById` |
-| 定数 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
-| 型/インターフェース | PascalCase | `UserInput` |
+| 対象                | 規則             | 例                |
+| ------------------- | ---------------- | ----------------- |
+| コンポーネント      | PascalCase.tsx   | `UserForm.tsx`    |
+| その他ファイル      | kebab-case.ts    | `api-keys.ts`     |
+| 関数                | camelCase        | `getUserById`     |
+| 定数                | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| 型/インターフェース | PascalCase       | `UserInput`       |
 
 ## ディレクトリ構成
 
@@ -42,7 +42,7 @@ export default async function Page() {
 ### Client Componentは必要時のみ
 
 ```typescript
-'use client'
+"use client";
 // フック、イベントハンドラ、ブラウザAPIが必要な場合のみ
 ```
 
@@ -51,27 +51,27 @@ export default async function Page() {
 ### withAuth パターン
 
 ```typescript
-import { withAuth, createSuccess, createFailure } from '@/types/server-actions'
+import { withAuth, createSuccess, createFailure } from "@/types/server-actions";
 
 export const updateItem = withAuth(async (_user, id: string, data: Input) => {
-  const validated = schema.safeParse(data)
+  const validated = schema.safeParse(data);
   if (!validated.success) {
-    return createFailure('入力エラー', validated.error.flatten().fieldErrors)
+    return createFailure("入力エラー", validated.error.flatten().fieldErrors);
   }
 
-  await prisma.item.update({ where: { id }, data: validated.data })
-  return createSuccess('更新しました')
-})
+  await prisma.item.update({ where: { id }, data: validated.data });
+  return createSuccess("更新しました");
+});
 ```
 
 ### Query関数（読み取り専用）
 
 ```typescript
-import { verifyAdminSession } from '@/lib/auth'
+import { verifyAdminSession } from "@/lib/auth";
 
 export async function getItems() {
-  await verifyAdminSession()
-  return prisma.item.findMany()
+  await verifyAdminSession();
+  return prisma.item.findMany();
 }
 ```
 
@@ -80,24 +80,24 @@ export async function getItems() {
 ### Zodスキーマ優先
 
 ```typescript
-import { z } from 'zod'
+import { z } from "zod";
 
 export const itemSchema = z.object({
-  name: z.string().min(1, '必須'),
+  name: z.string().min(1, "必須"),
   price: z.number().positive(),
-})
+});
 
-export type ItemInput = z.infer<typeof itemSchema>
+export type ItemInput = z.infer<typeof itemSchema>;
 ```
 
 ### Prisma型の活用
 
 ```typescript
-import type { Item } from '@/generated/prisma/client'
-import type { Prisma } from '@/generated/prisma/client'
+import type { Item } from "@/generated/prisma/client";
+import type { Prisma } from "@/generated/prisma/client";
 
 // WhereInput型
-const where: Prisma.ItemWhereInput = { isActive: true }
+const where: Prisma.ItemWhereInput = { isActive: true };
 ```
 
 ## バリデーション
@@ -107,7 +107,7 @@ const where: Prisma.ItemWhereInput = { isActive: true }
 
 ```typescript
 // 同じスキーマを両方で使用
-import { itemSchema } from '@/lib/validations/item'
+import { itemSchema } from "@/lib/validations/item";
 
 // Client: react-hook-form + zodResolver
 // Server: safeParse
@@ -123,15 +123,15 @@ fix(auth): handle token refresh
 refactor(settings): extract to components
 ```
 
-| type | 用途 |
-|------|------|
-| feat | 新機能 |
-| fix | バグ修正 |
+| type     | 用途             |
+| -------- | ---------------- |
+| feat     | 新機能           |
+| fix      | バグ修正         |
 | refactor | リファクタリング |
-| docs | ドキュメント |
-| style | フォーマット |
-| test | テスト |
-| chore | 雑務 |
+| docs     | ドキュメント     |
+| style    | フォーマット     |
+| test     | テスト           |
+| chore    | 雑務             |
 
 ## 禁止事項
 

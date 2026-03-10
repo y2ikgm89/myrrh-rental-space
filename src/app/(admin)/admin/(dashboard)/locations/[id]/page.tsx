@@ -21,29 +21,27 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   await connection();
   const { id } = await params;
-  const result = await getLocationById(id);
+  const location = await getLocationById(id);
 
-  if (!result.success || !result.data) {
+  if (!location) {
     return {
       title: "場所が見つかりません | Myrrh Rental Space",
     };
   }
 
   return {
-    title: `${result.data.name} | Myrrh Rental Space`,
+    title: `${location.name} | Myrrh Rental Space`,
   };
 }
 
 export default async function LocationDetailPage({ params }: PageProps) {
   await connection();
   const { id } = await params;
-  const result = await getLocationById(id);
+  const location = await getLocationById(id);
 
-  if (!result.success || !result.data) {
+  if (!location) {
     notFound();
   }
-
-  const location = result.data;
 
   return (
     <AdminDetailLayout

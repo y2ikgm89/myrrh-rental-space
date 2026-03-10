@@ -5,12 +5,16 @@
  * 初回Tabキー押下時にのみ表示され、メインコンテンツへジャンプ可能
  */
 
-import { DEFAULT_SKIP_TARGETS, SKIP_LINK_CLASSES, type SkipLinkTarget } from '@/public/lib/a11y'
-import type { ReactElement } from 'react'
+import {
+  DEFAULT_SKIP_TARGETS,
+  SKIP_LINK_CLASSES,
+  type SkipLinkTarget,
+} from "@/public/lib/a11y";
+import type { ReactElement } from "react";
 
 interface SkipLinkProps {
   /** カスタムターゲット（デフォルト: main-content） */
-  targets?: SkipLinkTarget[]
+  targets?: SkipLinkTarget[];
 }
 
 /**
@@ -34,5 +38,5 @@ export function SkipLink({
         </a>
       ))}
     </>
-  )
+  );
 }

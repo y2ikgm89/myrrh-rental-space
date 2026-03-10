@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * セクション編集 Client Wrapper
@@ -7,24 +7,24 @@
  * 保存・戻る操作でセクション一覧画面へ遷移する。
  */
 
-import { useRouter } from 'next/navigation'
-import { SectionEditor } from '@/app/(admin)/admin/(dashboard)/settings/_components/homepage/SectionEditor'
-import type { HomepageSectionData } from '@/admin/actions/homepage-settings'
+import { useRouter } from "next/navigation";
+import { SectionEditor } from "@/app/(admin)/admin/(dashboard)/settings/_components/homepage/SectionEditor";
+import type { HomepageSectionData } from "@/admin/actions/homepage-settings";
 
 interface SectionEditWrapperProps {
-  section: HomepageSectionData
+  section: HomepageSectionData;
 }
 
 export function SectionEditWrapper({ section }: SectionEditWrapperProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleBack = () => {
-    router.push('/admin/pages/homepage/edit?tab=sections')
-  }
+    router.push("/admin/pages/homepage/edit?tab=sections");
+  };
 
   const handleSave = () => {
-    router.push('/admin/pages/homepage/edit?tab=sections')
-  }
+    router.push("/admin/pages/homepage/edit?tab=sections");
+  };
 
   return (
     <SectionEditor
@@ -33,5 +33,5 @@ export function SectionEditWrapper({ section }: SectionEditWrapperProps) {
       onSave={handleSave}
       showHeader={false}
     />
-  )
+  );
 }

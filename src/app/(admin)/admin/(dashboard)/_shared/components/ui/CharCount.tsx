@@ -7,24 +7,24 @@
 
 interface CharCountProps {
   /** 現在の文字数 */
-  current: number
+  current: number;
   /** 最大文字数（推奨値） */
-  max: number
+  max: number;
 }
 
 export function CharCount({ current, max }: CharCountProps) {
-  const ratio = current / max
+  const ratio = current / max;
 
-  let colorClass = 'text-muted-foreground'
+  let colorClass = "text-muted-foreground";
   if (ratio > 1) {
-    colorClass = 'text-destructive'
+    colorClass = "text-destructive";
   } else if (ratio >= 0.8) {
-    colorClass = 'text-warning'
+    colorClass = "text-warning";
   }
 
   return (
     <span className={`text-xs tabular-nums ${colorClass}`}>
       {current}/{max}
     </span>
-  )
+  );
 }

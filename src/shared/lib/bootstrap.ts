@@ -9,7 +9,7 @@
  * - 絶対に throw しない（サーバー起動をブロックしない）
  */
 
-import { bootstrapSystemPagesCommand } from '@/shared/domain/pages/system-pages'
+import { bootstrapSystemPagesCommand } from "@/shared/domain/pages/system-pages";
 
 /**
  * 全システムページ + デフォルトセクションを保証
@@ -18,5 +18,5 @@ import { bootstrapSystemPagesCommand } from '@/shared/domain/pages/system-pages'
  * 認証不要（インフラ操作）。
  */
 export async function bootstrapSystemPages(): Promise<void> {
-  await bootstrapSystemPagesCommand()
+  await bootstrapSystemPagesCommand();
 }

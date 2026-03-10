@@ -9,7 +9,7 @@ export type {
   EditorCoreConfig,
   EditorCoreReturn,
   EditorPanelsReturn,
-} from './types'
+} from "./types";
 
 // 変換関数
 export {
@@ -33,7 +33,7 @@ export {
   parseTagsString,
   // boolean変換
   toFormNullableBoolean,
-} from './transforms'
+} from "./transforms";
 
 // コアフック
 export {
@@ -41,4 +41,4 @@ export {
   computeIsDirty,
   createContentChangeHandler,
   createResetHandler,
-} from './use-editor-core'
+} from "./use-editor-core";

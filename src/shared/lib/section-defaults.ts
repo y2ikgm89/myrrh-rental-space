@@ -15,7 +15,7 @@
 import {
   ensureHomepageSectionsCommand,
   ensurePageSectionsCommand,
-} from '@/shared/domain/pages/system-pages'
+} from "@/shared/domain/pages/system-pages";
 
 /**
  * ページのデフォルトセクションを確保（additive）
@@ -27,8 +27,11 @@ import {
  * @param slug - ページスラッグ（デフォルトセクション定義のキー）
  * @returns 作成されたセクション数
  */
-export async function ensurePageSections(pageId: string, slug: string): Promise<number> {
-  return ensurePageSectionsCommand(pageId, slug)
+export async function ensurePageSections(
+  pageId: string,
+  slug: string,
+): Promise<number> {
+  return ensurePageSectionsCommand(pageId, slug);
 }
 
 /**
@@ -40,5 +43,5 @@ export async function ensurePageSections(pageId: string, slug: string): Promise<
  * @returns 作成されたセクション数
  */
 export async function ensureHomepageSections(): Promise<number> {
-  return ensureHomepageSectionsCommand()
+  return ensureHomepageSectionsCommand();
 }

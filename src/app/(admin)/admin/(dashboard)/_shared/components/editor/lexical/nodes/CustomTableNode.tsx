@@ -16,7 +16,11 @@ import {
   createState,
 } from "lexical";
 import { TableNode } from "@lexical/table";
-import { createEnumGuard, parseBoolean, parseString } from "../config/type-guards";
+import {
+  createEnumGuard,
+  parseBoolean,
+  parseString,
+} from "../config/type-guards";
 
 // =============================================================================
 // 型定義

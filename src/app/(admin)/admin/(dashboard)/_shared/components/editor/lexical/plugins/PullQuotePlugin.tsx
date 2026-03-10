@@ -6,10 +6,10 @@
  * ダイアログでスタイルを選択し、PullQuote構造を挿入
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $createParagraphNode,
   $getSelection,
@@ -18,8 +18,8 @@ import {
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   mergeRegister,
-} from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+} from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createPullQuoteNode,
   $isPullQuoteNode,
@@ -27,9 +27,15 @@ import {
   PullQuoteNode,
   type PullQuoteStyle,
   PULL_QUOTE_STYLES,
-} from '../nodes/PullQuoteNode'
-import { $createPullQuoteTextNode, PullQuoteTextNode } from '../nodes/PullQuoteTextNode'
-import { $createPullQuoteCitationNode, PullQuoteCitationNode } from '../nodes/PullQuoteCitationNode'
+} from "../nodes/PullQuoteNode";
+import {
+  $createPullQuoteTextNode,
+  PullQuoteTextNode,
+} from "../nodes/PullQuoteTextNode";
+import {
+  $createPullQuoteCitationNode,
+  PullQuoteCitationNode,
+} from "../nodes/PullQuoteCitationNode";
 import {
   Dialog,
   DialogContent,
@@ -38,15 +44,15 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { PULL_QUOTE_STYLE_LABELS } from '../config/node-labels'
+} from "@/admin/components/ui/select";
+import { PULL_QUOTE_STYLE_LABELS } from "../config/node-labels";
 
 // =============================================================================
 // Utilities
@@ -55,44 +61,42 @@ import { PULL_QUOTE_STYLE_LABELS } from '../config/node-labels'
 /**
  * 矢印キーでPullQuote境界を脱出
  */
-function $onEscape(
-  direction: 'up' | 'down'
-): boolean {
-  const selection = $getSelection()
+function $onEscape(direction: "up" | "down"): boolean {
+  const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
-    return false
+    return false;
   }
 
-  const node = selection.anchor.getNode()
-  let pullQuoteNode: PullQuoteNode | null = null
-  let current = node.getParent()
+  const node = selection.anchor.getNode();
+  let pullQuoteNode: PullQuoteNode | null = null;
+  let current = node.getParent();
 
   while (current) {
     if ($isPullQuoteNode(current)) {
-      pullQuoteNode = current
-      break
+      pullQuoteNode = current;
+      break;
     }
-    current = current.getParent()
+    current = current.getParent();
   }
 
-  if (!pullQuoteNode) return false
+  if (!pullQuoteNode) return false;
 
-  const isAtStart = selection.anchor.offset === 0
+  const isAtStart = selection.anchor.offset === 0;
   const isAtEnd =
-    selection.anchor.offset === selection.anchor.getNode().getTextContentSize()
+    selection.anchor.offset === selection.anchor.getNode().getTextContentSize();
 
-  if ((direction === 'up' && isAtStart) || (direction === 'down' && isAtEnd)) {
-    const paragraph = $createParagraphNode()
-    if (direction === 'up') {
-      pullQuoteNode.insertBefore(paragraph)
+  if ((direction === "up" && isAtStart) || (direction === "down" && isAtEnd)) {
+    const paragraph = $createParagraphNode();
+    if (direction === "up") {
+      pullQuoteNode.insertBefore(paragraph);
     } else {
-      pullQuoteNode.insertAfter(paragraph)
+      pullQuoteNode.insertAfter(paragraph);
     }
-    paragraph.select()
-    return true
+    paragraph.select();
+    return true;
   }
 
-  return false
+  return false;
 }
 
 // =============================================================================
@@ -100,17 +104,17 @@ function $onEscape(
 // =============================================================================
 
 type PullQuotePluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [selectedStyle, setSelectedStyle] = useState<PullQuoteStyle>('classic')
+  const [editor] = useLexicalComposerContext();
+  const [selectedStyle, setSelectedStyle] = useState<PullQuoteStyle>("classic");
 
   // リスナー登録（mergeRegisterで統一）
   useEffect(() => {
@@ -118,84 +122,88 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
       // 矢印キーリスナー
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
-        () => $onEscape('up'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape("up"),
+        COMMAND_PRIORITY_LOW,
       ),
       editor.registerCommand(
         KEY_ARROW_DOWN_COMMAND,
-        () => $onEscape('down'),
-        COMMAND_PRIORITY_LOW
+        () => $onEscape("down"),
+        COMMAND_PRIORITY_LOW,
       ),
       // 構造検証トランスフォーマー: PullQuote
       editor.registerNodeTransform(PullQuoteNode, (node) => {
-        const children = node.getChildren()
-        const hasTextNode = children.some((child) => child instanceof PullQuoteTextNode)
-        const hasCitationNode = children.some((child) => child instanceof PullQuoteCitationNode)
+        const children = node.getChildren();
+        const hasTextNode = children.some(
+          (child) => child instanceof PullQuoteTextNode,
+        );
+        const hasCitationNode = children.some(
+          (child) => child instanceof PullQuoteCitationNode,
+        );
 
         // 必要な子ノードがない場合は追加
         if (!hasTextNode) {
-          const textNode = $createPullQuoteTextNode()
-          const paragraph = $createParagraphNode()
-          textNode.append(paragraph)
-          node.append(textNode)
+          const textNode = $createPullQuoteTextNode();
+          const paragraph = $createParagraphNode();
+          textNode.append(paragraph);
+          node.append(textNode);
         }
         if (!hasCitationNode) {
-          const citationNode = $createPullQuoteCitationNode()
-          const paragraph = $createParagraphNode()
-          citationNode.append(paragraph)
-          node.append(citationNode)
+          const citationNode = $createPullQuoteCitationNode();
+          const paragraph = $createParagraphNode();
+          citationNode.append(paragraph);
+          node.append(citationNode);
         }
       }),
       // PullQuoteTextNodeの構造検証
       editor.registerNodeTransform(PullQuoteTextNode, (node) => {
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
+          const paragraph = $createParagraphNode();
+          node.append(paragraph);
         }
       }),
       // PullQuoteCitationNodeの構造検証
       editor.registerNodeTransform(PullQuoteCitationNode, (node) => {
         if (node.getChildren().length === 0) {
-          const paragraph = $createParagraphNode()
-          node.append(paragraph)
+          const paragraph = $createParagraphNode();
+          node.append(paragraph);
         }
-      })
-    )
-  }, [editor])
+      }),
+    );
+  }, [editor]);
 
   const resetForm = () => {
-    setSelectedStyle('classic')
-  }
+    setSelectedStyle("classic");
+  };
 
   const handleInsert = () => {
     editor.update(() => {
       // PullQuote構造を作成
-      const pullQuote = $createPullQuoteNode(selectedStyle)
-      const textNode = $createPullQuoteTextNode()
-      const textParagraph = $createParagraphNode()
-      textNode.append(textParagraph)
+      const pullQuote = $createPullQuoteNode(selectedStyle);
+      const textNode = $createPullQuoteTextNode();
+      const textParagraph = $createParagraphNode();
+      textNode.append(textParagraph);
 
-      const citationNode = $createPullQuoteCitationNode()
-      const citationParagraph = $createParagraphNode()
-      citationNode.append(citationParagraph)
+      const citationNode = $createPullQuoteCitationNode();
+      const citationParagraph = $createParagraphNode();
+      citationNode.append(citationParagraph);
 
-      pullQuote.append(textNode)
-      pullQuote.append(citationNode)
+      pullQuote.append(textNode);
+      pullQuote.append(citationNode);
 
-      $insertNodeToNearestRoot(pullQuote)
+      $insertNodeToNearestRoot(pullQuote);
 
       // テキスト部分を選択
-      textParagraph.selectEnd()
-    })
+      textParagraph.selectEnd();
+    });
 
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -208,7 +216,12 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
           <Label className="text-sm font-medium mb-3 block">
             スタイルを選択
           </Label>
-          <Select value={selectedStyle} onValueChange={(value) => { if (isPullQuoteStyle(value)) setSelectedStyle(value) }}>
+          <Select
+            value={selectedStyle}
+            onValueChange={(value) => {
+              if (isPullQuoteStyle(value)) setSelectedStyle(value);
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -232,5 +245,5 @@ export function PullQuotePlugin({ isOpen, onClose }: PullQuotePluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

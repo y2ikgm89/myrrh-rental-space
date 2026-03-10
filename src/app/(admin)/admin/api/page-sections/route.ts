@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { checkResourceAccess } from "@/admin/lib/action-auth";
 import { getPageSectionsQuery } from "@/shared/domain/sections/admin-queries";
+import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
   pageId: z.string().uuid({ error: "pageId が不正です" }),
@@ -14,10 +15,7 @@ export async function GET(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "pageId が不正です" },
-      { status: 400 },
-    );
+    return jsonValidationError(parsed.error, "pageId が不正です");
   }
 
   const auth = await checkResourceAccess(
@@ -27,7 +25,7 @@ export async function GET(request: Request) {
     request.headers,
   );
   if (!auth.success) {
-    return NextResponse.json({ error: auth.error.error }, { status: 403 });
+    return jsonError(auth.error.error, 403);
   }
 
   const sections = await getPageSectionsQuery(parsed.data.pageId);

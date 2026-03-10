@@ -17,9 +17,9 @@
  * formatChange(0)   // → '0%'
  */
 export function formatChange(change: number): string {
-  if (change > 0) return `+${change}%`
-  if (change < 0) return `${change}%`
-  return '0%'
+  if (change > 0) return `+${change}%`;
+  if (change < 0) return `${change}%`;
+  return "0%";
 }
 
 /**
@@ -31,9 +31,9 @@ export function formatChange(change: number): string {
  * getChangeColor(0)   // → 'text-muted-foreground'
  */
 export function getChangeColor(change: number): string {
-  if (change > 0) return 'text-success'
-  if (change < 0) return 'text-destructive'
-  return 'text-muted-foreground'
+  if (change > 0) return "text-success";
+  if (change < 0) return "text-destructive";
+  return "text-muted-foreground";
 }
 
 // =============================================================================
@@ -49,11 +49,11 @@ export function getChangeColor(change: number): string {
  * formatBytes(500)       // → '500 B'
  */
 export function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return '0 B'
+  if (bytes === 0) return "0 B";
 
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
 }

@@ -10,9 +10,7 @@ import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import {
-  getGoogleCalendarWebhookState,
-} from "@/shared/domain/settings/admin-queries";
+import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
   clearGoogleCalendarWebhook,
@@ -40,7 +38,7 @@ import {
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 import {
   googleCalendarConnectionTestSchema,
@@ -205,7 +203,8 @@ export async function setupCalendarWebhook(): Promise<
     resource: "settings",
     action: "update",
     execute: async () => {
-      const baseUrl = clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
+      const baseUrl =
+        clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.BETTER_AUTH_URL;
       if (!baseUrl) {
         throw new DomainError("APP_URLが設定されていません", "VALIDATION");
       }

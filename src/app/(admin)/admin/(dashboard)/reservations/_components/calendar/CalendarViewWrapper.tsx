@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import { useCalendarState, useEventActions } from './hooks'
-import { CalendarToolbar } from './CalendarToolbar'
-import { MonthView, WeekView, DayView } from './views'
-import { EventDetailDialog } from './EventDetailDialog'
-import type { CalendarEvent, SpaceOption } from '@/admin/lib/calendar'
+import { useCalendarState, useEventActions } from "./hooks";
+import { CalendarToolbar } from "./CalendarToolbar";
+import { MonthView, WeekView, DayView } from "./views";
+import { EventDetailDialog } from "./EventDetailDialog";
+import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
 
 interface CalendarViewWrapperProps {
-  initialEvents: CalendarEvent[]
-  spaces: SpaceOption[]
+  initialEvents: CalendarEvent[];
+  spaces: SpaceOption[];
 }
 
 export function CalendarViewWrapper({
   initialEvents,
   spaces,
 }: CalendarViewWrapperProps) {
-  const state = useCalendarState({ events: initialEvents, spaces })
+  const state = useCalendarState({ events: initialEvents, spaces });
   const {
     isPending,
     optimisticEvents,
@@ -23,20 +23,20 @@ export function CalendarViewWrapper({
     handleEventClick,
     handleCloseDialog,
     handleStatusChange,
-  } = useEventActions({ events: state.events })
+  } = useEventActions({ events: state.events });
 
-  const { view, currentDate, dateRange, goToDate } = state
+  const { view, currentDate, dateRange, goToDate } = state;
 
   // 楽観的更新されたイベントをフィルタリング（useCalendarStateのフィルター条件を適用済み）
   // state.eventsはすでにフィルター済みなので、optimisticEventsも同じイベントIDでフィルタリング
-  const filteredOptimisticEvents = optimisticEvents
+  const filteredOptimisticEvents = optimisticEvents;
 
   return (
     <div className="flex h-full flex-col space-y-4">
       <CalendarToolbar state={state} />
 
       <div className="min-h-0 flex-1">
-        {view === 'month' && (
+        {view === "month" && (
           <MonthView
             dateRange={dateRange}
             currentDate={currentDate}
@@ -45,14 +45,14 @@ export function CalendarViewWrapper({
             onDayClick={goToDate}
           />
         )}
-        {view === 'week' && (
+        {view === "week" && (
           <WeekView
             dateRange={dateRange}
             events={filteredOptimisticEvents}
             onEventClick={handleEventClick}
           />
         )}
-        {view === 'day' && (
+        {view === "day" && (
           <DayView
             date={currentDate}
             events={filteredOptimisticEvents}
@@ -68,5 +68,5 @@ export function CalendarViewWrapper({
         onStatusChange={handleStatusChange}
       />
     </div>
-  )
+  );
 }

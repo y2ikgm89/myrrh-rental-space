@@ -31,10 +31,10 @@ bun run build 2>&1
 
 ## Thresholds
 
-| Metric | OK | Warning | Critical |
-|--------|----|---------|---------|
+| Metric                 | OK       | Warning    | Critical |
+| ---------------------- | -------- | ---------- | -------- |
 | First Load JS (shared) | < 100 kB | 100–150 kB | > 150 kB |
-| Individual route size | < 50 kB | 50–100 kB | > 100 kB |
+| Individual route size  | < 50 kB  | 50–100 kB  | > 100 kB |
 
 ## Analysis focus areas
 

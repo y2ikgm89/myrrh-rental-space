@@ -8,22 +8,23 @@
  * - 動的コンテンツ: 設定データ（Suspenseでラップ）
  */
 
-import { Suspense } from 'react'
-import { getSettings } from '@/admin/queries/settings'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { SettingsTabs } from '../_components/SettingsTabs'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { getSettings } from "@/admin/queries/settings";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { SettingsTabs } from "../_components/SettingsTabs";
 import {
   EmailSection,
   NotificationSection,
   StripeSection,
-} from '../_components/sections'
-import type { ReactElement } from 'react'
+} from "../_components/sections";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: 通知・決済設定
  */
 async function NotifySettingsContent(): Promise<ReactElement> {
-  const settings = await getSettings()
+  const settings = await getSettings();
 
   if (!settings) {
     return (
@@ -35,26 +36,26 @@ async function NotifySettingsContent(): Promise<ReactElement> {
           設定を読み込めませんでした
         </div>
       </SettingsLayout>
-    )
+    );
   }
 
   const tabs = [
     {
-      value: 'email',
-      label: 'メール',
+      value: "email",
+      label: "メール",
       content: <EmailSection settings={settings} />,
     },
     {
-      value: 'notification',
-      label: '通知',
+      value: "notification",
+      label: "通知",
       content: <NotificationSection settings={settings} />,
     },
     {
-      value: 'payment',
-      label: '決済',
+      value: "payment",
+      label: "決済",
       content: <StripeSection settings={settings} />,
     },
-  ]
+  ];
 
   return (
     <SettingsLayout
@@ -63,7 +64,7 @@ async function NotifySettingsContent(): Promise<ReactElement> {
     >
       <SettingsTabs tabs={tabs} defaultTab="email" />
     </SettingsLayout>
-  )
+  );
 }
 
 /**
@@ -84,16 +85,14 @@ function NotifySettingsLoading(): ReactElement {
         <div className="h-48 bg-muted rounded" />
       </div>
     </SettingsLayout>
-  )
+  );
 }
 
 export default async function NotifySettingsPage(): Promise<ReactElement> {
+  await connection();
   return (
     <Suspense fallback={<NotifySettingsLoading />}>
       <NotifySettingsContent />
     </Suspense>
-  )
+  );
 }
-
-
-

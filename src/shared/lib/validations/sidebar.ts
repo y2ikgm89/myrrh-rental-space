@@ -4,7 +4,7 @@
  * admin/public両方で使用するサイドバー設定
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 
 /**
  * サイドバーウィジェット設定
@@ -15,9 +15,9 @@ export const sidebarWidgetsSchema = z.object({
   popular: z.boolean().default(true), // 人気記事ウィジェット
   categories: z.boolean().default(true), // カテゴリー一覧ウィジェット
   tags: z.boolean().default(true), // タグクラウドウィジェット
-})
+});
 
-export type SidebarWidgets = z.infer<typeof sidebarWidgetsSchema>
+export type SidebarWidgets = z.infer<typeof sidebarWidgetsSchema>;
 
 /**
  * サイドバー設定（Settings.sidebarWidgets のJSON構造）
@@ -27,6 +27,6 @@ export const sidebarSettingsSchema = z.object({
   sidebarWidgets: sidebarWidgetsSchema, // ウィジェット個別設定
   sidebarRecentCount: z.number().int().min(1).max(20), // 新着記事の表示件数
   sidebarPopularCount: z.number().int().min(1).max(20), // 人気記事の表示件数
-})
+});
 
-export type SidebarSettings = z.infer<typeof sidebarSettingsSchema>
+export type SidebarSettings = z.infer<typeof sidebarSettingsSchema>;

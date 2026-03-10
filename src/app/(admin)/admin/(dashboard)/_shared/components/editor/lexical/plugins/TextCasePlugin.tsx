@@ -9,10 +9,10 @@
  * - capitalize: 先頭大文字
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
   $isRangeSelection,
@@ -21,101 +21,108 @@ import {
   mergeRegister,
   SELECTION_CHANGE_COMMAND,
   type TextFormatType,
-} from 'lexical'
+} from "lexical";
 import {
   CaseLower,
   CaseUpper,
   CaseSensitive,
   ChevronDown,
   Check,
-} from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
+} from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/admin/components/ui/dropdown-menu'
+} from "@/admin/components/ui/dropdown-menu";
 
 // =============================================================================
 // Types & Constants
 // =============================================================================
 
-type TextCaseType = 'lowercase' | 'uppercase' | 'capitalize'
+type TextCaseType = "lowercase" | "uppercase" | "capitalize";
 
 type TextCaseConfig = {
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  format: TextFormatType
-}
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  format: TextFormatType;
+};
 
 const TEXT_CASE_CONFIG = {
   lowercase: {
-    label: '小文字',
+    label: "小文字",
     icon: CaseLower,
-    format: 'lowercase' as const,
+    format: "lowercase" as const,
   },
   uppercase: {
-    label: '大文字',
+    label: "大文字",
     icon: CaseUpper,
-    format: 'uppercase' as const,
+    format: "uppercase" as const,
   },
   capitalize: {
-    label: '先頭大文字',
+    label: "先頭大文字",
     icon: CaseSensitive,
-    format: 'capitalize' as const,
+    format: "capitalize" as const,
   },
-} satisfies Record<TextCaseType, TextCaseConfig>
+} satisfies Record<TextCaseType, TextCaseConfig>;
 
-const TEXT_CASE_TYPES = new Set<TextCaseType>(['lowercase', 'uppercase', 'capitalize'])
+const TEXT_CASE_TYPES = new Set<TextCaseType>([
+  "lowercase",
+  "uppercase",
+  "capitalize",
+]);
 
 // =============================================================================
 // Hook
 // =============================================================================
 
 export function useTextCase() {
-  const [editor] = useLexicalComposerContext()
-  const [activeCase, setActiveCase] = useState<TextCaseType | null>(null)
+  const [editor] = useLexicalComposerContext();
+  const [activeCase, setActiveCase] = useState<TextCaseType | null>(null);
 
   useEffect(() => {
     const updateTextCaseState = () => {
-      const selection = $getSelection()
+      const selection = $getSelection();
       if ($isRangeSelection(selection)) {
         // 各ケースの状態をチェック
-        if (selection.hasFormat('lowercase')) {
-          setActiveCase('lowercase')
-        } else if (selection.hasFormat('uppercase')) {
-          setActiveCase('uppercase')
-        } else if (selection.hasFormat('capitalize')) {
-          setActiveCase('capitalize')
+        if (selection.hasFormat("lowercase")) {
+          setActiveCase("lowercase");
+        } else if (selection.hasFormat("uppercase")) {
+          setActiveCase("uppercase");
+        } else if (selection.hasFormat("capitalize")) {
+          setActiveCase("capitalize");
         } else {
-          setActiveCase(null)
+          setActiveCase(null);
         }
       }
-    }
+    };
 
     return mergeRegister(
       editor.registerUpdateListener(({ editorState }) => {
         editorState.read(() => {
-          updateTextCaseState()
-        })
+          updateTextCaseState();
+        });
       }),
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateTextCaseState()
-          return false
+          updateTextCaseState();
+          return false;
         },
-        COMMAND_PRIORITY_CRITICAL
-      )
-    )
-  }, [editor])
+        COMMAND_PRIORITY_CRITICAL,
+      ),
+    );
+  }, [editor]);
 
   const applyTextCase = (caseType: TextCaseType) => {
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, TEXT_CASE_CONFIG[caseType].format)
-  }
+    editor.dispatchCommand(
+      FORMAT_TEXT_COMMAND,
+      TEXT_CASE_CONFIG[caseType].format,
+    );
+  };
 
-  return { activeCase, applyTextCase }
+  return { activeCase, applyTextCase };
 }
 
 // =============================================================================
@@ -123,17 +130,19 @@ export function useTextCase() {
 // =============================================================================
 
 export function TextCasePlugin() {
-  const { activeCase, applyTextCase } = useTextCase()
+  const { activeCase, applyTextCase } = useTextCase();
 
   // アクティブな状態のアイコンを取得
-  const ActiveIcon = activeCase ? TEXT_CASE_CONFIG[activeCase].icon : CaseSensitive
+  const ActiveIcon = activeCase
+    ? TEXT_CASE_CONFIG[activeCase].icon
+    : CaseSensitive;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          variant={activeCase ? 'secondary' : 'ghost'}
+          variant={activeCase ? "secondary" : "ghost"}
           size="sm"
           className="h-8 gap-1"
           title="テキスト変換"
@@ -144,7 +153,7 @@ export function TextCasePlugin() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[140px]">
         {Array.from(TEXT_CASE_TYPES).map((caseType) => {
-          const { label, icon: Icon } = TEXT_CASE_CONFIG[caseType]
+          const { label, icon: Icon } = TEXT_CASE_CONFIG[caseType];
           return (
             <DropdownMenuItem
               key={caseType}
@@ -159,11 +168,11 @@ export function TextCasePlugin() {
                 <Check className="h-4 w-4 text-primary" />
               )}
             </DropdownMenuItem>
-          )
+          );
         })}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 // =============================================================================
@@ -175,10 +184,13 @@ export function TextCasePlugin() {
  * ComponentPickerPluginから使用
  */
 export function applyTextCaseToSelection(
-  editor: import('lexical').LexicalEditor,
-  caseType: TextCaseType
+  editor: import("lexical").LexicalEditor,
+  caseType: TextCaseType,
 ): void {
-  editor.dispatchCommand(FORMAT_TEXT_COMMAND, TEXT_CASE_CONFIG[caseType].format)
+  editor.dispatchCommand(
+    FORMAT_TEXT_COMMAND,
+    TEXT_CASE_CONFIG[caseType].format,
+  );
 }
 
-export { TEXT_CASE_CONFIG, TEXT_CASE_TYPES, type TextCaseType }
+export { TEXT_CASE_CONFIG, TEXT_CASE_TYPES, type TextCaseType };

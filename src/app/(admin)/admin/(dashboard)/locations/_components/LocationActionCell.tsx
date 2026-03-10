@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
 import {
   ActionDropdown,
   ActionDropdownItem,
-} from '@/admin/components/ActionDropdown'
+} from "@/admin/components/ActionDropdown";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type LocationActionCellProps = {
-  locationId: string
-}
+  locationId: string;
+};
 
 // =============================================================================
 // LocationActionCell Component (Client Component)
@@ -27,5 +27,5 @@ export function LocationActionCell({ locationId }: LocationActionCellProps) {
         詳細
       </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

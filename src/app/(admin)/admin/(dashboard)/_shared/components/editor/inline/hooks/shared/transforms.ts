@@ -5,9 +5,9 @@
  * 型アサーション完全排除
  */
 
-import { format } from 'date-fns'
-import { isValidLayoutWidth } from '@/shared/lib/validations/enums'
-import type { LayoutWidth } from '@/shared/db/enums'
+import { format } from "date-fns";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
+import type { LayoutWidth } from "@/shared/db/enums";
 
 // =============================================================================
 // 日時変換
@@ -18,11 +18,13 @@ import type { LayoutWidth } from '@/shared/db/enums'
  * @param date - 日付（Date | string | null | undefined）
  * @returns ISO形式のローカル日時文字列（yyyy-MM-dd'T'HH:mm）
  */
-export function toFormDateString(date: Date | string | null | undefined): string {
-  if (!date) return ''
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  if (isNaN(dateObj.getTime())) return ''
-  return format(dateObj, "yyyy-MM-dd'T'HH:mm")
+export function toFormDateString(
+  date: Date | string | null | undefined,
+): string {
+  if (!date) return "";
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return "";
+  return format(dateObj, "yyyy-MM-dd'T'HH:mm");
 }
 
 /**
@@ -31,9 +33,9 @@ export function toFormDateString(date: Date | string | null | undefined): string
  * @returns Date型（空文字列の場合はundefined）
  */
 export function toSubmitDate(value: string): Date | undefined {
-  if (!value) return undefined
-  const date = new Date(value)
-  return isNaN(date.getTime()) ? undefined : date
+  if (!value) return undefined;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? undefined : date;
 }
 
 // =============================================================================
@@ -45,8 +47,10 @@ export function toSubmitDate(value: string): Date | undefined {
  * @param width - LayoutWidth | null | undefined
  * @returns 文字列（nullの場合は空文字列）
  */
-export function toFormContentWidth(width: LayoutWidth | null | undefined): string {
-  return width ?? ''
+export function toFormContentWidth(
+  width: LayoutWidth | null | undefined,
+): string {
+  return width ?? "";
 }
 
 /**
@@ -54,8 +58,10 @@ export function toFormContentWidth(width: LayoutWidth | null | undefined): strin
  * @param value - フォームの文字列（optional型にも対応）
  * @returns LayoutWidth | null（無効な値の場合はnull）
  */
-export function toSubmitContentWidth(value: string | undefined): LayoutWidth | null {
-  return value && isValidLayoutWidth(value) ? value : null
+export function toSubmitContentWidth(
+  value: string | undefined,
+): LayoutWidth | null {
+  return value && isValidLayoutWidth(value) ? value : null;
 }
 
 /**
@@ -63,8 +69,10 @@ export function toSubmitContentWidth(value: string | undefined): LayoutWidth | n
  * @param value - フォームの文字列（optional型にも対応）
  * @returns LayoutWidth | undefined
  */
-export function toSubmitContentWidthUndefined(value: string | undefined): LayoutWidth | undefined {
-  return value && isValidLayoutWidth(value) ? value : undefined
+export function toSubmitContentWidthUndefined(
+  value: string | undefined,
+): LayoutWidth | undefined {
+  return value && isValidLayoutWidth(value) ? value : undefined;
 }
 
 // =============================================================================
@@ -77,8 +85,8 @@ export function toSubmitContentWidthUndefined(value: string | undefined): Layout
  * @returns 文字列
  */
 export function toFormNumberString(value: number | null | undefined): string {
-  if (value === null || value === undefined) return ''
-  return String(value)
+  if (value === null || value === undefined) return "";
+  return String(value);
 }
 
 /**
@@ -87,9 +95,9 @@ export function toFormNumberString(value: number | null | undefined): string {
  * @returns number | null（空文字列またはundefinedの場合はnull）
  */
 export function toSubmitNumber(value: string | undefined): number | null {
-  if (!value) return null
-  const num = parseInt(value, 10)
-  return isNaN(num) ? null : num
+  if (!value) return null;
+  const num = parseInt(value, 10);
+  return isNaN(num) ? null : num;
 }
 
 /**
@@ -97,10 +105,12 @@ export function toSubmitNumber(value: string | undefined): number | null {
  * @param value - フォームの文字列（optional型にも対応）
  * @returns number | undefined
  */
-export function toSubmitNumberUndefined(value: string | undefined): number | undefined {
-  if (!value) return undefined
-  const num = parseInt(value, 10)
-  return isNaN(num) ? undefined : num
+export function toSubmitNumberUndefined(
+  value: string | undefined,
+): number | undefined {
+  if (!value) return undefined;
+  const num = parseInt(value, 10);
+  return isNaN(num) ? undefined : num;
 }
 
 // =============================================================================
@@ -113,7 +123,7 @@ export function toSubmitNumberUndefined(value: string | undefined): number | und
  * @returns 文字列（nullの場合は空文字列）
  */
 export function toFormString(value: string | null | undefined): string {
-  return value ?? ''
+  return value ?? "";
 }
 
 /**
@@ -122,7 +132,7 @@ export function toFormString(value: string | null | undefined): string {
  * @returns string | null（空文字列またはundefinedの場合はnull）
  */
 export function toNullableString(value: string | undefined): string | null {
-  return value || null
+  return value || null;
 }
 
 /**
@@ -130,8 +140,10 @@ export function toNullableString(value: string | undefined): string | null {
  * @param value - フォームの文字列（optional型にも対応）
  * @returns string | undefined（空文字列またはundefinedの場合はundefined）
  */
-export function toUndefinedString(value: string | undefined): string | undefined {
-  return value || undefined
+export function toUndefinedString(
+  value: string | undefined,
+): string | undefined {
+  return value || undefined;
 }
 
 // =============================================================================
@@ -144,7 +156,7 @@ export function toUndefinedString(value: string | undefined): string | undefined
  * @returns カンマ区切り文字列
  */
 export function toTagsString(tags: string[] | null | undefined): string {
-  return tags?.join(', ') ?? ''
+  return tags?.join(", ") ?? "";
 }
 
 /**
@@ -153,11 +165,11 @@ export function toTagsString(tags: string[] | null | undefined): string {
  * @returns string[]
  */
 export function parseTagsString(value: string | undefined): string[] {
-  if (!value) return []
+  if (!value) return [];
   return value
-    .split(',')
+    .split(",")
     .map((t) => t.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
 // =============================================================================
@@ -169,6 +181,8 @@ export function parseTagsString(value: string | undefined): string[] {
  * @param value - boolean | null | undefined
  * @returns boolean | null
  */
-export function toFormNullableBoolean(value: boolean | null | undefined): boolean | null {
-  return value ?? null
+export function toFormNullableBoolean(
+  value: boolean | null | undefined,
+): boolean | null {
+  return value ?? null;
 }

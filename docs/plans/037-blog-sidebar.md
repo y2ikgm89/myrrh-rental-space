@@ -8,23 +8,26 @@
 ## 要件
 
 ### グローバル設定（サイト設定 > レイアウトタブ）
+
 - サイドバー全体のオン/オフ
 - 各ウィジェットの個別オン/オフ（検索、新着、人気、カテゴリー、タグ）
 - 表示件数の設定（新着: 5件、人気: 5件）
 
 ### ページ種別デフォルト
+
 - ブログ一覧・詳細ページ: デフォルトON
 - カスタムページ（Page）: デフォルトOFF（ページごとに設定可能）
 - その他ページ（ニュース、スペース等）: サイドバーなし
 
 ### ウィジェット
-| ウィジェット | 機能 |
-|-------------|------|
-| 検索バー | ブログ内検索（既存の検索機能を活用） |
-| 新着記事 | 公開日降順で最新N件表示 |
-| 人気記事 | viewCount降順で上位N件表示 |
-| カテゴリー | 全カテゴリー一覧（記事数表示） |
-| タグ | 全タグ一覧（タグクラウド形式） |
+
+| ウィジェット | 機能                                 |
+| ------------ | ------------------------------------ |
+| 検索バー     | ブログ内検索（既存の検索機能を活用） |
+| 新着記事     | 公開日降順で最新N件表示              |
+| 人気記事     | viewCount降順で上位N件表示           |
+| カテゴリー   | 全カテゴリー一覧（記事数表示）       |
+| タグ         | 全タグ一覧（タグクラウド形式）       |
 
 ---
 
@@ -33,6 +36,7 @@
 ## ✅ フェーズ1: DBスキーマ拡張 `cc:DONE`
 
 ### タスク
+
 - [x] Settings モデルにサイドバー設定フィールド追加
   - `sidebarEnabled: Boolean @default(true)`
   - `sidebarWidgets: Json @default("{}")` // { search: true, recent: true, popular: true, categories: true, tags: true }
@@ -43,6 +47,7 @@
 - [x] マイグレーション実行: `20260117000900_add_sidebar_settings`
 
 ### 変更ファイル
+
 - `prisma/schema.prisma`
 
 ---
@@ -50,6 +55,7 @@
 ## ✅ フェーズ2: Server Actions `cc:DONE`
 
 ### タスク
+
 - [x] サイドバー設定の取得・更新 Server Actions 追加
   - `getSidebarSettings()` - グローバル設定取得
   - `updateSidebarSettings()` - グローバル設定更新
@@ -58,10 +64,12 @@
   - `getSidebarData()` - 新着・人気・カテゴリー・タグを一括取得
 
 ### 新規ファイル
+
 - `src/lib/validations/sidebar.ts` - Zodスキーマ
 - `src/actions/public/sidebar.ts` - 公開用 Server Actions
 
 ### 変更ファイル
+
 - `src/actions/admin/settings.ts` - 管理用 Server Actions 追加
 
 ---
@@ -69,6 +77,7 @@
 ## ✅ フェーズ3: サイドバーコンポーネント `cc:DONE`
 
 ### タスク
+
 - [x] サイドバーコンテナコンポーネント作成
 - [x] 検索ウィジェット作成（既存BlogFiltersの検索部分を再利用）
 - [x] 新着記事ウィジェット作成
@@ -77,6 +86,7 @@
 - [x] タグウィジェット作成（タグクラウド形式）
 
 ### 新規ファイル
+
 - `src/components/site/sidebar/BlogSidebar.tsx` - メインコンテナ
 - `src/components/site/sidebar/SearchWidget.tsx` - 検索ウィジェット
 - `src/components/site/sidebar/RecentPostsWidget.tsx` - 新着記事
@@ -90,6 +100,7 @@
 ## ✅ フェーズ4: ブログページ統合 `cc:DONE`
 
 ### タスク
+
 - [x] ブログ一覧ページにサイドバー統合
   - 2カラムレイアウト（メイン + サイドバー）
   - レスポンシブ対応（モバイルはサイドバー下部表示）
@@ -97,6 +108,7 @@
 - [x] サイドバー表示判定ロジック実装
 
 ### 変更ファイル
+
 - `src/app/(public)/blog/page.tsx` - 一覧ページ
 - `src/app/(public)/blog/[slug]/page.tsx` - 詳細ページ
 
@@ -105,6 +117,7 @@
 ## ✅ フェーズ5: 管理画面UI `cc:DONE`
 
 ### タスク
+
 - [x] 設定画面「レイアウト」タブにサイドバー設定セクション追加
   - サイドバー全体のオン/オフ
   - 各ウィジェットのオン/オフトグル
@@ -112,9 +125,11 @@
 - [ ] プレビュー機能（オプション）
 
 ### 新規ファイル
+
 - `src/app/(admin)/admin/(dashboard)/settings/_components/sections/SidebarSection.tsx`
 
 ### 変更ファイル
+
 - `src/app/(admin)/admin/(dashboard)/settings/_components/tabs/LayoutTab.tsx`
 
 ---
@@ -122,11 +137,13 @@
 ## ✅ フェーズ6: ページ単位設定 `cc:DONE`
 
 ### タスク
+
 - [x] ページ編集画面にサイドバー設定追加
   - 「デフォルト（非表示）」「表示」「非表示」の3択
 - [x] カスタムページでのサイドバー表示対応
 
 ### 変更ファイル
+
 - `src/lib/validations/page.ts` - PageData型・updatePageSchemaにshowSidebar追加
 - `src/actions/admin/page.ts` - updatePageにshowSidebar保存処理追加
 - `src/components/admin/editor/inline/types.ts` - PageEditorFormDataにshowSidebar追加
@@ -134,6 +151,7 @@
 - `src/app/(admin)/admin/(dashboard)/pages/_components/PageInlineEditor.tsx` - showSidebar対応
 
 ### 新規ファイル
+
 - `src/app/(public)/p/[slug]/page.tsx` - カスタムページ公開表示（サイドバー対応）
 
 ---
@@ -141,6 +159,7 @@
 ## ✅ フェーズ7: 検証・レビュー `cc:DONE`
 
 ### タスク
+
 - [x] type-check / lint / build 通過確認
 - [ ] 動作確認
   - ブログ一覧でサイドバー表示

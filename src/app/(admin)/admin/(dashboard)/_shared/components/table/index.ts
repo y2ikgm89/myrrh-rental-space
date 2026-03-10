@@ -2,5 +2,5 @@
  * テーブル関連コンポーネント
  */
 
-export { BaseFilters } from './BaseFilters'
-export type { StatusOption, BaseFiltersProps } from './BaseFilters'
+export { BaseFilters } from "./BaseFilters";
+export type { StatusOption, BaseFiltersProps } from "./BaseFilters";

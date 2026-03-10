@@ -16,6 +16,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 export const metadata: Metadata = {
   title: "お知らせ管理 | Myrrh Rental Space",
@@ -89,6 +90,7 @@ async function SeoContent() {
 // ==============================================================================
 
 export default async function NewsPage({ searchParams }: PageProps) {
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -121,4 +123,3 @@ export default async function NewsPage({ searchParams }: PageProps) {
     </div>
   );
 }
-

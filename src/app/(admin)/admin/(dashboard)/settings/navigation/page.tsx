@@ -8,22 +8,24 @@
  * - 動的コンテンツ: ナビゲーションデータ（Suspenseでラップ）
  */
 
-import { Suspense } from 'react'
-import { getNavigationItems, getSocialLinks } from '@/admin/queries/navigation'
-import { SettingsLayout } from '../_components/SettingsLayout'
-import { NavigationManager } from '../site/_components/navigation'
-import type { ReactElement } from 'react'
+import { Suspense } from "react";
+import { connection } from "next/server";
+import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
+import { SettingsLayout } from "../_components/SettingsLayout";
+import { NavigationManager } from "../site/_components/navigation";
+import type { ReactElement } from "react";
 
 /**
  * 動的コンテンツ: ナビゲーション管理
  */
 async function NavigationContent(): Promise<ReactElement> {
-  const [desktopItems, mobileItems, footerItems, socialLinks] = await Promise.all([
-    getNavigationItems('HEADER_DESKTOP'),
-    getNavigationItems('HEADER_MOBILE'),
-    getNavigationItems('FOOTER'),
-    getSocialLinks(),
-  ])
+  const [desktopItems, mobileItems, footerItems, socialLinks] =
+    await Promise.all([
+      getNavigationItems("HEADER_DESKTOP"),
+      getNavigationItems("HEADER_MOBILE"),
+      getNavigationItems("FOOTER"),
+      getSocialLinks(),
+    ]);
 
   return (
     <NavigationManager
@@ -32,7 +34,7 @@ async function NavigationContent(): Promise<ReactElement> {
       initialFooterItems={footerItems}
       initialSocialLinks={socialLinks}
     />
-  )
+  );
 }
 
 /**
@@ -54,10 +56,11 @@ function NavigationLoading(): ReactElement {
         <div className="h-64 rounded bg-muted" />
       </div>
     </div>
-  )
+  );
 }
 
 export default async function NavigationSettingsPage(): Promise<ReactElement> {
+  await connection();
   return (
     <SettingsLayout
       title="ナビゲーション管理"
@@ -67,8 +70,5 @@ export default async function NavigationSettingsPage(): Promise<ReactElement> {
         <NavigationContent />
       </Suspense>
     </SettingsLayout>
-  )
+  );
 }
-
-
-

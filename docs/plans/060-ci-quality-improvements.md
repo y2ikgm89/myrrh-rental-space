@@ -10,6 +10,7 @@ Dependabot設定、CSPセキュリティヘッダー、テストカバレッジ�
 ### Phase 1: Dependabot設定 ✅
 
 `.github/dependabot.yml` 作成:
+
 - npm依存関係の週次更新（月曜日）
 - GitHub Actionsの週次更新
 - メジャーバージョンは手動対応（ignore設定）
@@ -19,11 +20,13 @@ Dependabot設定、CSPセキュリティヘッダー、テストカバレッジ�
 ### Phase 2: CSPセキュリティヘッダー実装 ✅
 
 `next.config.ts` 更新:
+
 - Content-Security-Policy ヘッダー追加
 - 環境別設定（開発: unsafe-eval許可、本番: 厳格化）
 - 対応サービス: Turnstile, Stripe, Supabase, YouTube
 
 CSP設定内容:
+
 - `default-src: 'self'`
 - `script-src: 'self' 'unsafe-inline' + 開発時unsafe-eval + 外部サービス`
 - `style-src: 'self' 'unsafe-inline'`
@@ -35,17 +38,20 @@ CSP設定内容:
 ### Phase 3: テストカバレッジ有効化 ✅
 
 `bunfig.toml` 更新:
+
 - `coverage = true`
 - `coverageReporter = ["text", "lcov", "html"]`
 - `coverageDir = "coverage"`
 - `coverageThreshold = { lines = 80, functions = 80, branches = 70 }`
 
 `.github/workflows/ci.yml` 更新:
+
 - `bun test --coverage` でカバレッジレポート生成（ローカル確認用）
 
 ### Phase 4: 型アサーション状況確認 ✅
 
 現状確認の結果:
+
 - 自動生成ファイル（Prisma）: 変更不可
 - import renaming（`type X as Y`）: 正当な使用
 - 型ガード関数内: 必要な使用
@@ -56,16 +62,19 @@ CSP設定内容:
 ### Phase 5: TypeDoc API ドキュメント設定 ✅
 
 `typedoc.json` 作成:
+
 - エントリーポイント: shared/lib, admin/actions, public/actions
 - 出力先: docs/api
 - Markdownプラグイン使用
 - 自動生成ファイル除外
 
 `package.json` 更新:
+
 - `docs`: TypeDoc実行
 - `docs:watch`: 監視モード
 
 devDependencies追加:
+
 - `typedoc: ^0.28.4`
 - `typedoc-plugin-markdown: ^4.7.0`
 

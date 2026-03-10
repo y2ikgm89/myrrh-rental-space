@@ -1,25 +1,27 @@
-import { notFound } from 'next/navigation'
-import type { Metadata } from 'next'
-import { getFaqItemById, getFaqCategories } from '@/admin/queries/faq'
-import { FaqItemInlineEditor } from '../../../_components/FaqItemInlineEditor'
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import type { Metadata } from "next";
+import { getFaqItemById, getFaqCategories } from "@/admin/queries/faq";
+import { FaqItemInlineEditor } from "../../../_components/FaqItemInlineEditor";
 
 export const metadata: Metadata = {
-  title: '質問編集 | FAQ管理 | Myrrh Rental Space',
-}
+  title: "質問編集 | FAQ管理 | Myrrh Rental Space",
+};
 
 type PageProps = {
-  params: Promise<{ id: string }>
-}
+  params: Promise<{ id: string }>;
+};
 
 export default async function EditFaqItemPage({ params }: PageProps) {
-  const { id } = await params
+  await connection();
+  const { id } = await params;
   const [item, { categories }] = await Promise.all([
     getFaqItemById(id),
     getFaqCategories(),
-  ])
+  ]);
 
   if (!item) {
-    notFound()
+    notFound();
   }
 
   return (
@@ -28,6 +30,5 @@ export default async function EditFaqItemPage({ params }: PageProps) {
       categories={categories.map((c) => ({ id: c.id, name: c.name }))}
       mode="edit"
     />
-  )
+  );
 }
-

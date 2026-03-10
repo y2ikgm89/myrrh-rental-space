@@ -4,64 +4,71 @@
  * @description FileNode のプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $isFileNode, fileUrlState, fileNameState, fileSizeState, fileMimeState, formatFileSize } from '../../nodes/FileNode'
-import type { FileNode } from '../../nodes/FileNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorFields } from '../InspectorFields'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+import { useEffect, useState } from "react";
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import {
+  $isFileNode,
+  fileUrlState,
+  fileNameState,
+  fileSizeState,
+  fileMimeState,
+  formatFileSize,
+} from "../../nodes/FileNode";
+import type { FileNode } from "../../nodes/FileNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorFields } from "../InspectorFields";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type FileInspectorPanelProps = {
-  nodeKey: string
-  node: FileNode
-}
+  nodeKey: string;
+  node: FileNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isFileNode)
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isFileNode);
 
   const [url, setUrl] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileUrlState))
-  )
+    editor.getEditorState().read(() => $getState(node, fileUrlState)),
+  );
   const [fileName, setFileName] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileNameState))
-  )
+    editor.getEditorState().read(() => $getState(node, fileNameState)),
+  );
   const [fileSize, setFileSize] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileSizeState))
-  )
+    editor.getEditorState().read(() => $getState(node, fileSizeState)),
+  );
   const [mime, setMime] = useState(() =>
-    editor.getEditorState().read(() => $getState(node, fileMimeState))
-  )
+    editor.getEditorState().read(() => $getState(node, fileMimeState)),
+  );
 
   useEffect(() => {
     return editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        setUrl($getState(node, fileUrlState))
-        setFileName($getState(node, fileNameState))
-        setFileSize($getState(node, fileSizeState))
-        setMime($getState(node, fileMimeState))
-      })
-    })
-  }, [editor, node])
+        setUrl($getState(node, fileUrlState));
+        setFileName($getState(node, fileNameState));
+        setFileSize($getState(node, fileSizeState));
+        setMime($getState(node, fileMimeState));
+      });
+    });
+  }, [editor, node]);
 
   const handleFileNameChange = (value: string) => {
     updateNode((n) => {
-      $setState(n, fileNameState, value)
-    })
-  }
+      $setState(n, fileNameState, value);
+    });
+  };
 
   return (
     <div>
@@ -89,7 +96,9 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
         {fileSize > 0 && (
           <div className="space-y-2">
             <Label className="text-xs">ファイルサイズ</Label>
-            <p className="text-xs text-muted-foreground">{formatFileSize(fileSize)}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatFileSize(fileSize)}
+            </p>
           </div>
         )}
 
@@ -101,5 +110,5 @@ export function FileInspectorPanel({ nodeKey, node }: FileInspectorPanelProps) {
         )}
       </InspectorFields>
     </div>
-  )
+  );
 }

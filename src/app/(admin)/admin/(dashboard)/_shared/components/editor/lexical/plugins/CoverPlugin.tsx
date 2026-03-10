@@ -6,12 +6,12 @@
  * ダイアログで設定を選択し、CoverNode + HeadingNode + ParagraphNode を挿入する
  */
 
-'use client'
+"use client";
 
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-import { $createHeadingNode } from '@lexical/rich-text'
-import { $createParagraphNode } from 'lexical'
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $createHeadingNode } from "@lexical/rich-text";
+import { $createParagraphNode } from "lexical";
 import {
   Dialog,
   DialogContent,
@@ -20,19 +20,16 @@ import {
   DialogFooter,
   Button,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
-import { Input } from '@/admin/components/ui/input'
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from '@/admin/components/ui/radio-group'
+} from "@/admin/components/ui/select";
+import { Input } from "@/admin/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/admin/components/ui/radio-group";
 import {
   $createCoverNode,
   COVER_MIN_HEIGHTS,
@@ -46,64 +43,70 @@ import {
   type CoverContentAlign,
   type CoverContentPosition,
   type CoverOverlayOpacity,
-} from '../nodes/CoverNode'
-import { ACCENT_COLORS, ACCENT_COLOR_LABELS, isAccentColor, type AccentColor } from '../config/accent-colors'
-import { useState } from 'react'
+} from "../nodes/CoverNode";
+import {
+  ACCENT_COLORS,
+  ACCENT_COLOR_LABELS,
+  isAccentColor,
+  type AccentColor,
+} from "../config/accent-colors";
+import { useState } from "react";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type CoverPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const MIN_HEIGHT_LABELS: Record<CoverMinHeight, string> = {
-  sm: '小（200px）',
-  md: '中（300px）',
-  lg: '大（400px）',
-  xl: '特大（500px）',
-  full: '全画面',
-}
+  sm: "小（200px）",
+  md: "中（300px）",
+  lg: "大（400px）",
+  xl: "特大（500px）",
+  full: "全画面",
+};
 
 const CONTENT_ALIGN_LABELS: Record<CoverContentAlign, string> = {
-  left: '左',
-  center: '中央',
-  right: '右',
-}
+  left: "左",
+  center: "中央",
+  right: "右",
+};
 
 const CONTENT_POSITION_LABELS: Record<CoverContentPosition, string> = {
-  top: '上',
-  center: '中央',
-  bottom: '下',
-}
+  top: "上",
+  center: "中央",
+  bottom: "下",
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState('')
-  const [overlayColor, setOverlayColor] = useState<AccentColor>('default')
-  const [overlayOpacity, setOverlayOpacity] = useState<CoverOverlayOpacity>(40)
-  const [minHeight, setMinHeight] = useState<CoverMinHeight>('md')
-  const [contentAlign, setContentAlign] = useState<CoverContentAlign>('center')
-  const [contentPosition, setContentPosition] = useState<CoverContentPosition>('center')
+  const [editor] = useLexicalComposerContext();
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
+  const [overlayColor, setOverlayColor] = useState<AccentColor>("default");
+  const [overlayOpacity, setOverlayOpacity] = useState<CoverOverlayOpacity>(40);
+  const [minHeight, setMinHeight] = useState<CoverMinHeight>("md");
+  const [contentAlign, setContentAlign] = useState<CoverContentAlign>("center");
+  const [contentPosition, setContentPosition] =
+    useState<CoverContentPosition>("center");
 
   const resetState = () => {
-    setBackgroundImageUrl('')
-    setOverlayColor('default')
-    setOverlayOpacity(40)
-    setMinHeight('md')
-    setContentAlign('center')
-    setContentPosition('center')
-  }
+    setBackgroundImageUrl("");
+    setOverlayColor("default");
+    setOverlayOpacity(40);
+    setMinHeight("md");
+    setContentAlign("center");
+    setContentPosition("center");
+  };
 
   const handleInsert = () => {
     editor.update(() => {
@@ -114,30 +117,30 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
         minHeight,
         contentAlign,
         contentPosition,
-      })
-      const heading = $createHeadingNode('h2')
-      const para = $createParagraphNode()
-      coverNode.append(heading)
-      coverNode.append(para)
-      $insertNodeToNearestRoot(coverNode)
-    })
-    resetState()
-    onClose()
-  }
+      });
+      const heading = $createHeadingNode("h2");
+      const para = $createParagraphNode();
+      coverNode.append(heading);
+      coverNode.append(para);
+      $insertNodeToNearestRoot(coverNode);
+    });
+    resetState();
+    onClose();
+  };
 
   const handleClose = () => {
-    resetState()
-    onClose()
-  }
+    resetState();
+    onClose();
+  };
 
   const handleOverlayColorChange = (value: string) => {
     if (isAccentColor(value)) {
-      setOverlayColor(value)
+      setOverlayColor(value);
     }
-  }
+  };
 
   const handleOverlayOpacityChange = (value: string) => {
-    const parsed = parseInt(value, 10)
+    const parsed = parseInt(value, 10);
     if (
       parsed === 0 ||
       parsed === 10 ||
@@ -149,27 +152,27 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
       parsed === 70 ||
       parsed === 80
     ) {
-      setOverlayOpacity(parsed)
+      setOverlayOpacity(parsed);
     }
-  }
+  };
 
   const handleMinHeightChange = (value: string) => {
     if (isCoverMinHeight(value)) {
-      setMinHeight(value)
+      setMinHeight(value);
     }
-  }
+  };
 
   const handleContentAlignChange = (value: string) => {
     if (isCoverContentAlign(value)) {
-      setContentAlign(value)
+      setContentAlign(value);
     }
-  }
+  };
 
   const handleContentPositionChange = (value: string) => {
     if (isCoverContentPosition(value)) {
-      setContentPosition(value)
+      setContentPosition(value);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -190,7 +193,10 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">オーバーレイカラー</Label>
-            <Select value={overlayColor} onValueChange={handleOverlayColorChange}>
+            <Select
+              value={overlayColor}
+              onValueChange={handleOverlayColorChange}
+            >
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -206,7 +212,10 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">オーバーレイ透明度</Label>
-            <Select value={String(overlayOpacity)} onValueChange={handleOverlayOpacityChange}>
+            <Select
+              value={String(overlayOpacity)}
+              onValueChange={handleOverlayOpacityChange}
+            >
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -246,7 +255,10 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
               {COVER_CONTENT_ALIGNS.map((align) => (
                 <div key={align} className="flex items-center space-x-2">
                   <RadioGroupItem value={align} id={`cover-align-${align}`} />
-                  <Label htmlFor={`cover-align-${align}`} className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`cover-align-${align}`}
+                    className="font-normal cursor-pointer"
+                  >
                     {CONTENT_ALIGN_LABELS[align]}
                   </Label>
                 </div>
@@ -264,7 +276,10 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
               {COVER_CONTENT_POSITIONS.map((pos) => (
                 <div key={pos} className="flex items-center space-x-2">
                   <RadioGroupItem value={pos} id={`cover-position-${pos}`} />
-                  <Label htmlFor={`cover-position-${pos}`} className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor={`cover-position-${pos}`}
+                    className="font-normal cursor-pointer"
+                  >
                     {CONTENT_POSITION_LABELS[pos]}
                   </Label>
                 </div>
@@ -283,5 +298,5 @@ export function CoverPlugin({ isOpen, onClose }: CoverPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

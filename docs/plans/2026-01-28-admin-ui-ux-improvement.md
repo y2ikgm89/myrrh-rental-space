@@ -10,30 +10,30 @@ shadcn/uiベースを維持しつつ、Minimalism & Swiss Styleで統一感の�
 
 ## 要件
 
-| 項目 | 内容 |
-|------|------|
-| スタイル | Minimalism & Swiss Style |
-| カラー | Trust Blue パレット |
-| モバイル | スマホ対応必須（レスポンシブ） |
-| ダークモード | ライトモードのみ |
-| 進め方 | 段階的に少しずつ |
+| 項目         | 内容                           |
+| ------------ | ------------------------------ |
+| スタイル     | Minimalism & Swiss Style       |
+| カラー       | Trust Blue パレット            |
+| モバイル     | スマホ対応必須（レスポンシブ） |
+| ダークモード | ライトモードのみ               |
+| 進め方       | 段階的に少しずつ               |
 
 ## デザインシステム
 
 ### カラーパレット
 
-| 役割 | Hex | Tailwind | CSS変数 |
-|------|-----|----------|---------|
-| Primary | `#2563EB` | `blue-600` | `--color-primary` |
-| Secondary | `#3B82F6` | `blue-500` | `--color-secondary` |
-| CTA/成功 | `#10B981` | `emerald-500` | `--color-success` |
-| 警告 | `#F59E0B` | `amber-500` | `--color-warning` |
-| 危険 | `#EF4444` | `red-500` | `--color-destructive` |
-| Background | `#F8FAFC` | `slate-50` | `--color-background` |
-| Text | `#1E293B` | `slate-800` | `--color-foreground` |
-| Muted Text | `#64748B` | `slate-500` | `--color-muted-foreground` |
-| Border | `#E2E8F0` | `slate-200` | `--color-border` |
-| Card BG | `#FFFFFF` | `white` | `--color-card` |
+| 役割       | Hex       | Tailwind      | CSS変数                    |
+| ---------- | --------- | ------------- | -------------------------- |
+| Primary    | `#2563EB` | `blue-600`    | `--color-primary`          |
+| Secondary  | `#3B82F6` | `blue-500`    | `--color-secondary`        |
+| CTA/成功   | `#10B981` | `emerald-500` | `--color-success`          |
+| 警告       | `#F59E0B` | `amber-500`   | `--color-warning`          |
+| 危険       | `#EF4444` | `red-500`     | `--color-destructive`      |
+| Background | `#F8FAFC` | `slate-50`    | `--color-background`       |
+| Text       | `#1E293B` | `slate-800`   | `--color-foreground`       |
+| Muted Text | `#64748B` | `slate-500`   | `--color-muted-foreground` |
+| Border     | `#E2E8F0` | `slate-200`   | `--color-border`           |
+| Card BG    | `#FFFFFF` | `white`       | `--color-card`             |
 
 ### タイポグラフィ
 
@@ -147,6 +147,7 @@ shadcn/uiベースを維持しつつ、Minimalism & Swiss Styleで統一感の�
 ## 変更ファイル一覧
 
 ### 共通コンポーネント
+
 - `src/app/globals.css` - Trust Blueカラーパレット
 - `src/app/(admin)/admin/(dashboard)/_shared/components/ui/button.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/ui/card.tsx`
@@ -163,11 +164,13 @@ shadcn/uiベースを維持しつつ、Minimalism & Swiss Styleで統一感の�
 - `src/app/(admin)/admin/(dashboard)/_shared/components/ui/Pagination.tsx`
 
 ### レイアウト
+
 - `src/app/(admin)/admin/(dashboard)/_components/ResponsiveSidebar.tsx`
 - `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx`
 - `src/app/(admin)/admin/(dashboard)/_components/MainContent.tsx`
 
 ### ページ
+
 - `src/app/(admin)/admin/(dashboard)/reservations/page.tsx`
 - `src/app/(admin)/admin/(dashboard)/news/page.tsx`
 - `src/app/(admin)/admin/(dashboard)/customers/page.tsx`

@@ -2,11 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import {
-  CACHE_LIFE,
-  CACHE_TAGS,
-  getCacheTag,
-} from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,

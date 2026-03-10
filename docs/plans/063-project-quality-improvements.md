@@ -30,6 +30,7 @@
 **解決**: 共有予約ロジックを `@/shared/lib/reservation/` に抽出
 
 新規作成ファイル:
+
 - `src/shared/lib/reservation/constants.ts` - 営業時間定数
 - `src/shared/lib/reservation/types.ts` - 型定義（TimeSlot, CalendarDate等）
 - `src/shared/lib/reservation/overlap-check.ts` - 予約重複チェック
@@ -37,6 +38,7 @@
 - `src/shared/lib/reservation/index.ts` - バレルエクスポート
 
 更新ファイル:
+
 - `src/app/(admin)/.../TimeSlotSelector.tsx` - インポート先変更
 - `src/app/(admin)/.../actions/reservation.ts` - インポート先変更
 - `src/app/(public)/.../actions/reservation.ts` - 共有ロジック使用
@@ -45,11 +47,13 @@
 ### 3. モック基盤構築
 
 **新規作成**:
+
 - `__tests__/mocks/resend.ts` - メール送信モック
 - `__tests__/mocks/google-calendar.ts` - Google Calendar APIモック
 - `__tests__/mocks/stripe.ts` - Stripe APIモック
 
 **更新**:
+
 - `__tests__/mocks/index.ts` - バレルエクスポート追加
 
 ### 4. 品質レビュー対応

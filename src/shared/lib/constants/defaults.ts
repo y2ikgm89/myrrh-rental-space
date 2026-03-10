@@ -6,8 +6,8 @@
 
 export const SITE_DEFAULTS = {
   /** サイト名（DB未設定時のフォールバック） */
-  name: 'Myrrh Rental Space',
+  name: "Myrrh Rental Space",
 
   /** サイト説明（DB未設定時のフォールバック） */
-  description: 'レンタルスペースの予約・管理サービス',
-} as const
+  description: "レンタルスペースの予約・管理サービス",
+} as const;

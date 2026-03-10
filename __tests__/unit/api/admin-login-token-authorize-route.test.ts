@@ -2,9 +2,8 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextRequest } from "next/server";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 
-const mockConsumeAdminLoginToken = mock<
-  (token: string, usedAt?: Date) => Promise<boolean>
->();
+const mockConsumeAdminLoginToken =
+  mock<(token: string, usedAt?: Date) => Promise<boolean>>();
 
 mock.module("@/shared/domain/admin-login-tokens/commands", () => ({
   consumeAdminLoginToken: (token: string, usedAt?: Date) =>
@@ -46,6 +45,15 @@ describe("GET /api/admin/login-tokens/authorize", () => {
       new NextRequest(
         "https://example.com/api/admin/login-tokens/authorize?token=plain-token",
       ),
+    );
+
+    expect(response.status).toBe(404);
+    expect(mockConsumeAdminLoginToken).not.toHaveBeenCalled();
+  });
+
+  test("token がない場合は 404 にする", async () => {
+    const response = await GET(
+      new NextRequest("https://example.com/api/admin/login-tokens/authorize"),
     );
 
     expect(response.status).toBe(404);

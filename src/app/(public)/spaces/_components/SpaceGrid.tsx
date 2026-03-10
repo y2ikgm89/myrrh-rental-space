@@ -1,39 +1,39 @@
-'use client'
+"use client";
 
-import { useRef, type ReactElement } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
+import { useRef, type ReactElement } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 
 interface SpaceCardData {
-  readonly id: string
-  readonly slug: string
-  readonly name: string
-  readonly description: string | null
-  readonly capacity: number | null
-  readonly hourlyPrice: number | null
-  readonly area: number | null
-  readonly mainImageUrl: string
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly capacity: number | null;
+  readonly hourlyPrice: number | null;
+  readonly area: number | null;
+  readonly mainImageUrl: string;
 }
 
 interface SpaceGridProps {
-  readonly spaces: readonly SpaceCardData[]
+  readonly spaces: readonly SpaceCardData[];
 }
 
 export function SpaceGrid({ spaces }: SpaceGridProps): ReactElement {
-  const gridRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const grid = gridRef.current
-      if (!grid) return
+      const grid = gridRef.current;
+      if (!grid) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const cards = grid.querySelectorAll('[data-space-card]')
-        if (cards.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const cards = grid.querySelectorAll("[data-space-card]");
+        if (cards.length === 0) return;
 
         gsap.fromTo(
           cards,
@@ -46,26 +46,29 @@ export function SpaceGrid({ spaces }: SpaceGridProps): ReactElement {
             stagger: STAGGER.card,
             scrollTrigger: {
               trigger: grid,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: gridRef },
-  )
+  );
 
   if (spaces.length === 0) {
     return (
       <p className="py-16 text-center text-muted-foreground">
         現在公開中のスペースはありません。
       </p>
-    )
+    );
   }
 
   return (
-    <div ref={gridRef} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
+    <div
+      ref={gridRef}
+      className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8"
+    >
       {spaces.map((space) => (
         <Link
           key={space.id}
@@ -96,7 +99,7 @@ export function SpaceGrid({ spaces }: SpaceGridProps): ReactElement {
               <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                 <span className="text-xs text-muted-foreground">
                   {space.capacity != null && `${space.capacity}名`}
-                  {space.capacity != null && space.area != null && ' / '}
+                  {space.capacity != null && space.area != null && " / "}
                   {space.area != null && <>{space.area}m&sup2;</>}
                 </span>
                 {space.hourlyPrice != null && (
@@ -110,5 +113,5 @@ export function SpaceGrid({ spaces }: SpaceGridProps): ReactElement {
         </Link>
       ))}
     </div>
-  )
+  );
 }

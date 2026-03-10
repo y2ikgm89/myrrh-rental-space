@@ -124,7 +124,7 @@ export function useVisualEffects(): VisualEffectsContextValue {
 
 ```typescript
 // コンポーネントでの使用
-const { effectLevel, budget, degradeTo } = useVisualEffects()
+const { effectLevel, budget, degradeTo } = useVisualEffects();
 
 // L3以上でThree.js有効
 if (effectLevel >= 3 && budget.allowThreeJs) {
@@ -133,7 +133,7 @@ if (effectLevel >= 3 && budget.allowThreeJs) {
 
 // パフォーマンス低下時にダウングレード
 if (fps < 30) {
-  degradeTo(toEffectLevel(effectLevel - 1))
+  degradeTo(toEffectLevel(effectLevel - 1));
 }
 ```
 
@@ -195,20 +195,20 @@ CSS `mix-blend-mode` / `background-blend-mode` による視覚的合成。L1 か
 
 ### mix-blend-mode ガイド
 
-| モード | 効果 | 用途 | パフォーマンス |
-|--------|------|------|-------------|
-| `multiply` | 暗い色が優先 | カラーフィルター、写真にブランドカラー重ね | Good |
-| `screen` | 明るい色が優先 | 光の重ね、フレア効果 | Good |
-| `overlay` | コントラスト強調 | テクスチャ合成、画像の質感追加 | Good |
-| `difference` | 色反転 | カスタムカーソル、ダイナミックテキスト | Good |
-| `exclusion` | 柔らかい反転 | 背景上のテキスト可読性 | Good |
+| モード       | 効果             | 用途                                       | パフォーマンス |
+| ------------ | ---------------- | ------------------------------------------ | -------------- |
+| `multiply`   | 暗い色が優先     | カラーフィルター、写真にブランドカラー重ね | Good           |
+| `screen`     | 明るい色が優先   | 光の重ね、フレア効果                       | Good           |
+| `overlay`    | コントラスト強調 | テクスチャ合成、画像の質感追加             | Good           |
+| `difference` | 色反転           | カスタムカーソル、ダイナミックテキスト     | Good           |
+| `exclusion`  | 柔らかい反転     | 背景上のテキスト可読性                     | Good           |
 
 ### isolation（ブレンドモード分離）
 
 ```css
 /* 親要素でisolationを設定し、ブレンドの影響範囲を限定 */
 .blend-container {
-  isolation: isolate;  /* 子要素のブレンドがこのコンテナ外に漏れない */
+  isolation: isolate; /* 子要素のブレンドがこのコンテナ外に漏れない */
 }
 
 .blend-child {
@@ -222,7 +222,7 @@ WebGL Canvas と HTML 要素のブレンドは `mix-blend-mode` をCanvas wrappe
 
 ```css
 .three-canvas-wrapper {
-  mix-blend-mode: screen;  /* 3D要素を明るく合成 */
+  mix-blend-mode: screen; /* 3D要素を明るく合成 */
   pointer-events: none;
 }
 ```
@@ -305,31 +305,31 @@ L1（CSS only）レベルのパララックスとして最も高パフォーマ�
 
 ### ブラウザ対応状況（2025年末）
 
-| ブラウザ | `animation-timeline: scroll()` |
-|---------|-------------------------------|
-| Chrome 115+ | ✅ 対応 |
-| Edge 115+ | ✅ 対応 |
-| Opera 101+ | ✅ 対応 |
-| Firefox | ⚠️ フラグ付き |
-| Safari | ❌ 未対応 |
+| ブラウザ    | `animation-timeline: scroll()` |
+| ----------- | ------------------------------ |
+| Chrome 115+ | ✅ 対応                        |
+| Edge 115+   | ✅ 対応                        |
+| Opera 101+  | ✅ 対応                        |
+| Firefox     | ⚠️ フラグ付き                  |
+| Safari      | ❌ 未対応                      |
 
 ### フォールバック戦略
 
 ```typescript
 // 検出パターン
-const supportsScrollTimeline = CSS.supports('animation-timeline', 'scroll()')
+const supportsScrollTimeline = CSS.supports("animation-timeline", "scroll()");
 
 if (supportsScrollTimeline) {
   // CSS ネイティブ — JS 不要、メインスレッド外で実行
-  document.documentElement.classList.add('scroll-timeline-supported')
+  document.documentElement.classList.add("scroll-timeline-supported");
 } else {
   // GSAP ScrollTrigger フォールバック
-  import('../../lib/gsap-config').then(({ gsap }) => {
-    gsap.to('.parallax-bg', {
+  import("../../lib/gsap-config").then(({ gsap }) => {
+    gsap.to(".parallax-bg", {
       yPercent: -20,
-      scrollTrigger: { trigger: '.hero', scrub: true },
-    })
-  })
+      scrollTrigger: { trigger: ".hero", scrub: true },
+    });
+  });
 }
 ```
 
@@ -342,8 +342,12 @@ if (supportsScrollTimeline) {
   }
 
   @keyframes parallax-move {
-    from { transform: translateY(0); }
-    to { transform: translateY(-20%); }
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-20%);
+    }
   }
 }
 ```
@@ -358,7 +362,7 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 
 ```css
 @property --hue {
-  syntax: '<number>';
+  syntax: "<number>";
   inherits: false;
   initial-value: 0;
 }
@@ -369,7 +373,9 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 }
 
 @keyframes hue-rotate {
-  to { --hue: 360; }
+  to {
+    --hue: 360;
+  }
 }
 ```
 
@@ -398,11 +404,21 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 ### mix-blend-mode パターン
 
 ```css
-.blend-overlay { mix-blend-mode: overlay; }      /* 画像にテクスチャ重ね */
-.blend-multiply { mix-blend-mode: multiply; }    /* カラーフィルター */
-.blend-screen { mix-blend-mode: screen; }        /* 明るい重ね合わせ */
-.blend-difference { mix-blend-mode: difference; } /* 反転コントラスト */
-.blend-exclusion { mix-blend-mode: exclusion; }  /* 柔らかな反転 */
+.blend-overlay {
+  mix-blend-mode: overlay;
+} /* 画像にテクスチャ重ね */
+.blend-multiply {
+  mix-blend-mode: multiply;
+} /* カラーフィルター */
+.blend-screen {
+  mix-blend-mode: screen;
+} /* 明るい重ね合わせ */
+.blend-difference {
+  mix-blend-mode: difference;
+} /* 反転コントラスト */
+.blend-exclusion {
+  mix-blend-mode: exclusion;
+} /* 柔らかな反転 */
 ```
 
 ### CSS masks / clip-path
@@ -410,7 +426,7 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 ```css
 /* SVGマスクで切り抜き */
 .masked-image {
-  mask-image: url('/masks/organic-shape.svg');
+  mask-image: url("/masks/organic-shape.svg");
   mask-size: cover;
   mask-repeat: no-repeat;
 }
@@ -438,12 +454,21 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.03); opacity: 1; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breathing { animation: none; }
+  .breathing {
+    animation: none;
+  }
 }
 ```
 
@@ -491,11 +516,22 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 }
 
 @keyframes glitch-shift {
-  0%, 100% { transform: translate(0); }
-  20% { transform: translate(-3px, 2px); }
-  40% { transform: translate(3px, -1px); }
-  60% { transform: translate(-1px, 3px); }
-  80% { transform: translate(2px, -2px); }
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-3px, 2px);
+  }
+  40% {
+    transform: translate(3px, -1px);
+  }
+  60% {
+    transform: translate(-1px, 3px);
+  }
+  80% {
+    transform: translate(2px, -2px);
+  }
 }
 ```
 
@@ -504,12 +540,17 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 ```css
 /* ネオン */
 .neon-text {
-  text-shadow: 0 0 7px currentColor, 0 0 20px currentColor, 0 0 40px oklch(0.7 0.2 240);
+  text-shadow:
+    0 0 7px currentColor,
+    0 0 20px currentColor,
+    0 0 40px oklch(0.7 0.2 240);
 }
 
 /* エンボス */
 .emboss-text {
-  text-shadow: 1px 1px 1px oklch(1 0 0 / 0.3), -1px -1px 1px oklch(0 0 0 / 0.2);
+  text-shadow:
+    1px 1px 1px oklch(1 0 0 / 0.3),
+    -1px -1px 1px oklch(0 0 0 / 0.2);
 }
 
 /* 3D押し出し */
@@ -528,7 +569,8 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 .gradient-border {
   border: 2px solid transparent;
   background:
-    linear-gradient(var(--color-background), var(--color-background)) padding-box,
+    linear-gradient(var(--color-background), var(--color-background))
+      padding-box,
     linear-gradient(135deg, oklch(0.6 0.2 240), oklch(0.7 0.15 300)) border-box;
   border-radius: 12px;
 }
@@ -536,14 +578,14 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 
 ### ブラウザ対応注意事項
 
-| エフェクト | Chrome | Firefox | Safari | 備考 |
-|-----------|--------|---------|--------|------|
-| `@property` | 85+ | 128+ | 15.4+ | グラデーション補間に必須 |
-| `backdrop-filter` | 76+ | 103+ | 9+ | `-webkit-` prefix 併記 |
-| `mix-blend-mode` | 41+ | 32+ | 8+ | ほぼ全対応 |
-| `mask-image` (SVG) | 120+ | 53+ | 15.4+ | `-webkit-` prefix 併記 |
-| `clip-path` (polygon) | 55+ | 54+ | 13.1+ | ほぼ全対応 |
-| `animation-timeline` | 115+ | ⚠️ flag | ❌ | L1で最もモダン |
+| エフェクト            | Chrome | Firefox | Safari | 備考                     |
+| --------------------- | ------ | ------- | ------ | ------------------------ |
+| `@property`           | 85+    | 128+    | 15.4+  | グラデーション補間に必須 |
+| `backdrop-filter`     | 76+    | 103+    | 9+     | `-webkit-` prefix 併記   |
+| `mix-blend-mode`      | 41+    | 32+     | 8+     | ほぼ全対応               |
+| `mask-image` (SVG)    | 120+   | 53+     | 15.4+  | `-webkit-` prefix 併記   |
+| `clip-path` (polygon) | 55+    | 54+     | 13.1+  | ほぼ全対応               |
+| `animation-timeline`  | 115+   | ⚠️ flag | ❌     | L1で最もモダン           |
 
 ## View Transitions API
 
@@ -552,12 +594,12 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 
 ### ブラウザ対応状況（2025年末）
 
-| ブラウザ | SPA (同一ドキュメント) | MPA (クロスドキュメント) |
-|---------|----------------------|----------------------|
-| Chrome 111+ | ✅ | Chrome 126+ ✅ |
-| Edge 111+ | ✅ | Edge 126+ ✅ |
-| Safari 18+ | ✅ | ❌ |
-| Firefox | ⚠️ 実装中 | ❌ |
+| ブラウザ    | SPA (同一ドキュメント) | MPA (クロスドキュメント) |
+| ----------- | ---------------------- | ------------------------ |
+| Chrome 111+ | ✅                     | Chrome 126+ ✅           |
+| Edge 111+   | ✅                     | Edge 126+ ✅             |
+| Safari 18+  | ✅                     | ❌                       |
+| Firefox     | ⚠️ 実装中              | ❌                       |
 
 ### SPAパターン（document.startViewTransition）
 
@@ -565,13 +607,13 @@ L1（JSなし）で使用可能なCSSエフェクト。`prefers-reduced-motion: 
 function navigateTo(url: string) {
   if (!document.startViewTransition) {
     // フォールバック: 即座に遷移
-    router.push(url)
-    return
+    router.push(url);
+    return;
   }
 
   document.startViewTransition(() => {
-    router.push(url)
-  })
+    router.push(url);
+  });
 }
 ```
 
@@ -632,11 +674,11 @@ experimental: {
 
 ### ブレークポイント統一規約
 
-| コンテキスト | ブレークポイント | 備考 |
-|-------------|----------------|------|
-| Tailwind CSS | `md: 768px` | CSS レイアウト用 |
-| `gsap.matchMedia()` | `800px` | アニメーション分岐用 |
-| `detect-gpu` `isMobile` | UA + 画面サイズ | 自動判定 |
+| コンテキスト            | ブレークポイント | 備考                 |
+| ----------------------- | ---------------- | -------------------- |
+| Tailwind CSS            | `md: 768px`      | CSS レイアウト用     |
+| `gsap.matchMedia()`     | `800px`          | アニメーション分岐用 |
+| `detect-gpu` `isMobile` | UA + 画面サイズ  | 自動判定             |
 
 ### モバイルでのエフェクトレベル制限
 
@@ -649,49 +691,53 @@ experimental: {
 
 ### モバイルでの各レベル挙動
 
-| レベル | モバイルでの挙動 |
-|--------|----------------|
-| L1 | CSS transition のみ。パララックスなし |
-| L2 | GSAP パララックス量50%削減、ピン固定回避、Lenis `syncTouch: true` |
-| L3 | Three.js DPR制限（1.5）、パーティクル数40%、ジオメトリ簡略化 |
-| L4 | **モバイルでは到達不可**（isMobile ペナルティにより） |
+| レベル | モバイルでの挙動                                                  |
+| ------ | ----------------------------------------------------------------- |
+| L1     | CSS transition のみ。パララックスなし                             |
+| L2     | GSAP パララックス量50%削減、ピン固定回避、Lenis `syncTouch: true` |
+| L3     | Three.js DPR制限（1.5）、パーティクル数40%、ジオメトリ簡略化      |
+| L4     | **モバイルでは到達不可**（isMobile ペナルティにより）             |
 
 ### ビューポート単位規約
 
 ```css
 /* モバイルアドレスバー対応 */
-height: 100svh;    /* ✅ small viewport height（推奨） */
-height: 100dvh;    /* ⚠️ dynamic（アドレスバー連動でリフロー） */
-height: 100vh;     /* ❌ 固定（モバイルで下部が隠れる） */
+height: 100svh; /* ✅ small viewport height（推奨） */
+height: 100dvh; /* ⚠️ dynamic（アドレスバー連動でリフロー） */
+height: 100vh; /* ❌ 固定（モバイルで下部が隠れる） */
 min-height: 100svh; /* ✅ min-height で安全に使用 */
 ```
 
 ### Lenis モバイル設定ガイドライン
 
-| パラメータ | デスクトップ | モバイル | 理由 |
-|-----------|------------|--------|------|
-| `lerp` | 0.08 | 0.12 | タッチ慣性を軽減 |
-| `duration` | 1.4 | 1.0 | 短いスクロール距離に適応 |
-| `syncTouch` | false | true | iOS ゴムバンド効果と共存 |
-| `touchMultiplier` | - | 2.0 | タッチ感度調整 |
+| パラメータ        | デスクトップ | モバイル | 理由                     |
+| ----------------- | ------------ | -------- | ------------------------ |
+| `lerp`            | 0.08         | 0.12     | タッチ慣性を軽減         |
+| `duration`        | 1.4          | 1.0      | 短いスクロール距離に適応 |
+| `syncTouch`       | false        | true     | iOS ゴムバンド効果と共存 |
+| `touchMultiplier` | -            | 2.0      | タッチ感度調整           |
 
 ### タッチ vs ホバー
 
 ```css
 /* ホバーエフェクトはホバー可能デバイスのみ */
 @media (hover: hover) {
-  .interactive:hover { transform: scale(1.05); }
+  .interactive:hover {
+    transform: scale(1.05);
+  }
 }
 
 /* タッチデバイスではタップフィードバック */
 @media (hover: none) {
-  .interactive:active { transform: scale(0.97); }
+  .interactive:active {
+    transform: scale(0.97);
+  }
 }
 ```
 
 ```typescript
 // Three.js / PixiJS のマウスインタラクション
-const hasHover = window.matchMedia('(hover: hover)').matches
+const hasHover = window.matchMedia("(hover: hover)").matches;
 // hasHover === false の場合、ホバーエフェクトを無効化
 ```
 
@@ -720,37 +766,37 @@ const hasHover = window.matchMedia('(hover: hover)').matches
 
 ### CLS を引き起こすパターン
 
-| パターン | CLS影響 | 対策 |
-|---------|---------|------|
-| 画像サイズ未指定 | 高 | `width`/`height` 属性 or `aspect-ratio` |
-| フォントロード後のリフロー | 中 | `font-display: swap` + `size-adjust` |
-| ScrollTrigger `pin: true` | 中 | `pinSpacing: true`（デフォルト）を維持 |
-| 動的コンテンツ挿入 | 高 | `min-height` でスペース確保 |
-| Three.js Canvas サイズ変更 | 低 | CSS で `width: 100%; height: 100svh` 固定 |
+| パターン                   | CLS影響 | 対策                                      |
+| -------------------------- | ------- | ----------------------------------------- |
+| 画像サイズ未指定           | 高      | `width`/`height` 属性 or `aspect-ratio`   |
+| フォントロード後のリフロー | 中      | `font-display: swap` + `size-adjust`      |
+| ScrollTrigger `pin: true`  | 中      | `pinSpacing: true`（デフォルト）を維持    |
+| 動的コンテンツ挿入         | 高      | `min-height` でスペース確保               |
+| Three.js Canvas サイズ変更 | 低      | CSS で `width: 100%; height: 100svh` 固定 |
 
 ## パフォーマンス監視（本番）
 
 ```typescript
-'use client'
+"use client";
 
-import { useEffect } from 'react'
+import { useEffect } from "react";
 
 export function WebVitalsReporter() {
   useEffect(() => {
     // web-vitals ライブラリ（動的インポート）
-    import('web-vitals').then(({ onCLS, onFID, onLCP, onINP }) => {
+    import("web-vitals").then(({ onCLS, onFID, onLCP, onINP }) => {
       const report = (metric: { name: string; value: number }) => {
         // Analytics送信（Google Analytics, Vercel Analytics等）
-        console.debug(`[WebVitals] ${metric.name}: ${metric.value}`)
-      }
-      onCLS(report)
-      onFID(report)
-      onLCP(report)
-      onINP(report)
-    })
-  }, [])
+        console.debug(`[WebVitals] ${metric.name}: ${metric.value}`);
+      };
+      onCLS(report);
+      onFID(report);
+      onLCP(report);
+      onINP(report);
+    });
+  }, []);
 
-  return null
+  return null;
 }
 ```
 
@@ -759,30 +805,30 @@ export function WebVitalsReporter() {
 ```typescript
 function useFpsMonitor(onDegrade: (fps: number) => void) {
   useEffect(() => {
-    const samples: number[] = []
-    let lastTime = performance.now()
-    let frameId: number
+    const samples: number[] = [];
+    let lastTime = performance.now();
+    let frameId: number;
 
     const tick = () => {
-      const now = performance.now()
-      const fps = 1000 / (now - lastTime)
-      lastTime = now
-      samples.push(fps)
+      const now = performance.now();
+      const fps = 1000 / (now - lastTime);
+      lastTime = now;
+      samples.push(fps);
 
       if (samples.length >= 60) {
-        const avg = samples.reduce((a, b) => a + b) / samples.length
+        const avg = samples.reduce((a, b) => a + b) / samples.length;
         if (avg < 30) {
-          onDegrade(avg)  // 30fps未満 → degradeTo 呼び出し
+          onDegrade(avg); // 30fps未満 → degradeTo 呼び出し
         }
-        samples.length = 0
+        samples.length = 0;
       }
 
-      frameId = requestAnimationFrame(tick)
-    }
+      frameId = requestAnimationFrame(tick);
+    };
 
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [onDegrade])
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [onDegrade]);
 }
 ```
 
@@ -793,21 +839,21 @@ function useFpsMonitor(onDegrade: (fps: number) => void) {
 
 ### スタイル → エフェクトレベル要件
 
-| ui-ux-pro-max スタイル | 最低L | 推奨L | パフォーマンス評価 | 使用技術 |
-|------------------------|-------|-------|-------------------|---------|
-| Minimalism (1) | L1 | L1 | Excellent | CSS transition のみ |
-| Flat Design (12) | L1 | L1 | Excellent | CSS hover, opacity |
-| Glassmorphism (3) | L1 | L2 | Good | backdrop-filter + GSAP |
-| Motion-Driven (15) | L2 | L2-L3 | Good | GSAP ScrollTrigger + Lenis |
-| Kinetic Typography (48) | L2 | L2 | Moderate | GSAP SplitText + scrub |
-| Parallax Storytelling (49) | L2 | L2-L3 | Poor | GSAP pin + scrub + stacking |
-| Dimensional Layering (46) | L2 | L2 | Good | GSAP translateZ + z-index |
-| Hero-Centric Design (20) | L1 | L2 | Good | GSAP parallax + fade |
-| Storytelling-Driven (27) | L2 | L2-L3 | Moderate | GSAP scroll reveals + transitions |
-| 3D & Hyperrealism (5) | L3 | L3-L4 | Poor | Three.js / R3F + WebGL |
-| Spatial UI / VisionOS (55) | L3 | L3 | Moderate | Three.js + parallax depth |
-| Liquid Glass (14) | L2 | L4 | Moderate-Poor | GSAP + PixiJS blur/grain |
-| Cyberpunk UI (41) | L2 | L3-L4 | Moderate | GSAP glitch + PixiJS scanlines |
+| ui-ux-pro-max スタイル     | 最低L | 推奨L | パフォーマンス評価 | 使用技術                          |
+| -------------------------- | ----- | ----- | ------------------ | --------------------------------- |
+| Minimalism (1)             | L1    | L1    | Excellent          | CSS transition のみ               |
+| Flat Design (12)           | L1    | L1    | Excellent          | CSS hover, opacity                |
+| Glassmorphism (3)          | L1    | L2    | Good               | backdrop-filter + GSAP            |
+| Motion-Driven (15)         | L2    | L2-L3 | Good               | GSAP ScrollTrigger + Lenis        |
+| Kinetic Typography (48)    | L2    | L2    | Moderate           | GSAP SplitText + scrub            |
+| Parallax Storytelling (49) | L2    | L2-L3 | Poor               | GSAP pin + scrub + stacking       |
+| Dimensional Layering (46)  | L2    | L2    | Good               | GSAP translateZ + z-index         |
+| Hero-Centric Design (20)   | L1    | L2    | Good               | GSAP parallax + fade              |
+| Storytelling-Driven (27)   | L2    | L2-L3 | Moderate           | GSAP scroll reveals + transitions |
+| 3D & Hyperrealism (5)      | L3    | L3-L4 | Poor               | Three.js / R3F + WebGL            |
+| Spatial UI / VisionOS (55) | L3    | L3    | Moderate           | Three.js + parallax depth         |
+| Liquid Glass (14)          | L2    | L4    | Moderate-Poor      | GSAP + PixiJS blur/grain          |
+| Cyberpunk UI (41)          | L2    | L3-L4 | Moderate           | GSAP glitch + PixiJS scanlines    |
 
 ### プロダクトタイプ別推奨エフェクト
 
@@ -816,13 +862,13 @@ function useFpsMonitor(onDegrade: (fps: number) => void) {
 python3 .claude/skills/ui-ux-pro-max/scripts/search.py "hospitality rental space" --domain product
 ```
 
-| プロダクトタイプ | 推奨スタイル | 推奨L | 理由 |
-|----------------|------------|-------|------|
-| レンタルスペース | Motion-Driven + Hero-Centric | L2 | 写真重視、スクロール自然体験 |
-| 高級ホテル | Liquid Glass + Storytelling | L2-L3 | 没入感、ブランド体験 |
-| 建築事務所 | Parallax Storytelling + 3D | L2-L3 | 空間表現、作品ショーケース |
-| 不動産 | Hero-Centric + Dimensional | L2 | 信頼感、物件ビジュアル |
-| イベント会場 | Motion-Driven + Horizontal | L2 | エネルギー、スクロール体験 |
+| プロダクトタイプ | 推奨スタイル                 | 推奨L | 理由                         |
+| ---------------- | ---------------------------- | ----- | ---------------------------- |
+| レンタルスペース | Motion-Driven + Hero-Centric | L2    | 写真重視、スクロール自然体験 |
+| 高級ホテル       | Liquid Glass + Storytelling  | L2-L3 | 没入感、ブランド体験         |
+| 建築事務所       | Parallax Storytelling + 3D   | L2-L3 | 空間表現、作品ショーケース   |
+| 不動産           | Hero-Centric + Dimensional   | L2    | 信頼感、物件ビジュアル       |
+| イベント会場     | Motion-Driven + Horizontal   | L2    | エネルギー、スクロール体験   |
 
 ### デグラデーション戦略
 
@@ -836,6 +882,7 @@ L4（PixiJS）→ L3（Three.js フォールバック）→ L2（GSAP フォー�
 ```
 
 各レベルのフォールバックが視覚的に破綻しないことを確認:
+
 - L4 → L3: PixiJS フィルター → CSS radial-gradient + noise texture
 - L3 → L2: Three.js 3D → CSS gradient + GSAP transform
 - L2 → L1: GSAP ScrollTrigger → CSS `animation-timeline: scroll()` or 静的表示
@@ -863,21 +910,31 @@ Hero セクション構成例:
 
 ```typescript
 // 1. GSAP アニメーション開始（DOM要素のパララックス）
-useGSAP(() => {
-  gsap.fromTo('.hero-title', { opacity: 0, y: 50 }, {
-    opacity: 1, y: 0, duration: 1, ease: 'power3.out',
-    scrollTrigger: { trigger: '.hero', start: 'top 80%' },
-  })
-}, { scope: sectionRef })
+useGSAP(
+  () => {
+    gsap.fromTo(
+      ".hero-title",
+      { opacity: 0, y: 50 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: "power3.out",
+        scrollTrigger: { trigger: ".hero", start: "top 80%" },
+      },
+    );
+  },
+  { scope: sectionRef },
+);
 
 // 2. Three.js は同じスクロールデータを参照してリアクティブに動作
 function ParticlesWithScroll() {
-  const scrollRef = useScrollRef()
+  const scrollRef = useScrollRef();
   useFrame(() => {
     // scrollRef.current.progress が GSAP と同じ Lenis から供給される
-    const intensity = scrollRef.current.progress * 0.5
+    const intensity = scrollRef.current.progress * 0.5;
     // パーティクルの広がりをスクロールに連動
-  })
+  });
 }
 ```
 
@@ -912,24 +969,30 @@ useLenis((lenis) => {
 
 ```typescript
 // GSAP のコールバックで Three.js の状態を更新
-const threeStateRef = useRef({ sectionActive: false, intensity: 0 })
+const threeStateRef = useRef({ sectionActive: false, intensity: 0 });
 
 ScrollTrigger.create({
-  trigger: '.hero',
-  start: 'top top',
-  end: 'bottom top',
-  onEnter: () => { threeStateRef.current.sectionActive = true },
-  onLeave: () => { threeStateRef.current.sectionActive = false },
-  onUpdate: (self) => { threeStateRef.current.intensity = self.progress },
-})
+  trigger: ".hero",
+  start: "top top",
+  end: "bottom top",
+  onEnter: () => {
+    threeStateRef.current.sectionActive = true;
+  },
+  onLeave: () => {
+    threeStateRef.current.sectionActive = false;
+  },
+  onUpdate: (self) => {
+    threeStateRef.current.intensity = self.progress;
+  },
+});
 
 // Three.js 側で参照
 function ResponsiveParticles() {
   useFrame(() => {
-    if (!threeStateRef.current.sectionActive) return
-    const intensity = threeStateRef.current.intensity
+    if (!threeStateRef.current.sectionActive) return;
+    const intensity = threeStateRef.current.intensity;
     // intensity に基づいてパーティクル動作を変更
-  })
+  });
 }
 ```
 
@@ -986,111 +1049,120 @@ function ThreeCanvasWithDegradation() {
 ### Playwright スクリーンショット比較（visual regression）
 
 ```typescript
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
 
-test('Hero section visual regression', async ({ page }) => {
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
-  await page.waitForTimeout(2000)  // アニメーション完了待ち
+test("Hero section visual regression", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(2000); // アニメーション完了待ち
 
   // スクリーンショット比較（閾値設定）
-  await expect(page.locator('.hero-section')).toHaveScreenshot('hero-desktop.png', {
-    maxDiffPixelRatio: 0.02,  // 2% まで許容（アニメーション揺らぎ）
-    animations: 'disabled',    // CSS animation を停止
-  })
-})
+  await expect(page.locator(".hero-section")).toHaveScreenshot(
+    "hero-desktop.png",
+    {
+      maxDiffPixelRatio: 0.02, // 2% まで許容（アニメーション揺らぎ）
+      animations: "disabled", // CSS animation を停止
+    },
+  );
+});
 
-test('Hero section mobile', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 667 })
-  await page.goto('/')
-  await page.waitForTimeout(2000)
+test("Hero section mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+  await page.waitForTimeout(2000);
 
-  await expect(page.locator('.hero-section')).toHaveScreenshot('hero-mobile.png', {
-    maxDiffPixelRatio: 0.02,
-  })
-})
+  await expect(page.locator(".hero-section")).toHaveScreenshot(
+    "hero-mobile.png",
+    {
+      maxDiffPixelRatio: 0.02,
+    },
+  );
+});
 ```
 
 ### FPS 閾値アサーション（performance benchmark）
 
 ```typescript
-test('Scroll performance meets 60fps target', async ({ page }) => {
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
+test("Scroll performance meets 60fps target", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
 
   // Performance Observer でフレームレートを計測
   const fps = await page.evaluate(() => {
     return new Promise<number>((resolve) => {
-      const frames: number[] = []
-      let lastTime = performance.now()
+      const frames: number[] = [];
+      let lastTime = performance.now();
 
       function measure() {
-        const now = performance.now()
-        frames.push(1000 / (now - lastTime))
-        lastTime = now
+        const now = performance.now();
+        frames.push(1000 / (now - lastTime));
+        lastTime = now;
         if (frames.length >= 60) {
-          resolve(frames.reduce((a, b) => a + b) / frames.length)
+          resolve(frames.reduce((a, b) => a + b) / frames.length);
         } else {
-          requestAnimationFrame(measure)
+          requestAnimationFrame(measure);
         }
       }
 
-      requestAnimationFrame(measure)
+      requestAnimationFrame(measure);
       // スクロールをシミュレート
-      window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' })
-    })
-  })
+      window.scrollTo({
+        top: document.body.scrollHeight / 2,
+        behavior: "smooth",
+      });
+    });
+  });
 
-  expect(fps).toBeGreaterThan(45)  // 最低45fps
-})
+  expect(fps).toBeGreaterThan(45); // 最低45fps
+});
 ```
 
 ### GPU tier オーバーライド（detect-gpu override でレベル別テスト）
 
 ```typescript
-test.describe('Effect level tests', () => {
-  test('L1: CSS only (reduced motion)', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+test.describe("Effect level tests", () => {
+  test("L1: CSS only (reduced motion)", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
     // L1 フォールバックが正しく表示されることを確認
-    await expect(page.locator('.three-canvas')).not.toBeVisible()
-    await expect(page.locator('.pixi-canvas')).not.toBeVisible()
-  })
+    await expect(page.locator(".three-canvas")).not.toBeVisible();
+    await expect(page.locator(".pixi-canvas")).not.toBeVisible();
+  });
 
-  test('L2: GSAP animations visible', async ({ page }) => {
-    await page.goto('/')
+  test("L2: GSAP animations visible", async ({ page }) => {
+    await page.goto("/");
     // GSAP アニメーション要素が表示されることを確認
-    await page.waitForSelector('.gsap-animated.is-visible')
-  })
-})
+    await page.waitForSelector(".gsap-animated.is-visible");
+  });
+});
 ```
 
 ### prefers-reduced-motion 検証
 
 ```typescript
-test('Respects prefers-reduced-motion', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
+test("Respects prefers-reduced-motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
 
   // アニメーション関連の transform/opacity が初期値であることを確認
-  const opacity = await page.locator('.hero-title').evaluate(
-    (el) => getComputedStyle(el).opacity
-  )
-  expect(opacity).toBe('1')  // 非表示状態ではなく即座に表示
-})
+  const opacity = await page
+    .locator(".hero-title")
+    .evaluate((el) => getComputedStyle(el).opacity);
+  expect(opacity).toBe("1"); // 非表示状態ではなく即座に表示
+});
 ```
 
 ### モバイルデバイステストチェックリスト
 
-| 確認項目 | テスト方法 | 合格基準 |
-|---------|----------|---------|
-| パララックス量 | DevTools モバイルビュー | デスクトップの50%以下 |
-| pin固定なし | iOS Safari実機 | スクロールがスムーズ |
-| Three.js DPR | GPU tier override | ≤ 1.5 |
-| タッチスクロール | 実機タッチ | Lenis syncTouch 有効 |
-| CLS | Lighthouse | < 0.1 |
-| LCP | Lighthouse | < 2.5s |
-| 60fps | Performance Monitor | > 45fps |
+| 確認項目         | テスト方法              | 合格基準              |
+| ---------------- | ----------------------- | --------------------- |
+| パララックス量   | DevTools モバイルビュー | デスクトップの50%以下 |
+| pin固定なし      | iOS Safari実機          | スクロールがスムーズ  |
+| Three.js DPR     | GPU tier override       | ≤ 1.5                 |
+| タッチスクロール | 実機タッチ              | Lenis syncTouch 有効  |
+| CLS              | Lighthouse              | < 0.1                 |
+| LCP              | Lighthouse              | < 2.5s                |
+| 60fps            | Performance Monitor     | > 45fps               |
 
 ## セクション間アニメーションシーケンシング
 
@@ -1103,19 +1175,20 @@ function setupSectionTransitions(sections: HTMLElement[]) {
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: section,
-        start: 'top 80%',
-        end: 'bottom 20%',
+        start: "top 80%",
+        end: "bottom 20%",
         scrub: false,
-        toggleActions: 'play reverse play reverse',
+        toggleActions: "play reverse play reverse",
       },
-    })
+    });
 
     // 入場
-    tl.fromTo(section.querySelectorAll('.animate-in'),
+    tl.fromTo(
+      section.querySelectorAll(".animate-in"),
       { opacity: 0, y: 40 },
-      { opacity: 1, y: 0, stagger: 0.1, duration: 0.8, ease: 'power2.out' }
-    )
-  })
+      { opacity: 1, y: 0, stagger: 0.1, duration: 0.8, ease: "power2.out" },
+    );
+  });
 }
 ```
 
@@ -1128,68 +1201,72 @@ sections.forEach((section, i) => {
   // 退場: セクション下端の80-100%で退場
   ScrollTrigger.create({
     trigger: section,
-    start: '80% center',
-    end: 'bottom center',
+    start: "80% center",
+    end: "bottom center",
     scrub: true,
     onUpdate: (self) => {
-      gsap.set(section, { opacity: 1 - self.progress * 0.3 })
+      gsap.set(section, { opacity: 1 - self.progress * 0.3 });
     },
-  })
+  });
 
   // 入場: 次のセクションが0-20%で入場
   if (i < sections.length - 1) {
-    const next = sections[i + 1]
+    const next = sections[i + 1];
     ScrollTrigger.create({
       trigger: next,
-      start: 'top bottom',
-      end: '20% center',
+      start: "top bottom",
+      end: "20% center",
       scrub: true,
       onUpdate: (self) => {
-        gsap.set(next, { opacity: 0.3 + self.progress * 0.7 })
+        gsap.set(next, { opacity: 0.3 + self.progress * 0.7 });
       },
-    })
+    });
   }
-})
+});
 ```
 
 ### 隣接セクション間カラー/ムード遷移
 
 ```typescript
 const SECTION_THEMES = [
-  { bg: 'oklch(0.15 0.02 250)', text: 'oklch(0.95 0 0)' },   // ダーク
-  { bg: 'oklch(0.97 0.01 80)', text: 'oklch(0.15 0.02 250)' }, // ライト
-  { bg: 'oklch(0.20 0.05 300)', text: 'oklch(0.90 0.03 60)' }, // パープル
-]
+  { bg: "oklch(0.15 0.02 250)", text: "oklch(0.95 0 0)" }, // ダーク
+  { bg: "oklch(0.97 0.01 80)", text: "oklch(0.15 0.02 250)" }, // ライト
+  { bg: "oklch(0.20 0.05 300)", text: "oklch(0.90 0.03 60)" }, // パープル
+];
 
 sections.forEach((section, i) => {
-  if (i >= SECTION_THEMES.length - 1) return
-  const from = SECTION_THEMES[i]
-  const to = SECTION_THEMES[i + 1]
+  if (i >= SECTION_THEMES.length - 1) return;
+  const from = SECTION_THEMES[i];
+  const to = SECTION_THEMES[i + 1];
 
   ScrollTrigger.create({
     trigger: section,
-    start: '70% center',
-    end: 'bottom center',
+    start: "70% center",
+    end: "bottom center",
     scrub: true,
     onUpdate: (self) => {
       // OKLCH 値をスクロール進行で補間
-      const p = self.progress
-      document.body.style.setProperty('--section-bg',
-        interpolateOklch(from.bg, to.bg, p))
-      document.body.style.setProperty('--section-text',
-        interpolateOklch(from.text, to.text, p))
+      const p = self.progress;
+      document.body.style.setProperty(
+        "--section-bg",
+        interpolateOklch(from.bg, to.bg, p),
+      );
+      document.body.style.setProperty(
+        "--section-text",
+        interpolateOklch(from.text, to.text, p),
+      );
     },
-  })
-})
+  });
+});
 ```
 
 ### ページ全体でのアニメーション言語統一
 
-| 要素 | 統一ルール |
-|------|----------|
-| 入場方向 | 全セクション共通（下から上 or 左から右） |
-| イージング | 入場: `.out` 系、退場: `.in` 系で統一 |
-| stagger | 同種要素は同じ stagger 値 |
-| duration | 基本 0.6-0.8s、強調 1.0-1.2s |
+| 要素             | 統一ルール                               |
+| ---------------- | ---------------------------------------- |
+| 入場方向         | 全セクション共通（下から上 or 左から右） |
+| イージング       | 入場: `.out` 系、退場: `.in` 系で統一    |
+| stagger          | 同種要素は同じ stagger 値                |
+| duration         | 基本 0.6-0.8s、強調 1.0-1.2s             |
 | パララックス方向 | 背景: 遅い（正のy）、前景: 速い（負のy） |
-| カラー遷移 | 隣接セクション間でスムーズ補間 |
+| カラー遷移       | 隣接セクション間でスムーズ補間           |

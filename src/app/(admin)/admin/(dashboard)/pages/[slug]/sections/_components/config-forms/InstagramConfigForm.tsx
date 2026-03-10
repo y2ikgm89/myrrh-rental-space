@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -10,20 +10,25 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   instagramConfigSchema,
   getInstagramConfig,
   parseGapSize,
   type InstagramConfig,
   type InstagramConfigInput,
-} from '@/shared/lib/validations/section'
-import { gapSizeLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import { gapSizeLabels } from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function InstagramConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getInstagramConfig(section.config)
+export default function InstagramConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getInstagramConfig(section.config);
 
   const {
     register,
@@ -33,16 +38,21 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
   } = useForm<InstagramConfigInput, unknown, InstagramConfig>({
     resolver: zodResolver(instagramConfigSchema),
     defaultValues: config,
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="instagram-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="instagram-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="instagram-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Follow Us"
             disabled={isPending}
           />
@@ -52,7 +62,7 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
           <Label htmlFor="instagram-title">タイトル</Label>
           <Input
             id="instagram-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="Instagram"
             disabled={isPending}
           />
@@ -66,7 +76,7 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
               type="number"
               min={3}
               max={6}
-              {...register('columns', { valueAsNumber: true })}
+              {...register("columns", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -78,7 +88,7 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
               type="number"
               min={6}
               max={12}
-              {...register('count', { valueAsNumber: true })}
+              {...register("count", { valueAsNumber: true })}
               disabled={isPending}
             />
           </div>
@@ -87,7 +97,7 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
             <Label htmlFor="instagram-gap">間隔</Label>
             <Select
               defaultValue={config.gap}
-              onValueChange={(v) => setValue('gap', parseGapSize(v))}
+              onValueChange={(v) => setValue("gap", parseGapSize(v))}
               disabled={isPending}
             >
               <SelectTrigger id="instagram-gap">
@@ -105,7 +115,11 @@ export default function InstagramConfigForm({ section, onSave, isPending, onDirt
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

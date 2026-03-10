@@ -8,4 +8,3 @@ export default async function TermsDetailPage({ params }: PageProps) {
   const { id } = await params;
   redirect(`/admin/terms/${id}/edit`);
 }
-

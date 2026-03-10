@@ -4,33 +4,33 @@
  * Server Componentsでのデータ取得時のエラーハンドリングを統一
  */
 
-import { logError } from './logger'
-import { ErrorCategory, ErrorSeverity } from './types'
+import { logError } from "./logger";
+import { ErrorCategory, ErrorSeverity } from "./types";
 
 interface SafeFetchOptions<T> {
   /** データ取得関数 */
-  fetch: () => Promise<T>
+  fetch: () => Promise<T>;
   /** エラー時のフォールバック値 */
-  fallback: T
+  fallback: T;
   /** エラーカテゴリ */
-  category: ErrorCategory
+  category: ErrorCategory;
   /** エラー深刻度 */
-  severity: ErrorSeverity
+  severity: ErrorSeverity;
   /** 操作名（ログ用） */
-  operationName: string
+  operationName: string;
   /** 追加コンテキスト */
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>;
 }
 
 interface CriticalFetchOptions<T> {
   /** データ取得関数 */
-  fetch: () => Promise<T>
+  fetch: () => Promise<T>;
   /** エラーカテゴリ */
-  category: ErrorCategory
+  category: ErrorCategory;
   /** 操作名（ログ用） */
-  operationName: string
+  operationName: string;
   /** 追加コンテキスト */
-  context?: Record<string, unknown>
+  context?: Record<string, unknown>;
 }
 
 /**
@@ -50,7 +50,7 @@ interface CriticalFetchOptions<T> {
  */
 export async function safeFetch<T>(options: SafeFetchOptions<T>): Promise<T> {
   try {
-    return await options.fetch()
+    return await options.fetch();
   } catch (error) {
     logError(error, {
       category: options.category,
@@ -60,8 +60,8 @@ export async function safeFetch<T>(options: SafeFetchOptions<T>): Promise<T> {
         operation: options.operationName,
         fallbackUsed: true,
       },
-    })
-    return options.fallback
+    });
+    return options.fallback;
   }
 }
 
@@ -79,10 +79,10 @@ export async function safeFetch<T>(options: SafeFetchOptions<T>): Promise<T> {
  * })
  */
 export async function criticalFetch<T>(
-  options: CriticalFetchOptions<T>
+  options: CriticalFetchOptions<T>,
 ): Promise<T> {
   try {
-    return await options.fetch()
+    return await options.fetch();
   } catch (error) {
     logError(error, {
       category: options.category,
@@ -92,9 +92,9 @@ export async function criticalFetch<T>(
         operation: options.operationName,
         critical: true,
       },
-    })
-    throw error
+    });
+    throw error;
   }
 }
 
-export { ErrorCategory, ErrorSeverity }
+export { ErrorCategory, ErrorSeverity };

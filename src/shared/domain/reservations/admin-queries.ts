@@ -248,7 +248,9 @@ export async function getReservationStatsQuery() {
   const [total, pending, confirmed, cancelled, todayCount, thisWeekCount] =
     await Promise.all([
       prisma.reservation.count(),
-      prisma.reservation.count({ where: { status: ReservationStatus.PENDING } }),
+      prisma.reservation.count({
+        where: { status: ReservationStatus.PENDING },
+      }),
       prisma.reservation.count({
         where: { status: ReservationStatus.CONFIRMED },
       }),

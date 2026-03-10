@@ -12,7 +12,7 @@
  * @module api/webhooks/google-calendar
  */
 
-import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
@@ -27,6 +27,12 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
+import {
+  jsonError,
+  jsonSuccess,
+  jsonValidationError,
+} from "@/shared/lib/route-responses";
+import { googleCalendarWebhookHeadersSchema } from "@/shared/lib/validations/google-calendar-webhook";
 import { CalendarSyncMethod } from "@/shared/db/enums";
 
 /**
@@ -44,33 +50,35 @@ import { CalendarSyncMethod } from "@/shared/db/enums";
  */
 export async function POST(request: Request) {
   try {
-    // Google Calendar Push Notificationヘッダーを取得
-    const channelId = request.headers.get("x-goog-channel-id");
-    const resourceId = request.headers.get("x-goog-resource-id");
-    const resourceState = request.headers.get("x-goog-resource-state");
+    const headersResult = googleCalendarWebhookHeadersSchema.safeParse({
+      channelId: request.headers.get("x-goog-channel-id") ?? undefined,
+      resourceId: request.headers.get("x-goog-resource-id") ?? undefined,
+      resourceState: request.headers.get("x-goog-resource-state") ?? undefined,
+      channelToken: request.headers.get("x-goog-channel-token") ?? undefined,
+      messageNumber: request.headers.get("x-goog-message-number") ?? undefined,
+    });
 
-    // チャンネルIDの検証
-    if (!channelId || !resourceId) {
-      logError(
-        new Error("Missing required headers for Google Calendar webhook"),
-        {
-          category: ErrorCategory.VALIDATION,
-          severity: ErrorSeverity.LOW,
-          context: {
-            operation: "googleCalendarWebhook",
-            hasChannelId: !!channelId,
-            hasResourceId: !!resourceId,
-          },
+    if (!headersResult.success) {
+      logError(new Error("Invalid Google Calendar webhook headers"), {
+        category: ErrorCategory.VALIDATION,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "googleCalendarWebhook",
+          issues: headersResult.error.issues.map((issue) => issue.message),
         },
-      );
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+      });
+      return jsonValidationError(headersResult.error, "Invalid request");
     }
+
+    const {
+      channelId,
+      resourceId,
+      resourceState,
+      channelToken: receivedToken,
+    } = headersResult.data;
 
     // 登録されているWebhookか確認
     const settings = await getGoogleCalendarWebhookState();
-
-    // トークン検証（x-goog-channel-token）
-    const receivedToken = request.headers.get("x-goog-channel-token");
 
     // トークンが設定されていない場合はWebhookを拒否（セキュリティ強化）
     if (!settings.token) {
@@ -79,10 +87,7 @@ export async function POST(request: Request) {
         severity: ErrorSeverity.HIGH,
         context: { operation: "googleCalendarWebhook" },
       });
-      return NextResponse.json(
-        { error: "Webhook not configured" },
-        { status: 503 },
-      );
+      return jsonError("Webhook not configured", 503);
     }
 
     if (receivedToken !== settings.token) {
@@ -94,7 +99,7 @@ export async function POST(request: Request) {
           hasToken: !!receivedToken,
         },
       });
-      return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+      return jsonError("Invalid token", 403);
     }
 
     if (
@@ -107,24 +112,24 @@ export async function POST(request: Request) {
         context: { operation: "googleCalendarWebhook", channelId, resourceId },
       });
       // 不明なWebhookでも200を返す（Googleが再送しないように）
-      return NextResponse.json({ success: true, ignored: true });
+      return jsonSuccess({ ignored: true });
     }
 
     // syncイベントは初回登録時の確認なのでスキップ
     if (resourceState === "sync") {
-      return NextResponse.json({ success: true, sync: true });
+      return jsonSuccess({ sync: true });
     }
 
     // 双方向同期が有効か確認
     const enabled = await isTwoWaySyncEnabled();
     if (!enabled) {
-      return NextResponse.json({ success: true, disabled: true });
+      return jsonSuccess({ disabled: true });
     }
 
     // 同期方式を確認（webhookまたはbothの場合のみ実行）
     const syncSettings = await getTwoWaySyncSettings();
     if (syncSettings.syncMethod === CalendarSyncMethod.polling) {
-      return NextResponse.json({ success: true, pollingOnly: true });
+      return jsonSuccess({ pollingOnly: true });
     }
 
     // 同期実行
@@ -137,33 +142,29 @@ export async function POST(request: Request) {
         context: { operation: "googleCalendarWebhook", errors: result.errors },
       });
       // エラーでも200を返す（Googleが再送しないように）
-      return NextResponse.json({
-        success: false,
-        errors: result.errors,
-      });
+      return jsonSuccess({ error: "Calendar sync failed" });
     }
 
     // キャッシュ無効化: カレンダー同期後に予約データを最新化
     revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
     revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
 
-    return NextResponse.json({
-      success: true,
+    return jsonSuccess({
       processed: result.processed,
       deleted: result.deleted,
       updated: result.updated,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    unstable_rethrow(error);
     logError(normalizeError(error), {
       category: ErrorCategory.UNKNOWN,
       severity: ErrorSeverity.HIGH,
       context: { operation: "googleCalendarWebhook" },
     });
     // エラーでも200を返す（Googleが再送しないように）
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+    return jsonSuccess({
+      error: "Webhook processing failed",
     });
   }
 }
@@ -172,7 +173,7 @@ export async function POST(request: Request) {
  * Webhook検証用（GETリクエスト）
  */
 export async function GET() {
-  return NextResponse.json({
+  return jsonSuccess({
     status: "ok",
     message: "Google Calendar webhook endpoint is ready",
     timestamp: new Date().toISOString(),

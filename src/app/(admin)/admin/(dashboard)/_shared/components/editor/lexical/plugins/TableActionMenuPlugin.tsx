@@ -7,11 +7,11 @@
  * 行/列の挿入・削除・セル結合/分割操作を提供する
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
@@ -20,52 +20,52 @@ import {
   $insertTableRowAtSelection,
   $isTableSelection,
   $unmergeCell,
-} from '@lexical/table'
-import type { TableCellNode } from '@lexical/table'
+} from "@lexical/table";
+import type { TableCellNode } from "@lexical/table";
 import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_CRITICAL,
   SELECTION_CHANGE_COMMAND,
   mergeRegister,
-} from 'lexical'
-import { ChevronDown } from 'lucide-react'
+} from "lexical";
+import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/admin/components/ui/dropdown-menu'
+} from "@/admin/components/ui/dropdown-menu";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TableActionMenuPluginProps = {
-  anchorElem: HTMLElement | null
-}
+  anchorElem: HTMLElement | null;
+};
 
 type MenuPosition = {
-  top: number
-  left: number
-}
+  top: number;
+  left: number;
+};
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 function getSelectedCellNode(): TableCellNode | null {
-  const selection = $getSelection()
+  const selection = $getSelection();
   if ($isRangeSelection(selection)) {
-    const anchor = selection.anchor.getNode()
-    return $getTableCellNodeFromLexicalNode(anchor)
+    const anchor = selection.anchor.getNode();
+    return $getTableCellNodeFromLexicalNode(anchor);
   }
   if ($isTableSelection(selection)) {
-    const anchor = selection.anchor.getNode()
-    return $getTableCellNodeFromLexicalNode(anchor)
+    const anchor = selection.anchor.getNode();
+    return $getTableCellNodeFromLexicalNode(anchor);
   }
-  return null
+  return null;
 }
 
 function computeMenuPosition(
@@ -73,16 +73,16 @@ function computeMenuPosition(
   editor: ReturnType<typeof useLexicalComposerContext>[0],
   anchorElem: HTMLElement,
 ): MenuPosition | null {
-  const cellDOMNode = editor.getElementByKey(cellNode.getKey())
-  if (!cellDOMNode) return null
+  const cellDOMNode = editor.getElementByKey(cellNode.getKey());
+  if (!cellDOMNode) return null;
 
-  const cellRect = cellDOMNode.getBoundingClientRect()
-  const anchorRect = anchorElem.getBoundingClientRect()
+  const cellRect = cellDOMNode.getBoundingClientRect();
+  const anchorRect = anchorElem.getBoundingClientRect();
 
   return {
     top: cellRect.top - anchorRect.top + anchorElem.scrollTop,
     left: cellRect.right - anchorRect.left - 28 + anchorElem.scrollLeft,
-  }
+  };
 }
 
 // =============================================================================
@@ -90,16 +90,16 @@ function computeMenuPosition(
 // =============================================================================
 
 type TableActionMenuProps = {
-  position: MenuPosition
-  onInsertRowAbove: () => void
-  onInsertRowBelow: () => void
-  onInsertColumnLeft: () => void
-  onInsertColumnRight: () => void
-  onDeleteRow: () => void
-  onDeleteColumn: () => void
-  onUnmergeCell: () => void
-  isMergedCell: boolean
-}
+  position: MenuPosition;
+  onInsertRowAbove: () => void;
+  onInsertRowBelow: () => void;
+  onInsertColumnLeft: () => void;
+  onInsertColumnRight: () => void;
+  onDeleteRow: () => void;
+  onDeleteColumn: () => void;
+  onUnmergeCell: () => void;
+  isMergedCell: boolean;
+};
 
 function TableActionMenu({
   position,
@@ -165,107 +165,109 @@ function TableActionMenu({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  )
+  );
 }
 
 // =============================================================================
 // Main Plugin
 // =============================================================================
 
-export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
-  const [isMergedCell, setIsMergedCell] = useState(false)
+export function TableActionMenuPlugin({
+  anchorElem,
+}: TableActionMenuPluginProps) {
+  const [editor] = useLexicalComposerContext();
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
+  const [isMergedCell, setIsMergedCell] = useState(false);
 
   useEffect(() => {
-    if (!anchorElem) return
+    if (!anchorElem) return;
 
     const updateMenu = () => {
       editor.getEditorState().read(() => {
-        const cellNode = getSelectedCellNode()
+        const cellNode = getSelectedCellNode();
         if (!cellNode) {
-          setMenuPosition(null)
-          return
+          setMenuPosition(null);
+          return;
         }
 
-        const position = computeMenuPosition(cellNode, editor, anchorElem)
+        const position = computeMenuPosition(cellNode, editor, anchorElem);
         if (!position) {
-          setMenuPosition(null)
-          return
+          setMenuPosition(null);
+          return;
         }
 
-        setMenuPosition(position)
-        setIsMergedCell(cellNode.getColSpan() > 1 || cellNode.getRowSpan() > 1)
-      })
-    }
+        setMenuPosition(position);
+        setIsMergedCell(cellNode.getColSpan() > 1 || cellNode.getRowSpan() > 1);
+      });
+    };
 
-    let isFirstUpdate = true
+    let isFirstUpdate = true;
 
     return mergeRegister(
       editor.registerCommand(
         SELECTION_CHANGE_COMMAND,
         () => {
-          updateMenu()
-          return false
+          updateMenu();
+          return false;
         },
         COMMAND_PRIORITY_CRITICAL,
       ),
       editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
         // Re-compute position when table layout changes
         if (isFirstUpdate) {
-          isFirstUpdate = false
-          return
+          isFirstUpdate = false;
+          return;
         }
-        if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return
-        updateMenu()
+        if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
+        updateMenu();
       }),
-    )
-  }, [editor, anchorElem])
+    );
+  }, [editor, anchorElem]);
 
   const handleInsertRowAbove = () => {
     editor.update(() => {
-      $insertTableRowAtSelection(false)
-    })
-  }
+      $insertTableRowAtSelection(false);
+    });
+  };
 
   const handleInsertRowBelow = () => {
     editor.update(() => {
-      $insertTableRowAtSelection(true)
-    })
-  }
+      $insertTableRowAtSelection(true);
+    });
+  };
 
   const handleInsertColumnLeft = () => {
     editor.update(() => {
-      $insertTableColumnAtSelection(false)
-    })
-  }
+      $insertTableColumnAtSelection(false);
+    });
+  };
 
   const handleInsertColumnRight = () => {
     editor.update(() => {
-      $insertTableColumnAtSelection(true)
-    })
-  }
+      $insertTableColumnAtSelection(true);
+    });
+  };
 
   const handleDeleteRow = () => {
     editor.update(() => {
-      $deleteTableRowAtSelection()
-    })
-  }
+      $deleteTableRowAtSelection();
+    });
+  };
 
   const handleDeleteColumn = () => {
     editor.update(() => {
-      $deleteTableColumnAtSelection()
-    })
-  }
+      $deleteTableColumnAtSelection();
+    });
+  };
 
   const handleUnmergeCell = () => {
     editor.update(() => {
-      $unmergeCell()
-    })
-  }
+      $unmergeCell();
+    });
+  };
 
   if (!anchorElem || !menuPosition) {
-    return null
+    return null;
   }
 
   return createPortal(
@@ -281,5 +283,5 @@ export function TableActionMenuPlugin({ anchorElem }: TableActionMenuPluginProps
       isMergedCell={isMergedCell}
     />,
     anchorElem,
-  )
+  );
 }

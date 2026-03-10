@@ -68,7 +68,7 @@ export type Serialized<T> = T extends Date
     ? Array<Serialized<U>>
     : T extends object
       ? { [K in keyof T]: Serialized<T[K]> }
-      : T
+      : T;
 
 /**
  * null 許容型のシリアライズ後の型
@@ -84,7 +84,7 @@ export type Serialized<T> = T extends Date
  * // Result: Serialized<User> | null
  * ```
  */
-export type SerializedNullable<T> = T extends null ? null : Serialized<T>
+export type SerializedNullable<T> = T extends null ? null : Serialized<T>;
 
 // =============================================================================
 // Serialization Functions
@@ -133,24 +133,24 @@ export type SerializedNullable<T> = T extends null ? null : Serialized<T>
 export function toPlainObject<T>(obj: T): T {
   // null/undefined はそのまま返す（パフォーマンス最適化）
   if (obj === null || obj === undefined) {
-    return obj
+    return obj;
   }
 
   // プリミティブ型はそのまま返す（パフォーマンス最適化）
-  const type = typeof obj
-  if (type === 'string' || type === 'number' || type === 'boolean') {
-    return obj
+  const type = typeof obj;
+  if (type === "string" || type === "number" || type === "boolean") {
+    return obj;
   }
 
   try {
-    return JSON.parse(JSON.stringify(obj))
+    return JSON.parse(JSON.stringify(obj));
   } catch {
     // 循環参照や BigInt などでエラーが発生した場合
     // Server Component でのエラーをわかりやすくする
     throw new Error(
       `[serialize] Failed to convert object to plain object. ` +
-      `Ensure the object does not contain circular references, BigInt, or other non-serializable values.`
-    )
+        `Ensure the object does not contain circular references, BigInt, or other non-serializable values.`,
+    );
   }
 }
 
@@ -173,16 +173,16 @@ export function toPlainObject<T>(obj: T): T {
 export function toPlainArray<T>(arr: T[]): T[] {
   // null/undefined/空配列はそのまま返す（パフォーマンス最適化）
   if (!arr || arr.length === 0) {
-    return arr
+    return arr;
   }
 
   try {
-    return JSON.parse(JSON.stringify(arr))
+    return JSON.parse(JSON.stringify(arr));
   } catch {
     throw new Error(
       `[serialize] Failed to convert array to plain array. ` +
-      `Ensure elements do not contain circular references, BigInt, or other non-serializable values.`
-    )
+        `Ensure elements do not contain circular references, BigInt, or other non-serializable values.`,
+    );
   }
 }
 
@@ -221,11 +221,13 @@ export function toPlainArray<T>(arr: T[]): T[] {
  * </time>
  * ```
  */
-export function toISOString(value: Date | string | null | undefined): string | undefined {
-  if (value === null || value === undefined) return undefined
+export function toISOString(
+  value: Date | string | null | undefined,
+): string | undefined {
+  if (value === null || value === undefined) return undefined;
   // シリアライズ済み（string）の場合はそのまま返す（パフォーマンス最適化）
-  if (typeof value === 'string') return value
-  return value.toISOString()
+  if (typeof value === "string") return value;
+  return value.toISOString();
 }
 
 /**
@@ -268,21 +270,24 @@ export function toISOString(value: Date | string | null | undefined): string | u
  */
 export function formatSerializedDate(
   value: Date | string | null | undefined,
-  options?: Intl.DateTimeFormatOptions
+  options?: Intl.DateTimeFormatOptions,
 ): string {
-  if (value === null || value === undefined) return ''
+  if (value === null || value === undefined) return "";
 
   // Date オブジェクトまたは ISO 文字列を統一的に処理
-  const date = typeof value === 'string' ? new Date(value) : value
+  const date = typeof value === "string" ? new Date(value) : value;
 
   // Invalid Date チェック
-  if (Number.isNaN(date.getTime())) return ''
+  if (Number.isNaN(date.getTime())) return "";
 
-  return date.toLocaleDateString('ja-JP', options ?? {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  return date.toLocaleDateString(
+    "ja-JP",
+    options ?? {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    },
+  );
 }
 
 /**
@@ -303,7 +308,7 @@ export function formatSerializedDate(
  * ```
  */
 export function toDateString(date: Date): string {
-  return date.toISOString().split('T')[0] ?? ''
+  return date.toISOString().split("T")[0] ?? "";
 }
 
 // =============================================================================
@@ -327,12 +332,13 @@ export function toDateString(date: Date): string {
  * // => null
  * ```
  */
-export function extractFirstFromCommaList(value: string | null | undefined): string | null {
-  if (!value) return null
-  const first = value.split(',')[0]
-  return first ? first.trim() : null
+export function extractFirstFromCommaList(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const first = value.split(",")[0];
+  return first ? first.trim() : null;
 }
-
 
 // =============================================================================
 // Type-safe Object Utilities
@@ -357,7 +363,7 @@ export function extractFirstFromCommaList(value: string | null | undefined): str
 export function keysOf<T extends object>(obj: T): (keyof T)[] {
   // Object.keys() は string[] を返す（TypeScript の構造的型付けの制約）。
   // keyof T も実行時には文字列キーのため、この as は型安全。
-  return Object.keys(obj) as (keyof T)[]
+  return Object.keys(obj) as (keyof T)[];
 }
 
 /**
@@ -370,9 +376,8 @@ export function keysOf<T extends object>(obj: T): (keyof T)[] {
 export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
   // Object.entries() は [string, T[keyof T]][] を返す（TypeScript の構造的型付けの制約）。
   // keyof T も実行時には文字列キーのため、この as は型安全。
-  return Object.entries(obj) as [keyof T, T[keyof T]][]
+  return Object.entries(obj) as [keyof T, T[keyof T]][];
 }
-
 
 /**
  * 型安全な filter(Boolean) の代替
@@ -391,12 +396,10 @@ export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
  * ```
  */
 export function filterTruthy<T>(
-  arr: readonly (T | false | null | undefined)[]
+  arr: readonly (T | false | null | undefined)[],
 ): T[] {
-  return arr.filter((x): x is T => Boolean(x))
+  return arr.filter((x): x is T => Boolean(x));
 }
-
-
 
 // =============================================================================
 // Type Guard Generators
@@ -421,7 +424,7 @@ export function filterTruthy<T>(
  * ```
  */
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -445,11 +448,10 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * ```
  */
 export function createTypeGuard<T extends string>(
-  allowedValues: readonly T[]
+  allowedValues: readonly T[],
 ): (value: unknown) => value is T {
-  const validSet = new Set<string>(allowedValues)
+  const validSet = new Set<string>(allowedValues);
   return (value: unknown): value is T => {
-    return typeof value === 'string' && validSet.has(value)
-  }
+    return typeof value === "string" && validSet.has(value);
+  };
 }
-

@@ -8,7 +8,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeHomeCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createHomepageSectionCommand,
   deleteHomepageSectionCommand,
@@ -70,8 +70,7 @@ export const createHomepageSection = async (
   return executeAdminMutationResult({
     resource: "settings",
     action: "update",
-    execute: async () =>
-      createHomepageSectionCommand(parsed.data, contentHtml),
+    execute: async () => createHomepageSectionCommand(parsed.data, contentHtml),
     afterSuccess: () => {
       revalidateHomepage();
     },

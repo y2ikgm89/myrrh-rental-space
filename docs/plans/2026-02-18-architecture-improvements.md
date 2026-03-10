@@ -16,6 +16,7 @@
 **Score impact:** +3点
 
 **Files:**
+
 - Modify: `package.json` (bun add コマンドで自動更新)
 - Modify: `src/shared/lib/prisma.ts`
 - Modify: `src/shared/lib/auth.ts`
@@ -52,8 +53,8 @@ Expected: `package.json` の `dependencies` に `"server-only": "^0.0.1"` が追
 ファイルの最初のインポート行（`import { PrismaPg } from '@prisma/adapter-pg'`）の直前に1行追加:
 
 ```typescript
-import 'server-only'
-import { PrismaPg } from '@prisma/adapter-pg'
+import "server-only";
+import { PrismaPg } from "@prisma/adapter-pg";
 // ... (以降は変更なし)
 ```
 
@@ -69,8 +70,8 @@ import { PrismaPg } from '@prisma/adapter-pg'
  * ...（既存 JSDoc）
  */
 
-import 'server-only'
-import { betterAuth } from 'better-auth'
+import "server-only";
+import { betterAuth } from "better-auth";
 // ... (以降は変更なし)
 ```
 
@@ -86,8 +87,8 @@ import { betterAuth } from 'better-auth'
  * ...（既存 JSDoc）
  */
 
-import 'server-only'
-import type { ErrorLogContext } from './types'
+import "server-only";
+import type { ErrorLogContext } from "./types";
 // ... (以降は変更なし)
 ```
 
@@ -103,8 +104,8 @@ import type { ErrorLogContext } from './types'
  * ...（既存 JSDoc）
  */
 
-import 'server-only'
-import { getSession, getSessionUser, type User } from '@/shared/lib/auth'
+import "server-only";
+import { getSession, getSessionUser, type User } from "@/shared/lib/auth";
 // ... (以降は変更なし)
 ```
 
@@ -120,8 +121,8 @@ import { getSession, getSessionUser, type User } from '@/shared/lib/auth'
  * ...（既存 JSDoc）
  */
 
-import 'server-only'
-import { cacheLife, cacheTag } from 'next/cache'
+import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 // ... (以降は変更なし)
 ```
 
@@ -137,7 +138,7 @@ import { cacheLife, cacheTag } from 'next/cache'
  * ...（既存 JSDoc）
  */
 
-import 'server-only'
+import "server-only";
 // ... (以降は変更なし)
 ```
 
@@ -187,6 +188,7 @@ git commit -m "security: add server-only to DAL modules to prevent client bundle
 **Score impact:** +2点
 
 **Files:**
+
 - Modify: `src/app/api/cron/calendar-sync/route.ts`
 - Modify: `src/app/api/webhooks/google-calendar/route.ts`
 
@@ -206,8 +208,8 @@ Expected: どちらも未インポート。
 既存の `import { NextResponse } from 'next/server'` 付近（ファイル先頭）に追加:
 
 ```typescript
-import { revalidateTag } from 'next/cache'
-import { CACHE_TAGS } from '@/shared/lib/constants'
+import { revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/shared/lib/constants";
 ```
 
 ---
@@ -217,6 +219,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 `syncFromCalendar()` の成功パス（エラーハンドリング `if (!result.success) { ... }` の閉じブレースの直後、`return NextResponse.json({ success: true, ... })` の直前）:
 
 変更前（現在 line 169 付近）:
+
 ```typescript
     }
 
@@ -226,6 +229,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 ```
 
 変更後:
+
 ```typescript
     }
 
@@ -250,6 +254,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 `syncFromCalendar()` の成功パス（エラーハンドリング直後、`return NextResponse.json({ success: true, ... })` の直前、現在 line 130 付近）:
 
 変更前:
+
 ```typescript
     }
 
@@ -259,6 +264,7 @@ import { CACHE_TAGS } from '@/shared/lib/constants'
 ```
 
 変更後:
+
 ```typescript
     }
 
@@ -288,6 +294,7 @@ git commit -m "fix(cache): add revalidateTag(RESERVATIONS) after calendar sync i
 **Score impact:** +1点
 
 **Files:**
+
 - Modify: `next.config.ts` (line 119 付近の `experimental` セクション)
 
 **背景:**
@@ -304,6 +311,7 @@ git commit -m "fix(cache): add revalidateTag(RESERVATIONS) after calendar sync i
 `experimental` セクションの先頭（`optimizePackageImports` の前）に1行追加:
 
 変更前:
+
 ```typescript
   experimental: {
     // Optimize package imports - tree shaking for barrel exports
@@ -311,6 +319,7 @@ git commit -m "fix(cache): add revalidateTag(RESERVATIONS) after calendar sync i
 ```
 
 変更後:
+
 ```typescript
   experimental: {
     // Turbopack persistent filesystem cache for faster dev server cold starts
@@ -340,6 +349,7 @@ git commit -m "feat(dx): enable turbopackFileSystemCacheForDev for faster dev se
 **Score impact:** +0.5点
 
 **Files:**
+
 - Modify: `src/shared/types/global.d.ts`
 
 **背景:**
@@ -351,11 +361,11 @@ git commit -m "feat(dx): enable turbopackFileSystemCacheForDev for faster dev se
 
 ```typescript
 declare global {
-  var prisma: PrismaClient | undefined
+  var prisma: PrismaClient | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  var gtag: ((...args: any[]) => void) | undefined
+  var gtag: ((...args: any[]) => void) | undefined;
 }
-export {}
+export {};
 ```
 
 ---
@@ -365,18 +375,20 @@ export {}
 ファイル全体を以下に置き換える:
 
 ```typescript
-import type { PrismaClient } from '@/shared/generated/prisma/client'
+import type { PrismaClient } from "@/shared/generated/prisma/client";
 
 // Google Analytics gtag 型定義
 // https://developers.google.com/tag-platform/gtagjs/reference
-type GtagCommand = 'config' | 'event' | 'get' | 'set' | 'consent'
-type GtagParams = Record<string, string | number | boolean | null | undefined>
+type GtagCommand = "config" | "event" | "get" | "set" | "consent";
+type GtagParams = Record<string, string | number | boolean | null | undefined>;
 
 declare global {
-  var prisma: PrismaClient | undefined
-  var gtag: ((command: GtagCommand, target: string, params?: GtagParams) => void) | undefined
+  var prisma: PrismaClient | undefined;
+  var gtag:
+    | ((command: GtagCommand, target: string, params?: GtagParams) => void)
+    | undefined;
 }
-export {}
+export {};
 ```
 
 **注意:** 既存の `var prisma: PrismaClient | undefined` の `PrismaClient` が import なしで参照されている場合は import を追加する（あるいは既に ambient declaration で解決されていれば不要）。型チェックで判断する。
@@ -404,6 +416,7 @@ git commit -m "refactor(types): replace any with strict GtagCommand/GtagParams i
 **Score impact:** 品質向上（点数外）
 
 **Files:**
+
 - Create: `.claude/rules/server-only-patterns.md`
 - Modify: `.claude/rules/server-actions.md`
 
@@ -420,33 +433,33 @@ git commit -m "refactor(types): replace any with strict GtagCommand/GtagParams i
 
 `server-only` パッケージはバンドラーレベルでクライアントバンドルへの混入を**ビルド時エラー**で防ぐ。`'use server'` / `'use cache'` ディレクティブはランタイム境界を制御するが、`server-only` は**ビルド時**に誤ったインポートを即座に検出するセキュリティ層。
 
-| 手段 | 保護タイミング | 保護対象 |
-|------|--------------|---------|
-| `server-only` | **ビルド時** | モジュール自体のクライアントバンドル混入 |
-| `'use server'` | ランタイム | 関数が Client→Server RPC エンドポイントになる |
-| `'use cache'` | ランタイム | 関数の結果をクロスリクエストキャッシュに保存 |
+| 手段           | 保護タイミング | 保護対象                                      |
+| -------------- | -------------- | --------------------------------------------- |
+| `server-only`  | **ビルド時**   | モジュール自体のクライアントバンドル混入      |
+| `'use server'` | ランタイム     | 関数が Client→Server RPC エンドポイントになる |
+| `'use cache'`  | ランタイム     | 関数の結果をクロスリクエストキャッシュに保存  |
 
 ## 対象ファイル（プロジェクト標準）
 
 以下のファイルは `import 'server-only'` を持つ:
 
-| ファイル | 理由 |
-|---------|------|
-| `@/shared/lib/prisma.ts` | DB クライアント + 接続シークレット |
-| `@/shared/lib/auth.ts` | Better Auth 設定（OAuth シークレット等） |
-| `@/shared/lib/errors/logger.ts` | サーバー専用構造化ロガー |
-| `@/admin/lib/action-auth.ts` | 権限チェック関数群 |
-| `@/admin/lib/permissions.ts` | 権限定義マップ（ROLE_PERMISSIONS 等） |
-| `@/admin/lib/audit.ts` | 監査ログ記録関数 |
+| ファイル                        | 理由                                     |
+| ------------------------------- | ---------------------------------------- |
+| `@/shared/lib/prisma.ts`        | DB クライアント + 接続シークレット       |
+| `@/shared/lib/auth.ts`          | Better Auth 設定（OAuth シークレット等） |
+| `@/shared/lib/errors/logger.ts` | サーバー専用構造化ロガー                 |
+| `@/admin/lib/action-auth.ts`    | 権限チェック関数群                       |
+| `@/admin/lib/permissions.ts`    | 権限定義マップ（ROLE_PERMISSIONS 等）    |
+| `@/admin/lib/audit.ts`          | 監査ログ記録関数                         |
 
 ## 使い方
 
 ```typescript
 // JSDoc コメント直後、最初の import 行の前に追加
-import 'server-only'
+import "server-only";
 
 // 以降は通常のインポート
-import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaPg } from "@prisma/adapter-pg";
 ```
 
 ## 除外対象（追加不要）
@@ -474,34 +487,37 @@ DB 接続・環境変数シークレット・認証設定・権限定義を含�
 `.claude/rules/server-actions.md` の `updateTag vs revalidateTag 比較` テーブル直後または `revalidateTag（非同期再検証）` セクションに、実際のファイルパスコメントを追記する。
 
 現在の Route Handler 使用例のコード:
+
 ```typescript
 // Route Handler（CRON Job 等）
 export async function POST() {
-  await syncCalendar()
-  revalidateTag(CACHE_TAGS.RESERVATIONS)
-  return Response.json({ ok: true })
+  await syncCalendar();
+  revalidateTag(CACHE_TAGS.RESERVATIONS);
+  return Response.json({ ok: true });
 }
 ```
 
 上記を以下に更新（実際のファイルとの対応を明記）:
+
 ```typescript
 // Route Handler（CRON Job / Webhook — revalidateTag を使用）
 // 例: src/app/api/cron/calendar-sync/route.ts
 // 例: src/app/api/webhooks/google-calendar/route.ts
 export async function POST() {
-  const result = await syncFromCalendar()
+  const result = await syncFromCalendar();
   if (!result.success) {
     // エラー処理...
   }
 
   // 同期完了後にキャッシュ無効化（updateTag は Server Actions 専用のため不可）
-  revalidateTag(CACHE_TAGS.RESERVATIONS)
+  revalidateTag(CACHE_TAGS.RESERVATIONS);
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true });
 }
 ```
 
 また `禁止事項` セクション 4 の `updateTag を Route Handlers で使用禁止` コードブロックに `server-only` との違いに関する注記を追加:
+
 ```typescript
 // 補足: Route Handler 自体がサーバー専用のため server-only は不要（'use server' / 'use cache' も不要）
 ```
@@ -519,13 +535,13 @@ git commit -m "docs(rules): add server-only-patterns.md and update Route Handler
 
 ## 実施後の期待スコア
 
-| 指標 | 改善前 | 改善後 |
-|------|--------|--------|
-| セキュリティスコア | 88/100 | 95/100 |
-| キャッシュ正確性 | 85/100 | 97/100 |
-| 開発体験 | 90/100 | 95/100 |
-| 型安全性 | 94/100 | 97/100 |
-| **総合スコア** | **91/100** | **97/100** |
+| 指標               | 改善前     | 改善後     |
+| ------------------ | ---------- | ---------- |
+| セキュリティスコア | 88/100     | 95/100     |
+| キャッシュ正確性   | 85/100     | 97/100     |
+| 開発体験           | 90/100     | 95/100     |
+| 型安全性           | 94/100     | 97/100     |
+| **総合スコア**     | **91/100** | **97/100** |
 
 ## 実施時の注意事項
 
@@ -534,6 +550,7 @@ git commit -m "docs(rules): add server-only-patterns.md and update Route Handler
 設計調査の結果、`CustomerForm.tsx` と `CouponForm.tsx` は `useActionState` の `isPending` を同一コンポーネントスコープ内で直接使用しているため、props ドリリングは発生していない。`useFormStatus` は `<form>` の子孫コンポーネント内でのみ機能するが、これらのフォームは submit ボタンをインラインで持つ構造。
 
 **`useFormStatus` が有効なケース（将来の参考）:**
+
 ```typescript
 // 新規フォーム作成時: submit ボタンを子コンポーネントに分離する場合
 function AdminSubmitButton({ children }: { children: React.ReactNode }) {

@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
-import { tv } from 'tailwind-variants'
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { tv } from "tailwind-variants";
 import {
   Card,
   CardContent,
@@ -18,88 +18,108 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/admin/components/ui'
-import { deleteFaqCategory, deleteFaqItem, toggleFaqItemPublished } from '@/admin/actions/faq'
-import type { FaqCategoryWithItems } from '@/shared/domain/faq/types'
+} from "@/admin/components/ui";
+import {
+  deleteFaqCategory,
+  deleteFaqItem,
+  toggleFaqItemPublished,
+} from "@/admin/actions/faq";
+import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 const styles = tv({
   slots: {
-    categoryCard: 'overflow-hidden',
-    categoryHeader: 'cursor-pointer hover:bg-muted/50 transition-colors',
-    categoryTitle: 'flex items-center gap-2',
-    itemList: 'divide-y',
-    itemRow: 'flex items-center justify-between py-3 px-4 hover:bg-muted/30 transition-colors',
-    question: 'font-medium text-sm',
-    actions: 'flex items-center gap-1',
-    emptyState: 'py-8 text-center text-muted-foreground',
+    categoryCard: "overflow-hidden",
+    categoryHeader: "cursor-pointer hover:bg-muted/50 transition-colors",
+    categoryTitle: "flex items-center gap-2",
+    itemList: "divide-y",
+    itemRow:
+      "flex items-center justify-between py-3 px-4 hover:bg-muted/30 transition-colors",
+    question: "font-medium text-sm",
+    actions: "flex items-center gap-1",
+    emptyState: "py-8 text-center text-muted-foreground",
   },
-})()
+})();
 
 type FaqCategoryListProps = {
-  categories: FaqCategoryWithItems[]
-}
+  categories: FaqCategoryWithItems[];
+};
 
 export function FaqCategoryList({ categories }: FaqCategoryListProps) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    () => new Set(categories.map((c) => c.id))
-  )
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deletingItem, setDeletingItem] = useState<{ type: 'category' | 'item'; id: string; name: string } | null>(null)
+    () => new Set(categories.map((c) => c.id)),
+  );
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<{
+    type: "category" | "item";
+    id: string;
+    name: string;
+  } | null>(null);
 
   const toggleCategory = (id: string) => {
     setExpandedCategories((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(id)) {
-        next.delete(id)
+        next.delete(id);
       } else {
-        next.add(id)
+        next.add(id);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const handleDeleteCategory = (id: string, name: string) => {
-    setDeletingItem({ type: 'category', id, name })
-    setDeleteDialogOpen(true)
-  }
+    setDeletingItem({ type: "category", id, name });
+    setDeleteDialogOpen(true);
+  };
 
   const handleDeleteItem = (id: string, question: string) => {
-    setDeletingItem({ type: 'item', id, name: question })
-    setDeleteDialogOpen(true)
-  }
+    setDeletingItem({ type: "item", id, name: question });
+    setDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
-    if (!deletingItem) return
+    if (!deletingItem) return;
 
     startTransition(async () => {
-      const result = deletingItem.type === 'category'
-        ? await deleteFaqCategory(deletingItem.id)
-        : await deleteFaqItem(deletingItem.id)
+      const result =
+        deletingItem.type === "category"
+          ? await deleteFaqCategory(deletingItem.id)
+          : await deleteFaqItem(deletingItem.id);
 
-      if (result.success) {
-        toast.success(result.message)
-        router.refresh()
+      if (isMutationError(result)) {
+        toast.error(result.error);
       } else {
-        toast.error(result.error)
+        toast.success(
+          deletingItem.type === "category"
+            ? "カテゴリを削除しました"
+            : "質問を削除しました",
+        );
+        router.refresh();
       }
-      setDeleteDialogOpen(false)
-      setDeletingItem(null)
-    })
-  }
+      setDeleteDialogOpen(false);
+      setDeletingItem(null);
+    });
+  };
 
   const handleToggleItemPublished = (id: string) => {
     startTransition(async () => {
-      const result = await toggleFaqItemPublished(id)
-      if (result.success) {
-        toast.success(result.message)
-        router.refresh()
-      } else {
-        toast.error(result.error)
+      const result = await toggleFaqItemPublished(id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success(
+        result.isPublished
+          ? "FAQ項目を公開しました"
+          : "FAQ項目を非公開にしました",
+      );
+      router.refresh();
+    });
+  };
 
   if (categories.length === 0) {
     return (
@@ -111,14 +131,14 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
     <>
       <div className="space-y-4">
         {categories.map((category) => {
-          const isExpanded = expandedCategories.has(category.id)
+          const isExpanded = expandedCategories.has(category.id);
 
           return (
             <Card key={category.id} className={styles.categoryCard()}>
@@ -129,7 +149,7 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                 <div className="flex items-center justify-between">
                   <CardTitle className={styles.categoryTitle()}>
                     <svg
-                      className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -149,7 +169,10 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                       <Badge variant="secondary">非公開</Badge>
                     )}
                   </CardTitle>
-                  <div className={styles.actions()} onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className={styles.actions()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button variant="ghost" size="sm" asChild>
                       <Link href={`/admin/faq/categories/${category.id}/edit`}>
                         編集
@@ -159,7 +182,9 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                       variant="ghost"
                       size="sm"
                       className="text-destructive"
-                      onClick={() => handleDeleteCategory(category.id, category.name)}
+                      onClick={() =>
+                        handleDeleteCategory(category.id, category.name)
+                      }
                       disabled={category.items.length > 0}
                     >
                       削除
@@ -193,7 +218,7 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                               onClick={() => handleToggleItemPublished(item.id)}
                               disabled={isPending}
                             >
-                              {item.isPublished ? '非公開' : '公開'}
+                              {item.isPublished ? "非公開" : "公開"}
                             </Button>
                             <Button variant="ghost" size="sm" asChild>
                               <Link href={`/admin/faq/items/${item.id}/edit`}>
@@ -204,7 +229,9 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                               variant="ghost"
                               size="sm"
                               className="text-destructive"
-                              onClick={() => handleDeleteItem(item.id, item.question)}
+                              onClick={() =>
+                                handleDeleteItem(item.id, item.question)
+                              }
                             >
                               削除
                             </Button>
@@ -216,7 +243,7 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                 </CardContent>
               )}
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -225,12 +252,14 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {deletingItem?.type === 'category' ? 'カテゴリを削除' : '質問を削除'}
+              {deletingItem?.type === "category"
+                ? "カテゴリを削除"
+                : "質問を削除"}
             </DialogTitle>
             <DialogDescription>
-              {deletingItem?.type === 'category'
+              {deletingItem?.type === "category"
                 ? `「${deletingItem?.name}」を削除しますか？`
-                : 'この質問を削除しますか？この操作は取り消せません。'}
+                : "この質問を削除しますか？この操作は取り消せません。"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -246,11 +275,11 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
               onClick={confirmDelete}
               disabled={isPending}
             >
-              {isPending ? '削除中...' : '削除'}
+              {isPending ? "削除中..." : "削除"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

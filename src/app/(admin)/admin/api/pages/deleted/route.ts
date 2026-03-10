@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import type { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 import { checkPermission } from "@/admin/lib/action-auth";
 import { isEditorRole } from "@/admin/lib/permissions";
@@ -10,23 +10,17 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "@/shared/lib/errors/server";
-
-function getErrorStatus(message: string): number {
-  if (message.includes("ログイン") || message.includes("権限")) {
-    return 403;
-  }
-
-  return 400;
-}
+import {
+  getRouteErrorStatus,
+  jsonError,
+  jsonSuccess,
+} from "@/shared/lib/route-responses";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const auth = await checkPermission("page", "read", request.headers);
     if (!auth.success) {
-      return NextResponse.json(
-        { error: auth.error.error },
-        { status: getErrorStatus(auth.error.error) },
-      );
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const allowedPageIds = isEditorRole(auth.user.role)
@@ -34,7 +28,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       : undefined;
     const pages = await getDeletedPagesListQuery(allowedPageIds);
 
-    return NextResponse.json(pages);
+    return jsonSuccess(pages);
   } catch (error: unknown) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
@@ -43,9 +37,6 @@ export async function GET(request: Request): Promise<NextResponse> {
       context: { operation: "adminDeletedPagesGet" },
     });
 
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return jsonError("Internal server error", 500);
   }
 }

@@ -86,7 +86,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         maxReservationDuration: formData.maxReservationDuration || null,
         cancellationTermsId: formData.cancellationTermsId || null,
       });
-      handleResult(result);
+      handleResult(result, "予約設定を保存しました");
     });
   };
 

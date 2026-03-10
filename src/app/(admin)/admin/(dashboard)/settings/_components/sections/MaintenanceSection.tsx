@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * メンテナンス設定セクション
@@ -6,7 +6,7 @@
  * メンテナンスモードの有効/無効、メッセージ設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -17,32 +17,32 @@ import {
   Label,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { updateMaintenanceSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateMaintenanceSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 interface MaintenanceSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
 export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     maintenanceMode: settings.maintenanceMode,
-    maintenanceMessage: settings.maintenanceMessage || '',
-  })
+    maintenanceMessage: settings.maintenanceMessage || "",
+  });
 
   const handleSave = () => {
     startTransition(async () => {
       const result = await updateMaintenanceSettings({
         maintenanceMode: formData.maintenanceMode,
         maintenanceMessage: formData.maintenanceMessage || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "メンテナンス設定を保存しました");
+    });
+  };
 
   return (
     <Card>
@@ -56,8 +56,8 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
         <div
           className={`flex items-center justify-between rounded-lg border p-4 ${
             formData.maintenanceMode
-              ? 'border-destructive bg-destructive/5'
-              : ''
+              ? "border-destructive bg-destructive/5"
+              : ""
           }`}
         >
           <div className="space-y-0.5">
@@ -111,9 +111,9 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
         </div>
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : 'メンテナンス設定を保存'}
+          {isPending ? "保存中..." : "メンテナンス設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

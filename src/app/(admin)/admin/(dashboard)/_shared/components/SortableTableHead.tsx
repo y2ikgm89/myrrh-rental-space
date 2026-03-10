@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SortableTableHead - ソート可能なテーブルヘッダー
@@ -6,19 +6,19 @@
  * @description クリックでソート順序を切り替えられるテーブルヘッダーコンポーネント
  */
 
-import type { ReactNode } from 'react'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
-import { TableHead } from '@/admin/components/ui'
-import { cn } from '@/shared/lib/cn'
+import type { ReactNode } from "react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { TableHead } from "@/admin/components/ui";
+import { cn } from "@/shared/lib/cn";
 
 type SortableTableHeadProps<T extends string> = {
-  field: T
-  currentSortBy: T
-  currentSortOrder: 'asc' | 'desc'
-  onToggle: (field: T) => void
-  children: ReactNode
-  className?: string
-}
+  field: T;
+  currentSortBy: T;
+  currentSortOrder: "asc" | "desc";
+  onToggle: (field: T) => void;
+  children: ReactNode;
+  className?: string;
+};
 
 export function SortableTableHead<T extends string>({
   field,
@@ -28,7 +28,7 @@ export function SortableTableHead<T extends string>({
   children,
   className,
 }: SortableTableHeadProps<T>) {
-  const isActive = currentSortBy === field
+  const isActive = currentSortBy === field;
 
   return (
     <TableHead className={cn(className)}>
@@ -40,7 +40,7 @@ export function SortableTableHead<T extends string>({
       >
         {children}
         {isActive ? (
-          currentSortOrder === 'asc' ? (
+          currentSortOrder === "asc" ? (
             <ArrowUp className="h-4 w-4" />
           ) : (
             <ArrowDown className="h-4 w-4" />
@@ -50,5 +50,5 @@ export function SortableTableHead<T extends string>({
         )}
       </button>
     </TableHead>
-  )
+  );
 }

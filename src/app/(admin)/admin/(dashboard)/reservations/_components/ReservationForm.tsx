@@ -28,6 +28,7 @@ import {
   type AdminReservationInput,
 } from "@/admin/lib/validations/admin-reservation";
 import { createAdminReservation } from "@/admin/actions/reservation";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatCurrency } from "@/shared/lib/utils";
 import {
   ReservationStatus,
@@ -65,26 +66,6 @@ type NewCustomerData = {
 // =============================================================================
 // Helpers
 // =============================================================================
-
-/**
- * 成功したActionResultからIDを抽出
- * ActionResult<{ id: string }> の条件型ナローイング問題を回避
- */
-function extractCreatedId(
-  result:
-    | { success: true; message: string }
-    | { success: true; message: string; data: { id: string } },
-): string | null {
-  if (
-    "data" in result &&
-    result.data &&
-    typeof result.data === "object" &&
-    "id" in result.data
-  ) {
-    return result.data.id;
-  }
-  return null;
-}
 
 /**
  * FieldErrorsをCustomerSelector用の形式に変換
@@ -218,16 +199,8 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
       };
 
       const result = await createAdminReservation(submitData);
-      if (result.success) {
-        toast.success(result.message);
-        const createdId = extractCreatedId(result);
-        router.push(
-          createdId
-            ? `/admin/reservations/${createdId}`
-            : "/admin/reservations",
-        );
-      } else {
-        toast.error(result.error || "予約の作成に失敗しました");
+      if (isMutationError(result)) {
+        toast.error(result.error);
         if (result.fieldErrors) {
           Object.entries(result.fieldErrors).forEach(([field, messages]) => {
             messages.forEach((message: string) =>
@@ -235,7 +208,11 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
             );
           });
         }
+        return;
       }
+
+      toast.success("予約を作成しました");
+      router.push(`/admin/reservations/${result.id}`);
     });
   };
 

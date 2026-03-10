@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * ScrollReveal — Scroll-triggered reveal animation
@@ -7,18 +7,23 @@
  * Supports stagger for child elements with data-reveal attribute.
  */
 
-import { useRef, type ReactElement, type ReactNode } from 'react'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { DURATION, EASE, STAGGER, SCROLL_TRIGGER } from '@/public/lib/animations'
+import { useRef, type ReactElement, type ReactNode } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import {
+  DURATION,
+  EASE,
+  STAGGER,
+  SCROLL_TRIGGER,
+} from "@/public/lib/animations";
 
 interface ScrollRevealProps {
-  readonly children: ReactNode
-  readonly className?: string
+  readonly children: ReactNode;
+  readonly className?: string;
   /** Animate child elements with [data-reveal] individually */
-  readonly stagger?: boolean
-  readonly delay?: number
-  readonly distance?: number
+  readonly stagger?: boolean;
+  readonly delay?: number;
+  readonly distance?: number;
 }
 
 export function ScrollReveal({
@@ -28,18 +33,18 @@ export function ScrollReveal({
   delay = 0,
   distance = 40,
 }: ScrollRevealProps): ReactElement {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const container = containerRef.current
-      if (!container) return
+      const container = containerRef.current;
+      if (!container) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
         if (stagger) {
-          const targets = container.querySelectorAll('[data-reveal]')
-          if (targets.length === 0) return
+          const targets = container.querySelectorAll("[data-reveal]");
+          if (targets.length === 0) return;
 
           gsap.fromTo(
             targets,
@@ -56,7 +61,7 @@ export function ScrollReveal({
                 ...SCROLL_TRIGGER.reveal,
               },
             },
-          )
+          );
         } else {
           gsap.fromTo(
             container,
@@ -72,16 +77,16 @@ export function ScrollReveal({
                 ...SCROLL_TRIGGER.reveal,
               },
             },
-          )
+          );
         }
-      })
+      });
     },
     { scope: containerRef, dependencies: [stagger, delay, distance] },
-  )
+  );
 
   return (
     <div ref={containerRef} className={className}>
       {children}
     </div>
-  )
+  );
 }

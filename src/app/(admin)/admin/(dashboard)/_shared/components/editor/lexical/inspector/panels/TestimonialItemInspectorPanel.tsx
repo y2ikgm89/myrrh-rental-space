@@ -4,10 +4,10 @@
  * @description TestimonialItemNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isTestimonialItemNode,
   type TestimonialItemNode,
@@ -17,78 +17,99 @@ import {
   testimonialAvatarUrlState,
   testimonialRatingState,
   testimonialDateState,
-} from '../../nodes/TestimonialNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+} from "../../nodes/TestimonialNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const RATING_OPTIONS: readonly { value: TestimonialRating; label: string }[] = [
-  { value: 1, label: '★☆☆☆☆ (1)' },
-  { value: 2, label: '★★☆☆☆ (2)' },
-  { value: 3, label: '★★★☆☆ (3)' },
-  { value: 4, label: '★★★★☆ (4)' },
-  { value: 5, label: '★★★★★ (5)' },
-]
+  { value: 1, label: "★☆☆☆☆ (1)" },
+  { value: 2, label: "★★☆☆☆ (2)" },
+  { value: 3, label: "★★★☆☆ (3)" },
+  { value: 4, label: "★★★★☆ (4)" },
+  { value: 5, label: "★★★★★ (5)" },
+];
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TestimonialItemInspectorPanelProps = {
-  nodeKey: string
-  node: TestimonialItemNode
-}
+  nodeKey: string;
+  node: TestimonialItemNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function TestimonialItemInspectorPanel({ nodeKey, node }: TestimonialItemInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isTestimonialItemNode)
+export function TestimonialItemInspectorPanel({
+  nodeKey,
+  node,
+}: TestimonialItemInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isTestimonialItemNode);
 
-  const { authorName, authorTitle, avatarUrl, rating, date } = editor.getEditorState().read(() => ({
-    authorName: $getState(node, testimonialAuthorNameState),
-    authorTitle: $getState(node, testimonialAuthorTitleState),
-    avatarUrl: $getState(node, testimonialAvatarUrlState),
-    rating: $getState(node, testimonialRatingState),
-    date: $getState(node, testimonialDateState),
-  }))
+  const { authorName, authorTitle, avatarUrl, rating, date } = editor
+    .getEditorState()
+    .read(() => ({
+      authorName: $getState(node, testimonialAuthorNameState),
+      authorTitle: $getState(node, testimonialAuthorTitleState),
+      avatarUrl: $getState(node, testimonialAvatarUrlState),
+      rating: $getState(node, testimonialRatingState),
+      date: $getState(node, testimonialDateState),
+    }));
 
   const handleAuthorNameChange = (value: string) => {
-    updateNode((n) => { $setState(n, testimonialAuthorNameState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, testimonialAuthorNameState, value);
+    });
+  };
 
   const handleAuthorTitleChange = (value: string) => {
-    updateNode((n) => { $setState(n, testimonialAuthorTitleState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, testimonialAuthorTitleState, value);
+    });
+  };
 
   const handleAvatarUrlChange = (value: string) => {
-    updateNode((n) => { $setState(n, testimonialAvatarUrlState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, testimonialAvatarUrlState, value);
+    });
+  };
 
   const handleRatingChange = (value: string) => {
-    const parsed = parseInt(value, 10)
-    if (parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4 || parsed === 5) {
-      updateNode((n) => { $setState(n, testimonialRatingState, parsed) })
+    const parsed = parseInt(value, 10);
+    if (
+      parsed === 1 ||
+      parsed === 2 ||
+      parsed === 3 ||
+      parsed === 4 ||
+      parsed === 5
+    ) {
+      updateNode((n) => {
+        $setState(n, testimonialRatingState, parsed);
+      });
     }
-  }
+  };
 
   const handleDateChange = (value: string) => {
-    updateNode((n) => { $setState(n, testimonialDateState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, testimonialDateState, value);
+    });
+  };
 
   return (
     <div>
@@ -158,5 +179,5 @@ export function TestimonialItemInspectorPanel({ nodeKey, node }: TestimonialItem
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

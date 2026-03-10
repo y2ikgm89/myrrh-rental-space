@@ -1,34 +1,34 @@
-'use client'
+"use client";
 
-import { useRef, type ReactElement } from 'react'
-import Link from 'next/link'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
-import { DURATION, EASE, STAGGER } from '@/public/lib/animations'
-import { SanitizedHtml } from '@/shared/components/SanitizedHtml'
+import { useRef, type ReactElement } from "react";
+import Link from "next/link";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
+import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 
 interface FaqItemData {
-  readonly id: string
-  readonly question: string
-  readonly answerHtml: string
+  readonly id: string;
+  readonly question: string;
+  readonly answerHtml: string;
 }
 
 interface FaqAccordionProps {
-  readonly items: readonly FaqItemData[]
+  readonly items: readonly FaqItemData[];
 }
 
 export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
-  const listRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const list = listRef.current
-      if (!list) return
+      const list = listRef.current;
+      if (!list) return;
 
-      const mm = gsap.matchMedia()
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        const faqItems = list.querySelectorAll('[data-faq-item]')
-        if (faqItems.length === 0) return
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const faqItems = list.querySelectorAll("[data-faq-item]");
+        if (faqItems.length === 0) return;
 
         gsap.fromTo(
           faqItems,
@@ -41,22 +41,22 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
             stagger: STAGGER.element * 0.6,
             scrollTrigger: {
               trigger: list,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             },
           },
-        )
-      })
+        );
+      });
     },
     { scope: listRef },
-  )
+  );
 
   if (items.length === 0) {
     return (
       <p className="py-16 text-center text-muted-foreground">
         現在公開中のよくある質問はありません。
       </p>
-    )
+    );
   }
 
   // NOTE: answerHtml is admin-managed sanitized content from Lexical editor
@@ -75,8 +75,18 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
               className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"
               aria-hidden="true"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </span>
           </summary>
@@ -97,5 +107,5 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
         </Link>
       </div>
     </div>
-  )
+  );
 }

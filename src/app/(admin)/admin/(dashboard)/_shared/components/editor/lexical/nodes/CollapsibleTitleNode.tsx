@@ -7,7 +7,7 @@
  * スタイルは lexical-content.css の [data-collapsible-title] セレクターで管理
  */
 
-'use client'
+"use client";
 
 import type {
   DOMConversionMap,
@@ -16,18 +16,20 @@ import type {
   EditorConfig,
   LexicalNode,
   RangeSelection,
-} from 'lexical'
-import { $create, $setState, ElementNode } from 'lexical'
-import { $isCollapsibleItemNode, openState } from './CollapsibleItemNode'
-import { $isCollapsibleContentNode } from './CollapsibleContentNode'
+} from "lexical";
+import { $create, $setState, ElementNode } from "lexical";
+import { $isCollapsibleItemNode, openState } from "./CollapsibleItemNode";
+import { $isCollapsibleContentNode } from "./CollapsibleContentNode";
 
 // =============================================================================
 // DOM Conversion
 // =============================================================================
 
-function $convertCollapsibleTitleElement(_element: HTMLElement): null | DOMConversionOutput {
-  const node = $createCollapsibleTitleNode()
-  return { node }
+function $convertCollapsibleTitleElement(
+  _element: HTMLElement,
+): null | DOMConversionOutput {
+  const node = $createCollapsibleTitleNode();
+  return { node };
 }
 
 // =============================================================================
@@ -36,7 +38,7 @@ function $convertCollapsibleTitleElement(_element: HTMLElement): null | DOMConve
 
 export class CollapsibleTitleNode extends ElementNode {
   override $config() {
-    return this.config('collapsible-title', { extends: ElementNode })
+    return this.config("collapsible-title", { extends: ElementNode });
   }
 
   static override importDOM(): DOMConversionMap | null {
@@ -45,49 +47,52 @@ export class CollapsibleTitleNode extends ElementNode {
         conversion: $convertCollapsibleTitleElement,
         priority: 1,
       }),
-    }
+    };
   }
 
   override exportDOM(): DOMExportOutput {
-    const element = document.createElement('summary')
-    element.setAttribute('data-collapsible-title', 'true')
-    return { element }
+    const element = document.createElement("summary");
+    element.setAttribute("data-collapsible-title", "true");
+    return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
-    const element = document.createElement('div')
-    element.setAttribute('data-collapsible-title', 'true')
-    return element
+    const element = document.createElement("div");
+    element.setAttribute("data-collapsible-title", "true");
+    return element;
   }
 
   override updateDOM(): false {
-    return false
+    return false;
   }
 
   override canInsertTextBefore(): false {
-    return false
+    return false;
   }
 
   override canInsertTextAfter(): false {
-    return false
+    return false;
   }
 
-  override insertNewAfter(_selection: RangeSelection, restoreSelection = true): null | ElementNode {
-    const item = this.getParent()
+  override insertNewAfter(
+    _selection: RangeSelection,
+    restoreSelection = true,
+  ): null | ElementNode {
+    const item = this.getParent();
     if ($isCollapsibleItemNode(item)) {
-      $setState(item, openState, true)
-      const content = item.getChildren().find($isCollapsibleContentNode)
+      $setState(item, openState, true);
+      const content = item.getChildren().find($isCollapsibleContentNode);
       if (content) {
-        const firstChild = content.getFirstChild()
+        const firstChild = content.getFirstChild();
         if (firstChild) {
           if (restoreSelection) {
-            firstChild.selectStart()
+            firstChild.selectStart();
           }
-          return null
+          return null;
         }
       }
     }
-    return null
+    return null;
   }
 }
 
@@ -96,11 +101,11 @@ export class CollapsibleTitleNode extends ElementNode {
 // =============================================================================
 
 export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
-  return $create(CollapsibleTitleNode)
+  return $create(CollapsibleTitleNode);
 }
 
 export function $isCollapsibleTitleNode(
-  node: LexicalNode | null | undefined
+  node: LexicalNode | null | undefined,
 ): node is CollapsibleTitleNode {
-  return node instanceof CollapsibleTitleNode
+  return node instanceof CollapsibleTitleNode;
 }

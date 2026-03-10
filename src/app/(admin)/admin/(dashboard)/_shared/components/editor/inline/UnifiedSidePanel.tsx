@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * 統一サイドパネル
@@ -7,8 +7,8 @@
  * 全コンテンツタイプで共通のUI構造を提供
  */
 
-import { tv } from 'tailwind-variants'
-import type { FieldValues } from 'react-hook-form'
+import { tv } from "tailwind-variants";
+import type { FieldValues } from "react-hook-form";
 import {
   Card,
   CardContent,
@@ -18,34 +18,34 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/admin/components/ui'
-import { SidePanelShell } from './SidePanelShell'
-import type { UnifiedSidePanelProps } from './content-types/types'
+} from "@/admin/components/ui";
+import { SidePanelShell } from "./SidePanelShell";
+import type { UnifiedSidePanelProps } from "./content-types/types";
 
-type TabCount = 2 | 3 | 4 | 5
-const VALID_TAB_COUNTS = new Set<number>([2, 3, 4, 5])
+type TabCount = 2 | 3 | 4 | 5;
+const VALID_TAB_COUNTS = new Set<number>([2, 3, 4, 5]);
 function isValidTabCount(n: number): n is TabCount {
-  return VALID_TAB_COUNTS.has(n)
+  return VALID_TAB_COUNTS.has(n);
 }
 
 const styles = tv({
   slots: {
-    tabsList: 'grid w-full',
-    tabContent: 'mt-4',
-    sectionWrapper: 'space-y-4',
+    tabsList: "grid w-full",
+    tabContent: "mt-4",
+    sectionWrapper: "space-y-4",
   },
   variants: {
     tabCount: {
-      2: { tabsList: 'grid-cols-2' },
-      3: { tabsList: 'grid-cols-3' },
-      4: { tabsList: 'grid-cols-4' },
-      5: { tabsList: 'grid-cols-5' },
+      2: { tabsList: "grid-cols-2" },
+      3: { tabsList: "grid-cols-3" },
+      4: { tabsList: "grid-cols-4" },
+      5: { tabsList: "grid-cols-5" },
     },
   },
   defaultVariants: {
     tabCount: 3,
   },
-})
+});
 
 export function UnifiedSidePanel<T extends FieldValues>({
   isOpen,
@@ -59,11 +59,13 @@ export function UnifiedSidePanel<T extends FieldValues>({
   disabled,
   extraProps = {},
 }: UnifiedSidePanelProps<T>) {
-  const tabCount = isValidTabCount(config.tabs.length) ? config.tabs.length : undefined
-  const classes = styles({ tabCount })
+  const tabCount = isValidTabCount(config.tabs.length)
+    ? config.tabs.length
+    : undefined;
+  const classes = styles({ tabCount });
 
   // 最初のタブをデフォルト値として使用
-  const defaultTab = config.tabs[0]?.id ?? 'basic'
+  const defaultTab = config.tabs[0]?.id ?? "basic";
 
   return (
     <SidePanelShell
@@ -82,10 +84,14 @@ export function UnifiedSidePanel<T extends FieldValues>({
         </TabsList>
 
         {config.tabs.map((tab) => (
-          <TabsContent key={tab.id} value={tab.id} className={classes.tabContent()}>
+          <TabsContent
+            key={tab.id}
+            value={tab.id}
+            className={classes.tabContent()}
+          >
             <div className={classes.sectionWrapper()}>
               {tab.sections.map((section, index) => {
-                const SectionComponent = section.component
+                const SectionComponent = section.component;
 
                 return (
                   // eslint-disable-next-line @eslint-react/no-array-index-key
@@ -106,12 +112,12 @@ export function UnifiedSidePanel<T extends FieldValues>({
                       />
                     </CardContent>
                   </Card>
-                )
+                );
               })}
             </div>
           </TabsContent>
         ))}
       </Tabs>
     </SidePanelShell>
-  )
+  );
 }

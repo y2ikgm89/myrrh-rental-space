@@ -6,12 +6,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  PublishSwitch,
 } from "@/admin/components/ui";
-import { toggleTermsActive } from "@/admin/actions/terms";
 import { TERMS_TYPES } from "@/shared/lib/validations/terms";
 import type { TermsWithVersion } from "@/shared/lib/validations/terms";
 import { EmptyState } from "@/admin/components/EmptyState";
+import { TermsActiveSwitch } from "./TermsActiveSwitch";
 import { TermsActionCell } from "./TermsActionCell";
 
 type TermsTableProps = {
@@ -72,12 +71,7 @@ export function TermsTable({ terms }: TermsTableProps) {
                     )}
                   </TableCell>
                   <TableCell className="text-center">
-                    <PublishSwitch
-                      id={term.id}
-                      isPublished={term.isActive}
-                      onToggle={toggleTermsActive}
-                      label={{ published: "有効", unpublished: "無効" }}
-                    />
+                    <TermsActiveSwitch id={term.id} isActive={term.isActive} />
                   </TableCell>
                   <TableCell className="hidden text-right md:table-cell">
                     <Badge variant="secondary">{term._count.spaces}件</Badge>

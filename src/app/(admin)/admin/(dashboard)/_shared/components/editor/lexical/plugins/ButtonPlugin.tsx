@@ -6,11 +6,11 @@
  * ダイアログでテキスト、URL、スタイルを設定し、Buttonノードを挿入
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createButtonNode,
   isButtonVariant,
@@ -22,7 +22,7 @@ import {
   BUTTON_VARIANTS,
   BUTTON_SIZES,
   BUTTON_ALIGNMENTS,
-} from '../nodes/ButtonNode'
+} from "../nodes/ButtonNode";
 import {
   Dialog,
   DialogContent,
@@ -33,53 +33,53 @@ import {
   Input,
   Label,
   Switch,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui/select'
+} from "@/admin/components/ui/select";
 import {
   BUTTON_VARIANT_LABELS,
   BUTTON_SIZE_LABELS,
   BUTTON_ALIGNMENT_LABELS,
-} from '../config/node-labels'
+} from "../config/node-labels";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ButtonPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [text, setText] = useState('ボタン')
-  const [href, setHref] = useState('')
-  const [variant, setVariant] = useState<ButtonVariant>('primary')
-  const [size, setSize] = useState<ButtonSize>('md')
-  const [alignment, setAlignment] = useState<ButtonAlignment>('center')
-  const [openInNewTab, setOpenInNewTab] = useState(false)
+  const [editor] = useLexicalComposerContext();
+  const [text, setText] = useState("ボタン");
+  const [href, setHref] = useState("");
+  const [variant, setVariant] = useState<ButtonVariant>("primary");
+  const [size, setSize] = useState<ButtonSize>("md");
+  const [alignment, setAlignment] = useState<ButtonAlignment>("center");
+  const [openInNewTab, setOpenInNewTab] = useState(false);
 
   const resetForm = () => {
-    setText('ボタン')
-    setHref('')
-    setVariant('primary')
-    setSize('md')
-    setAlignment('center')
-    setOpenInNewTab(false)
-  }
+    setText("ボタン");
+    setHref("");
+    setVariant("primary");
+    setSize("md");
+    setAlignment("center");
+    setOpenInNewTab(false);
+  };
 
   const handleInsert = () => {
-    if (!text.trim() || !href.trim()) return
+    if (!text.trim() || !href.trim()) return;
 
     editor.update(() => {
       const buttonNode = $createButtonNode({
@@ -89,21 +89,21 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
         size,
         alignment,
         openInNewTab,
-      })
+      });
 
-      $insertNodeToNearestRoot(buttonNode)
-    })
+      $insertNodeToNearestRoot(buttonNode);
+    });
 
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
-  const isValid = text.trim() !== '' && href.trim() !== ''
+  const isValid = text.trim() !== "" && href.trim() !== "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -139,7 +139,12 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
           {/* スタイル */}
           <div className="space-y-2">
             <Label>スタイル</Label>
-            <Select value={variant} onValueChange={(value) => { if (isButtonVariant(value)) setVariant(value) }}>
+            <Select
+              value={variant}
+              onValueChange={(value) => {
+                if (isButtonVariant(value)) setVariant(value);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -156,7 +161,12 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
           {/* サイズ */}
           <div className="space-y-2">
             <Label>サイズ</Label>
-            <Select value={size} onValueChange={(value) => { if (isButtonSize(value)) setSize(value) }}>
+            <Select
+              value={size}
+              onValueChange={(value) => {
+                if (isButtonSize(value)) setSize(value);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -173,7 +183,12 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
           {/* 配置 */}
           <div className="space-y-2">
             <Label>配置</Label>
-            <Select value={alignment} onValueChange={(value) => { if (isButtonAlignment(value)) setAlignment(value) }}>
+            <Select
+              value={alignment}
+              onValueChange={(value) => {
+                if (isButtonAlignment(value)) setAlignment(value);
+              }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -210,5 +225,5 @@ export function ButtonPlugin({ isOpen, onClose }: ButtonPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

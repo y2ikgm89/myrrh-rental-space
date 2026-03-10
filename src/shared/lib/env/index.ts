@@ -7,8 +7,8 @@
  *   console.log(env.NEXT_PUBLIC_BASE_URL)
  */
 
-import { serverEnv } from './server'
-import { clientEnv } from './client'
+import { serverEnv } from "./server";
+import { clientEnv } from "./client";
 
 /**
  * 統合環境変数オブジェクト
@@ -19,7 +19,7 @@ import { clientEnv } from './client'
 export const env = {
   ...serverEnv,
   ...clientEnv,
-} as const
+} as const;
 
 // 個別エクスポート（必要に応じて使い分け）
-export { serverEnv, clientEnv }
+export { serverEnv, clientEnv };

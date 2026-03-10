@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * TaxonomyEditor - カテゴリ・タグ共通エディター
@@ -6,13 +6,19 @@
  * 通常の管理画面内で表示されるシンプルなフォーム
  */
 
-import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
-import { ArrowLeft, ExternalLink, Image as ImageIcon, Save, Trash2 } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  ExternalLink,
+  Image as ImageIcon,
+  Save,
+  Trash2,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -29,12 +35,21 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/admin/components/ui'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import { updatePostCategory, updatePostTag, deletePostCategory, deletePostTag } from '@/admin/actions/post'
-import type { PostCategoryData, PostTagData } from '@/shared/domain/posts/types'
-import type { SelectedMedia } from '@/admin/types/media-picker'
-import { generateSlug } from '@/shared/lib/utils'
+} from "@/admin/components/ui";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import {
+  updatePostCategory,
+  updatePostTag,
+  deletePostCategory,
+  deletePostTag,
+} from "@/admin/actions/post";
+import type {
+  PostCategoryData,
+  PostTagData,
+} from "@/shared/domain/posts/types";
+import type { SelectedMedia } from "@/admin/types/media-picker";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { generateSlug } from "@/shared/lib/utils";
 
 // =============================================================================
 // Schema
@@ -42,42 +57,60 @@ import { generateSlug } from '@/shared/lib/utils'
 
 const baseTaxonomySchema = z.object({
   name: z.string().min(1).max(50),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+  slug: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   description: z.string().max(500).optional(),
   metaTitle: z.string().max(70).optional(),
   metaDescription: z.string().max(160).optional(),
   ogpImageUrl: z.string().optional(),
-})
+});
 
 const categoryFormSchema = baseTaxonomySchema.extend({
-  name: z.string().min(1, { error: 'カテゴリ名は必須です' }).max(50, { error: 'カテゴリ名は50文字以内' }),
-  slug: z.string().min(1, { error: 'スラッグは必須です' }).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
+  name: z
+    .string()
+    .min(1, { error: "カテゴリ名は必須です" })
+    .max(50, { error: "カテゴリ名は50文字以内" }),
+  slug: z
+    .string()
+    .min(1, { error: "スラッグは必須です" })
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
   order: z.number().int().min(0),
-})
+});
 
 const tagFormSchema = baseTaxonomySchema.extend({
-  name: z.string().min(1, { error: 'タグ名は必須です' }).max(50, { error: 'タグ名は50文字以内' }),
-  slug: z.string().min(1, { error: 'スラッグは必須です' }).max(50).regex(/^[a-z0-9-]+$/, { error: 'スラッグは小文字英数字とハイフンのみ' }),
-})
+  name: z
+    .string()
+    .min(1, { error: "タグ名は必須です" })
+    .max(50, { error: "タグ名は50文字以内" }),
+  slug: z
+    .string()
+    .min(1, { error: "スラッグは必須です" })
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, { error: "スラッグは小文字英数字とハイフンのみ" }),
+});
 
-type CategoryFormData = z.infer<typeof categoryFormSchema>
-type TagFormData = z.infer<typeof tagFormSchema>
+type CategoryFormData = z.infer<typeof categoryFormSchema>;
+type TagFormData = z.infer<typeof tagFormSchema>;
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type CategoryEditorProps = {
-  type: 'category'
-  data: PostCategoryData
-}
+  type: "category";
+  data: PostCategoryData;
+};
 
 type TagEditorProps = {
-  type: 'tag'
-  data: PostTagData
-}
+  type: "tag";
+  data: PostTagData;
+};
 
-type TaxonomyEditorProps = CategoryEditorProps | TagEditorProps
+type TaxonomyEditorProps = CategoryEditorProps | TagEditorProps;
 
 // =============================================================================
 // Config
@@ -85,26 +118,29 @@ type TaxonomyEditorProps = CategoryEditorProps | TagEditorProps
 
 const CONFIG = {
   category: {
-    label: 'カテゴリ',
-    urlPrefix: '/posts/category/',
-    backUrl: '/admin/posts?tab=categories',
+    label: "カテゴリ",
+    urlPrefix: "/posts/category/",
+    backUrl: "/admin/posts?tab=categories",
   },
   tag: {
-    label: 'タグ',
-    urlPrefix: '/posts/tag/',
-    backUrl: '/admin/posts?tab=tags',
+    label: "タグ",
+    urlPrefix: "/posts/tag/",
+    backUrl: "/admin/posts?tab=tags",
   },
-} satisfies Record<string, { label: string; urlPrefix: string; backUrl: string }>
+} satisfies Record<
+  string,
+  { label: string; urlPrefix: string; backUrl: string }
+>;
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function TaxonomyEditor(props: TaxonomyEditorProps) {
-  if (props.type === 'category') {
-    return <CategoryEditorImpl data={props.data} />
+  if (props.type === "category") {
+    return <CategoryEditorImpl data={props.data} />;
   }
-  return <TagEditorImpl data={props.data} />
+  return <TagEditorImpl data={props.data} />;
 }
 
 // =============================================================================
@@ -112,10 +148,10 @@ export function TaxonomyEditor(props: TaxonomyEditorProps) {
 // =============================================================================
 
 function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
-  const config = CONFIG.category
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const config = CONFIG.category;
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const {
     register,
@@ -130,46 +166,46 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
     defaultValues: {
       name: data.name,
       slug: data.slug,
-      description: data.description ?? '',
+      description: data.description ?? "",
       order: data.order,
-      metaTitle: data.metaTitle ?? '',
-      metaDescription: data.metaDescription ?? '',
-      ogpImageUrl: data.ogpImageUrl ?? '',
+      metaTitle: data.metaTitle ?? "",
+      metaDescription: data.metaDescription ?? "",
+      ogpImageUrl: data.ogpImageUrl ?? "",
     },
-  })
+  });
 
-  const ogpImageUrl = useWatch({ control, name: 'ogpImageUrl' })
-  const currentSlug = useWatch({ control, name: 'slug' })
-  const metaTitle = useWatch({ control, name: 'metaTitle' })
-  const metaDescription = useWatch({ control, name: 'metaDescription' })
-  const description = useWatch({ control, name: 'description' })
-  const postCount = data._count.posts
+  const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
+  const currentSlug = useWatch({ control, name: "slug" });
+  const metaTitle = useWatch({ control, name: "metaTitle" });
+  const metaDescription = useWatch({ control, name: "metaDescription" });
+  const description = useWatch({ control, name: "description" });
+  const postCount = data._count.posts;
 
   const mediaPicker = useSingleMediaPicker({
-    defaultUsage: 'POST',
+    defaultUsage: "POST",
     onSelect: (media: SelectedMedia[]) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('ogpImageUrl', selected.url, { shouldDirty: true })
+        setValue("ogpImageUrl", selected.url, { shouldDirty: true });
       }
     },
-  })
+  });
 
   const handleClearOgpImage = () => {
-    setValue('ogpImageUrl', '', { shouldDirty: true })
-  }
+    setValue("ogpImageUrl", "", { shouldDirty: true });
+  };
 
   const handleGenerateSlug = () => {
-    const name = getValues('name')
+    const name = getValues("name");
     if (name) {
-      const slug = generateSlug(name, 'category')
-      setValue('slug', slug, { shouldDirty: true })
+      const slug = generateSlug(name, "category");
+      setValue("slug", slug, { shouldDirty: true });
     }
-  }
+  };
 
   const handleBack = () => {
-    router.push(config.backUrl)
-  }
+    router.push(config.backUrl);
+  };
 
   const onSubmit = (formData: CategoryFormData) => {
     startTransition(async () => {
@@ -181,49 +217,48 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
         metaTitle: formData.metaTitle || null,
         metaDescription: formData.metaDescription || null,
         ogpImageUrl: formData.ogpImageUrl || null,
-      })
+      });
 
-      if (result.success) {
-        reset(formData)
-        router.refresh()
-        toast.success(`${config.label}を更新しました`)
-      } else {
-        toast.error(result.error)
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      reset(formData);
+      router.refresh();
+      toast.success(`${config.label}を更新しました`);
+    });
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
-      const result = await deletePostCategory(data.id)
-      if (result.success) {
-        toast.success(`${config.label}を削除しました`)
-        router.push(config.backUrl)
-      } else {
-        toast.error(result.error)
+      const result = await deletePostCategory(data.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
 
-  const archiveUrl = `${config.urlPrefix}${currentSlug}`
+      toast.success(`${config.label}を削除しました`);
+      router.push(config.backUrl);
+    });
+  };
+
+  const archiveUrl = `${config.urlPrefix}${currentSlug}`;
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             戻る
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">{data.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                {data.name}
+              </h1>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {postCount}件の投稿
               </span>
@@ -242,7 +277,10 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <Dialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button
                 type="button"
@@ -260,7 +298,8 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 <DialogDescription>
                   {postCount > 0 ? (
                     <>
-                      この{config.label}には{postCount}件の投稿が紐づいています。
+                      この{config.label}には{postCount}
+                      件の投稿が紐づいています。
                       削除すると、投稿との紐づけが解除されます。
                     </>
                   ) : (
@@ -281,7 +320,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                   onClick={handleDelete}
                   disabled={isPending}
                 >
-                  {isPending ? '削除中...' : '削除'}
+                  {isPending ? "削除中..." : "削除"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -291,12 +330,15 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
             disabled={isPending || !isDirty}
           >
             <Save className="mr-2 h-4 w-4" />
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-2">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid gap-6 lg:grid-cols-2"
+      >
         {/* 基本情報 */}
         <Card>
           <CardHeader>
@@ -307,12 +349,14 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
               <Label htmlFor="name">{config.label}名 *</Label>
               <Input
                 id="name"
-                {...register('name')}
+                {...register("name")}
                 placeholder={`${config.label}名`}
                 disabled={isPending}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
               )}
             </div>
 
@@ -331,12 +375,14 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
               </div>
               <Input
                 id="slug"
-                {...register('slug')}
+                {...register("slug")}
                 placeholder="slug"
                 disabled={isPending}
               />
               {errors.slug && (
-                <p className="text-sm text-destructive">{errors.slug.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.slug.message}
+                </p>
               )}
             </div>
 
@@ -344,7 +390,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
               <Label htmlFor="description">説明</Label>
               <Textarea
                 id="description"
-                {...register('description')}
+                {...register("description")}
                 placeholder={`${config.label}の説明`}
                 rows={3}
                 disabled={isPending}
@@ -356,7 +402,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
               <Input
                 id="order"
                 type="number"
-                {...register('order', { valueAsNumber: true })}
+                {...register("order", { valueAsNumber: true })}
                 disabled={isPending}
               />
               <p className="text-xs text-muted-foreground">
@@ -377,7 +423,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 <Label htmlFor="metaTitle">SEOタイトル</Label>
                 <Input
                   id="metaTitle"
-                  {...register('metaTitle')}
+                  {...register("metaTitle")}
                   placeholder="検索結果に表示されるタイトル"
                   disabled={isPending}
                 />
@@ -387,7 +433,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 <Label htmlFor="metaDescription">メタディスクリプション</Label>
                 <Textarea
                   id="metaDescription"
-                  {...register('metaDescription')}
+                  {...register("metaDescription")}
                   placeholder="検索結果に表示される説明文"
                   rows={3}
                   disabled={isPending}
@@ -419,7 +465,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                           alt="OGP画像プレビュー"
                           className="h-full w-full object-cover"
                         />
-                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all hover:bg-black/50 hover:opacity-100">
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-all hover:bg-overlay hover:opacity-100">
                           <Button
                             type="button"
                             variant="secondary"
@@ -455,14 +501,14 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                   </div>
                   {/* テキストエリア */}
                   <div className="space-y-1 p-3">
-                    <p className="text-xs text-muted-foreground">
-                      example.com
-                    </p>
+                    <p className="text-xs text-muted-foreground">example.com</p>
                     <p className="font-medium line-clamp-1">
                       {metaTitle || data.name}
                     </p>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {metaDescription || description || `${data.name}の記事一覧`}
+                      {metaDescription ||
+                        description ||
+                        `${data.name}の記事一覧`}
                     </p>
                   </div>
                 </div>
@@ -474,7 +520,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
 
       <mediaPicker.MediaPicker />
     </div>
-  )
+  );
 }
 
 // =============================================================================
@@ -482,10 +528,10 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
 // =============================================================================
 
 function TagEditorImpl({ data }: { data: PostTagData }) {
-  const config = CONFIG.tag
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const config = CONFIG.tag;
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const {
     register,
@@ -500,45 +546,45 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
     defaultValues: {
       name: data.name,
       slug: data.slug,
-      description: data.description ?? '',
-      metaTitle: data.metaTitle ?? '',
-      metaDescription: data.metaDescription ?? '',
-      ogpImageUrl: data.ogpImageUrl ?? '',
+      description: data.description ?? "",
+      metaTitle: data.metaTitle ?? "",
+      metaDescription: data.metaDescription ?? "",
+      ogpImageUrl: data.ogpImageUrl ?? "",
     },
-  })
+  });
 
-  const ogpImageUrl = useWatch({ control, name: 'ogpImageUrl' })
-  const currentSlug = useWatch({ control, name: 'slug' })
-  const metaTitle = useWatch({ control, name: 'metaTitle' })
-  const metaDescription = useWatch({ control, name: 'metaDescription' })
-  const description = useWatch({ control, name: 'description' })
-  const postCount = data._count.posts
+  const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
+  const currentSlug = useWatch({ control, name: "slug" });
+  const metaTitle = useWatch({ control, name: "metaTitle" });
+  const metaDescription = useWatch({ control, name: "metaDescription" });
+  const description = useWatch({ control, name: "description" });
+  const postCount = data._count.posts;
 
   const mediaPicker = useSingleMediaPicker({
-    defaultUsage: 'POST',
+    defaultUsage: "POST",
     onSelect: (media: SelectedMedia[]) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('ogpImageUrl', selected.url, { shouldDirty: true })
+        setValue("ogpImageUrl", selected.url, { shouldDirty: true });
       }
     },
-  })
+  });
 
   const handleClearOgpImage = () => {
-    setValue('ogpImageUrl', '', { shouldDirty: true })
-  }
+    setValue("ogpImageUrl", "", { shouldDirty: true });
+  };
 
   const handleGenerateSlug = () => {
-    const name = getValues('name')
+    const name = getValues("name");
     if (name) {
-      const slug = generateSlug(name, 'tag')
-      setValue('slug', slug, { shouldDirty: true })
+      const slug = generateSlug(name, "tag");
+      setValue("slug", slug, { shouldDirty: true });
     }
-  }
+  };
 
   const handleBack = () => {
-    router.push(config.backUrl)
-  }
+    router.push(config.backUrl);
+  };
 
   const onSubmit = (formData: TagFormData) => {
     startTransition(async () => {
@@ -549,49 +595,48 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
         metaTitle: formData.metaTitle || null,
         metaDescription: formData.metaDescription || null,
         ogpImageUrl: formData.ogpImageUrl || null,
-      })
+      });
 
-      if (result.success) {
-        reset(formData)
-        router.refresh()
-        toast.success(`${config.label}を更新しました`)
-      } else {
-        toast.error(result.error)
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      reset(formData);
+      router.refresh();
+      toast.success(`${config.label}を更新しました`);
+    });
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
-      const result = await deletePostTag(data.id)
-      if (result.success) {
-        toast.success(`${config.label}を削除しました`)
-        router.push(config.backUrl)
-      } else {
-        toast.error(result.error)
+      const result = await deletePostTag(data.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
 
-  const archiveUrl = `${config.urlPrefix}${currentSlug}`
+      toast.success(`${config.label}を削除しました`);
+      router.push(config.backUrl);
+    });
+  };
+
+  const archiveUrl = `${config.urlPrefix}${currentSlug}`;
 
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             戻る
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">{data.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                {data.name}
+              </h1>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {postCount}件の投稿
               </span>
@@ -610,7 +655,10 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <Dialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+          >
             <DialogTrigger asChild>
               <Button
                 type="button"
@@ -628,7 +676,8 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 <DialogDescription>
                   {postCount > 0 ? (
                     <>
-                      この{config.label}には{postCount}件の投稿が紐づいています。
+                      この{config.label}には{postCount}
+                      件の投稿が紐づいています。
                       削除すると、投稿との紐づけが解除されます。
                     </>
                   ) : (
@@ -649,7 +698,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                   onClick={handleDelete}
                   disabled={isPending}
                 >
-                  {isPending ? '削除中...' : '削除'}
+                  {isPending ? "削除中..." : "削除"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -659,12 +708,15 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
             disabled={isPending || !isDirty}
           >
             <Save className="mr-2 h-4 w-4" />
-            {isPending ? '保存中...' : '保存'}
+            {isPending ? "保存中..." : "保存"}
           </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-2">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid gap-6 lg:grid-cols-2"
+      >
         {/* 基本情報 */}
         <Card>
           <CardHeader>
@@ -675,12 +727,14 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
               <Label htmlFor="name">{config.label}名 *</Label>
               <Input
                 id="name"
-                {...register('name')}
+                {...register("name")}
                 placeholder={`${config.label}名`}
                 disabled={isPending}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.name.message}
+                </p>
               )}
             </div>
 
@@ -699,12 +753,14 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
               </div>
               <Input
                 id="slug"
-                {...register('slug')}
+                {...register("slug")}
                 placeholder="slug"
                 disabled={isPending}
               />
               {errors.slug && (
-                <p className="text-sm text-destructive">{errors.slug.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.slug.message}
+                </p>
               )}
             </div>
 
@@ -712,7 +768,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
               <Label htmlFor="description">説明</Label>
               <Textarea
                 id="description"
-                {...register('description')}
+                {...register("description")}
                 placeholder={`${config.label}の説明`}
                 rows={3}
                 disabled={isPending}
@@ -732,7 +788,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 <Label htmlFor="metaTitle">SEOタイトル</Label>
                 <Input
                   id="metaTitle"
-                  {...register('metaTitle')}
+                  {...register("metaTitle")}
                   placeholder="検索結果に表示されるタイトル"
                   disabled={isPending}
                 />
@@ -742,7 +798,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 <Label htmlFor="metaDescription">メタディスクリプション</Label>
                 <Textarea
                   id="metaDescription"
-                  {...register('metaDescription')}
+                  {...register("metaDescription")}
                   placeholder="検索結果に表示される説明文"
                   rows={3}
                   disabled={isPending}
@@ -774,7 +830,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                           alt="OGP画像プレビュー"
                           className="h-full w-full object-cover"
                         />
-                        <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all hover:bg-black/50 hover:opacity-100">
+                        <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-all hover:bg-overlay hover:opacity-100">
                           <Button
                             type="button"
                             variant="secondary"
@@ -810,14 +866,14 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                   </div>
                   {/* テキストエリア */}
                   <div className="space-y-1 p-3">
-                    <p className="text-xs text-muted-foreground">
-                      example.com
-                    </p>
+                    <p className="text-xs text-muted-foreground">example.com</p>
                     <p className="font-medium line-clamp-1">
                       {metaTitle || data.name}
                     </p>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {metaDescription || description || `${data.name}の記事一覧`}
+                      {metaDescription ||
+                        description ||
+                        `${data.name}の記事一覧`}
                     </p>
                   </div>
                 </div>
@@ -829,5 +885,5 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
 
       <mediaPicker.MediaPicker />
     </div>
-  )
+  );
 }

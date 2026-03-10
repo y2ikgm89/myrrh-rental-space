@@ -4,11 +4,11 @@
  * @description Google マップ埋め込みダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,53 +18,55 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createMapEmbedNode, toEmbedUrl } from '../nodes/MapEmbedNode'
+} from "@/admin/components/ui";
+import { $createMapEmbedNode, toEmbedUrl } from "../nodes/MapEmbedNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type MapEmbedPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function MapEmbedPlugin({ isOpen, onClose }: MapEmbedPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [label, setLabel] = useState('')
-  const [error, setError] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    const embedUrl = toEmbedUrl(url)
+    const embedUrl = toEmbedUrl(url);
 
     if (!embedUrl) {
-      setError('Google マップの「共有 > マップを埋め込む」から取得した URL を入力してください')
-      return
+      setError(
+        "Google マップの「共有 > マップを埋め込む」から取得した URL を入力してください",
+      );
+      return;
     }
 
     editor.update(() => {
-      const node = $createMapEmbedNode(embedUrl, label)
-      $insertNodeToNearestRoot(node)
-    })
+      const node = $createMapEmbedNode(embedUrl, label);
+      $insertNodeToNearestRoot(node);
+    });
 
-    setUrl('')
-    setLabel('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setLabel("");
+    setError("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setLabel('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setLabel("");
+    setError("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -84,8 +86,8 @@ export function MapEmbedPlugin({ isOpen, onClose }: MapEmbedPluginProps) {
               type="url"
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value)
-                setError('')
+                setUrl(e.target.value);
+                setError("");
               }}
               placeholder="https://www.google.com/maps/embed?pb=...（共有 > マップを埋め込む から取得）"
             />
@@ -114,5 +116,5 @@ export function MapEmbedPlugin({ isOpen, onClose }: MapEmbedPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

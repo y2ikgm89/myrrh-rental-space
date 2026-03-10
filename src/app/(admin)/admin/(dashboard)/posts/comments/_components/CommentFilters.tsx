@@ -1,50 +1,50 @@
-'use client'
+"use client";
 
 /**
  * コメントフィルター
  */
 
-import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { Search, X } from 'lucide-react'
-import { Input, Button } from '@/admin/components/ui'
-import { getFormString } from '@/shared/lib/utils'
+import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { Search, X } from "lucide-react";
+import { Input, Button } from "@/admin/components/ui";
+import { getFormString } from "@/shared/lib/utils";
 
 interface StatusOption {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 const STATUS_OPTIONS: readonly StatusOption[] = [
-  { value: 'ALL', label: 'すべて' },
-  { value: 'ACTIVE', label: 'アクティブ' },
-  { value: 'DELETED', label: '削除済み' },
-]
+  { value: "ALL", label: "すべて" },
+  { value: "ACTIVE", label: "アクティブ" },
+  { value: "DELETED", label: "削除済み" },
+];
 
 export function CommentFilters() {
   const [params, setParams] = useQueryStates(
     {
-      status: parseAsString.withDefault(''),
-      search: parseAsString.withDefault(''),
+      status: parseAsString.withDefault(""),
+      search: parseAsString.withDefault(""),
       page: parseAsInteger.withDefault(1),
     },
-    { history: 'push', shallow: false }
-  )
+    { history: "push", shallow: false },
+  );
 
-  const currentStatus = params.status || 'ALL'
+  const currentStatus = params.status || "ALL";
 
   function handleStatusChange(status: string) {
-    void setParams({ status: status === 'ALL' ? null : status, page: 1 })
+    void setParams({ status: status === "ALL" ? null : status, page: 1 });
   }
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const search = getFormString(formData, 'search')
-    void setParams({ search: search || null, page: 1 })
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const search = getFormString(formData, "search");
+    void setParams({ search: search || null, page: 1 });
   }
 
   function handleClearSearch() {
-    void setParams({ search: null, page: 1 })
+    void setParams({ search: null, page: 1 });
   }
 
   return (
@@ -54,7 +54,7 @@ export function CommentFilters() {
         {STATUS_OPTIONS.map((option) => (
           <Button
             key={option.value}
-            variant={currentStatus === option.value ? 'default' : 'outline'}
+            variant={currentStatus === option.value ? "default" : "outline"}
             size="sm"
             onClick={() => handleStatusChange(option.value)}
           >
@@ -88,5 +88,5 @@ export function CommentFilters() {
         </Button>
       </form>
     </div>
-  )
+  );
 }

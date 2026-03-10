@@ -8,9 +8,15 @@
  * 動作を検証する。
  */
 
-import { describe, test, expect, beforeEach } from 'bun:test'
-import { createHeadlessEditor } from '@lexical/headless'
-import { $getRoot, $getNodeByKey, $getState, $setState, type LexicalEditor } from 'lexical'
+import { describe, test, expect, beforeEach } from "bun:test";
+import { createHeadlessEditor } from "@lexical/headless";
+import {
+  $getRoot,
+  $getNodeByKey,
+  $getState,
+  $setState,
+  type LexicalEditor,
+} from "lexical";
 
 // テスト対象ノード
 import {
@@ -20,8 +26,11 @@ import {
   buttonTextState,
   buttonHrefState,
   buttonVariantState,
-} from '@/admin/components/editor/lexical/nodes/ButtonNode'
-import { ImageNode, $isImageNode } from '@/admin/components/editor/lexical/nodes/ImageNode'
+} from "@/admin/components/editor/lexical/nodes/ButtonNode";
+import {
+  ImageNode,
+  $isImageNode,
+} from "@/admin/components/editor/lexical/nodes/ImageNode";
 
 // =============================================================================
 // Test Setup
@@ -29,195 +38,195 @@ import { ImageNode, $isImageNode } from '@/admin/components/editor/lexical/nodes
 
 function createTestEditor(): LexicalEditor {
   return createHeadlessEditor({
-    namespace: 'test',
+    namespace: "test",
     nodes: [ButtonNode, ImageNode],
     onError: (error) => {
-      throw error
+      throw error;
     },
-  })
+  });
 }
 
 // =============================================================================
 // Tests
 // =============================================================================
 
-describe('useNodeUpdater pattern', () => {
-  describe('$getNodeByKeyを使用したノード取得', () => {
-    let editor: LexicalEditor
-    let buttonNodeKey: string
+describe("useNodeUpdater pattern", () => {
+  describe("$getNodeByKeyを使用したノード取得", () => {
+    let editor: LexicalEditor;
+    let buttonNodeKey: string;
 
     beforeEach(async () => {
-      editor = createTestEditor()
+      editor = createTestEditor();
 
       // ノードを作成してキーを取得
       await editor.update(() => {
-        const root = $getRoot()
-        root.clear()
+        const root = $getRoot();
+        root.clear();
         const buttonNode = $createButtonNode({
-          text: '初期テキスト',
-          href: 'https://example.com',
-          variant: 'primary',
-        })
-        root.append(buttonNode)
-        buttonNodeKey = buttonNode.getKey()
-      })
-    })
+          text: "初期テキスト",
+          href: "https://example.com",
+          variant: "primary",
+        });
+        root.append(buttonNode);
+        buttonNodeKey = buttonNode.getKey();
+      });
+    });
 
-    test('nodeKeyからノードを取得できる', async () => {
+    test("nodeKeyからノードを取得できる", async () => {
       await editor.update(() => {
-        const retrievedNode = $getNodeByKey(buttonNodeKey)
+        const retrievedNode = $getNodeByKey(buttonNodeKey);
 
-        expect(retrievedNode).not.toBeNull()
-        expect($isButtonNode(retrievedNode)).toBe(true)
-      })
-    })
+        expect(retrievedNode).not.toBeNull();
+        expect($isButtonNode(retrievedNode)).toBe(true);
+      });
+    });
 
-    test('型ガードが成功した場合、$setStateで更新できる', async () => {
+    test("型ガードが成功した場合、$setStateで更新できる", async () => {
       await editor.update(() => {
-        const targetNode = $getNodeByKey(buttonNodeKey)
+        const targetNode = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(targetNode)) {
-          $setState(targetNode, buttonTextState, '更新後テキスト')
+          $setState(targetNode, buttonTextState, "更新後テキスト");
         }
-      })
+      });
 
       // 更新が反映されていることを確認
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(buttonNodeKey)
+        const node = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(node)) {
-          expect($getState(node, buttonTextState)).toBe('更新後テキスト')
+          expect($getState(node, buttonTextState)).toBe("更新後テキスト");
         }
-      })
-    })
+      });
+    });
 
-    test('型ガードが失敗した場合、更新は実行されない', async () => {
-      let updaterCalled = false
+    test("型ガードが失敗した場合、更新は実行されない", async () => {
+      let updaterCalled = false;
 
       await editor.update(() => {
-        const targetNode = $getNodeByKey(buttonNodeKey)
+        const targetNode = $getNodeByKey(buttonNodeKey);
 
         // 間違った型ガード（ImageNode）を使用
         if ($isImageNode(targetNode)) {
-          updaterCalled = true
+          updaterCalled = true;
         }
-      })
+      });
 
-      expect(updaterCalled).toBe(false)
-    })
+      expect(updaterCalled).toBe(false);
+    });
 
-    test('存在しないnodeKeyの場合、nullが返る', async () => {
+    test("存在しないnodeKeyの場合、nullが返る", async () => {
       await editor.update(() => {
-        const targetNode = $getNodeByKey('non-existent-key')
-        expect(targetNode).toBeNull()
-      })
-    })
+        const targetNode = $getNodeByKey("non-existent-key");
+        expect(targetNode).toBeNull();
+      });
+    });
 
-    test('複数のプロパティを一度に更新できる', async () => {
+    test("複数のプロパティを一度に更新できる", async () => {
       await editor.update(() => {
-        const targetNode = $getNodeByKey(buttonNodeKey)
+        const targetNode = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(targetNode)) {
-          $setState(targetNode, buttonTextState, '新しいテキスト')
-          $setState(targetNode, buttonHrefState, 'https://new-url.com')
-          $setState(targetNode, buttonVariantState, 'secondary')
+          $setState(targetNode, buttonTextState, "新しいテキスト");
+          $setState(targetNode, buttonHrefState, "https://new-url.com");
+          $setState(targetNode, buttonVariantState, "secondary");
         }
-      })
+      });
 
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(buttonNodeKey)
+        const node = $getNodeByKey(buttonNodeKey);
         if ($isButtonNode(node)) {
-          expect($getState(node, buttonTextState)).toBe('新しいテキスト')
-          expect($getState(node, buttonHrefState)).toBe('https://new-url.com')
-          expect($getState(node, buttonVariantState)).toBe('secondary')
+          expect($getState(node, buttonTextState)).toBe("新しいテキスト");
+          expect($getState(node, buttonHrefState)).toBe("https://new-url.com");
+          expect($getState(node, buttonVariantState)).toBe("secondary");
         }
-      })
-    })
-  })
+      });
+    });
+  });
 
-  describe('$setState/$getStateパターン', () => {
-    let editor: LexicalEditor
+  describe("$setState/$getStateパターン", () => {
+    let editor: LexicalEditor;
 
     beforeEach(() => {
-      editor = createTestEditor()
-    })
+      editor = createTestEditor();
+    });
 
-    test('$setStateでプロパティを更新し$getStateで読み取れる', async () => {
-      let nodeKey: string
+    test("$setStateでプロパティを更新し$getStateで読み取れる", async () => {
+      let nodeKey: string;
 
       await editor.update(() => {
-        const root = $getRoot()
-        root.clear()
+        const root = $getRoot();
+        root.clear();
         const buttonNode = $createButtonNode({
-          text: 'テスト',
-          href: '#',
-        })
-        root.append(buttonNode)
-        nodeKey = buttonNode.getKey()
-      })
+          text: "テスト",
+          href: "#",
+        });
+        root.append(buttonNode);
+        nodeKey = buttonNode.getKey();
+      });
 
       // 更新前の状態を取得
-      let originalText: string = ''
+      let originalText: string = "";
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          originalText = $getState(node, buttonTextState)
+          originalText = $getState(node, buttonTextState);
         }
-      })
+      });
 
-      expect(originalText).toBe('テスト')
+      expect(originalText).toBe("テスト");
 
       // 更新
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonTextState, '更新後')
+          $setState(node, buttonTextState, "更新後");
         }
-      })
+      });
 
       // 更新後の状態を確認
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          expect($getState(node, buttonTextState)).toBe('更新後')
-          expect($getState(node, buttonTextState)).not.toBe(originalText)
+          expect($getState(node, buttonTextState)).toBe("更新後");
+          expect($getState(node, buttonTextState)).not.toBe(originalText);
         }
-      })
-    })
+      });
+    });
 
-    test('$getStateは最新の値を返す', async () => {
-      let nodeKey: string
+    test("$getStateは最新の値を返す", async () => {
+      let nodeKey: string;
 
       await editor.update(() => {
-        const root = $getRoot()
-        root.clear()
+        const root = $getRoot();
+        root.clear();
         const buttonNode = $createButtonNode({
-          text: '初期値',
-          href: '#',
-        })
-        root.append(buttonNode)
-        nodeKey = buttonNode.getKey()
-      })
+          text: "初期値",
+          href: "#",
+        });
+        root.append(buttonNode);
+        nodeKey = buttonNode.getKey();
+      });
 
       // 複数回更新
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonTextState, '更新1')
+          $setState(node, buttonTextState, "更新1");
         }
-      })
+      });
 
       await editor.update(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          $setState(node, buttonTextState, '更新2')
+          $setState(node, buttonTextState, "更新2");
         }
-      })
+      });
 
       // 最新の値が取得できることを確認
       editor.getEditorState().read(() => {
-        const node = $getNodeByKey(nodeKey!)
+        const node = $getNodeByKey(nodeKey!);
         if ($isButtonNode(node)) {
-          expect($getState(node, buttonTextState)).toBe('更新2')
+          expect($getState(node, buttonTextState)).toBe("更新2");
         }
-      })
-    })
-  })
-})
+      });
+    });
+  });
+});

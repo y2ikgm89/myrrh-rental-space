@@ -9,11 +9,7 @@ import {
   LayoutWidth,
   PostPermalinkStructure,
 } from "@/shared/db/enums";
-import {
-  CACHE_LIFE,
-  CACHE_TAGS,
-  getCacheTag,
-} from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -519,14 +515,17 @@ export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   }
 
   return {
-    containerWidth: result.containerWidth ?? FALLBACK_LAYOUT_CONFIG.containerWidth,
+    containerWidth:
+      result.containerWidth ?? FALLBACK_LAYOUT_CONFIG.containerWidth,
     containerWidthCustom: result.containerWidthCustom,
     contentWidth: result.contentWidth ?? FALLBACK_LAYOUT_CONFIG.contentWidth,
     contentWidthCustom: result.contentWidthCustom,
   };
 }
 
-export async function getPostLayoutSettings(postId: string): Promise<LayoutConfig> {
+export async function getPostLayoutSettings(
+  postId: string,
+): Promise<LayoutConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
@@ -559,7 +558,9 @@ export async function getPostLayoutSettings(postId: string): Promise<LayoutConfi
   };
 }
 
-export async function getNewsLayoutSettings(newsId: string): Promise<LayoutConfig> {
+export async function getNewsLayoutSettings(
+  newsId: string,
+): Promise<LayoutConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
@@ -592,7 +593,9 @@ export async function getNewsLayoutSettings(newsId: string): Promise<LayoutConfi
   };
 }
 
-export async function getPageLayoutSettings(slug: string): Promise<LayoutConfig> {
+export async function getPageLayoutSettings(
+  slug: string,
+): Promise<LayoutConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(

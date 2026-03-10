@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * サイドバーのセクションアイテム（DnD対応）
@@ -6,8 +6,8 @@
  * コンパクトなリストアイテム + ⋯ メニュー
  */
 
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Button,
   DropdownMenu,
@@ -15,20 +15,27 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from '@/admin/components/ui'
-import { GripVertical, MoreHorizontal, Eye, EyeOff, Copy, Trash2 } from 'lucide-react'
-import { sectionTypeLabels } from '@/shared/lib/validations/section'
-import type { PageSectionData } from '@/admin/actions/page-section'
-import { SectionTypeIcon } from '../../sections/_components/SectionTypeIcon'
+} from "@/admin/components/ui";
+import {
+  GripVertical,
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  Copy,
+  Trash2,
+} from "lucide-react";
+import { sectionTypeLabels } from "@/shared/lib/validations/section";
+import type { PageSectionData } from "@/admin/actions/page-section";
+import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
 
 interface SectionSidebarItemProps {
-  section: PageSectionData
-  isSelected: boolean
-  onSelect: (id: string) => void
-  onToggle: (id: string, isActive: boolean) => void
-  onDuplicate: (id: string) => void
-  onDelete: (id: string) => void
-  disabled: boolean
+  section: PageSectionData;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+  onToggle: (id: string, isActive: boolean) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  disabled: boolean;
 }
 
 export function SectionSidebarItem({
@@ -47,15 +54,15 @@ export function SectionSidebarItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: section.id })
+  } = useSortable({ id: section.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
-  const label = sectionTypeLabels[section.type]
+  const label = sectionTypeLabels[section.type];
 
   return (
     <div
@@ -63,9 +70,9 @@ export function SectionSidebarItem({
       style={style}
       className={`group flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors ${
         isSelected
-          ? 'bg-accent/10 border-l-2 border-l-primary'
-          : 'hover:bg-accent/5 border-l-2 border-l-transparent'
-      } ${!section.isActive ? 'opacity-50' : ''} ${isDragging ? 'shadow-lg z-10' : ''}`}
+          ? "bg-accent/10 border-l-2 border-l-primary"
+          : "hover:bg-accent/5 border-l-2 border-l-transparent"
+      } ${!section.isActive ? "opacity-50" : ""} ${isDragging ? "shadow-lg z-10" : ""}`}
       onClick={() => onSelect(section.id)}
     >
       {/* Drag Handle */}
@@ -82,14 +89,15 @@ export function SectionSidebarItem({
 
       {/* Icon */}
       <div className="shrink-0">
-        <SectionTypeIcon type={section.type} className="h-4 w-4 text-muted-foreground" />
+        <SectionTypeIcon
+          type={section.type}
+          className="h-4 w-4 text-muted-foreground"
+        />
       </div>
 
       {/* Label */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {section.title || label}
-        </p>
+        <p className="text-sm font-medium truncate">{section.title || label}</p>
       </div>
 
       {/* Status */}
@@ -112,8 +120,8 @@ export function SectionSidebarItem({
         <DropdownMenuContent align="end" className="w-40">
           <DropdownMenuItem
             onClick={(e) => {
-              e.stopPropagation()
-              onToggle(section.id, !section.isActive)
+              e.stopPropagation();
+              onToggle(section.id, !section.isActive);
             }}
           >
             {section.isActive ? (
@@ -130,8 +138,8 @@ export function SectionSidebarItem({
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={(e) => {
-              e.stopPropagation()
-              onDuplicate(section.id)
+              e.stopPropagation();
+              onDuplicate(section.id);
             }}
           >
             <Copy className="h-4 w-4 mr-2" />
@@ -141,8 +149,8 @@ export function SectionSidebarItem({
           <DropdownMenuItem
             className="text-destructive"
             onClick={(e) => {
-              e.stopPropagation()
-              onDelete(section.id)
+              e.stopPropagation();
+              onDelete(section.id);
             }}
           >
             <Trash2 className="h-4 w-4 mr-2" />
@@ -151,5 +159,5 @@ export function SectionSidebarItem({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  )
+  );
 }

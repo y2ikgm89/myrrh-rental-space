@@ -92,10 +92,10 @@ src/app/(admin)/admin/reservations/calendar/
 ## ステータス別カラーコード
 
 | ステータス | 背景色 | ボーダー色 |
-|-----------|--------|-----------|
-| PENDING   | 黄色   | 黄色      |
-| CONFIRMED | 緑     | 緑        |
-| CANCELLED | 赤     | 赤        |
+| ---------- | ------ | ---------- |
+| PENDING    | 黄色   | 黄色       |
+| CONFIRMED  | 緑     | 緑         |
+| CANCELLED  | 赤     | 赤         |
 
 ## 技術詳細
 
@@ -104,11 +104,8 @@ src/app/(admin)/admin/reservations/calendar/
 ```typescript
 // 期間と重複する予約を取得
 const where = {
-  AND: [
-    { startTime: { lt: endDate } },
-    { endTime: { gt: startDate } },
-  ],
-}
+  AND: [{ startTime: { lt: endDate } }, { endTime: { gt: startDate } }],
+};
 ```
 
 ### Race Condition 対策
@@ -127,8 +124,11 @@ const handleStatusChange = useCallback(
 
 ```typescript
 // monthKey で展開状態を月ごとに分離
-const monthKey = useMemo(() => format(dateRange.start, 'yyyy-MM'), [dateRange.start])
-const isExpanded = (dayId: string) => expandedDay === `${monthKey}-${dayId}`
+const monthKey = useMemo(
+  () => format(dateRange.start, "yyyy-MM"),
+  [dateRange.start],
+);
+const isExpanded = (dayId: string) => expandedDay === `${monthKey}-${dayId}`;
 ```
 
 ## 注意事項

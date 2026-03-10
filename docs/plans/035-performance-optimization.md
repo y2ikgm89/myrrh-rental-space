@@ -9,19 +9,20 @@
 
 ## 問題分析サマリー
 
-| カテゴリ | Critical | High | Medium |
-|---------|----------|------|--------|
-| パフォーマンス | 3 | 3 | 3 |
-| データベース | 2 | 3 | 1 |
-| Next.js最適化 | 4 | 2 | 1 |
-| 保守性 | 3 | 4 | 2 |
-| ビルド・バンドル | 1 | 2 | 1 |
+| カテゴリ         | Critical | High | Medium |
+| ---------------- | -------- | ---- | ------ |
+| パフォーマンス   | 3        | 3    | 3      |
+| データベース     | 2        | 3    | 1      |
+| Next.js最適化    | 4        | 2    | 1      |
+| 保守性           | 3        | 4    | 2      |
+| ビルド・バンドル | 1        | 2    | 1      |
 
 ---
 
 ## Priority 1: 即効性の高い修正（各30分程度）
 
 ### 1.1 データベースインデックス追加
+
 **影響**: クエリ速度30-50%向上
 
 ```prisma
@@ -39,40 +40,45 @@
 ```
 
 ### 1.2 コネクションプール調整
+
 **ファイル**: `src/lib/prisma.ts`
 **影響**: 高負荷時のタイムアウト防止
 
 ```typescript
 const pool = new Pool({
-  max: process.env.NODE_ENV === 'production' ? 20 : 5,
+  max: process.env.NODE_ENV === "production" ? 20 : 5,
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 10000,
-})
+});
 ```
 
 ### 1.3 ダッシュボード集計ループ最適化
+
 **ファイル**: `src/actions/admin/dashboard.ts` (Line 282+)
 **影響**: ダッシュボード統計10倍高速化
 
 **現状**: インメモリで売上集計
+
 ```typescript
 for (const r of reservations) {
-  const dateStr = r.createdAt.toISOString().split('T')[0]
+  const dateStr = r.createdAt.toISOString().split("T")[0];
   // ループ内で集計...
 }
 ```
 
 **改善**: DBの `groupBy` 使用
+
 ```typescript
 const dailyStats = await prisma.reservation.groupBy({
-  by: ['createdAt'],
+  by: ["createdAt"],
   _sum: { totalPrice: true },
   _count: { id: true },
-  where: { status: 'CONFIRMED' },
-})
+  where: { status: "CONFIRMED" },
+});
 ```
 
 ### 1.4 画像priority属性追加
+
 **ファイル**: 公開ページの画像コンポーネント
 **影響**: LCP 500-1000ms改善
 
@@ -82,7 +88,7 @@ const dailyStats = await prisma.reservation.groupBy({
   src={post.thumbnailUrl}
   alt={post.title}
   fill
-  priority={index < 2}  // 最初の2つに追加
+  priority={index < 2} // 最初の2つに追加
   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 />
 ```
@@ -92,6 +98,7 @@ const dailyStats = await prisma.reservation.groupBy({
 ## Priority 2: 重要な最適化（各1時間程度）
 
 ### 2.1 統一エラーバウンダリ戦略
+
 **対象**: 管理画面の各ページ
 
 ```typescript
@@ -118,6 +125,7 @@ export default function ReservationsError({
 ```
 
 ### 2.2 Lexical エディタ動的インポート
+
 **ファイル**: `src/components/admin/editor/lexical/LexicalEditor.tsx`
 **影響**: 管理画面の初期ロード500KB削減
 
@@ -136,19 +144,21 @@ const LexicalEditor = dynamic(
 ```
 
 ### 2.3 粒度の細かいrevalidation
+
 **影響**: キャッシュ効率20-30%向上
 
 ```typescript
 // 現在: パス全体を無効化
-revalidatePath('/admin/blog')
-revalidatePath('/blog')
+revalidatePath("/admin/blog");
+revalidatePath("/blog");
 
 // 改善: タグベース
-revalidateTag(`blog-${id}`)
-revalidateTag('blog-list')
+revalidateTag(`blog-${id}`);
+revalidateTag("blog-list");
 ```
 
 ### 2.4 Prisma型変換ミドルウェア
+
 **ファイル**: `src/lib/prisma.ts`
 **影響**: 50箇所以上の手動変換を削除
 
@@ -159,14 +169,12 @@ prisma.$extends({
       totalPrice: {
         needs: { totalPrice: true },
         compute(reservation) {
-          return reservation.totalPrice
-            ? Number(reservation.totalPrice)
-            : null
+          return reservation.totalPrice ? Number(reservation.totalPrice) : null;
         },
       },
     },
   },
-})
+});
 ```
 
 ---
@@ -174,6 +182,7 @@ prisma.$extends({
 ## Priority 3: リファクタリング（各2時間程度）
 
 ### 3.1 Lexicalコンポーネント分割
+
 **現状**: 280行以上の単一コンポーネント
 **改善**: プラグインレジストリパターン
 
@@ -189,50 +198,54 @@ export const pluginRegistry = {
     Dialog: YouTubeDialog,
   },
   // ...
-}
+};
 ```
 
 ### 3.2 バリデーションスキーマ集約
+
 **影響**: 重複コード削減、型安全性向上
 
 ```typescript
 // src/lib/validations/shared.ts
 export const statusUpdateSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(['PENDING', 'CONFIRMED', 'CANCELLED']),
-})
+  status: z.enum(["PENDING", "CONFIRMED", "CANCELLED"]),
+});
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-})
+});
 ```
 
 ### 3.3 レスポンスキャッシュ層実装
+
 **対象**: 頻繁にアクセスされるデータ
 
 ```typescript
 // src/lib/cache.ts
-const cache = new Map<string, { data: unknown; expires: number }>()
+const cache = new Map<string, { data: unknown; expires: number }>();
 
 export async function getCached<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlMs = 5 * 60 * 1000
+  ttlMs = 5 * 60 * 1000,
 ): Promise<T> {
-  const cached = cache.get(key)
+  const cached = cache.get(key);
   if (cached && cached.expires > Date.now()) {
-    return cached.data as T
+    return cached.data as T;
   }
 
-  const data = await fetcher()
-  cache.set(key, { data, expires: Date.now() + ttlMs })
-  return data
+  const data = await fetcher();
+  cache.set(key, { data, expires: Date.now() + ttlMs });
+  return data;
 }
 ```
 
 ### 3.4 未使用依存関係削除
+
 **確認対象**:
+
 - `@pixi/react`, `pixi.js` - 使用箇所なし
 - `@react-three/drei`, `@react-three/fiber` - 遅延ロード化
 - `recharts` - ダッシュボードのみ、遅延ロード化
@@ -263,13 +276,13 @@ experimental: {
 
 ```typescript
 // src/app/(public)/spaces/page.tsx
-export const dynamic = 'force-dynamic'
-export const revalidate = 300  // 5分ISR
-export const maxDuration = 60
+export const dynamic = "force-dynamic";
+export const revalidate = 300; // 5分ISR
+export const maxDuration = 60;
 
 // src/app/(public)/blog/page.tsx
-export const dynamic = 'force-dynamic'
-export const revalidate = 300
+export const dynamic = "force-dynamic";
+export const revalidate = 300;
 ```
 
 ---
@@ -278,13 +291,13 @@ export const revalidate = 300
 
 実装後に追跡すべき指標:
 
-| メトリクス | 目標値 | 計測方法 |
-|-----------|--------|----------|
-| LCP | < 2.5s | Web Vitals |
-| FID | < 100ms | Web Vitals |
-| 管理画面初期ロード | < 3s | DevTools |
-| ダッシュボード表示 | < 1s | Server Action実行時間 |
-| DBクエリ平均 | < 50ms | Prisma Logging |
+| メトリクス         | 目標値  | 計測方法              |
+| ------------------ | ------- | --------------------- |
+| LCP                | < 2.5s  | Web Vitals            |
+| FID                | < 100ms | Web Vitals            |
+| 管理画面初期ロード | < 3s    | DevTools              |
+| ダッシュボード表示 | < 1s    | Server Action実行時間 |
+| DBクエリ平均       | < 50ms  | Prisma Logging        |
 
 ---
 

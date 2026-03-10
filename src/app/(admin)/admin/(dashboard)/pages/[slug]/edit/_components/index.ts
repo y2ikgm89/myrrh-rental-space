@@ -1,2 +1,2 @@
-export { SectionMasterDetail } from './SectionMasterDetail'
-export { PublishToggle } from './PublishToggle'
+export { SectionMasterDetail } from "./SectionMasterDetail";
+export { PublishToggle } from "./PublishToggle";

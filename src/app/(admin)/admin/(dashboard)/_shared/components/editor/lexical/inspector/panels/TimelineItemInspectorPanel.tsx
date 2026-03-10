@@ -4,50 +4,57 @@
  * @description TimelineItemNodeのプロパティ編集パネル
  */
 
-'use client'
+"use client";
 
-import { $getState, $setState } from 'lexical'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
+import { $getState, $setState } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $isTimelineItemNode,
   type TimelineItemNode,
   timelineYearState,
   timelineLabelState,
-} from '../../nodes/TimelineNode'
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
-import { useNodeUpdater } from '../hooks/use-node-updater'
-import { Input, Label } from '@/admin/components/ui'
+} from "../../nodes/TimelineNode";
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
+import { useNodeUpdater } from "../hooks/use-node-updater";
+import { Input, Label } from "@/admin/components/ui";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type TimelineItemInspectorPanelProps = {
-  nodeKey: string
-  node: TimelineItemNode
-}
+  nodeKey: string;
+  node: TimelineItemNode;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function TimelineItemInspectorPanel({ nodeKey, node }: TimelineItemInspectorPanelProps) {
-  const [editor] = useLexicalComposerContext()
-  const updateNode = useNodeUpdater(nodeKey, $isTimelineItemNode)
+export function TimelineItemInspectorPanel({
+  nodeKey,
+  node,
+}: TimelineItemInspectorPanelProps) {
+  const [editor] = useLexicalComposerContext();
+  const updateNode = useNodeUpdater(nodeKey, $isTimelineItemNode);
 
   const { year, label } = editor.getEditorState().read(() => ({
     year: $getState(node, timelineYearState),
     label: $getState(node, timelineLabelState),
-  }))
+  }));
 
   const handleYearChange = (value: string) => {
-    updateNode((n) => { $setState(n, timelineYearState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, timelineYearState, value);
+    });
+  };
 
   const handleLabelChange = (value: string) => {
-    updateNode((n) => { $setState(n, timelineLabelState, value) })
-  }
+    updateNode((n) => {
+      $setState(n, timelineLabelState, value);
+    });
+  };
 
   return (
     <div>
@@ -77,5 +84,5 @@ export function TimelineItemInspectorPanel({ nodeKey, node }: TimelineItemInspec
         </div>
       </InspectorSection>
     </div>
-  )
+  );
 }

@@ -4,13 +4,13 @@
  * 管理画面内で存在しないURLへのアクセス時に表示。
  */
 
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { Button } from '@/admin/components/ui'
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Button } from "@/admin/components/ui";
 
 export const metadata: Metadata = {
-  title: 'ページが見つかりません',
-}
+  title: "ページが見つかりません",
+};
 
 export default function AdminNotFound() {
   return (
@@ -32,9 +32,7 @@ export default function AdminNotFound() {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Button asChild>
-            <Link href="/admin">
-              ダッシュボードへ
-            </Link>
+            <Link href="/admin">ダッシュボードへ</Link>
           </Button>
         </div>
 
@@ -43,21 +41,33 @@ export default function AdminNotFound() {
             よく使うページ
           </p>
           <div className="flex flex-wrap justify-center gap-3 text-sm">
-            <Link href="/admin/reservations" className="text-muted-foreground hover:text-foreground hover:underline">
+            <Link
+              href="/admin/reservations"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
               予約管理
             </Link>
-            <Link href="/admin/spaces" className="text-muted-foreground hover:text-foreground hover:underline">
+            <Link
+              href="/admin/spaces"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
               スペース管理
             </Link>
-            <Link href="/admin/inquiries" className="text-muted-foreground hover:text-foreground hover:underline">
+            <Link
+              href="/admin/inquiries"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
               お問い合わせ
             </Link>
-            <Link href="/admin/settings" className="text-muted-foreground hover:text-foreground hover:underline">
+            <Link
+              href="/admin/settings"
+              className="text-muted-foreground hover:text-foreground hover:underline"
+            >
               設定
             </Link>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -19,6 +19,7 @@ Claude Code の公式ドキュメント（hooks / sub-agents / skills）を参�
 **公式推奨**: プロジェクト共有フックは `.claude/settings.json` へ。`settings.local.json` は個人用のみ。
 
 **変更**:
+
 - `.claude/settings.json`（新規作成・git管理）に Prettier の `PostToolUse` フックを移動
 - `.claude/settings.local.json` は `.env` 系の `deny` 権限のみに縮小
 
@@ -29,6 +30,7 @@ Claude Code の公式ドキュメント（hooks / sub-agents / skills）を参�
 **公式推奨**: `$CLAUDE_PROJECT_DIR` 環境変数を使用。フック実行時に Claude Code が自動設定する。
 
 **変更**:
+
 - スクリプト内の `PROJECT_ROOT` 変数を `$CLAUDE_PROJECT_DIR` に置換
 - `settings.json` の command を `"\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh"` に修正
 - フック spinner に `statusMessage: "Formatting..."` を追加
@@ -51,10 +53,10 @@ Claude Code の公式ドキュメント（hooks / sub-agents / skills）を参�
 
 ### 6. skill フロントマター修正
 
-| スキル | 変更内容 | 理由 |
-|--------|---------|------|
+| スキル             | 変更内容                              | 理由                               |
+| ------------------ | ------------------------------------- | ---------------------------------- |
 | `prisma-migration` | `disable-model-invocation: true` 追加 | ユーザー明示起動のみのワークフロー |
-| `ui-ux-pro-max` | `disable-model-invocation: true` 追加 | Python スクリプト実行を伴うため |
+| `ui-ux-pro-max`    | `disable-model-invocation: true` 追加 | Python スクリプト実行を伴うため    |
 
 ### 7. security-reviewer agent 更新
 
@@ -62,14 +64,14 @@ Claude Code の公式ドキュメント（hooks / sub-agents / skills）を参�
 
 ## ファイル変更サマリー
 
-| ファイル | 操作 |
-|---------|------|
-| `.claude/settings.json` | 新規作成（Prettier hook + `enableAllProjectMcpServers`） |
-| `.claude/settings.local.json` | 縮小（deny rules のみ） |
-| `.claude/hooks/prettier-format.sh` | 修正（`$CLAUDE_PROJECT_DIR` 使用） |
-| `.claude/commands/` | **削除**（3ファイル） |
-| `.claude/plans/` | **削除**（空ディレクトリ） |
-| `.gitignore` | 追加（`agent-memory-local/`） |
-| `.claude/skills/prisma-migration/SKILL.md` | 修正（frontmatter 追加） |
-| `.claude/skills/ui-ux-pro-max/SKILL.md` | 修正（frontmatter 追加） |
-| `.claude/agents/security-reviewer.md` | 修正（`memory: project` 追加） |
+| ファイル                                   | 操作                                                     |
+| ------------------------------------------ | -------------------------------------------------------- |
+| `.claude/settings.json`                    | 新規作成（Prettier hook + `enableAllProjectMcpServers`） |
+| `.claude/settings.local.json`              | 縮小（deny rules のみ）                                  |
+| `.claude/hooks/prettier-format.sh`         | 修正（`$CLAUDE_PROJECT_DIR` 使用）                       |
+| `.claude/commands/`                        | **削除**（3ファイル）                                    |
+| `.claude/plans/`                           | **削除**（空ディレクトリ）                               |
+| `.gitignore`                               | 追加（`agent-memory-local/`）                            |
+| `.claude/skills/prisma-migration/SKILL.md` | 修正（frontmatter 追加）                                 |
+| `.claude/skills/ui-ux-pro-max/SKILL.md`    | 修正（frontmatter 追加）                                 |
+| `.claude/agents/security-reviewer.md`      | 修正（`memory: project` 追加）                           |

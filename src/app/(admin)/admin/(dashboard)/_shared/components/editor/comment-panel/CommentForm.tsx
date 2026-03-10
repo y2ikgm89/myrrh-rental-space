@@ -4,44 +4,44 @@
  * @description コメント入力フォームコンポーネント
  */
 
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { Send } from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
-import { Textarea } from '@/admin/components/ui/textarea'
+import { useState, useTransition } from "react";
+import { Send } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
+import { Textarea } from "@/admin/components/ui/textarea";
 
 type CommentFormProps = {
-  onSubmit: (content: string) => Promise<void>
-  placeholder?: string
-  disabled?: boolean
-}
+  onSubmit: (content: string) => Promise<void>;
+  placeholder?: string;
+  disabled?: boolean;
+};
 
 export function CommentForm({
   onSubmit,
-  placeholder = '返信を入力...',
+  placeholder = "返信を入力...",
   disabled = false,
 }: CommentFormProps) {
-  const [content, setContent] = useState('')
-  const [isPending, startTransition] = useTransition()
+  const [content, setContent] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const handleSubmit = () => {
-    const trimmed = content.trim()
-    if (!trimmed || isPending) return
+    const trimmed = content.trim();
+    if (!trimmed || isPending) return;
 
     startTransition(async () => {
-      await onSubmit(trimmed)
-      setContent('')
-    })
-  }
+      await onSubmit(trimmed);
+      setContent("");
+    });
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Ctrl/Cmd + Enter で送信
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault()
-      handleSubmit()
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
     }
-  }
+  };
 
   return (
     <div className="flex gap-2">
@@ -64,5 +64,5 @@ export function CommentForm({
         <Send className="h-4 w-4" />
       </Button>
     </div>
-  )
+  );
 }

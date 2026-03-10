@@ -10,23 +10,23 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap
  */
 
-import type { MetadataRoute } from 'next'
-import { getSitemapContentData } from '@/shared/domain/sitemap/queries'
-import { getBaseUrl } from '@/shared/lib/constants'
-import { buildPostCanonicalPath } from '@/shared/domain/posts/routing'
-import { getPermalinkSettings } from '@/shared/domain/settings/queries'
+import type { MetadataRoute } from "next";
+import { getSitemapContentData } from "@/shared/domain/sitemap/queries";
+import { getBaseUrl } from "@/shared/lib/constants";
+import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-type SitemapEntry = MetadataRoute.Sitemap[number]
+type SitemapEntry = MetadataRoute.Sitemap[number];
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const BASE_URL = getBaseUrl()
+const BASE_URL = getBaseUrl();
 
 /**
  * 静的ページの定義
@@ -35,14 +35,14 @@ const BASE_URL = getBaseUrl()
  * ビルド時の日付を使用（実質的に変更頻度が低いページ）
  */
 const STATIC_PAGES = [
-  '/',
-  '/about',
-  '/contact',
-  '/faq',
-  '/reservation',
-  '/terms',
-  '/privacy',
-] as const
+  "/",
+  "/about",
+  "/contact",
+  "/faq",
+  "/reservation",
+  "/terms",
+  "/privacy",
+] as const;
 
 // =============================================================================
 // Sitemap Generation
@@ -53,15 +53,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [permalinkSettings, content] = await Promise.all([
     getPermalinkSettings(),
     getSitemapContentData(),
-  ])
-  const { spaces, news, posts, customPages } = content
+  ]);
+  const { spaces, news, posts, customPages } = content;
 
   // 各コンテンツタイプの最新更新日を取得
-  const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date()
-  const latestNewsUpdate = news[0]?.updatedAt ?? new Date()
-  const latestPostUpdate = posts[0]?.updatedAt ?? new Date()
+  const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date();
+  const latestNewsUpdate = news[0]?.updatedAt ?? new Date();
+  const latestPostUpdate = posts[0]?.updatedAt ?? new Date();
 
-  const entries: SitemapEntry[] = []
+  const entries: SitemapEntry[] = [];
 
   // ==========================================================================
   // 1. 静的ページ
@@ -70,7 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}${path}`,
       lastModified: new Date(),
-    })
+    });
   }
 
   // ==========================================================================
@@ -79,15 +79,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   entries.push({
     url: `${BASE_URL}/spaces`,
     lastModified: latestSpaceUpdate,
-  })
+  });
   entries.push({
     url: `${BASE_URL}/news`,
     lastModified: latestNewsUpdate,
-  })
+  });
   entries.push({
     url: `${BASE_URL}/posts`,
     lastModified: latestPostUpdate,
-  })
+  });
 
   // ==========================================================================
   // 3. スペース詳細ページ
@@ -96,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}/spaces/${space.slug}`,
       lastModified: space.updatedAt,
-    })
+    });
   }
 
   // ==========================================================================
@@ -106,7 +106,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}/news/${item.slug}`,
       lastModified: item.updatedAt,
-    })
+    });
   }
 
   // ==========================================================================
@@ -116,7 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}${buildPostCanonicalPath(post, permalinkSettings ?? undefined)}`,
       lastModified: post.updatedAt,
-    })
+    });
   }
 
   // ==========================================================================
@@ -126,8 +126,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}/${page.slug}`,
       lastModified: page.updatedAt,
-    })
+    });
   }
 
-  return entries
+  return entries;
 }

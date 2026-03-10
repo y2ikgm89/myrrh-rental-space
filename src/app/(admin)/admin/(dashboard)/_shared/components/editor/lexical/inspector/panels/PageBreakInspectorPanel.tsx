@@ -4,10 +4,10 @@
  * @description PageBreakNodeの情報表示パネル（情報のみ）
  */
 
-'use client'
+"use client";
 
-import { InspectorHeader } from '../InspectorHeader'
-import { InspectorSection } from '../InspectorSection'
+import { InspectorHeader } from "../InspectorHeader";
+import { InspectorSection } from "../InspectorSection";
 
 export function PageBreakInspectorPanel() {
   return (
@@ -20,5 +20,5 @@ export function PageBreakInspectorPanel() {
         </p>
       </InspectorSection>
     </div>
-  )
+  );
 }

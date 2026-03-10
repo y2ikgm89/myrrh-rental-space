@@ -85,7 +85,17 @@ describe("admin read boundaries", () => {
 
   test("legacy /api/admin/media を削除し、canonical /admin/api/media のみ残す", () => {
     expect(
-      existsSync(path.join(workspaceRoot, "src", "app", "api", "admin", "media", "route.ts")),
+      existsSync(
+        path.join(
+          workspaceRoot,
+          "src",
+          "app",
+          "api",
+          "admin",
+          "media",
+          "route.ts",
+        ),
+      ),
     ).toBe(false);
     expect(
       existsSync(

@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * セクションサイドバー（左パネル）
@@ -14,33 +14,33 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { Button, Separator } from '@/admin/components/ui'
-import { Globe, Plus } from 'lucide-react'
-import type { PageSectionData } from '@/admin/actions/page-section'
-import { SectionSidebarItem } from './SectionSidebarItem'
+} from "@dnd-kit/sortable";
+import { Button, Separator } from "@/admin/components/ui";
+import { Globe, Plus } from "lucide-react";
+import type { PageSectionData } from "@/admin/actions/page-section";
+import { SectionSidebarItem } from "./SectionSidebarItem";
 
-const SEO_SELECTION_ID = '__seo__'
+const SEO_SELECTION_ID = "__seo__";
 
 interface SectionSidebarProps {
-  sections: PageSectionData[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  onReorder: (sections: PageSectionData[]) => void
-  onToggle: (id: string, isActive: boolean) => void
-  onDuplicate: (id: string) => void
-  onDelete: (id: string) => void
-  onAddSection: () => void
-  disabled: boolean
+  sections: PageSectionData[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  onReorder: (sections: PageSectionData[]) => void;
+  onToggle: (id: string, isActive: boolean) => void;
+  onDuplicate: (id: string) => void;
+  onDelete: (id: string) => void;
+  onAddSection: () => void;
+  disabled: boolean;
 }
 
-export { SEO_SELECTION_ID }
+export { SEO_SELECTION_ID };
 
 export function SectionSidebar({
   sections,
@@ -57,17 +57,17 @@ export function SectionSidebar({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
+    }),
+  );
 
   function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    const oldIndex = sections.findIndex((s) => s.id === active.id)
-    const newIndex = sections.findIndex((s) => s.id === over.id)
-    const reordered = arrayMove(sections, oldIndex, newIndex)
-    onReorder(reordered)
+    const oldIndex = sections.findIndex((s) => s.id === active.id);
+    const newIndex = sections.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(sections, oldIndex, newIndex);
+    onReorder(reordered);
   }
 
   return (
@@ -128,8 +128,8 @@ export function SectionSidebar({
           onClick={() => onSelect(SEO_SELECTION_ID)}
           className={`flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm transition-colors ${
             selectedId === SEO_SELECTION_ID
-              ? 'bg-accent/10 text-foreground font-medium'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/5'
+              ? "bg-accent/10 text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
           }`}
         >
           <Globe className="h-4 w-4" />
@@ -137,5 +137,5 @@ export function SectionSidebar({
         </button>
       </div>
     </div>
-  )
+  );
 }

@@ -53,6 +53,7 @@ bunx playwright test --debug                       # headed/debug mode
 ## Project-specific context
 
 **Test framework**: Bun Test (`bun:test`) — not Vitest. Key differences:
+
 - `mock(() => ...)` not `vi.fn()`
 - `mock.module('path', () => ...)` not `vi.mock()`
 - `spyOn(obj, 'method')` not `vi.spyOn()`
@@ -62,6 +63,7 @@ bunx playwright test --debug                       # headed/debug mode
 **Test setup**: `__tests__/setup.ts` sets dummy env vars — tests never need real DB/API keys.
 
 **Test locations**:
+
 - `__tests__/unit/components/` — React component tests
 - `__tests__/unit/lib/` — utility function tests
 - `__tests__/unit/types/` — type-level tests
@@ -98,12 +100,14 @@ Test-internal type errors appear only when running `bun test`, not in validate.
 ## Memory management
 
 Record in your memory:
+
 - Recurring test failures and their root causes
 - Mock setup patterns that are tricky in this project
 - Flaky tests (environment-dependent, timing-sensitive)
 - Common mismatches between Bun Test and Vitest APIs that trip up new code
 
 Files:
+
 ```
 MEMORY.md          — Quick reference (under 200 lines)
 test-failures.md   — Recurring failures with fixes

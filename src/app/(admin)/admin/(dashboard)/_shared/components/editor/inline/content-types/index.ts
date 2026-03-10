@@ -41,14 +41,11 @@ export type {
   // データ変換型
   ContentTransforms,
   ContentFeatures,
-} from './types'
+} from "./types";
 
 // 型ガード
-export {
-  isStatusPublishControl,
-  isBooleanPublishControl,
-} from './types'
+export { isStatusPublishControl, isBooleanPublishControl } from "./types";
 
 // コンテンツタイプ設定
-export { postConfig } from './post'
-export { newsConfig } from './news'
+export { postConfig } from "./post";
+export { newsConfig } from "./news";

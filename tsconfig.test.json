@@ -15,7 +15,5 @@
     // グローバル型宣言（global.d.ts の globalThis.prisma 等）をテストでも有効化
     "src/shared/types/*.d.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

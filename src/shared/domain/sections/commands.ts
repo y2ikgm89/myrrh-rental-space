@@ -1,5 +1,6 @@
 import "server-only";
 
+import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma, prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ensureHomepageSections } from "@/shared/lib/section-defaults";
@@ -23,26 +24,6 @@ function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   return defaultSectionConfigs[type];
 }
 
-function isInputJsonValue(value: unknown): value is Prisma.InputJsonValue {
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return true;
-  }
-
-  if (Array.isArray(value)) {
-    return value.every(isInputJsonValue);
-  }
-
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-
-  return Object.values(value).every(isInputJsonValue);
-}
-
 function parseJsonValue(
   value: string | null | undefined,
 ): Prisma.InputJsonValue | typeof Prisma.JsonNull | undefined {
@@ -54,21 +35,11 @@ function parseJsonValue(
     return Prisma.JsonNull;
   }
 
-  const parsed: unknown = JSON.parse(value);
-  if (!isInputJsonValue(parsed)) {
-    throw new DomainError("JSONデータが不正です", "VALIDATION");
-  }
-
-  return parsed;
+  return parsePrismaInputJson(value, "JSONデータが不正です");
 }
 
 function cloneJsonValue(value: unknown): Prisma.InputJsonValue {
-  const cloned: unknown = JSON.parse(JSON.stringify(value));
-  if (!isInputJsonValue(cloned)) {
-    throw new DomainError("JSONデータが不正です", "VALIDATION");
-  }
-
-  return cloned;
+  return clonePrismaInputJson(value, "JSONデータが不正です");
 }
 
 async function ensurePageExists(pageId: string): Promise<void> {

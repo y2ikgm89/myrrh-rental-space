@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * お知らせエディター
@@ -16,10 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/admin/components/ui'
-import { EDITOR_PROSE_CLASSES } from '@/shared/lib/styles/prose'
-import { CommentPanel } from '@/admin/components/editor/comment-panel'
-import { LazyLexicalEditor } from '@/admin/components/editor/lexical'
+} from "@/admin/components/ui";
+import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
+import { CommentPanel } from "@/admin/components/editor/comment-panel";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
 import {
   EditorHeader,
   InlineEditorShell,
@@ -27,42 +27,46 @@ import {
   useNewsEditor,
   useContentWidthStyles,
   newsConfig,
-} from '@/admin/components/editor/inline'
-import type { NewsData } from '@/shared/domain/news/types'
-import type { ContentWidth } from '@/shared/types'
+} from "@/admin/components/editor/inline";
+import type { NewsData } from "@/shared/domain/news/types";
+import type { ContentWidth } from "@/shared/types";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type NewsEditorProps = {
-  news?: NewsData
-  mode?: 'create' | 'edit'
+  news?: NewsData;
+  mode?: "create" | "edit";
   /** グローバルレイアウト設定（フォールバック値として使用） */
-  fallbackContentWidth?: ContentWidth
-}
+  fallbackContentWidth?: ContentWidth;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEditorProps) {
+export function NewsEditor({
+  news,
+  mode = "edit",
+  fallbackContentWidth,
+}: NewsEditorProps) {
   // 専用フック使用（型アサーション不要）
-  const editor = useNewsEditor({ news, mode })
+  const editor = useNewsEditor({ news, mode });
 
   // 公開アクションの設定
   const publishActions =
-    mode === 'edit' && news
+    mode === "edit" && news
       ? {
           status: editor.isPublished,
           onPublish: editor.handlePublish,
           onUnpublish: editor.handleUnpublish,
         }
-      : undefined
+      : undefined;
 
   // 削除ダイアログ
   const deleteDialog =
-    mode === 'edit' && news ? (
+    mode === "edit" && news ? (
       <Dialog
         open={editor.isDeleteDialogOpen}
         onOpenChange={editor.setIsDeleteDialogOpen}
@@ -98,31 +102,31 @@ export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEd
               onClick={editor.handleDelete}
               disabled={editor.isPending}
             >
-              {editor.isPending ? '削除中...' : '削除'}
+              {editor.isPending ? "削除中..." : "削除"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    ) : undefined
+    ) : undefined;
 
   // スラッグの表示
-  const displaySlug = `news/${editor.slug}`
+  const displaySlug = `news/${editor.slug}`;
 
   // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
   const contentStyles = useContentWidthStyles({
     control: editor.form.control,
-    widthFieldName: 'contentWidth',
-    customFieldName: 'contentWidthCustom',
+    widthFieldName: "contentWidth",
+    customFieldName: "contentWidthCustom",
     fallback: fallbackContentWidth,
-  })
+  });
 
   // サイドパネル用extraProps
   const sidePanelExtraProps = {
     isPublishedValue: editor.isPublished,
     onIsPublishedChange: (value: boolean) => {
-      editor.form.setValue('isPublished', value)
+      editor.form.setValue("isPublished", value);
     },
-  }
+  };
 
   return (
     <InlineEditorShell
@@ -142,7 +146,7 @@ export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEd
           onPreview={editor.handlePreview}
           onBack={editor.handleBack}
           publishActions={publishActions}
-          showCommentButton={mode === 'edit' && !!news}
+          showCommentButton={mode === "edit" && !!news}
           isCommentPanelOpen={editor.isCommentsPanelOpen}
           onToggleCommentPanel={editor.toggleComments}
           extraActions={deleteDialog}
@@ -162,7 +166,7 @@ export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEd
             disabled={editor.isPending}
             extraProps={sidePanelExtraProps}
           />
-          {mode === 'edit' && news && (
+          {mode === "edit" && news && (
             <CommentPanel
               isOpen={editor.isCommentsPanelOpen}
               contentType="news"
@@ -184,11 +188,13 @@ export function NewsEditor({ news, mode = 'edit', fallbackContentWidth }: NewsEd
         className={EDITOR_PROSE_CLASSES}
         showToolbar
         height="100%"
-        onMarkClick={mode === 'edit' && news ? editor.selectMark : undefined}
-        onAddComment={mode === 'edit' && news ? editor.handleAddComment : undefined}
+        onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
+        onAddComment={
+          mode === "edit" && news ? editor.handleAddComment : undefined
+        }
         contentWidthClassName={contentStyles.className}
         contentWidthStyle={contentStyles.style}
       />
     </InlineEditorShell>
-  )
+  );
 }

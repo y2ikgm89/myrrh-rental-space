@@ -4,97 +4,97 @@
  * Settings / navigation domain から取得した設定を基にJSON-LD用データを生成
  */
 
-import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
-} from '@/shared/domain/settings/queries'
-import { isRecord } from '@/shared/lib/serialize'
+} from "@/shared/domain/settings/queries";
+import { isRecord } from "@/shared/lib/serialize";
 
-const BASE_URL = getBaseUrl()
+const BASE_URL = getBaseUrl();
 
 // =============================================================================
 // Types
 // =============================================================================
 
 export interface WebSiteJsonLdData {
-  name: string
-  description: string
-  url: string
+  name: string;
+  description: string;
+  url: string;
 }
 
 export interface OrganizationJsonLdData {
-  name: string
-  description?: string
-  url: string
-  logo?: string
-  telephone?: string
-  email?: string
+  name: string;
+  description?: string;
+  url: string;
+  logo?: string;
+  telephone?: string;
+  email?: string;
   address?: {
-    streetAddress?: string
-    addressLocality?: string
-    addressRegion?: string
-    postalCode?: string
-    addressCountry?: string
-  }
+    streetAddress?: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    postalCode?: string;
+    addressCountry?: string;
+  };
 }
 
 interface OpeningHoursSpec {
-  '@type': 'OpeningHoursSpecification'
-  dayOfWeek: string | string[]
-  opens: string
-  closes: string
+  "@type": "OpeningHoursSpecification";
+  dayOfWeek: string | string[];
+  opens: string;
+  closes: string;
 }
 
 interface SpecialOpeningHoursSpec {
-  '@type': 'OpeningHoursSpecification'
-  validFrom: string
-  validThrough: string
-  opens: string
-  closes: string
+  "@type": "OpeningHoursSpecification";
+  validFrom: string;
+  validThrough: string;
+  opens: string;
+  closes: string;
 }
 
 interface AmenityFeatureSpec {
-  '@type': 'LocationFeatureSpecification'
-  name: string
-  value: boolean
+  "@type": "LocationFeatureSpecification";
+  name: string;
+  value: boolean;
 }
 
 export interface LocalBusinessJsonLdData {
-  name: string
-  description?: string
-  url: string
-  logo?: string
-  telephone?: string
-  email?: string
+  name: string;
+  description?: string;
+  url: string;
+  logo?: string;
+  telephone?: string;
+  email?: string;
   address?: {
-    streetAddress?: string
-    addressLocality?: string
-    addressRegion?: string
-    postalCode?: string
-    addressCountry?: string
-  }
-  openingHoursSpecification?: OpeningHoursSpec[]
-  specialOpeningHoursSpecification?: SpecialOpeningHoursSpec[]
-  priceRange?: string
+    streetAddress?: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    postalCode?: string;
+    addressCountry?: string;
+  };
+  openingHoursSpecification?: OpeningHoursSpec[];
+  specialOpeningHoursSpecification?: SpecialOpeningHoursSpec[];
+  priceRange?: string;
   geo?: {
-    latitude: number
-    longitude: number
-  }
-  hasMap?: string
-  currenciesAccepted?: string
-  paymentAccepted?: string
-  foundingDate?: string
-  additionalType?: string
-  image?: string | string[]
-  sameAs?: string[]
-  amenityFeature?: AmenityFeatureSpec[]
+    latitude: number;
+    longitude: number;
+  };
+  hasMap?: string;
+  currenciesAccepted?: string;
+  paymentAccepted?: string;
+  foundingDate?: string;
+  additionalType?: string;
+  image?: string | string[];
+  sameAs?: string[];
+  amenityFeature?: AmenityFeatureSpec[];
 }
 
 /** @graph パターン用の統合データ */
 export interface GraphJsonLdData {
-  localBusiness: LocalBusinessJsonLdData
-  webSite: WebSiteJsonLdData
+  localBusiness: LocalBusinessJsonLdData;
+  webSite: WebSiteJsonLdData;
 }
 
 // =============================================================================
@@ -105,32 +105,30 @@ export interface GraphJsonLdData {
  * WebSite JSON-LD用データを取得
  */
 export async function getWebSiteJsonLdData(): Promise<WebSiteJsonLdData> {
-  const settings = await getOrganizationSettings()
+  const settings = await getOrganizationSettings();
 
   return {
     name: settings?.siteName || SITE_DEFAULTS.name,
     description: settings?.siteDescription || SITE_DEFAULTS.description,
     url: BASE_URL,
-  }
+  };
 }
 
 /**
  * Organization JSON-LD用データを取得
  */
 export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdData> {
-  const settings = await getOrganizationSettings()
+  const settings = await getOrganizationSettings();
 
   // 住所の構築
-  const streetAddress = [
-    settings?.streetAddress,
-    settings?.buildingName,
-  ]
+  const streetAddress = [settings?.streetAddress, settings?.buildingName]
     .filter(Boolean)
-    .join(' ')
+    .join(" ");
 
   return {
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
-    description: settings?.businessDescription || settings?.siteDescription || undefined,
+    description:
+      settings?.businessDescription || settings?.siteDescription || undefined,
     url: BASE_URL,
     logo: settings?.headerLogoUrl || undefined,
     telephone: settings?.phoneNumber || undefined,
@@ -142,10 +140,10 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
             addressRegion: settings?.prefecture || undefined,
             addressLocality: settings?.city || undefined,
             streetAddress: streetAddress || undefined,
-            addressCountry: 'JP',
+            addressCountry: "JP",
           }
         : undefined,
-  }
+  };
 }
 
 // =============================================================================
@@ -154,76 +152,86 @@ export async function getOrganizationJsonLdData(): Promise<OrganizationJsonLdDat
 
 /** 曜日マッピング（フロントエンド表示でも再利用） */
 export const DAY_MAP: Record<string, string> = {
-  monday: 'Monday',
-  tuesday: 'Tuesday',
-  wednesday: 'Wednesday',
-  thursday: 'Thursday',
-  friday: 'Friday',
-  saturday: 'Saturday',
-  sunday: 'Sunday',
-}
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
 
 /** 曜日の日本語表示ラベル */
 export const DAY_LABELS: Record<string, string> = {
-  monday: '月',
-  tuesday: '火',
-  wednesday: '水',
-  thursday: '木',
-  friday: '金',
-  saturday: '土',
-  sunday: '日',
-}
+  monday: "月",
+  tuesday: "火",
+  wednesday: "水",
+  thursday: "木",
+  friday: "金",
+  saturday: "土",
+  sunday: "日",
+};
 
 /**
  * businessHours JSON → OpeningHoursSpecification 変換
  * 同じ時間帯の曜日をグループ化
  */
 export function convertToOpeningHoursSpecification(
-  businessHours: unknown
+  businessHours: unknown,
 ): OpeningHoursSpec[] | undefined {
   if (!isRecord(businessHours)) {
-    return undefined
+    return undefined;
   }
 
-  const hours = businessHours
+  const hours = businessHours;
 
   // 時間帯ごとに曜日をグループ化
-  const groupMap = new Map<string, string[]>()
+  const groupMap = new Map<string, string[]>();
 
   for (const [dayKey, dayValue] of Object.entries(hours)) {
-    const englishDay = DAY_MAP[dayKey]
-    if (!englishDay) continue
+    const englishDay = DAY_MAP[dayKey];
+    if (!englishDay) continue;
 
-    if (!isRecord(dayValue) || !dayValue['isOpen'] || !Array.isArray(dayValue['slots'])) continue
+    if (
+      !isRecord(dayValue) ||
+      !dayValue["isOpen"] ||
+      !Array.isArray(dayValue["slots"])
+    )
+      continue;
 
-    for (const slot of dayValue['slots']) {
-      if (!isRecord(slot) || typeof slot['openTime'] !== 'string' || typeof slot['closeTime'] !== 'string') continue
-      const key = `${slot['openTime']}-${slot['closeTime']}`
-      const existing = groupMap.get(key)
+    for (const slot of dayValue["slots"]) {
+      if (
+        !isRecord(slot) ||
+        typeof slot["openTime"] !== "string" ||
+        typeof slot["closeTime"] !== "string"
+      )
+        continue;
+      const key = `${slot["openTime"]}-${slot["closeTime"]}`;
+      const existing = groupMap.get(key);
       if (existing) {
-        existing.push(englishDay)
+        existing.push(englishDay);
       } else {
-        groupMap.set(key, [englishDay])
+        groupMap.set(key, [englishDay]);
       }
     }
   }
 
-  if (groupMap.size === 0) return undefined
+  if (groupMap.size === 0) return undefined;
 
-  const specs: OpeningHoursSpec[] = []
+  const specs: OpeningHoursSpec[] = [];
   for (const [timeRange, days] of groupMap) {
-    const [opens = '', closes = ''] = timeRange.split('-')
-    const firstDay = days[0]
-    if (!firstDay) continue
+    const [opens = "", closes = ""] = timeRange.split("-");
+    const firstDay = days[0];
+    if (!firstDay) continue;
     specs.push({
-      '@type': 'OpeningHoursSpecification',
+      "@type": "OpeningHoursSpecification",
       dayOfWeek: days.length === 1 ? firstDay : days,
       opens,
       closes,
-    })
+    });
   }
 
-  return specs.length > 0 ? specs : undefined
+  return specs.length > 0 ? specs : undefined;
 }
 
 /**
@@ -231,66 +239,66 @@ export function convertToOpeningHoursSpecification(
  * 休業日は opens/closes を "00:00" に設定（schema.org 公式パターン）
  */
 function convertToSpecialOpeningHours(
-  specialHolidays: unknown
+  specialHolidays: unknown,
 ): SpecialOpeningHoursSpec[] | undefined {
-  if (!Array.isArray(specialHolidays)) return undefined
+  if (!Array.isArray(specialHolidays)) return undefined;
 
-  const specs: SpecialOpeningHoursSpec[] = []
+  const specs: SpecialOpeningHoursSpec[] = [];
 
   for (const dateStr of specialHolidays) {
-    if (typeof dateStr !== 'string') continue
+    if (typeof dateStr !== "string") continue;
     // ISO 8601 日付形式チェック: YYYY-MM-DD
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue;
 
     specs.push({
-      '@type': 'OpeningHoursSpecification',
+      "@type": "OpeningHoursSpecification",
       validFrom: dateStr,
       validThrough: dateStr,
-      opens: '00:00',
-      closes: '00:00',
-    })
+      opens: "00:00",
+      closes: "00:00",
+    });
   }
 
-  return specs.length > 0 ? specs : undefined
+  return specs.length > 0 ? specs : undefined;
 }
 
 /** 施設属性ラベルマッピング（フロントエンド表示でも再利用） */
 export const ATTR_LABELS: Record<string, string> = {
-  wifi: 'Wi-Fi',
-  parking: '駐車場',
-  barrier_free: 'バリアフリー',
-  elevator: 'エレベーター',
-  smoking_area: '喫煙所',
-  food_allowed: '飲食可',
-  photography_allowed: '撮影可',
-  music_allowed: '楽器演奏可',
-}
+  wifi: "Wi-Fi",
+  parking: "駐車場",
+  barrier_free: "バリアフリー",
+  elevator: "エレベーター",
+  smoking_area: "喫煙所",
+  food_allowed: "飲食可",
+  photography_allowed: "撮影可",
+  music_allowed: "楽器演奏可",
+};
 
 /**
  * businessAttributes → amenityFeature 変換
  * value: true のもののみ出力
  */
 function convertToAmenityFeatures(
-  attrs: unknown
+  attrs: unknown,
 ): AmenityFeatureSpec[] | undefined {
   if (!isRecord(attrs)) {
-    return undefined
+    return undefined;
   }
 
-  const record = attrs
-  const features: AmenityFeatureSpec[] = []
+  const record = attrs;
+  const features: AmenityFeatureSpec[] = [];
 
   for (const [key, value] of Object.entries(record)) {
     if (value === true) {
       features.push({
-        '@type': 'LocationFeatureSpecification',
+        "@type": "LocationFeatureSpecification",
         name: ATTR_LABELS[key] || key,
         value: true,
-      })
+      });
     }
   }
 
-  return features.length > 0 ? features : undefined
+  return features.length > 0 ? features : undefined;
 }
 
 /**
@@ -300,35 +308,35 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
   const [settings, sameAs] = await Promise.all([
     getOrganizationSettings(),
     getSocialLinkUrls(),
-  ])
+  ]);
 
   // 住所の構築
-  const streetAddress = [
-    settings?.streetAddress,
-    settings?.buildingName,
-  ]
+  const streetAddress = [settings?.streetAddress, settings?.buildingName]
     .filter(Boolean)
-    .join(' ')
+    .join(" ");
 
-  const lat = settings?.latitude ?? null
-  const lng = settings?.longitude ?? null
+  const lat = settings?.latitude ?? null;
+  const lng = settings?.longitude ?? null;
 
   // geo + hasMap: 緯度経度が両方設定されている場合のみ
-  const geo = lat !== null && lng !== null
-    ? { latitude: lat, longitude: lng }
-    : undefined
+  const geo =
+    lat !== null && lng !== null
+      ? { latitude: lat, longitude: lng }
+      : undefined;
   const hasMap = geo
     ? `https://www.google.com/maps?q=${geo.latitude},${geo.longitude}`
-    : undefined
+    : undefined;
 
   // foundingDate: ISO 8601形式
   const foundingDate = settings?.establishedDate
-    ? (new Date(settings.establishedDate).toISOString().split('T')[0] ?? undefined)
-    : undefined
+    ? (new Date(settings.establishedDate).toISOString().split("T")[0] ??
+      undefined)
+    : undefined;
 
   return {
     name: settings?.businessName || settings?.siteName || SITE_DEFAULTS.name,
-    description: settings?.businessDescription || settings?.siteDescription || undefined,
+    description:
+      settings?.businessDescription || settings?.siteDescription || undefined,
     url: BASE_URL,
     logo: settings?.headerLogoUrl || undefined,
     telephone: settings?.phoneNumber || undefined,
@@ -340,22 +348,26 @@ export async function getLocalBusinessJsonLdData(): Promise<LocalBusinessJsonLdD
             addressRegion: settings?.prefecture || undefined,
             addressLocality: settings?.city || undefined,
             streetAddress: streetAddress || undefined,
-            addressCountry: 'JP',
+            addressCountry: "JP",
           }
         : undefined,
-    openingHoursSpecification: convertToOpeningHoursSpecification(settings?.businessHours),
-    specialOpeningHoursSpecification: convertToSpecialOpeningHours(settings?.specialHolidays),
+    openingHoursSpecification: convertToOpeningHoursSpecification(
+      settings?.businessHours,
+    ),
+    specialOpeningHoursSpecification: convertToSpecialOpeningHours(
+      settings?.specialHolidays,
+    ),
     priceRange: settings?.priceRange || undefined,
     geo,
     hasMap,
-    currenciesAccepted: 'JPY',
+    currenciesAccepted: "JPY",
     paymentAccepted: settings?.paymentAccepted || undefined,
     foundingDate,
-    additionalType: 'https://en.wikipedia.org/wiki/Coworking',
+    additionalType: "https://en.wikipedia.org/wiki/Coworking",
     image: settings?.headerLogoUrl ? [settings.headerLogoUrl] : undefined,
     sameAs: sameAs.length > 0 ? sameAs : undefined,
     amenityFeature: convertToAmenityFeatures(settings?.businessAttributes),
-  }
+  };
 }
 
 /**
@@ -366,7 +378,7 @@ export async function getGraphJsonLdData(): Promise<GraphJsonLdData> {
   const [localBusiness, webSite] = await Promise.all([
     getLocalBusinessJsonLdData(),
     getWebSiteJsonLdData(),
-  ])
+  ]);
 
-  return { localBusiness, webSite }
+  return { localBusiness, webSite };
 }

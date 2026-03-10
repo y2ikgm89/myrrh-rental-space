@@ -29,6 +29,7 @@ import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 const formSchema = z.object({
   slug: z
@@ -75,7 +76,9 @@ async function fetchSlugAvailability(
   slug: string,
 ): Promise<SlugAvailabilityResult> {
   const params = new URLSearchParams({ slug });
-  return fetchAdminJson(`/admin/api/pages/slug-availability?${params.toString()}`);
+  return fetchAdminJson(
+    `/admin/api/pages/slug-availability?${params.toString()}`,
+  );
 }
 
 export function CreatePageDialog() {
@@ -161,14 +164,15 @@ export function CreatePageDialog() {
           isPublished: false,
         });
 
-        if (result.success) {
-          toast.success(result.message);
-          setIsOpen(false);
-          reset();
-          router.push(`/admin/pages/${result.data.slug}/edit`);
-        } else if (!result.success) {
+        if (isMutationError(result)) {
           toast.error(result.error || "ページの作成に失敗しました");
+          return;
         }
+
+        toast.success("ページを作成しました");
+        setIsOpen(false);
+        reset();
+        router.push(`/admin/pages/${result.slug}/edit`);
       } catch (error) {
         logger.error("ページ作成エラー", {
           error: getErrorMessage(error),

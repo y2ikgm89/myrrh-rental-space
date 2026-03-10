@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * サムネイル画像フィールド
@@ -7,20 +7,20 @@
  * OGP画像はOGPFieldsで管理
  */
 
-import Image from 'next/image'
-import { ImagePlus } from 'lucide-react'
-import type { FieldErrors, UseFormSetValue, Control } from 'react-hook-form'
-import { useWatch } from 'react-hook-form'
-import { Button, Label } from '@/admin/components/ui'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import type { PostEditorFormData } from '../types'
+import Image from "next/image";
+import { ImagePlus } from "lucide-react";
+import type { FieldErrors, UseFormSetValue, Control } from "react-hook-form";
+import { useWatch } from "react-hook-form";
+import { Button, Label } from "@/admin/components/ui";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import type { PostEditorFormData } from "../types";
 
 type ImageFieldsProps = {
-  errors: FieldErrors<PostEditorFormData>
-  setValue: UseFormSetValue<PostEditorFormData>
-  control: Control<PostEditorFormData>
-  disabled?: boolean
-}
+  errors: FieldErrors<PostEditorFormData>;
+  setValue: UseFormSetValue<PostEditorFormData>;
+  control: Control<PostEditorFormData>;
+  disabled?: boolean;
+};
 
 export function ImageFields({
   errors,
@@ -28,17 +28,17 @@ export function ImageFields({
   control,
   disabled,
 }: ImageFieldsProps) {
-  const thumbnailUrl = useWatch({ control, name: 'thumbnailUrl' }) ?? ''
+  const thumbnailUrl = useWatch({ control, name: "thumbnailUrl" }) ?? "";
 
   const thumbnailPicker = useSingleMediaPicker({
-    defaultUsage: 'POST',
+    defaultUsage: "POST",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('thumbnailUrl', selected.url)
+        setValue("thumbnailUrl", selected.url);
       }
     },
-  })
+  });
 
   return (
     <div className="space-y-2">
@@ -77,10 +77,12 @@ export function ImageFields({
         </div>
       </div>
       {errors.thumbnailUrl && (
-        <p className="text-sm text-destructive">{errors.thumbnailUrl.message}</p>
+        <p className="text-sm text-destructive">
+          {errors.thumbnailUrl.message}
+        </p>
       )}
 
       <thumbnailPicker.MediaPicker />
     </div>
-  )
+  );
 }

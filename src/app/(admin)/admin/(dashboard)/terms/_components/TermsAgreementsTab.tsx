@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import type { TermsAgreementItem } from "@/shared/lib/validations/terms";
+import {
+  adminTermsAgreementsResponseSchema,
+  type TermsAgreementItem,
+} from "@/shared/lib/validations/terms";
 import {
   Table,
   TableBody,
@@ -37,43 +40,34 @@ async function fetchTermsAgreements(
   termsId: string,
   page: number,
 ): Promise<{ agreements: TermsAgreementItem[]; total: number }> {
-  const response = await fetch(`/admin/api/terms/${termsId}/agreements?page=${page}`, {
-    credentials: "same-origin",
-  });
+  const response = await fetch(
+    `/admin/api/terms/${termsId}/agreements?page=${page}`,
+    {
+      credentials: "same-origin",
+    },
+  );
 
   const body: unknown = await response.json().catch(() => null);
 
-  if (
-    !response.ok ||
-    !body ||
-    typeof body !== "object" ||
-    !("success" in body) ||
-    body.success !== true ||
-    !("data" in body) ||
-    !body.data ||
-    typeof body.data !== "object"
-  ) {
+  if (!response.ok) {
     const message =
-      body && typeof body === "object" && "error" in body && typeof body.error === "string"
+      body &&
+      typeof body === "object" &&
+      "error" in body &&
+      typeof body.error === "string"
         ? body.error
         : "同意記録の取得に失敗しました";
     throw new Error(message);
   }
 
-  if (
-    !("agreements" in body.data) ||
-    !Array.isArray(body.data.agreements) ||
-    !("total" in body.data) ||
-    typeof body.data.total !== "number"
-  ) {
+  const parsed = adminTermsAgreementsResponseSchema.safeParse(body);
+  if (!parsed.success) {
     throw new Error("同意記録の取得に失敗しました");
   }
 
-  const agreements: TermsAgreementItem[] = body.data.agreements;
-
   return {
-    agreements,
-    total: body.data.total,
+    agreements: parsed.data.agreements,
+    total: parsed.data.total,
   };
 }
 
@@ -99,7 +93,9 @@ export function TermsAgreementsTab({
         setPage(newPage);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "同意記録の取得に失敗しました";
+          error instanceof Error
+            ? error.message
+            : "同意記録の取得に失敗しました";
         toast.error(message);
       }
     });

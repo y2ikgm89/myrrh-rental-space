@@ -76,10 +76,10 @@ src/
 
 ### 接続テスト
 
-| サービス | テスト方法 |
-|---------|-----------|
-| Resend | `domains.list()` API呼び出し |
-| Turnstile | キー形式検証（`0x`プレフィックス確認） |
+| サービス    | テスト方法                             |
+| ----------- | -------------------------------------- |
+| Resend      | `domains.list()` API呼び出し           |
+| Turnstile   | キー形式検証（`0x`プレフィックス確認） |
 | Google Maps | Geocoding API呼び出し（address=Tokyo） |
 
 ### セキュリティ
@@ -92,6 +92,7 @@ src/
 ### UI
 
 設定画面に「APIキー」タブを追加:
+
 - Resend設定セクション
 - Cloudflare Turnstile設定セクション
 - Google Maps設定セクション

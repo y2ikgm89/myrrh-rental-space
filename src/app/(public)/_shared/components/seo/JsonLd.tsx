@@ -9,103 +9,103 @@
  */
 
 /* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
-import type { ReactElement } from 'react'
-import { getBaseUrl, SITE_DEFAULTS } from '@/shared/lib/constants'
+import type { ReactElement } from "react";
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 
-const BASE_URL = getBaseUrl()
+const BASE_URL = getBaseUrl();
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface OrganizationData {
-  name: string
-  description?: string
-  url?: string
-  logo?: string
-  telephone?: string
-  email?: string
+  name: string;
+  description?: string;
+  url?: string;
+  logo?: string;
+  telephone?: string;
+  email?: string;
   address?: {
-    streetAddress?: string
-    addressLocality?: string
-    addressRegion?: string
-    postalCode?: string
-    addressCountry?: string
-  }
-  sameAs?: string[]
+    streetAddress?: string;
+    addressLocality?: string;
+    addressRegion?: string;
+    postalCode?: string;
+    addressCountry?: string;
+  };
+  sameAs?: string[];
 }
 
 interface OpeningHoursSpecification {
-  '@type': 'OpeningHoursSpecification'
-  dayOfWeek: string | string[]
-  opens: string
-  closes: string
+  "@type": "OpeningHoursSpecification";
+  dayOfWeek: string | string[];
+  opens: string;
+  closes: string;
 }
 
 interface AmenityFeature {
-  '@type': 'LocationFeatureSpecification'
-  name: string
-  value: boolean
+  "@type": "LocationFeatureSpecification";
+  name: string;
+  value: boolean;
 }
 
 interface SpecialOpeningHoursSpecification {
-  '@type': 'OpeningHoursSpecification'
-  validFrom: string
-  validThrough: string
-  opens: string
-  closes: string
+  "@type": "OpeningHoursSpecification";
+  validFrom: string;
+  validThrough: string;
+  opens: string;
+  closes: string;
 }
 
 interface LocalBusinessData extends OrganizationData {
-  openingHoursSpecification?: OpeningHoursSpecification[]
-  specialOpeningHoursSpecification?: SpecialOpeningHoursSpecification[]
-  priceRange?: string
+  openingHoursSpecification?: OpeningHoursSpecification[];
+  specialOpeningHoursSpecification?: SpecialOpeningHoursSpecification[];
+  priceRange?: string;
   geo?: {
-    latitude: number
-    longitude: number
-  }
-  hasMap?: string
-  currenciesAccepted?: string
-  paymentAccepted?: string
-  foundingDate?: string
-  additionalType?: string
-  image?: string | string[]
-  amenityFeature?: AmenityFeature[]
+    latitude: number;
+    longitude: number;
+  };
+  hasMap?: string;
+  currenciesAccepted?: string;
+  paymentAccepted?: string;
+  foundingDate?: string;
+  additionalType?: string;
+  image?: string | string[];
+  amenityFeature?: AmenityFeature[];
 }
 
 interface ProductData {
-  name: string
-  description: string
-  image: string
-  url: string
+  name: string;
+  description: string;
+  image: string;
+  url: string;
   offers?: {
-    price: number
-    priceCurrency?: string
-    availability?: string
-  }
+    price: number;
+    priceCurrency?: string;
+    availability?: string;
+  };
 }
 
 interface ArticleData {
-  headline: string
-  description: string
-  image?: string
-  url: string
-  datePublished: string
-  dateModified?: string
+  headline: string;
+  description: string;
+  image?: string;
+  url: string;
+  datePublished: string;
+  dateModified?: string;
   author?: {
-    name: string
-    url?: string
-  }
+    name: string;
+    url?: string;
+  };
 }
 
 interface BreadcrumbItem {
-  name: string
-  url: string
+  name: string;
+  url: string;
 }
 
 interface FAQItem {
-  question: string
-  answer: string
+  question: string;
+  answer: string;
 }
 
 // =============================================================================
@@ -113,7 +113,7 @@ interface FAQItem {
 // =============================================================================
 
 interface JsonLdProps {
-  data: Record<string, unknown>
+  data: Record<string, unknown>;
 }
 
 /**
@@ -130,18 +130,18 @@ function JsonLd({ data }: JsonLdProps): ReactElement {
   // セキュリティ: HTML/Script特殊文字とJavaScript改行文字をUnicodeエスケープ
   // これによりscriptタグ内でのXSS攻撃を防止
   const safeJsonString = JSON.stringify(data)
-    .replace(/</g, '\\u003c')
-    .replace(/>/g, '\\u003e')
-    .replace(/&/g, '\\u0026')
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029')
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 
   return (
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: safeJsonString }}
     />
-  )
+  );
 }
 
 // =============================================================================
@@ -162,8 +162,8 @@ export function OrganizationJsonLd({
   sameAs,
 }: OrganizationData): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
+    "@context": "https://schema.org",
+    "@type": "Organization",
     name,
     ...(description && { description }),
     url,
@@ -172,15 +172,15 @@ export function OrganizationJsonLd({
     ...(email && { email }),
     ...(address && {
       address: {
-        '@type': 'PostalAddress',
+        "@type": "PostalAddress",
         ...address,
-        addressCountry: address.addressCountry || 'JP',
+        addressCountry: address.addressCountry || "JP",
       },
     }),
     ...(sameAs && sameAs.length > 0 && { sameAs }),
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -189,7 +189,9 @@ export function OrganizationJsonLd({
 /**
  * LocalBusiness JSON-LD オブジェクトを構築（コンポーネント版と @graph 版で共有）
  */
-function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Record<string, unknown> {
+function buildLocalBusinessData(
+  props: LocalBusinessData & { id?: string },
+): Record<string, unknown> {
   const {
     name,
     description,
@@ -211,11 +213,11 @@ function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Rec
     amenityFeature,
     sameAs,
     id,
-  } = props
+  } = props;
 
   return {
-    '@type': 'LocalBusiness',
-    '@id': id || `${url}/#organization`,
+    "@type": "LocalBusiness",
+    "@id": id || `${url}/#organization`,
     name,
     ...(description && { description }),
     url,
@@ -225,21 +227,23 @@ function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Rec
     ...(email && { email }),
     ...(address && {
       address: {
-        '@type': 'PostalAddress',
+        "@type": "PostalAddress",
         ...address,
-        addressCountry: address.addressCountry || 'JP',
+        addressCountry: address.addressCountry || "JP",
       },
     }),
-    ...(openingHoursSpecification && openingHoursSpecification.length > 0 && {
-      openingHoursSpecification,
-    }),
-    ...(specialOpeningHoursSpecification && specialOpeningHoursSpecification.length > 0 && {
-      specialOpeningHoursSpecification,
-    }),
+    ...(openingHoursSpecification &&
+      openingHoursSpecification.length > 0 && {
+        openingHoursSpecification,
+      }),
+    ...(specialOpeningHoursSpecification &&
+      specialOpeningHoursSpecification.length > 0 && {
+        specialOpeningHoursSpecification,
+      }),
     ...(priceRange && { priceRange }),
     ...(geo && {
       geo: {
-        '@type': 'GeoCoordinates',
+        "@type": "GeoCoordinates",
         latitude: geo.latitude,
         longitude: geo.longitude,
       },
@@ -251,7 +255,7 @@ function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Rec
     ...(additionalType && { additionalType }),
     ...(amenityFeature && amenityFeature.length > 0 && { amenityFeature }),
     ...(sameAs && sameAs.length > 0 && { sameAs }),
-  }
+  };
 }
 
 /**
@@ -259,11 +263,11 @@ function buildLocalBusinessData(props: LocalBusinessData & { id?: string }): Rec
  */
 export function LocalBusinessJsonLd(props: LocalBusinessData): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
+    "@context": "https://schema.org",
     ...buildLocalBusinessData(props),
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -274,36 +278,36 @@ export function GraphJsonLd({
   localBusiness,
   webSite,
 }: {
-  localBusiness: LocalBusinessData
-  webSite: { name: string; description?: string; url?: string }
+  localBusiness: LocalBusinessData;
+  webSite: { name: string; description?: string; url?: string };
 }): ReactElement {
-  const orgId = `${localBusiness.url || BASE_URL}/#organization`
-  const websiteId = `${webSite.url || BASE_URL}/#website`
+  const orgId = `${localBusiness.url || BASE_URL}/#organization`;
+  const websiteId = `${webSite.url || BASE_URL}/#website`;
 
   const data = {
-    '@context': 'https://schema.org',
-    '@graph': [
+    "@context": "https://schema.org",
+    "@graph": [
       buildLocalBusinessData({ ...localBusiness, id: orgId }),
       {
-        '@type': 'WebSite',
-        '@id': websiteId,
+        "@type": "WebSite",
+        "@id": websiteId,
         name: webSite.name,
         ...(webSite.description && { description: webSite.description }),
         url: webSite.url || BASE_URL,
-        publisher: { '@id': orgId },
+        publisher: { "@id": orgId },
         potentialAction: {
-          '@type': 'SearchAction',
+          "@type": "SearchAction",
           target: {
-            '@type': 'EntryPoint',
+            "@type": "EntryPoint",
             urlTemplate: `${webSite.url || BASE_URL}/search?q={search_term_string}`,
           },
-          'query-input': 'required name=search_term_string',
+          "query-input": "required name=search_term_string",
         },
       },
     ],
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -317,23 +321,23 @@ export function ProductJsonLd({
   offers,
 }: ProductData): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
+    "@context": "https://schema.org",
+    "@type": "Product",
     name,
     description,
     image,
     url,
     ...(offers && {
       offers: {
-        '@type': 'Offer',
+        "@type": "Offer",
         price: offers.price,
-        priceCurrency: offers.priceCurrency || 'JPY',
-        availability: offers.availability || 'https://schema.org/InStock',
+        priceCurrency: offers.priceCurrency || "JPY",
+        availability: offers.availability || "https://schema.org/InStock",
       },
     }),
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -349,8 +353,8 @@ export function ArticleJsonLd({
   author,
 }: ArticleData): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
+    "@context": "https://schema.org",
+    "@type": "Article",
     headline,
     description,
     ...(image && { image }),
@@ -359,19 +363,19 @@ export function ArticleJsonLd({
     dateModified: dateModified || datePublished,
     ...(author && {
       author: {
-        '@type': 'Person',
+        "@type": "Person",
         name: author.name,
         ...(author.url && { url: author.url }),
       },
     }),
     publisher: {
-      '@type': 'Organization',
+      "@type": "Organization",
       name: SITE_DEFAULTS.name,
       url: BASE_URL,
     },
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -384,10 +388,10 @@ export function NewsArticleJsonLd({
   url,
   datePublished,
   dateModified,
-}: Omit<ArticleData, 'author'>): ReactElement {
+}: Omit<ArticleData, "author">): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'NewsArticle',
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
     headline,
     description,
     ...(image && { image }),
@@ -395,13 +399,13 @@ export function NewsArticleJsonLd({
     datePublished,
     dateModified: dateModified || datePublished,
     publisher: {
-      '@type': 'Organization',
+      "@type": "Organization",
       name: SITE_DEFAULTS.name,
       url: BASE_URL,
     },
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -410,20 +414,20 @@ export function NewsArticleJsonLd({
 export function BreadcrumbJsonLd({
   items,
 }: {
-  items: BreadcrumbItem[]
+  items: BreadcrumbItem[];
 }): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
+      "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url.startsWith('http') ? item.url : `${BASE_URL}${item.url}`,
+      item: item.url.startsWith("http") ? item.url : `${BASE_URL}${item.url}`,
     })),
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -431,19 +435,19 @@ export function BreadcrumbJsonLd({
  */
 export function FAQPageJsonLd({ items }: { items: FAQItem[] }): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
     mainEntity: items.map((item) => ({
-      '@type': 'Question',
+      "@type": "Question",
       name: item.question,
       acceptedAnswer: {
-        '@type': 'Answer',
+        "@type": "Answer",
         text: item.answer,
       },
     })),
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }
 
 /**
@@ -454,25 +458,25 @@ export function WebSiteJsonLd({
   description,
   url = BASE_URL,
 }: {
-  name: string
-  description?: string
-  url?: string
+  name: string;
+  description?: string;
+  url?: string;
 }): ReactElement {
   const data = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
+    "@context": "https://schema.org",
+    "@type": "WebSite",
     name,
     ...(description && { description }),
     url,
     potentialAction: {
-      '@type': 'SearchAction',
+      "@type": "SearchAction",
       target: {
-        '@type': 'EntryPoint',
+        "@type": "EntryPoint",
         urlTemplate: `${url}/search?q={search_term_string}`,
       },
-      'query-input': 'required name=search_term_string',
+      "query-input": "required name=search_term_string",
     },
-  }
+  };
 
-  return <JsonLd data={data} />
+  return <JsonLd data={data} />;
 }

@@ -5,6 +5,7 @@ import {
   checkSlugAvailability,
   getSlugErrorMessage,
 } from "@/shared/lib/slug-validation";
+import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
 
 const searchSchema = z.object({
   slug: z.string().trim().max(100).optional(),
@@ -13,7 +14,7 @@ const searchSchema = z.object({
 export async function GET(request: Request): Promise<NextResponse> {
   const auth = await checkPermission("page", "create", request.headers);
   if (!auth.success) {
-    return NextResponse.json({ error: auth.error.error }, { status: 403 });
+    return jsonError(auth.error.error, 403);
   }
 
   const url = new URL(request.url);
@@ -22,10 +23,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   });
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "slug が不正です" },
-      { status: 400 },
-    );
+    return jsonValidationError(parsed.error, "slug が不正です");
   }
 
   const slug = parsed.data.slug ?? "";

@@ -73,58 +73,81 @@ if (!parsed.success) {
 
 ## Server Actions エラーパターン
 
-### 認証エラー（withPermission HOF — 推奨パターン）
+### 認証エラー（executeAdminMutation — 推奨パターン）
 
-`withPermission` HOF は認証・認可・監査ログを自動化する。管理画面の Server Actions では必ず使用:
+`executeAdminMutation` は認証・認可・DomainError ハンドリング・監査ログを一括処理する。管理画面の書き込み系 Server Actions では必ず使用:
 
 ```typescript
 "use server";
 
-import { withPermission } from "@/admin/lib/server-action-helpers";
-import { createSuccess, createFailure } from "@/admin/types/server-actions";
+import { executeAdminMutation } from "@/admin/lib/admin-action";
+import { createSuccess } from "@/admin/types/server-actions";
 import { createValidationError } from "@/shared/lib/action-helpers";
 
-export const createPost = withPermission<[CreatePostInput], { id: string }>(
-  "post",
-  "create",
-)(async (user, data) => {
-  // withPermission が認証・認可を処理済み。ここは user が保証された状態
-  const parsed = createPostSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationError(parsed.error);
-  }
+export const createPost = async (input: CreatePostInput) => {
+  const parsed = createPostSchema.safeParse(input);
+  if (!parsed.success) return createValidationError(parsed.error);
 
-  const post = await prisma.post.create({ data: parsed.data });
-  updateTag(CACHE_TAGS.POSTS);
-  return createSuccess("投稿を作成しました", { id: post.id });
-});
+  return executeAdminMutation({
+    resource: "post",
+    action: "create",
+    execute: async () => createPostCommand(parsed.data),
+    success: (result) => createSuccess("投稿を作成しました", result),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.POSTS);
+    },
+    resolveAuditResourceId: (data) => data.id,
+  });
+};
 ```
 
-HOF の種類:
+`executeAdminMutation` が自動処理する内容:
 
-| HOF                                | 用途                                       |
-| ---------------------------------- | ------------------------------------------ |
-| `withPermission(resource, action)` | 書き込み系（create/update/delete/publish） |
-| `withReadPermission(resource)`     | 読み取り系（ActionResult不要な場合）       |
-| `withRole(requiredRole)`           | ロール限定アクション                       |
+- 認証チェック（`checkPermission` / `checkResourceAccess`）
+- 権限チェック（resource + action ベース）
+- DomainError のキャッチ → `createFailure(error.message)` 変換
+- 監査ログ記録（`logAction`）
 
-### 直接認証チェック（checkPermission — HOFが使いにくい場合）
+関数の種類:
+
+| 関数                         | 用途                                                      |
+| ---------------------------- | --------------------------------------------------------- |
+| `executeAdminMutation`       | 書き込み系 Server Actions（`ActionResult<TData>` を返す） |
+| `executeAdminMutationResult` | 書き込み系で `MutationResult<TData>` を返す場合           |
+
+オプション:
+
+| オプション               | 型                                     | 必須 | 説明                                    |
+| ------------------------ | -------------------------------------- | ---- | --------------------------------------- |
+| `resource`               | `Resource`                             | Yes  | 権限チェック対象リソース                |
+| `action`                 | `Action`                               | Yes  | 権限チェック対象アクション              |
+| `resourceId`             | `string`                               | No   | リソースアクセスチェック・監査ログ用 ID |
+| `checkResourceAccess`    | `boolean`                              | No   | `true` で `checkResourceAccess` を使用  |
+| `execute`                | `(user: User) => Promise<TData>`       | Yes  | ビジネスロジック実行関数                |
+| `success`                | `(data: TData) => ActionSuccess`       | Yes  | 成功レスポンス生成関数                  |
+| `afterSuccess`           | `(data: TData) => void \| Promise`     | No   | キャッシュ無効化等の後処理              |
+| `resolveAuditResourceId` | `(data: TData) => string \| undefined` | No   | 実行結果から監査ログ用 ID を解決        |
+
+### 直接認証チェック（checkPermission — API Routes 専用）
+
+`checkPermission` を直接使用するのは API Routes のみ。Server Actions では `executeAdminMutation` を使用する:
 
 ```typescript
+// API Route でのみ使用
 import { checkPermission } from "@/admin/lib/action-auth";
 
-export async function deletePost(id: string): Promise<ActionResult> {
+export async function DELETE(req: Request) {
   const auth = await checkPermission("post", "delete");
-  if (!auth.success) return auth.error;
+  if (!auth.success) return new Response(null, { status: 403 });
 
   const { user } = auth;
-  // ... action logic
+  // ... API route logic
 }
 ```
 
 ### データベースエラー
 
-try/catch で必ずエラーをログ + `createFailure` を返す。エラー握りつぶし禁止:
+`executeAdminMutation` は DomainError を自動キャッチするが、それ以外の例外（DB エラー等）は再スローされる。ドメインコマンド層で try/catch + `logError` + `createFailure` を行う:
 
 ```typescript
 import {
@@ -133,56 +156,70 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
 
-export const updateSpace = withPermission<[string, SpaceInput]>(
-  "space",
-  "update",
-)(async (user, id, data) => {
-  const parsed = spaceFormSchema.safeParse(data);
+// Server Action（executeAdminMutation がDomainErrorを自動処理）
+export const updateSpace = async (id: string, input: SpaceInput) => {
+  const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) return createValidationError(parsed.error);
 
+  return executeAdminMutation({
+    resource: "space",
+    action: "update",
+    resourceId: id,
+    execute: async () => updateSpaceCommand(id, parsed.data),
+    success: () => createSuccess("スペースを更新しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SPACES);
+    },
+  });
+};
+
+// ドメインコマンド層でDBエラーをハンドリング
+async function updateSpaceCommand(id: string, data: SpaceData) {
   try {
-    await prisma.space.update({ where: { id }, data: parsed.data });
-    updateTag(CACHE_TAGS.SPACES);
-    return createSuccess("スペースを更新しました");
+    await prisma.space.update({ where: { id }, data });
   } catch (error) {
     logError(error, {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.HIGH,
       context: { operation: "updateSpace", spaceId: id },
     });
-    return createFailure("スペースの更新に失敗しました");
+    throw error; // executeAdminMutation に再スローされ、呼び出し元でハンドリング
   }
-});
+}
 ```
 
 ### ビジネスロジックエラー（早期リターン）
 
 ```typescript
-export const publishPost = withPermission<[string]>(
-  "post",
-  "publish",
-)(async (user, id) => {
+export const publishPost = async (id: string) => {
+  return executeAdminMutation({
+    resource: "post",
+    action: "publish",
+    resourceId: id,
+    execute: async () => publishPostCommand(id),
+    success: () => createSuccess("公開しました"),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.POSTS);
+    },
+  });
+};
+
+// ドメインコマンド層で DomainError を throw → executeAdminMutation が自動キャッチ
+async function publishPostCommand(id: string) {
   const post = await prisma.post.findUnique({ where: { id } });
   if (!post) {
-    return createFailure("投稿が見つかりません");
+    throw new DomainError("投稿が見つかりません");
   }
 
   if (!post.title || !post.contentHtml) {
-    return createFailure("タイトルとコンテンツが必要です");
-  }
-
-  // 競合検出（ドメイン固有エラー）
-  const overlap = await checkReservationOverlap(id);
-  if (overlap) {
-    return createFailure("選択された時間帯は既に予約されています");
+    throw new DomainError("タイトルとコンテンツが必要です");
   }
 
   await prisma.post.update({
     where: { id },
     data: { status: PostStatus.PUBLISHED },
   });
-  return createSuccess("公開しました");
-});
+}
 ```
 
 ### 一時的障害のリトライ
@@ -426,7 +463,7 @@ try {
    - `createSuccess()` / `createFailure()` を使用
 
 5. **認証チェック漏れ禁止**
-   - 管理画面 Server Actions は必ず `withPermission` または `checkPermission` を使用
+   - 管理画面 Server Actions は必ず `executeAdminMutation` を使用。`checkPermission` の直接使用は API Routes のみ
 
 6. **safeFetch の fallback に `undefined` 指定禁止**
    - `undefined` は React 19 シリアライゼーション対象外。`null` または具体的な値を使用
@@ -448,12 +485,12 @@ try {
 
 ## ファイル配置
 
-| パス                                | 内容                                                                                                                                                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@/shared/types/server-actions`     | `ActionResult`, `createSuccess`, `createFailure`, `isActionSuccess`                                                                                                                   |
-| `@/shared/lib/errors`               | `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError`, `isReservationOverlapError`（クライアントセーフ — Client Component から import 可） |
-| `@/shared/lib/errors/server`        | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`（サーバー専用）+ 上記を全て re-export。Server Actions / API Routes / `'use cache'` 関数で使用                           |
-| `@/shared/lib/logger`               | `logger`（汎用ロガー）                                                                                                                                                                |
-| `@/shared/lib/action-helpers`       | `createValidationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                           |
-| `@/admin/lib/server-action-helpers` | `withPermission`, `withReadPermission`, `withRole`（HOF群）                                                                                                                           |
-| `@/admin/lib/action-auth`           | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |
+| パス                            | 内容                                                                                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/shared/types/server-actions` | `ActionResult`, `createSuccess`, `createFailure`, `isActionSuccess`                                                                                                                   |
+| `@/shared/lib/errors`           | `ErrorCategory`, `ErrorSeverity`, `normalizeError`, `getErrorMessage`, `ReservationOverlapError`, `isReservationOverlapError`（クライアントセーフ — Client Component から import 可） |
+| `@/shared/lib/errors/server`    | `logError`, `createErrorLogger`, `safeFetch`, `criticalFetch`（サーバー専用）+ 上記を全て re-export。Server Actions / API Routes / `'use cache'` 関数で使用                           |
+| `@/shared/lib/logger`           | `logger`（汎用ロガー）                                                                                                                                                                |
+| `@/shared/lib/action-helpers`   | `createValidationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                           |
+| `@/admin/lib/admin-action`      | `executeAdminMutation`, `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理）                                                                                    |
+| `@/admin/lib/action-auth`       | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |

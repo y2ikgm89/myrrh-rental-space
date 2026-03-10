@@ -1,15 +1,12 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import {
-  deleteReservation,
-} from "@/admin/actions/reservation";
 import { getReservationById } from "@/admin/queries/reservation";
 import { ReservationDetail } from "./_components/ReservationDetail";
+import { ReservationDangerZone } from "./_components/ReservationDangerZone";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -21,7 +18,7 @@ type PageProps = {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  await headers();
+  await connection();
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -35,6 +32,7 @@ export async function generateMetadata({
 }
 
 export default async function ReservationDetailPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
   const reservation = await getReservationById(id);
 
@@ -57,13 +55,10 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       }
     >
       <ReservationDetail reservation={reservation} />
-      <DangerZone
-        deleteLabel="予約を削除"
+      <ReservationDangerZone
+        reservationId={reservation.id}
         itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
-        onDelete={deleteReservation.bind(null, reservation.id)}
-        redirectTo="/admin/reservations"
       />
     </AdminDetailLayout>
   );
 }
-

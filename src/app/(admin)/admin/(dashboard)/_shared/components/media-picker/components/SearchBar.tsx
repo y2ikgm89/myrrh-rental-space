@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * SearchBar
@@ -6,18 +6,18 @@
  * メディア検索入力
  */
 
-import { Search } from 'lucide-react'
+import { Search } from "lucide-react";
 
 interface SearchBarProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
 }
 
 export function SearchBar({
   value,
   onChange,
-  placeholder = '画像を検索...',
+  placeholder = "画像を検索...",
 }: SearchBarProps) {
   return (
     <div className="relative flex-1">
@@ -30,5 +30,5 @@ export function SearchBar({
         className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
     </div>
-  )
+  );
 }

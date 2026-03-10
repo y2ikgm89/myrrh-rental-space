@@ -4,11 +4,11 @@
  * @description Vimeo動画挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,50 +18,50 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createVimeoNode, extractVimeoId } from '../nodes/VimeoNode'
+} from "@/admin/components/ui";
+import { $createVimeoNode, extractVimeoId } from "../nodes/VimeoNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type VimeoPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function VimeoPlugin({ isOpen, onClose }: VimeoPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    const videoId = extractVimeoId(url)
+    const videoId = extractVimeoId(url);
 
     if (!videoId) {
-      setError('有効なVimeo URLを入力してください')
-      return
+      setError("有効なVimeo URLを入力してください");
+      return;
     }
 
     editor.update(() => {
-      const node = $createVimeoNode({ videoId })
-      $insertNodeToNearestRoot(node)
-    })
+      const node = $createVimeoNode({ videoId });
+      $insertNodeToNearestRoot(node);
+    });
 
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -81,8 +81,8 @@ export function VimeoPlugin({ isOpen, onClose }: VimeoPluginProps) {
               type="url"
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value)
-                setError('')
+                setUrl(e.target.value);
+                setError("");
               }}
               placeholder="https://vimeo.com/123456789"
             />
@@ -100,5 +100,5 @@ export function VimeoPlugin({ isOpen, onClose }: VimeoPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

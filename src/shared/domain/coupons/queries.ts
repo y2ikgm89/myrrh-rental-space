@@ -115,7 +115,11 @@ function buildStatusWhereClause(
 function buildCouponWhere(filters: CouponFilters): Prisma.CouponWhereInput {
   const where: Prisma.CouponWhereInput = {};
 
-  if (filters.status && filters.status !== "active" && filters.status !== "limitReached") {
+  if (
+    filters.status &&
+    filters.status !== "active" &&
+    filters.status !== "limitReached"
+  ) {
     Object.assign(where, buildStatusWhereClause(filters.status));
   }
 
@@ -173,10 +177,7 @@ function buildRawCouponWhere(filters: CouponFilters): Prisma.Sql {
     return PrismaNamespace.empty;
   }
 
-  return PrismaNamespace.sql`WHERE ${PrismaNamespace.join(
-    clauses,
-    " AND ",
-  )}`;
+  return PrismaNamespace.sql`WHERE ${PrismaNamespace.join(clauses, " AND ")}`;
 }
 
 export async function getCoupons(
@@ -196,7 +197,10 @@ export async function getCoupons(
   if (filters.status === "active" || filters.status === "limitReached") {
     const whereSql = buildRawCouponWhere(filters);
     const sortColumn = SORT_COLUMN_MAP[sortBy];
-    const sortDirection = sortOrder === "asc" ? PrismaNamespace.raw("ASC") : PrismaNamespace.raw("DESC");
+    const sortDirection =
+      sortOrder === "asc"
+        ? PrismaNamespace.raw("ASC")
+        : PrismaNamespace.raw("DESC");
     const countResult = await prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
       FROM "Coupon"
@@ -252,7 +256,9 @@ export async function getCoupons(
   };
 }
 
-export async function getCouponById(id: string): Promise<CouponDetailData | null> {
+export async function getCouponById(
+  id: string,
+): Promise<CouponDetailData | null> {
   const coupon = await prisma.coupon.findUnique({
     where: { id },
   });

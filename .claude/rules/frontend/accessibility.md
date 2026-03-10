@@ -14,6 +14,7 @@ paths:
 管理画面（Lexical エディタ含む）でも基本的な a11y 規則を守る。
 
 本プロジェクトの a11y インフラ:
+
 - `SkipLink` — キーボードナビゲーション（`@/public/components/a11y`）
 - `AriaLiveRegion` — 動的コンテンツ通知（`@/public/components/a11y`）
 - `AriaLiveProvider` — コンテキスト管理（`@/shared/contexts`）
@@ -58,7 +59,9 @@ paths:
 ```tsx
 <nav aria-label="パンくずリスト">
   <ol>
-    <li><a href="/">ホーム</a></li>
+    <li>
+      <a href="/">ホーム</a>
+    </li>
     <li aria-current="page">スペース一覧</li>
   </ol>
 </nav>
@@ -66,9 +69,9 @@ paths:
 
 ### ボタン vs リンク
 
-| 用途 | 要素 |
-|------|------|
-| ページ遷移・URL変化 | `<a href="...">` |
+| 用途                                          | 要素                     |
+| --------------------------------------------- | ------------------------ |
+| ページ遷移・URL変化                           | `<a href="...">`         |
 | JavaScript アクション（モーダル開閉、送信等） | `<button type="button">` |
 
 ```tsx
@@ -85,7 +88,7 @@ paths:
 
 ---
 
-## aria-* 属性
+## aria-\* 属性
 
 ### aria-label / aria-labelledby
 
@@ -110,8 +113,8 @@ paths:
 
 ```tsx
 function FaqAccordion({ question, answer }: Props) {
-  const [open, setOpen] = useState(false)
-  const contentId = useId()
+  const [open, setOpen] = useState(false);
+  const contentId = useId();
 
   return (
     <div>
@@ -123,16 +126,11 @@ function FaqAccordion({ question, answer }: Props) {
       >
         {question}
       </button>
-      <div
-        id={contentId}
-        role="region"
-        aria-label={question}
-        hidden={!open}
-      >
+      <div id={contentId} role="region" aria-label={question} hidden={!open}>
         {answer}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -142,22 +140,22 @@ function FaqAccordion({ question, answer }: Props) {
 
 ```tsx
 // NG: 独自 aria-live を追加（AriaLiveRegion と競合）
-<div aria-live="polite">{statusMessage}</div>
+<div aria-live="polite">{statusMessage}</div>;
 
 // OK: announce 関数を使用
-import { useAriaLive } from '@/shared/contexts'
+import { useAriaLive } from "@/shared/contexts";
 
 function ReservationForm() {
-  const { announce } = useAriaLive()
+  const { announce } = useAriaLive();
 
   const handleSubmit = async () => {
-    const result = await submitReservation(data)
+    const result = await submitReservation(data);
     if (result.success) {
-      announce('予約が完了しました', 'polite')
+      announce("予約が完了しました", "polite");
     } else {
-      announce('予約に失敗しました。内容を確認してください', 'assertive')
+      announce("予約に失敗しました。内容を確認してください", "assertive");
     }
-  }
+  };
 }
 ```
 
@@ -187,7 +185,7 @@ public.css / admin.css の `@layer base` で全体フォーカスリングを定
 
 ```tsx
 // OK: Radix UI Dialog（フォーカストラップ自動対応）
-import * as Dialog from '@radix-ui/react-dialog'
+import * as Dialog from "@radix-ui/react-dialog";
 
 <Dialog.Root>
   <Dialog.Trigger>開く</Dialog.Trigger>
@@ -198,7 +196,7 @@ import * as Dialog from '@radix-ui/react-dialog'
       {/* Tabキーがここに閉じ込められる */}
     </Dialog.Content>
   </Dialog.Portal>
-</Dialog.Root>
+</Dialog.Root>;
 ```
 
 ### スキップリンク
@@ -224,38 +222,40 @@ import * as Dialog from '@radix-ui/react-dialog'
 アニメーションをスキップする場合（reduce 時は GSAP 不介入 → 要素は CSS デフォルトで表示）:
 
 ```tsx
-'use client'
+"use client";
 
-import { useRef } from 'react'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
 
 function AnimatedSection() {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
-      const mm = gsap.matchMedia()
+      const mm = gsap.matchMedia();
 
       // NG: mm を使わず直接アニメーション（reduced-motion 無視）
       // gsap.from(containerRef.current, { opacity: 0, y: 50 })
 
       // OK: matchMedia でラップ
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.fromTo(
           containerRef.current,
           { opacity: 0, y: 50 },
           {
-            opacity: 1, y: 0, duration: 0.8,
-            scrollTrigger: { trigger: containerRef.current, start: 'top 85%' },
-          }
-        )
-      })
+            opacity: 1,
+            y: 0,
+            duration: 0.8,
+            scrollTrigger: { trigger: containerRef.current, start: "top 85%" },
+          },
+        );
+      });
     },
-    { scope: containerRef }
-  )
+    { scope: containerRef },
+  );
 
-  return <div ref={containerRef}>...</div>
+  return <div ref={containerRef}>...</div>;
 }
 ```
 
@@ -273,39 +273,42 @@ function AnimatedSection() {
 reduce 時も軽量アニメーションを実行する場合:
 
 ```tsx
-useGSAP(() => {
-  const mm = gsap.matchMedia()
-  mm.add(
-    {
-      reduce: '(prefers-reduced-motion: reduce)',
-      noPreference: '(prefers-reduced-motion: no-preference)',
-    },
-    (ctx) => {
-      const { reduce } = ctx.conditions ?? {}
-      gsap.to(el, {
-        y: reduce ? 4 : 20,  // reduce 時は小さな値
-        repeat: -1,
-        yoyo: true,
-        duration: reduce ? 2 : 0.8,
-      })
-    }
-  )
-}, { scope: ref })
+useGSAP(
+  () => {
+    const mm = gsap.matchMedia();
+    mm.add(
+      {
+        reduce: "(prefers-reduced-motion: reduce)",
+        noPreference: "(prefers-reduced-motion: no-preference)",
+      },
+      (ctx) => {
+        const { reduce } = ctx.conditions ?? {};
+        gsap.to(el, {
+          y: reduce ? 4 : 20, // reduce 時は小さな値
+          repeat: -1,
+          yoyo: true,
+          duration: reduce ? 2 : 0.8,
+        });
+      },
+    );
+  },
+  { scope: ref },
+);
 ```
 
 ### イベントハンドラでの reduced-motion（パターン C）
 
 ```tsx
-import { useMotionPreference } from '@/public/hooks/use-motion-preference'
+import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 
 function MagneticButton() {
-  const motionOk = useMotionPreference()  // gsap.matchMedia ベースの ReactiveRef
+  const motionOk = useMotionPreference(); // gsap.matchMedia ベースの ReactiveRef
 
   // useCallback 不要（React Compiler 自動メモ化。ref は依存配列と衝突する）
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!motionOk.current) return
-    gsap.to(buttonRef.current, { x: delta.x * 0.3, y: delta.y * 0.3 })
-  }
+    if (!motionOk.current) return;
+    gsap.to(buttonRef.current, { x: delta.x * 0.3, y: delta.y * 0.3 });
+  };
 }
 ```
 
@@ -315,7 +318,7 @@ function MagneticButton() {
 
 ```typescript
 // VisualEffectsProvider 内部ロジック（参考）
-if (prefersReducedMotion) return 1  // → L1（CSS onlyに制限）
+if (prefersReducedMotion) return 1; // → L1（CSS onlyに制限）
 ```
 
 Three.js / PixiJS は `effectLevel >= 3` / `effectLevel >= 4` の条件でのみ描画されるため、
@@ -348,7 +351,7 @@ Three.js / PixiJS は `effectLevel >= 3` / `effectLevel >= 4` の条件でのみ
 
 ```tsx
 function FormField({ id, label, error }: Props) {
-  const errorId = `${id}-error`
+  const errorId = `${id}-error`;
 
   return (
     <div>
@@ -356,7 +359,7 @@ function FormField({ id, label, error }: Props) {
       <input
         id={id}
         aria-describedby={error ? errorId : undefined}
-        aria-invalid={error ? 'true' : undefined}
+        aria-invalid={error ? "true" : undefined}
       />
       {error && (
         <p id={errorId} role="alert" className="text-destructive text-sm">
@@ -364,7 +367,7 @@ function FormField({ id, label, error }: Props) {
         </p>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -433,11 +436,11 @@ Radix UI コンポーネントは Escape キー対応済み。カスタム実装
 ```tsx
 useEffect(() => {
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose()
-  }
-  document.addEventListener('keydown', handleKeyDown)
-  return () => document.removeEventListener('keydown', handleKeyDown)
-}, [onClose])
+    if (e.key === "Escape") onClose();
+  };
+  document.addEventListener("keydown", handleKeyDown);
+  return () => document.removeEventListener("keydown", handleKeyDown);
+}, [onClose]);
 ```
 
 ---
@@ -468,14 +471,14 @@ useEffect(() => {
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@/public/components/a11y/SkipLink.tsx` | キーボードナビゲーション用スキップリンク |
-| `@/public/components/a11y/AriaLiveRegion.tsx` | スクリーンリーダー向け動的通知リージョン |
-| `@/shared/contexts` | `AriaLiveProvider`, `useAriaLive`, `useAriaLiveOptional` |
-| `@/public/lib/a11y/` | `skip-link.ts`, `aria-live.ts`, `motion-utils.ts` |
-| `@/public/hooks/use-motion-preference.ts` | `gsap.matchMedia` ベースの reduced-motion フック（パターン C） |
-| `@/public/components/animations/ScrollReveal.tsx` | matchMedia 対応済みスクロールアニメーション |
+| パス                                              | 内容                                                           |
+| ------------------------------------------------- | -------------------------------------------------------------- |
+| `@/public/components/a11y/SkipLink.tsx`           | キーボードナビゲーション用スキップリンク                       |
+| `@/public/components/a11y/AriaLiveRegion.tsx`     | スクリーンリーダー向け動的通知リージョン                       |
+| `@/shared/contexts`                               | `AriaLiveProvider`, `useAriaLive`, `useAriaLiveOptional`       |
+| `@/public/lib/a11y/`                              | `skip-link.ts`, `aria-live.ts`, `motion-utils.ts`              |
+| `@/public/hooks/use-motion-preference.ts`         | `gsap.matchMedia` ベースの reduced-motion フック（パターン C） |
+| `@/public/components/animations/ScrollReveal.tsx` | matchMedia 対応済みスクロールアニメーション                    |
 
 ## 参照
 

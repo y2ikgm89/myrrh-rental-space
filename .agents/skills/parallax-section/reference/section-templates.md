@@ -107,17 +107,17 @@ export function {SectionName}Hero() {
 
 ### hero ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| レイヤー数 | 5 | 3 | 5 |
-| 背景 yPercent | 40 | 15 | 25 |
-| 前景 yPercent | -60 | -20 | -40 |
-| 入場 duration | 1.2s | 0.9s | 0.6s |
-| 入場 stagger | 0.20 | 0.15 | 0.08 |
-| 入場 ease | `expo.out` | `power2.out` | `back.out(1.7)` |
-| テキスト分割 | char + rotateX | line mask reveal | char + scale + bounce |
-| コンテンツフェード start | 15% top | 25% top | 20% top |
-| スクロール高さ | 250svh | 180svh | 200svh |
+| パラメータ               | ドラマチック   | エレガント       | プレイフル            |
+| ------------------------ | -------------- | ---------------- | --------------------- |
+| レイヤー数               | 5              | 3                | 5                     |
+| 背景 yPercent            | 40             | 15               | 25                    |
+| 前景 yPercent            | -60            | -20              | -40                   |
+| 入場 duration            | 1.2s           | 0.9s             | 0.6s                  |
+| 入場 stagger             | 0.20           | 0.15             | 0.08                  |
+| 入場 ease                | `expo.out`     | `power2.out`     | `back.out(1.7)`       |
+| テキスト分割             | char + rotateX | line mask reveal | char + scale + bounce |
+| コンテンツフェード start | 15% top        | 25% top          | 20% top               |
+| スクロール高さ           | 250svh         | 180svh           | 200svh                |
 
 ---
 
@@ -216,14 +216,14 @@ export function {SectionName}Content() {
 
 ### content ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| clipPath初期 inset | 30% 20% | 10% 5% | 20% 15% round 32px |
-| clipPath ease | `power3.inOut` | `power2.inOut` | `back.out(1.4)` |
-| 画像パララックス yPercent | ±15 | ±8 | ±12 |
-| テキスト入場 y | 50px | 25px | 35px |
-| テキスト stagger | 0.15 | 0.12 | 0.08 |
-| 画像 scale初期 | 1.20 | 1.10 | 1.15 |
+| パラメータ                | ドラマチック   | エレガント     | プレイフル         |
+| ------------------------- | -------------- | -------------- | ------------------ |
+| clipPath初期 inset        | 30% 20%        | 10% 5%         | 20% 15% round 32px |
+| clipPath ease             | `power3.inOut` | `power2.inOut` | `back.out(1.4)`    |
+| 画像パララックス yPercent | ±15            | ±8             | ±12                |
+| テキスト入場 y            | 50px           | 25px           | 35px               |
+| テキスト stagger          | 0.15           | 0.12           | 0.08               |
+| 画像 scale初期            | 1.20           | 1.10           | 1.15               |
 
 ---
 
@@ -291,14 +291,14 @@ export function {SectionName}CTA() {
 
 ### cta ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| 入場 scale | 0.85 | 0.95 | 0.90 |
-| 入場 ease | `expo.out` | `power2.out` | `elastic.out(1, 0.5)` |
-| 入場 duration | 1.2s | 0.8s | 0.7s |
-| 背景 | 強いグラデーション | 微細なグラデーション | カラフルグラデーション |
-| 浮遊装飾 yPercent | ±40 | ±15 | ±30 (回転付き) |
-| 装飾数 | 4-6個 | 2個 | 5-8個 |
+| パラメータ        | ドラマチック       | エレガント           | プレイフル             |
+| ----------------- | ------------------ | -------------------- | ---------------------- |
+| 入場 scale        | 0.85               | 0.95                 | 0.90                   |
+| 入場 ease         | `expo.out`         | `power2.out`         | `elastic.out(1, 0.5)`  |
+| 入場 duration     | 1.2s               | 0.8s                 | 0.7s                   |
+| 背景              | 強いグラデーション | 微細なグラデーション | カラフルグラデーション |
+| 浮遊装飾 yPercent | ±40                | ±15                  | ±30 (回転付き)         |
+| 装飾数            | 4-6個              | 2個                  | 5-8個                  |
 
 ---
 
@@ -404,14 +404,14 @@ export function {SectionName}Stacking({ items }: { items: readonly StackItem[] }
 
 ### stacking ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| フェード opacity | 0.2 | 0.4 | 0.3 |
-| フェード scale | 0.90 | 0.97 | 0.93 |
-| テキストリビール ease | `expo.out` | `power2.out` | `back.out(1.7)` |
-| テキストリビール stagger | 0.18 | 0.12 | 0.08 |
-| 背景遷移 | 色相回転 | 明度変化 | 彩度変化 |
-| セクション間効果 | blur(4→0) 追加 | なし | rotate(2deg→0) 追加 |
+| パラメータ               | ドラマチック   | エレガント   | プレイフル          |
+| ------------------------ | -------------- | ------------ | ------------------- |
+| フェード opacity         | 0.2            | 0.4          | 0.3                 |
+| フェード scale           | 0.90           | 0.97         | 0.93                |
+| テキストリビール ease    | `expo.out`     | `power2.out` | `back.out(1.7)`     |
+| テキストリビール stagger | 0.18           | 0.12         | 0.08                |
+| 背景遷移                 | 色相回転       | 明度変化     | 彩度変化            |
+| セクション間効果         | blur(4→0) 追加 | なし         | rotate(2deg→0) 追加 |
 
 ---
 
@@ -525,14 +525,14 @@ export function {SectionName}Gallery({ items }: { items: readonly GalleryItem[] 
 
 ### gallery ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| batch入場 y | 80px | 40px | 60px |
-| batch stagger | 0.20 | 0.12 | 0.08 |
-| batch ease | `power3.out` | `power2.out` | `back.out(1.4)` |
-| clipPath初期 inset | 25% round 20px | 10% round 12px | 15% round 24px |
-| 画像パララックス yPercent | ±12 | ±5 | ±10 |
-| グリッド offset範囲 | ±50px | ±15px | ±40px (+ rotate) |
+| パラメータ                | ドラマチック   | エレガント     | プレイフル       |
+| ------------------------- | -------------- | -------------- | ---------------- |
+| batch入場 y               | 80px           | 40px           | 60px             |
+| batch stagger             | 0.20           | 0.12           | 0.08             |
+| batch ease                | `power3.out`   | `power2.out`   | `back.out(1.4)`  |
+| clipPath初期 inset        | 25% round 20px | 10% round 12px | 15% round 24px   |
+| 画像パララックス yPercent | ±12            | ±5             | ±10              |
+| グリッド offset範囲       | ±50px          | ±15px          | ±40px (+ rotate) |
 
 ---
 
@@ -643,14 +643,14 @@ export function {SectionName}Zoom() {
 
 ### zoom ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| z距離 | 120vh | 80vh | 100vh |
-| stagger amount | 0.25 | 0.15 | 0.20 |
-| stagger from | 'end' | 'center' | 'random' (deterministic) |
-| --progress ease | `power2.inOut` | `power1.inOut` | `back.inOut(1.4)` |
-| テキスト分離量 | ±40vw | ±20vw | ±30vw (+ rotate) |
-| レイヤー数 | 6 | 4 | 6 |
+| パラメータ      | ドラマチック   | エレガント     | プレイフル               |
+| --------------- | -------------- | -------------- | ------------------------ |
+| z距離           | 120vh          | 80vh           | 100vh                    |
+| stagger amount  | 0.25           | 0.15           | 0.20                     |
+| stagger from    | 'end'          | 'center'       | 'random' (deterministic) |
+| --progress ease | `power2.inOut` | `power1.inOut` | `back.inOut(1.4)`        |
+| テキスト分離量  | ±40vw          | ±20vw          | ±30vw (+ rotate)         |
+| レイヤー数      | 6              | 4              | 6                        |
 
 ---
 
@@ -830,10 +830,10 @@ export function {SectionName}Split() {
 
 ### split ムードバリアント
 
-| パラメータ | ドラマチック | エレガント | プレイフル |
-|-----------|-----------|----------|----------|
-| data-speed 範囲 | 0.5〜1.5 | 0.8〜1.2 | 0.6〜1.4 |
-| テキストリビール ease | `expo.out` | `power2.out` | `back.out(1.7)` |
-| --progress scale | ×0.15 | ×0.05 | ×0.10 |
-| レイアウト | 非対称 (7:3) | 対称 (5:5) | 壊れたグリッド |
-| 装飾 | 背景スケール | 微細ライン | 回転要素 + カラフル |
+| パラメータ            | ドラマチック | エレガント   | プレイフル          |
+| --------------------- | ------------ | ------------ | ------------------- |
+| data-speed 範囲       | 0.5〜1.5     | 0.8〜1.2     | 0.6〜1.4            |
+| テキストリビール ease | `expo.out`   | `power2.out` | `back.out(1.7)`     |
+| --progress scale      | ×0.15        | ×0.05        | ×0.10               |
+| レイアウト            | 非対称 (7:3) | 対称 (5:5)   | 壊れたグリッド      |
+| 装飾                  | 背景スケール | 微細ライン   | 回転要素 + カラフル |

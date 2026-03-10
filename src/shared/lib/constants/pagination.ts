@@ -20,4 +20,4 @@ export const PAGINATION_DEFAULTS = {
     /** 公開ページデフォルト（10件） */
     default: 10,
   },
-} as const
+} as const;

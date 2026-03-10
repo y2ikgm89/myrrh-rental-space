@@ -18,7 +18,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeNewsCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createNewsSchema,
   updateNewsSchema,
@@ -26,7 +26,10 @@ import {
   type UpdateNewsInput,
 } from "@/admin/lib/validations/news";
 
-export type { CreateNewsInput, UpdateNewsInput } from "@/admin/lib/validations/news";
+export type {
+  CreateNewsInput,
+  UpdateNewsInput,
+} from "@/admin/lib/validations/news";
 export type {
   GetNewsListResult,
   NewsData,
@@ -105,7 +108,9 @@ export async function updateNews(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = await renderEditorStateToHtmlLazy(parsed.data.contentJson);
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    parsed.data.contentJson,
+  );
   let updatedNews: { oldSlug: string; slug: string } | null = null;
 
   return executeAdminMutationResult({

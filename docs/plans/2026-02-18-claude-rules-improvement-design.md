@@ -16,21 +16,21 @@
 
 現在 13ファイル ~4,451行 が全てのリクエストで常時ロードされている:
 
-| ファイル | 行数 | 問題 |
-|---------|------|------|
-| `react-patterns.md` | 792 | テスト・DB作業時も常時ロード |
-| `bun-patterns.md` | 656 | フロントエンド・DB作業時も常時ロード |
-| `server-actions.md` | 480 | Dockerfileや設定ファイル編集時も常時ロード |
-| `zod-patterns.md` | 419 | 同上 |
-| `error-handling.md` | 392 | ✓ 常時ロード妥当 |
-| `nuqs-patterns.md` | 390 | 常時ロード不要 |
-| `prisma-patterns.md` | 381 | 常時ロード不要 |
-| `test-quality.md` | 358 | テスト以外では不要 |
-| `auth-patterns.md` | 358 | 常時ロード不要 |
-| `tailwind-patterns.md` | 336 | 常時ロード不要 |
-| `type-safety.md` | 289 | ✓ 常時ロード妥当 |
-| `implementation-quality.md` | 197 | ✓ 常時ロード妥当 |
-| `server-only-patterns.md` | 95 | ✓ 常時ロード妥当 |
+| ファイル                    | 行数 | 問題                                       |
+| --------------------------- | ---- | ------------------------------------------ |
+| `react-patterns.md`         | 792  | テスト・DB作業時も常時ロード               |
+| `bun-patterns.md`           | 656  | フロントエンド・DB作業時も常時ロード       |
+| `server-actions.md`         | 480  | Dockerfileや設定ファイル編集時も常時ロード |
+| `zod-patterns.md`           | 419  | 同上                                       |
+| `error-handling.md`         | 392  | ✓ 常時ロード妥当                           |
+| `nuqs-patterns.md`          | 390  | 常時ロード不要                             |
+| `prisma-patterns.md`        | 381  | 常時ロード不要                             |
+| `test-quality.md`           | 358  | テスト以外では不要                         |
+| `auth-patterns.md`          | 358  | 常時ロード不要                             |
+| `tailwind-patterns.md`      | 336  | 常時ロード不要                             |
+| `type-safety.md`            | 289  | ✓ 常時ロード妥当                           |
+| `implementation-quality.md` | 197  | ✓ 常時ロード妥当                           |
+| `server-only-patterns.md`   | 95   | ✓ 常時ロード妥当                           |
 
 ### 確立済みプロジェクトパターン
 
@@ -52,6 +52,7 @@
 以下9ファイルに YAML フロントマターを追加する。
 
 #### `react-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -60,6 +61,7 @@ paths:
 ```
 
 #### `server-actions.md`
+
 ```yaml
 ---
 paths:
@@ -69,6 +71,7 @@ paths:
 ```
 
 #### `zod-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -77,6 +80,7 @@ paths:
 ```
 
 #### `nuqs-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -85,6 +89,7 @@ paths:
 ```
 
 #### `prisma-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -93,6 +98,7 @@ paths:
 ```
 
 #### `bun-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -102,6 +108,7 @@ paths:
 ```
 
 #### `test-quality.md`
+
 ```yaml
 ---
 paths:
@@ -111,6 +118,7 @@ paths:
 ```
 
 #### `auth-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -120,6 +128,7 @@ paths:
 ```
 
 #### `tailwind-patterns.md`
+
 ```yaml
 ---
 paths:
@@ -138,6 +147,7 @@ paths:
 **新規作成**: `docs/reference/claude-rules/react-api-reference.md`
 
 移動内容（ルール指示として不要な詳細実装例）:
+
 - React 19.2 新API の詳細コード例:
   - `useOptimistic`（楽観的UI実装コード）
   - `useActionState`（フォーム状態管理詳細）
@@ -151,6 +161,7 @@ paths:
 - Server Components / Server Actions のコード例（`server-actions.md` に重複あり）
 
 **残す内容**（必須ルール・禁止事項）:
+
 - forwardRef 廃止（breaking change、必須対応）
 - React Compiler 自動メモ化（useCallback/useMemo/memo 禁止ルール）
 - useCallback + ref.current の衝突パターン（lint エラーの原因）
@@ -164,6 +175,7 @@ paths:
 **新規作成**: `docs/reference/claude-rules/bun-test-reference.md`
 
 移動内容:
+
 - モック関数の詳細 API リスト（`mockResolvedValueOnce`, `mockImplementationOnce` 等）
 - Prisma モックの詳細実装例（createMockPrismaClient の内部実装）
 - Auth モックの詳細実装例（createMockUser, setMockSession の内部実装）
@@ -172,6 +184,7 @@ paths:
 - Bun ランタイム固有機能（Bun.file, Bun.write, Bun.env）
 
 **残す内容**（必須ルール・禁止事項）:
+
 - 基本 import パターン（`vi.*` 禁止）
 - `mock.module()` の呼び出し順序（TDZ 回避）
 - `Symbol.dispose` + `using` キーワード
@@ -200,9 +213,9 @@ paths:
 
 ## 期待効果
 
-| 指標 | 現在 | 改善後 |
-|------|------|--------|
-| 常時ロード行数 | 4,451行 | 973行 |
-| コンテキスト削減率 | — | **78% 削減** |
-| react-patterns.md | 792行 | ~350行 |
-| bun-patterns.md | 656行 | ~280行 |
+| 指標               | 現在    | 改善後       |
+| ------------------ | ------- | ------------ |
+| 常時ロード行数     | 4,451行 | 973行        |
+| コンテキスト削減率 | —       | **78% 削減** |
+| react-patterns.md  | 792行   | ~350行       |
+| bun-patterns.md    | 656行   | ~280行       |

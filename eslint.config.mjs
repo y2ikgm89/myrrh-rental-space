@@ -54,6 +54,25 @@ const eslintConfig = defineConfig([
 
       // Import
       "import/no-anonymous-default-export": "warn",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "react",
+              importNames: ["forwardRef"],
+              message:
+                "React 19 では forwardRef を使わず、ref prop を通常の props として渡してください。",
+            },
+            {
+              name: "react",
+              importNames: ["useMemo", "useCallback"],
+              message:
+                "React Compiler 前提のコードベースです。外部ライブラリ要件がない限り useMemo / useCallback は使わないでください。",
+            },
+          ],
+        },
+      ],
 
       // jsx-a11y
       "jsx-a11y/alt-text": ["warn", { elements: ["img"], img: ["Image"] }],
@@ -141,6 +160,22 @@ const eslintConfig = defineConfig([
                 "public app layer から generated Prisma を直接 import しないでください。",
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    name: "cache-tag-boundaries",
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/shared/lib/constants/cache.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.name=/^(cacheTag|updateTag|revalidateTag)$/] > Literal:first-child",
+          message:
+            "cacheTag / updateTag / revalidateTag のタグ名は直書きせず、CACHE_TAGS または getCacheTag を使ってください。",
         },
       ],
     },

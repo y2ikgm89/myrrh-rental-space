@@ -6,47 +6,47 @@
  * エラーカテゴリ - 発生源による分類
  */
 export type ErrorCategory =
-  | 'DATABASE'
-  | 'EXTERNAL_API'
-  | 'VALIDATION'
-  | 'AUTHORIZATION'
-  | 'CACHE'
-  | 'UNKNOWN'
+  | "DATABASE"
+  | "EXTERNAL_API"
+  | "VALIDATION"
+  | "AUTHORIZATION"
+  | "CACHE"
+  | "UNKNOWN";
 
 export const ErrorCategory: Record<ErrorCategory, ErrorCategory> = {
-  DATABASE: 'DATABASE',
-  EXTERNAL_API: 'EXTERNAL_API',
-  VALIDATION: 'VALIDATION',
-  AUTHORIZATION: 'AUTHORIZATION',
-  CACHE: 'CACHE',
-  UNKNOWN: 'UNKNOWN',
-}
+  DATABASE: "DATABASE",
+  EXTERNAL_API: "EXTERNAL_API",
+  VALIDATION: "VALIDATION",
+  AUTHORIZATION: "AUTHORIZATION",
+  CACHE: "CACHE",
+  UNKNOWN: "UNKNOWN",
+};
 
 /**
  * エラー深刻度 - 対応の緊急性による分類
  */
-export type ErrorSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+export type ErrorSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
 export const ErrorSeverity: Record<ErrorSeverity, ErrorSeverity> = {
   /** システム障害、ユーザーは続行不可 */
-  CRITICAL: 'CRITICAL',
+  CRITICAL: "CRITICAL",
   /** 機能障害、フォールバック利用可能 */
-  HIGH: 'HIGH',
+  HIGH: "HIGH",
   /** 部分的障害、機能低下 */
-  MEDIUM: 'MEDIUM',
+  MEDIUM: "MEDIUM",
   /** 軽微な問題、サイレント回復 */
-  LOW: 'LOW',
-}
+  LOW: "LOW",
+};
 
 /**
  * エラーログコンテキスト
  */
 export interface ErrorLogContext {
-  category: ErrorCategory
-  severity: ErrorSeverity
-  context?: Record<string, unknown>
-  userId?: string
-  timestamp?: Date
+  category: ErrorCategory;
+  severity: ErrorSeverity;
+  context?: Record<string, unknown>;
+  userId?: string;
+  timestamp?: Date;
 }
 
 // =============================================================================
@@ -70,9 +70,9 @@ export interface ErrorLogContext {
  */
 export function normalizeError(error: unknown): Error {
   if (error instanceof Error) {
-    return error
+    return error;
   }
-  return new Error(String(error))
+  return new Error(String(error));
 }
 
 /**
@@ -83,9 +83,9 @@ export function normalizeError(error: unknown): Error {
  */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
-    return error.message
+    return error.message;
   }
-  return String(error)
+  return String(error);
 }
 
 // =============================================================================
@@ -100,17 +100,19 @@ export function getErrorMessage(error: unknown): string {
  * 重複が見つかった場合にこのエラーをスローします。
  */
 export class ReservationOverlapError extends Error {
-  readonly code = 'RESERVATION_OVERLAP' as const
+  readonly code = "RESERVATION_OVERLAP" as const;
 
-  constructor(message = '選択された時間帯は既に予約されています') {
-    super(message)
-    this.name = 'ReservationOverlapError'
+  constructor(message = "選択された時間帯は既に予約されています") {
+    super(message);
+    this.name = "ReservationOverlapError";
   }
 }
 
 /**
  * ReservationOverlapError の型ガード
  */
-export function isReservationOverlapError(error: unknown): error is ReservationOverlapError {
-  return error instanceof ReservationOverlapError
+export function isReservationOverlapError(
+  error: unknown,
+): error is ReservationOverlapError {
+  return error instanceof ReservationOverlapError;
 }

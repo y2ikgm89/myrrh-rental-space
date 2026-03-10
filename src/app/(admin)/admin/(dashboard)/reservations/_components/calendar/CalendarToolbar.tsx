@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import {
   Button,
   Select,
@@ -8,13 +8,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/admin/components/ui'
-import { formatDateLabel } from '@/admin/lib/calendar'
-import { getReservationStatusFilterOrAll } from '@/shared/lib/validations/enums'
-import type { CalendarState } from './hooks'
+} from "@/admin/components/ui";
+import { formatDateLabel } from "@/admin/lib/calendar";
+import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums";
+import type { CalendarState } from "./hooks";
 
 interface CalendarToolbarProps {
-  state: CalendarState
+  state: CalendarState;
 }
 
 export function CalendarToolbar({ state }: CalendarToolbarProps) {
@@ -30,32 +30,32 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
     goToday,
     setSpaceFilter,
     setStatusFilter,
-  } = state
+  } = state;
 
-  const dateLabel = formatDateLabel(currentDate, view)
+  const dateLabel = formatDateLabel(currentDate, view);
 
   return (
     <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
       {/* 左: ビュー切替 */}
       <div className="flex gap-1">
         <Button
-          variant={view === 'month' ? 'default' : 'outline'}
+          variant={view === "month" ? "default" : "outline"}
           size="sm"
-          onClick={() => setView('month')}
+          onClick={() => setView("month")}
         >
           月
         </Button>
         <Button
-          variant={view === 'week' ? 'default' : 'outline'}
+          variant={view === "week" ? "default" : "outline"}
           size="sm"
-          onClick={() => setView('week')}
+          onClick={() => setView("week")}
         >
           週
         </Button>
         <Button
-          variant={view === 'day' ? 'default' : 'outline'}
+          variant={view === "day" ? "default" : "outline"}
           size="sm"
-          onClick={() => setView('day')}
+          onClick={() => setView("day")}
         >
           日
         </Button>
@@ -86,8 +86,8 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
       {/* 右: フィルター */}
       <div className="flex gap-2">
         <Select
-          value={spaceId ?? 'all'}
-          onValueChange={(v) => setSpaceFilter(v === 'all' ? null : v)}
+          value={spaceId ?? "all"}
+          onValueChange={(v) => setSpaceFilter(v === "all" ? null : v)}
         >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="スペース" />
@@ -120,5 +120,5 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
         </Select>
       </div>
     </div>
-  )
+  );
 }

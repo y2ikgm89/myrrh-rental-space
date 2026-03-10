@@ -179,7 +179,8 @@ export async function getAdminSettings(): Promise<SettingsData> {
     if (decrypted) {
       const email = extractServiceAccountEmail(decrypted);
       if (email) {
-        googleCalendarServiceAccountEmailMasked = maskServiceAccountEmail(email);
+        googleCalendarServiceAccountEmailMasked =
+          maskServiceAccountEmail(email);
       }
     }
   }
@@ -321,8 +322,7 @@ export async function getICalFeedSettings(): Promise<ICalFeedSettingsData> {
 
   return {
     icalFeedEnabled: settings?.icalFeedEnabled ?? false,
-    icalFeedIncludeCustomerInfo:
-      settings?.icalFeedIncludeCustomerInfo ?? false,
+    icalFeedIncludeCustomerInfo: settings?.icalFeedIncludeCustomerInfo ?? false,
   };
 }
 

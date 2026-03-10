@@ -19,7 +19,7 @@ import {
 } from "@/shared/domain/customers/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { CustomerStatus } from "@/shared/lib/validations/enums";
 
 const idSchema = z.string().uuid({ error: "顧客IDが不正です" });

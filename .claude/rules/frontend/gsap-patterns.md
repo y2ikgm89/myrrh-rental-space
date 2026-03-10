@@ -18,15 +18,18 @@ paths:
 // NG: useEffect + 手動クリーンアップ
 useEffect(() => {
   const ctx = gsap.context(() => {
-    gsap.to(ref.current, { y: 100 })
-  }, ref)
-  return () => ctx.revert()
-}, [])
+    gsap.to(ref.current, { y: 100 });
+  }, ref);
+  return () => ctx.revert();
+}, []);
 
 // OK: useGSAP + scope（自動クリーンアップ）
-useGSAP(() => {
-  gsap.to(ref.current, { y: 100 })
-}, { scope: ref })
+useGSAP(
+  () => {
+    gsap.to(ref.current, { y: 100 });
+  },
+  { scope: ref },
+);
 ```
 
 ### scope は必須
@@ -37,43 +40,46 @@ useGSAP(() => {
 ```typescript
 // NG: scope なし（グローバルセレクタが漏れる）
 useGSAP(() => {
-  gsap.to('.item', { y: 20 })
-})
+  gsap.to(".item", { y: 20 });
+});
 
 // OK: scope でスコープを限定
-const containerRef = useRef<HTMLDivElement>(null)
-useGSAP(() => {
-  gsap.to('.item', { y: 20 })  // containerRef 内の .item のみに作用
-}, { scope: containerRef })
+const containerRef = useRef<HTMLDivElement>(null);
+useGSAP(
+  () => {
+    gsap.to(".item", { y: 20 }); // containerRef 内の .item のみに作用
+  },
+  { scope: containerRef },
+);
 ```
 
 ### gsap-config.ts 経由で import（直接 import 禁止）
 
 ```typescript
 // NG: gsap や gsap/ScrollTrigger を直接 import
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // OK: gsap-config.ts 経由
-import { gsap, ScrollTrigger } from '@/public/lib/gsap-config'
-import { useGSAP } from '@gsap/react'
+import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
+import { useGSAP } from "@gsap/react";
 ```
 
 `gsap-config.ts` 実装（変更禁止）:
 
 ```typescript
-'use client'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useGSAP } from '@gsap/react'
+"use client";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useGSAP } from "@gsap/react";
 
-gsap.registerPlugin(ScrollTrigger, useGSAP)
-export { gsap, ScrollTrigger }
+gsap.registerPlugin(ScrollTrigger, useGSAP);
+export { gsap, ScrollTrigger };
 
 // @deprecated — 新規コードでは gsap.matchMedia() を使用
 export function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 ```
 
@@ -140,33 +146,33 @@ reduced-motion 時はパラメータを控えめにする場合:
 ```typescript
 useGSAP(
   () => {
-    const mm = gsap.matchMedia()
+    const mm = gsap.matchMedia();
     mm.add(
       {
-        reduce: '(prefers-reduced-motion: reduce)',
-        noPreference: '(prefers-reduced-motion: no-preference)',
+        reduce: "(prefers-reduced-motion: reduce)",
+        noPreference: "(prefers-reduced-motion: no-preference)",
       },
       (ctx) => {
-        const { reduce } = ctx.conditions ?? {}
+        const { reduce } = ctx.conditions ?? {};
         gsap.to(el, {
           y: reduce ? 4 : 20,
           repeat: -1,
           yoyo: true,
           duration: reduce ? 2 : 1,
-        })
+        });
       },
-    )
+    );
   },
   { scope: ref },
-)
+);
 ```
 
 ### パターン A 選択ガイド
 
-| 状況 | パターン |
-|------|---------|
-| reduced-motion 時はアニメーション完全省略 | A-1 |
-| reduced-motion 時は控えめなアニメーションで代替 | A-2 |
+| 状況                                            | パターン |
+| ----------------------------------------------- | -------- |
+| reduced-motion 時はアニメーション完全省略       | A-1      |
+| reduced-motion 時は控えめなアニメーションで代替 | A-2      |
 
 ---
 
@@ -178,16 +184,16 @@ useGSAP(
 ```typescript
 useGSAP(
   () => {
-    const mm = gsap.matchMedia()
+    const mm = gsap.matchMedia();
     mm.add(
       {
-        isDesktop: '(min-width: 800px)',
-        isMobile: '(max-width: 799px)',
-        noPreference: '(prefers-reduced-motion: no-preference)',
+        isDesktop: "(min-width: 800px)",
+        isMobile: "(max-width: 799px)",
+        noPreference: "(prefers-reduced-motion: no-preference)",
       },
       (ctx) => {
-        const { isDesktop, noPreference } = ctx.conditions ?? {}
-        if (!noPreference) return  // reduced-motion は必ずガード
+        const { isDesktop, noPreference } = ctx.conditions ?? {};
+        if (!noPreference) return; // reduced-motion は必ずガード
 
         if (isDesktop) {
           gsap.fromTo(
@@ -199,10 +205,10 @@ useGSAP(
                 trigger: section,
                 ...SCROLL_TRIGGER.scrub,
                 pin: true,
-                invalidateOnRefresh: true,  // pin 使用時は必須
+                invalidateOnRefresh: true, // pin 使用時は必須
               },
             },
-          )
+          );
         } else {
           // モバイル: ピン固定回避、パララックス量を縮小
           gsap.fromTo(
@@ -215,13 +221,13 @@ useGSAP(
                 ...SCROLL_TRIGGER.scrub,
               },
             },
-          )
+          );
         }
       },
-    )
+    );
   },
   { scope: containerRef },
-)
+);
 ```
 
 **matchMedia の自動 revert**: `mm.add` 内で作成された tween / ScrollTrigger は、メディアクエリ条件が外れた時点で自動的に revert される。CSS の `!important` フォールバックは不要。
@@ -283,11 +289,11 @@ function MagneticButton() {
 `useMotionPreference()` フック実装（`@/public/hooks/use-motion-preference.ts`）:
 
 ```typescript
-'use client'
+"use client";
 
-import { useRef } from 'react'
-import { useGSAP } from '@gsap/react'
-import { gsap } from '@/public/lib/gsap-config'
+import { useRef } from "react";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "@/public/lib/gsap-config";
 
 /**
  * gsap.matchMedia() ベースの reactive reduced-motion フック。
@@ -295,19 +301,19 @@ import { gsap } from '@/public/lib/gsap-config'
  * OS 設定変更時に自動更新される。
  */
 export function useMotionPreference(): React.RefObject<boolean> {
-  const motionOk = useRef(true)
+  const motionOk = useRef(true);
 
   useGSAP(() => {
-    const mm = gsap.matchMedia()
-    mm.add('(prefers-reduced-motion: reduce)', () => {
-      motionOk.current = false
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      motionOk.current = false;
       return () => {
-        motionOk.current = true
-      }
-    })
-  })
+        motionOk.current = true;
+      };
+    });
+  });
 
-  return motionOk
+  return motionOk;
 }
 ```
 
@@ -322,10 +328,10 @@ export function useMotionPreference(): React.RefObject<boolean> {
 ```typescript
 useGSAP(
   () => {
-    const mm = gsap.matchMedia()
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
       gsap.fromTo(
-        '.item',
+        ".item",
         { opacity: 0, y: 40 },
         {
           opacity: 1,
@@ -341,11 +347,11 @@ useGSAP(
             // toggleActions: 'play none none none'
           },
         },
-      )
-    })
+      );
+    });
   },
   { scope: containerRef },
-)
+);
 ```
 
 ### スクラブ（scrub）パララックス
@@ -355,16 +361,16 @@ useGSAP(
 ```typescript
 useGSAP(
   () => {
-    const mm = gsap.matchMedia()
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.set(imageRef.current, { scale: 1.15 })  // parallax 分の余裕を作る
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.set(imageRef.current, { scale: 1.15 }); // parallax 分の余裕を作る
 
       gsap.fromTo(
         imageRef.current,
         { y: -50 },
         {
           y: 50,
-          ease: 'none',  // scrub アニメーションに custom ease 禁止
+          ease: "none", // scrub アニメーションに custom ease 禁止
           scrollTrigger: {
             trigger: containerRef.current,
             ...SCROLL_TRIGGER.scrub,
@@ -373,11 +379,11 @@ useGSAP(
             // scrub: 1
           },
         },
-      )
-    })
+      );
+    });
   },
   { scope: containerRef, dependencies: [speed] },
-)
+);
 ```
 
 ### ピン固定（pin）
@@ -387,42 +393,45 @@ useGSAP(
 ```typescript
 useGSAP(
   () => {
-    const mm = gsap.matchMedia()
+    const mm = gsap.matchMedia();
     mm.add(
       {
-        isDesktop: '(min-width: 800px)',
-        noPreference: '(prefers-reduced-motion: no-preference)',
+        isDesktop: "(min-width: 800px)",
+        noPreference: "(prefers-reduced-motion: no-preference)",
       },
       (ctx) => {
-        const { isDesktop, noPreference } = ctx.conditions ?? {}
-        if (!noPreference || !isDesktop) return  // モバイルではピン固定回避
+        const { isDesktop, noPreference } = ctx.conditions ?? {};
+        if (!noPreference || !isDesktop) return; // モバイルではピン固定回避
 
         const tl = gsap.timeline({
           scrollTrigger: {
             trigger: sectionRef.current,
-            start: 'top top',
-            end: 'bottom top',
+            start: "top top",
+            end: "bottom top",
             scrub: 1,
             pin: true,
-            invalidateOnRefresh: true,  // 必須: リサイズ時に再計算
+            invalidateOnRefresh: true, // 必須: リサイズ時に再計算
           },
-        })
-        tl.to('.layer-1', { yPercent: -30 })
-          .to('.title', { opacity: 0, y: -50 }, '<')
+        });
+        tl.to(".layer-1", { yPercent: -30 }).to(
+          ".title",
+          { opacity: 0, y: -50 },
+          "<",
+        );
       },
-    )
+    );
   },
   { scope: containerRef },
-)
+);
 ```
 
 ### ScrollTrigger 3 パターン要約
 
-| パターン | 主要設定 | 用途 |
-|---------|---------|------|
-| **入場アニメーション** | `toggleActions: 'play none none none'`, `start: 'top 85%'` | 要素がビューポートに入った時に1回再生 |
+| パターン                 | 主要設定                                                               | 用途                                       |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------ |
+| **入場アニメーション**   | `toggleActions: 'play none none none'`, `start: 'top 85%'`             | 要素がビューポートに入った時に1回再生      |
 | **スクラブパララックス** | `scrub: 1`, `start: 'top bottom'`, `end: 'bottom top'`, `ease: 'none'` | スクロール位置に連動する連続アニメーション |
-| **ピン固定** | `pin: true`, `scrub: 1`, `invalidateOnRefresh: true` | 横スクロール、ステップ進行（モバイル禁止） |
+| **ピン固定**             | `pin: true`, `scrub: 1`, `invalidateOnRefresh: true`                   | 横スクロール、ステップ進行（モバイル禁止） |
 
 ---
 
@@ -433,50 +442,50 @@ useGSAP(
 ```typescript
 // DURATION — 秒単位
 export const DURATION = {
-  fast: 0.3,    // ホバー、フィードバック
-  normal: 0.6,  // 一般的な遷移
-  slow: 0.8,    // 入場アニメーション
-  xslow: 1.2,   // 大きな遷移
-  hero: 1.5,    // Hero 専用
-} as const
+  fast: 0.3, // ホバー、フィードバック
+  normal: 0.6, // 一般的な遷移
+  slow: 0.8, // 入場アニメーション
+  xslow: 1.2, // 大きな遷移
+  hero: 1.5, // Hero 専用
+} as const;
 
 // EASE — GSAP 形式
 export const EASE = {
-  outExpo: 'expo.out',           // スムーズな減速 — 一般的な入場
-  outQuart: 'power4.out',        // 自然な減速 — テキストリビール
-  inOutQuart: 'quart.inOut',     // スムーズな入出 — スクロール連動
-  outElastic: 'elastic.out(1, 0.3)',  // 弾性リターン — MagneticButton
-  none: 'none',                  // リニア — scrub アニメーション
-} as const
+  outExpo: "expo.out", // スムーズな減速 — 一般的な入場
+  outQuart: "power4.out", // 自然な減速 — テキストリビール
+  inOutQuart: "quart.inOut", // スムーズな入出 — スクロール連動
+  outElastic: "elastic.out(1, 0.3)", // 弾性リターン — MagneticButton
+  none: "none", // リニア — scrub アニメーション
+} as const;
 
 // STAGGER — 秒単位
 export const STAGGER = {
-  char: 0.03,     // 文字単位リビール
-  word: 0.08,     // 単語単位リビール
-  line: 0.15,     // 行単位リビール
-  card: 0.12,     // カードグリッド
-  element: 0.1,   // 一般的な要素
-} as const
+  char: 0.03, // 文字単位リビール
+  word: 0.08, // 単語単位リビール
+  line: 0.15, // 行単位リビール
+  card: 0.12, // カードグリッド
+  element: 0.1, // 一般的な要素
+} as const;
 
 // SCROLL_TRIGGER プリセット
 export const SCROLL_TRIGGER = {
   reveal: {
-    start: 'top 85%',
-    end: 'top 20%',
-    toggleActions: 'play none none none' as const,
+    start: "top 85%",
+    end: "top 20%",
+    toggleActions: "play none none none" as const,
   },
   scrub: {
-    start: 'top bottom',
-    end: 'bottom top',
+    start: "top bottom",
+    end: "bottom top",
     scrub: 1,
   },
-} as const
+} as const;
 
 // PARALLAX 速度プリセット
 export const PARALLAX = {
-  subtle: 0.3,  // 背景の微細な動き
-  normal: 0.5,  // 標準パララックス
-} as const
+  subtle: 0.3, // 背景の微細な動き
+  normal: 0.5, // 標準パララックス
+} as const;
 ```
 
 ---
@@ -486,40 +495,45 @@ export const PARALLAX = {
 ### useLenis() フック（消費側）
 
 ```typescript
-'use client'
+"use client";
 
-import { useLenis } from 'lenis/react'
+import { useLenis } from "lenis/react";
 
 // インスタンス取得
-const lenis = useLenis()
+const lenis = useLenis();
 
 // スクロールイベント購読
 useLenis((lenis) => {
-  const progress = lenis.progress  // 0-1
-  const velocity = lenis.velocity
-})
+  const progress = lenis.progress; // 0-1
+  const velocity = lenis.velocity;
+});
 ```
 
 ### SmoothScrollProvider（内部 — Lenis 公式推奨パターン）
 
 ```typescript
 // GSAP ticker で Lenis の RAF を駆動
-const lenis = new Lenis({ duration: 1.2 })  // autoRaf: false（デフォルト）
-lenis.on('scroll', ScrollTrigger.update)     // ScrollTrigger との同期
+const lenis = new Lenis({ duration: 1.2 }); // autoRaf: false（デフォルト）
+lenis.on("scroll", ScrollTrigger.update); // ScrollTrigger との同期
 
-const tickerCb = (time: number) => { lenis.raf(time * 1000) }
-gsap.ticker.add(tickerCb)
-gsap.ticker.lagSmoothing(0)   // ラグ補正無効化
-gsap.config({ autoSleep: 0 }) // ticker スリープ防止（デフォルト ~2秒で停止しスクロールがデッドロック）
+const tickerCb = (time: number) => {
+  lenis.raf(time * 1000);
+};
+gsap.ticker.add(tickerCb);
+gsap.ticker.lagSmoothing(0); // ラグ補正無効化
+gsap.config({ autoSleep: 0 }); // ticker スリープ防止（デフォルト ~2秒で停止しスクロールがデッドロック）
 
-ScrollTrigger.refresh()       // Lenis 初期化後に必須
+ScrollTrigger.refresh(); // Lenis 初期化後に必須
 
 // 動的コンテンツ対応: ResizeObserver で高さ変化を検知
-const ro = new ResizeObserver(() => { ScrollTrigger.refresh(true) })
-ro.observe(document.body)
+const ro = new ResizeObserver(() => {
+  ScrollTrigger.refresh(true);
+});
+ro.observe(document.body);
 ```
 
 **設計ポイント**:
+
 - `autoRaf: false`（デフォルト）— 同一 RAF フレーム内で Lenis 補間 → ScrollTrigger 更新 → GSAP tween 適用が実行され、フレーム同期が保証される
 - `autoSleep: 0` — デフォルト（120フレーム ~2秒）でアイドル後に ticker が停止し Lenis がデッドロックするため必須
 - `refresh(true)` — スクロール完了後に安全にトリガー位置を再計算（安全モード）
@@ -554,13 +568,13 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 
 ## レスポンシブ規約
 
-| 機能 | デスクトップ | モバイル |
-|------|------------|--------|
-| パララックス量 | `yPercent: 30`（PARALLAX.normal × 60） | `yPercent: 12`（× 0.4 に縮小） |
-| ピン固定 | `pin: true` | **禁止**（通常スクロール化） |
-| 横スクロール | `pin: true + x` | **縦スクロールに変換** |
-| stagger | `STAGGER.card = 0.12` | `STAGGER.element = 0.1`（短縮） |
-| ビューポート単位 | `100svh` | `100svh`（`100vh` 禁止） |
+| 機能             | デスクトップ                           | モバイル                        |
+| ---------------- | -------------------------------------- | ------------------------------- |
+| パララックス量   | `yPercent: 30`（PARALLAX.normal × 60） | `yPercent: 12`（× 0.4 に縮小）  |
+| ピン固定         | `pin: true`                            | **禁止**（通常スクロール化）    |
+| 横スクロール     | `pin: true + x`                        | **縦スクロールに変換**          |
+| stagger          | `STAGGER.card = 0.12`                  | `STAGGER.element = 0.1`（短縮） |
+| ビューポート単位 | `100svh`                               | `100svh`（`100vh` 禁止）        |
 
 ---
 
@@ -583,15 +597,15 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 
 ## ファイル配置
 
-| パス | 内容 |
-|------|------|
-| `@/public/lib/gsap-config.ts` | GSAP 中央設定、プラグイン登録 |
-| `@/public/lib/animations.ts` | DURATION / EASE / STAGGER / SCROLL_TRIGGER / PARALLAX 定数 |
-| `@/public/hooks/use-motion-preference.ts` | `gsap.matchMedia()` ベースの reactive reduced-motion フック（パターン C 用） |
-| `@/public/components/providers/SmoothScrollProvider.tsx` | Lenis + GSAP ticker 同期（`lenis/react` LenisContext 提供） |
-| `@/public/components/animations/ScrollReveal.tsx` | スクロール入場アニメーション（パターン A-1 の実装例） |
-| `@/public/components/animations/SplitText.tsx` | テキスト分割スタガーアニメーション（パターン A-1 の実装例） |
-| `@/public/components/animations/ParallaxImage.tsx` | scrub パララックス画像（パターン A-1 の実装例） |
-| `@/public/components/animations/MagneticButton.tsx` | マウス追従マグネットボタン（パターン C の実装例） |
+| パス                                                     | 内容                                                                         |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `@/public/lib/gsap-config.ts`                            | GSAP 中央設定、プラグイン登録                                                |
+| `@/public/lib/animations.ts`                             | DURATION / EASE / STAGGER / SCROLL_TRIGGER / PARALLAX 定数                   |
+| `@/public/hooks/use-motion-preference.ts`                | `gsap.matchMedia()` ベースの reactive reduced-motion フック（パターン C 用） |
+| `@/public/components/providers/SmoothScrollProvider.tsx` | Lenis + GSAP ticker 同期（`lenis/react` LenisContext 提供）                  |
+| `@/public/components/animations/ScrollReveal.tsx`        | スクロール入場アニメーション（パターン A-1 の実装例）                        |
+| `@/public/components/animations/SplitText.tsx`           | テキスト分割スタガーアニメーション（パターン A-1 の実装例）                  |
+| `@/public/components/animations/ParallaxImage.tsx`       | scrub パララックス画像（パターン A-1 の実装例）                              |
+| `@/public/components/animations/MagneticButton.tsx`      | マウス追従マグネットボタン（パターン C の実装例）                            |
 
 > **詳細リファレンス**: `docs/reference/claude-rules/gsap-reference.md`

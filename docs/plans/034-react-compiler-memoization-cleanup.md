@@ -9,6 +9,7 @@ React Compiler（Next.js 16で有効）環境に対応し、不要な手動メ�
 ### React Compilerの自動最適化
 
 React Compilerは以下を自動的に行う:
+
 - コンポーネントと関数の自動メモ化
 - 依存関係の自動追跡
 - 不要な再レンダリングの防止
@@ -21,24 +22,24 @@ React Compilerは以下を自動的に行う:
 
 ### 削除統計
 
-| 対象 | 変更前 | 変更後 | 削除数 |
-|------|--------|--------|--------|
-| useMemo | 4ファイル | 2ファイル | 2 |
-| useCallback | 50ファイル | 12ファイル | 38 |
+| 対象        | 変更前     | 変更後     | 削除数 |
+| ----------- | ---------- | ---------- | ------ |
+| useMemo     | 4ファイル  | 2ファイル  | 2      |
+| useCallback | 50ファイル | 12ファイル | 38     |
 
 ### 保持したuseMemo（2ファイル）
 
-| ファイル | 理由 |
-|---------|------|
-| `use-calendar-state.ts:33` | `new Date()`の参照安定化が必要 |
-| `LexicalEditor.tsx:312` | Lexical `initialConfig`の安定参照が必要 |
+| ファイル                   | 理由                                    |
+| -------------------------- | --------------------------------------- |
+| `use-calendar-state.ts:33` | `new Date()`の参照安定化が必要          |
+| `LexicalEditor.tsx:312`    | Lexical `initialConfig`の安定参照が必要 |
 
 ### 保持したuseCallback（12ファイル）
 
-| カテゴリ | ファイル数 | 理由 |
-|---------|-----------|------|
-| Lexicalノード`onDelete` | 9 | `editor.registerCommand`依存配列で使用 |
-| useEffect依存関数 | 3 | Effect実行タイミング制御に必要 |
+| カテゴリ                | ファイル数 | 理由                                   |
+| ----------------------- | ---------- | -------------------------------------- |
+| Lexicalノード`onDelete` | 9          | `editor.registerCommand`依存配列で使用 |
+| useEffect依存関数       | 3          | Effect実行タイミング制御に必要         |
 
 #### 詳細
 
@@ -80,26 +81,30 @@ React Compilerは以下を自動的に行う:
 const onDelete = useCallback(
   (event: KeyboardEvent) => {
     if (isSelected && $isNodeSelection($getSelection())) {
-      event.preventDefault()
+      event.preventDefault();
       editor.update(() => {
-        const node = $getNodeByKey(nodeKey)
+        const node = $getNodeByKey(nodeKey);
         if ($isImageNode(node)) {
-          node.remove()
+          node.remove();
         }
-      })
-      return true
+      });
+      return true;
     }
-    return false
+    return false;
   },
-  [editor, isSelected, nodeKey]
-)
+  [editor, isSelected, nodeKey],
+);
 
 useEffect(() => {
   return mergeRegister(
     editor.registerCommand(KEY_DELETE_COMMAND, onDelete, COMMAND_PRIORITY_LOW),
-    editor.registerCommand(KEY_BACKSPACE_COMMAND, onDelete, COMMAND_PRIORITY_LOW)
-  )
-}, [editor, onDelete]) // onDeleteは依存配列に必要
+    editor.registerCommand(
+      KEY_BACKSPACE_COMMAND,
+      onDelete,
+      COMMAND_PRIORITY_LOW,
+    ),
+  );
+}, [editor, onDelete]); // onDeleteは依存配列に必要
 ```
 
 ### 削除した典型的パターン
@@ -108,16 +113,16 @@ useEffect(() => {
 // Before: 不要なuseCallback
 const handleSave = useCallback(() => {
   startTransition(async () => {
-    await saveData()
-  })
-}, [])
+    await saveData();
+  });
+}, []);
 
 // After: 通常の関数
 const handleSave = () => {
   startTransition(async () => {
-    await saveData()
-  })
-}
+    await saveData();
+  });
+};
 ```
 
 ## 検証

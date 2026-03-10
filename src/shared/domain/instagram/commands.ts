@@ -8,9 +8,7 @@ import {
   type InstagramSettingsInput,
 } from "@/shared/lib/validations/instagram";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  testInstagramConnection,
-} from "@/shared/lib/instagram";
+import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { SaveInstagramTokenResult } from "@/shared/domain/instagram/types";
 
 function getMetadataString(

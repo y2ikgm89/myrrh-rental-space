@@ -18,29 +18,29 @@ docs/
 
 ## クイックリンク
 
-| カテゴリ | 説明 | 主要ファイル |
-|---------|------|-------------|
-| [architecture/](./architecture/) | システム設計・データベース | [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) |
-| [requirements/](./requirements/) | 機能別要件定義 | [README.md](./requirements/README.md) |
-| [guides/](./guides/) | 開発規約・ベストプラクティス | [README.md](./guides/README.md) |
-| [security/](./security/) | 認証・保護対策 | [README.md](./security/README.md) |
-| [operations/](./operations/) | デプロイ・インフラ | [README.md](./operations/README.md) |
-| [plans/](./plans/) | 実装計画・完了履歴 | [README.md](./plans/README.md) |
-| [comparison/](./comparison/) | 技術比較・評価 | [puck-vs-grapesjs.md](./comparison/puck-vs-grapesjs.md) |
-| [templates/](./templates/) | ドキュメントテンプレート | plan.md, requirements.md |
+| カテゴリ                         | 説明                         | 主要ファイル                                            |
+| -------------------------------- | ---------------------------- | ------------------------------------------------------- |
+| [architecture/](./architecture/) | システム設計・データベース   | [README.md](./architecture/README.md)                   |
+| [requirements/](./requirements/) | 機能別要件定義               | [README.md](./requirements/README.md)                   |
+| [guides/](./guides/)             | 開発規約・ベストプラクティス | [README.md](./guides/README.md)                         |
+| [security/](./security/)         | 認証・保護対策               | [README.md](./security/README.md)                       |
+| [operations/](./operations/)     | デプロイ・インフラ           | [README.md](./operations/README.md)                     |
+| [plans/](./plans/)               | 実装計画・完了履歴           | [README.md](./plans/README.md)                          |
+| [comparison/](./comparison/)     | 技術比較・評価               | [puck-vs-grapesjs.md](./comparison/puck-vs-grapesjs.md) |
+| [templates/](./templates/)       | ドキュメントテンプレート     | plan.md, requirements.md                                |
 
 ## 技術スタック
 
-| 技術 | バージョン |
-|-----|----------|
-| Next.js | 16.1.6 |
-| React | 19.2.4 |
-| TypeScript | 6.0-beta |
-| Prisma | 7.4.0 |
-| Better Auth | 1.4.18 |
-| Bun | 1.3.9 |
-| Zod | 4.3.6 |
-| Tailwind CSS | 4.1.18 |
+| 技術         | バージョン         |
+| ------------ | ------------------ |
+| Next.js      | 16.1.6             |
+| React        | 19.2.4             |
+| TypeScript   | 6.0.0-dev.20260228 |
+| Prisma       | 7.4.2              |
+| Better Auth  | 1.5.3              |
+| Bun          | 1.3.10             |
+| Zod          | 4.3.6              |
+| Tailwind CSS | 4.2.1              |
 
 詳細は [CLAUDE.md](../CLAUDE.md) を参照。
 
@@ -50,7 +50,7 @@ docs/
 
 1. [CLAUDE.md](../CLAUDE.md) - プロジェクト概要
 2. [architecture/PROJECT_STRUCTURE.md](./architecture/PROJECT_STRUCTURE.md) - 構造
-3. [guides/coding-standards.md](./guides/coding-standards.md) - 規約
+3. [reference/codex-rules/react-patterns.md](./reference/codex-rules/react-patterns.md) - React / Next 実装ルール
 
 ### インフラ担当
 
@@ -61,9 +61,9 @@ docs/
 ## 実装方針
 
 - 最新の公式ベストプラクティスに準拠
-- 後方互換性は考慮しない
-- Server Components / Server Actions 優先
-- Zodバリデーション必須
+- 後方互換レイヤーを追加しない
+- Server Components / Route Handlers / Server Actions を責務ごとに使い分ける
+- 入出力は Zod で検証する
 
 ## 技術比較
 
@@ -73,4 +73,4 @@ docs/
 
 ---
 
-最終更新: 2026-02-18
+最終更新: 2026-03-09

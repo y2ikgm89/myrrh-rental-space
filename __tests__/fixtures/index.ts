@@ -2,5 +2,5 @@
  * フィクスチャエクスポート
  */
 
-export * from './users'
-export * from './reservations'
+export * from "./users";
+export * from "./reservations";

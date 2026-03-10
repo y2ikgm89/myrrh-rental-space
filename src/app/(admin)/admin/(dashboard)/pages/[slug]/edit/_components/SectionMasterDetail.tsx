@@ -34,6 +34,7 @@ import {
   SectionType,
   defaultSectionConfigs,
 } from "@/shared/lib/validations/section";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
 import { PageSeoForm } from "../../seo/_components/PageSeoForm";
@@ -118,8 +119,8 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     );
     startTransition(async () => {
       const result = await togglePageSection(id, isActive);
-      if (result.success) {
-        toast.success(result.message);
+      if (!isMutationError(result)) {
+        toast.success("更新しました");
       } else {
         toast.error(result.error);
         reloadSections();
@@ -169,7 +170,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         if (!undone) {
           startTransition(async () => {
             const result = await deletePageSection(id);
-            if (!result.success) {
+            if (isMutationError(result)) {
               toast.error(result.error);
               reloadSections();
             }
@@ -182,8 +183,8 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   function handleDuplicate(id: string) {
     startTransition(async () => {
       const result = await duplicatePageSection(id);
-      if (result.success) {
-        toast.success(result.message);
+      if (!isMutationError(result)) {
+        toast.success("複製しました");
         // リロードして新しいセクションを取得 & 自動選択
         const sectionList = await fetchPageSections(page.id);
         setSections(sectionList);
@@ -208,11 +209,11 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         design: {},
         isActive: true,
       });
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
-      toast.success(result.message);
+      toast.success("追加しました");
       // リロードして新しいセクションを自動選択
       const sectionList = await fetchPageSections(page.id);
       setSections(sectionList);
@@ -235,7 +236,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       const result = await updatePageSectionOrder(page.id, {
         sections: orderUpdates,
       });
-      if (!result.success) {
+      if (isMutationError(result)) {
         toast.error(result.error);
         reloadSections();
       }

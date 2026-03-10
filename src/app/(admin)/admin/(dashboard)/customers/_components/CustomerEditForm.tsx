@@ -1,33 +1,30 @@
-'use client'
+"use client";
 
-import { useTransition, type ReactElement } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
-import { updateCustomer } from '@/admin/actions/customer'
+import { useTransition, type ReactElement } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+import { updateCustomer } from "@/admin/actions/customer";
 import {
   customerFormSchema,
   type CustomerFormData,
-} from '@/admin/lib/validations/customer'
-import {
-  Button,
-  Card,
-  Input,
-  Label,
-  Textarea,
-} from '@/admin/components/ui'
-import type { CustomerWithReservations } from '@/shared/domain/customers/types'
-import { cn } from '@/shared/lib/cn'
-import { useKanaInput } from '@/admin/hooks'
+} from "@/admin/lib/validations/customer";
+import { Button, Card, Input, Label, Textarea } from "@/admin/components/ui";
+import type { CustomerWithReservations } from "@/shared/domain/customers/types";
+import { cn } from "@/shared/lib/cn";
+import { useKanaInput } from "@/admin/hooks";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 type CustomerEditFormProps = {
-  customer: CustomerWithReservations
-}
+  customer: CustomerWithReservations;
+};
 
-export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElement {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+export function CustomerEditForm({
+  customer,
+}: CustomerEditFormProps): ReactElement {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const {
     register,
@@ -39,36 +36,37 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
     defaultValues: {
       lastName: customer.lastName,
       firstName: customer.firstName,
-      lastNameKana: customer.lastNameKana ?? '',
-      firstNameKana: customer.firstNameKana ?? '',
+      lastNameKana: customer.lastNameKana ?? "",
+      firstNameKana: customer.firstNameKana ?? "",
       email: customer.email,
-      phoneNumber: customer.phoneNumber ?? '',
-      address: customer.address ?? '',
-      notes: customer.notes ?? '',
+      phoneNumber: customer.phoneNumber ?? "",
+      address: customer.address ?? "",
+      notes: customer.notes ?? "",
     },
-  })
+  });
 
   // IME 自動カナ入力（既存データで初期化）
   const lastNameKanaInput = useKanaInput({
-    initialKana: customer.lastNameKana ?? '',
-    onKanaChange: (kana) => setValue('lastNameKana', kana),
-  })
+    initialKana: customer.lastNameKana ?? "",
+    onKanaChange: (kana) => setValue("lastNameKana", kana),
+  });
   const firstNameKanaInput = useKanaInput({
-    initialKana: customer.firstNameKana ?? '',
-    onKanaChange: (kana) => setValue('firstNameKana', kana),
-  })
+    initialKana: customer.firstNameKana ?? "",
+    onKanaChange: (kana) => setValue("firstNameKana", kana),
+  });
 
   const onSubmit = (data: CustomerFormData) => {
     startTransition(async () => {
-      const result = await updateCustomer(customer.id, data)
-      if (result.success) {
-        toast.success(result.message)
-        router.push(`/admin/customers/${customer.id}`)
-      } else {
-        toast.error(result.error)
+      const result = await updateCustomer(customer.id, data);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
-    })
-  }
+
+      toast.success("顧客情報を更新しました");
+      router.push(`/admin/customers/${customer.id}`);
+    });
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -82,12 +80,18 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
               </Label>
               <Input
                 id="lastName"
-                {...register('lastName')}
+                {...register("lastName")}
                 placeholder="山田"
                 aria-invalid={!!errors.lastName}
-                aria-describedby={errors.lastName ? 'lastName-error' : undefined}
-                onCompositionStart={lastNameKanaInput.inputProps.onCompositionStart}
-                onCompositionUpdate={lastNameKanaInput.inputProps.onCompositionUpdate}
+                aria-describedby={
+                  errors.lastName ? "lastName-error" : undefined
+                }
+                onCompositionStart={
+                  lastNameKanaInput.inputProps.onCompositionStart
+                }
+                onCompositionUpdate={
+                  lastNameKanaInput.inputProps.onCompositionUpdate
+                }
                 onCompositionEnd={lastNameKanaInput.inputProps.onCompositionEnd}
                 onInput={lastNameKanaInput.inputProps.onInput}
               />
@@ -103,13 +107,21 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
               </Label>
               <Input
                 id="firstName"
-                {...register('firstName')}
+                {...register("firstName")}
                 placeholder="太郎"
                 aria-invalid={!!errors.firstName}
-                aria-describedby={errors.firstName ? 'firstName-error' : undefined}
-                onCompositionStart={firstNameKanaInput.inputProps.onCompositionStart}
-                onCompositionUpdate={firstNameKanaInput.inputProps.onCompositionUpdate}
-                onCompositionEnd={firstNameKanaInput.inputProps.onCompositionEnd}
+                aria-describedby={
+                  errors.firstName ? "firstName-error" : undefined
+                }
+                onCompositionStart={
+                  firstNameKanaInput.inputProps.onCompositionStart
+                }
+                onCompositionUpdate={
+                  firstNameKanaInput.inputProps.onCompositionUpdate
+                }
+                onCompositionEnd={
+                  firstNameKanaInput.inputProps.onCompositionEnd
+                }
                 onInput={firstNameKanaInput.inputProps.onInput}
               />
               {errors.firstName && (
@@ -125,7 +137,9 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <div className="space-y-2">
               <Label htmlFor="lastNameKana">
                 セイ
-                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  （自動入力）
+                </span>
               </Label>
               <Input
                 id="lastNameKana"
@@ -137,7 +151,9 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <div className="space-y-2">
               <Label htmlFor="firstNameKana">
                 メイ
-                <span className="text-xs text-muted-foreground ml-2">（自動入力）</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  （自動入力）
+                </span>
               </Label>
               <Input
                 id="firstNameKana"
@@ -156,10 +172,10 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <Input
               id="email"
               type="email"
-              {...register('email')}
+              {...register("email")}
               placeholder="example@example.com"
               aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'email-error' : undefined}
+              aria-describedby={errors.email ? "email-error" : undefined}
             />
             {errors.email && (
               <p id="email-error" className="text-xs text-destructive">
@@ -174,10 +190,12 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <Input
               id="phoneNumber"
               type="tel"
-              {...register('phoneNumber')}
+              {...register("phoneNumber")}
               placeholder="090-1234-5678"
               aria-invalid={!!errors.phoneNumber}
-              aria-describedby={errors.phoneNumber ? 'phoneNumber-error' : undefined}
+              aria-describedby={
+                errors.phoneNumber ? "phoneNumber-error" : undefined
+              }
             />
             {errors.phoneNumber && (
               <p id="phoneNumber-error" className="text-xs text-destructive">
@@ -191,10 +209,10 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <Label htmlFor="address">住所</Label>
             <Input
               id="address"
-              {...register('address')}
+              {...register("address")}
               placeholder="東京都渋谷区..."
               aria-invalid={!!errors.address}
-              aria-describedby={errors.address ? 'address-error' : undefined}
+              aria-describedby={errors.address ? "address-error" : undefined}
             />
             {errors.address && (
               <p id="address-error" className="text-xs text-destructive">
@@ -208,11 +226,11 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <Label htmlFor="notes">メモ</Label>
             <Textarea
               id="notes"
-              {...register('notes')}
+              {...register("notes")}
               placeholder="顧客に関するメモ..."
               rows={4}
               aria-invalid={!!errors.notes}
-              aria-describedby={errors.notes ? 'notes-error' : undefined}
+              aria-describedby={errors.notes ? "notes-error" : undefined}
             />
             {errors.notes && (
               <p id="notes-error" className="text-xs text-destructive">
@@ -233,13 +251,13 @@ export function CustomerEditForm({ customer }: CustomerEditFormProps): ReactElem
             <Button
               type="submit"
               disabled={isPending}
-              className={cn(isPending && 'opacity-50')}
+              className={cn(isPending && "opacity-50")}
             >
-              {isPending ? '更新中...' : '顧客情報を更新'}
+              {isPending ? "更新中..." : "顧客情報を更新"}
             </Button>
           </div>
         </div>
       </Card>
     </form>
-  )
+  );
 }

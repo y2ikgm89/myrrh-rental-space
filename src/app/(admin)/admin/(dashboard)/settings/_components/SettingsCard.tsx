@@ -5,20 +5,31 @@
  * カード一覧ページで使用
  */
 
-import Link from 'next/link'
-import type { LucideIcon } from 'lucide-react'
-import { ChevronRight } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/admin/components/ui/card'
+import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/admin/components/ui/card";
 
 export interface SettingsCardProps {
-  title: string
-  description: string
-  href: string
-  icon: LucideIcon
-  items?: string[]
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  items?: string[];
 }
 
-export function SettingsCard({ title, description, href, icon: Icon, items }: SettingsCardProps) {
+export function SettingsCard({
+  title,
+  description,
+  href,
+  icon: Icon,
+  items,
+}: SettingsCardProps) {
   return (
     <Link href={href} className="block group">
       <Card className="h-full transition-colors hover:bg-muted/50">
@@ -30,7 +41,9 @@ export function SettingsCard({ title, description, href, icon: Icon, items }: Se
               </div>
               <div>
                 <CardTitle className="text-lg">{title}</CardTitle>
-                <CardDescription className="mt-1">{description}</CardDescription>
+                <CardDescription className="mt-1">
+                  {description}
+                </CardDescription>
               </div>
             </div>
             <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
@@ -50,5 +63,5 @@ export function SettingsCard({ title, description, href, icon: Icon, items }: Se
         </CardHeader>
       </Card>
     </Link>
-  )
+  );
 }

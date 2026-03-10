@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Taxonomy (カテゴリー・タグ) フィルター用hooks
@@ -6,50 +6,50 @@
  * @description nuqs を使用した型安全な URL パラメータ管理
  */
 
-import { useQueryStates, parseAsString } from 'nuqs'
-import { parseAsBoolean } from '@/shared/lib/nuqs'
-import { useRef, useEffect } from 'react'
+import { useQueryStates, parseAsString } from "nuqs";
+import { parseAsBoolean } from "@/shared/lib/nuqs";
+import { useRef, useEffect } from "react";
 
 // =============================================================================
 // Types
 // =============================================================================
 
-export type TaxonomySortField = 'name' | 'postCount' | 'createdAt'
-export type SortOrder = 'asc' | 'desc'
+export type TaxonomySortField = "name" | "postCount" | "createdAt";
+export type SortOrder = "asc" | "desc";
 
 // Type guards (Set-based pattern)
-const SORT_FIELD_VALUES = ['name', 'postCount', 'createdAt'] as const
-const SORT_FIELD_SET = new Set<string>(SORT_FIELD_VALUES)
+const SORT_FIELD_VALUES = ["name", "postCount", "createdAt"] as const;
+const SORT_FIELD_SET = new Set<string>(SORT_FIELD_VALUES);
 
-const SORT_ORDER_VALUES = ['asc', 'desc'] as const
-const SORT_ORDER_SET = new Set<string>(SORT_ORDER_VALUES)
+const SORT_ORDER_VALUES = ["asc", "desc"] as const;
+const SORT_ORDER_SET = new Set<string>(SORT_ORDER_VALUES);
 
 function isSortField(value: unknown): value is TaxonomySortField {
-  return typeof value === 'string' && SORT_FIELD_SET.has(value)
+  return typeof value === "string" && SORT_FIELD_SET.has(value);
 }
 
 function isSortOrder(value: unknown): value is SortOrder {
-  return typeof value === 'string' && SORT_ORDER_SET.has(value)
+  return typeof value === "string" && SORT_ORDER_SET.has(value);
 }
 
 function parseSortField(value: unknown): TaxonomySortField {
-  return isSortField(value) ? value : 'name'
+  return isSortField(value) ? value : "name";
 }
 
 function parseSortOrder(value: unknown): SortOrder {
-  return isSortOrder(value) ? value : 'asc'
+  return isSortOrder(value) ? value : "asc";
 }
 
 export type CategoryFilterParams = {
-  search: string
-}
+  search: string;
+};
 
 export type TagFilterParams = {
-  search: string
-  sortBy: TaxonomySortField
-  sortOrder: SortOrder
-  unusedOnly: boolean
-}
+  search: string;
+  sortBy: TaxonomySortField;
+  sortOrder: SortOrder;
+  unusedOnly: boolean;
+};
 
 // =============================================================================
 // Debounce Hook
@@ -57,26 +57,26 @@ export type TagFilterParams = {
 
 function useDebouncedCallback(
   callback: (value: string) => void,
-  delayMs: number
+  delayMs: number,
 ): (value: string) => void {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
+        clearTimeout(timeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (value: string) => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
+      clearTimeout(timeoutRef.current);
     }
     timeoutRef.current = setTimeout(() => {
-      callback(value)
-    }, delayMs)
-  }
+      callback(value);
+    }, delayMs);
+  };
 }
 
 // =============================================================================
@@ -86,24 +86,24 @@ function useDebouncedCallback(
 export function useCategoryFilters() {
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      tab: parseAsString.withDefault('categories'),
+      search: parseAsString.withDefault(""),
+      tab: parseAsString.withDefault("categories"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
   const setSearch = (value: string) => {
-    void setParams({ search: value || null })
-  }
+    void setParams({ search: value || null });
+  };
 
-  const setSearchDebounced = useDebouncedCallback(setSearch, 300)
+  const setSearchDebounced = useDebouncedCallback(setSearch, 300);
 
   const reset = () => {
-    void setParams({ search: null })
-  }
+    void setParams({ search: null });
+  };
 
   return {
     params: {
@@ -112,7 +112,7 @@ export function useCategoryFilters() {
     setSearch,
     setSearchDebounced,
     reset,
-  }
+  };
 }
 
 // =============================================================================
@@ -122,35 +122,37 @@ export function useCategoryFilters() {
 export function useTagFilters() {
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(''),
-      sortBy: parseAsString.withDefault('name'),
-      sortOrder: parseAsString.withDefault('asc'),
+      search: parseAsString.withDefault(""),
+      sortBy: parseAsString.withDefault("name"),
+      sortOrder: parseAsString.withDefault("asc"),
       unusedOnly: parseAsBoolean.withDefault(false),
-      tab: parseAsString.withDefault('tags'),
+      tab: parseAsString.withDefault("tags"),
     },
     {
-      history: 'push',
+      history: "push",
       shallow: false,
-    }
-  )
+    },
+  );
 
   const setSearch = (value: string) => {
-    void setParams({ search: value || null })
-  }
+    void setParams({ search: value || null });
+  };
 
-  const setSearchDebounced = useDebouncedCallback(setSearch, 300)
+  const setSearchDebounced = useDebouncedCallback(setSearch, 300);
 
   const toggleSort = (field: TaxonomySortField) => {
     if (params.sortBy === field) {
-      void setParams({ sortOrder: params.sortOrder === 'asc' ? 'desc' : 'asc' })
+      void setParams({
+        sortOrder: params.sortOrder === "asc" ? "desc" : "asc",
+      });
     } else {
-      void setParams({ sortBy: field, sortOrder: 'asc' })
+      void setParams({ sortBy: field, sortOrder: "asc" });
     }
-  }
+  };
 
   const setUnusedOnly = (value: boolean) => {
-    void setParams({ unusedOnly: value || null })
-  }
+    void setParams({ unusedOnly: value || null });
+  };
 
   const reset = () => {
     void setParams({
@@ -158,8 +160,8 @@ export function useTagFilters() {
       sortBy: null,
       sortOrder: null,
       unusedOnly: null,
-    })
-  }
+    });
+  };
 
   return {
     params: {
@@ -173,5 +175,5 @@ export function useTagFilters() {
     toggleSort,
     setUnusedOnly,
     reset,
-  }
+  };
 }

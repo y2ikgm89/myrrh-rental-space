@@ -23,12 +23,12 @@ ThreeCanvas と同一の3段階ゲート。L4 専用。
 ```typescript
 // 1. next/dynamic でSSR除外
 const PixiCanvasInner = dynamic(
-  () => import('./PixiCanvasInner').then((mod) => mod.PixiCanvasInner),
+  () => import("./PixiCanvasInner").then((mod) => mod.PixiCanvasInner),
   { ssr: false },
-)
+);
 
 // 2. L4 + budget チェック
-const shouldRenderPixi = effectLevel >= 4 && budget.allowPixiJs
+const shouldRenderPixi = effectLevel >= 4 && budget.allowPixiJs;
 
 // 3. IntersectionObserver（rootMargin: 100px）
 ```
@@ -36,12 +36,16 @@ const shouldRenderPixi = effectLevel >= 4 && budget.allowPixiJs
 ## 非同期初期化（v8必須）
 
 ```typescript
-const pixiApp = new Application()
+const pixiApp = new Application();
 await pixiApp.init({
-  backgroundAlpha: 0, antialias: false, preference: 'webgl',
+  backgroundAlpha: 0,
+  antialias: false,
+  preference: "webgl",
   resolution: Math.min(window.devicePixelRatio, 2),
-  autoDensity: true, resizeTo: container, autoStart: true,
-})
+  autoDensity: true,
+  resizeTo: container,
+  autoStart: true,
+});
 ```
 
 ## FPS自動劣化
@@ -49,32 +53,34 @@ await pixiApp.init({
 60サンプル平均が30fps未満 × 3回連続で L3 に劣化（`degradeTo(3)` を呼び出す）。
 
 ```typescript
-const FPS_SAMPLE_SIZE = 60, FPS_THRESHOLD = 30, FPS_FAIL_LIMIT = 3
+const FPS_SAMPLE_SIZE = 60,
+  FPS_THRESHOLD = 30,
+  FPS_FAIL_LIMIT = 3;
 
 pixiApp.ticker.add((ticker) => {
-  fpsSamples.push(ticker.FPS)
+  fpsSamples.push(ticker.FPS);
   if (fpsSamples.length === FPS_SAMPLE_SIZE) {
-    const avgFps = fpsSamples.reduce((s, f) => s + f, 0) / FPS_SAMPLE_SIZE
+    const avgFps = fpsSamples.reduce((s, f) => s + f, 0) / FPS_SAMPLE_SIZE;
     if (avgFps < FPS_THRESHOLD) {
-      failCount++
+      failCount++;
       if (failCount >= FPS_FAIL_LIMIT) {
-        degradeTo(3)  // L3 にダウングレード
+        degradeTo(3); // L3 にダウングレード
       }
     } else {
-      failCount = 0
+      failCount = 0;
     }
-    fpsSamples.length = 0
+    fpsSamples.length = 0;
   }
-})
+});
 ```
 
 ## v7 → v8 移行
 
-| v7 | v8 |
-|----|-----|
+| v7                         | v8                                              |
+| -------------------------- | ----------------------------------------------- |
 | `new Application({ ... })` | `new Application()` + `await app.init({ ... })` |
-| `app.view` | `app.canvas` |
-| `PIXI.` グローバル | 名前付きimport |
+| `app.view`                 | `app.canvas`                                    |
+| `PIXI.` グローバル         | 名前付きimport                                  |
 
 ## カスタムフィルター vertex shader（実際の実装）
 
@@ -134,21 +140,24 @@ void main(void) {
 
 ```typescript
 filter = new Filter({
-  glProgram: new GlProgram({ vertex: VERTEX_SHADER, fragment: FRAGMENT_SHADER }),
+  glProgram: new GlProgram({
+    vertex: VERTEX_SHADER,
+    fragment: FRAGMENT_SHADER,
+  }),
   resources: {
     grainUniforms: {
-      uIntensity: { value: intensity, type: 'f32' },
-      uTime: { value: 0, type: 'f32' },
+      uIntensity: { value: intensity, type: "f32" },
+      uTime: { value: 0, type: "f32" },
     },
   },
-})
+});
 
 app.ticker.add((ticker) => {
-  const resource = filter.resources['grainUniforms']
+  const resource = filter.resources["grainUniforms"];
   if (resource?.uniforms) {
-    resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed
+    resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed;
   }
-})
+});
 ```
 
 ## useEffect + destroyed フラグパターン（必須）
@@ -156,64 +165,70 @@ app.ticker.add((ticker) => {
 非同期セットアップの完了前にアンマウントされた場合の安全処理:
 
 ```typescript
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { usePixiApp } from './hooks/use-pixi-app'
+import { useEffect } from "react";
+import { usePixiApp } from "./hooks/use-pixi-app";
 
 export function PixiGrain({ intensity = 0.05, speed = 1.0 }) {
-  const app = usePixiApp()
+  const app = usePixiApp();
 
   useEffect(() => {
-    let filter: import('pixi.js').Filter | null = null
-    let tickerCb: ((ticker: import('pixi.js').Ticker) => void) | null = null
-    let destroyed = false
+    let filter: import("pixi.js").Filter | null = null;
+    let tickerCb: ((ticker: import("pixi.js").Ticker) => void) | null = null;
+    let destroyed = false;
 
     const setup = async () => {
-      const { Filter, GlProgram } = await import('pixi.js')
-      if (destroyed) return  // 非同期完了前にアンマウントされた場合は中断
+      const { Filter, GlProgram } = await import("pixi.js");
+      if (destroyed) return; // 非同期完了前にアンマウントされた場合は中断
 
-      const glProgram = new GlProgram({ vertex: VERTEX_SHADER, fragment: FRAGMENT_SHADER })
+      const glProgram = new GlProgram({
+        vertex: VERTEX_SHADER,
+        fragment: FRAGMENT_SHADER,
+      });
       filter = new Filter({
         glProgram,
         resources: {
           grainUniforms: {
-            uIntensity: { value: intensity, type: 'f32' },
-            uTime: { value: 0, type: 'f32' },
+            uIntensity: { value: intensity, type: "f32" },
+            uTime: { value: 0, type: "f32" },
           },
         },
-      })
+      });
 
-      const existing = app.stage.filters
-      app.stage.filters = [...(Array.isArray(existing) ? existing : []), filter]
+      const existing = app.stage.filters;
+      app.stage.filters = [
+        ...(Array.isArray(existing) ? existing : []),
+        filter,
+      ];
 
-      const tickerCallback = (ticker: import('pixi.js').Ticker) => {
+      const tickerCallback = (ticker: import("pixi.js").Ticker) => {
         if (filter) {
-          const resource = filter.resources['grainUniforms']
+          const resource = filter.resources["grainUniforms"];
           if (resource?.uniforms) {
-            resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed
+            resource.uniforms.uTime += ticker.deltaTime * 0.01 * speed;
           }
         }
-      }
-      app.ticker.add(tickerCallback)
-      tickerCb = tickerCallback
-    }
+      };
+      app.ticker.add(tickerCallback);
+      tickerCb = tickerCallback;
+    };
 
-    void setup()
+    void setup();
 
     return () => {
-      destroyed = true
-      if (tickerCb) app.ticker.remove(tickerCb)
+      destroyed = true;
+      if (tickerCb) app.ticker.remove(tickerCb);
       if (filter) {
         if (Array.isArray(app.stage.filters)) {
-          app.stage.filters = app.stage.filters.filter((f) => f !== filter)
+          app.stage.filters = app.stage.filters.filter((f) => f !== filter);
         }
-        filter.destroy()
+        filter.destroy();
       }
-    }
-  }, [app, intensity, speed])
+    };
+  }, [app, intensity, speed]);
 
-  return null  // DOMを返さない（PixiAppContextで親Canvasに描画）
+  return null; // DOMを返さない（PixiAppContextで親Canvasに描画）
 }
 ```
 
@@ -221,11 +236,11 @@ export function PixiGrain({ intensity = 0.05, speed = 1.0 }) {
 
 ```typescript
 function deterministicHash(seed: number): number {
-  let hash = seed
-  hash = ((hash >> 16) ^ hash) * 0x45d9f3b
-  hash = ((hash >> 16) ^ hash) * 0x45d9f3b
-  hash = (hash >> 16) ^ hash
-  return (hash & 0x7fffffff) / 0x7fffffff
+  let hash = seed;
+  hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+  hash = ((hash >> 16) ^ hash) * 0x45d9f3b;
+  hash = (hash >> 16) ^ hash;
+  return (hash & 0x7fffffff) / 0x7fffffff;
 }
 ```
 
@@ -252,10 +267,10 @@ const app = usePixiApp()  // hooks/use-pixi-app.ts
 
 ```typescript
 // NG: オブジェクト形式（v7 API）
-app.destroy({ removeView: true })
+app.destroy({ removeView: true });
 
 // OK: PixiCanvasInner の実装（boolean）
-pixiApp.destroy(true)  // removeView=true でcanvasをDOMから除去
+pixiApp.destroy(true); // removeView=true でcanvasをDOMから除去
 ```
 
 ## モバイル
@@ -265,13 +280,13 @@ PixiJS は L4 専用。モバイルでは**常に無効化**（`isMobile` ペナ
 
 ## CLS対策
 
-| 対策 | 実装 |
-|------|------|
+| 対策             | 実装                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
 | Canvas初期サイズ | `absolute inset-0 z-[3]` で CLS 防止（z-index: `visual-effects-patterns.md` §Z-index ベースライン準拠） |
-| CSS containment | `contain: layout paint` |
-| FPS自動劣化 | 60サンプル平均 < 30fps × 3回で L3 にダウングレード |
-| 非表示時停止 | `IntersectionObserver` |
-| 解放 | unmount時に `pixiApp.destroy(true)` |
+| CSS containment  | `contain: layout paint`                                                                                 |
+| FPS自動劣化      | 60サンプル平均 < 30fps × 3回で L3 にダウングレード                                                      |
+| 非表示時停止     | `IntersectionObserver`                                                                                  |
+| 解放             | unmount時に `pixiApp.destroy(true)`                                                                     |
 
 ## GSAP ↔ PixiJS 統合要約
 
@@ -279,21 +294,21 @@ GSAP で PixiJS フィルターの uniform を直接制御:
 
 ```typescript
 // gsap.to() で uniform をアニメーション
-gsap.to(filter.resources['grainUniforms'].uniforms, {
+gsap.to(filter.resources["grainUniforms"].uniforms, {
   uIntensity: 0.08,
   duration: 1.5,
-  ease: 'power2.inOut',
-})
+  ease: "power2.inOut",
+});
 
 // ScrollTrigger onUpdate → filter intensity
 ScrollTrigger.create({
-  trigger: '.section',
+  trigger: ".section",
   scrub: true,
   onUpdate: (self) => {
-    const uniforms = filter.resources['grainUniforms'].uniforms
-    uniforms.uIntensity = 0.02 + self.progress * 0.06
+    const uniforms = filter.resources["grainUniforms"].uniforms;
+    uniforms.uIntensity = 0.02 + self.progress * 0.06;
   },
-})
+});
 ```
 
 **スクロール速度連動**: `Math.min(Math.abs(velocity) * 0.002, maxIntensity)` で速度に応じたフィルター強度を計算。
@@ -314,16 +329,16 @@ ScrollTrigger.create({
 
 ```typescript
 // NG: トップレベルで同期 import（SSR クラッシュ）
-import { Application } from 'pixi.js'
+import { Application } from "pixi.js";
 
 // OK: useEffect 内で動的 import
 useEffect(() => {
   const setup = async () => {
-    const { Application } = await import('pixi.js')
+    const { Application } = await import("pixi.js");
     // ...
-  }
-  void setup()
-}, [])
+  };
+  void setup();
+}, []);
 ```
 
 ```typescript
@@ -357,14 +372,14 @@ useEffect(() => {
 
 パスは `src/app/(public)/_shared/components/` を起点とした相対パス。
 
-| パス | 内容 |
-|------|------|
-| `effects/pixi/PixiCanvas.tsx` | SSRゲート + L4チェック |
-| `effects/pixi/PixiCanvasInner.tsx` | Application 初期化 + FPS監視 + PixiAppContext.Provider |
-| `effects/pixi/PixiGrain.tsx` | フィルムグレインGLSLフィルター |
-| `effects/pixi/PixiVignette.tsx` | ビネットGLSLフィルター |
-| `effects/pixi/PixiParticleSprites.tsx` | 2Dボケパーティクル |
-| `effects/pixi/hooks/use-pixi-app.ts` | PixiAppContext + `usePixiApp()` フック |
-| `effects/pixi/hooks/use-pixi-scroll.ts` | Lenis → ref スクロール同期 |
+| パス                                    | 内容                                                   |
+| --------------------------------------- | ------------------------------------------------------ |
+| `effects/pixi/PixiCanvas.tsx`           | SSRゲート + L4チェック                                 |
+| `effects/pixi/PixiCanvasInner.tsx`      | Application 初期化 + FPS監視 + PixiAppContext.Provider |
+| `effects/pixi/PixiGrain.tsx`            | フィルムグレインGLSLフィルター                         |
+| `effects/pixi/PixiVignette.tsx`         | ビネットGLSLフィルター                                 |
+| `effects/pixi/PixiParticleSprites.tsx`  | 2Dボケパーティクル                                     |
+| `effects/pixi/hooks/use-pixi-app.ts`    | PixiAppContext + `usePixiApp()` フック                 |
+| `effects/pixi/hooks/use-pixi-scroll.ts` | Lenis → ref スクロール同期                             |
 
 > **詳細パターン**: `src/app/(public)/_shared/components/effects/pixi/` 以下の実装を優先して読む。

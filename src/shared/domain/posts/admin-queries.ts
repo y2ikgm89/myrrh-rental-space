@@ -150,7 +150,9 @@ export async function getPostById(id: string): Promise<PostData | null> {
   };
 }
 
-export async function getPostVersions(postId: string): Promise<PostVersionData[]> {
+export async function getPostVersions(
+  postId: string,
+): Promise<PostVersionData[]> {
   const versions = await prisma.postVersion.findMany({
     where: { postId },
     select: {

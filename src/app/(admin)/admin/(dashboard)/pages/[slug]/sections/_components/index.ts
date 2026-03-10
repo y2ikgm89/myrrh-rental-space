@@ -1,2 +1,2 @@
-export { AddSectionDialog } from './AddSectionDialog'
-export { SectionTypeIcon, sectionTypeIconComponents } from './SectionTypeIcon'
+export { AddSectionDialog } from "./AddSectionDialog";
+export { SectionTypeIcon, sectionTypeIconComponents } from "./SectionTypeIcon";

@@ -34,28 +34,33 @@ design rules manually: `.claude/rules/anti-ai-design.md`, `.claude/rules/project
 ## What to remember
 
 ### Color decisions
+
 - OKLCH values chosen and why (mood, contrast, accessibility)
 - Semantic token mappings (primary, accent, muted, etc.)
 - Color relationships (complementary, analogous patterns used)
 
 ### Typography
+
 - Font pairings selected and rationale
 - Scale decisions (heading sizes, body text, captions)
 - Weight usage patterns
 
 ### Animation & motion
+
 - GSAP easing curves chosen per mood/section type
 - ScrollTrigger configurations that worked well
 - Parallax amounts and stagger values per section type
 - Reduced-motion fallback decisions
 
 ### Layout patterns
+
 - Section spacing rhythm (padding, gap values)
 - Grid patterns used across pages
 - Responsive breakpoint decisions
 - Container width choices
 
 ### Component patterns
+
 - Button styles, hover states, transitions
 - Card layouts, shadow treatments
 - Hero section variants that were approved
@@ -86,6 +91,7 @@ rejected-options.md    — What was tried and rejected (and why)
 ```
 
 When recording decisions, always include:
+
 - **What** was decided
 - **Why** (rationale, brand alignment)
 - **When** (date or context of the decision)

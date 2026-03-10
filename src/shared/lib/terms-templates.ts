@@ -4,22 +4,22 @@
  * 規約バージョン作成時に使用できるテンプレートを提供
  */
 
-import { TermsType } from '@/shared/db/enums'
+import { TermsType } from "@/shared/db/enums";
 
 export interface TermsTemplate {
-  id: string
-  label: string
-  description: string
-  content: string
+  id: string;
+  label: string;
+  description: string;
+  content: string;
 }
 
 /**
  * 利用規約テンプレート
  */
 const TERMS_OF_USE_TEMPLATE: TermsTemplate = {
-  id: 'terms-of-use',
-  label: 'レンタルスペース利用規約',
-  description: 'レンタルスペースの基本的な利用規約テンプレート',
+  id: "terms-of-use",
+  label: "レンタルスペース利用規約",
+  description: "レンタルスペースの基本的な利用規約テンプレート",
   content: `<h2>事業者情報</h2>
 <p>【事業者名を入力してください】<br>
 所在地：【住所を入力してください】<br>
@@ -83,15 +83,16 @@ const TERMS_OF_USE_TEMPLATE: TermsTemplate = {
 
 <h2>第10条（お問い合わせ）</h2>
 <p>本規約に関するお問い合わせは、上記連絡先までご連絡ください。</p>`,
-}
+};
 
 /**
  * プライバシーポリシーテンプレート
  */
 const PRIVACY_POLICY_TEMPLATE: TermsTemplate = {
-  id: 'privacy-policy',
-  label: 'プライバシーポリシー',
-  description: '個人情報の取り扱いに関するポリシーテンプレート（外部サービス対応）',
+  id: "privacy-policy",
+  label: "プライバシーポリシー",
+  description:
+    "個人情報の取り扱いに関するポリシーテンプレート（外部サービス対応）",
   content: `<h2>1. 事業者情報</h2>
 <p>【事業者名を入力してください】<br>
 所在地：【住所を入力してください】<br>
@@ -180,15 +181,15 @@ const PRIVACY_POLICY_TEMPLATE: TermsTemplate = {
 
 <h2>11. プライバシーポリシーの変更</h2>
 <p>当施設は、必要に応じて本プライバシーポリシーを変更することがあります。重要な変更がある場合は、ウェブサイト上でお知らせします。変更後のポリシーは、当施設ウェブサイトに掲載した時点から効力を生じるものとします。</p>`,
-}
+};
 
 /**
  * キャンセルポリシーテンプレート
  */
 const CANCELLATION_POLICY_TEMPLATE: TermsTemplate = {
-  id: 'cancellation-policy',
-  label: 'キャンセルポリシー',
-  description: '予約キャンセルに関するポリシーテンプレート',
+  id: "cancellation-policy",
+  label: "キャンセルポリシー",
+  description: "予約キャンセルに関するポリシーテンプレート",
   content: `<h2>事業者情報</h2>
 <p>【事業者名を入力してください】<br>
 所在地：【住所を入力してください】<br>
@@ -258,15 +259,15 @@ const CANCELLATION_POLICY_TEMPLATE: TermsTemplate = {
 
 <h2>お問い合わせ</h2>
 <p>キャンセルに関するお問い合わせは、上記連絡先までご連絡ください。</p>`,
-}
+};
 
 /**
  * 支払い規約テンプレート
  */
 const PAYMENT_TERMS_TEMPLATE: TermsTemplate = {
-  id: 'payment-terms',
-  label: '支払い規約',
-  description: '料金・支払いに関する規約テンプレート',
+  id: "payment-terms",
+  label: "支払い規約",
+  description: "料金・支払いに関する規約テンプレート",
   content: `<h2>事業者情報</h2>
 <p>【事業者名を入力してください】<br>
 所在地：【住所を入力してください】<br>
@@ -329,7 +330,7 @@ const PAYMENT_TERMS_TEMPLATE: TermsTemplate = {
 
 <h2>8. お問い合わせ</h2>
 <p>お支払いに関するお問い合わせは、上記連絡先までご連絡ください。</p>`,
-}
+};
 
 /**
  * 規約タイプごとのテンプレート定義
@@ -340,13 +341,13 @@ export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
   [TermsType.CANCELLATION]: [CANCELLATION_POLICY_TEMPLATE],
   [TermsType.PAYMENT]: [PAYMENT_TERMS_TEMPLATE],
   [TermsType.CUSTOM]: [], // カスタム規約はテンプレートなし
-}
+};
 
 /**
  * 規約タイプに対応するテンプレートを取得
  */
 export function getTemplatesForType(termsType: TermsType): TermsTemplate[] {
-  return TERMS_TEMPLATES[termsType] ?? []
+  return TERMS_TEMPLATES[termsType] ?? [];
 }
 
 /**
@@ -354,24 +355,24 @@ export function getTemplatesForType(termsType: TermsType): TermsTemplate[] {
  */
 export function getTemplateById(
   termsType: TermsType,
-  templateId: string
+  templateId: string,
 ): TermsTemplate | undefined {
-  const templates = getTemplatesForType(termsType)
-  return templates.find((t) => t.id === templateId)
+  const templates = getTemplatesForType(termsType);
+  return templates.find((t) => t.id === templateId);
 }
 
 /**
  * テンプレートに埋め込む事業者情報
  */
 export interface BusinessInfo {
-  businessName: string | null
-  email: string | null
-  phoneNumber: string | null
-  postalCode: string | null
-  prefecture: string | null
-  city: string | null
-  streetAddress: string | null
-  buildingName: string | null
+  businessName: string | null;
+  email: string | null;
+  phoneNumber: string | null;
+  postalCode: string | null;
+  prefecture: string | null;
+  city: string | null;
+  streetAddress: string | null;
+  buildingName: string | null;
 }
 
 /**
@@ -384,20 +385,22 @@ function buildAddress(info: BusinessInfo): string {
     info.city,
     info.streetAddress,
     info.buildingName,
-  ].filter(Boolean)
+  ].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(' ') : '【住所を入力してください】'
+  return parts.length > 0 ? parts.join(" ") : "【住所を入力してください】";
 }
 
 /**
  * 連絡先を組み立てる
  */
 function buildContact(info: BusinessInfo): string {
-  const parts = []
-  if (info.email) parts.push(info.email)
-  if (info.phoneNumber) parts.push(`TEL: ${info.phoneNumber}`)
+  const parts = [];
+  if (info.email) parts.push(info.email);
+  if (info.phoneNumber) parts.push(`TEL: ${info.phoneNumber}`);
 
-  return parts.length > 0 ? parts.join(' / ') : '【メールアドレス/電話番号を入力してください】'
+  return parts.length > 0
+    ? parts.join(" / ")
+    : "【メールアドレス/電話番号を入力してください】";
 }
 
 /**
@@ -405,15 +408,16 @@ function buildContact(info: BusinessInfo): string {
  */
 export function applyBusinessInfo(content: string, info: BusinessInfo): string {
   const replacements: Record<string, string> = {
-    '【事業者名を入力してください】': info.businessName || '【事業者名を入力してください】',
-    '【住所を入力してください】': buildAddress(info),
-    '【メールアドレス/電話番号を入力してください】': buildContact(info),
-  }
+    "【事業者名を入力してください】":
+      info.businessName || "【事業者名を入力してください】",
+    "【住所を入力してください】": buildAddress(info),
+    "【メールアドレス/電話番号を入力してください】": buildContact(info),
+  };
 
-  let result = content
+  let result = content;
   for (const [placeholder, value] of Object.entries(replacements)) {
-    result = result.replace(placeholder, value)
+    result = result.replace(placeholder, value);
   }
 
-  return result
+  return result;
 }

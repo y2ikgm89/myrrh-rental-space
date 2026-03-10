@@ -13,4 +13,4 @@ export const SESSION_CONFIG = {
 
   /** Cookie キャッシュ有効期限（秒） - 5分 */
   cookieCacheMaxAge: 60 * 5,
-} as const
+} as const;

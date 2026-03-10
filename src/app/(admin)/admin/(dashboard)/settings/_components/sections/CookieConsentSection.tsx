@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Cookie同意バナー設定セクション
@@ -6,7 +6,7 @@
  * GDPR対応のCookie同意バナーの表示設定
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition } from "react";
 import {
   Button,
   Card,
@@ -18,34 +18,32 @@ import {
   Label,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
-import { updateCookieConsentSettings } from '@/admin/actions/settings'
-import type { SettingsData } from '@/admin/actions/settings'
-import { useRefreshOnSuccess } from '../hooks'
+} from "@/admin/components/ui";
+import { updateCookieConsentSettings } from "@/admin/actions/settings";
+import type { SettingsData } from "@/admin/actions/settings";
+import { useRefreshOnSuccess } from "../hooks";
 
 // デフォルト値
 const DEFAULT_MESSAGE =
-  '当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。'
-const DEFAULT_ACCEPT_TEXT = '同意する'
-const DEFAULT_REJECT_TEXT = '拒否する'
-const DEFAULT_POLICY_URL = '/privacy'
+  "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
+const DEFAULT_ACCEPT_TEXT = "同意する";
+const DEFAULT_REJECT_TEXT = "拒否する";
+const DEFAULT_POLICY_URL = "/privacy";
 
 interface CookieConsentSectionProps {
-  settings: SettingsData
+  settings: SettingsData;
 }
 
-export function CookieConsentSection({
-  settings,
-}: CookieConsentSectionProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
   const [formData, setFormData] = useState({
     cookieConsentEnabled: settings.cookieConsentEnabled,
-    cookieConsentMessage: settings.cookieConsentMessage || '',
-    cookieConsentAcceptText: settings.cookieConsentAcceptText || '',
-    cookieConsentRejectText: settings.cookieConsentRejectText || '',
-    cookieConsentPolicyUrl: settings.cookieConsentPolicyUrl || '',
-  })
+    cookieConsentMessage: settings.cookieConsentMessage || "",
+    cookieConsentAcceptText: settings.cookieConsentAcceptText || "",
+    cookieConsentRejectText: settings.cookieConsentRejectText || "",
+    cookieConsentPolicyUrl: settings.cookieConsentPolicyUrl || "",
+  });
 
   const handleSave = () => {
     startTransition(async () => {
@@ -55,10 +53,10 @@ export function CookieConsentSection({
         cookieConsentAcceptText: formData.cookieConsentAcceptText || null,
         cookieConsentRejectText: formData.cookieConsentRejectText || null,
         cookieConsentPolicyUrl: formData.cookieConsentPolicyUrl || null,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "Cookie同意設定を保存しました");
+    });
+  };
 
   return (
     <Card>
@@ -172,9 +170,9 @@ export function CookieConsentSection({
         )}
 
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : 'Cookie同意設定を保存'}
+          {isPending ? "保存中..." : "Cookie同意設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }

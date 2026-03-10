@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * エディターヘッダー
@@ -7,33 +7,44 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
-import { ArrowLeft, Settings, Eye, Save, Loader2, Globe, GlobeLock, MessageSquare } from 'lucide-react'
-import { tv } from 'tailwind-variants'
-import { Button } from '@/admin/components/ui'
-import { Z_INDEX } from '@/admin/lib/styles/z-index'
-import type { EditorHeaderProps } from './types'
+import {
+  ArrowLeft,
+  Settings,
+  Eye,
+  Save,
+  Loader2,
+  Globe,
+  GlobeLock,
+  MessageSquare,
+} from "lucide-react";
+import { tv } from "tailwind-variants";
+import { Button } from "@/admin/components/ui";
+import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import type { EditorHeaderProps } from "./types";
 
 const styles = tv({
   slots: {
     header: `fixed top-0 left-0 right-0 z-[${Z_INDEX.editorToolbar}] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`,
-    container: 'flex h-14 items-center justify-between px-4',
-    left: 'flex items-center gap-3',
-    center: 'flex-1 flex items-center justify-center',
-    right: 'flex items-center gap-2',
-    titleSection: 'flex items-center gap-2',
-    title: 'text-base font-medium truncate max-w-[300px]',
-    slug: 'text-sm text-muted-foreground',
-    dirtyIndicator: 'ml-2 text-xs text-warning',
+    container: "flex h-14 items-center justify-between px-4",
+    left: "flex items-center gap-3",
+    center: "flex-1 flex items-center justify-center",
+    right: "flex items-center gap-2",
+    titleSection: "flex items-center gap-2",
+    title: "text-base font-medium truncate max-w-[300px]",
+    slug: "text-sm text-muted-foreground",
+    dirtyIndicator: "ml-2 text-xs text-warning",
   },
-})()
+})();
 
 /**
  * 公開状態を判定するヘルパー関数
  * PostStatus ('PUBLISHED') または boolean (true) の両方に対応
  */
-function checkIsPublished(status: EditorHeaderProps['publishActions']): boolean {
-  if (!status) return false
-  return status.status === 'PUBLISHED' || status.status === true
+function checkIsPublished(
+  status: EditorHeaderProps["publishActions"],
+): boolean {
+  if (!status) return false;
+  return status.status === "PUBLISHED" || status.status === true;
 }
 
 export function EditorHeader({
@@ -53,7 +64,7 @@ export function EditorHeader({
   onToggleCommentPanel,
   commentCount,
 }: EditorHeaderProps) {
-  const isPublished = checkIsPublished(publishActions)
+  const isPublished = checkIsPublished(publishActions);
 
   return (
     <header className={styles.header()}>
@@ -72,11 +83,9 @@ export function EditorHeader({
           </Button>
 
           <div className={styles.titleSection()}>
-            <span className={styles.title()}>{title || '無題'}</span>
+            <span className={styles.title()}>{title || "無題"}</span>
             <span className={styles.slug()}>/{slug}</span>
-            {isDirty && (
-              <span className={styles.dirtyIndicator()}>未保存</span>
-            )}
+            {isDirty && <span className={styles.dirtyIndicator()}>未保存</span>}
           </div>
         </div>
 
@@ -101,7 +110,7 @@ export function EditorHeader({
               variant="outline"
               size="sm"
               onClick={onToggleSidePanel}
-              className={isSidePanelOpen ? 'bg-accent' : ''}
+              className={isSidePanelOpen ? "bg-accent" : ""}
             >
               <Settings className="h-4 w-4" />
               <span className="sr-only">設定</span>
@@ -114,7 +123,7 @@ export function EditorHeader({
               variant="outline"
               size="sm"
               onClick={onToggleCommentPanel}
-              className={isCommentPanelOpen ? 'bg-accent' : ''}
+              className={isCommentPanelOpen ? "bg-accent" : ""}
             >
               <MessageSquare className="h-4 w-4" />
               {commentCount !== undefined && commentCount > 0 && (
@@ -137,13 +146,13 @@ export function EditorHeader({
               <Save className="h-4 w-4" />
             )}
             <span className="hidden sm:inline">
-              {isPending ? '保存中...' : '保存'}
+              {isPending ? "保存中..." : "保存"}
             </span>
           </Button>
 
           {/* 公開/非公開ボタン */}
-          {publishActions && (
-            isPublished ? (
+          {publishActions &&
+            (isPublished ? (
               <Button
                 type="button"
                 variant="outline"
@@ -167,12 +176,11 @@ export function EditorHeader({
                 <Globe className="h-4 w-4" />
                 <span className="hidden sm:inline">公開する</span>
               </Button>
-            )
-          )}
+            ))}
 
           {extraActions}
         </div>
       </div>
     </header>
-  )
+  );
 }

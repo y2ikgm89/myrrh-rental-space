@@ -53,50 +53,61 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 
 1. **モジュールエイリアス（`resolveAlias`）**
    - パスエイリアスやパッケージの置き換えが可能
+
    ```typescript
    // next.config.ts
    const nextConfig: NextConfig = {
      turbopack: {
        resolveAlias: {
-         '@': './src',
-         'underscore': 'lodash',
+         "@": "./src",
+         underscore: "lodash",
          // 条件付きエイリアス（ブラウザ環境用）
-         'mocha': { browser: 'mocha/browser-entry.js' }
-       }
-     }
-   }
+         mocha: { browser: "mocha/browser-entry.js" },
+       },
+     },
+   };
    ```
 
 2. **ファイル拡張子の解決（`resolveExtensions`）**
    - カスタムファイル拡張子のサポート
+
    ```typescript
    const nextConfig: NextConfig = {
      turbopack: {
-       resolveExtensions: ['.mdx', '.tsx', '.ts', '.jsx', '.js', '.mjs', '.json']
-     }
-   }
+       resolveExtensions: [
+         ".mdx",
+         ".tsx",
+         ".ts",
+         ".jsx",
+         ".js",
+         ".mjs",
+         ".json",
+       ],
+     },
+   };
    ```
 
 3. **カスタムローダー（`rules`）**
    - カスタムローダーの設定が可能
+
    ```typescript
    const nextConfig: NextConfig = {
      turbopack: {
        rules: {
-         '*.svg': {
+         "*.svg": {
            loaders: [
              {
-               loader: '@svgr/webpack',
+               loader: "@svgr/webpack",
                options: {
                  icon: true,
                },
              },
            ],
-           as: '*.js',
+           as: "*.js",
          },
        },
-     }
-   }
+     },
+   };
    ```
 
 4. **Sassの`~`構文の対応**
@@ -105,10 +116,10 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
    const nextConfig: NextConfig = {
      turbopack: {
        resolveAlias: {
-         '~*': '*' // ~bootstrap → bootstrap に変換
-       }
-     }
-   }
+         "~*": "*", // ~bootstrap → bootstrap に変換
+       },
+     },
+   };
    ```
 
 **注意**: ローダーのオプションはプレーンなJavaScriptプリミティブ、オブジェクト、配列のみ（`require()`は不可）です。
@@ -129,10 +140,11 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
   - `next.config.js`で明示的に有効化する必要がある
   - 後続の`next build`実行を高速化
 - **設定例**:
+
   ```typescript
   // next.config.ts
-  import type { NextConfig } from 'next'
-  
+  import type { NextConfig } from "next";
+
   const nextConfig: NextConfig = {
     experimental: {
       // 開発環境のファイルシステムキャッシュ（デフォルトで有効）
@@ -140,9 +152,9 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
       // 本番ビルドのファイルシステムキャッシュ（オプトイン）
       turbopackFileSystemCacheForBuild: true,
     },
-  }
-  
-  export default nextConfig
+  };
+
+  export default nextConfig;
   ```
 
 ---
@@ -284,7 +296,7 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 #### Turbopack設定の制約
 
 - **制約**: カスタムローダーのオプションはプレーンなJavaScriptプリミティブ、オブジェクト、配列のみ（`require()`は不可）
-- **対応**: 
+- **対応**:
   - `turbopack.resolveAlias`でエイリアス設定
   - `turbopack.rules`でローダー設定
   - `turbopack.resolveExtensions`で拡張子設定
@@ -469,7 +481,7 @@ Turbopackは、Rustで書かれた次世代のJavaScript/TypeScriptバンドラ�
 #### 機能動作確認
 
 - **基準**: すべての機能が正常に動作する
-- **確認方法**: 
+- **確認方法**:
   - すべてのページが正常に表示される
   - フォーム送信が正常に動作する
   - 認証フローが正常に動作する

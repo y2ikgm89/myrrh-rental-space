@@ -4,16 +4,16 @@
  * Displays a small uppercase label with a gold line accent on the left.
  */
 
-import type { ReactElement } from 'react'
+import type { ReactElement } from "react";
 
 interface SectionLabelProps {
-  readonly children: string
-  readonly className?: string
+  readonly children: string;
+  readonly className?: string;
 }
 
 export function SectionLabel({
   children,
-  className = '',
+  className = "",
 }: SectionLabelProps): ReactElement {
   return (
     <span
@@ -21,5 +21,5 @@ export function SectionLabel({
     >
       {children}
     </span>
-  )
+  );
 }

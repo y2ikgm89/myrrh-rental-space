@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# PostToolUse: "use server" ファイルで withPermission/withReadPermission なしの
-# export async function を検出し、認証チェック漏れを防ぐ
+# PostToolUse: "use server" ファイルで executeAdminMutation パターンなしの
+# export を検出し、認証チェック漏れを防ぐ
 
 set -euo pipefail
 
@@ -17,14 +17,14 @@ FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev
 # "use server" ディレクティブがないファイルはスキップ（helpers.ts 等）
 if ! grep -qE '^"use server"|^'"'"'use server'"'" "$FILE_PATH" 2>/dev/null; then exit 0; fi
 
-# withPermission/withReadPermission/withRole/checkReadPermissionFor が一切ない場合
-if ! grep -qE "withPermission|withReadPermission|withRole|checkReadPermissionFor" "$FILE_PATH" 2>/dev/null; then
-  # export async function が存在する場合のみ警告（HOF 経由でない生の export）
-  if grep -qE "^export async function" "$FILE_PATH" 2>/dev/null; then
-    echo "WARNING: Server Action に withPermission/withReadPermission HOF が未使用です。"
-    echo "   認証チェック漏れのリスクがあります。"
-    echo "   .claude/rules/error-handling.md の withPermission パターンを確認してください。"
-    echo "   （読み取り専用なら checkReadPermissionFor、書き込み系は withPermission を使用）"
+# executeAdminMutation / executeAdminMutationResult / checkPermission が一切ない場合
+if ! grep -qE "executeAdminMutation|executeAdminMutationResult|checkPermission|checkAdminAuth|checkResourceAccess" "$FILE_PATH" 2>/dev/null; then
+  # export された関数/const が存在する場合のみ警告
+  if grep -qE "^export (async function|const )" "$FILE_PATH" 2>/dev/null; then
+    echo "WARNING: Server Action に認証パターンが未使用です。"
+    echo "   書き込み系: executeAdminMutation / executeAdminMutationResult を使用"
+    echo "   API Route: checkPermission を直接使用"
+    echo "   .claude/rules/auth-patterns.md を確認してください。"
   fi
 fi
 

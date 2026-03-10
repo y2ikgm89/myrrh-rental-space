@@ -19,5 +19,5 @@ export default function AdminLoading() {
         <div className="h-4 w-full max-w-lg rounded bg-muted" />
       </div>
     </div>
-  )
+  );
 }

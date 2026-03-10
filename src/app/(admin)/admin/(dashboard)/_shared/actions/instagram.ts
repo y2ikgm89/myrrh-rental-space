@@ -20,7 +20,7 @@ import {
   type InstagramSettingsInput,
 } from "@/shared/lib/validations/instagram";
 import { testInstagramConnection } from "@/shared/lib/instagram";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { DomainError } from "@/shared/domain/domain-error";
 
 export type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
@@ -138,9 +138,7 @@ export async function addInstagramPost(url: string): Promise<MutationResult> {
   });
 }
 
-export async function removeInstagramPost(
-  id: string,
-): Promise<MutationResult> {
+export async function removeInstagramPost(id: string): Promise<MutationResult> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) {
     return createValidationMutationError(validated.error);

@@ -4,11 +4,11 @@
  * @description YouTube動画挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,17 +18,17 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createYouTubeNode } from '../nodes/YouTubeNode'
+} from "@/admin/components/ui";
+import { $createYouTubeNode } from "../nodes/YouTubeNode";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type YouTubePluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Utilities
@@ -39,24 +39,24 @@ type YouTubePluginProps = {
  */
 function extractVideoId(url: string): string | null {
   // 短縮URL: youtu.be/VIDEO_ID
-  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/)
+  const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
   if (shortMatch?.[1]) {
-    return shortMatch[1]
+    return shortMatch[1];
   }
 
   // 通常URL: youtube.com/watch?v=VIDEO_ID
-  const normalMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/)
+  const normalMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
   if (normalMatch?.[1]) {
-    return normalMatch[1]
+    return normalMatch[1];
   }
 
   // 埋め込みURL: youtube.com/embed/VIDEO_ID
-  const embedMatch = url.match(/embed\/([a-zA-Z0-9_-]+)/)
+  const embedMatch = url.match(/embed\/([a-zA-Z0-9_-]+)/);
   if (embedMatch?.[1]) {
-    return embedMatch[1]
+    return embedMatch[1];
   }
 
-  return null
+  return null;
 }
 
 // =============================================================================
@@ -64,33 +64,33 @@ function extractVideoId(url: string): string | null {
 // =============================================================================
 
 export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState('')
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = () => {
-    const videoId = extractVideoId(url)
+    const videoId = extractVideoId(url);
 
     if (!videoId) {
-      setError('有効なYouTube URLを入力してください')
-      return
+      setError("有効なYouTube URLを入力してください");
+      return;
     }
 
     editor.update(() => {
-      const node = $createYouTubeNode({ videoId })
-      $insertNodeToNearestRoot(node)
-    })
+      const node = $createYouTubeNode({ videoId });
+      $insertNodeToNearestRoot(node);
+    });
 
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setError('')
-    onClose()
-  }
+    setUrl("");
+    setError("");
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -110,8 +110,8 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
               type="url"
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value)
-                setError('')
+                setUrl(e.target.value);
+                setError("");
               }}
               placeholder="https://www.youtube.com/watch?v=..."
             />
@@ -129,6 +129,5 @@ export function YouTubePlugin({ isOpen, onClose }: YouTubePluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

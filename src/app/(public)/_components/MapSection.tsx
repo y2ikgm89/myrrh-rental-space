@@ -5,48 +5,58 @@
  * showAddressBelow で地図下に住所テキストを表示。
  */
 
-import type { ReactElement } from 'react'
-import { ScrollReveal } from '@/public/components/animations/ScrollReveal'
-import { SectionWrapper, getTitleClasses, getTitleStyle, getTextStyle } from '@/public/components/sections/SectionWrapper'
-import { SectionLabel } from '@/public/components/ui/SectionLabel'
-import { BORDER_RADIUS_MAP } from '@/public/lib/section-style-maps'
-import type { MapConfig } from '@/shared/lib/validations/section'
-import { parseBorderRadius } from '@/shared/lib/validations/section'
-import type { SectionDesign } from '@/shared/lib/validations/section-design'
+import type { ReactElement } from "react";
+import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import {
+  SectionWrapper,
+  getTitleClasses,
+  getTitleStyle,
+  getTextStyle,
+} from "@/public/components/sections/SectionWrapper";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
+import type { MapConfig } from "@/shared/lib/validations/section";
+import { parseBorderRadius } from "@/shared/lib/validations/section";
+import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 const HEIGHT_MAP = {
-  sm: 'h-[300px]',
-  md: 'h-[400px]',
-  lg: 'h-[500px]',
-} as const
+  sm: "h-[300px]",
+  md: "h-[400px]",
+  lg: "h-[500px]",
+} as const;
 
 interface MapSectionProps {
-  readonly config: MapConfig
-  readonly design: SectionDesign
+  readonly config: MapConfig;
+  readonly design: SectionDesign;
 }
 
 function buildMapEmbedUrl(config: MapConfig): string | null {
   if (config.latitude != null && config.longitude != null) {
-    return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${config.longitude}!3d${config.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sja!2sjp!4v1&z=${config.zoom}`
+    return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${config.longitude}!3d${config.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sja!2sjp!4v1&z=${config.zoom}`;
   }
   if (config.address) {
-    const q = encodeURIComponent(config.address)
-    return `https://www.google.com/maps/embed/v1/place?key=&q=${q}&zoom=${config.zoom}`
+    const q = encodeURIComponent(config.address);
+    return `https://www.google.com/maps/embed/v1/place?key=&q=${q}&zoom=${config.zoom}`;
   }
-  return null
+  return null;
 }
 
 export function MapSection({ config, design }: MapSectionProps): ReactElement {
-  const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md
-  const embedUrl = buildMapEmbedUrl(config)
+  const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
+  const embedUrl = buildMapEmbedUrl(config);
 
   return (
     <SectionWrapper design={design}>
       {config.title && (
         <div className="mb-8 text-center md:mb-12">
           <ScrollReveal>
-            {config.sectionLabel && <SectionLabel>{config.sectionLabel}</SectionLabel>}
-            <h2 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`} style={getTitleStyle(design)}>
+            {config.sectionLabel && (
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            )}
+            <h2
+              className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+              style={getTitleStyle(design)}
+            >
               {config.title}
             </h2>
           </ScrollReveal>
@@ -54,7 +64,9 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
       )}
 
       <ScrollReveal>
-        <div className={`overflow-hidden ${BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)]} ${heightClass}`}>
+        <div
+          className={`overflow-hidden ${BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)]} ${heightClass}`}
+        >
           {embedUrl ? (
             <iframe
               src={embedUrl}
@@ -62,7 +74,7 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
-              title={config.title ?? 'Google Maps'}
+              title={config.title ?? "Google Maps"}
             />
           ) : (
             <div className="flex h-full items-center justify-center bg-muted">
@@ -76,11 +88,14 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
 
       {config.showAddressBelow && config.address && (
         <ScrollReveal delay={0.2}>
-          <p className="mt-4 text-center text-sm text-muted-foreground" style={getTextStyle(design)}>
+          <p
+            className="mt-4 text-center text-sm text-muted-foreground"
+            style={getTextStyle(design)}
+          >
             {config.address}
           </p>
         </ScrollReveal>
       )}
     </SectionWrapper>
-  )
+  );
 }

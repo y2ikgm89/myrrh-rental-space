@@ -5,46 +5,48 @@
  * 旧: /admin/settings?tab=homepage → 新: /admin/pages/homepage/edit
  */
 
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
-import { getInstagramConfig } from '@/admin/queries/instagram'
-import { getPageBySlug } from '@/admin/queries/page'
-import { Button, Badge, Breadcrumb } from '@/admin/components/ui'
-import { HomepageEditTabs } from './_components/HomepageEditTabs'
-import type { Metadata } from 'next'
-import type { ReactElement } from 'react'
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { getInstagramConfig } from "@/admin/queries/instagram";
+import { getPageBySlug } from "@/admin/queries/page";
+import { Button, Badge, Breadcrumb } from "@/admin/components/ui";
+import { HomepageEditTabs } from "./_components/HomepageEditTabs";
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
 
 export const metadata: Metadata = {
-  title: 'ホームページ編集',
-}
+  title: "ホームページ編集",
+};
 
 export default async function HomepageEditPage(): Promise<ReactElement> {
-  const homePage = await getPageBySlug('home')
+  await connection();
+  const homePage = await getPageBySlug("home");
   if (!homePage) {
-    notFound()
+    notFound();
   }
 
   // Instagram接続状態を取得
-  const instagramConfig = await getInstagramConfig()
+  const instagramConfig = await getInstagramConfig();
 
   // SEO用データ
   const pageSeoData = {
-    slug: 'home',
+    slug: "home",
     title: homePage.title,
     metaDescription: homePage.metaDescription,
     metaKeywords: homePage.metaKeywords,
     ogpTitle: homePage.ogpTitle,
     ogpDescription: homePage.ogpDescription,
     ogpImageUrl: homePage.ogpImageUrl,
-  }
+  };
 
   return (
     <div className="space-y-6">
       <Breadcrumb
         items={[
-          { label: 'ページ管理', href: '/admin/pages' },
-          { label: 'ホームページ' },
+          { label: "ページ管理", href: "/admin/pages" },
+          { label: "ホームページ" },
         ]}
       />
 
@@ -57,7 +59,9 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">ホームページ編集</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                ホームページ編集
+              </h1>
               <Badge variant="secondary">システム</Badge>
             </div>
             <p className="text-muted-foreground">
@@ -78,6 +82,5 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
         page={pageSeoData}
       />
     </div>
-  )
+  );
 }
-

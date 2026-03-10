@@ -7,13 +7,13 @@
 
 ## 現状の問題
 
-| コンポーネント | 状態 | 詳細 |
-|---------------|------|------|
-| Settings モデル | ✅ | `siteName`, `headerLogoUrl` フィールド存在 |
-| 設定 UI | ⚠️ | 両フィールド設定可能だが切り替え機能なし |
-| 公開ヘッダー | ❌ | `siteName` のみ表示、ロゴ未使用 |
-| 公開フッター | ⚠️ | `siteName` のみ表示、ロゴなし |
-| 管理画面ヘッダー | ❌ | ハードコード、設定未反映 |
+| コンポーネント   | 状態 | 詳細                                       |
+| ---------------- | ---- | ------------------------------------------ |
+| Settings モデル  | ✅   | `siteName`, `headerLogoUrl` フィールド存在 |
+| 設定 UI          | ⚠️   | 両フィールド設定可能だが切り替え機能なし   |
+| 公開ヘッダー     | ❌   | `siteName` のみ表示、ロゴ未使用            |
+| 公開フッター     | ⚠️   | `siteName` のみ表示、ロゴなし              |
+| 管理画面ヘッダー | ❌   | ハードコード、設定未反映                   |
 
 ## UI/UX 設計方針
 
@@ -21,10 +21,10 @@
 
 ### シンプルな2択設計
 
-| 設定 | 動作 |
-|------|------|
+| 設定                             | 動作                                            |
+| -------------------------------- | ----------------------------------------------- |
 | **ロゴを使用: ON**（デフォルト） | ロゴ URL があればロゴ表示、なければテキスト表示 |
-| **ロゴを使用: OFF** | 常にサイト名テキスト表示 |
+| **ロゴを使用: OFF**              | 常にサイト名テキスト表示                        |
 
 ### 表示ロジック
 
@@ -38,6 +38,7 @@ useLogo = false
 ```
 
 **シンプルさのメリット**:
+
 - 設定で迷わない（ON/OFF の2択）
 - コード分岐が少ない
 - フォールバックが自然（ロゴなければテキスト）
@@ -91,18 +92,18 @@ useLogo = false
 
 ## 変更ファイル
 
-| ファイル | 変更内容 |
-|----------|----------|
-| `prisma/schema.prisma` | `useHeaderLogo`, `useFooterLogo`, `footerLogoUrl` 追加 |
-| `prisma/migrations/20260119005448_add_logo_display_settings/` | マイグレーション |
-| `src/app/(admin)/.../settings/_components/sections/BasicInfoSection.tsx` | トグルスイッチ UI |
-| `src/app/(public)/_shared/components/layouts/Header.tsx` | ロゴ/テキスト表示ロジック |
-| `src/app/(public)/_shared/components/layouts/HeaderBranding.tsx` | 新規（Client Component） |
-| `src/app/(public)/_shared/components/layouts/Footer.tsx` | フッターロゴ対応 |
-| `src/app/(public)/_shared/components/layouts/FooterBranding.tsx` | 新規（Client Component） |
-| `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx` | ブランディング追加 |
-| `src/app/(admin)/admin/(dashboard)/layout.tsx` | 設定取得・Props渡し |
-| `src/app/(admin)/admin/(dashboard)/_shared/actions/settings.ts` | 新フィールド対応 |
+| ファイル                                                                 | 変更内容                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `prisma/schema.prisma`                                                   | `useHeaderLogo`, `useFooterLogo`, `footerLogoUrl` 追加 |
+| `prisma/migrations/20260119005448_add_logo_display_settings/`            | マイグレーション                                       |
+| `src/app/(admin)/.../settings/_components/sections/BasicInfoSection.tsx` | トグルスイッチ UI                                      |
+| `src/app/(public)/_shared/components/layouts/Header.tsx`                 | ロゴ/テキスト表示ロジック                              |
+| `src/app/(public)/_shared/components/layouts/HeaderBranding.tsx`         | 新規（Client Component）                               |
+| `src/app/(public)/_shared/components/layouts/Footer.tsx`                 | フッターロゴ対応                                       |
+| `src/app/(public)/_shared/components/layouts/FooterBranding.tsx`         | 新規（Client Component）                               |
+| `src/app/(admin)/admin/(dashboard)/_components/TopBar.tsx`               | ブランディング追加                                     |
+| `src/app/(admin)/admin/(dashboard)/layout.tsx`                           | 設定取得・Props渡し                                    |
+| `src/app/(admin)/admin/(dashboard)/_shared/actions/settings.ts`          | 新フィールド対応                                       |
 
 ---
 
@@ -128,14 +129,14 @@ model Settings {
 ```tsx
 // Header.tsx の表示ロジック
 function BrandingDisplay({ settings }: { settings: Settings }) {
-  const { useHeaderLogo, headerLogoUrl, siteName } = settings
-  const [logoError, setLogoError] = useState(false)
+  const { useHeaderLogo, headerLogoUrl, siteName } = settings;
+  const [logoError, setLogoError] = useState(false);
 
-  const displayName = siteName || 'Site Name'
+  const displayName = siteName || "Site Name";
 
   // テキスト表示の条件: ロゴ無効 or ロゴURL無し or ロゴ読込失敗
   if (!useHeaderLogo || !headerLogoUrl || logoError) {
-    return <span className="text-xl font-bold">{displayName}</span>
+    return <span className="text-xl font-bold">{displayName}</span>;
   }
 
   // ロゴ表示
@@ -148,7 +149,7 @@ function BrandingDisplay({ settings }: { settings: Settings }) {
       onError={() => setLogoError(true)}
       priority
     />
-  )
+  );
 }
 ```
 
@@ -162,7 +163,7 @@ function BrandingDisplay({ settings }: { settings: Settings }) {
     id="useHeaderLogo"
     checked={formData.useHeaderLogo}
     onCheckedChange={(checked) =>
-      setFormData(prev => ({ ...prev, useHeaderLogo: checked }))
+      setFormData((prev) => ({ ...prev, useHeaderLogo: checked }))
     }
   />
 </div>

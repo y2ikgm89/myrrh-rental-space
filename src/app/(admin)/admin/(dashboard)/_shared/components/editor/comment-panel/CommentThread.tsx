@@ -4,11 +4,11 @@
  * @description コメントスレッド（引用テキスト + コメント一覧 + 入力フォーム）
  */
 
-'use client'
+"use client";
 
-import { useState, useTransition } from 'react'
-import { formatDistanceToNow } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { useState, useTransition } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ja } from "date-fns/locale";
 import {
   Check,
   ChevronDown,
@@ -16,38 +16,41 @@ import {
   MessageSquare,
   RotateCcw,
   Trash2,
-} from 'lucide-react'
-import { Button } from '@/admin/components/ui/button'
+} from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/admin/components/ui/collapsible'
-import { Badge } from '@/admin/components/ui/badge'
-import { cn } from '@/shared/lib/cn'
-import type { EditorCommentThread, EditorCommentStatus } from '@/admin/types/editor-comment'
-import { CommentItem } from './CommentItem'
-import { CommentForm } from './CommentForm'
+} from "@/admin/components/ui/collapsible";
+import { Badge } from "@/admin/components/ui/badge";
+import { cn } from "@/shared/lib/cn";
+import type {
+  EditorCommentThread,
+  EditorCommentStatus,
+} from "@/admin/types/editor-comment";
+import { CommentItem } from "./CommentItem";
+import { CommentForm } from "./CommentForm";
 
 type CommentThreadProps = {
-  thread: EditorCommentThread
-  isActive?: boolean
-  onSelect?: () => void
-  onResolve?: () => Promise<void>
-  onReopen?: () => Promise<void>
-  onDelete?: () => Promise<void>
-  onAddReply?: (content: string) => Promise<void>
-  onDeleteComment?: (commentId: string) => Promise<void>
-}
+  thread: EditorCommentThread;
+  isActive?: boolean;
+  onSelect?: () => void;
+  onResolve?: () => Promise<void>;
+  onReopen?: () => Promise<void>;
+  onDelete?: () => Promise<void>;
+  onAddReply?: (content: string) => Promise<void>;
+  onDeleteComment?: (commentId: string) => Promise<void>;
+};
 
 const STATUS_CONFIG: Record<
   EditorCommentStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' }
+  { label: string; variant: "default" | "secondary" | "destructive" }
 > = {
-  ACTIVE: { label: '未解決', variant: 'secondary' },
-  RESOLVED: { label: '解決済み', variant: 'default' },
-  DELETED: { label: '削除済み', variant: 'destructive' },
-}
+  ACTIVE: { label: "未解決", variant: "secondary" },
+  RESOLVED: { label: "解決済み", variant: "default" },
+  DELETED: { label: "削除済み", variant: "destructive" },
+};
 
 export function CommentThread({
   thread,
@@ -59,53 +62,53 @@ export function CommentThread({
   onAddReply,
   onDeleteComment,
 }: CommentThreadProps) {
-  const [isOpen, setIsOpen] = useState(isActive)
-  const [isResolvePending, startResolveTransition] = useTransition()
-  const [isReopenPending, startReopenTransition] = useTransition()
-  const [isDeletePending, startDeleteTransition] = useTransition()
+  const [isOpen, setIsOpen] = useState(isActive);
+  const [isResolvePending, startResolveTransition] = useTransition();
+  const [isReopenPending, startReopenTransition] = useTransition();
+  const [isDeletePending, startDeleteTransition] = useTransition();
 
-  const statusConfig = STATUS_CONFIG[thread.status]
-  const statusVariant = statusConfig?.variant ?? 'secondary'
-  const statusLabel = statusConfig?.label ?? '未解決'
+  const statusConfig = STATUS_CONFIG[thread.status];
+  const statusVariant = statusConfig?.variant ?? "secondary";
+  const statusLabel = statusConfig?.label ?? "未解決";
   const timeAgo = formatDistanceToNow(new Date(thread.createdAt), {
     addSuffix: true,
     locale: ja,
-  })
+  });
 
   const handleResolve = () => {
-    if (!onResolve) return
+    if (!onResolve) return;
     startResolveTransition(async () => {
-      await onResolve()
-    })
-  }
+      await onResolve();
+    });
+  };
 
   const handleReopen = () => {
-    if (!onReopen) return
+    if (!onReopen) return;
     startReopenTransition(async () => {
-      await onReopen()
-    })
-  }
+      await onReopen();
+    });
+  };
 
   const handleDelete = () => {
-    if (!onDelete) return
+    if (!onDelete) return;
     startDeleteTransition(async () => {
-      await onDelete()
-    })
-  }
+      await onDelete();
+    });
+  };
 
   const handleToggle = (opening: boolean) => {
-    setIsOpen(opening)
+    setIsOpen(opening);
     if (opening) {
-      onSelect?.()
+      onSelect?.();
     }
-  }
+  };
 
   return (
     <Collapsible open={isOpen} onOpenChange={handleToggle}>
       <div
         className={cn(
-          'rounded-lg border transition-colors',
-          isActive ? 'border-primary bg-primary/5' : 'border-border'
+          "rounded-lg border transition-colors",
+          isActive ? "border-primary bg-primary/5" : "border-border",
         )}
       >
         {/* ヘッダー */}
@@ -144,7 +147,7 @@ export function CommentThread({
           <div className="border-t px-3 py-2">
             {/* アクションボタン */}
             <div className="flex gap-2 mb-3">
-              {thread.status === 'ACTIVE' && onResolve && (
+              {thread.status === "ACTIVE" && onResolve && (
                 <Button
                   type="button"
                   variant="outline"
@@ -157,7 +160,7 @@ export function CommentThread({
                   解決
                 </Button>
               )}
-              {thread.status === 'RESOLVED' && onReopen && (
+              {thread.status === "RESOLVED" && onReopen && (
                 <Button
                   type="button"
                   variant="outline"
@@ -170,7 +173,7 @@ export function CommentThread({
                   再オープン
                 </Button>
               )}
-              {onDelete && thread.status !== 'DELETED' && (
+              {onDelete && thread.status !== "DELETED" && (
                 <Button
                   type="button"
                   variant="outline"
@@ -198,14 +201,17 @@ export function CommentThread({
             </div>
 
             {/* 返信フォーム */}
-            {thread.status === 'ACTIVE' && onAddReply && (
+            {thread.status === "ACTIVE" && onAddReply && (
               <div className="mt-3 pt-3 border-t">
-                <CommentForm onSubmit={onAddReply} placeholder="返信を入力..." />
+                <CommentForm
+                  onSubmit={onAddReply}
+                  placeholder="返信を入力..."
+                />
               </div>
             )}
           </div>
         </CollapsibleContent>
       </div>
     </Collapsible>
-  )
+  );
 }

@@ -28,6 +28,7 @@
 ### Task 1: type-safety.md 完全刷新
 
 **Files:**
+
 - Read: `.claude/rules/type-safety.md`（現行版）
 - Modify: `.claude/rules/type-safety.md`
 - Sync: `docs/reference/codex-rules/type-safety.md`
@@ -35,6 +36,7 @@
 **Context（サブエージェントへ）:**
 このプロジェクトは TypeScript 6.0-beta を使用。`noUncheckedIndexedAccess: true`、`strict: true` が有効。
 型アサーション（`as`）は原則禁止。許可例外は4つのみ:
+
 1. DOM event target（`event.target as HTMLElement`）
 2. Prisma JSON型（`{} as Prisma.InputJsonObject`）
 3. SectionConfig union widening（`result.data as SectionConfig` — コメント必須）
@@ -48,6 +50,7 @@ Query: "TypeScript 6.0 noUncheckedIndexedAccess strict mode type safety patterns
 ```
 
 また以下も確認:
+
 ```
 WebSearch: "TypeScript 6.0 satisfies operator type guards best practices 2025 2026"
 ```
@@ -72,29 +75,37 @@ cat .claude/rules/type-safety.md
 [TypeScript 6.0 の最新パターン — 研究結果を反映]
 
 ### 配列アクセス
+
 [OK/NGコード例]
 
 ### Record型アクセス
+
 [OK/NGコード例]
 
 ### ループパターン
+
 [OK/NGコード例]
 
 ## 型アサーション（`as`）禁止
 
 ### 許可例外（4種のみ）
+
 [各例外とその理由、コードサンプル]
 
 ### 代替手段
+
 [keysOf / isValid* / satisfies の使い方]
 
 ## satisfies キーワード
+
 [使いどころとコード例]
 
 ## 型ガードパターン
+
 [Set-based / isinstance / Zodベース型ガード]
 
 ## ユーティリティ
+
 [keysOf, isValid*, getValid* — ファイルパス付き]
 ```
 
@@ -113,6 +124,7 @@ cp .claude/rules/type-safety.md docs/reference/codex-rules/type-safety.md
 ### Task 2: react-patterns.md 完全刷新
 
 **Files:**
+
 - Read: `.claude/rules/react-patterns.md`
 - Modify: `.claude/rules/react-patterns.md`
 - Sync: `docs/reference/codex-rules/react-patterns.md`
@@ -145,34 +157,43 @@ WebSearch: "React 19.2 new features useEffectEvent useOptimistic server actions 
 ## React 19 の破壊的変更
 
 ### forwardRef 廃止（必須対応）
+
 [OK/NGコード例]
 
 ### ref は通常のprop
+
 [コード例]
 
 ## React Compiler 互換ルール
 
 ### useCallback / useMemo（原則不要）
+
 [何をすべきか / すべきでないか]
 
 ### useCallback + ref.current の衝突
+
 [react-hooks/preserve-manual-memoization エラー回避パターン]
 
 ### React Hook Form
+
 [watch() 禁止 → useWatch() — コード例]
 
 ## React 19.2 新機能
 
 ### useEffectEvent
+
 [説明 + コード例 + ルール]
 
 ### Activity コンポーネント
+
 [説明 + 使いどころ]
 
 ### useOptimistic
+
 [楽観的更新パターン]
 
 ## Server Components / Server Actions
+
 [パターンと制約]
 ```
 
@@ -183,6 +204,7 @@ WebSearch: "React 19.2 new features useEffectEvent useOptimistic server actions 
 ### Task 3: server-actions.md 完全刷新
 
 **Files:**
+
 - Read: `.claude/rules/server-actions.md`
 - Modify: `.claude/rules/server-actions.md`
 - Sync: `docs/reference/codex-rules/server-actions.md`
@@ -215,20 +237,27 @@ WebSearch: "Next.js 16 cacheComponents use cache directive best practices 2025 2
 ## 'use cache' パターン
 
 ### 基本キャッシュ（関数レベル）
+
 ### cacheTag でタグ付け
+
 ### cacheLife プリセット一覧
+
 ### カスタム有効期限
 
 ## キャッシュ無効化
 
 ### updateTag（即時失効 — read-your-own-writes）
+
 ### revalidateTag（非同期再検証）
+
 ### updateTag vs revalidateTag 比較表
 
 ## Server Action 実装パターン
 
 ### 基本構造（認証 → バリデーション → DB操作 → キャッシュ更新）
+
 ### ActionResult 型
+
 ### withPermission ラッパー
 
 ## 公開データ取得（'use cache' + safeFetch）
@@ -245,6 +274,7 @@ WebSearch: "Next.js 16 cacheComponents use cache directive best practices 2025 2
 ### Task 4: prisma-patterns.md 完全刷新
 
 **Files:**
+
 - Read: `.claude/rules/prisma-patterns.md`
 - Modify: `.claude/rules/prisma-patterns.md`
 - Sync: `docs/reference/codex-rules/prisma-patterns.md`
@@ -281,12 +311,15 @@ head -30 src/shared/lib/prisma.ts
 ## Enum パターン（Prisma 7 mapped enums）
 
 ### Prisma enum 定数を使用（文字列リテラル禁止）
+
 [OK/NGコード例]
 
 ### 型ガードは enums.ts に集約（Single Source of Truth）
+
 [isValid* / getValid* の使い方]
 
 ### z.enum() との統合
+
 [Zod 4 + Prisma enum]
 
 ### SelectItem 値にenum定数使用
@@ -294,7 +327,9 @@ head -30 src/shared/lib/prisma.ts
 ## JSON フィールドの型安全化
 
 ### Zodスキーマによるランタイムバリデーション
+
 ### 複雑なJSON（parseBusinessHours 等）
+
 ### React 19 シリアライゼーション（toPlainObject）
 
 ## Decimal 自動変換（$extends）
@@ -304,7 +339,9 @@ head -30 src/shared/lib/prisma.ts
 ## クエリパターン
 
 ### Select句で型を限定
+
 ### Include vs Select
+
 ### N+1 クエリ禁止
 
 ## トランザクション
@@ -319,6 +356,7 @@ head -30 src/shared/lib/prisma.ts
 ### Task 5: zod-patterns.md 完全刷新
 
 **Files:**
+
 - Read: `.claude/rules/zod-patterns.md`
 - Modify: `.claude/rules/zod-patterns.md`
 - Sync: `docs/reference/codex-rules/zod-patterns.md`
@@ -348,25 +386,31 @@ Query: "Zod 4 z.enum nativeEnum migration error parameter safeParse flattenError
 ## 基本パターン
 
 ### エラーメッセージ（error: パラメータ）
+
 [OK/NGコード例]
 
 ### スキーマ定義
+
 ### 複合スキーマ
+
 ### Server Actions での使用
 
 ## Prisma Enum バリデーション
 
 ### z.enum() で Prisma enum を使用（nativeEnum 禁止）
+
 ### デフォルト値もenum定数で
 
 ## 共通スキーマの再利用
 
 ### SEOフィールド
+
 ### URLバリデーション
 
 ## 型ガードパターン
 
 ### Prisma Enum型ガード（enums.ts から import）
+
 ### ローカルEnum型ガード（Prisma enumが存在しない場合のみ）
 
 ## React Hook Form連携
@@ -383,6 +427,7 @@ Query: "Zod 4 z.enum nativeEnum migration error parameter safeParse flattenError
 ### Task 6: bun-patterns.md 新規作成
 
 **Files:**
+
 - Create: `.claude/rules/bun-patterns.md`
 - Create: `docs/reference/codex-rules/bun-patterns.md`
 
@@ -415,7 +460,7 @@ head -30 __tests__/setup.ts
 
 **Step 3: 以下の構成で新規作成**
 
-```markdown
+````markdown
 # Bun パターンルール
 
 > Bun 1.3.x / Bun Test ランタイム対応
@@ -423,54 +468,74 @@ head -30 __tests__/setup.ts
 ## テストフレームワーク（Bun Test）
 
 ### 基本インポート
+
 ```typescript
-import { test, expect, describe, mock, beforeAll, afterAll, beforeEach, afterEach } from 'bun:test'
+import {
+  test,
+  expect,
+  describe,
+  mock,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from "bun:test";
 ```
+````
 
 ### モック
+
 ```typescript
 // 関数モック
-const mockFn = mock(() => 'value')
+const mockFn = mock(() => "value");
 
 // モジュールモック
-mock.module('@/shared/lib/prisma', () => ({
-  prisma: mockPrisma
-}))
+mock.module("@/shared/lib/prisma", () => ({
+  prisma: mockPrisma,
+}));
 
 // リセット（afterEach で）
-mockFn.mockReset()
+mockFn.mockReset();
 ```
 
 ### セッションモック（Better Auth）
+
 [プロジェクト固有パターン — __tests__/mocks/auth.ts]
 
 ### Prisma モック
+
 [プロジェクト固有パターン — __tests__/mocks/prisma.ts]
 
 ## Vitest API 禁止一覧
+
 [vi.fn(), vi.mock(), vi.restoreAllMocks() 等 → Bun代替]
 
 ## 環境変数のモック
+
 [beforeAll/afterAll パターン]
 
 ## Server Actions テスト
+
 [モック → アクション呼び出し → アサーション]
 
 ## Bun ランタイム固有機能
 
 ### Bun.file / Bun.write
+
 ### Bun.env
 
 ## ファイル配置と命名規則
 
 ## コマンド
+
 ```bash
 bun run test              # 全テスト
 bun run test:unit         # 単体テスト
 bun run test:integration  # 統合テスト
 bun run test:watch        # 監視モード
 ```
-```
+
+````
 
 ---
 
@@ -492,7 +557,7 @@ bun run test:watch        # 監視モード
 cat src/shared/lib/errors/logger.ts
 cat src/shared/types/server-actions.ts
 head -30 src/app/(admin)/admin/(dashboard)/_shared/actions/post.ts
-```
+````
 
 **Step 2: 以下の構成で新規作成**
 
@@ -502,26 +567,33 @@ head -30 src/app/(admin)/admin/(dashboard)/_shared/actions/post.ts
 ## ActionResult 型
 
 ### createSuccess / createFailure
+
 [コード例]
 
 ### ActionResult の型定義
+
 [型定義とNG/OKパターン]
 
 ## Server Actions エラーパターン
 
 ### 認証エラー
+
 ### バリデーションエラー
+
 ### データベースエラー
+
 ### ビジネスロジックエラー
 
 ## safeFetch パターン
 
 ### 公開データ取得での使用
+
 ### ErrorCategory / ErrorSeverity
 
 ## logger の使用
 
 ### 構造化ログ
+
 ### console.log 禁止
 
 ## withPermission ラッパー
@@ -536,6 +608,7 @@ head -30 src/app/(admin)/admin/(dashboard)/_shared/actions/post.ts
 ### Task 8: accessibility.md 新規作成
 
 **Files:**
+
 - Create: `.claude/rules/accessibility.md`
 - Create: `docs/reference/codex-rules/accessibility.md`
 
@@ -554,7 +627,7 @@ WebSearch: "prefers-reduced-motion GSAP accessibility best practices 2025"
 
 **Step 2: 以下の構成で新規作成**
 
-```markdown
+````markdown
 # アクセシビリティ（a11y）ルール
 
 > WCAG 2.2 / React 19 / GSAP prefers-reduced-motion 対応
@@ -562,49 +635,63 @@ WebSearch: "prefers-reduced-motion GSAP accessibility best practices 2025"
 ## セマンティックHTML
 
 ### 見出し階層
+
 ### ランドマーク
+
 ### ボタン vs リンク
 
-## aria-* 属性
+## aria-\* 属性
 
 ### aria-label / aria-labelledby
+
 ### aria-describedby
+
 ### aria-expanded / aria-controls（アコーディオン）
+
 ### aria-live（動的コンテンツ）
 
 ## フォーカス管理
 
 ### フォーカストラップ（モーダル）
+
 ### フォーカスリング（キーボード操作）
 
 ## prefers-reduced-motion
 
 ### GSAP matchMedia パターン
+
 ```typescript
 // OK: 必須パターン
-useGSAP(() => {
-  const mm = gsap.matchMedia()
-  mm.add('(prefers-reduced-motion: no-preference)', () => {
-    // アニメーション
-  })
-  // reduced-motion 時のフォールバック
-  mm.add('(prefers-reduced-motion: reduce)', () => {
-    // 静的表示
-  })
-}, { scope: containerRef })
+useGSAP(
+  () => {
+    const mm = gsap.matchMedia();
+    mm.add("(prefers-reduced-motion: no-preference)", () => {
+      // アニメーション
+    });
+    // reduced-motion 時のフォールバック
+    mm.add("(prefers-reduced-motion: reduce)", () => {
+      // 静的表示
+    });
+  },
+  { scope: containerRef },
+);
 ```
+````
 
 ### Three.js / PixiJS のフォールバック
 
 ## フォームa11y
 
 ### label と input の関連付け
+
 ### エラーメッセージの aria-describedby
+
 ### 必須フィールドの aria-required
 
 ## 画像 alt テキスト
 
 ## キーボードナビゲーション
+
 ```
 
 ---
@@ -627,16 +714,18 @@ Server Actions: `getSession()` / `getSessionUser()`（cache() 不使用）。
 **Step 1: context7 でリサーチ**
 
 ```
+
 context7: /better-auth/better-auth
 Query: "Better Auth 1.4 RBAC nextCookies server actions Next.js session patterns 2025"
-```
+
+````
 
 **Step 2: 現行ファイルを読む + 実際の実装確認**
 
 ```bash
 head -50 src/shared/lib/auth.ts
 head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
-```
+````
 
 **Step 3: 以下の構成で書き直す**
 
@@ -648,7 +737,9 @@ head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
 ## Better Auth 公式パターン
 
 ### nextCookies プラグイン（必須）
+
 ### Server Components でのセッション取得
+
 ### Server Actions でのセッション取得
 
 ## 権限階層
@@ -658,14 +749,19 @@ head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
 ## Server Action の認証パターン
 
 ### 基本認証（checkAdminAuth）
+
 ### 権限チェック（checkPermission）
+
 ### withPermission ラッパー（推奨）
+
 ### リソースアクセスチェック（EDITOR用）
 
 ## セッション取得パターン
 
 ### Server Components（cache()でメモ化）
+
 ### Server Actions（cache()不使用）
+
 ### オプショナル認証
 
 ## 型安全なRole取得
@@ -682,6 +778,7 @@ head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
 ### Task 10: tailwind-patterns.md 完全刷新
 
 **Files:**
+
 - Modify: `.claude/rules/tailwind-patterns.md`
 - Sync: `docs/reference/codex-rules/tailwind-patterns.md`
 
@@ -712,6 +809,7 @@ head -80 src/app/(public)/_styles/public.css
 ### Task 11: gsap-patterns.md 完全刷新
 
 **Files:**
+
 - Modify: `.claude/rules/gsap-patterns.md`
 - Sync: `docs/reference/codex-rules/gsap-patterns.md`
 
@@ -747,16 +845,21 @@ ls src/app/(public)/_shared/components/animations/
 ## 基本ルール
 
 ### useGSAP() 使用（useEffect 禁止）
+
 ### scope 参照の必須化
 
 ## パターン A: matchMedia + prefers-reduced-motion（標準）
+
 ### パターン B: matchMedia + レスポンシブブレークポイント
+
 ### パターン C: イベントハンドラ（useCallback 禁止）
 
 ## ScrollTrigger パターン
 
 ### 基本スクロールアニメーション
+
 ### ピン留め
+
 ### スクラブ
 
 ## アニメーション定数
@@ -775,6 +878,7 @@ ls src/app/(public)/_shared/components/animations/
 ### Task 12: lexical-patterns.md 更新確認・精度向上
 
 **Files:**
+
 - Read: `.claude/rules/lexical-patterns.md`
 - Modify: `.claude/rules/lexical-patterns.md`（必要な箇所のみ）
 - Sync: `docs/reference/codex-rules/lexical-patterns.md`
@@ -801,6 +905,7 @@ head -150 .claude/rules/lexical-patterns.md
 **Step 3: 最新 API と整合していない箇所を特定して更新**
 
 主な確認ポイント:
+
 - `mergeRegister` の import が `lexical` 本体になっているか
 - 禁止リストが最新か
 - `$getStateChange` パターンが記載されているか
@@ -810,6 +915,7 @@ head -150 .claude/rules/lexical-patterns.md
 ### Task 13: seo-patterns.md 完全刷新
 
 **Files:**
+
 - Modify: `.claude/rules/seo-patterns.md`
 - Sync: `docs/reference/codex-rules/seo-patterns.md`
 
@@ -841,6 +947,7 @@ cat src/app/(public)/_shared/lib/page-metadata.ts | head -50
 ### Task 14: nuqs-patterns.md 更新
 
 **Files:**
+
 - Modify: `.claude/rules/nuqs-patterns.md`
 - Sync: `docs/reference/codex-rules/nuqs-patterns.md`
 
@@ -868,6 +975,7 @@ cat src/shared/lib/validations/params.ts
 ### Task 15: threejs-patterns.md + pixijs-patterns.md + visual-effects-patterns.md 更新
 
 **Files:**
+
 - Modify: `.claude/rules/threejs-patterns.md`
 - Modify: `.claude/rules/pixijs-patterns.md`
 - Modify: `.claude/rules/visual-effects-patterns.md`
@@ -900,6 +1008,7 @@ cat src/app/(public)/_shared/components/effects/pixi/PixiGrain.tsx | head -50
 ### Task 16: 残り5ファイル更新（implementation-quality, test-quality, deployment-patterns, turbopack-hmr, ui-ux-patterns）
 
 **Files:**
+
 - Modify: `.claude/rules/implementation-quality.md`
 - Modify: `.claude/rules/test-quality.md`（Bun 最新に合わせて）
 - Modify: `.claude/rules/deployment-patterns.md`
@@ -923,15 +1032,18 @@ cat src/app/(public)/_shared/components/effects/pixi/PixiGrain.tsx | head -50
 ### Task 17: CLAUDE.md 完全刷新
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 **Context（サブエージェントへ）:**
 現行 CLAUDE.md の構造:
+
 - 🔴 必須（禁止事項・検証コマンド・詳細ルール）
 - 🟡 ワークフロー（superpowers自動発動・ツール使い分け）
 - 🟢 プロジェクト情報（tech stack・構造・コマンド）
 
 **更新事項:**
+
 1. 条件付きロードに新規ルール追加: `bun-patterns.md`（`__tests__/**`）、`error-handling.md`（`src/**/*.ts`）、`accessibility.md`（`src/app/(public*)/**`）
 2. tech stack の TypeScript を `6.0.0-beta` に明確化
 3. Lexical 行に NodeState API 言及追加
@@ -947,6 +1059,7 @@ cat src/app/(public)/_shared/components/effects/pixi/PixiGrain.tsx | head -50
 ### Task 18: AGENTS.md 完全刷新
 
 **Files:**
+
 - Modify: `AGENTS.md`
 
 **Context（サブエージェントへ）:**
@@ -954,6 +1067,7 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 現行の構成: Project overview / Setup commands / Testing instructions / Additional instructions
 
 **更新事項:**
+
 1. Caching rules: `updateTag` は Server Actions 内のみ、`revalidateTag` は遅延OK の場合
 2. Prisma パターン: WASM エンジン、mapped enums、型ガードは `enums.ts` から import
 3. Better Auth パターン: `withPermission` ラッパーの使用
@@ -970,6 +1084,7 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 ### Task 19: agents/ 全4ファイル更新
 
 **Files:**
+
 - Modify: `.claude/agents/project-reviewer.md`
 - Modify: `.claude/agents/verification.md`
 - Modify: `.claude/agents/codebase-explorer.md`
@@ -978,19 +1093,23 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 **Context（サブエージェントへ）:**
 
 **project-reviewer.md 修正事項:**
+
 - `TypeScript 5.9` → `TypeScript 6.0-beta` に修正（システムプロンプト内）
 - 新規ルール（bun-patterns, error-handling, accessibility）のレビュー項目追加
 - Bun テストパターン違反（`vi.*` 使用）のチェック追加
 
 **verification.md 修正事項:**
+
 - `bun run test:unit` / `bun run test:integration` コマンド追加
 - Common project-specific patterns に Bun テストパターン追加
 
 **codebase-explorer.md 修正事項:**
+
 - 新規追加された公開ルート（/posts, /news, /about, /faq, /spaces, /terms, /privacy）を追加
 - `src/shared/lib/validations/params.ts` / `src/shared/lib/bootstrap.ts` 等を記載
 
 **design-memory.md 修正事項:**
+
 - 現行確認（基本的に変更不要な可能性が高い）
 
 ---
@@ -998,6 +1117,7 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 ### Task 20: skills/ 全スキルファイル更新
 
 **Files:**
+
 - Modify: `.claude/skills/frontend-design/SKILL.md`
 - Modify: `.claude/skills/lexical-node/SKILL.md`（最小限の確認）
 - Modify: `.claude/skills/lexical-plugin/SKILL.md`
@@ -1008,21 +1128,26 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 **Context（サブエージェントへ）:**
 
 **frontend-design/SKILL.md:**
+
 - Definition of Done に `bun run validate`（`bun run type-check` + `bun run lint` の両方）追加
 - `accessibility.md` ルール参照を追加（a11y チェック）
 
 **lexical-node/SKILL.md:**
+
 - 最新 API 確認（`$getStateChange` が記載されているか確認）
 - Definition of Done の確認
 
 **lexical-plugin/SKILL.md + lexical-toolbar/SKILL.md:**
+
 - 現行を読んで、Lexical 0.40 / `mergeRegister` が `lexical` 本体からの import になっているか確認
 
 **parallax-section/SKILL.md:**
+
 - GSAP 3.14 + `useGSAP` パターンに合っているか確認
 - `prefers-reduced-motion` 対応が記載されているか確認
 
 **ui-ux-pro-max/SKILL.md:**
+
 - 現行確認・整合性チェック
 
 ---
@@ -1032,6 +1157,7 @@ AGENTS.md は Codex（GPT Codex）向けの指示ファイル。Claude向けと�
 ### Task 21: docs/reference/codex-rules/ 完全同期確認
 
 **Files:**
+
 - Read: `.claude/rules/*.md`（全22+3=25ファイル）
 - Read: `docs/reference/codex-rules/*.md`（同期先）
 

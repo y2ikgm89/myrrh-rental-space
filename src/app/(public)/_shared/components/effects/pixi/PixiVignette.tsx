@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { usePixiApp } from './hooks/use-pixi-app'
+import { useEffect } from "react";
+import { usePixiApp } from "./hooks/use-pixi-app";
 
 /**
  * ビネットエフェクト。
@@ -12,9 +12,9 @@ import { usePixiApp } from './hooks/use-pixi-app'
 
 interface PixiVignetteProps {
   /** ビネット強度 (0-1, default 0.3) */
-  readonly intensity?: number
+  readonly intensity?: number;
   /** ビネット開始半径 (0-1, default 0.7) */
-  readonly radius?: number
+  readonly radius?: number;
 }
 
 const VERTEX_SHADER = `
@@ -40,7 +40,7 @@ void main(void) {
   gl_Position = filterVertexPosition();
   vTextureCoord = filterTextureCoord();
 }
-`
+`;
 
 const FRAGMENT_SHADER = `
 in vec2 vTextureCoord;
@@ -56,53 +56,56 @@ void main(void) {
   float vignette = smoothstep(uRadius, uRadius + 0.3, dist) * uIntensity;
   finalColor = vec4(color.rgb * (1.0 - vignette), color.a);
 }
-`
+`;
 
 export function PixiVignette({
   intensity = 0.3,
   radius = 0.7,
 }: PixiVignetteProps) {
-  const app = usePixiApp()
+  const app = usePixiApp();
 
   useEffect(() => {
-    let filter: import('pixi.js').Filter | null = null
-    let destroyed = false
+    let filter: import("pixi.js").Filter | null = null;
+    let destroyed = false;
 
     const setup = async () => {
-      const { Filter, GlProgram } = await import('pixi.js')
-      if (destroyed) return
+      const { Filter, GlProgram } = await import("pixi.js");
+      if (destroyed) return;
 
       const glProgram = new GlProgram({
         vertex: VERTEX_SHADER,
         fragment: FRAGMENT_SHADER,
-      })
+      });
 
       filter = new Filter({
         glProgram,
         resources: {
           vignetteUniforms: {
-            uIntensity: { value: intensity, type: 'f32' },
-            uRadius: { value: radius, type: 'f32' },
+            uIntensity: { value: intensity, type: "f32" },
+            uRadius: { value: radius, type: "f32" },
           },
         },
-      })
+      });
 
-      const existing = app.stage.filters
-      app.stage.filters = [...(Array.isArray(existing) ? existing : []), filter]
-    }
+      const existing = app.stage.filters;
+      app.stage.filters = [
+        ...(Array.isArray(existing) ? existing : []),
+        filter,
+      ];
+    };
 
-    void setup()
+    void setup();
 
     return () => {
-      destroyed = true
+      destroyed = true;
       if (filter) {
         if (Array.isArray(app.stage.filters)) {
-          app.stage.filters = app.stage.filters.filter((f) => f !== filter)
+          app.stage.filters = app.stage.filters.filter((f) => f !== filter);
         }
-        filter.destroy()
+        filter.destroy();
       }
-    }
-  }, [app, intensity, radius])
+    };
+  }, [app, intensity, radius]);
 
-  return null
+  return null;
 }

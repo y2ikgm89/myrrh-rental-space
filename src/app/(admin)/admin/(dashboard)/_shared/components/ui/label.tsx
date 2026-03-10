@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import * as LabelPrimitive from '@radix-ui/react-label'
+import * as LabelPrimitive from "@radix-ui/react-label";
 
-import { cn } from '@/shared/lib/cn'
+import { cn } from "@/shared/lib/cn";
 
 const labelStyles =
-  'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70";
 
 function Label({
   className,
@@ -18,7 +18,7 @@ function Label({
       className={cn(labelStyles, className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Label }
+export { Label };

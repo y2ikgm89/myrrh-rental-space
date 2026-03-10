@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import {
   getTermsById,
   getTermsVersionById,
@@ -12,13 +13,13 @@ interface PageProps {
 }
 
 export default async function TermsEditPage({ params }: PageProps) {
+  await connection();
   const { id } = await params;
 
-  const termsResult = await getTermsById(id);
-  if (!termsResult.success || !termsResult.data) {
+  const terms = await getTermsById(id);
+  if (!terms) {
     notFound();
   }
-  const terms = termsResult.data;
 
   // 初期バージョンを取得: 最新 DRAFT → 最新 PUBLISHED → 先頭
   const initialVersionId =
@@ -28,20 +29,11 @@ export default async function TermsEditPage({ params }: PageProps) {
 
   let initialVersion = null;
   if (initialVersionId) {
-    const versionResult = await getTermsVersionById(initialVersionId);
-    if (versionResult.success && versionResult.data) {
-      initialVersion = versionResult.data;
-    }
+    initialVersion = await getTermsVersionById(initialVersionId);
   }
 
   // 同意記録の初期データを取得
-  const agreementsResult = await getTermsAgreements(id, 1);
-  const initialAgreements = agreementsResult.success
-    ? agreementsResult.data.agreements
-    : [];
-  const initialTotal = agreementsResult.success
-    ? agreementsResult.data.total
-    : 0;
+  const agreementsData = await getTermsAgreements(id, 1);
 
   return (
     <TermsInlineEditor
@@ -54,10 +46,9 @@ export default async function TermsEditPage({ params }: PageProps) {
         versions: terms.versions,
       }}
       initialVersion={initialVersion}
-      initialAgreements={initialAgreements}
-      initialTotal={initialTotal}
+      initialAgreements={agreementsData.agreements}
+      initialTotal={agreementsData.total}
       mode="edit"
     />
   );
 }
-

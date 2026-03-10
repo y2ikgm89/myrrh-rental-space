@@ -6,6 +6,7 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
+import { connection } from "next/server";
 import { getPagesList, getHomepageLastUpdated } from "@/admin/queries/page";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
 import {
@@ -28,6 +29,7 @@ type PageProps = {
 export default async function PagesManagementPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  await connection();
   const params = await loadAdminPageSearchParams(searchParams);
 
   const [result, homepageLastUpdated] = await Promise.all([
@@ -47,7 +49,9 @@ export default async function PagesManagementPage({
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">ページ管理</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            ページ管理
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             公開ページのコンテンツ・SEO設定
           </p>
@@ -72,4 +76,3 @@ export default async function PagesManagementPage({
     </div>
   );
 }
-

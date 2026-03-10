@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useState } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import Image from "next/image";
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Button,
   Input,
@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/admin/components/ui'
-import { ImagePlus } from 'lucide-react'
-import { useSingleMediaPicker } from '@/admin/hooks/use-media-picker'
-import { CTAButtonEditor } from '@/admin/components/cta-button-editor'
+} from "@/admin/components/ui";
+import { ImagePlus } from "lucide-react";
+import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
+import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   heroParallaxConfigSchema,
   getHeroParallaxConfig,
@@ -27,17 +27,22 @@ import {
   type HeroParallaxConfig,
   type HeroParallaxConfigInput,
   type CTAButtonItem,
-} from '@/shared/lib/validations/section'
+} from "@/shared/lib/validations/section";
 import {
   contentPositionLabels,
   overlayStyleLabels,
   heroParallaxHeightLabels,
-} from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function HeroParallaxConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getHeroParallaxConfig(section.config)
+export default function HeroParallaxConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getHeroParallaxConfig(section.config);
 
   const {
     register,
@@ -48,34 +53,37 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
   } = useForm<HeroParallaxConfigInput, unknown, HeroParallaxConfig>({
     resolver: zodResolver(heroParallaxConfigSchema),
     defaultValues: config,
-  })
+  });
 
-  const backgroundImageUrl = useWatch({ control, name: 'backgroundImageUrl' })
+  const backgroundImageUrl = useWatch({ control, name: "backgroundImageUrl" });
 
-  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons)
+  const [buttons, setButtons] = useState<CTAButtonItem[]>(config.buttons);
   const handleButtonsChange = (newButtons: CTAButtonItem[]) => {
-    setButtons(newButtons)
-    setValue('buttons', newButtons)
-  }
+    setButtons(newButtons);
+    setValue("buttons", newButtons);
+  };
 
   const bgPicker = useSingleMediaPicker({
-    defaultUsage: 'GENERAL',
+    defaultUsage: "GENERAL",
     onSelect: (media) => {
-      const selected = media[0]
+      const selected = media[0];
       if (selected) {
-        setValue('backgroundImageUrl', selected.url)
+        setValue("backgroundImageUrl", selected.url);
       }
     },
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="hero-parallax-tagline">タグライン</Label>
           <Input
             id="hero-parallax-tagline"
-            {...register('tagline')}
+            {...register("tagline")}
             placeholder="Luxury Rental Space"
             disabled={isPending}
           />
@@ -88,7 +96,7 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
           <Label htmlFor="hero-parallax-title">タイトル</Label>
           <Input
             id="hero-parallax-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="洗練された空間で 特別なひとときを"
             disabled={isPending}
           />
@@ -101,12 +109,14 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
           <Label htmlFor="hero-parallax-subtitle">サブタイトル</Label>
           <Input
             id="hero-parallax-subtitle"
-            {...register('subtitle')}
+            {...register("subtitle")}
             placeholder="厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。"
             disabled={isPending}
           />
           {errors.subtitle && (
-            <p className="text-sm text-destructive">{errors.subtitle.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.subtitle.message}
+            </p>
           )}
         </div>
 
@@ -143,7 +153,7 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setValue('backgroundImageUrl', '')}
+                  onClick={() => setValue("backgroundImageUrl", "")}
                   disabled={isPending}
                 >
                   削除
@@ -155,10 +165,14 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="hero-parallax-content-position">コンテンツ配置</Label>
+            <Label htmlFor="hero-parallax-content-position">
+              コンテンツ配置
+            </Label>
             <Select
               defaultValue={config.contentPosition}
-              onValueChange={(v) => setValue('contentPosition', parseContentPosition(v))}
+              onValueChange={(v) =>
+                setValue("contentPosition", parseContentPosition(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="hero-parallax-content-position">
@@ -178,7 +192,9 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
             <Label htmlFor="hero-parallax-height">高さ</Label>
             <Select
               defaultValue={config.height}
-              onValueChange={(v) => setValue('height', parseHeroParallaxHeight(v))}
+              onValueChange={(v) =>
+                setValue("height", parseHeroParallaxHeight(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="hero-parallax-height">
@@ -198,7 +214,9 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
             <Label htmlFor="hero-parallax-overlay-style">オーバーレイ</Label>
             <Select
               defaultValue={config.overlayStyle}
-              onValueChange={(v) => setValue('overlayStyle', parseOverlayStyle(v))}
+              onValueChange={(v) =>
+                setValue("overlayStyle", parseOverlayStyle(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="hero-parallax-overlay-style">
@@ -223,7 +241,7 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
             min={0}
             max={1}
             step={0.1}
-            {...register('parallaxSpeed', { valueAsNumber: true })}
+            {...register("parallaxSpeed", { valueAsNumber: true })}
             disabled={isPending}
           />
         </div>
@@ -233,19 +251,27 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
             <Switch
               id="hero-parallax-overlay-gradient"
               checked={config.overlayGradient}
-              onCheckedChange={(checked) => setValue('overlayGradient', checked)}
+              onCheckedChange={(checked) =>
+                setValue("overlayGradient", checked)
+              }
               disabled={isPending}
             />
-            <Label htmlFor="hero-parallax-overlay-gradient">オーバーレイグラデーション</Label>
+            <Label htmlFor="hero-parallax-overlay-gradient">
+              オーバーレイグラデーション
+            </Label>
           </div>
           <div className="flex items-center gap-2">
             <Switch
               id="hero-parallax-scroll-indicator"
               checked={config.scrollIndicator}
-              onCheckedChange={(checked) => setValue('scrollIndicator', checked)}
+              onCheckedChange={(checked) =>
+                setValue("scrollIndicator", checked)
+              }
               disabled={isPending}
             />
-            <Label htmlFor="hero-parallax-scroll-indicator">スクロールインジケーター</Label>
+            <Label htmlFor="hero-parallax-scroll-indicator">
+              スクロールインジケーター
+            </Label>
           </div>
         </div>
 
@@ -259,8 +285,12 @@ export default function HeroParallaxConfigForm({ section, onSave, isPending, onD
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
       <bgPicker.MediaPicker />
     </form>
-  )
+  );
 }

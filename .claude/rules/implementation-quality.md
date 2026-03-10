@@ -28,21 +28,24 @@ export async function deleteItem(id: string) {
   return { success: true }; // 実際の削除処理がない
 }
 
-// OK: withPermission パターンで完全な実装
-export const deleteItem = withPermission<[id: string], void>(
-  "item",
-  "delete",
-)(async (_user, id) => {
-  const item = await prisma.item.findUnique({
-    where: { id },
-    select: { id: true },
-  });
-  if (!item) return createFailure("アイテムが見つかりません");
+// OK: executeAdminMutation パターンで完全な実装
+export async function deleteItem(id: string) {
+  return executeAdminMutation({
+    resource: "item",
+    action: "delete",
+    execute: async () => {
+      const item = await prisma.item.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!item) return createFailure("アイテムが見つかりません");
 
-  await prisma.item.delete({ where: { id } });
-  updateTag(CACHE_TAGS.ITEMS);
-  return createSuccess("削除しました");
-});
+      await prisma.item.delete({ where: { id } });
+      updateTag(CACHE_TAGS.ITEMS);
+      return createSuccess("削除しました");
+    },
+  });
+}
 ```
 
 ### 2. 過剰な抽象化禁止
@@ -154,4 +157,4 @@ try {
 
 ## Server Action 実装パターン
 
-→ `error-handling.md` の `withPermission` パターンを参照。
+→ `error-handling.md` の `executeAdminMutation` パターンを参照。

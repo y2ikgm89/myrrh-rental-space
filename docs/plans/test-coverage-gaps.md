@@ -12,31 +12,31 @@
 
 ```typescript
 // 以下の Server Actions をテスト
-- updateHomePageSettings()     // セクション設定保存
-- getHomePageSections()        // セクション一覧取得
-- updateSectionOrder()         // セクション順序変更
-- deleteSection()              // セクション削除
-- publishSection()             // セクション公開切り替え
+-updateHomePageSettings() - // セクション設定保存
+  getHomePageSections() - // セクション一覧取得
+  updateSectionOrder() - // セクション順序変更
+  deleteSection() - // セクション削除
+  publishSection(); // セクション公開切り替え
 ```
 
 #### テストケース案
 
 ```typescript
-describe('Homepage Settings Integration', () => {
+describe("Homepage Settings Integration", () => {
   // ✅ 正常系
-  test('セクション設定を保存できる')
-  test('セクション順序を変更できる')
-  test('セクションを削除できる')
-  test('キャッシュが無効化される (updateTag)')
-  
+  test("セクション設定を保存できる");
+  test("セクション順序を変更できる");
+  test("セクションを削除できる");
+  test("キャッシュが無効化される (updateTag)");
+
   // ⚠️ エラー系
-  test('権限なしはエラー (VIEWER)')
-  test('不正なセクションタイプはエラー')
-  test('並び替え時のバリデーション')
-  
+  test("権限なしはエラー (VIEWER)");
+  test("不正なセクションタイプはエラー");
+  test("並び替え時のバリデーション");
+
   // 🔄 キャッシュ
-  test('編集後に最新データが返される (read-your-own-writes)')
-})
+  test("編集後に最新データが返される (read-your-own-writes)");
+});
 ```
 
 #### 実装メモ
@@ -57,31 +57,31 @@ describe('Homepage Settings Integration', () => {
 
 ```typescript
 // 以下の Server Actions をテスト
-- getAuditLogs()            // ログ取得（フィルタ対応）
-- getAuditLogStats()        // ログ統計
-- clearAuditLogs()          // ログ削除（SUPER_ADMIN のみ）
+-getAuditLogs() - // ログ取得（フィルタ対応）
+  getAuditLogStats() - // ログ統計
+  clearAuditLogs(); // ログ削除（SUPER_ADMIN のみ）
 ```
 
 #### テストケース案
 
 ```typescript
-describe('Audit Log Integration', () => {
+describe("Audit Log Integration", () => {
   // ✅ 取得・フィルタ
-  test('ログ一覧を取得できる')
-  test('ユーザーで絞り込める')
-  test('アクション種別で絞り込める')
-  test('日付範囲で絞り込める')
-  test('ページネーションが動作する')
-  
+  test("ログ一覧を取得できる");
+  test("ユーザーで絞り込める");
+  test("アクション種別で絞り込める");
+  test("日付範囲で絞り込める");
+  test("ページネーションが動作する");
+
   // 🔐 権限検査
-  test('SUPER_ADMIN は全ログを取得可')
-  test('ADMIN は部分的に表示（除外フィールドあり？）')
-  test('EDITOR 以下はエラー')
-  
+  test("SUPER_ADMIN は全ログを取得可");
+  test("ADMIN は部分的に表示（除外フィールドあり？）");
+  test("EDITOR 以下はエラー");
+
   // ⚙️ 統計
-  test('ユーザー別アクション数を集計できる')
-  test('アクション別件数を集計できる')
-})
+  test("ユーザー別アクション数を集計できる");
+  test("アクション別件数を集計できる");
+});
 ```
 
 #### 実装メモ
@@ -101,22 +101,22 @@ describe('Audit Log Integration', () => {
 #### テストシナリオ
 
 ```typescript
-test.describe('ページ編集 - セクション管理', () => {
-  test('ページ編集画面でセクションを追加できる', async ({ page }) => {
+test.describe("ページ編集 - セクション管理", () => {
+  test("ページ編集画面でセクションを追加できる", async ({ page }) => {
     // 1. ページ編集ページへ遷移
     // 2. セクション追加ボタンをクリック
     // 3. セクションタイプを選択
     // 4. セクション詳細を入力
     // 5. 保存ボタンをクリック
     // 6. 追加されたことを確認
-  })
+  });
 
-  test('セクションを削除できる')
-  test('セクションを上下に移動できる')
-  test('複数セクション編集後に保存できる')
-  test('フォーム入力エラーが表示される')
-  test('未保存の変更を警告する')
-})
+  test("セクションを削除できる");
+  test("セクションを上下に移動できる");
+  test("複数セクション編集後に保存できる");
+  test("フォーム入力エラーが表示される");
+  test("未保存の変更を警告する");
+});
 ```
 
 #### テスト環境
@@ -142,13 +142,13 @@ test.describe('ページ編集 - セクション管理', () => {
 #### テストケース
 
 ```typescript
-describe('Editor Comment Integration', () => {
-  test('エディタ内にコメントを追加できる')
-  test('コメントに返信できる')
-  test('コメント削除権限をチェック')
-  test('コメント数をカウント')
-  test('未読コメント通知')
-})
+describe("Editor Comment Integration", () => {
+  test("エディタ内にコメントを追加できる");
+  test("コメントに返信できる");
+  test("コメント削除権限をチェック");
+  test("コメント数をカウント");
+  test("未読コメント通知");
+});
 ```
 
 ---
@@ -160,17 +160,17 @@ describe('Editor Comment Integration', () => {
 #### テストケース
 
 ```typescript
-describe('Email Service Unit', () => {
+describe("Email Service Unit", () => {
   // 成功系
-  test('シンプルなメールを送信できる')
-  test('HTMLテンプレートで送信できる')
-  test('添付ファイル付きで送信できる')
-  
+  test("シンプルなメールを送信できる");
+  test("HTMLテンプレートで送信できる");
+  test("添付ファイル付きで送信できる");
+
   // エラー系
-  test('無効なメールアドレスはエラー')
-  test('Resend API エラーを握りつぶさない')
-  test('リトライロジックが動作する')
-})
+  test("無効なメールアドレスはエラー");
+  test("Resend API エラーを握りつぶさない");
+  test("リトライロジックが動作する");
+});
 ```
 
 ---
@@ -182,13 +182,13 @@ describe('Email Service Unit', () => {
 #### テストシナリオ
 
 ```typescript
-test.describe('メディア管理', () => {
-  test('画像をアップロードできる')
-  test('複数ファイルをドラッグ&ドロップできる')
-  test('アップロード進捗が表示される')
-  test('ファイル削除時に確認ダイアログが出る')
-  test('削除後にページが更新される')
-})
+test.describe("メディア管理", () => {
+  test("画像をアップロードできる");
+  test("複数ファイルをドラッグ&ドロップできる");
+  test("アップロード進捗が表示される");
+  test("ファイル削除時に確認ダイアログが出る");
+  test("削除後にページが更新される");
+});
 ```
 
 ---
@@ -200,14 +200,14 @@ test.describe('メディア管理', () => {
 #### テストケース
 
 ```typescript
-describe('Calendar Sync Utility', () => {
-  test('イベント同期をスケジュールできる')
-  test('重複イベントを検出できる')
-  test('タイムゾーン変換が正しい')
-  test('削除されたイベントを検出できる')
-  test('エラー時にリトライする')
-  test('レート制限に対応する')
-})
+describe("Calendar Sync Utility", () => {
+  test("イベント同期をスケジュールできる");
+  test("重複イベントを検出できる");
+  test("タイムゾーン変換が正しい");
+  test("削除されたイベントを検出できる");
+  test("エラー時にリトライする");
+  test("レート制限に対応する");
+});
 ```
 
 ---
@@ -215,18 +215,22 @@ describe('Calendar Sync Utility', () => {
 ## 優先度 P2 テスト実装（フェーズ3：時間あれば）
 
 ### 1. `post-comment.ts` Integration Test
+
 - ブログコメント機能（承認・拒否フロー）
 
 ### 2. `ical-tokens.ts` Integration Test
+
 - iCal フィード用トークンの生成・無効化・更新
 
 ### 3. E2E: 設定ページ一式
+
 - SEO設定
 - ビジネス設定
 - 支払い設定
 - ソーシャルリンク設定
 
 ### 4. モック改善
+
 - Google Calendar エラーケース（402, 429）
 - Stripe Webhook ペイロード
 - メール送信失敗シナリオ
@@ -273,12 +277,12 @@ describe('Calendar Sync Utility', () => {
 
 ## 🎯 品質メトリクス目標
 
-| メトリクス | 現在 | 目標 | 達成時期 |
-|-----------|------|------|---------|
-| Integration テストカバレッジ | 75% | 90% | 2月末 |
-| E2E テストカバレッジ | 65% | 85% | 3月末 |
-| モック品質スコア | 3.0/5 | 4.5/5 | 3月末 |
-| 全体テストスコア | 4.0/5 | 4.5/5 | 3月末 |
+| メトリクス                   | 現在  | 目標  | 達成時期 |
+| ---------------------------- | ----- | ----- | -------- |
+| Integration テストカバレッジ | 75%   | 90%   | 2月末    |
+| E2E テストカバレッジ         | 65%   | 85%   | 3月末    |
+| モック品質スコア             | 3.0/5 | 4.5/5 | 3月末    |
+| 全体テストスコア             | 4.0/5 | 4.5/5 | 3月末    |
 
 ---
 

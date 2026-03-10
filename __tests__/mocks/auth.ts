@@ -5,78 +5,80 @@
  * - ユーザー認証状態の制御
  */
 
-import { mock } from 'bun:test'
-import { Role } from '@/shared/db/enums'
+import { mock } from "bun:test";
+import { Role } from "@/shared/db/enums";
 
 // User型定義（Better Authのインターフェースに準拠）
 export interface MockUser {
-  id: string
-  email: string
-  name: string
-  role: Role
-  emailVerified: boolean
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  emailVerified: boolean;
   // Better Auth の User.image は省略可能
-  image?: string | null
-  createdAt: Date
-  updatedAt: Date
+  image?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   // EDITOR ロール用: 割り当てられたページIDの配列
-  assignedPages?: string[]
+  assignedPages?: string[];
 }
 
 export interface MockSession {
-  user: MockUser
+  user: MockUser;
   session: {
-    token: string
-    userId: string
-    expiresAt: Date
-    ipAddress?: string
-    userAgent?: string
-  }
+    token: string;
+    userId: string;
+    expiresAt: Date;
+    ipAddress?: string;
+    userAgent?: string;
+  };
 }
 
 // モック関数
 export const mockGetSession = mock<() => Promise<MockSession | null>>(() =>
-  Promise.resolve(null)
-)
+  Promise.resolve(null),
+);
 
 export function createMockUser(overrides?: Partial<MockUser>): MockUser {
   return {
-    id: 'test-user-id',
-    email: 'test@example.com',
-    name: 'Test User',
+    id: "test-user-id",
+    email: "test@example.com",
+    name: "Test User",
     role: Role.ADMIN,
     emailVerified: true,
     image: null,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
     ...overrides,
-  }
+  };
 }
 
-export function createMockSession(userOverrides?: Partial<MockUser>): MockSession {
-  const user = createMockUser(userOverrides)
+export function createMockSession(
+  userOverrides?: Partial<MockUser>,
+): MockSession {
+  const user = createMockUser(userOverrides);
 
   return {
     user,
     session: {
-      token: 'test-session-token',
+      token: "test-session-token",
       userId: user.id,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24時間後
-      ipAddress: '127.0.0.1',
-      userAgent: 'Test Agent',
+      ipAddress: "127.0.0.1",
+      userAgent: "Test Agent",
     },
-  }
+  };
 }
 
 export function setMockSession(session: MockSession | null): void {
-  mockGetSession.mockResolvedValue(session)
+  mockGetSession.mockResolvedValue(session);
 }
 
 export function clearMockSession(): void {
-  mockGetSession.mockResolvedValue(null)
+  mockGetSession.mockResolvedValue(null);
 }
 
 export function resetAuthMock(): void {
-  mockGetSession.mockReset()
-  mockGetSession.mockResolvedValue(null)
+  mockGetSession.mockReset();
+  mockGetSession.mockResolvedValue(null);
 }

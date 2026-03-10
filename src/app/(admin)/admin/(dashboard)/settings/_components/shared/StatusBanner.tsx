@@ -6,11 +6,11 @@
  * - エラー: destructive系（統一カラー）
  */
 
-import type { ReactNode, ReactElement } from 'react'
+import type { ReactNode, ReactElement } from "react";
 
 interface StatusBannerProps {
-  success: boolean
-  children: ReactNode
+  success: boolean;
+  children: ReactNode;
 }
 
 export function StatusBanner({
@@ -18,8 +18,8 @@ export function StatusBanner({
   children,
 }: StatusBannerProps): ReactElement {
   const styles = success
-    ? 'border-success/20 bg-success/10'
-    : 'border-destructive/50 bg-destructive/10'
+    ? "border-success/20 bg-success/10"
+    : "border-destructive/50 bg-destructive/10";
 
-  return <div className={`rounded-lg border p-4 ${styles}`}>{children}</div>
+  return <div className={`rounded-lg border p-4 ${styles}`}>{children}</div>;
 }

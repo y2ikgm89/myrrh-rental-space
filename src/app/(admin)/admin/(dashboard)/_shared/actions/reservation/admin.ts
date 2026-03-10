@@ -6,7 +6,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import type { MutationResult } from "@/shared/lib/mutation-result"
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
@@ -71,7 +71,10 @@ export const createAdminReservation = async (
           operation: "syncReservationToCalendar",
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.LOW,
-          context: { reservationId: result.id, trigger: "createAdminReservation" },
+          context: {
+            reservationId: result.id,
+            trigger: "createAdminReservation",
+          },
         });
       }
 
@@ -129,15 +132,12 @@ export const updateAdminReservation = async (
       }
 
       if (validation.data.sendNotificationEmail) {
-        fireAndForget(
-          sendReservationConfirmationEmail(result.notification),
-          {
-            operation: "sendNotificationEmail",
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.LOW,
-            context: { reservationId: id },
-          },
-        );
+        fireAndForget(sendReservationConfirmationEmail(result.notification), {
+          operation: "sendNotificationEmail",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { reservationId: id },
+        });
       }
 
       updateTag(CACHE_TAGS.RESERVATIONS);

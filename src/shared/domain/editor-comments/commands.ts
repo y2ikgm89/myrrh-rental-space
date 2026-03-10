@@ -163,10 +163,7 @@ export async function deleteThreadCommand(threadId: string): Promise<void> {
   }
 
   if (thread.status === "DELETED") {
-    throw new DomainError(
-      "このスレッドは既に削除されています",
-      "VALIDATION",
-    );
+    throw new DomainError("このスレッドは既に削除されています", "VALIDATION");
   }
 
   await prisma.editorCommentThread.update({
@@ -191,10 +188,7 @@ export async function deleteCommentCommand(
   }
 
   if (comment.isDeleted) {
-    throw new DomainError(
-      "このコメントは既に削除されています",
-      "VALIDATION",
-    );
+    throw new DomainError("このコメントは既に削除されています", "VALIDATION");
   }
 
   await prisma.editorComment.update({

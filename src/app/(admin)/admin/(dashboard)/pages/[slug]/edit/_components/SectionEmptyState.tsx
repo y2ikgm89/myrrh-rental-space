@@ -1,18 +1,21 @@
-'use client'
+"use client";
 
 /**
  * セクション未選択時 / セクションなし時の空状態表示
  */
 
-import { Button } from '@/admin/components/ui'
-import { LayoutTemplate, MousePointerClick, Plus } from 'lucide-react'
+import { Button } from "@/admin/components/ui";
+import { LayoutTemplate, MousePointerClick, Plus } from "lucide-react";
 
 interface SectionEmptyStateProps {
-  hasSections: boolean
-  onAddSection: () => void
+  hasSections: boolean;
+  onAddSection: () => void;
 }
 
-export function SectionEmptyState({ hasSections, onAddSection }: SectionEmptyStateProps) {
+export function SectionEmptyState({
+  hasSections,
+  onAddSection,
+}: SectionEmptyStateProps) {
   if (hasSections) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -24,7 +27,7 @@ export function SectionEmptyState({ hasSections, onAddSection }: SectionEmptySta
           左のリストからセクションを選択して、コンテンツやデザインを編集しましょう
         </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -41,5 +44,5 @@ export function SectionEmptyState({ hasSections, onAddSection }: SectionEmptySta
         セクションを追加
       </Button>
     </div>
-  )
+  );
 }

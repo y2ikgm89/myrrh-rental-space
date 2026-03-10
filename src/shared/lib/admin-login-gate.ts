@@ -57,9 +57,7 @@ async function importSigningKey(): Promise<CryptoKey> {
   );
 }
 
-function parseSignedToken(
-  token: string,
-): {
+function parseSignedToken(token: string): {
   readonly expiresAtMs: number;
   readonly payload: string;
   readonly signature: Uint8Array;

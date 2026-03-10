@@ -52,7 +52,6 @@ export const Z_INDEX = {
   toast: 95,
   tooltip: 97,
   emergency: 99,
-} satisfies Record<string, number>
+} satisfies Record<string, number>;
 
-export type ZIndexKey = keyof typeof Z_INDEX
-
+export type ZIndexKey = keyof typeof Z_INDEX;

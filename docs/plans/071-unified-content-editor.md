@@ -53,57 +53,61 @@ src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types
 
 ```typescript
 type ContentTypeConfig<
-  TData,                    // DBエンティティ型（BlogPostData等）
-  TFormData extends FieldValues,  // フォームデータ型
-  TPreviewData              // プレビューデータ型
+  TData, // DBエンティティ型（BlogPostData等）
+  TFormData extends FieldValues, // フォームデータ型
+  TPreviewData, // プレビューデータ型
 > = {
   // === 基本情報 ===
-  id: ContentTypeId
-  label: string
-  listPath: string            // '/admin/blog'
-  slugPrefix: string          // 'blog/'
-  previewBasePath: string     // '/blog'
+  id: ContentTypeId;
+  label: string;
+  listPath: string; // '/admin/blog'
+  slugPrefix: string; // 'blog/'
+  previewBasePath: string; // '/blog'
 
   // === スキーマ ===
-  formSchema: ZodSchema<TFormData>
+  formSchema: ZodSchema<TFormData>;
 
   // === 機能フラグ ===
   features: {
-    create: boolean
-    delete: boolean
-    publish: boolean
-    comments: boolean
-  }
+    create: boolean;
+    delete: boolean;
+    publish: boolean;
+    comments: boolean;
+  };
 
   // === 公開方式 ===
   publishControl: {
-    type: 'status' | 'isPublished'
-    statusEnum?: typeof BlogPostStatus  // status方式の場合
-  }
+    type: "status" | "isPublished";
+    statusEnum?: typeof BlogPostStatus; // status方式の場合
+  };
 
   // === データ変換 ===
   transforms: {
-    toFormData: (data?: TData) => TFormData
-    toSubmitPayload: (formData: TFormData) => unknown
-    toPreviewData: (formData: TFormData, data?: TData, extra?: unknown) => TPreviewData
-  }
+    toFormData: (data?: TData) => TFormData;
+    toSubmitPayload: (formData: TFormData) => unknown;
+    toPreviewData: (
+      formData: TFormData,
+      data?: TData,
+      extra?: unknown,
+    ) => TPreviewData;
+  };
 
   // === Server Actions ===
   actions: {
-    create?: (payload: unknown) => Promise<ActionResult<{ id: string }>>
-    update: (id: string, payload: unknown) => Promise<ActionResult>
-    delete?: (id: string) => Promise<ActionResult>
-    publish?: (id: string) => Promise<ActionResult<void, string>>
-    unpublish?: (id: string) => Promise<ActionResult<void, string>>
-  }
+    create?: (payload: unknown) => Promise<ActionResult<{ id: string }>>;
+    update: (id: string, payload: unknown) => Promise<ActionResult>;
+    delete?: (id: string) => Promise<ActionResult>;
+    publish?: (id: string) => Promise<ActionResult<void, string>>;
+    unpublish?: (id: string) => Promise<ActionResult<void, string>>;
+  };
 
   // === サイドパネル ===
   sidePanelConfig: {
-    title: string
-    width: 'default' | 'narrow'
-    tabs: TabDefinition[]
-  }
-}
+    title: string;
+    width: "default" | "narrow";
+    tabs: TabDefinition[];
+  };
+};
 ```
 
 ### ContentEditorProps
@@ -113,19 +117,19 @@ type ContentEditorProps<
   TData,
   TFormData extends FieldValues,
   TPreviewData,
-  TConfig extends ContentTypeConfig<TData, TFormData, TPreviewData>
+  TConfig extends ContentTypeConfig<TData, TFormData, TPreviewData>,
 > = {
-  config: TConfig
-  data?: TData
-  mode?: 'create' | 'edit'
+  config: TConfig;
+  data?: TData;
+  mode?: "create" | "edit";
   // コンテンツタイプ固有の追加データ
   extraData?: {
-    categories?: CategoryOption[]
-    tags?: TagOption[]
-    onCreateCategory?: (name: string) => Promise<CategoryOption | null>
-    onCreateTag?: (name: string) => Promise<TagOption | null>
-  }
-}
+    categories?: CategoryOption[];
+    tags?: TagOption[];
+    onCreateCategory?: (name: string) => Promise<CategoryOption | null>;
+    onCreateTag?: (name: string) => Promise<TagOption | null>;
+  };
+};
 ```
 
 ## 実装詳細

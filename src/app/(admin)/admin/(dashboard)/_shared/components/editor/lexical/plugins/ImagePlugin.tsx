@@ -4,45 +4,45 @@
  * @description 画像挿入ダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodes } from 'lexical'
-import { MediaPickerDialog } from '@/admin/components/media-picker'
-import { $createImageNode } from '../nodes/ImageNode'
-import type { SelectedMedia } from '@/admin/types/media-picker'
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodes } from "lexical";
+import { MediaPickerDialog } from "@/admin/components/media-picker";
+import { $createImageNode } from "../nodes/ImageNode";
+import type { SelectedMedia } from "@/admin/types/media-picker";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type ImagePluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   const handleSelect = (media: SelectedMedia[]) => {
-    if (media.length === 0) return
+    if (media.length === 0) return;
 
     editor.update(() => {
       const nodes = media.map((m) =>
         $createImageNode({
           src: m.url,
-          alt: m.alt ?? '',
-        })
-      )
-      $insertNodes(nodes)
-    })
+          alt: m.alt ?? "",
+        }),
+      );
+      $insertNodes(nodes);
+    });
 
-    onClose()
-  }
+    onClose();
+  };
 
   return (
     <MediaPickerDialog
@@ -53,6 +53,5 @@ export function ImagePlugin({ isOpen, onClose }: ImagePluginProps) {
       defaultUsage="POST"
       showUrlTab
     />
-  )
+  );
 }
-

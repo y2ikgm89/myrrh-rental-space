@@ -1,74 +1,80 @@
-'use client'
+"use client";
 
-import { useTransition } from 'react'
-import { useQueryState } from 'nuqs'
-import { Button } from '@/admin/components/ui'
-import { parseAsPage } from '@/shared/lib/nuqs'
+import { useTransition } from "react";
+import { useQueryState } from "nuqs";
+import { Button } from "@/admin/components/ui";
+import { parseAsPage } from "@/shared/lib/nuqs";
 
 type PaginationProps = {
-  currentPage: number
-  totalPages: number
-  total: number
-}
+  currentPage: number;
+  totalPages: number;
+  total: number;
+};
 
 /**
  * ページ番号の配列を生成
  * 7ページ以下: 全表示
  * 8ページ以上: 省略記号付き（現在ページ周辺を表示）
  */
-function getPageNumbers(current: number, total: number): (number | 'ellipsis')[] {
+function getPageNumbers(
+  current: number,
+  total: number,
+): (number | "ellipsis")[] {
   if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1)
+    return Array.from({ length: total }, (_, i) => i + 1);
   }
 
-  const pages: (number | 'ellipsis')[] = [1]
+  const pages: (number | "ellipsis")[] = [1];
 
   if (current > 3) {
-    pages.push('ellipsis')
+    pages.push("ellipsis");
   }
 
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
 
   for (let i = start; i <= end; i++) {
-    pages.push(i)
+    pages.push(i);
   }
 
   if (current < total - 2) {
-    pages.push('ellipsis')
+    pages.push("ellipsis");
   }
 
-  pages.push(total)
+  pages.push(total);
 
-  return pages
+  return pages;
 }
 
-export function Pagination({ currentPage, totalPages, total }: PaginationProps) {
-  const [isPending, startTransition] = useTransition()
+export function Pagination({
+  currentPage,
+  totalPages,
+  total,
+}: PaginationProps) {
+  const [isPending, startTransition] = useTransition();
 
-  const [, setPage] = useQueryState('page', {
+  const [, setPage] = useQueryState("page", {
     ...parseAsPage,
     shallow: false,
-    history: 'push',
+    history: "push",
     startTransition,
-  })
+  });
 
   const goToPage = (page: number) => {
-    void setPage(page === 1 ? null : page)
-  }
+    void setPage(page === 1 ? null : page);
+  };
 
   if (totalPages <= 1) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        全 {total} 件
-      </div>
-    )
+    return <div className="text-sm text-muted-foreground">全 {total} 件</div>;
   }
 
-  const pageNumbers = getPageNumbers(currentPage, totalPages)
+  const pageNumbers = getPageNumbers(currentPage, totalPages);
 
   return (
-    <nav aria-label="ページネーション" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <nav
+      aria-label="ページネーション"
+      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div className="text-sm text-muted-foreground">
         全 {total} 件（{currentPage} / {totalPages} ページ）
       </div>
@@ -83,7 +89,7 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
         </Button>
 
         {pageNumbers.map((page, i) =>
-          page === 'ellipsis' ? (
+          page === "ellipsis" ? (
             <span
               /* eslint-disable-next-line @eslint-react/no-array-index-key */
               key={`ellipsis-${i}`}
@@ -94,16 +100,16 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
           ) : (
             <Button
               key={page}
-              variant={page === currentPage ? 'default' : 'outline'}
+              variant={page === currentPage ? "default" : "outline"}
               size="sm"
               className="h-8 w-8 p-0"
               onClick={() => goToPage(page)}
               disabled={isPending}
-              aria-current={page === currentPage ? 'page' : undefined}
+              aria-current={page === currentPage ? "page" : undefined}
             >
               {page}
             </Button>
-          )
+          ),
         )}
 
         <Button
@@ -116,5 +122,5 @@ export function Pagination({ currentPage, totalPages, total }: PaginationProps) 
         </Button>
       </div>
     </nav>
-  )
+  );
 }

@@ -4,11 +4,11 @@
  * @description Spotify 埋め込みダイアログを提供するプラグイン
  */
 
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
+import { useState } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,42 +18,42 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
-import { $createSpotifyNode, toSpotifyEmbedUrl } from '../nodes/SpotifyNode'
-import type { DialogPluginProps } from '../config/dialog-registry'
+} from "@/admin/components/ui";
+import { $createSpotifyNode, toSpotifyEmbedUrl } from "../nodes/SpotifyNode";
+import type { DialogPluginProps } from "../config/dialog-registry";
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function SpotifyPlugin({ isOpen, onClose }: DialogPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const handleInsert = () => {
-    const trimmed = url.trim()
-    if (!trimmed) return
+    const trimmed = url.trim();
+    if (!trimmed) return;
 
-    const result = toSpotifyEmbedUrl(trimmed)
+    const result = toSpotifyEmbedUrl(trimmed);
     if (!result) {
-      setError('Spotify の URL ではありません')
-      return
+      setError("Spotify の URL ではありません");
+      return;
     }
 
     editor.update(() => {
-      const spotifyNode = $createSpotifyNode(result)
-      $insertNodeToNearestRoot(spotifyNode)
-    })
+      const spotifyNode = $createSpotifyNode(result);
+      $insertNodeToNearestRoot(spotifyNode);
+    });
 
-    handleClose()
-  }
+    handleClose();
+  };
 
   const handleClose = () => {
-    setUrl('')
-    setError(null)
-    onClose()
-  }
+    setUrl("");
+    setError(null);
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -61,7 +61,8 @@ export function SpotifyPlugin({ isOpen, onClose }: DialogPluginProps) {
         <DialogHeader>
           <DialogTitle>Spotify を挿入</DialogTitle>
           <DialogDescription>
-            Spotify のトラック・アルバム・プレイリスト・Podcast の URL を入力してください
+            Spotify のトラック・アルバム・プレイリスト・Podcast の URL
+            を入力してください
           </DialogDescription>
         </DialogHeader>
 
@@ -73,8 +74,8 @@ export function SpotifyPlugin({ isOpen, onClose }: DialogPluginProps) {
               type="url"
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value)
-                setError(null)
+                setUrl(e.target.value);
+                setError(null);
               }}
               placeholder="https://open.spotify.com/track/..."
             />
@@ -92,5 +93,5 @@ export function SpotifyPlugin({ isOpen, onClose }: DialogPluginProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

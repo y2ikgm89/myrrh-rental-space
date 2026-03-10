@@ -101,9 +101,5 @@ export function VisualEffectsProvider({ children }: { children: ReactNode }) {
     degradeTo,
   };
 
-  return (
-    <VisualEffectsContext value={value}>
-      {children}
-    </VisualEffectsContext>
-  );
+  return <VisualEffectsContext value={value}>{children}</VisualEffectsContext>;
 }

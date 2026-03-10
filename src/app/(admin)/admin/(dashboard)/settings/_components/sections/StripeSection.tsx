@@ -40,6 +40,7 @@ import { createTypeGuard } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/utils";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -90,7 +91,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         stripeWebhookSecret: formData.stripeWebhookSecret || null,
         stripeCurrency: formData.stripeCurrency,
       });
-      if (result.success) {
+      if (!isMutationError(result)) {
         // 入力フィールドをリセット
         setFormData((prev) => ({
           ...prev,
@@ -100,7 +101,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         setShowSecretKeyInput(false);
         setShowWebhookSecretInput(false);
       }
-      handleResult(result);
+      handleResult(result, "Stripe設定を保存しました");
     });
   };
 
@@ -118,17 +119,19 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
     try {
       const result = await testStripeConnectionAction(formData.stripeSecretKey);
-      if (result.success) {
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
-          message: `接続成功 (アカウントID: ${result.data.accountId})`,
-          mode: result.data.mode,
+          message: result.accountId
+            ? `接続成功 (アカウントID: ${result.accountId})`
+            : "接続成功",
+          mode: result.mode,
         });
         refresh();
       } else {
         setTestResult({
           success: false,
-          message: result.error || "接続に失敗しました",
+          message: result.error,
         });
       }
     } catch {
@@ -152,7 +155,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
 
     startTransition(async () => {
       const result = await clearStripeKeys();
-      if (result.success) {
+      if (!isMutationError(result)) {
         setFormData((prev) => ({
           ...prev,
           stripePublishableKey: "",
@@ -161,7 +164,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
         }));
         setTestResult(null);
       }
-      handleResult(result);
+      handleResult(result, "Stripeキーをクリアしました");
     });
   };
 

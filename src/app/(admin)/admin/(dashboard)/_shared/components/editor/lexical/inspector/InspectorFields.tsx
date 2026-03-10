@@ -5,16 +5,16 @@
  * `<InspectorSection><div className="space-y-3">` パターンを統合
  */
 
-'use client'
+"use client";
 
-import type { ReactNode } from 'react'
-import { InspectorSection } from './InspectorSection'
+import type { ReactNode } from "react";
+import { InspectorSection } from "./InspectorSection";
 
 type InspectorFieldsProps = {
-  title: string
-  defaultOpen?: boolean
-  children: ReactNode
-}
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+};
 
 export function InspectorFields({
   title,
@@ -25,5 +25,5 @@ export function InspectorFields({
     <InspectorSection title={title} defaultOpen={defaultOpen}>
       <div className="space-y-3">{children}</div>
     </InspectorSection>
-  )
+  );
 }

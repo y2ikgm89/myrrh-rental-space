@@ -1,10 +1,13 @@
-'use client'
+"use client";
 
-import { ActionDropdown, ActionDropdownItem } from '@/admin/components/ActionDropdown'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+} from "@/admin/components/ActionDropdown";
 
 type CouponActionCellProps = {
-  couponId: string
-}
+  couponId: string;
+};
 
 export function CouponActionCell({ couponId }: CouponActionCellProps) {
   return (
@@ -13,5 +16,5 @@ export function CouponActionCell({ couponId }: CouponActionCellProps) {
         編集
       </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

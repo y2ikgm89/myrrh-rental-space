@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * Instagram設定セクション
@@ -8,9 +8,9 @@
  * - フィード表示設定
  */
 
-import { useState, useTransition } from 'react'
-import { useConfirm } from '@/admin/contexts/confirm-context'
-import { Instagram, Link2, Key, Unlink, ExternalLink } from 'lucide-react'
+import { useState, useTransition } from "react";
+import { useConfirm } from "@/admin/contexts/confirm-context";
+import { Instagram, Link2, Key, Unlink, ExternalLink } from "lucide-react";
 import {
   Button,
   Card,
@@ -22,35 +22,35 @@ import {
   Label,
   Switch,
   SelectionBox,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   updateInstagramSettings,
   saveManualToken,
   testInstagramConnectionAction,
   disconnectInstagram,
   type InstagramConfig,
-} from '@/admin/actions/instagram'
-import { StatusBanner } from '../shared'
-import { useRefreshOnSuccess } from '../hooks'
-import { formatDateTimeShort } from '@/shared/lib/utils'
-import { InstagramFeedLayout } from '@/shared/db/enums'
-import { isValidInstagramFeedLayout } from '@/shared/lib/validations/enums'
+} from "@/admin/actions/instagram";
+import { StatusBanner } from "../shared";
+import { useRefreshOnSuccess } from "../hooks";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { InstagramFeedLayout } from "@/shared/db/enums";
+import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 interface InstagramSectionProps {
-  config: InstagramConfig
+  config: InstagramConfig;
 }
 
-const CONNECTION_METHODS = ['oauth', 'manual'] as const
-type ConnectionMethod = (typeof CONNECTION_METHODS)[number]
-const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS)
+const CONNECTION_METHODS = ["oauth", "manual"] as const;
+type ConnectionMethod = (typeof CONNECTION_METHODS)[number];
+const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS);
 function isConnectionMethod(value: string): value is ConnectionMethod {
-  return CONNECTION_METHOD_SET.has(value)
+  return CONNECTION_METHOD_SET.has(value);
 }
-
 
 // =============================================================================
 // Constants
@@ -58,45 +58,45 @@ function isConnectionMethod(value: string): value is ConnectionMethod {
 
 const CONNECTION_METHOD_OPTIONS = [
   {
-    value: 'oauth' as const,
-    label: 'OAuth連携（推奨）',
-    description: 'Instagramアカウントで認証して自動的にトークンを取得します',
+    value: "oauth" as const,
+    label: "OAuth連携（推奨）",
+    description: "Instagramアカウントで認証して自動的にトークンを取得します",
     icon: <Link2 />,
   },
   {
-    value: 'manual' as const,
-    label: '手動トークン入力',
-    description: '自分でアクセストークンを取得して入力します',
+    value: "manual" as const,
+    label: "手動トークン入力",
+    description: "自分でアクセストークンを取得して入力します",
     icon: <Key />,
   },
-]
+];
 
 const LAYOUT_OPTIONS = [
   {
     value: InstagramFeedLayout.grid,
-    label: 'グリッド',
-    description: '写真を格子状に並べて表示',
+    label: "グリッド",
+    description: "写真を格子状に並べて表示",
   },
   {
     value: InstagramFeedLayout.masonry,
-    label: 'メイソンリー',
-    description: '高さの異なるグリッドレイアウト',
+    label: "メイソンリー",
+    description: "高さの異なるグリッドレイアウト",
   },
   {
     value: InstagramFeedLayout.slider,
-    label: 'スライダー',
-    description: '横スクロールで表示',
+    label: "スライダー",
+    description: "横スクロールで表示",
   },
-]
+];
 
 // =============================================================================
 // Connection Card Component
 // =============================================================================
 
 interface ConnectionCardProps {
-  config: InstagramConfig
-  isPending: boolean
-  onDisconnect: () => void
+  config: InstagramConfig;
+  isPending: boolean;
+  onDisconnect: () => void;
 }
 
 function ConnectionCard({
@@ -104,68 +104,68 @@ function ConnectionCard({
   isPending,
   onDisconnect,
 }: ConnectionCardProps) {
-  const { handleResult } = useRefreshOnSuccess()
+  const { handleResult } = useRefreshOnSuccess();
   const [connectionMethod, setConnectionMethod] =
-    useState<ConnectionMethod>('oauth')
-  const [manualToken, setManualToken] = useState('')
-  const [isTesting, setIsTesting] = useState(false)
+    useState<ConnectionMethod>("oauth");
+  const [manualToken, setManualToken] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
-    success: boolean
-    message: string
-  } | null>(null)
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const handleOAuthConnect = () => {
     // OAuth認証ページへリダイレクト
-    window.location.href = '/api/instagram/oauth/authorize'
-  }
+    window.location.href = "/api/instagram/oauth/authorize";
+  };
 
   const handleTestConnection = async () => {
     if (!manualToken) {
       setTestResult({
         success: false,
-        message: 'アクセストークンを入力してください',
-      })
-      return
+        message: "アクセストークンを入力してください",
+      });
+      return;
     }
 
-    setIsTesting(true)
-    setTestResult(null)
+    setIsTesting(true);
+    setTestResult(null);
 
     try {
-      const result = await testInstagramConnectionAction(manualToken)
-      if (result.success) {
+      const result = await testInstagramConnectionAction(manualToken);
+      if (!isMutationError(result)) {
         setTestResult({
           success: true,
-          message:
-            result.data?.message ||
-            `接続成功 - @${result.data?.username || 'unknown'}`,
-        })
+          message: result.username
+            ? `接続成功 - @${result.username}`
+            : "接続成功",
+        });
       } else {
         setTestResult({
           success: false,
-          message: result.error || '接続テストに失敗しました',
-        })
+          message: result.error,
+        });
       }
     } catch {
       setTestResult({
         success: false,
-        message: '接続テストでエラーが発生しました',
-      })
+        message: "接続テストでエラーが発生しました",
+      });
     } finally {
-      setIsTesting(false)
+      setIsTesting(false);
     }
-  }
+  };
 
   const handleSaveManualToken = async () => {
-    if (!manualToken) return
+    if (!manualToken) return;
 
-    const result = await saveManualToken(manualToken)
-    if (result.success) {
-      setManualToken('')
-      setTestResult(null)
+    const result = await saveManualToken(manualToken);
+    if (!isMutationError(result)) {
+      setManualToken("");
+      setTestResult(null);
     }
-    handleResult(result)
-  }
+    handleResult(result, "Instagramトークンを保存しました");
+  };
 
   // 連携済みの場合
   if (config.isConnected) {
@@ -182,12 +182,10 @@ function ConnectionCard({
           <StatusBanner success>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-success" />
-              <span className="text-sm font-medium text-success">
-                連携済み
-              </span>
+              <span className="text-sm font-medium text-success">連携済み</span>
             </div>
             <p className="mt-1 text-sm text-success">
-              @{config.username || 'unknown'}
+              @{config.username || "unknown"}
               {config.accountType && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   ({config.accountType})
@@ -198,7 +196,9 @@ function ConnectionCard({
               <p className="mt-1 text-xs text-muted-foreground">
                 トークン有効期限: {formatDateTimeShort(config.tokenExpiresAt)}
                 {config.tokenExpiryDays !== null && (
-                  <span className="ml-1">（残り{config.tokenExpiryDays}日）</span>
+                  <span className="ml-1">
+                    （残り{config.tokenExpiryDays}日）
+                  </span>
                 )}
               </p>
             )}
@@ -235,7 +235,7 @@ function ConnectionCard({
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   // 未連携の場合
@@ -257,14 +257,16 @@ function ConnectionCard({
           <SelectionBox
             options={CONNECTION_METHOD_OPTIONS}
             value={connectionMethod}
-            onChange={(value) => { if (isConnectionMethod(value)) setConnectionMethod(value) }}
+            onChange={(value) => {
+              if (isConnectionMethod(value)) setConnectionMethod(value);
+            }}
             columns={2}
             name="connection-method"
           />
         </div>
 
         {/* OAuth連携 */}
-        {connectionMethod === 'oauth' && (
+        {connectionMethod === "oauth" && (
           <div className="space-y-4">
             <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
               <p className="text-sm text-primary">
@@ -280,7 +282,7 @@ function ConnectionCard({
         )}
 
         {/* 手動トークン入力 */}
-        {connectionMethod === 'manual' && (
+        {connectionMethod === "manual" && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="manualToken">アクセストークン</Label>
@@ -297,7 +299,8 @@ function ConnectionCard({
                 disabled={isPending || isTesting}
               />
               <p className="text-xs text-muted-foreground">
-                Meta for Developersで取得した長期アクセストークンを入力してください
+                Meta for
+                Developersで取得した長期アクセストークンを入力してください
               </p>
             </div>
 
@@ -305,7 +308,7 @@ function ConnectionCard({
             {testResult && (
               <StatusBanner success={testResult.success}>
                 <p
-                  className={`text-sm ${testResult.success ? 'text-success' : 'text-destructive'}`}
+                  className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
                 >
                   {testResult.message}
                 </p>
@@ -318,20 +321,20 @@ function ConnectionCard({
                 onClick={handleTestConnection}
                 disabled={!manualToken || isPending || isTesting}
               >
-                {isTesting ? 'テスト中...' : '接続テスト'}
+                {isTesting ? "テスト中..." : "接続テスト"}
               </Button>
               <Button
                 onClick={handleSaveManualToken}
                 disabled={!manualToken || isPending}
               >
-                {isPending ? '保存中...' : '保存'}
+                {isPending ? "保存中..." : "保存"}
               </Button>
             </div>
           </div>
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // =============================================================================
@@ -339,9 +342,9 @@ function ConnectionCard({
 // =============================================================================
 
 interface FeedSettingsCardProps {
-  config: InstagramConfig
-  isPending: boolean
-  startTransition: (callback: () => void) => void
+  config: InstagramConfig;
+  isPending: boolean;
+  startTransition: (callback: () => void) => void;
 }
 
 function FeedSettingsCard({
@@ -349,13 +352,13 @@ function FeedSettingsCard({
   isPending,
   startTransition,
 }: FeedSettingsCardProps) {
-  const { handleResult } = useRefreshOnSuccess()
-  const [feedEnabled, setFeedEnabled] = useState(config.feedEnabled)
-  const [feedLayout, setFeedLayout] = useState(config.feedLayout)
-  const [feedColumns, setFeedColumns] = useState(config.feedColumns)
-  const [feedMaxItems, setFeedMaxItems] = useState(config.feedMaxItems)
-  const [showCaption, setShowCaption] = useState(config.showCaption)
-  const [showViewAll, setShowViewAll] = useState(config.showViewAll)
+  const { handleResult } = useRefreshOnSuccess();
+  const [feedEnabled, setFeedEnabled] = useState(config.feedEnabled);
+  const [feedLayout, setFeedLayout] = useState(config.feedLayout);
+  const [feedColumns, setFeedColumns] = useState(config.feedColumns);
+  const [feedMaxItems, setFeedMaxItems] = useState(config.feedMaxItems);
+  const [showCaption, setShowCaption] = useState(config.showCaption);
+  const [showViewAll, setShowViewAll] = useState(config.showViewAll);
 
   const handleSave = () => {
     startTransition(async () => {
@@ -366,10 +369,10 @@ function FeedSettingsCard({
         feedMaxItems,
         showCaption,
         showViewAll,
-      })
-      handleResult(result)
-    })
-  }
+      });
+      handleResult(result, "Instagram設定を保存しました");
+    });
+  };
 
   return (
     <Card>
@@ -407,7 +410,7 @@ function FeedSettingsCard({
             value={feedLayout}
             onChange={(value) => {
               if (isValidInstagramFeedLayout(value)) {
-                setFeedLayout(value)
+                setFeedLayout(value);
               }
             }}
             columns={3}
@@ -482,11 +485,11 @@ function FeedSettingsCard({
 
         {/* 保存ボタン */}
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? '保存中...' : '設定を保存'}
+          {isPending ? "保存中..." : "設定を保存"}
         </Button>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // =============================================================================
@@ -494,24 +497,25 @@ function FeedSettingsCard({
 // =============================================================================
 
 export function InstagramSection({ config }: InstagramSectionProps) {
-  const confirmDialog = useConfirm()
-  const { handleResult } = useRefreshOnSuccess()
-  const [isPending, startTransition] = useTransition()
+  const confirmDialog = useConfirm();
+  const { handleResult } = useRefreshOnSuccess();
+  const [isPending, startTransition] = useTransition();
 
   const handleDisconnect = async () => {
     const confirmed = await confirmDialog({
-      title: 'Instagram連携を解除しますか？',
-      description: 'Instagram連携を解除しますか？キャッシュされた投稿も削除されます。',
-      confirmLabel: '解除',
-      variant: 'destructive',
-    })
-    if (!confirmed) return
+      title: "Instagram連携を解除しますか？",
+      description:
+        "Instagram連携を解除しますか？キャッシュされた投稿も削除されます。",
+      confirmLabel: "解除",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     startTransition(async () => {
-      const result = await disconnectInstagram()
-      handleResult(result)
-    })
-  }
+      const result = await disconnectInstagram();
+      handleResult(result, "Instagram連携を解除しました");
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -531,5 +535,5 @@ export function InstagramSection({ config }: InstagramSectionProps) {
         />
       )}
     </div>
-  )
+  );
 }

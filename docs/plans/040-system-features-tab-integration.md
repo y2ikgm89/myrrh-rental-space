@@ -8,6 +8,7 @@
 ナビゲーション・お知らせバーはサイト設定にタブ統合、監査ログはリンクカードとして配置。
 
 **背景**:
+
 - リンクカード形式は一貫性がなく、わかりにくい
 - ナビゲーション・お知らせバーはサイト設定に属するのが自然
 - 監査ログは独立した機能として別ページへのリンクが適切
@@ -17,19 +18,23 @@
 ### Before（現状）
 
 **システム管理** (`/settings/system`)
+
 - タブ: メンテナンス / Cookie / 権限
 - リンクカード: ナビゲーション / お知らせバー / 監査ログ
 
 **サイト設定** (`/settings/site`)
+
 - タブ: 一般 / SEO / レイアウト
 
 ### After（変更後）
 
 **システム管理** (`/settings/system`)
+
 - タブ: メンテナンス / Cookie / 権限
 - リンクカードなし（削除）
 
 **サイト設定** (`/settings/site`)
+
 - タブ: 一般 / SEO / レイアウト / ナビゲーション / お知らせバー（5タブ）
 - リンクカード: 監査ログ
 
@@ -63,28 +68,38 @@
 ### 1. コンポーネント再利用
 
 既存のコンポーネントをそのまま使用：
+
 - `NavigationManager` - ナビゲーション管理UI
 - `AnnouncementBarManager` - お知らせバー管理UI
 
 ### 2. データ取得
 
 サイト設定ページで追加データ取得が必要：
+
 ```typescript
-const [settings, desktopItems, mobileItems, footerItems, socialLinks, announcementBars, carouselSettings] =
-  await Promise.all([
-    getSettings(),
-    getNavigationItems('HEADER_DESKTOP'),
-    getNavigationItems('HEADER_MOBILE'),
-    getNavigationItems('FOOTER'),
-    getSocialLinks(),
-    getAnnouncementBars(),
-    getAnnouncementBarCarouselSettings(),
-  ])
+const [
+  settings,
+  desktopItems,
+  mobileItems,
+  footerItems,
+  socialLinks,
+  announcementBars,
+  carouselSettings,
+] = await Promise.all([
+  getSettings(),
+  getNavigationItems("HEADER_DESKTOP"),
+  getNavigationItems("HEADER_MOBILE"),
+  getNavigationItems("FOOTER"),
+  getSocialLinks(),
+  getAnnouncementBars(),
+  getAnnouncementBarCarouselSettings(),
+]);
 ```
 
 ### 3. URL状態管理
 
 nuqs でタブ状態をURLに同期（既存のSettingsTabsを使用）：
+
 - `?tab=general` → 一般タブ
 - `?tab=seo` → SEOタブ
 - `?tab=layout` → レイアウトタブ

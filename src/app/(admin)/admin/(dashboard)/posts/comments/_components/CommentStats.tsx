@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
 /**
  * コメント統計カード
  */
 
-import { MessageCircle, Clock, Trash2 } from 'lucide-react'
-import type { CommentStats as Stats } from '@/shared/domain/post-comments/types'
+import { MessageCircle, Clock, Trash2 } from "lucide-react";
+import type { CommentStats as Stats } from "@/shared/domain/post-comments/types";
 
 type Props = {
-  stats: Stats
-}
+  stats: Stats;
+};
 
 export function CommentStats({ stats }: Props) {
   return (
@@ -45,5 +45,5 @@ export function CommentStats({ stats }: Props) {
         </p>
       </div>
     </div>
-  )
+  );
 }

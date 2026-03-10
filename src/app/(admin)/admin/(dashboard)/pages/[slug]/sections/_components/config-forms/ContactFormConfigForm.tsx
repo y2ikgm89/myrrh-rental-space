@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -12,20 +12,25 @@ import {
   SelectValue,
   Switch,
   Textarea,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   contactFormConfigSchema,
   getContactFormConfig,
   parseContactFormVariant,
   type ContactFormConfig,
   type ContactFormConfigInput,
-} from '@/shared/lib/validations/section'
-import { contactFormVariantLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import { contactFormVariantLabels } from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function ContactFormConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getContactFormConfig(section.config)
+export default function ContactFormConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getContactFormConfig(section.config);
 
   const {
     register,
@@ -35,16 +40,21 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
   } = useForm<ContactFormConfigInput, unknown, ContactFormConfig>({
     resolver: zodResolver(contactFormConfigSchema),
     defaultValues: config,
-  })
+  });
 
   return (
-    <form onSubmit={handleSubmit((data) => onSave({ config: data }))} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((data) => onSave({ config: data }))}
+      className="space-y-6"
+    >
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="contact-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="contact-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="contact-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Contact"
             disabled={isPending}
           />
@@ -54,7 +64,7 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
           <Label htmlFor="contact-title">タイトル</Label>
           <Input
             id="contact-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="お問い合わせ"
             disabled={isPending}
           />
@@ -67,7 +77,7 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
           <Label htmlFor="contact-description">説明（任意）</Label>
           <Textarea
             id="contact-description"
-            {...register('description')}
+            {...register("description")}
             placeholder="お気軽にお問い合わせください"
             rows={2}
             disabled={isPending}
@@ -78,7 +88,9 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
           <Label htmlFor="contact-variant">バリエーション</Label>
           <Select
             defaultValue={config.variant}
-            onValueChange={(v) => setValue('variant', parseContactFormVariant(v))}
+            onValueChange={(v) =>
+              setValue("variant", parseContactFormVariant(v))
+            }
             disabled={isPending}
           >
             <SelectTrigger id="contact-variant">
@@ -86,7 +98,9 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
             </SelectTrigger>
             <SelectContent>
               {keysOf(contactFormVariantLabels).map((key) => (
-                <SelectItem key={key} value={key}>{contactFormVariantLabels[key]}</SelectItem>
+                <SelectItem key={key} value={key}>
+                  {contactFormVariantLabels[key]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -99,7 +113,9 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
               <Switch
                 id="contact-name"
                 checked={config.showNameField}
-                onCheckedChange={(checked) => setValue('showNameField', checked)}
+                onCheckedChange={(checked) =>
+                  setValue("showNameField", checked)
+                }
                 disabled={isPending}
               />
               <Label htmlFor="contact-name">名前フィールド</Label>
@@ -108,7 +124,9 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
               <Switch
                 id="contact-phone"
                 checked={config.showPhoneField}
-                onCheckedChange={(checked) => setValue('showPhoneField', checked)}
+                onCheckedChange={(checked) =>
+                  setValue("showPhoneField", checked)
+                }
                 disabled={isPending}
               />
               <Label htmlFor="contact-phone">電話番号フィールド</Label>
@@ -117,7 +135,9 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
               <Switch
                 id="contact-subject"
                 checked={config.showSubjectField}
-                onCheckedChange={(checked) => setValue('showSubjectField', checked)}
+                onCheckedChange={(checked) =>
+                  setValue("showSubjectField", checked)
+                }
                 disabled={isPending}
               />
               <Label htmlFor="contact-subject">件名フィールド</Label>
@@ -129,14 +149,18 @@ export default function ContactFormConfigForm({ section, onSave, isPending, onDi
           <Label htmlFor="contact-submit">送信ボタンテキスト</Label>
           <Input
             id="contact-submit"
-            {...register('submitButtonText')}
+            {...register("submitButtonText")}
             placeholder="送信する"
             disabled={isPending}
           />
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

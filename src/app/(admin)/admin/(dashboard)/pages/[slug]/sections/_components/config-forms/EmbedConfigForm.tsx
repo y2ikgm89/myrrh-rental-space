@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Input,
   Label,
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 import {
   embedConfigSchema,
   getEmbedConfig,
@@ -20,13 +20,22 @@ import {
   parseBorderRadius,
   type EmbedConfig,
   type EmbedConfigInput,
-} from '@/shared/lib/validations/section'
-import { borderRadiusLabels, embedAspectRatioLabels, maxWidthLabels } from '@/shared/lib/validations/section-options'
-import { keysOf } from '@/shared/lib/serialize'
-import { FormActions, type ConfigFormProps } from './shared'
+} from "@/shared/lib/validations/section";
+import {
+  borderRadiusLabels,
+  embedAspectRatioLabels,
+  maxWidthLabels,
+} from "@/shared/lib/validations/section-options";
+import { keysOf } from "@/shared/lib/serialize";
+import { FormActions, type ConfigFormProps } from "./shared";
 
-export default function EmbedConfigForm({ section, onSave, isPending, onDirtyChange }: ConfigFormProps) {
-  const config = getEmbedConfig(section.config)
+export default function EmbedConfigForm({
+  section,
+  onSave,
+  isPending,
+  onDirtyChange,
+}: ConfigFormProps) {
+  const config = getEmbedConfig(section.config);
 
   const {
     register,
@@ -36,20 +45,22 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
   } = useForm<EmbedConfigInput, unknown, EmbedConfig>({
     resolver: zodResolver(embedConfigSchema),
     defaultValues: config,
-  })
+  });
 
   const handleFormSave = handleSubmit((data) => {
-    onSave({ config: data })
-  })
+    onSave({ config: data });
+  });
 
   return (
     <form onSubmit={handleFormSave} className="space-y-6">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="embed-section-label">セクションラベル（英語装飾）</Label>
+          <Label htmlFor="embed-section-label">
+            セクションラベル（英語装飾）
+          </Label>
           <Input
             id="embed-section-label"
-            {...register('sectionLabel')}
+            {...register("sectionLabel")}
             placeholder="例: Media"
             disabled={isPending}
           />
@@ -59,7 +70,7 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
           <Label htmlFor="embed-title">タイトル（任意）</Label>
           <Input
             id="embed-title"
-            {...register('title')}
+            {...register("title")}
             placeholder="埋め込みコンテンツ"
             disabled={isPending}
           />
@@ -69,18 +80,20 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
           <Label htmlFor="embed-url">埋め込みURL（任意）</Label>
           <Input
             id="embed-url"
-            {...register('embedUrl')}
+            {...register("embedUrl")}
             placeholder="https://www.youtube.com/embed/..."
             disabled={isPending}
           />
-          <p className="text-xs text-muted-foreground">YouTube、Vimeo等の埋め込みURL</p>
+          <p className="text-xs text-muted-foreground">
+            YouTube、Vimeo等の埋め込みURL
+          </p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="embed-code">埋め込みコード（任意）</Label>
           <Textarea
             id="embed-code"
-            {...register('embedCode')}
+            {...register("embedCode")}
             placeholder="<iframe ...></iframe>"
             rows={4}
             disabled={isPending}
@@ -96,7 +109,9 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
             <Label htmlFor="embed-aspect">アスペクト比</Label>
             <Select
               defaultValue={config.aspectRatio}
-              onValueChange={(v) => setValue('aspectRatio', parseEmbedAspectRatio(v))}
+              onValueChange={(v) =>
+                setValue("aspectRatio", parseEmbedAspectRatio(v))
+              }
               disabled={isPending}
             >
               <SelectTrigger id="embed-aspect">
@@ -104,7 +119,9 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
               </SelectTrigger>
               <SelectContent>
                 {keysOf(embedAspectRatioLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{embedAspectRatioLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {embedAspectRatioLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -114,7 +131,7 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
             <Label htmlFor="embed-max-width">最大幅</Label>
             <Select
               defaultValue={config.maxWidth}
-              onValueChange={(v) => setValue('maxWidth', parseMaxWidth(v))}
+              onValueChange={(v) => setValue("maxWidth", parseMaxWidth(v))}
               disabled={isPending}
             >
               <SelectTrigger id="embed-max-width">
@@ -122,7 +139,9 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
               </SelectTrigger>
               <SelectContent>
                 {keysOf(maxWidthLabels).map((key) => (
-                  <SelectItem key={key} value={key}>{maxWidthLabels[key]}</SelectItem>
+                  <SelectItem key={key} value={key}>
+                    {maxWidthLabels[key]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -133,7 +152,9 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
           <Label htmlFor="embed-border-radius">角丸</Label>
           <Select
             defaultValue={config.borderRadius}
-            onValueChange={(v) => setValue('borderRadius', parseBorderRadius(v))}
+            onValueChange={(v) =>
+              setValue("borderRadius", parseBorderRadius(v))
+            }
             disabled={isPending}
           >
             <SelectTrigger id="embed-border-radius">
@@ -141,14 +162,20 @@ export default function EmbedConfigForm({ section, onSave, isPending, onDirtyCha
             </SelectTrigger>
             <SelectContent>
               {keysOf(borderRadiusLabels).map((key) => (
-                <SelectItem key={key} value={key}>{borderRadiusLabels[key]}</SelectItem>
+                <SelectItem key={key} value={key}>
+                  {borderRadiusLabels[key]}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <FormActions isDirty={isDirty} isPending={isPending} onDirtyChange={onDirtyChange} />
+      <FormActions
+        isDirty={isDirty}
+        isPending={isPending}
+        onDirtyChange={onDirtyChange}
+      />
     </form>
-  )
+  );
 }

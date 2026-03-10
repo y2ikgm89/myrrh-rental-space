@@ -5,40 +5,41 @@
  * コマンド登録のみ、ダイアログなし
  */
 
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { createCommand, COMMAND_PRIORITY_EDITOR } from 'lexical'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-import { $createPageBreakNode } from '../nodes/PageBreakNode'
+import { useEffect } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { createCommand, COMMAND_PRIORITY_EDITOR } from "lexical";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { $createPageBreakNode } from "../nodes/PageBreakNode";
 
 // =============================================================================
 // Commands
 // =============================================================================
 
-export const INSERT_PAGE_BREAK_COMMAND = createCommand<void>('INSERT_PAGE_BREAK')
+export const INSERT_PAGE_BREAK_COMMAND =
+  createCommand<void>("INSERT_PAGE_BREAK");
 
 // =============================================================================
 // Plugin
 // =============================================================================
 
 export function PageBreakPlugin() {
-  const [editor] = useLexicalComposerContext()
+  const [editor] = useLexicalComposerContext();
 
   useEffect(() => {
     return editor.registerCommand(
       INSERT_PAGE_BREAK_COMMAND,
       () => {
         editor.update(() => {
-          const pageBreakNode = $createPageBreakNode()
-          $insertNodeToNearestRoot(pageBreakNode)
-        })
-        return true
+          const pageBreakNode = $createPageBreakNode();
+          $insertNodeToNearestRoot(pageBreakNode);
+        });
+        return true;
       },
-      COMMAND_PRIORITY_EDITOR
-    )
-  }, [editor])
+      COMMAND_PRIORITY_EDITOR,
+    );
+  }, [editor]);
 
-  return null
+  return null;
 }

@@ -24,6 +24,7 @@ import {
   updateReservationNotes,
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   isValidReservationStatus,
   type ReservationStatus,
@@ -44,11 +45,13 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
 
     startTransition(async () => {
       const result = await updateReservationStatus(reservation.id, newStatus);
-      if (result.success) {
-        router.refresh();
-      } else {
-        toast.error(result.error || "エラーが発生しました");
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
+
+      toast.success("ステータスを更新しました");
+      router.refresh();
     });
   };
 
@@ -58,11 +61,13 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         reservation.id,
         notes || null,
       );
-      if (result.success) {
-        router.refresh();
-      } else {
-        toast.error(result.error || "エラーが発生しました");
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
       }
+
+      toast.success("メモを更新しました");
+      router.refresh();
     });
   };
 

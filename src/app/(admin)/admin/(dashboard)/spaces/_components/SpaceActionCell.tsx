@@ -1,14 +1,17 @@
-'use client'
+"use client";
 
-import { ActionDropdown, ActionDropdownItem } from '@/admin/components/ActionDropdown'
+import {
+  ActionDropdown,
+  ActionDropdownItem,
+} from "@/admin/components/ActionDropdown";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type SpaceActionCellProps = {
-  spaceId: string
-}
+  spaceId: string;
+};
 
 // =============================================================================
 // SpaceActionCell Component (Client Component)
@@ -17,8 +20,12 @@ type SpaceActionCellProps = {
 export function SpaceActionCell({ spaceId }: SpaceActionCellProps) {
   return (
     <ActionDropdown>
-      <ActionDropdownItem href={`/admin/spaces/${spaceId}/edit`}>編集</ActionDropdownItem>
-      <ActionDropdownItem href={`/admin/spaces/${spaceId}`}>詳細</ActionDropdownItem>
+      <ActionDropdownItem href={`/admin/spaces/${spaceId}/edit`}>
+        編集
+      </ActionDropdownItem>
+      <ActionDropdownItem href={`/admin/spaces/${spaceId}`}>
+        詳細
+      </ActionDropdownItem>
     </ActionDropdown>
-  )
+  );
 }

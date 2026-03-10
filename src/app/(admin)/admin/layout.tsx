@@ -5,18 +5,18 @@
  * html/body は親の Root Layout で定義済み
  */
 
-import { Toaster } from '@/admin/components/ui'
-import type { ReactElement, ReactNode } from 'react'
+import { Toaster } from "@/admin/components/ui";
+import type { ReactElement, ReactNode } from "react";
 
 export default function AdminLayout({
   children,
 }: {
-  children: ReactNode
+  children: ReactNode;
 }): ReactElement {
   return (
     <>
       {children}
       <Toaster />
     </>
-  )
+  );
 }

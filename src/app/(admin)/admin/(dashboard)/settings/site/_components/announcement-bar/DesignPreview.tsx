@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
 import {
   DEFAULT_TYPE_STYLE,
   getStripedStyle,
-} from '@/shared/lib/announcement-bar-utils'
-import { cn } from '@/shared/lib/cn'
-import { AnnouncementBarDesignStyle } from '@/shared/db/enums'
-import type { DesignPreviewProps } from './types'
+} from "@/shared/lib/announcement-bar-utils";
+import { cn } from "@/shared/lib/cn";
+import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import type { DesignPreviewProps } from "./types";
 
 export function DesignPreview({
   message,
@@ -19,87 +19,96 @@ export function DesignPreview({
   gradientAnimation,
   glassAnimation,
 }: DesignPreviewProps) {
-  const defaultColors = DEFAULT_TYPE_STYLE
+  const defaultColors = DEFAULT_TYPE_STYLE;
 
   // スタイル計算
-  const customStyles: React.CSSProperties = {}
-  if (bgColor) customStyles.backgroundColor = bgColor
-  if (textColor) customStyles.color = textColor
+  const customStyles: React.CSSProperties = {};
+  if (bgColor) customStyles.backgroundColor = bgColor;
+  if (textColor) customStyles.color = textColor;
 
   // ストライプスタイル（共通ユーティリティを使用）
   if (designStyle === AnnouncementBarDesignStyle.striped) {
-    const baseColor = bgColor || defaultColors.hex
-    const stripedStyles = getStripedStyle(baseColor, stripeColor, stripeAnimation)
-    Object.assign(customStyles, stripedStyles)
+    const baseColor = bgColor || defaultColors.hex;
+    const stripedStyles = getStripedStyle(
+      baseColor,
+      stripeColor,
+      stripeAnimation,
+    );
+    Object.assign(customStyles, stripedStyles);
   }
 
   // グラデーションアニメーション
-  if (designStyle === AnnouncementBarDesignStyle.gradient && gradientAnimation) {
-    customStyles.backgroundSize = '200% 100%'
-    customStyles.animation = 'gradient-flow 3s ease infinite'
+  if (
+    designStyle === AnnouncementBarDesignStyle.gradient &&
+    gradientAnimation
+  ) {
+    customStyles.backgroundSize = "200% 100%";
+    customStyles.animation = "gradient-flow 3s ease infinite";
   }
 
   // グラスアニメーション用
   if (designStyle === AnnouncementBarDesignStyle.glass && glassAnimation) {
-    customStyles.position = 'relative'
-    customStyles.overflow = 'hidden'
+    customStyles.position = "relative";
+    customStyles.overflow = "hidden";
   }
 
   // デザインスタイル別のクラス
   function getStyleClasses(): string {
     switch (designStyle) {
       case AnnouncementBarDesignStyle.solid:
-        return !bgColor ? defaultColors.bg : ''
+        return !bgColor ? defaultColors.bg : "";
       case AnnouncementBarDesignStyle.gradient:
-        return `bg-gradient-to-r ${defaultColors.gradient}`
+        return `bg-gradient-to-r ${defaultColors.gradient}`;
       case AnnouncementBarDesignStyle.outlined:
-        return 'bg-transparent border-y border-border'
+        return "bg-transparent border-y border-border";
       case AnnouncementBarDesignStyle.glass:
-        return 'backdrop-blur-md bg-white/10 border-y border-white/20'
+        return "backdrop-blur-md bg-white/10 border-y border-white/20";
       case AnnouncementBarDesignStyle.minimal:
-        return 'bg-transparent border-b border-border'
+        return "bg-transparent border-b border-border";
       case AnnouncementBarDesignStyle.striped:
-        return !bgColor ? defaultColors.bg : ''
+        return !bgColor ? defaultColors.bg : "";
       default:
-        return ''
+        return "";
     }
   }
 
   function getTextClasses(): string {
-    if (textColor) return ''
+    if (textColor) return "";
     switch (designStyle) {
       case AnnouncementBarDesignStyle.solid:
       case AnnouncementBarDesignStyle.gradient:
       case AnnouncementBarDesignStyle.glass:
       case AnnouncementBarDesignStyle.striped:
-        return 'text-primary-foreground'
+        return "text-primary-foreground";
       case AnnouncementBarDesignStyle.outlined:
       case AnnouncementBarDesignStyle.minimal:
-        return 'text-foreground'
+        return "text-foreground";
       default:
-        return ''
+        return "";
     }
   }
 
   return (
     <>
-      {designStyle === AnnouncementBarDesignStyle.striped && stripeAnimation && (
-        <style>{`
+      {designStyle === AnnouncementBarDesignStyle.striped &&
+        stripeAnimation && (
+          <style>{`
           @keyframes stripe-slide {
             from { background-position: 0 0; }
             to { background-position: 28.28px 0; }
           }
         `}</style>
-      )}
-      {designStyle === AnnouncementBarDesignStyle.gradient && gradientAnimation && (
-        <style>{`
+        )}
+      {designStyle === AnnouncementBarDesignStyle.gradient &&
+        gradientAnimation && (
+          <style>{`
           @keyframes gradient-flow {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
           }
         `}</style>
-      )}
+        )}
       {designStyle === AnnouncementBarDesignStyle.glass && glassAnimation && (
         <style>{`
           @keyframes glass-shimmer {
@@ -110,9 +119,9 @@ export function DesignPreview({
       )}
       <div
         className={cn(
-          'flex items-center justify-center gap-2 px-4 py-2 text-sm',
+          "flex items-center justify-center gap-2 px-4 py-2 text-sm",
           getStyleClasses(),
-          getTextClasses()
+          getTextClasses(),
         )}
         style={customStyles}
       >
@@ -124,15 +133,15 @@ export function DesignPreview({
           >
             <div
               className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
-              style={{ animation: 'glass-shimmer 3s ease-in-out infinite' }}
+              style={{ animation: "glass-shimmer 3s ease-in-out infinite" }}
             />
           </div>
         )}
-        <span>{message || 'サンプルお知らせメッセージ'}</span>
+        <span>{message || "サンプルお知らせメッセージ"}</span>
         {linkText && (
           <span className="underline underline-offset-2">{linkText}</span>
         )}
       </div>
     </>
-  )
+  );
 }

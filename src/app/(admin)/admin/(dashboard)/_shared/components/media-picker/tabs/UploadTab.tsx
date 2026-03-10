@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 /**
  * UploadTab
@@ -6,17 +6,20 @@
  * アップロードタブ
  */
 
-import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
-import { useMediaUpload, type UploadResult } from '@/admin/hooks/use-media-upload'
-import { DropZone, FilePreview } from '../components'
-import { Button } from '@/admin/components/ui'
-import type { MediaUsage } from '@/admin/lib/validations/media'
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
+import {
+  useMediaUpload,
+  type UploadResult,
+} from "@/admin/hooks/use-media-upload";
+import { DropZone, FilePreview } from "../components";
+import { Button } from "@/admin/components/ui";
+import type { MediaUsage } from "@/admin/lib/validations/media";
 
 interface UploadTabProps {
-  onUploadComplete: (media: UploadResult) => void
-  usage: MediaUsage
-  canAddMore: boolean
+  onUploadComplete: (media: UploadResult) => void;
+  usage: MediaUsage;
+  canAddMore: boolean;
 }
 
 export function UploadTab({
@@ -24,33 +27,37 @@ export function UploadTab({
   usage,
   canAddMore,
 }: UploadTabProps) {
-  const [file, setFile] = useState<File | null>(null)
-  const [alt, setAlt] = useState('')
+  const [file, setFile] = useState<File | null>(null);
+  const [alt, setAlt] = useState("");
 
   const { uploadFile, isUploading, previewUrl, setPreviewFile, clearPreview } =
-    useMediaUpload()
+    useMediaUpload();
 
   const handleFileDrop = (droppedFile: File) => {
-    setFile(droppedFile)
-    setPreviewFile(droppedFile)
-  }
+    setFile(droppedFile);
+    setPreviewFile(droppedFile);
+  };
 
   const handleRemoveFile = () => {
-    setFile(null)
-    setAlt('')
-    clearPreview()
-  }
+    setFile(null);
+    setAlt("");
+    clearPreview();
+  };
 
   const handleUpload = async () => {
-    if (!file) return
+    if (!file) return;
 
-    const result = await uploadFile(file, { alt: alt.trim() || undefined }, usage)
+    const result = await uploadFile(
+      file,
+      { alt: alt.trim() || undefined },
+      usage,
+    );
 
     if (result) {
-      onUploadComplete(result)
-      handleRemoveFile()
+      onUploadComplete(result);
+      handleRemoveFile();
     }
-  }
+  };
 
   if (!file) {
     return (
@@ -62,7 +69,7 @@ export function UploadTab({
           </p>
         )}
       </div>
-    )
+    );
   }
 
   return (
@@ -96,5 +103,5 @@ export function UploadTab({
         アップロードして追加
       </Button>
     </div>
-  )
+  );
 }

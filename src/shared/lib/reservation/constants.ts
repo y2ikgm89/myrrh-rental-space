@@ -18,6 +18,6 @@ export const DEFAULT_BUSINESS_HOURS = {
   start: 9,
   /** 営業終了時間（時） */
   end: 21,
-} as const
+} as const;
 
-export type BusinessHours = typeof DEFAULT_BUSINESS_HOURS
+export type BusinessHours = typeof DEFAULT_BUSINESS_HOURS;

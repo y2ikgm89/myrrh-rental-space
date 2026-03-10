@@ -31,12 +31,12 @@ T3 Env の一元管理から漏れておりビルド時検証が効かない。
 
 ### 修正対象
 
-| ファイル | 行 | 変数 | 対処 |
-|---------|-----|------|------|
-| `src/shared/lib/instagram/authorize/route.ts` | 49 | `process.env["NODE_ENV"]` | `serverEnv.NODE_ENV` |
-| `src/shared/lib/instagram/authorize/route.ts` | 74-75 | `process.env["VERCEL_URL"]` | `serverEnv.VERCEL_URL` |
-| `src/shared/lib/instagram/callback/route.ts` | 170-171 | `process.env["VERCEL_URL"]` | `serverEnv.VERCEL_URL` |
-| `src/shared/lib/google-calendar.ts` | 327 | `process.env["NEXT_PUBLIC_APP_URL"] \|\| process.env["VERCEL_URL"]` | `clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.VERCEL_URL` |
+| ファイル                                      | 行      | 変数                                                                | 対処                                                    |
+| --------------------------------------------- | ------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
+| `src/shared/lib/instagram/authorize/route.ts` | 49      | `process.env["NODE_ENV"]`                                           | `serverEnv.NODE_ENV`                                    |
+| `src/shared/lib/instagram/authorize/route.ts` | 74-75   | `process.env["VERCEL_URL"]`                                         | `serverEnv.VERCEL_URL`                                  |
+| `src/shared/lib/instagram/callback/route.ts`  | 170-171 | `process.env["VERCEL_URL"]`                                         | `serverEnv.VERCEL_URL`                                  |
+| `src/shared/lib/google-calendar.ts`           | 327     | `process.env["NEXT_PUBLIC_APP_URL"] \|\| process.env["VERCEL_URL"]` | `clientEnv.NEXT_PUBLIC_APP_URL ?? serverEnv.VERCEL_URL` |
 
 ### `serverEnv` スキーマへの追加
 
@@ -61,11 +61,11 @@ VERCEL_URL: process.env["VERCEL_URL"],
 
 ### 修正マッピング
 
-| 現行 | 修正後 |
-|------|--------|
-| `cacheLife('hours')` | `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)` |
-| `cacheLife('minutes')` | `cacheLife(CACHE_LIFE.DYNAMIC_DATA)` |
-| `cacheLife('days')` | `cacheLife(CACHE_LIFE.STATIC_SETTINGS)` |
+| 現行                   | 修正後                                  |
+| ---------------------- | --------------------------------------- |
+| `cacheLife('hours')`   | `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`  |
+| `cacheLife('minutes')` | `cacheLife(CACHE_LIFE.DYNAMIC_DATA)`    |
+| `cacheLife('days')`    | `cacheLife(CACHE_LIFE.STATIC_SETTINGS)` |
 
 ### 対象ファイル（確認済み）
 
@@ -90,7 +90,7 @@ src/app/(admin)/admin/(dashboard)/layout.tsx            — 1箇所
 各ファイルで `CACHE_LIFE` が未 import の場合：
 
 ```typescript
-import { CACHE_LIFE } from '@/shared/lib/constants'
+import { CACHE_LIFE } from "@/shared/lib/constants";
 ```
 
 ---
@@ -101,10 +101,10 @@ import { CACHE_LIFE } from '@/shared/lib/constants'
 
 ```typescript
 // src/app/(admin)/admin/.../section.ts — 修正前
-initialOpen: z.enum(faqInitialOpenValues).default('none')
+initialOpen: z.enum(faqInitialOpenValues).default("none");
 
 // 修正後（Prisma enum 定数 or defined const を使用）
-initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[0])
+initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[0]);
 // または faqInitialOpenValues の定義に合わせた enum 定数
 ```
 
@@ -112,12 +112,12 @@ initialOpen: z.enum(faqInitialOpenValues).default(faqInitialOpenValues[0])
 
 ```typescript
 // src/shared/lib/stripe.ts — 修正前
-z.enum(['jpy', 'usd', 'eur']).default('jpy')
+z.enum(["jpy", "usd", "eur"]).default("jpy");
 
 // 修正後
-const SUPPORTED_CURRENCIES = ['jpy', 'usd', 'eur'] as const
+const SUPPORTED_CURRENCIES = ["jpy", "usd", "eur"] as const;
 // スキーマ内で
-z.enum(SUPPORTED_CURRENCIES).default('jpy')
+z.enum(SUPPORTED_CURRENCIES).default("jpy");
 ```
 
 ---
@@ -131,11 +131,11 @@ Tailwind ルールでは `gray-*` / `white` 等のデフォルトカラー禁止
 
 ### 対象
 
-| ファイル | インスタンス数 | 修正案 |
-|---------|-------------|--------|
-| `MediaGrid.tsx` | 8 | 画像オーバーレイ → `text-primary-foreground` または CSS変数 |
-| `SpaceDetail.tsx` | 4 | 画像オーバーレイ → `text-primary-foreground` |
-| `AnnouncementBarCarousel.tsx` | 1 | → `text-primary-foreground` |
+| ファイル                      | インスタンス数 | 修正案                                                      |
+| ----------------------------- | -------------- | ----------------------------------------------------------- |
+| `MediaGrid.tsx`               | 8              | 画像オーバーレイ → `text-primary-foreground` または CSS変数 |
+| `SpaceDetail.tsx`             | 4              | 画像オーバーレイ → `text-primary-foreground`                |
+| `AnnouncementBarCarousel.tsx` | 1              | → `text-primary-foreground`                                 |
 
 **注**: DesignPreview.tsx / ResponsiveSidebar.tsx は意図的な例外（表示目的 / ダーク背景）として修正対象外。
 
@@ -143,13 +143,13 @@ Tailwind ルールでは `gray-*` / `white` 等のデフォルトカラー禁止
 
 ## Intentional Exceptions（修正不要）
 
-| 箇所 | 理由 |
-|------|------|
-| `HighlightPlugin.tsx` / `TextColorPlugin.tsx` | カラーピッカースウォッチ（ルール明示的例外）|
-| `WebVitalsReporter.tsx` NODE_ENV | Client Component — `NEXT_PUBLIC_*` 経由が正しい |
-| `DesignPreview.tsx` white overlay | アナウンスバープレビュー表示目的 |
-| `ResponsiveSidebar.tsx` text-white | `bg-sidebar-accent`（濃色背景）上で視認性確保 |
-| `isProduction()` の SKIP_ENV_VALIDATION | 意図的ランタイムガード |
+| 箇所                                          | 理由                                            |
+| --------------------------------------------- | ----------------------------------------------- |
+| `HighlightPlugin.tsx` / `TextColorPlugin.tsx` | カラーピッカースウォッチ（ルール明示的例外）    |
+| `WebVitalsReporter.tsx` NODE_ENV              | Client Component — `NEXT_PUBLIC_*` 経由が正しい |
+| `DesignPreview.tsx` white overlay             | アナウンスバープレビュー表示目的                |
+| `ResponsiveSidebar.tsx` text-white            | `bg-sidebar-accent`（濃色背景）上で視認性確保   |
+| `isProduction()` の SKIP_ENV_VALIDATION       | 意図的ランタイムガード                          |
 
 ---
 

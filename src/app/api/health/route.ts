@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { runDatabaseHealthCheck } from "@/shared/domain/system/queries";
 import {
   logError,
@@ -44,6 +45,7 @@ export async function GET() {
       },
     );
   } catch (error) {
+    unstable_rethrow(error);
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.CRITICAL,

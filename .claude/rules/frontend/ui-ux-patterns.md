@@ -50,40 +50,40 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 
 ### 検索ドメイン
 
-| ドメイン | 用途 | キーワード例 |
-|----------|------|-------------|
-| `product` | プロダクトタイプ推奨 | SaaS, e-commerce, dashboard, admin panel |
-| `style` | UIスタイル・エフェクト | glassmorphism, minimalism, dark mode |
-| `typography` | フォントペアリング | elegant, professional, modern |
-| `color` | カラーパレット | saas, healthcare, fintech |
-| `landing` | ページ構造・CTA | hero, testimonial, pricing |
-| `chart` | チャート推奨 | trend, comparison, funnel |
-| `ux` | ベストプラクティス | animation, accessibility, loading |
+| ドメイン     | 用途                   | キーワード例                             |
+| ------------ | ---------------------- | ---------------------------------------- |
+| `product`    | プロダクトタイプ推奨   | SaaS, e-commerce, dashboard, admin panel |
+| `style`      | UIスタイル・エフェクト | glassmorphism, minimalism, dark mode     |
+| `typography` | フォントペアリング     | elegant, professional, modern            |
+| `color`      | カラーパレット         | saas, healthcare, fintech                |
+| `landing`    | ページ構造・CTA        | hero, testimonial, pricing               |
+| `chart`      | チャート推奨           | trend, comparison, funnel                |
+| `ux`         | ベストプラクティス     | animation, accessibility, loading        |
 
 ### スタック
 
-| スタック | フォーカス |
-|----------|-----------|
-| `html-tailwind` | Tailwindユーティリティ、レスポンシブ、a11y |
-| `react` | State、hooks、パフォーマンス |
-| `nextjs` | SSR、ルーティング、画像最適化 **（このプロジェクト）** |
-| `vue` | Composition API、Pinia |
-| `svelte` | Runes、stores、SvelteKit |
-| `swiftui` | Views、State、Navigation |
-| `react-native` | Components、Navigation |
-| `flutter` | Widgets、State、Layout |
+| スタック        | フォーカス                                             |
+| --------------- | ------------------------------------------------------ |
+| `html-tailwind` | Tailwindユーティリティ、レスポンシブ、a11y             |
+| `react`         | State、hooks、パフォーマンス                           |
+| `nextjs`        | SSR、ルーティング、画像最適化 **（このプロジェクト）** |
+| `vue`           | Composition API、Pinia                                 |
+| `svelte`        | Runes、stores、SvelteKit                               |
+| `swiftui`       | Views、State、Navigation                               |
+| `react-native`  | Components、Navigation                                 |
+| `flutter`       | Widgets、State、Layout                                 |
 
 ## スキル使い分け
 
-| タスク | 使用スキル | 検索例 |
-|--------|-----------|--------|
-| スタイル方針決定 | `ui-ux-pro-max` | `--domain style "admin dashboard clean"` |
-| カラーパレット設計 | `ui-ux-pro-max` | `--domain color "saas professional"` |
-| フォントペアリング | `ui-ux-pro-max` | `--domain typography "modern clean"` |
-| レイアウト設計 | `ui-ux-pro-max` | `--domain ux "layout responsive"` |
-| コンポーネント実装 | `frontend-design` | - |
-| ページ実装 | `frontend-design` | - |
-| 既存UIレビュー | `ui-ux-pro-max` | `--domain ux "accessibility"` |
+| タスク             | 使用スキル        | 検索例                                   |
+| ------------------ | ----------------- | ---------------------------------------- |
+| スタイル方針決定   | `ui-ux-pro-max`   | `--domain style "admin dashboard clean"` |
+| カラーパレット設計 | `ui-ux-pro-max`   | `--domain color "saas professional"`     |
+| フォントペアリング | `ui-ux-pro-max`   | `--domain typography "modern clean"`     |
+| レイアウト設計     | `ui-ux-pro-max`   | `--domain ux "layout responsive"`        |
+| コンポーネント実装 | `frontend-design` | -                                        |
+| ページ実装         | `frontend-design` | -                                        |
+| 既存UIレビュー     | `ui-ux-pro-max`   | `--domain ux "accessibility"`            |
 
 ## 必須使用シナリオ
 
@@ -147,7 +147,7 @@ src/app/
 ```css
 @theme {
   /* Swiss Industrial Admin - Trust Blue パレット（固定）*/
-  --color-primary: oklch(0.55 0.20 260);
+  --color-primary: oklch(0.55 0.2 260);
   --color-sidebar-bg: oklch(0.18 0.03 260);
 }
 ```
@@ -174,28 +174,33 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 ## 品質チェックリスト
 
 ### Visual Quality
+
 - [ ] 絵文字をアイコンとして使用していない（SVG: Lucide使用）
 - [ ] アイコンサイズが統一されている（w-5 h-5 or w-6 h-6）
 - [ ] ホバー状態でレイアウトシフトが発生しない
 - [ ] テーマカラーを直接使用（bg-primary, text-foreground）
 
 ### Interaction
+
 - [ ] クリック可能な要素に `cursor-pointer` がある
 - [ ] ホバー状態で視覚的フィードバックがある
 - [ ] トランジションが適切（150-300ms）
 - [ ] フォーカス状態がキーボードナビゲーションで視認できる
 
 ### Light/Dark Mode
+
 - [ ] ライトモードでテキストコントラストが十分（4.5:1以上）
 - [ ] 透明要素がライトモードで視認できる
 - [ ] ボーダーが両モードで視認できる
 
 ### Layout
+
 - [ ] 固定要素の背後にコンテンツが隠れない
 - [ ] レスポンシブ対応（375px, 768px, 1024px, 1440px）
 - [ ] モバイルで水平スクロールが発生しない
 
 ### Accessibility
+
 - [ ] 画像にalt属性がある
 - [ ] フォーム入力にラベルがある
 - [ ] 色だけで情報を伝えていない

@@ -13,13 +13,13 @@ nuqs は、React アプリケーションで URL のクエリパラメータを�
 
 ### 導入メリット
 
-| メリット | 説明 |
-|---------|------|
-| **型安全性** | TypeScript の型チェックを活用 |
-| **URL 共有** | フィルタ状態を URL で共有可能 |
-| **ブラウザ操作** | 戻る/進むボタンで状態を復元 |
-| **ブックマーク** | 特定のフィルタ状態を保存可能 |
-| **SEO** | 検索エンジンがフィルタ状態を認識可能 |
+| メリット         | 説明                                 |
+| ---------------- | ------------------------------------ |
+| **型安全性**     | TypeScript の型チェックを活用        |
+| **URL 共有**     | フィルタ状態を URL で共有可能        |
+| **ブラウザ操作** | 戻る/進むボタンで状態を復元          |
+| **ブックマーク** | 特定のフィルタ状態を保存可能         |
+| **SEO**          | 検索エンジンがフィルタ状態を認識可能 |
 
 ---
 
@@ -27,11 +27,11 @@ nuqs は、React アプリケーションで URL のクエリパラメータを�
 
 ### バージョン要件
 
-| パッケージ | バージョン | 備考 |
-|-----------|-----------|------|
-| **nuqs** | `2.8.8` | インストール済み |
-| **Next.js** | `>=14.2.0` | 本プロジェクトは 16.1.1 |
-| **React** | `^18.3 \|\| ^19` | 本プロジェクトは 19.2.3 |
+| パッケージ  | バージョン       | 備考                    |
+| ----------- | ---------------- | ----------------------- |
+| **nuqs**    | `2.8.8`          | インストール済み        |
+| **Next.js** | `>=14.2.0`       | 本プロジェクトは 16.1.1 |
+| **React**   | `^18.3 \|\| ^19` | 本プロジェクトは 19.2.3 |
 
 ### インストール
 
@@ -97,47 +97,53 @@ import {
   parseAsInteger,
   parseAsString,
   parseAsStringLiteral,
-} from 'nuqs/server'
+} from "nuqs/server";
 
 // ページネーション
-export const parseAsPage = parseAsInteger.withDefault(1)
-export const parseAsPerPage = parseAsInteger.withDefault(10)
+export const parseAsPage = parseAsInteger.withDefault(1);
+export const parseAsPerPage = parseAsInteger.withDefault(10);
 
 // ソート
-export const sortOrders = ['asc', 'desc'] as const
-export type SortOrder = (typeof sortOrders)[number]
-export const parseAsSortOrder = parseAsStringLiteral(sortOrders).withDefault('desc')
+export const sortOrders = ["asc", "desc"] as const;
+export type SortOrder = (typeof sortOrders)[number];
+export const parseAsSortOrder =
+  parseAsStringLiteral(sortOrders).withDefault("desc");
 
 // フィルター
-export const parseAsQuery = parseAsString.withDefault('')
-export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ',')
+export const parseAsQuery = parseAsString.withDefault("");
+export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ",");
 
 // 日付
 export const parseAsDate = createParser<Date>({
   parse: (value) => {
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? null : date
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   },
-  serialize: (date) => date.toISOString().split('T')[0],
+  serialize: (date) => date.toISOString().split("T")[0],
   eq: (a, b) => a.getTime() === b.getTime(),
-})
+});
 
 // ブール値
 export const parseAsBoolean = createParser<boolean>({
   parse: (value) => {
-    if (value === 'true') return true
-    if (value === 'false') return false
-    return null
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return null;
   },
-  serialize: (value) => (value ? 'true' : 'false'),
-})
+  serialize: (value) => (value ? "true" : "false"),
+});
 ```
 
 ### 機能別 SearchParams（`src/lib/nuqs/search-params.ts`）
 
 ```typescript
-import { createLoader, createSearchParamsCache } from 'nuqs/server'
-import { parseAsPage, parseAsPerPage, parseAsQuery, parseAsSortOrder } from './parsers'
+import { createLoader, createSearchParamsCache } from "nuqs/server";
+import {
+  parseAsPage,
+  parseAsPerPage,
+  parseAsQuery,
+  parseAsSortOrder,
+} from "./parsers";
 
 // スペース一覧
 export const spaceSearchParams = {
@@ -145,10 +151,11 @@ export const spaceSearchParams = {
   page: parseAsPage,
   perPage: parseAsPerPage,
   sort: parseAsSortOrder,
-}
+};
 
-export const loadSpaceSearchParams = createLoader(spaceSearchParams)
-export const spaceSearchParamsCache = createSearchParamsCache(spaceSearchParams)
+export const loadSpaceSearchParams = createLoader(spaceSearchParams);
+export const spaceSearchParamsCache =
+  createSearchParamsCache(spaceSearchParams);
 
 // 投稿一覧
 export const postSearchParams = {
@@ -158,10 +165,10 @@ export const postSearchParams = {
   category: parseAsQuery,
   tags: parseAsCommaSeparated,
   sort: parseAsSortOrder,
-}
+};
 
-export const loadPostSearchParams = createLoader(postSearchParams)
-export const postSearchParamsCache = createSearchParamsCache(postSearchParams)
+export const loadPostSearchParams = createLoader(postSearchParams);
+export const postSearchParamsCache = createSearchParamsCache(postSearchParams);
 ```
 
 ---
@@ -282,13 +289,13 @@ export function Pagination({ currentPage, totalPages }: Props) {
 
 ### 主要オプション
 
-| オプション | デフォルト | 説明 |
-|-----------|-----------|------|
-| `shallow` | `true` | `false` で Server Component 再レンダリング |
-| `scroll` | `false` | `true` でページトップへスクロール |
-| `history` | `'replace'` | `'push'` で履歴エントリを追加 |
-| `clearOnDefault` | `true` | デフォルト値では URL から削除 |
-| `startTransition` | - | React の useTransition と連携 |
+| オプション        | デフォルト  | 説明                                       |
+| ----------------- | ----------- | ------------------------------------------ |
+| `shallow`         | `true`      | `false` で Server Component 再レンダリング |
+| `scroll`          | `false`     | `true` でページトップへスクロール          |
+| `history`         | `'replace'` | `'push'` で履歴エントリを追加              |
+| `clearOnDefault`  | `true`      | デフォルト値では URL から削除              |
+| `startTransition` | -           | React の useTransition と連携              |
 
 ### グローバルデフォルト設定
 
@@ -310,21 +317,21 @@ export function Pagination({ currentPage, totalPages }: Props) {
 
 ### 公開ページ（実装済み）
 
-| ページ | 状態 | パラメータ |
-|-------|------|-----------|
-| `/spaces` | **完了** | `q`, `page`, `perPage`, `sort` |
-| `/posts` | **完了** | `q`, `page`, `category`, `tags`, `sort` |
-| `/news` | 計画中 | `page`, `perPage` |
+| ページ    | 状態     | パラメータ                              |
+| --------- | -------- | --------------------------------------- |
+| `/spaces` | **完了** | `q`, `page`, `perPage`, `sort`          |
+| `/posts`  | **完了** | `q`, `page`, `category`, `tags`, `sort` |
+| `/news`   | 計画中   | `page`, `perPage`                       |
 
 ### 管理画面（計画中）
 
-| ページ | パラメータ |
-|-------|-----------|
+| ページ                | パラメータ                                                 |
+| --------------------- | ---------------------------------------------------------- |
 | `/admin/reservations` | `status`, `startDate`, `endDate`, `search`, `sort`, `view` |
-| `/admin/customers` | `search`, `status`, `sort`, `sortOrder` |
-| `/admin/posts` | `status`, `categoryId`, `search`, `sort` |
-| `/admin/spaces` | `isPublished`, `search`, `sort` |
-| `/admin/inquiries` | `status`, `sort` |
+| `/admin/customers`    | `search`, `status`, `sort`, `sortOrder`                    |
+| `/admin/posts`        | `status`, `categoryId`, `search`, `sort`                   |
+| `/admin/spaces`       | `isPublished`, `search`, `sort`                            |
+| `/admin/inquiries`    | `status`, `sort`                                           |
 
 ---
 
@@ -346,7 +353,7 @@ URL をクリーンに保つため、デフォルト値を設定。
 
 ```typescript
 // ?page=1 ではなく、page がない場合は 1
-export const parseAsPage = parseAsInteger.withDefault(1)
+export const parseAsPage = parseAsInteger.withDefault(1);
 ```
 
 ### 3. useTransition との連携
@@ -354,11 +361,11 @@ export const parseAsPage = parseAsInteger.withDefault(1)
 ローディング状態を適切に管理。
 
 ```typescript
-const [isPending, startTransition] = useTransition()
+const [isPending, startTransition] = useTransition();
 
 const [params, setParams] = useQueryStates(parsers, {
   startTransition,
-})
+});
 ```
 
 ### 4. フィルタ変更時のページリセット
@@ -367,8 +374,8 @@ const [params, setParams] = useQueryStates(parsers, {
 
 ```typescript
 const handleCategoryChange = (category: string | null) => {
-  setParams({ category, page: null }) // null でデフォルト（1）に戻る
-}
+  setParams({ category, page: null }); // null でデフォルト（1）に戻る
+};
 ```
 
 ---

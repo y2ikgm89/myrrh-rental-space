@@ -45,14 +45,14 @@ src/app/(admin)/admin/(dashboard)/
 
 ### エイリアス
 
-| エイリアス | 実パス |
-|-----------|-------|
-| `@/admin/lib/stripe` | `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts` |
-| `@/admin/lib/stripe-shared` | `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts`（新規） |
-| `@/admin/lib/validations/customer` | `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/customer.ts` |
-| `@/admin/actions/customer` | `src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts` |
-| `@/admin/hooks` | `src/app/(admin)/admin/(dashboard)/_shared/hooks/index.ts` |
-| `@/shared/lib/serialize` | `src/shared/lib/serialize.ts` |
+| エイリアス                         | 実パス                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| `@/admin/lib/stripe`               | `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts`                |
+| `@/admin/lib/stripe-shared`        | `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts`（新規） |
+| `@/admin/lib/validations/customer` | `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/customer.ts`  |
+| `@/admin/actions/customer`         | `src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts`          |
+| `@/admin/hooks`                    | `src/app/(admin)/admin/(dashboard)/_shared/hooks/index.ts`               |
+| `@/shared/lib/serialize`           | `src/shared/lib/serialize.ts`                                            |
 
 ### 問題の根本原因
 
@@ -60,6 +60,7 @@ src/app/(admin)/admin/(dashboard)/
 `stripe.ts` には「Stripe API を呼び出すサーバー専用コード」と「キー形式検証・定数（秘密情報なし）」が混在しており、Client Component は後者しか使っていない。
 
 **修正前のカスケードエラー:**
+
 ```
 StripeSection.tsx (use client)
   → stripe.ts (server-only) ← build error
@@ -70,12 +71,12 @@ StripeSection.tsx (use client)
 
 **`stripe.ts` を import しているファイル（全4件）:**
 
-| ファイル | 使用内容 | 対応 |
-|---------|---------|------|
-| `StripeSection.tsx` | `SUPPORTED_CURRENCIES`, `SupportedCurrency` | stripe-shared に変更 |
-| `actions/settings/basic.ts` | `maskSecretKey` | stripe-shared に変更 |
-| `validations/stripe.ts` | `isValidPublishableKey`, `isValidSecretKey`, `isValidWebhookSecret`, `keysHaveMatchingMode` | stripe-shared に変更 |
-| `actions/settings/stripe.ts` | `testStripeConnection` | **変更不要**（server-only 間の import は問題なし） |
+| ファイル                     | 使用内容                                                                                    | 対応                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `StripeSection.tsx`          | `SUPPORTED_CURRENCIES`, `SupportedCurrency`                                                 | stripe-shared に変更                               |
+| `actions/settings/basic.ts`  | `maskSecretKey`                                                                             | stripe-shared に変更                               |
+| `validations/stripe.ts`      | `isValidPublishableKey`, `isValidSecretKey`, `isValidWebhookSecret`, `keysHaveMatchingMode` | stripe-shared に変更                               |
+| `actions/settings/stripe.ts` | `testStripeConnection`                                                                      | **変更不要**（server-only 間の import は問題なし） |
 
 ### 重要ルール（このプロジェクト固有）
 
@@ -96,6 +97,7 @@ StripeSection.tsx (use client)
 ### Task 1: `stripe-shared.ts` を新規作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe-shared.ts`
 
 **Step 1: ファイルを作成**
@@ -114,33 +116,33 @@ StripeSection.tsx (use client)
 // =============================================================================
 
 /** Zod enum / DB フィールド用の値配列 */
-export const SUPPORTED_CURRENCY_VALUES = ['jpy', 'usd', 'eur'] as const
+export const SUPPORTED_CURRENCY_VALUES = ["jpy", "usd", "eur"] as const;
 
-export type SupportedCurrency = (typeof SUPPORTED_CURRENCY_VALUES)[number]
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCY_VALUES)[number];
 
 export interface CurrencyOption {
-  value: SupportedCurrency
-  label: string
+  value: SupportedCurrency;
+  label: string;
 }
 
 /** UI 表示用（value + label ペア） */
 export const SUPPORTED_CURRENCIES: readonly CurrencyOption[] = [
-  { value: 'jpy', label: '日本円 (JPY)' },
-  { value: 'usd', label: '米ドル (USD)' },
-  { value: 'eur', label: 'ユーロ (EUR)' },
-]
+  { value: "jpy", label: "日本円 (JPY)" },
+  { value: "usd", label: "米ドル (USD)" },
+  { value: "eur", label: "ユーロ (EUR)" },
+];
 
 // =============================================================================
 // キープレフィックス（秘密情報なし）
 // =============================================================================
 
 const KEY_PREFIXES = {
-  publishableTest: 'pk_test_',
-  publishableLive: 'pk_live_',
-  secretTest: 'sk_test_',
-  secretLive: 'sk_live_',
-  webhook: 'whsec_',
-} as const
+  publishableTest: "pk_test_",
+  publishableLive: "pk_live_",
+  secretTest: "sk_test_",
+  secretLive: "sk_live_",
+  webhook: "whsec_",
+} as const;
 
 // =============================================================================
 // キー形式検証（純粋関数 — API 呼び出しなし）
@@ -148,32 +150,47 @@ const KEY_PREFIXES = {
 
 /** テストキー（公開可能 or シークレット）かを判定 */
 export function isTestKey(key: string): boolean {
-  return key.startsWith(KEY_PREFIXES.secretTest) || key.startsWith(KEY_PREFIXES.publishableTest)
+  return (
+    key.startsWith(KEY_PREFIXES.secretTest) ||
+    key.startsWith(KEY_PREFIXES.publishableTest)
+  );
 }
 
 /** ライブキー（公開可能 or シークレット）かを判定 */
 export function isLiveKey(key: string): boolean {
-  return key.startsWith(KEY_PREFIXES.secretLive) || key.startsWith(KEY_PREFIXES.publishableLive)
+  return (
+    key.startsWith(KEY_PREFIXES.secretLive) ||
+    key.startsWith(KEY_PREFIXES.publishableLive)
+  );
 }
 
 /** 公開可能キーの形式が正しいか検証 */
 export function isValidPublishableKey(key: string): boolean {
-  return key.startsWith(KEY_PREFIXES.publishableTest) || key.startsWith(KEY_PREFIXES.publishableLive)
+  return (
+    key.startsWith(KEY_PREFIXES.publishableTest) ||
+    key.startsWith(KEY_PREFIXES.publishableLive)
+  );
 }
 
 /** シークレットキーの形式が正しいか検証 */
 export function isValidSecretKey(key: string): boolean {
-  return key.startsWith(KEY_PREFIXES.secretTest) || key.startsWith(KEY_PREFIXES.secretLive)
+  return (
+    key.startsWith(KEY_PREFIXES.secretTest) ||
+    key.startsWith(KEY_PREFIXES.secretLive)
+  );
 }
 
 /** Webhookシークレットの形式が正しいか検証 */
 export function isValidWebhookSecret(key: string): boolean {
-  return key.startsWith(KEY_PREFIXES.webhook)
+  return key.startsWith(KEY_PREFIXES.webhook);
 }
 
 /** キーのモード（test/live）がマッチしているか確認 */
-export function keysHaveMatchingMode(publishableKey: string, secretKey: string): boolean {
-  return isTestKey(publishableKey) === isTestKey(secretKey)
+export function keysHaveMatchingMode(
+  publishableKey: string,
+  secretKey: string,
+): boolean {
+  return isTestKey(publishableKey) === isTestKey(secretKey);
 }
 
 /**
@@ -183,11 +200,11 @@ export function keysHaveMatchingMode(publishableKey: string, secretKey: string):
  * セキュリティ: 入力をサニタイズして XSS 攻撃を防止
  */
 export function maskSecretKey(key: string): string {
-  if (!key || key.length < 16) return '****'
-  if (!/^[a-zA-Z0-9_]+$/.test(key)) return '****'
-  const prefix = key.substring(0, 12)
-  const suffix = key.substring(key.length - 4)
-  return `${prefix}...${suffix}`
+  if (!key || key.length < 16) return "****";
+  if (!/^[a-zA-Z0-9_]+$/.test(key)) return "****";
+  const prefix = key.substring(0, 12);
+  const suffix = key.substring(key.length - 4);
+  return `${prefix}...${suffix}`;
 }
 ```
 
@@ -208,6 +225,7 @@ git commit -m "feat(stripe): extract client-safe code to stripe-shared.ts"
 ### Task 2: `stripe.ts` を精査・更新（server-only コードのみ残す）
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/stripe.ts`
 
 **Step 1: `stripe.ts` を全て置き換え**
@@ -227,33 +245,33 @@ git commit -m "feat(stripe): extract client-safe code to stripe-shared.ts"
  * @important server-only — Client Component から import 禁止
  */
 
-import 'server-only'
-import Stripe from 'stripe'
-import { safeDecrypt } from '@/shared/lib/crypto'
-import { serverEnv } from '@/shared/lib/env/server'
-import { isValidSecretKey, isTestKey } from './stripe-shared'
+import "server-only";
+import Stripe from "stripe";
+import { safeDecrypt } from "@/shared/lib/crypto";
+import { serverEnv } from "@/shared/lib/env/server";
+import { isValidSecretKey, isTestKey } from "./stripe-shared";
 
 /**
  * Stripe設定の取得元
  */
-export type StripeConfigSource = 'env' | 'db' | null
+export type StripeConfigSource = "env" | "db" | null;
 
 /**
  * Stripe接続テスト結果
  */
 export interface StripeConnectionTestResult {
-  success: boolean
-  error?: string
-  accountId?: string
-  mode?: 'test' | 'live'
-  source?: StripeConfigSource
+  success: boolean;
+  error?: string;
+  accountId?: string;
+  mode?: "test" | "live";
+  source?: StripeConfigSource;
 }
 
 /**
  * 環境変数からStripeシークレットキーを取得
  */
 function getEnvSecretKey(): string | null {
-  return serverEnv.STRIPE_SECRET_KEY ?? null
+  return serverEnv.STRIPE_SECRET_KEY ?? null;
 }
 
 /**
@@ -262,9 +280,9 @@ function getEnvSecretKey(): string | null {
  */
 export function createStripeClient(secretKey: string): Stripe {
   return new Stripe(secretKey, {
-    apiVersion: '2026-01-28.clover',
+    apiVersion: "2026-01-28.clover",
     typescript: true,
-  })
+  });
 }
 
 /**
@@ -273,21 +291,21 @@ export function createStripeClient(secretKey: string): Stripe {
  * @returns Stripeクライアントと設定元
  */
 export async function getStripeClient(
-  dbSecretKey?: string | null
+  dbSecretKey?: string | null,
 ): Promise<{ client: Stripe | null; source: StripeConfigSource }> {
-  const envKey = getEnvSecretKey()
+  const envKey = getEnvSecretKey();
   if (envKey) {
-    return { client: createStripeClient(envKey), source: 'env' }
+    return { client: createStripeClient(envKey), source: "env" };
   }
 
   if (dbSecretKey) {
-    const decryptedKey = safeDecrypt(dbSecretKey)
+    const decryptedKey = safeDecrypt(dbSecretKey);
     if (decryptedKey) {
-      return { client: createStripeClient(decryptedKey), source: 'db' }
+      return { client: createStripeClient(decryptedKey), source: "db" };
     }
   }
 
-  return { client: null, source: null }
+  return { client: null, source: null };
 }
 
 /**
@@ -295,42 +313,44 @@ export async function getStripeClient(
  * @param secretKey - テストするシークレットキー（平文）
  */
 export async function testStripeConnection(
-  secretKey: string
+  secretKey: string,
 ): Promise<StripeConnectionTestResult> {
   try {
     if (!isValidSecretKey(secretKey)) {
       return {
         success: false,
-        error: 'シークレットキーの形式が正しくありません。sk_test_ または sk_live_ で始まる必要があります。',
-      }
+        error:
+          "シークレットキーの形式が正しくありません。sk_test_ または sk_live_ で始まる必要があります。",
+      };
     }
 
-    const stripe = createStripeClient(secretKey)
-    const account = await stripe.accounts.retrieve()
+    const stripe = createStripeClient(secretKey);
+    const account = await stripe.accounts.retrieve();
 
     return {
       success: true,
       accountId: account.id,
-      mode: isTestKey(secretKey) ? 'test' : 'live',
-    }
+      mode: isTestKey(secretKey) ? "test" : "live",
+    };
   } catch (error) {
-    const message = error instanceof Error ? error.message : '接続テストに失敗しました'
+    const message =
+      error instanceof Error ? error.message : "接続テストに失敗しました";
 
     if (error instanceof Stripe.errors.StripeAuthenticationError) {
       return {
         success: false,
-        error: 'APIキーが無効です。正しいキーを入力してください。',
-      }
+        error: "APIキーが無効です。正しいキーを入力してください。",
+      };
     }
 
     if (error instanceof Stripe.errors.StripePermissionError) {
       return {
         success: false,
-        error: 'このAPIキーにはアカウント情報へのアクセス権限がありません。',
-      }
+        error: "このAPIキーにはアカウント情報へのアクセス権限がありません。",
+      };
     }
 
-    return { success: false, error: message }
+    return { success: false, error: message };
   }
 }
 ```
@@ -345,6 +365,7 @@ Expected: `actions/settings/basic.ts`, `validations/stripe.ts`, `StripeSection.t
 ### Task 3: `validations/stripe.ts` の import を `stripe-shared` に変更
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/lib/validations/stripe.ts`
 
 **Step 1: import を書き換え、ローカル `SUPPORTED_CURRENCIES` を削除**
@@ -356,31 +377,34 @@ Expected: `actions/settings/basic.ts`, `validations/stripe.ts`, `StripeSection.t
  * Stripe設定のバリデーションスキーマ
  */
 
-import { z } from 'zod'
+import { z } from "zod";
 import {
   SUPPORTED_CURRENCY_VALUES,
   isValidPublishableKey,
   isValidSecretKey,
   isValidWebhookSecret,
   keysHaveMatchingMode,
-} from '@/admin/lib/stripe-shared'
+} from "@/admin/lib/stripe-shared";
 
 // バリデーションメッセージ
 interface ValidationMessages {
-  publishableKey: string
-  secretKey: string
-  webhookSecret: string
-  keyModeMismatch: string
-  maxLength: (field: string) => string
+  publishableKey: string;
+  secretKey: string;
+  webhookSecret: string;
+  keyModeMismatch: string;
+  maxLength: (field: string) => string;
 }
 
 const MESSAGES: ValidationMessages = {
-  publishableKey: '公開可能キーは pk_test_ または pk_live_ で始まる必要があります',
-  secretKey: 'シークレットキーは sk_test_ または sk_live_ で始まる必要があります',
-  webhookSecret: 'Webhookシークレットは whsec_ で始まる必要があります',
-  keyModeMismatch: '公開可能キーとシークレットキーのモード（test/live）が一致していません',
+  publishableKey:
+    "公開可能キーは pk_test_ または pk_live_ で始まる必要があります",
+  secretKey:
+    "シークレットキーは sk_test_ または sk_live_ で始まる必要があります",
+  webhookSecret: "Webhookシークレットは whsec_ で始まる必要があります",
+  keyModeMismatch:
+    "公開可能キーとシークレットキーのモード（test/live）が一致していません",
   maxLength: (field: string) => `${field}は200文字以内で入力してください`,
-}
+};
 
 /**
  * Stripe設定の更新スキーマ
@@ -391,7 +415,7 @@ export const stripeSettingsSchema = z
     stripeTestMode: z.boolean(),
     stripePublishableKey: z
       .string()
-      .max(200, { error: MESSAGES.maxLength('公開可能キー') })
+      .max(200, { error: MESSAGES.maxLength("公開可能キー") })
       .nullable()
       .optional()
       .refine((val) => !val || isValidPublishableKey(val), {
@@ -399,7 +423,7 @@ export const stripeSettingsSchema = z
       }),
     stripeSecretKey: z
       .string()
-      .max(200, { error: MESSAGES.maxLength('シークレットキー') })
+      .max(200, { error: MESSAGES.maxLength("シークレットキー") })
       .nullable()
       .optional()
       .refine((val) => !val || isValidSecretKey(val), {
@@ -407,28 +431,33 @@ export const stripeSettingsSchema = z
       }),
     stripeWebhookSecret: z
       .string()
-      .max(200, { error: MESSAGES.maxLength('Webhookシークレット') })
+      .max(200, { error: MESSAGES.maxLength("Webhookシークレット") })
       .nullable()
       .optional()
       .refine((val) => !val || isValidWebhookSecret(val), {
         error: MESSAGES.webhookSecret,
       }),
-    stripeCurrency: z.enum(SUPPORTED_CURRENCY_VALUES).default(SUPPORTED_CURRENCY_VALUES[0]),
+    stripeCurrency: z
+      .enum(SUPPORTED_CURRENCY_VALUES)
+      .default(SUPPORTED_CURRENCY_VALUES[0]),
   })
   .refine(
     (data) => {
       if (data.stripePublishableKey && data.stripeSecretKey) {
-        return keysHaveMatchingMode(data.stripePublishableKey, data.stripeSecretKey)
+        return keysHaveMatchingMode(
+          data.stripePublishableKey,
+          data.stripeSecretKey,
+        );
       }
-      return true
+      return true;
     },
     {
       error: MESSAGES.keyModeMismatch,
-      path: ['stripeSecretKey'],
-    }
-  )
+      path: ["stripeSecretKey"],
+    },
+  );
 
-export type StripeSettingsInput = z.infer<typeof stripeSettingsSchema>
+export type StripeSettingsInput = z.infer<typeof stripeSettingsSchema>;
 
 /**
  * 接続テスト用スキーマ（シークレットキーのみ）
@@ -436,13 +465,15 @@ export type StripeSettingsInput = z.infer<typeof stripeSettingsSchema>
 export const stripeConnectionTestSchema = z.object({
   secretKey: z
     .string()
-    .min(1, { error: 'シークレットキーを入力してください' })
+    .min(1, { error: "シークレットキーを入力してください" })
     .refine(isValidSecretKey, {
       error: MESSAGES.secretKey,
     }),
-})
+});
 
-export type StripeConnectionTestInput = z.infer<typeof stripeConnectionTestSchema>
+export type StripeConnectionTestInput = z.infer<
+  typeof stripeConnectionTestSchema
+>;
 ```
 
 **Step 2: 型チェック**
@@ -455,6 +486,7 @@ Expected: `actions/settings/basic.ts` と `StripeSection.tsx` でまだエラー
 ### Task 4: `actions/settings/basic.ts` の import を `stripe-shared` に変更
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/basic.ts`
 
 **Step 1: import を1行変更**
@@ -463,10 +495,10 @@ Expected: `actions/settings/basic.ts` と `StripeSection.tsx` でまだエラー
 
 ```typescript
 // 変更前
-import { maskSecretKey } from '@/admin/lib/stripe'
+import { maskSecretKey } from "@/admin/lib/stripe";
 
 // 変更後
-import { maskSecretKey } from '@/admin/lib/stripe-shared'
+import { maskSecretKey } from "@/admin/lib/stripe-shared";
 ```
 
 **Step 2: 型チェック**
@@ -479,17 +511,26 @@ Expected: `StripeSection.tsx` のエラーのみ残る
 ### Task 5: `StripeSection.tsx` の import を修正し、型安全な通貨ガードに修正
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/settings/_components/sections/StripeSection.tsx`
 
 **Step 1: 以下の2点を変更**
 
 変更点1 — import を `stripe-shared` に変更（35行目）:
+
 ```typescript
 // 変更前
-import { SUPPORTED_CURRENCIES, type SupportedCurrency } from '@/admin/lib/stripe'
+import {
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+} from "@/admin/lib/stripe";
 
 // 変更後
-import { SUPPORTED_CURRENCIES, type SupportedCurrency, SUPPORTED_CURRENCY_VALUES } from '@/admin/lib/stripe-shared'
+import {
+  SUPPORTED_CURRENCIES,
+  type SupportedCurrency,
+  SUPPORTED_CURRENCY_VALUES,
+} from "@/admin/lib/stripe-shared";
 ```
 
 変更点2 — ローカル型ガードを `createTypeGuard` で置き換え（44-48行目）:
@@ -498,18 +539,20 @@ import { SUPPORTED_CURRENCIES, type SupportedCurrency, SUPPORTED_CURRENCY_VALUES
 
 ```typescript
 // 変更前: 既存コード (44-48行目)
-const VALID_CURRENCIES = new Set<string>(SUPPORTED_CURRENCIES.map((c) => c.value))
+const VALID_CURRENCIES = new Set<string>(
+  SUPPORTED_CURRENCIES.map((c) => c.value),
+);
 
 function isSupportedCurrency(value: unknown): value is SupportedCurrency {
-  return typeof value === 'string' && VALID_CURRENCIES.has(value)
+  return typeof value === "string" && VALID_CURRENCIES.has(value);
 }
 ```
 
 ```typescript
 // 変更後: createTypeGuard を使用（import も追加）
-import { createTypeGuard } from '@/shared/lib/serialize'
+import { createTypeGuard } from "@/shared/lib/serialize";
 
-const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES)
+const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
 ```
 
 変更点3 — `onValueChange` の型アノテーション削除（334行目付近）:
@@ -557,6 +600,7 @@ git commit -m "fix(stripe): resolve server-only boundary violation by separating
 ### Task 6: `updateCustomer` Server Action を `customer.ts` に追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/_shared/actions/customer.ts`
 
 **背景:** 既存の `customer.ts` には `createCustomer`, `updateCustomerStatus`, `updateCustomerNotes`, `toggleCustomerActive` はあるが全フィールドを更新する `updateCustomer` がない。
@@ -567,30 +611,43 @@ git commit -m "fix(stripe): resolve server-only boundary violation by separating
 /**
  * 顧客情報を全フィールド更新
  */
-export const updateCustomer = withPermission<[id: string, input: CustomerFormInput], void>(
-  'customer',
-  'update'
+export const updateCustomer = withPermission<
+  [id: string, input: CustomerFormInput],
+  void
+>(
+  "customer",
+  "update",
 )(async (_user, id, input): Promise<ActionResult<void>> => {
-  const parsed = customerFormSchema.safeParse(input)
+  const parsed = customerFormSchema.safeParse(input);
   if (!parsed.success) {
-    return createValidationError(parsed.error)
+    return createValidationError(parsed.error);
   }
 
-  const { lastName, firstName, lastNameKana, firstNameKana, email, phoneNumber, address, notes } = parsed.data
+  const {
+    lastName,
+    firstName,
+    lastNameKana,
+    firstNameKana,
+    email,
+    phoneNumber,
+    address,
+    notes,
+  } = parsed.data;
 
   // 存在確認
   const customer = await prisma.customer.findUnique({
     where: { id },
     select: { id: true },
-  })
-  if (!customer) return createFailure('顧客が見つかりません')
+  });
+  if (!customer) return createFailure("顧客が見つかりません");
 
   // メールアドレスの重複チェック（自分自身を除外）
   const emailConflict = await prisma.customer.findFirst({
     where: { email, NOT: { id } },
     select: { id: true },
-  })
-  if (emailConflict) return createFailure('このメールアドレスは既に登録されています')
+  });
+  if (emailConflict)
+    return createFailure("このメールアドレスは既に登録されています");
 
   await prisma.customer.update({
     where: { id },
@@ -604,13 +661,13 @@ export const updateCustomer = withPermission<[id: string, input: CustomerFormInp
       address: address || null,
       notes: notes || null,
     },
-  })
+  });
 
-  updateTag(CACHE_TAGS.CUSTOMERS)
-  updateTag(getCacheTag.customers.detail(id))
+  updateTag(CACHE_TAGS.CUSTOMERS);
+  updateTag(getCacheTag.customers.detail(id));
 
-  return createSuccess('顧客情報を更新しました')
-})
+  return createSuccess("顧客情報を更新しました");
+});
 ```
 
 **Step 2: 型チェック**
@@ -630,9 +687,11 @@ git commit -m "feat(customer): add updateCustomer server action for full field e
 ### Task 7: `CustomerEditForm.tsx` を新規作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/customers/_components/CustomerEditForm.tsx`
 
 **背景:**
+
 - 参考パターン: `CustomerForm.tsx`（新規作成フォーム）と `ReservationEditForm.tsx`（予約編集フォーム）
 - `CustomerForm.tsx` は `useActionState` + native form action のハイブリッド
 - `CustomerEditForm.tsx` は `react-hook-form` の `handleSubmit` で Server Action を直接呼ぶ（`ReservationEditForm.tsx` と同じアプローチ）
@@ -905,6 +964,7 @@ git commit -m "feat(customer): add CustomerEditForm component with kana auto-inp
 ### Task 8: 編集ページ `customers/[id]/edit/page.tsx` を作成
 
 **Files:**
+
 - Create: `src/app/(admin)/admin/(dashboard)/customers/[id]/edit/page.tsx`
 
 **重要:** `export const dynamic = 'force-dynamic'` は Next.js 16 では禁止。代わりに `await connection()` を使用して動的レンダリングを強制する。
@@ -982,21 +1042,23 @@ git commit -m "feat(customer): add customer edit page /customers/[id]/edit"
 ### Task 9: `CustomerDetail.tsx` に編集ボタンを追加
 
 **Files:**
+
 - Modify: `src/app/(admin)/admin/(dashboard)/customers/[id]/_components/CustomerDetail.tsx`
 
 **Step 1: `lucide-react` import に `Pencil` を追加（5行目）**
 
 ```typescript
 // 変更前
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from "lucide-react";
 
 // 変更後
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Pencil } from "lucide-react";
 ```
 
 **Step 2: ヘッダー部分に編集ボタンを追加（79-96行目付近）**
 
 現在のヘッダー構造:
+
 ```tsx
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-4">
@@ -1019,6 +1081,7 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 ```
 
 修正後（`</div>` の閉じタグの前に編集ボタンを追加）:
+
 ```tsx
 <div className="flex items-center justify-between">
   <div className="flex items-center gap-4">
@@ -1071,6 +1134,7 @@ Expected: エラーゼロ
 
 Run: `bun run build`
 Expected:
+
 - `StripeSection.tsx` の `server-only` 関連エラーが消えていること
 - ビルド成功
 
@@ -1086,6 +1150,7 @@ git commit -m "chore: final validation pass"
 ## チェックリスト
 
 ### Part 1: Stripe server-only 修正
+
 - [ ] `stripe-shared.ts` 作成（秘密情報なし）
 - [ ] `stripe.ts` 更新（server-only コードのみ残す）
 - [ ] `validations/stripe.ts` import 変更
@@ -1094,6 +1159,7 @@ git commit -m "chore: final validation pass"
 - [ ] ビルドで `server-only` エラーが消えていること
 
 ### Part 2: 顧客編集
+
 - [ ] `updateCustomer` Server Action 追加
 - [ ] `CustomerEditForm.tsx` 作成
 - [ ] `customers/[id]/edit/page.tsx` 作成
