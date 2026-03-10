@@ -16,12 +16,12 @@ import {
   validateCouponCodeQuery,
   type ValidatedCouponData,
 } from "@/shared/domain/coupons/queries";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
-  createSuccess,
-  createFailure,
-  type ActionResult,
-} from "@/shared/types/server-actions";
-import { logError, ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 
 // =============================================================================
 // Types
@@ -51,34 +51,37 @@ export type ValidatedCoupon = ValidatedCouponData;
 export async function validateCouponCode(
   code: string,
   reservationAmount?: number,
-): Promise<ActionResult<{ coupon: ValidatedCoupon }>> {
+): Promise<MutationResult<{ coupon: ValidatedCoupon }>> {
   const normalizedCode = code.toUpperCase().trim();
 
   if (normalizedCode.length < 4) {
-    return createFailure("クーポンコードは4文字以上で入力してください");
+    return { error: "クーポンコードは4文字以上で入力してください" };
   }
 
   if (!/^[A-Z0-9]+$/.test(normalizedCode)) {
-    return createFailure("無効なクーポンコードです");
+    return { error: "無効なクーポンコードです" };
   }
 
   try {
-    const result = await validateCouponCodeQuery(normalizedCode, reservationAmount);
+    const result = await validateCouponCodeQuery(
+      normalizedCode,
+      reservationAmount,
+    );
 
     if (!result.valid) {
-      return createFailure(result.errorMessage);
+      return { error: result.errorMessage };
     }
 
-    return createSuccess("クーポンを適用しました", {
+    return {
       coupon: result.coupon,
-    });
+    };
   } catch (error) {
     logError(error, {
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.HIGH,
       context: { operation: "validateCouponCode", code: normalizedCode },
     });
-    return createFailure("一時的なエラーが発生しました");
+    return { error: "一時的なエラーが発生しました" };
   }
 }
 

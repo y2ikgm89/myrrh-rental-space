@@ -142,21 +142,6 @@ export type SpaceFormInput = z.input<typeof spaceFormSchema>;
 export type SpaceFormData = z.output<typeof spaceFormSchema>;
 
 /**
- * Server Action のレスポンス型
- */
-export type SpaceActionResult =
-  | {
-      success: true;
-      message: string;
-      id?: string;
-    }
-  | {
-      success: false;
-      error: string;
-      fieldErrors?: Record<string, string[]>;
-    };
-
-/**
  * フォームのデフォルト値
  */
 export const defaultSpaceFormValues: SpaceFormInput = {

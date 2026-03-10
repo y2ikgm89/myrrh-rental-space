@@ -1,88 +1,71 @@
 /**
  * カスタムアサーション
  *
- * - ActionResult型のアサーション
+ * - MutationResult型のアサーション
  * - よく使うパターンの簡潔化
  */
 
-import { expect } from 'bun:test'
+import { expect } from "bun:test";
 import type {
-  ActionResult,
-  ActionSuccess,
-  ActionFailure,
-} from '@/admin/types/server-actions'
+  MutationResult,
+  MutationError,
+} from "@/shared/lib/mutation-result";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 /**
- * ActionResultが成功であることを検証
+ * MutationResultが成功（エラーでない）ことを検証
  */
 export function expectSuccess<T>(
-  result: ActionResult<T>
-): asserts result is ActionSuccess<T> {
-  expect(result.success).toBe(true)
-  if (!result.success) {
-    throw new Error(`Expected success but got failure: ${result.error}`)
+  result: MutationResult<T>,
+): asserts result is T {
+  if (isMutationError(result)) {
+    throw new Error(`Expected success but got error: ${result.error}`);
   }
 }
 
 /**
- * ActionResultが失敗であることを検証
+ * MutationResultがエラーであることを検証
  */
-export function expectFailure<T>(
-  result: ActionResult<T>
-): asserts result is ActionFailure {
-  expect(result.success).toBe(false)
-  if (result.success) {
-    throw new Error('Expected failure but got success')
+export function expectError<T>(
+  result: MutationResult<T>,
+): asserts result is MutationError {
+  expect(isMutationError(result)).toBe(true);
+  if (!isMutationError(result)) {
+    throw new Error("Expected error but got success");
   }
 }
 
 /**
- * ActionResultが特定のエラーメッセージで失敗することを検証
+ * MutationResultが特定のエラーメッセージで失敗することを検証
  */
-export function expectFailureWithError<T>(
-  result: ActionResult<T>,
-  errorMessage: string
+export function expectErrorWithMessage<T>(
+  result: MutationResult<T>,
+  errorMessage: string,
 ): void {
-  expectFailure(result)
-  expect(result.error).toContain(errorMessage)
+  expectError(result);
+  expect(result.error).toContain(errorMessage);
 }
 
 /**
- * ActionResultが成功し、データを含むことを検証
+ * MutationResultが成功し、データを含むことを検証
  */
 export function expectSuccessWithData<T>(
-  result: ActionResult<T>,
-  assertion: (data: T) => void
+  result: MutationResult<T>,
+  assertion: (data: T) => void,
 ): void {
-  expectSuccess(result)
-  if ('data' in result && result.data !== undefined) {
-    // TS 6.0: 条件型を含むジェネリック型へのナロウイングは推論できないため unknown 経由でキャスト
-    assertion(result.data as unknown as T)
-  } else {
-    throw new Error('Expected result to have data')
-  }
+  expectSuccess(result);
+  assertion(result);
 }
 
 /**
- * ActionResultが成功し、特定のメッセージを含むことを検証
- */
-export function expectSuccessWithMessage<T>(
-  result: ActionResult<T>,
-  message: string
-): void {
-  expectSuccess(result)
-  expect(result.message).toContain(message)
-}
-
-/**
- * ActionResultがフィールドエラーを含むことを検証
+ * MutationResultがフィールドエラーを含むことを検証
  */
 export function expectFieldErrors<T>(
-  result: ActionResult<T>,
-  field: string
+  result: MutationResult<T>,
+  field: string,
 ): void {
-  expectFailure(result)
-  expect(result.fieldErrors).toBeDefined()
-  expect(result.fieldErrors?.[field]).toBeDefined()
-  expect(result.fieldErrors?.[field]?.length).toBeGreaterThan(0)
+  expectError(result);
+  expect(result.fieldErrors).toBeDefined();
+  expect(result.fieldErrors?.[field]).toBeDefined();
+  expect(result.fieldErrors?.[field]?.length).toBeGreaterThan(0);
 }

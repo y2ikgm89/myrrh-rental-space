@@ -6,16 +6,17 @@
  * URLを入力するとOGP情報を取得し、リッチなカード形式で挿入
  */
 
-'use client'
+"use client";
 
-import { useEffect, useState, useTransition } from 'react'
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { $insertNodeToNearestRoot } from '@lexical/utils'
-import { COMMAND_PRIORITY_LOW, createCommand } from 'lexical'
-import { Loader2, ExternalLink, AlertCircle } from 'lucide-react'
-import { logger } from '@/shared/lib/logger'
-import { $createBookmarkNode } from '../nodes/BookmarkNode'
-import { fetchOgp } from '../../../../actions/fetch-ogp'
+import { useEffect, useState, useTransition } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
+import { COMMAND_PRIORITY_LOW, createCommand } from "lexical";
+import { Loader2, ExternalLink, AlertCircle } from "lucide-react";
+import { logger } from "@/shared/lib/logger";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { $createBookmarkNode } from "../nodes/BookmarkNode";
+import { fetchOgp } from "../../../../actions/fetch-ogp";
 import {
   Dialog,
   DialogContent,
@@ -25,44 +26,44 @@ import {
   Button,
   Input,
   Label,
-} from '@/admin/components/ui'
+} from "@/admin/components/ui";
 
 // =============================================================================
 // Command
 // =============================================================================
 
 export const INSERT_BOOKMARK_COMMAND = createCommand<{ url: string }>(
-  'INSERT_BOOKMARK_COMMAND',
-)
+  "INSERT_BOOKMARK_COMMAND",
+);
 
 // =============================================================================
 // Types
 // =============================================================================
 
 type BookmarkPluginProps = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 type OgpPreview = {
-  url: string
-  title: string
-  description: string
-  imageUrl: string
-  faviconUrl: string
-  siteName: string
-} | null
+  url: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  faviconUrl: string;
+  siteName: string;
+} | null;
 
 // =============================================================================
 // Component
 // =============================================================================
 
 export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
-  const [editor] = useLexicalComposerContext()
-  const [url, setUrl] = useState('')
-  const [preview, setPreview] = useState<OgpPreview>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [editor] = useLexicalComposerContext();
+  const [url, setUrl] = useState("");
+  const [preview, setPreview] = useState<OgpPreview>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   // INSERT_BOOKMARK_COMMAND ハンドラ（PasteUrlPlugin 等から URL を受け取り自動挿入）
   useEffect(() => {
@@ -70,55 +71,57 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
       INSERT_BOOKMARK_COMMAND,
       (payload) => {
         startTransition(async () => {
-          const result = await fetchOgp(payload.url)
-          if (result.success) {
+          const result = await fetchOgp(payload.url);
+          if (isMutationError(result)) {
+            logger.warn("PasteUrlPlugin: OGP fetch failed", {
+              url: payload.url,
+            });
+          } else {
             editor.update(() => {
               const bookmarkNode = $createBookmarkNode({
-                url: result.data.url,
-                title: result.data.title,
-                description: result.data.description,
-                imageUrl: result.data.imageUrl,
-                faviconUrl: result.data.faviconUrl,
-                siteName: result.data.siteName,
-              })
-              $insertNodeToNearestRoot(bookmarkNode)
-            })
-          } else {
-            logger.warn('PasteUrlPlugin: OGP fetch failed', { url: payload.url })
+                url: result.url,
+                title: result.title,
+                description: result.description,
+                imageUrl: result.imageUrl,
+                faviconUrl: result.faviconUrl,
+                siteName: result.siteName,
+              });
+              $insertNodeToNearestRoot(bookmarkNode);
+            });
           }
-        })
-        return true
+        });
+        return true;
       },
       COMMAND_PRIORITY_LOW,
-    )
-  }, [editor])
+    );
+  }, [editor]);
 
   const resetForm = () => {
-    setUrl('')
-    setPreview(null)
-    setError(null)
-  }
+    setUrl("");
+    setPreview(null);
+    setError(null);
+  };
 
   const handleFetchOgp = () => {
-    if (!url.trim()) return
+    if (!url.trim()) return;
 
-    setError(null)
-    setPreview(null)
+    setError(null);
+    setPreview(null);
 
     startTransition(async () => {
-      const result = await fetchOgp(url.trim())
-      if (result.success) {
-        setPreview(result.data)
-        setError(null)
+      const result = await fetchOgp(url.trim());
+      if (isMutationError(result)) {
+        setError(result.error);
+        setPreview(null);
       } else {
-        setError(result.error)
-        setPreview(null)
+        setPreview(result);
+        setError(null);
       }
-    })
-  }
+    });
+  };
 
   const handleInsert = () => {
-    if (!preview) return
+    if (!preview) return;
 
     editor.update(() => {
       const bookmarkNode = $createBookmarkNode({
@@ -128,19 +131,19 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
         imageUrl: preview.imageUrl,
         faviconUrl: preview.faviconUrl,
         siteName: preview.siteName,
-      })
+      });
 
-      $insertNodeToNearestRoot(bookmarkNode)
-    })
+      $insertNodeToNearestRoot(bookmarkNode);
+    });
 
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   const handleClose = () => {
-    resetForm()
-    onClose()
-  }
+    resetForm();
+    onClose();
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -161,9 +164,9 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                 placeholder="https://example.com"
                 type="url"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleFetchOgp()
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleFetchOgp();
                   }
                 }}
               />
@@ -176,7 +179,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  '取得'
+                  "取得"
                 )}
               </Button>
             </div>
@@ -204,7 +207,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                         alt=""
                         className="w-4 h-4 rounded-sm"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none'
+                          e.currentTarget.style.display = "none";
                         }}
                       />
                     ) : (
@@ -233,7 +236,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                       alt=""
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.parentElement?.remove()
+                        e.currentTarget.parentElement?.remove();
                       }}
                     />
                   </div>
@@ -253,5 +256,5 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

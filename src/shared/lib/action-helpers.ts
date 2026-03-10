@@ -7,15 +7,13 @@
  * ## 提供機能
  * - **Zodエラー変換**: ZodErrorをフィールドエラーマップに変換
  * - **Turnstile検証**: ボット対策の検証フロー
- * - **複合ラッパー**: Turnstile + Zodバリデーションの組み合わせ
  * - **リトライ機構**: 一時的な障害に対する指数バックオフリトライ
  *
  * @module shared/lib/action-helpers
  */
 
-import type { ZodError, ZodSchema } from "zod";
+import type { ZodError } from "zod";
 import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
-import type { ActionFailure } from "@/shared/types/server-actions";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
@@ -45,17 +43,15 @@ export function extractFieldErrors(error: ZodError): Record<string, string[]> {
 }
 
 /**
- * バリデーションエラーレスポンスを生成
+ * ZodErrorをActionFailure互換のMutationErrorに変換
  *
- * @param error - ZodError
- * @param message - ユーザー向けエラーメッセージ
+ * @deprecated Task 6 で createValidationMutationError に置き換え予定
  */
 export function createValidationError(
   error: ZodError,
   message = "入力内容に誤りがあります",
-): ActionFailure {
+): MutationError {
   return {
-    success: false,
     error: message,
     fieldErrors: extractFieldErrors(error),
   };
@@ -63,9 +59,6 @@ export function createValidationError(
 
 /**
  * ZodErrorをMutationErrorに直接変換
- *
- * executeAdminMutationResult パターンで ActionFailure を経由せず
- * MutationError を生成するためのヘルパー。
  *
  * @param error - ZodError
  * @param message - ユーザー向けエラーメッセージ
@@ -118,95 +111,6 @@ export async function validateTurnstile(
   }
 
   return { success: true };
-}
-
-/**
- * Turnstile検証付きでServer Actionを実行
- *
- * @param token - Turnstileトークン
- * @param handler - 検証成功後に実行する関数
- *
- * @example
- * export async function submitForm(data: FormData, token?: string) {
- *   return withTurnstile(token, async () => {
- *     // フォーム処理
- *   })
- * }
- */
-export async function withTurnstile<T>(
-  token: string | undefined,
-  handler: () => Promise<T>,
-): Promise<T | ActionFailure> {
-  const result = await validateTurnstile(token);
-
-  if (!result.success) {
-    return { success: false, error: result.error };
-  }
-
-  return handler();
-}
-
-/**
- * Zodバリデーション付きでServer Actionを実行
- *
- * @param schema - Zodスキーマ
- * @param input - 入力データ
- * @param handler - バリデーション成功後に実行する関数
- *
- * @example
- * export async function submitForm(input: unknown) {
- *   return withValidation(formSchema, input, async (data) => {
- *     // data は型安全
- *   })
- * }
- */
-export async function withValidation<Input, Output>(
-  schema: ZodSchema<Input>,
-  input: unknown,
-  handler: (data: Input) => Promise<Output>,
-): Promise<Output | ActionFailure> {
-  const result = schema.safeParse(input);
-
-  if (!result.success) {
-    return createValidationError(
-      result.error,
-      "バリデーションエラーが発生しました",
-    );
-  }
-
-  return handler(result.data);
-}
-
-/**
- * Turnstile + Zodバリデーション付きでServer Actionを実行
- *
- * @param token - Turnstileトークン
- * @param schema - Zodスキーマ
- * @param input - 入力データ
- * @param handler - 検証成功後に実行する関数
- *
- * @example
- * export async function submitContact(input: ContactInput, token?: string) {
- *   return withTurnstileAndValidation(token, contactSchema, input, async (data) => {
- *     const inquiry = await prisma.inquiry.create({ ... })
- *     return { success: true, message: '送信しました' }
- *   })
- * }
- */
-export async function withTurnstileAndValidation<Input, Output>(
-  token: string | undefined,
-  schema: ZodSchema<Input>,
-  input: unknown,
-  handler: (data: Input) => Promise<Output>,
-): Promise<Output | ActionFailure> {
-  // Turnstile検証
-  const turnstileResult = await validateTurnstile(token);
-  if (!turnstileResult.success) {
-    return { success: false, error: turnstileResult.error };
-  }
-
-  // バリデーション + ハンドラ実行
-  return withValidation(schema, input, handler);
 }
 
 // =============================================================================

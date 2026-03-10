@@ -7,27 +7,22 @@ import {
   checkResourceAccess,
   logAction,
 } from "@/admin/lib/action-auth";
-import {
-  createFailure,
-  type ActionResult,
-  type ActionSuccess,
-} from "@/admin/types/server-actions";
 import { isDomainError } from "@/shared/domain/domain-error";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
-type ExecuteAdminMutationOptions<TData> = {
+type ExecuteAdminMutationResultOptions<TData> = {
   resource: Resource;
   action: Action;
   resourceId?: string;
   checkResourceAccess?: boolean;
   execute: (user: User) => Promise<TData>;
-  success: (data: TData) => ActionSuccess<TData>;
   afterSuccess?: (data: TData) => Promise<void> | void;
   resolveAuditResourceId?: (data: TData) => string | undefined;
 };
 
-export async function executeAdminMutation<TData>(
-  options: ExecuteAdminMutationOptions<TData>,
-): Promise<ActionResult<TData>> {
+export async function executeAdminMutationResult<TData>(
+  options: ExecuteAdminMutationResultOptions<TData>,
+): Promise<MutationResult<TData>> {
   const permissionResult = options.checkResourceAccess
     ? await checkResourceAccess(
         options.resource,
@@ -37,7 +32,7 @@ export async function executeAdminMutation<TData>(
     : await checkPermission(options.resource, options.action);
 
   if (!permissionResult.success) {
-    return permissionResult.error;
+    return { error: permissionResult.error.error };
   }
 
   try {
@@ -51,10 +46,10 @@ export async function executeAdminMutation<TData>(
       options.resolveAuditResourceId?.(data) ?? options.resourceId,
     );
 
-    return options.success(data);
+    return data;
   } catch (error) {
     if (isDomainError(error)) {
-      return createFailure(error.message);
+      return { error: error.message };
     }
 
     throw error;

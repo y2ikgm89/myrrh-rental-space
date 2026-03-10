@@ -7,13 +7,7 @@ import {
 } from "@/admin/components/ui";
 
 export async function AuditLogStats() {
-  const statsResult = await getAuditLogStats();
-
-  const emptyByAction: Record<string, number> = {};
-  const stats =
-    statsResult.success && "data" in statsResult
-      ? statsResult.data
-      : { total: 0, today: 0, securityEvents: 0, byAction: emptyByAction };
+  const stats = await getAuditLogStats();
 
   return (
     <div className="grid gap-4 md:grid-cols-4">

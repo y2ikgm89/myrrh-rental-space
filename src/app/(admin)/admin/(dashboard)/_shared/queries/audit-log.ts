@@ -3,11 +3,6 @@ import "server-only";
 import { z } from "zod";
 import { AuditAction } from "@/shared/db/enums";
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import {
   getAuditLogResources as getAuditLogResourcesQuery,
   getAuditLogs as getAuditLogsQuery,
   getAuditLogStats as getAuditLogStatsQuery,
@@ -39,26 +34,23 @@ const filtersSchema = z.object({
 
 export async function getAuditLogs(
   filters?: AuditLogFilters,
-): Promise<ActionResult<AuditLogResult>> {
+): Promise<AuditLogResult> {
   await requireAdminPermission("auditLog", "read");
 
   const validated = filtersSchema.safeParse(filters ?? {});
   if (!validated.success) {
-    return createValidationError(validated.error, "入力が不正です");
+    return { logs: [], total: 0, page: 1, totalPages: 1 };
   }
 
-  const data = await getAuditLogsQuery(validated.data);
-  return createSuccess("監査ログを取得しました", data);
+  return getAuditLogsQuery(validated.data);
 }
 
-export async function getAuditLogStats(): Promise<ActionResult<AuditLogStats>> {
+export async function getAuditLogStats(): Promise<AuditLogStats> {
   await requireAdminPermission("auditLog", "read");
-  const data = await getAuditLogStatsQuery();
-  return createSuccess("統計を取得しました", data);
+  return getAuditLogStatsQuery();
 }
 
-export async function getAuditLogResources(): Promise<ActionResult<string[]>> {
+export async function getAuditLogResources(): Promise<string[]> {
   await requireAdminPermission("auditLog", "read");
-  const data = await getAuditLogResourcesQuery();
-  return createSuccess("リソース一覧を取得しました", data);
+  return getAuditLogResourcesQuery();
 }

@@ -2,11 +2,6 @@ import "server-only";
 
 import { z } from "zod";
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import { createValidationError } from "@/shared/lib/action-helpers";
-import {
   getActiveTermsForSelectOptions as getActiveTermsForSelectOptionsQuery,
   getAdminTermsAgreements as getAdminTermsAgreementsQuery,
   getAdminTermsById as getAdminTermsByIdQuery,
@@ -22,16 +17,14 @@ import type {
 } from "@/shared/lib/validations/terms";
 import { requireAdminPermission } from "./_helpers";
 
-const idSchema = z.string().uuid({ error: "IDが不正です" });
 const agreementsSchema = z.object({
   termsId: z.string().uuid({ error: "規約IDが不正です" }),
   page: z.number().int().positive({ error: "ページ番号が不正です" }),
 });
 
-export async function getTermsList(): Promise<ActionResult<TermsWithVersion[]>> {
+export async function getTermsList(): Promise<TermsWithVersion[]> {
   await requireAdminPermission("terms", "read");
-  const result = await getAdminTermsListQuery();
-  return createSuccess("規約一覧を取得しました", result);
+  return getAdminTermsListQuery();
 }
 
 export async function getActiveTermsForSelect(): Promise<
@@ -48,53 +41,31 @@ export async function getDefaultsForTermsType(
   return getTermsDefaultsForTypeQuery(type);
 }
 
-export async function getTermsById(
-  id: string,
-): Promise<ActionResult<TermsDetail | null>> {
+export async function getTermsById(id: string): Promise<TermsDetail | null> {
   await requireAdminPermission("terms", "read");
-
-  const validated = idSchema.safeParse(id);
-  if (!validated.success) {
-    return createValidationError(validated.error);
-  }
-
-  const terms = await getAdminTermsByIdQuery(validated.data);
-  if (!terms) {
-    return createSuccess("規約が見つかりませんでした", null);
-  }
-
-  return createSuccess("規約詳細を取得しました", terms);
+  return getAdminTermsByIdQuery(id);
 }
 
 export async function getTermsVersionById(
   versionId: string,
-): Promise<ActionResult<TermsVersionDetail | null>> {
+): Promise<TermsVersionDetail | null> {
   await requireAdminPermission("terms", "read");
-
-  const validated = idSchema.safeParse(versionId);
-  if (!validated.success) {
-    return createValidationError(validated.error);
-  }
-
-  const version = await getAdminTermsVersionByIdQuery(validated.data);
-  return createSuccess("バージョン詳細を取得しました", version);
+  return getAdminTermsVersionByIdQuery(versionId);
 }
 
 export async function getTermsAgreements(
   termsId: string,
   page: number,
-): Promise<ActionResult<{ agreements: TermsAgreementItem[]; total: number }>> {
+): Promise<{ agreements: TermsAgreementItem[]; total: number }> {
   await requireAdminPermission("terms", "read");
 
   const validated = agreementsSchema.safeParse({ termsId, page });
   if (!validated.success) {
-    return createValidationError(validated.error);
+    return { agreements: [], total: 0 };
   }
 
-  const data = await getAdminTermsAgreementsQuery(
+  return getAdminTermsAgreementsQuery(
     validated.data.termsId,
     validated.data.page,
   );
-
-  return createSuccess("同意記録を取得しました", data);
 }

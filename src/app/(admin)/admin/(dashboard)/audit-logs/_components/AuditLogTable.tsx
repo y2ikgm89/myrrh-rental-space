@@ -10,16 +10,10 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { AuditActionBadge } from "@/admin/components/status-badges";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isRecord } from "@/shared/lib/serialize";
-import type { getAuditLogs } from "@/admin/queries/audit-log";
-
-type AuditLogData = Extract<
-  Awaited<ReturnType<typeof getAuditLogs>>,
-  { success: true }
->["data"];
-type AuditLogEntry = AuditLogData["logs"][number];
+import type { AuditLogItem } from "@/shared/domain/audit-log/queries";
 
 type AuditLogTableProps = {
-  logs: AuditLogEntry[];
+  logs: AuditLogItem[];
 };
 
 export function AuditLogTable({ logs }: AuditLogTableProps) {

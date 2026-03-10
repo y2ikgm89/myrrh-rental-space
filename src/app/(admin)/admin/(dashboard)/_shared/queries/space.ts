@@ -1,10 +1,6 @@
 import "server-only";
 
 import {
-  createSuccess,
-  type ActionResult,
-} from "@/admin/types/server-actions";
-import {
   getSpaceByIdQuery,
   getSpacesForSelectQuery,
   getSpaceStatsQuery,
@@ -50,10 +46,7 @@ export async function getSpaceStats(): Promise<{
   return getSpaceStatsQuery();
 }
 
-export async function getSpacesForSelect(): Promise<
-  ActionResult<SpaceSelectOption[]>
-> {
+export async function getSpacesForSelect(): Promise<SpaceSelectOption[]> {
   await requireAdminPermission("space", "read");
-  const spaces = await getSpacesForSelectQuery();
-  return createSuccess("取得しました", spaces);
+  return getSpacesForSelectQuery();
 }

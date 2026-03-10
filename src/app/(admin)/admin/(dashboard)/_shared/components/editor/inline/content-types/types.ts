@@ -16,7 +16,7 @@ import type {
   UseFormGetValues,
 } from "react-hook-form";
 import type { PostStatus } from "@/shared/db/enums";
-import type { ActionResult } from "@/admin/types/server-actions";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // コンテンツタイプID
@@ -131,25 +131,18 @@ export type ContentFeatures = {
  * 公開/非公開アクションの結果型
  */
 export type PublishActionResult =
-  | {
-      success: true;
-      message: string;
-    }
-  | {
-      success: false;
-      error: string;
-    };
+  MutationResult<{ version: number } | null>;
 
 /**
  * コンテンツタイプのServer Actions
  */
 export type ContentActions<TSubmitPayload> = {
   /** 新規作成 */
-  create?: (payload: TSubmitPayload) => Promise<ActionResult<{ id: string }>>;
+  create?: (payload: TSubmitPayload) => Promise<MutationResult<{ id: string }>>;
   /** 更新 */
-  update: (id: string, payload: TSubmitPayload) => Promise<ActionResult>;
+  update: (id: string, payload: TSubmitPayload) => Promise<MutationResult>;
   /** 削除 */
-  delete?: (id: string) => Promise<ActionResult>;
+  delete?: (id: string) => Promise<MutationResult>;
   /** 公開 */
   publish?: (id: string) => Promise<PublishActionResult>;
   /** 非公開 */
@@ -414,27 +407,3 @@ export function isBooleanPublishControl(
   return control.type === "isPublished";
 }
 
-// =============================================================================
-// RHF setValue ヘルパー
-// =============================================================================
-
-/**
- * React Hook Form の setValue で string 値をセットする
- *
- * ジェネリックコンポーネントで setValue(path, stringValue) を呼ぶ際、
- * TypeScript は string が PathValue<T, Path<T>> を満たすことを証明できない。
- * JSON.parse が返す any 型を利用してジェネリック境界を橋渡しする。
- */
-export function setFieldString<T extends FieldValues>(
-  setValue: UseFormSetValue<T>,
-  name: string,
-  value: string,
-  options?: { shouldDirty?: boolean; shouldValidate?: boolean },
-): void {
-  // JSON.parse(JSON.stringify(x)) returns `any` → PathValue<T, Path<T>> に暗黙代入可能
-  setValue(
-    JSON.parse(JSON.stringify(name)),
-    JSON.parse(JSON.stringify(value)),
-    options,
-  );
-}

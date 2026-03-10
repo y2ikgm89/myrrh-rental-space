@@ -20,10 +20,7 @@ import {
   type Action,
 } from "@/admin/lib/permissions";
 import { logUserAction, logPermissionDenied } from "@/admin/lib/audit";
-import {
-  createFailure,
-  type ActionFailure,
-} from "@/admin/types/server-actions";
+import type { MutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -31,11 +28,11 @@ import {
 
 export type AuthResult =
   | { success: true; user: User }
-  | { success: false; error: ActionFailure };
+  | { success: false; error: MutationError };
 
 export type PermissionResult =
   | { success: true; user: User }
-  | { success: false; error: ActionFailure };
+  | { success: false; error: MutationError };
 
 // =============================================================================
 // Auth Functions (call inside server actions)
@@ -61,11 +58,11 @@ export async function checkAdminAuth(
   const user = getSessionUser(session);
 
   if (!user) {
-    return { success: false, error: createFailure("ログインが必要です") };
+    return { success: false, error: { error: "ログインが必要です" } };
   }
 
   if (!canAccessAdmin(user.role)) {
-    return { success: false, error: createFailure("管理者権限が必要です") };
+    return { success: false, error: { error: "管理者権限が必要です" } };
   }
 
   return { success: true, user };
@@ -98,7 +95,7 @@ export async function checkPermission(
     void logPermissionDenied(user.id, resource, action);
     return {
       success: false,
-      error: createFailure(`${resource}の${action}権限がありません`),
+      error: { error: `${resource}の${action}権限がありません` },
     };
   }
 
@@ -124,7 +121,7 @@ export async function checkResourceAccess(
       void logPermissionDenied(user.id, resource, action, resourceId);
       return {
         success: false,
-        error: createFailure("このリソースへのアクセス権がありません"),
+        error: { error: "このリソースへのアクセス権がありません" },
       };
     }
   }
@@ -157,7 +154,7 @@ export async function checkRole(
     void logPermissionDenied(user.id, "role", requiredRole);
     return {
       success: false,
-      error: createFailure(`${requiredRole}以上の権限が必要です`),
+      error: { error: `${requiredRole}以上の権限が必要です` },
     };
   }
 

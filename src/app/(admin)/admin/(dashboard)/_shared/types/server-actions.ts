@@ -4,18 +4,7 @@
  * 型定義のみをエクスポート
  */
 
-import type { AuditUser } from '@/admin/lib/audit'
-
-// Re-export types from shared
-export {
-  type ActionSuccess,
-  type ActionFailure,
-  type ActionResult,
-  createSuccess,
-  createFailure,
-  isActionSuccess,
-  isActionFailure,
-} from '@/shared/types/server-actions'
+import type { AuditUser } from "@/admin/lib/audit";
 
 // Re-export AuditUser type
-export type { AuditUser }
+export type { AuditUser };

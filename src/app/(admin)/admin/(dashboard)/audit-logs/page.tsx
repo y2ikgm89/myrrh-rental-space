@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums";
@@ -19,7 +20,7 @@ type PageProps = {
 
 async function AuditLogList({ searchParams }: PageProps) {
   const params = await loadAdminAuditLogSearchParams(searchParams);
-  const logsResult = await getAuditLogs({
+  const logs = await getAuditLogs({
     page: params.page,
     perPage: params.perPage,
     action: getAuditActionFilterOrAll(params.action),
@@ -28,11 +29,6 @@ async function AuditLogList({ searchParams }: PageProps) {
     dateFrom: params.dateFrom || undefined,
     dateTo: params.dateTo || undefined,
   });
-
-  const logs =
-    logsResult.success && "data" in logsResult
-      ? logsResult.data
-      : { logs: [], total: 0, page: 1, totalPages: 1 };
 
   return (
     <>
@@ -47,12 +43,15 @@ async function AuditLogList({ searchParams }: PageProps) {
 }
 
 export default async function AuditLogsPage({ searchParams }: PageProps) {
+  await connection();
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">監査ログ</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            監査ログ
+          </h1>
           <p className="text-sm text-muted-foreground sm:text-base">
             システム操作の履歴を確認します
           </p>
@@ -76,4 +75,3 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
     </div>
   );
 }
-
