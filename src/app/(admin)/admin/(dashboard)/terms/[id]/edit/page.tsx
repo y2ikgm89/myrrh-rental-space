@@ -41,7 +41,11 @@ export default async function TermsEditPage({ params }: PageProps) {
         slug: terms.slug,
         type: terms.type,
         isActive: terms.isActive,
-        versions: terms.versions,
+        versions: terms.versions.map((v) => ({
+          ...v,
+          createdAt: v.createdAt.toISOString(),
+          publishedAt: v.publishedAt?.toISOString() ?? null,
+        })),
       }}
       initialVersion={initialVersion}
       initialAgreements={agreementsData.agreements}

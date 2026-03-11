@@ -97,8 +97,8 @@ interface TermsVersionSummary {
   version: number;
   status: TermsStatus;
   isCurrentVersion: boolean;
-  publishedAt: Date | null;
-  createdAt: Date;
+  publishedAt: string | null;
+  createdAt: string;
 }
 
 interface TermsData {
@@ -336,7 +336,7 @@ export function TermsInlineEditor({
           status: TermsStatus.DRAFT,
           isCurrentVersion: false,
           publishedAt: null,
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
         setLocalVersions((prev) => [newVersionSummary, ...prev]);
         await handleVersionSwitch(result.id);
@@ -575,7 +575,7 @@ export function TermsInlineEditor({
             status: TermsStatus.DRAFT,
             isCurrentVersion: false,
             publishedAt: null,
-            createdAt: new Date(),
+            createdAt: new Date().toISOString(),
           };
           setLocalVersions((prev) => [newVersionSummary, ...prev]);
           await handleVersionSwitch(versionResult.id);
