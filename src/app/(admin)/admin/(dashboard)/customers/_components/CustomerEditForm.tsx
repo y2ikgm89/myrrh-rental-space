@@ -1,10 +1,8 @@
 "use client";
 
-import { useTransition, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useFormAction } from "@/admin/hooks";
 import { updateCustomer } from "@/admin/actions/customer";
 import {
   customerFormSchema,
@@ -19,9 +17,7 @@ import {
   SubmitButton,
 } from "@/admin/components/ui";
 import type { CustomerWithReservations } from "@/shared/domain/customers/types";
-import { cn } from "@/shared/lib/cn";
 import { useKanaInput } from "@/admin/hooks";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 type CustomerEditFormProps = {
   customer: CustomerWithReservations;
@@ -31,26 +27,31 @@ export function CustomerEditForm({
   customer,
 }: CustomerEditFormProps): ReactElement {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+
+  const { form, isPending, onSubmit } = useFormAction(
+    customerFormSchema,
+    (data) => updateCustomer(customer.id, data),
+    {
+      redirectTo: `/admin/customers/${customer.id}`,
+      successMessage: "顧客情報を更新しました",
+      defaultValues: {
+        lastName: customer.lastName,
+        firstName: customer.firstName,
+        lastNameKana: customer.lastNameKana ?? "",
+        firstNameKana: customer.firstNameKana ?? "",
+        email: customer.email,
+        phoneNumber: customer.phoneNumber ?? "",
+        address: customer.address ?? "",
+        notes: customer.notes ?? "",
+      },
+    },
+  );
 
   const {
     register,
-    handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerFormSchema),
-    defaultValues: {
-      lastName: customer.lastName,
-      firstName: customer.firstName,
-      lastNameKana: customer.lastNameKana ?? "",
-      firstNameKana: customer.firstNameKana ?? "",
-      email: customer.email,
-      phoneNumber: customer.phoneNumber ?? "",
-      address: customer.address ?? "",
-      notes: customer.notes ?? "",
-    },
-  });
+  } = form;
 
   // IME 自動カナ入力（既存データで初期化）
   const lastNameKanaInput = useKanaInput({
@@ -62,21 +63,8 @@ export function CustomerEditForm({
     onKanaChange: (kana) => setValue("firstNameKana", kana),
   });
 
-  const onSubmit = (data: CustomerFormData) => {
-    startTransition(async () => {
-      const result = await updateCustomer(customer.id, data);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("顧客情報を更新しました");
-      router.push(`/admin/customers/${customer.id}`);
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={onSubmit}>
       <Card className="p-6">
         <div className="space-y-6">
           {/* 氏名 */}
@@ -259,7 +247,6 @@ export function CustomerEditForm({
               isPending={isPending}
               label="顧客情報を更新"
               pendingLabel="更新中..."
-              className={cn(isPending && "opacity-50")}
             />
           </div>
         </div>

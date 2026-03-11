@@ -1,14 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useFormAction } from "@/admin/hooks";
 import { createCustomer } from "@/admin/actions/customer";
 import {
   customerFormSchema,
   type CustomerFormData,
-  type CustomerFormInput,
 } from "@/admin/lib/validations/customer";
 import {
   Button,
@@ -18,70 +16,25 @@ import {
   Textarea,
   SubmitButton,
 } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/cn";
 import { useKanaInput } from "@/admin/hooks";
-import {
-  getFormString,
-  getFormStringRequired,
-  getFormStringOrDefault,
-} from "@/shared/lib/form-data";
-import { isMutationError } from "@/shared/lib/mutation-result";
-
-type FormState = {
-  success: boolean;
-  message: string;
-  customerId?: string;
-} | null;
-
-async function submitAction(
-  _prevState: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const input: CustomerFormInput = {
-    lastName: getFormStringRequired(formData, "lastName"),
-    firstName: getFormStringRequired(formData, "firstName"),
-    lastNameKana: getFormString(formData, "lastNameKana"),
-    firstNameKana: getFormString(formData, "firstNameKana"),
-    email: getFormStringRequired(formData, "email"),
-    phoneNumber: getFormStringOrDefault(formData, "phoneNumber", ""),
-    address: getFormStringOrDefault(formData, "address", ""),
-    notes: getFormStringOrDefault(formData, "notes", ""),
-  };
-
-  const result = await createCustomer(input);
-
-  if (isMutationError(result)) {
-    return { success: false, message: result.error };
-  }
-
-  return {
-    success: true,
-    message: "顧客を作成しました",
-    customerId: result.id,
-  };
-}
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
-  const [state, formAction, isPending] = useActionState(submitAction, null);
+
+  const { form, isPending, onSubmit } = useFormAction(
+    customerFormSchema,
+    (data) => createCustomer(data),
+    {
+      redirectTo: "/admin/customers",
+      successMessage: "顧客を作成しました",
+    },
+  );
 
   const {
     register,
     setValue,
     formState: { errors },
-  } = useForm<CustomerFormData>({
-    resolver: zodResolver(customerFormSchema),
-    defaultValues: {
-      lastName: "",
-      firstName: "",
-      lastNameKana: "",
-      firstNameKana: "",
-      email: "",
-      phoneNumber: "",
-      address: "",
-      notes: "",
-    },
-  });
+  } = form;
 
   // IME 自動カナ入力
   const lastNameKanaInput = useKanaInput({
@@ -91,23 +44,10 @@ export function CustomerForm(): ReactElement {
     onKanaChange: (kana) => setValue("firstNameKana", kana),
   });
 
-  useEffect(() => {
-    if (state?.success) {
-      router.push("/admin/customers");
-    }
-  }, [state?.success, router]);
-
   return (
-    <form action={formAction}>
+    <form onSubmit={onSubmit}>
       <Card className="p-6">
         <div className="space-y-6">
-          {/* エラーメッセージ */}
-          {state && !state.success && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {state.message}
-            </div>
-          )}
-
           {/* 氏名 */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -290,7 +230,6 @@ export function CustomerForm(): ReactElement {
               isPending={isPending}
               label="顧客を作成"
               pendingLabel="作成中..."
-              className={cn(isPending && "opacity-50")}
             />
           </div>
         </div>

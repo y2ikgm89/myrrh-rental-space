@@ -1,16 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useWatch } from "react-hook-form";
 import { createCoupon, updateCoupon } from "@/admin/actions/coupon";
 import type { CouponData } from "@/shared/domain/coupons/types";
 import {
   couponFormSchema,
   type CouponFormInput,
 } from "@/shared/lib/validations/coupon";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   Button,
   Input,
@@ -23,23 +21,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/cn";
-import {
-  CouponType,
-  isValidCouponType,
-  getValidCouponType,
-} from "@/shared/lib/validations/enums";
+import { CouponType, isValidCouponType } from "@/shared/lib/validations/enums";
+import { useFormAction } from "@/admin/hooks";
 
 // =============================================================================
 // Types
 // =============================================================================
-
-type FormState = {
-  success: boolean;
-  message: string;
-  couponId?: string;
-} | null;
 
 type CouponFormProps = {
   coupon?: CouponData;
@@ -53,31 +42,6 @@ function formatDateForInput(date: string): string {
   return date.slice(0, 16);
 }
 
-function getFormString(formData: FormData, key: string): string | undefined {
-  const value = formData.get(key);
-  return typeof value === "string" && value.trim() !== ""
-    ? value.trim()
-    : undefined;
-}
-
-function getFormNumber(formData: FormData, key: string): number | undefined {
-  const value = formData.get(key);
-  if (typeof value !== "string" || value.trim() === "") return undefined;
-  const num = Number(value);
-  return Number.isNaN(num) ? undefined : num;
-}
-
-function getFormBoolean(formData: FormData, key: string): boolean {
-  return formData.get(key) === "on" || formData.get(key) === "true";
-}
-
-function getSubmitButtonLabel(isPending: boolean, isEdit: boolean): string {
-  if (isPending) {
-    return isEdit ? "保存中..." : "作成中...";
-  }
-  return isEdit ? "クーポンを保存" : "クーポンを作成";
-}
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -86,88 +50,49 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
   const router = useRouter();
   const isEdit = !!coupon;
 
-  async function submitAction(
-    _prevState: FormState,
-    formData: FormData,
-  ): Promise<FormState> {
-    const validUntilStr = getFormString(formData, "validUntil");
-    const input: CouponFormInput = {
-      code: getFormString(formData, "code") ?? "",
-      name: getFormString(formData, "name") ?? "",
-      description: getFormString(formData, "description") ?? "",
-      type: getValidCouponType(
-        getFormString(formData, "type"),
-        CouponType.PERCENTAGE,
-      ),
-      discountValue: getFormNumber(formData, "discountValue") ?? 0,
-      minReservationAmount:
-        getFormNumber(formData, "minReservationAmount") ?? null,
-      maxDiscountAmount: getFormNumber(formData, "maxDiscountAmount") ?? null,
-      validFrom: getFormString(formData, "validFrom") ?? "",
-      validUntil: validUntilStr ?? null,
-      usageLimit: getFormNumber(formData, "usageLimit") ?? null,
-      isActive: getFormBoolean(formData, "isActive"),
-      canCombineWithDurationDiscount: getFormBoolean(
-        formData,
-        "canCombineWithDurationDiscount",
-      ),
-    };
-
-    if (isEdit) {
-      const result = await updateCoupon(coupon.id, input);
-      if (isMutationError(result)) {
-        return { success: false, message: result.error };
+  const { form, isPending, onSubmit } = useFormAction(
+    couponFormSchema,
+    async (data) => {
+      if (isEdit) {
+        return updateCoupon(coupon.id, data);
       }
-      return {
-        success: true,
-        message: "クーポンを更新しました",
-        couponId: coupon.id,
-      };
-    }
-
-    const result = await createCoupon(input);
-    if (isMutationError(result)) {
-      return { success: false, message: result.error };
-    }
-    return {
-      success: true,
-      message: "クーポンを作成しました",
-      couponId: result.id,
-    };
-  }
-
-  const [state, formAction, isPending] = useActionState(submitAction, null);
-
-  const form = useForm<CouponFormInput>({
-    resolver: zodResolver(couponFormSchema),
-    defaultValues: coupon
-      ? {
-          code: coupon.code,
-          name: coupon.name,
-          description: coupon.description ?? "",
-          type: coupon.type,
-          discountValue: coupon.discountValue,
-          minReservationAmount: coupon.minReservationAmount ?? undefined,
-          maxDiscountAmount: coupon.maxDiscountAmount ?? undefined,
-          validFrom: formatDateForInput(coupon.validFrom),
-          validUntil: coupon.validUntil
-            ? formatDateForInput(coupon.validUntil)
-            : undefined,
-          usageLimit: coupon.usageLimit ?? undefined,
-          isActive: coupon.isActive,
-          canCombineWithDurationDiscount: coupon.canCombineWithDurationDiscount,
-        }
-      : {
-          code: "",
-          name: "",
-          description: "",
-          type: CouponType.PERCENTAGE,
-          discountValue: 10,
-          validFrom: "",
-          isActive: true,
-          canCombineWithDurationDiscount: true,
-        },
-  });
+      return createCoupon(data);
+    },
+    {
+      redirectTo: "/admin/coupons",
+      successMessage: isEdit
+        ? "クーポンを更新しました"
+        : "クーポンを作成しました",
+      defaultValues: coupon
+        ? {
+            code: coupon.code,
+            name: coupon.name,
+            description: coupon.description ?? "",
+            type: coupon.type,
+            discountValue: coupon.discountValue,
+            minReservationAmount: coupon.minReservationAmount ?? undefined,
+            maxDiscountAmount: coupon.maxDiscountAmount ?? undefined,
+            validFrom: formatDateForInput(coupon.validFrom),
+            validUntil: coupon.validUntil
+              ? formatDateForInput(coupon.validUntil)
+              : undefined,
+            usageLimit: coupon.usageLimit ?? undefined,
+            isActive: coupon.isActive,
+            canCombineWithDurationDiscount:
+              coupon.canCombineWithDurationDiscount,
+          }
+        : {
+            code: "",
+            name: "",
+            description: "",
+            type: CouponType.PERCENTAGE,
+            discountValue: 10,
+            validFrom: "",
+            isActive: true,
+            canCombineWithDurationDiscount: true,
+          },
+    },
+  );
 
   const {
     register,
@@ -184,23 +109,10 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
     name: "canCombineWithDurationDiscount",
   });
 
-  useEffect(() => {
-    if (state?.success) {
-      router.push("/admin/coupons");
-    }
-  }, [state?.success, router]);
-
   return (
-    <form action={formAction}>
+    <form onSubmit={onSubmit}>
       <Card className="p-6">
         <div className="space-y-6">
-          {/* エラーメッセージ */}
-          {state && !state.success && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {state.message}
-            </div>
-          )}
-
           {/* 基本情報 */}
           <div className="space-y-4">
             <h3 className="font-medium">基本情報</h3>
@@ -285,7 +197,6 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                <input type="hidden" name="type" value={couponType} />
               </div>
 
               <div className="space-y-2">
@@ -429,7 +340,6 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               </div>
               <Switch
                 id="isActive"
-                name="isActive"
                 checked={isActive ?? false}
                 onCheckedChange={(checked) => setValue("isActive", checked)}
               />
@@ -446,7 +356,6 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               </div>
               <Switch
                 id="canCombineWithDurationDiscount"
-                name="canCombineWithDurationDiscount"
                 checked={canCombine ?? false}
                 onCheckedChange={(checked) =>
                   setValue("canCombineWithDurationDiscount", checked)
@@ -464,13 +373,11 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
             >
               キャンセル
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className={cn(isPending && "opacity-50")}
-            >
-              {getSubmitButtonLabel(isPending, isEdit)}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={isEdit ? "クーポンを保存" : "クーポンを作成"}
+              pendingLabel={isEdit ? "保存中..." : "作成中..."}
+            />
           </div>
         </div>
       </Card>
