@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -38,7 +38,7 @@ export default function ContactFormConfigForm({
     setValue,
     formState: { errors, isDirty },
   } = useForm<ContactFormConfigInput, unknown, ContactFormConfig>({
-    resolver: zodResolver(contactFormConfigSchema),
+    resolver: standardSchemaResolver(contactFormConfigSchema),
     defaultValues: config,
   });
 

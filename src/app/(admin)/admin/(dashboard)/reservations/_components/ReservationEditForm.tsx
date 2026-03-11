@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useWatch } from "react-hook-form";
 import { CalendarIcon, User, Mail, Phone } from "lucide-react";
 import {
   Button,
@@ -30,7 +28,7 @@ import {
   type UpdateReservationInput,
 } from "@/admin/lib/validations/admin-reservation";
 import { updateAdminReservation } from "@/admin/actions/reservation";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/utils";
 import {
   ReservationStatus,
@@ -107,29 +105,38 @@ export function ReservationEditForm({
   spaces,
 }: ReservationEditFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
+
+  const { form, isPending, onSubmit } = useFormAction(
+    updateReservationSchema,
+    (data: UpdateReservationInput) =>
+      updateAdminReservation(reservation.id, {
+        ...data,
+        totalPrice: manualPrice,
+      }),
+    {
+      defaultValues: {
+        spaceId: reservation.spaceId,
+        date: toLocalDateString(reservation.startTime),
+        startTime: toLocalTimeString(reservation.startTime),
+        endTime: toLocalTimeString(reservation.endTime),
+        customerId: reservation.customerId,
+        couponCode: reservation.coupon?.code ?? "",
+        status: reservation.status,
+        notes: reservation.notes ?? "",
+        sendNotificationEmail: false,
+      },
+      successMessage: "予約を更新しました",
+      redirectTo: `/admin/reservations/${reservation.id}`,
+    },
+  );
 
   const {
     register,
-    handleSubmit,
     formState: { errors },
     setValue,
     control,
-  } = useForm<UpdateReservationInput>({
-    resolver: zodResolver(updateReservationSchema),
-    defaultValues: {
-      spaceId: reservation.spaceId,
-      date: toLocalDateString(reservation.startTime),
-      startTime: toLocalTimeString(reservation.startTime),
-      endTime: toLocalTimeString(reservation.endTime),
-      customerId: reservation.customerId,
-      couponCode: reservation.coupon?.code ?? "",
-      status: reservation.status,
-      notes: reservation.notes ?? "",
-      sendNotificationEmail: false,
-    },
-  });
+  } = form;
 
   const spaceId = useWatch({ control, name: "spaceId" });
   const date = useWatch({ control, name: "date" });
@@ -160,35 +167,8 @@ export function ReservationEditForm({
 
   const displayPrice = manualPrice ?? calculatedPrice;
 
-  const onSubmit = async (data: UpdateReservationInput) => {
-    startTransition(async () => {
-      const submitData: UpdateReservationInput = {
-        ...data,
-        totalPrice: manualPrice,
-      };
-
-      const result = await updateAdminReservation(reservation.id, submitData);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        if (result.fieldErrors) {
-          Object.entries(result.fieldErrors).forEach(([field, messages]) => {
-            if (Array.isArray(messages)) {
-              messages.forEach((message: string) =>
-                toast.error(`${field}: ${message}`),
-              );
-            }
-          });
-        }
-        return;
-      }
-
-      toast.success("予約を更新しました");
-      router.push(`/admin/reservations/${reservation.id}`);
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 左カラム: 予約情報（スペース・日時・料金・クーポン） */}
         <Card>

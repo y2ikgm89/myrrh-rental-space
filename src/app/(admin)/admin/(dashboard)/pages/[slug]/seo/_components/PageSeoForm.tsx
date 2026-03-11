@@ -9,11 +9,9 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useTransition } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { ImagePlus, Save } from "lucide-react";
+import { useEffect } from "react";
+import { useWatch } from "react-hook-form";
+import { ImagePlus, Save, Loader2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -28,12 +26,9 @@ import {
 } from "@/admin/components/ui";
 import { SerpPreview } from "@/admin/components/seo/SerpPreview";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
-import {
-  updatePageSeoSchema,
-  type UpdatePageSeoInput,
-} from "@/shared/lib/validations/page";
+import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/page";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 
 interface PageSeoData {
   slug: string;
@@ -51,25 +46,30 @@ interface PageSeoFormProps {
 
 export function PageSeoForm({ page }: PageSeoFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+
+  const { form, isPending, onSubmit } = useFormAction(
+    updatePageSeoSchema,
+    (data) => updatePageSeo(page.slug, data),
+    {
+      defaultValues: {
+        title: page.title,
+        metaDescription: page.metaDescription || "",
+        metaKeywords: page.metaKeywords || "",
+        ogpTitle: page.ogpTitle || "",
+        ogpDescription: page.ogpDescription || "",
+        ogpImageUrl: page.ogpImageUrl || "",
+      },
+      successMessage: "SEO設定を更新しました",
+      refresh: true,
+    },
+  );
 
   const {
     register,
-    handleSubmit,
     setValue,
     control,
     formState: { errors, isDirty },
-  } = useForm<UpdatePageSeoInput>({
-    resolver: zodResolver(updatePageSeoSchema),
-    defaultValues: {
-      title: page.title,
-      metaDescription: page.metaDescription || "",
-      metaKeywords: page.metaKeywords || "",
-      ogpTitle: page.ogpTitle || "",
-      ogpDescription: page.ogpDescription || "",
-      ogpImageUrl: page.ogpImageUrl || "",
-    },
-  });
+  } = form;
 
   // リアルタイム監視（CharCount / SerpPreview 用）
   const watchedTitle = useWatch({ control, name: "title" }) || "";
@@ -100,21 +100,8 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  const onSubmit = async (data: UpdatePageSeoInput) => {
-    startTransition(async () => {
-      const result = await updatePageSeo(page.slug, data);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("SEO設定を更新しました");
-      router.refresh();
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       {/* SERP プレビュー */}
       <SerpPreview
         title={watchedTitle}
@@ -346,7 +333,11 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
           キャンセル
         </Button>
         <Button type="submit" disabled={isPending || !isDirty}>
-          <Save className="h-4 w-4 mr-2" />
+          {isPending ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-2" />
+          )}
           {isPending ? "保存中..." : "保存"}
         </Button>
       </div>

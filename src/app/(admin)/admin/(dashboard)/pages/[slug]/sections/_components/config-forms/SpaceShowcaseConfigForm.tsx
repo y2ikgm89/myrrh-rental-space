@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -41,7 +41,7 @@ export default function SpaceShowcaseConfigForm({
     setValue,
     formState: { errors, isDirty },
   } = useForm<SpaceShowcaseConfigInput, unknown, SpaceShowcaseConfig>({
-    resolver: zodResolver(spaceShowcaseConfigSchema),
+    resolver: standardSchemaResolver(spaceShowcaseConfigSchema),
     defaultValues: config,
   });
 

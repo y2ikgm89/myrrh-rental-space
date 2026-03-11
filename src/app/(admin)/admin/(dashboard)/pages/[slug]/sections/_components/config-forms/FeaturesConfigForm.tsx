@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Card,
@@ -42,7 +42,7 @@ export default function FeaturesConfigForm({
     control,
     formState: { isDirty },
   } = useForm<FeaturesConfigInput, unknown, FeaturesConfig>({
-    resolver: zodResolver(featuresConfigSchema),
+    resolver: standardSchemaResolver(featuresConfigSchema),
     defaultValues: config,
   });
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Input,
@@ -56,7 +56,7 @@ export function HeroParallaxConfigForm({
     control,
     formState: { errors },
   } = useForm<HeroParallaxConfigInput, unknown, HeroParallaxConfig>({
-    resolver: zodResolver(heroParallaxConfigSchema),
+    resolver: standardSchemaResolver(heroParallaxConfigSchema),
     defaultValues: config,
   });
 

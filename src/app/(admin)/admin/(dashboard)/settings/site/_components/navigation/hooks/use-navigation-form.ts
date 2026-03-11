@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import type { NavigationType } from "@/shared/db/enums";
 import {
   type NavFormData,
@@ -46,7 +46,7 @@ export type UseNavigationFormReturn = {
 
 export function useNavigationForm(): UseNavigationFormReturn {
   const form = useForm<NavFormData>({
-    resolver: zodResolver(navFormSchema),
+    resolver: standardSchemaResolver(navFormSchema),
     defaultValues: {
       type: "HEADER_DESKTOP",
       parentId: null,
@@ -114,7 +114,7 @@ export type UseSocialFormReturn = {
 
 export function useSocialForm(): UseSocialFormReturn {
   const form = useForm<SocialFormData>({
-    resolver: zodResolver(socialFormSchema),
+    resolver: standardSchemaResolver(socialFormSchema),
     defaultValues: {
       platform: "TWITTER",
       url: "",

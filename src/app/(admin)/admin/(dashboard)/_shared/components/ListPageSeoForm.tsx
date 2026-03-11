@@ -8,11 +8,7 @@
  */
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import { ImagePlus } from "lucide-react";
 import {
   Button,
@@ -27,12 +23,9 @@ import {
   SubmitButton,
 } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
-import {
-  updatePageSeoSchema,
-  type UpdatePageSeoInput,
-} from "@/shared/lib/validations/page";
+import { updatePageSeoSchema } from "@/shared/lib/validations/page";
 import { updatePageSeo } from "@/admin/actions/page";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 
 interface SeoData {
   title: string;
@@ -51,26 +44,29 @@ interface ListPageSeoFormProps {
 }
 
 export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const { form, isPending, onSubmit } = useFormAction(
+    updatePageSeoSchema,
+    (data) => updatePageSeo(slug, data),
+    {
+      defaultValues: {
+        title: seoData.title,
+        metaDescription: seoData.metaDescription || "",
+        metaKeywords: seoData.metaKeywords || "",
+        ogpTitle: seoData.ogpTitle || "",
+        ogpDescription: seoData.ogpDescription || "",
+        ogpImageUrl: seoData.ogpImageUrl || "",
+      },
+      successMessage: "SEO設定を更新しました",
+      refresh: true,
+    },
+  );
 
   const {
     register,
-    handleSubmit,
     setValue,
     control,
     formState: { errors },
-  } = useForm<UpdatePageSeoInput>({
-    resolver: zodResolver(updatePageSeoSchema),
-    defaultValues: {
-      title: seoData.title,
-      metaDescription: seoData.metaDescription || "",
-      metaKeywords: seoData.metaKeywords || "",
-      ogpTitle: seoData.ogpTitle || "",
-      ogpDescription: seoData.ogpDescription || "",
-      ogpImageUrl: seoData.ogpImageUrl || "",
-    },
-  });
+  } = form;
 
   const ogpImageUrl = useWatch({ control, name: "ogpImageUrl" });
 
@@ -84,21 +80,8 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
     },
   });
 
-  const onSubmit = async (data: UpdatePageSeoInput) => {
-    startTransition(async () => {
-      const result = await updatePageSeo(slug, data);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("SEO設定を更新しました");
-      router.refresh();
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       {/* 基本情報 */}
       <Card>
         <CardHeader>

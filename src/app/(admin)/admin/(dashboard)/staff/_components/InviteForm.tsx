@@ -9,10 +9,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/admin/components/ui/button";
+import { SubmitButton } from "@/admin/components/ui";
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import {
@@ -22,8 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
+import { useFormAction } from "@/admin/hooks";
 import { sendInvitation } from "@/admin/actions/staff-invitation";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 // スタッフ用ロール（管理画面アクセス可能なロールのみ）
 type StaffRole = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
@@ -42,59 +42,45 @@ const inviteSchema = z.object({
   role: z.enum(["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const),
 });
 
-type InviteFormData = z.infer<typeof inviteSchema>;
-
 export function InviteForm() {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    reset,
-    formState: { errors },
-  } = useForm<InviteFormData>({
-    resolver: zodResolver(inviteSchema),
-    defaultValues: {
-      email: "",
-      name: "",
-      role: "EDITOR",
-    },
-  });
-
-  const currentRole = useWatch({ control, name: "role" });
-
-  async function onSubmit(data: InviteFormData) {
-    setIsSubmitting(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      const result = await sendInvitation({
+  const { form, isPending, onSubmit } = useFormAction(
+    inviteSchema,
+    async (data) =>
+      sendInvitation({
         email: data.email,
         name: data.name || undefined,
         role: data.role,
-      });
-
-      if (!isMutationError(result)) {
+      }),
+    {
+      successMessage: "招待メールを送信しました",
+      defaultValues: {
+        email: "",
+        name: "",
+        role: "EDITOR",
+      },
+      onSuccess: () => {
         setSuccess(true);
-        reset();
+        form.reset();
         // 3秒後にスタッフ一覧へ戻る
         setTimeout(() => {
           router.push("/admin/staff");
           router.refresh();
         }, 3000);
-      } else {
-        setError(result.error);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+      },
+    },
+  );
+
+  const {
+    register,
+    setValue,
+    control,
+    formState: { errors },
+  } = form;
+
+  const currentRole = useWatch({ control, name: "role" });
 
   if (success) {
     return (
@@ -126,13 +112,7 @@ export function InviteForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="rounded-md bg-info/10 p-4 text-sm text-info">
         <p className="font-medium">招待フローについて</p>
         <p className="mt-1">
@@ -209,14 +189,16 @@ export function InviteForm() {
       </div>
 
       <div className="flex gap-4">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "送信中..." : "招待メールを送信"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label="招待メールを送信"
+          pendingLabel="送信中..."
+        />
         <Button
           type="button"
           variant="outline"
           onClick={() => router.back()}
-          disabled={isSubmitting}
+          disabled={isPending}
         >
           キャンセル
         </Button>

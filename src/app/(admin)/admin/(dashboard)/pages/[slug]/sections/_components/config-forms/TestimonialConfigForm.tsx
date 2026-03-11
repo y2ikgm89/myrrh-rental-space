@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useForm, useWatch, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Card,
@@ -50,7 +50,7 @@ export default function TestimonialConfigForm({
     control,
     formState: { isDirty },
   } = useForm<TestimonialConfigInput, unknown, TestimonialConfig>({
-    resolver: zodResolver(testimonialConfigSchema),
+    resolver: standardSchemaResolver(testimonialConfigSchema),
     defaultValues: config,
   });
 

@@ -4,10 +4,7 @@ import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { useFormAction } from "@/admin/hooks";
 import { createCustomer } from "@/admin/actions/customer";
-import {
-  customerFormSchema,
-  type CustomerFormData,
-} from "@/admin/lib/validations/customer";
+import { customerFormSchema } from "@/admin/lib/validations/customer";
 import {
   Button,
   Input,

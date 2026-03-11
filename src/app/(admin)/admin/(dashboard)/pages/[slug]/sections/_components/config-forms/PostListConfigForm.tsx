@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -42,7 +42,7 @@ export default function PostListConfigForm({
     control,
     formState: { errors, isDirty },
   } = useForm<PostListConfigInput, unknown, PostListConfig>({
-    resolver: zodResolver(postListConfigSchema),
+    resolver: standardSchemaResolver(postListConfigSchema),
     defaultValues: config,
   });
 

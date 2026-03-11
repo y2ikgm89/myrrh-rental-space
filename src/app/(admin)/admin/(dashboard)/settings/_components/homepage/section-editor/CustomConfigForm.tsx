@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Input, Label, SubmitButton } from "@/admin/components/ui";
 
 import {
@@ -49,7 +49,7 @@ export function CustomConfigForm({
     unknown,
     CustomConfig
   >({
-    resolver: zodResolver(customConfigSchema),
+    resolver: standardSchemaResolver(customConfigSchema),
     defaultValues: config,
   });
 

@@ -9,7 +9,7 @@
 
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import {
   newsFormSchema,
@@ -146,7 +146,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
   // フォーム（型アサーション不要）
   const form = useForm<NewsFormData, unknown, NewsFormData>({
-    resolver: zodResolver(newsFormSchema),
+    resolver: standardSchemaResolver(newsFormSchema),
     defaultValues: toFormData(news),
   });
 

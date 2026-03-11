@@ -8,7 +8,7 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Search, X, Settings } from "lucide-react";
@@ -226,7 +226,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
   // Form
   const form = useForm<CategoryFormData, unknown, CategoryFormData>({
-    resolver: zodResolver(categoryFormSchema),
+    resolver: standardSchemaResolver(categoryFormSchema),
     defaultValues: { name: "", slug: "", description: "", order: 0 },
   });
 

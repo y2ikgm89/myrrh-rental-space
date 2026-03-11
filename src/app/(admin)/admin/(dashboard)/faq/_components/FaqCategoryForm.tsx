@@ -1,10 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import {
   Button,
   Card,
@@ -15,14 +12,15 @@ import {
   Textarea,
   Label,
   Switch,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   faqCategoryFormSchema,
   defaultFaqCategoryFormValues,
 } from "@/admin/lib/validations/faq";
 import { createFaqCategory, updateFaqCategory } from "@/admin/actions/faq";
+import { useFormAction } from "@/admin/hooks";
 import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 type FaqCategoryFormProps = {
   category?: FaqCategoryWithItems;
@@ -31,20 +29,30 @@ type FaqCategoryFormProps = {
 
 export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
 
-  const form = useForm({
-    resolver: zodResolver(faqCategoryFormSchema),
-    defaultValues: category
-      ? {
-          name: category.name,
-          slug: category.slug,
-          description: category.description,
-          order: category.order,
-          isActive: category.isActive,
-        }
-      : defaultFaqCategoryFormValues,
-  });
+  const { form, isPending, onSubmit } = useFormAction(
+    faqCategoryFormSchema,
+    async (data) => {
+      if (mode === "create") return createFaqCategory(data);
+      return category
+        ? updateFaqCategory(category.id, data)
+        : { error: "カテゴリが見つかりません" };
+    },
+    {
+      redirectTo: "/admin/faq",
+      successMessage:
+        mode === "create" ? "カテゴリを作成しました" : "カテゴリを更新しました",
+      defaultValues: category
+        ? {
+            name: category.name,
+            slug: category.slug,
+            description: category.description,
+            order: category.order,
+            isActive: category.isActive,
+          }
+        : defaultFaqCategoryFormValues,
+    },
+  );
 
   const {
     register,
@@ -54,27 +62,6 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
   } = form;
 
   const isActive = useWatch({ control, name: "isActive" });
-
-  const onSubmit = form.handleSubmit((data) => {
-    startTransition(async () => {
-      const result =
-        mode === "create"
-          ? await createFaqCategory(data)
-          : category
-            ? await updateFaqCategory(category.id, data)
-            : { error: "カテゴリが見つかりません" };
-
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success(
-        mode === "create" ? "カテゴリを作成しました" : "カテゴリを更新しました",
-      );
-      router.push("/admin/faq");
-    });
-  });
 
   // 名前からスラッグを自動生成
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,15 +184,11 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending
-            ? mode === "create"
-              ? "作成中..."
-              : "更新中..."
-            : mode === "create"
-              ? "作成"
-              : "更新"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label={mode === "create" ? "作成" : "更新"}
+          pendingLabel={mode === "create" ? "作成中..." : "更新中..."}
+        />
       </div>
     </form>
   );

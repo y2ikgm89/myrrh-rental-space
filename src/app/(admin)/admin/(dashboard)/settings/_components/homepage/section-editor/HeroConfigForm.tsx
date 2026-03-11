@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Input,
@@ -54,7 +54,7 @@ export function HeroConfigForm({
     control,
     formState: { errors },
   } = useForm<HeroConfigInput, unknown, HeroConfig>({
-    resolver: zodResolver(heroConfigSchema),
+    resolver: standardSchemaResolver(heroConfigSchema),
     defaultValues: config,
   });
 

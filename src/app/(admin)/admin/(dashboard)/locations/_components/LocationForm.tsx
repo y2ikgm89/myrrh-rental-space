@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useTransition, useId } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useId } from "react";
+import { useFieldArray } from "react-hook-form";
 import { ImagePlus } from "lucide-react";
 import {
   Button,
@@ -34,6 +32,7 @@ import {
   FormControl,
   FormDescription,
   FormMessage,
+  SubmitButton,
   type DragEndEvent,
 } from "@/admin/components/ui";
 import {
@@ -42,13 +41,13 @@ import {
   type LocationFormInput,
 } from "@/admin/lib/validations/location";
 import { createLocation, updateLocation } from "@/admin/actions/location";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 
 type LocationFormProps = {
   location?: LocationWithStats;
@@ -160,27 +159,39 @@ function SortableImageItem({
 
 export function LocationForm({ location, mode }: LocationFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   // DndContext の id は SSR hydration mismatch 防止に必要
   const dndContextId = useId();
 
-  const form = useForm<LocationFormInput>({
-    resolver: zodResolver(locationFormSchema),
-    defaultValues: location
-      ? {
-          name: location.name,
-          description: location.description ?? "",
-          address: location.address,
-          access: location.access ?? "",
-          imageUrl: location.imageUrl,
-          // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
-          imageUrls: location.imageUrls.map((url) => ({ url })),
-          businessHours: location.businessHours,
-          sortOrder: location.sortOrder,
-          isPublished: location.isPublished,
+  const { form, isPending, onSubmit } = useFormAction(
+    locationFormSchema,
+    (data: LocationFormInput) =>
+      mode === "create"
+        ? createLocation(data)
+        : updateLocation(location!.id, data),
+    {
+      defaultValues: location
+        ? {
+            name: location.name,
+            description: location.description ?? "",
+            address: location.address,
+            access: location.access ?? "",
+            imageUrl: location.imageUrl,
+            // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
+            imageUrls: location.imageUrls.map((url) => ({ url })),
+            businessHours: location.businessHours,
+            sortOrder: location.sortOrder,
+            isPublished: location.isPublished,
+          }
+        : defaultLocationFormValues,
+      onSuccess: (data) => {
+        if (mode === "create") {
+          router.push(`/admin/locations/${data.id}`);
+        } else {
+          router.push("/admin/spaces?tab=locations");
         }
-      : defaultLocationFormValues,
-  });
+      },
+    },
+  );
 
   // useFieldArray で imageUrls を管理
   // fields[].id は RHF が生成する安定した一意 ID — dnd-kit の SortableContext items に使用する
@@ -198,27 +209,6 @@ export function LocationForm({ location, mode }: LocationFormProps) {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  const onSubmit = async (data: LocationFormInput) => {
-    startTransition(async () => {
-      // data.imageUrls は { url: string }[] — Server Action 側で string[] に変換する
-      if (mode === "create") {
-        const result = await createLocation(data);
-        if (!isMutationError(result)) {
-          router.push(`/admin/locations/${result.id}`);
-        } else {
-          toast.error(result.error);
-        }
-      } else if (location) {
-        const result = await updateLocation(location.id, data);
-        if (!isMutationError(result)) {
-          router.push("/admin/spaces?tab=locations");
-        } else {
-          toast.error(result.error);
-        }
-      }
-    });
-  };
 
   const handleImageDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -259,7 +249,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={onSubmit} className="space-y-6">
         {/* 基本情報 */}
         <Card>
           <CardHeader>
@@ -519,15 +509,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
           >
             キャンセル
           </Button>
-          <Button type="submit" disabled={isPending}>
-            {isPending
-              ? mode === "create"
-                ? "作成中..."
-                : "更新中..."
-              : mode === "create"
-                ? "作成"
-                : "更新"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            label={mode === "create" ? "作成" : "更新"}
+            pendingLabel={mode === "create" ? "作成中..." : "更新中..."}
+          />
         </div>
 
         {/* メディアピッカーダイアログ */}

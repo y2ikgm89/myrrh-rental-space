@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
 import { createCoupon, updateCoupon } from "@/admin/actions/coupon";
 import type { CouponData } from "@/shared/domain/coupons/types";
-import {
-  couponFormSchema,
-  type CouponFormInput,
-} from "@/shared/lib/validations/coupon";
+import { couponFormSchema } from "@/shared/lib/validations/coupon";
 import {
   Button,
   Input,

@@ -9,7 +9,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
@@ -162,7 +162,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
     reset,
     formState: { errors, isDirty },
   } = useForm<CategoryFormData>({
-    resolver: zodResolver(categoryFormSchema),
+    resolver: standardSchemaResolver(categoryFormSchema),
     defaultValues: {
       name: data.name,
       slug: data.slug,
@@ -542,7 +542,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
     reset,
     formState: { errors, isDirty },
   } = useForm<TagFormData>({
-    resolver: zodResolver(tagFormSchema),
+    resolver: standardSchemaResolver(tagFormSchema),
     defaultValues: {
       name: data.name,
       slug: data.slug,

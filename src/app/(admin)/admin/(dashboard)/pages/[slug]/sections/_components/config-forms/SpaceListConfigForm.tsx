@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -44,7 +44,7 @@ export default function SpaceListConfigForm({
     control,
     formState: { errors, isDirty },
   } = useForm<SpaceListConfigInput, unknown, SpaceListConfig>({
-    resolver: zodResolver(spaceListConfigSchema),
+    resolver: standardSchemaResolver(spaceListConfigSchema),
     defaultValues: config,
   });
 

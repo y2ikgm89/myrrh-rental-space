@@ -1,10 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { useForm, useWatch, type FieldErrors } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useWatch, type FieldErrors } from "react-hook-form";
 import { CalendarIcon } from "lucide-react";
 import {
   Button,
@@ -29,7 +27,7 @@ import {
   type AdminReservationInput,
 } from "@/admin/lib/validations/admin-reservation";
 import { createAdminReservation } from "@/admin/actions/reservation";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/utils";
 import {
   ReservationStatus,
@@ -118,7 +116,6 @@ const TIME_OPTIONS = Array.from({ length: 13 }, (_, i) => {
 
 export function ReservationForm({ spaces }: ReservationFormProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [manualPrice, setManualPrice] = useState<number | undefined>(undefined);
 
   // CustomerSelector用の状態
@@ -126,19 +123,28 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
   const [selectedCustomer, setSelectedCustomer] =
     useState<SelectedCustomer | null>(null);
 
+  const { form, isPending, onSubmit } = useFormAction(
+    adminReservationSchema,
+    (data: AdminReservationInput) =>
+      createAdminReservation({ ...data, totalPrice: manualPrice }),
+    {
+      defaultValues: {
+        status: ReservationStatus.CONFIRMED,
+        sendEmail: true,
+      },
+      successMessage: "予約を作成しました",
+      onSuccess: (data) => {
+        router.push(`/admin/reservations/${data.id}`);
+      },
+    },
+  );
+
   const {
     register,
-    handleSubmit,
     formState: { errors },
     setValue,
     control,
-  } = useForm<AdminReservationInput>({
-    resolver: zodResolver(adminReservationSchema),
-    defaultValues: {
-      status: ReservationStatus.CONFIRMED,
-      sendEmail: true,
-    },
-  });
+  } = form;
 
   const spaceId = useWatch({ control, name: "spaceId" });
   const date = useWatch({ control, name: "date" });
@@ -192,33 +198,8 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
 
   const displayPrice = manualPrice ?? calculatedPrice;
 
-  const onSubmit = async (data: AdminReservationInput) => {
-    startTransition(async () => {
-      const submitData: AdminReservationInput = {
-        ...data,
-        totalPrice: manualPrice,
-      };
-
-      const result = await createAdminReservation(submitData);
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        if (result.fieldErrors) {
-          Object.entries(result.fieldErrors).forEach(([field, messages]) => {
-            messages.forEach((message: string) =>
-              toast.error(`${field}: ${message}`),
-            );
-          });
-        }
-        return;
-      }
-
-      toast.success("予約を作成しました");
-      router.push(`/admin/reservations/${result.id}`);
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 左カラム: 予約情報（スペース・日時・料金） */}
         <Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -43,7 +43,7 @@ export function EmbedConfigForm({
     setValue,
     formState: { errors },
   } = useForm<EmbedConfigInput, unknown, EmbedConfig>({
-    resolver: zodResolver(embedConfigSchema),
+    resolver: standardSchemaResolver(embedConfigSchema),
     defaultValues: config,
   });
 

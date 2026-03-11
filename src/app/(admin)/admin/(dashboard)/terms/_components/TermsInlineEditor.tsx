@@ -11,7 +11,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
@@ -206,7 +206,7 @@ export function TermsInlineEditor({
     setValue,
     formState: { errors, isDirty },
   } = useForm<FormData>({
-    resolver: zodResolver(termsFormSchema),
+    resolver: standardSchemaResolver(termsFormSchema),
     defaultValues: terms
       ? {
           title: terms.title,

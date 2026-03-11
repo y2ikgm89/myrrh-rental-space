@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Input,
@@ -46,7 +46,7 @@ export function ConceptConfigForm({
     control,
     formState: { errors },
   } = useForm<ConceptConfigInput, unknown, ConceptConfig>({
-    resolver: zodResolver(conceptConfigSchema),
+    resolver: standardSchemaResolver(conceptConfigSchema),
     defaultValues: config,
   });
 

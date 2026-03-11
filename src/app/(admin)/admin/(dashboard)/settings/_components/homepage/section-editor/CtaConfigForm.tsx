@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -45,7 +45,7 @@ export function CtaConfigForm({
     setValue,
     formState: { errors },
   } = useForm<CtaConfigInput, unknown, CtaConfig>({
-    resolver: zodResolver(ctaConfigSchema),
+    resolver: standardSchemaResolver(ctaConfigSchema),
     defaultValues: config,
   });
 

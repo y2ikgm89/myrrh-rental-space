@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { PostStatus } from "@/shared/db/enums";
 import {
@@ -192,7 +192,7 @@ export function usePostEditor({
 
   // フォーム（型アサーション不要）
   const form = useForm<PostFormData, unknown, PostFormData>({
-    resolver: zodResolver(postFormSchema),
+    resolver: standardSchemaResolver(postFormSchema),
     defaultValues: toFormData(post),
   });
 

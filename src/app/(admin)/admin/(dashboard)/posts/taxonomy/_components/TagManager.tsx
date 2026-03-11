@@ -8,7 +8,7 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Search, X, Settings } from "lucide-react";
@@ -212,7 +212,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
 
   // Form
   const form = useForm<TagFormData>({
-    resolver: zodResolver(tagFormSchema),
+    resolver: standardSchemaResolver(tagFormSchema),
     defaultValues: { name: "", slug: "" },
   });
 

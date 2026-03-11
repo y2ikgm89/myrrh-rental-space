@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -47,7 +47,7 @@ export function GalleryConfigForm({
     control,
     formState: { errors },
   } = useForm<GalleryConfigInput, unknown, GalleryConfig>({
-    resolver: zodResolver(galleryConfigSchema),
+    resolver: standardSchemaResolver(galleryConfigSchema),
     defaultValues: config,
   });
 

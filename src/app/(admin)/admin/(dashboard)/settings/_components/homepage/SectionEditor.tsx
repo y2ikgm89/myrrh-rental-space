@@ -9,7 +9,7 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import {
   Button,
@@ -354,7 +354,7 @@ function TitleForm({
     handleSubmit,
     formState: { errors },
   } = useForm<TitleFormData>({
-    resolver: zodResolver(titleSchema),
+    resolver: standardSchemaResolver(titleSchema),
     defaultValues: { title: section.title || "" },
   });
 

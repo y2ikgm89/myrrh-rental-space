@@ -1,23 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import {
-  useState,
-  useEffect,
-  useTransition,
-  useId,
-  useEffectEvent,
-} from "react";
+import { useState, useEffect, useId, useEffectEvent } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useForm,
-  useWatch,
-  useFieldArray,
-  type FieldErrors,
-} from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useWatch, useFieldArray, type FieldErrors } from "react-hook-form";
 import { z } from "zod";
-import { toast } from "sonner";
 import { ImagePlus, GripVertical, HelpCircle, X } from "lucide-react";
 import {
   Button,
@@ -37,6 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
   TooltipProvider,
+  SubmitButton,
   DndContext,
   closestCenter,
   useSensor,
@@ -55,14 +43,13 @@ import {
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { createSpace, updateSpace } from "@/admin/actions/space";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import type { MutationResult } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
 import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   calculateTaxIncludedPrice,
   getTaxRate,
@@ -349,78 +336,145 @@ export function SpaceEditForm({
     "tab",
     parseAsStringLiteral(TAB_VALUES).withDefault("basic"),
   );
-  const [isPending, startTransition] = useTransition();
   const [newFacility, setNewFacility] = useState("");
   const dndContextId = useId();
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: space
-      ? {
-          slug: space.slug,
-          name: space.name,
-          description: space.description,
-          address: space.address,
-          access: space.access ?? "",
-          capacity: space.capacity,
-          area: space.area ?? undefined,
-          hourlyPrice: space.hourlyPrice,
-          dailyPrice: space.dailyPrice ?? undefined,
-          mainImageUrl: space.mainImageUrl,
-          // string[] → { url: string }[]
-          imageUrls: space.imageUrls.map((url) => ({ url })),
-          // string[] → { value: string }[]
-          facilities: space.facilities.map((value) => ({ value })),
-          isPublished: space.isPublished,
-          termsId: space.termsId ?? undefined,
-          locationId: space.locationId ?? undefined,
-          categoryId: space.categoryId ?? undefined,
-          discountType: space.discountType ?? DiscountType.none,
-          discountValue: space.discountValue ?? undefined,
-          durationDiscountOverride:
-            space.durationDiscountOverride ?? DurationDiscountOverride.inherit,
-          taxRateType: getValidTaxRateType(space.taxRateType),
-          metaDescription: space.metaDescription ?? "",
-          metaKeywords: space.metaKeywords ?? "",
-          ogpTitle: space.ogpTitle ?? "",
-          ogpDescription: space.ogpDescription ?? "",
-          ogpImageUrl: space.ogpImageUrl ?? "",
-          publishedAt: space.publishedAt
-            ? new Date(space.publishedAt).toISOString()
-            : undefined,
-        }
-      : {
-          slug: "",
-          name: "",
-          description: "",
-          address: "",
-          access: "",
-          capacity: 10,
-          area: undefined,
-          hourlyPrice: 0,
-          dailyPrice: undefined,
-          mainImageUrl: "",
-          imageUrls: [],
-          facilities: [],
-          isPublished: false,
-          termsId: undefined,
-          locationId: undefined,
-          categoryId: undefined,
-          discountType: DiscountType.none,
-          discountValue: undefined,
-          durationDiscountOverride: DurationDiscountOverride.inherit,
-          taxRateType: TaxRateType.standard,
-          metaDescription: "",
-          metaKeywords: "",
-          ogpTitle: "",
-          ogpDescription: "",
-          ogpImageUrl: "",
-        },
+  // FormData → Server Action payload 変換
+  const buildPayload = (data: FormData) => ({
+    slug: data.slug,
+    name: data.name,
+    description: data.description,
+    address: data.address,
+    capacity: data.capacity,
+    hourlyPrice: data.hourlyPrice,
+    mainImageUrl: data.mainImageUrl,
+    // { url: string }[] → string[]
+    imageUrls: data.imageUrls.map((f) => f.url),
+    // { value: string }[] → string[]
+    facilities: data.facilities.map((f) => f.value),
+    isPublished: data.isPublished ?? false,
+    access: data.access || undefined,
+    area: data.area != null ? data.area : undefined,
+    dailyPrice: data.dailyPrice != null ? data.dailyPrice : undefined,
+    termsId: data.termsId || undefined,
+    locationId: data.locationId || undefined,
+    categoryId: data.categoryId || undefined,
+    discountType: data.discountType ?? DiscountType.none,
+    discountValue:
+      data.discountType !== DiscountType.none
+        ? (data.discountValue ?? null)
+        : null,
+    durationDiscountOverride:
+      data.durationDiscountOverride ?? DurationDiscountOverride.inherit,
+    taxRateType: data.taxRateType ?? TaxRateType.standard,
+    metaDescription: data.metaDescription || null,
+    metaKeywords: data.metaKeywords || null,
+    ogpTitle: data.ogpTitle || null,
+    ogpDescription: data.ogpDescription || null,
+    ogpImageUrl: data.ogpImageUrl || null,
   });
+
+  const { form, isPending, onSubmit } = useFormAction<
+    FormData,
+    { id: string } | null
+  >(
+    formSchema,
+    async (data): Promise<MutationResult<{ id: string } | null>> => {
+      const payload = buildPayload(data);
+      if (mode === "create") {
+        return createSpace(payload);
+      }
+      if (space) {
+        return updateSpace(space.id, payload);
+      }
+      return { error: "スペースが見つかりません" };
+    },
+    {
+      defaultValues: space
+        ? {
+            slug: space.slug,
+            name: space.name,
+            description: space.description,
+            address: space.address,
+            access: space.access ?? "",
+            capacity: space.capacity,
+            area: space.area ?? undefined,
+            hourlyPrice: space.hourlyPrice,
+            dailyPrice: space.dailyPrice ?? undefined,
+            mainImageUrl: space.mainImageUrl,
+            // string[] → { url: string }[]
+            imageUrls: space.imageUrls.map((url) => ({ url })),
+            // string[] → { value: string }[]
+            facilities: space.facilities.map((value) => ({ value })),
+            isPublished: space.isPublished,
+            termsId: space.termsId ?? undefined,
+            locationId: space.locationId ?? undefined,
+            categoryId: space.categoryId ?? undefined,
+            discountType: space.discountType ?? DiscountType.none,
+            discountValue: space.discountValue ?? undefined,
+            durationDiscountOverride:
+              space.durationDiscountOverride ??
+              DurationDiscountOverride.inherit,
+            taxRateType: getValidTaxRateType(space.taxRateType),
+            metaDescription: space.metaDescription ?? "",
+            metaKeywords: space.metaKeywords ?? "",
+            ogpTitle: space.ogpTitle ?? "",
+            ogpDescription: space.ogpDescription ?? "",
+            ogpImageUrl: space.ogpImageUrl ?? "",
+            publishedAt: space.publishedAt
+              ? new Date(space.publishedAt).toISOString()
+              : undefined,
+          }
+        : {
+            slug: "",
+            name: "",
+            description: "",
+            address: "",
+            access: "",
+            capacity: 10,
+            area: undefined,
+            hourlyPrice: 0,
+            dailyPrice: undefined,
+            mainImageUrl: "",
+            imageUrls: [],
+            facilities: [],
+            isPublished: false,
+            termsId: undefined,
+            locationId: undefined,
+            categoryId: undefined,
+            discountType: DiscountType.none,
+            discountValue: undefined,
+            durationDiscountOverride: DurationDiscountOverride.inherit,
+            taxRateType: TaxRateType.standard,
+            metaDescription: "",
+            metaKeywords: "",
+            ogpTitle: "",
+            ogpDescription: "",
+            ogpImageUrl: "",
+          },
+      successMessage:
+        mode === "create" ? "スペースを作成しました" : "スペースを保存しました",
+      ...(mode === "create"
+        ? {
+            onSuccess: (result) => {
+              if (result && typeof result === "object" && "id" in result) {
+                const { id } = result;
+                router.push(`/admin/spaces/${id}`);
+              }
+            },
+          }
+        : {
+            refresh: true,
+            onSuccess: () => {
+              // 編集成功時: isDirty をリセット（値は保持）
+              form.reset(form.getValues());
+            },
+          }),
+    },
+  );
 
   const {
     register,
-    handleSubmit,
     control,
     setValue,
     getValues,
@@ -516,74 +570,9 @@ export function SpaceEditForm({
     }),
   );
 
-  // フォーム送信（useEffectEvent で onSubmit を deps から除外）
-  const onSubmit = (data: FormData) => {
-    startTransition(async () => {
-      try {
-        const payload = {
-          slug: data.slug,
-          name: data.name,
-          description: data.description,
-          address: data.address,
-          capacity: data.capacity,
-          hourlyPrice: data.hourlyPrice,
-          mainImageUrl: data.mainImageUrl,
-          // { url: string }[] → string[]
-          imageUrls: data.imageUrls.map((f) => f.url),
-          // { value: string }[] → string[]
-          facilities: data.facilities.map((f) => f.value),
-          isPublished: data.isPublished ?? false,
-          access: data.access || undefined,
-          area: data.area != null ? data.area : undefined,
-          dailyPrice: data.dailyPrice != null ? data.dailyPrice : undefined,
-          termsId: data.termsId || undefined,
-          locationId: data.locationId || undefined,
-          categoryId: data.categoryId || undefined,
-          discountType: data.discountType ?? DiscountType.none,
-          discountValue:
-            data.discountType !== DiscountType.none
-              ? (data.discountValue ?? null)
-              : null,
-          durationDiscountOverride:
-            data.durationDiscountOverride ?? DurationDiscountOverride.inherit,
-          taxRateType: data.taxRateType ?? TaxRateType.standard,
-          metaDescription: data.metaDescription || null,
-          metaKeywords: data.metaKeywords || null,
-          ogpTitle: data.ogpTitle || null,
-          ogpDescription: data.ogpDescription || null,
-          ogpImageUrl: data.ogpImageUrl || null,
-        };
-
-        if (mode === "create") {
-          const result = await createSpace(payload);
-          if (!isMutationError(result)) {
-            toast.success("スペースを作成しました");
-            router.push(`/admin/spaces/${result.id}`);
-          } else {
-            toast.error(result.error);
-          }
-        } else if (space) {
-          const result = await updateSpace(space.id, payload);
-          if (!isMutationError(result)) {
-            form.reset(data);
-            router.refresh();
-            toast.success("スペースを保存しました");
-          } else {
-            toast.error(result.error);
-          }
-        }
-      } catch (error) {
-        logger.error("保存中にエラーが発生しました", {
-          error: getErrorMessage(error),
-        });
-        toast.error("保存中にエラーが発生しました");
-      }
-    });
-  };
-
-  // Ctrl+S 保存（useEffectEvent で handleSubmit を deps から除外）
+  // Ctrl+S 保存（useEffectEvent で onSubmit を deps から除外）
   const triggerSave = useEffectEvent(() => {
-    void handleSubmit(onSubmit)();
+    void onSubmit();
   });
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -624,7 +613,7 @@ export function SpaceEditForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={onSubmit}>
       <Tabs
         value={activeTab}
         onValueChange={(v) => void setActiveTab(v)}
@@ -1402,13 +1391,10 @@ export function SpaceEditForm({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending
-                ? "保存中..."
-                : mode === "create"
-                  ? "スペースを作成"
-                  : "変更を保存"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={mode === "create" ? "スペースを作成" : "変更を保存"}
+            />
           </div>
         </div>
       </div>

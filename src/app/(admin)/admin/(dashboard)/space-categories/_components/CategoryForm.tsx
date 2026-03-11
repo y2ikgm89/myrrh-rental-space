@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { Input, Textarea, Label } from "@/admin/components/ui";
 import {
   spaceCategoryFormSchema,
@@ -26,7 +26,7 @@ export function CategoryForm({
     handleSubmit,
     formState: { errors },
   } = useForm<SpaceCategoryFormInput>({
-    resolver: zodResolver(spaceCategoryFormSchema),
+    resolver: standardSchemaResolver(spaceCategoryFormSchema),
     defaultValues: category
       ? {
           name: category.name,

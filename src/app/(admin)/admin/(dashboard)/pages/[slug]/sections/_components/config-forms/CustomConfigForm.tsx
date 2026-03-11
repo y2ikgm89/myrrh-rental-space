@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -56,7 +56,7 @@ export default function CustomConfigForm({
     setValue,
     formState: { isDirty },
   } = useForm<CustomConfigInput, unknown, CustomConfig>({
-    resolver: zodResolver(customConfigSchema),
+    resolver: standardSchemaResolver(customConfigSchema),
     defaultValues: config,
   });
 

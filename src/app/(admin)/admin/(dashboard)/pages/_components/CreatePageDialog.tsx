@@ -7,12 +7,10 @@
  * - リアルタイムスラッグ検証（debounce 500ms）
  */
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useWatch } from "react-hook-form";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/admin/components/ui";
 import {
@@ -27,9 +25,7 @@ import { Label } from "@/admin/components/ui/label";
 import { Textarea } from "@/admin/components/ui/textarea";
 import { createPage } from "@/admin/actions/page";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
-import { isMutationError } from "@/shared/lib/mutation-result";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 
 const formSchema = z.object({
   slug: z
@@ -48,8 +44,6 @@ const formSchema = z.object({
     .max(500, { error: "説明は500文字以内です" })
     .optional(),
 });
-
-type FormData = z.infer<typeof formSchema>;
 
 /**
  * タイトルからスラッグを自動生成
@@ -84,27 +78,43 @@ async function fetchSlugAvailability(
 export function CreatePageDialog() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [isManualSlug, setIsManualSlug] = useState(false);
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const slugCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { form, isPending, onSubmit } = useFormAction(
+    formSchema,
+    (data) =>
+      createPage({
+        slug: data.slug,
+        title: data.title,
+        description: data.description,
+        isPublished: false,
+      }),
+    {
+      defaultValues: {
+        slug: "",
+        title: "",
+        description: "",
+      },
+      successMessage: "ページを作成しました",
+      errorMessage: "ページの作成に失敗しました",
+      disableToast: false,
+      onSuccess: (result) => {
+        setIsOpen(false);
+        form.reset();
+        router.push(`/admin/pages/${result.slug}/edit`);
+      },
+    },
+  );
+
   const {
     register,
-    handleSubmit,
-    reset,
     control,
     setValue,
     formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      slug: "",
-      title: "",
-      description: "",
-    },
-  });
+  } = form;
 
   const title = useWatch({ control, name: "title" });
   const slug = useWatch({ control, name: "slug" });
@@ -126,25 +136,28 @@ export function CreatePageDialog() {
     }
 
     if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-      startTransition(() => {
+      // 無効なスラッグの場合は即座にリセット（0ms タイマーで同期 setState を回避）
+      slugCheckRef.current = setTimeout(() => {
         setSlugStatus("idle");
         setSlugMessage("");
-      });
-      return;
+      }, 0);
+      return () => {
+        if (slugCheckRef.current) clearTimeout(slugCheckRef.current);
+      };
     }
 
-    startTransition(() => {
+    // checking 状態を即座に設定し、500ms debounce で実際の検証を実行
+    slugCheckRef.current = setTimeout(() => {
       setSlugStatus("checking");
-    });
-    slugCheckRef.current = setTimeout(async () => {
-      const result = await fetchSlugAvailability(slug);
-      if (result.available) {
-        setSlugStatus("available");
-        setSlugMessage("");
-      } else {
-        setSlugStatus("unavailable");
-        setSlugMessage(result.message ?? "このスラッグは使用できません");
-      }
+      void fetchSlugAvailability(slug).then((result) => {
+        if (result.available) {
+          setSlugStatus("available");
+          setSlugMessage("");
+        } else {
+          setSlugStatus("unavailable");
+          setSlugMessage(result.message ?? "このスラッグは使用できません");
+        }
+      });
     }, 500);
 
     return () => {
@@ -154,38 +167,10 @@ export function CreatePageDialog() {
     };
   }, [slug]);
 
-  const onSubmit = (data: FormData) => {
-    startTransition(async () => {
-      try {
-        const result = await createPage({
-          slug: data.slug,
-          title: data.title,
-          description: data.description,
-          isPublished: false,
-        });
-
-        if (isMutationError(result)) {
-          toast.error(result.error || "ページの作成に失敗しました");
-          return;
-        }
-
-        toast.success("ページを作成しました");
-        setIsOpen(false);
-        reset();
-        router.push(`/admin/pages/${result.slug}/edit`);
-      } catch (error) {
-        logger.error("ページ作成エラー", {
-          error: getErrorMessage(error),
-        });
-        toast.error("ページの作成中にエラーが発生しました");
-      }
-    });
-  };
-
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
-      reset();
+      form.reset();
       setIsManualSlug(false);
       setSlugStatus("idle");
       setSlugMessage("");
@@ -205,7 +190,7 @@ export function CreatePageDialog() {
           <DialogTitle>新規ページ作成</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">
               タイトル <span className="text-destructive">*</span>

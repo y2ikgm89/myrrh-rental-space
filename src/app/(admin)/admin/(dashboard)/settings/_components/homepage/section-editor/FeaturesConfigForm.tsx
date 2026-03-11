@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Button,
   Input,
@@ -51,7 +51,7 @@ export function FeaturesConfigForm({
     control,
     formState: { errors },
   } = useForm<FeaturesConfigInput, unknown, FeaturesConfig>({
-    resolver: zodResolver(featuresConfigSchema),
+    resolver: standardSchemaResolver(featuresConfigSchema),
     defaultValues: config,
   });
 

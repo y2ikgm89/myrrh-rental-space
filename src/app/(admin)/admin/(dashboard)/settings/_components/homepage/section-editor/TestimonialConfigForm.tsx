@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -41,7 +41,7 @@ export function TestimonialConfigForm({
     setValue,
     formState: { errors },
   } = useForm<TestimonialConfigInput, unknown, TestimonialConfig>({
-    resolver: zodResolver(testimonialConfigSchema),
+    resolver: standardSchemaResolver(testimonialConfigSchema),
     defaultValues: config,
   });
 

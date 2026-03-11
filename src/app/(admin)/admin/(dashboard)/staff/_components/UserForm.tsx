@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
 import { Button } from "@/admin/components/ui/button";
+import { SubmitButton } from "@/admin/components/ui";
 import { Input } from "@/admin/components/ui/input";
 import { Label } from "@/admin/components/ui/label";
 import {
@@ -176,15 +177,11 @@ export function UserForm({ mode, user }: Props) {
       </div>
 
       <div className="flex gap-4">
-        <Button type="submit" disabled={isPending}>
-          {isPending && isEdit
-            ? "更新中..."
-            : isPending
-              ? "作成中..."
-              : isEdit
-                ? "更新"
-                : "作成"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          label={isEdit ? "更新" : "作成"}
+          pendingLabel={isEdit ? "更新中..." : "作成中..."}
+        />
         <Button
           type="button"
           variant="outline"

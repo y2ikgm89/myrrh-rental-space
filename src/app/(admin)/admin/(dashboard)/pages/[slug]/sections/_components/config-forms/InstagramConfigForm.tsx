@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   Input,
   Label,
@@ -36,7 +36,7 @@ export default function InstagramConfigForm({
     setValue,
     formState: { isDirty },
   } = useForm<InstagramConfigInput, unknown, InstagramConfig>({
-    resolver: zodResolver(instagramConfigSchema),
+    resolver: standardSchemaResolver(instagramConfigSchema),
     defaultValues: config,
   });
 
