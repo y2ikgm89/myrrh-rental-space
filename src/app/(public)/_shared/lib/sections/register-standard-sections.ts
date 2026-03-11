@@ -1,0 +1,37 @@
+import { registerSection } from "@/shared/lib/sections/registry";
+
+import { heroDefinition } from "../../components/sections/standard/hero";
+import { heroParallaxDefinition } from "../../components/sections/standard/hero-parallax";
+import { customDefinition } from "../../components/sections/standard/custom";
+import { conceptDefinition } from "../../components/sections/standard/concept";
+import { spaceListDefinition } from "../../components/sections/standard/space-list";
+import { spaceShowcaseDefinition } from "../../components/sections/standard/space-showcase";
+import { newsListDefinition } from "../../components/sections/standard/news-list";
+import { postListDefinition } from "../../components/sections/standard/post-list";
+import { faqListDefinition } from "../../components/sections/standard/faq-list";
+import { featuresDefinition } from "../../components/sections/standard/features";
+import { testimonialDefinition } from "../../components/sections/standard/testimonial";
+import { galleryDefinition } from "../../components/sections/standard/gallery";
+import { ctaDefinition } from "../../components/sections/standard/cta";
+import { contactFormDefinition } from "../../components/sections/standard/contact-form";
+import { mapDefinition } from "../../components/sections/standard/map";
+import { embedDefinition } from "../../components/sections/standard/embed";
+import { instagramDefinition } from "../../components/sections/standard/instagram";
+
+registerSection(heroDefinition);
+registerSection(heroParallaxDefinition);
+registerSection(customDefinition);
+registerSection(conceptDefinition);
+registerSection(spaceListDefinition);
+registerSection(spaceShowcaseDefinition);
+registerSection(newsListDefinition);
+registerSection(postListDefinition);
+registerSection(faqListDefinition);
+registerSection(featuresDefinition);
+registerSection(testimonialDefinition);
+registerSection(galleryDefinition);
+registerSection(ctaDefinition);
+registerSection(contactFormDefinition);
+registerSection(mapDefinition);
+registerSection(embedDefinition);
+registerSection(instagramDefinition);
