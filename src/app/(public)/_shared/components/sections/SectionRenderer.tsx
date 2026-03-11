@@ -7,7 +7,7 @@
 
 import "@/public/lib/sections/register-standard-sections";
 
-import type { ReactElement, ComponentType } from "react";
+import type { ReactElement } from "react";
 import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import type { PublicSection } from "@/shared/domain/sections/queries";
@@ -34,13 +34,9 @@ function buildClientComponentMap(): Record<string, DynamicComponent> {
       definition.component.type === "client" ||
       definition.component.type === "client-only"
     ) {
-      map[id] = dynamic(
-        () =>
-          definition.component
-            .load()
-            .then((mod) => ({ default: mod.default as ComponentType<SectionComponentProps> })),
-        { ssr: definition.component.type !== "client-only" },
-      );
+      map[id] = dynamic(definition.component.load, {
+        ssr: definition.component.type !== "client-only",
+      });
     }
   }
   return map;
