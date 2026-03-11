@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 import { Controller } from "react-hook-form";
 import { Label } from "@/admin/components/ui/label";
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor/CTAButtonEditor";
-import type { CTAButtonItem } from "@/shared/lib/validations/section-design";
 import type { FieldComponentProps } from "../FieldRenderer";
 
 export function CTAButtonEditorField({
@@ -24,7 +23,7 @@ export function CTAButtonEditorField({
         name={field.name}
         render={({ field: rhfField }) => (
           <CTAButtonEditor
-            buttons={Array.isArray(rhfField.value) ? (rhfField.value as CTAButtonItem[]) : []}
+            buttons={Array.isArray(rhfField.value) ? rhfField.value : []}
             onChange={rhfField.onChange}
             disabled={isPending}
           />
