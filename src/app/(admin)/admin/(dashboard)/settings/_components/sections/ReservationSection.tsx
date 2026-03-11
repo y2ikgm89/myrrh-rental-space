@@ -8,6 +8,7 @@
  */
 
 import { useState, useTransition, useEffect } from "react";
+import type { Serialized } from "@/shared/lib/serialize";
 import Link from "next/link";
 import {
   Card,
@@ -33,7 +34,7 @@ import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
 interface ReservationSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 interface CancellationPolicy {

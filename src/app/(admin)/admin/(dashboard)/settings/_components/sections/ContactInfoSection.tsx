@@ -20,10 +20,11 @@ import {
 } from "@/admin/components/ui";
 import { updateContactInfo } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface ContactInfoSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function ContactInfoSection({ settings }: ContactInfoSectionProps) {

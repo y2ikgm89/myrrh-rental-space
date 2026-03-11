@@ -18,6 +18,7 @@ import {
 } from "@/admin/components/ui";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
+import type { Serialized } from "@/shared/lib/serialize";
 import type { NavigationItemData, SocialLinkData } from "./types";
 import { platformLabels } from "./types";
 
@@ -138,8 +139,8 @@ export function SortableNavRow({
 // =============================================================================
 
 type SortableSocialRowProps = {
-  link: SocialLinkData;
-  onEdit: (link: SocialLinkData) => void;
+  link: Serialized<SocialLinkData>;
+  onEdit: (link: Serialized<SocialLinkData>) => void;
   onDelete: (id: string) => void;
   isPending: boolean;
 };

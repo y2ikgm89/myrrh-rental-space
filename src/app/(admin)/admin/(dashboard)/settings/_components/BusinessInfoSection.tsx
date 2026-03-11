@@ -19,11 +19,12 @@ import {
 } from "@/admin/components/ui";
 import { updateBusinessInfo } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "./hooks";
 import { toDateString } from "@/shared/lib/serialize";
 
 interface BusinessInfoSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 const BUSINESS_TYPES = [

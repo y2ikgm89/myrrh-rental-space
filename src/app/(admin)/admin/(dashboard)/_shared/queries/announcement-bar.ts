@@ -5,10 +5,11 @@ import {
   getAnnouncementBars as getAnnouncementBarsQuery,
   type AnnouncementBarData,
 } from "@/shared/domain/settings/announcement-bar";
+import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 export type GetAnnouncementBarsResult = {
-  items: AnnouncementBarData[];
+  items: Serialized<AnnouncementBarData>[];
   total: number;
 };
 
@@ -20,7 +21,7 @@ export async function getAnnouncementBars(): Promise<GetAnnouncementBarsResult> 
 
 export async function getAnnouncementBarById(
   id: string,
-): Promise<AnnouncementBarData | null> {
+): Promise<Serialized<AnnouncementBarData> | null> {
   await requireAdminPermission("announcementBar", "read");
   return getAnnouncementBarByIdQuery(id);
 }

@@ -23,6 +23,7 @@ import type {
   AnnouncementBarData,
   AnnouncementBarInput,
 } from "@/shared/domain/settings/announcement-bar";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   updateAnnouncementBarCarouselSettings,
   type AnnouncementBarCarouselSettingsInput,
@@ -73,12 +74,12 @@ const barFormSchema = z.object({
 // =============================================================================
 
 type AnnouncementBarManagerProps = {
-  initialBars: AnnouncementBarData[];
+  initialBars: Serialized<AnnouncementBarData>[];
   initialCarouselSettings: AnnouncementBarCarouselSettingsInput;
 };
 
 async function fetchAnnouncementBars(): Promise<{
-  items: AnnouncementBarData[];
+  items: Serialized<AnnouncementBarData>[];
   total: number;
 }> {
   return fetchAdminJson("/admin/api/announcement-bars");
@@ -93,9 +94,9 @@ export function AnnouncementBarManager({
   initialCarouselSettings,
 }: AnnouncementBarManagerProps) {
   const [isPending, startTransition] = useTransition();
-  const [bars, setBars] = useState<AnnouncementBarData[]>(initialBars);
+  const [bars, setBars] = useState<Serialized<AnnouncementBarData>[]>(initialBars);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingBar, setEditingBar] = useState<AnnouncementBarData | null>(
+  const [editingBar, setEditingBar] = useState<Serialized<AnnouncementBarData> | null>(
     null,
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -164,7 +165,7 @@ export function AnnouncementBarManager({
   };
 
   // Open dialog for create/edit
-  const openDialog = (bar?: AnnouncementBarData) => {
+  const openDialog = (bar?: Serialized<AnnouncementBarData>) => {
     if (bar) {
       setEditingBar(bar);
       reset({

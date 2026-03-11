@@ -22,6 +22,7 @@ import {
 import { Switch } from "@/admin/components/ui/switch";
 import { updateSidebarSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   sidebarWidgetsSchema,
   type SidebarWidgets,
@@ -33,7 +34,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 interface SidebarSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 // =============================================================================

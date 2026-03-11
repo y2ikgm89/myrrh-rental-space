@@ -21,6 +21,7 @@ import {
 } from "@/admin/components/ui";
 import { updateCookieConsentSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 // デフォルト値
@@ -31,7 +32,7 @@ const DEFAULT_REJECT_TEXT = "拒否する";
 const DEFAULT_POLICY_URL = "/privacy";
 
 interface CookieConsentSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function CookieConsentSection({ settings }: CookieConsentSectionProps) {

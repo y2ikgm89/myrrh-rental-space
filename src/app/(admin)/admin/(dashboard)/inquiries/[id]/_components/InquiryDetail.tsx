@@ -20,6 +20,7 @@ import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { updateInquiryStatus } from "@/admin/actions/inquiry";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InquiryData } from "@/shared/domain/inquiries/types";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   isValidInquiryStatus,
   type InquiryStatus,
@@ -28,7 +29,7 @@ import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 
 type InquiryDetailProps = {
-  inquiry: InquiryData;
+  inquiry: Serialized<InquiryData>;
 };
 
 export function InquiryDetail({ inquiry }: InquiryDetailProps) {

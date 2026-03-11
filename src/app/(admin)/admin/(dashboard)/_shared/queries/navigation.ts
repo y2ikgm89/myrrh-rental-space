@@ -8,6 +8,7 @@ import {
   type NavigationItemData,
   type SocialLinkData,
 } from "@/shared/domain/navigation/queries";
+import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 export type { GetSocialLinksOptions, NavigationItemData, SocialLinkData };
@@ -21,7 +22,7 @@ export async function getNavigationItems(
 
 export async function getSocialLinks(
   options: GetSocialLinksOptions = {},
-): Promise<SocialLinkData[]> {
+): Promise<Serialized<SocialLinkData>[]> {
   await requireAdminPermission("navigation", "read");
   return getSocialLinksQuery(options);
 }

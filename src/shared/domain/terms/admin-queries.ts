@@ -3,6 +3,7 @@ import "server-only";
 import { TermsStatus } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   getTermsTypeDefaults,
   type TermsAgreementItem,
@@ -153,7 +154,7 @@ export async function getTermsDefaultsForType(
 
 export async function getAdminTermsById(
   id: string,
-): Promise<TermsDetail | null> {
+): Promise<Serialized<TermsDetail> | null> {
   const terms = await prisma.terms.findUnique({
     where: { id },
     include: {
@@ -186,7 +187,7 @@ export async function getAdminTermsById(
 
 export async function getAdminTermsVersionById(
   versionId: string,
-): Promise<TermsVersionDetail | null> {
+): Promise<Serialized<TermsVersionDetail> | null> {
   const version = await prisma.termsVersion.findUnique({
     where: { id: versionId },
   });

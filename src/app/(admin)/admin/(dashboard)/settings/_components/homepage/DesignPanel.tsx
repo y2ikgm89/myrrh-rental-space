@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useTransition } from "react";
+import type { Serialized } from "@/shared/lib/serialize";
 import { toast } from "sonner";
 import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
@@ -111,7 +112,7 @@ const animationOptions = [
 
 // ホームページセクション用（既存互換）
 interface HomepageDesignPanelProps {
-  readonly section: HomepageSectionData;
+  readonly section: Serialized<HomepageSectionData>;
   readonly onSave: () => void;
   readonly onDesignSave?: never;
 }

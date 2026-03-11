@@ -15,6 +15,7 @@ import type {
   TermsVersionDetail,
   TermsWithVersion,
 } from "@/shared/lib/validations/terms";
+import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 const agreementsSchema = z.object({
@@ -41,14 +42,16 @@ export async function getDefaultsForTermsType(
   return getTermsDefaultsForTypeQuery(type);
 }
 
-export async function getTermsById(id: string): Promise<TermsDetail | null> {
+export async function getTermsById(
+  id: string,
+): Promise<Serialized<TermsDetail> | null> {
   await requireAdminPermission("terms", "read");
   return getAdminTermsByIdQuery(id);
 }
 
 export async function getTermsVersionById(
   versionId: string,
-): Promise<TermsVersionDetail | null> {
+): Promise<Serialized<TermsVersionDetail> | null> {
   await requireAdminPermission("terms", "read");
   return getAdminTermsVersionByIdQuery(versionId);
 }

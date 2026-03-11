@@ -10,6 +10,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 
 export type PublicNavItem = {
   readonly id: string;
@@ -162,7 +163,7 @@ export async function getNavigationItems(
 
 export async function getSocialLinks(
   options: GetSocialLinksOptions = {},
-): Promise<SocialLinkData[]> {
+): Promise<Serialized<SocialLinkData>[]> {
   const { showOnDesktop, showOnMobile, activeOnly = false } = options;
 
   return toPlainArray(

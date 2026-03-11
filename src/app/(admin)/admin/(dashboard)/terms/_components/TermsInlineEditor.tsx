@@ -68,6 +68,7 @@ import type {
   TermsVersionDetail,
   TermsAgreementItem,
 } from "@/shared/lib/validations/terms";
+import type { Serialized } from "@/shared/lib/serialize";
 import { TermsAgreementsTab } from "./TermsAgreementsTab";
 
 // =============================================================================
@@ -112,7 +113,7 @@ interface TermsData {
 
 interface TermsInlineEditorProps {
   terms?: TermsData;
-  initialVersion?: TermsVersionDetail | null;
+  initialVersion?: Serialized<TermsVersionDetail> | null;
   businessInfo?: BusinessInfo;
   mode?: "create" | "edit";
   initialAgreements?: TermsAgreementItem[];
@@ -130,7 +131,7 @@ async function fetchTermsDefaultsForType(type: string): Promise<{
 
 async function fetchTermsVersionById(
   versionId: string,
-): Promise<TermsVersionDetail> {
+): Promise<Serialized<TermsVersionDetail>> {
   return fetchAdminJson(`/admin/api/terms/versions/${versionId}`);
 }
 
@@ -190,7 +191,7 @@ export function TermsInlineEditor({
     initialVersion?.id ?? "",
   );
   const [selectedVersionContent, setSelectedVersionContent] =
-    useState<TermsVersionDetail | null>(initialVersion ?? null);
+    useState<Serialized<TermsVersionDetail> | null>(initialVersion ?? null);
   const [localVersions, setLocalVersions] = useState<TermsVersionSummary[]>(
     terms?.versions ?? [],
   );

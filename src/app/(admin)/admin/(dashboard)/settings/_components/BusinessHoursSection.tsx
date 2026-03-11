@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { Serialized } from "@/shared/lib/serialize";
 import { Plus, X, Copy } from "lucide-react";
 import {
   Button,
@@ -29,7 +30,7 @@ import type {
 import { useRefreshOnSuccess } from "./hooks";
 
 interface BusinessHoursSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 interface DayOfWeek {

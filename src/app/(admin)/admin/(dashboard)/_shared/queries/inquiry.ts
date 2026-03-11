@@ -13,6 +13,7 @@ import type {
   InquiryPagination,
   InquiryStats,
 } from "@/shared/domain/inquiries/types";
+import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 const idSchema = z.string().uuid({ error: "お問い合わせIDが不正です" });
@@ -20,12 +21,14 @@ const idSchema = z.string().uuid({ error: "お問い合わせIDが不正です" 
 export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {},
-): Promise<GetInquiriesResult> {
+): Promise<Serialized<GetInquiriesResult>> {
   await requireAdminPermission("inquiry", "read");
   return getInquiriesQuery(filters, pagination);
 }
 
-export async function getInquiryById(id: string): Promise<InquiryData | null> {
+export async function getInquiryById(
+  id: string,
+): Promise<Serialized<InquiryData> | null> {
   await requireAdminPermission("inquiry", "read");
 
   const validated = idSchema.safeParse(id);

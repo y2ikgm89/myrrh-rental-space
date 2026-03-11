@@ -10,9 +10,10 @@
 import { useRouter } from "next/navigation";
 import { SectionEditor } from "@/app/(admin)/admin/(dashboard)/settings/_components/homepage/SectionEditor";
 import type { HomepageSectionData } from "@/admin/actions/homepage-settings";
+import type { Serialized } from "@/shared/lib/serialize";
 
 interface SectionEditWrapperProps {
-  section: HomepageSectionData;
+  section: Serialized<HomepageSectionData>;
 }
 
 export function SectionEditWrapper({ section }: SectionEditWrapperProps) {

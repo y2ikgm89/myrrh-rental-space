@@ -16,6 +16,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 
 export type AnnouncementBarData = {
   id: string;
@@ -167,7 +168,9 @@ function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
   };
 }
 
-export async function getAnnouncementBars(): Promise<AnnouncementBarData[]> {
+export async function getAnnouncementBars(): Promise<
+  Serialized<AnnouncementBarData>[]
+> {
   const items = await prisma.announcementBar.findMany({
     select: announcementBarSelect,
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
@@ -178,7 +181,7 @@ export async function getAnnouncementBars(): Promise<AnnouncementBarData[]> {
 
 export async function getAnnouncementBarById(
   id: string,
-): Promise<AnnouncementBarData | null> {
+): Promise<Serialized<AnnouncementBarData> | null> {
   return toPlainObject(
     await prisma.announcementBar.findUnique({
       where: { id },
@@ -188,7 +191,7 @@ export async function getAnnouncementBarById(
 }
 
 export async function getActiveAnnouncementBars(): Promise<
-  AnnouncementBarData[]
+  Serialized<AnnouncementBarData>[]
 > {
   "use cache";
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);

@@ -28,6 +28,7 @@ import {
 } from "@/admin/components/ui";
 import { updateLayoutSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   LayoutWidth,
   isValidLayoutWidth,
@@ -48,7 +49,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 interface LayoutSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 // =============================================================================

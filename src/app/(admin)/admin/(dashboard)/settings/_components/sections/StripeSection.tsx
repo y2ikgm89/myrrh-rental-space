@@ -33,6 +33,7 @@ import {
   clearStripeKeys,
 } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   SUPPORTED_CURRENCIES,
   SUPPORTED_CURRENCY_VALUES,
@@ -50,7 +51,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 const isSupportedCurrency = createTypeGuard(SUPPORTED_CURRENCY_VALUES);
 
 interface StripeSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 // =============================================================================

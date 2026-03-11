@@ -10,6 +10,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 
 const publicTermsSelect = {
@@ -47,7 +48,7 @@ export type PublicTermsData = {
 
 export async function getPublicTermsBySlug(
   slug: string,
-): Promise<PublicTermsData | null> {
+): Promise<Serialized<PublicTermsData> | null> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.TERMS);

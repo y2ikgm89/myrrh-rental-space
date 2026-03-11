@@ -73,6 +73,7 @@ import {
   initializeDefaultSections,
 } from "@/admin/actions/homepage-settings";
 import type { HomepageSectionData } from "@/admin/queries/homepage-settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   SectionType,
@@ -86,7 +87,9 @@ import {
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
-async function fetchHomepageSections(): Promise<HomepageSectionData[]> {
+async function fetchHomepageSections(): Promise<
+  Serialized<HomepageSectionData>[]
+> {
   return fetchAdminJson("/admin/api/homepage-sections");
 }
 
@@ -119,8 +122,8 @@ const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
 // =============================================================================
 
 interface SortableSectionItemProps {
-  section: HomepageSectionData;
-  onEdit: (section: HomepageSectionData) => void;
+  section: Serialized<HomepageSectionData>;
+  onEdit: (section: Serialized<HomepageSectionData>) => void;
   onToggle: (id: string, isActive: boolean) => void;
   onDelete: (id: string) => void;
   disabled: boolean;
@@ -326,7 +329,9 @@ export function HomepageTab({
 }: HomepageTabProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [sections, setSections] = useState<HomepageSectionData[] | null>(null);
+  const [sections, setSections] = useState<
+    Serialized<HomepageSectionData>[] | null
+  >(null);
   const [deletingSectionId, setDeletingSectionId] = useState<string | null>(
     null,
   );

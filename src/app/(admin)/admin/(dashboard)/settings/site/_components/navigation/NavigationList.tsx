@@ -19,6 +19,7 @@ import {
 } from "@/admin/components/ui";
 import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
 import type { NavigationType } from "@/shared/db/enums";
+import type { Serialized } from "@/shared/lib/serialize";
 import type {
   NavigationItemData,
   SocialLinkData,
@@ -124,11 +125,11 @@ export function NavigationList({
 // =============================================================================
 
 type SocialLinkListProps = {
-  links: SocialLinkData[];
+  links: Serialized<SocialLinkData>[];
   sensors: SensorDescriptor<SensorOptions>[];
   isPending: boolean;
   onAdd: () => void;
-  onEdit: (link: SocialLinkData) => void;
+  onEdit: (link: Serialized<SocialLinkData>) => void;
   onDelete: (id: string) => void;
   onDragEnd: (event: DragEndEvent) => void;
 };

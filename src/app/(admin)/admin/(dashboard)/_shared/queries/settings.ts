@@ -26,6 +26,7 @@ import type {
   TermsAgreementSettingsData,
 } from "@/shared/domain/settings/types";
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
+import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
 
 export type {
@@ -39,11 +40,11 @@ export type {
   TaxSettingsData,
 };
 
-export async function getPublicSettings(): Promise<SettingsData> {
+export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
   return getPublicSettingsQuery();
 }
 
-export async function getSettings(): Promise<SettingsData> {
+export async function getSettings(): Promise<Serialized<SettingsData>> {
   await requireAdminPermission("settings", "read");
   return getAdminSettingsQuery();
 }
@@ -68,7 +69,7 @@ export async function getTermsAgreementSettings(): Promise<TermsAgreementSetting
 }
 
 export async function getCancellationPolicies(): Promise<
-  CancellationPolicyOption[]
+  Serialized<CancellationPolicyOption>[]
 > {
   await requireAdminPermission("settings", "read");
   return getCancellationPoliciesQuery();

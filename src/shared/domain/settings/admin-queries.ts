@@ -35,6 +35,7 @@ import {
   parseDurationDiscountRules,
 } from "@/shared/lib/pricing";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums";
 import {
   DEFAULT_ROBOTS_TXT,
@@ -81,7 +82,7 @@ function toSettingsData(
     stripeWebhookSecretMasked: string | null;
     googleCalendarServiceAccountEmailMasked: string | null;
   },
-): SettingsData {
+): Serialized<SettingsData> {
   return toPlainObject({
     ...settings,
     businessHours: parseBusinessHours(settings.businessHours),
@@ -153,7 +154,7 @@ function parseCalendarSyncMethod(value: string | null): CalendarSyncMethod {
   return CalendarSyncMethod.polling;
 }
 
-export async function getPublicSettings(): Promise<SettingsData> {
+export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
   const settings = await getOrCreateSettings();
 
   return toSettingsData(settings, {
@@ -163,7 +164,7 @@ export async function getPublicSettings(): Promise<SettingsData> {
   });
 }
 
-export async function getAdminSettings(): Promise<SettingsData> {
+export async function getAdminSettings(): Promise<Serialized<SettingsData>> {
   const settings = await getOrCreateSettings();
 
   const stripeSecretKeyMasked = settings.stripeSecretKey
@@ -278,7 +279,9 @@ export async function getGoogleCalendarWebhookState(): Promise<GoogleCalendarWeb
   };
 }
 
-export async function getICalTokens(): Promise<ICalTokenWithRelations[]> {
+export async function getICalTokens(): Promise<
+  Serialized<ICalTokenWithRelations>[]
+> {
   const tokens = await prisma.iCalToken.findMany({
     select: {
       id: true,
@@ -355,7 +358,7 @@ export async function getTermsAgreementSettings(): Promise<TermsAgreementSetting
 }
 
 export async function getCancellationPolicies(): Promise<
-  CancellationPolicyOption[]
+  Serialized<CancellationPolicyOption>[]
 > {
   const policies = await prisma.terms.findMany({
     where: {

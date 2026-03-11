@@ -26,6 +26,7 @@ import {
   deleteSocialLink,
   updateSocialLinkOrder,
 } from "@/admin/actions/navigation";
+import type { Serialized } from "@/shared/lib/serialize";
 import type {
   NavigationItemInput,
   SocialLinkInput,
@@ -54,7 +55,7 @@ type NavigationManagerProps = {
   initialDesktopItems: NavigationItemData[];
   initialMobileItems: NavigationItemData[];
   initialFooterItems: NavigationItemData[];
-  initialSocialLinks: SocialLinkData[];
+  initialSocialLinks: Serialized<SocialLinkData>[];
 };
 
 async function fetchNavigationItems(
@@ -64,7 +65,7 @@ async function fetchNavigationItems(
   return fetchAdminJson(`/admin/api/navigation?${searchParams.toString()}`);
 }
 
-async function fetchSocialLinks(): Promise<SocialLinkData[]> {
+async function fetchSocialLinks(): Promise<Serialized<SocialLinkData>[]> {
   return fetchAdminJson("/admin/api/navigation/social-links");
 }
 
@@ -93,10 +94,10 @@ export function NavigationManager({
 
   // Social Links State
   const [socialLinks, setSocialLinks] =
-    useState<SocialLinkData[]>(initialSocialLinks);
+    useState<Serialized<SocialLinkData>[]>(initialSocialLinks);
   const [isSocialDialogOpen, setIsSocialDialogOpen] = useState(false);
   const [editingSocialLink, setEditingSocialLink] =
-    useState<SocialLinkData | null>(null);
+    useState<Serialized<SocialLinkData> | null>(null);
 
   // D&D Sensors
   const sensors = useSensors(
@@ -243,7 +244,7 @@ export function NavigationManager({
     setIsSocialDialogOpen(true);
   };
 
-  const openSocialEditDialog = (link: SocialLinkData) => {
+  const openSocialEditDialog = (link: Serialized<SocialLinkData>) => {
     setEditingSocialLink(link);
     socialFormHook.resetForEdit(link);
     setIsSocialDialogOpen(true);

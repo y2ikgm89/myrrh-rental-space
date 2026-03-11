@@ -21,10 +21,11 @@ import {
 } from "@/admin/components/ui";
 import { updateBasicInfo } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface BasicInfoSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function BasicInfoSection({ settings }: BasicInfoSectionProps) {

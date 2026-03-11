@@ -31,6 +31,7 @@ import {
   updateHomepageSection,
   type HomepageSectionData,
 } from "@/admin/actions/homepage-settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   SectionType,
@@ -76,7 +77,7 @@ import { EmbedConfigForm } from "./section-editor/EmbedConfigForm";
 // =============================================================================
 
 interface SectionEditorProps {
-  section: HomepageSectionData;
+  section: Serialized<HomepageSectionData>;
   onBack: () => void;
   onSave: () => void;
   /** false にするとエディタ内蔵ヘッダーを非表示（専用ページで使用） */
@@ -344,7 +345,7 @@ function TitleForm({
   isPending,
   onSave,
 }: {
-  section: HomepageSectionData;
+  section: Serialized<HomepageSectionData>;
   isPending: boolean;
   onSave: () => void;
 }) {

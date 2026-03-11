@@ -20,10 +20,11 @@ import {
 } from "@/admin/components/ui";
 import { updateTermsAgreementSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface TermsAgreementSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function TermsAgreementSection({

@@ -21,6 +21,7 @@ import {
 } from "@/admin/components/ui";
 import { updateSeoSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 import { AnalyticsType } from "@/shared/db/enums";
 import {
@@ -29,7 +30,7 @@ import {
 } from "@/shared/lib/validations/enums";
 
 interface SeoSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 const ANALYTICS_TYPE_OPTIONS = [

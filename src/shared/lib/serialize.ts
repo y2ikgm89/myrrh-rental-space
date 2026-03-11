@@ -130,7 +130,8 @@ export type SerializedNullable<T> = T extends null ? null : Serialized<T>;
  * // => 'hello'
  * ```
  */
-export function toPlainObject<T>(obj: T): T {
+export function toPlainObject<T>(obj: T): Serialized<T>;
+export function toPlainObject(obj: unknown): unknown {
   // null/undefined はそのまま返す（パフォーマンス最適化）
   if (obj === null || obj === undefined) {
     return obj;
@@ -170,7 +171,8 @@ export function toPlainObject<T>(obj: T): T {
  * const plainArray = toPlainArray(prismaResults)
  * ```
  */
-export function toPlainArray<T>(arr: T[]): T[] {
+export function toPlainArray<T>(arr: T[]): Serialized<T>[];
+export function toPlainArray(arr: unknown[]): unknown[] {
   // null/undefined/空配列はそのまま返す（パフォーマンス最適化）
   if (!arr || arr.length === 0) {
     return arr;

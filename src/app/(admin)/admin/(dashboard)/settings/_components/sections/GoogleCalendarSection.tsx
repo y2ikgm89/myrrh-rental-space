@@ -7,6 +7,7 @@
  */
 
 import { useState, useTransition } from "react";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
@@ -37,7 +38,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 interface GoogleCalendarSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 // =============================================================================

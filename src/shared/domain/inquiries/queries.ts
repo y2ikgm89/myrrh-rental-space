@@ -3,6 +3,7 @@ import "server-only";
 import { InquiryStatus } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 import type { InquiryWhereInput } from "@/shared/types/prisma";
 import type {
   GetInquiriesResult,
@@ -15,7 +16,7 @@ import type {
 export async function getInquiries(
   filters: InquiryFilters = {},
   pagination: InquiryPagination = {},
-): Promise<GetInquiriesResult> {
+): Promise<Serialized<GetInquiriesResult>> {
   const { status, search } = filters;
   const {
     page = 1,
@@ -70,7 +71,9 @@ export async function getInquiries(
   };
 }
 
-export async function getInquiryById(id: string): Promise<InquiryData | null> {
+export async function getInquiryById(
+  id: string,
+): Promise<Serialized<InquiryData> | null> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
   });

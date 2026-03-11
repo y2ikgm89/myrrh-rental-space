@@ -20,10 +20,11 @@ import {
 } from "@/admin/components/ui";
 import { updateEmailSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface EmailSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function EmailSection({ settings }: EmailSectionProps) {

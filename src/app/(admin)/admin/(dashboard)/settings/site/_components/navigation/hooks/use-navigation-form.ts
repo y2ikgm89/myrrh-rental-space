@@ -3,6 +3,7 @@
 import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import type { NavigationType } from "@/shared/db/enums";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   type NavFormData,
   type SocialFormData,
@@ -109,7 +110,7 @@ export type UseSocialFormReturn = {
   socialShowOnDesktop: boolean;
   socialShowOnMobile: boolean;
   resetForCreate: (linkCount: number) => void;
-  resetForEdit: (link: SocialLinkData) => void;
+  resetForEdit: (link: Serialized<SocialLinkData>) => void;
 };
 
 export function useSocialForm(): UseSocialFormReturn {
@@ -149,7 +150,7 @@ export function useSocialForm(): UseSocialFormReturn {
     });
   };
 
-  const resetForEdit = (link: SocialLinkData) => {
+  const resetForEdit = (link: Serialized<SocialLinkData>) => {
     form.reset({
       platform: link.platform,
       url: link.url,

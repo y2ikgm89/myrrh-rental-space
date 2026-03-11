@@ -22,6 +22,7 @@ import {
 import { updateMeoSettings } from "@/admin/actions/settings";
 import { parseBusinessAttributes } from "@/shared/lib/json-validators";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 // =============================================================================
@@ -56,7 +57,7 @@ const BUSINESS_ATTRIBUTE_OPTIONS = [
 // =============================================================================
 
 interface MeoSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
   socialLinkCount: number;
 }
 
@@ -70,7 +71,7 @@ interface MeoScoreItem {
 // =============================================================================
 
 function calculateMeoScore(
-  settings: SettingsData,
+  settings: Serialized<SettingsData>,
   socialLinkCount: number,
 ): {
   score: number;

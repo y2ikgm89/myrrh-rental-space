@@ -20,10 +20,11 @@ import {
 } from "@/admin/components/ui";
 import { updateMaintenanceSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface MaintenanceSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function MaintenanceSection({ settings }: MaintenanceSectionProps) {

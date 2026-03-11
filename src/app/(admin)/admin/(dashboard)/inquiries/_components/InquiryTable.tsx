@@ -10,6 +10,7 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import type { InquiryData } from "@/shared/domain/inquiries/types";
+import type { Serialized } from "@/shared/lib/serialize";
 import { InquiryActionCell } from "./InquiryActionCell";
 
 // =============================================================================
@@ -17,7 +18,7 @@ import { InquiryActionCell } from "./InquiryActionCell";
 // =============================================================================
 
 type InquiryTableProps = {
-  inquiries: InquiryData[];
+  inquiries: Serialized<InquiryData>[];
 };
 
 // =============================================================================

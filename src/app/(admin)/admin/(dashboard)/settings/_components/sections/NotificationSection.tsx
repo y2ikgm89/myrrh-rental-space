@@ -19,10 +19,11 @@ import {
 } from "@/admin/components/ui";
 import { updateNotificationSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { useRefreshOnSuccess } from "../hooks";
 
 interface NotificationSectionProps {
-  settings: SettingsData;
+  settings: Serialized<SettingsData>;
 }
 
 export function NotificationSection({ settings }: NotificationSectionProps) {

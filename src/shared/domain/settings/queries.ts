@@ -16,6 +16,7 @@ import {
   safeFetch,
 } from "@/shared/lib/errors/server";
 import { toPlainObject } from "@/shared/lib/serialize";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   isValidHeaderBackgroundMode,
   isValidHeaderScrollBehavior,
@@ -347,7 +348,7 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
   return toPlainObject(result);
 }
 
-export async function getOrganizationSettings(): Promise<OrganizationSettings | null> {
+export async function getOrganizationSettings(): Promise<Serialized<OrganizationSettings> | null> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
   cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS, CACHE_TAGS.SETTINGS);

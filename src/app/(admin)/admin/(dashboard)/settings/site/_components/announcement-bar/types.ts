@@ -5,6 +5,7 @@ import type {
   Control,
 } from "react-hook-form";
 import type { AnnouncementBarData } from "@/shared/domain/settings/announcement-bar";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
@@ -120,9 +121,9 @@ export type CarouselSettings = {
 // =============================================================================
 
 export type BarListProps = {
-  bars: AnnouncementBarData[];
+  bars: Serialized<AnnouncementBarData>[];
   isPending: boolean;
-  onEdit: (bar: AnnouncementBarData) => void;
+  onEdit: (bar: Serialized<AnnouncementBarData>) => void;
   onCreate: () => void;
   onToggleActive: (id: string) => void;
   onDelete: (id: string) => void;
@@ -131,7 +132,7 @@ export type BarListProps = {
 export type BarDialogProps = {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  editingBar: AnnouncementBarData | null;
+  editingBar: Serialized<AnnouncementBarData> | null;
   isPending: boolean;
   register: UseFormRegister<BarFormData>;
   setValue: UseFormSetValue<BarFormData>;

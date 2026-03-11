@@ -12,6 +12,7 @@ import {
   type CustomConfigInput,
 } from "@/admin/lib/validations/homepage-section";
 import type { HomepageSectionData } from "@/admin/actions/homepage-settings";
+import type { Serialized } from "@/shared/lib/serialize";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 
 const LexicalEditor = dynamic(
@@ -38,7 +39,7 @@ export function CustomConfigForm({
   isPending,
 }: {
   config: CustomConfig;
-  section: HomepageSectionData;
+  section: Serialized<HomepageSectionData>;
   onSave: (config: CustomConfig, contentJson: string) => void;
   isPending: boolean;
 }) {

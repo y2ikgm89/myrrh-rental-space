@@ -18,6 +18,7 @@ import {
   Switch,
 } from "@/admin/components/ui";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums";
+import type { Serialized } from "@/shared/lib/serialize";
 import type {
   NavFormData,
   SocialFormData,
@@ -180,7 +181,7 @@ type SocialLinkDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   form: UseFormReturn<SocialFormData>;
-  editingLink: SocialLinkData | null;
+  editingLink: Serialized<SocialLinkData> | null;
   isPending: boolean;
   socialPlatform: SocialFormData["platform"];
   socialIsActive: boolean;

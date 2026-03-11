@@ -6,6 +6,7 @@ import {
   getHomepageSectionsQuery,
   getPublicHomepageSectionsQuery,
 } from "@/shared/domain/sections/admin-queries";
+import type { Serialized } from "@/shared/lib/serialize";
 import {
   SectionType,
   type SectionConfig,
@@ -27,28 +28,28 @@ export type HomepageSectionData = {
 };
 
 export async function getHomepageSections(): Promise<
-  HomepageSectionData[] | null
+  Serialized<HomepageSectionData>[] | null
 > {
   await requireAdminPermission("settings", "read");
   return getHomepageSectionsQuery();
 }
 
 export async function getPublicHomepageSections(): Promise<
-  HomepageSectionData[]
+  Serialized<HomepageSectionData>[]
 > {
   return getPublicHomepageSectionsQuery();
 }
 
 export async function getHomepageSection(
   id: string,
-): Promise<HomepageSectionData | null> {
+): Promise<Serialized<HomepageSectionData> | null> {
   await requireAdminPermission("settings", "read");
   return getHomepageSectionQuery(id);
 }
 
 export async function getHomepageSectionByType(
   type: SectionType,
-): Promise<HomepageSectionData | null> {
+): Promise<Serialized<HomepageSectionData> | null> {
   await requireAdminPermission("settings", "read");
   return getHomepageSectionByTypeQuery(type);
 }

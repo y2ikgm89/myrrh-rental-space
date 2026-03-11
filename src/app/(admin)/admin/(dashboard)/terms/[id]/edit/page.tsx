@@ -43,8 +43,8 @@ export default async function TermsEditPage({ params }: PageProps) {
         isActive: terms.isActive,
         versions: terms.versions.map((v) => ({
           ...v,
-          createdAt: v.createdAt.toISOString(),
-          publishedAt: v.publishedAt?.toISOString() ?? null,
+          createdAt: v.createdAt,
+          publishedAt: v.publishedAt ?? null,
         })),
       }}
       initialVersion={initialVersion}
