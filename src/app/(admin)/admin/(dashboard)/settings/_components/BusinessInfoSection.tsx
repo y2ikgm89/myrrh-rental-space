@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
+  SubmitButton,
   Card,
   CardContent,
   CardDescription,
@@ -223,9 +223,12 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
           />
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "事業者情報を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="事業者情報を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

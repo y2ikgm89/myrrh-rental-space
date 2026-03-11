@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -17,6 +16,7 @@ import {
   Input,
   Label,
   Switch,
+  SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
 import { updateCookieConsentSettings } from "@/admin/actions/settings";
@@ -169,9 +169,12 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
           </>
         )}
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "Cookie同意設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="Cookie同意設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

@@ -22,6 +22,7 @@ import {
   Label,
   Switch,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateInstagramSettings,
@@ -484,9 +485,12 @@ function FeedSettingsCard({
         </div>
 
         {/* 保存ボタン */}
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

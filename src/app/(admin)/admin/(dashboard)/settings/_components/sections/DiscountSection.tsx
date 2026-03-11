@@ -23,6 +23,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateDiscountSettings,
@@ -297,9 +298,12 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
       </Card>
 
       {/* 保存ボタン */}
-      <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? "保存中..." : "割引設定を保存"}
-      </Button>
+      <SubmitButton
+        isPending={isPending}
+        onClick={handleSave}
+        label="割引設定を保存"
+        pendingLabel="保存中..."
+      />
     </div>
   );
 }

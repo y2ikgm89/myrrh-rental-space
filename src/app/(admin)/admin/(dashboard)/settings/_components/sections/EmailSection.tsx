@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -16,6 +15,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import { updateEmailSettings } from "@/admin/actions/settings";
@@ -160,9 +160,12 @@ export function EmailSection({ settings }: EmailSectionProps) {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "メール設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="メール設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

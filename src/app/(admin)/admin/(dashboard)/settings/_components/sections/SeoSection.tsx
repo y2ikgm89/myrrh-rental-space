@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -18,6 +17,7 @@ import {
   Label,
   Textarea,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateSeoSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
@@ -316,9 +316,13 @@ export function SeoSection({ settings }: SeoSectionProps) {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isPending} size="lg">
-          {isPending ? "保存中..." : "SEO・Analytics設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="SEO・Analytics設定を保存"
+          pendingLabel="保存中..."
+          size="lg"
+        />
       </div>
     </div>
   );

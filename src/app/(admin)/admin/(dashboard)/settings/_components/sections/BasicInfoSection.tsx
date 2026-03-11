@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -17,6 +16,7 @@ import {
   Input,
   Label,
   Switch,
+  SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
 import { updateBasicInfo } from "@/admin/actions/settings";
@@ -199,9 +199,12 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "基本情報を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="基本情報を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

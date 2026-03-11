@@ -8,13 +8,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
   Label,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import { updateNotificationSettings } from "@/admin/actions/settings";
@@ -129,9 +129,12 @@ export function NotificationSection({ settings }: NotificationSectionProps) {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "通知設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="通知設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

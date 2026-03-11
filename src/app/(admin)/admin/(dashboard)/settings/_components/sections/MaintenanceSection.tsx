@@ -8,13 +8,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
   Label,
+  SubmitButton,
   Switch,
   Textarea,
 } from "@/admin/components/ui";
@@ -110,9 +110,12 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
           </p>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "メンテナンス設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="メンテナンス設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

@@ -9,7 +9,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -18,6 +17,7 @@ import {
   Checkbox,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateMeoSettings } from "@/admin/actions/settings";
 import { parseBusinessAttributes } from "@/shared/lib/json-validators";
@@ -395,9 +395,12 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
         </CardContent>
       </Card>
 
-      <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? "保存中..." : "MEO設定を保存"}
-      </Button>
+      <SubmitButton
+        isPending={isPending}
+        onClick={handleSave}
+        label="MEO設定を保存"
+        pendingLabel="保存中..."
+      />
     </div>
   );
 }

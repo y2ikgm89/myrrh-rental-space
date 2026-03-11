@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -14,6 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
@@ -463,9 +463,12 @@ export function CarouselSettingsPanel({
             />
           </div>
 
-          <Button onClick={onSave} disabled={isPending}>
-            {isPending ? "保存中..." : "デザイン・カルーセル設定を保存"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            onClick={onSave}
+            label="デザイン・カルーセル設定を保存"
+            pendingLabel="保存中..."
+          />
         </CardContent>
       </Card>
     </div>

@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
   Label,
-  Button,
   SelectionBox,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import { updatePermalinkSettings } from "@/admin/actions/settings";
@@ -166,9 +166,7 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
         </div>
 
         {/* 保存ボタン */}
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "保存"}
-        </Button>
+        <SubmitButton isPending={isPending} onClick={handleSave} label="保存" />
       </CardContent>
     </Card>
   );

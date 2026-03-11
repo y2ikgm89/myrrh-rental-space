@@ -24,6 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateLayoutSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
@@ -287,9 +288,11 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
 
         {/* アクションボタン */}
         <div className="flex items-center gap-4">
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "保存中..." : "保存"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="保存"
+          />
           <Button
             variant="outline"
             onClick={handlePreview}

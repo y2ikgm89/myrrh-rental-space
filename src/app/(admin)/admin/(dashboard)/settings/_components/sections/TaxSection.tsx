@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -21,6 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateTaxSettings,
@@ -219,9 +219,12 @@ export function TaxSection({ settings }: TaxSectionProps) {
       </Card>
 
       {/* 保存ボタン */}
-      <Button onClick={handleSave} disabled={isPending}>
-        {isPending ? "保存中..." : "消費税設定を保存"}
-      </Button>
+      <SubmitButton
+        isPending={isPending}
+        onClick={handleSave}
+        label="消費税設定を保存"
+        pendingLabel="保存中..."
+      />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { Switch } from "@/admin/components/ui/switch";
 import { Textarea } from "@/admin/components/ui/textarea";
@@ -362,9 +363,12 @@ export function GoogleCalendarSection({
 
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "保存中..." : "設定を保存"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="設定を保存"
+            pendingLabel="保存中..."
+          />
           {formData.serviceAccountJson && formData.googleCalendarId && (
             <Button
               variant="outline"

@@ -10,7 +10,6 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -18,6 +17,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { Switch } from "@/admin/components/ui/switch";
 import { updateSidebarSettings } from "@/admin/actions/settings";
@@ -299,9 +299,12 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
 
         {/* 保存ボタン */}
         <div className="flex items-center gap-4">
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "保存中..." : "サイドバー設定を保存"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="サイドバー設定を保存"
+            pendingLabel="保存中..."
+          />
         </div>
 
         {/* ヒント */}

@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
   Label,
+  SubmitButton,
   Switch,
   Textarea,
 } from "@/admin/components/ui";
@@ -238,9 +239,12 @@ export function RobotsTxtSection() {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "robots.txt設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="robots.txt設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

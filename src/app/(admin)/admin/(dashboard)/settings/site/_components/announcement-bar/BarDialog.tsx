@@ -16,6 +16,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
   Switch,
 } from "@/admin/components/ui";
 import { AnnouncementBarType } from "@/shared/db/enums";
@@ -192,9 +193,11 @@ export function BarDialog({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "保存中..." : editingBar ? "更新" : "作成"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={editingBar ? "更新" : "作成"}
+              pendingLabel="保存中..."
+            />
           </DialogFooter>
         </form>
       </DialogContent>

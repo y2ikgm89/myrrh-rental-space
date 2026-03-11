@@ -8,6 +8,8 @@ interface SubmitButtonProps extends Omit<ButtonProps, "type" | "disabled"> {
   isPending: boolean;
   label: string;
   pendingLabel?: string;
+  /** onClick 指定時は type="button" になる（設定パネル等の非フォーム用途） */
+  onClick?: () => void;
 }
 
 /**
@@ -22,13 +24,19 @@ function SubmitButton({
   isPending,
   label,
   pendingLabel,
+  onClick,
   children,
   ...props
 }: SubmitButtonProps) {
   const pending = pendingLabel ?? `${label.replace(/^(.+)$/, "$1")}中...`;
 
   return (
-    <Button type="submit" disabled={isPending} {...props}>
+    <Button
+      type={onClick ? "button" : "submit"}
+      disabled={isPending}
+      onClick={onClick}
+      {...props}
+    >
       {isPending ? (
         <>
           <Loader2 className="animate-spin" />

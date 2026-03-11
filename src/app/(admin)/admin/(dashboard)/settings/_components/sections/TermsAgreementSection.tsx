@@ -8,7 +8,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -17,6 +16,7 @@ import {
   Input,
   Label,
   Checkbox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateTermsAgreementSettings } from "@/admin/actions/settings";
 import type { SettingsData } from "@/admin/actions/settings";
@@ -153,9 +153,12 @@ export function TermsAgreementSection({
           </>
         )}
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "規約同意設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="規約同意設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

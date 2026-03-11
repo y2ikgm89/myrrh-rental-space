@@ -15,8 +15,8 @@ import {
   CardHeader,
   CardTitle,
   Label,
-  Button,
   SelectionBox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateHeaderSettings } from "@/admin/actions/settings";
 import type { SelectionBoxOption } from "@/admin/components/ui";
@@ -153,9 +153,7 @@ export function HeaderSection({ settings }: HeaderSectionProps) {
           </p>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "保存"}
-        </Button>
+        <SubmitButton isPending={isPending} onClick={handleSave} label="保存" />
       </CardContent>
     </Card>
   );

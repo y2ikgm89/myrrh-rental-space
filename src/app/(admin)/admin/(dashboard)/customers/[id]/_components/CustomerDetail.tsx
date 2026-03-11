@@ -20,6 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
   Textarea,
   Table,
   TableBody,
@@ -261,13 +262,13 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               rows={5}
               disabled={isPending}
             />
-            <Button
+            <SubmitButton
+              isPending={isPending}
               onClick={handleNotesUpdate}
-              disabled={isPending}
+              label="メモを保存"
+              pendingLabel="保存中..."
               className="w-full"
-            >
-              {isPending ? "保存中..." : "メモを保存"}
-            </Button>
+            />
           </CardContent>
         </Card>
 

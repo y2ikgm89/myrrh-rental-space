@@ -10,7 +10,6 @@
 import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -23,6 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { updateReservationSettings } from "@/admin/actions/settings";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
@@ -218,9 +218,12 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
           </div>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending}>
-          {isPending ? "保存中..." : "予約設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="予約設定を保存"
+          pendingLabel="保存中..."
+        />
       </CardContent>
     </Card>
   );

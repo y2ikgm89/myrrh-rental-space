@@ -17,6 +17,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateGoogleMapsSettings,
@@ -224,9 +225,11 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
 
         {/* アクションボタン */}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "保存中..." : "保存"}
-          </Button>
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="保存"
+          />
           {formData.googleMapsApiKey && (
             <Button
               variant="outline"
