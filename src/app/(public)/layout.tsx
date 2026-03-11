@@ -31,6 +31,7 @@ import { AnnouncementBarWrapper } from "@/public/components/AnnouncementBarWrapp
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
+import { ExperienceShell } from "@/public/components/effects/ExperienceShell";
 import { GraphJsonLd } from "@/public/components/seo/JsonLd";
 import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
@@ -210,41 +211,43 @@ export default async function PublicRootLayout({
         </Suspense>
         <Suspense fallback={null}>
           <AriaLiveProvider>
-            <div className="flex min-h-screen flex-col">
-              {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
-              <SkipLink />
+            <ExperienceShell>
+              <div className="flex min-h-screen flex-col">
+                {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+                <SkipLink />
 
-              {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-              <AnnouncementBarWrapper />
-              <Suspense fallback={null}>
-                <HeaderWithData headerSettings={headerSettings} />
-              </Suspense>
-
-              <main
-                id="main-content"
-                className="flex-1"
-                {...(isTransparent && {
-                  "data-header-transparent": "",
-                  style: {
-                    marginTop: "calc(var(--header-height, 0px) * -1)",
-                  },
-                })}
-              >
+                {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+                <AnnouncementBarWrapper />
                 <Suspense fallback={null}>
-                  <NuqsAdapter>{children}</NuqsAdapter>
+                  <HeaderWithData headerSettings={headerSettings} />
                 </Suspense>
-              </main>
 
-              <Footer />
+                <main
+                  id="main-content"
+                  className="flex-1"
+                  {...(isTransparent && {
+                    "data-header-transparent": "",
+                    style: {
+                      marginTop: "calc(var(--header-height, 0px) * -1)",
+                    },
+                  })}
+                >
+                  <Suspense fallback={null}>
+                    <NuqsAdapter>{children}</NuqsAdapter>
+                  </Suspense>
+                </main>
 
-              {/* 動的コンテンツ - リクエスト時にストリーミング */}
-              <Suspense fallback={null}>
-                <DynamicContent />
-              </Suspense>
+                <Footer />
+              </div>
+            </ExperienceShell>
 
-              {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
-              <AriaLiveRegion />
-            </div>
+            {/* DynamicContent は ExperienceShell 外（Analytics/Cookie はスクロールコンテキスト不要） */}
+            <Suspense fallback={null}>
+              <DynamicContent />
+            </Suspense>
+
+            {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+            <AriaLiveRegion />
           </AriaLiveProvider>
         </Suspense>
       </body>
