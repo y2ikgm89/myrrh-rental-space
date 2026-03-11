@@ -73,30 +73,7 @@ enum LayoutWidth {
   CUSTOM
 }
 
-enum SectionType {
-  // Hero variants
-  HERO // ヒーローセクション
-  HERO_PARALLAX // パララックスヒーロー（v3）
-  // Content
-  CUSTOM // Lexicalリッチテキスト
-  CONCEPT // コンセプトセクション（v3）
-  // Lists
-  SPACE_LIST // スペース一覧
-  SPACE_SHOWCASE // スペースショーケース（v3）
-  NEWS_LIST // お知らせ一覧
-  POST_LIST // 記事一覧
-  FAQ_LIST // FAQ一覧
-  // Features
-  FEATURES // 特徴セクション（v3）
-  TESTIMONIAL // 体験談・レビュー
-  GALLERY // ギャラリー
-  // Functional
-  CTA // Call to Action
-  CONTACT_FORM // お問い合わせフォーム
-  MAP // 地図
-  EMBED // 埋め込み（iframe）
-  INSTAGRAM // Instagramフィード
-}
+// SectionType enum deleted — replaced by Section.componentId String
 
 enum PostStatus {
   DRAFT
@@ -862,6 +839,7 @@ model Page {
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   showSidebar        Boolean? // null=デフォルト使用、true/false=明示的指定
+  effectConfig       Json         @default("{}") // ページ単位のエフェクト設定
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -879,22 +857,23 @@ model Page {
 model Section {
   id          String      @id @default(uuid())
   pageId      String? // null = ホームページ
-  type        SectionType
-  order       Int         @default(0) // 表示順序（DnDで変更可能）
-  isActive    Boolean     @default(true) // ON/OFF制御
-  title       String? // セクション見出し（表示用）
-  contentHtml String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
-  contentJson Json? // Lexical EditorState JSON（プライマリ）
-  config      Json        @default("{}") // タイプ別設定（Zodで型安全）
-  design    Json        @default("{}") // ビジュアル設定（共通）
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  componentId  String // 旧: type SectionType → kebab-case 文字列
+  order        Int         @default(0) // 表示順序（DnDで変更可能）
+  isActive     Boolean     @default(true) // ON/OFF制御
+  title        String? // セクション見出し（表示用）
+  contentHtml  String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
+  contentJson  Json? // Lexical EditorState JSON（プライマリ）
+  config       Json        @default("{}") // タイプ別設定（Zodで型安全）
+  design       Json        @default("{}") // ビジュアル設定（共通）
+  effectConfig Json        @default("{}") // セクション単位のエフェクト設定
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   // Relations
   page Page? @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, order, isActive])
-  @@index([type])
+  @@index([componentId])
   @@map("sections")
 }
 
