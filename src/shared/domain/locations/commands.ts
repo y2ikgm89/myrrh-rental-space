@@ -3,7 +3,7 @@ import "server-only";
 import { prisma, Prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import type { LocationFormData } from "@/admin/lib/validations/location";
+import type { LocationFormData } from "@/shared/lib/validations/location";
 
 function businessHoursToJson(
   value: BusinessHours | null | undefined,

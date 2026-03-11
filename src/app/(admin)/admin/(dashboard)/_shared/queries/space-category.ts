@@ -8,7 +8,7 @@ import {
 import type {
   GetSpaceCategoriesResult,
   SpaceCategoryWithStats,
-} from "@/admin/lib/validations/space-category";
+} from "@/shared/lib/validations/space-category";
 import { requireAdminPermission } from "./_helpers";
 
 export async function getSpaceCategories(options?: {

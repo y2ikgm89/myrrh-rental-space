@@ -67,11 +67,19 @@ export async function GET(request: NextRequest) {
 
   // エラーチェック（ユーザーが認証をキャンセルした場合など）
   if (error) {
-    const errorMessage =
-      error_description ||
-      error_reason ||
-      "Instagram認証がキャンセルされました";
-    return redirectToSettings({ error: errorMessage });
+    logError(new Error("Instagram OAuth error"), {
+      category: ErrorCategory.EXTERNAL_API,
+      severity: ErrorSeverity.LOW,
+      context: {
+        error,
+        error_reason,
+        error_description,
+        operation: "instagramOAuthCallback",
+      },
+    });
+    return redirectToSettings({
+      error: "Instagram認証に失敗しました。再度お試しください。",
+    });
   }
 
   // 必須パラメータチェック

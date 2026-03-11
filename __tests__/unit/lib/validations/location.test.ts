@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { locationFormSchema } from "@/admin/lib/validations/location";
+import { locationFormSchema } from "@/shared/lib/validations/location";
 
 describe("locationFormSchema", () => {
   test("正常なデータが検証を通過する", () => {

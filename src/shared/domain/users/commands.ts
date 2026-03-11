@@ -7,7 +7,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import type {
   CreateUserInput,
   UpdateUserInput,
-} from "@/admin/lib/validations/user";
+} from "@/shared/lib/validations/user";
 
 async function ensureUserExists(id: string): Promise<{
   id: string;

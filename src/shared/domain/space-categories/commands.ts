@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import type { SpaceCategoryFormData } from "@/admin/lib/validations/space-category";
+import type { SpaceCategoryFormData } from "@/shared/lib/validations/space-category";
 
 type SpaceCategoryOrderInput = {
   id: string;

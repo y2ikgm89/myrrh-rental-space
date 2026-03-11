@@ -9,7 +9,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { CategoryActionCell } from "./CategoryActionCell";
-import type { SpaceCategoryWithStats } from "@/admin/lib/validations/space-category";
+import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 
 type CategoryTableProps = {
   categories: SpaceCategoryWithStats[];

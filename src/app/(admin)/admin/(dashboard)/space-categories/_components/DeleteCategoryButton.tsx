@@ -17,7 +17,7 @@ import {
 } from "@/admin/components/ui";
 import { deleteSpaceCategory } from "@/admin/actions/space-category";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { SpaceCategoryWithStats } from "@/admin/lib/validations/space-category";
+import type { SpaceCategoryWithStats } from "@/shared/lib/validations/space-category";
 
 type DeleteCategoryButtonProps = {
   category: SpaceCategoryWithStats;

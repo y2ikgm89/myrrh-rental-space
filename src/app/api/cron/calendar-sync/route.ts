@@ -125,9 +125,7 @@ export async function GET(request: Request) {
         sendWebhookRenewalNotification({
           success: false,
           error:
-            renewalError instanceof Error
-              ? renewalError.message
-              : "Unknown error",
+            "Webhook更新処理でエラーが発生しました。詳細はサーバーログを確認してください。",
         }),
         {
           operation: "sendWebhookRenewalNotificationError",

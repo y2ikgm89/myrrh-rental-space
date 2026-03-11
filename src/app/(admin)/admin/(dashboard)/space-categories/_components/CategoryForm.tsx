@@ -8,7 +8,7 @@ import {
   defaultSpaceCategoryFormValues,
   type SpaceCategoryFormInput,
   type SpaceCategoryWithStats,
-} from "@/admin/lib/validations/space-category";
+} from "@/shared/lib/validations/space-category";
 
 type CategoryFormProps = {
   category?: SpaceCategoryWithStats;

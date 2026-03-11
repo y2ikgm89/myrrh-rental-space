@@ -4,7 +4,7 @@
  * メディアアップロードダイアログ
  */
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useId } from "react";
 import { X, Upload, File, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,7 @@ export function MediaUploadDialog({
   onUploadSuccess,
 }: Props) {
   const router = useRouter();
+  const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -170,6 +171,9 @@ export function MediaUploadDialog({
               <p className="text-xs text-muted-foreground">
                 画像: 10MB以下 / 動画: 100MB以下
               </p>
+              <label htmlFor="file-input" className="sr-only">
+                ファイルを選択
+              </label>
               <input
                 id="file-input"
                 type="file"
@@ -219,8 +223,14 @@ export function MediaUploadDialog({
             <div className="space-y-3">
               {/* Usage */}
               <div>
-                <label className="text-sm font-medium block mb-1">用途</label>
+                <label
+                  htmlFor={`${formId}-usage`}
+                  className="text-sm font-medium block mb-1"
+                >
+                  用途
+                </label>
                 <select
+                  id={`${formId}-usage`}
                   value={formData.usage}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -241,10 +251,14 @@ export function MediaUploadDialog({
               {/* Alt Text (for images) */}
               {file.type.startsWith("image/") && (
                 <div>
-                  <label className="text-sm font-medium block mb-1">
+                  <label
+                    htmlFor={`${formId}-alt`}
+                    className="text-sm font-medium block mb-1"
+                  >
                     代替テキスト（alt）
                   </label>
                   <input
+                    id={`${formId}-alt`}
                     type="text"
                     value={formData.alt}
                     onChange={(e) =>
@@ -258,10 +272,14 @@ export function MediaUploadDialog({
 
               {/* Title */}
               <div>
-                <label className="text-sm font-medium block mb-1">
+                <label
+                  htmlFor={`${formId}-title`}
+                  className="text-sm font-medium block mb-1"
+                >
                   タイトル
                 </label>
                 <input
+                  id={`${formId}-title`}
                   type="text"
                   value={formData.title}
                   onChange={(e) =>

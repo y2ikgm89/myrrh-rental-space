@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { spaceCategoryFormSchema } from "@/admin/lib/validations/space-category";
+import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
 
 describe("spaceCategoryFormSchema", () => {
   test("正常なデータが検証を通過する", () => {

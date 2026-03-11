@@ -7,6 +7,11 @@
 
 import "server-only";
 import { z } from "zod";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import { getDecryptedCloudflareCredentials } from "@/shared/domain/settings/api-key-queries";
 import { logger } from "./logger";
 import { getBaseUrl } from "@/shared/lib/constants";
@@ -135,10 +140,15 @@ async function callPurgeApi(
     if (error instanceof Error && error.name === "TimeoutError") {
       return { success: false, error: "タイムアウトしました" };
     }
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "不明なエラー",
-    };
+    logError(
+      error instanceof Error ? error : new Error("Cloudflare API error"),
+      {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: { operation: "callPurgeApi" },
+      },
+    );
+    return { success: false, error: "Cloudflare API接続に失敗しました" };
   }
 }
 

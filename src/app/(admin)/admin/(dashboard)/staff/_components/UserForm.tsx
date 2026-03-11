@@ -18,7 +18,7 @@ import { createUser, updateUser } from "@/admin/actions/user";
 import {
   createUserSchema,
   updateUserSchema,
-} from "@/admin/lib/validations/user";
+} from "@/shared/lib/validations/user";
 import type { UserData } from "@/shared/domain/users/types";
 import { Role } from "@/shared/db/enums";
 import { keysOf } from "@/shared/lib/serialize";

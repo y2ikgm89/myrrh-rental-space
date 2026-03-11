@@ -9,7 +9,7 @@ import {
   setupPasswordSchema,
   type CreateInvitationInput,
   type SetupPasswordInput,
-} from "@/admin/lib/validations/staff-invitation";
+} from "@/shared/lib/validations/staff-invitation";
 import {
   deleteInvitation as deleteInvitationCommand,
   resendInvitation as resendInvitationCommand,

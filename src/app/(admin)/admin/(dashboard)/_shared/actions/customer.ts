@@ -8,7 +8,7 @@ import {
   updateCustomerNotesSchema,
   updateCustomerStatusSchema,
   type CustomerFormInput,
-} from "@/admin/lib/validations/customer";
+} from "@/shared/lib/validations/customer";
 import {
   createCustomer as createCustomerCommand,
   deleteCustomer as deleteCustomerCommand,

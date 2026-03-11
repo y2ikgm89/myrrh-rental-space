@@ -10,7 +10,7 @@ import {
   updateUserSchema,
   type CreateUserInput,
   type UpdateUserInput,
-} from "@/admin/lib/validations/user";
+} from "@/shared/lib/validations/user";
 import { Role } from "@/shared/db/enums";
 import {
   createUser as createUserCommand,

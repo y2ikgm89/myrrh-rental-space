@@ -3,7 +3,7 @@ import "server-only";
 import type { CustomerStatus } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import type { CustomerFormData } from "@/admin/lib/validations/customer";
+import type { CustomerFormData } from "@/shared/lib/validations/customer";
 
 async function ensureCustomerExists(id: string): Promise<void> {
   const customer = await prisma.customer.findUnique({

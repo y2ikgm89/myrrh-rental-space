@@ -4,7 +4,7 @@
  * メディア詳細ダイアログ
  */
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useId } from "react";
 import {
   Copy,
   ExternalLink,
@@ -57,6 +57,7 @@ function getInitialFormState(item: MediaData | null): FormState {
 export function MediaDetailDialog({ item, onClose }: Props) {
   const router = useRouter();
   const confirmDialog = useConfirm();
+  const formId = useId();
   const [isPending, startTransition] = useTransition();
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -218,10 +219,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   <div className="space-y-3">
                     {/* Usage */}
                     <div>
-                      <label className="text-sm font-medium block mb-1">
+                      <label
+                        htmlFor={`${formId}-usage`}
+                        className="text-sm font-medium block mb-1"
+                      >
                         用途
                       </label>
                       <select
+                        id={`${formId}-usage`}
                         value={formData.usage}
                         onChange={(e) => handleChange("usage", e.target.value)}
                         className="w-full h-9 rounded-md border bg-background px-3 text-sm"
@@ -237,10 +242,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                     {/* Alt */}
                     {item.type === "IMAGE" && (
                       <div>
-                        <label className="text-sm font-medium block mb-1">
+                        <label
+                          htmlFor={`${formId}-alt`}
+                          className="text-sm font-medium block mb-1"
+                        >
                           代替テキスト（alt）
                         </label>
                         <input
+                          id={`${formId}-alt`}
                           type="text"
                           value={formData.alt}
                           onChange={(e) => handleChange("alt", e.target.value)}
@@ -252,10 +261,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
                     {/* Title */}
                     <div>
-                      <label className="text-sm font-medium block mb-1">
+                      <label
+                        htmlFor={`${formId}-title`}
+                        className="text-sm font-medium block mb-1"
+                      >
                         タイトル
                       </label>
                       <input
+                        id={`${formId}-title`}
                         type="text"
                         value={formData.title}
                         onChange={(e) => handleChange("title", e.target.value)}
@@ -266,10 +279,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
 
                     {/* Description */}
                     <div>
-                      <label className="text-sm font-medium block mb-1">
+                      <label
+                        htmlFor={`${formId}-description`}
+                        className="text-sm font-medium block mb-1"
+                      >
                         説明
                       </label>
                       <textarea
+                        id={`${formId}-description`}
                         value={formData.description}
                         onChange={(e) =>
                           handleChange("description", e.target.value)

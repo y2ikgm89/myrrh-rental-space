@@ -18,7 +18,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type {
   SpaceCategoryFormInput,
   SpaceCategoryWithStats,
-} from "@/admin/lib/validations/space-category";
+} from "@/shared/lib/validations/space-category";
 import { CategoryForm } from "./CategoryForm";
 
 type EditCategoryDialogProps = {

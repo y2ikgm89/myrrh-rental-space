@@ -3,7 +3,7 @@ import {
   customerFormSchema,
   updateCustomerStatusSchema,
   updateCustomerNotesSchema,
-} from "@/admin/lib/validations/customer";
+} from "@/shared/lib/validations/customer";
 import { CustomerStatus } from "@/shared/lib/validations/enums";
 
 describe("customerFormSchema", () => {

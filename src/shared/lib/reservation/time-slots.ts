@@ -44,14 +44,14 @@ async function getBusinessHoursSettings(): Promise<BusinessHours | null> {
 /**
  * 日付から曜日キーを取得
  */
-function getWeekdayKey(date: Date): WeekdayKey {
+export function getWeekdayKey(date: Date): WeekdayKey {
   return WEEKDAY_KEYS[date.getDay()] ?? "sunday";
 }
 
 /**
  * 時刻文字列を時・分に分解
  */
-function parseTime(time: string): { hour: number; minute: number } {
+export function parseTime(time: string): { hour: number; minute: number } {
   const parts = time.split(":").map(Number);
   return { hour: parts[0] ?? 0, minute: parts[1] ?? 0 };
 }
@@ -63,7 +63,7 @@ function parseTime(time: string): { hour: number; minute: number } {
  * @param date - 日付（YYYY-MM-DD形式）
  * @returns 営業時間内の時間枠（1時間刻み）
  */
-function generateSlotsFromBusinessHours(
+export function generateSlotsFromBusinessHours(
   businessHours: BusinessHours | null,
   date: string,
 ): TimeSlot[] {
@@ -109,7 +109,7 @@ function generateSlotsFromBusinessHours(
 /**
  * フォールバック用スロット生成（営業時間設定がない場合）
  */
-function generateFallbackSlots(): TimeSlot[] {
+export function generateFallbackSlots(): TimeSlot[] {
   const slots: TimeSlot[] = [];
   for (
     let hour = DEFAULT_BUSINESS_HOURS.start;

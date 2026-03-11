@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type {
   GetSpaceCategoriesResult,
   SpaceCategoryWithStats,
-} from "@/admin/lib/validations/space-category";
+} from "@/shared/lib/validations/space-category";
 
 type ActiveSpaceCategoryOption = {
   id: string;

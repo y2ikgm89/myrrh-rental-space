@@ -18,7 +18,7 @@ import {
   INVITATION_EXPIRY_DAYS,
   type CreateInvitationInput,
   type SetupPasswordInput,
-} from "@/admin/lib/validations/staff-invitation";
+} from "@/shared/lib/validations/staff-invitation";
 
 function generateToken(): string {
   return randomBytes(32).toString("hex");

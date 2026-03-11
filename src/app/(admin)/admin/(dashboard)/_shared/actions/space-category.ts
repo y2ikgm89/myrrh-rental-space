@@ -13,8 +13,8 @@ import {
   updateSpaceCategory as updateSpaceCategoryCommand,
   updateSpaceCategoryOrder as updateSpaceCategoryOrderCommand,
 } from "@/shared/domain/space-categories/commands";
-import { spaceCategoryFormSchema } from "@/admin/lib/validations/space-category";
-import type { SpaceCategoryFormInput } from "@/admin/lib/validations/space-category";
+import { spaceCategoryFormSchema } from "@/shared/lib/validations/space-category";
+import type { SpaceCategoryFormInput } from "@/shared/lib/validations/space-category";
 
 const idSchema = z.string().uuid({ error: "カテゴリーIDが不正です" });
 const categoryOrderSchema = z.array(

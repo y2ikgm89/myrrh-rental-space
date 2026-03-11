@@ -15,7 +15,7 @@ import {
 } from "@/admin/components/ui";
 import { createSpaceCategory } from "@/admin/actions/space-category";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { SpaceCategoryFormInput } from "@/admin/lib/validations/space-category";
+import type { SpaceCategoryFormInput } from "@/shared/lib/validations/space-category";
 import { CategoryForm } from "./CategoryForm";
 
 export function CreateCategoryDialog() {

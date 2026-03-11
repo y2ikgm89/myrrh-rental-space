@@ -6,7 +6,7 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   locationFormSchema,
   type LocationFormInput,
-} from "@/admin/lib/validations/location";
+} from "@/shared/lib/validations/location";
 import {
   createLocation as createLocationCommand,
   deleteLocation as deleteLocationCommand,

@@ -2,7 +2,7 @@ import { describe, test, expect } from "bun:test";
 import {
   createInvitationSchema,
   setupPasswordSchema,
-} from "@/admin/lib/validations/staff-invitation";
+} from "@/shared/lib/validations/staff-invitation";
 import { Role } from "@/shared/db/enums";
 
 describe("createInvitationSchema", () => {
