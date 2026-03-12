@@ -457,6 +457,25 @@ export async function updateHeaderSettings(
   });
 }
 
+export type FooterSettingsInput = {
+  footerTagline: string | null;
+  footerNavigationLabel: string;
+  footerContactLabel: string;
+  footerHoursLabel: string;
+  footerShowSocialLinks: boolean;
+  themeColor: string;
+};
+
+export async function updateFooterSettings(
+  data: FooterSettingsInput,
+): Promise<void> {
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...data },
+    update: data,
+  });
+}
+
 export async function updateDiscountSettings(
   data: DiscountSettingsInput,
 ): Promise<void> {
