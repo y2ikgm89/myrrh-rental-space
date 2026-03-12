@@ -150,6 +150,12 @@ export type SettingsData = {
   postUrlPrefixEnabled: boolean;
   headerScrollBehavior: HeaderScrollBehavior;
   headerBackgroundMode: HeaderBackgroundMode;
+  footerTagline: string | null;
+  footerNavigationLabel: string;
+  footerContactLabel: string;
+  footerHoursLabel: string;
+  footerShowSocialLinks: boolean;
+  themeColor: string;
   createdAt: Date;
   updatedAt: Date;
 };
