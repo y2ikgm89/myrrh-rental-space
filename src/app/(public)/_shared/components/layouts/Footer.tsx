@@ -11,9 +11,14 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
+import {
+  getFooterSettings,
+  getSocialLinksForFooter,
+} from "@/shared/domain/settings/queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { CopyrightYear } from "./CopyrightYear";
+import { SocialLinks } from "./SocialLinks";
 
 // =============================================================================
 // Constants
@@ -122,9 +127,11 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
 // =============================================================================
 
 export async function Footer(): Promise<ReactElement> {
-  const [info, footerNav] = await Promise.all([
+  const [info, footerNav, footerSettings, socialLinks] = await Promise.all([
     getBusinessInfo(),
     getFooterNavigation(),
+    getFooterSettings(),
+    getSocialLinksForFooter(),
   ]);
   const brandShort = (info.name.split(" ")[0] ?? "MYRRH").toUpperCase();
   const hoursDisplay = parseFooterHours(info.businessHours);
@@ -142,16 +149,29 @@ export async function Footer(): Promise<ReactElement> {
               {brandShort}
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              洗練された空間で、特別なひとときを。
-              <br />
-              厳選されたレンタルスペースをご案内します。
+              {(
+                footerSettings.tagline ??
+                "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
+              )
+                .split("\n")
+                .map((line, i) => (
+                  <span key={i}>
+                    {i > 0 && <br />}
+                    {line}
+                  </span>
+                ))}
             </p>
+            {footerSettings.showSocialLinks && socialLinks.length > 0 && (
+              <div className="mt-4">
+                <SocialLinks links={socialLinks} />
+              </div>
+            )}
           </div>
 
           {/* Navigation */}
           <div>
             <h3 className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Navigation
+              {footerSettings.navigationLabel}
             </h3>
             <ul className="mt-4 space-y-3">
               {footerNav.length > 0 ? (
@@ -215,7 +235,7 @@ export async function Footer(): Promise<ReactElement> {
             className="not-italic"
           >
             <h3 className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Contact
+              {footerSettings.contactLabel}
             </h3>
             <meta itemProp="name" content={info.name} />
             <ul className="mt-4 space-y-3 text-sm text-foreground">
@@ -275,7 +295,7 @@ export async function Footer(): Promise<ReactElement> {
               {hoursDisplay.length > 0 && (
                 <li className="pt-1">
                   <span className="block text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Hours
+                    {footerSettings.hoursLabel}
                   </span>
                   <div className="mt-2 space-y-1">
                     {hoursDisplay.map((h) => (
