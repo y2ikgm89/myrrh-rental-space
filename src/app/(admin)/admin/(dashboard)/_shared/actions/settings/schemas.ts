@@ -203,6 +203,31 @@ export const headerSettingsSchema = z.object({
 
 export type HeaderSettingsInput = z.infer<typeof headerSettingsSchema>;
 
+export const footerSettingsSchema = z.object({
+  footerTagline: z
+    .string()
+    .max(200, { error: "200文字以内で入力してください" })
+    .nullable(),
+  footerNavigationLabel: z
+    .string()
+    .min(1, { error: "必須です" })
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerContactLabel: z
+    .string()
+    .min(1, { error: "必須です" })
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerHoursLabel: z
+    .string()
+    .min(1, { error: "必須です" })
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerShowSocialLinks: z.boolean(),
+  themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, {
+    error: "有効なHEXカラーコードを入力してください",
+  }),
+});
+
+export type FooterSettingsInput = z.infer<typeof footerSettingsSchema>;
+
 export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>;
 
 // =============================================================================

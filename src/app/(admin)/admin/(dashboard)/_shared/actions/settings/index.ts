@@ -54,6 +54,7 @@ export type {
   DiscountSettingsInput,
   DurationDiscountRuleInput,
   HeaderSettingsInput,
+  FooterSettingsInput,
 } from "./schemas";
 
 // =============================================================================
@@ -124,6 +125,7 @@ export {
   updateAnnouncementBarCarouselSettings,
   updatePermalinkSettings,
   updateHeaderSettings,
+  updateFooterSettings,
 } from "./other";
 
 // =============================================================================

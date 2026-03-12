@@ -20,6 +20,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { updateAnnouncementBarCarouselSettings as updateAnnouncementBarCarouselSettingsCommand } from "@/shared/domain/settings/announcement-bar";
 import {
   updateCookieConsentSettings as updateCookieConsentSettingsCommand,
+  updateFooterSettings as updateFooterSettingsCommand,
   updateHeaderSettings as updateHeaderSettingsCommand,
   updateMaintenanceSettings as updateMaintenanceSettingsCommand,
   updatePermalinkSettings as updatePermalinkSettingsCommand,
@@ -37,6 +38,7 @@ import {
   announcementBarCarouselSettingsSchema,
   permalinkSettingsSchema,
   headerSettingsSchema,
+  footerSettingsSchema,
   type MaintenanceSettingsInput,
   type CookieConsentSettingsInput,
   type TermsAgreementSettingsInput,
@@ -44,6 +46,7 @@ import {
   type AnnouncementBarCarouselSettingsInput,
   type PermalinkSettingsInput,
   type HeaderSettingsInput,
+  type FooterSettingsInput,
   type SidebarSettingsInput,
 } from "./schemas";
 
@@ -220,6 +223,25 @@ export async function updateHeaderSettings(
     action: "update",
     execute: async () => {
       await updateHeaderSettingsCommand(parsed.data);
+      return null;
+    },
+    afterSuccess: invalidateLayoutCache,
+  });
+}
+
+export async function updateFooterSettings(
+  data: FooterSettingsInput,
+): Promise<MutationResult> {
+  const parsed = footerSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateFooterSettingsCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateLayoutCache,
