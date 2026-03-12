@@ -6,6 +6,7 @@
  * 各セクションタイプに応じた設定フォームを表示
  */
 
+import "@/public/lib/sections/register-standard-sections";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -33,44 +34,8 @@ import {
 } from "@/admin/actions/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  SectionType,
-  sectionTypeLabels,
-  getHeroConfig,
-  getHeroParallaxConfig,
-  getConceptConfig,
-  getSpaceShowcaseConfig,
-  getFeaturesConfig,
-  getSpaceListConfig,
-  getNewsListConfig,
-  getPostListConfig,
-  getFaqListConfig,
-  getCtaConfig,
-  getCustomConfig,
-  getInstagramConfig,
-  getTestimonialConfig,
-  getGalleryConfig,
-  getContactFormConfig,
-  getMapConfig,
-  getEmbedConfig,
-} from "@/admin/lib/validations/homepage-section";
-import { HeroConfigForm } from "./section-editor/HeroConfigForm";
-import { HeroParallaxConfigForm } from "./section-editor/HeroParallaxConfigForm";
-import { ConceptConfigForm } from "./section-editor/ConceptConfigForm";
-import { SpaceShowcaseConfigForm } from "./section-editor/SpaceShowcaseConfigForm";
-import { FeaturesConfigForm } from "./section-editor/FeaturesConfigForm";
-import { SpaceListConfigForm } from "./section-editor/SpaceListConfigForm";
-import { NewsListConfigForm } from "./section-editor/NewsListConfigForm";
-import { PostListConfigForm } from "./section-editor/PostListConfigForm";
-import { FaqListConfigForm } from "./section-editor/FaqListConfigForm";
-import { CtaConfigForm } from "./section-editor/CtaConfigForm";
-import { CustomConfigForm } from "./section-editor/CustomConfigForm";
-import { InstagramConfigForm } from "./section-editor/InstagramConfigForm";
-import { TestimonialConfigForm } from "./section-editor/TestimonialConfigForm";
-import { GalleryConfigForm } from "./section-editor/GalleryConfigForm";
-import { ContactFormConfigForm } from "./section-editor/ContactFormConfigForm";
-import { MapConfigForm } from "./section-editor/MapConfigForm";
-import { EmbedConfigForm } from "./section-editor/EmbedConfigForm";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { SchemaForm } from "@/admin/components/schema-form";
 
 // =============================================================================
 // Props
@@ -95,17 +60,12 @@ export function SectionEditor({
   showHeader = true,
 }: SectionEditorProps) {
   const [isPending, startTransition] = useTransition();
-  const label = sectionTypeLabels[section.type];
+  const definition = getSectionDefinition(section.componentId);
+  const label = definition?.meta.label ?? section.componentId;
 
-  const handleConfigSave = (
-    config: Record<string, unknown>,
-    contentJson?: string,
-  ) => {
+  const handleConfigSave = (config: Record<string, unknown>) => {
     startTransition(async () => {
-      const result = await updateHomepageSection(section.id, {
-        config,
-        contentJson,
-      });
+      const result = await updateHomepageSection(section.id, { config });
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
@@ -114,156 +74,6 @@ export function SectionEditor({
       toast.success("セクションを更新しました");
       onSave();
     });
-  };
-
-  const renderConfigForm = () => {
-    const { config } = section;
-
-    switch (section.type) {
-      case SectionType.HERO:
-        return (
-          <HeroConfigForm
-            config={getHeroConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.HERO_PARALLAX:
-        return (
-          <HeroParallaxConfigForm
-            config={getHeroParallaxConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.CONCEPT:
-        return (
-          <ConceptConfigForm
-            config={getConceptConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.SPACE_SHOWCASE:
-        return (
-          <SpaceShowcaseConfigForm
-            config={getSpaceShowcaseConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.FEATURES:
-        return (
-          <FeaturesConfigForm
-            config={getFeaturesConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.SPACE_LIST:
-        return (
-          <SpaceListConfigForm
-            config={getSpaceListConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.NEWS_LIST:
-        return (
-          <NewsListConfigForm
-            config={getNewsListConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.POST_LIST:
-        return (
-          <PostListConfigForm
-            config={getPostListConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.FAQ_LIST:
-        return (
-          <FaqListConfigForm
-            config={getFaqListConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.CTA:
-        return (
-          <CtaConfigForm
-            config={getCtaConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.CUSTOM:
-        return (
-          <CustomConfigForm
-            config={getCustomConfig(config)}
-            section={section}
-            onSave={(c, contentJson) => handleConfigSave(c, contentJson)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.INSTAGRAM:
-        return (
-          <InstagramConfigForm
-            config={getInstagramConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.TESTIMONIAL:
-        return (
-          <TestimonialConfigForm
-            config={getTestimonialConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.GALLERY:
-        return (
-          <GalleryConfigForm
-            config={getGalleryConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.CONTACT_FORM:
-        return (
-          <ContactFormConfigForm
-            config={getContactFormConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.MAP:
-        return (
-          <MapConfigForm
-            config={getMapConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      case SectionType.EMBED:
-        return (
-          <EmbedConfigForm
-            config={getEmbedConfig(config)}
-            onSave={(c) => handleConfigSave(c)}
-            isPending={isPending}
-          />
-        );
-      default:
-        return (
-          <p className="text-muted-foreground">
-            このセクションタイプは編集できません
-          </p>
-        );
-    }
   };
 
   return (
@@ -308,7 +118,23 @@ export function SectionEditor({
               <CardTitle>セクション設定</CardTitle>
               <CardDescription>{label}固有の設定</CardDescription>
             </CardHeader>
-            <CardContent>{renderConfigForm()}</CardContent>
+            <CardContent>
+              {definition ? (
+                <SchemaForm
+                  schema={definition.configSchema}
+                  defaultValues={z
+                    .record(z.string(), z.unknown())
+                    .catch({})
+                    .parse(section.config ?? definition.defaultConfig ?? {})}
+                  onSubmit={handleConfigSave}
+                  isPending={isPending}
+                />
+              ) : (
+                <p className="text-muted-foreground">
+                  このセクションタイプは編集できません
+                </p>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -374,6 +200,9 @@ function TitleForm({
     });
   };
 
+  const definition = getSectionDefinition(section.componentId);
+  const label = definition?.meta.label ?? section.componentId;
+
   return (
     <form onSubmit={handleSubmit(handleTitleSave)} className="space-y-4">
       <div className="space-y-2">
@@ -381,7 +210,7 @@ function TitleForm({
         <Input
           id="section-title"
           {...register("title")}
-          placeholder={sectionTypeLabels[section.type]}
+          placeholder={label}
           disabled={isPending || isUpdating}
         />
         {errors.title && (

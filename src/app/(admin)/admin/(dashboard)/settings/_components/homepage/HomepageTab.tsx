@@ -9,9 +9,11 @@
  * - ON/OFF切り替え
  */
 
+import "@/public/lib/sections/register-standard-sections";
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   DndContext,
   closestCenter,
@@ -48,22 +50,7 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Layers,
   Layout,
-  LayoutList,
-  Lightbulb,
-  Newspaper,
-  FileText,
-  HelpCircle,
-  Star,
-  MessageSquare,
-  Image,
-  MousePointerClick,
-  Mail,
-  MapPin,
-  Code,
-  Wand2,
-  Instagram,
 } from "lucide-react";
 import {
   updateSectionOrder,
@@ -76,10 +63,10 @@ import type { HomepageSectionData } from "@/admin/queries/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  SectionType,
-  sectionTypeLabels,
-  defaultSectionConfigs,
-} from "@/admin/lib/validations/homepage-section";
+  getSectionDefinition,
+  getRegisteredComponentIds,
+} from "@/shared/lib/sections/registry";
+import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 import {
   isMutationError,
   type MutationResult,
@@ -92,30 +79,6 @@ async function fetchHomepageSections(): Promise<
 > {
   return fetchAdminJson("/admin/api/homepage-sections");
 }
-
-// =============================================================================
-// Icons Mapping
-// =============================================================================
-
-const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
-  [SectionType.HERO]: Sparkles,
-  [SectionType.HERO_PARALLAX]: Layers,
-  [SectionType.CUSTOM]: Wand2,
-  [SectionType.CONCEPT]: Lightbulb,
-  [SectionType.SPACE_LIST]: Layout,
-  [SectionType.SPACE_SHOWCASE]: LayoutList,
-  [SectionType.NEWS_LIST]: Newspaper,
-  [SectionType.POST_LIST]: FileText,
-  [SectionType.FAQ_LIST]: HelpCircle,
-  [SectionType.FEATURES]: Star,
-  [SectionType.TESTIMONIAL]: MessageSquare,
-  [SectionType.GALLERY]: Image,
-  [SectionType.CTA]: MousePointerClick,
-  [SectionType.CONTACT_FORM]: Mail,
-  [SectionType.MAP]: MapPin,
-  [SectionType.EMBED]: Code,
-  [SectionType.INSTAGRAM]: Instagram,
-};
 
 // =============================================================================
 // Sortable Section Item
@@ -151,8 +114,8 @@ function SortableSectionItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const Icon = sectionTypeIcons[section.type];
-  const label = sectionTypeLabels[section.type];
+  const definition = getSectionDefinition(section.componentId);
+  const label = definition?.meta.label ?? section.componentId;
 
   return (
     <div
@@ -176,7 +139,7 @@ function SortableSectionItem({
       {/* Icon & Label */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="p-2 rounded-md bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
+          {renderSectionIcon(definition?.meta.icon ?? "", "h-5 w-5 text-primary")}
         </div>
         <div className="min-w-0">
           <p className="font-medium truncate">{section.title || label}</p>
@@ -236,9 +199,9 @@ function SortableSectionItem({
 interface AddSectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (type: SectionType) => void;
+  onAdd: (componentId: string) => void;
   disabled: boolean;
-  existingTypes: SectionType[];
+  existingComponentIds: string[];
   isInstagramConnected: boolean;
 }
 
@@ -247,16 +210,17 @@ function AddSectionDialog({
   onOpenChange,
   onAdd,
   disabled,
-  existingTypes,
+  existingComponentIds,
   isInstagramConnected,
 }: AddSectionDialogProps) {
-  const availableTypes = Object.values(SectionType).filter((type) => {
-    // CUSTOMは複数追加可能
-    if (type === SectionType.CUSTOM) return true;
+  const allComponentIds = getRegisteredComponentIds();
+  const availableComponentIds = allComponentIds.filter((componentId) => {
+    // customは複数追加可能
+    if (componentId === "custom") return true;
     // InstagramはAPI設定済みの場合のみ表示
-    if (type === SectionType.INSTAGRAM && !isInstagramConnected) return false;
+    if (componentId === "instagram" && !isInstagramConnected) return false;
     // それ以外は既存タイプでなければ表示
-    return !existingTypes.includes(type);
+    return !existingComponentIds.includes(componentId);
   });
 
   return (
@@ -269,25 +233,25 @@ function AddSectionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="grid grid-cols-3 gap-2 py-4 max-h-[60vh] overflow-y-auto">
-          {availableTypes.map((type) => {
-            const Icon = sectionTypeIcons[type];
-            const label = sectionTypeLabels[type];
-            const isCustom = type === SectionType.CUSTOM;
-            const alreadyExists = existingTypes.includes(type);
+          {availableComponentIds.map((componentId) => {
+            const definition = getSectionDefinition(componentId);
+            const label = definition?.meta.label ?? componentId;
+            const isCustom = componentId === "custom";
+            const alreadyExists = existingComponentIds.includes(componentId);
 
             return (
               <button
-                key={type}
+                key={componentId}
                 type="button"
                 onClick={() => {
-                  onAdd(type);
+                  onAdd(componentId);
                   onOpenChange(false);
                 }}
                 disabled={disabled}
                 className="flex flex-col items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-center disabled:opacity-50"
               >
                 <div className="p-2 rounded-md bg-primary/10">
-                  <Icon className="h-5 w-5 text-primary" />
+                  {renderSectionIcon(definition?.meta.icon ?? "", "h-5 w-5 text-primary")}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{label}</p>
@@ -442,12 +406,17 @@ export function HomepageTab({
     );
   };
 
-  const handleAddSection = (type: SectionType) => {
+  const handleAddSection = (componentId: string) => {
+    const defaultConfig = z
+      .record(z.string(), z.unknown())
+      .catch({})
+      .parse(getSectionDefinition(componentId)?.defaultConfig ?? {});
+
     runActionAndReload(
       () =>
         createHomepageSection({
-          type,
-          config: defaultSectionConfigs[type],
+          componentId,
+          config: defaultConfig,
           design: {},
           isActive: true,
         }),
@@ -514,7 +483,7 @@ export function HomepageTab({
     );
   }
 
-  const existingTypes = sections.map((s) => s.type);
+  const existingComponentIds = sections.map((s) => s.componentId);
 
   return (
     <>
@@ -570,7 +539,7 @@ export function HomepageTab({
         onOpenChange={onShowAddDialogChange}
         onAdd={handleAddSection}
         disabled={isPending}
-        existingTypes={existingTypes}
+        existingComponentIds={existingComponentIds}
         isInstagramConnected={isInstagramConnected}
       />
 

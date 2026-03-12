@@ -6,6 +6,7 @@
  * コンパクトなリストアイテム + ⋯ メニュー
  */
 
+import "@/public/lib/sections/register-standard-sections";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -24,9 +25,9 @@ import {
   Copy,
   Trash2,
 } from "lucide-react";
-import { sectionTypeLabels } from "@/shared/lib/validations/section";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 import type { PageSectionData } from "@/admin/actions/page-section";
-import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
 
 interface SectionSidebarItemProps {
   section: PageSectionData;
@@ -62,7 +63,8 @@ export function SectionSidebarItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const label = sectionTypeLabels[section.type];
+  const definition = getSectionDefinition(section.componentId);
+  const label = definition?.meta.label ?? section.componentId;
 
   return (
     <div
@@ -89,10 +91,7 @@ export function SectionSidebarItem({
 
       {/* Icon */}
       <div className="shrink-0">
-        <SectionTypeIcon
-          type={section.type}
-          className="h-4 w-4 text-muted-foreground"
-        />
+        {renderSectionIcon(definition?.meta.icon ?? "", "h-4 w-4 text-muted-foreground")}
       </div>
 
       {/* Label */}

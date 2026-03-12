@@ -3,11 +3,13 @@
 /**
  * 右パネル — コンテンツ/デザインのタブ切替
  *
- * コンテンツタブ: タイトル入力 + configFormRegistry[type]
+ * コンテンツタブ: タイトル入力 + SchemaForm (registry configSchema)
  * デザインタブ: 汎化版 DesignPanel
  */
 
-import { Suspense, useEffect, useState, useTransition } from "react";
+import "@/public/lib/sections/register-standard-sections";
+import { useEffect, useState, useTransition } from "react";
+import { z } from "zod";
 import { toast } from "sonner";
 import {
   Input,
@@ -23,12 +25,10 @@ import {
 } from "@/admin/actions/page-section";
 import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { SchemaForm } from "@/admin/components/schema-form";
 import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
-import {
-  configFormRegistry,
-  type ConfigFormSavePayload,
-} from "../../sections/_components/config-forms";
 import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
 
 interface SectionDetailPanelProps {
@@ -47,19 +47,16 @@ export function SectionDetailPanel({
   onDirtyChange,
 }: SectionDetailPanelProps) {
   const [isPending, startTransition] = useTransition();
-  const [configDirty, setConfigDirty] = useState(false);
   const [designDirty, setDesignDirty] = useState(false);
 
-  // dirty集約: config or design のいずれかがdirtyなら通知
+  // dirty集約: designのdirtyを通知
   useEffect(() => {
-    onDirtyChange?.(configDirty || designDirty);
-  }, [configDirty, designDirty, onDirtyChange]);
+    onDirtyChange?.(designDirty);
+  }, [designDirty, onDirtyChange]);
 
   // セクション変更時にdirtyリセット
   useEffect(() => {
-    // セクションが変更されたら、次のレンダリング時にdirtyをリセット
     return () => {
-      setConfigDirty(false);
       setDesignDirty(false);
     };
   }, [section?.id]);
@@ -73,16 +70,11 @@ export function SectionDetailPanel({
     );
   }
 
-  const ConfigForm = configFormRegistry[section.type];
+  const definition = getSectionDefinition(section.componentId);
 
-  const handleConfigSave = (payload: ConfigFormSavePayload) => {
+  const handleConfigSave = (config: Record<string, unknown>) => {
     startTransition(async () => {
-      const result = await updatePageSection(section.id, {
-        config: payload.config,
-        ...(payload.contentJson !== undefined
-          ? { contentJson: payload.contentJson }
-          : {}),
-      });
+      const result = await updatePageSection(section.id, { config });
       if (!isMutationError(result)) {
         toast.success("保存しました");
         onSectionUpdated();
@@ -141,19 +133,16 @@ export function SectionDetailPanel({
           />
 
           {/* Config Form */}
-          {ConfigForm ? (
-            <Suspense
-              fallback={
-                <div className="h-40 animate-pulse rounded-lg bg-muted" />
-              }
-            >
-              <ConfigForm
-                section={section}
-                onSave={handleConfigSave}
-                isPending={isPending}
-                onDirtyChange={setConfigDirty}
-              />
-            </Suspense>
+          {definition ? (
+            <SchemaForm
+              schema={definition.configSchema}
+              defaultValues={z
+                .record(z.string(), z.unknown())
+                .catch({})
+                .parse(section.config ?? definition.defaultConfig ?? {})}
+              onSubmit={handleConfigSave}
+              isPending={isPending}
+            />
           ) : (
             <p className="text-sm text-muted-foreground">
               このセクションタイプにはコンテンツ設定がありません
@@ -165,7 +154,7 @@ export function SectionDetailPanel({
           <DesignPanel
             section={{
               id: section.id,
-              type: section.type,
+              componentId: section.componentId,
               design: section.design,
             }}
             onDesignSave={handleDesignSave}

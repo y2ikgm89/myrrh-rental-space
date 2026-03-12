@@ -3,9 +3,10 @@
 /**
  * セクション追加ダイアログ
  *
- * 17セクションタイプを5カテゴリに分類して表示
+ * レジストリからセクション定義を取得してカテゴリ別に表示
  */
 
+import "@/public/lib/sections/register-standard-sections";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -15,18 +16,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/admin/components/ui";
-import {
-  sectionTypeLabels,
-  sectionTypeDescriptions,
-  sectionTypesByCategory,
-} from "@/shared/lib/validations/section";
-import { SectionTypeIcon } from "./SectionTypeIcon";
-import type { SectionType } from "@/shared/lib/validations/section";
+import { getSectionsByCategory } from "@/shared/lib/sections/registry";
+import type { SectionCategory } from "@/shared/lib/sections/types";
+import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
+
+const CATEGORY_LABELS: Record<SectionCategory, string> = {
+  hero: "ヒーロー",
+  content: "コンテンツ",
+  list: "一覧表示",
+  interactive: "CTA・フォーム",
+  media: "メディア・埋め込み",
+  utility: "ユーティリティ",
+};
 
 interface AddSectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (type: SectionType) => void;
+  onAdd: (componentId: string) => void;
   disabled: boolean;
 }
 
@@ -36,6 +42,8 @@ export function AddSectionDialog({
   onAdd,
   disabled,
 }: AddSectionDialogProps) {
+  const groups = getSectionsByCategory();
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -46,42 +54,34 @@ export function AddSectionDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-5 py-4 overflow-y-auto">
-          {sectionTypesByCategory.map(({ category, label, types }) => (
+          {groups.map(({ category, sections }) => (
             <div key={category}>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                {label}
+                {CATEGORY_LABELS[category] ?? category}
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                {types.map((type) => {
-                  const typeLabel = sectionTypeLabels[type];
-                  const description = sectionTypeDescriptions[type];
-
-                  return (
+                {sections.map((definition) => (
                     <button
-                      key={type}
+                      key={definition.id}
                       type="button"
                       onClick={() => {
-                        onAdd(type);
+                        onAdd(definition.id);
                         onOpenChange(false);
                       }}
                       disabled={disabled}
                       className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
                     >
                       <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                        <SectionTypeIcon
-                          type={type}
-                          className="h-5 w-5 text-primary"
-                        />
+                        {renderSectionIcon(definition.meta.icon, "h-5 w-5 text-primary")}
                       </div>
                       <div className="min-w-0">
-                        <p className="font-medium">{typeLabel}</p>
+                        <p className="font-medium">{definition.meta.label}</p>
                         <p className="text-xs text-muted-foreground line-clamp-2">
-                          {description}
+                          {definition.meta.description}
                         </p>
                       </div>
                     </button>
-                  );
-                })}
+                ))}
               </div>
             </div>
           ))}

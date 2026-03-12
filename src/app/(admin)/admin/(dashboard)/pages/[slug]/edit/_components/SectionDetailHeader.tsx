@@ -4,22 +4,24 @@
  * 右パネルのヘッダー（セクション名 + タイプバッジ）
  */
 
+import "@/public/lib/sections/register-standard-sections";
 import { Badge } from "@/admin/components/ui";
-import { sectionTypeLabels } from "@/shared/lib/validations/section";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import type { PageSectionData } from "@/admin/actions/page-section";
-import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
+import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 
 interface SectionDetailHeaderProps {
   section: PageSectionData;
 }
 
 export function SectionDetailHeader({ section }: SectionDetailHeaderProps) {
-  const label = sectionTypeLabels[section.type];
+  const definition = getSectionDefinition(section.componentId);
+  const label = definition?.meta.label ?? section.componentId;
 
   return (
     <div className="flex items-center gap-3 pb-4 border-b">
       <div className="p-2 rounded-md bg-primary/10">
-        <SectionTypeIcon type={section.type} className="h-5 w-5 text-primary" />
+        {renderSectionIcon(definition?.meta.icon ?? "", "h-5 w-5 text-primary")}
       </div>
       <div className="flex-1 min-w-0">
         <h2 className="text-lg font-semibold truncate">

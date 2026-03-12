@@ -26,14 +26,13 @@ import {
   duplicatePageSection,
   createPageSection,
 } from "@/admin/actions/page-section";
+import "@/public/lib/sections/register-standard-sections";
+import { z } from "zod";
 import type {
   PageForEdit,
   PageSectionData,
 } from "@/admin/queries/page-section";
-import {
-  SectionType,
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
@@ -200,12 +199,15 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     });
   }
 
-  function handleAddSection(type: SectionType) {
+  function handleAddSection(componentId: string) {
     startTransition(async () => {
       const result = await createPageSection({
         pageId: page.id,
-        type,
-        config: defaultSectionConfigs[type],
+        componentId,
+        config: z
+          .record(z.string(), z.unknown())
+          .catch({})
+          .parse(getSectionDefinition(componentId)?.defaultConfig ?? {}),
         design: {},
         isActive: true,
       });
