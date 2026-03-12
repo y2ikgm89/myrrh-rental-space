@@ -24,9 +24,6 @@ import {
   updateSectionOrderSchema,
   // Validators
   validateSectionConfig,
-  // Type guards
-  isHeroConfig,
-  isCtaConfig,
   // Helpers
   parseHeroHeight,
   parseMaxWidth,
@@ -37,7 +34,8 @@ import {
   parseCtaVariant,
   // Default configs
   defaultSectionConfigs,
-  SectionType,
+  defaultSectionConfigMap,
+  sectionTypeLabels,
 } from "@/shared/lib/validations/section";
 
 // =============================================================================
@@ -675,59 +673,34 @@ describe("updateSectionOrderSchema", () => {
 // =============================================================================
 
 describe("validateSectionConfig", () => {
-  test("HEROタイプで有効なconfig", () => {
-    const result = validateSectionConfig("HERO", {
+  test("hero componentIdで有効なconfig", () => {
+    const result = validateSectionConfig("hero", {
       title: "Test Hero",
       height: "lg",
     });
     expect(result.success).toBe(true);
   });
 
-  test("HEROタイプで無効なconfig", () => {
-    const result = validateSectionConfig("HERO", {
+  test("hero componentIdで無効なconfig", () => {
+    const result = validateSectionConfig("hero", {
       title: "a".repeat(101),
     });
     expect(result.success).toBe(false);
   });
 
-  test("CTAタイプで有効なconfig", () => {
-    const result = validateSectionConfig("CTA", {
+  test("cta componentIdで有効なconfig", () => {
+    const result = validateSectionConfig("cta", {
       title: "CTA Title",
       buttons: [],
     });
     expect(result.success).toBe(true);
   });
-});
 
-// =============================================================================
-// 型ガード関数
-// =============================================================================
-
-describe("型ガード関数", () => {
-  test("isHeroConfig", () => {
-    const validHero = {
-      height: "md",
-      overlay: true,
-      overlayOpacity: 40,
-      variant: "default",
-      parallaxSpeed: 0.5,
-      buttons: [],
-    };
-    const invalidHero = { title: "a".repeat(101) };
-    expect(isHeroConfig(validHero)).toBe(true);
-    expect(isHeroConfig(invalidHero)).toBe(false);
-  });
-
-  test("isCtaConfig", () => {
-    const validCta = {
-      title: "CTA",
-      buttons: [],
-      variant: "default",
-      sectionLabel: "Ready to Begin?",
-    };
-    const invalidCta = { title: "" };
-    expect(isCtaConfig(validCta)).toBe(true);
-    expect(isCtaConfig(invalidCta)).toBe(false);
+  test("未知のcomponentIdでエラー", () => {
+    const result = validateSectionConfig("unknown-section", {
+      title: "Test",
+    });
+    expect(result.success).toBe(false);
   });
 });
 
@@ -778,21 +751,21 @@ describe("パーサー関数", () => {
 
 describe("defaultSectionConfigs", () => {
   test("全セクションタイプにデフォルト設定が存在", () => {
-    const types = Object.values(SectionType);
-    types.forEach((type) => {
-      expect(defaultSectionConfigs[type]).toBeDefined();
+    const componentIds = Object.keys(sectionTypeLabels);
+    componentIds.forEach((componentId) => {
+      expect(defaultSectionConfigMap[componentId]).toBeDefined();
     });
   });
 
   test("HEROデフォルト設定", () => {
-    const defaultHero = defaultSectionConfigs[SectionType.HERO];
+    const defaultHero = defaultSectionConfigs["hero"];
     expect(defaultHero.height).toBe("md");
     expect(defaultHero.overlay).toBe(true);
     expect(defaultHero.overlayOpacity).toBe(40);
   });
 
   test("CTAデフォルト設定", () => {
-    const defaultCta = defaultSectionConfigs[SectionType.CTA];
+    const defaultCta = defaultSectionConfigs["cta"];
     expect(defaultCta.title).toBe("ご予約・お問い合わせ");
     expect(defaultCta.buttons).toHaveLength(2);
   });
