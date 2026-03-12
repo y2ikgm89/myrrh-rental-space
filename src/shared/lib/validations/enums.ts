@@ -13,7 +13,6 @@ import {
   NavigationType,
   SocialPlatform,
   LayoutWidth,
-  SectionType,
   PostStatus,
   AuditAction,
   MediaType,
@@ -50,7 +49,6 @@ export {
   NavigationType,
   SocialPlatform,
   LayoutWidth,
-  SectionType,
   PostStatus,
   AuditAction,
   MediaType,
@@ -102,7 +100,6 @@ const VALID_CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus));
 const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType));
 const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform));
 const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth));
-const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
 const VALID_POST_STATUSES = new Set<string>(Object.values(PostStatus));
 const VALID_NEWS_STATUS_FILTERS = new Set(["ALL", "PUBLISHED", "DRAFT"]);
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction));
@@ -182,10 +179,6 @@ export function isValidSocialPlatform(value: unknown): value is SocialPlatform {
 
 export function isValidLayoutWidth(value: unknown): value is LayoutWidth {
   return typeof value === "string" && VALID_LAYOUT_WIDTHS.has(value);
-}
-
-export function isValidSectionType(value: unknown): value is SectionType {
-  return typeof value === "string" && VALID_SECTION_TYPES.has(value);
 }
 
 export function isValidPostStatus(value: unknown): value is PostStatus {

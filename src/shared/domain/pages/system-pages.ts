@@ -6,7 +6,7 @@ import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
   defaultHomepageSectionOrder,
-  defaultSectionConfigs,
+  defaultSectionConfigMap,
 } from "@/shared/lib/validations/section";
 import { logError } from "@/shared/lib/errors/logger";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
@@ -22,13 +22,13 @@ export async function ensurePageSectionsCommand(
 
   const existingSections = await prisma.section.findMany({
     where: { pageId },
-    select: { type: true },
+    select: { componentId: true },
   });
-  const existingTypes = new Set(
-    existingSections.map((section) => section.type),
+  const existingComponentIds = new Set(
+    existingSections.map((section) => section.componentId),
   );
   const missingSections = defaults.filter(
-    (section) => !existingTypes.has(section.type),
+    (section) => !existingComponentIds.has(section.componentId),
   );
 
   if (missingSections.length === 0) {
@@ -40,13 +40,13 @@ export async function ensurePageSectionsCommand(
       async (tx) => {
         const currentSections = await tx.section.findMany({
           where: { pageId },
-          select: { type: true },
+          select: { componentId: true },
         });
-        const currentTypes = new Set(
-          currentSections.map((section) => section.type),
+        const currentComponentIds = new Set(
+          currentSections.map((section) => section.componentId),
         );
         const toCreate = defaults.filter(
-          (section) => !currentTypes.has(section.type),
+          (section) => !currentComponentIds.has(section.componentId),
         );
 
         if (toCreate.length === 0) {
@@ -56,7 +56,7 @@ export async function ensurePageSectionsCommand(
         const created = await tx.section.createMany({
           data: toCreate.map((section) => ({
             pageId,
-            type: section.type,
+            componentId: section.componentId,
             title: section.title,
             config: section.config,
             design: section.design ?? {},
@@ -94,10 +94,10 @@ export async function ensureHomepageSectionsCommand(): Promise<number> {
         }
 
         const created = await tx.section.createMany({
-          data: defaultHomepageSectionOrder.map((type, index) => ({
-            type,
+          data: defaultHomepageSectionOrder.map((componentId, index) => ({
+            componentId,
             config: clonePrismaInputJson(
-              defaultSectionConfigs[type],
+              defaultSectionConfigMap[componentId] ?? {},
               "セクション設定が不正です",
             ),
             design: {},

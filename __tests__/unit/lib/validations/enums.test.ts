@@ -7,7 +7,6 @@ import {
   NavigationType,
   SocialPlatform,
   LayoutWidth,
-  SectionType,
   PostStatus,
   AuditAction,
   MediaType,
@@ -23,7 +22,6 @@ import {
   isValidNavigationType,
   isValidSocialPlatform,
   isValidLayoutWidth,
-  isValidSectionType,
   isValidPostStatus,
   isValidNewsStatusFilter,
   isValidAuditAction,
@@ -162,18 +160,6 @@ describe("isValidLayoutWidth", () => {
 
   test("無効なレイアウト幅の場合 false を返す", () => {
     expect(isValidLayoutWidth("INVALID")).toBe(false);
-  });
-});
-
-describe("isValidSectionType", () => {
-  test("有効なセクションタイプの場合 true を返す", () => {
-    expect(isValidSectionType(SectionType.HERO)).toBe(true);
-    expect(isValidSectionType(SectionType.CUSTOM)).toBe(true);
-    expect(isValidSectionType(SectionType.CTA)).toBe(true);
-  });
-
-  test("無効なセクションタイプの場合 false を返す", () => {
-    expect(isValidSectionType("INVALID")).toBe(false);
   });
 });
 

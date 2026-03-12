@@ -15,22 +15,20 @@ import {
   updatePageSectionOrderCommand,
 } from "@/shared/domain/sections/commands";
 import {
-  type SectionType,
   createSectionSchema,
   updateSectionSchema,
   updateSectionOrderSchema,
   type CreateSectionInput,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  type SectionConfig,
 } from "@/shared/lib/validations/section";
 
 export type PageSectionData = {
   id: string;
   pageId: string;
-  type: SectionType;
+  componentId: string;
   title: string | null;
-  config: SectionConfig;
+  config: unknown;
   design: unknown;
   contentHtml: string | null;
   contentJson: unknown;

@@ -1,23 +1,19 @@
 import "server-only";
 
 import {
-  getHomepageSectionByTypeQuery,
+  getHomepageSectionByComponentIdQuery,
   getHomepageSectionQuery,
   getHomepageSectionsQuery,
   getPublicHomepageSectionsQuery,
 } from "@/shared/domain/sections/admin-queries";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  SectionType,
-  type SectionConfig,
-} from "@/shared/lib/validations/section";
 import { requireAdminPermission } from "./_helpers";
 
 export type HomepageSectionData = {
   id: string;
-  type: SectionType;
+  componentId: string;
   title: string | null;
-  config: SectionConfig;
+  config: unknown;
   design: unknown;
   contentHtml: string | null;
   contentJson: unknown;
@@ -47,9 +43,9 @@ export async function getHomepageSection(
   return getHomepageSectionQuery(id);
 }
 
-export async function getHomepageSectionByType(
-  type: SectionType,
+export async function getHomepageSectionByComponentId(
+  componentId: string,
 ): Promise<Serialized<HomepageSectionData> | null> {
   await requireAdminPermission("settings", "read");
-  return getHomepageSectionByTypeQuery(type);
+  return getHomepageSectionByComponentIdQuery(componentId);
 }

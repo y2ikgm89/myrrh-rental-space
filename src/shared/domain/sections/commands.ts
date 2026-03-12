@@ -1,28 +1,25 @@
 import "server-only";
 
+import "@/public/lib/sections/register-standard-sections";
+
 import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma, prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { StandardComponentId } from "@/shared/lib/sections/component-ids";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ensureHomepageSections } from "@/shared/lib/section-defaults";
 import {
-  SectionType,
-  defaultHomepageSectionOrder,
-  defaultSectionConfigs,
   type CreateSectionInput,
-  type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  validateSectionConfig,
 } from "@/shared/lib/validations/section";
 
-function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config);
-  if (result.success) {
-    return result.data;
-  }
-
-  return defaultSectionConfigs[type];
+function parseSectionConfig(componentId: string, config: unknown): unknown {
+  const def = getSectionDefinition(componentId);
+  if (!def) return config;
+  const result = def.configSchema.safeParse(config);
+  return result.success ? result.data : def.defaultConfig;
 }
 
 function parseJsonValue(
@@ -57,7 +54,7 @@ async function ensurePageExists(pageId: string): Promise<void> {
 async function ensureHomepageSectionExists(id: string) {
   const section = await prisma.section.findUnique({
     where: { id },
-    select: { id: true, pageId: true, type: true },
+    select: { id: true, pageId: true, componentId: true },
   });
 
   if (!section || section.pageId !== null) {
@@ -73,7 +70,7 @@ async function ensureHomepageSectionExists(id: string) {
 async function ensurePageSectionExists(id: string) {
   const section = await prisma.section.findUnique({
     where: { id },
-    select: { id: true, pageId: true, type: true },
+    select: { id: true, pageId: true, componentId: true },
   });
 
   if (!section || !section.pageId) {
@@ -86,20 +83,27 @@ async function ensurePageSectionExists(id: string) {
   };
 }
 
-function validateConfig(type: SectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config);
-  if (!result.success) {
-    throw new DomainError("設定エラー", "VALIDATION");
-  }
-
+function validateConfig(componentId: string, config: unknown): unknown {
+  const def = getSectionDefinition(componentId);
+  if (!def) throw new DomainError("不明なセクションタイプです", "VALIDATION");
+  const result = def.configSchema.safeParse(config);
+  if (!result.success) throw new DomainError("設定エラー", "VALIDATION");
   return result.data;
 }
+
+const DEFAULT_HOMEPAGE_ORDER: readonly string[] = [
+  StandardComponentId.HERO_PARALLAX,
+  StandardComponentId.CONCEPT,
+  StandardComponentId.SPACE_SHOWCASE,
+  StandardComponentId.FEATURES,
+  StandardComponentId.CTA,
+];
 
 export async function createHomepageSectionCommand(
   input: CreateSectionInput,
   contentHtml: string | null,
 ): Promise<{ id: string }> {
-  const config = validateConfig(input.type, input.config);
+  const config = validateConfig(input.componentId, input.config);
   const maxOrder = await prisma.section.aggregate({
     where: { pageId: null },
     _max: { order: true },
@@ -108,7 +112,7 @@ export async function createHomepageSectionCommand(
   const section = await prisma.section.create({
     data: omitUndefined({
       pageId: null,
-      type: input.type,
+      componentId: input.componentId,
       title: input.title,
       config: cloneJsonValue(config),
       design: cloneJsonValue(input.design ?? {}),
@@ -133,7 +137,7 @@ export async function updateHomepageSectionCommand(
   const config =
     input.config === undefined
       ? undefined
-      : validateConfig(existing.type, input.config);
+      : validateConfig(existing.componentId, input.config);
 
   await prisma.section.update({
     where: { id },
@@ -202,12 +206,14 @@ export async function initializeDefaultHomepageSectionsCommand(): Promise<boolea
   }
 
   await prisma.$transaction(
-    defaultHomepageSectionOrder.map((type, index) =>
+    DEFAULT_HOMEPAGE_ORDER.map((componentId, index) =>
       prisma.section.create({
         data: {
           pageId: null,
-          type,
-          config: cloneJsonValue(defaultSectionConfigs[type]),
+          componentId,
+          config: cloneJsonValue(
+            getSectionDefinition(componentId)?.defaultConfig ?? {},
+          ),
           design: {},
           order: index,
           isActive: true,
@@ -228,7 +234,7 @@ export async function createPageSectionCommand(
   }
 
   await ensurePageExists(input.pageId);
-  const config = validateConfig(input.type, input.config);
+  const config = validateConfig(input.componentId, input.config);
 
   const maxOrder = await prisma.section.aggregate({
     where: { pageId: input.pageId },
@@ -238,7 +244,7 @@ export async function createPageSectionCommand(
   const section = await prisma.section.create({
     data: omitUndefined({
       pageId: input.pageId,
-      type: input.type,
+      componentId: input.componentId,
       title: input.title,
       config: cloneJsonValue(config),
       design: cloneJsonValue(input.design ?? {}),
@@ -263,7 +269,7 @@ export async function updatePageSectionCommand(
   const config =
     input.config === undefined
       ? undefined
-      : validateConfig(existing.type, input.config);
+      : validateConfig(existing.componentId, input.config);
 
   await prisma.section.update({
     where: { id },
@@ -346,7 +352,7 @@ export async function duplicatePageSectionCommand(id: string) {
   const duplicated = await prisma.section.create({
     data: omitUndefined({
       pageId: section.pageId,
-      type: section.type,
+      componentId: section.componentId,
       title: section.title ? `コピー - ${section.title}` : null,
       config: section.config ?? undefined,
       design: section.design ?? undefined,
@@ -362,9 +368,9 @@ export async function duplicatePageSectionCommand(id: string) {
     section: {
       id: duplicated.id,
       pageId: duplicated.pageId ?? "",
-      type: duplicated.type,
+      componentId: duplicated.componentId,
       title: duplicated.title,
-      config: parseSectionConfig(duplicated.type, duplicated.config),
+      config: parseSectionConfig(duplicated.componentId, duplicated.config),
       design: duplicated.design,
       contentHtml: duplicated.contentHtml,
       contentJson: duplicated.contentJson,

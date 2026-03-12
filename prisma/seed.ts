@@ -2485,7 +2485,7 @@ async function seedHomepageSections() {
 
   const sections: Prisma.SectionCreateManyInput[] = [
     {
-      type: "HERO_PARALLAX",
+      componentId: "hero-parallax",
       config: {
         title: "洗練された空間で 特別なひとときを",
         subtitle:
@@ -2501,7 +2501,7 @@ async function seedHomepageSections() {
       isActive: true,
     },
     {
-      type: "CONCEPT",
+      componentId: "concept",
       config: {
         heading: "空間が、体験を変える",
         body: "洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。",
@@ -2514,7 +2514,7 @@ async function seedHomepageSections() {
       isActive: true,
     },
     {
-      type: "SPACE_SHOWCASE",
+      componentId: "space-showcase",
       config: {
         title: "厳選されたスペース",
         maxItems: 3,
@@ -2525,7 +2525,7 @@ async function seedHomepageSections() {
       isActive: true,
     },
     {
-      type: "FEATURES",
+      componentId: "features",
       config: {
         title: "選ばれる理由",
         items: [
@@ -2555,7 +2555,7 @@ async function seedHomepageSections() {
       isActive: true,
     },
     {
-      type: "CTA",
+      componentId: "cta",
       config: {
         title: "あなたの特別な一日を 私たちと共に",
         description:

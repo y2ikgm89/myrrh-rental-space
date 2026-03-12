@@ -45,7 +45,7 @@ import {
 
 export interface SectionDesignTarget {
   id: string;
-  type: string;
+  componentId: string;
   design: unknown;
 }
 

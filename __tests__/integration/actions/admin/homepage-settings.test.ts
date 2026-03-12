@@ -7,34 +7,35 @@
 
 import { describe, test, expect } from "bun:test";
 import {
-  SectionType,
   createSectionSchema,
   updateSectionSchema,
   updateSectionOrderSchema,
   validateSectionConfig,
   defaultSectionConfigs,
+  defaultSectionConfigMap,
+  sectionTypeLabels,
 } from "@/shared/lib/validations/section";
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_UUID_2 = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
 const VALID_CREATE_INPUT = {
-  type: SectionType.HERO,
+  componentId: "hero",
   isActive: true,
 };
 
 describe("Homepage Settings Admin Action Integration", () => {
   describe("createSectionSchema バリデーション", () => {
     describe("正常系", () => {
-      test("HERO タイプの最小入力でパス", () => {
+      test("hero コンポーネントの最小入力でパス", () => {
         const result = createSectionSchema.safeParse(VALID_CREATE_INPUT);
         expect(result.success).toBe(true);
       });
 
-      test("全 SectionType での作成が可能", () => {
-        for (const type of Object.values(SectionType)) {
+      test("全 componentId での作成が可能", () => {
+        for (const componentId of Object.keys(sectionTypeLabels)) {
           const result = createSectionSchema.safeParse({
-            type,
+            componentId,
             isActive: true,
           });
           expect(result.success).toBe(true);
@@ -85,7 +86,7 @@ describe("Homepage Settings Admin Action Integration", () => {
 
       test("isActive のデフォルトは true", () => {
         const result = createSectionSchema.safeParse({
-          type: SectionType.HERO,
+          componentId: "hero",
         });
         expect(result.success).toBe(true);
         if (result.success) {
@@ -102,16 +103,16 @@ describe("Homepage Settings Admin Action Integration", () => {
       });
     });
 
-    describe("type バリデーション", () => {
-      test("無効なセクションタイプはエラー", () => {
+    describe("componentId バリデーション", () => {
+      test("空文字列はエラー", () => {
         const result = createSectionSchema.safeParse({
-          type: "INVALID_TYPE",
+          componentId: "",
           isActive: true,
         });
         expect(result.success).toBe(false);
       });
 
-      test("type が欠落するとエラー", () => {
+      test("componentId が欠落するとエラー", () => {
         const result = createSectionSchema.safeParse({ isActive: true });
         expect(result.success).toBe(false);
       });
@@ -345,7 +346,7 @@ describe("Homepage Settings Admin Action Integration", () => {
   });
 
   describe("validateSectionConfig フォールバックロジック", () => {
-    test("有効な HERO 設定は成功", () => {
+    test("有効な hero 設定は成功", () => {
       const config = {
         height: "md",
         overlay: true,
@@ -353,21 +354,21 @@ describe("Homepage Settings Admin Action Integration", () => {
         variant: "default",
         parallaxSpeed: 0.5,
       };
-      const result = validateSectionConfig(SectionType.HERO, config);
+      const result = validateSectionConfig("hero", config);
       expect(result.success).toBe(true);
     });
 
-    test("有効な CUSTOM 設定は成功", () => {
+    test("有効な custom 設定は成功", () => {
       const config = {
         sectionLabel: "Contents",
         maxWidth: "lg",
         padding: "md",
       };
-      const result = validateSectionConfig(SectionType.CUSTOM, config);
+      const result = validateSectionConfig("custom", config);
       expect(result.success).toBe(true);
     });
 
-    test("有効な NEWS_LIST 設定は成功", () => {
+    test("有効な news-list 設定は成功", () => {
       const config = {
         sectionLabel: "News",
         title: "お知らせ",
@@ -378,54 +379,54 @@ describe("Homepage Settings Admin Action Integration", () => {
         layout: "list",
         columns: 2,
       };
-      const result = validateSectionConfig(SectionType.NEWS_LIST, config);
+      const result = validateSectionConfig("news-list", config);
       expect(result.success).toBe(true);
     });
 
     test("無効な設定は失敗", () => {
-      const result = validateSectionConfig(SectionType.CUSTOM, "not-an-object");
+      const result = validateSectionConfig("custom", "not-an-object");
       expect(result.success).toBe(false);
     });
 
-    test("全 SectionType に対して validatesectionConfig が実行できる", () => {
-      for (const type of Object.values(SectionType)) {
-        const defaultConfig = defaultSectionConfigs[type];
-        const result = validateSectionConfig(type, defaultConfig);
+    test("全 componentId に対して validateSectionConfig が実行できる", () => {
+      for (const componentId of Object.keys(sectionTypeLabels)) {
+        const defaultConfig = defaultSectionConfigMap[componentId];
+        const result = validateSectionConfig(componentId, defaultConfig);
         expect(result.success).toBe(true);
       }
     });
   });
 
   describe("defaultSectionConfigs", () => {
-    test("全 SectionType にデフォルト設定が存在する", () => {
-      for (const type of Object.values(SectionType)) {
-        expect(defaultSectionConfigs[type]).toBeDefined();
+    test("全 componentId にデフォルト設定が存在する", () => {
+      for (const componentId of Object.keys(sectionTypeLabels)) {
+        expect(defaultSectionConfigMap[componentId]).toBeDefined();
       }
     });
 
-    test("HERO のデフォルト設定に必須フィールドが含まれる", () => {
-      const config = defaultSectionConfigs[SectionType.HERO];
+    test("hero のデフォルト設定に必須フィールドが含まれる", () => {
+      const config = defaultSectionConfigs["hero"];
       expect(config.height).toBeDefined();
       expect(typeof config.overlay).toBe("boolean");
       expect(typeof config.overlayOpacity).toBe("number");
     });
 
-    test("SPACE_LIST のデフォルト設定に必須フィールドが含まれる", () => {
-      const config = defaultSectionConfigs[SectionType.SPACE_LIST];
+    test("space-list のデフォルト設定に必須フィールドが含まれる", () => {
+      const config = defaultSectionConfigs["space-list"];
       expect(config.maxItems).toBeGreaterThan(0);
       expect(config.columns).toBeGreaterThan(0);
       expect(typeof config.showOnlyPublished).toBe("boolean");
     });
 
-    test("FAQ_LIST のデフォルト設定に必須フィールドが含まれる", () => {
-      const config = defaultSectionConfigs[SectionType.FAQ_LIST];
+    test("faq-list のデフォルト設定に必須フィールドが含まれる", () => {
+      const config = defaultSectionConfigs["faq-list"];
       expect(config.maxItems).toBeGreaterThan(0);
       expect(config.variant).toBeDefined();
       expect(config.containerWidth).toBeDefined();
     });
 
-    test("GALLERY のデフォルト設定に必須フィールドが含まれる", () => {
-      const config = defaultSectionConfigs[SectionType.GALLERY];
+    test("gallery のデフォルト設定に必須フィールドが含まれる", () => {
+      const config = defaultSectionConfigs["gallery"];
       expect(Array.isArray(config.images)).toBe(true);
       expect(config.layout).toBeDefined();
       expect(typeof config.enableLightbox).toBe("boolean");
@@ -436,7 +437,7 @@ describe("Homepage Settings Admin Action Integration", () => {
     test("有効なホームページセクションデータ", () => {
       type HomepageSectionData = {
         id: string;
-        type: SectionType;
+        componentId: string;
         title: string | null;
         config: unknown;
         design: unknown;
@@ -450,9 +451,9 @@ describe("Homepage Settings Admin Action Integration", () => {
 
       const data: HomepageSectionData = {
         id: VALID_UUID,
-        type: SectionType.HERO,
+        componentId: "hero",
         title: "ヒーロー",
-        config: defaultSectionConfigs[SectionType.HERO],
+        config: defaultSectionConfigs["hero"],
         design: {},
         contentHtml: null,
         contentJson: null,
@@ -462,7 +463,7 @@ describe("Homepage Settings Admin Action Integration", () => {
         updatedAt: new Date(),
       };
 
-      expect(data.type).toBe(SectionType.HERO);
+      expect(data.componentId).toBe("hero");
       expect(data.isActive).toBe(true);
       expect(data.order).toBe(0);
     });

@@ -32,7 +32,7 @@ export default async function HomepageSectionEditPage({
 
   if (!section) notFound();
 
-  const label = sectionTypeLabels[section.type];
+  const label = sectionTypeLabels[section.componentId];
 
   return (
     <div className="space-y-6">

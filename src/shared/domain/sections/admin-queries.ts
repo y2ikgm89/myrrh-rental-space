@@ -1,30 +1,26 @@
 import "server-only";
 
+import "@/public/lib/sections/register-standard-sections";
+
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
-import {
-  SectionType,
-  defaultSectionConfigs,
-  type SectionConfig,
-  validateSectionConfig,
-} from "@/shared/lib/validations/section";
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
 
-function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
-  const result = validateSectionConfig(type, config);
-  if (result.success) {
-    return result.data;
-  }
-
-  return defaultSectionConfigs[type];
+function parseSectionConfig(componentId: string, config: unknown): unknown {
+  const def = getSectionDefinition(componentId);
+  if (!def) return config;
+  const result = def.configSchema.safeParse(config);
+  return result.success ? result.data : def.defaultConfig;
 }
 
 function toSectionData(section: {
   id: string;
   pageId: string | null;
-  type: SectionType;
+  componentId: string;
   title: string | null;
   config: unknown;
   design: unknown;
+  effectConfig: unknown;
   contentHtml: string | null;
   contentJson: unknown;
   order: number;
@@ -34,7 +30,7 @@ function toSectionData(section: {
 }) {
   return {
     ...section,
-    config: parseSectionConfig(section.type, section.config),
+    config: parseSectionConfig(section.componentId, section.config),
   };
 }
 
@@ -44,10 +40,11 @@ export async function getHomepageSectionsQuery() {
     select: {
       id: true,
       pageId: true,
-      type: true,
+      componentId: true,
       title: true,
       config: true,
       design: true,
+      effectConfig: true,
       contentHtml: true,
       contentJson: true,
       order: true,
@@ -72,10 +69,11 @@ export async function getPublicHomepageSectionsQuery() {
     select: {
       id: true,
       pageId: true,
-      type: true,
+      componentId: true,
       title: true,
       config: true,
       design: true,
+      effectConfig: true,
       contentHtml: true,
       contentJson: true,
       order: true,
@@ -109,9 +107,11 @@ export async function getHomepageSectionQuery(id: string) {
   });
 }
 
-export async function getHomepageSectionByTypeQuery(type: SectionType) {
+export async function getHomepageSectionByComponentIdQuery(
+  componentId: string,
+) {
   const section = await prisma.section.findFirst({
-    where: { type, pageId: null },
+    where: { componentId, pageId: null },
     orderBy: { order: "asc" },
   });
 

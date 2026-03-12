@@ -18,21 +18,19 @@ import {
   updateHomepageSectionOrderCommand,
 } from "@/shared/domain/sections/commands";
 import {
-  SectionType,
   createSectionSchema,
   updateSectionOrderSchema,
   updateSectionSchema,
   type CreateSectionInput,
-  type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
 } from "@/shared/lib/validations/section";
 
 export type HomepageSectionData = {
   id: string;
-  type: SectionType;
+  componentId: string;
   title: string | null;
-  config: SectionConfig;
+  config: unknown;
   design: unknown;
   contentHtml: string | null;
   contentJson: unknown;

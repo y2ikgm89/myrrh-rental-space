@@ -2,7 +2,6 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { SectionType } from "@/shared/db/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
@@ -19,12 +18,13 @@ import { getPublicPage } from "@/shared/domain/pages/queries";
 
 export type PublicSection = {
   readonly id: string;
-  readonly type: SectionType;
+  readonly componentId: string;
   readonly title: string | null;
   readonly contentHtml: string | null;
   readonly contentJson: unknown | null;
   readonly config: unknown;
   readonly design: unknown;
+  readonly effectConfig: unknown;
   readonly order: number;
 };
 
@@ -36,12 +36,13 @@ function getDefaultSections(slug: string): PublicSection[] {
 
   return defaults.map((section, index) => ({
     id: `default-${slug}-${index}`,
-    type: section.type,
+    componentId: section.componentId,
     title: section.title,
     contentHtml: section.content,
     contentJson: null,
     config: section.config,
     design: section.design ?? {},
+    effectConfig: {},
     order: section.order,
   }));
 }
@@ -60,12 +61,13 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
         },
         select: {
           id: true,
-          type: true,
+          componentId: true,
           title: true,
           contentHtml: true,
           contentJson: true,
           config: true,
           design: true,
+          effectConfig: true,
           order: true,
         },
         orderBy: { order: "asc" },
@@ -134,12 +136,13 @@ export async function getPageSections(
         },
         select: {
           id: true,
-          type: true,
+          componentId: true,
           title: true,
           contentHtml: true,
           contentJson: true,
           config: true,
           design: true,
+          effectConfig: true,
           order: true,
         },
         orderBy: { order: "asc" },

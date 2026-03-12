@@ -5,11 +5,10 @@
  * 各ページに適したセクションタイプとconfigを定義。
  */
 
-import { SectionType } from "@/shared/db/enums";
 import type { Prisma } from "@/shared/db/prisma";
 
 export type DefaultSectionDef = {
-  type: SectionType;
+  componentId: string;
   title: string | null;
   config: Prisma.InputJsonValue;
   design?: Prisma.InputJsonValue;
@@ -24,7 +23,7 @@ export type DefaultSectionDef = {
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   about: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "About",
@@ -38,7 +37,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.CUSTOM,
+      componentId: "custom",
       title: "ミッション",
       config: {},
       content:
@@ -47,7 +46,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.CTA,
+      componentId: "cta",
       title: null,
       config: {
         title: "お問い合わせ",
@@ -64,7 +63,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   faq: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "FAQ",
@@ -77,7 +76,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.FAQ_LIST,
+      componentId: "faq-list",
       title: "よくあるご質問",
       config: {
         maxItems: 20,
@@ -88,7 +87,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.CTA,
+      componentId: "cta",
       title: null,
       config: {
         title: "お探しの答えが見つかりませんか？",
@@ -103,7 +102,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   contact: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Contact",
@@ -120,7 +119,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   news: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "News",
@@ -136,7 +135,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   posts: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Blog",
@@ -152,7 +151,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   privacy: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Privacy",
@@ -165,7 +164,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.CUSTOM,
+      componentId: "custom",
       title: "プライバシーポリシー",
       config: {},
       content:
@@ -177,7 +176,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   terms: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Terms",
@@ -190,7 +189,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.CUSTOM,
+      componentId: "custom",
       title: "利用規約",
       config: {},
       content: "<p>利用規約の内容は管理画面から編集してください。</p>",
@@ -201,7 +200,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   reservation: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Reserve",
@@ -215,7 +214,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.SPACE_LIST,
+      componentId: "space-list",
       title: "予約可能なスペース",
       config: {
         maxItems: 12,
@@ -229,7 +228,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
 
   spaces: [
     {
-      type: SectionType.HERO,
+      componentId: "hero",
       title: null,
       config: {
         title: "Spaces",
@@ -242,7 +241,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       isActive: true,
     },
     {
-      type: SectionType.SPACE_LIST,
+      componentId: "space-list",
       title: null,
       config: {
         maxItems: 12,
