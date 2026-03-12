@@ -148,6 +148,14 @@ prisma/                          # schema.prisma, migrations/, seed.ts
 
 **公開ページ ↔ 管理画面の遷移はフルページリロード**（異なる Root Layout 間の仕様）
 
+### セクションアーキテクチャ（コンポーネント駆動）
+
+- **レジストリ方式**: `componentId` (String) + 2層レジストリ（公開: `registry.ts` / 管理: `admin-registry.ts`）
+- **定義ファイル**: `src/app/(public)/_shared/components/sections/standard/<kebab-name>/definition.ts`
+- **server-only 分離**: dataLoader ありセクションは `config.ts`（admin-safe）+ `definition.ts`（server-only）に分離
+- **コンポーネント props**: `SectionComponentProps` ベース型、内部で `configSchema.parse(props.config)` で型安全化
+- **カスタムセクション生成**: `/create-custom-section <Name> <category>` スキル
+
 ### コマンド
 
 ```bash

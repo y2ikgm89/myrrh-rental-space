@@ -2,6 +2,12 @@
 
 プロジェクト固有の落とし穴と対処法。
 
+## セクションレジストリ
+
+- **admin レジストリに server-only 定義を import 禁止** — `dataLoader` を含む definition.ts を `register-admin-sections.ts` に import すると Client Component ビルドエラー。`config.ts` から `*Meta` を import する
+- **新セクション追加時は両レジストリに登録必須** — `register-standard-sections.ts`（`registerSection`）と `register-admin-sections.ts`（`registerSectionMeta`）の両方。片方だけだと公開ページまたは管理画面でセクションが表示されない
+- **configSchema の全フィールドに `.default()` 必須** — `configSchema.parse({})` が `defaultConfig` 生成に使われる。`.default()` がないフィールドがあると管理画面のセクション追加が即エラー
+
 ## デプロイ
 
 - **デプロイ先は Google Cloud Run**（Vercel 不使用）— `Dockerfile` + `cloudbuild.yaml`。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run に明示設定（`VERCEL_URL` は存在しない）
