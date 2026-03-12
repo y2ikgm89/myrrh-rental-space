@@ -251,6 +251,49 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
   };
 }
 
+export interface FooterSettings {
+  tagline: string | null;
+  navigationLabel: string;
+  contactLabel: string;
+  hoursLabel: string;
+  showSocialLinks: boolean;
+  themeColor: string;
+}
+
+export async function getFooterSettings(): Promise<FooterSettings> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          footerTagline: true,
+          footerNavigationLabel: true,
+          footerContactLabel: true,
+          footerHoursLabel: true,
+          footerShowSocialLinks: true,
+          themeColor: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getFooterSettings",
+  });
+
+  return {
+    tagline: result?.footerTagline ?? null,
+    navigationLabel: result?.footerNavigationLabel ?? "Navigation",
+    contactLabel: result?.footerContactLabel ?? "Contact",
+    hoursLabel: result?.footerHoursLabel ?? "Hours",
+    showSocialLinks: result?.footerShowSocialLinks ?? true,
+    themeColor: result?.themeColor ?? "#fafafa",
+  };
+}
+
 export async function getAdminBrandingSettings(): Promise<{
   siteName: string | null;
   headerLogoUrl: string | null;
@@ -408,6 +451,37 @@ export async function getSocialLinkUrls(): Promise<string[]> {
   });
 
   return result.map((link) => link.url);
+}
+
+export interface SocialLinkForFooter {
+  platform: string;
+  url: string;
+}
+
+export async function getSocialLinksForFooter(): Promise<
+  SocialLinkForFooter[]
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.SOCIAL_LINKS, CACHE_TAGS.SETTINGS);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.socialLink.findMany({
+        where: { isActive: true },
+        select: { platform: true, url: true },
+        orderBy: { order: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getSocialLinksForFooter",
+  });
+
+  return result.map((link) => ({
+    platform: link.platform,
+    url: link.url,
+  }));
 }
 
 export async function getPermalinkSettings() {
