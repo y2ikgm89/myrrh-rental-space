@@ -37,6 +37,7 @@ import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
 import { getBusinessInfo } from "@/public/data/business";
 import {
   getHeaderSettings,
+  getFooterSettings,
   type HeaderSettings,
 } from "@/shared/domain/settings/queries";
 import { HeaderBackgroundMode } from "@/shared/db/enums";
@@ -70,11 +71,14 @@ export const metadata: Metadata = {
   description: SITE_DEFAULTS.description,
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#fafafa",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const footerSettings = await getFooterSettings();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    themeColor: footerSettings.themeColor,
+  };
+}
 
 /**
  * 動的コンテンツ: Cookie同意バナーとAnalytics
