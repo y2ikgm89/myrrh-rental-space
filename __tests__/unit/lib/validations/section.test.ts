@@ -589,7 +589,7 @@ describe("createSectionSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
       pageId: "550e8400-e29b-41d4-a716-446655440000",
-      type: "HERO",
+      componentId: "hero",
       title: "ヒーローセクション",
       config: { title: "Test" },
       design: {},
@@ -601,7 +601,7 @@ describe("createSectionSchema", () => {
 
   test("デフォルト値の適用", () => {
     const data = {
-      type: "CUSTOM",
+      componentId: "custom",
     };
     const result = createSectionSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -614,7 +614,7 @@ describe("createSectionSchema", () => {
 
   test("contentJsonの文字数制限", () => {
     const data = {
-      type: "CUSTOM",
+      componentId: "custom",
       contentJson: "a".repeat(500001),
     };
     const result = createSectionSchema.safeParse(data);

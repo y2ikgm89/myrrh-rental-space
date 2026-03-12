@@ -25,8 +25,6 @@ import {
   mapConfigSchema,
   embedConfigSchema,
   instagramConfigSchema,
-  // 型
-  SectionType,
   // CRUD
   createSectionSchema,
   updateSectionSchema,
@@ -54,14 +52,6 @@ describe("homepage-section re-export", () => {
     expect(instagramConfigSchema).toBeDefined();
   });
 
-  test("SectionTypeがインポート可能", () => {
-    expect(SectionType).toBeDefined();
-    expect(SectionType.HERO).toBe("HERO");
-    expect(SectionType.HERO_PARALLAX).toBe("HERO_PARALLAX");
-    expect(SectionType.CUSTOM).toBe("CUSTOM");
-    expect(SectionType.CTA).toBe("CTA");
-  });
-
   test("CRUDスキーマがインポート可能", () => {
     expect(createSectionSchema).toBeDefined();
     expect(updateSectionSchema).toBeDefined();
@@ -69,7 +59,7 @@ describe("homepage-section re-export", () => {
 
   test("デフォルト設定がインポート可能", () => {
     expect(defaultSectionConfigs).toBeDefined();
-    expect(defaultSectionConfigs[SectionType.HERO]).toBeDefined();
+    expect(defaultSectionConfigs["hero"]).toBeDefined();
   });
 
   test("heroConfigSchemaが機能する", () => {
@@ -101,7 +91,7 @@ describe("homepage-section re-export", () => {
 
   test("createSectionSchemaが機能する", () => {
     const data = {
-      type: "HERO",
+      componentId: "hero",
       title: "ヒーローセクション",
       config: {},
       design: {},
