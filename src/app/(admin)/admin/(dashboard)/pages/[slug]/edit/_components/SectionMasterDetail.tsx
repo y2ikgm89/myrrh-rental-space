@@ -26,13 +26,13 @@ import {
   duplicatePageSection,
   createPageSection,
 } from "@/admin/actions/page-section";
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { z } from "zod";
 import type {
   PageForEdit,
   PageSectionData,
 } from "@/admin/queries/page-section";
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { getAdminSectionMeta } from "@/shared/lib/sections/admin-registry";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
@@ -207,7 +207,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         config: z
           .record(z.string(), z.unknown())
           .catch({})
-          .parse(getSectionDefinition(componentId)?.defaultConfig ?? {}),
+          .parse(getAdminSectionMeta(componentId)?.defaultConfig ?? {}),
         design: {},
         isActive: true,
       });

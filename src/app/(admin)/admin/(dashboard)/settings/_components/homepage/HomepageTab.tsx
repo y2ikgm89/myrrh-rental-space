@@ -9,7 +9,7 @@
  * - ON/OFF切り替え
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -63,9 +63,9 @@ import type { HomepageSectionData } from "@/admin/queries/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
-  getSectionDefinition,
-  getRegisteredComponentIds,
-} from "@/shared/lib/sections/registry";
+  getAdminSectionMeta,
+  getAdminRegisteredComponentIds,
+} from "@/shared/lib/sections/admin-registry";
 import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 import {
   isMutationError,
@@ -114,7 +114,7 @@ function SortableSectionItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
   const label = definition?.meta.label ?? section.componentId;
 
   return (
@@ -213,7 +213,7 @@ function AddSectionDialog({
   existingComponentIds,
   isInstagramConnected,
 }: AddSectionDialogProps) {
-  const allComponentIds = getRegisteredComponentIds();
+  const allComponentIds = getAdminRegisteredComponentIds();
   const availableComponentIds = allComponentIds.filter((componentId) => {
     // customは複数追加可能
     if (componentId === "custom") return true;
@@ -234,7 +234,7 @@ function AddSectionDialog({
         </AlertDialogHeader>
         <div className="grid grid-cols-3 gap-2 py-4 max-h-[60vh] overflow-y-auto">
           {availableComponentIds.map((componentId) => {
-            const definition = getSectionDefinition(componentId);
+            const definition = getAdminSectionMeta(componentId);
             const label = definition?.meta.label ?? componentId;
             const isCustom = componentId === "custom";
             const alreadyExists = existingComponentIds.includes(componentId);
@@ -410,7 +410,7 @@ export function HomepageTab({
     const defaultConfig = z
       .record(z.string(), z.unknown())
       .catch({})
-      .parse(getSectionDefinition(componentId)?.defaultConfig ?? {});
+      .parse(getAdminSectionMeta(componentId)?.defaultConfig ?? {});
 
     runActionAndReload(
       () =>

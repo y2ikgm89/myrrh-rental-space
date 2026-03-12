@@ -6,7 +6,7 @@
  * コンパクトなリストアイテム + ⋯ メニュー
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -25,7 +25,7 @@ import {
   Copy,
   Trash2,
 } from "lucide-react";
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { getAdminSectionMeta } from "@/shared/lib/sections/admin-registry";
 import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 import type { PageSectionData } from "@/admin/actions/page-section";
 
@@ -63,7 +63,7 @@ export function SectionSidebarItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
   const label = definition?.meta.label ?? section.componentId;
 
   return (

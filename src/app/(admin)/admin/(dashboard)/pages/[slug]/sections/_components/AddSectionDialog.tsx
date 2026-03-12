@@ -6,7 +6,7 @@
  * レジストリからセクション定義を取得してカテゴリ別に表示
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/admin/components/ui";
-import { getSectionsByCategory } from "@/shared/lib/sections/registry";
+import { getAdminSectionsByCategory } from "@/shared/lib/sections/admin-registry";
 import type { SectionCategory } from "@/shared/lib/sections/types";
 import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 
@@ -42,7 +42,7 @@ export function AddSectionDialog({
   onAdd,
   disabled,
 }: AddSectionDialogProps) {
-  const groups = getSectionsByCategory();
+  const groups = getAdminSectionsByCategory();
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

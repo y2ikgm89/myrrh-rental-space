@@ -4,9 +4,9 @@
  * 右パネルのヘッダー（セクション名 + タイプバッジ）
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { Badge } from "@/admin/components/ui";
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { getAdminSectionMeta } from "@/shared/lib/sections/admin-registry";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { renderSectionIcon } from "@/admin/components/section-icon-resolver";
 
@@ -15,7 +15,7 @@ interface SectionDetailHeaderProps {
 }
 
 export function SectionDetailHeader({ section }: SectionDetailHeaderProps) {
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
   const label = definition?.meta.label ?? section.componentId;
 
   return (

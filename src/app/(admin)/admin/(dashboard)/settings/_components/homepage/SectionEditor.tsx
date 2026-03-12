@@ -6,7 +6,7 @@
  * 各セクションタイプに応じた設定フォームを表示
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
@@ -34,7 +34,7 @@ import {
 } from "@/admin/actions/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { getAdminSectionMeta } from "@/shared/lib/sections/admin-registry";
 import { SchemaForm } from "@/admin/components/schema-form";
 
 // =============================================================================
@@ -60,7 +60,7 @@ export function SectionEditor({
   showHeader = true,
 }: SectionEditorProps) {
   const [isPending, startTransition] = useTransition();
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
   const label = definition?.meta.label ?? section.componentId;
 
   const handleConfigSave = (config: Record<string, unknown>) => {
@@ -200,7 +200,7 @@ function TitleForm({
     });
   };
 
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
   const label = definition?.meta.label ?? section.componentId;
 
   return (

@@ -7,7 +7,7 @@
  * デザインタブ: 汎化版 DesignPanel
  */
 
-import "@/public/lib/sections/register-standard-sections";
+import "@/admin/lib/sections/register-admin-sections";
 import { useEffect, useState, useTransition } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -25,7 +25,7 @@ import {
 } from "@/admin/actions/page-section";
 import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { getSectionDefinition } from "@/shared/lib/sections/registry";
+import { getAdminSectionMeta } from "@/shared/lib/sections/admin-registry";
 import { SchemaForm } from "@/admin/components/schema-form";
 import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
@@ -71,7 +71,7 @@ export function SectionDetailPanel({
     );
   }
 
-  const definition = getSectionDefinition(section.componentId);
+  const definition = getAdminSectionMeta(section.componentId);
 
   const handleConfigSave = (config: Record<string, unknown>) => {
     startTransition(async () => {
