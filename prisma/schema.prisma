@@ -1069,6 +1069,16 @@ model Settings {
   headerScrollBehavior  HeaderScrollBehavior @default(always_visible)
   headerBackgroundMode  HeaderBackgroundMode @default(solid)
 
+  // Footer Settings (フッター設定)
+  footerTagline         String?
+  footerNavigationLabel String  @default("Navigation")
+  footerContactLabel    String  @default("Contact")
+  footerHoursLabel      String  @default("Hours")
+  footerShowSocialLinks Boolean @default(true)
+
+  // Theme
+  themeColor String @default("#fafafa")
+
   // Sidebar Settings (サイドバー設定)
   sidebarEnabled      Boolean @default(true) // サイドバー全体の有効/無効
   sidebarWidgets      Json    @default("{\"search\":true,\"recent\":true,\"popular\":true,\"categories\":true,\"tags\":true}") // ウィジェット個別設定
