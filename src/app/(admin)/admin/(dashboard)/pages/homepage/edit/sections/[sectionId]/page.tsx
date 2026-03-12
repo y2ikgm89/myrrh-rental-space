@@ -9,7 +9,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getHomepageSection } from "@/admin/queries/homepage-settings";
-import { sectionTypeLabels } from "@/admin/lib/validations/homepage-section";
+import { sectionComponentLabels } from "@/admin/lib/validations/homepage-section";
 import { toPlainObject } from "@/shared/lib/serialize";
 import { Button, Breadcrumb } from "@/admin/components/ui";
 import { SectionEditWrapper } from "./_components/SectionEditWrapper";
@@ -32,7 +32,7 @@ export default async function HomepageSectionEditPage({
 
   if (!section) notFound();
 
-  const label = sectionTypeLabels[section.componentId];
+  const label = sectionComponentLabels[section.componentId];
 
   return (
     <div className="space-y-6">

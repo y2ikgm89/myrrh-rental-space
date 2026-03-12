@@ -46,7 +46,6 @@ export const customDefinition: SectionDefinition<typeof customConfigSchema> = {
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/CustomSection").then((m) => ({
         default: m.CustomSection,
       })),

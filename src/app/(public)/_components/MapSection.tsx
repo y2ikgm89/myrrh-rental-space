@@ -15,20 +15,18 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
-import type { MapConfig } from "@/shared/lib/validations/section";
-import { parseBorderRadius } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  mapConfigSchema,
+  parseBorderRadius,
+  type MapConfig,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 const HEIGHT_MAP = {
   sm: "h-[300px]",
   md: "h-[400px]",
   lg: "h-[500px]",
 } as const;
-
-interface MapSectionProps {
-  readonly config: MapConfig;
-  readonly design: SectionDesign;
-}
 
 function buildMapEmbedUrl(config: MapConfig): string | null {
   if (config.latitude != null && config.longitude != null) {
@@ -41,7 +39,9 @@ function buildMapEmbedUrl(config: MapConfig): string | null {
   return null;
 }
 
-export function MapSection({ config, design }: MapSectionProps): ReactElement {
+export function MapSection(props: SectionComponentProps): ReactElement {
+  const config = mapConfigSchema.parse(props.config);
+  const { design } = props;
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
   const embedUrl = buildMapEmbedUrl(config);
 

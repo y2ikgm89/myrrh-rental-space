@@ -18,13 +18,11 @@ import {
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
-import type { ContactFormConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
-
-interface ContactFormSectionProps {
-  readonly config: ContactFormConfig;
-  readonly design: SectionDesign;
-}
+import {
+  contactFormConfigSchema,
+  type ContactFormConfig,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary";
@@ -116,10 +114,9 @@ function ContactForm({
   );
 }
 
-export function ContactFormSection({
-  config,
-  design,
-}: ContactFormSectionProps): ReactElement {
+export function ContactFormSection(props: SectionComponentProps): ReactElement {
+  const config = contactFormConfigSchema.parse(props.config);
+  const { design } = props;
   const variant = config.variant;
 
   // split: 2-column (left=heading/description/contact info, right=form)

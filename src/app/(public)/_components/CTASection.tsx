@@ -17,21 +17,23 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import type { CtaConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
-
-interface CTASectionProps {
-  readonly config: CtaConfig;
-  readonly design: SectionDesign;
-}
+import {
+  ctaConfigSchema,
+  type CtaConfig,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 function CTAButtons({
   primaryButton,
   secondaryButton,
   variant,
 }: {
-  readonly primaryButton: CtaConfig["buttons"][number] | undefined;
-  readonly secondaryButton: CtaConfig["buttons"][number] | undefined;
+  readonly primaryButton:
+    | NonNullable<CtaConfig["buttons"]>[number]
+    | undefined;
+  readonly secondaryButton:
+    | NonNullable<CtaConfig["buttons"]>[number]
+    | undefined;
   readonly variant: CtaConfig["variant"];
 }): ReactElement | null {
   if (!primaryButton && !secondaryButton) return null;
@@ -62,9 +64,12 @@ function CTAButtons({
   );
 }
 
-export function CTASection({ config, design }: CTASectionProps): ReactElement {
-  const primaryButton = config.buttons.find((b) => b.variant === "primary");
-  const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
+export function CTASection(props: SectionComponentProps): ReactElement {
+  const config = ctaConfigSchema.parse(props.config);
+  const { design } = props;
+  const buttons = config.buttons ?? [];
+  const primaryButton = buttons.find((b) => b.variant === "primary");
+  const secondaryButton = buttons.find((b) => b.variant === "secondary");
   const variant = config.variant;
   const styleProps = config.backgroundColor
     ? { style: { backgroundColor: config.backgroundColor } }

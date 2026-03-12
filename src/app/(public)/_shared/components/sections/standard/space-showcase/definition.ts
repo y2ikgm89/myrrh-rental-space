@@ -16,7 +16,6 @@ export const spaceShowcaseDefinition: SectionDefinition<
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/SpaceShowcase").then((m) => ({
         default: m.SpaceShowcase,
       })),

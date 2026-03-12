@@ -26,9 +26,11 @@ import {
   IMAGE_ASPECT_MAP,
   getCardGridColsClass,
 } from "@/public/lib/section-style-maps";
-import { parsePostImageAspect } from "@/shared/lib/validations/section";
-import type { PostListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  postListConfigSchema,
+  parsePostImageAspect,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 export interface PostData {
   readonly id: string;
@@ -41,17 +43,13 @@ export interface PostData {
   readonly categoryName: string | null;
 }
 
-interface PostListSectionProps {
-  readonly config: PostListConfig;
-  readonly posts: readonly PostData[];
-  readonly design: SectionDesign;
-}
-
-export function PostListSection({
-  config,
-  posts,
-  design,
-}: PostListSectionProps): ReactElement {
+export function PostListSection(props: SectionComponentProps): ReactElement {
+  const config = postListConfigSchema.parse(props.config);
+  const { design } = props;
+  const rawPosts = props.extraData?.["posts"];
+  const posts: readonly PostData[] = Array.isArray(rawPosts)
+    ? rawPosts
+    : [];
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

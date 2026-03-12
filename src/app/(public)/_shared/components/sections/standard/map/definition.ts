@@ -69,7 +69,6 @@ export const mapDefinition: SectionDefinition<typeof mapConfigSchema> = {
   component: {
     type: "client",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/MapSection").then((m) => ({
         default: m.MapSection,
       })),

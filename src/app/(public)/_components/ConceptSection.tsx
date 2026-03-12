@@ -20,11 +20,11 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { IMAGE_ASPECT_MAP } from "@/public/lib/section-style-maps";
 import {
+  conceptConfigSchema,
   parseConceptLayout,
   parseImageAspect,
 } from "@/shared/lib/validations/section";
-import type { ConceptConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 /** text-left は CSS デフォルトなので省略し、非デフォルト値のみクラスを付与 */
 const TEXT_ALIGN_CLASS: Record<string, string | undefined> = {
@@ -32,15 +32,9 @@ const TEXT_ALIGN_CLASS: Record<string, string | undefined> = {
   right: "text-right",
 };
 
-interface ConceptSectionProps {
-  readonly config: ConceptConfig;
-  readonly design: SectionDesign;
-}
-
-export function ConceptSection({
-  config,
-  design,
-}: ConceptSectionProps): ReactElement {
+export function ConceptSection(props: SectionComponentProps): ReactElement {
+  const config = conceptConfigSchema.parse(props.config);
+  const { design } = props;
   const heading = config.heading;
   const body = config.body;
   const imageUrl = config.imageUrl;

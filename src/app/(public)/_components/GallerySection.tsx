@@ -29,21 +29,15 @@ import {
   getMasonryColsClass,
 } from "@/public/lib/section-style-maps";
 import {
+  galleryConfigSchema,
   parseGalleryImageAspect,
   parseGalleryHoverEffect,
 } from "@/shared/lib/validations/section";
-import type { GalleryConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
-interface GallerySectionProps {
-  readonly config: GalleryConfig;
-  readonly design: SectionDesign;
-}
-
-export function GallerySection({
-  config,
-  design,
-}: GallerySectionProps): ReactElement {
+export function GallerySection(props: SectionComponentProps): ReactElement {
+  const config = galleryConfigSchema.parse(props.config);
+  const { design } = props;
   const gridRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [lightboxIndex, setLightboxIndex] = useState(-1);

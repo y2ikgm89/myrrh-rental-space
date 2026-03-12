@@ -15,9 +15,11 @@ import {
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import type { EmbedConfig } from "@/shared/lib/validations/section";
-import { parseBorderRadius } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  embedConfigSchema,
+  parseBorderRadius,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 const MAX_WIDTH_MAP = {
   sm: "max-w-2xl",
@@ -34,15 +36,9 @@ const ASPECT_RATIO_MAP = {
   auto: "",
 } as const;
 
-interface EmbedSectionProps {
-  readonly config: EmbedConfig;
-  readonly design: SectionDesign;
-}
-
-export function EmbedSection({
-  config,
-  design,
-}: EmbedSectionProps): ReactElement {
+export function EmbedSection(props: SectionComponentProps): ReactElement {
+  const config = embedConfigSchema.parse(props.config);
+  const { design } = props;
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
   const aspectClass =
     ASPECT_RATIO_MAP[config.aspectRatio] ?? ASPECT_RATIO_MAP["16:9"];

@@ -65,7 +65,6 @@ export const testimonialDefinition: SectionDefinition<
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/TestimonialSection").then((m) => ({
         default: m.TestimonialSection,
       })),

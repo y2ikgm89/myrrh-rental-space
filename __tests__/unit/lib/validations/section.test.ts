@@ -35,7 +35,7 @@ import {
   // Default configs
   defaultSectionConfigs,
   defaultSectionConfigMap,
-  sectionTypeLabels,
+  sectionComponentLabels,
 } from "@/shared/lib/validations/section";
 
 // =============================================================================
@@ -751,7 +751,7 @@ describe("パーサー関数", () => {
 
 describe("defaultSectionConfigs", () => {
   test("全セクションタイプにデフォルト設定が存在", () => {
-    const componentIds = Object.keys(sectionTypeLabels);
+    const componentIds = Object.keys(sectionComponentLabels);
     componentIds.forEach((componentId) => {
       expect(defaultSectionConfigMap[componentId]).toBeDefined();
     });

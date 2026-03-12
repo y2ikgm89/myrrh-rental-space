@@ -28,11 +28,11 @@ import {
   getCardGridColsClass,
 } from "@/public/lib/section-style-maps";
 import {
+  spaceListConfigSchema,
   parseCardStyle,
   parseSpaceImageAspect,
 } from "@/shared/lib/validations/section";
-import type { SpaceListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 export interface SpaceListData {
   readonly id: string;
@@ -45,17 +45,13 @@ export interface SpaceListData {
   readonly mainImageUrl: string;
 }
 
-interface SpaceListSectionProps {
-  readonly config: SpaceListConfig;
-  readonly spaces: readonly SpaceListData[];
-  readonly design: SectionDesign;
-}
-
-export function SpaceListSection({
-  config,
-  spaces,
-  design,
-}: SpaceListSectionProps): ReactElement {
+export function SpaceListSection(props: SectionComponentProps): ReactElement {
+  const config = spaceListConfigSchema.parse(props.config);
+  const { design } = props;
+  const rawSpaces = props.extraData?.["spaces"];
+  const spaces: readonly SpaceListData[] = Array.isArray(rawSpaces)
+    ? rawSpaces
+    : [];
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

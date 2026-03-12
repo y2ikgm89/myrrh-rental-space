@@ -14,8 +14,8 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import type { CustomConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import { customConfigSchema } from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 
 const MAX_WIDTH_MAP = {
@@ -33,19 +33,11 @@ const PADDING_MAP = {
   lg: "py-24 md:py-32",
 } as const;
 
-interface CustomSectionProps {
-  readonly config: CustomConfig;
-  readonly content: string | null;
-  readonly title: string | null;
-  readonly design: SectionDesign;
-}
-
-export function CustomSection({
-  config,
-  content,
-  title,
-  design,
-}: CustomSectionProps): ReactElement {
+export function CustomSection(props: SectionComponentProps): ReactElement {
+  const config = customConfigSchema.parse(props.config);
+  const { design } = props;
+  const content = props.section?.contentHtml ?? null;
+  const title = props.section?.title ?? null;
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
   const paddingClass = PADDING_MAP[config.padding] ?? PADDING_MAP.md;
 

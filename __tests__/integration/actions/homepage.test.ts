@@ -11,7 +11,7 @@ import {
   validateSectionConfig,
   defaultSectionConfigs,
   defaultSectionConfigMap,
-  sectionTypeLabels,
+  sectionComponentLabels,
 } from "@/shared/lib/validations/section";
 
 // =============================================================================
@@ -19,7 +19,7 @@ import {
 // =============================================================================
 
 describe("Homepage Public Action Integration", () => {
-  describe("sectionTypeLabels（全コンポーネントID）", () => {
+  describe("sectionComponentLabels（全コンポーネントID）", () => {
     test("全てのコンポーネントIDが定義されている", () => {
       const expectedComponentIds = [
         "hero",
@@ -41,14 +41,14 @@ describe("Homepage Public Action Integration", () => {
         "instagram",
       ];
 
-      const componentIds = Object.keys(sectionTypeLabels);
+      const componentIds = Object.keys(sectionComponentLabels);
       expectedComponentIds.forEach((id) => {
         expect(componentIds).toContain(id);
       });
     });
 
     test("セクションタイプ数", () => {
-      const typeCount = Object.keys(sectionTypeLabels).length;
+      const typeCount = Object.keys(sectionComponentLabels).length;
       expect(typeCount).toBe(17);
     });
   });
@@ -177,7 +177,7 @@ describe("Homepage Public Action Integration", () => {
 
   describe("defaultSectionConfigs", () => {
     test("全コンポーネントIDにデフォルト設定がある", () => {
-      Object.keys(sectionTypeLabels).forEach((componentId) => {
+      Object.keys(sectionComponentLabels).forEach((componentId) => {
         expect(defaultSectionConfigMap[componentId]).toBeDefined();
       });
     });

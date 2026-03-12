@@ -81,7 +81,6 @@ export const heroDefinition: SectionDefinition<typeof heroConfigSchema> = {
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/StandardHeroSection").then((m) => ({
         default: m.StandardHeroSection,
       })),

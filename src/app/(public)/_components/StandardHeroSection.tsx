@@ -22,15 +22,18 @@ import { SplitText } from "@/public/components/animations/SplitText";
 import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
 import { MagneticButton } from "@/public/components/animations/MagneticButton";
 import { DURATION, EASE, SCROLL_TRIGGER } from "@/public/lib/animations";
-import type { HeroConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  heroConfigSchema,
+  type HeroConfig,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 import {
   getTitleClasses,
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 
-type HeroButton = HeroConfig["buttons"][number];
+type HeroButton = NonNullable<HeroConfig["buttons"]>[number];
 
 function HeroButtons({
   primary,
@@ -69,15 +72,11 @@ const HEIGHT_MAP = {
   full: "h-svh",
 } as const;
 
-interface StandardHeroSectionProps {
-  readonly config: HeroConfig;
-  readonly design: SectionDesign;
-}
-
-export function StandardHeroSection({
-  config,
-  design,
-}: StandardHeroSectionProps): ReactElement {
+export function StandardHeroSection(
+  props: SectionComponentProps,
+): ReactElement {
+  const config = heroConfigSchema.parse(props.config);
+  const { design } = props;
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -139,8 +138,9 @@ export function StandardHeroSection({
   );
 
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
-  const primaryButton = config.buttons.find((b) => b.variant === "primary");
-  const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
+  const buttons = config.buttons ?? [];
+  const primaryButton = buttons.find((b) => b.variant === "primary");
+  const secondaryButton = buttons.find((b) => b.variant === "secondary");
 
   // =========================================================================
   // Minimal: bottom-aligned, gradient bg, left-aligned

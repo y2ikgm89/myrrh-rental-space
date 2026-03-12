@@ -21,12 +21,12 @@ import {
   HERO_PARALLAX_HEIGHT_MAP,
 } from "@/public/lib/section-style-maps";
 import {
+  heroParallaxConfigSchema,
   parseContentPosition,
   parseOverlayStyle,
   parseHeroParallaxHeight,
 } from "@/shared/lib/validations/section";
-import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -36,15 +36,9 @@ import {
 const DEFAULT_BG_IMAGE =
   "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80";
 
-interface HeroSectionProps {
-  readonly config: HeroParallaxConfig;
-  readonly design: SectionDesign;
-}
-
-export function HeroSection({
-  config,
-  design,
-}: HeroSectionProps): ReactElement {
+export function HeroSection(props: SectionComponentProps): ReactElement {
+  const config = heroParallaxConfigSchema.parse(props.config);
+  const { design } = props;
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);

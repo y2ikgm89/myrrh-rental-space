@@ -58,7 +58,6 @@ export const embedDefinition: SectionDefinition<typeof embedConfigSchema> = {
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/EmbedSection").then((m) => ({
         default: m.EmbedSection,
       })),

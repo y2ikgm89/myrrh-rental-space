@@ -24,9 +24,11 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
-import { parseFeaturesLayout } from "@/shared/lib/validations/section";
-import type { FeaturesConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  featuresConfigSchema,
+  parseFeaturesLayout,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 function FeatureIcon({
   icon,
@@ -79,15 +81,9 @@ function FeatureIcon({
   );
 }
 
-interface FeaturesSectionProps {
-  readonly config: FeaturesConfig;
-  readonly design: SectionDesign;
-}
-
-export function FeaturesSection({
-  config,
-  design,
-}: FeaturesSectionProps): ReactElement {
+export function FeaturesSection(props: SectionComponentProps): ReactElement {
+  const config = featuresConfigSchema.parse(props.config);
+  const { design } = props;
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

@@ -24,22 +24,16 @@ import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import {
+  faqListConfigSchema,
   parseContainerWidth,
   parseFaqInitialOpen,
 } from "@/shared/lib/validations/section";
-import type { FaqListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 export interface FaqData {
   readonly id: string;
   readonly question: string;
   readonly answer: string;
-}
-
-interface FaqListSectionProps {
-  readonly config: FaqListConfig;
-  readonly items: readonly FaqData[];
-  readonly design: SectionDesign;
 }
 
 const VARIANT_STYLES = {
@@ -66,11 +60,11 @@ const VARIANT_STYLES = {
   },
 } as const;
 
-export function FaqListSection({
-  config,
-  items,
-  design,
-}: FaqListSectionProps): ReactElement {
+export function FaqListSection(props: SectionComponentProps): ReactElement {
+  const config = faqListConfigSchema.parse(props.config);
+  const { design } = props;
+  const rawItems = props.extraData?.["items"];
+  const items: readonly FaqData[] = Array.isArray(rawItems) ? rawItems : [];
   const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

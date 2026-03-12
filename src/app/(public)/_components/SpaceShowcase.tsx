@@ -25,11 +25,11 @@ import {
   getGridColsClass,
 } from "@/public/lib/section-style-maps";
 import {
+  spaceShowcaseConfigSchema,
   parseCardStyle,
   parseShowcaseImageAspect,
 } from "@/shared/lib/validations/section";
-import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 export interface SpaceData {
   readonly id: string;
@@ -44,17 +44,13 @@ export interface SpaceData {
   readonly slug: string;
 }
 
-interface SpaceShowcaseProps {
-  readonly config: SpaceShowcaseConfig;
-  readonly spaces: readonly SpaceData[];
-  readonly design: SectionDesign;
-}
-
-export function SpaceShowcase({
-  config,
-  spaces,
-  design,
-}: SpaceShowcaseProps): ReactElement {
+export function SpaceShowcase(props: SectionComponentProps): ReactElement {
+  const config = spaceShowcaseConfigSchema.parse(props.config);
+  const { design } = props;
+  const rawSpaces = props.extraData?.["spaces"];
+  const spaces: readonly SpaceData[] = Array.isArray(rawSpaces)
+    ? rawSpaces
+    : [];
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

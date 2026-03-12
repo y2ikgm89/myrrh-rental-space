@@ -22,8 +22,8 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
-import type { NewsListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import { newsListConfigSchema } from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 export interface NewsData {
   readonly id: string;
@@ -31,12 +31,6 @@ export interface NewsData {
   readonly url: string;
   readonly title: string;
   readonly publishedAt: string | null;
-}
-
-interface NewsListSectionProps {
-  readonly config: NewsListConfig;
-  readonly news: readonly NewsData[];
-  readonly design: SectionDesign;
 }
 
 function formatDate(date: string | null): string {
@@ -50,11 +44,11 @@ function formatDate(date: string | null): string {
     .replaceAll("/", ".");
 }
 
-export function NewsListSection({
-  config,
-  news,
-  design,
-}: NewsListSectionProps): ReactElement {
+export function NewsListSection(props: SectionComponentProps): ReactElement {
+  const config = newsListConfigSchema.parse(props.config);
+  const { design } = props;
+  const rawNews = props.extraData?.["news"];
+  const news: readonly NewsData[] = Array.isArray(rawNews) ? rawNews : [];
   const listRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

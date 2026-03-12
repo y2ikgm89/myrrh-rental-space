@@ -21,13 +21,8 @@ import {
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
-import type { TestimonialConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
-
-interface TestimonialSectionProps {
-  readonly config: TestimonialConfig;
-  readonly design: SectionDesign;
-}
+import { testimonialConfigSchema } from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
 function StarRating({ rating }: { readonly rating: number }): ReactElement {
   return (
@@ -59,10 +54,11 @@ const CARD_CLASS = {
   carousel: "min-w-[300px] snap-center md:min-w-[360px]",
 } as const;
 
-export function TestimonialSection({
-  config,
-  design,
-}: TestimonialSectionProps): ReactElement {
+export function TestimonialSection(
+  props: SectionComponentProps,
+): ReactElement {
+  const config = testimonialConfigSchema.parse(props.config);
+  const { design } = props;
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

@@ -13,7 +13,7 @@ import {
   validateSectionConfig,
   defaultSectionConfigs,
   defaultSectionConfigMap,
-  sectionTypeLabels,
+  sectionComponentLabels,
 } from "@/shared/lib/validations/section";
 
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -33,7 +33,7 @@ describe("Homepage Settings Admin Action Integration", () => {
       });
 
       test("全 componentId での作成が可能", () => {
-        for (const componentId of Object.keys(sectionTypeLabels)) {
+        for (const componentId of Object.keys(sectionComponentLabels)) {
           const result = createSectionSchema.safeParse({
             componentId,
             isActive: true,
@@ -389,7 +389,7 @@ describe("Homepage Settings Admin Action Integration", () => {
     });
 
     test("全 componentId に対して validateSectionConfig が実行できる", () => {
-      for (const componentId of Object.keys(sectionTypeLabels)) {
+      for (const componentId of Object.keys(sectionComponentLabels)) {
         const defaultConfig = defaultSectionConfigMap[componentId];
         const result = validateSectionConfig(componentId, defaultConfig);
         expect(result.success).toBe(true);
@@ -399,7 +399,7 @@ describe("Homepage Settings Admin Action Integration", () => {
 
   describe("defaultSectionConfigs", () => {
     test("全 componentId にデフォルト設定が存在する", () => {
-      for (const componentId of Object.keys(sectionTypeLabels)) {
+      for (const componentId of Object.keys(sectionComponentLabels)) {
         expect(defaultSectionConfigMap[componentId]).toBeDefined();
       }
     });

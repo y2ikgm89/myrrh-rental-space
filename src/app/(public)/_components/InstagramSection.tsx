@@ -21,19 +21,15 @@ import {
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass, GAP_MAP } from "@/public/lib/section-style-maps";
-import type { InstagramConfig } from "@/shared/lib/validations/section";
-import { parseGapSize } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import {
+  instagramConfigSchema,
+  parseGapSize,
+} from "@/shared/lib/validations/section";
+import type { SectionComponentProps } from "@/shared/lib/sections/types";
 
-interface InstagramSectionProps {
-  readonly config: InstagramConfig;
-  readonly design: SectionDesign;
-}
-
-export function InstagramSection({
-  config,
-  design,
-}: InstagramSectionProps): ReactElement {
+export function InstagramSection(props: SectionComponentProps): ReactElement {
+  const config = instagramConfigSchema.parse(props.config);
+  const { design } = props;
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(

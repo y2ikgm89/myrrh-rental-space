@@ -95,7 +95,6 @@ export const heroParallaxDefinition: SectionDefinition<
   component: {
     type: "client",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/HeroSection").then((m) => ({
         default: m.HeroSection,
       })),

@@ -36,7 +36,7 @@ export function CtaConfigForm({
   isPending: boolean;
 }) {
   const [buttons, setButtons] = useState<CTAButtonItem[]>(
-    config.buttons.map((b) => omitUndefined(b)),
+    (config.buttons ?? []).map((b) => omitUndefined(b)),
   );
 
   const {

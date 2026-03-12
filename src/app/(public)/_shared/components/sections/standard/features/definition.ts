@@ -59,7 +59,6 @@ export const featuresDefinition: SectionDefinition<
   component: {
     type: "server",
     load: () =>
-      // @ts-expect-error -- migration: component uses typed props; will adopt SectionComponentProps<TConfig> in Task 13
       import("../../../../../_components/FeaturesSection").then((m) => ({
         default: m.FeaturesSection,
       })),
