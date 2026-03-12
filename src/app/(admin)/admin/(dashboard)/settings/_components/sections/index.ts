@@ -19,6 +19,7 @@ export { StripeSection } from "./StripeSection";
 // Layout Settings
 export { LayoutSection } from "./LayoutSection";
 export { HeaderSection } from "./HeaderSection";
+export { FooterSection } from "./FooterSection";
 export { SidebarSection } from "./SidebarSection";
 
 // Posts Settings

@@ -21,6 +21,7 @@ import {
   SidebarSection,
   LayoutSection,
   HeaderSection,
+  FooterSection,
   PermalinkSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
@@ -71,6 +72,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       content: (
         <div className="space-y-6">
           <HeaderSection settings={settings} />
+          <FooterSection settings={settings} />
           <SidebarSection settings={settings} />
           <LayoutSection settings={settings} />
         </div>

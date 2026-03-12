@@ -62,7 +62,7 @@ export function DesignPreview({
       case AnnouncementBarDesignStyle.outlined:
         return "bg-transparent border-y border-border";
       case AnnouncementBarDesignStyle.glass:
-        return "backdrop-blur-md bg-white/10 border-y border-white/20";
+        return "backdrop-blur-md bg-card/10 border-y border-card/20";
       case AnnouncementBarDesignStyle.minimal:
         return "bg-transparent border-b border-border";
       case AnnouncementBarDesignStyle.striped:
