@@ -155,7 +155,7 @@ export async function Footer(): Promise<ReactElement> {
               )
                 .split("\n")
                 .map((line, i) => (
-                  <span key={i}>
+                  <span key={`tagline-${line}`}>
                     {i > 0 && <br />}
                     {line}
                   </span>
