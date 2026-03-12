@@ -30,6 +30,7 @@ import { SchemaForm } from "@/admin/components/schema-form";
 import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
 import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
+import { EffectSelector } from "@/admin/components/effect-editor";
 
 interface SectionDetailPanelProps {
   section: PageSectionData | null;
@@ -122,6 +123,7 @@ export function SectionDetailPanel({
         <TabsList>
           <TabsTrigger value="content">コンテンツ</TabsTrigger>
           <TabsTrigger value="design">デザイン</TabsTrigger>
+          <TabsTrigger value="effects">エフェクト</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="mt-4 space-y-6">
@@ -160,6 +162,10 @@ export function SectionDetailPanel({
             onDesignSave={handleDesignSave}
             onDirtyChange={setDesignDirty}
           />
+        </TabsContent>
+
+        <TabsContent value="effects" className="mt-4">
+          <EffectSelector />
         </TabsContent>
       </Tabs>
     </div>
