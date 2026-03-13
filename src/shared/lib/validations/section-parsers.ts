@@ -2,8 +2,8 @@
  * セクション config パーサー（Zod 不使用）
  *
  * 公開ページの Client Components で使用。
- * Zod の safeParse を Array.includes に置換することで
- * Zod ライブラリ（~74KB gzip）をクライアントバンドルから除去。
+ * Zod の safeParse を Set.has に置換することで
+ * Zod ライブラリをクライアントバンドルから除去。
  *
  * admin 側は section.ts の re-export 経由で同じ関数を使用するため
  * インターフェースに変更なし。
@@ -86,20 +86,15 @@ import {
 
 /**
  * 指定された値配列に含まれるかチェックし、含まれなければデフォルト値を返す。
- * Zod の safeParse と同じ振る舞いを Array.includes で実現。
+ * Zod の safeParse と同じ振る舞いを Set.has で実現。
  */
 function createParser<T extends string>(
   values: readonly T[],
   defaultValue: NoInfer<T>,
 ): (value: string) => T {
   const set = new Set<string>(values);
-  return (value: string): T => {
-    if (set.has(value)) {
-      // set.has で検証済みのため安全なナローイング
-      return value as T;
-    }
-    return defaultValue;
-  };
+  const isValid = (v: string): v is T => set.has(v);
+  return (value: string): T => (isValid(value) ? value : defaultValue);
 }
 
 // =============================================================================

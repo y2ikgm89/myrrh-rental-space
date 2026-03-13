@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition } from "react";
+import { useEffect, startTransition } from "react";
+import { logger } from "@/shared/lib/logger";
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -8,6 +9,13 @@ interface ErrorProps {
 }
 
 export default function AuthError({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    logger.error("Auth error boundary triggered", {
+      error: error.message,
+      digest: error.digest,
+    });
+  }, [error]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
