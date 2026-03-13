@@ -13,7 +13,7 @@ import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/utils";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { SpaceActionCell } from "./SpaceActionCell";
+import { ResourceActionCell } from "@/admin/components/ResourceActionCell";
 
 // =============================================================================
 // Types
@@ -103,7 +103,15 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <SpaceActionCell spaceId={space.id} />
+                  <ResourceActionCell
+                    actions={[
+                      {
+                        label: "編集",
+                        href: `/admin/spaces/${space.id}/edit`,
+                      },
+                      { label: "詳細", href: `/admin/spaces/${space.id}` },
+                    ]}
+                  />
                 </TableCell>
               </TableRow>
             ))}
