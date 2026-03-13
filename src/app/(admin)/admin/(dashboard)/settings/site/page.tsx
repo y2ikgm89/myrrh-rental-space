@@ -18,12 +18,12 @@ import {
   ContactInfoSection,
   SeoSection,
   RobotsTxtSection,
-  SidebarSection,
-  LayoutSection,
-  HeaderSection,
-  FooterSection,
   PermalinkSection,
 } from "../_components/sections";
+import { LayoutSection } from "../_components/sections/LayoutSection";
+import { HeaderSection } from "../_components/sections/HeaderSection";
+import { FooterSection } from "../_components/sections/FooterSection";
+import { SidebarSection } from "../_components/sections/SidebarSection";
 import type { ReactElement } from "react";
 
 /**

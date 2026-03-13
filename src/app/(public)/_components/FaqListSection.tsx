@@ -26,7 +26,7 @@ import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import {
   parseContainerWidth,
   parseFaqInitialOpen,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { FaqListConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

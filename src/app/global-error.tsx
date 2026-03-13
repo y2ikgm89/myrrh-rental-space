@@ -5,6 +5,7 @@
  *
  * ルートレベルのエラーをキャッチ。
  * layout.tsxを上書きするため、html/bodyタグが必須。
+ * Root Layout の外で動くため CSS 変数が存在しない — 全てインラインスタイルで記述。
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
  */
@@ -34,14 +35,35 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   return (
     <html lang="ja">
       <body
-        className="antialiased"
-        style={{ fontFamily: '"Helvetica Neue", Arial, sans-serif' }}
+        style={{
+          fontFamily: '"Helvetica Neue", Arial, sans-serif',
+          margin: 0,
+          backgroundColor: "#fafafa",
+          color: "#111",
+        }}
       >
-        <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-          <div className="w-full max-w-md text-center">
-            <div className="mb-8">
+        <div
+          style={{
+            display: "flex",
+            minHeight: "100vh",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 1rem",
+          }}
+        >
+          <div
+            style={{ width: "100%", maxWidth: "28rem", textAlign: "center" }}
+          >
+            <div style={{ marginBottom: "2rem" }}>
               <svg
-                className="mx-auto h-24 w-24 text-destructive"
+                style={{
+                  margin: "0 auto",
+                  display: "block",
+                  height: "6rem",
+                  width: "6rem",
+                  color: "#dc2626",
+                }}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -55,26 +77,53 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               </svg>
             </div>
 
-            <h1 className="mb-4 text-2xl font-bold text-foreground">
+            <h1
+              style={{
+                marginBottom: "1rem",
+                fontSize: "1.5rem",
+                fontWeight: "bold",
+              }}
+            >
               予期しないエラーが発生しました
             </h1>
 
-            <p className="mb-8 text-muted-foreground">
+            <p style={{ marginBottom: "2rem", color: "#666" }}>
               申し訳ございません。システムエラーが発生しました。
               <br />
               しばらく時間をおいてから再度お試しください。
             </p>
 
             {error.digest && (
-              <p className="mb-6 text-sm text-muted-foreground/70">
+              <p
+                style={{
+                  marginBottom: "1.5rem",
+                  fontSize: "0.875rem",
+                  color: "#999",
+                }}
+              >
                 エラーID: {error.digest}
               </p>
             )}
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
               <button
                 onClick={handleReset}
-                className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "0.5rem",
+                  border: "none",
+                  backgroundColor: "#111",
+                  color: "#fff",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                }}
               >
                 再試行する
               </button>
@@ -82,7 +131,18 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/"
-                className="rounded-lg border border-border bg-card px-6 py-3 font-medium text-card-foreground transition-colors hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                style={{
+                  display: "inline-block",
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "0.5rem",
+                  border: "1px solid #ddd",
+                  backgroundColor: "#fff",
+                  color: "#111",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  fontSize: "1rem",
+                  textAlign: "center",
+                }}
               >
                 ホームに戻る
               </a>

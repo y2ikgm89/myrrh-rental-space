@@ -24,7 +24,7 @@ import {
   parseContentPosition,
   parseOverlayStyle,
   parseHeroParallaxHeight,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 import {
@@ -79,7 +79,7 @@ export function HeroSection({
           { y: -displacement },
           {
             y: displacement,
-            ease: "none",
+            ease: EASE.none,
             scrollTrigger: {
               trigger: section,
               ...SCROLL_TRIGGER.scrub,

@@ -11,6 +11,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
+import { getSession, getRoleFromSession } from "@/shared/lib/auth";
+import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
 const STATE_COOKIE_NAME = "instagram_oauth_state";
@@ -25,7 +27,18 @@ const STATE_COOKIE_MAX_AGE = 600; // 10分
  * 3. stateをcookieに保存
  * 4. Instagram認証URLにリダイレクト
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // 認証チェック
+  const session = await getSession(request.headers);
+  const role = getRoleFromSession(session);
+  if (
+    !session?.user ||
+    !role ||
+    (!isAdminRole(role) && !isSuperAdminRole(role))
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   // 環境変数チェック
   const clientId = serverEnv.INSTAGRAM_APP_ID;
   const redirectUri = serverEnv.INSTAGRAM_REDIRECT_URI;

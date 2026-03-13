@@ -31,7 +31,7 @@ import {
 import {
   parseGalleryImageAspect,
   parseGalleryHoverEffect,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { GalleryConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

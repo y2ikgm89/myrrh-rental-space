@@ -22,7 +22,7 @@ import { IMAGE_ASPECT_MAP } from "@/public/lib/section-style-maps";
 import {
   parseConceptLayout,
   parseImageAspect,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

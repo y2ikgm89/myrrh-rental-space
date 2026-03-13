@@ -7,7 +7,7 @@
 import { Badge } from "@/admin/components/ui";
 import { sectionTypeLabels } from "@/shared/lib/validations/section";
 import type { PageSectionData } from "@/admin/actions/page-section";
-import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
+import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
 interface SectionDetailHeaderProps {
   section: PageSectionData;

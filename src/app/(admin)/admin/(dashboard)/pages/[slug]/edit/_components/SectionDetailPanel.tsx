@@ -28,7 +28,7 @@ import { SectionEmptyState } from "./SectionEmptyState";
 import {
   configFormRegistry,
   type ConfigFormSavePayload,
-} from "../../sections/_components/config-forms";
+} from "../../_sections/_components/config-forms";
 import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
 
 interface SectionDetailPanelProps {

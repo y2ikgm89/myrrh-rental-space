@@ -22,7 +22,7 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass, GAP_MAP } from "@/public/lib/section-style-maps";
 import type { InstagramConfig } from "@/shared/lib/validations/section";
-import { parseGapSize } from "@/shared/lib/validations/section";
+import { parseGapSize } from "@/shared/lib/validations/section-parsers";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 interface InstagramSectionProps {

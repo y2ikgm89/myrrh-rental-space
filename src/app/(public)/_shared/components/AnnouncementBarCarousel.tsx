@@ -17,6 +17,7 @@ import { useState, useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { gsap } from "@/public/lib/gsap-config";
+import { EASE } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
 import {
   TYPE_STYLES,
@@ -118,7 +119,7 @@ function isWithinDisplayPeriod(bar: AnnouncementBarItem): boolean {
   if (!startAt && endAt) return now <= endAt;
 
   // 両方指定 → 期間内なら表示
-  return now >= startAt! && now <= endAt!;
+  return startAt !== null && endAt !== null && now >= startAt && now <= endAt;
 }
 
 // =============================================================================
@@ -273,7 +274,7 @@ export function AnnouncementBarCarousel({
     gsap.fromTo(contentRef.current, ENTER_FROM_PROPS[settings.animation], {
       ...ENTER_TO_PROPS[settings.animation],
       duration: TRANSITION_DURATION,
-      ease: "power2.out",
+      ease: EASE.outQuad,
       onComplete: () => {
         isAnimatingRef.current = false;
       },
@@ -416,7 +417,7 @@ export function AnnouncementBarCarousel({
           // design-exception: frosted-glass overlay requires white text regardless of theme
           !hasCustomText &&
             designStyle === AnnouncementBarDesignStyle.glass &&
-            "text-white",
+            "text-card",
         )}
         style={customStyles}
         role="alert"
@@ -443,7 +444,7 @@ export function AnnouncementBarCarousel({
             onClick={goPrev}
             className={cn(
               "absolute left-2 rounded-full p-1 transition-colors",
-              !hasCustomText && "hover:bg-black/10",
+              !hasCustomText && "hover:bg-foreground/10",
             )}
             aria-label="前のお知らせ"
           >
@@ -490,7 +491,7 @@ export function AnnouncementBarCarousel({
             onClick={goNext}
             className={cn(
               "absolute right-6 rounded-full p-1 transition-colors",
-              !hasCustomText && "hover:bg-black/10",
+              !hasCustomText && "hover:bg-foreground/10",
             )}
             aria-label="次のお知らせ"
           >
@@ -503,7 +504,7 @@ export function AnnouncementBarCarousel({
           onClick={handleDismiss}
           className={cn(
             "absolute right-2 rounded-full p-1 transition-colors",
-            !hasCustomText && "hover:bg-black/10",
+            !hasCustomText && "hover:bg-foreground/10",
           )}
           aria-label="閉じる"
         >

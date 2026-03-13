@@ -24,7 +24,7 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
-import { parseFeaturesLayout } from "@/shared/lib/validations/section";
+import { parseFeaturesLayout } from "@/shared/lib/validations/section-parsers";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

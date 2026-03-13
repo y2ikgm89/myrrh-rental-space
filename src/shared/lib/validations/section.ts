@@ -49,7 +49,6 @@ import {
   postImageAspectValues,
   galleryImageAspectValues,
   maxWidthValues,
-  type ImageAspect,
 } from "./section-options";
 
 export { SectionType };
@@ -796,252 +795,47 @@ export const getInstagramConfig = createSectionConfigGetter(
   instagramConfigSchema,
 );
 
-/**
- * 汎用: セクションタイプに応じた config 取得（型安全）
- */
-const heroHeightSchema = z.enum(heroHeightValues);
-const maxWidthOptionsSchema = z.enum(maxWidthValues);
-const paddingOptionsSchema = z.enum(paddingValues);
-const spaceLayoutOptionsSchema = z.enum(spaceLayoutValues);
-const newsLayoutOptionsSchema = z.enum(newsLayoutValues);
-const postLayoutOptionsSchema = z.enum(postLayoutValues);
-const ctaVariantOptionsSchema = z.enum(ctaVariantValues);
-const galleryLayoutOptionsSchema = z.enum(galleryLayoutValues);
-const galleryGapOptionsSchema = z.enum(galleryGapValues);
-const testimonialLayoutOptionsSchema = z.enum(testimonialLayoutValues);
-const testimonialVariantOptionsSchema = z.enum(testimonialVariantValues);
-const mapHeightOptionsSchema = z.enum(mapHeightValues);
-const embedAspectRatioOptionsSchema = z.enum(embedAspectRatioValues);
+// =============================================================================
+// Parse helpers（Zod 不使用 — クライアントバンドル軽量化）
+// section-parsers.ts から re-export。admin/public 両方で使用可能。
+// =============================================================================
 
-export function parseHeroHeight(value: string): HeroConfig["height"] {
-  const result = heroHeightSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseMaxWidth(value: string): CustomConfig["maxWidth"] {
-  const result = maxWidthOptionsSchema.safeParse(value);
-  return result.success ? result.data : "lg";
-}
-
-export function parsePadding(value: string): CustomConfig["padding"] {
-  const result = paddingOptionsSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseSpaceLayout(value: string): SpaceListConfig["layout"] {
-  const result = spaceLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "grid";
-}
-
-export function parseNewsLayout(value: string): NewsListConfig["layout"] {
-  const result = newsLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "list";
-}
-
-export function parsePostLayout(value: string): PostListConfig["layout"] {
-  const result = postLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "grid";
-}
-
-export function parseCtaVariant(value: string): CtaConfig["variant"] {
-  const result = ctaVariantOptionsSchema.safeParse(value);
-  return result.success ? result.data : "default";
-}
-
-export function parseGalleryLayout(value: string): GalleryConfig["layout"] {
-  const result = galleryLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "grid";
-}
-
-export function parseGalleryGap(value: string): GalleryConfig["gap"] {
-  const result = galleryGapOptionsSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseTestimonialLayout(
-  value: string,
-): TestimonialConfig["layout"] {
-  const result = testimonialLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "carousel";
-}
-
-export function parseTestimonialVariant(
-  value: string,
-): TestimonialConfig["variant"] {
-  const result = testimonialVariantOptionsSchema.safeParse(value);
-  return result.success ? result.data : "default";
-}
-
-export function parseMapHeight(value: string): MapConfig["height"] {
-  const result = mapHeightOptionsSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseEmbedAspectRatio(
-  value: string,
-): EmbedConfig["aspectRatio"] {
-  const result = embedAspectRatioOptionsSchema.safeParse(value);
-  return result.success ? result.data : "16:9";
-}
-
-// --- Phase: variant/layout 拡張用パーサー ---
-
-const cardStyleOptionsSchema = z.enum(cardStyleValues);
-const borderRadiusOptionsSchema = z.enum(borderRadiusValues);
-const containerWidthOptionsSchema = z.enum(containerWidthValues);
-const gapSizeOptionsSchema = z.enum(gapSizeValues);
-const contentPositionOptionsSchema = z.enum(contentPositionValues);
-const overlayStyleOptionsSchema = z.enum(overlayStyleValues);
-const heroParallaxHeightOptionsSchema = z.enum(heroParallaxHeightValues);
-const featuresLayoutOptionsSchema = z.enum(featuresLayoutValues);
-const faqInitialOpenOptionsSchema = z.enum(faqInitialOpenValues);
-const galleryHoverEffectOptionsSchema = z.enum(galleryHoverEffectValues);
-const conceptLayoutOptionsSchema = z.enum(conceptLayoutValues);
-const imageAspectOptionsSchema = z.enum(imageAspectValues);
-const heroVariantOptionsSchema = z.enum(heroVariantValues);
-const contactFormVariantOptionsSchema = z.enum(contactFormVariantValues);
-const faqVariantOptionsSchema = z.enum(faqVariantValues);
-
-export function parseCardStyle(value: string): SpaceListConfig["cardStyle"] {
-  const result = cardStyleOptionsSchema.safeParse(value);
-  return result.success ? result.data : "bordered";
-}
-
-export function parseBorderRadius(value: string): MapConfig["borderRadius"] {
-  const result = borderRadiusOptionsSchema.safeParse(value);
-  return result.success ? result.data : "sm";
-}
-
-export function parseContainerWidth(
-  value: string,
-): FaqListConfig["containerWidth"] {
-  const result = containerWidthOptionsSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseGapSize(value: string): InstagramConfig["gap"] {
-  const result = gapSizeOptionsSchema.safeParse(value);
-  return result.success ? result.data : "md";
-}
-
-export function parseContentPosition(
-  value: string,
-): HeroParallaxConfig["contentPosition"] {
-  const result = contentPositionOptionsSchema.safeParse(value);
-  return result.success ? result.data : "center";
-}
-
-export function parseOverlayStyle(
-  value: string,
-): HeroParallaxConfig["overlayStyle"] {
-  const result = overlayStyleOptionsSchema.safeParse(value);
-  return result.success ? result.data : "gradient";
-}
-
-export function parseHeroParallaxHeight(
-  value: string,
-): HeroParallaxConfig["height"] {
-  const result = heroParallaxHeightOptionsSchema.safeParse(value);
-  return result.success ? result.data : "full";
-}
-
-export function parseFeaturesLayout(value: string): FeaturesConfig["layout"] {
-  const result = featuresLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "hero-first";
-}
-
-export function parseFaqInitialOpen(
-  value: string,
-): FaqListConfig["initialOpen"] {
-  const result = faqInitialOpenOptionsSchema.safeParse(value);
-  return result.success ? result.data : "none";
-}
-
-export function parseGalleryHoverEffect(
-  value: string,
-): GalleryConfig["hoverEffect"] {
-  const result = galleryHoverEffectOptionsSchema.safeParse(value);
-  return result.success ? result.data : "zoom";
-}
-
-export function parseConceptLayout(value: string): ConceptConfig["layout"] {
-  const result = conceptLayoutOptionsSchema.safeParse(value);
-  return result.success ? result.data : "side-by-side";
-}
-
-export function parseImageAspect(value: string): ImageAspect {
-  const result = imageAspectOptionsSchema.safeParse(value);
-  return result.success ? result.data : "original";
-}
-
-const spaceImageAspectSchema = z.enum(spaceImageAspectValues);
-
-export function parseSpaceImageAspect(
-  value: string,
-): SpaceListConfig["imageAspect"] {
-  const result = spaceImageAspectSchema.safeParse(value);
-  return result.success ? result.data : "4:3";
-}
-
-const postImageAspectSchema = z.enum(postImageAspectValues);
-
-export function parsePostImageAspect(
-  value: string,
-): PostListConfig["imageAspect"] {
-  const result = postImageAspectSchema.safeParse(value);
-  return result.success ? result.data : "16:9";
-}
-
-const galleryImageAspectSchema = z.enum(galleryImageAspectValues);
-
-export function parseGalleryImageAspect(
-  value: string,
-): GalleryConfig["imageAspect"] {
-  const result = galleryImageAspectSchema.safeParse(value);
-  return result.success ? result.data : "original";
-}
-
-const showcaseImageAspectSchema = z.enum(showcaseImageAspectValues);
-
-export function parseShowcaseImageAspect(
-  value: string,
-): SpaceShowcaseConfig["imageAspect"] {
-  const result = showcaseImageAspectSchema.safeParse(value);
-  return result.success ? result.data : "4:3";
-}
-
-export function parseHeroVariant(value: string): HeroConfig["variant"] {
-  const result = heroVariantOptionsSchema.safeParse(value);
-  return result.success ? result.data : "default";
-}
-
-export function parseContactFormVariant(
-  value: string,
-): ContactFormConfig["variant"] {
-  const result = contactFormVariantOptionsSchema.safeParse(value);
-  return result.success ? result.data : "default";
-}
-
-export function parseFaqVariant(value: string): FaqListConfig["variant"] {
-  const result = faqVariantOptionsSchema.safeParse(value);
-  return result.success ? result.data : "default";
-}
-
-const imagePositionOptionsSchema = z.enum(imagePositionValues);
-
-export function parseImagePosition(
-  value: string,
-): ConceptConfig["imagePosition"] {
-  const result = imagePositionOptionsSchema.safeParse(value);
-  return result.success ? result.data : "right";
-}
-
-const textAlignOptionsSchema = z.enum(textAlignValues);
-
-export function parseTextAlign(value: string): ConceptConfig["textAlign"] {
-  const result = textAlignOptionsSchema.safeParse(value);
-  return result.success ? result.data : "left";
-}
+export {
+  parseHeroHeight,
+  parseMaxWidth,
+  parsePadding,
+  parseSpaceLayout,
+  parseNewsLayout,
+  parsePostLayout,
+  parseCtaVariant,
+  parseGalleryLayout,
+  parseGalleryGap,
+  parseTestimonialLayout,
+  parseTestimonialVariant,
+  parseMapHeight,
+  parseEmbedAspectRatio,
+  parseCardStyle,
+  parseBorderRadius,
+  parseContainerWidth,
+  parseGapSize,
+  parseContentPosition,
+  parseOverlayStyle,
+  parseHeroParallaxHeight,
+  parseFeaturesLayout,
+  parseFaqInitialOpen,
+  parseGalleryHoverEffect,
+  parseConceptLayout,
+  parseImageAspect,
+  parseSpaceImageAspect,
+  parsePostImageAspect,
+  parseGalleryImageAspect,
+  parseShowcaseImageAspect,
+  parseHeroVariant,
+  parseContactFormVariant,
+  parseFaqVariant,
+  parseImagePosition,
+  parseTextAlign,
+} from "./section-parsers";
 
 // =============================================================================
 // デフォルト設定

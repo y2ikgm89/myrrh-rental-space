@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { sectionTypeLabels } from "@/shared/lib/validations/section";
 import type { PageSectionData } from "@/admin/actions/page-section";
-import { SectionTypeIcon } from "../../sections/_components/SectionTypeIcon";
+import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
 interface SectionSidebarItemProps {
   section: PageSectionData;

@@ -30,7 +30,7 @@ import {
 import {
   parseCardStyle,
   parseSpaceImageAspect,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

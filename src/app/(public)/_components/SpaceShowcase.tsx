@@ -27,7 +27,7 @@ import {
 import {
   parseCardStyle,
   parseShowcaseImageAspect,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-parsers";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 

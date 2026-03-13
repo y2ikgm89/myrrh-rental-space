@@ -18,7 +18,7 @@ import {
 } from "@/admin/components/ui/tabs";
 import { Button } from "@/admin/components/ui";
 import { HomepageTab } from "@/app/(admin)/admin/(dashboard)/settings/_components/homepage/HomepageTab";
-import { PageSeoForm } from "../../../[slug]/seo/_components/PageSeoForm";
+import { PageSeoForm } from "../../../[slug]/_seo/_components/PageSeoForm";
 
 // =============================================================================
 // Types

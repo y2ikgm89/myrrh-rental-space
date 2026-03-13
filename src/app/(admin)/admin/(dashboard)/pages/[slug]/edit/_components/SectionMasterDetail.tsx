@@ -37,8 +37,8 @@ import {
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
-import { PageSeoForm } from "../../seo/_components/PageSeoForm";
-import { AddSectionDialog } from "../../sections/_components/AddSectionDialog";
+import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
+import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
 
 interface SectionMasterDetailProps {
   page: PageForEdit;

@@ -16,7 +16,7 @@ import {
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import type { MapConfig } from "@/shared/lib/validations/section";
-import { parseBorderRadius } from "@/shared/lib/validations/section";
+import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 const HEIGHT_MAP = {

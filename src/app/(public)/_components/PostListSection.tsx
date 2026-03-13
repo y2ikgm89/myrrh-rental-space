@@ -26,7 +26,7 @@ import {
   IMAGE_ASPECT_MAP,
   getCardGridColsClass,
 } from "@/public/lib/section-style-maps";
-import { parsePostImageAspect } from "@/shared/lib/validations/section";
+import { parsePostImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { PostListConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
