@@ -23,13 +23,11 @@ export function ListPageHeader({
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
           {title}
         </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          {description}
-        </p>
+        <p className="text-muted-foreground">{description}</p>
       </div>
       {actions ??
         (createHref && (
-          <Button asChild className="min-h-10 sm:min-h-9">
+          <Button asChild>
             <Link href={createHref}>
               <Plus className="mr-2 h-4 w-4" />
               {createLabel}

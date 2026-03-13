@@ -12,7 +12,7 @@ import {
 import { toggleLocationPublish } from "@/admin/actions/location";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { ResourceActionCell } from "@/admin/components/ResourceActionCell";
+import { LocationActionCell } from "./LocationActionCell";
 
 // =============================================================================
 // Types
@@ -91,18 +91,7 @@ export function LocationTable({ locations }: LocationTableProps) {
                   <Badge variant="secondary">{location._count.spaces}件</Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <ResourceActionCell
-                    actions={[
-                      {
-                        label: "編集",
-                        href: `/admin/locations/${location.id}/edit`,
-                      },
-                      {
-                        label: "詳細",
-                        href: `/admin/locations/${location.id}`,
-                      },
-                    ]}
-                  />
+                  <LocationActionCell locationId={location.id} />
                 </TableCell>
               </TableRow>
             ))}

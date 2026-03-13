@@ -8,7 +8,7 @@ import {
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
-import { ResourceActionCell } from "@/admin/components/ResourceActionCell";
+import { ReservationActionCell } from "./ReservationActionCell";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { formatPrice } from "@/shared/lib/utils";
 import { EmptyState } from "@/admin/components/EmptyState";
@@ -111,18 +111,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                         currentStatus={reservation.status}
                       />
                     </div>
-                    <ResourceActionCell
-                      actions={[
-                        {
-                          label: "編集",
-                          href: `/admin/reservations/${reservation.id}/edit`,
-                        },
-                        {
-                          label: "詳細",
-                          href: `/admin/reservations/${reservation.id}`,
-                        },
-                      ]}
-                    />
+                    <ReservationActionCell reservationId={reservation.id} />
                   </div>
                 </TableCell>
               </TableRow>

@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/admin/components/ui/button";
-import { logger } from "@/shared/lib/logger";
 
 export default function ResourceError({
   error,
@@ -13,10 +12,7 @@ export default function ResourceError({
   reset: () => void;
 }) {
   useEffect(() => {
-    logger.error("Admin error boundary triggered", {
-      error: error.message,
-      digest: error.digest,
-    });
+    console.error("Admin error boundary:", error);
   }, [error]);
 
   return (
