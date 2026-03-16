@@ -1,0 +1,55 @@
+---
+paths:
+  - src/shared/lib/email*
+  - src/**/api-keys/resend*
+  - src/shared/emails/**
+---
+
+# Resend SDK パターン（v6+）
+
+## エラーハンドリング
+
+Resend SDK v3+ は例外を投げない。全 API メソッドが `{ data, error }` を返す。
+
+```typescript
+// ✅ 正しい: { error } を destructure してチェック
+const { error } = await resend.emails.send({ ... });
+if (error) {
+  logError({ message: `Resend send failed: ${error.message}`, ... });
+  return { success: false };
+}
+
+// ❌ 禁止: try/catch のみに依存
+try {
+  await resend.emails.send({ ... });
+} catch (e) { /* API エラーはここに来ない */ }
+```
+
+> `catch` ブロックは React Email レンダリング例外の保険として残してよいが、API エラーは必ず `{ error }` でチェック。
+
+## クライアント取得パターン
+
+```typescript
+// 1. 有効性チェック → 2. クライアント取得 → 3. null チェック
+if (!isEmailEnabled()) return { success: true };
+
+const resend = getResendClient();
+if (!resend) return { success: true };
+
+// 4. 送信
+const { error } = await resend.emails.send({ ... });
+```
+
+## 接続テスト
+
+```typescript
+const resend = new Resend(apiKey);
+const { error } = await resend.domains.list();
+// error.name === "invalid_api_key" で無効キー判定
+```
+
+## 禁止事項
+
+- `try/catch` のみのエラーハンドリング
+- `error.message` をユーザーに直接露出（内部詳細漏洩リスク）
+- `getResendClient()` の null チェック省略
