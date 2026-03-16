@@ -289,7 +289,7 @@ export function HeroParallaxConfigForm({
       <SubmitButton isPending={isPending} label="保存" />
 
       {/* メディアピッカーダイアログ */}
-      <bgPicker.MediaPicker />
+      {bgPicker.mediaPickerDialog}
     </form>
   );
 }

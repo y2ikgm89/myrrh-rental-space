@@ -102,11 +102,11 @@ export function useComment(): UseCommentReturn {
       const selection = $getSelection();
       const isRangeSelected = $isRangeSelection(selection);
 
-      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
       setCanAddComment(isRangeSelected && !selection.isCollapsed());
 
       if (!isRangeSelected) {
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
         setActiveMarkIds([]);
         return;
       }
@@ -114,10 +114,10 @@ export function useComment(): UseCommentReturn {
       const anchorNode = selection.anchor.getNode();
       if ($isTextNode(anchorNode)) {
         const markIds = $getMarkIDs(anchorNode, selection.anchor.offset);
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
         setActiveMarkIds(markIds ?? []);
       } else {
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+        // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
         setActiveMarkIds([]);
       }
     });
@@ -344,7 +344,7 @@ export function useMarkIds(): string[] {
       for (const [id] of markNodeMap) {
         ids.add(id);
       }
-      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
       setMarkIds([...ids]);
     });
   });

@@ -292,7 +292,7 @@ export default function HeroParallaxConfigForm({
         isPending={isPending}
         onDirtyChange={onDirtyChange}
       />
-      <bgPicker.MediaPicker />
+      {bgPicker.mediaPickerDialog}
     </form>
   );
 }

@@ -1400,8 +1400,8 @@ export function SpaceEditForm({
       </div>
 
       {/* メディアピッカーダイアログ */}
-      <mainImagePicker.MediaPicker />
-      <additionalImagesPicker.MediaPicker />
+      {mainImagePicker.mediaPickerDialog}
+      {additionalImagesPicker.mediaPickerDialog}
     </form>
   );
 }

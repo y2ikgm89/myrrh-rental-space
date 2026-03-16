@@ -74,7 +74,7 @@ function TableOfContentsComponent({ nodeKey }: { nodeKey: NodeKey }) {
 
   useEffect(() => {
     const update = () => {
-      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
+      // eslint-disable-next-line @eslint-react/set-state-in-effect
       setEntries(collectHeadings(editor));
     };
 

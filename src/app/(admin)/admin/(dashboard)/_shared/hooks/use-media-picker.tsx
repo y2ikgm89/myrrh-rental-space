@@ -7,7 +7,7 @@
  * 各フォームから使用する統合フック
  */
 
-import { useState, type ComponentType } from "react";
+import { useState, type ReactNode } from "react";
 import { MediaPickerDialog } from "@/admin/components/media-picker/MediaPickerDialog";
 import type { MediaUsage } from "@/admin/lib/validations/media";
 import type { SelectionMode, SelectedMedia } from "@/admin/types/media-picker";
@@ -25,6 +25,41 @@ export interface UseMediaPickerOptions {
   onSelect?: (media: SelectedMedia[]) => void;
 }
 
+interface MediaPickerRendererProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (media: SelectedMedia[]) => void;
+  selectionMode: SelectionMode;
+  maxSelections: number;
+  defaultUsage: MediaUsage;
+  initialSelected: SelectedMedia[];
+  showUrlTab: boolean;
+}
+
+function MediaPickerRenderer({
+  isOpen,
+  onClose,
+  onSelect,
+  selectionMode,
+  maxSelections,
+  defaultUsage,
+  initialSelected,
+  showUrlTab,
+}: MediaPickerRendererProps) {
+  return (
+    <MediaPickerDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onSelect={onSelect}
+      selectionMode={selectionMode}
+      maxSelections={maxSelections}
+      defaultUsage={defaultUsage}
+      initialSelected={initialSelected}
+      showUrlTab={showUrlTab}
+    />
+  );
+}
+
 export interface UseMediaPickerReturn {
   /** ピッカーを開く */
   openPicker: (initialSelected?: SelectedMedia[]) => void;
@@ -34,8 +69,8 @@ export interface UseMediaPickerReturn {
   isOpen: boolean;
   /** 選択されたメディア */
   selectedMedia: SelectedMedia[];
-  /** ピッカーダイアログコンポーネント */
-  MediaPicker: ComponentType;
+  /** ピッカーダイアログ要素（JSX に直接配置） */
+  mediaPickerDialog: ReactNode;
 }
 
 export function useMediaPicker(
@@ -67,27 +102,25 @@ export function useMediaPicker(
     onSelect?.(media);
   };
 
-  const MediaPicker = () => {
-    return (
-      <MediaPickerDialog
-        isOpen={isOpen}
-        onClose={closePicker}
-        onSelect={handleSelect}
-        selectionMode={selectionMode}
-        maxSelections={maxSelections}
-        defaultUsage={defaultUsage}
-        initialSelected={initialSelected}
-        showUrlTab={showUrlTab}
-      />
-    );
-  };
+  const mediaPickerDialog = (
+    <MediaPickerRenderer
+      isOpen={isOpen}
+      onClose={closePicker}
+      onSelect={handleSelect}
+      selectionMode={selectionMode}
+      maxSelections={maxSelections}
+      defaultUsage={defaultUsage}
+      initialSelected={initialSelected}
+      showUrlTab={showUrlTab}
+    />
+  );
 
   return {
     openPicker,
     closePicker,
     isOpen,
     selectedMedia,
-    MediaPicker,
+    mediaPickerDialog,
   };
 }
 

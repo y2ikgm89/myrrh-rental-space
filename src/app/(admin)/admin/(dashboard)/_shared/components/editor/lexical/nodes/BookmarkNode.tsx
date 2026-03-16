@@ -75,6 +75,15 @@ function BookmarkComponent({
   siteName: string;
   nodeKey: NodeKey;
 }) {
+  let hostname = "";
+  if (url) {
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      hostname = url;
+    }
+  }
+
   return (
     <div data-lexical-node-key={nodeKey} data-bookmark className="my-6">
       <a
@@ -103,16 +112,7 @@ function BookmarkComponent({
                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
               )}
               <span className="text-xs text-muted-foreground truncate">
-                {siteName ||
-                  (url
-                    ? (() => {
-                        try {
-                          return new URL(url).hostname;
-                        } catch {
-                          return url;
-                        }
-                      })()
-                    : "")}
+                {siteName || hostname}
               </span>
             </div>
             {/* タイトル */}

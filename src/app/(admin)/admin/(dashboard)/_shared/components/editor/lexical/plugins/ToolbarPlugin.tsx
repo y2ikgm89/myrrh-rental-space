@@ -498,6 +498,12 @@ export function ToolbarPlugin({
   // 挿入アイテム（configベース）
   const insertItems = getToolbarInsertItems(!!openDialog);
 
+  // ドロップダウン表示用の現在値を事前計算（IIFE 回避）
+  const { label: blockTypeLabel, icon: BlockTypeIcon } =
+    BLOCK_TYPE_CONFIG[blockType];
+  const { label: alignTypeLabel, icon: AlignTypeIcon } =
+    ALIGNMENT_CONFIG[elementFormat];
+
   return (
     <div className="flex items-center border-b bg-background p-1">
       <div className="flex flex-wrap items-center gap-0.5 flex-1">
@@ -608,23 +614,18 @@ export function ToolbarPlugin({
         {/* Block Type Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {(() => {
-              const { label, icon: BlockIcon } = BLOCK_TYPE_CONFIG[blockType];
-              return (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1 min-w-[100px] justify-between"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <BlockIcon className="h-4 w-4" />
-                    <span className="text-xs">{label}</span>
-                  </span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              );
-            })()}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 min-w-[100px] justify-between"
+            >
+              <span className="flex items-center gap-1.5">
+                <BlockTypeIcon className="h-4 w-4" />
+                <span className="text-xs">{blockTypeLabel}</span>
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[160px]">
             {entriesOf(BLOCK_TYPE_CONFIG).map(
@@ -652,24 +653,18 @@ export function ToolbarPlugin({
         {/* Text Alignment Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {(() => {
-              const { label, icon: AlignIcon } =
-                ALIGNMENT_CONFIG[elementFormat];
-              return (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1 min-w-[90px] justify-between"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <AlignIcon className="h-4 w-4" />
-                    <span className="text-xs">{label}</span>
-                  </span>
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              );
-            })()}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 min-w-[90px] justify-between"
+            >
+              <span className="flex items-center gap-1.5">
+                <AlignTypeIcon className="h-4 w-4" />
+                <span className="text-xs">{alignTypeLabel}</span>
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[140px]">
             {entriesOf(ALIGNMENT_CONFIG).map(

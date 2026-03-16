@@ -253,7 +253,7 @@ export default function HeroConfigForm({
         isPending={isPending}
         onDirtyChange={onDirtyChange}
       />
-      <bgPicker.MediaPicker />
+      {bgPicker.mediaPickerDialog}
     </form>
   );
 }

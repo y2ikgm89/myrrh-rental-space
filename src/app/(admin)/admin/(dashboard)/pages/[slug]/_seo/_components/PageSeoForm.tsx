@@ -343,7 +343,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
       </div>
 
       {/* メディアピッカーダイアログ */}
-      <ogpPicker.MediaPicker />
+      {ogpPicker.mediaPickerDialog}
     </form>
   );
 }

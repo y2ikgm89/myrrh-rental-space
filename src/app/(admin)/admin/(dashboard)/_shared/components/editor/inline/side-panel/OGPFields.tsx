@@ -119,7 +119,7 @@ export function OGPFields<T extends FieldValues>({
         <p className="text-xs text-muted-foreground">推奨サイズ: 1200x630px</p>
       </div>
 
-      <ogpPicker.MediaPicker />
+      {ogpPicker.mediaPickerDialog}
     </div>
   );
 }

@@ -518,8 +518,8 @@ export function LocationForm({ location, mode }: LocationFormProps) {
         </div>
 
         {/* メディアピッカーダイアログ */}
-        <mainImagePicker.MediaPicker />
-        <additionalImagesPicker.MediaPicker />
+        {mainImagePicker.mediaPickerDialog}
+        {additionalImagesPicker.mediaPickerDialog}
       </form>
     </Form>
   );

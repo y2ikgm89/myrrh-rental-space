@@ -266,7 +266,7 @@ export default function GalleryConfigForm({
         onDirtyChange={onDirtyChange}
       />
 
-      <imagePicker.MediaPicker />
+      {imagePicker.mediaPickerDialog}
     </form>
   );
 }

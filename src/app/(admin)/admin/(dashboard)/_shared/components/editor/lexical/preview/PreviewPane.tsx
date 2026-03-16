@@ -28,7 +28,7 @@ export function PreviewPane() {
   const updatePreviewHtml = useEffectEvent((editorState?: EditorState) => {
     const currentEditorState = editorState ?? editor.getEditorState();
     currentEditorState.read(() => {
-      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
+      // eslint-disable-next-line @eslint-react/set-state-in-effect -- runs from a Lexical listener through useEffectEvent, not directly from an effect body
       setHtml($generateHtmlFromNodes(editor, null));
     });
   });

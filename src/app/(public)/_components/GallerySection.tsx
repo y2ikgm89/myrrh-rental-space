@@ -118,6 +118,11 @@ export function GallerySection({
       ? `${getMasonryColsClass(colKey)} ${gapClass}`
       : `grid ${getGalleryGridColsClass(colKey)} ${gapClass}`;
 
+  const lightboxImage =
+    lightboxIndex >= 0 && lightboxIndex < config.images.length
+      ? config.images[lightboxIndex]
+      : undefined;
+
   return (
     <SectionWrapper design={design}>
       {config.title && (
@@ -187,19 +192,35 @@ export function GallerySection({
             if (e.target === dialogRef.current) closeLightbox();
           }}
         >
-          {(() => {
-            const lightboxImage =
-              lightboxIndex >= 0 && lightboxIndex < config.images.length
-                ? config.images[lightboxIndex]
-                : undefined;
-            if (!lightboxImage) return null;
-            return (
-              <div className="flex h-full w-full flex-col items-center justify-center p-4">
+          {lightboxImage && (
+            <div className="flex h-full w-full flex-col items-center justify-center p-4">
+              <button
+                type="button"
+                onClick={closeLightbox}
+                className="absolute right-4 top-4 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="閉じる"
+              >
+                <svg
+                  className="h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+
+              <div className="relative flex max-h-[80vh] max-w-[90vw] items-center">
                 <button
                   type="button"
-                  onClick={closeLightbox}
-                  className="absolute right-4 top-4 text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="閉じる"
+                  onClick={() => navigateLightbox(-1)}
+                  className="absolute -left-12 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label="前の画像"
                 >
                   <svg
                     className="h-8 w-8"
@@ -211,71 +232,48 @@ export function GallerySection({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={1.5}
-                      d="M6 18L18 6M6 6l12 12"
+                      d="M15 19l-7-7 7-7"
                     />
                   </svg>
                 </button>
 
-                <div className="relative flex max-h-[80vh] max-w-[90vw] items-center">
-                  <button
-                    type="button"
-                    onClick={() => navigateLightbox(-1)}
-                    className="absolute -left-12 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label="前の画像"
+                <Image
+                  src={lightboxImage.url}
+                  alt={lightboxImage.alt ?? ""}
+                  width={1200}
+                  height={800}
+                  className="max-h-[80vh] w-auto rounded-lg object-contain"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => navigateLightbox(1)}
+                  className="absolute -right-12 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label="次の画像"
+                >
+                  <svg
+                    className="h-8 w-8"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className="h-8 w-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M15 19l-7-7 7-7"
-                      />
-                    </svg>
-                  </button>
-
-                  <Image
-                    src={lightboxImage.url}
-                    alt={lightboxImage.alt ?? ""}
-                    width={1200}
-                    height={800}
-                    className="max-h-[80vh] w-auto rounded-lg object-contain"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => navigateLightbox(1)}
-                    className="absolute -right-12 text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label="次の画像"
-                  >
-                    <svg
-                      className="h-8 w-8"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {lightboxImage.caption && (
-                  <p className="mt-4 text-center text-sm text-muted-foreground">
-                    {lightboxImage.caption}
-                  </p>
-                )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
               </div>
-            );
-          })()}
+
+              {lightboxImage.caption && (
+                <p className="mt-4 text-center text-sm text-muted-foreground">
+                  {lightboxImage.caption}
+                </p>
+              )}
+            </div>
+          )}
         </dialog>
       )}
     </SectionWrapper>

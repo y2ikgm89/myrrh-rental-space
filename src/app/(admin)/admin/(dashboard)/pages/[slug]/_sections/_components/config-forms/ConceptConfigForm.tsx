@@ -248,7 +248,7 @@ export default function ConceptConfigForm({
         isPending={isPending}
         onDirtyChange={onDirtyChange}
       />
-      <imagePicker.MediaPicker />
+      {imagePicker.mediaPickerDialog}
     </form>
   );
 }

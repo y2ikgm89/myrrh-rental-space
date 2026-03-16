@@ -57,7 +57,7 @@ export function TableColorPicker({
 
   // value が外部から変更された時に同期
   useEffect(() => {
-    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setHexInput(value);
   }, [value]);
 

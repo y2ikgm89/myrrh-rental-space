@@ -82,7 +82,7 @@ export function ImageFields({
         </p>
       )}
 
-      <thumbnailPicker.MediaPicker />
+      {thumbnailPicker.mediaPickerDialog}
     </div>
   );
 }

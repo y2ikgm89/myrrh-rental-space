@@ -248,7 +248,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
       </div>
 
       {/* メディアピッカーダイアログ */}
-      <ogpPicker.MediaPicker />
+      {ogpPicker.mediaPickerDialog}
     </form>
   );
 }

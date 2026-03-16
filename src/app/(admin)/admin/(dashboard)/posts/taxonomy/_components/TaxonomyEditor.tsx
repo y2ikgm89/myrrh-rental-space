@@ -518,7 +518,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
         </div>
       </form>
 
-      <mediaPicker.MediaPicker />
+      {mediaPicker.mediaPickerDialog}
     </div>
   );
 }
@@ -883,7 +883,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
         </div>
       </form>
 
-      <mediaPicker.MediaPicker />
+      {mediaPicker.mediaPickerDialog}
     </div>
   );
 }

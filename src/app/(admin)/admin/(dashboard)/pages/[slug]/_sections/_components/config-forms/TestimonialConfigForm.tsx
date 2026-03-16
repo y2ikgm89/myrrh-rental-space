@@ -313,7 +313,7 @@ export default function TestimonialConfigForm({
         onDirtyChange={onDirtyChange}
       />
 
-      <authorImagePicker.MediaPicker />
+      {authorImagePicker.mediaPickerDialog}
     </form>
   );
 }

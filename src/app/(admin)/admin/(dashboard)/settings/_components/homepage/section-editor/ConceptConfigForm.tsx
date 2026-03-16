@@ -264,7 +264,7 @@ export function ConceptConfigForm({
       <SubmitButton isPending={isPending} label="保存" />
 
       {/* メディアピッカーダイアログ */}
-      <imgPicker.MediaPicker />
+      {imgPicker.mediaPickerDialog}
     </form>
   );
 }
