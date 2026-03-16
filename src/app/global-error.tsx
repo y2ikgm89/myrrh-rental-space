@@ -87,7 +87,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               予期しないエラーが発生しました
             </h1>
 
-            <p style={{ marginBottom: "2rem", color: "#666" }}>
+            <p style={{ marginBottom: "2rem", color: "oklch(0.55 0.01 250)" }}>
               申し訳ございません。システムエラーが発生しました。
               <br />
               しばらく時間をおいてから再度お試しください。

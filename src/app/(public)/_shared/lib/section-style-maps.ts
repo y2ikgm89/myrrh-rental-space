@@ -78,8 +78,9 @@ export const CONTENT_POSITION_MAP: Record<ContentPosition, string> = {
 
 /** オーバーレイスタイル → CSS */
 export const OVERLAY_STYLE_MAP: Record<OverlayStyle, string> = {
-  gradient: "bg-gradient-to-t from-black/70 via-black/30 to-black/10",
-  solid: "bg-black/50",
+  gradient:
+    "bg-gradient-to-t from-foreground/70 via-foreground/30 to-foreground/10",
+  solid: "bg-foreground/50",
   none: "",
 };
 

@@ -85,7 +85,7 @@ export const DESIGN_STYLE_CLASSES: Record<
     border: "border-current",
   },
   glass: {
-    container: "backdrop-blur-md bg-white/10 border-y border-white/20",
+    container: "backdrop-blur-md bg-card/10 border-y border-card/20",
     containerWithBg: () => "",
   },
   minimal: {

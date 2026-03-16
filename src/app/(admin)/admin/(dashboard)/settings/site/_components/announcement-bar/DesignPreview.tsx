@@ -132,7 +132,7 @@ export function DesignPreview({
             aria-hidden="true"
           >
             <div
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-card/20 to-transparent"
               style={{ animation: "glass-shimmer 3s ease-in-out infinite" }}
             />
           </div>
