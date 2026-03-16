@@ -12,7 +12,7 @@ import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { PARALLAX, SCROLL_TRIGGER } from "@/public/lib/animations";
+import { EASE, PARALLAX, SCROLL_TRIGGER } from "@/public/lib/animations";
 
 interface ParallaxImageProps {
   readonly src: string;
@@ -48,7 +48,7 @@ export function ParallaxImage({
           { y: -yDistance },
           {
             y: yDistance,
-            ease: "none",
+            ease: EASE.none,
             scrollTrigger: {
               trigger: container,
               ...SCROLL_TRIGGER.scrub,

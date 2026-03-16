@@ -185,9 +185,10 @@ export async function SectionRenderer({
     case SectionType.FAQ_LIST: {
       const config = getFaqListConfig(section.config);
       // Dual source: config.items (inline) or DB
-      const hasInlineItems = config.items != null && config.items.length > 0;
+      const inlineItems = config.items;
+      const hasInlineItems = inlineItems != null && inlineItems.length > 0;
       const items: FaqData[] = hasInlineItems
-        ? config.items!.map((item, index) => ({
+        ? inlineItems.map((item, index) => ({
             id: `inline-${index}`,
             question: item.question,
             answer: item.answer,

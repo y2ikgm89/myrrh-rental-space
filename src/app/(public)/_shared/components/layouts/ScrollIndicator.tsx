@@ -9,6 +9,7 @@
 import { useRef, type ReactElement } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { EASE } from "@/public/lib/animations";
 
 export function ScrollIndicator(): ReactElement {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +30,7 @@ export function ScrollIndicator(): ReactElement {
           gsap.to(el, {
             y: reduce ? 4 : 8,
             duration: 1.2,
-            ease: "sine.inOut",
+            ease: EASE.inOutSine,
             repeat: -1,
             yoyo: true,
           });

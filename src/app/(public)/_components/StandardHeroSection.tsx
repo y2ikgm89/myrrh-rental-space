@@ -126,7 +126,7 @@ export function StandardHeroSection({
           { y: -displacement },
           {
             y: displacement,
-            ease: "none",
+            ease: EASE.none,
             scrollTrigger: {
               trigger: section,
               ...SCROLL_TRIGGER.scrub,

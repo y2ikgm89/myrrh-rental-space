@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
+import { EASE } from "@/public/lib/animations";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
 import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
 import { cn } from "@/shared/lib/cn";
@@ -127,9 +128,10 @@ export function Header({
           if (backgroundMode === HeaderBackgroundMode.solid) return;
           // transparent モードのみ style で制御
           if (next) {
-            header.style.backgroundColor = "oklch(0.995 0.002 250 / 0.9)";
+            header.style.backgroundColor =
+              "color-mix(in oklch, var(--color-background) 90%, transparent)";
             header.style.backdropFilter = "blur(24px)";
-            header.style.boxShadow = "0 1px 2px 0 rgb(0 0 0 / 0.03)";
+            header.style.boxShadow = "var(--shadow-sm)";
           } else {
             header.style.backgroundColor = "";
             header.style.backdropFilter = "";
@@ -217,7 +219,7 @@ export function Header({
       gsap.fromTo(
         overlay,
         { opacity: 0 },
-        { opacity: 1, duration: reduced ? 0.15 : 0.3, ease: "power2.out" },
+        { opacity: 1, duration: reduced ? 0.15 : 0.3, ease: EASE.outQuad },
       );
       gsap.fromTo(
         links,
@@ -227,7 +229,7 @@ export function Header({
           y: 0,
           stagger: reduced ? 0 : 0.06,
           duration: reduced ? 0.15 : 0.4,
-          ease: "power3.out",
+          ease: EASE.outCubic,
           delay: reduced ? 0 : 0.15,
         },
       );
@@ -244,7 +246,7 @@ export function Header({
     gsap.to(overlay, {
       opacity: 0,
       duration: reduced ? 0.1 : 0.25,
-      ease: "power2.in",
+      ease: EASE.inQuad,
       onComplete: () => setMenuOpen(false),
     });
   };

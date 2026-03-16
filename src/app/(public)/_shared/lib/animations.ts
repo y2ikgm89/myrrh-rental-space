@@ -17,10 +17,18 @@ export const DURATION = {
 export const EASE = {
   /** Smooth deceleration — general entrance */
   outExpo: "expo.out",
+  /** Medium deceleration — UI interactions, overlays */
+  outQuad: "power2.out",
+  /** Medium acceleration — exit animations */
+  inQuad: "power2.in",
+  /** Strong deceleration — staggered element entrance */
+  outCubic: "power3.out",
   /** Natural deceleration — text reveals */
   outQuart: "power4.out",
   /** Smooth entrance/exit — scroll-linked animations */
   inOutQuart: "quart.inOut",
+  /** Gentle oscillation — looping indicators */
+  inOutSine: "sine.inOut",
   /** Elastic return — magnetic button snap-back */
   outElastic: "elastic.out(1, 0.3)",
   /** Linear — scroll-scrubbed animations */

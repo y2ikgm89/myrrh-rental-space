@@ -82,9 +82,11 @@ export function ImageDistortion({
     const progress = scrollRef.current.progress;
 
     // velocity を 0-1 範囲にクランプし intensity で乗算
-    material.uniforms["uDistortion"]!.value =
-      Math.min(velocity * 0.01, 1) * intensity;
-    material.uniforms["uProgress"]!.value = progress;
+    const distortion = material.uniforms["uDistortion"];
+    const progressUniform = material.uniforms["uProgress"];
+    if (!distortion || !progressUniform) return;
+    distortion.value = Math.min(velocity * 0.01, 1) * intensity;
+    progressUniform.value = progress;
   });
 
   return (

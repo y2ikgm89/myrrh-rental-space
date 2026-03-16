@@ -43,7 +43,7 @@ export function MagneticButton({
       x: x * strength,
       y: y * strength,
       duration: 0.4,
-      ease: "power2.out",
+      ease: EASE.outQuad,
     });
   };
 
