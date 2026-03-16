@@ -79,6 +79,7 @@ export function NavigationList({
               ドラッグ&ドロップで順序を変更できます
             </p>
             <DndContext
+              id={`nav-${type}-sortable`}
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={onDragEnd}
@@ -162,6 +163,7 @@ export function SocialLinkList({
               ドラッグ&ドロップで順序を変更できます
             </p>
             <DndContext
+              id="social-links-sortable"
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={onDragEnd}

@@ -405,6 +405,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                 ドラッグ&ドロップで順序を変更できます
               </p>
               <DndContext
+                id="category-sortable"
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}

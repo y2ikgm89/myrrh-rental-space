@@ -158,6 +158,7 @@ export function SortableInspectorList({
   return (
     <>
       <DndContext
+        id="inspector-sortable"
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}

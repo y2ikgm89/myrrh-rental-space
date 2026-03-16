@@ -536,6 +536,7 @@ export function HomepageTab({
       ) : (
         // Main list view
         <DndContext
+          id="homepage-section-sortable"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}

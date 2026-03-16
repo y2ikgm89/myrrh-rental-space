@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 /**
  * @dnd-kit Sortable Components
  *
@@ -194,6 +196,7 @@ export function SortableList<T extends SortableItem>({
   disabled,
   className,
 }: SortableListProps<T>) {
+  const dndId = useId();
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -218,6 +221,7 @@ export function SortableList<T extends SortableItem>({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}

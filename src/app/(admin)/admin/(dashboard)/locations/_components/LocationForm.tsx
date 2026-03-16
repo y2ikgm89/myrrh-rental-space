@@ -164,10 +164,11 @@ export function LocationForm({ location, mode }: LocationFormProps) {
 
   const { form, isPending, onSubmit } = useFormAction(
     locationFormSchema,
-    (data: LocationFormInput) =>
-      mode === "create"
-        ? createLocation(data)
-        : updateLocation(location!.id, data),
+    (data: LocationFormInput) => {
+      if (mode === "create") return createLocation(data);
+      if (!location) throw new Error("location is required for edit mode");
+      return updateLocation(location.id, data);
+    },
     {
       defaultValues: location
         ? {

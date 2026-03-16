@@ -76,6 +76,7 @@ export function SectionSidebar({
       <div className="flex-1 overflow-y-auto py-2">
         {sections.length > 0 ? (
           <DndContext
+            id="section-sidebar-sortable"
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
