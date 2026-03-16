@@ -7,6 +7,7 @@
 import {
   $create,
   $getState,
+  $getStateChange,
   $setState,
   type DOMConversionMap,
   type DOMExportOutput,
@@ -52,14 +53,12 @@ export class CustomTableCellNode extends TableCellNode {
   }
 
   // TableCellNode.updateDOM は (prevNode: this): boolean シグネチャ（1引数のみ）
-  // 背景色変更時に true を返して DOM 再構築（createDOM）をトリガーする
+  // dom 引数がないため $getStateChange で変更検出し、変更時は true を返して createDOM で再構築
   override updateDOM(prevNode: this): boolean {
     if (super.updateDOM(prevNode)) {
       return true;
     }
-    const prevBg = $getState(prevNode, cellBackgroundColorState);
-    const nextBg = $getState(this, cellBackgroundColorState);
-    return prevBg !== nextBg;
+    return $getStateChange(this, prevNode, cellBackgroundColorState) !== null;
   }
 
   override exportDOM(editor: LexicalEditor): DOMExportOutput {

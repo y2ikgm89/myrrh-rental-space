@@ -126,15 +126,15 @@ export class PullQuoteNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: PullQuoteNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const styleChange = $getStateChange(this, prevNode, quoteStyleState);
-    if (styleChange) {
+    if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-pull-quote-style", newStyle);
     }
 
     const colorChange = $getStateChange(this, prevNode, pullQuoteColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }

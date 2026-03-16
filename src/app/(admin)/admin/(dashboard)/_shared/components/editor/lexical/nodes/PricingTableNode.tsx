@@ -96,7 +96,7 @@ export class PricingTableContainerNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(): boolean {
+  override updateDOM(): false {
     return false;
   }
 
@@ -149,14 +149,14 @@ export class PricingPlanNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(prevNode: PricingPlanNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const featuredChange = $getStateChange(this, prevNode, planFeaturedState);
-    if (featuredChange) {
+    if (featuredChange !== null) {
       const [newFeatured] = featuredChange;
       dom.setAttribute("data-featured", String(newFeatured));
     }
     const colorChange = $getStateChange(this, prevNode, planColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }
@@ -259,13 +259,13 @@ export class PricingFeatureNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(prevNode: PricingFeatureNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const includedChange = $getStateChange(
       this,
       prevNode,
       featureIncludedState,
     );
-    if (includedChange) {
+    if (includedChange !== null) {
       const [newIncluded] = includedChange;
       dom.setAttribute("data-included", String(newIncluded));
     }

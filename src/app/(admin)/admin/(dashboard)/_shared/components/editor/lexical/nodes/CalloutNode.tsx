@@ -109,9 +109,9 @@ export class CalloutNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: CalloutNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const change = $getStateChange(this, prevNode, calloutTypeState);
-    if (change) {
+    if (change !== null) {
       const [newType] = change;
       dom.setAttribute("data-callout-type", newType);
     }

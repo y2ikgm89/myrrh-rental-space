@@ -149,7 +149,7 @@ export class TestimonialContainerNode extends ElementNode {
       prevNode,
       testimonialLayoutState,
     );
-    if (layoutChange) {
+    if (layoutChange !== null) {
       const [newLayout] = layoutChange;
       dom.setAttribute("data-layout", newLayout);
     }
@@ -158,7 +158,7 @@ export class TestimonialContainerNode extends ElementNode {
       prevNode,
       testimonialColumnsState,
     );
-    if (columnsChange) {
+    if (columnsChange !== null) {
       const [newColumns] = columnsChange;
       dom.setAttribute("data-columns", String(newColumns));
     }
@@ -167,7 +167,7 @@ export class TestimonialContainerNode extends ElementNode {
       prevNode,
       testimonialAccentColorState,
     );
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }
@@ -299,13 +299,13 @@ export class TestimonialItemNode extends ElementNode {
     return blockquote;
   }
 
-  override updateDOM(prevNode: TestimonialItemNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const authorNameChange = $getStateChange(
       this,
       prevNode,
       testimonialAuthorNameState,
     );
-    if (authorNameChange) {
+    if (authorNameChange !== null) {
       const [newAuthorName] = authorNameChange;
       dom.setAttribute("data-author-name", newAuthorName);
     }
@@ -314,7 +314,7 @@ export class TestimonialItemNode extends ElementNode {
       prevNode,
       testimonialAuthorTitleState,
     );
-    if (authorTitleChange) {
+    if (authorTitleChange !== null) {
       const [newAuthorTitle] = authorTitleChange;
       dom.setAttribute("data-author-title", newAuthorTitle);
     }
@@ -323,7 +323,7 @@ export class TestimonialItemNode extends ElementNode {
       prevNode,
       testimonialAvatarUrlState,
     );
-    if (avatarUrlChange) {
+    if (avatarUrlChange !== null) {
       const [newAvatarUrl] = avatarUrlChange;
       dom.setAttribute("data-avatar-url", newAvatarUrl);
     }
@@ -332,12 +332,12 @@ export class TestimonialItemNode extends ElementNode {
       prevNode,
       testimonialRatingState,
     );
-    if (ratingChange) {
+    if (ratingChange !== null) {
       const [newRating] = ratingChange;
       dom.setAttribute("data-rating", String(newRating));
     }
     const dateChange = $getStateChange(this, prevNode, testimonialDateState);
-    if (dateChange) {
+    if (dateChange !== null) {
       const [newDate] = dateChange;
       dom.setAttribute("data-date", newDate);
     }

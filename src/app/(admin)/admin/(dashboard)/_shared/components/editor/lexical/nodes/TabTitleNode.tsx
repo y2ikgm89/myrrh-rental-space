@@ -100,14 +100,14 @@ export class TabTitleNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: TabTitleNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const indexChange = $getStateChange(this, prevNode, tabTitleIndexState);
-    if (indexChange) {
+    if (indexChange !== null) {
       const [newIndex] = indexChange;
       dom.setAttribute("data-tab-index", String(newIndex));
     }
     const activeChange = $getStateChange(this, prevNode, tabTitleActiveState);
-    if (activeChange) {
+    if (activeChange !== null) {
       const [newIsActive] = activeChange;
       dom.setAttribute("aria-selected", String(newIsActive));
     }

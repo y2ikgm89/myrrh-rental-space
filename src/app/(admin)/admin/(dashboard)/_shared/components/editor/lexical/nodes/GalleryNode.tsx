@@ -107,11 +107,11 @@ export class GalleryContainerNode extends ElementNode {
   ): boolean {
     const colsChange = $getStateChange(this, prevNode, galleryColumnsState);
     const styleChange = $getStateChange(this, prevNode, galleryStyleState);
-    if (colsChange) {
+    if (colsChange !== null) {
       const [newCols] = colsChange;
       dom.setAttribute("data-gallery-columns", String(newCols));
     }
-    if (styleChange) {
+    if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-gallery-style", newStyle);
     }
@@ -203,7 +203,7 @@ export class GalleryItemNode extends ElementNode {
     return figure;
   }
 
-  override updateDOM(): boolean {
+  override updateDOM(): false {
     return false;
   }
 

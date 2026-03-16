@@ -246,9 +246,9 @@ export class CoverNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(prevNode: CoverNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const bgChange = $getStateChange(this, prevNode, backgroundImageUrlState);
-    if (bgChange) {
+    if (bgChange !== null) {
       const [newBg] = bgChange;
       if (newBg) {
         dom.style.backgroundImage = `url(${newBg})`;
@@ -262,7 +262,7 @@ export class CoverNode extends ElementNode {
       prevNode,
       overlayColorState,
     );
-    if (overlayColorChange) {
+    if (overlayColorChange !== null) {
       const [newColor] = overlayColorChange;
       dom.setAttribute("data-overlay-color", newColor);
     }
@@ -272,13 +272,13 @@ export class CoverNode extends ElementNode {
       prevNode,
       overlayOpacityState,
     );
-    if (overlayOpacityChange) {
+    if (overlayOpacityChange !== null) {
       const [newOpacity] = overlayOpacityChange;
       dom.setAttribute("data-overlay-opacity", String(newOpacity));
     }
 
     const minHeightChange = $getStateChange(this, prevNode, minHeightState);
-    if (minHeightChange) {
+    if (minHeightChange !== null) {
       const [newMinHeight] = minHeightChange;
       dom.setAttribute("data-min-height", newMinHeight);
     }
@@ -288,7 +288,7 @@ export class CoverNode extends ElementNode {
       prevNode,
       contentAlignState,
     );
-    if (contentAlignChange) {
+    if (contentAlignChange !== null) {
       const [newAlign] = contentAlignChange;
       dom.setAttribute("data-content-align", newAlign);
     }
@@ -298,7 +298,7 @@ export class CoverNode extends ElementNode {
       prevNode,
       contentPositionState,
     );
-    if (contentPositionChange) {
+    if (contentPositionChange !== null) {
       const [newPosition] = contentPositionChange;
       dom.setAttribute("data-content-position", newPosition);
     }

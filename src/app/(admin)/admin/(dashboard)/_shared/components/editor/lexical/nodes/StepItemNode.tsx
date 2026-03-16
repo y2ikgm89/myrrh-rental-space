@@ -87,9 +87,9 @@ export class StepItemNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: StepItemNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const change = $getStateChange(this, prevNode, stepNumberState);
-    if (change) {
+    if (change !== null) {
       const [newStepNumber] = change;
       dom.setAttribute("data-step", String(newStepNumber));
     }

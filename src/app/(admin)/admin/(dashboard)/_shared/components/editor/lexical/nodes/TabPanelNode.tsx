@@ -99,14 +99,14 @@ export class TabPanelNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: TabPanelNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const indexChange = $getStateChange(this, prevNode, tabPanelIndexState);
-    if (indexChange) {
+    if (indexChange !== null) {
       const [newIndex] = indexChange;
       dom.setAttribute("data-tab-index", String(newIndex));
     }
     const activeChange = $getStateChange(this, prevNode, tabPanelActiveState);
-    if (activeChange) {
+    if (activeChange !== null) {
       const [newIsActive] = activeChange;
       if (newIsActive) {
         dom.removeAttribute("aria-hidden");

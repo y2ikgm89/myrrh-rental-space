@@ -92,9 +92,9 @@ export class CollapsibleItemNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: CollapsibleItemNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const change = $getStateChange(this, prevNode, openState);
-    if (change) {
+    if (change !== null) {
       const [newOpen] = change;
       if (newOpen) {
         dom.setAttribute("data-open", "true");

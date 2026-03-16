@@ -95,12 +95,12 @@ export class TimelineContainerNode extends ElementNode {
     dom: HTMLElement,
   ): boolean {
     const dirChange = $getStateChange(this, prevNode, timelineDirectionState);
-    if (dirChange) {
+    if (dirChange !== null) {
       const [newDir] = dirChange;
       dom.setAttribute("data-direction", newDir);
     }
     const colorChange = $getStateChange(this, prevNode, timelineColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }
@@ -165,7 +165,7 @@ export class TimelineItemNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(): boolean {
+  override updateDOM(): false {
     return false;
   }
 

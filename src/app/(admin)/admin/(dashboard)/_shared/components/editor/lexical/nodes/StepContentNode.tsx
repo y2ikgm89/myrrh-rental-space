@@ -64,7 +64,7 @@ export class StepContentNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(): boolean {
+  override updateDOM(): false {
     return false;
   }
 

@@ -187,19 +187,19 @@ export class TabsContainerNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: TabsContainerNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const indexChange = $getStateChange(this, prevNode, activeIndexState);
-    if (indexChange) {
+    if (indexChange !== null) {
       const [newIndex] = indexChange;
       dom.setAttribute("data-tabs-active", String(newIndex));
     }
     const styleChange = $getStateChange(this, prevNode, tabsStyleState);
-    if (styleChange) {
+    if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-tabs-style", newStyle);
     }
     const sizeChange = $getStateChange(this, prevNode, tabsSizeState);
-    if (sizeChange) {
+    if (sizeChange !== null) {
       const [newSize] = sizeChange;
       dom.setAttribute("data-tabs-size", newSize);
     }
@@ -208,12 +208,12 @@ export class TabsContainerNode extends ElementNode {
       prevNode,
       tabsFixedWidthState,
     );
-    if (fixedWidthChange) {
+    if (fixedWidthChange !== null) {
       const [newFixedWidth] = fixedWidthChange;
       dom.setAttribute("data-tabs-fixed-width", newFixedWidth);
     }
     const colorChange = $getStateChange(this, prevNode, tabsColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }

@@ -146,7 +146,7 @@ export class FeatureIconListContainerNode extends ElementNode {
       prevNode,
       featureIconListColumnsState,
     );
-    if (columnsChange) {
+    if (columnsChange !== null) {
       const [newColumns] = columnsChange;
       dom.setAttribute("data-columns", String(newColumns));
     }
@@ -155,7 +155,7 @@ export class FeatureIconListContainerNode extends ElementNode {
       prevNode,
       featureIconListAccentColorState,
     );
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }
@@ -164,7 +164,7 @@ export class FeatureIconListContainerNode extends ElementNode {
       prevNode,
       featureIconListIconSizeState,
     );
-    if (iconSizeChange) {
+    if (iconSizeChange !== null) {
       const [newIconSize] = iconSizeChange;
       dom.setAttribute("data-icon-size", newIconSize);
     }
@@ -272,13 +272,13 @@ export class FeatureIconItemNode extends ElementNode {
     return li;
   }
 
-  override updateDOM(prevNode: FeatureIconItemNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const iconNameChange = $getStateChange(
       this,
       prevNode,
       featureIconItemNameState,
     );
-    if (iconNameChange) {
+    if (iconNameChange !== null) {
       const [newIconName] = iconNameChange;
       dom.setAttribute("data-icon-name", newIconName);
     }
@@ -287,7 +287,7 @@ export class FeatureIconItemNode extends ElementNode {
       prevNode,
       featureIconItemLibraryState,
     );
-    if (iconLibraryChange) {
+    if (iconLibraryChange !== null) {
       const [newIconLibrary] = iconLibraryChange;
       dom.setAttribute("data-icon-library", newIconLibrary);
     }

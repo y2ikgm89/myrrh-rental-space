@@ -158,17 +158,17 @@ export class CollapsibleContainerNode extends ElementNode {
     dom: HTMLElement,
   ): boolean {
     const styleChange = $getStateChange(this, prevNode, collapsibleStyleState);
-    if (styleChange) {
+    if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-collapsible-style", newStyle);
     }
     const radiusChange = $getStateChange(this, prevNode, borderRadiusState);
-    if (radiusChange) {
+    if (radiusChange !== null) {
       const [newRadius] = radiusChange;
       dom.setAttribute("data-collapsible-radius", newRadius);
     }
     const colorChange = $getStateChange(this, prevNode, collapsibleColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }

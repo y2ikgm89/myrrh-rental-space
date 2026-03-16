@@ -194,40 +194,40 @@ export class StepsContainerNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const styleChange = $getStateChange(this, prevNode, stepsStyleState);
-    if (styleChange) {
+    if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-steps-style", newStyle);
     }
 
     const labelChange = $getStateChange(this, prevNode, stepsLabelState);
-    if (labelChange) {
+    if (labelChange !== null) {
       const [newLabel] = labelChange;
       dom.setAttribute("data-steps-label", newLabel);
       dom.style.setProperty("--step-label", `"${newLabel}"`);
     }
 
     const shapeChange = $getStateChange(this, prevNode, stepsShapeState);
-    if (shapeChange) {
+    if (shapeChange !== null) {
       const [newShape] = shapeChange;
       dom.setAttribute("data-steps-shape", newShape);
     }
 
     const startChange = $getStateChange(this, prevNode, startNumberState);
-    if (startChange) {
+    if (startChange !== null) {
       const [newStart] = startChange;
       dom.setAttribute("data-steps-start", String(newStart));
     }
 
     const fillChange = $getStateChange(this, prevNode, stepsFillState);
-    if (fillChange) {
+    if (fillChange !== null) {
       const [newFill] = fillChange;
       dom.setAttribute("data-steps-fill", newFill);
     }
 
     const colorChange = $getStateChange(this, prevNode, stepsColorState);
-    if (colorChange) {
+    if (colorChange !== null) {
       const [newColor] = colorChange;
       dom.setAttribute("data-color", newColor);
     }

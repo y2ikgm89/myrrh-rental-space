@@ -94,9 +94,9 @@ export class LayoutContainerNode extends ElementNode {
     return { element };
   }
 
-  override updateDOM(prevNode: LayoutContainerNode, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const change = $getStateChange(this, prevNode, templateColumnsState);
-    if (change) {
+    if (change !== null) {
       const [newColumns] = change;
       dom.style.gridTemplateColumns = newColumns;
     }

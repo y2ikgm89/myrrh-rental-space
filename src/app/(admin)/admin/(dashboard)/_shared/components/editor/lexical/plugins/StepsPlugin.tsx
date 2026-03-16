@@ -145,9 +145,6 @@ export function $renumberSteps(container: StepsContainerNode): void {
  * 末尾にステップを追加し、新規StepItemNodeを返す
  */
 export function $addStep(container: StepsContainerNode): StepItemNode {
-  const count = container.getChildren().filter($isStepItemNode).length;
-  const start = $getState(container, startNumberState);
-  const _stepNumber = start + count;
   const stepItem = $createStepItemNode(1); // $renumberStepsで即座に再設定
 
   const titleNode = $createStepTitleNode();
