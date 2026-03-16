@@ -105,6 +105,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/import-boundary-check.sh",
             "statusMessage": "Import 境界チェック中...",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-disable-audit.sh",
+            "statusMessage": "ESLint disable 監査中...",
+            "timeout": 5
           }
         ]
       },

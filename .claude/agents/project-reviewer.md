@@ -1,11 +1,11 @@
 ---
 name: project-reviewer
 description: >
-  Expert code reviewer for this project (Next.js 16 / React 19 / TypeScript 6.0-beta).
+  Expert code reviewer for this project (Next.js 16 / React 19 / TypeScript 6.0).
   Use proactively after writing or modifying code. Reviews for type safety (no `as` assertions),
   semantic color tokens (no hardcoded colors), React Compiler compatibility,
-  Server Actions patterns, Zod 4 validation, and all 27 project rules.
-  Catches violations before they reach CI.
+  eslint-react v3 patterns (no IIFE in JSX, no component-in-hook), Server Actions patterns,
+  Zod 4 validation, and all 29 project rules. Catches violations before they reach CI.
 disallowedTools:
   - Write
   - Edit
@@ -47,6 +47,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
 - **Use `useEffectEvent`** for event callbacks in `useEffect` deps — `import { useEffectEvent } from 'react'`
 - **GSAP / Three.js / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
+- **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
+- **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
+- **eslint-disable コメントのルール名が最新か確認** — `@eslint-react/hooks-extra/*` は v3 で廃止。`@eslint-react/set-state-in-effect` 等の新名に置換済みか検証
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):
 
@@ -154,7 +157,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **Always-load (1):** gotchas
 
-**Conditional by paths: (26):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
+**Conditional by paths: (28):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, resend-patterns, api-routes, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
 
 ## Output format
 
