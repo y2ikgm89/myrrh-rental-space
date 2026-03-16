@@ -113,10 +113,10 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)     |
 | React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
 | TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
-| Prisma       | 7.4.2      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
+| Prisma       | 7.5.0      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
 | Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須         |
 | Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
-| Better Auth  | 1.5.3      | RBAC, `executeAdminMutationResult` パターン必須               |
+| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` パターン必須               |
 | Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
 
 ### 構造

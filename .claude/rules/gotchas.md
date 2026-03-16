@@ -147,3 +147,13 @@
 - **設定依存エラーは 503（500 禁止）** — Webhook トークン未設定・API キー未設定等の「依存関係が未設定」は `{ status: 503 }` を返す。500 にすると Google Calendar 等の外部サービスが自動リトライを繰り返す
 - **OAuth コールバック: URL クエリパラメータに生エラーメッセージ禁止** — `?error=認証エラー: ${error.message}` はブラウザ履歴・ログに内部詳細が永続する。`logError()` で内部記録のみ行い、URL には固定の安全メッセージを返す（例: `"Instagram認証に失敗しました。再度お試しください。"`）
 - **HTTP レスポンスボディに `error.message` 露出禁止** — DB ホスト名・スキーマ名等の内部情報を含む可能性がある。`logError()` でサーバー側記録のみ行い、外部レスポンスにはフィールドを含めないか固定メッセージにする（URL パラメータだけでなくレスポンスボディも対象）
+
+## ESLint
+
+- **`@eslint-react/eslint-plugin` v3 でルール名変更** — `@eslint-react/hooks-extra/no-direct-set-state-in-use-effect` → `@eslint-react/set-state-in-effect`。アップグレード時に全 eslint-disable コメントを一括置換する。`@eslint-react/purity` の `new Date()` 警告は Server Component で false positive（warn レベルのため放置可）
+- **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
+- **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` を定義して返すパターンは禁止。`ReactNode` を返すか、モジュールレベルにコンポーネントを抽出する（`use-media-picker.tsx` が実装例）
+
+## Recharts（SVG チャート）
+
+- **Recharts の SVG props は CSS 変数を受け取れない** — `fill={CHART_COLORS.primary}` のように oklch 定数を定義して渡す。admin.css テーマトークンと同期する oklch 値をコンポーネント上部に `as const` で定義（`ReservationChart.tsx` が実装例）

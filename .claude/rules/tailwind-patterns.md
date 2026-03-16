@@ -128,23 +128,24 @@ OKLCH の利点:
 
 **よく間違えるハードコードカラー → セマンティックトークン（管理画面）**:
 
-| 禁止                | 代替                             |
-| ------------------- | -------------------------------- |
-| `text-gray-900`     | `text-foreground`                |
-| `text-gray-600`     | `text-muted-foreground`          |
-| `bg-gray-100`       | `bg-muted`                       |
-| `bg-gray-50`        | `bg-muted/50`                    |
-| `bg-white`          | `bg-card` または `bg-background` |
-| `border-gray-200`   | `border-border`                  |
-| `hover:bg-gray-100` | `hover:bg-accent`                |
-| `ring-blue-500`     | `ring-ring`                      |
-| `text-green-600`    | `text-success`                   |
-| `bg-green-500`      | `bg-success`                     |
-| `text-red-600`      | `text-destructive`               |
-| `bg-red-500`        | `bg-destructive`                 |
-| `text-yellow-600`   | `text-warning`                   |
-| `bg-blue-600`       | `bg-primary`                     |
-| `text-blue-600`     | `text-primary`                   |
+| 禁止                       | 代替                             |
+| -------------------------- | -------------------------------- |
+| `text-gray-900`            | `text-foreground`                |
+| `text-gray-600`            | `text-muted-foreground`          |
+| `bg-gray-100`              | `bg-muted`                       |
+| `bg-gray-50`               | `bg-muted/50`                    |
+| `bg-white`                 | `bg-card` または `bg-background` |
+| `border-gray-200`          | `border-border`                  |
+| `hover:bg-gray-100`        | `hover:bg-accent`                |
+| `ring-blue-500`            | `ring-ring`                      |
+| `text-green-600`           | `text-success`                   |
+| `bg-green-500`             | `bg-success`                     |
+| `text-red-600`             | `text-destructive`               |
+| `bg-red-500`               | `bg-destructive`                 |
+| `text-yellow-600`          | `text-warning`                   |
+| `bg-blue-600`              | `bg-primary`                     |
+| `text-blue-600`            | `text-primary`                   |
+| `shadow-[..rgb(0_0_0/..)]` | `shadow-xs` または `shadow-sm`   |
 
 ### 公開ページ（public.css） — Champagne Gold + White テーマ
 

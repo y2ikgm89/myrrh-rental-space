@@ -478,6 +478,28 @@ import { unstable_Activity as Activity } from 'react'
 
 ---
 
+## フックから UI 要素を返すパターン（headless UI）
+
+フックから `ComponentType` を返すと React Compiler / eslint-react v3 でエラー（`component-hook-factories`）。`ReactNode` を返す:
+
+```typescript
+// NG: フック内コンポーネント定義（component-hook-factories エラー）
+function useDialog() {
+  const Dialog = () => <DialogImpl {...props} />;
+  return { Dialog }; // ComponentType
+}
+<picker.Dialog />
+
+// OK: ReactNode を返す（use-media-picker.tsx が実装例）
+function useDialog() {
+  const dialogElement = <DialogImpl {...props} />;
+  return { dialogElement }; // ReactNode
+}
+{picker.dialogElement}
+```
+
+---
+
 ## 禁止事項（本文未掲載のパターン）
 
 上記各セクションに加え、以下のパターンも禁止:
