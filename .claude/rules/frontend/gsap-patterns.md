@@ -1,6 +1,10 @@
 ---
 paths:
-  - src/app/(public*)/**
+  - src/app/(public*)/_shared/lib/gsap*
+  - src/app/(public*)/_shared/lib/animations*
+  - src/app/(public*)/_shared/components/effects/**
+  - src/app/(public*)/_shared/components/providers/SmoothScrollProvider*
+  - src/app/(public*)/_shared/lib/a11y/motion*
 ---
 
 # GSAP パターンルール
@@ -452,8 +456,12 @@ export const DURATION = {
 // EASE — GSAP 形式
 export const EASE = {
   outExpo: "expo.out", // スムーズな減速 — 一般的な入場
+  outQuad: "power2.out", // 中程度の減速 — UI操作、オーバーレイ
+  inQuad: "power2.in", // 中程度の加速 — 退場アニメーション
+  outCubic: "power3.out", // 強い減速 — スタガー入場
   outQuart: "power4.out", // 自然な減速 — テキストリビール
   inOutQuart: "quart.inOut", // スムーズな入出 — スクロール連動
+  inOutSine: "sine.inOut", // 穏やかな往復 — ループインジケーター
   outElastic: "elastic.out(1, 0.3)", // 弾性リターン — MagneticButton
   none: "none", // リニア — scrub アニメーション
 } as const;

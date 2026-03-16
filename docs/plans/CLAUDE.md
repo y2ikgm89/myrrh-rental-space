@@ -75,4 +75,5 @@ ls -t docs/plans/*.md | head -10
 計画実行時のスキルチェーン（新規セッションで計画ファイルを参照）:
 
 1. `superpowers:using-git-worktrees` — 隔離 worktree を作成（実装開始前に必須）
-2. `superpowers:executing-plans` — タスクをバッチ実行・チェックポイントでレビュー
+2. `superpowers:subagent-driven-development` — 同一セッション内でサブエージェント実行（推奨）
+3. `superpowers:executing-plans` — 別セッションでバッチ実行・チェックポイントでレビュー

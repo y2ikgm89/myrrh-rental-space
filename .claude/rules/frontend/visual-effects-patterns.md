@@ -1,6 +1,8 @@
 ---
 paths:
-  - src/app/(public*)/**
+  - src/app/(public*)/_shared/components/effects/**
+  - src/app/(public*)/_shared/lib/animations*
+  - src/app/(public*)/_shared/lib/a11y/motion*
 ---
 
 # ビジュアルエフェクトアーキテクチャ

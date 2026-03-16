@@ -148,6 +148,17 @@ OKLCH の利点:
 
 ### 公開ページ（public.css） — Champagne Gold + White テーマ
 
+**よく間違えるハードコードカラー → セマンティックトークン（公開ページ）**:
+
+| 禁止                | 代替                        |
+| ------------------- | --------------------------- |
+| `bg-black/10`       | `bg-foreground/10`          |
+| `hover:bg-black/10` | `hover:bg-foreground/10`    |
+| `text-white`        | `text-card`（純白が必要時） |
+| `bg-white/10`       | `bg-card/10`                |
+| `border-white/20`   | `border-card/20`            |
+| `bg-black/50`       | `bg-foreground/50`          |
+
 **完全なトークン一覧**: `src/app/(public)/_styles/public.css` を参照。
 
 **公開ページ固有トークン**（管理画面に存在しないもの）:

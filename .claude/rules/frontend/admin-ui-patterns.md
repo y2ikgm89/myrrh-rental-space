@@ -213,7 +213,12 @@ import { SubmitButton } from "@/admin/components/ui";
 - 単純ラベル（「保存」「更新」「削除」「作成」）→ 省略可（デフォルト: `label + "中..."`）
 - 複合ラベル（「予約を作成」「顧客情報を更新」）→ `pendingLabel` 明示指定（デフォルトだと「予約を作成中...」になる）
 
-**適用対象外**: `DeleteConfirmDialog`（内部 isPending 管理）、`onClick` ハンドラのボタン、`disabled={isPending || !isDirty}` 等の複合条件ボタン
+**適用対象外**（以下は SubmitButton に置換**しない**）:
+
+- `DeleteConfirmDialog`（内部 isPending 管理）
+- `onClick` ハンドラのボタン（`type="submit"` でないもの — Settings セクションの保存ボタン、EditorHeader 等）
+- `disabled={isPending || !isDirty}` / `disabled={isPending || hasErrors}` / `disabled={!value || isPending}` 等の**複合条件ボタン**
+- カスタムアイコン付きボタン（`Loader2` / `Save` 切替等）
 
 ## テーブルレスポンシブ対応パターン
 
@@ -635,3 +640,4 @@ export function DashboardHeader() {
 14. **タブリスト右端ボタンの dialog state をタブ内コンポーネントに持つこと禁止** — `showXxxDialog` state は `*EditTabs` 親で管理し、`onShowXxxDialogChange` prop として渡す
 15. **テーブルカラム非表示をヘッダーのみ・データ行のみに適用禁止** — ヘッダー・仮想行（ホームページ行等）・全データ行に対称的に `hidden md:table-cell` を適用する
 16. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる。必ず2層ラッパーを使う
+17. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` 等のサブページコンポーネントディレクトリは Next.js がルートとして解釈する可能性がある。`_` プレフィックスでプライベートフォルダにする（`[slug]/_sections/`、`[slug]/_seo/`）

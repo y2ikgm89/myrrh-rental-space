@@ -82,11 +82,11 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
   return false
 }
 
-// OK: 変更があった場合のみ更新
+// OK: $getStateChange で変更があった場合のみ更新
 updateDOM(prevNode: this, dom: HTMLElement): boolean {
-  const src = $getState(this, srcState)
-  if ($getState(prevNode, srcState) !== src) {
-    dom.setAttribute('data-src', src)
+  const srcChange = $getStateChange(this, prevNode, srcState)
+  if (srcChange !== null) {
+    dom.setAttribute('data-src', srcChange[0])
   }
   return false
 }
@@ -177,6 +177,52 @@ parse: (v: unknown): FooType =>
 ```
 
 **検出方法**: ノードファイルの `parse:` 内で `isXxx(v)` パターン（`typeof v === "string"` チェックなし）を探す。
+
+### 11. `updateDOM` の `prevNode` パラメータ型
+
+`prevNode` は具象クラス名ではなく `this` を使用する（公式パターン）:
+
+```typescript
+// NG: 具象クラス名
+override updateDOM(prevNode: CalloutNode, dom: HTMLElement): boolean {
+
+// OK: this 型
+override updateDOM(prevNode: this, dom: HTMLElement): boolean {
+```
+
+**検出方法**: `override updateDOM(prevNode: [A-Z]` パターンを grep。
+
+### 12. `$getStateChange` の null チェック
+
+`$getStateChange` の結果は `!== null` で比較する（truthy チェック禁止）:
+
+```typescript
+// NG
+if (change) {
+
+// OK
+if (change !== null) {
+```
+
+**検出方法**: `getStateChange` 呼び出し直後の `if (変数名) {` パターンを検索。
+
+### 13. `updateDOM` の `false` リテラル戻り型
+
+引数なし・常に `return false` の `updateDOM` は `boolean` ではなく `false` リテラル型:
+
+```typescript
+// NG
+override updateDOM(): boolean {
+  return false;
+}
+
+// OK
+override updateDOM(): false {
+  return false;
+}
+```
+
+**検出方法**: `override updateDOM(): boolean` を grep し、中身が `return false` のみのものを報告。
 
 ## 報告形式
 

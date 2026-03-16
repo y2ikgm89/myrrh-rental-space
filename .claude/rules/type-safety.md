@@ -122,11 +122,35 @@ const style = TYPE_STYLES[type];
 if (!style) return;
 ```
 
-## 型アサーション（`as`）禁止
+## 型アサーション（`as`）・非null アサーション（`!`）禁止
 
-型アサーションはコンパイラの型検査を無効化するため、原則禁止。以下の4種のみ許可:
+型アサーション・非null アサーションはコンパイラの型検査を無効化するため、原則禁止。
 
-### 許可例外（4種のみ）
+### 非null アサーション (`!`) の代替パターン
+
+```typescript
+// NG: 非null アサーション
+location!.id
+config.items!.map(...)
+uniforms["key"]!.value
+
+// OK: ガード句（edit mode で optional prop を使う場合）
+if (!location) throw new Error("location is required for edit mode");
+location.id
+
+// OK: 変数抽出で narrowing（三項演算子内で narrowing が効かない場合）
+const inlineItems = config.items;
+if (inlineItems != null && inlineItems.length > 0) {
+  inlineItems.map(...)  // narrowed
+}
+
+// OK: optional + early return（noUncheckedIndexedAccess 対応）
+const uniform = uniforms["key"];
+if (!uniform) return;
+uniform.value = 42;
+```
+
+### `as` の許可例外（4種のみ）
 
 **1. DOM event target**
 
@@ -277,6 +301,23 @@ const CONNECTION_METHOD_SET = new Set<string>(CONNECTION_METHODS);
 function isConnectionMethod(value: string): value is ConnectionMethod {
   return CONNECTION_METHOD_SET.has(value);
 }
+```
+
+**パーサーファクトリ（`section-parsers.ts` パターン）**:
+
+```typescript
+// Set.has + 型述語でデフォルト値付きパーサーを生成（as T 不要）
+function createParser<T extends string>(
+  values: readonly T[],
+  defaultValue: NoInfer<T>, // NoInfer<T>: defaultValue からの型推論を防止
+): (value: string) => T {
+  const set = new Set<string>(values);
+  const isValid = (v: string): v is T => set.has(v);
+  return (value: string): T => (isValid(value) ? value : defaultValue);
+}
+
+// 使用例: Zod をクライアントバンドルから除去するため section-parsers.ts で使用
+export const parseHeroHeight = createParser(heroHeightValues, "md");
 ```
 
 ### Zod safeParse 型ガード（推奨）

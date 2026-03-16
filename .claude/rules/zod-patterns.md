@@ -1,6 +1,9 @@
 ---
 paths:
-  - src/**/*.ts
+  - src/shared/lib/validations/**
+  - src/**/lib/validations/**
+  - src/**/actions/**/*.ts
+  - src/shared/domain/**
 ---
 
 # Zod パターンルール

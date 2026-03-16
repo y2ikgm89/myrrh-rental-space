@@ -80,3 +80,4 @@ nul
 # Serena MCP tool files
 .serena/
 .worktrees
+.claire

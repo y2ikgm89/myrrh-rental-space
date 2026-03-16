@@ -350,9 +350,9 @@ createDOM(_config: EditorConfig): HTMLElement {
 }
 
 // updateDOM(): 差分更新（return false で DOM 再構築を回避）
-updateDOM(prevNode: StepsContainerNode, dom: HTMLElement): boolean {
+updateDOM(prevNode: this, dom: HTMLElement): boolean {
   const change = $getStateChange(this, prevNode, stepsStyleState)
-  if (change) {
+  if (change !== null) {
     const [newStyle] = change
     dom.setAttribute('data-steps-style', newStyle)
   }
@@ -703,6 +703,9 @@ editor.update(() => {
 21. **`TableCellResizerPlugin` は @lexical/react 0.41.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
 22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
 23. **組み込みノード（TableNode 等）を継承する場合は Node Replacement パターン必須**: 独自型文字列（`"custom-table"`）を持つカスタムノードと `{ replace: TableNode, with: factory, withKlass: CustomTableNode }` をセットで `EDITOR_NODES` に登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を登録するため `TablePlugin.hasNodes([TableNode])` が通過し、`$isTableNode(customTableNode)` も `instanceof` で `true` になる。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外であり禁止
+24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する
+25. **`$getStateChange` の truthy チェック禁止** — `if (change)` ではなく `if (change !== null)` を使用。公式ドキュメントと一致させる
+26. **常に `false` を返す `updateDOM` に `boolean` 戻り型禁止** — 引数なし・常に `return false` のメソッドは `override updateDOM(): false` とリテラル型で宣言する。DecoratorNode や状態を持たない子ノードが該当
 
 ## 新規ノード登録チェックリスト
 

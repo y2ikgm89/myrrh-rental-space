@@ -1,6 +1,10 @@
 ---
 paths:
-  - src/app/(public*)/**
+  - src/app/(public*)/_shared/lib/seo/**
+  - src/app/(public*)/_shared/components/seo/**
+  - src/app/(public*)/_shared/lib/page-metadata*
+  - src/app/(public*)/*/page.tsx
+  - src/app/(public*)/[*]/page.tsx
 ---
 
 # SEO / 構造化データパターンルール

@@ -1,6 +1,6 @@
 ---
 paths:
-  - src/app/(public*)/**
+  - src/app/(public*)/_shared/components/effects/pixi/**
 ---
 
 # PixiJS パターンルール
