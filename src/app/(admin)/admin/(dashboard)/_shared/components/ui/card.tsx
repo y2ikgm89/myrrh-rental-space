@@ -11,7 +11,7 @@ function Card({ className, ref, ...props }: DivProps) {
       className={cn(
         // Swiss Design: シャープなエッジ、控えめなシャドウ
         "rounded-md border bg-card text-card-foreground",
-        "shadow-[0_1px_3px_0_rgb(0_0_0/0.04),0_1px_2px_-1px_rgb(0_0_0/0.03)]",
+        "shadow-xs",
         "transition-shadow duration-200",
         className,
       )}

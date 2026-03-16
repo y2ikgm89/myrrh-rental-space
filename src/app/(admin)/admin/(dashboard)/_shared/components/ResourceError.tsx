@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/admin/components/ui/button";
 
 export default function ResourceError({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error("Admin error boundary:", error);
-  }, [error]);
-
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8">
       <AlertTriangle className="h-12 w-12 text-destructive mb-4" />

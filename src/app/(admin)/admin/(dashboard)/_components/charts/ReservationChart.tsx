@@ -5,6 +5,9 @@
  *
  * 直近30日の予約数・売上推移グラフ
  * Recharts使用
+ *
+ * NOTE: Recharts の SVG props は CSS 変数を直接受け取れないため、
+ * admin.css テーマと一致する oklch 値を定数として定義する。
  */
 
 import {
@@ -28,6 +31,21 @@ import type { ChartDataPoint } from "@/shared/domain/dashboard/queries";
 type ReservationChartProps = {
   data: ChartDataPoint[];
 };
+
+/**
+ * チャート色定数 — admin.css テーマトークンと同期
+ * Recharts SVG は CSS custom properties を直接受け取れないため oklch 値を定義
+ */
+const CHART_COLORS = {
+  /** --color-border: oklch(0.9 0.01 250) */
+  grid: "oklch(0.9 0.01 250)",
+  /** --color-primary: oklch(0.55 0.2 260) — Trust Blue */
+  reservations: "oklch(0.55 0.2 260)",
+  /** --color-success: oklch(0.65 0.17 155) */
+  revenue: "oklch(0.65 0.17 155)",
+  /** --color-card: oklch(1 0 0) */
+  tooltipBg: "oklch(1 0 0)",
+} as const;
 
 function formatCurrency(value: number): string {
   if (value >= 10000) {
@@ -66,12 +84,12 @@ export function ReservationChart({ data }: ReservationChartProps) {
             data={data}
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 11 }}
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: CHART_COLORS.grid }}
               interval="preserveStartEnd"
             />
             <YAxis
@@ -92,8 +110,8 @@ export function ReservationChart({ data }: ReservationChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
+                backgroundColor: CHART_COLORS.tooltipBg,
+                border: `1px solid ${CHART_COLORS.grid}`,
                 borderRadius: "6px",
                 fontSize: "12px",
               }}
@@ -113,14 +131,14 @@ export function ReservationChart({ data }: ReservationChartProps) {
             <Bar
               yAxisId="left"
               dataKey="reservations"
-              fill="#6366f1"
+              fill={CHART_COLORS.reservations}
               name="予約数"
               radius={[2, 2, 0, 0]}
             />
             <Bar
               yAxisId="right"
               dataKey="revenue"
-              fill="#10b981"
+              fill={CHART_COLORS.revenue}
               name="売上"
               radius={[2, 2, 0, 0]}
             />
