@@ -13,7 +13,6 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
-import { ExperienceShell } from "@/public/components/effects/ExperienceShell";
 import { WebSiteJsonLd } from "@/public/components/seo/JsonLd";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
@@ -41,11 +40,9 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <ExperienceShell>
-        {sections.map((section) => (
-          <SectionRenderer key={section.id} section={section} />
-        ))}
-      </ExperienceShell>
+      {sections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
     </>
   );
 }

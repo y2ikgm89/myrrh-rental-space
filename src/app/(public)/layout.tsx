@@ -31,6 +31,8 @@ import { AnnouncementBarWrapper } from "@/public/components/AnnouncementBarWrapp
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
+import { LenisProvider } from "@/public/components/providers/LenisProvider";
+import { MobileNav } from "@/public/components/layouts/mobile-nav";
 import { GraphJsonLd } from "@/public/components/seo/JsonLd";
 import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
@@ -214,7 +216,7 @@ export default async function PublicRootLayout({
         </Suspense>
         <Suspense fallback={null}>
           <AriaLiveProvider>
-            <div className="flex min-h-screen flex-col">
+            <div className="flex min-h-screen flex-col pb-16 md:pb-0">
               {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
               <SkipLink />
 
@@ -234,12 +236,15 @@ export default async function PublicRootLayout({
                   },
                 })}
               >
-                <Suspense fallback={null}>
-                  <NuqsAdapter>{children}</NuqsAdapter>
-                </Suspense>
+                <LenisProvider>
+                  <Suspense fallback={null}>
+                    <NuqsAdapter>{children}</NuqsAdapter>
+                  </Suspense>
+                </LenisProvider>
               </main>
 
               <Footer />
+              <MobileNav />
 
               {/* 動的コンテンツ - リクエスト時にストリーミング */}
               <Suspense fallback={null}>
