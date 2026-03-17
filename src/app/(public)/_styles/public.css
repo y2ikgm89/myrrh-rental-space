@@ -3,100 +3,88 @@
 @plugin "@tailwindcss/typography";
 
 /* ==========================================================================
- * Public V3 Theme — Champagne Gold + White
+ * Public V4 Theme — Deep Neutral + Warm Accent
  *
- * デザイン方針: 白基調 + シャンパンゴールドアクセント
- * v1（暖色系 hue 80 + クラシックゴールド hue 85）と差別化
+ * デザイン方針: ニュートラル基調 + 暖色アクセント（控えめ・上質）
  * カラー形式: OKLCH（Tailwind CSS 4推奨）
  * ========================================================================== */
 
 @theme {
   /* --------------------------------------------------------------------------
-   * Brand Colors — Champagne Gold
+   * Colors
    * -------------------------------------------------------------------------- */
-  --color-brand-primary: oklch(0.75 0.06 65);
-  --color-brand-secondary: oklch(0.55 0.08 65);
-
-  /* --------------------------------------------------------------------------
-   * Core Colors
-   * -------------------------------------------------------------------------- */
-  --color-background: oklch(0.995 0.002 250);
+  --color-background: oklch(0.985 0 0);
+  --color-surface: oklch(0.96 0.005 80);
   --color-foreground: oklch(0.15 0.01 250);
+  --color-muted-foreground: oklch(0.55 0.01 250);
+  --color-border: oklch(0.88 0.005 80);
 
-  /* --------------------------------------------------------------------------
-   * Card & Surface
-   * -------------------------------------------------------------------------- */
-  --color-card: oklch(1 0 0);
+  --color-accent: oklch(0.45 0.03 60);
+  --color-accent-light: oklch(0.94 0.015 60);
+  --color-accent-foreground: oklch(0.985 0 0);
+
+  --color-card: oklch(0.985 0 0);
   --color-card-foreground: oklch(0.15 0.01 250);
-  --color-surface: oklch(0.97 0.003 250);
+  --color-overlay: oklch(0 0 0 / 0.6);
+
+  --color-success: oklch(0.55 0.15 145);
+  --color-warning: oklch(0.7 0.15 70);
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-info: oklch(0.55 0.1 250);
 
   /* --------------------------------------------------------------------------
-   * Primary（シャンパンゴールド）
+   * Typography
    * -------------------------------------------------------------------------- */
-  --color-primary: var(--color-brand-primary);
-  --color-primary-dark: oklch(0.55 0.08 65);
-  --color-primary-foreground: oklch(0.15 0.01 250);
+  --font-sans: "Noto Sans JP", sans-serif;
+  --font-serif: "Noto Serif JP", serif;
+
+  --text-hero: clamp(2.5rem, 5vw + 1rem, 4.5rem);
+  --text-h1: clamp(2rem, 3vw + 0.5rem, 3rem);
+  --text-h2: clamp(1.5rem, 2vw + 0.5rem, 2.25rem);
+  --text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.5rem);
+  --text-body: 1rem;
+  --text-small: 0.875rem;
+  --text-label: 0.6875rem;
+
+  --leading-tight: 1.3;
+  --leading-normal: 1.8;
+  --leading-relaxed: 2;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.1em;
 
   /* --------------------------------------------------------------------------
-   * Secondary
+   * Spacing
    * -------------------------------------------------------------------------- */
-  --color-secondary: oklch(0.96 0.005 250);
-  --color-secondary-foreground: oklch(0.25 0.02 250);
+  --spacing-section: clamp(5rem, 8vw, 7.5rem);
+  --spacing-block: clamp(2rem, 4vw, 3rem);
+  --spacing-element: 1.5rem;
+  --spacing-inline: 1rem;
 
-  /* --------------------------------------------------------------------------
-   * Muted
-   * -------------------------------------------------------------------------- */
-  --color-muted: oklch(0.96 0.005 250);
-  --color-muted-foreground: oklch(0.45 0.01 250);
-
-  /* --------------------------------------------------------------------------
-   * Accent
-   * -------------------------------------------------------------------------- */
-  --color-accent: oklch(0.96 0.01 65);
-  --color-accent-foreground: oklch(0.35 0.05 65);
-
-  /* --------------------------------------------------------------------------
-   * Semantic Colors
-   * -------------------------------------------------------------------------- */
-  --color-destructive: oklch(0.55 0.22 25);
-  --color-destructive-foreground: oklch(1 0 0);
-  --color-success: oklch(0.6 0.18 145);
-  --color-success-foreground: oklch(1 0 0);
-  --color-warning: oklch(0.75 0.18 85);
-  --color-warning-foreground: oklch(0.2 0.02 85);
-  --color-info: oklch(0.55 0.18 260);
-  --color-info-foreground: oklch(1 0 0);
-  --color-rating: oklch(0.82 0.17 90);
-
-  /* --------------------------------------------------------------------------
-   * Border & Input
-   * -------------------------------------------------------------------------- */
-  --color-border: oklch(0.9 0.005 250);
-  --color-input: oklch(0.9 0.005 250);
-  --color-ring: var(--color-primary-dark);
+  --container-max: 80rem;
+  --container-padding: clamp(1.5rem, 3vw, 3rem);
 
   /* --------------------------------------------------------------------------
    * Border Radius
    * -------------------------------------------------------------------------- */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
 
   /* --------------------------------------------------------------------------
    * Shadows
    * -------------------------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow-md:
-    0 4px 6px -1px rgb(0 0 0 / 0.04), 0 2px 4px -2px rgb(0 0 0 / 0.02);
-  --shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.02);
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px oklch(0 0 0 / 0.07);
+  --shadow-lg: 0 10px 15px oklch(0 0 0 / 0.1);
+  --shadow-card: 0 1px 3px oklch(0 0 0 / 0.04), 0 1px 2px oklch(0 0 0 / 0.06);
 
   /* --------------------------------------------------------------------------
-   * Font
+   * Layout
    * -------------------------------------------------------------------------- */
-  --font-sans: var(--font-noto-sans-jp), "Helvetica Neue", Arial, sans-serif;
-  --font-serif: var(--font-noto-serif-jp), Georgia, "Times New Roman", serif;
+  --header-height: 64px;
 }
 
 /* ==========================================================================
@@ -104,8 +92,10 @@
  * ========================================================================== */
 
 @layer base {
-  :root {
-    --header-height: 60px;
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   * {
@@ -113,9 +103,10 @@
   }
 
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
     font-family: var(--font-sans);
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    line-height: var(--leading-normal);
   }
 
   /* transparent モードのみ: 非Hero最初の要素にmargin-top補正
@@ -125,13 +116,17 @@
      skipping invisible elements like <script> (JSON-LD). */
   #main-content[data-header-transparent]
     > :is(section, div):first-of-type:not([data-hero]) {
-    margin-top: var(--header-height, 60px);
+    margin-top: var(--header-height, 64px);
   }
 
-  /* Lenis smooth scroll */
+  /* Lenis smooth scroll (desktop only) */
+  html.lenis {
+    height: auto;
+  }
+
   html.lenis,
   html.lenis body {
-    height: auto;
+    scroll-behavior: auto;
   }
 
   .lenis.lenis-smooth {
@@ -147,8 +142,8 @@
   }
 
   /* WCAG 2.4.7 Focus Visible — keyboard focus indicator */
-  :is(a, button, input, select, textarea, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-ring);
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 
@@ -168,6 +163,52 @@
     header.sticky {
       translate: none !important;
     }
+  }
+}
+
+/* ==========================================================================
+ * Compat Layer — backward compatibility for custom pages & existing components
+ *
+ * 旧テーマトークンを新テーマにマッピング。
+ * [...segments] カスタムページや既存コンポーネントが旧トークンを参照するため必要。
+ * ========================================================================== */
+
+@layer compat {
+  :root {
+    /* Brand → Accent */
+    --color-brand-primary: var(--color-accent);
+    --color-brand-secondary: var(--color-accent);
+
+    /* Primary → Accent */
+    --color-primary: var(--color-accent);
+    --color-primary-dark: var(--color-accent);
+    --color-primary-foreground: var(--color-accent-foreground);
+
+    /* Secondary → Surface */
+    --color-secondary: var(--color-surface);
+    --color-secondary-foreground: var(--color-foreground);
+
+    /* Muted → Surface */
+    --color-muted: var(--color-surface);
+
+    /* Accent (old style — was a light tint) → accent-light */
+    /* Note: new --color-accent is the dark accent; old was light tint */
+
+    /* Semantic foregrounds */
+    --color-destructive-foreground: var(--color-accent-foreground);
+    --color-success-foreground: var(--color-accent-foreground);
+    --color-warning-foreground: oklch(0.2 0.02 70);
+    --color-info-foreground: var(--color-accent-foreground);
+
+    /* Rating */
+    --color-rating: oklch(0.82 0.17 90);
+
+    /* Input & Ring */
+    --color-input: var(--color-border);
+    --color-ring: var(--color-accent);
+
+    /* Radius */
+    --radius-xl: 0.75rem;
   }
 }
 
@@ -193,6 +234,7 @@
 @layer utilities {
   .font-heading {
     font-family: var(--font-serif);
+    letter-spacing: var(--tracking-tight);
   }
 
   /* メンテナンスページ フェードイン（モーション許可時のみ） */
@@ -202,7 +244,7 @@
     }
   }
 
-  /* ゴールドアクセントライン — セクションラベル装飾 */
+  /* アクセントライン — セクションラベル装飾 */
   .gold-line {
     position: relative;
     display: inline-block;
@@ -216,6 +258,6 @@
     transform: translateY(-50%);
     width: 1.5rem;
     height: 1px;
-    background-color: var(--color-brand-primary);
+    background-color: var(--color-accent);
   }
 }
