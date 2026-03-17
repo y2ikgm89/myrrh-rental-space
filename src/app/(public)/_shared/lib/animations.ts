@@ -4,17 +4,37 @@
  * Medium intensity: SplitText + Parallax + MagneticButton (no pinning)
  */
 
+// ---------------------------------------------------------------------------
+// Duration
+// ---------------------------------------------------------------------------
+
 /** Standard durations (seconds) */
 export const DURATION = {
   fast: 0.3,
   normal: 0.6,
   slow: 0.8,
+  /** Hero entrance — new pages use 1.2s */
+  hero: 1.2,
+
+  // Legacy compat — used by existing section components (HeroSection, StandardHeroSection)
+  /** @deprecated Use `hero` instead — legacy hero sections used 1.5s */
   xslow: 1.2,
-  hero: 1.5,
+  /** Legacy hero duration for existing HeroSection/StandardHeroSection */
+  legacyHero: 1.5,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Easing
+// ---------------------------------------------------------------------------
 
 /** Standard easing curves (GSAP format) */
 export const EASE = {
+  // Simplified aliases (preferred for new Page-First pages)
+  out: "power3.out",
+  inOut: "power2.inOut",
+  elastic: "elastic.out(1, 0.3)",
+
+  // Full set — keep until legacy component refactoring
   /** Smooth deceleration — general entrance */
   outExpo: "expo.out",
   /** Medium deceleration — UI interactions, overlays */
@@ -35,11 +55,15 @@ export const EASE = {
   none: "none",
 } as const;
 
+// ---------------------------------------------------------------------------
+// Stagger
+// ---------------------------------------------------------------------------
+
 /** Stagger presets */
 export const STAGGER = {
   /** Character-by-character text reveal */
   char: 0.03,
-  /** Word-by-word text reveal */
+  /** Word-by-word text reveal (new: 0.06) */
   word: 0.08,
   /** Line-by-line text reveal */
   line: 0.15,
@@ -49,13 +73,16 @@ export const STAGGER = {
   element: 0.1,
 } as const;
 
+// ---------------------------------------------------------------------------
+// ScrollTrigger
+// ---------------------------------------------------------------------------
+
 /** ScrollTrigger preset configurations */
 export const SCROLL_TRIGGER = {
   /** Standard reveal — element enters viewport */
   reveal: {
     start: "top 85%",
-    end: "top 20%",
-    toggleActions: "play none none none" as const,
+    toggleActions: "play none none none",
   },
   /** Scrub animation — tied to scroll position */
   scrub: {
@@ -65,6 +92,10 @@ export const SCROLL_TRIGGER = {
   },
 } as const;
 
+// ---------------------------------------------------------------------------
+// Parallax
+// ---------------------------------------------------------------------------
+
 /** Parallax speed presets */
 export const PARALLAX = {
   /** Subtle background movement */
@@ -72,3 +103,10 @@ export const PARALLAX = {
   /** Standard parallax */
   normal: 0.5,
 } as const;
+
+// ---------------------------------------------------------------------------
+// Type exports
+// ---------------------------------------------------------------------------
+
+export type Duration = (typeof DURATION)[keyof typeof DURATION];
+export type Ease = (typeof EASE)[keyof typeof EASE];
