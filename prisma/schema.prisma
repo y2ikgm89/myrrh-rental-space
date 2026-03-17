@@ -1593,3 +1593,20 @@ model BlockTemplate {
   @@index([createdAt])
   @@map("block_templates")
 }
+
+/// ページ固有コンテンツ（Page-First Architecture）
+/// pageKey でページを識別し、content JSON に Zod バリデーション済みデータを格納
+model PageContent {
+  id              String   @id @default(cuid())
+  pageKey         String   @unique
+  content         Json
+  metaTitle       String?
+  metaDescription String?
+  ogpTitle        String?
+  ogpDescription  String?
+  ogpImage        String?
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?
+
+  @@map("page_contents")
+}
