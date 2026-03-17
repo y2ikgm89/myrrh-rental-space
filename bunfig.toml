@@ -2,8 +2,8 @@
 # https://bun.sh/docs/runtime/bunfig
 
 [test]
-# テストファイルのプリロード
-preload = ["./__tests__/setup.ts"]
+# テストファイルのプリロード（DOM 環境 + グローバル設定）
+preload = ["./__tests__/setup-dom.ts", "./__tests__/setup.ts"]
 
 # E2E テスト（Playwright）を除外
 root = "./__tests__"
