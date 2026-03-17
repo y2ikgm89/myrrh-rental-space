@@ -148,6 +148,8 @@ export const CACHE_TAGS = {
   BLOCK_TEMPLATES: "block-templates",
   /** 権限 */
   PERMISSIONS: "permissions",
+  /** ページコンテンツ（Page-First Architecture） */
+  PAGE_CONTENT: "page-content",
 } as const;
 
 /**
@@ -222,6 +224,10 @@ export const getCacheTag = {
   },
   pageSeo: {
     detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,
+  },
+  pageContent: {
+    detail: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-${pageKey}`,
+    meta: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-meta-${pageKey}`,
   },
 } as const;
 
