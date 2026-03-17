@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 
 type HeadingLevel = 1 | 2 | 3 | 4;
