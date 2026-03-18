@@ -1,10 +1,7 @@
 /**
- * /news — ニュース一覧ページ
+ * /news — ニュース一覧ページ（Page-First アーキテクチャ）
  *
- * パターンB: セクション + カスタムコンテンツ
- * セクション（Hero等）をレンダー後、ニュースリスト + ページネーション
- *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
+ * SEO: generatePageMetadata
  * ページネーション: nuqs createSearchParamsCache
  */
 
@@ -12,11 +9,12 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
-import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Pagination } from "@/public/components/Pagination";
 import { paginationSearchParams } from "@/public/lib/search-params";
 import { NewsList } from "./_components/NewsList";
@@ -36,10 +34,7 @@ export default async function NewsPage({
 }: PageProps): Promise<ReactElement> {
   await connection();
 
-  const [sections, { page }] = await Promise.all([
-    getPageSectionsWithFallback("news"),
-    paginationSearchParams.parse(searchParams),
-  ]);
+  const { page } = await paginationSearchParams.parse(searchParams);
 
   const { items, totalPages, currentPage } = await getPublishedNewsList(
     Math.max(1, page),
@@ -47,25 +42,24 @@ export default async function NewsPage({
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "お知らせ", url: "/news" },
-        ]}
+      <PageHero
+        variant="compact"
+        title="お知らせ"
+        breadcrumb={<Breadcrumb items={[{ label: "お知らせ" }]} />}
       />
 
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
-
-      <section className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
-        <NewsList items={items} />
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          basePath="/news"
-        />
+      <section className="py-[var(--spacing-section)]">
+        <Container>
+          <NewsList items={items} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            basePath="/news"
+          />
+        </Container>
       </section>
+
+      <SiteCTA />
     </>
   );
 }

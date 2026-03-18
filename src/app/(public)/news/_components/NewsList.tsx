@@ -42,7 +42,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
                 {formatSerializedDate(item.publishedAt)}
               </time>
 
-              <h2 className="font-heading text-sm font-medium tracking-tight transition-colors group-hover:text-primary md:text-base">
+              <h2 className="font-heading text-sm font-medium tracking-tight transition-colors group-hover:text-accent md:text-base">
                 {item.title}
               </h2>
             </Link>
