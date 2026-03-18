@@ -20,14 +20,14 @@ export function ReservationWidget({
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
             <span className="text-muted-foreground">1時間</span>
-            <span className="text-xl font-bold text-primary-dark">
+            <span className="text-xl font-bold text-accent">
               &yen;{hourlyPrice.toLocaleString()}
             </span>
           </div>
           {dailyPrice != null ? (
             <div className="flex items-baseline justify-between">
               <span className="text-muted-foreground">1日</span>
-              <span className="text-xl font-bold text-primary-dark">
+              <span className="text-xl font-bold text-accent">
                 &yen;{dailyPrice.toLocaleString()}
               </span>
             </div>

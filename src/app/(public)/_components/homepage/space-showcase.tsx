@@ -68,7 +68,7 @@ export async function SpaceShowcase() {
                           ) : null}
                         </span>
                         {space.hourlyPrice != null ? (
-                          <span className="text-sm font-medium text-primary-dark">
+                          <span className="text-sm font-medium text-accent">
                             &yen;{space.hourlyPrice.toLocaleString()}/h
                           </span>
                         ) : null}

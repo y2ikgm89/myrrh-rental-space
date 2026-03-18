@@ -103,7 +103,7 @@ export function SpaceGrid({ spaces }: SpaceGridProps): ReactElement {
                   {space.area != null && <>{space.area}m&sup2;</>}
                 </span>
                 {space.hourlyPrice != null && (
-                  <span className="text-sm font-medium text-primary-dark">
+                  <span className="text-sm font-medium text-accent">
                     &yen;{space.hourlyPrice.toLocaleString()}/h
                   </span>
                 )}

@@ -72,7 +72,7 @@ export function SpaceCard({
               ) : null}
             </div>
             {hourlyPrice != null ? (
-              <span className="font-medium text-primary-dark">
+              <span className="font-medium text-accent">
                 &yen;{hourlyPrice.toLocaleString()}/h
               </span>
             ) : null}
