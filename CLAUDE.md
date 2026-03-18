@@ -100,6 +100,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `playwright`: UI 実装後の視覚確認・E2E デバッグ（`browser_navigate` → `browser_take_screenshot`）
 - **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
 - **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md`
+- **スペック/計画**: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` / `docs/superpowers/plans/YYYY-MM-DD-<name>.md`
 
 ---
 
@@ -140,8 +141,8 @@ src/app/
     └── spaces/[slug]/           # スペース詳細（Page-First）
 
 src/shared/                      # 両方で共有（CSS変数非依存）
-├── domain/page-content/         # PageContent キャッシュ付きクエリ
-├── domain/spaces/public-queries.ts  # 公開スペースクエリ
+  ├── domain/page-content/       # PageContent キャッシュ付きクエリ
+  └── domain/spaces/             # 公開スペースクエリ (public-queries.ts)
 prisma/                          # schema.prisma, migrations/, seed.ts
 ```
 

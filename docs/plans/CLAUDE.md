@@ -77,3 +77,13 @@ ls -t docs/plans/*.md | head -10
 1. `superpowers:using-git-worktrees` — 隔離 worktree を作成（実装開始前に必須）
 2. `superpowers:subagent-driven-development` — 同一セッション内でサブエージェント実行（推奨）
 3. `superpowers:executing-plans` — 別セッションでバッチ実行・チェックポイントでレビュー
+
+## superpowers による計画
+
+`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画を作成する。
+スペックは `docs/superpowers/specs/` に配置。
+
+```bash
+ls -t docs/superpowers/plans/*.md | head -10
+ls -t docs/superpowers/specs/*.md | head -10
+```
