@@ -1,17 +1,26 @@
 /**
- * /spaces -- スペース一覧ページ
+ * /spaces -- スペース一覧ページ（Page-First アーキテクチャ）
  *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
- * コンテンツ: DB セクション（HERO + SPACE_LIST）を SectionRenderer で描画
+ * SEO: generatePageMetadata
+ * コンテンツ: DB から getPageContent + getPublishedSpaces
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
+import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { getPageContent } from "@/public/lib/content/queries";
+import {
+  spaceListContentSchema,
+  defaultSpaceListContent,
+} from "@/public/lib/content/schemas/space-list";
+import { getPublishedSpaces } from "@/shared/domain/spaces/public-queries";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { SpaceGrid } from "./_components/space-grid";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -22,20 +31,37 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SpacesPage(): Promise<ReactElement> {
   await connection();
 
-  const sections = await getPageSectionsWithFallback("spaces");
+  const [content, spaces] = await Promise.all([
+    getPageContent(
+      "space-list",
+      spaceListContentSchema,
+      defaultSpaceListContent,
+    ),
+    getPublishedSpaces(),
+  ]);
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "スペース一覧", url: "/spaces" },
-        ]}
+      <PageHero
+        variant="compact"
+        title={content.hero.title}
+        breadcrumb={<Breadcrumb items={[{ label: "スペース一覧" }]} />}
       />
 
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
+      <section className="py-[var(--spacing-section)]">
+        <Container>
+          {content.hero.description ? (
+            <p className="mb-8 text-center text-muted-foreground">
+              {content.hero.description}
+            </p>
+          ) : null}
+          <Suspense fallback={null}>
+            <SpaceGrid spaces={spaces} />
+          </Suspense>
+        </Container>
+      </section>
+
+      <SiteCTA />
     </>
   );
 }
