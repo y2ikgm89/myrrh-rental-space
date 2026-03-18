@@ -1,5 +1,5 @@
 /**
- * /terms/[slug] — 規約詳細公開ページ
+ * /terms/[slug] — 規約詳細公開ページ（Page-First アーキテクチャ）
  *
  * 最新の公開バージョン（isCurrentVersion=true, status=PUBLISHED）を表示する。
  */
@@ -7,12 +7,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { toISOString } from "@/shared/lib/serialize";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { getPublicTermsBySlug } from "@/shared/domain/terms/queries";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -51,25 +54,27 @@ export default async function TermsDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const baseUrl = getBaseUrl();
   const publishedAt = toISOString(terms.currentVersion.publishedAt);
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-16 md:px-8 md:py-24">
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: baseUrl },
-          { name: terms.title, url: `${baseUrl}/terms/${slug}` },
-        ]}
+    <>
+      <PageHero
+        variant="compact"
+        title={terms.title}
+        breadcrumb={
+          <Breadcrumb
+            items={[
+              { label: "利用規約", href: "/terms" },
+              { label: terms.title },
+            ]}
+          />
+        }
       />
 
-      <article>
-        <header className="mb-10 border-b pb-8">
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-            {terms.title}
-          </h1>
-          {publishedAt && (
-            <p className="mt-3 text-sm text-muted-foreground">
+      <article className="py-[var(--spacing-section)]">
+        <Container variant="narrow">
+          {publishedAt ? (
+            <p className="mb-8 text-sm text-muted-foreground">
               最終更新:{" "}
               <time dateTime={publishedAt}>
                 {new Date(publishedAt).toLocaleDateString("ja-JP", {
@@ -79,14 +84,16 @@ export default async function TermsDetailPage({ params }: PageProps) {
                 })}
               </time>
             </p>
-          )}
-        </header>
+          ) : null}
 
-        <SanitizedHtml
-          html={terms.currentVersion.contentHtml}
-          className="prose prose-stone max-w-none"
-        />
+          <SanitizedHtml
+            html={terms.currentVersion.contentHtml}
+            className="prose prose-neutral max-w-none"
+          />
+        </Container>
       </article>
-    </main>
+
+      <SiteCTA />
+    </>
   );
 }
