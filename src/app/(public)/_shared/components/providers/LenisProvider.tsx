@@ -3,7 +3,7 @@
 /**
  * LenisProvider — デスクトップ専用スムーススクロール
  *
- * ExperienceShell の簡素化版。Lenis をデスクトップ（min-width: 768px）のみで初期化し、
+ * Lenis をデスクトップ（min-width: 768px）のみで初期化し、
  * lenis/react の LenisContext を提供して useLenis() との互換性を維持する。
  *
  * - prefers-reduced-motion を尊重
