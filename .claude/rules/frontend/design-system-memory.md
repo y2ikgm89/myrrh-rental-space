@@ -86,6 +86,25 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 2. **ユーザー承認なしの方針変更禁止** — デザイン方針の変更はユーザーに確認してから Memory 更新
 3. **Memory と実装の乖離禁止** — Memory に記載された方針と矛盾する実装をしない
 
+## Page-First Design System
+
+公開ページは `src/app/(public)/_shared/components/design-system/` の Primitives を使用。
+barrel: `index.ts` から全 11 コンポーネントを export。
+
+| Primitive    | 用途                                                       |
+| ------------ | ---------------------------------------------------------- |
+| `Button`     | CTA、フォーム送信（variant: primary/secondary/ghost/link） |
+| `Card`       | スペース/記事カード（hover shadow+scale）                  |
+| `Container`  | max-w + padding（variant: default/narrow/wide）            |
+| `Heading`    | h1-h4 自動スタイリング（font-heading + tracking-tight）    |
+| `Stack`      | flex layout（direction + gap）                             |
+| `Badge`      | ステータス表示（variant: default/success/warning/info）    |
+| `Prose`      | 本文コンテンツ（max-w-[65ch]）                             |
+| `ImageFrame` | next/image wrapper（aspect-ratio + skeleton）              |
+| `Input`      | テキスト入力（label + error + min-h-11）                   |
+| `Select`     | セレクトボックス                                           |
+| `Textarea`   | テキストエリア                                             |
+
 ## 参照
 
 - `.claude/rules/project-design-config.md` — プロジェクト固有デザイン値（Memory 未作成時の初期値）

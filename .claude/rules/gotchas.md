@@ -2,6 +2,16 @@
 
 プロジェクト固有の落とし穴と対処法。
 
+## Page-First Architecture（公開ページ）
+
+- **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
+- **旧カラートークンは `@layer compat` でエイリアス** — `--color-primary` → `var(--color-accent)` 等。レガシーセクションコンポーネントが依存。新コードでは `accent`/`foreground`/`surface` 等の新トークンを直接使用すること
+- **`PageContent` モデルと `Page`/`Section` モデルは共存** — 固定ページ（トップ、一覧等）は `PageContent`、カスタムページは `Page` + `Section`。削除せず維持
+- **PascalCase アニメーションファイルは thin re-export** — `ScrollReveal.tsx` → `export { ScrollReveal } from "./scroll-reveal"`。レガシーセクションの import パスを壊さないため。新コードは kebab-case を直接 import
+- **Prisma `Decimal` 型は `Number()` で変換** — `Space.hourlyPrice` 等は `Decimal` 型。子コンポーネントに渡す前に `Number(space.hourlyPrice)` で変換（`as number` 禁止）
+- **Prisma JSON フィールド（`imageUrls`, `facilities`）は `unknown` で受け取る** — `Array.isArray()` + type guard filter でランタイムパース。`as string[]` 禁止
+- **Three.js / PixiJS は削除済み** — `effects/` ディレクトリ全体（29ファイル）とパッケージ（`three`, `@types/three`, `pixi.js`, `detect-gpu`）を削除。アニメーションは GSAP + Lenis のみ
+
 ## Multiple Root Layouts
 
 - **root `app/loading.tsx` を削除する場合、各 route group 内に `loading.tsx` が必要** — root `loading.tsx` は `app/layout.tsx` がなくても Suspense boundary として機能している。削除すると `(dashboard)/layout.tsx` 等の動的レイアウトで「Uncached data was accessed outside of \<Suspense\>」ビルドエラー。対処: `(admin)/admin/loading.tsx`（admin 全体）と `(admin)/admin/(auth)/loading.tsx`（認証画面）を個別に追加

@@ -51,17 +51,16 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 
 **機能追加（ドメイン別）**
 
-| スキル                                                | 呼び出しタイミング                          |
-| ----------------------------------------------------- | ------------------------------------------- |
-| `frontend-design`                                     | フロントエンド UI 実装時                    |
-| `create-admin-page`                                   | 管理画面に新リソースを追加する時            |
-| `create-server-action`                                | Server Action を新規作成する時              |
-| `add-settings-field`                                  | Settings シングルトンにフィールド追加する時 |
-| `prisma-migration`                                    | DBスキーマ変更時                            |
-| `new-section`                                         | 新セクション定義スキャフォールド時          |
-| `parallax-section`                                    | パララックスセクション実装時（公開ページ）  |
-| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                          |
-| `split-action-file`                                   | 500行超の Server Action ファイル分割時      |
+| スキル                                                | 呼び出しタイミング                               |
+| ----------------------------------------------------- | ------------------------------------------------ |
+| `frontend-design`                                     | フロントエンド UI 実装時                         |
+| `create-admin-page`                                   | 管理画面に新リソースを追加する時                 |
+| `create-server-action`                                | Server Action を新規作成する時                   |
+| `add-settings-field`                                  | Settings シングルトンにフィールド追加する時      |
+| `prisma-migration`                                    | DBスキーマ変更時                                 |
+| `new-section`                                         | `[...segments]` カスタムページ用セクション追加時 |
+| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                               |
+| `split-action-file`                                   | 500行超の Server Action ファイル分割時           |
 
 **問題対応・メンテ**
 
@@ -85,9 +84,9 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `project-reviewer`: 管理画面コード作成・大規模リファクタリング後（型安全・カラートークン・rules 違反）
   - `cache-strategy-reviewer`: `updateTag`・`revalidateTag`・`'use cache'` 関数変更後
   - `lexical-reviewer`: `src/**/lexical/` 配下 Node/Plugin 編集後（`nodes.ts` の Node Replacement 設定変更も含む）
-  - `react-compiler-reviewer`: GSAP/Three.js/Lenis/Lexical を含むコンポーネント編集後（Rules of React 違反検出）
+  - `react-compiler-reviewer`: GSAP/Lenis/Lexical を含むコンポーネント編集後（Rules of React 違反検出）
   - `accessibility-reviewer`: 管理画面フォーム・ダイアログ・テーブル・ナビゲーション編集後（WCAG 2.1 AA）
-  - `animation-cleanup-reviewer`: GSAP/Three.js/PixiJS/Lenis を含むコンポーネント編集後（メモリリーク検出）
+  - `animation-cleanup-reviewer`: GSAP/Lenis を含むコンポーネント編集後（メモリリーク検出）
   - `performance-analyzer`: 新規ページ・コンポーネント追加後（バンドルサイズ・First Load JS 分析）
   - `test-writer`: 新規 lib 関数・Server Action・バリデーションスキーマ実装後
   - `test-runner`: テスト失敗時の root cause 分析・修正（特定テストの隔離実行）
@@ -128,22 +127,33 @@ src/app/
 ├── (admin)/admin/(dashboard)/   # 管理画面（URL: /admin/...）
 │   ├── layout.tsx               # Admin Root Layout (html/body)
 │   └── _shared/                 # 共有コンポーネント・アクション・lib
-└── (public)/                    # 公開ページ
-    ├── layout.tsx               # Public Root Layout (html/body)
-    └── _shared/                 # 共有コンポーネント
+└── (public)/                    # 公開ページ（Page-First Architecture）
+    ├── layout.tsx               # Public Root Layout (html/body, LenisProvider, MobileNav)
+    ├── _shared/
+    │   ├── components/
+    │   │   ├── design-system/   # Primitives (Button, Card, Heading 等 11種)
+    │   │   ├── layouts/         # site-header, site-footer, page-hero, site-cta, breadcrumb, mobile-nav
+    │   │   ├── ui/              # image-gallery, filter-bar, share-buttons, step-indicator
+    │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, magnetic-button
+    │   └── lib/content/         # PageContent 型・スキーマ・クエリ・デフォルト値
+    ├── _components/homepage/    # ホームページ専用コンポーネント
+    └── spaces/[slug]/           # スペース詳細（Page-First）
 
 src/shared/                      # 両方で共有（CSS変数非依存）
+├── domain/page-content/         # PageContent キャッシュ付きクエリ
+├── domain/spaces/public-queries.ts  # 公開スペースクエリ
 prisma/                          # schema.prisma, migrations/, seed.ts
 ```
 
-| パス                                         | 用途                                   |
-| -------------------------------------------- | -------------------------------------- |
-| `src/app/(admin)/_styles/admin.css`          | 管理画面専用テーマ                     |
-| `src/app/(public)/_styles/public.css`        | 公開ページテーマ                       |
-| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント             |
-| `src/app/(public)/_shared/`                  | 公開ページ専用コンポーネント           |
-| `src/app/(public)/[slug]/`                   | カスタムページルート（管理画面で作成） |
-| `src/shared/`                                | 共有（CSS変数に依存しないコード）      |
+| パス                                         | 用途                                              |
+| -------------------------------------------- | ------------------------------------------------- |
+| `src/app/(admin)/_styles/admin.css`          | 管理画面専用テーマ                                |
+| `src/app/(public)/_styles/public.css`        | 公開ページテーマ（Deep Neutral + Warm Accent）    |
+| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント                        |
+| `src/app/(public)/_shared/`                  | 公開ページ Design System + Layout                 |
+| `src/app/(public)/[...segments]/`            | カスタムページ + ポスト詳細（セクション方式維持） |
+| `src/app/(public)/spaces/[slug]/`            | スペース詳細（Page-First）                        |
+| `src/shared/`                                | 共有（CSS変数に依存しないコード）                 |
 
 **インポートエイリアス**: `@/admin/*`, `@/public/*`, `@/shared/*`
 
@@ -178,7 +188,10 @@ bun update                                      # semver 範囲内の依存パ�
 - Server Components 優先、Server Actions
 - Zod バリデーション必須
 - フォーム送信ボタン: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）
-- 命名: コンポーネント `PascalCase.tsx`、その他 `kebab-case.ts`
+- 命名: 管理画面コンポーネント `PascalCase.tsx`、公開ページコンポーネント `kebab-case.tsx`、その他 `kebab-case.ts`
+- 公開ページ: Page-First Architecture — ページ構成はコードで直接定義、`SectionRenderer` は `[...segments]` のみ
+- 公開ページコンテンツ: `getPageContent(pageKey, schema, default)` で DB から取得（`'use cache'` + `cacheTag`）
+- 公開ページフォーム: `Input`/`Select`/`Textarea` は `_shared/components/design-system/` から使用
 - コミット: `<type>(<scope>): <subject>`
 
 ### ⚠️ Gotchas
