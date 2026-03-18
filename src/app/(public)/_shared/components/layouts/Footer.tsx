@@ -182,7 +182,7 @@ export async function Footer(): Promise<ReactElement> {
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-foreground transition-colors hover:text-primary-dark"
+                        className="text-sm text-foreground transition-colors hover:text-accent"
                       >
                         {item.label}
                         <span className="sr-only"> (新しいタブで開く)</span>
@@ -190,7 +190,7 @@ export async function Footer(): Promise<ReactElement> {
                     ) : (
                       <Link
                         href={item.url}
-                        className="text-sm text-foreground transition-colors hover:text-primary-dark"
+                        className="text-sm text-foreground transition-colors hover:text-accent"
                       >
                         {item.label}
                       </Link>
@@ -202,7 +202,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/"
-                      className="text-sm text-foreground transition-colors hover:text-primary-dark"
+                      className="text-sm text-foreground transition-colors hover:text-accent"
                     >
                       Home
                     </Link>
@@ -210,7 +210,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/reservation"
-                      className="text-sm text-foreground transition-colors hover:text-primary-dark"
+                      className="text-sm text-foreground transition-colors hover:text-accent"
                     >
                       Reservation
                     </Link>
@@ -218,7 +218,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/contact"
-                      className="text-sm text-foreground transition-colors hover:text-primary-dark"
+                      className="text-sm text-foreground transition-colors hover:text-accent"
                     >
                       Contact
                     </Link>
@@ -244,7 +244,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="email"
                     href={`mailto:${info.email}`}
-                    className="transition-colors hover:text-primary-dark"
+                    className="transition-colors hover:text-accent"
                   >
                     {info.email}
                   </a>
@@ -255,7 +255,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="telephone"
                     href={`tel:${info.phone}`}
-                    className="transition-colors hover:text-primary-dark"
+                    className="transition-colors hover:text-accent"
                   >
                     {info.phone}
                   </a>
@@ -324,7 +324,7 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-primary-dark"
+                      className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
                     >
                       Google Maps で見る
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -335,7 +335,7 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleReviewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-primary-dark"
+                      className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
                     >
                       Google で口コミを書く
                       <ExternalLink className="h-3.5 w-3.5" />

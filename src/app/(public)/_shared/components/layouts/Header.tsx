@@ -25,6 +25,7 @@ import { EASE } from "@/public/lib/animations";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
 import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "../design-system/button";
 
 interface HeaderProps {
   readonly brandName?: string;
@@ -271,7 +272,10 @@ export function Header({
           </Link>
 
           {/* Desktop navigation */}
-          <nav aria-label="メインナビゲーション" className="hidden md:block">
+          <nav
+            aria-label="メインナビゲーション"
+            className="hidden items-center gap-8 md:flex"
+          >
             <ul className="flex items-center gap-8">
               {items.map((item) => (
                 <li key={item.id}>
@@ -280,7 +284,7 @@ export function Header({
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
                     >
                       {item.label}
                       <span className="sr-only"> (新しいタブで開く)</span>
@@ -288,7 +292,7 @@ export function Header({
                   ) : (
                     <Link
                       href={item.url}
-                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+                      className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
                     >
                       {item.label}
                     </Link>
@@ -296,6 +300,9 @@ export function Header({
                 </li>
               ))}
             </ul>
+            <Button variant="primary" size="sm" href="/reservation">
+              予約する
+            </Button>
           </nav>
 
           {/* Hamburger (mobile) */}
@@ -351,6 +358,11 @@ export function Header({
           </div>
 
           <nav className="flex flex-1 flex-col items-center justify-center gap-8">
+            <div data-menu-link="">
+              <Button variant="primary" size="md" href="/reservation">
+                予約する
+              </Button>
+            </div>
             {items.map((item) =>
               item.isExternal ? (
                 <a
@@ -360,7 +372,7 @@ export function Header({
                   rel="noopener noreferrer"
                   data-menu-link=""
                   onClick={closeMenu}
-                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-primary-dark"
+                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-accent"
                 >
                   {item.label}
                   <span className="sr-only"> (新しいタブで開く)</span>
@@ -371,7 +383,7 @@ export function Header({
                   href={item.url}
                   data-menu-link=""
                   onClick={closeMenu}
-                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-primary-dark"
+                  className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-accent"
                 >
                   {item.label}
                 </Link>

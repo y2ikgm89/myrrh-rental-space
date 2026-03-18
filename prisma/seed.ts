@@ -20,6 +20,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
 import { hashPassword } from "better-auth/crypto";
+import { defaultHomepageContent } from "../src/app/(public)/_shared/lib/content/defaults/homepage";
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
@@ -57,6 +58,7 @@ async function clearAllData() {
     prisma.faqItem.deleteMany(),
     prisma.faqCategory.deleteMany(),
     prisma.news.deleteMany(),
+    prisma.pageContent.deleteMany(),
     prisma.page.deleteMany(),
     prisma.termsVersion.deleteMany(),
     prisma.terms.deleteMany(),
@@ -2473,6 +2475,25 @@ async function seedSocialLinks() {
 }
 
 // =============================================================================
+// Page Content (Homepage)
+// =============================================================================
+
+async function seedPageContent() {
+  await prisma.pageContent.upsert({
+    where: { pageKey: "homepage" },
+    update: {},
+    create: {
+      pageKey: "homepage",
+      content: defaultHomepageContent,
+      metaTitle: "Myrrh Rental Space | レンタルスペース",
+      metaDescription:
+        "撮影、会議、イベントに最適な上質レンタルスペース。1時間から柔軟にご利用いただけます。",
+    },
+  });
+  console.log("✅ Page content seeded (homepage)");
+}
+
+// =============================================================================
 // Homepage Sections
 // =============================================================================
 
@@ -2610,6 +2631,7 @@ async function seedAll(email: string, password: string, name: string) {
   // Phase 6: コンテンツ
   await seedNews();
   await seedPages();
+  await seedPageContent();
   await seedFaq();
   await seedBlogTags();
   await seedBlog();
@@ -2639,6 +2661,7 @@ async function seedDemo() {
   // コンテンツ
   await seedNews();
   await seedPages();
+  await seedPageContent();
   await seedTerms();
   await seedFaq();
   await seedHomepageSections();

@@ -108,7 +108,7 @@ export function StandardHeroSection({
           {
             opacity: 1,
             y: 0,
-            duration: DURATION.hero,
+            duration: DURATION.legacyHero,
             ease: EASE.outExpo,
             delay: 0.2,
           },
