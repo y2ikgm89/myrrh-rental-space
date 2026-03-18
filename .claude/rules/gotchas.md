@@ -10,7 +10,7 @@
 - **PascalCase アニメーションファイルは thin re-export** — `ScrollReveal.tsx` → `export { ScrollReveal } from "./scroll-reveal"`。レガシーセクションの import パスを壊さないため。新コードは kebab-case を直接 import
 - **Prisma `Decimal` 型は `Number()` で変換** — `Space.hourlyPrice` 等は `Decimal` 型。子コンポーネントに渡す前に `Number(space.hourlyPrice)` で変換（`as number` 禁止）
 - **Prisma JSON フィールド（`imageUrls`, `facilities`）は `unknown` で受け取る** — `Array.isArray()` + type guard filter でランタイムパース。`as string[]` 禁止
-- **Three.js / PixiJS は削除済み** — `effects/` ディレクトリ全体（29ファイル）とパッケージ（`three`, `@types/three`, `pixi.js`, `detect-gpu`）を削除。アニメーションは GSAP + Lenis のみ
+- **Three.js / PixiJS はパッケージのみ利用可能** — 旧 `effects/` インフラ（Provider/Canvas 29ファイル）は削除済みだが、パッケージは再インストール済み。使用時はページコンポーネントから直接 `import { Canvas } from "@react-three/fiber"` 等で import する。旧の `ExperienceShell` → `VisualEffectsProvider` パターンは禁止
 
 ## Multiple Root Layouts
 

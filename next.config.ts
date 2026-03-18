@@ -103,6 +103,11 @@ const nextConfig: NextConfig = {
       "recharts",
       // Animation
       "gsap",
+      // 3D / 2D effects (available for page-level use)
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "pixi.js",
       "gsap/ScrollTrigger",
       "@gsap/react",
       "lenis",
