@@ -1,17 +1,22 @@
 /**
- * /privacy -- プライバシーポリシーページ
+ * /privacy — プライバシーポリシーページ（Page-First アーキテクチャ）
  *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
- * コンテンツ: DB セクション（HERO + CUSTOM）を SectionRenderer で描画
+ * SEO: generatePageMetadata
+ * コンテンツ: DB セクションを SectionRenderer で描画
+ *
+ * NOTE: privacy ページは管理画面でカスタムセクションを使用してコンテンツを構成するため、
+ * SectionRenderer を維持する。PageHero + Breadcrumb で統一的なヘッダーを提供。
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -26,16 +31,17 @@ export default async function PrivacyPage(): Promise<ReactElement> {
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "プライバシーポリシー", url: "/privacy" },
-        ]}
+      <PageHero
+        variant="compact"
+        title="プライバシーポリシー"
+        breadcrumb={<Breadcrumb items={[{ label: "プライバシーポリシー" }]} />}
       />
 
       {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
+
+      <SiteCTA />
     </>
   );
 }

@@ -1,10 +1,10 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
-import {
-  BreadcrumbJsonLd,
-  NewsArticleJsonLd,
-} from "@/public/components/seo/JsonLd";
-import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
+import { NewsArticleJsonLd } from "@/public/components/seo/JsonLd";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -15,6 +15,7 @@ import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString } from "@/shared/lib/serialize";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 type PublishedNewsItem = NonNullable<
   Awaited<ReturnType<typeof getPublishedNewsItem>>
@@ -65,14 +66,6 @@ export async function NewsDetailPageContent({
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "お知らせ", url: "/news" },
-          { name: newsItem.title, url: newsItem.url },
-        ]}
-      />
-
       <NewsArticleJsonLd
         headline={newsItem.title}
         description={newsItem.metaDescription ?? newsItem.title}
@@ -83,19 +76,36 @@ export async function NewsDetailPageContent({
         datePublished={datePublished}
       />
 
-      <ArticleDetailHero
+      <PageHero
+        variant="compact"
         title={newsItem.title}
-        publishedAt={newsItem.publishedAt}
+        breadcrumb={
+          <Breadcrumb
+            items={[
+              { label: "お知らせ", href: "/news" },
+              { label: newsItem.title },
+            ]}
+          />
+        }
       />
 
-      <article className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
-        <div className={contentClassName} style={contentStyle}>
-          <SanitizedHtml
-            html={newsItem.contentHtml}
-            className="prose prose-lg max-w-none"
-          />
-        </div>
+      <article className="py-[var(--spacing-section)]">
+        <Container variant="narrow">
+          <div className="mb-6 text-sm text-muted-foreground">
+            <time dateTime={newsItem.publishedAt ?? undefined}>
+              {formatSerializedDate(newsItem.publishedAt)}
+            </time>
+          </div>
+          <div className={contentClassName} style={contentStyle}>
+            <SanitizedHtml
+              html={newsItem.contentHtml}
+              className="prose prose-lg max-w-none"
+            />
+          </div>
+        </Container>
       </article>
+
+      <SiteCTA />
     </>
   );
 }

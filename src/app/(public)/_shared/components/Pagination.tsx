@@ -60,7 +60,7 @@ export function Pagination({
           href={getHref(page)}
           className={`rounded-md border px-3 py-2 text-sm transition-colors ${
             page === currentPage
-              ? "border-primary bg-primary text-primary-foreground"
+              ? "border-accent bg-accent text-accent-foreground"
               : "border-border text-muted-foreground hover:bg-accent"
           }`}
           aria-current={page === currentPage ? "page" : undefined}

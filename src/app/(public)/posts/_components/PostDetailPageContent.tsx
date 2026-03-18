@@ -1,10 +1,11 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
-import {
-  ArticleJsonLd,
-  BreadcrumbJsonLd,
-} from "@/public/components/seo/JsonLd";
-import { ArticleDetailHero } from "@/public/components/ArticleDetailHero";
+import { ArticleJsonLd } from "@/public/components/seo/JsonLd";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { Badge } from "@/public/components/design-system/badge";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -14,7 +15,7 @@ import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { getPostLayoutSettings } from "@/shared/domain/settings/queries";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
-import { toISOString } from "@/shared/lib/serialize";
+import { toISOString, formatSerializedDate } from "@/shared/lib/serialize";
 
 type PublishedPost = NonNullable<Awaited<ReturnType<typeof getPublishedPost>>>;
 
@@ -63,14 +64,6 @@ export async function PostDetailPageContent({
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "ブログ", url: "/posts" },
-          { name: post.title, url: post.url },
-        ]}
-      />
-
       <ArticleJsonLd
         headline={post.title}
         description={post.metaDescription ?? post.excerpt}
@@ -80,36 +73,58 @@ export async function PostDetailPageContent({
         {...(post.author ? { author: { name: post.author.name } } : {})}
       />
 
-      <ArticleDetailHero
+      <PageHero
+        variant="compact"
         title={post.title}
-        categoryName={post.category?.name ?? null}
-        publishedAt={toISOString(post.publishedAt) ?? null}
-        authorName={post.author?.name ?? null}
+        breadcrumb={
+          <Breadcrumb
+            items={[{ label: "ブログ", href: "/posts" }, { label: post.title }]}
+          />
+        }
       />
 
-      <article className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
-        <div className={contentClassName} style={contentStyle}>
-          <SanitizedHtml
-            html={post.contentHtml}
-            className="prose prose-lg max-w-none"
-          />
-        </div>
-
-        {post.postTags.length > 0 && (
-          <div className="mt-12 border-t border-border pt-6">
-            <div className="flex flex-wrap gap-2">
-              {post.postTags.map((postTag) => (
-                <span
-                  key={postTag.tag.slug}
-                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
-                >
-                  {postTag.tag.name}
-                </span>
-              ))}
-            </div>
+      <article className="py-[var(--spacing-section)]">
+        <Container variant="narrow">
+          <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            {post.category?.name ? <Badge>{post.category.name}</Badge> : null}
+            <time
+              dateTime={post.publishedAt ? String(post.publishedAt) : undefined}
+            >
+              {formatSerializedDate(toISOString(post.publishedAt))}
+            </time>
+            {post.author?.name ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <span>{post.author.name}</span>
+              </>
+            ) : null}
           </div>
-        )}
+
+          <div className={contentClassName} style={contentStyle}>
+            <SanitizedHtml
+              html={post.contentHtml}
+              className="prose prose-lg max-w-none"
+            />
+          </div>
+
+          {post.postTags.length > 0 ? (
+            <div className="mt-12 border-t border-border pt-6">
+              <div className="flex flex-wrap gap-2">
+                {post.postTags.map((postTag) => (
+                  <span
+                    key={postTag.tag.slug}
+                    className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                  >
+                    {postTag.tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </Container>
       </article>
+
+      <SiteCTA />
     </>
   );
 }

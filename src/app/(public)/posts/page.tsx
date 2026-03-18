@@ -1,10 +1,7 @@
 /**
- * /posts — ブログ記事一覧ページ
+ * /posts — ブログ記事一覧ページ（Page-First アーキテクチャ）
  *
- * パターンB: セクション + カスタムコンテンツ
- * セクション（Hero等）をレンダー後、記事グリッド + ページネーション
- *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
+ * SEO: generatePageMetadata
  * ページネーション: nuqs createSearchParamsCache
  */
 
@@ -12,11 +9,12 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
-import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Pagination } from "@/public/components/Pagination";
 import { paginationSearchParams } from "@/public/lib/search-params";
 import { PostGrid } from "./_components/PostGrid";
@@ -36,10 +34,7 @@ export default async function PostsPage({
 }: PageProps): Promise<ReactElement> {
   await connection();
 
-  const [sections, { page }] = await Promise.all([
-    getPageSectionsWithFallback("posts"),
-    paginationSearchParams.parse(searchParams),
-  ]);
+  const { page } = await paginationSearchParams.parse(searchParams);
 
   const { posts, totalPages, currentPage } = await getPublishedPostsList(
     Math.max(1, page),
@@ -47,25 +42,24 @@ export default async function PostsPage({
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "ブログ", url: "/posts" },
-        ]}
+      <PageHero
+        variant="compact"
+        title="ブログ"
+        breadcrumb={<Breadcrumb items={[{ label: "ブログ" }]} />}
       />
 
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
-
-      <section className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
-        <PostGrid posts={posts} />
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          basePath="/posts"
-        />
+      <section className="py-[var(--spacing-section)]">
+        <Container>
+          <PostGrid posts={posts} />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            basePath="/posts"
+          />
+        </Container>
       </section>
+
+      <SiteCTA />
     </>
   );
 }

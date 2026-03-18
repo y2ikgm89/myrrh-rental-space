@@ -101,7 +101,7 @@ export function PostPreviewContent({
 
   return (
     <>
-      <div className="bg-primary/10 py-2 text-center text-xs text-primary">
+      <div className="bg-accent/10 py-2 text-center text-xs text-accent">
         プレビューモード — このページは公開されていません
       </div>
       <ArticleDetailHero
