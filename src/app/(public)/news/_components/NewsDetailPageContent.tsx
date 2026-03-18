@@ -10,6 +10,7 @@ import {
   getSeoSettings,
 } from "@/public/lib/seo/metadata-factory";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { ShareButtons } from "@/public/components/ui/share-buttons";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries";
@@ -100,6 +101,12 @@ export async function NewsDetailPageContent({
             <SanitizedHtml
               html={newsItem.contentHtml}
               className="prose prose-lg max-w-none"
+            />
+          </div>
+          <div className="mt-12 border-t border-border pt-6">
+            <ShareButtons
+              url={`${baseUrl}${newsItem.url}`}
+              title={newsItem.title}
             />
           </div>
         </Container>

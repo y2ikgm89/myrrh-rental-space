@@ -11,6 +11,7 @@ import {
   getSeoSettings,
 } from "@/public/lib/seo/metadata-factory";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { ShareButtons } from "@/public/components/ui/share-buttons";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { getPostLayoutSettings } from "@/shared/domain/settings/queries";
@@ -121,6 +122,9 @@ export async function PostDetailPageContent({
               </div>
             </div>
           ) : null}
+          <div className="mt-12 border-t border-border pt-6">
+            <ShareButtons url={`${baseUrl}${post.url}`} title={post.title} />
+          </div>
         </Container>
       </article>
 

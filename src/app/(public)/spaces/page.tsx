@@ -15,12 +15,20 @@ import {
   spaceListContentSchema,
   defaultSpaceListContent,
 } from "@/public/lib/content/schemas/space-list";
-import { getPublishedSpaces } from "@/shared/domain/spaces/public-queries";
+import {
+  getPublishedSpaces,
+  getActiveCategories,
+} from "@/shared/domain/spaces/public-queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { FilterBar } from "@/public/components/ui/filter-bar";
 import { SpaceGrid } from "./_components/space-grid";
+
+interface SpacesPageProps {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -28,16 +36,25 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("spaces");
 }
 
-export default async function SpacesPage(): Promise<ReactElement> {
+export default async function SpacesPage({
+  searchParams,
+}: SpacesPageProps): Promise<ReactElement> {
   await connection();
 
-  const [content, spaces] = await Promise.all([
+  const resolvedParams = await searchParams;
+  const categoryId =
+    typeof resolvedParams["category"] === "string"
+      ? resolvedParams["category"]
+      : undefined;
+
+  const [content, spaces, categories] = await Promise.all([
     getPageContent(
       "space-list",
       spaceListContentSchema,
       defaultSpaceListContent,
     ),
-    getPublishedSpaces(),
+    getPublishedSpaces(categoryId),
+    getActiveCategories(),
   ]);
 
   return (
@@ -55,6 +72,11 @@ export default async function SpacesPage(): Promise<ReactElement> {
               {content.hero.description}
             </p>
           ) : null}
+          <Suspense fallback={null}>
+            <div className="mb-8">
+              <FilterBar categories={categories} />
+            </div>
+          </Suspense>
           <Suspense fallback={null}>
             <SpaceGrid spaces={spaces} />
           </Suspense>

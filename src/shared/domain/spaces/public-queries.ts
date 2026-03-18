@@ -7,13 +7,17 @@ import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 /**
  * 公開済み・有効なスペース一覧を取得（カテゴリ付き）
  */
-export async function getPublishedSpaces() {
+export async function getPublishedSpaces(categoryId?: string) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
   return prisma.space.findMany({
-    where: { isPublished: true, isActive: true },
+    where: {
+      isPublished: true,
+      isActive: true,
+      ...(categoryId ? { categoryId } : {}),
+    },
     select: {
       id: true,
       slug: true,
