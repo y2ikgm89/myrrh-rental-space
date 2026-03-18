@@ -4,5 +4,8 @@ export { Card } from "./card";
 export { Container } from "./container";
 export { Heading } from "./heading";
 export { ImageFrame } from "./image-frame";
+export { Input } from "./input";
 export { Prose } from "./prose";
+export { Select } from "./select";
 export { Stack } from "./stack";
+export { Textarea } from "./textarea";

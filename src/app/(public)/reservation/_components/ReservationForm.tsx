@@ -14,11 +14,16 @@ import { useState, useRef, type ReactElement } from "react";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { Input, Select, Textarea } from "@/public/components/design-system";
 import { StepIndicator } from "./StepIndicator";
 import { DURATION, EASE } from "@/public/lib/animations";
 
-const INPUT_CLASS =
-  "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent";
+const TIMESLOT_OPTIONS = [
+  { value: "10-13", label: "10:00 - 13:00 (3時間)" },
+  { value: "13-17", label: "13:00 - 17:00 (4時間)" },
+  { value: "17-21", label: "17:00 - 21:00 (4時間)" },
+  { value: "10-21", label: "10:00 - 21:00 (終日)" },
+] as const;
 
 function DateTimeStep({
   onNext,
@@ -32,45 +37,22 @@ function DateTimeStep({
       </h2>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label
-            htmlFor="reservation-date"
-            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-          >
-            ご利用日
-          </label>
-          <input id="reservation-date" type="date" className={INPUT_CLASS} />
-        </div>
-        <div>
-          <label
-            htmlFor="reservation-timeslot"
-            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-          >
-            時間帯
-          </label>
-          <select id="reservation-timeslot" className={INPUT_CLASS}>
-            <option>10:00 - 13:00 (3時間)</option>
-            <option>13:00 - 17:00 (4時間)</option>
-            <option>17:00 - 21:00 (4時間)</option>
-            <option>10:00 - 21:00 (終日)</option>
-          </select>
-        </div>
+        <Input id="reservation-date" label="ご利用日" type="date" />
+        <Select
+          id="reservation-timeslot"
+          label="時間帯"
+          options={TIMESLOT_OPTIONS}
+        />
       </div>
 
       <div className="mt-5">
-        <label
-          htmlFor="reservation-capacity"
-          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-        >
-          利用人数
-        </label>
-        <input
+        <Input
           id="reservation-capacity"
+          label="利用人数"
           type="number"
           min={1}
           max={100}
           defaultValue={10}
-          className={INPUT_CLASS}
         />
       </div>
 
@@ -97,63 +79,35 @@ function InfoStep({
       </h2>
 
       <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label
-            htmlFor="reservation-name"
-            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-          >
-            お名前
-          </label>
-          <input
-            id="reservation-name"
-            type="text"
-            placeholder="山田 太郎"
-            className={INPUT_CLASS}
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="reservation-email"
-            className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-          >
-            メールアドレス
-          </label>
-          <input
-            id="reservation-email"
-            type="email"
-            placeholder="mail@example.com"
-            className={INPUT_CLASS}
-          />
-        </div>
-      </div>
-
-      <div className="mt-5">
-        <label
-          htmlFor="reservation-phone"
-          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-        >
-          電話番号
-        </label>
-        <input
-          id="reservation-phone"
-          type="tel"
-          placeholder="03-1234-5678"
-          className={INPUT_CLASS}
+        <Input
+          id="reservation-name"
+          label="お名前"
+          type="text"
+          placeholder="山田 太郎"
+        />
+        <Input
+          id="reservation-email"
+          label="メールアドレス"
+          type="email"
+          placeholder="mail@example.com"
         />
       </div>
 
       <div className="mt-5">
-        <label
-          htmlFor="reservation-notes"
-          className="mb-2 block text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
-        >
-          備考
-        </label>
-        <textarea
+        <Input
+          id="reservation-phone"
+          label="電話番号"
+          type="tel"
+          placeholder="03-1234-5678"
+        />
+      </div>
+
+      <div className="mt-5">
+        <Textarea
           id="reservation-notes"
+          label="備考"
           rows={3}
           placeholder="ご要望などございましたらお書きください"
-          className={INPUT_CLASS}
         />
       </div>
 
