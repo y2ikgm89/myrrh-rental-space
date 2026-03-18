@@ -1,18 +1,19 @@
 ---
 paths:
-  - src/app/(public*)/_shared/components/effects/**
+  - src/app/(public*)/_shared/components/animations/**
   - src/app/(public*)/_shared/lib/animations*
-  - src/app/(public*)/_shared/lib/a11y/motion*
 ---
 
 # ビジュアルエフェクトアーキテクチャ
 
-> エフェクトレベル L1-L4 / パフォーマンスバジェット / GPU検出 / WebGLコンテキスト管理
+> **注意**: 旧 ExperienceShell / VisualEffectsProvider / effects/ インフラは削除済み。
+> Three.js/PixiJS はパッケージとして利用可能だが、ページコンポーネントから直接 import して使用すること。
+> 以下のエフェクトレベルシステムは参考情報として維持（旧アーキテクチャの設計思想）。
 
 ## 概要
 
-公開ページのビジュアルエフェクトは4段階のレベルシステムで管理。
-デバイスのGPU能力に応じて自動的にエフェクトレベルを決定し、パフォーマンスを保証する。
+公開ページのビジュアルエフェクトは Page-First Architecture に基づき、ページコンポーネントから直接制御する。
+GSAP + Lenis が主要アニメーション基盤。Three.js/PixiJS は必要なページに直接統合する。
 
 > **詳細リファレンス**: `docs/reference/claude-rules/visual-effects-reference.md`
 

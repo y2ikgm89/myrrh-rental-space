@@ -1,7 +1,7 @@
 ---
 name: react-compiler-reviewer
 description: >
-  React Compiler 1.0 互換性レビュー専門エージェント。GSAP / Three.js / Lenis / Lexical を
+  React Compiler 1.0 互換性レビュー専門エージェント。GSAP / Lenis / Lexical / Three.js を
   含むコンポーネント編集後に使用。Rules of React 違反・手動メモ化・ref 不正アクセス・
   ライブラリ非互換パターンを検出し、修正案を提示する。
 tools:
