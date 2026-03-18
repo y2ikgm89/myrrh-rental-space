@@ -2,7 +2,24 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import {
+  CACHE_LIFE,
+  CACHE_TAGS,
+  PAGINATION_DEFAULTS,
+  getCacheTag,
+} from "@/shared/lib/constants";
+
+const spaceListSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  description: true,
+  capacity: true,
+  area: true,
+  hourlyPrice: true,
+  mainImageUrl: true,
+  category: { select: { id: true, name: true } },
+} as const;
 
 /**
  * 公開済み・有効なスペース一覧を取得（カテゴリ付き）
@@ -18,19 +35,47 @@ export async function getPublishedSpaces(categoryId?: string) {
       isActive: true,
       ...(categoryId ? { categoryId } : {}),
     },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      capacity: true,
-      area: true,
-      hourlyPrice: true,
-      mainImageUrl: true,
-      category: { select: { id: true, name: true } },
-    },
+    select: spaceListSelect,
     orderBy: { name: "asc" },
   });
+}
+
+/**
+ * 公開済み・有効なスペース一覧をページネーション付きで取得
+ */
+export async function getPublishedSpacesPaginated(
+  page: number = 1,
+  perPage: number = PAGINATION_DEFAULTS.public.default,
+  categoryId?: string,
+) {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.SPACES);
+
+  const where = {
+    isPublished: true,
+    isActive: true,
+    ...(categoryId ? { categoryId } : {}),
+  };
+
+  const skip = (page - 1) * perPage;
+
+  const [items, totalCount] = await Promise.all([
+    prisma.space.findMany({
+      where,
+      select: spaceListSelect,
+      orderBy: { name: "asc" },
+      skip,
+      take: perPage,
+    }),
+    prisma.space.count({ where }),
+  ]);
+
+  return {
+    items,
+    totalPages: Math.ceil(totalCount / perPage),
+    currentPage: page,
+  };
 }
 
 /**

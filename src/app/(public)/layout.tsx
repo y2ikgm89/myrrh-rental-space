@@ -20,8 +20,8 @@ import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
-import { Header } from "@/public/components/layouts/Header";
-import { Footer } from "@/public/components/layouts/Footer";
+import { Header } from "@/public/components/layouts/site-header";
+import { Footer } from "@/public/components/layouts/site-footer";
 import {
   AnalyticsProvider,
   WebVitalsReporter,

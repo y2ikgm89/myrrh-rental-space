@@ -10,6 +10,9 @@ import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageContent } from "@/public/lib/content/queries";
+import { simplePageContentSchema } from "@/public/lib/content/schemas";
+import { defaultNewsListContent } from "@/public/lib/content/defaults/news-list";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
@@ -36,16 +39,17 @@ export default async function NewsPage({
 
   const { page } = await paginationSearchParams.parse(searchParams);
 
-  const { items, totalPages, currentPage } = await getPublishedNewsList(
-    Math.max(1, page),
-  );
+  const [content, { items, totalPages, currentPage }] = await Promise.all([
+    getPageContent("news", simplePageContentSchema, defaultNewsListContent),
+    getPublishedNewsList(Math.max(1, page)),
+  ]);
 
   return (
     <>
       <PageHero
         variant="compact"
-        title="お知らせ"
-        breadcrumb={<Breadcrumb items={[{ label: "お知らせ" }]} />}
+        title={content.hero.title}
+        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
       />
 
       <section className="py-[var(--spacing-section)]">

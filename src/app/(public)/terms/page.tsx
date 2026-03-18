@@ -12,6 +12,9 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageContent } from "@/public/lib/content/queries";
+import { simplePageContentSchema } from "@/public/lib/content/schemas";
+import { defaultTermsContent } from "@/public/lib/content/defaults/terms";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { PageHero } from "@/public/components/layouts/page-hero";
@@ -27,14 +30,17 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function TermsPage(): Promise<ReactElement> {
   await connection();
 
-  const sections = await getPageSectionsWithFallback("terms");
+  const [content, sections] = await Promise.all([
+    getPageContent("terms", simplePageContentSchema, defaultTermsContent),
+    getPageSectionsWithFallback("terms"),
+  ]);
 
   return (
     <>
       <PageHero
         variant="compact"
-        title="利用規約"
-        breadcrumb={<Breadcrumb items={[{ label: "利用規約" }]} />}
+        title={content.hero.title}
+        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
       />
 
       {sections.map((section) => (

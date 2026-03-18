@@ -3,6 +3,7 @@ import { Heading } from "../../_shared/components/design-system/heading";
 import { Prose } from "../../_shared/components/design-system/prose";
 import { ImageFrame } from "../../_shared/components/design-system/image-frame";
 import { ScrollReveal } from "../../_shared/components/animations/scroll-reveal";
+import { ParallaxLayer } from "../../_shared/components/animations/parallax-layer";
 import type { HomepageContent } from "../../_shared/lib/content/schemas";
 
 interface ConceptSectionProps {
@@ -26,14 +27,16 @@ export function ConceptSection({ content }: ConceptSectionProps) {
                 <p>{content.body}</p>
               </Prose>
             </div>
-            <ImageFrame
-              src={content.image.src}
-              alt={content.image.alt}
-              width={content.image.width}
-              height={content.image.height}
-              aspect="portrait"
-              sizes="(min-width: 1024px) 50vw, 100vw"
-            />
+            <ParallaxLayer speed={0.15}>
+              <ImageFrame
+                src={content.image.src}
+                alt={content.image.alt}
+                width={content.image.width}
+                height={content.image.height}
+                aspect="portrait"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+              />
+            </ParallaxLayer>
           </div>
         </ScrollReveal>
       </Container>

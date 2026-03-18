@@ -11,6 +11,9 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageContent } from "@/public/lib/content/queries";
+import { simplePageContentSchema } from "@/public/lib/content/schemas";
+import { defaultFaqContent } from "@/public/lib/content/defaults/faq";
 import { getPublishedFaqItems } from "@/shared/domain/sections/queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
@@ -27,7 +30,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
 
-  const items = await getPublishedFaqItems(50);
+  const [content, items] = await Promise.all([
+    getPageContent("faq", simplePageContentSchema, defaultFaqContent),
+    getPublishedFaqItems(50),
+  ]);
 
   // Strip HTML tags for plain text in JSON-LD Answer
   // Content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
@@ -61,8 +67,8 @@ export default async function FaqPage(): Promise<ReactElement> {
 
       <PageHero
         variant="compact"
-        title="よくある質問"
-        breadcrumb={<Breadcrumb items={[{ label: "よくある質問" }]} />}
+        title={content.hero.title}
+        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
       />
 
       <section className="py-[var(--spacing-section)]">

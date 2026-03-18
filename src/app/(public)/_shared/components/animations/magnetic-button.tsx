@@ -59,7 +59,7 @@ export function MagneticButton({
     });
   };
 
-  const baseClassName = `relative inline-flex items-center justify-center overflow-hidden rounded-full border border-primary/40 bg-transparent px-8 py-3.5 font-heading text-xs uppercase tracking-[0.2em] text-primary-dark transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-dark focus-visible:ring-offset-2 focus-visible:ring-offset-background md:px-10 md:py-4 md:text-sm ${className}`;
+  const baseClassName = `relative inline-flex items-center justify-center overflow-hidden rounded-full border border-accent/40 bg-transparent px-8 py-3.5 font-heading text-xs uppercase tracking-[0.2em] text-accent transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background md:px-10 md:py-4 md:text-sm ${className}`;
 
   if (href) {
     return (

@@ -50,3 +50,19 @@ export const homepageContentSchema = z.object({
 
 /** ホームページコンテンツ型 */
 export type HomepageContent = z.infer<typeof homepageContentSchema>;
+
+/**
+ * シンプルページコンテンツスキーマ
+ *
+ * compact hero（タイトル + 説明文）のみのページで共通使用
+ * 対象: contact, faq, about, news, posts, reservation, terms, privacy
+ */
+export const simplePageContentSchema = z.object({
+  hero: z.object({
+    title: z.string(),
+    description: z.string(),
+  }),
+});
+
+/** シンプルページコンテンツ型 */
+export type SimplePageContent = z.infer<typeof simplePageContentSchema>;

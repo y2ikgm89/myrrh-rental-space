@@ -10,6 +10,9 @@ import type { ReactElement } from "react";
 import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
+import { getPageContent } from "@/public/lib/content/queries";
+import { simplePageContentSchema } from "@/public/lib/content/schemas";
+import { defaultPostsListContent } from "@/public/lib/content/defaults/posts-list";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
@@ -36,16 +39,17 @@ export default async function PostsPage({
 
   const { page } = await paginationSearchParams.parse(searchParams);
 
-  const { posts, totalPages, currentPage } = await getPublishedPostsList(
-    Math.max(1, page),
-  );
+  const [content, { posts, totalPages, currentPage }] = await Promise.all([
+    getPageContent("posts", simplePageContentSchema, defaultPostsListContent),
+    getPublishedPostsList(Math.max(1, page)),
+  ]);
 
   return (
     <>
       <PageHero
         variant="compact"
-        title="ブログ"
-        breadcrumb={<Breadcrumb items={[{ label: "ブログ" }]} />}
+        title={content.hero.title}
+        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
       />
 
       <section className="py-[var(--spacing-section)]">

@@ -106,14 +106,6 @@ const nextConfig: NextConfig = {
       "gsap/ScrollTrigger",
       "@gsap/react",
       "lenis",
-      // Three.js / React Three Fiber
-      "three",
-      "@react-three/fiber",
-      "@react-three/drei",
-      // PixiJS
-      "pixi.js",
-      // GPU detection
-      "detect-gpu",
       // DnD
       "@dnd-kit/core",
       "@dnd-kit/sortable",

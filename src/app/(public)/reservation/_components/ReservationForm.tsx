@@ -15,7 +15,7 @@ import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { Input, Select, Textarea } from "@/public/components/design-system";
-import { StepIndicator } from "./StepIndicator";
+import { StepIndicator } from "@/public/components/ui/step-indicator";
 import { DURATION, EASE } from "@/public/lib/animations";
 
 const TIMESLOT_OPTIONS = [

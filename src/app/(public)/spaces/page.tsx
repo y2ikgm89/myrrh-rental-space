@@ -7,27 +7,29 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageContent } from "@/public/lib/content/queries";
+import { spaceListContentSchema } from "@/public/lib/content/schemas/space-list";
+import { defaultSpaceListContent } from "@/public/lib/content/defaults/space-list";
 import {
-  spaceListContentSchema,
-  defaultSpaceListContent,
-} from "@/public/lib/content/schemas/space-list";
-import {
-  getPublishedSpaces,
+  getPublishedSpacesPaginated,
   getActiveCategories,
 } from "@/shared/domain/spaces/public-queries";
+import { paginationSearchParams } from "@/public/lib/search-params";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { Pagination } from "@/public/components/Pagination";
+import { FadeIn } from "@/public/components/animations/fade-in";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import { SpaceGrid } from "./_components/space-grid";
 
 interface SpacesPageProps {
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+  readonly searchParams: Promise<SearchParams>;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,21 +43,23 @@ export default async function SpacesPage({
 }: SpacesPageProps): Promise<ReactElement> {
   await connection();
 
+  const { page } = await paginationSearchParams.parse(searchParams);
   const resolvedParams = await searchParams;
   const categoryId =
     typeof resolvedParams["category"] === "string"
       ? resolvedParams["category"]
       : undefined;
 
-  const [content, spaces, categories] = await Promise.all([
-    getPageContent(
-      "space-list",
-      spaceListContentSchema,
-      defaultSpaceListContent,
-    ),
-    getPublishedSpaces(categoryId),
-    getActiveCategories(),
-  ]);
+  const [content, { items, totalPages, currentPage }, categories] =
+    await Promise.all([
+      getPageContent(
+        "space-list",
+        spaceListContentSchema,
+        defaultSpaceListContent,
+      ),
+      getPublishedSpacesPaginated(Math.max(1, page), undefined, categoryId),
+      getActiveCategories(),
+    ]);
 
   return (
     <>
@@ -68,9 +72,11 @@ export default async function SpacesPage({
       <section className="py-[var(--spacing-section)]">
         <Container>
           {content.hero.description ? (
-            <p className="mb-8 text-center text-muted-foreground">
-              {content.hero.description}
-            </p>
+            <FadeIn className="mb-8">
+              <p className="text-center text-muted-foreground">
+                {content.hero.description}
+              </p>
+            </FadeIn>
           ) : null}
           <Suspense fallback={null}>
             <div className="mb-8">
@@ -78,8 +84,13 @@ export default async function SpacesPage({
             </div>
           </Suspense>
           <Suspense fallback={null}>
-            <SpaceGrid spaces={spaces} />
+            <SpaceGrid spaces={items} />
           </Suspense>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            basePath="/spaces"
+          />
         </Container>
       </section>
 

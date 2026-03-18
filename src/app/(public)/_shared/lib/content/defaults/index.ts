@@ -1,0 +1,10 @@
+export { defaultHomepageContent } from "./homepage";
+export { defaultSpaceListContent } from "./space-list";
+export { defaultContactContent } from "./contact";
+export { defaultFaqContent } from "./faq";
+export { defaultAboutContent } from "./about";
+export { defaultNewsListContent } from "./news-list";
+export { defaultPostsListContent } from "./posts-list";
+export { defaultReservationContent } from "./reservation";
+export { defaultTermsContent } from "./terms";
+export { defaultPrivacyContent } from "./privacy";

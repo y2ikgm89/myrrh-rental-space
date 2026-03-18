@@ -20,7 +20,18 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
 import { hashPassword } from "better-auth/crypto";
-import { defaultHomepageContent } from "../src/app/(public)/_shared/lib/content/defaults/homepage";
+import {
+  defaultHomepageContent,
+  defaultSpaceListContent,
+  defaultContactContent,
+  defaultFaqContent,
+  defaultAboutContent,
+  defaultNewsListContent,
+  defaultPostsListContent,
+  defaultReservationContent,
+  defaultTermsContent,
+  defaultPrivacyContent,
+} from "../src/app/(public)/_shared/lib/content/defaults";
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
@@ -2475,22 +2486,90 @@ async function seedSocialLinks() {
 }
 
 // =============================================================================
-// Page Content (Homepage)
+// Page Content (All Pages)
 // =============================================================================
 
 async function seedPageContent() {
-  await prisma.pageContent.upsert({
-    where: { pageKey: "homepage" },
-    update: {},
-    create: {
+  const pages = [
+    {
       pageKey: "homepage",
       content: defaultHomepageContent,
       metaTitle: "Myrrh Rental Space | レンタルスペース",
       metaDescription:
         "撮影、会議、イベントに最適な上質レンタルスペース。1時間から柔軟にご利用いただけます。",
     },
-  });
-  console.log("✅ Page content seeded (homepage)");
+    {
+      pageKey: "space-list",
+      content: defaultSpaceListContent,
+      metaTitle: "スペース一覧 | Myrrh Rental Space",
+      metaDescription:
+        "ご利用シーンに合わせた多彩なスペースをご用意しています。撮影、会議、イベントに最適な空間をお探しください。",
+    },
+    {
+      pageKey: "contact",
+      content: defaultContactContent,
+      metaTitle: "お問い合わせ | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space へのご質問・ご相談はお気軽にどうぞ。見学のご予約も承っております。",
+    },
+    {
+      pageKey: "faq",
+      content: defaultFaqContent,
+      metaTitle: "よくある質問 | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space のご利用に関するよくある質問をまとめました。",
+    },
+    {
+      pageKey: "about",
+      content: defaultAboutContent,
+      metaTitle: "私たちについて | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space のコンセプトとこだわりをご紹介します。",
+    },
+    {
+      pageKey: "news",
+      content: defaultNewsListContent,
+      metaTitle: "お知らせ | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space からの最新情報・キャンペーン情報をお届けします。",
+    },
+    {
+      pageKey: "posts",
+      content: defaultPostsListContent,
+      metaTitle: "ブログ | Myrrh Rental Space",
+      metaDescription: "スペース活用のヒントやイベントレポートをお届けします。",
+    },
+    {
+      pageKey: "reservation",
+      content: defaultReservationContent,
+      metaTitle: "ご予約 | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space のご予約はこちらから。ご希望の日時・スペースをお選びください。",
+    },
+    {
+      pageKey: "terms",
+      content: defaultTermsContent,
+      metaTitle: "利用規約 | Myrrh Rental Space",
+      metaDescription: "Myrrh Rental Space のご利用にあたっての規約です。",
+    },
+    {
+      pageKey: "privacy",
+      content: defaultPrivacyContent,
+      metaTitle: "プライバシーポリシー | Myrrh Rental Space",
+      metaDescription:
+        "Myrrh Rental Space における個人情報の取り扱いについてご説明します。",
+    },
+  ];
+
+  for (const page of pages) {
+    await prisma.pageContent.upsert({
+      where: { pageKey: page.pageKey },
+      update: {},
+      create: page,
+    });
+  }
+
+  console.log(`✅ Page content seeded (${pages.length} pages)`);
 }
 
 // =============================================================================
