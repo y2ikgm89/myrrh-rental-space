@@ -18,7 +18,7 @@ import { StepIndicator } from "./StepIndicator";
 import { DURATION, EASE } from "@/public/lib/animations";
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary";
+  "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent";
 
 function DateTimeStep({
   onNext,
@@ -180,7 +180,7 @@ function ConfirmationStep({
 }): ReactElement {
   return (
     <div>
-      <div className="rounded-lg border border-primary/20 bg-card p-5 md:p-8">
+      <div className="rounded-lg border border-accent/20 bg-card p-5 md:p-8">
         <h3 className="font-heading text-xl tracking-tight">予約内容の確認</h3>
 
         <div className="mt-6 space-y-4">
@@ -202,7 +202,7 @@ function ConfirmationStep({
           </div>
           <div className="flex justify-between pt-2">
             <span className="font-heading text-base">概算金額</span>
-            <span className="font-heading text-xl text-primary-dark">
+            <span className="font-heading text-xl text-accent">
               &yen;32,000
             </span>
           </div>
@@ -263,22 +263,20 @@ export function ReservationForm(): ReactElement {
   };
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-2xl px-5 md:px-8">
-        {/* Step indicator */}
-        <div className="mb-10 md:mb-12">
-          <StepIndicator currentStep={step} />
-        </div>
+    <div>
+      {/* Step indicator */}
+      <div className="mb-10 md:mb-12">
+        <StepIndicator currentStep={step} />
+      </div>
 
-        {/* Form content */}
-        <div ref={contentRef}>
-          <div data-step="">
-            {step === 1 && <DateTimeStep onNext={goNext} />}
-            {step === 2 && <InfoStep onNext={goNext} onBack={goBack} />}
-            {step === 3 && <ConfirmationStep onBack={goBack} />}
-          </div>
+      {/* Form content */}
+      <div ref={contentRef}>
+        <div data-step="">
+          {step === 1 && <DateTimeStep onNext={goNext} />}
+          {step === 2 && <InfoStep onNext={goNext} onBack={goBack} />}
+          {step === 3 && <ConfirmationStep onBack={goBack} />}
         </div>
       </div>
-    </section>
+    </div>
   );
 }

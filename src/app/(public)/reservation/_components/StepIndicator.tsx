@@ -41,9 +41,9 @@ export function StepIndicator({
               <div
                 className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-medium transition-all duration-300 md:h-10 md:w-10 ${
                   isActive
-                    ? "border-primary bg-primary text-primary-foreground"
+                    ? "border-accent bg-accent text-accent-foreground"
                     : isCompleted
-                      ? "border-primary bg-primary/10 text-primary-dark"
+                      ? "border-accent bg-accent/10 text-accent"
                       : "border-border bg-surface text-muted-foreground"
                 }`}
               >
@@ -80,7 +80,7 @@ export function StepIndicator({
             {i < STEPS.length - 1 && (
               <div
                 className={`mx-3 mb-5 h-px w-12 transition-colors duration-300 md:mx-4 md:w-16 ${
-                  isCompleted ? "bg-primary" : "bg-border"
+                  isCompleted ? "bg-accent" : "bg-border"
                 }`}
                 aria-hidden="true"
               />
