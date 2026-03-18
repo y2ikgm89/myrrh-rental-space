@@ -1,10 +1,7 @@
 /**
- * /contact — お問い合わせページ
+ * /contact — お問い合わせページ（Page-First アーキテクチャ）
  *
- * パターンB: セクション + カスタムコンテンツ
- * セクション（Hero等）をレンダー後、フォーム + ビジネス情報を配置
- *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
+ * SEO: generatePageMetadata
  */
 
 import type { Metadata } from "next";
@@ -12,10 +9,11 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { ContactForm } from "./_components/ContactForm";
 import { BusinessInfo } from "./_components/BusinessInfo";
 
@@ -28,23 +26,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ContactPage(): Promise<ReactElement> {
   await connection();
 
-  const sections = await getPageSectionsWithFallback("contact");
-
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "お問い合わせ", url: "/contact" },
-        ]}
+      <PageHero
+        variant="compact"
+        title="お問い合わせ"
+        breadcrumb={<Breadcrumb items={[{ label: "お問い合わせ" }]} />}
       />
 
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
-
-      <section className="py-16 md:py-24">
-        <div className="mx-auto max-w-4xl px-5 md:px-8">
+      <section className="py-[var(--spacing-section)]">
+        <Container variant="narrow">
           <div className="grid gap-10 md:grid-cols-[1fr_320px] md:gap-12">
             <ContactForm />
             <ScrollReveal delay={0.2}>
@@ -53,8 +44,10 @@ export default async function ContactPage(): Promise<ReactElement> {
               </Suspense>
             </ScrollReveal>
           </div>
-        </div>
+        </Container>
       </section>
+
+      <SiteCTA />
     </>
   );
 }

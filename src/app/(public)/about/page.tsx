@@ -1,17 +1,22 @@
 /**
- * /about -- 私たちについてページ
+ * /about — 会社概要ページ（Page-First アーキテクチャ）
  *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD
- * コンテンツ: DB セクション（HERO + CUSTOM + CTA）を SectionRenderer で描画
+ * SEO: generatePageMetadata
+ * コンテンツ: DB セクションを SectionRenderer で描画
+ *
+ * NOTE: about ページは管理画面でカスタムセクションを使用してコンテンツを構成するため、
+ * SectionRenderer を維持する。PageHero + Breadcrumb で統一的なヘッダーを提供。
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -26,16 +31,17 @@ export default async function AboutPage(): Promise<ReactElement> {
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "私たちについて", url: "/about" },
-        ]}
+      <PageHero
+        variant="compact"
+        title="私たちについて"
+        breadcrumb={<Breadcrumb items={[{ label: "私たちについて" }]} />}
       />
 
       {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
+
+      <SiteCTA />
     </>
   );
 }

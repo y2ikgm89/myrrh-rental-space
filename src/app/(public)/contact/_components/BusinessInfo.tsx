@@ -201,7 +201,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               <a
                 itemProp="telephone"
                 href={`tel:${info.phone}`}
-                className="transition-colors hover:text-primary-dark"
+                className="transition-colors hover:text-accent"
               >
                 {info.phone}
               </a>
@@ -218,7 +218,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               <a
                 itemProp="email"
                 href={`mailto:${info.email}`}
-                className="transition-colors hover:text-primary-dark"
+                className="transition-colors hover:text-accent"
               >
                 {info.email}
               </a>
@@ -300,7 +300,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
                   href={info.googleMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-primary-dark"
+                  className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
                 >
                   Google Maps で見る
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -311,7 +311,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
                   href={info.googleReviewUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-primary-dark"
+                  className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
                 >
                   Google で口コミを書く
                   <ExternalLink className="h-3.5 w-3.5" />

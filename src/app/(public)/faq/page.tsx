@@ -1,8 +1,7 @@
 /**
- * /faq -- よくある質問ページ
+ * /faq — よくある質問ページ（Page-First アーキテクチャ）
  *
- * SEO: generatePageMetadata + BreadcrumbList JSON-LD + FAQPage JSON-LD
- * コンテンツ: DB セクション（HERO + FAQ_LIST + CTA）を SectionRenderer で描画
+ * SEO: generatePageMetadata + FAQPage JSON-LD
  *
  * NOTE: FAQPage JSON-LD uses dangerouslySetInnerHTML for schema.org structured data.
  * The content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
@@ -11,13 +10,13 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import {
-  getPageSectionsWithFallback,
-  getPublishedFaqItems,
-} from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { getPublishedFaqItems } from "@/shared/domain/sections/queries";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { Container } from "@/public/components/design-system/container";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { FaqAccordion } from "./_components/FaqAccordion";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -28,10 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
 
-  const [sections, items] = await Promise.all([
-    getPageSectionsWithFallback("faq"),
-    getPublishedFaqItems(50),
-  ]);
+  const items = await getPublishedFaqItems(50);
 
   // Strip HTML tags for plain text in JSON-LD Answer
   // Content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
@@ -54,25 +50,28 @@ export default async function FaqPage(): Promise<ReactElement> {
 
   return (
     <>
-      <BreadcrumbJsonLd
-        items={[
-          { name: "ホーム", url: "/" },
-          { name: "よくある質問", url: "/faq" },
-        ]}
-      />
-
       {/* FAQPage JSON-LD -- sanitized via JSON.stringify (no raw HTML in output) */}
       {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */}
-      {faqJsonLd && (
+      {faqJsonLd ? (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
-      )}
+      ) : null}
 
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
+      <PageHero
+        variant="compact"
+        title="よくある質問"
+        breadcrumb={<Breadcrumb items={[{ label: "よくある質問" }]} />}
+      />
+
+      <section className="py-[var(--spacing-section)]">
+        <Container variant="narrow">
+          <FaqAccordion items={items} />
+        </Container>
+      </section>
+
+      <SiteCTA />
     </>
   );
 }
