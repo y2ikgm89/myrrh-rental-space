@@ -51,16 +51,17 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 
 **機能追加（ドメイン別）**
 
-| スキル                                                | 呼び出しタイミング                               |
-| ----------------------------------------------------- | ------------------------------------------------ |
-| `frontend-design`                                     | フロントエンド UI 実装時                         |
-| `create-admin-page`                                   | 管理画面に新リソースを追加する時                 |
-| `create-server-action`                                | Server Action を新規作成する時                   |
-| `add-settings-field`                                  | Settings シングルトンにフィールド追加する時      |
-| `prisma-migration`                                    | DBスキーマ変更時                                 |
-| `new-section`                                         | `[...segments]` カスタムページ用セクション追加時 |
-| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                               |
-| `split-action-file`                                   | 500行超の Server Action ファイル分割時           |
+| スキル                                                | 呼び出しタイミング                                |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| `frontend-design`                                     | フロントエンド UI 実装時                          |
+| `create-admin-page`                                   | 管理画面に新リソースを追加する時                  |
+| `create-server-action`                                | Server Action を新規作成する時                    |
+| `create-page-content`                                 | 公開ページ追加時（スキーマ+デフォルト+seed+page） |
+| `add-settings-field`                                  | Settings シングルトンにフィールド追加する時       |
+| `prisma-migration`                                    | DBスキーマ変更時                                  |
+| `new-section`                                         | `[...segments]` カスタムページ用セクション追加時  |
+| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                                |
+| `split-action-file`                                   | 500行超の Server Action ファイル分割時            |
 
 **問題対応・メンテ**
 
