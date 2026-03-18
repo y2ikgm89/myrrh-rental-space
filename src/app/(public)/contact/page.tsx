@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";

@@ -8,8 +8,8 @@
  */
 
 import type { ReactElement } from "react";
-import { SplitText } from "@/public/components/animations/SplitText";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { SplitText } from "@/public/components/animations/split-text";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 

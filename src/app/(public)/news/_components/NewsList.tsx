@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 
 interface NewsItemData {

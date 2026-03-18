@@ -5,8 +5,8 @@
  */
 
 import type { ReactElement } from "react";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { Input, Textarea } from "@/public/components/design-system";
 
 export function ContactForm(): ReactElement {

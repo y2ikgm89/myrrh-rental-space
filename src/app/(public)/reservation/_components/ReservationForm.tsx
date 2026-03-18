@@ -13,7 +13,7 @@
 import { useState, useRef, type ReactElement } from "react";
 import { gsap } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
-import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { Input, Select, Textarea } from "@/public/components/design-system";
 import { StepIndicator } from "./StepIndicator";
 import { DURATION, EASE } from "@/public/lib/animations";

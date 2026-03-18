@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 
