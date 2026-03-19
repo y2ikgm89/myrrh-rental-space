@@ -36,6 +36,8 @@ import type { Serialized } from "@/shared/lib/serialize";
 // Constants
 // =============================================================================
 
+const PRICE_RANGE_PLACEHOLDER = "\u00A51,000\u301C\u00A55,000/\u6642\u9593";
+
 function getScoreColorClass(score: number): string {
   if (score >= 70) return "text-success";
   if (score >= 40) return "text-warning";
@@ -248,7 +250,7 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
                     <FormControl>
                       <Input
                         {...field}
-                        placeholder="¥1,000〜¥5,000/時間"
+                        placeholder={PRICE_RANGE_PLACEHOLDER}
                         disabled={isPending}
                       />
                     </FormControl>

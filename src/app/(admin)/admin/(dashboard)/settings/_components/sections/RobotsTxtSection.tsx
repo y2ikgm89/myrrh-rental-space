@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
@@ -21,7 +23,6 @@ import {
 } from "@/admin/actions/settings";
 import type { RobotsTxtData } from "@/shared/domain/settings/types";
 import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas";
-import { useRefreshOnSuccess } from "../hooks";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { AlertTriangle, RotateCcw, Info } from "lucide-react";
 
@@ -31,7 +32,7 @@ async function fetchRobotsTxtSettings(): Promise<RobotsTxtData> {
 
 export function RobotsTxtSection() {
   const confirm = useConfirm();
-  const { handleResult } = useRefreshOnSuccess();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<RobotsTxtData | null>(null);
@@ -72,7 +73,12 @@ export function RobotsTxtSection() {
       if (!isMutationError(result)) {
         setWarnings(result.warnings);
       }
-      handleResult(result, "robots.txt設定を更新しました");
+      if (isMutationError(result)) {
+        toast.error(result.error || "保存に失敗しました");
+      } else {
+        toast.success("robots.txt設定を更新しました");
+        router.refresh();
+      }
     });
   }
 
@@ -96,7 +102,12 @@ export function RobotsTxtSection() {
         });
         setWarnings([]);
       }
-      handleResult(result, "robots.txt設定をデフォルトに戻しました");
+      if (isMutationError(result)) {
+        toast.error(result.error || "保存に失敗しました");
+      } else {
+        toast.success("robots.txt設定をデフォルトに戻しました");
+        router.refresh();
+      }
     });
   }
 

@@ -7,6 +7,8 @@
  */
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import {
   Button,
@@ -31,7 +33,6 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import { addCustomApiKey, deleteCustomApiKey } from "@/admin/actions/api-keys";
 import type { CustomApiKeyData } from "@/admin/types/api-keys";
-import { useRefreshOnSuccess } from "../hooks";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
@@ -48,7 +49,7 @@ interface CustomApiKeysSectionProps {
 
 export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
   const confirm = useConfirm();
-  const { handleResult } = useRefreshOnSuccess();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,7 +66,12 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
         setFormData({ name: "", keyName: "", keyValue: "", description: "" });
         setIsDialogOpen(false);
       }
-      handleResult(result, "APIキーを追加しました");
+      if (isMutationError(result)) {
+        toast.error(result.error || "保存に失敗しました");
+      } else {
+        toast.success("APIキーを追加しました");
+        router.refresh();
+      }
     });
   };
 
@@ -80,7 +86,12 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
 
     startTransition(async () => {
       const result = await deleteCustomApiKey(id);
-      handleResult(result, "APIキーを削除しました");
+      if (isMutationError(result)) {
+        toast.error(result.error || "保存に失敗しました");
+      } else {
+        toast.success("APIキーを削除しました");
+        router.refresh();
+      }
     });
   };
 
