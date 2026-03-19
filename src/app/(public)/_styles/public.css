@@ -26,6 +26,7 @@
   --color-card: oklch(0.985 0 0);
   --color-card-foreground: oklch(0.15 0.01 250);
   --color-overlay: oklch(0 0 0 / 0.6);
+  --color-overlay-foreground: oklch(0.985 0 0);
 
   --color-success: oklch(0.55 0.15 145);
   --color-warning: oklch(0.7 0.15 70);

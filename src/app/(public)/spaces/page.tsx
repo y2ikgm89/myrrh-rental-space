@@ -18,7 +18,7 @@ import {
   getPublishedSpacesPaginated,
   getActiveCategories,
 } from "@/shared/domain/spaces/public-queries";
-import { paginationSearchParams } from "@/public/lib/search-params";
+import { spaceSearchParams } from "@/public/lib/search-params";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
@@ -43,12 +43,8 @@ export default async function SpacesPage({
 }: SpacesPageProps): Promise<ReactElement> {
   await connection();
 
-  const { page } = await paginationSearchParams.parse(searchParams);
-  const resolvedParams = await searchParams;
-  const categoryId =
-    typeof resolvedParams["category"] === "string"
-      ? resolvedParams["category"]
-      : undefined;
+  const { page, category: categoryId } =
+    await spaceSearchParams.parse(searchParams);
 
   const [content, { items, totalPages, currentPage }, categories] =
     await Promise.all([
@@ -57,7 +53,11 @@ export default async function SpacesPage({
         spaceListContentSchema,
         defaultSpaceListContent,
       ),
-      getPublishedSpacesPaginated(Math.max(1, page), undefined, categoryId),
+      getPublishedSpacesPaginated(
+        Math.max(1, page),
+        undefined,
+        categoryId ?? undefined,
+      ),
       getActiveCategories(),
     ]);
 

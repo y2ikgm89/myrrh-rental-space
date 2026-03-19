@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import { useTransition } from "react";
 
 interface FilterOption {
@@ -13,21 +13,15 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ categories }: FilterBarProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const [activeCategory, setActiveCategory] = useQueryState(
+    "category",
+    parseAsString.withOptions({ history: "push", shallow: false }),
+  );
   const [isPending, startTransition] = useTransition();
-  const activeCategory = searchParams.get("category");
 
   function handleFilter(categoryId: string | null) {
     startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (categoryId) {
-        params.set("category", categoryId);
-      } else {
-        params.delete("category");
-      }
-      const qs = params.toString();
-      router.push(qs ? `/spaces?${qs}` : "/spaces");
+      void setActiveCategory(categoryId);
     });
   }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { z } from "zod/v4";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { isEditorRole } from "@/admin/lib/permissions";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -119,13 +120,18 @@ export async function deleteMedia(id: string): Promise<MutationResult> {
   });
 }
 
+const bulkDeleteSchema = z.array(z.string().uuid()).min(1);
+
 export async function bulkDeleteMedia(
   ids: string[],
 ): Promise<MutationResult<{ deleted: number }>> {
+  const parsed = bulkDeleteSchema.safeParse(ids);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "media",
     action: "delete",
-    execute: async () => bulkDeleteMediaCommand(ids),
+    execute: async () => bulkDeleteMediaCommand(parsed.data),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.MEDIA);
     },

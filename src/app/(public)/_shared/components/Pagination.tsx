@@ -34,7 +34,7 @@ export function Pagination({
       {currentPage > 1 && (
         <Link
           href={getHref(currentPage - 1)}
-          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           前へ
         </Link>
@@ -44,7 +44,7 @@ export function Pagination({
         <>
           <Link
             href={getHref(1)}
-            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             1
           </Link>
@@ -61,7 +61,7 @@ export function Pagination({
           className={`rounded-md border px-3 py-2 text-sm transition-colors ${
             page === currentPage
               ? "border-accent bg-accent text-accent-foreground"
-              : "border-border text-muted-foreground hover:bg-accent"
+              : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           }`}
           aria-current={page === currentPage ? "page" : undefined}
         >
@@ -76,7 +76,7 @@ export function Pagination({
           )}
           <Link
             href={getHref(totalPages)}
-            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             {totalPages}
           </Link>
@@ -86,7 +86,7 @@ export function Pagination({
       {currentPage < totalPages && (
         <Link
           href={getHref(currentPage + 1)}
-          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
           次へ
         </Link>

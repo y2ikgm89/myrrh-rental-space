@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import type { KeyboardEvent } from "react";
@@ -95,22 +95,53 @@ function LightboxOverlay({
   readonly onNext: () => void;
   readonly onKeyDown: (e: KeyboardEvent) => void;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
     return () => {
       document.body.style.overflow = "";
     };
   }, []);
 
+  useEffect(() => {
+    function handleFocusTrap(e: globalThis.KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = dialog.querySelectorAll<HTMLElement>(
+        'button, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleFocusTrap);
+    return () => document.removeEventListener("keydown", handleFocusTrap);
+  }, []);
+
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-label="画像ギャラリー"
       aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-overlay"
       onClick={onClose}
       onKeyDown={onKeyDown}
-      tabIndex={0}
+      tabIndex={-1}
     >
       <div
         className="relative max-h-[90vh] max-w-[90vw]"
@@ -125,6 +156,7 @@ function LightboxOverlay({
         />
       </div>
       <button
+        ref={closeButtonRef}
         type="button"
         onClick={onClose}
         className="absolute right-4 top-4 rounded-full bg-background/80 p-2 text-foreground"

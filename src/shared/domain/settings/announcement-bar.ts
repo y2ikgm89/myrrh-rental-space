@@ -171,9 +171,20 @@ function normalizeAnnouncementBarInput(data: AnnouncementBarInput) {
 export async function getAnnouncementBars(): Promise<
   Serialized<AnnouncementBarData>[]
 > {
-  const items = await prisma.announcementBar.findMany({
-    select: announcementBarSelect,
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+  "use cache";
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA);
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
+
+  const items = await safeFetch({
+    fetch: () =>
+      prisma.announcementBar.findMany({
+        select: announcementBarSelect,
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getAnnouncementBars",
   });
 
   return toPlainArray(items);
@@ -182,10 +193,21 @@ export async function getAnnouncementBars(): Promise<
 export async function getAnnouncementBarById(
   id: string,
 ): Promise<Serialized<AnnouncementBarData> | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.DYNAMIC_DATA);
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
+
   return toPlainObject(
-    await prisma.announcementBar.findUnique({
-      where: { id },
-      select: announcementBarSelect,
+    await safeFetch({
+      fetch: () =>
+        prisma.announcementBar.findUnique({
+          where: { id },
+          select: announcementBarSelect,
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getAnnouncementBarById",
     }),
   );
 }

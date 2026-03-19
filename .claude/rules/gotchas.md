@@ -22,6 +22,7 @@
 
 - **デプロイ先は Google Cloud Run**（Vercel 不使用）— `Dockerfile` + `cloudbuild.yaml`。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run に明示設定（`VERCEL_URL` は存在しない）
 - **Docker ビルドは `SKIP_ENV_VALIDATION=true`** — `DATABASE_URL` / `BETTER_AUTH_SECRET` がビルド時に不在のため。`build:strict`（環境変数バリデーション有り）に移行するには Cloud Build の Secret Manager 連携で `DATABASE_URL` と `BETTER_AUTH_SECRET` をビルド時に注入する設定が必要
+- **staging 環境にも `CRON_SECRET` を設定必須** — `proxy.ts` の cron 認証は `CRON_SECRET` が未設定の場合スキップされる。本番は起動時チェックで保護されるが、staging（Internet 公開の Cloud Run インスタンス等）は明示設定が必要
 
 ## TypeScript
 

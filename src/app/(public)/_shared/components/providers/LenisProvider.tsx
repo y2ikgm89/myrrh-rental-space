@@ -11,7 +11,7 @@
  * - ScrollTrigger との同期
  */
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import Lenis from "lenis";
 import type { ScrollCallback } from "lenis";
@@ -43,20 +43,20 @@ export function LenisProvider({ children }: LenisProviderProps) {
   >([]);
   const storeRef = useRef<LenisStore>({ value: null, listeners: new Set() });
 
-  const subscribe = (listener: () => void) => {
+  const subscribe = useCallback((listener: () => void) => {
     storeRef.current.listeners.add(listener);
     return () => {
       storeRef.current.listeners.delete(listener);
     };
-  };
+  }, []);
 
-  const getSnapshot = (): LenisContextValue | null => {
+  const getSnapshot = useCallback((): LenisContextValue | null => {
     return storeRef.current.value;
-  };
+  }, []);
 
-  const getServerSnapshot = (): LenisContextValue | null => {
+  const getServerSnapshot = useCallback((): LenisContextValue | null => {
     return null;
-  };
+  }, []);
 
   const contextValue = useSyncExternalStore(
     subscribe,

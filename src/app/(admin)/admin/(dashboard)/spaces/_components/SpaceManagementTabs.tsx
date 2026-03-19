@@ -10,7 +10,7 @@ import {
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/admin/components/ui";
-import { CreateCategoryDialog } from "../../space-categories/_components/CreateCategoryDialog";
+import { CreateCategoryDialog } from "../../_space-categories/_components/CreateCategoryDialog";
 
 // =============================================================================
 // 型定義

@@ -1,7 +1,5 @@
 /**
- * サイト設定のZodスキーマ定義
- *
- * @module admin/actions/settings/schemas
+ * 基本設定・ビジネス情報・SEO・レイアウト・その他設定のZodスキーマ
  */
 
 import { z } from "zod";
@@ -10,15 +8,8 @@ import {
   AnalyticsType,
   HeaderScrollBehavior,
   HeaderBackgroundMode,
-  CalendarSyncMethod,
-  AnnouncementBarAnimation,
-  AnnouncementBarDesignStyle,
   PostPermalinkStructure,
-  DiscountCombinationMode,
-  TaxDisplayMode,
-  TaxInputMode,
 } from "@/shared/db/enums";
-import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
 // Basic Schemas
@@ -231,94 +222,6 @@ export type FooterSettingsInput = z.infer<typeof footerSettingsSchema>;
 export type LayoutSettingsInput = z.infer<typeof layoutSettingsSchema>;
 
 // =============================================================================
-// Email Schemas
-// =============================================================================
-
-export const emailSettingsSchema = z.object({
-  senderEmail: z.string().email().max(100).nullable().or(z.literal("")),
-  senderName: z.string().max(100).nullable(),
-  replyToEmail: z.string().email().max(100).nullable().or(z.literal("")),
-  sendReservationConfirmationEmail: z.boolean(),
-  sendAdminNotificationEmail: z.boolean(),
-  notificationEmailAddresses: z.string().max(500).nullable(),
-});
-
-export type EmailSettingsInput = z.infer<typeof emailSettingsSchema>;
-
-export const notificationSettingsSchema = z.object({
-  notifyNewReservation: z.boolean(),
-  notifyReservationChange: z.boolean(),
-  notifyReservationCancel: z.boolean(),
-  notifyNewInquiry: z.boolean(),
-});
-
-export type NotificationSettingsInput = z.infer<
-  typeof notificationSettingsSchema
->;
-
-// =============================================================================
-// Google Calendar Schemas
-// =============================================================================
-
-const CALENDAR_ID_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const optionalCalendarIdSchema = z
-  .string()
-  .max(200)
-  .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {
-    error: "カレンダーIDの形式が無効です",
-  });
-
-const requiredCalendarIdSchema = z
-  .string()
-  .min(1, { error: "カレンダーIDを入力してください" })
-  .max(200)
-  .refine((value) => value === "primary" || CALENDAR_ID_REGEX.test(value), {
-    error: "カレンダーIDの形式が無効です",
-  });
-
-export const googleCalendarSettingsSchema = z.object({
-  googleCalendarEnabled: z.boolean(),
-  googleCalendarId: optionalCalendarIdSchema.nullable(),
-  serviceAccountJson: z
-    .string()
-    .nullable()
-    .refine(
-      (value) =>
-        value === null || parseGoogleServiceAccountCredentials(value) !== null,
-      { error: "サービスアカウントJSONの形式が無効です" },
-    ), // 新規入力時のみ
-  icalAttachmentEnabled: z.boolean(),
-  addToCalendarLinksEnabled: z.boolean(),
-});
-
-export type GoogleCalendarSettingsInput = z.infer<
-  typeof googleCalendarSettingsSchema
->;
-
-export const googleCalendarConnectionTestSchema = z.object({
-  serviceAccountJson: z
-    .string()
-    .min(1, { error: "サービスアカウントJSONを入力してください" })
-    .refine((value) => parseGoogleServiceAccountCredentials(value) !== null, {
-      error: "サービスアカウントJSONの形式が無効です",
-    }),
-  calendarId: requiredCalendarIdSchema,
-});
-
-export type GoogleCalendarConnectionTestInput = z.infer<
-  typeof googleCalendarConnectionTestSchema
->;
-
-export const twoWaySyncSettingsSchema = z.object({
-  enabled: z.boolean(),
-  syncMethod: z.enum(CalendarSyncMethod),
-  pollingIntervalMin: z.number().int().min(1).max(60),
-});
-
-export type TwoWaySyncSettingsInput = z.infer<typeof twoWaySyncSettingsSchema>;
-
-// =============================================================================
 // Other Schemas
 // =============================================================================
 
@@ -365,41 +268,6 @@ export type ReservationSettingsInput = z.infer<
   typeof reservationSettingsSchema
 >;
 
-export const announcementBarCarouselSettingsSchema = z.object({
-  announcementBarAnimation: z.enum(AnnouncementBarAnimation),
-  announcementBarDuration: z.number().int().min(1000).max(30000),
-  announcementBarAutoPlay: z.boolean(),
-  announcementBarPauseOnHover: z.boolean(),
-  announcementBarShowArrows: z.boolean(),
-  announcementBarShowIndicator: z.boolean(),
-  announcementBarDesignStyle: z.enum(AnnouncementBarDesignStyle),
-  // Common Color Settings
-  announcementBarBgColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarTextColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  // Striped Design Settings
-  announcementBarStripeColor: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable(),
-  announcementBarStripeAnimation: z.boolean(),
-  // Gradient Design Settings
-  announcementBarGradientAnimation: z.boolean(),
-  // Glass Design Settings
-  announcementBarGlassAnimation: z.boolean(),
-  // Sticky Settings
-  announcementBarSticky: z.boolean(),
-});
-
-export type AnnouncementBarCarouselSettingsInput = z.infer<
-  typeof announcementBarCarouselSettingsSchema
->;
-
 // =============================================================================
 // Permalink Schemas
 // =============================================================================
@@ -416,44 +284,6 @@ export {
   sidebarSettingsSchema,
   type SidebarSettings as SidebarSettingsInput,
 } from "@/shared/lib/validations/sidebar";
-
-// =============================================================================
-// Discount Schemas
-// =============================================================================
-
-export const durationDiscountRuleSchema = z.object({
-  hours: z.coerce.number().int().min(1).max(24),
-  discountRate: z.coerce.number().min(1).max(100),
-});
-
-export const discountSettingsSchema = z.object({
-  durationDiscountEnabled: z.boolean(),
-  durationDiscountRules: z.array(durationDiscountRuleSchema),
-  discountCombinationMode: z.enum(DiscountCombinationMode),
-  showOriginalPrice: z.boolean(),
-  discountWarningEnabled: z.boolean(),
-});
-
-export type DurationDiscountRuleInput = z.infer<
-  typeof durationDiscountRuleSchema
->;
-export type DiscountSettingsInput = z.infer<typeof discountSettingsSchema>;
-
-// =============================================================================
-// Tax Schemas
-// =============================================================================
-
-export const taxDisplayModeSchema = z.enum(TaxDisplayMode);
-
-export const taxSettingsSchema = z.object({
-  taxStandardRate: z.coerce.number().min(0).max(100),
-  taxReducedRate: z.coerce.number().min(0).max(100),
-  taxDisplayModeAdmin: taxDisplayModeSchema,
-  taxDisplayModePublic: taxDisplayModeSchema,
-  taxInputMode: z.enum(TaxInputMode),
-});
-
-export type TaxSettingsInput = z.infer<typeof taxSettingsSchema>;
 
 // =============================================================================
 // MEO Schemas (ローカル検索最適化)
