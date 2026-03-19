@@ -2,7 +2,7 @@
  * /reservation — ご予約ページ（Page-First アーキテクチャ）
  *
  * SEO: generatePageMetadata
- * コンテンツ: ダミー3ステップフォーム（DB連携は将来実装）
+ * コンテンツ: 3ステップ予約フォーム（スペース選択 → 顧客情報 → 確認・送信）
  */
 
 import type { Metadata } from "next";
@@ -16,7 +16,9 @@ import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Container } from "@/public/components/design-system/container";
-import { ReservationForm } from "./_components/ReservationForm";
+import { getPublishedSpaces } from "@/shared/domain/spaces/public-queries";
+import { toPlainObject } from "@/shared/lib/serialize";
+import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -27,10 +29,23 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ReservationPage(): Promise<ReactElement> {
   await connection();
 
-  const content = await getPageContent(
-    "reservation",
-    simplePageContentSchema,
-    defaultReservationContent,
+  const [content, rawSpaces] = await Promise.all([
+    getPageContent(
+      "reservation",
+      simplePageContentSchema,
+      defaultReservationContent,
+    ),
+    getPublishedSpaces(),
+  ]);
+
+  const spaces = rawSpaces.map((s) =>
+    toPlainObject({
+      id: s.id,
+      name: s.name,
+      capacity: s.capacity,
+      hourlyPrice: Number(s.hourlyPrice),
+      mainImageUrl: s.mainImageUrl,
+    }),
   );
 
   return (
@@ -43,7 +58,7 @@ export default async function ReservationPage(): Promise<ReactElement> {
 
       <section className="py-[var(--spacing-section)]">
         <Container variant="narrow">
-          <ReservationForm />
+          <ReservationForm spaces={spaces} />
         </Container>
       </section>
 
