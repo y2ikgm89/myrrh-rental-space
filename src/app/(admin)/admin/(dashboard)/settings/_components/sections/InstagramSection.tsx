@@ -9,6 +9,7 @@
  */
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { Instagram, Link2, Key, Unlink, ExternalLink } from "lucide-react";
 import {
@@ -18,12 +19,18 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
-  Switch,
   SelectionBox,
   SubmitButton,
+  Switch,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateInstagramSettings,
   saveManualToken,
@@ -31,8 +38,8 @@ import {
   disconnectInstagram,
   type InstagramConfig,
 } from "@/admin/actions/instagram";
+import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas";
 import { StatusBanner } from "../shared";
-import { useRefreshOnSuccess } from "../hooks";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { InstagramFeedLayout } from "@/shared/db/enums";
 import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums";
@@ -105,11 +112,12 @@ function ConnectionCard({
   isPending,
   onDisconnect,
 }: ConnectionCardProps) {
-  const { handleResult } = useRefreshOnSuccess();
+  const router = useRouter();
   const [connectionMethod, setConnectionMethod] =
     useState<ConnectionMethod>("oauth");
   const [manualToken, setManualToken] = useState("");
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
@@ -142,10 +150,7 @@ function ConnectionCard({
             : "接続成功",
         });
       } else {
-        setTestResult({
-          success: false,
-          message: result.error,
-        });
+        setTestResult({ success: false, message: result.error });
       }
     } catch {
       setTestResult({
@@ -160,12 +165,17 @@ function ConnectionCard({
   const handleSaveManualToken = async () => {
     if (!manualToken) return;
 
-    const result = await saveManualToken(manualToken);
-    if (!isMutationError(result)) {
-      setManualToken("");
-      setTestResult(null);
+    setIsSaving(true);
+    try {
+      const result = await saveManualToken(manualToken);
+      if (!isMutationError(result)) {
+        setManualToken("");
+        setTestResult(null);
+        router.refresh();
+      }
+    } finally {
+      setIsSaving(false);
     }
-    handleResult(result, "Instagramトークンを保存しました");
   };
 
   // 連携済みの場合
@@ -254,7 +264,7 @@ function ConnectionCard({
       <CardContent className="space-y-6">
         {/* 連携方法選択 */}
         <div className="space-y-2">
-          <Label>連携方法を選択</Label>
+          <label className="text-sm font-medium">連携方法を選択</label>
           <SelectionBox
             options={CONNECTION_METHOD_OPTIONS}
             value={connectionMethod}
@@ -275,7 +285,11 @@ function ConnectionCard({
                 認証後、自動的にこのページに戻ります。
               </p>
             </div>
-            <Button onClick={handleOAuthConnect} className="w-full">
+            <Button
+              type="button"
+              onClick={handleOAuthConnect}
+              className="w-full"
+            >
               <Instagram className="mr-2 h-4 w-4" />
               Instagramと連携
             </Button>
@@ -286,7 +300,9 @@ function ConnectionCard({
         {connectionMethod === "manual" && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="manualToken">アクセストークン</Label>
+              <label htmlFor="manualToken" className="text-sm font-medium">
+                アクセストークン
+              </label>
               <Input
                 id="manualToken"
                 type="text"
@@ -318,6 +334,7 @@ function ConnectionCard({
 
             <div className="flex flex-wrap gap-2">
               <Button
+                type="button"
                 variant="outline"
                 onClick={handleTestConnection}
                 disabled={!manualToken || isPending || isTesting}
@@ -325,10 +342,11 @@ function ConnectionCard({
                 {isTesting ? "テスト中..." : "接続テスト"}
               </Button>
               <Button
+                type="button"
                 onClick={handleSaveManualToken}
-                disabled={!manualToken || isPending}
+                disabled={!manualToken || isPending || isSaving}
               >
-                {isPending ? "保存中..." : "保存"}
+                {isSaving ? "保存中..." : "保存"}
               </Button>
             </div>
           </div>
@@ -344,155 +362,205 @@ function ConnectionCard({
 
 interface FeedSettingsCardProps {
   config: InstagramConfig;
-  isPending: boolean;
-  startTransition: (callback: () => void) => void;
+  parentIsPending: boolean;
 }
 
-function FeedSettingsCard({
-  config,
-  isPending,
-  startTransition,
-}: FeedSettingsCardProps) {
-  const { handleResult } = useRefreshOnSuccess();
-  const [feedEnabled, setFeedEnabled] = useState(config.feedEnabled);
-  const [feedLayout, setFeedLayout] = useState(config.feedLayout);
-  const [feedColumns, setFeedColumns] = useState(config.feedColumns);
-  const [feedMaxItems, setFeedMaxItems] = useState(config.feedMaxItems);
-  const [showCaption, setShowCaption] = useState(config.showCaption);
-  const [showViewAll, setShowViewAll] = useState(config.showViewAll);
+function FeedSettingsCard({ config, parentIsPending }: FeedSettingsCardProps) {
+  const { form, isPending, onSubmit } = useFormAction(
+    instagramFeedFormSchema,
+    (data) => updateInstagramSettings(data),
+    {
+      defaultValues: {
+        feedEnabled: config.feedEnabled,
+        feedLayout: config.feedLayout,
+        feedColumns: config.feedColumns,
+        feedMaxItems: config.feedMaxItems,
+        showCaption: config.showCaption,
+        showViewAll: config.showViewAll,
+      },
+      refresh: true,
+      successMessage: "Instagram設定を保存しました",
+    },
+  );
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateInstagramSettings({
-        feedEnabled,
-        feedLayout,
-        feedColumns,
-        feedMaxItems,
-        showCaption,
-        showViewAll,
-      });
-      handleResult(result, "Instagram設定を保存しました");
-    });
-  };
+  const feedEnabled = form.getValues("feedEnabled");
+  const formIsPending = isPending || parentIsPending;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Instagram className="h-5 w-5" />
-          フィード表示設定
-        </CardTitle>
-        <CardDescription>
-          ホームページや固定ページでのInstagram投稿の表示設定
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* フィード有効化 */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="feedEnabled">フィードを有効化</Label>
-            <p className="text-xs text-muted-foreground">
-              ホームページにInstagramフィードを表示します
-            </p>
-          </div>
-          <Switch
-            id="feedEnabled"
-            checked={feedEnabled}
-            onCheckedChange={setFeedEnabled}
-            disabled={isPending}
-          />
-        </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Instagram className="h-5 w-5" />
+              フィード表示設定
+            </CardTitle>
+            <CardDescription>
+              ホームページや固定ページでのInstagram投稿の表示設定
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* フィード有効化 */}
+            <FormField
+              control={form.control}
+              name="feedEnabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel>フィードを有効化</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      ホームページにInstagramフィードを表示します
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={formIsPending}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        {/* レイアウト選択 */}
-        <div className="space-y-2">
-          <Label>レイアウト</Label>
-          <SelectionBox
-            options={LAYOUT_OPTIONS}
-            value={feedLayout}
-            onChange={(value) => {
-              if (isValidInstagramFeedLayout(value)) {
-                setFeedLayout(value);
-              }
-            }}
-            columns={3}
-            disabled={isPending || !feedEnabled}
-            name="feed-layout"
-          />
-        </div>
+            {/* レイアウト選択 */}
+            <FormField
+              control={form.control}
+              name="feedLayout"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>レイアウト</FormLabel>
+                  <FormControl>
+                    <SelectionBox
+                      options={LAYOUT_OPTIONS}
+                      value={field.value}
+                      onChange={(value) => {
+                        if (isValidInstagramFeedLayout(value)) {
+                          field.onChange(value);
+                        }
+                      }}
+                      columns={3}
+                      disabled={formIsPending || !feedEnabled}
+                      name="feed-layout"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {/* 列数 */}
-        <div className="space-y-2">
-          <Label htmlFor="feedColumns">列数</Label>
-          <Input
-            id="feedColumns"
-            type="number"
-            min={2}
-            max={6}
-            value={feedColumns}
-            onChange={(e) => setFeedColumns(Number(e.target.value))}
-            disabled={isPending || !feedEnabled}
-            className="w-24"
-          />
-          <p className="text-xs text-muted-foreground">2〜6の範囲で指定</p>
-        </div>
+            {/* 列数 */}
+            <FormField
+              control={form.control}
+              name="feedColumns"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>列数</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.valueAsNumber || 3)
+                      }
+                      type="number"
+                      min={2}
+                      max={6}
+                      disabled={formIsPending || !feedEnabled}
+                      className="w-24"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    2〜6の範囲で指定
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {/* 表示件数 */}
-        <div className="space-y-2">
-          <Label htmlFor="feedMaxItems">表示件数</Label>
-          <Input
-            id="feedMaxItems"
-            type="number"
-            min={1}
-            max={24}
-            value={feedMaxItems}
-            onChange={(e) => setFeedMaxItems(Number(e.target.value))}
-            disabled={isPending || !feedEnabled}
-            className="w-24"
-          />
-          <p className="text-xs text-muted-foreground">1〜24の範囲で指定</p>
-        </div>
+            {/* 表示件数 */}
+            <FormField
+              control={form.control}
+              name="feedMaxItems"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>表示件数</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.valueAsNumber || 6)
+                      }
+                      type="number"
+                      min={1}
+                      max={24}
+                      disabled={formIsPending || !feedEnabled}
+                      className="w-24"
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    1〜24の範囲で指定
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {/* キャプション表示 */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="showCaption">キャプションを表示</Label>
-            <p className="text-xs text-muted-foreground">
-              投稿のキャプションを表示します
-            </p>
-          </div>
-          <Switch
-            id="showCaption"
-            checked={showCaption}
-            onCheckedChange={setShowCaption}
-            disabled={isPending || !feedEnabled}
-          />
-        </div>
+            {/* キャプション表示 */}
+            <FormField
+              control={form.control}
+              name="showCaption"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel>キャプションを表示</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      投稿のキャプションを表示します
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={formIsPending || !feedEnabled}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        {/* もっと見るリンク */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="showViewAll">「もっと見る」リンク</Label>
-            <p className="text-xs text-muted-foreground">
-              Instagramプロフィールへのリンクを表示します
-            </p>
-          </div>
-          <Switch
-            id="showViewAll"
-            checked={showViewAll}
-            onCheckedChange={setShowViewAll}
-            disabled={isPending || !feedEnabled}
-          />
-        </div>
+            {/* もっと見るリンク */}
+            <FormField
+              control={form.control}
+              name="showViewAll"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <FormLabel>「もっと見る」リンク</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Instagramプロフィールへのリンクを表示します
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={formIsPending || !feedEnabled}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        {/* 保存ボタン */}
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="設定を保存"
-          pendingLabel="保存中..."
-        />
-      </CardContent>
-    </Card>
+            {/* 保存ボタン */}
+            <SubmitButton
+              isPending={isPending}
+              label="設定を保存"
+              disabled={!form.formState.isDirty}
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }
 
@@ -501,8 +569,8 @@ function FeedSettingsCard({
 // =============================================================================
 
 export function InstagramSection({ config }: InstagramSectionProps) {
+  const router = useRouter();
   const confirmDialog = useConfirm();
-  const { handleResult } = useRefreshOnSuccess();
   const [isPending, startTransition] = useTransition();
 
   const handleDisconnect = async () => {
@@ -517,7 +585,9 @@ export function InstagramSection({ config }: InstagramSectionProps) {
 
     startTransition(async () => {
       const result = await disconnectInstagram();
-      handleResult(result, "Instagram連携を解除しました");
+      if (!isMutationError(result)) {
+        router.refresh();
+      }
     });
   };
 
@@ -532,11 +602,7 @@ export function InstagramSection({ config }: InstagramSectionProps) {
 
       {/* フィード設定カード（連携済みの場合のみ表示） */}
       {config.isConnected && (
-        <FeedSettingsCard
-          config={config}
-          isPending={isPending}
-          startTransition={startTransition}
-        />
+        <FeedSettingsCard config={config} parentIsPending={isPending} />
       )}
     </div>
   );

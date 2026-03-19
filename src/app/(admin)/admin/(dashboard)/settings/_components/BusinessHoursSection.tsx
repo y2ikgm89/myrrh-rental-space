@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
 import { Plus, X, Copy } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
@@ -12,6 +14,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
   Switch,
   Textarea,
   Select,
@@ -27,7 +30,8 @@ import type {
   BusinessHoursDay,
   BusinessTimeSlot,
 } from "@/admin/actions/settings";
-import { useRefreshOnSuccess } from "./hooks";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { useTransition } from "react";
 
 interface BusinessHoursSectionProps {
   settings: Serialized<SettingsData>;
@@ -130,7 +134,7 @@ type SlotError = {
 };
 
 export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
-  const { handleResult } = useRefreshOnSuccess();
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const initialBusinessHours = settings.businessHours ?? DEFAULT_BUSINESS_HOURS;
@@ -139,15 +143,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
 
   /**
    * 定休日設定を営業時間に反映
-   *
-   * NOTE: regularHolidaysとbusinessHours.isOpenの二重管理について
-   * - regularHolidays: 定休日の一覧（公開ページでの表示用）
-   * - businessHours.{day}.isOpen: 各曜日の営業状態
-   *
-   * 保存時: isOpen=falseの曜日からregularHolidaysを再構築
-   * 読込時: regularHolidaysに基づきisOpenを上書き（整合性維持）
-   *
-   * これにより、どちらのフィールドからアクセスしても一貫した状態を保証
    */
   const businessHoursWithHolidays = (() => {
     const hours = { ...initialBusinessHours };
@@ -199,7 +194,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
       for (let i = 0; i < day.slots.length; i++) {
         const slot = day.slots[i];
         if (!slot) continue;
-        // 時刻フォーマットチェック
         if (!TIME_REGEX.test(slot.openTime)) {
           errors.push({
             day: key,
@@ -216,7 +210,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
             message: "不正な時刻形式",
           });
         }
-        // 終了時刻 > 開始時刻チェック
         if (
           slot.openTime &&
           slot.closeTime &&
@@ -230,7 +223,6 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           });
         }
       }
-      // 重複チェック
       if (day.slots.length > 1 && hasOverlappingSlots(day.slots)) {
         errors.push({
           day: key,
@@ -321,12 +313,8 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
     setBusinessHours((prev) => {
       const updated = { ...prev };
       for (const { key } of DAYS_OF_WEEK) {
-        // 日曜日は休業のままにするオプション
         if (key === "sunday") {
-          updated[key] = {
-            isOpen: false,
-            slots: [],
-          };
+          updated[key] = { isOpen: false, slots: [] };
         } else {
           updated[key] = {
             isOpen: true,
@@ -373,9 +361,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
     const errors = validateSlots(businessHours);
     setSlotErrors(errors);
     if (errors.length > 0) {
-      handleResult({
-        error: "入力エラーがあります。時間帯を確認してください。",
-      });
+      toast.error("入力エラーがあります。時間帯を確認してください。");
       return;
     }
 
@@ -391,7 +377,12 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
         holidayNotice: holidayNotice || null,
       });
 
-      handleResult(result, "営業時間設定を保存しました");
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("営業時間設定を保存しました");
+        router.refresh();
+      }
     });
   };
 
@@ -634,9 +625,12 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           </p>
         </div>
 
-        <Button onClick={handleSave} disabled={isPending || hasErrors}>
-          {isPending ? "保存中..." : "営業時間設定を保存"}
-        </Button>
+        <SubmitButton
+          isPending={isPending}
+          onClick={handleSave}
+          label="営業時間設定を保存"
+          disabled={hasErrors}
+        />
       </CardContent>
     </Card>
   );

@@ -10,8 +10,10 @@
 
 import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
+import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import {
   Button,
   Card,
@@ -19,16 +21,21 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Label,
-} from "@/admin/components/ui";
-import { Switch } from "@/admin/components/ui/switch";
-import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/admin/components/ui/select";
+  SubmitButton,
+  Switch,
+} from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateTwoWaySyncSettings,
   setupCalendarWebhook,
@@ -36,6 +43,7 @@ import {
   triggerManualSync,
   type SettingsData,
 } from "@/admin/actions/settings";
+import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas";
 import {
   RefreshCw,
   Clock,
@@ -44,7 +52,6 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { CalendarSyncMethod } from "@/shared/db/enums";
-import { useRefreshOnSuccess } from "../hooks";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
@@ -61,20 +68,31 @@ interface TwoWaySyncSectionProps {
 // =============================================================================
 
 export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
-  const confirm = useConfirm();
-  const { handleResult, refresh } = useRefreshOnSuccess();
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const confirmDialog = useConfirm();
+  const [actionPending, startActionTransition] = useTransition();
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
 
-  const [formData, setFormData] = useState({
-    enabled: settings.googleCalendarTwoWaySyncEnabled,
-    syncMethod: settings.googleCalendarSyncMethod,
-    pollingIntervalMin: settings.googleCalendarPollingIntervalMin,
-  });
+  const { form, isPending, onSubmit } = useFormAction(
+    twoWaySyncFormSchema,
+    (data) => updateTwoWaySyncSettings(data),
+    {
+      defaultValues: {
+        enabled: settings.googleCalendarTwoWaySyncEnabled,
+        syncMethod: settings.googleCalendarSyncMethod,
+        pollingIntervalMin: settings.googleCalendarPollingIntervalMin,
+      },
+      refresh: true,
+      successMessage: "双方向同期設定を更新しました",
+    },
+  );
+
+  const enabled = useWatch({ control: form.control, name: "enabled" });
+  const syncMethod = useWatch({ control: form.control, name: "syncMethod" });
 
   // Google Calendarが有効でない場合は表示しない
   if (
@@ -84,22 +102,20 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
     return null;
   }
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateTwoWaySyncSettings(formData);
-      handleResult(result, "双方向同期設定を更新しました");
-    });
-  };
-
   const handleSetupWebhook = () => {
-    startTransition(async () => {
+    startActionTransition(async () => {
       const result = await setupCalendarWebhook();
-      handleResult(result, "Webhookを設定しました");
+      if (!isMutationError(result)) {
+        toast.success("Webhookを設定しました");
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
     });
   };
 
   const handleStopWebhook = async () => {
-    const confirmed = await confirm({
+    const confirmed = await confirmDialog({
       title: "Webhookを停止しますか？",
       description: "Webhookを停止しますか？",
       confirmLabel: "停止",
@@ -107,9 +123,14 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
     });
     if (!confirmed) return;
 
-    startTransition(async () => {
+    startActionTransition(async () => {
       const result = await stopCalendarWebhook();
-      handleResult(result, "Webhookを停止しました");
+      if (!isMutationError(result)) {
+        toast.success("Webhookを停止しました");
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
     });
   };
 
@@ -125,12 +146,9 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
           message: `同期完了: ${result.processed}件処理 (更新: ${result.updated}件, 削除: ${result.deleted}件)`,
         });
         toast.success("同期が完了しました");
-        refresh();
+        router.refresh();
       } else {
-        setSyncResult({
-          success: false,
-          message: result.error,
-        });
+        setSyncResult({ success: false, message: result.error });
         toast.error("同期に失敗しました");
       }
     } catch {
@@ -145,212 +163,243 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" />
-          双方向同期（カレンダー → 予約システム）
-        </CardTitle>
-        <CardDescription>
-          Google
-          Calendarでの変更（時間変更、削除など）を予約システムに自動反映します
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* 有効化トグル */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="twoWaySyncEnabled">双方向同期を有効化</Label>
-            <p className="text-sm text-muted-foreground">
-              カレンダーの変更を予約システムに反映
-            </p>
-          </div>
-          <Switch
-            id="twoWaySyncEnabled"
-            checked={formData.enabled}
-            onCheckedChange={(checked) =>
-              setFormData((prev) => ({ ...prev, enabled: checked }))
-            }
-            disabled={isPending}
-          />
-        </div>
-
-        {formData.enabled && (
-          <>
-            {/* 同期方式設定 */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>同期方式</Label>
-                <Select
-                  value={formData.syncMethod}
-                  onValueChange={(value: CalendarSyncMethod) =>
-                    setFormData((prev) => ({ ...prev, syncMethod: value }))
-                  }
-                  disabled={isPending}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={CalendarSyncMethod.polling}>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        ポーリングのみ
-                      </div>
-                    </SelectItem>
-                    <SelectItem value={CalendarSyncMethod.webhook}>
-                      <div className="flex items-center gap-2">
-                        <Webhook className="h-4 w-4" />
-                        Webhookのみ
-                      </div>
-                    </SelectItem>
-                    <SelectItem value={CalendarSyncMethod.both}>
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="h-4 w-4" />
-                        両方使用（推奨）
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                  {formData.syncMethod === CalendarSyncMethod.polling &&
-                    "ポーリング: 定期的にカレンダーをチェック（5分ごと推奨）"}
-                  {formData.syncMethod === CalendarSyncMethod.webhook &&
-                    "Webhook: カレンダー変更時に即座に通知を受信"}
-                  {formData.syncMethod === CalendarSyncMethod.both &&
-                    "Webhookで即時同期 + ポーリングでバックアップ"}
-                </p>
-              </div>
-
-              {/* ポーリング間隔 */}
-              {(formData.syncMethod === CalendarSyncMethod.polling ||
-                formData.syncMethod === CalendarSyncMethod.both) && (
-                <div className="space-y-2">
-                  <Label>ポーリング間隔</Label>
-                  <Select
-                    value={String(formData.pollingIntervalMin)}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        pollingIntervalMin: Number(value),
-                      }))
-                    }
-                    disabled={isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1分</SelectItem>
-                      <SelectItem value="5">5分（推奨）</SelectItem>
-                      <SelectItem value="10">10分</SelectItem>
-                      <SelectItem value="15">15分</SelectItem>
-                      <SelectItem value="30">30分</SelectItem>
-                      <SelectItem value="60">60分</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            {/* Webhook設定 */}
-            {(formData.syncMethod === CalendarSyncMethod.webhook ||
-              formData.syncMethod === CalendarSyncMethod.both) && (
-              <div className="rounded-lg border p-4 space-y-4">
-                <div className="flex items-center justify-between">
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              双方向同期（カレンダー → 予約システム）
+            </CardTitle>
+            <CardDescription>
+              Google
+              Calendarでの変更（時間変更、削除など）を予約システムに自動反映します
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* 有効化トグル */}
+            <FormField
+              control={form.control}
+              name="enabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <Label className="flex items-center gap-2">
-                      <Webhook className="h-4 w-4" />
-                      Webhook状態
-                    </Label>
-                    {settings.googleCalendarWebhookActive ? (
-                      <p className="text-sm text-success flex items-center gap-1">
-                        <CheckCircle2 className="h-4 w-4" />
-                        有効（有効期限:{" "}
-                        {formatDateTimeShort(
-                          settings.googleCalendarWebhookExpiration,
-                        )}
-                        ）
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <AlertCircle className="h-4 w-4" />
-                        未設定
-                      </p>
-                    )}
+                    <FormLabel>双方向同期を有効化</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      カレンダーの変更を予約システムに反映
+                    </p>
                   </div>
-                  {settings.googleCalendarWebhookActive ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleStopWebhook}
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                       disabled={isPending}
-                    >
-                      停止
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={handleSetupWebhook}
-                      disabled={isPending}
-                    >
-                      設定
-                    </Button>
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {enabled && (
+              <>
+                {/* 同期方式設定 */}
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="syncMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>同期方式</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={CalendarSyncMethod.polling}>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                ポーリングのみ
+                              </div>
+                            </SelectItem>
+                            <SelectItem value={CalendarSyncMethod.webhook}>
+                              <div className="flex items-center gap-2">
+                                <Webhook className="h-4 w-4" />
+                                Webhookのみ
+                              </div>
+                            </SelectItem>
+                            <SelectItem value={CalendarSyncMethod.both}>
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                両方使用（推奨）
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          {syncMethod === CalendarSyncMethod.polling &&
+                            "ポーリング: 定期的にカレンダーをチェック（5分ごと推奨）"}
+                          {syncMethod === CalendarSyncMethod.webhook &&
+                            "Webhook: カレンダー変更時に即座に通知を受信"}
+                          {syncMethod === CalendarSyncMethod.both &&
+                            "Webhookで即時同期 + ポーリングでバックアップ"}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* ポーリング間隔 */}
+                  {(syncMethod === CalendarSyncMethod.polling ||
+                    syncMethod === CalendarSyncMethod.both) && (
+                    <FormField
+                      control={form.control}
+                      name="pollingIntervalMin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ポーリング間隔</FormLabel>
+                          <Select
+                            value={String(field.value)}
+                            onValueChange={(value) =>
+                              field.onChange(Number(value))
+                            }
+                            disabled={isPending}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">1分</SelectItem>
+                              <SelectItem value="5">5分（推奨）</SelectItem>
+                              <SelectItem value="10">10分</SelectItem>
+                              <SelectItem value="15">15分</SelectItem>
+                              <SelectItem value="30">30分</SelectItem>
+                              <SelectItem value="60">60分</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Webhookは最大7日間有効です。期限切れ時は自動的にポーリングにフォールバックします。
-                </p>
-              </div>
+
+                {/* Webhook設定 */}
+                {(syncMethod === CalendarSyncMethod.webhook ||
+                  syncMethod === CalendarSyncMethod.both) && (
+                  <div className="rounded-lg border p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <FormLabel className="flex items-center gap-2">
+                          <Webhook className="h-4 w-4" />
+                          Webhook状態
+                        </FormLabel>
+                        {settings.googleCalendarWebhookActive ? (
+                          <p className="text-sm text-success flex items-center gap-1">
+                            <CheckCircle2 className="h-4 w-4" />
+                            有効（有効期限:{" "}
+                            {formatDateTimeShort(
+                              settings.googleCalendarWebhookExpiration,
+                            )}
+                            ）
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            <AlertCircle className="h-4 w-4" />
+                            未設定
+                          </p>
+                        )}
+                      </div>
+                      {settings.googleCalendarWebhookActive ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStopWebhook}
+                          disabled={isPending || actionPending}
+                        >
+                          停止
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleSetupWebhook}
+                          disabled={isPending || actionPending}
+                        >
+                          設定
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Webhookは最大7日間有効です。期限切れ時は自動的にポーリングにフォールバックします。
+                    </p>
+                  </div>
+                )}
+
+                {/* 同期ステータス */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <FormLabel>最終同期</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDateTimeShort(
+                          settings.googleCalendarLastSyncedAt,
+                        )}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleManualSync}
+                      disabled={isSyncing || isPending || actionPending}
+                    >
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+                      />
+                      {isSyncing ? "同期中..." : "手動同期"}
+                    </Button>
+                  </div>
+                  {syncResult && (
+                    <div
+                      className={`rounded p-2 text-sm ${
+                        syncResult.success
+                          ? "bg-success/10 text-success"
+                          : "bg-destructive/10 text-destructive"
+                      }`}
+                    >
+                      {syncResult.message}
+                    </div>
+                  )}
+                </div>
+
+                {/* 保存ボタン */}
+                <SubmitButton
+                  isPending={isPending}
+                  label="設定を保存"
+                  disabled={!form.formState.isDirty}
+                />
+              </>
             )}
 
-            {/* 同期ステータス */}
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>最終同期</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDateTimeShort(settings.googleCalendarLastSyncedAt)}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleManualSync}
-                  disabled={isSyncing || isPending}
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
-                  />
-                  {isSyncing ? "同期中..." : "手動同期"}
-                </Button>
-              </div>
-              {syncResult && (
-                <div
-                  className={`rounded p-2 text-sm ${
-                    syncResult.success
-                      ? "bg-success/10 text-success"
-                      : "bg-destructive/10 text-destructive"
-                  }`}
-                >
-                  {syncResult.message}
-                </div>
-              )}
-            </div>
-
-            {/* 保存ボタン */}
-            <Button onClick={handleSave} disabled={isPending}>
-              設定を保存
-            </Button>
-          </>
-        )}
-
-        {!formData.enabled && (
-          <Button onClick={handleSave} disabled={isPending}>
-            設定を保存
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+            {!enabled && (
+              <SubmitButton
+                isPending={isPending}
+                label="設定を保存"
+                disabled={!form.formState.isDirty}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }
