@@ -2,7 +2,9 @@
 
 import { useState, type ReactElement } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
-import { Button, Input, Textarea } from "@/public/components/design-system";
+import { Button } from "@/public/components/design-system/button";
+import { Input } from "@/public/components/design-system/input";
+import { Textarea } from "@/public/components/design-system/textarea";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { submitInquiry } from "@/public/actions/inquiry";
@@ -92,7 +94,7 @@ export function ContactForm(): ReactElement {
         />
 
         {errorMessage !== null && (
-          <p className="text-sm text-destructive">{errorMessage}</p>
+          <p className="mt-4 text-sm text-destructive">{errorMessage}</p>
         )}
 
         <div className="pt-2">

@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import { Button } from "@/public/components/design-system";
+import { Button } from "@/public/components/design-system/button";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 
 type SpaceOption = {

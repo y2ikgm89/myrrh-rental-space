@@ -2,7 +2,9 @@
 
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { Button, Input, Textarea } from "@/public/components/design-system";
+import { Button } from "@/public/components/design-system/button";
+import { Input } from "@/public/components/design-system/input";
+import { Textarea } from "@/public/components/design-system/textarea";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 
 export function CustomerStep({
