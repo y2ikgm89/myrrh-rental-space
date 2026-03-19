@@ -51,7 +51,9 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
   // nuqs でURLパラメータと同期
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(tabValues).withDefault(firstTab),
+    parseAsStringLiteral(tabValues)
+      .withDefault(firstTab)
+      .withOptions({ history: "push", shallow: true }),
   );
 
   return (
@@ -64,7 +66,12 @@ export function SettingsTabs({ tabs, defaultTab }: SettingsTabsProps) {
         ))}
       </TabsList>
       {tabs.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value}>
+        <TabsContent
+          key={tab.value}
+          value={tab.value}
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           {tab.content}
         </TabsContent>
       ))}
