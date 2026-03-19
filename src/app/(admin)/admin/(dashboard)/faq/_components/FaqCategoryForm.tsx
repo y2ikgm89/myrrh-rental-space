@@ -188,6 +188,7 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
           isPending={isPending}
           label={mode === "create" ? "作成" : "更新"}
           pendingLabel={mode === "create" ? "作成中..." : "更新中..."}
+          {...(mode === "edit" && { disabled: !form.formState.isDirty })}
         />
       </div>
     </form>

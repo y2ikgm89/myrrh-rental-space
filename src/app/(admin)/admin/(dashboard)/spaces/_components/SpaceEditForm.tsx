@@ -334,7 +334,9 @@ export function SpaceEditForm({
   const router = useRouter();
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(TAB_VALUES).withDefault("basic"),
+    parseAsStringLiteral(TAB_VALUES)
+      .withDefault("basic")
+      .withOptions({ history: "push", shallow: true }),
   );
   const [newFacility, setNewFacility] = useState("");
   const dndContextId = useId();
@@ -641,7 +643,11 @@ export function SpaceEditForm({
         </TabsList>
 
         {/* ══ Tab: 基本情報 ══ */}
-        <TabsContent value="basic" forceMount={true}>
+        <TabsContent
+          value="basic"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <Card>
             <CardHeader>
               <CardTitle>基本情報</CardTitle>
@@ -762,7 +768,11 @@ export function SpaceEditForm({
         </TabsContent>
 
         {/* ══ Tab: 料金設定 ══ */}
-        <TabsContent value="pricing" forceMount={true}>
+        <TabsContent
+          value="pricing"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <Card>
             <CardHeader>
               <CardTitle>料金設定</CardTitle>
@@ -1035,7 +1045,11 @@ export function SpaceEditForm({
         </TabsContent>
 
         {/* ══ Tab: メディア ══ */}
-        <TabsContent value="media" forceMount={true}>
+        <TabsContent
+          value="media"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <Card>
             <CardHeader>
               <CardTitle>画像設定</CardTitle>
@@ -1138,7 +1152,11 @@ export function SpaceEditForm({
         </TabsContent>
 
         {/* ══ Tab: 詳細設定 ══ */}
-        <TabsContent value="details" forceMount={true}>
+        <TabsContent
+          value="details"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <div className="space-y-6">
             {/* ── 場所・カテゴリー ── */}
             {(availableLocations.length > 0 ||
@@ -1310,7 +1328,11 @@ export function SpaceEditForm({
         </TabsContent>
 
         {/* ══ Tab: 公開・SEO ══ */}
-        <TabsContent value="publish" forceMount={true}>
+        <TabsContent
+          value="publish"
+          forceMount
+          className="data-[state=inactive]:hidden"
+        >
           <div className="space-y-6">
             {/* ── 公開設定 ── */}
             <Card>
@@ -1394,6 +1416,7 @@ export function SpaceEditForm({
             <SubmitButton
               isPending={isPending}
               label={mode === "create" ? "スペースを作成" : "変更を保存"}
+              {...(mode === "edit" && { disabled: !isDirty })}
             />
           </div>
         </div>

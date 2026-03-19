@@ -374,6 +374,7 @@ export function CouponForm({ coupon }: CouponFormProps): ReactElement {
               isPending={isPending}
               label={isEdit ? "クーポンを保存" : "クーポンを作成"}
               pendingLabel={isEdit ? "保存中..." : "作成中..."}
+              {...(isEdit && { disabled: !form.formState.isDirty })}
             />
           </div>
         </div>

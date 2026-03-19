@@ -51,7 +51,9 @@ export function HomepageEditTabs({
 }: HomepageEditTabsProps) {
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
-    parseAsStringLiteral(tabValues).withDefault("sections"),
+    parseAsStringLiteral(tabValues)
+      .withDefault("sections")
+      .withOptions({ history: "push", shallow: true }),
   );
   const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -69,14 +71,22 @@ export function HomepageEditTabs({
           </Button>
         )}
       </div>
-      <TabsContent value="sections">
+      <TabsContent
+        value="sections"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         <HomepageTab
           isInstagramConnected={isInstagramConnected}
           showAddDialog={showAddDialog}
           onShowAddDialogChange={setShowAddDialog}
         />
       </TabsContent>
-      <TabsContent value="seo">
+      <TabsContent
+        value="seo"
+        forceMount
+        className="data-[state=inactive]:hidden"
+      >
         <PageSeoForm page={page} />
       </TabsContent>
     </Tabs>

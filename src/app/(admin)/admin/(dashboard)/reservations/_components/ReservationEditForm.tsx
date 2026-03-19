@@ -445,6 +445,7 @@ export function ReservationEditForm({
           isPending={isPending}
           label="予約を更新"
           pendingLabel="更新中..."
+          disabled={!form.formState.isDirty}
         />
       </div>
     </form>

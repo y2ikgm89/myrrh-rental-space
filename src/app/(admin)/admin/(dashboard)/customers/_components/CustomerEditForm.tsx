@@ -244,6 +244,7 @@ export function CustomerEditForm({
               isPending={isPending}
               label="顧客情報を更新"
               pendingLabel="更新中..."
+              disabled={!form.formState.isDirty}
             />
           </div>
         </div>

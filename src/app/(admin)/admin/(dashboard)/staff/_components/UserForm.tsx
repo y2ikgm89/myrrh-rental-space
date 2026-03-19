@@ -181,6 +181,7 @@ export function UserForm({ mode, user }: Props) {
           isPending={isPending}
           label={isEdit ? "更新" : "作成"}
           pendingLabel={isEdit ? "更新中..." : "作成中..."}
+          {...(isEdit && { disabled: !form.formState.isDirty })}
         />
         <Button
           type="button"
