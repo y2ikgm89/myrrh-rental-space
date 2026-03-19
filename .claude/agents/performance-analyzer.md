@@ -29,18 +29,43 @@ cd "$CLAUDE_PROJECT_DIR"
 bun run build 2>&1
 ```
 
+## Turbopack の注意点（Next.js 16 デフォルト）
+
+Turbopack ビルドは Webpack と異なり、ルート別 JS サイズを出力に表示しない。
+「Total client JS」は全チャンクの合計であり、1ルートの First Load JS ではない。
+
+### 正しい分析手法
+
+1. Root shared JS = `.next/build-manifest.json` の `rootMainFiles` の合計サイズ
+2. ルート別 JS = `.next/server/app/<route>.html` 内の `<script>` タグ参照チャンクの合計
+3. `@next/bundle-analyzer` は Turbopack で HTML レポートを生成しない — チャンクファイルの手動解析が必要
+
+### チャンク内容の特定
+
+Turbopack は高度に minify するため、ライブラリ名での `grep` は不確実。先頭 200-300 バイトのパターンで推定する:
+
+- Prism.js: `lang(?:uage)?-` パターン
+- Lexical: `lexical.dev/docs/error` URL
+- Zod: `_zod`, `status:"aborted"`
+- Radix: `radix` 文字列
+
 ## Thresholds
 
-| Metric                 | OK       | Warning    | Critical |
-| ---------------------- | -------- | ---------- | -------- |
-| First Load JS (shared) | < 100 kB | 100–150 kB | > 150 kB |
-| Individual route size  | < 50 kB  | 50–100 kB  | > 100 kB |
+| Metric                          | OK        | Warning      | Critical  |
+| ------------------------------- | --------- | ------------ | --------- |
+| Root shared JS (framework)      | < 500 kB  | 500–700 kB   | > 700 kB  |
+| Public route total (root+route) | < 900 kB  | 900–1200 kB  | > 1200 kB |
+| Admin route total (root+route)  | < 2000 kB | 2000–3000 kB | > 3000 kB |
+
+> React 19 + Next.js 16 フレームワーク自体が ~400kB。これは削減不可。
 
 ## Analysis focus areas
 
 - Routes marked as `ƒ` (dynamic) that could be `○` (static)
 - Unusually large route bundles — check for missing code splitting
 - Shared JS growing over time — check for large dependencies added to layout
+- **admin/public のクロスバンドル** — Lexical/Recharts/Prism が public ルートに混入していないか
+- **未使用パッケージ** — `optimizePackageImports` に含まれるが実際に import されていないパッケージ
 
 ## Output format
 

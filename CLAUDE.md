@@ -176,6 +176,7 @@ bunx --bun prisma migrate dev --name <name>     # マイグレーション
 bun run db:generate                             # Prisma スキーマ再生成
 bun run db:studio                               # Prisma Studio（DB GUI）
 bun run e2e                                     # E2E テスト（Playwright）
+ANALYZE=true bun run build                      # バンドル分析（@next/bundle-analyzer）
 gcloud builds submit --config=cloudbuild.yaml   # Cloud Run デプロイ（Cloud Build 経由）
 bun upgrade                                     # Bun ランタイム自体のアップグレード
 bun outdated                                    # 依存パッケージの最新版確認
