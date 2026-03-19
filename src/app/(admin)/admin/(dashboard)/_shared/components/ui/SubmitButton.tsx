@@ -10,6 +10,8 @@ interface SubmitButtonProps extends Omit<ButtonProps, "type" | "disabled"> {
   pendingLabel?: string;
   /** onClick 指定時は type="button" になる（設定パネル等の非フォーム用途） */
   onClick?: () => void;
+  /** 追加の無効化条件（isDirty 等） */
+  disabled?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ function SubmitButton({
   label,
   pendingLabel,
   onClick,
+  disabled,
   children,
   ...props
 }: SubmitButtonProps) {
@@ -33,7 +36,7 @@ function SubmitButton({
   return (
     <Button
       type={onClick ? "button" : "submit"}
-      disabled={isPending}
+      disabled={isPending || disabled}
       onClick={onClick}
       {...props}
     >
