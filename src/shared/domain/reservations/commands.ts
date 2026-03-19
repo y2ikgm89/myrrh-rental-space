@@ -549,3 +549,137 @@ export async function deleteReservationCommand(id: string) {
     googleCalendarEventId: reservation.googleCalendarEventId,
   };
 }
+
+type PublicReservationInput = {
+  spaceId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  numberOfGuests: number;
+  lastName: string;
+  firstName: string;
+  email: string;
+  phoneNumber?: string | null | undefined;
+  notes?: string | null | undefined;
+};
+
+export async function createPublicReservationCommand(
+  input: PublicReservationInput,
+) {
+  const startDateTime = buildDateTime(input.date, input.startTime);
+  const endDateTime = buildDateTime(input.date, input.endTime);
+
+  const space = await prisma.space.findUnique({
+    where: { id: input.spaceId, isActive: true, isPublished: true },
+    select: { id: true, name: true, address: true, hourlyPrice: true },
+  });
+
+  if (!space) {
+    throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
+  }
+
+  const overlapCheck = await checkReservationOverlap({
+    spaceId: input.spaceId,
+    startTime: startDateTime,
+    endTime: endDateTime,
+  });
+
+  if (overlapCheck.hasOverlap) {
+    throw new DomainError(
+      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+      "CONFLICT",
+    );
+  }
+
+  const hours =
+    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+  const basePrice = Math.floor(Number(space.hourlyPrice) * hours);
+
+  const reservation = await prisma.$transaction(async (tx) => {
+    const overlapCheckTx = await checkReservationOverlap(
+      {
+        spaceId: input.spaceId,
+        startTime: startDateTime,
+        endTime: endDateTime,
+      },
+      tx,
+    );
+    if (overlapCheckTx.hasOverlap) {
+      throw new DomainError(
+        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+        "CONFLICT",
+      );
+    }
+
+    let customer = await tx.customer.findUnique({
+      where: { email: input.email },
+    });
+
+    if (!customer) {
+      customer = await tx.customer.create({
+        data: {
+          lastName: input.lastName,
+          firstName: input.firstName,
+          email: input.email,
+          phoneNumber: input.phoneNumber || null,
+        },
+      });
+    } else {
+      customer = await tx.customer.update({
+        where: { email: input.email },
+        data: {
+          lastName: input.lastName,
+          firstName: input.firstName,
+          phoneNumber: input.phoneNumber || customer.phoneNumber,
+        },
+      });
+    }
+
+    const created = await tx.reservation.create({
+      data: {
+        spaceId: input.spaceId,
+        customerId: customer.id,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        totalPrice: basePrice,
+        basePrice,
+        status: ReservationStatus.PENDING,
+        notes: input.notes || null,
+      },
+      include: {
+        customer: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    const firstReservationAt = customer.firstReservationAt;
+    await tx.customer.update({
+      where: { id: customer.id },
+      data: {
+        totalReservations: { increment: 1 },
+        lastReservationAt: new Date(),
+        ...(firstReservationAt === null
+          ? { firstReservationAt: new Date() }
+          : {}),
+      },
+    });
+
+    return created;
+  });
+
+  const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
+
+  return {
+    id: reservation.id,
+    notification: {
+      reservationId: reservation.id,
+      customerEmail: reservation.customer.email,
+      customerName,
+      spaceName: space.name,
+      startTime: startDateTime,
+      endTime: endDateTime,
+      totalPrice: basePrice,
+      notes: input.notes ?? undefined,
+      location: space.address ?? undefined,
+    } satisfies ReservationNotificationPayload,
+  };
+}
