@@ -6,28 +6,33 @@
  * サイドバーの有効/無効、ウィジェット設定、表示件数設定
  */
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
   SubmitButton,
+  Switch,
 } from "@/admin/components/ui";
-import { Switch } from "@/admin/components/ui/switch";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateSidebarSettings } from "@/admin/actions/settings";
+import { sidebarFormSchema } from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   sidebarWidgetsSchema,
   type SidebarWidgets,
 } from "@/shared/lib/validations/sidebar";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -42,9 +47,6 @@ interface SidebarSectionProps {
 // =============================================================================
 
 export function SidebarSection({ settings }: SidebarSectionProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
   // デフォルト値の設定
   const defaultWidgets: SidebarWidgets = {
     search: true,
@@ -60,267 +62,282 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     return result.success ? result.data : defaultWidgets;
   };
 
-  const [formData, setFormData] = useState(() => ({
-    sidebarEnabled: settings.sidebarEnabled ?? true,
-    sidebarWidgets: parseWidgets(settings.sidebarWidgets),
-    sidebarRecentCount: settings.sidebarRecentCount ?? 5,
-    sidebarPopularCount: settings.sidebarPopularCount ?? 5,
-  }));
+  const { form, isPending, onSubmit } = useFormAction(
+    sidebarFormSchema,
+    (data) =>
+      updateSidebarSettings({
+        sidebarEnabled: data.sidebarEnabled,
+        sidebarWidgets: data.sidebarWidgets,
+        sidebarRecentCount: data.sidebarRecentCount,
+        sidebarPopularCount: data.sidebarPopularCount,
+      }),
+    {
+      defaultValues: {
+        sidebarEnabled: settings.sidebarEnabled ?? true,
+        sidebarWidgets: parseWidgets(settings.sidebarWidgets),
+        sidebarRecentCount: settings.sidebarRecentCount ?? 5,
+        sidebarPopularCount: settings.sidebarPopularCount ?? 5,
+      },
+      refresh: true,
+      successMessage: "サイドバー設定を保存しました",
+    },
+  );
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateSidebarSettings({
-        sidebarEnabled: formData.sidebarEnabled,
-        sidebarWidgets: formData.sidebarWidgets,
-        sidebarRecentCount: formData.sidebarRecentCount,
-        sidebarPopularCount: formData.sidebarPopularCount,
-      });
-
-      if (isMutationError(result)) {
-        toast.error(result.error);
-      } else {
-        toast.success("サイドバー設定を保存しました");
-        router.refresh();
-      }
-    });
-  };
+  const sidebarEnabled = useWatch({
+    control: form.control,
+    name: "sidebarEnabled",
+  });
+  const widgetRecent = useWatch({
+    control: form.control,
+    name: "sidebarWidgets.recent",
+  });
+  const widgetPopular = useWatch({
+    control: form.control,
+    name: "sidebarWidgets.popular",
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>サイドバー設定</CardTitle>
-        <CardDescription>
-          ブログページのサイドバー表示とウィジェット設定を行います
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* サイドバー全体の有効/無効 */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="sidebarEnabled">サイドバーを表示する</Label>
-            <p className="text-sm text-muted-foreground">
-              ブログページでサイドバーを表示します
-            </p>
-          </div>
-          <Switch
-            id="sidebarEnabled"
-            checked={formData.sidebarEnabled}
-            onCheckedChange={(checked) =>
-              setFormData({ ...formData, sidebarEnabled: checked })
-            }
-            disabled={isPending}
-          />
-        </div>
-
-        {/* ウィジェット設定 */}
-        {formData.sidebarEnabled && (
-          <>
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium">ウィジェット設定</h4>
-
-              {/* 検索ウィジェット */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="widgetSearch">検索ウィジェット</Label>
-                  <p className="text-sm text-muted-foreground">
-                    記事検索フォームを表示します
-                  </p>
-                </div>
-                <Switch
-                  id="widgetSearch"
-                  checked={formData.sidebarWidgets.search}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      sidebarWidgets: {
-                        ...formData.sidebarWidgets,
-                        search: checked,
-                      },
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-
-              {/* 新着記事ウィジェット */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="widgetRecent">新着記事ウィジェット</Label>
-                  <p className="text-sm text-muted-foreground">
-                    最新の記事一覧を表示します
-                  </p>
-                </div>
-                <Switch
-                  id="widgetRecent"
-                  checked={formData.sidebarWidgets.recent}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      sidebarWidgets: {
-                        ...formData.sidebarWidgets,
-                        recent: checked,
-                      },
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-
-              {/* 人気記事ウィジェット */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="widgetPopular">人気記事ウィジェット</Label>
-                  <p className="text-sm text-muted-foreground">
-                    閲覧数の多い記事一覧を表示します
-                  </p>
-                </div>
-                <Switch
-                  id="widgetPopular"
-                  checked={formData.sidebarWidgets.popular}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      sidebarWidgets: {
-                        ...formData.sidebarWidgets,
-                        popular: checked,
-                      },
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-
-              {/* カテゴリーウィジェット */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="widgetCategories">
-                    カテゴリーウィジェット
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
-                    カテゴリー一覧を表示します
-                  </p>
-                </div>
-                <Switch
-                  id="widgetCategories"
-                  checked={formData.sidebarWidgets.categories}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      sidebarWidgets: {
-                        ...formData.sidebarWidgets,
-                        categories: checked,
-                      },
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-
-              {/* タグウィジェット */}
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label htmlFor="widgetTags">タグウィジェット</Label>
-                  <p className="text-sm text-muted-foreground">
-                    タグクラウドを表示します
-                  </p>
-                </div>
-                <Switch
-                  id="widgetTags"
-                  checked={formData.sidebarWidgets.tags}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      sidebarWidgets: {
-                        ...formData.sidebarWidgets,
-                        tags: checked,
-                      },
-                    })
-                  }
-                  disabled={isPending}
-                />
-              </div>
-            </div>
-
-            {/* 表示件数設定 */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-medium">表示件数設定</h4>
-
-              {/* 新着記事の表示件数 */}
-              {formData.sidebarWidgets.recent && (
-                <div className="space-y-2">
-                  <Label htmlFor="sidebarRecentCount">新着記事の表示件数</Label>
-                  <Input
-                    id="sidebarRecentCount"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={formData.sidebarRecentCount}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        sidebarRecentCount: parseInt(e.target.value, 10) || 5,
-                      })
-                    }
-                    disabled={isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    1〜20件の範囲で指定してください
-                  </p>
-                </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>サイドバー設定</CardTitle>
+            <CardDescription>
+              ブログページのサイドバー表示とウィジェット設定を行います
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* サイドバー全体の有効/無効 */}
+            <FormField
+              control={form.control}
+              name="sidebarEnabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel>サイドバーを表示する</FormLabel>
+                    <p className="text-sm text-muted-foreground">
+                      ブログページでサイドバーを表示します
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                </FormItem>
               )}
+            />
 
-              {/* 人気記事の表示件数 */}
-              {formData.sidebarWidgets.popular && (
-                <div className="space-y-2">
-                  <Label htmlFor="sidebarPopularCount">
-                    人気記事の表示件数
-                  </Label>
-                  <Input
-                    id="sidebarPopularCount"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={formData.sidebarPopularCount}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        sidebarPopularCount: parseInt(e.target.value, 10) || 5,
-                      })
-                    }
-                    disabled={isPending}
+            {/* ウィジェット設定 */}
+            {sidebarEnabled && (
+              <>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">ウィジェット設定</h4>
+
+                  <FormField
+                    control={form.control}
+                    name="sidebarWidgets.search"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>検索ウィジェット</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            記事検索フォームを表示します
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    1〜20件の範囲で指定してください
-                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="sidebarWidgets.recent"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>新着記事ウィジェット</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            最新の記事一覧を表示します
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="sidebarWidgets.popular"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>人気記事ウィジェット</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            閲覧数の多い記事一覧を表示します
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="sidebarWidgets.categories"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>カテゴリーウィジェット</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            カテゴリー一覧を表示します
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="sidebarWidgets.tags"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel>タグウィジェット</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            タグクラウドを表示します
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              )}
-            </div>
-          </>
-        )}
 
-        {/* 保存ボタン */}
-        <div className="flex items-center gap-4">
-          <SubmitButton
-            isPending={isPending}
-            onClick={handleSave}
-            label="サイドバー設定を保存"
-            pendingLabel="保存中..."
-          />
-        </div>
+                {/* 表示件数設定 */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium">表示件数設定</h4>
 
-        {/* ヒント */}
-        <Card className="bg-muted/50">
-          <CardContent className="pt-6">
-            <h4 className="font-medium mb-2">ヒント</h4>
-            <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-              <li>サイドバーは記事一覧ページと記事詳細ページで表示されます</li>
-              <li>モバイル表示では自動的に非表示になります</li>
-              <li>各ウィジェットは個別にオン/オフできます</li>
-              <li>表示件数は1〜20件の範囲で設定できます</li>
-            </ul>
+                  {widgetRecent && (
+                    <FormField
+                      control={form.control}
+                      name="sidebarRecentCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>新着記事の表示件数</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={field.value}
+                              onChange={(e) =>
+                                field.onChange(
+                                  parseInt(e.target.value, 10) || 5,
+                                )
+                              }
+                              disabled={isPending}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            1〜20件の範囲で指定してください
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {widgetPopular && (
+                    <FormField
+                      control={form.control}
+                      name="sidebarPopularCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>人気記事の表示件数</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={field.value}
+                              onChange={(e) =>
+                                field.onChange(
+                                  parseInt(e.target.value, 10) || 5,
+                                )
+                              }
+                              disabled={isPending}
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            1〜20件の範囲で指定してください
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 保存ボタン */}
+            <SubmitButton
+              isPending={isPending}
+              label="サイドバー設定を保存"
+              disabled={!form.formState.isDirty}
+            />
+
+            {/* ヒント */}
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <h4 className="font-medium mb-2">ヒント</h4>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
+                  <li>
+                    サイドバーは記事一覧ページと記事詳細ページで表示されます
+                  </li>
+                  <li>モバイル表示では自動的に非表示になります</li>
+                  <li>各ウィジェットは個別にオン/オフできます</li>
+                  <li>表示件数は1〜20件の範囲で設定できます</li>
+                </ul>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
-      </CardContent>
-    </Card>
+      </form>
+    </Form>
   );
 }

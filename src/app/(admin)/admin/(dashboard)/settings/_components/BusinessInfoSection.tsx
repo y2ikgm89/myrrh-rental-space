@@ -1,26 +1,34 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import {
-  SubmitButton,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
-  Textarea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SubmitButton,
+  Textarea,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateBusinessInfo } from "@/admin/actions/settings";
+import {
+  businessInfoFormSchema,
+  emptyToNull,
+} from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { useRefreshOnSuccess } from "./hooks";
 import { toDateString } from "@/shared/lib/serialize";
 
 interface BusinessInfoSectionProps {
@@ -45,192 +53,240 @@ const INDUSTRY_TYPES = [
 ];
 
 export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess();
-  const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState(() => ({
-    businessName: settings.businessName || "",
-    businessNameKana: settings.businessNameKana || "",
-    representativeName: settings.representativeName || "",
-    businessType: settings.businessType || "",
-    industryType: settings.industryType || "",
-    establishedDate: settings.establishedDate
-      ? toDateString(new Date(settings.establishedDate))
-      : "",
-    registrationNumber: settings.registrationNumber || "",
-    invoiceNumber: settings.invoiceNumber || "",
-    businessDescription: settings.businessDescription || "",
-  }));
-
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateBusinessInfo({
-        businessName: formData.businessName || null,
-        businessNameKana: formData.businessNameKana || null,
-        representativeName: formData.representativeName || null,
-        businessType: formData.businessType || null,
-        industryType: formData.industryType || null,
-        establishedDate: formData.establishedDate || null,
-        registrationNumber: formData.registrationNumber || null,
-        invoiceNumber: formData.invoiceNumber || null,
-        businessDescription: formData.businessDescription || null,
-      });
-      handleResult(result, "事業者情報を保存しました");
-    });
-  };
+  const { form, isPending, onSubmit } = useFormAction(
+    businessInfoFormSchema,
+    (data) =>
+      updateBusinessInfo({
+        businessName: emptyToNull(data.businessName),
+        businessNameKana: emptyToNull(data.businessNameKana),
+        representativeName: emptyToNull(data.representativeName),
+        businessType: emptyToNull(data.businessType),
+        industryType: emptyToNull(data.industryType),
+        establishedDate: data.establishedDate || null,
+        registrationNumber: emptyToNull(data.registrationNumber),
+        invoiceNumber: emptyToNull(data.invoiceNumber),
+        businessDescription: emptyToNull(data.businessDescription),
+      }),
+    {
+      defaultValues: {
+        businessName: settings.businessName || "",
+        businessNameKana: settings.businessNameKana || "",
+        representativeName: settings.representativeName || "",
+        businessType: settings.businessType || "",
+        industryType: settings.industryType || "",
+        establishedDate: settings.establishedDate
+          ? toDateString(new Date(settings.establishedDate))
+          : "",
+        registrationNumber: settings.registrationNumber || "",
+        invoiceNumber: settings.invoiceNumber || "",
+        businessDescription: settings.businessDescription || "",
+      },
+      refresh: true,
+      successMessage: "事業者情報を保存しました",
+    },
+  );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>事業者情報</CardTitle>
-        <CardDescription>
-          事業者の基本情報を設定します（特定商取引法表示などに使用）
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="businessName">会社名・屋号</Label>
-            <Input
-              id="businessName"
-              value={formData.businessName}
-              onChange={(e) =>
-                setFormData({ ...formData, businessName: e.target.value })
-              }
-              placeholder="株式会社サンプル"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="businessNameKana">会社名・屋号（カナ）</Label>
-            <Input
-              id="businessNameKana"
-              value={formData.businessNameKana}
-              onChange={(e) =>
-                setFormData({ ...formData, businessNameKana: e.target.value })
-              }
-              placeholder="カブシキガイシャサンプル"
-              disabled={isPending}
-            />
-          </div>
-        </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>事業者情報</CardTitle>
+            <CardDescription>
+              事業者の基本情報を設定します（特定商取引法表示などに使用）
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>会社名・屋号</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="株式会社サンプル"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="businessNameKana"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>会社名・屋号（カナ）</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="カブシキガイシャサンプル"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="representativeName">代表者名</Label>
-            <Input
-              id="representativeName"
-              value={formData.representativeName}
-              onChange={(e) =>
-                setFormData({ ...formData, representativeName: e.target.value })
-              }
-              placeholder="山田 太郎"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="businessType">事業形態</Label>
-            <Select
-              value={formData.businessType}
-              onValueChange={(value) =>
-                setFormData({ ...formData, businessType: value })
-              }
-              disabled={isPending}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="選択してください" />
-              </SelectTrigger>
-              <SelectContent>
-                {BUSINESS_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="industryType">業種</Label>
-            <Select
-              value={formData.industryType}
-              onValueChange={(value) =>
-                setFormData({ ...formData, industryType: value })
-              }
-              disabled={isPending}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="選択してください" />
-              </SelectTrigger>
-              <SelectContent>
-                {INDUSTRY_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="representativeName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>代表者名</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="山田 太郎"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="businessType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>事業形態</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="選択してください" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BUSINESS_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="industryType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>業種</FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={isPending}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="選択してください" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INDUSTRY_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
-            <Label htmlFor="establishedDate">設立日</Label>
-            <Input
-              id="establishedDate"
-              type="date"
-              value={formData.establishedDate}
-              onChange={(e) =>
-                setFormData({ ...formData, establishedDate: e.target.value })
-              }
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="registrationNumber">法人番号</Label>
-            <Input
-              id="registrationNumber"
-              value={formData.registrationNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, registrationNumber: e.target.value })
-              }
-              placeholder="1234567890123"
-              disabled={isPending}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">インボイス登録番号</Label>
-            <Input
-              id="invoiceNumber"
-              value={formData.invoiceNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, invoiceNumber: e.target.value })
-              }
-              placeholder="T1234567890123"
-              disabled={isPending}
-            />
-          </div>
-        </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                control={form.control}
+                name="establishedDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>設立日</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="date" disabled={isPending} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="registrationNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>法人番号</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="1234567890123"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="invoiceNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>インボイス登録番号</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="T1234567890123"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="businessDescription">事業概要</Label>
-          <Textarea
-            id="businessDescription"
-            value={formData.businessDescription}
-            onChange={(e) =>
-              setFormData({ ...formData, businessDescription: e.target.value })
-            }
-            placeholder="事業内容の説明..."
-            rows={3}
-            disabled={isPending}
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="businessDescription"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>事業概要</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="事業内容の説明..."
+                      rows={3}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="事業者情報を保存"
-          pendingLabel="保存中..."
-        />
-      </CardContent>
-    </Card>
+            <SubmitButton
+              isPending={isPending}
+              label="事業者情報を保存"
+              disabled={!form.formState.isDirty}
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }

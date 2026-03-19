@@ -6,6 +6,10 @@
  */
 import { z } from "zod";
 import {
+  AnalyticsType,
+  HeaderBackgroundMode,
+  HeaderScrollBehavior,
+  LayoutWidth,
   PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
@@ -165,3 +169,219 @@ export const termsAgreementFormSchema = z.object({
 });
 
 export type TermsAgreementFormInput = z.infer<typeof termsAgreementFormSchema>;
+
+// =============================================================================
+// Site > SEO > SEO・Analytics設定
+// =============================================================================
+
+/** analyticsType: フォームでは "none" を使い、送信時に null に変換する */
+export const seoFormSchema = z.object({
+  defaultMetaDescription: z
+    .string()
+    .max(160, { error: "160文字以内で入力してください" }),
+  defaultMetaKeywords: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+  defaultOgpTitle: z
+    .string()
+    .max(60, { error: "60文字以内で入力してください" }),
+  defaultOgpDescription: z
+    .string()
+    .max(160, { error: "160文字以内で入力してください" }),
+  analyticsType: z.union([z.enum(AnalyticsType), z.literal("none")]),
+  googleAnalyticsId: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  googleTagManagerId: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  gaPropertyId: z.string().max(20, { error: "20文字以内で入力してください" }),
+  googleSearchConsoleId: z
+    .string()
+    .max(100, { error: "100文字以内で入力してください" }),
+  bingWebmasterToolsId: z
+    .string()
+    .max(100, { error: "100文字以内で入力してください" }),
+});
+
+export type SeoFormInput = z.infer<typeof seoFormSchema>;
+
+// =============================================================================
+// Site > Email > メール設定
+// =============================================================================
+
+export const emailFormSchema = z.object({
+  senderEmail: z.union([
+    z
+      .string()
+      .email({ error: "有効なメールアドレスを入力してください" })
+      .max(100),
+    z.literal(""),
+  ]),
+  senderName: z.string().max(100, { error: "100文字以内で入力してください" }),
+  replyToEmail: z.union([
+    z
+      .string()
+      .email({ error: "有効なメールアドレスを入力してください" })
+      .max(100),
+    z.literal(""),
+  ]),
+  sendReservationConfirmationEmail: z.boolean(),
+  sendAdminNotificationEmail: z.boolean(),
+  notificationEmailAddresses: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+});
+
+export type EmailFormInput = z.infer<typeof emailFormSchema>;
+
+// =============================================================================
+// Site > Email > 通知設定
+// =============================================================================
+
+export const notificationFormSchema = z.object({
+  notifyNewReservation: z.boolean(),
+  notifyReservationChange: z.boolean(),
+  notifyReservationCancel: z.boolean(),
+  notifyNewInquiry: z.boolean(),
+});
+
+export type NotificationFormInput = z.infer<typeof notificationFormSchema>;
+
+// =============================================================================
+// Site > SEO > MEO対策設定
+// =============================================================================
+
+export const meoFormSchema = z.object({
+  latitude: z.string(),
+  longitude: z.string(),
+  priceRange: z.string().max(100, { error: "100文字以内で入力してください" }),
+  googleBusinessPlaceId: z
+    .string()
+    .max(200, { error: "200文字以内で入力してください" }),
+  googleReviewUrl: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+  businessAttributes: z.record(z.string(), z.boolean()),
+  paymentAccepted: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+});
+
+export type MeoFormInput = z.infer<typeof meoFormSchema>;
+
+// =============================================================================
+// Site > Privacy > Cookie同意設定
+// =============================================================================
+
+export const cookieConsentFormSchema = z.object({
+  cookieConsentEnabled: z.boolean(),
+  cookieConsentMessage: z
+    .string()
+    .max(1000, { error: "1000文字以内で入力してください" }),
+  cookieConsentAcceptText: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  cookieConsentRejectText: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  cookieConsentPolicyUrl: z
+    .string()
+    .max(200, { error: "200文字以内で入力してください" }),
+});
+
+export type CookieConsentFormInput = z.infer<typeof cookieConsentFormSchema>;
+
+// =============================================================================
+// Site > Appearance > ヘッダー設定
+// =============================================================================
+
+export const headerFormSchema = z.object({
+  headerScrollBehavior: z.enum(HeaderScrollBehavior),
+  headerBackgroundMode: z.enum(HeaderBackgroundMode),
+});
+
+export type HeaderFormInput = z.infer<typeof headerFormSchema>;
+
+// =============================================================================
+// Site > Appearance > フッター設定
+// =============================================================================
+
+export const footerFormSchema = z.object({
+  footerTagline: z
+    .string()
+    .max(200, { error: "200文字以内で入力してください" }),
+  footerNavigationLabel: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerContactLabel: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerHoursLabel: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  footerShowSocialLinks: z.boolean(),
+  themeColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, {
+    error: "有効なHEXカラーコードを入力してください（例: #fafafa）",
+  }),
+});
+
+export type FooterFormInput = z.infer<typeof footerFormSchema>;
+
+// =============================================================================
+// Site > Appearance > サイドバー設定
+// =============================================================================
+
+export const sidebarFormSchema = z.object({
+  sidebarEnabled: z.boolean(),
+  sidebarWidgets: z.object({
+    search: z.boolean(),
+    recent: z.boolean(),
+    popular: z.boolean(),
+    categories: z.boolean(),
+    tags: z.boolean(),
+  }),
+  sidebarRecentCount: z.number().int().min(1).max(20),
+  sidebarPopularCount: z.number().int().min(1).max(20),
+});
+
+export type SidebarFormInput = z.infer<typeof sidebarFormSchema>;
+
+// =============================================================================
+// Site > Appearance > レイアウト設定
+// =============================================================================
+
+export const layoutFormSchema = z.object({
+  containerWidth: z.enum(LayoutWidth),
+  containerWidthCustom: z.string(),
+  contentWidth: z.enum(LayoutWidth),
+  contentWidthCustom: z.string(),
+});
+
+export type LayoutFormInput = z.infer<typeof layoutFormSchema>;
+
+// =============================================================================
+// Site > General > 事業者情報
+// =============================================================================
+
+export const businessInfoFormSchema = z.object({
+  businessName: z.string().max(100, { error: "100文字以内で入力してください" }),
+  businessNameKana: z
+    .string()
+    .max(100, { error: "100文字以内で入力してください" }),
+  representativeName: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  businessType: z.string().max(50),
+  industryType: z.string().max(50),
+  establishedDate: z.string(),
+  registrationNumber: z
+    .string()
+    .max(50, { error: "50文字以内で入力してください" }),
+  invoiceNumber: z.string().max(20, { error: "20文字以内で入力してください" }),
+  businessDescription: z
+    .string()
+    .max(2000, { error: "2000文字以内で入力してください" }),
+});
+
+export type BusinessInfoFormInput = z.infer<typeof businessInfoFormSchema>;

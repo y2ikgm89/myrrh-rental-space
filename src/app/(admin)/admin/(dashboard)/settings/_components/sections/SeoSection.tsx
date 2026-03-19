@@ -6,28 +6,32 @@
  * メタ情報、Analytics設定、検索エンジン検証の3カード構成
  */
 
-import { useState, useTransition } from "react";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
-  Textarea,
   SelectionBox,
   SubmitButton,
+  Textarea,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateSeoSettings } from "@/admin/actions/settings";
+import { seoFormSchema, emptyToNull } from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { useRefreshOnSuccess } from "../hooks";
 import { AnalyticsType } from "@/shared/db/enums";
-import {
-  isValidAnalyticsType,
-  getValidAnalyticsType,
-} from "@/shared/lib/validations/enums";
+import { isValidAnalyticsType } from "@/shared/lib/validations/enums";
 
 interface SeoSectionProps {
   settings: Serialized<SettingsData>;
@@ -48,283 +52,319 @@ const ANALYTICS_TYPE_OPTIONS = [
 ];
 
 export function SeoSection({ settings }: SeoSectionProps) {
-  const { handleResult } = useRefreshOnSuccess();
-  const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState(() => ({
-    // Meta settings
-    defaultMetaDescription: settings.defaultMetaDescription || "",
-    defaultMetaKeywords: settings.defaultMetaKeywords || "",
-    defaultOgpTitle: settings.defaultOgpTitle || "",
-    defaultOgpDescription: settings.defaultOgpDescription || "",
-    // Analytics settings
-    analyticsType: getValidAnalyticsType(settings.analyticsType),
-    googleAnalyticsId: settings.googleAnalyticsId || "",
-    googleTagManagerId: settings.googleTagManagerId || "",
-    gaPropertyId: settings.gaPropertyId || "",
-    // Webmaster settings
-    googleSearchConsoleId: settings.googleSearchConsoleId || "",
-    bingWebmasterToolsId: settings.bingWebmasterToolsId || "",
-  }));
+  const { form, isPending, onSubmit } = useFormAction(
+    seoFormSchema,
+    (data) =>
+      updateSeoSettings({
+        defaultMetaDescription: emptyToNull(data.defaultMetaDescription),
+        defaultMetaKeywords: emptyToNull(data.defaultMetaKeywords),
+        defaultOgpTitle: emptyToNull(data.defaultOgpTitle),
+        defaultOgpDescription: emptyToNull(data.defaultOgpDescription),
+        analyticsType:
+          data.analyticsType !== "none" &&
+          isValidAnalyticsType(data.analyticsType)
+            ? data.analyticsType
+            : null,
+        googleAnalyticsId: emptyToNull(data.googleAnalyticsId),
+        googleTagManagerId: emptyToNull(data.googleTagManagerId),
+        gaPropertyId: emptyToNull(data.gaPropertyId),
+        googleSearchConsoleId: emptyToNull(data.googleSearchConsoleId),
+        bingWebmasterToolsId: emptyToNull(data.bingWebmasterToolsId),
+      }),
+    {
+      defaultValues: {
+        defaultMetaDescription: settings.defaultMetaDescription || "",
+        defaultMetaKeywords: settings.defaultMetaKeywords || "",
+        defaultOgpTitle: settings.defaultOgpTitle || "",
+        defaultOgpDescription: settings.defaultOgpDescription || "",
+        analyticsType: settings.analyticsType ?? "none",
+        googleAnalyticsId: settings.googleAnalyticsId || "",
+        googleTagManagerId: settings.googleTagManagerId || "",
+        gaPropertyId: settings.gaPropertyId || "",
+        googleSearchConsoleId: settings.googleSearchConsoleId || "",
+        bingWebmasterToolsId: settings.bingWebmasterToolsId || "",
+      },
+      refresh: true,
+      successMessage: "SEO・Analytics設定を保存しました",
+    },
+  );
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateSeoSettings({
-        defaultMetaDescription: formData.defaultMetaDescription || null,
-        defaultMetaKeywords: formData.defaultMetaKeywords || null,
-        defaultOgpTitle: formData.defaultOgpTitle || null,
-        defaultOgpDescription: formData.defaultOgpDescription || null,
-        analyticsType: formData.analyticsType,
-        googleAnalyticsId: formData.googleAnalyticsId || null,
-        googleTagManagerId: formData.googleTagManagerId || null,
-        gaPropertyId: formData.gaPropertyId || null,
-        googleSearchConsoleId: formData.googleSearchConsoleId || null,
-        bingWebmasterToolsId: formData.bingWebmasterToolsId || null,
-      });
-      handleResult(result, "SEO・Analytics設定を保存しました");
-    });
-  };
+  const analyticsType = useWatch({
+    control: form.control,
+    name: "analyticsType",
+  });
+  const metaDescriptionValue = useWatch({
+    control: form.control,
+    name: "defaultMetaDescription",
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Card 1: Meta Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>メタ情報設定</CardTitle>
-          <CardDescription>
-            検索エンジンやSNSシェア時に表示される情報を設定します
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="defaultMetaDescription">
-              デフォルトメタディスクリプション
-            </Label>
-            <Textarea
-              id="defaultMetaDescription"
-              value={formData.defaultMetaDescription}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  defaultMetaDescription: e.target.value,
-                })
-              }
-              placeholder="サイトのデフォルト説明文（160文字以内推奨）"
-              rows={2}
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              現在 {formData.defaultMetaDescription.length} 文字（推奨:
-              120〜160文字）
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="defaultMetaKeywords">
-              デフォルトメタキーワード
-            </Label>
-            <Input
-              id="defaultMetaKeywords"
-              value={formData.defaultMetaKeywords}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  defaultMetaKeywords: e.target.value,
-                })
-              }
-              placeholder="レンタルスペース, 会議室, イベント会場"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">カンマ区切りで入力</p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="defaultOgpTitle">OGPタイトル</Label>
-              <Input
-                id="defaultOgpTitle"
-                value={formData.defaultOgpTitle}
-                onChange={(e) =>
-                  setFormData({ ...formData, defaultOgpTitle: e.target.value })
-                }
-                placeholder="サイト名 | キャッチコピー"
-                disabled={isPending}
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <div className="space-y-6">
+          {/* Card 1: Meta Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>メタ情報設定</CardTitle>
+              <CardDescription>
+                検索エンジンやSNSシェア時に表示される情報を設定します
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="defaultMetaDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>デフォルトメタディスクリプション</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="サイトのデフォルト説明文（160文字以内推奨）"
+                        rows={2}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      現在 {metaDescriptionValue.length} 文字（推奨:
+                      120〜160文字）
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="defaultOgpDescription">OGP説明</Label>
-              <Input
-                id="defaultOgpDescription"
-                value={formData.defaultOgpDescription}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    defaultOgpDescription: e.target.value,
-                  })
-                }
-                placeholder="SNSシェア時の説明文"
-                disabled={isPending}
+
+              <FormField
+                control={form.control}
+                name="defaultMetaKeywords"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>デフォルトメタキーワード</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="レンタルスペース, 会議室, イベント会場"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>カンマ区切りで入力</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Card 2: Analytics Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Analytics設定</CardTitle>
-          <CardDescription>
-            Google AnalyticsまたはGoogle Tag Managerを設定します
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Label>トラッキング方式</Label>
-            <SelectionBox
-              options={ANALYTICS_TYPE_OPTIONS}
-              value={formData.analyticsType ?? "none"}
-              onChange={(value) => {
-                const analyticsType =
-                  value !== "none" && isValidAnalyticsType(value)
-                    ? value
-                    : null;
-                setFormData({ ...formData, analyticsType });
-              }}
-              columns={3}
-              disabled={isPending}
-              name="トラッキング方式"
-            />
-            <p className="text-xs text-muted-foreground">
-              GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。
-            </p>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="defaultOgpTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OGPタイトル</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="サイト名 | キャッチコピー"
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="defaultOgpDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>OGP説明</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="SNSシェア時の説明文"
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          {formData.analyticsType === AnalyticsType.ga4 && (
-            <div className="space-y-2">
-              <Label htmlFor="googleAnalyticsId">GA4 Measurement ID</Label>
-              <Input
-                id="googleAnalyticsId"
-                value={formData.googleAnalyticsId}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    googleAnalyticsId: e.target.value,
-                  })
-                }
-                placeholder="G-XXXXXXXXXX"
-                disabled={isPending}
+          {/* Card 2: Analytics Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Analytics設定</CardTitle>
+              <CardDescription>
+                Google AnalyticsまたはGoogle Tag Managerを設定します
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="analyticsType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>トラッキング方式</FormLabel>
+                    <FormControl>
+                      <SelectionBox
+                        options={ANALYTICS_TYPE_OPTIONS}
+                        value={field.value ?? "none"}
+                        onChange={(value) => field.onChange(value)}
+                        columns={3}
+                        disabled={isPending}
+                        name="トラッキング方式"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      GA4とGTMは排他選択です。GTM経由でGA4を使う場合はGTMを選択してください。
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <p className="text-xs text-muted-foreground">
-                GA4管理画面 &gt; データストリーム &gt; 測定IDから取得
-              </p>
-            </div>
-          )}
 
-          {formData.analyticsType === AnalyticsType.gtm && (
-            <div className="space-y-2">
-              <Label htmlFor="googleTagManagerId">GTM Container ID</Label>
-              <Input
-                id="googleTagManagerId"
-                value={formData.googleTagManagerId}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    googleTagManagerId: e.target.value,
-                  })
-                }
-                placeholder="GTM-XXXXXXX"
-                disabled={isPending}
+              {analyticsType === AnalyticsType.ga4 && (
+                <FormField
+                  control={form.control}
+                  name="googleAnalyticsId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GA4 Measurement ID</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="G-XXXXXXXXXX"
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        GA4管理画面 &gt; データストリーム &gt; 測定IDから取得
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {analyticsType === AnalyticsType.gtm && (
+                <FormField
+                  control={form.control}
+                  name="googleTagManagerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GTM Container ID</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="GTM-XXXXXXX"
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        GTM管理画面のコンテナIDから取得
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="gaPropertyId"
+                render={({ field }) => (
+                  <FormItem className="pt-2 border-t">
+                    <FormLabel>
+                      GA4 プロパティID（ダッシュボード統計用）
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="123456789"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      GA4管理画面 &gt; プロパティ設定 &gt;
+                      プロパティIDから取得（数値のみ）。
+                      ダッシュボードでのアクセス解析表示に必要です。
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              <p className="text-xs text-muted-foreground">
-                GTM管理画面のコンテナIDから取得
-              </p>
-            </div>
-          )}
+            </CardContent>
+          </Card>
 
-          <div className="space-y-2 pt-2 border-t">
-            <Label htmlFor="gaPropertyId">
-              GA4 プロパティID（ダッシュボード統計用）
-            </Label>
-            <Input
-              id="gaPropertyId"
-              value={formData.gaPropertyId}
-              onChange={(e) =>
-                setFormData({ ...formData, gaPropertyId: e.target.value })
-              }
-              placeholder="123456789"
-              disabled={isPending}
+          {/* Card 3: Search Engine Verification */}
+          <Card>
+            <CardHeader>
+              <CardTitle>検索エンジン検証</CardTitle>
+              <CardDescription>
+                Google Search ConsoleやBing Webmaster
+                Toolsの所有権確認用メタタグを設定します
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="googleSearchConsoleId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Google Search Console</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="verification-code-here"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      &lt;meta name=&quot;google-site-verification&quot;
+                      content=&quot;...&quot; /&gt; のcontent属性値を入力
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="bingWebmasterToolsId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bing Webmaster Tools</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="verification-code-here"
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      &lt;meta name=&quot;msvalidate.01&quot;
+                      content=&quot;...&quot; /&gt; のcontent属性値を入力
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <SubmitButton
+              isPending={isPending}
+              label="SEO・Analytics設定を保存"
+              disabled={!form.formState.isDirty}
+              size="lg"
             />
-            <p className="text-xs text-muted-foreground">
-              GA4管理画面 &gt; プロパティ設定 &gt;
-              プロパティIDから取得（数値のみ）。
-              ダッシュボードでのアクセス解析表示に必要です。
-            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Card 3: Search Engine Verification */}
-      <Card>
-        <CardHeader>
-          <CardTitle>検索エンジン検証</CardTitle>
-          <CardDescription>
-            Google Search ConsoleやBing Webmaster
-            Toolsの所有権確認用メタタグを設定します
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="googleSearchConsoleId">Google Search Console</Label>
-            <Input
-              id="googleSearchConsoleId"
-              value={formData.googleSearchConsoleId}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  googleSearchConsoleId: e.target.value,
-                })
-              }
-              placeholder="verification-code-here"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;google-site-verification&quot;
-              content=&quot;...&quot; /&gt; のcontent属性値を入力
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bingWebmasterToolsId">Bing Webmaster Tools</Label>
-            <Input
-              id="bingWebmasterToolsId"
-              value={formData.bingWebmasterToolsId}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  bingWebmasterToolsId: e.target.value,
-                })
-              }
-              placeholder="verification-code-here"
-              disabled={isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              &lt;meta name=&quot;msvalidate.01&quot; content=&quot;...&quot;
-              /&gt; のcontent属性値を入力
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="SEO・Analytics設定を保存"
-          pendingLabel="保存中..."
-          size="lg"
-        />
-      </div>
-    </div>
+        </div>
+      </form>
+    </Form>
   );
 }

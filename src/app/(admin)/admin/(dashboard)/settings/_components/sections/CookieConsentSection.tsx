@@ -6,23 +6,33 @@
  * GDPR対応のCookie同意バナーの表示設定
  */
 
-import { useState, useTransition } from "react";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   Input,
-  Label,
   Switch,
   SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateCookieConsentSettings } from "@/admin/actions/settings";
+import {
+  cookieConsentFormSchema,
+  emptyToNull,
+} from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { useRefreshOnSuccess } from "../hooks";
 
 // デフォルト値
 const DEFAULT_MESSAGE =
@@ -36,147 +46,162 @@ interface CookieConsentSectionProps {
 }
 
 export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
-  const { handleResult } = useRefreshOnSuccess();
-  const [isPending, startTransition] = useTransition();
-  const [formData, setFormData] = useState({
-    cookieConsentEnabled: settings.cookieConsentEnabled,
-    cookieConsentMessage: settings.cookieConsentMessage || "",
-    cookieConsentAcceptText: settings.cookieConsentAcceptText || "",
-    cookieConsentRejectText: settings.cookieConsentRejectText || "",
-    cookieConsentPolicyUrl: settings.cookieConsentPolicyUrl || "",
+  const { form, isPending, onSubmit } = useFormAction(
+    cookieConsentFormSchema,
+    (data) =>
+      updateCookieConsentSettings({
+        cookieConsentEnabled: data.cookieConsentEnabled,
+        cookieConsentMessage: emptyToNull(data.cookieConsentMessage),
+        cookieConsentAcceptText: emptyToNull(data.cookieConsentAcceptText),
+        cookieConsentRejectText: emptyToNull(data.cookieConsentRejectText),
+        cookieConsentPolicyUrl: emptyToNull(data.cookieConsentPolicyUrl),
+      }),
+    {
+      defaultValues: {
+        cookieConsentEnabled: settings.cookieConsentEnabled,
+        cookieConsentMessage: settings.cookieConsentMessage || "",
+        cookieConsentAcceptText: settings.cookieConsentAcceptText || "",
+        cookieConsentRejectText: settings.cookieConsentRejectText || "",
+        cookieConsentPolicyUrl: settings.cookieConsentPolicyUrl || "",
+      },
+      refresh: true,
+      successMessage: "Cookie同意設定を保存しました",
+    },
+  );
+
+  const cookieConsentEnabled = useWatch({
+    control: form.control,
+    name: "cookieConsentEnabled",
   });
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateCookieConsentSettings({
-        cookieConsentEnabled: formData.cookieConsentEnabled,
-        cookieConsentMessage: formData.cookieConsentMessage || null,
-        cookieConsentAcceptText: formData.cookieConsentAcceptText || null,
-        cookieConsentRejectText: formData.cookieConsentRejectText || null,
-        cookieConsentPolicyUrl: formData.cookieConsentPolicyUrl || null,
-      });
-      handleResult(result, "Cookie同意設定を保存しました");
-    });
-  };
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Cookie同意バナー</CardTitle>
-        <CardDescription>
-          GDPR対応のCookie同意バナーを表示します。グローバル展開時に有効にしてください。
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor="cookieConsentEnabled" className="font-medium">
-              Cookie同意バナーを表示
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              有効にすると、初回訪問時にCookie同意バナーが表示されます
-            </p>
-          </div>
-          <Switch
-            id="cookieConsentEnabled"
-            checked={formData.cookieConsentEnabled}
-            onCheckedChange={(checked) =>
-              setFormData({ ...formData, cookieConsentEnabled: checked })
-            }
-            disabled={isPending}
-          />
-        </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Cookie同意バナー</CardTitle>
+            <CardDescription>
+              GDPR対応のCookie同意バナーを表示します。グローバル展開時に有効にしてください。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="cookieConsentEnabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="font-medium">
+                      Cookie同意バナーを表示
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      有効にすると、初回訪問時にCookie同意バナーが表示されます
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        {formData.cookieConsentEnabled && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="cookieConsentMessage">バナーメッセージ</Label>
-              <Textarea
-                id="cookieConsentMessage"
-                value={formData.cookieConsentMessage}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    cookieConsentMessage: e.target.value,
-                  })
-                }
-                placeholder={DEFAULT_MESSAGE}
-                rows={3}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                空欄の場合はデフォルトメッセージが表示されます
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cookieConsentAcceptText">
-                  同意ボタンテキスト
-                </Label>
-                <Input
-                  id="cookieConsentAcceptText"
-                  value={formData.cookieConsentAcceptText}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cookieConsentAcceptText: e.target.value,
-                    })
-                  }
-                  placeholder={DEFAULT_ACCEPT_TEXT}
-                  disabled={isPending}
+            {cookieConsentEnabled && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="cookieConsentMessage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>バナーメッセージ</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder={DEFAULT_MESSAGE}
+                          rows={3}
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        空欄の場合はデフォルトメッセージが表示されます
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="cookieConsentRejectText">
-                  拒否ボタンテキスト
-                </Label>
-                <Input
-                  id="cookieConsentRejectText"
-                  value={formData.cookieConsentRejectText}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cookieConsentRejectText: e.target.value,
-                    })
-                  }
-                  placeholder={DEFAULT_REJECT_TEXT}
-                  disabled={isPending}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="cookieConsentAcceptText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>同意ボタンテキスト</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={DEFAULT_ACCEPT_TEXT}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cookieConsentRejectText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>拒否ボタンテキスト</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={DEFAULT_REJECT_TEXT}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="cookieConsentPolicyUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>プライバシーポリシーURL</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder={DEFAULT_POLICY_URL}
+                          disabled={isPending}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        「詳細」リンクのリンク先URL
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </div>
-            </div>
+              </>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="cookieConsentPolicyUrl">
-                プライバシーポリシーURL
-              </Label>
-              <Input
-                id="cookieConsentPolicyUrl"
-                value={formData.cookieConsentPolicyUrl}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    cookieConsentPolicyUrl: e.target.value,
-                  })
-                }
-                placeholder={DEFAULT_POLICY_URL}
-                disabled={isPending}
-              />
-              <p className="text-xs text-muted-foreground">
-                「詳細」リンクのリンク先URL
-              </p>
-            </div>
-          </>
-        )}
-
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="Cookie同意設定を保存"
-          pendingLabel="保存中..."
-        />
-      </CardContent>
-    </Card>
+            <SubmitButton
+              isPending={isPending}
+              label="Cookie同意設定を保存"
+              disabled={!form.formState.isDirty}
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }

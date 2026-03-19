@@ -6,19 +6,25 @@
  * ヘッダーのスクロール動作と背景モードを設定
  */
 
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Label,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
   SelectionBox,
   SubmitButton,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateHeaderSettings } from "@/admin/actions/settings";
+import { headerFormSchema } from "@/admin/actions/settings/schemas";
 import type { SelectionBoxOption } from "@/admin/components/ui";
 import {
   HeaderScrollBehavior,
@@ -28,7 +34,6 @@ import {
   getValidHeaderScrollBehavior,
   getValidHeaderBackgroundMode,
 } from "@/shared/lib/validations/enums";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Constants
@@ -81,80 +86,107 @@ interface HeaderSectionProps {
 // =============================================================================
 
 export function HeaderSection({ settings }: HeaderSectionProps) {
-  const [isPending, startTransition] = useTransition();
-
-  const [behavior, setBehavior] = useState<HeaderScrollBehavior>(() =>
-    getValidHeaderScrollBehavior(settings.headerScrollBehavior),
+  const { form, isPending, onSubmit } = useFormAction(
+    headerFormSchema,
+    (data) =>
+      updateHeaderSettings({
+        headerScrollBehavior: data.headerScrollBehavior,
+        headerBackgroundMode: data.headerBackgroundMode,
+      }),
+    {
+      defaultValues: {
+        headerScrollBehavior: getValidHeaderScrollBehavior(
+          settings.headerScrollBehavior,
+        ),
+        headerBackgroundMode: getValidHeaderBackgroundMode(
+          settings.headerBackgroundMode,
+        ),
+      },
+      refresh: true,
+      successMessage: "ヘッダー設定を保存しました",
+    },
   );
-  const [backgroundMode, setBackgroundMode] = useState<HeaderBackgroundMode>(
-    () => getValidHeaderBackgroundMode(settings.headerBackgroundMode),
-  );
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updateHeaderSettings({
-        headerScrollBehavior: behavior,
-        headerBackgroundMode: backgroundMode,
-      });
-
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("ヘッダー設定を保存しました");
-    });
-  };
+  const backgroundMode = useWatch({
+    control: form.control,
+    name: "headerBackgroundMode",
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>ヘッダー設定</CardTitle>
-        <CardDescription>
-          ヘッダーのスクロール時の動作と背景モードを設定します
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-3">
-          <Label>背景モード</Label>
-          <SelectionBox
-            options={BACKGROUND_MODE_OPTIONS}
-            value={backgroundMode}
-            onChange={(value) => {
-              if (isValidHeaderBackgroundMode(value)) {
-                setBackgroundMode(value);
-              }
-            }}
-            columns={1}
-            name="ヘッダー背景モード"
-          />
-        </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>ヘッダー設定</CardTitle>
+            <CardDescription>
+              ヘッダーのスクロール時の動作と背景モードを設定します
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              control={form.control}
+              name="headerBackgroundMode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>背景モード</FormLabel>
+                  <FormControl>
+                    <SelectionBox
+                      options={BACKGROUND_MODE_OPTIONS}
+                      value={field.value}
+                      onChange={(value) => {
+                        if (isValidHeaderBackgroundMode(value)) {
+                          field.onChange(value);
+                        }
+                      }}
+                      columns={1}
+                      name="ヘッダー背景モード"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="space-y-3">
-          <Label>スクロール動作</Label>
-          <SelectionBox
-            options={SCROLL_BEHAVIOR_OPTIONS}
-            value={behavior}
-            onChange={(value) => {
-              if (isValidHeaderScrollBehavior(value)) {
-                setBehavior(value);
-              }
-            }}
-            columns={1}
-            name="ヘッダースクロール動作"
-          />
-        </div>
+            <FormField
+              control={form.control}
+              name="headerScrollBehavior"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>スクロール動作</FormLabel>
+                  <FormControl>
+                    <SelectionBox
+                      options={SCROLL_BEHAVIOR_OPTIONS}
+                      value={field.value}
+                      onChange={(value) => {
+                        if (isValidHeaderScrollBehavior(value)) {
+                          field.onChange(value);
+                        }
+                      }}
+                      columns={1}
+                      name="ヘッダースクロール動作"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div className="rounded-md border border-muted bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">
-            {backgroundMode === HeaderBackgroundMode.transparent
-              ? "ヒーロー画像がヘッダー背後に広がります。テキストが見にくい場合は「不透明」に変更してください。"
-              : "予約導線を常時表示したい場合は「常時表示」がおすすめです。"}
-          </p>
-        </div>
+            <div className="rounded-md border border-muted bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">
+                {backgroundMode === HeaderBackgroundMode.transparent
+                  ? "ヒーロー画像がヘッダー背後に広がります。テキストが見にくい場合は「不透明」に変更してください。"
+                  : "予約導線を常時表示したい場合は「常時表示」がおすすめです。"}
+              </p>
+            </div>
 
-        <SubmitButton isPending={isPending} onClick={handleSave} label="保存" />
-      </CardContent>
-    </Card>
+            <SubmitButton
+              isPending={isPending}
+              label="保存"
+              disabled={!form.formState.isDirty}
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }
