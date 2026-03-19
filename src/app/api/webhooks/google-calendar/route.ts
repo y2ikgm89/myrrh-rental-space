@@ -12,10 +12,27 @@
  * @module api/webhooks/google-calendar
  */
 
+import crypto from "node:crypto";
 import { unstable_rethrow } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
+
+/**
+ * タイミング攻撃を防止する定時間トークン比較
+ * Google Calendar API は HMAC 署名を未サポートのため、
+ * 共有秘密トークンの比較にはタイミングセーフな比較が必須。
+ */
+function timingSafeTokenEqual(
+  received: string | undefined,
+  expected: string,
+): boolean {
+  if (!received) return false;
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 import { syncFromCalendar } from "@/shared/lib/calendar-sync";
 import {
   isTwoWaySyncEnabled,
@@ -90,7 +107,7 @@ export async function POST(request: Request) {
       return jsonError("Webhook not configured", 503);
     }
 
-    if (receivedToken !== settings.token) {
+    if (!timingSafeTokenEqual(receivedToken, settings.token)) {
       logError(new Error("Invalid webhook token"), {
         category: ErrorCategory.VALIDATION,
         severity: ErrorSeverity.MEDIUM,
