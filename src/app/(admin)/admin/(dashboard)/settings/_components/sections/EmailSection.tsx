@@ -190,11 +190,13 @@ export function EmailSection({ settings }: EmailSectionProps) {
               </div>
             </div>
 
-            <SubmitButton
-              isPending={isPending}
-              label="メール設定を保存"
-              disabled={!form.formState.isDirty}
-            />
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                label="メール設定を保存"
+                disabled={!form.formState.isDirty}
+              />
+            </div>
           </CardContent>
         </Card>
       </form>

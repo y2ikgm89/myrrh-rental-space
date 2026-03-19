@@ -443,11 +443,13 @@ export function MeoSection({ settings, socialLinkCount }: MeoSectionProps) {
             </CardContent>
           </Card>
 
-          <SubmitButton
-            isPending={isPending}
-            label="MEO設定を保存"
-            disabled={!form.formState.isDirty}
-          />
+          <div className="flex justify-end pt-2">
+            <SubmitButton
+              isPending={isPending}
+              label="MEO設定を保存"
+              disabled={!form.formState.isDirty}
+            />
+          </div>
         </div>
       </form>
     </Form>

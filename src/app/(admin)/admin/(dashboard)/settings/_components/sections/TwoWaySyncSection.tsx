@@ -382,20 +382,24 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                 </div>
 
                 {/* 保存ボタン */}
+                <div className="flex justify-end pt-2">
+                  <SubmitButton
+                    isPending={isPending}
+                    label="設定を保存"
+                    disabled={!form.formState.isDirty}
+                  />
+                </div>
+              </>
+            )}
+
+            {!enabled && (
+              <div className="flex justify-end pt-2">
                 <SubmitButton
                   isPending={isPending}
                   label="設定を保存"
                   disabled={!form.formState.isDirty}
                 />
-              </>
-            )}
-
-            {!enabled && (
-              <SubmitButton
-                isPending={isPending}
-                label="設定を保存"
-                disabled={!form.formState.isDirty}
-              />
+              </div>
             )}
           </CardContent>
         </Card>

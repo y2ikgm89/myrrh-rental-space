@@ -242,22 +242,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
             )}
 
             {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="保存"
-                disabled={!form.formState.isDirty}
-              />
-              {apiKey && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || isTesting}
-                >
-                  {isTesting ? "テスト中..." : "接続テスト"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {config.apiKeyMasked && (
                 <Button
                   type="button"
@@ -268,6 +253,21 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
                   クリア
                 </Button>
               )}
+              {apiKey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || isTesting}
+                >
+                  {isTesting ? "テスト中..." : "接続テスト"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

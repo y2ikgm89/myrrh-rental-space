@@ -194,11 +194,13 @@ export function CookieConsentSection({ settings }: CookieConsentSectionProps) {
               </>
             )}
 
-            <SubmitButton
-              isPending={isPending}
-              label="Cookie同意設定を保存"
-              disabled={!form.formState.isDirty}
-            />
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                label="Cookie同意設定を保存"
+                disabled={!form.formState.isDirty}
+              />
+            </div>
           </CardContent>
         </Card>
       </form>

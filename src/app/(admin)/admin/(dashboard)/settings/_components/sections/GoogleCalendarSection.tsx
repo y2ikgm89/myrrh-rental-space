@@ -386,22 +386,7 @@ export function GoogleCalendarSection({
             </div>
 
             {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="設定を保存"
-                disabled={!form.formState.isDirty}
-              />
-              {serviceAccountJson && googleCalendarId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || testPending}
-                >
-                  {testPending ? "テスト中..." : "接続テスト"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {settings.googleCalendarServiceAccountEmailMasked && (
                 <Button
                   type="button"
@@ -412,6 +397,21 @@ export function GoogleCalendarSection({
                   認証情報をクリア
                 </Button>
               )}
+              {serviceAccountJson && googleCalendarId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || testPending}
+                >
+                  {testPending ? "テスト中..." : "接続テスト"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="設定を保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

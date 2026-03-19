@@ -625,12 +625,14 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
           </p>
         </div>
 
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="営業時間設定を保存"
-          disabled={hasErrors}
-        />
+        <div className="flex justify-end pt-2">
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="営業時間設定を保存"
+            disabled={hasErrors}
+          />
+        </div>
       </CardContent>
     </Card>
   );

@@ -265,22 +265,7 @@ export function CloudflareSection({ config }: Props) {
               </StatusBanner>
             )}
 
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="保存"
-                disabled={!form.formState.isDirty}
-              />
-              {cloudflareApiToken && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || testPending}
-                >
-                  {testPending ? "テスト中..." : "接続テスト"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {hasExistingConfig && (
                 <Button
                   type="button"
@@ -291,6 +276,21 @@ export function CloudflareSection({ config }: Props) {
                   クリア
                 </Button>
               )}
+              {cloudflareApiToken && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || testPending}
+                >
+                  {testPending ? "テスト中..." : "接続テスト"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

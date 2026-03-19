@@ -341,12 +341,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
             </div>
 
             {/* アクションボタン */}
-            <div className="flex items-center gap-4">
-              <SubmitButton
-                isPending={isPending}
-                label="保存"
-                disabled={!form.formState.isDirty}
-              />
+            <div className="flex items-center justify-end gap-4">
               <Button
                 variant="outline"
                 onClick={handlePreview}
@@ -355,6 +350,11 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               >
                 プレビュー
               </Button>
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
 
             {/* ヒント */}

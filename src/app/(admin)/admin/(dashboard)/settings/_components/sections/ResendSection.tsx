@@ -235,22 +235,7 @@ export function ResendSection({ config }: ResendSectionProps) {
             )}
 
             {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="保存"
-                disabled={!form.formState.isDirty}
-              />
-              {resendApiKey && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || testPending}
-                >
-                  {testPending ? "テスト中..." : "接続テスト"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {config.apiKeyMasked && (
                 <Button
                   type="button"
@@ -261,6 +246,21 @@ export function ResendSection({ config }: ResendSectionProps) {
                   クリア
                 </Button>
               )}
+              {resendApiKey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || testPending}
+                >
+                  {testPending ? "テスト中..." : "接続テスト"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

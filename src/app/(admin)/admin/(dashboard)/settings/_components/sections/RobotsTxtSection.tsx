@@ -250,12 +250,14 @@ export function RobotsTxtSection() {
           </div>
         </div>
 
-        <SubmitButton
-          isPending={isPending}
-          onClick={handleSave}
-          label="robots.txt設定を保存"
-          pendingLabel="保存中..."
-        />
+        <div className="flex justify-end pt-2">
+          <SubmitButton
+            isPending={isPending}
+            onClick={handleSave}
+            label="robots.txt設定を保存"
+            pendingLabel="保存中..."
+          />
+        </div>
       </CardContent>
     </Card>
   );

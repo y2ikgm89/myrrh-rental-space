@@ -441,22 +441,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
             )}
 
             {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="Stripe設定を保存"
-                disabled={!form.formState.isDirty}
-              />
-              {stripeSecretKey && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || testPending}
-                >
-                  {testPending ? "テスト中..." : "接続テスト"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {(settings.stripeSecretKeyMasked ||
                 settings.stripePublishableKey) && (
                 <Button
@@ -468,6 +453,21 @@ export function StripeSection({ settings }: StripeSectionProps) {
                   キーをクリア
                 </Button>
               )}
+              {stripeSecretKey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || testPending}
+                >
+                  {testPending ? "テスト中..." : "接続テスト"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="Stripe設定を保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

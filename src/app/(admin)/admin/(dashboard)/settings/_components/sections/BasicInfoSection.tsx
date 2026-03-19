@@ -257,11 +257,13 @@ export function BasicInfoSection({ settings }: BasicInfoSectionProps) {
               />
             </div>
 
-            <SubmitButton
-              isPending={isPending}
-              label="基本情報を保存"
-              disabled={!form.formState.isDirty}
-            />
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                label="基本情報を保存"
+                disabled={!form.formState.isDirty}
+              />
+            </div>
           </CardContent>
         </Card>
       </form>

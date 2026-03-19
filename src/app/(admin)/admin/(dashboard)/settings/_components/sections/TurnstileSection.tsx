@@ -275,22 +275,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
             )}
 
             {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2">
-              <SubmitButton
-                isPending={isPending}
-                label="保存"
-                disabled={!form.formState.isDirty}
-              />
-              {siteKey && secretKey && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleConnectionTest}
-                  disabled={isPending || isTesting}
-                >
-                  {isTesting ? "テスト中..." : "形式検証"}
-                </Button>
-              )}
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {(config.siteKey || config.secretKeyMasked) && (
                 <Button
                   type="button"
@@ -301,6 +286,21 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
                   クリア
                 </Button>
               )}
+              {siteKey && secretKey && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleConnectionTest}
+                  disabled={isPending || isTesting}
+                >
+                  {isTesting ? "テスト中..." : "形式検証"}
+                </Button>
+              )}
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!form.formState.isDirty}
+              />
             </div>
           </CardContent>
         </Card>

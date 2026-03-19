@@ -157,7 +157,9 @@ export function SpaceShowcaseConfigForm({
         </div>
       </div>
 
-      <SubmitButton isPending={isPending} label="保存" />
+      <div className="flex justify-end pt-2">
+        <SubmitButton isPending={isPending} label="保存" />
+      </div>
     </form>
   );
 }

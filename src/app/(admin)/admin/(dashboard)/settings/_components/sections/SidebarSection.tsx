@@ -315,11 +315,13 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
             )}
 
             {/* 保存ボタン */}
-            <SubmitButton
-              isPending={isPending}
-              label="サイドバー設定を保存"
-              disabled={!form.formState.isDirty}
-            />
+            <div className="flex justify-end pt-2">
+              <SubmitButton
+                isPending={isPending}
+                label="サイドバー設定を保存"
+                disabled={!form.formState.isDirty}
+              />
+            </div>
 
             {/* ヒント */}
             <Card className="bg-muted/50">

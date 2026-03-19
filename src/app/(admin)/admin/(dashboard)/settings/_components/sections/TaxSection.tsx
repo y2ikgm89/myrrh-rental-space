@@ -264,11 +264,13 @@ export function TaxSection({ settings }: TaxSectionProps) {
         </Card>
 
         {/* 保存ボタン */}
-        <SubmitButton
-          isPending={isPending}
-          label="消費税設定を保存"
-          disabled={!form.formState.isDirty}
-        />
+        <div className="flex justify-end pt-2">
+          <SubmitButton
+            isPending={isPending}
+            label="消費税設定を保存"
+            disabled={!form.formState.isDirty}
+          />
+        </div>
       </form>
     </Form>
   );

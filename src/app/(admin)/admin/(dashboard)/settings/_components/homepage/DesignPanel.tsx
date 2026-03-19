@@ -408,11 +408,13 @@ export function DesignPanel(props: DesignPanelProps) {
         />
       </div>
 
-      <SubmitButton
-        isPending={isPending}
-        label="デザインを保存"
-        pendingLabel="保存中..."
-      />
+      <div className="flex justify-end pt-2">
+        <SubmitButton
+          isPending={isPending}
+          label="デザインを保存"
+          pendingLabel="保存中..."
+        />
+      </div>
     </form>
   );
 }

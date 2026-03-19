@@ -314,11 +314,13 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
         </Card>
 
         {/* 保存ボタン */}
-        <SubmitButton
-          isPending={isPending}
-          label="割引設定を保存"
-          disabled={!form.formState.isDirty}
-        />
+        <div className="flex justify-end pt-2">
+          <SubmitButton
+            isPending={isPending}
+            label="割引設定を保存"
+            disabled={!form.formState.isDirty}
+          />
+        </div>
       </form>
     </Form>
   );
