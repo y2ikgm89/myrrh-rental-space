@@ -17,7 +17,7 @@ import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { ContactForm } from "./_components/ContactForm";
+import { ContactForm } from "./_components/contact-form";
 import { BusinessInfo } from "./_components/BusinessInfo";
 
 export async function generateMetadata(): Promise<Metadata> {
