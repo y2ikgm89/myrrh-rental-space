@@ -327,9 +327,10 @@ export function AnnouncementBarCarousel({
   const textColor = settings.textColor || null;
   const hasCustomBg = !!bgColor;
   const hasCustomText = !!textColor;
-  const customStyles: React.CSSProperties = {};
-  if (bgColor) customStyles.backgroundColor = bgColor;
-  if (textColor) customStyles.color = textColor;
+  let customStyles: React.CSSProperties = {
+    ...(bgColor ? { backgroundColor: bgColor } : {}),
+    ...(textColor ? { color: textColor } : {}),
+  };
 
   // デザインスタイル
   const designStyle = settings.designStyle || AnnouncementBarDesignStyle.solid;
@@ -348,7 +349,7 @@ export function AnnouncementBarCarousel({
       settings.stripeColor,
       settings.stripeAnimation,
     );
-    Object.assign(customStyles, stripedStyles);
+    customStyles = { ...customStyles, ...stripedStyles };
   }
 
   // Gradientスタイルのアニメーション
@@ -356,7 +357,7 @@ export function AnnouncementBarCarousel({
     designStyle === AnnouncementBarDesignStyle.gradient &&
     settings.gradientAnimation
   ) {
-    Object.assign(customStyles, getGradientAnimationStyle(true));
+    customStyles = { ...customStyles, ...getGradientAnimationStyle(true) };
   }
 
   // Glassスタイルのアニメーション
@@ -364,7 +365,7 @@ export function AnnouncementBarCarousel({
     designStyle === AnnouncementBarDesignStyle.glass &&
     settings.glassAnimation
   ) {
-    Object.assign(customStyles, getGlassShimmerStyle(true));
+    customStyles = { ...customStyles, ...getGlassShimmerStyle(true) };
   }
 
   return (

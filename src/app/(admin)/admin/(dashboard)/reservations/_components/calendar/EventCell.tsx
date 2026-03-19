@@ -31,7 +31,9 @@ export function EventCell({ event, onClick }: EventCellProps) {
     >
       <div className="truncate font-medium">{event.title}</div>
       <div className="truncate text-[10px] opacity-75">
+        {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
         {format(new Date(event.startTime), "HH:mm")} -{" "}
+        {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
         {format(new Date(event.endTime), "HH:mm")}
       </div>
       {position.height >= 50 && (
@@ -57,6 +59,7 @@ export function EventBadge({ event, onClick }: EventBadgeProps) {
       onClick={() => onClick(event)}
     >
       <span className="font-medium">
+        {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
         {format(new Date(event.startTime), "HH:mm")}
       </span>{" "}
       {event.title}

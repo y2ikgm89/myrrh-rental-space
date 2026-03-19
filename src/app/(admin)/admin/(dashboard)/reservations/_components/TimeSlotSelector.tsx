@@ -122,6 +122,7 @@ export function TimeSlotSelector({
   const isSelecting: "start" | "end" = startTime && !endTime ? "end" : "start";
 
   // 日付の最小値（今日）を計算
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here
   const today = toDateString(new Date());
 
   const handleSlotClick = (time: string, available: boolean): void => {

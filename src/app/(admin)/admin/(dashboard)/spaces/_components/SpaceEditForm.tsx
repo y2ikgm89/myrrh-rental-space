@@ -374,6 +374,8 @@ export function SpaceEditForm({
     ogpImageUrl: data.ogpImageUrl || null,
   });
 
+  const publishedAtDefault = space?.publishedAt ?? undefined;
+
   const { form, isPending, onSubmit } = useFormAction<
     FormData,
     { id: string } | null
@@ -421,9 +423,7 @@ export function SpaceEditForm({
             ogpTitle: space.ogpTitle ?? "",
             ogpDescription: space.ogpDescription ?? "",
             ogpImageUrl: space.ogpImageUrl ?? "",
-            publishedAt: space.publishedAt
-              ? new Date(space.publishedAt).toISOString()
-              : undefined,
+            publishedAt: publishedAtDefault,
           }
         : {
             slug: "",

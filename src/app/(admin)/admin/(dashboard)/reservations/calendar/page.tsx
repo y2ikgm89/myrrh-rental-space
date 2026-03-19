@@ -37,6 +37,7 @@ function CalendarSkeleton() {
 async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
   const params = await loadAdminCalendarSearchParams(searchParams);
   const view = getValidCalendarView(params.view, "week");
+  // eslint-disable-next-line @eslint-react/purity -- Server Component: new Date() used after data fetch
   const date = params.date ? new Date(params.date) : new Date();
   const spaceId = params.spaceId || undefined;
   const status = getReservationStatusFilterOrAll(params.status);

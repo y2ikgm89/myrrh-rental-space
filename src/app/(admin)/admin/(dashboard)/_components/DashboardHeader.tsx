@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
 export function DashboardHeader() {
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here
   const today = new Date();
 
   return (

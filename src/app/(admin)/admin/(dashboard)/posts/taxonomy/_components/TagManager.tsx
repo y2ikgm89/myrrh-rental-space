@@ -89,6 +89,7 @@ type TagRowProps = {
 function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here
   const formattedDate = new Date(tag.createdAt).toLocaleDateString("ja-JP", {
     year: "numeric",
     month: "2-digit",

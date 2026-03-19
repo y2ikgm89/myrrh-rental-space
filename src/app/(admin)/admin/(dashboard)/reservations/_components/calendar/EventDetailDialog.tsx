@@ -74,12 +74,15 @@ export function EventDetailDialog({
               <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="font-medium">
+                  {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
                   {format(new Date(event.startTime), "yyyy年M月d日 (E)", {
                     locale: ja,
                   })}
                 </div>
                 <div className="text-sm text-muted-foreground">
+                  {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
                   {format(new Date(event.startTime), "HH:mm")} -{" "}
+                  {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
                   {format(new Date(event.endTime), "HH:mm")}
                 </div>
               </div>

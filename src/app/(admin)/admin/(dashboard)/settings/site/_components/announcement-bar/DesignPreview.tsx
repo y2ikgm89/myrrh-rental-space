@@ -22,9 +22,10 @@ export function DesignPreview({
   const defaultColors = DEFAULT_TYPE_STYLE;
 
   // スタイル計算
-  const customStyles: React.CSSProperties = {};
-  if (bgColor) customStyles.backgroundColor = bgColor;
-  if (textColor) customStyles.color = textColor;
+  let customStyles: React.CSSProperties = {
+    ...(bgColor ? { backgroundColor: bgColor } : {}),
+    ...(textColor ? { color: textColor } : {}),
+  };
 
   // ストライプスタイル（共通ユーティリティを使用）
   if (designStyle === AnnouncementBarDesignStyle.striped) {
@@ -34,7 +35,7 @@ export function DesignPreview({
       stripeColor,
       stripeAnimation,
     );
-    Object.assign(customStyles, stripedStyles);
+    customStyles = { ...customStyles, ...stripedStyles };
   }
 
   // グラデーションアニメーション
@@ -42,14 +43,20 @@ export function DesignPreview({
     designStyle === AnnouncementBarDesignStyle.gradient &&
     gradientAnimation
   ) {
-    customStyles.backgroundSize = "200% 100%";
-    customStyles.animation = "gradient-flow 3s ease infinite";
+    customStyles = {
+      ...customStyles,
+      backgroundSize: "200% 100%",
+      animation: "gradient-flow 3s ease infinite",
+    };
   }
 
   // グラスアニメーション用
   if (designStyle === AnnouncementBarDesignStyle.glass && glassAnimation) {
-    customStyles.position = "relative";
-    customStyles.overflow = "hidden";
+    customStyles = {
+      ...customStyles,
+      position: "relative",
+      overflow: "hidden",
+    };
   }
 
   // デザインスタイル別のクラス

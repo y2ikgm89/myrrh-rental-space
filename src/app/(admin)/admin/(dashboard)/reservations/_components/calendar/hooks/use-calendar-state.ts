@@ -39,6 +39,7 @@ export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
   const status = getReservationStatusFilterOrAll(params.status);
 
   // 日付計算
+  // eslint-disable-next-line @eslint-react/purity -- Client-side hook: new Date() is safe here
   const currentDate = params.date ? new Date(params.date) : new Date();
 
   // 日付範囲計算

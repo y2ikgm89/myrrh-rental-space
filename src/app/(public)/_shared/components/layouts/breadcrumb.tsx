@@ -30,10 +30,12 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
 
   return (
     <>
+      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD structured data: JSON.stringify produces safe output */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdHtml }}
       />
+      {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}
       <nav
         aria-label="パンくずリスト"
         className="text-sm text-muted-foreground"

@@ -70,6 +70,7 @@ export function CommentThread({
   const statusConfig = STATUS_CONFIG[thread.status];
   const statusVariant = statusConfig?.variant ?? "secondary";
   const statusLabel = statusConfig?.label ?? "未解決";
+  // eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here
   const timeAgo = formatDistanceToNow(new Date(thread.createdAt), {
     addSuffix: true,
     locale: ja,

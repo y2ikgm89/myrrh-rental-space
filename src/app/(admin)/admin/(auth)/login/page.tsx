@@ -36,6 +36,7 @@ export default async function LoginPage({
   }
 
   const token = params.token;
+  // eslint-disable-next-line @eslint-react/purity -- Server Component: cookieStore.get() is safe in async Server Components
   const adminGateCookie = cookieStore.get(ADMIN_GATE_COOKIE_NAME)?.value;
   if (token && adminGateCookie !== "1") {
     redirect(
