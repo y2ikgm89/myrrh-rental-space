@@ -48,6 +48,11 @@ export async function GET(request: Request) {
 }
 ```
 
+## セキュリティ: トークン比較
+
+- **共有秘密トークンの `!==` / `===` 比較禁止** — タイミング攻撃でトークン値が漏洩する。`crypto.timingSafeEqual` を使用
+- Google Calendar webhook の実装例: `src/app/api/webhooks/google-calendar/route.ts` の `timingSafeTokenEqual()`
+
 ## 禁止事項
 
 1. **個別の `apiRateLimiter.check()` 直接呼び出し禁止** — `checkRateLimit()` に一元化
