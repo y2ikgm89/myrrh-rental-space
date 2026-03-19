@@ -6,27 +6,31 @@
  * 投稿記事のURL構造とプレフィックス表示を設定
  */
 
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  Label,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
   SelectionBox,
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updatePermalinkSettings } from "@/admin/actions/settings";
+import { permalinkFormSchema } from "@/admin/actions/settings/schemas";
 import { PostPermalinkStructure } from "@/shared/db/enums";
 import {
   isValidPostPermalinkStructure,
   getValidPostPermalinkStructure,
 } from "@/shared/lib/validations/enums";
 import type { SelectionBoxOption } from "@/admin/components/ui";
-import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // Types
@@ -66,30 +70,29 @@ const PERMALINK_OPTIONS: SelectionBoxOption[] = [
 // =============================================================================
 
 export function PermalinkSection({ settings }: PermalinkSectionProps) {
-  const [isPending, startTransition] = useTransition();
-
-  const [structure, setStructure] = useState<PostPermalinkStructure>(() =>
-    getValidPostPermalinkStructure(settings.postPermalinkStructure),
+  const { form, isPending, onSubmit } = useFormAction(
+    permalinkFormSchema,
+    (data) =>
+      updatePermalinkSettings({
+        postPermalinkStructure: data.postPermalinkStructure,
+        postUrlPrefixEnabled: data.postUrlPrefixEnabled,
+      }),
+    {
+      defaultValues: {
+        postPermalinkStructure: getValidPostPermalinkStructure(
+          settings.postPermalinkStructure,
+        ),
+        postUrlPrefixEnabled: settings.postUrlPrefixEnabled,
+      },
+      refresh: true,
+      successMessage: "パーマリンク設定を保存しました",
+    },
   );
-  const [prefixEnabled, setPrefixEnabled] = useState(
-    settings.postUrlPrefixEnabled,
-  );
 
-  const handleSave = () => {
-    startTransition(async () => {
-      const result = await updatePermalinkSettings({
-        postPermalinkStructure: structure,
-        postUrlPrefixEnabled: prefixEnabled,
-      });
-
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("パーマリンク設定を保存しました");
-    });
-  };
+  const [structure, prefixEnabled] = useWatch({
+    control: form.control,
+    name: ["postPermalinkStructure", "postUrlPrefixEnabled"],
+  });
 
   const getPreviewUrl = () => {
     const prefix = prefixEnabled ? "/posts" : "";
@@ -105,69 +108,100 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>パーマリンク設定</CardTitle>
-        <CardDescription>投稿記事のURL構造を設定します</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* URLプレフィックス設定 */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label className="text-base">/posts/ プレフィックス</Label>
-            <p className="text-sm text-muted-foreground">
-              URLに /posts/ を含める（推奨）
-            </p>
-          </div>
-          <Switch checked={prefixEnabled} onCheckedChange={setPrefixEnabled} />
-        </div>
+    <Form {...form}>
+      <form onSubmit={onSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>パーマリンク設定</CardTitle>
+            <CardDescription>投稿記事のURL構造を設定します</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* URLプレフィックス設定 */}
+            <FormField
+              control={form.control}
+              name="postUrlPrefixEnabled"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        /posts/ プレフィックス
+                      </FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        URLに /posts/ を含める（推奨）
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                </FormItem>
+              )}
+            />
 
-        {/* プレフィックス無効時の警告 */}
-        {!prefixEnabled && (
-          <div className="rounded-md border border-warning/20 bg-warning/10 p-4">
-            <p className="text-sm text-warning-foreground">
-              プレフィックスを無効にすると、投稿のスラッグがルートレベルで使用されます。
-              既存の静的ページ（about, contact
-              等）や予約パスと衝突しないよう注意してください。
-            </p>
-          </div>
-        )}
+            {/* プレフィックス無効時の警告 */}
+            {!prefixEnabled && (
+              <div className="rounded-md border border-warning/20 bg-warning/10 p-4">
+                <p className="text-sm text-warning-foreground">
+                  プレフィックスを無効にすると、投稿のスラッグがルートレベルで使用されます。
+                  既存の静的ページ（about, contact
+                  等）や予約パスと衝突しないよう注意してください。
+                </p>
+              </div>
+            )}
 
-        {/* URL構造選択 */}
-        <div className="space-y-3">
-          <Label>URL構造</Label>
-          <SelectionBox
-            options={PERMALINK_OPTIONS}
-            value={structure}
-            onChange={(value) => {
-              if (isValidPostPermalinkStructure(value)) {
-                setStructure(value);
-              }
-            }}
-            columns={1}
-            name="パーマリンク構造"
-          />
-        </div>
+            {/* URL構造選択 */}
+            <FormField
+              control={form.control}
+              name="postPermalinkStructure"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL構造</FormLabel>
+                  <FormControl>
+                    <SelectionBox
+                      options={PERMALINK_OPTIONS}
+                      value={field.value}
+                      onChange={(value) => {
+                        if (isValidPostPermalinkStructure(value)) {
+                          field.onChange(value);
+                        }
+                      }}
+                      columns={1}
+                      name="パーマリンク構造"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-        {/* プレビュー */}
-        <div className="rounded-md bg-muted p-4">
-          <Label className="text-sm font-medium">プレビュー</Label>
-          <code className="mt-2 block text-sm font-mono">
-            {getPreviewUrl()}
-          </code>
-        </div>
+            {/* プレビュー */}
+            <div className="rounded-md bg-muted p-4">
+              <FormLabel className="text-sm font-medium">プレビュー</FormLabel>
+              <code className="mt-2 block text-sm font-mono">
+                {getPreviewUrl()}
+              </code>
+            </div>
 
-        {/* 注意事項 */}
-        <div className="rounded-md border border-muted bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">
-            予約済みパス（about, contact, news, spaces, admin
-            など）と同名のスラッグは使用できません。
-          </p>
-        </div>
+            {/* 注意事項 */}
+            <div className="rounded-md border border-muted bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">
+                予約済みパス（about, contact, news, spaces, admin
+                など）と同名のスラッグは使用できません。
+              </p>
+            </div>
 
-        {/* 保存ボタン */}
-        <SubmitButton isPending={isPending} onClick={handleSave} label="保存" />
-      </CardContent>
-    </Card>
+            {/* 保存ボタン */}
+            <SubmitButton
+              isPending={isPending}
+              label="保存"
+              disabled={!form.formState.isDirty}
+            />
+          </CardContent>
+        </Card>
+      </form>
+    </Form>
   );
 }

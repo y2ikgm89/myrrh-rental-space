@@ -5,6 +5,11 @@
  * フォームでは空文字列を許容し、送信時に emptyToNull で null に変換する。
  */
 import { z } from "zod";
+import {
+  PostPermalinkStructure,
+  TaxDisplayMode,
+  TaxInputMode,
+} from "@/shared/db/enums";
 
 // =============================================================================
 // ヘルパー
@@ -69,3 +74,94 @@ export const contactInfoFormSchema = z.object({
 });
 
 export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;
+
+// =============================================================================
+// Site > General > パーマリンク設定
+// =============================================================================
+
+export const permalinkFormSchema = z.object({
+  postPermalinkStructure: z.enum(PostPermalinkStructure),
+  postUrlPrefixEnabled: z.boolean(),
+});
+
+export type PermalinkFormInput = z.infer<typeof permalinkFormSchema>;
+
+// =============================================================================
+// Site > Security > Turnstile
+// =============================================================================
+
+export const turnstileFormSchema = z.object({
+  turnstileSiteKey: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+  turnstileSecretKey: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+});
+
+export type TurnstileFormInput = z.infer<typeof turnstileFormSchema>;
+
+// =============================================================================
+// Site > Security > Google Maps
+// =============================================================================
+
+export const googleMapsFormSchema = z.object({
+  googleMapsApiKey: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+});
+
+export type GoogleMapsFormInput = z.infer<typeof googleMapsFormSchema>;
+
+// =============================================================================
+// Site > Integrations > iCal フィード
+// =============================================================================
+
+export const icalFeedFormSchema = z.object({
+  icalFeedEnabled: z.boolean(),
+  icalFeedIncludeCustomerInfo: z.boolean(),
+});
+
+export type ICalFeedFormInput = z.infer<typeof icalFeedFormSchema>;
+
+// =============================================================================
+// Site > General > メンテナンス
+// =============================================================================
+
+export const maintenanceFormSchema = z.object({
+  maintenanceMode: z.boolean(),
+  maintenanceMessage: z
+    .string()
+    .max(1000, { error: "1000文字以内で入力してください" }),
+});
+
+export type MaintenanceFormInput = z.infer<typeof maintenanceFormSchema>;
+
+// =============================================================================
+// Site > Payment > 消費税
+// =============================================================================
+
+export const taxFormSchema = z.object({
+  taxStandardRate: z.number().min(0).max(100),
+  taxReducedRate: z.number().min(0).max(100),
+  taxDisplayModeAdmin: z.enum(TaxDisplayMode),
+  taxDisplayModePublic: z.enum(TaxDisplayMode),
+  taxInputMode: z.enum(TaxInputMode),
+});
+
+export type TaxFormInput = z.infer<typeof taxFormSchema>;
+
+// =============================================================================
+// Site > Booking > 規約同意
+// =============================================================================
+
+export const termsAgreementFormSchema = z.object({
+  termsAgreementEnabled: z.boolean(),
+  termsAgreementText: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+  requireTermsAgreement: z.boolean(),
+  requirePrivacyAgreement: z.boolean(),
+});
+
+export type TermsAgreementFormInput = z.infer<typeof termsAgreementFormSchema>;
