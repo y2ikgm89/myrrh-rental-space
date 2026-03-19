@@ -179,7 +179,7 @@ export function PermalinkSection({ settings }: PermalinkSectionProps) {
 
             {/* プレビュー */}
             <div className="rounded-md bg-muted p-4">
-              <FormLabel className="text-sm font-medium">プレビュー</FormLabel>
+              <p className="text-sm font-medium">プレビュー</p>
               <code className="mt-2 block text-sm font-mono">
                 {getPreviewUrl()}
               </code>
