@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from "react";
+import type { InputHTMLAttributes, Ref } from "react";
 
 interface InputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -7,6 +7,7 @@ interface InputProps extends Omit<
   readonly label: string;
   readonly error?: string;
   readonly wrapperClassName?: string;
+  readonly ref?: Ref<HTMLInputElement>;
 }
 
 export function Input({
@@ -14,6 +15,7 @@ export function Input({
   error,
   id,
   wrapperClassName = "",
+  ref,
   ...props
 }: InputProps) {
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, "-");
@@ -27,6 +29,7 @@ export function Input({
       </label>
       <input
         id={inputId}
+        ref={ref}
         {...props}
         className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           placeholder:text-muted-foreground

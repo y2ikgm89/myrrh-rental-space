@@ -1,4 +1,4 @@
-import type { TextareaHTMLAttributes } from "react";
+import type { Ref, TextareaHTMLAttributes } from "react";
 
 interface TextareaProps extends Omit<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -7,6 +7,7 @@ interface TextareaProps extends Omit<
   readonly label: string;
   readonly error?: string;
   readonly wrapperClassName?: string;
+  readonly ref?: Ref<HTMLTextAreaElement>;
 }
 
 export function Textarea({
@@ -14,6 +15,7 @@ export function Textarea({
   error,
   id,
   wrapperClassName = "",
+  ref,
   ...props
 }: TextareaProps) {
   const textareaId = id ?? label.toLowerCase().replace(/\s+/g, "-");
@@ -27,6 +29,7 @@ export function Textarea({
       </label>
       <textarea
         id={textareaId}
+        ref={ref}
         {...props}
         className={`w-full min-h-[120px] rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           placeholder:text-muted-foreground resize-y
