@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import { Input, Select } from "@/public/components/design-system";
+import { Button, Input, Select } from "@/public/components/design-system";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 
 type SpaceOption = {
@@ -120,13 +120,9 @@ export function DateTimeStep({
       </div>
 
       <div className="mt-8">
-        <button
-          type="button"
-          onClick={onNext}
-          className="rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
+        <Button type="button" onClick={onNext}>
           次のステップへ
-        </button>
+        </Button>
       </div>
     </div>
   );

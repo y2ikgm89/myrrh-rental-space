@@ -53,7 +53,7 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
 
   if (items.length === 0) {
     return (
-      <p className="py-16 text-center text-muted-foreground">
+      <p className="py-[var(--spacing-block)] text-center text-muted-foreground">
         現在公開中のよくある質問はありません。
       </p>
     );

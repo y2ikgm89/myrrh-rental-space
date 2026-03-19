@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
-import { Input, Textarea } from "@/public/components/design-system";
+import { Button, Input, Textarea } from "@/public/components/design-system";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 
 export function CustomerStep({
@@ -83,20 +83,12 @@ export function CustomerStep({
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-border px-6 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
+        <Button type="button" variant="secondary" onClick={onBack}>
           戻る
-        </button>
-        <button
-          type="button"
-          onClick={onNext}
-          className="rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
+        </Button>
+        <Button type="button" onClick={onNext}>
           確認画面へ
-        </button>
+        </Button>
       </div>
     </div>
   );

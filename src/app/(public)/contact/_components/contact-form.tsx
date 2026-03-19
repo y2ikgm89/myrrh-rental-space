@@ -2,7 +2,7 @@
 
 import { useState, type ReactElement } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
-import { Input, Textarea } from "@/public/components/design-system";
+import { Button, Input, Textarea } from "@/public/components/design-system";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { submitInquiry } from "@/public/actions/inquiry";
@@ -96,13 +96,9 @@ export function ContactForm(): ReactElement {
         )}
 
         <div className="pt-2">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-8 py-3 font-heading text-sm tracking-wide text-primary-foreground transition-opacity disabled:opacity-60"
-          >
+          <Button type="submit" disabled={isPending}>
             {isPending ? "送信中..." : "送信する"}
-          </button>
+          </Button>
         </div>
       </form>
     </ScrollReveal>

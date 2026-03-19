@@ -20,7 +20,7 @@ interface NewsListProps {
 export function NewsList({ items }: NewsListProps): ReactElement {
   if (items.length === 0) {
     return (
-      <div className="py-24 text-center">
+      <div className="py-[var(--spacing-section)] text-center">
         <p className="text-muted-foreground">お知らせはまだありません。</p>
       </div>
     );

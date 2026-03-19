@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
+import { Button } from "@/public/components/design-system";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 
 type SpaceOption = {
@@ -157,21 +158,17 @@ export function ConfirmationStep({
       )}
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
-        <button
+        <Button
           type="button"
+          variant="secondary"
           onClick={onBack}
           disabled={isPending}
-          className="rounded-lg border border-border px-6 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
         >
           戻る
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-lg bg-primary px-8 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-        >
+        </Button>
+        <Button type="submit" disabled={isPending}>
           {isPending ? "送信中..." : "予約を確定する"}
-        </button>
+        </Button>
       </div>
     </div>
   );

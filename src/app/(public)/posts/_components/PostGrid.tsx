@@ -28,7 +28,7 @@ interface PostGridProps {
 export function PostGrid({ posts }: PostGridProps): ReactElement {
   if (posts.length === 0) {
     return (
-      <div className="py-24 text-center">
+      <div className="py-[var(--spacing-section)] text-center">
         <p className="text-muted-foreground">記事がまだありません。</p>
       </div>
     );
