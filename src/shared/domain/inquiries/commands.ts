@@ -37,3 +37,46 @@ export async function deleteInquiry(id: string): Promise<void> {
     where: { id },
   });
 }
+
+type CreateInquiryInput = {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+};
+
+type CreateInquiryResult = {
+  id: string;
+  emailData: {
+    inquiryId: string;
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  };
+};
+
+export async function createInquiryCommand(
+  input: CreateInquiryInput,
+): Promise<CreateInquiryResult> {
+  const inquiry = await prisma.inquiry.create({
+    data: {
+      name: input.name,
+      email: input.email,
+      subject: input.subject,
+      message: input.message,
+      status: InquiryStatus.NEW,
+    },
+  });
+
+  return {
+    id: inquiry.id,
+    emailData: {
+      inquiryId: inquiry.id,
+      name: input.name,
+      email: input.email,
+      subject: input.subject,
+      message: input.message,
+    },
+  };
+}
