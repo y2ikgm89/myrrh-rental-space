@@ -160,21 +160,30 @@ export type BusinessHoursSettingsInput = z.infer<
 // SEO Schemas
 // =============================================================================
 
-export const seoSettingsSchema = z.object({
+export const metaSettingsSchema = z.object({
   defaultMetaDescription: z.string().max(160).nullable(),
   defaultMetaKeywords: z.string().max(500).nullable(),
   defaultOgpTitle: z.string().max(60).nullable(),
   defaultOgpDescription: z.string().max(160).nullable(),
-  // Analytics Settings
+});
+
+export type MetaSettingsInput = z.infer<typeof metaSettingsSchema>;
+
+export const analyticsSettingsSchema = z.object({
   analyticsType: z.enum(AnalyticsType).nullable(),
   googleAnalyticsId: z.string().max(50).nullable(),
   googleTagManagerId: z.string().max(50).nullable(),
-  googleSearchConsoleId: z.string().max(100).nullable(),
-  bingWebmasterToolsId: z.string().max(100).nullable(),
   gaPropertyId: z.string().max(20).nullable(),
 });
 
-export type SeoSettingsInput = z.infer<typeof seoSettingsSchema>;
+export type AnalyticsSettingsInput = z.infer<typeof analyticsSettingsSchema>;
+
+export const searchVerificationSchema = z.object({
+  googleSearchConsoleId: z.string().max(100).nullable(),
+  bingWebmasterToolsId: z.string().max(100).nullable(),
+});
+
+export type SearchVerificationInput = z.infer<typeof searchVerificationSchema>;
 
 // =============================================================================
 // Layout Schemas

@@ -14,16 +14,22 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   updateBasicInfo as updateBasicInfoCommand,
   updateLayoutSettings as updateLayoutSettingsCommand,
-  updateSeoSettings as updateSeoSettingsCommand,
+  updateMetaSettings as updateMetaSettingsCommand,
+  updateAnalyticsSettings as updateAnalyticsSettingsCommand,
+  updateSearchVerification as updateSearchVerificationCommand,
 } from "@/shared/domain/settings/commands";
 
 import {
   basicInfoSchema,
   layoutSettingsSchema,
-  seoSettingsSchema,
+  metaSettingsSchema,
+  analyticsSettingsSchema,
+  searchVerificationSchema,
   type BasicInfoInput,
   type LayoutSettingsInput,
-  type SeoSettingsInput,
+  type MetaSettingsInput,
+  type AnalyticsSettingsInput,
+  type SearchVerificationInput,
 } from "./schemas";
 
 function invalidateSettingsCache(): void {
@@ -68,10 +74,10 @@ export async function updateLayoutSettings(
   });
 }
 
-export async function updateSeoSettings(
-  data: SeoSettingsInput,
+export async function updateMetaSettings(
+  data: MetaSettingsInput,
 ): Promise<MutationResult> {
-  const parsed = seoSettingsSchema.safeParse(data);
+  const parsed = metaSettingsSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
@@ -80,7 +86,45 @@ export async function updateSeoSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateSeoSettingsCommand(parsed.data);
+      await updateMetaSettingsCommand(parsed.data);
+      return null;
+    },
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function updateAnalyticsSettings(
+  data: AnalyticsSettingsInput,
+): Promise<MutationResult> {
+  const parsed = analyticsSettingsSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateAnalyticsSettingsCommand(parsed.data);
+      return null;
+    },
+    afterSuccess: invalidateSettingsCache,
+  });
+}
+
+export async function updateSearchVerification(
+  data: SearchVerificationInput,
+): Promise<MutationResult> {
+  const parsed = searchVerificationSchema.safeParse(data);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await updateSearchVerificationCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateSettingsCache,

@@ -43,17 +43,23 @@ export type LayoutSettingsInput = {
   contentWidthCustom: number | null;
 };
 
-export type SeoSettingsInput = {
+export type MetaSettingsInput = {
   defaultMetaDescription: string | null;
   defaultMetaKeywords: string | null;
   defaultOgpTitle: string | null;
   defaultOgpDescription: string | null;
+};
+
+export type AnalyticsSettingsInput = {
   analyticsType: AnalyticsType | null;
   googleAnalyticsId: string | null;
   googleTagManagerId: string | null;
+  gaPropertyId: string | null;
+};
+
+export type SearchVerificationInput = {
   googleSearchConsoleId: string | null;
   bingWebmasterToolsId: string | null;
-  gaPropertyId: string | null;
 };
 
 export type BusinessInfoInput = {
@@ -258,7 +264,29 @@ export async function updateLayoutSettings(
   });
 }
 
-export async function updateSeoSettings(data: SeoSettingsInput): Promise<void> {
+export async function updateMetaSettings(
+  data: MetaSettingsInput,
+): Promise<void> {
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...data },
+    update: data,
+  });
+}
+
+export async function updateAnalyticsSettings(
+  data: AnalyticsSettingsInput,
+): Promise<void> {
+  await prisma.settings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", ...data },
+    update: data,
+  });
+}
+
+export async function updateSearchVerification(
+  data: SearchVerificationInput,
+): Promise<void> {
   await prisma.settings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },

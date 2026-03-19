@@ -38,7 +38,9 @@ export type {
   ContactInfoInput,
   BusinessHoursSettingsInput,
   MeoSettingsInput,
-  SeoSettingsInput,
+  MetaSettingsInput,
+  AnalyticsSettingsInput,
+  SearchVerificationInput,
   LayoutSettingsInput,
   EmailSettingsInput,
   NotificationSettingsInput,
@@ -64,7 +66,9 @@ export type {
 export {
   updateBasicInfo,
   updateLayoutSettings,
-  updateSeoSettings,
+  updateMetaSettings,
+  updateAnalyticsSettings,
+  updateSearchVerification,
 } from "./basic";
 
 // =============================================================================

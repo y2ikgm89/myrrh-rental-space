@@ -175,11 +175,10 @@ export const termsAgreementFormSchema = z.object({
 export type TermsAgreementFormInput = z.infer<typeof termsAgreementFormSchema>;
 
 // =============================================================================
-// Site > SEO > SEO・Analytics設定
+// Site > SEO > メタ情報
 // =============================================================================
 
-/** analyticsType: フォームでは "none" を使い、送信時に null に変換する */
-export const seoFormSchema = z.object({
+export const metaFormSchema = z.object({
   defaultMetaDescription: z
     .string()
     .max(160, { error: "160文字以内で入力してください" }),
@@ -192,6 +191,16 @@ export const seoFormSchema = z.object({
   defaultOgpDescription: z
     .string()
     .max(160, { error: "160文字以内で入力してください" }),
+});
+
+export type MetaFormInput = z.infer<typeof metaFormSchema>;
+
+// =============================================================================
+// Site > SEO > Analytics設定
+// =============================================================================
+
+/** analyticsType: フォームでは "none" を使い、送信時に null に変換する */
+export const analyticsFormSchema = z.object({
   analyticsType: z.union([z.enum(AnalyticsType), z.literal("none")]),
   googleAnalyticsId: z
     .string()
@@ -200,6 +209,15 @@ export const seoFormSchema = z.object({
     .string()
     .max(50, { error: "50文字以内で入力してください" }),
   gaPropertyId: z.string().max(20, { error: "20文字以内で入力してください" }),
+});
+
+export type AnalyticsFormInput = z.infer<typeof analyticsFormSchema>;
+
+// =============================================================================
+// Site > SEO > 検索エンジン検証
+// =============================================================================
+
+export const searchVerificationFormSchema = z.object({
   googleSearchConsoleId: z
     .string()
     .max(100, { error: "100文字以内で入力してください" }),
@@ -208,7 +226,9 @@ export const seoFormSchema = z.object({
     .max(100, { error: "100文字以内で入力してください" }),
 });
 
-export type SeoFormInput = z.infer<typeof seoFormSchema>;
+export type SearchVerificationFormInput = z.infer<
+  typeof searchVerificationFormSchema
+>;
 
 // =============================================================================
 // Site > Email > メール設定
