@@ -6,9 +6,10 @@
 
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **旧カラートークンは `@layer compat` でエイリアス** — `--color-primary` → `var(--color-accent)` 等。レガシーセクションコンポーネントが依存。新コードでは `accent`/`foreground`/`surface` 等の新トークンを直接使用すること
+- **`@layer compat` の CSS 変数は Tailwind ユーティリティに反映されない** — `--color-info-foreground` 等を `@layer compat` のみに定義しても `text-info-foreground` クラスは正しい値を参照しない。Tailwind CSS 4 のユーティリティは `@theme` ブロック内の変数のみ参照する。新しいセマンティックカラーは必ず `@theme` に定義すること（`@layer compat` はレガシーエイリアス専用）
 - **`PageContent` モデルと `Page`/`Section` モデルは共存** — 固定ページ（トップ、一覧等）は `PageContent`、カスタムページは `Page` + `Section`。削除せず維持
 - **PascalCase アニメーションファイルは thin re-export** — `ScrollReveal.tsx` → `export { ScrollReveal } from "./scroll-reveal"`。レガシーセクションの import パスを壊さないため。新コードは kebab-case を直接 import
-- **Prisma `Decimal` 型は `Number()` で変換** — `Space.hourlyPrice` 等は `Decimal` 型。子コンポーネントに渡す前に `Number(space.hourlyPrice)` で変換（`as number` 禁止）
+- **Prisma `Decimal` 型は `Number()` で変換** — `Space.hourlyPrice` 等は `Decimal` 型。ドメインクエリ層（`public-queries.ts` 等）で `Number()` 変換を一元化する（`as number` 禁止）。呼び出し側での個別変換は不要
 - **Prisma JSON フィールド（`imageUrls`, `facilities`）は `unknown` で受け取る** — `Array.isArray()` + type guard filter でランタイムパース。`as string[]` 禁止
 - **Three.js / PixiJS はパッケージのみ利用可能** — 旧 `effects/` インフラ（Provider/Canvas 29ファイル）は削除済みだが、パッケージは再インストール済み。使用時はページコンポーネントから直接 `import { Canvas } from "@react-three/fiber"` 等で import する。旧の `ExperienceShell` → `VisualEffectsProvider` パターンは禁止
 
@@ -94,9 +95,10 @@
 
 ## React / コンポーネント
 
+- **自動切替コンテンツに `role="alert"` 禁止** — `role="alert"` は暗黙で `aria-live="assertive"` を設定し、切替のたびにスクリーンリーダーが割り込む。カルーセル等には `role="region" aria-live="polite" aria-label="..."` を使用
 - **ダイアログを条件分岐の内側でレンダリング禁止** — early return や三項演算子の片側に `<Dialog>` / `<AlertDialog>` を置くと、他の状態から `open={true}` にしても表示されない。ダイアログはコンポーネント末尾のトップレベルで常にレンダリングする
 - **sessionStorage / localStorage 読み取りに `useState` lazy initializer 禁止** — React 19 公式は `useSyncExternalStore` を推奨（`subscribe` = no-op、`getSnapshot` は `useRef` キャッシュ必須）→ `react-patterns.md §useSyncExternalStore`
-- **Prisma オブジェクトを `{ ...prismaObj }` で Client Component に渡すと Symbol エラー** — `nodejs.util.inspect.custom` 等の Symbol プロパティが混入し `Only plain objects can be passed to Client Components` エラーが発生。`toPlainObject({ ...prismaObj, customFields })` でラップして返す（`@/shared/lib/serialize`）。`Date` フィールドは実行時 ISO 文字列になるため表示には `toISOString()` / `formatSerializedDate()` を使用
+- **Prisma オブジェクトを Client Component や `'use cache'` 関数の戻り値に使うと Symbol エラー** — `nodejs.util.inspect.custom` 等の Symbol プロパティが混入し `Only plain objects can be passed to Client Components` エラーが発生。`'use cache'` 関数の戻り値も React シリアライゼーション層を通るため同様。**ドメインクエリ層**（`public-queries.ts` 等）で `toPlainObject`/`toPlainArray` + `Decimal` → `Number` 変換を一元化し、呼び出し側での変換を不要にする。`Date` フィールドは実行時 ISO 文字列になるため表示には `toISOString()` / `formatSerializedDate()` を使用
 - **`toPlainObject` は `Serialized<T>` を返す** — ドメインクエリが `toPlainObject()` を通すと `Date` → `string` に変換される。クエリの戻り型は `Serialized<T>` で宣言し、Client Component の props も `Serialized<T>` で受け取る。`Date` 型のまま Client Component に渡すと実行時は `string` なのに型は `Date` になる不整合が発生する
 - **`element.style.*` への色指定も CSS 変数を使う** — `el.style.backgroundColor = "oklch(...)"` 禁止。`color-mix(in oklch, var(--color-background) 90%, transparent)` や `var(--shadow-sm)` 等の CSS 変数参照で記述する。ScrollTrigger コールバック等の GSAP 内インラインスタイルも同様
 - **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
@@ -112,9 +114,17 @@
 - **`DialogContent` には必ず `DialogTitle` が必要** — Radix `DialogTitle`（または VisuallyHidden でラップ）がないと `role="dialog"` に `aria-labelledby` が接続されず WCAG 4.1.2 違反。`DialogContent` 追加時は必ずセットで記述する
 - **Settings singleton にフィールド追加は4箇所同時更新** — ① `schema.prisma` + migrate ② `domain/settings/types.ts` の `SettingsData` 型 ③ `domain/settings/queries.ts` の get クエリ + `commands.ts` の update コマンド ④ `actions/settings/schemas.ts` の Zod スキーマ + `other.ts` の Server Action + `index.ts` barrel。`SettingsData` は `getOrCreateSettings()` が `select` なしで全カラムを返すため型追加のみで値は自動伝播
 
+## 公開フォーム（Public Forms）
+
+- **`MagneticButton` はフォーム送信ボタンに使えない** — `type="submit"` / `disabled` prop を受け取らない。フォーム送信には `<button type="submit" className="rounded-lg bg-primary ...">` を使用
+- **公開フォームの `error` prop は条件付きスプレッド** — `exactOptionalPropertyTypes: true` 下で `error={form.formState.errors.name?.message}` は `string | undefined` になり型エラー。`...(msg && { error: msg })` を使用
+- **`omitUndefined` でメール通知データをラップ** — `ReservationNotificationPayload` の `notes?: string | undefined` は `ReservationEmailData` の `notes?: string` と非互換。`omitUndefined(result.notification)` で解決
+- **公開フォーム Server Action に `executeAdminMutationResult` 禁止** — 認証不要。直接 Zod + `validateTurnstile` + ドメインコマンド + `fireAndForget` メール
+
 ## フレームワーク固有
 
 - **`revalidateTag` は Next.js 16 で 2 引数必須** — `revalidateTag(tag: string, profile: string | CacheLifeConfig)`。第 2 引数 `profile` は省略不可（旧 Next.js 14/15 との破壊的変更）。`CACHE_LIFE.*` 定数を渡すのが正しい用法。監査・レビュー時に「余分な引数」と誤識別しないこと
+- **`updateTag` は 1 引数** — `updateTag(tag: string)` は `revalidateTag` とは異なり第 2 引数なし。混同しない
 - **`global-error.tsx` に `next/font/google` 使用不可** — admin.css/public.css をインポートしないため、変数モードのフォント CSS が preload されるが未使用警告になる。`<body style={{ fontFamily: '...' }}>` でシステムフォントを直接指定する
 - **時刻依存の設定トグルに `CACHE_LIFE.STATIC_SETTINGS` 禁止** — メンテナンスモード等、即時反映が必要な設定は `cacheLife(CACHE_LIFE.DYNAMIC_DATA)` を使う（`STATIC_SETTINGS` は 'days' 単位のため切り替えが即時反映されない）
 - **管理画面ページに `connection()` 禁止** — `connection()` は公開ページ（`src/app/(public)/`）専用の PPR 動的 opt-in。管理画面（`src/app/(admin)/`）では使用しない。`new Date()` が必要なコンポーネントは Client Component にする
