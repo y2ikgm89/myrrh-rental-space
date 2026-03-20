@@ -16,6 +16,8 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
 } from "@/admin/components/ui";
 import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
 import type { NavigationType } from "@/shared/db/enums";
@@ -37,9 +39,13 @@ type NavigationListProps = {
   emptyMessage: string;
   sensors: SensorDescriptor<SensorOptions>[];
   isPending: boolean;
+  activeItemId: string | null;
+  dragOffsetX: number;
   onAdd: (type: NavigationType) => void;
   onEdit: (item: NavigationItemData) => void;
   onDelete: (id: string) => void;
+  onDragStart: (event: DragStartEvent) => void;
+  onDragMove: (event: DragMoveEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
 };
 
@@ -49,9 +55,13 @@ export function NavigationList({
   emptyMessage,
   sensors,
   isPending,
+  activeItemId,
+  dragOffsetX,
   onAdd,
   onEdit,
   onDelete,
+  onDragStart,
+  onDragMove,
   onDragEnd,
 }: NavigationListProps) {
   const title = {
@@ -76,12 +86,14 @@ export function NavigationList({
         ) : (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
-              ドラッグ&ドロップで順序を変更できます
+              ドラッグ&ドロップで順序を変更できます。右にドラッグするとサブメニューになります。
             </p>
             <DndContext
               id={`nav-${type}-sortable`}
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={onDragStart}
+              onDragMove={onDragMove}
               onDragEnd={onDragEnd}
             >
               <SortableContext
@@ -107,7 +119,9 @@ export function NavigationList({
                         onEdit={onEdit}
                         onDelete={onDelete}
                         isPending={isPending}
-                        isChild={item.isChild}
+                        depth={item.depth}
+                        isDragTarget={item.id === activeItemId}
+                        dragOffsetX={dragOffsetX}
                       />
                     ))}
                   </TableBody>

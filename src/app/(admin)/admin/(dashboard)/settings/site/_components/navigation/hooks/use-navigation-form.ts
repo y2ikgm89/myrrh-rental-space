@@ -23,9 +23,9 @@ export function flattenNavItems(
 ): FlatNavigationItem[] {
   const result: FlatNavigationItem[] = [];
   for (const item of items) {
-    result.push({ ...item, isChild: false });
+    result.push({ ...item, isChild: false, depth: 0 });
     for (const child of item.children) {
-      result.push({ ...child, isChild: true });
+      result.push({ ...child, isChild: true, depth: 1 });
     }
   }
   return result;

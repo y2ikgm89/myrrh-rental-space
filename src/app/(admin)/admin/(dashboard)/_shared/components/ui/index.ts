@@ -121,6 +121,7 @@ export type {
   SortableTableRowProps,
   DragEndEvent,
   DragStartEvent,
+  DragMoveEvent,
 } from "./sortable";
 
 // Pagination

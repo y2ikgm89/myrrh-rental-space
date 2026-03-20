@@ -82,7 +82,10 @@ export const platformLabels: Record<SocialPlatform, string> = {
 // Utility Types
 // =============================================================================
 
-export type FlatNavigationItem = NavigationItemData & { isChild: boolean };
+export type FlatNavigationItem = NavigationItemData & {
+  isChild: boolean;
+  depth: 0 | 1;
+};
 
 // =============================================================================
 // Re-exports

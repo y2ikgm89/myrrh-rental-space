@@ -23,6 +23,18 @@ import type { NavigationItemData, SocialLinkData } from "./types";
 import { platformLabels } from "./types";
 
 // =============================================================================
+// Indentation Constants (shared with NavigationManager)
+// =============================================================================
+
+const INDENT_WIDTH = 50;
+
+function getProjectedDepth(offsetX: number, currentDepth: 0 | 1): 0 | 1 {
+  const projectedPixels = currentDepth * INDENT_WIDTH + offsetX;
+  const raw = Math.round(projectedPixels / INDENT_WIDTH);
+  return Math.max(0, Math.min(1, raw)) === 1 ? 1 : 0;
+}
+
+// =============================================================================
 // Sortable Navigation Row
 // =============================================================================
 
@@ -31,7 +43,9 @@ type SortableNavRowProps = {
   onEdit: (item: NavigationItemData) => void;
   onDelete: (id: string) => void;
   isPending: boolean;
-  isChild?: boolean;
+  depth: 0 | 1;
+  isDragTarget: boolean;
+  dragOffsetX: number;
 };
 
 export function SortableNavRow({
@@ -39,7 +53,9 @@ export function SortableNavRow({
   onEdit,
   onDelete,
   isPending,
-  isChild,
+  depth,
+  isDragTarget,
+  dragOffsetX,
 }: SortableNavRowProps) {
   const {
     attributes,
@@ -57,6 +73,11 @@ export function SortableNavRow({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // During drag, show projected depth for the dragged item
+  const displayDepth =
+    isDragTarget && isDragging ? getProjectedDepth(dragOffsetX, depth) : depth;
+  const isChild = displayDepth === 1;
+
   return (
     <TableRow
       ref={setNodeRef}
@@ -72,7 +93,9 @@ export function SortableNavRow({
         </div>
       </TableCell>
       <TableCell className={cn("font-medium", isChild && "pl-8")}>
-        {isChild && <span className="mr-2 text-muted-foreground">└</span>}
+        {isChild && (
+          <span className="mr-2 text-muted-foreground">{"\u2514"}</span>
+        )}
         {item.label}
       </TableCell>
       <TableCell className="text-muted-foreground">{item.url}</TableCell>

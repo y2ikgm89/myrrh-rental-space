@@ -14,6 +14,8 @@ import {
   sortableKeyboardCoordinates,
   arrayMove,
   type DragEndEvent,
+  type DragMoveEvent,
+  type DragStartEvent,
 } from "@/admin/components/ui";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
@@ -38,6 +40,7 @@ import type {
   SocialLinkData,
   NavFormData,
   SocialFormData,
+  FlatNavigationItem,
 } from "./types";
 import {
   useNavigationForm,
@@ -46,6 +49,60 @@ import {
 } from "./hooks/use-navigation-form";
 import { NavigationList, SocialLinkList } from "./NavigationList";
 import { NavigationDialog, SocialLinkDialog } from "./NavigationDialog";
+
+// =============================================================================
+// Indentation Constants
+// =============================================================================
+
+const INDENT_WIDTH = 50;
+
+function getProjectedDepth(offsetX: number, currentDepth: 0 | 1): 0 | 1 {
+  const projectedPixels = currentDepth * INDENT_WIDTH + offsetX;
+  const raw = Math.round(projectedPixels / INDENT_WIDTH);
+  return Math.max(0, Math.min(1, raw)) === 1 ? 1 : 0;
+}
+
+/**
+ * After reorder, walk through items top-to-bottom and assign parentId
+ * based on the projected depth of the dragged item.
+ * Non-dragged items keep their existing depth (isChild).
+ */
+function computeOrderWithNesting(
+  reordered: FlatNavigationItem[],
+  draggedId: string,
+  offsetX: number,
+  draggedOriginalDepth: 0 | 1,
+): { id: string; order: number; parentId: string | null }[] {
+  const projectedDepth = getProjectedDepth(offsetX, draggedOriginalDepth);
+
+  // Build depth map: dragged item gets projected depth, others keep existing
+  const depths = reordered.map((item) => ({
+    item,
+    depth: item.id === draggedId ? projectedDepth : item.depth,
+  }));
+
+  // Walk top-to-bottom, track the last root-level item
+  let lastRootId: string | null = null;
+  const updates: { id: string; order: number; parentId: string | null }[] = [];
+
+  for (let i = 0; i < depths.length; i++) {
+    const entry = depths[i];
+    if (!entry) continue;
+
+    const { item, depth } = entry;
+
+    if (depth === 1 && lastRootId !== null) {
+      // Child: parent is the last root item above
+      updates.push({ id: item.id, order: i, parentId: lastRootId });
+    } else {
+      // Root item (or forced root because no parent above)
+      updates.push({ id: item.id, order: i, parentId: null });
+      lastRootId = item.id;
+    }
+  }
+
+  return updates;
+}
 
 // =============================================================================
 // Props
@@ -98,6 +155,10 @@ export function NavigationManager({
   const [isSocialDialogOpen, setIsSocialDialogOpen] = useState(false);
   const [editingSocialLink, setEditingSocialLink] =
     useState<Serialized<SocialLinkData> | null>(null);
+
+  // D&D Drag-to-nest State
+  const [dragOffsetX, setDragOffsetX] = useState(0);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
 
   // D&D Sensors
   const sensors = useSensors(
@@ -205,25 +266,62 @@ export function NavigationManager({
     });
   };
 
-  // Navigation D&D Handler
+  // Navigation D&D Handlers
+  const handleNavDragStart =
+    (_type: NavigationType) => (event: DragStartEvent) => {
+      setActiveItemId(String(event.active.id));
+      setDragOffsetX(0);
+    };
+
+  const handleNavDragMove =
+    (_type: NavigationType) => (event: DragMoveEvent) => {
+      setActiveItemId(String(event.active.id));
+      setDragOffsetX(event.delta.x);
+    };
+
   const handleNavDragEnd = (type: NavigationType) => (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    const currentOffsetX = event.delta.x;
+
+    // Reset drag state
+    setActiveItemId(null);
+    setDragOffsetX(0);
+
+    if (!over) return;
 
     const items = getItemsByType(type);
     const flatItems = flattenNavItems(items);
 
     const oldIndex = flatItems.findIndex((item) => item.id === active.id);
-    const newIndex = flatItems.findIndex((item) => item.id === over.id);
 
-    if (oldIndex === -1 || newIndex === -1) return;
+    if (oldIndex === -1) return;
 
-    const reordered = arrayMove(flatItems, oldIndex, newIndex);
+    const draggedItem = flatItems[oldIndex];
+    if (!draggedItem) return;
 
-    const updates = reordered.map((item, index) => ({
-      id: item.id,
-      order: index,
-    }));
+    // Check if only depth changed (horizontal drag with no vertical reorder)
+    const projectedDepth = getProjectedDepth(currentOffsetX, draggedItem.depth);
+    const samePosition = active.id === over.id;
+
+    if (samePosition && projectedDepth === draggedItem.depth) return;
+
+    const newIndex = samePosition
+      ? oldIndex
+      : flatItems.findIndex((item) => item.id === over.id);
+
+    if (newIndex === -1) return;
+
+    const reordered = samePosition
+      ? flatItems
+      : arrayMove(flatItems, oldIndex, newIndex);
+
+    // Compute parentId for each item based on projected depth
+    const updates = computeOrderWithNesting(
+      reordered,
+      String(active.id),
+      currentOffsetX,
+      draggedItem.depth,
+    );
 
     startTransition(async () => {
       const result = await updateNavigationOrder(updates);
@@ -338,9 +436,13 @@ export function NavigationManager({
             emptyMessage="デスクトップメニューがありません"
             sensors={sensors}
             isPending={isPending}
+            activeItemId={activeItemId}
+            dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onDragStart={handleNavDragStart("HEADER_DESKTOP")}
+            onDragMove={handleNavDragMove("HEADER_DESKTOP")}
             onDragEnd={handleNavDragEnd("HEADER_DESKTOP")}
           />
         </TabsContent>
@@ -352,9 +454,13 @@ export function NavigationManager({
             emptyMessage="モバイルメニューがありません"
             sensors={sensors}
             isPending={isPending}
+            activeItemId={activeItemId}
+            dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onDragStart={handleNavDragStart("HEADER_MOBILE")}
+            onDragMove={handleNavDragMove("HEADER_MOBILE")}
             onDragEnd={handleNavDragEnd("HEADER_MOBILE")}
           />
           <p className="mt-4 text-sm text-muted-foreground">
@@ -369,9 +475,13 @@ export function NavigationManager({
             emptyMessage="フッターメニューがありません"
             sensors={sensors}
             isPending={isPending}
+            activeItemId={activeItemId}
+            dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
+            onDragStart={handleNavDragStart("FOOTER")}
+            onDragMove={handleNavDragMove("FOOTER")}
             onDragEnd={handleNavDragEnd("FOOTER")}
           />
         </TabsContent>

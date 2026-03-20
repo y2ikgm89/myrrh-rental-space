@@ -253,7 +253,11 @@ export {
   DragOverlay,
 } from "@dnd-kit/core";
 
-export type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+export type {
+  DragEndEvent,
+  DragStartEvent,
+  DragMoveEvent,
+} from "@dnd-kit/core";
 
 export {
   SortableContext,
