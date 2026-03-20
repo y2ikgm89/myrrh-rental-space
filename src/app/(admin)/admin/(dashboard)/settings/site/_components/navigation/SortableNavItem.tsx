@@ -58,8 +58,11 @@ export function SortableNavRow({
     isDragging,
   } = useSortable({ id: item.id });
 
+  // Translate only — suppress scale to prevent layout shift
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform
+      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+      : undefined,
     transition,
   };
 
@@ -73,12 +76,16 @@ export function SortableNavRow({
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{
+        ...style,
+        // Use padding instead of margin for indent — prevents layout shift
+        paddingLeft: isChild ? 32 : undefined,
+      }}
       className={cn(
         "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
         !item.isActive && "opacity-50",
-        isChild && "ml-8 border-l-2 border-l-primary/30",
+        isChild && "border-l-2 border-l-primary/30",
       )}
     >
       <div className="shrink-0 cursor-grab" {...attributes} {...listeners}>
@@ -152,7 +159,9 @@ export function SortableSocialRow({
   } = useSortable({ id: link.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: transform
+      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
+      : undefined,
     transition,
   };
 
