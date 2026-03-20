@@ -495,3 +495,10 @@ try {
 | `@/shared/lib/action-helpers`  | `createValidationMutationError`, `withValidation`, `withTurnstile`, `withRetry`, `isTransientError`                                                                                   |
 | `@/admin/lib/admin-action`     | `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理）                                                                                                            |
 | `@/admin/lib/action-auth`      | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`                                                                                                               |
+
+## Gotchas
+
+- **`ErrorSeverity` と `severity` は異なる値** — `logError` 出力 JSON の `severity` は GCP LogSeverity にマッピングされる（`HIGH` → `"ERROR"`, `MEDIUM` → `"WARNING"`, `LOW` → `"INFO"`）。テストで `parsed.severity` を検証する際は GCP LogSeverity を期待すること
+- **`stack_trace` は ERROR 以上のみ** — `severity` が `"ERROR"` / `"CRITICAL"` の場合のみ `stack_trace` と `@type`（Cloud Error Reporting 用）が出力される。WARNING 以下ではスタックトレースなし
+- **`K_SERVICE` / `K_REVISION`** — Cloud Run が自動設定する環境変数。`serviceContext.service` / `serviceContext.version` に使用。ローカルでは `"myrrh-rental-space"` / `"local"` にフォールバック
+- **モジュールレベルで `process.env` をキャッシュしない** — `const isDev = process.env["NODE_ENV"] !== "production"` はテスト時に `process.env` を上書きしても反映されない。`process.env["NODE_ENV"]` をインライン評価すること

@@ -132,6 +132,8 @@ src/app/
 └── (public)/                    # 公開ページ（Page-First Architecture）
     ├── layout.tsx               # Public Root Layout (html/body, LenisProvider, MobileNav)
     ├── _shared/
+    │   ├── actions/             # 公開フォーム Server Actions（認証不要、Turnstile保護）
+    │   ├── hooks/               # usePublicForm 等
     │   ├── components/
     │   │   ├── design-system/   # Primitives (Button, Card, Heading 等 11種)
     │   │   ├── layouts/         # site-header, site-footer, page-hero, site-cta, breadcrumb, mobile-nav
@@ -191,12 +193,16 @@ bun update                                      # semver 範囲内の依存パ�
 - Server Components 優先、Server Actions
 - Zod バリデーション必須
 - フォーム送信ボタン: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）
+- 設定セクション: `useFormAction` + `Form`/`FormField`/`FormMessage` + `disabled={!form.formState.isDirty}` → `admin-ui-patterns.md`
+- 設定セクションのスキーマ: Server Action 用（`nullable()`）とフォーム用（空文字列許容）は責務分離。`emptyToNull()` で送信時変換
 - 命名: 管理画面コンポーネント `PascalCase.tsx`、公開ページコンポーネント `kebab-case.tsx`、その他 `kebab-case.ts`
 - 公開ページ: Page-First Architecture — ページ構成はコードで直接定義、`SectionRenderer` は `[...segments]` のみ
 - 公開ページコンテンツ: `getPageContent(pageKey, schema, default)` で DB から取得（`'use cache'` + `cacheTag`）
-- 公開ページフォーム: `Input`/`Select`/`Textarea` は `_shared/components/design-system/` から使用
+- 公開ページフォーム: `usePublicForm`（`@/public/hooks/use-public-form`）+ Turnstile + fireAndForget メール。`executeAdminMutationResult` は使わない
+- 公開ページ import: Design System は直接 import（`from "@/public/components/design-system/button"` 等）。barrel 経由禁止（tree-shaking 不安定）
 - コミット: `<type>(<scope>): <subject>`
 
 ### ⚠️ Gotchas
 
-→ `.claude/rules/gotchas.md`（自動ロード済み）
+→ `.claude/rules/gotchas.md`（環境・ビルド・デプロイ・ツール系 — 常時ロード）
+→ ドメイン固有の gotcha は各 `.claude/rules/` ファイルの `## Gotchas` セクションに統合済み

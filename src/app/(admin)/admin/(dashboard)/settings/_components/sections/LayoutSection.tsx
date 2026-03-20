@@ -4,12 +4,11 @@
  * レイアウト設定セクション
  *
  * サイト全体の幅と記事コンテンツ幅を設定
- * リアルタイムプレビュー付き
+ * 比率プレビュー付き
  */
 
 import { useWatch } from "react-hook-form";
 import {
-  Button,
   Card,
   CardContent,
   CardDescription,
@@ -43,11 +42,9 @@ import {
 import {
   SITE_WIDTH_PRESETS,
   CONTENT_WIDTH_PRESETS,
-  resolveWidthStyles,
 } from "@/shared/lib/styles/layout-mapper";
+import type { WidthPreset } from "@/shared/lib/styles/layout-mapper";
 import { keysOf } from "@/shared/lib/serialize";
-import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
-import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 
 // =============================================================================
 // Types
@@ -58,30 +55,42 @@ interface LayoutSectionProps {
 }
 
 // =============================================================================
-// Options (derived from PRESETS — Single Source of Truth)
+// Helpers
 // =============================================================================
 
-const siteWidthOptions = keysOf(SITE_WIDTH_PRESETS)
-  .filter((key) => key !== LayoutWidth.XS)
-  .map((key) => {
-    const preset = SITE_WIDTH_PRESETS[key];
-    return {
-      value: key,
-      label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
-      description: preset.description,
-    };
-  });
+function buildOptions(
+  presets: Record<LayoutWidth, WidthPreset>,
+  exclude: LayoutWidth,
+) {
+  return keysOf(presets)
+    .filter((key) => key !== exclude)
+    .map((key) => {
+      const preset = presets[key];
+      return {
+        value: key,
+        label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
+      };
+    });
+}
 
-const contentWidthOptions = keysOf(CONTENT_WIDTH_PRESETS)
-  .filter((key) => key !== LayoutWidth.FULL)
-  .map((key) => {
-    const preset = CONTENT_WIDTH_PRESETS[key];
-    return {
-      value: key,
-      label: preset.px ? `${preset.label} (${preset.px}px)` : preset.label,
-      description: preset.description,
-    };
-  });
+const siteWidthOptions = buildOptions(SITE_WIDTH_PRESETS, LayoutWidth.XS);
+const contentWidthOptions = buildOptions(
+  CONTENT_WIDTH_PRESETS,
+  LayoutWidth.FULL,
+);
+
+function resolvePresetPx(
+  width: LayoutWidth,
+  customValue: string,
+  presets: Record<LayoutWidth, WidthPreset>,
+): number | null {
+  if (width === LayoutWidth.FULL) return null;
+  if (width === LayoutWidth.CUSTOM) {
+    const parsed = customValue ? parseInt(customValue, 10) : null;
+    return parsed !== null && !Number.isNaN(parsed) ? parsed : null;
+  }
+  return presets[width].px;
+}
 
 // =============================================================================
 // Component
@@ -129,31 +138,30 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
     control: form.control,
     name: "contentWidth",
   });
+  const containerWidthCustom = useWatch({
+    control: form.control,
+    name: "containerWidthCustom",
+  });
   const contentWidthCustom = useWatch({
     control: form.control,
     name: "contentWidthCustom",
   });
 
-  const handlePreview = () => {
-    window.open("/posts", "_blank");
-  };
+  const resolvedSitePx = resolvePresetPx(
+    containerWidth,
+    containerWidthCustom,
+    SITE_WIDTH_PRESETS,
+  );
+  const resolvedContentPx = resolvePresetPx(
+    contentWidth,
+    contentWidthCustom,
+    CONTENT_WIDTH_PRESETS,
+  );
 
-  // リアルタイムプレビュー用スタイル計算
-  const parsedCustomWidth = contentWidthCustom
-    ? parseInt(contentWidthCustom, 10)
-    : null;
-  const validCustomWidth =
-    parsedCustomWidth !== null && !Number.isNaN(parsedCustomWidth)
-      ? parsedCustomWidth
+  const contentRatio =
+    resolvedContentPx && resolvedSitePx
+      ? Math.round((resolvedContentPx / resolvedSitePx) * 100)
       : null;
-
-  const previewStyles = resolveWidthStyles({
-    width: contentWidth,
-    customPx: validCustomWidth,
-  });
-
-  // サンプルコンテンツ
-  const sampleContent = `<p>これはコンテンツ幅のプレビューです。設定を変更すると、このエディタの幅がリアルタイムで変わります。</p><p>実際のブログ記事やお知らせは、ここに表示されるのと同じ幅で公開ページに表示されます。</p>`;
 
   return (
     <Form {...form}>
@@ -200,12 +208,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                                 key={option.value}
                                 value={option.value}
                               >
-                                <div className="flex flex-col">
-                                  <span>{option.label}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {option.description}
-                                  </span>
-                                </div>
+                                {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -275,12 +278,7 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
                                 key={option.value}
                                 value={option.value}
                               >
-                                <div className="flex flex-col">
-                                  <span>{option.label}</span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {option.description}
-                                  </span>
-                                </div>
+                                {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -319,53 +317,53 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
               </div>
             </div>
 
-            {/* コンテンツ幅プレビュー */}
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <h4 className="text-sm font-medium">コンテンツ幅プレビュー</h4>
-                <p className="text-xs text-muted-foreground">
-                  設定した幅でエディタがどのように表示されるか確認できます
-                </p>
-              </div>
-              <div className="rounded-lg border bg-muted/20 p-4 overflow-x-auto">
-                <LazyLexicalEditor
-                  contentHtml={sampleContent}
-                  disabled
-                  className={EDITOR_PROSE_CLASSES}
-                  showToolbar={false}
-                  height="120px"
-                  contentWidthClassName={previewStyles.className}
-                  contentWidthStyle={previewStyles.style}
-                />
+            {/* レイアウトプレビュー（比率表示） */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">レイアウトプレビュー</p>
+              <div className="rounded-lg border bg-background px-4 py-4">
+                {/* サイト幅 = 100% */}
+                <div className="rounded border border-dashed border-border bg-muted/20 px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>サイト幅</span>
+                    <span className="font-mono">
+                      {resolvedSitePx ? `${resolvedSitePx}px` : "全幅"}
+                    </span>
+                  </div>
+                  {/* コンテンツ幅 = 比率 */}
+                  <div
+                    className="mx-auto mt-2.5 rounded border border-dashed border-primary/40 bg-background px-3 py-2.5"
+                    style={{
+                      width: contentRatio ? `${contentRatio}%` : "100%",
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>コンテンツ領域</span>
+                      <span className="font-mono">
+                        {resolvedContentPx ? `${resolvedContentPx}px` : "全幅"}
+                        {contentRatio !== null && (
+                          <span className="ml-1 opacity-60">
+                            ({contentRatio}%)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="h-2 rounded-full bg-muted" />
+                      <div className="h-2 w-4/5 rounded-full bg-muted" />
+                      <div className="h-2 w-3/5 rounded-full bg-muted" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* アクションボタン */}
-            <div className="flex items-center justify-end gap-4">
-              <Button
-                variant="outline"
-                onClick={handlePreview}
-                disabled={isPending}
-                type="button"
-              >
-                プレビュー
-              </Button>
+            {/* 保存 */}
+            <div className="flex justify-end">
               <SubmitButton
                 isPending={isPending}
                 label="保存"
                 disabled={!form.formState.isDirty}
               />
-            </div>
-
-            {/* ヒント */}
-            <div className="rounded-lg bg-muted/50 p-4">
-              <h4 className="font-medium mb-2">ヒント</h4>
-              <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-                <li>設定を保存すると、サイト全体に即時反映されます</li>
-                <li>個別の記事やページで幅を上書きすることもできます</li>
-                <li>長文の記事は狭めの幅（720〜800px程度）が読みやすいです</li>
-                <li>画像ギャラリーなどは広めの幅が適しています</li>
-              </ul>
             </div>
           </CardContent>
         </Card>

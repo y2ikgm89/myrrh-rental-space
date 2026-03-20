@@ -519,3 +519,9 @@ await prisma.$transaction(async (tx) => {
 | `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
 | `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
 | `@/admin/lib/lazy-renderer.ts`      | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
+
+## Gotchas
+
+- **`PrismaPg` adapter 必須** — `scripts/` は Next.js ランタイム外のため `new PrismaClient()` 単独で WASM エンジンが初期化できず `PrismaClientInitializationError`。`new PrismaPg({ connectionString: databaseUrl })` → `new PrismaClient({ adapter })` の順で初期化
+- **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.InputJsonValue` 等の実値を使う場合は `import { PrismaClient, Prisma }` （`type` キーワードなし）
+- **nullable JSON update は `Prisma.InputJsonValue`（`JsonValue` 禁止）** — `data: { field: content as Prisma.JsonValue }` は型エラー。`content as Prisma.InputJsonValue` を使う

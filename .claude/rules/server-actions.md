@@ -569,3 +569,10 @@ updateTag(CACHE_TAGS.POSTS);
 | `@/shared/lib/action-helpers.ts`  | `createValidationMutationError`                                            |
 | `@/shared/lib/errors`             | `safeFetch`, `ErrorCategory`, `ErrorSeverity`                              |
 | `@/shared/lib/serialize.ts`       | `toPlainObject`, `toPlainArray`                                            |
+
+## Gotchas
+
+- **`MagneticButton` はフォーム送信ボタンに使えない** — `type="submit"` / `disabled` prop を受け取らない。フォーム送信には `<button type="submit" className="rounded-lg bg-primary ...">` を使用
+- **公開フォームの `error` prop は条件付きスプレッド** — `exactOptionalPropertyTypes: true` 下で `error={form.formState.errors.name?.message}` は `string | undefined` になり型エラー。`...(msg && { error: msg })` を使用
+- **`omitUndefined` でメール通知データをラップ** — `ReservationNotificationPayload` の `notes?: string | undefined` は `ReservationEmailData` の `notes?: string` と非互換。`omitUndefined(result.notification)` で解決
+- **公開フォーム Server Action に `executeAdminMutationResult` 禁止** — 認証不要。直接 Zod + `validateTurnstile` + ドメインコマンド + `fireAndForget` メール

@@ -622,6 +622,85 @@ export function DashboardHeader() {
 </AlertDialogContent>
 ```
 
+## 設定セクション フォームパターン
+
+設定セクション（`settings/_components/sections/`）は `useFormAction` + `Form` コンポーネント群で統一:
+
+```tsx
+// 標準パターン（BasicInfoSection.tsx が実装例）
+const { form, isPending, onSubmit } = useFormAction(
+  basicInfoFormSchema,           // form-schemas.ts のフォーム用スキーマ
+  (data) => updateBasicInfo({    // emptyToNull で空文字→null 変換
+    siteName: emptyToNull(data.siteName),
+  }),
+  { defaultValues: {...}, refresh: true, successMessage: "保存しました" }
+);
+
+<Form {...form}>
+  <form onSubmit={onSubmit}>
+    <Card>
+      <CardContent>
+        <FormField control={form.control} name="siteName" render={({ field }) => (
+          <FormItem>
+            <FormLabel>サイト名</FormLabel>
+            <FormControl><Input {...field} disabled={isPending} /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <div className="flex justify-end pt-2">
+          <SubmitButton isPending={isPending} label="保存" disabled={!form.formState.isDirty} />
+        </div>
+      </CardContent>
+    </Card>
+  </form>
+</Form>
+```
+
+**SubmitButton 配置（右寄せ統一）:**
+
+```tsx
+// パターン A: 保存ボタンのみ
+<div className="flex justify-end pt-2">
+  <SubmitButton isPending={isPending} label="保存" disabled={!form.formState.isDirty} />
+</div>
+
+// パターン B: 接続テスト + 保存（クリア → テスト → 保存の順）
+<div className="flex flex-wrap items-center justify-end gap-2">
+  <Button type="button" variant="destructive" ...>クリア</Button>
+  <Button type="button" variant="outline" ...>接続テスト</Button>
+  <SubmitButton isPending={isPending} label="保存" disabled={!form.formState.isDirty} />
+</div>
+```
+
+**スキーマ構成（責務分離）:**
+
+- Server Action スキーマ（`schemas/basic.ts`）: `z.string().nullable()` — サーバーバリデーション用
+- フォーム用スキーマ（`schemas/form-schemas.ts`）: `z.string().max(100)` — クライアントバリデーション用
+- `emptyToNull()` で送信時に空文字列 → null 変換
+
+**接続テスト・OAuth ボタンの共存:**
+
+```tsx
+// フォーム送信: useFormAction
+const { form, isPending, onSubmit } = useFormAction(schema, action, options);
+// 接続テスト: 別の useTransition（isPending と競合しない）
+const [testPending, startTestTransition] = useTransition();
+```
+
+**useFormAction 非適用の例外:**
+
+- CRUD テーブル（CustomApiKeysSection, ICalFeedSection）
+- 読み取り専用 UI（PermissionsSection）
+- Lexical エディタ（RobotsTxtSection）
+- 複雑なネスト配列（BusinessHoursSection — 曜日×時間帯）
+
+**禁止:**
+
+- 設定セクションで `useState` + 手動 `onChange` のフォーム管理（`useFormAction` を使用）
+- `useRefreshOnSuccess` フック（削除済み、`useFormAction` の `refresh: true` で代替）
+
+---
+
 ## 禁止事項
 
 1. **型 re-export の追加禁止** — 共有型のローカル aliases は不要（`export type Foo = SharedFoo`）
@@ -641,3 +720,15 @@ export function DashboardHeader() {
 15. **テーブルカラム非表示をヘッダーのみ・データ行のみに適用禁止** — ヘッダー・仮想行（ホームページ行等）・全データ行に対称的に `hidden md:table-cell` を適用する
 16. **テーブルに `overflow-x-auto` なしで `overflow-hidden` のみ使用禁止** — モバイルでテーブルがクリップされスクロール不可になる。必ず2層ラッパーを使う
 17. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` 等のサブページコンポーネントディレクトリは Next.js がルートとして解釈する可能性がある。`_` プレフィックスでプライベートフォルダにする（`[slug]/_sections/`、`[slug]/_seo/`）
+18. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。isDirty 無効化は**編集モードのみ**。create/edit 共用コンポーネントでは `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
+19. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ。CRUD フォームの `flex justify-end gap-4` と統一
+
+## Gotchas
+
+- **`PublishSwitch.onToggle` は `(id, checked: boolean)` 必須** — 既存の「DB を読んで反転」パターン（`data: { isActive: !current }`）は非互換。`executeAdminMutationResult` で boolean を直接受け取り `data: { isActive }` で set する形に変更する
+- **tailwind-variants 複数スロット合成時の `text-*` 競合** — `${base()} ${variant()}` のように同一要素に2つの `text-*` が適用されると、CSS 生成順次第でどちらが勝つか不定（HTML クラス順は無関係）。動的に変わる色（アクティブ状態等）は継承に頼らず子要素に直接 `text-*` を明示する
+- **Lucide アイコンの `currentColor`** — アイコンの色を動的に切り替えたい場合、アイコン定義側では制御できないため呼び出し元で `<span className={isActive ? "text-sidebar-text" : ""}>` でラップして色クラスを付与する
+- **`bg-overlay` に opacity modifier 禁止** — `--color-overlay: oklch(0 0 0 / 0.6)` はアルファ値が CSS 変数値に組み込み済み。`bg-overlay/30` 等の Tailwind opacity modifier は期待通り機能しない。`bg-overlay` のみ使用する
+- **`DialogContent` には必ず `DialogTitle` が必要** — Radix `DialogTitle`（または VisuallyHidden でラップ）がないと `role="dialog"` に `aria-labelledby` が接続されず WCAG 4.1.2 違反。`DialogContent` 追加時は必ずセットで記述する
+- **Settings singleton にフィールド追加は4箇所同時更新** — ① `schema.prisma` + migrate ② `domain/settings/types.ts` の `SettingsData` 型 ③ `domain/settings/queries.ts` の get クエリ + `commands.ts` の update コマンド ④ `actions/settings/schemas.ts` の Zod スキーマ + `other.ts` の Server Action + `index.ts` barrel。`SettingsData` は `getOrCreateSettings()` が `select` なしで全カラムを返すため型追加のみで値は自動伝播
+- **Recharts の SVG props は CSS 変数を受け取れない** — `fill={CHART_COLORS.primary}` のように oklch 定数を定義して渡す。admin.css テーマトークンと同期する oklch 値をコンポーネント上部に `as const` で定義（`ReservationChart.tsx` が実装例）
