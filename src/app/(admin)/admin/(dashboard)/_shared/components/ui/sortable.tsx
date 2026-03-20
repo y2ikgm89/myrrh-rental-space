@@ -128,7 +128,11 @@ export function SortableItemWrapper({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("relative", isDragging && "z-50 opacity-50", className)}
+      className={cn(
+        "relative",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
+        className,
+      )}
       {...attributes}
       {...listeners}
     >
@@ -174,7 +178,7 @@ export function SortableTableRow({
       style={style}
       className={cn(
         "group",
-        isDragging && "z-50 bg-muted/80 shadow-lg",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
         className,
       )}
       {...attributes}
