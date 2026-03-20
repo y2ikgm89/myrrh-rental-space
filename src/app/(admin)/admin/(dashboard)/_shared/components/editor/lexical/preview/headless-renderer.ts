@@ -29,9 +29,10 @@ export function renderEditorStateToHtml(editorStateJson: string): string {
   });
 
   const editorState = editor.parseEditorState(editorStateJson);
+  editor.setEditorState(editorState);
   let html = "";
 
-  editorState.read(() => {
+  editor.getEditorState().read(() => {
     html = $generateHtmlFromNodes(editor, null);
   });
 

@@ -1,10 +1,10 @@
 import "server-only";
 
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
+import { prismaForBetterAuth } from "./prisma";
 
 export function createBetterAuthDatabaseAdapter() {
-  return prismaAdapter(prisma, {
+  return prismaAdapter(prismaForBetterAuth, {
     provider: "postgresql",
   });
 }

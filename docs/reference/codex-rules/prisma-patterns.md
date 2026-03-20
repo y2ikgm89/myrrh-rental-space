@@ -5,7 +5,13 @@ paths:
 
 # Prisma パターンルール
 
-> Prisma 7.4 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL
+> Prisma 7.5 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL
+
+## Better Auth との境界
+
+- **アプリ**: `src/shared/db/prisma.ts` の **`prisma`**（`$extends` 済み）。
+- **`prismaAdapter`**: **`prismaForBetterAuth`**（拡張前）のみを `src/shared/db/better-auth-adapter.ts` から渡す。
+- **`experimental.joins`** は `auth.ts` 側で有効維持。理由は `auth-patterns.md` および [Better Auth Prisma ドキュメント](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)。
 
 ## Enum パターン（Prisma 7 mapped enums）
 

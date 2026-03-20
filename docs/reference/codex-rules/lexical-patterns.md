@@ -11,7 +11,7 @@ paths:
 ## 概要
 
 このプロジェクトでのLexical実装ガイドライン。
-パス: `@/admin/components/editor/lexical/`
+実装パス: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`（インポートは `@/admin/...` エイリアスに従う）
 
 ## 技術スタック整合性
 
@@ -58,10 +58,14 @@ const initialConfig = useMemo(() => ({
 
 ```
 lexical/
-├── LexicalEditor.tsx      # メインコンポーネント（LexicalComposer）
+├── LexicalEditor.tsx      # メイン（LexicalComposer + InspectorSidebarProvider）
 ├── index.ts               # 公開エクスポート
 ├── theme.ts               # エディタテーマ定義
 ├── types.ts               # 型定義
+├── inspector/             # 右・ブロック設定パネル（Gutenberg 風）
+│   ├── InspectorSidebar.tsx
+│   ├── inspector-sidebar-context.tsx  # 開閉 + localStorage 永続化
+│   └── panels/            # ノード別インスペクター
 ├── nodes/
 │   ├── index.ts           # ノードエクスポート
 │   ├── ImageNode.tsx      # DecoratorNode例
@@ -72,6 +76,23 @@ lexical/
     ├── ImagePlugin.tsx    # 画像挿入ダイアログ
     └── YouTubePlugin.tsx  # YouTube挿入ダイアログ
 ```
+
+## ブロック設定パネル（Inspector Sidebar）
+
+右ペインは **開閉可能**（執筆エリアの確保・認知負荷の整理）。仕様の一次情報は本節。
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 状態共有 | `inspector/inspector-sidebar-context.tsx` の **`InspectorSidebarProvider`**（`LexicalEditor` / `EditorInner` で `showInspector` に応じて `enabled` を渡す） |
+| 消費 API | **`useInspectorSidebar()`** — `toggle` / `expand` / `collapse` / `isExpanded` / `isInspectorAvailable` |
+| React 19 Context | **`<InspectorSidebarContext value={...}>`** でラップ。**`.Provider` は使わない**。フックは **`use(InspectorSidebarContext)`**（`useContext` 禁止に準拠） |
+| 永続化 | `localStorage` キー **`myrrh-lexical-inspector-expanded`**（`1` = 展開、`0` = 折りたたみ）。利用不可環境では黙って無視 |
+| ツールバー | `ToolbarPlugin` — パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`） |
+| キーボード | **`Ctrl+Shift+0`**（**`Numpad0` 可**）。`KeyboardShortcutsPlugin` 内で `isInspectorAvailable` が false のときはコマンドを処理しない |
+| 無効化 | `LexicalEditor` の **`showInspector={false}`** — サイドバー非マウント・トグル非表示・上記ショートカット無効 |
+| マークアップ | パネルルートは **`<aside id="lexical-block-inspector-panel" aria-label="ブロック設定パネル">`** |
+
+**新規プラグイン**がパネル開閉に連動する場合: `LexicalComposer` 配下かつ **`InspectorSidebarProvider` 内**で `useInspectorSidebar()` を呼ぶこと。Provider 外ではフックが throw する。
 
 ## 非制御コンポーネント設計
 
@@ -629,3 +650,7 @@ exportDOM/importDOMは公開ページでのHTMLレンダリングに必須:
 
 - `exportDOM()`: エディタ状態 → HTML
 - `importDOM()`: HTML → エディタ状態（再編集時）
+
+## Gotchas（補足）
+
+- **`MobileEditorFallback`（画面幅 &lt; 1024px）** — 親から渡された **`contentJson` を headless で HTML に変換**してプレビューする（未保存の変更を反映）。`contentJson` が無い・変換失敗時は **`contentHtml`** にフォールバック。headless 変換は `parseEditorState` のあと **`editor.setEditorState(editorState)`** を挟んでから `$generateHtmlFromNodes` すること（省略すると空 HTML になりうる）。実装: `preview/render-editor-state-to-html-client.ts` / サーバー側は `preview/headless-renderer.ts`

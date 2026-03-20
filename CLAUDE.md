@@ -119,7 +119,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | Prisma       | 7.5.0      | WASM エンジン, mapped enums（`as const` オブジェクト）                                                  |
 | Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                                                   |
 | Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                                                          |
-| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` パターン必須                                                         |
+| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` 必須。**Prisma**: `prismaAdapter(prismaForBetterAuth)` + `experimental.joins: true`（[公式](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)）。動的 `getAuth()` は禁止 |
 | Bun          | 1.3.11     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致） |
 
 ### 構造
@@ -166,6 +166,14 @@ prisma/                          # schema.prisma, migrations/, seed.ts
 **管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL は `/admin/...`
 
 **公開ページ ↔ 管理画面の遷移はフルページリロード**（異なる Root Layout 間の仕様）
+
+### Lexical エディタ（管理画面・ブロック設定パネル）
+
+- 実装ディレクトリ: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
+- 右ペインの **ブロック設定（インスペクター）は開閉可能**（ツールバーアイコン・**Ctrl+Shift+0**、テンキーの **0** も可）。開閉状態は **`localStorage` キー `myrrh-lexical-inspector-expanded`** に永続化
+- **`LexicalEditor` の `showInspector={false}`** — サイドバー非表示・トグル非表示・上記ショートカット無効
+- **幅 1024px 未満** — `MobileEditorFallback` が表示され、**`contentJson` を headless で HTML 化したプレビュー**（未保存を含む）を優先。失敗時および JSON 未供給時は **`contentHtml`** にフォールバック
+- Context / a11y / 拡張時の注意: **`.claude/rules/frontend/lexical-patterns.md`** の **「ブロック設定パネル（Inspector Sidebar）」** 節および **Gotchas**
 
 ### コマンド
 

@@ -64,6 +64,8 @@ import {
   ListOrdered,
   Maximize,
   Minimize,
+  PanelRightClose,
+  PanelRightOpen,
   Pilcrow,
   Plus,
   Printer,
@@ -108,6 +110,7 @@ import {
 import { EDITOR_TRANSFORMERS } from "../MarkdownTransformers";
 import type { DialogId } from "../dialogs/dialog-types";
 import { ShortcutsHelpDialog } from "./KeyboardShortcutsPlugin";
+import { useInspectorSidebar } from "../inspector/inspector-sidebar-context";
 
 // =============================================================================
 // Types
@@ -270,6 +273,11 @@ export function ToolbarPlugin({
   onFullscreenToggle,
 }: ToolbarPluginProps) {
   const [editor] = useLexicalComposerContext();
+  const {
+    isExpanded: isInspectorExpanded,
+    isInspectorAvailable,
+    toggle: toggleInspector,
+  } = useInspectorSidebar();
 
   // 状態
   const [canUndo, setCanUndo] = useState(false);
@@ -802,6 +810,28 @@ export function ToolbarPlugin({
         </DropdownMenu>
       </div>
       <div className="ml-auto shrink-0 flex items-center">
+        {isInspectorAvailable ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            aria-pressed={isInspectorExpanded}
+            aria-controls="lexical-block-inspector-panel"
+            onClick={toggleInspector}
+            title={
+              isInspectorExpanded
+                ? "ブロック設定パネルを閉じる（Ctrl+Shift+0）"
+                : "ブロック設定パネルを開く（Ctrl+Shift+0）"
+            }
+          >
+            {isInspectorExpanded ? (
+              <PanelRightClose className="h-5 w-5 md:h-4 md:w-4" />
+            ) : (
+              <PanelRightOpen className="h-5 w-5 md:h-4 md:w-4" />
+            )}
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="ghost"

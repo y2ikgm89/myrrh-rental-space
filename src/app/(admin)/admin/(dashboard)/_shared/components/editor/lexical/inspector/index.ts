@@ -2,12 +2,18 @@
  * Inspector エクスポート
  *
  * @description
- * Lexicalエディタのサイドバーインスペクター機能を提供するモジュール。
- * WordPress Gutenberg方式のプロパティ編集UIを実現する。
+ * Lexical エディタの右サイドバー（ブロック設定 / インスペクター）。
+ * WordPress Gutenberg 風のプロパティ編集 UI。開閉は InspectorSidebarProvider +
+ * useInspectorSidebar（localStorage 永続化・ツールバー・Ctrl+Shift+0）。詳細は lexical-patterns.md。
  */
 
 // Components
 export { InspectorSidebar } from "./InspectorSidebar";
+export {
+  InspectorSidebarProvider,
+  useInspectorSidebar,
+} from "./inspector-sidebar-context";
+export type { InspectorSidebarContextValue } from "./inspector-sidebar-context";
 export { InspectorHeader } from "./InspectorHeader";
 export { InspectorSection } from "./InspectorSection";
 

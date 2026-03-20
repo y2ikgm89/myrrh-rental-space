@@ -107,7 +107,18 @@ override exportDOM() { ... }
 
 **検出方法**: `exportDOM` を含む各クラスで `importDOM` の有無を確認。`importDOM` が存在しないクラスを報告。
 
-### 7. `'use client'` ディレクティブ
+### 7. インスペクター Context（`inspector-sidebar-context.tsx`）
+
+`InspectorSidebarProvider` / `useInspectorSidebar` を変更・追加レビューする場合:
+
+| チェック | 内容 |
+| -------- | ---- |
+| React 19 Context | **`<InspectorSidebarContext value={...}>`** を使用。**`<InspectorSidebarContext.Provider>` は禁止**（eslint: `@eslint-react/no-context-provider`） |
+| フック | 消費側は **`use(InspectorSidebarContext)`**。**`useContext` は禁止**（`@eslint-react/no-use-context`） |
+| 永続化キー | ブロックパネル開閉は **`myrrh-lexical-inspector-expanded` のみ**を正とする。理由なく別キーを増やさない |
+| DOM id | パネルは **`id="lexical-block-inspector-panel"`**（ツールバー `aria-controls` と一致） |
+
+### 8. `'use client'` ディレクティブ
 
 全ての Node ファイルは `"use client"` で始まる必要がある。Lexical ノードは DOM API / React に依存するため:
 
@@ -123,7 +134,7 @@ import type { ... } from "lexical";
 
 **検出方法**: `nodes/` 配下の各 `*Node.tsx` ファイルの1行目が `"use client"` でないものを報告。
 
-### 8. コンポジットノードの `canInsertTextBefore` / `canInsertTextAfter`
+### 9. コンポジットノードの `canInsertTextBefore` / `canInsertTextAfter`
 
 `isShadowRoot()` を持つコンポジットノードは **メソッドの存在** と **戻り型リテラル `false`** の両方を確認する:
 
@@ -149,7 +160,7 @@ override canInsertTextAfter(): false { return false }
 2. `canInsertTextBefore\(\): boolean` / `canInsertTextAfter\(\): boolean` を grep し、`false` を返しているものを報告（戻り型違反）。
 3. `canBeEmpty\(\): boolean` を grep し、`false` を返しているものを報告（`canBeEmpty(): false` が正しい戻り型）。
 
-### 9. `$isXxxNode` の引数型
+### 10. `$isXxxNode` の引数型
 
 型ガード関数のパラメータは `LexicalNode | null | undefined`。`unknown` は違反:
 
@@ -163,7 +174,7 @@ export function $isFooNode(node: LexicalNode | null | undefined): node is FooNod
 
 **検出方法**: `\(node: unknown\)` パターンを grep し、`$is` プレフィックス関数を特定。
 
-### 10. `createEnumGuard` / カスタム型ガードを `parse` 関数で使う際の型安全性
+### 11. `createEnumGuard` / カスタム型ガードを `parse` 関数で使う際の型安全性
 
 `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー:
 
@@ -178,7 +189,7 @@ parse: (v: unknown): FooType =>
 
 **検出方法**: ノードファイルの `parse:` 内で `isXxx(v)` パターン（`typeof v === "string"` チェックなし）を探す。
 
-### 11. `updateDOM` の `prevNode` パラメータ型
+### 12. `updateDOM` の `prevNode` パラメータ型
 
 `prevNode` は具象クラス名ではなく `this` を使用する（公式パターン）:
 
@@ -192,7 +203,7 @@ override updateDOM(prevNode: this, dom: HTMLElement): boolean {
 
 **検出方法**: `override updateDOM(prevNode: [A-Z]` パターンを grep。
 
-### 12. `$getStateChange` の null チェック
+### 13. `$getStateChange` の null チェック
 
 `$getStateChange` の結果は `!== null` で比較する（truthy チェック禁止）:
 
@@ -206,7 +217,7 @@ if (change !== null) {
 
 **検出方法**: `getStateChange` 呼び出し直後の `if (変数名) {` パターンを検索。
 
-### 13. `updateDOM` の `false` リテラル戻り型
+### 14. `updateDOM` の `false` リテラル戻り型
 
 引数なし・常に `return false` の `updateDOM` は `boolean` ではなく `false` リテラル型:
 

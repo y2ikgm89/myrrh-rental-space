@@ -61,7 +61,7 @@ import { BlockTemplatePlugin } from "./plugins/BlockTemplatePlugin";
 import { TableActionMenuPlugin } from "./plugins";
 import { StatusBar } from "./parts/StatusBar";
 import { editorTheme } from "./theme";
-import { InspectorSidebar } from "./inspector";
+import { InspectorSidebar, InspectorSidebarProvider } from "./inspector";
 import { MobileEditorFallback } from "./parts/MobileEditorFallback";
 import { logger } from "@/shared/lib/logger";
 import type { LexicalEditorProps } from "./types";
@@ -135,126 +135,132 @@ function EditorInner({
     onChange(json);
   };
 
-  return (
-    <div className={cn("flex h-full", isFullscreen && "fixed inset-0 z-[100]")}>
-      {/* メインエディタ部分 */}
-      <div
-        className={cn(
-          "flex flex-col flex-1 bg-background border rounded-lg overflow-hidden min-w-0",
-          isFullscreen && "rounded-none border-0",
-        )}
-        style={isFullscreen ? undefined : { height }}
-      >
-        {/* ツールバー */}
-        {showToolbar && (
-          <div className="shrink-0">
-            <ToolbarPlugin
-              openDialog={dialogManager.openDialog}
-              isFullscreen={isFullscreen}
-              onFullscreenToggle={() => setIsFullscreen((prev) => !prev)}
-            />
-          </div>
-        )}
+  const inspectorEnabled = showInspector !== false;
 
-        {/* コンテンツラッパー */}
-        <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
-          <div
-            ref={setContentWidthRef}
-            className={cn("relative", contentWidthClassName)}
-            style={contentWidthStyle}
-          >
-            <RichTextPlugin
-              contentEditable={
-                <ContentEditable
-                  aria-placeholder={placeholder}
-                  placeholder={
-                    <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
-                      {placeholder}
-                    </div>
-                  }
-                  className={`outline-none pl-10 pr-6 py-6 min-h-full ${className ?? ""}`}
-                />
-              }
-              ErrorBoundary={LexicalErrorBoundary}
-            />
+  return (
+    <InspectorSidebarProvider enabled={inspectorEnabled}>
+      <div
+        className={cn("flex h-full", isFullscreen && "fixed inset-0 z-[100]")}
+      >
+        {/* メインエディタ部分 */}
+        <div
+          className={cn(
+            "flex flex-col flex-1 bg-background border rounded-lg overflow-hidden min-w-0",
+            isFullscreen && "rounded-none border-0",
+          )}
+          style={isFullscreen ? undefined : { height }}
+        >
+          {/* ツールバー */}
+          {showToolbar && (
+            <div className="shrink-0">
+              <ToolbarPlugin
+                openDialog={dialogManager.openDialog}
+                isFullscreen={isFullscreen}
+                onFullscreenToggle={() => setIsFullscreen((prev) => !prev)}
+              />
+            </div>
+          )}
+
+          {/* コンテンツラッパー */}
+          <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
+            <div
+              ref={setContentWidthRef}
+              className={cn("relative", contentWidthClassName)}
+              style={contentWidthStyle}
+            >
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    aria-placeholder={placeholder}
+                    placeholder={
+                      <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
+                        {placeholder}
+                      </div>
+                    }
+                    className={`outline-none pl-10 pr-6 py-6 min-h-full ${className ?? ""}`}
+                  />
+                }
+                ErrorBoundary={LexicalErrorBoundary}
+              />
+            </div>
           </div>
+
+          {/* 公式プラグイン */}
+          <HistoryPlugin />
+          <ListPlugin />
+          <CheckListPlugin />
+          <TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />
+          <LinkPlugin validateUrl={validateUrl} />
+          <AutoLinkPlugin matchers={MATCHERS} />
+          <ClickableLinkPlugin />
+          <TabIndentationPlugin />
+          <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
+          <HorizontalRulePlugin />
+          <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
+
+          {/* カスタムプラグイン */}
+          {/* contentJson がない場合のみ HTML フォールバック初期化 */}
+          {!contentJson && (
+            <HtmlInitializerPlugin
+              {...(contentHtml !== undefined && { content: contentHtml })}
+            />
+          )}
+          <DisablePlugin disabled={disabled} />
+          <DraggableBlockPlugin anchorElem={contentWidthRef} />
+          <TableActionMenuPlugin anchorElem={contentWidthRef} />
+          {contentWrapperRef && (
+            <FloatingToolbarPlugin
+              anchorElem={contentWrapperRef}
+              setIsLinkEditMode={(isEditMode) => {
+                if (isEditMode) dialogManager.openDialog("link");
+              }}
+              {...(onAddComment && { onAddComment: handleAddComment })}
+              onOpenRuby={() => dialogManager.openDialog("ruby")}
+              onOpenTooltip={() => dialogManager.openDialog("tooltip")}
+            />
+          )}
+          <LinkHoverPreviewPlugin />
+          <CommentPlugin {...(onMarkClick && { onMarkClick })} />
+          <PageBreakPlugin />
+          <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
+          <ImageDropPlugin />
+          <PasteUrlPlugin />
+          <FindReplacePlugin anchorElem={contentWrapperRef} />
+          <TableOfContentsPlugin />
+          <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
+          <CodeBlockPlugin anchorElem={contentWrapperRef} />
+          {(onAutoSave ?? autoSaveKey) && (
+            <AutoSavePlugin
+              {...(onAutoSave && { onAutoSave })}
+              {...(autoSaveKey !== undefined && { autoSaveKey })}
+              onStatusChange={setSaveStatus}
+            />
+          )}
+
+          {/* ブロックテンプレート */}
+          <BlockTemplatePlugin
+            isSaveOpen={dialogManager.activeDialog === "blockTemplateSave"}
+            isInsertOpen={dialogManager.activeDialog === "blockTemplateInsert"}
+            onClose={dialogManager.closeDialog}
+          />
+
+          {/* ダイアログ */}
+          <DialogRenderer dialogManager={dialogManager} />
+          <CollapsiblePlugin />
+          <EmojiPickerPlugin />
+          <WordCountPlugin onUpdate={updateWordCount} />
+          {characterLimit !== undefined && (
+            <CharacterLimitPlugin charset="UTF-16" maxLength={characterLimit} />
+          )}
+
+          {/* ステータスバー */}
+          <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
         </div>
 
-        {/* 公式プラグイン */}
-        <HistoryPlugin />
-        <ListPlugin />
-        <CheckListPlugin />
-        <TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />
-        <LinkPlugin validateUrl={validateUrl} />
-        <AutoLinkPlugin matchers={MATCHERS} />
-        <ClickableLinkPlugin />
-        <TabIndentationPlugin />
-        <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
-        <HorizontalRulePlugin />
-        <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
-
-        {/* カスタムプラグイン */}
-        {/* contentJson がない場合のみ HTML フォールバック初期化 */}
-        {!contentJson && (
-          <HtmlInitializerPlugin
-            {...(contentHtml !== undefined && { content: contentHtml })}
-          />
-        )}
-        <DisablePlugin disabled={disabled} />
-        <DraggableBlockPlugin anchorElem={contentWidthRef} />
-        <TableActionMenuPlugin anchorElem={contentWidthRef} />
-        {contentWrapperRef && (
-          <FloatingToolbarPlugin
-            anchorElem={contentWrapperRef}
-            setIsLinkEditMode={(isEditMode) => {
-              if (isEditMode) dialogManager.openDialog("link");
-            }}
-            {...(onAddComment && { onAddComment: handleAddComment })}
-            onOpenRuby={() => dialogManager.openDialog("ruby")}
-            onOpenTooltip={() => dialogManager.openDialog("tooltip")}
-          />
-        )}
-        <LinkHoverPreviewPlugin />
-        <CommentPlugin {...(onMarkClick && { onMarkClick })} />
-        <PageBreakPlugin />
-        <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
-        <ImageDropPlugin />
-        <PasteUrlPlugin />
-        <FindReplacePlugin anchorElem={contentWrapperRef} />
-        <TableOfContentsPlugin />
-        <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
-        <CodeBlockPlugin anchorElem={contentWrapperRef} />
-        {(onAutoSave ?? autoSaveKey) && (
-          <AutoSavePlugin
-            {...(onAutoSave && { onAutoSave })}
-            {...(autoSaveKey !== undefined && { autoSaveKey })}
-            onStatusChange={setSaveStatus}
-          />
-        )}
-
-        {/* ブロックテンプレート */}
-        <BlockTemplatePlugin
-          isSaveOpen={dialogManager.activeDialog === "blockTemplateSave"}
-          isInsertOpen={dialogManager.activeDialog === "blockTemplateInsert"}
-          onClose={dialogManager.closeDialog}
-        />
-
-        {/* ダイアログ */}
-        <DialogRenderer dialogManager={dialogManager} />
-        <CollapsiblePlugin />
-        <EmojiPickerPlugin />
-        <WordCountPlugin onUpdate={updateWordCount} />
-        {characterLimit !== undefined && (
-          <CharacterLimitPlugin charset="UTF-16" maxLength={characterLimit} />
-        )}
-
-        {/* ステータスバー */}
-        <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
+        {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
+        {inspectorEnabled && <InspectorSidebar />}
       </div>
-
-      {/* インスペクターサイドバー */}
-      {showInspector && <InspectorSidebar />}
-    </div>
+    </InspectorSidebarProvider>
   );
 }
 
@@ -270,6 +276,8 @@ export function LexicalEditor(props: LexicalEditorProps) {
   if (!isDesktop) {
     return (
       <MobileEditorFallback
+        {...(props.contentJson !== undefined &&
+          props.contentJson !== null && { contentJson: props.contentJson })}
         {...(props.contentHtml !== undefined && {
           contentHtml: props.contentHtml,
         })}

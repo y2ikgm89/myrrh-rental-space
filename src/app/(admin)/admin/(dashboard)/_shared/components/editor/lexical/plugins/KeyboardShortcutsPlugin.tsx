@@ -24,6 +24,7 @@ import { createPortal } from "react-dom";
 import { X, Keyboard } from "lucide-react";
 import { Button } from "@/admin/components/ui/button";
 import type { DialogId } from "../dialogs/dialog-types";
+import { useInspectorSidebar } from "../inspector/inspector-sidebar-context";
 
 // =============================================================================
 // Types
@@ -61,6 +62,7 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
   { keys: "Ctrl+F", description: "検索" },
   { keys: "Ctrl+H", description: "置換" },
   { keys: "Ctrl+Shift+/", description: "ショートカット一覧" },
+  { keys: "Ctrl+Shift+0", description: "ブロック設定パネル表示切替" },
 ];
 
 // =============================================================================
@@ -133,6 +135,8 @@ export function KeyboardShortcutsPlugin({
 }) {
   const [editor] = useLexicalComposerContext();
   const [showHelp, setShowHelp] = useState(false);
+  const { isInspectorAvailable, toggle: toggleInspector } =
+    useInspectorSidebar();
 
   useEffect(() => {
     return editor.registerCommand(
@@ -141,6 +145,14 @@ export function KeyboardShortcutsPlugin({
         const isCtrl = event.ctrlKey || event.metaKey;
 
         if (!isCtrl || !event.shiftKey) return false;
+
+        // Ctrl+Shift+0: ブロック設定パネル（インスペクター）開閉
+        if (event.key === "0" || event.key === "Numpad0") {
+          if (!isInspectorAvailable) return false;
+          event.preventDefault();
+          toggleInspector();
+          return true;
+        }
 
         // Ctrl+Shift+1~4: 見出し
         if (event.key >= "1" && event.key <= "4") {
@@ -199,7 +211,7 @@ export function KeyboardShortcutsPlugin({
       },
       COMMAND_PRIORITY_HIGH,
     );
-  }, [editor, openDialog]);
+  }, [editor, isInspectorAvailable, openDialog, toggleInspector]);
 
   if (!showHelp) return null;
 

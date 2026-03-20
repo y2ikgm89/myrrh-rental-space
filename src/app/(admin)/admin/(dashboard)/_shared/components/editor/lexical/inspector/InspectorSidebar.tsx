@@ -10,6 +10,7 @@ import {
   useSelectedNode,
   type SelectedNodeInfo,
 } from "./hooks/use-selected-node";
+import { useInspectorSidebar } from "./inspector-sidebar-context";
 import {
   ButtonInspectorPanel,
   ImageInspectorPanel,
@@ -46,7 +47,10 @@ import {
   TableInspectorPanel,
   TableCellInspectorPanel,
 } from "./panels";
-import { Settings2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
+
+const INSPECTOR_PANEL_ID = "lexical-block-inspector-panel";
 
 // =============================================================================
 // Panel Renderer
@@ -184,23 +188,72 @@ function renderPanel(info: SelectedNodeInfo) {
 
 export function InspectorSidebar() {
   const selectedNode = useSelectedNode();
+  const { isExpanded, expand, collapse } = useInspectorSidebar();
 
   return (
-    <div className="w-64 border-l border-border bg-background flex flex-col h-full">
-      {selectedNode ? (
-        <div className="flex-1 overflow-y-auto">
-          {renderPanel(selectedNode)}
-        </div>
+    <aside
+      id={INSPECTOR_PANEL_ID}
+      aria-label="ブロック設定パネル"
+      className={
+        isExpanded
+          ? "shrink-0 w-64 border-l border-border bg-background flex flex-col h-full transition-[width] duration-200 ease-out min-w-0"
+          : "shrink-0 w-11 border-l border-border bg-background flex flex-col items-center pt-2 h-full transition-[width] duration-200 ease-out"
+      }
+    >
+      {isExpanded ? (
+        <>
+          <div className="shrink-0 flex items-center justify-between gap-1 border-b border-border px-2 py-1.5">
+            <span className="text-xs font-medium text-foreground truncate pl-1">
+              ブロック設定
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-expanded={true}
+              onClick={collapse}
+              title="ブロック設定パネルを閉じる"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+              <span className="sr-only">ブロック設定パネルを閉じる</span>
+            </Button>
+          </div>
+          {selectedNode ? (
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {renderPanel(selectedNode)}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4 min-h-0">
+              <Settings2 className="h-8 w-8 mb-2 opacity-50" aria-hidden />
+              <p className="text-sm text-center">
+                ブロックを選択すると
+                <br />
+                設定を編集できます
+              </p>
+            </div>
+          )}
+        </>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4">
-          <Settings2 className="h-8 w-8 mb-2 opacity-50" />
-          <p className="text-sm text-center">
-            ブロックを選択すると
-            <br />
-            設定を編集できます
-          </p>
-        </div>
+        <>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            aria-expanded={false}
+            onClick={expand}
+            title="ブロック設定パネルを開く（Ctrl+Shift+0）"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+            <span className="sr-only">ブロック設定パネルを開く</span>
+          </Button>
+          <Settings2
+            className="h-4 w-4 mt-3 text-muted-foreground opacity-60"
+            aria-hidden
+          />
+        </>
       )}
-    </div>
+    </aside>
   );
 }

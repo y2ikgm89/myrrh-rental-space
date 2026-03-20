@@ -92,6 +92,14 @@ function createAuth() {
       : undefined;
 
   return betterAuth({
+    /**
+     * Prisma では 1.4.0 以降、ネイティブ join がサポートされている。
+     * /get-session 等で session + user を一度に取り、無効なネスト select を避ける。
+     * @see https://www.better-auth.com/docs/adapters/prisma#joins-experimental
+     */
+    experimental: {
+      joins: true,
+    },
     database: createBetterAuthDatabaseAdapter(),
     session: {
       expiresIn: SESSION_CONFIG.expiresIn,

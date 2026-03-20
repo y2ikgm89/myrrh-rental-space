@@ -32,6 +32,8 @@ Lexicalエディタ用のカスタムプラグインを作成します。
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ImagePlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/YouTubePlugin.tsx`
 
+**補足**: プラグインは `LexicalEditor` 内の **`InspectorSidebarProvider`** 配下で動く。**キーボードショートカットでパネル開閉に触れる場合**は `KeyboardShortcutsPlugin` の **Ctrl+Shift+0** ハンドラと衝突しないようにする（別モディファイア組み合わせを検討）。インスペクター状態が必要なら `useInspectorSidebar()` を参照（`lexical-patterns.md`「ブロック設定パネル」）。
+
 ### 3. プラグインファイル作成
 
 パス: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/${PluginName}Plugin.tsx`

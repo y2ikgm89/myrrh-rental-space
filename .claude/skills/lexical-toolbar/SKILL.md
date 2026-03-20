@@ -31,6 +31,8 @@ Lexicalエディタのツールバーに新規ボタンを追加します。
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`
 
+**補足**: `ToolbarPlugin` は `InspectorSidebarProvider` 内でマウントされる。右ブロック設定パネルの開閉と連動させる場合は **`useInspectorSidebar()`**（`inspector/inspector-sidebar-context.tsx`）を使う。既存のパネルトグル（`PanelRightOpen` / `PanelRightClose`・**Ctrl+Shift+0**）と役割が被るボタンを足さないこと。詳細は `.claude/rules/frontend/lexical-patterns.md` の「ブロック設定パネル」。
+
 ### 3. ボタンタイプ別実装
 
 #### A. ダイアログ表示タイプ（画像/YouTube風）

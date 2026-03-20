@@ -27,47 +27,48 @@ export const auth = betterAuth({
 });
 ```
 
-### 遅延非同期初期化パターン（本プロジェクト固有）
+### 静的初期化パターン（本プロジェクト正本）
 
-Better Auth インスタンスは `betterAuth()` をモジュールロード時に同期生成するが、
-Google OAuth 資格情報は DB に保存されるため非同期読取が必要。
+`src/shared/lib/auth.ts` で `export const auth = createAuth()` を **モジュールロード時に 1 回だけ** 生成する。
+Google OAuth は `serverEnv`（env / Secret Manager）を正本とし、**DB から provider を動的に差し替えたり、`getAuth()` / `resetAuthInstance()` で再 bootstrap したりしない**（AGENTS.md の不変条件）。
 
-| 関数                  | 用途                                                                      |
-| --------------------- | ------------------------------------------------------------------------- |
-| `baseAuth`            | 型推論専用（`socialProviders` なしで同期生成）                            |
-| `getAuth()`           | 実リクエスト用（DB から資格情報を読み、キャッシュ済みインスタンスを返す） |
-| `resetAuthInstance()` | 管理画面で OAuth 設定変更時にキャッシュ破棄                               |
+### Prisma アダプター + Prisma 7（必須設定）
 
-### Server Components でのセッション取得（auth.api 直接呼び出し）
+- **アダプターに渡すクライアント**: `$extends` による Decimal 換算などを付けたアプリ用 `prisma` は使わない。`src/shared/db/prisma.ts` の **`prismaForBetterAuth`（拡張前の `PrismaClient`）** のみを `src/shared/db/better-auth-adapter.ts` から `prismaAdapter(...)` に渡す。
+- **`experimental.joins`**: `betterAuth({ experimental: { joins: true }, ... })` を **有効のまま維持**する。Prisma アダプター公式で、セッション取得などでリレーションを 1 クエリにまとめる推奨設定（遅延・無効なネスト `select` 回避）。
+- 詳細: [Better Auth — Prisma — Joins (Experimental)](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)
+
+### Server Components でのセッション取得（推奨: DAL ヘルパー）
+
+運用コードでは `verifySession` / `verifyAdminSession` / `getCurrentUser` を優先（下記「セッション取得パターン」）。
+`auth.api.getSession` を直に叩く例:
 
 ```typescript
-import { getAuth } from '@/shared/lib/auth'
-import { headers } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { auth } from "@/shared/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const auth = await getAuth()
   const session = await auth.api.getSession({
     headers: await headers(),
-  })
+  });
 
   if (!session) {
-    redirect('/admin/login')
+    redirect("/admin/login");
   }
 
-  return <h1>Welcome {session.user.name}</h1>
+  return <h1>Welcome {session.user.name}</h1>;
 }
 ```
 
 ### Server Actions でのセッション取得（auth.api 直接呼び出し）
 
 ```typescript
-import { getAuth } from "@/shared/lib/auth";
+import { auth } from "@/shared/lib/auth";
 import { headers } from "next/headers";
 
 const someAuthenticatedAction = async () => {
   "use server";
-  const auth = await getAuth();
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -396,6 +397,7 @@ function logAction(
 
 ## Gotchas
 
+- **`get-session` が Prisma `findFirst` の `Invalid ... invocation` で失敗する** — アダプターが **`prismaForBetterAuth`**（拡張前クライアント）を受け取っているか、`betterAuth` に **`experimental: { joins: true }`** があるかを確認。拡張済み `prisma` のみ渡すと Prisma 7 組み合わせで壊れ得る
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例

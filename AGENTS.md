@@ -12,6 +12,13 @@
 - 管理系: `src/app/(admin)/admin/(dashboard)/...`（実務向け UI、Lexical エディタ）
 - 共通: `src/shared/...`（CSS 依存を持たない共通ロジック）
 
+### Lexical editor (admin)
+
+- **Path**: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
+- **Block inspector** (right panel): collapsible WordPress/Gutenberg-style block settings. Toggle via toolbar or **Ctrl+Shift+0** (including **Numpad 0**). Collapsed/expanded preference persists in **`localStorage`** key **`myrrh-lexical-inspector-expanded`**. **`LexicalEditor` `showInspector={false}`** removes the panel, toolbar toggle, and shortcut handling
+- **Narrow / mobile viewport (&lt; 1024px)**: rich editing is disabled; `MobileEditorFallback` shows a read-only preview derived from **`contentJson`** via headless HTML generation when available (falls back to **`contentHtml`**)
+- **Rules**: `docs/reference/codex-rules/lexical-patterns.md` (Codex canonical text); Claude Code loads the same content from `.claude/rules/frontend/lexical-patterns.md` via `paths:` frontmatter
+
 ### Tech stack
 
 下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
@@ -209,7 +216,8 @@ bun run e2e
 ### Data, auth, and security constraints
 
 - Prisma は Edge Runtime 非対応。API Routes / Server Actions は Node.js/Bun ランタイムで実装
-- Better Auth の Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、app/lib 層から直接組み立てない
+- Better Auth の Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、app/lib 層から直接組み立てない。**`prismaAdapter` には `prisma`（`$extends` 済み）ではなく `prismaForBetterAuth`（拡張前クライアント）のみを渡す**（`src/shared/db/prisma.ts`）
+- `betterAuth({ experimental: { joins: true } })` は Prisma 公式アダプター推奨として維持する（セッション取得で session + user を安全に join）。外す・無効化する変更はドキュメントとセットで検証すること
 - Better Auth は `src/shared/lib/auth.ts` の静的 `auth` export を正本にし、Google OAuth provider 設定は env / Secret Manager で管理する
 - auth のために DB 管理の provider 設定や `getAuth()` / `resetAuthInstance()` のような動的 bootstrap を再導入しない
 - 権限制御が必要な管理系 Server Action では `checkPermission()` / `checkAdminAuth()` を必須化

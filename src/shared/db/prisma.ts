@@ -79,6 +79,15 @@ if (serverEnv.NODE_ENV !== "production") {
 }
 
 /**
+ * Better Auth / Prisma アダプター専用のベースクライアント
+ *
+ * `$extends` により Decimal 変換などを加えた `prisma` はアプリ本体向け。
+ * 認証アダプターは公式推奨どおり素のクライアントデリゲートに任せ、
+ * `experimental.joins` 時のリレーション select とも干渉させない。
+ */
+export const prismaForBetterAuth = basePrisma;
+
+/**
  * Prisma Client with Decimal to Number conversion
  *
  * Decimal型を自動的にnumberに変換する拡張を追加

@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.4 / RBAC / Next.js 16 対応
+> Better Auth 1.5.5 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
 
 ## Better Auth 公式パターン
 
@@ -30,8 +30,15 @@ export const auth = betterAuth({
 ### 静的初期化パターン
 
 Better Auth は公式の happy path に合わせて、
-`src/shared/lib/auth.ts` で `export const auth = betterAuth(...)` を静的に定義する。
+`src/shared/lib/auth.ts` で `export const auth = createAuth()` を **モジュールロード時に 1 回** 定義する。
 Google OAuth provider 設定も env / Secret Manager を正本にし、DB から動的に上書きしない。
+**`getAuth()` / `resetAuthInstance()` 等の動的 bootstrap は再導入しない**（AGENTS.md）。
+
+### Prisma アダプター + Prisma 7（必須）
+
+- **`prismaAdapter`** には `src/shared/db/prisma.ts` の **`prismaForBetterAuth`**（`$extends` 前）のみを渡す。アプリ用の拡張済み `prisma` をアダプターに渡さない。
+- **`experimental: { joins: true }`** を `betterAuth(...)` に維持（Prisma でセッション取得時の join を公式推奨どおり有効化）。
+- 参照: [Better Auth — Prisma — Joins](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)
 
 ### Server Components でのセッション取得（auth.api 直接呼び出し）
 
