@@ -6,6 +6,7 @@
  * フッターの表示テキスト・SNSリンク表示・テーマカラーを設定
  */
 
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -90,7 +91,15 @@ export function FooterSection({ settings }: FooterSectionProps) {
           <CardHeader>
             <CardTitle>フッター設定</CardTitle>
             <CardDescription>
-              フッターの表示テキスト、SNSリンク表示、ブラウザテーマカラーを設定します
+              フッターの表示テキスト、SNSリンク表示、ブラウザテーマカラーを設定します。
+              メニュー項目やSNSリンクは
+              <Link
+                href="/admin/settings/navigation"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                ナビゲーション管理
+              </Link>
+              で編集できます。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

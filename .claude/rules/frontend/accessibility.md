@@ -314,15 +314,8 @@ function MagneticButton() {
 
 ### Three.js / PixiJS フォールバック
 
-エフェクトレベルは `prefersReducedMotion` が `true` の場合に自動で L1 になる（`VisualEffectsProvider` が制御）。追加の処理は不要:
-
-```typescript
-// VisualEffectsProvider 内部ロジック（参考）
-if (prefersReducedMotion) return 1; // → L1（CSS onlyに制限）
-```
-
-Three.js / PixiJS は `effectLevel >= 3` / `effectLevel >= 4` の条件でのみ描画されるため、
-`prefersReducedMotion` ユーザーには自動で CSS フォールバックが表示される。
+Three.js / PixiJS 使用時は `prefers-reduced-motion` を個別チェックし、CSS フォールバックを提供する。
+アニメーションコンポーネント側で `gsap.matchMedia()` または CSS `@media (prefers-reduced-motion: reduce)` で対応。
 
 ---
 

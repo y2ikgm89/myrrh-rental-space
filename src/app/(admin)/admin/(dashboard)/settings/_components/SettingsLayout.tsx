@@ -12,7 +12,7 @@ import { Button, Breadcrumb } from "@/admin/components/ui";
 
 interface SettingsLayoutProps {
   title: string;
-  description?: string;
+  description?: ReactNode;
   children: ReactNode;
 }
 

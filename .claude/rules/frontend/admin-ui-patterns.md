@@ -624,6 +624,34 @@ export function DashboardHeader() {
 
 ## 設定セクション フォームパターン
 
+**設定ページ間の導線（`SettingsLayout` / `CardDescription`）:**
+
+関連する設定ページへのリンクは `CardDescription` 内または `SettingsLayout description` に `<Link>` で埋め込む。
+`SettingsLayout` の `description` は `ReactNode` を受け付ける（例: ナビゲーション管理 ↔ サイト設定レイアウトタブ間の相互リンク）。
+
+**設定セクションのヒント折りたたみ（Accordion）:**
+
+3行以上のヒント・補足リストは Accordion で折りたたむ（デフォルト閉じ）。
+1-2行の短いヒントはインライン表示のまま。PermissionsSection / SidebarSection / RobotsTxtSection が実装例。
+
+```tsx
+<Accordion type="single" collapsible>
+  <AccordionItem
+    value="hints"
+    className="rounded-lg border bg-muted/50 px-4 border-b last:border-b"
+  >
+    <AccordionTrigger className="text-sm">ヒント</AccordionTrigger>
+    <AccordionContent>
+      <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
+        <li>...</li>
+      </ul>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>
+```
+
+**禁止**: Collapsible でヒントを折りたたむ（トリガーとコンテンツが分離して見える）
+
 設定セクション（`settings/_components/sections/`）は `useFormAction` + `Form` コンポーネント群で統一:
 
 ```tsx
@@ -732,3 +760,4 @@ const [testPending, startTestTransition] = useTransition();
 - **`DialogContent` には必ず `DialogTitle` が必要** — Radix `DialogTitle`（または VisuallyHidden でラップ）がないと `role="dialog"` に `aria-labelledby` が接続されず WCAG 4.1.2 違反。`DialogContent` 追加時は必ずセットで記述する
 - **Settings singleton にフィールド追加は4箇所同時更新** — ① `schema.prisma` + migrate ② `domain/settings/types.ts` の `SettingsData` 型 ③ `domain/settings/queries.ts` の get クエリ + `commands.ts` の update コマンド ④ `actions/settings/schemas.ts` の Zod スキーマ + `other.ts` の Server Action + `index.ts` barrel。`SettingsData` は `getOrCreateSettings()` が `select` なしで全カラムを返すため型追加のみで値は自動伝播
 - **Recharts の SVG props は CSS 変数を受け取れない** — `fill={CHART_COLORS.primary}` のように oklch 定数を定義して渡す。admin.css テーマトークンと同期する oklch 値をコンポーネント上部に `as const` で定義（`ReservationChart.tsx` が実装例）
+- **`bg-muted` 系は青みがかる** — admin.css の `--color-muted: oklch(0.95 0.01 250)` は色相250（青系）。`bg-muted/30` 等の低不透明度で薄い青が目立つ。ニュートラルな背景には背景色なし or `bg-card` を使用

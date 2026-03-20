@@ -2,7 +2,7 @@
   "name": "myrrh-rental-space",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "bun@1.3.10",
+  "packageManager": "bun@1.3.11",
   "scripts": {
     "dev": "bun run db:generate && next dev --turbopack",
     "build": "bun run db:generate && SKIP_ENV_VALIDATION=true next build",

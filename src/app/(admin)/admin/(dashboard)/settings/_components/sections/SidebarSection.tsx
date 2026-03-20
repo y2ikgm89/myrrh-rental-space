@@ -24,6 +24,12 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/admin/components/ui/accordion";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateSidebarSettings } from "@/admin/actions/settings";
 import { sidebarFormSchema } from "@/admin/actions/settings/schemas";
@@ -324,19 +330,24 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
             </div>
 
             {/* ヒント */}
-            <Card className="bg-muted/50">
-              <CardContent className="pt-6">
-                <h4 className="font-medium mb-2">ヒント</h4>
-                <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-                  <li>
-                    サイドバーは記事一覧ページと記事詳細ページで表示されます
-                  </li>
-                  <li>モバイル表示では自動的に非表示になります</li>
-                  <li>各ウィジェットは個別にオン/オフできます</li>
-                  <li>表示件数は1〜20件の範囲で設定できます</li>
-                </ul>
-              </CardContent>
-            </Card>
+            <Accordion type="single" collapsible>
+              <AccordionItem
+                value="hints"
+                className="rounded-lg border bg-muted/50 px-4 border-b last:border-b"
+              >
+                <AccordionTrigger className="text-sm">ヒント</AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-1 text-sm text-muted-foreground list-disc pl-4">
+                    <li>
+                      サイドバーは記事一覧ページと記事詳細ページで表示されます
+                    </li>
+                    <li>モバイル表示では自動的に非表示になります</li>
+                    <li>各ウィジェットは個別にオン/オフできます</li>
+                    <li>表示件数は1〜20件の範囲で設定できます</li>
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </CardContent>
         </Card>
       </form>

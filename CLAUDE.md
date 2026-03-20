@@ -63,6 +63,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                                |
 | `split-action-file`                                   | 500行超の Server Action ファイル分割時            |
 | `audit-settings-sections`                             | 設定セクション追加後・定期メンテ時の品質監査      |
+| `upgrade-deps`                                        | 依存パッケージアップグレード時                    |
 
 **問題対応・メンテ**
 
@@ -110,16 +111,16 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 
 ### 技術スタック
 
-| 技術         | バージョン | 重要な注意点                                                  |
-| ------------ | ---------- | ------------------------------------------------------------- |
-| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)     |
-| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)        |
-| TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md |
-| Prisma       | 7.5.0      | WASM エンジン, mapped enums（`as const` オブジェクト）        |
-| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須         |
-| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
-| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` パターン必須               |
-| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致） |
+| 技術         | バージョン | 重要な注意点                                                                                            |
+| ------------ | ---------- | ------------------------------------------------------------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                                               |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)                                                  |
+| TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md                                           |
+| Prisma       | 7.5.0      | WASM エンジン, mapped enums（`as const` オブジェクト）                                                  |
+| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                                                   |
+| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                                                          |
+| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` パターン必須                                                         |
+| Bun          | 1.3.11     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致） |
 
 ### 構造
 

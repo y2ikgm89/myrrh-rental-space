@@ -16,6 +16,12 @@ import {
   Switch,
   Textarea,
 } from "@/admin/components/ui";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/admin/components/ui/accordion";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   updateRobotsTxtSettings,
@@ -24,7 +30,7 @@ import {
 import type { RobotsTxtData } from "@/shared/domain/settings/types";
 import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { AlertTriangle, RotateCcw, Info } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 
 async function fetchRobotsTxtSettings(): Promise<RobotsTxtData> {
   return fetchAdminJson("/admin/api/settings/robots-txt");
@@ -221,12 +227,16 @@ export function RobotsTxtSection() {
           </p>
         </div>
 
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <div className="flex items-start gap-2">
-            <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p className="font-medium">robots.txtについて</p>
-              <ul className="list-disc list-inside space-y-0.5">
+        <Accordion type="single" collapsible>
+          <AccordionItem
+            value="robots-help"
+            className="rounded-lg border bg-muted/50 px-4 border-b last:border-b"
+          >
+            <AccordionTrigger className="text-sm">
+              robots.txt の書き方
+            </AccordionTrigger>
+            <AccordionContent>
+              <ul className="space-y-1 text-xs text-muted-foreground list-disc pl-4">
                 <li>
                   <code className="bg-muted px-1 rounded">User-agent: *</code> -
                   すべてのクローラーに適用
@@ -246,9 +256,9 @@ export function RobotsTxtSection() {
                   サイトマップのURLを指定
                 </li>
               </ul>
-            </div>
-          </div>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <div className="flex justify-end pt-2">
           <SubmitButton

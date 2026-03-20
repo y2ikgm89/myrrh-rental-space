@@ -320,9 +320,9 @@ export function LayoutSection({ settings }: LayoutSectionProps) {
             {/* レイアウトプレビュー（比率表示） */}
             <div className="space-y-2">
               <p className="text-sm font-medium">レイアウトプレビュー</p>
-              <div className="rounded-lg border bg-background px-4 py-4">
+              <div className="rounded-lg border px-4 py-4">
                 {/* サイト幅 = 100% */}
-                <div className="rounded border border-dashed border-border bg-muted/20 px-3 py-2.5">
+                <div className="rounded border border-dashed border-foreground/20 px-3 py-2.5">
                   <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span>サイト幅</span>
                     <span className="font-mono">
