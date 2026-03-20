@@ -17,7 +17,6 @@ import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Container } from "@/public/components/design-system/container";
 import { getPublishedSpaces } from "@/shared/domain/spaces/public-queries";
-import { toPlainObject } from "@/shared/lib/serialize";
 import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ReservationPage(): Promise<ReactElement> {
   await connection();
 
-  const [content, rawSpaces] = await Promise.all([
+  const [content, allSpaces] = await Promise.all([
     getPageContent(
       "reservation",
       simplePageContentSchema,
@@ -38,15 +37,13 @@ export default async function ReservationPage(): Promise<ReactElement> {
     getPublishedSpaces(),
   ]);
 
-  const spaces = rawSpaces.map((s) =>
-    toPlainObject({
-      id: s.id,
-      name: s.name,
-      capacity: s.capacity,
-      hourlyPrice: Number(s.hourlyPrice),
-      mainImageUrl: s.mainImageUrl,
-    }),
-  );
+  const spaces = allSpaces.map((s) => ({
+    id: s.id,
+    name: s.name,
+    capacity: s.capacity,
+    hourlyPrice: s.hourlyPrice,
+    mainImageUrl: s.mainImageUrl,
+  }));
 
   return (
     <>

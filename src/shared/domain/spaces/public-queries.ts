@@ -8,6 +8,7 @@ import {
   PAGINATION_DEFAULTS,
   getCacheTag,
 } from "@/shared/lib/constants";
+import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 const spaceListSelect = {
   id: true,
@@ -29,7 +30,7 @@ export async function getPublishedSpaces(categoryId?: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  return prisma.space.findMany({
+  const spaces = await prisma.space.findMany({
     where: {
       isPublished: true,
       isActive: true,
@@ -38,6 +39,13 @@ export async function getPublishedSpaces(categoryId?: string) {
     select: spaceListSelect,
     orderBy: { name: "asc" },
   });
+
+  return toPlainArray(
+    spaces.map((s) => ({
+      ...s,
+      hourlyPrice: Number(s.hourlyPrice),
+    })),
+  );
 }
 
 /**
@@ -60,7 +68,7 @@ export async function getPublishedSpacesPaginated(
 
   const skip = (page - 1) * perPage;
 
-  const [items, totalCount] = await Promise.all([
+  const [rawItems, totalCount] = await Promise.all([
     prisma.space.findMany({
       where,
       select: spaceListSelect,
@@ -72,7 +80,12 @@ export async function getPublishedSpacesPaginated(
   ]);
 
   return {
-    items,
+    items: toPlainArray(
+      rawItems.map((s) => ({
+        ...s,
+        hourlyPrice: Number(s.hourlyPrice),
+      })),
+    ),
     totalPages: Math.ceil(totalCount / perPage),
     currentPage: page,
   };
@@ -86,7 +99,7 @@ export async function getSpaceBySlug(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES, getCacheTag.spaces.detail(slug));
 
-  return prisma.space.findFirst({
+  const space = await prisma.space.findFirst({
     where: { slug, isPublished: true, isActive: true },
     select: {
       id: true,
@@ -109,6 +122,14 @@ export async function getSpaceBySlug(slug: string) {
       location: { select: { id: true, name: true } },
     },
   });
+
+  if (!space) return null;
+
+  return toPlainObject({
+    ...space,
+    hourlyPrice: Number(space.hourlyPrice),
+    dailyPrice: space.dailyPrice ? Number(space.dailyPrice) : null,
+  });
 }
 
 /**
@@ -123,7 +144,7 @@ export async function getRelatedSpaces(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  return prisma.space.findMany({
+  const spaces = await prisma.space.findMany({
     where: {
       isPublished: true,
       isActive: true,
@@ -141,6 +162,13 @@ export async function getRelatedSpaces(
     take: limit,
     orderBy: { name: "asc" },
   });
+
+  return toPlainArray(
+    spaces.map((s) => ({
+      ...s,
+      hourlyPrice: Number(s.hourlyPrice),
+    })),
+  );
 }
 
 /**
@@ -151,9 +179,11 @@ export async function getActiveCategories() {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACE_CATEGORIES);
 
-  return prisma.spaceCategory.findMany({
+  const categories = await prisma.spaceCategory.findMany({
     where: { isActive: true },
     select: { id: true, name: true, icon: true },
     orderBy: { sortOrder: "asc" },
   });
+
+  return toPlainArray(categories);
 }
