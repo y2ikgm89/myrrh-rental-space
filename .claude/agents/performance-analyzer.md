@@ -39,6 +39,7 @@ Turbopack ビルドは Webpack と異なり、ルート別 JS サイズを出力
 1. Root shared JS = `.next/build-manifest.json` の `rootMainFiles` の合計サイズ
 2. ルート別 JS = `.next/server/app/<route>.html` 内の `<script>` タグ参照チャンクの合計
 3. `@next/bundle-analyzer` は Turbopack で HTML レポートを生成しない — チャンクファイルの手動解析が必要
+4. `devDependencies` の `@next/bundle-analyzer` は `next` と同一マイナーに揃える（`package.json` を正）
 
 ### チャンク内容の特定
 

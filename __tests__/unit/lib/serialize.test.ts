@@ -5,6 +5,7 @@ import {
   toISOString,
   formatSerializedDate,
   toDateString,
+  dateInputValueFromSerialized,
   extractFirstFromCommaList,
   keysOf,
   entriesOf,
@@ -254,6 +255,28 @@ describe("serialize", () => {
     test("異なる日付を正しく変換する", () => {
       const date = new Date("2023-12-31T23:59:59.999Z");
       expect(toDateString(date)).toBe("2023-12-31");
+    });
+  });
+
+  describe("dateInputValueFromSerialized", () => {
+    test("null / undefined / 空は空文字", () => {
+      expect(dateInputValueFromSerialized(null)).toBe("");
+      expect(dateInputValueFromSerialized(undefined)).toBe("");
+      expect(dateInputValueFromSerialized("")).toBe("");
+    });
+
+    test("YYYY-MM-DD はそのまま", () => {
+      expect(dateInputValueFromSerialized("2024-01-15")).toBe("2024-01-15");
+    });
+
+    test("ISO 日時から日付部分のみ取り出す", () => {
+      expect(dateInputValueFromSerialized("2024-01-15T00:00:00.000Z")).toBe(
+        "2024-01-15",
+      );
+    });
+
+    test("解釈不能なら空文字", () => {
+      expect(dateInputValueFromSerialized("not-a-date")).toBe("");
     });
   });
 

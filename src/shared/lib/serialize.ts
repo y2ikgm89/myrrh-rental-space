@@ -313,6 +313,37 @@ export function toDateString(date: Date): string {
   return date.toISOString().split("T")[0] ?? "";
 }
 
+/** `input[type="date"]` の value として許容される YYYY-MM-DD 形式かどうか */
+const DATE_INPUT_VALUE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * シリアライズ済みの日付文字列（ISO 8601 日時や YYYY-MM-DD）を、HTML `input[type="date"]`
+ * の `value` に使える **YYYY-MM-DD** へ正規化する。
+ *
+ * React のレンダー純粋性（`@eslint-react/purity`）を満たすため、`Date` を介さず文字列だけで解釈する。
+ * Prisma / `JSON.stringify` 経由の典型形（例: `2024-01-15T00:00:00.000Z`）を想定する。
+ *
+ * @param value - API・DB から渡された日付文字列、または null / undefined
+ * @returns フォーム向け日付。空・解釈不能なら `""`
+ */
+export function dateInputValueFromSerialized(
+  value: string | null | undefined,
+): string {
+  if (value == null || value === "") {
+    return "";
+  }
+  if (DATE_INPUT_VALUE_PATTERN.test(value)) {
+    return value;
+  }
+  if (value.length >= 10 && value[4] === "-" && value[7] === "-") {
+    const head = value.slice(0, 10);
+    if (DATE_INPUT_VALUE_PATTERN.test(head)) {
+      return head;
+    }
+  }
+  return "";
+}
+
 // =============================================================================
 // Safe Access Utilities
 // =============================================================================

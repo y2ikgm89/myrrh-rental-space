@@ -14,7 +14,7 @@ model: sonnet
 memory: project
 ---
 
-You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0-beta).
+You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0.1-rc).
 
 ## Your workflow
 

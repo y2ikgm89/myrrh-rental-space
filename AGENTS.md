@@ -20,19 +20,19 @@
 | ------------ | ------------------ | ---------------------------------------------------- |
 | Next.js      | 16.1.6             | `'use cache'`, `updateTag`, PPR対応                  |
 | React        | 19.2.4             | React Compiler 1.0, `<Activity>`, `useEffectEvent`   |
-| TypeScript   | 6.0.0-dev.20260228 | TS 7.0 準備用 `--stableTypeOrdering` 利用可          |
-| Bun          | 1.3.10             | Bun.SQL, HTML直接実行                                |
-| Prisma       | 7.4.2              | 型生成98%削減, mapped enums                          |
+| TypeScript   | 6.0.1-rc           | `package.json` の解決版に合わせる（`erasableSyntaxOnly` 等） |
+| Bun          | 1.3.10             | Bun.SQL, HTML直接実行（`packageManager` 準拠）       |
+| Prisma       | 7.5.0              | 型生成98%削減, mapped enums                         |
 | PostgreSQL   | -                  | Supabase経由                                         |
-| Better Auth  | 1.5.3              | RBAC, Auth.js統合                                    |
+| Better Auth  | 1.5.5              | RBAC, Auth.js統合                                    |
 | Tailwind CSS | 4.2.1              | CSS-first設定, @theme                                |
 | Zod          | 4.3.6              | `{ error: }` パラメータ, z.fromJSONSchema()          |
 | nuqs         | 2.8.9              | createSearchParamsCache, Zod 4統合                   |
 | Lexical      | 0.41.0             | React 19対応, Node transforms, mergeRegister本体移動 |
 | GSAP         | 3.14.2             | ScrollTrigger, @gsap/react 2.1                       |
 | Three.js     | 0.183.2            | @react-three/fiber 9.5, @react-three/drei 10.7       |
-| PixiJS       | 8.16.0             | 2D WebGLレンダラー                                   |
-| Lenis        | 1.3.17             | スムーススクロール                                   |
+| PixiJS       | 8.17.1             | 2D WebGLレンダラー                                   |
+| Lenis        | 1.3.18             | スムーススクロール                                   |
 
 ### Project structure
 
@@ -103,6 +103,8 @@ bun run test:all
 bun run build
 ```
 
+- `bun run build` は `SKIP_ENV_VALIDATION=true` で実行される（開発・既定 CI 向け）。本番デプロイ前に `.env` の充足確認をしたい場合は `bun run build:strict` を使う。
+
 ## Testing instructions
 
 ```bash
@@ -125,7 +127,7 @@ bun run e2e
 ```
 
 - 作業完了前の最低ライン: `bun run validate`
-- PR 作成前の必須ライン: `bun run validate && bun run build`
+- PR 作成前の必須ライン: `bun run validate && bun run build`（本番相当の env 検証が必要なら `build:strict` を追加）
 - 仕様変更・不具合修正では、該当テストの追加/更新をセットで実施すること
 
 ## Additional instructions

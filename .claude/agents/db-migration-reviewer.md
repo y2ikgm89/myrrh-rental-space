@@ -71,7 +71,7 @@ You perform read-only analysis — you never run migrations, never edit files.
 ## Project context
 
 **Database**: PostgreSQL 16 via Supabase
-**Prisma version**: 7.4.0 — WASM engine (`engineType = "client"`, `runtime = "bun"`)
+**Prisma version**: 7.5.x — WASM engine (`engineType = "client"`, `runtime = "bun"`、`package.json` を正）
 **Schema file**: `prisma/schema.prisma` (main), `prisma/better-auth-schema.prisma` (auth tables — do not review these manually)
 **Migration folder naming**: `YYYYMMDDHHMMSS_<description>/migration.sql`
 **Seed**: `prisma/seed.ts` — run via `bun run db:seed`

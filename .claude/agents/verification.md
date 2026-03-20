@@ -62,7 +62,7 @@ Report results in this structure:
 
 When analyzing errors, watch for these project-specific issues:
 
-**TypeScript 6.0-beta patterns:**
+**TypeScript 6.0.1-rc patterns（`package.json` の `typescript` を正）:**
 
 - **`noUncheckedIndexedAccess`**: Array index `arr[i]` and Record access `obj[key]` return `T | undefined`. Fix with guard (`if (!item) continue`), optional chaining (`arr[i]?.prop`), or nullish coalescing (`arr[i] ?? default`)
 - **`noUncheckedSideEffectImports`**: CSS module imports need `declare module '*.css' {}` in `src/shared/types/css.d.ts`

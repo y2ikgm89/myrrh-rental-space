@@ -9,7 +9,7 @@ paths:
 
 # Prisma パターンルール
 
-> Prisma 7.4 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL
+> Prisma 7.5 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
 
 ## Enum パターン（Prisma 7 mapped enums）
 

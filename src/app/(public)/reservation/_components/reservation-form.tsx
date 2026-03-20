@@ -78,27 +78,25 @@ export function ReservationForm({
   };
 
   const goNext = async () => {
-    let fieldsToValidate: string[] = [];
     if (step === 1) {
-      fieldsToValidate = [
+      const isValid = await form.trigger([
         "spaceId",
         "date",
         "startTime",
         "endTime",
         "numberOfGuests",
-      ];
+      ] as const);
+      if (!isValid) return;
     } else if (step === 2) {
-      fieldsToValidate = [
+      const isValid = await form.trigger([
         "lastName",
         "firstName",
         "email",
         "phoneNumber",
         "notes",
-      ];
+      ] as const);
+      if (!isValid) return;
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const isValid = await form.trigger(fieldsToValidate as any);
-    if (!isValid) return;
     setStep((prev) => Math.min(3, prev + 1));
     animateTransition();
   };

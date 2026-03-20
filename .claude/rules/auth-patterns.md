@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.5.3 / RBAC / Next.js 16 対応
+> Better Auth 1.5.5 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
 
 ## Better Auth 公式パターン
 

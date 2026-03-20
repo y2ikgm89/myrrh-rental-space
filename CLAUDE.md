@@ -62,6 +62,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | `new-section`                                         | `[...segments]` カスタムページ用セクション追加時  |
 | `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                                |
 | `split-action-file`                                   | 500行超の Server Action ファイル分割時            |
+| `audit-settings-sections`                             | 設定セクション追加後・定期メンテ時の品質監査      |
 
 **問題対応・メンテ**
 
@@ -118,7 +119,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須         |
 | Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                |
 | Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` パターン必須               |
-| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行    |
+| Bun          | 1.3.10     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致） |
 
 ### 構造
 
@@ -135,10 +136,10 @@ src/app/
     │   ├── actions/             # 公開フォーム Server Actions（認証不要、Turnstile保護）
     │   ├── hooks/               # usePublicForm 等
     │   ├── components/
-    │   │   ├── design-system/   # Primitives (Button, Card, Heading 等 11種)
-    │   │   ├── layouts/         # site-header, site-footer, page-hero, site-cta, breadcrumb, mobile-nav
-    │   │   ├── ui/              # image-gallery, filter-bar, share-buttons, step-indicator
-    │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, magnetic-button
+    │   │   ├── design-system/   # Primitives (Button, Card, Container, Heading 等 11種)
+    │   │   ├── layouts/         # site-header, site-footer, page-hero, site-cta, breadcrumb, mobile-nav 等
+    │   │   ├── ui/              # image-gallery, filter-bar, share-buttons, step-indicator, section-label
+    │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, parallax-image, magnetic-button
     │   └── lib/content/         # PageContent 型・スキーマ・クエリ・デフォルト値
     ├── _components/homepage/    # ホームページ専用コンポーネント
     └── spaces/[slug]/           # スペース詳細（Page-First）

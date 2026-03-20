@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { Button } from "@/public/components/design-system/button";
@@ -48,7 +48,11 @@ export function DateTimeStep({
     label: `${s.name}（定員${s.capacity}名・¥${s.hourlyPrice.toLocaleString()}/時間）`,
   }));
 
-  const today = new Date().toISOString().split("T")[0];
+  /** マウント時点の「今日」（UTC のカレンダー日）。レンダーごとの new Date() を避ける */
+  const [minSelectableDate] = useState(() => {
+    const fragment = new Date().toISOString().split("T")[0];
+    return fragment ?? "";
+  });
 
   return (
     <div>
@@ -78,7 +82,7 @@ export function DateTimeStep({
           id="reservation-date"
           label="ご利用日"
           type="date"
-          min={today}
+          min={minSelectableDate}
           {...(form.formState.errors.date?.message && {
             error: form.formState.errors.date.message,
           })}

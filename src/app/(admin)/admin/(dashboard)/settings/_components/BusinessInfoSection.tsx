@@ -29,7 +29,7 @@ import {
 } from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { toDateString } from "@/shared/lib/serialize";
+import { dateInputValueFromSerialized } from "@/shared/lib/serialize";
 
 interface BusinessInfoSectionProps {
   settings: Serialized<SettingsData>;
@@ -74,9 +74,7 @@ export function BusinessInfoSection({ settings }: BusinessInfoSectionProps) {
         representativeName: settings.representativeName || "",
         businessType: settings.businessType || "",
         industryType: settings.industryType || "",
-        establishedDate: settings.establishedDate
-          ? toDateString(new Date(settings.establishedDate))
-          : "",
+        establishedDate: dateInputValueFromSerialized(settings.establishedDate),
         registrationNumber: settings.registrationNumber || "",
         invoiceNumber: settings.invoiceNumber || "",
         businessDescription: settings.businessDescription || "",
