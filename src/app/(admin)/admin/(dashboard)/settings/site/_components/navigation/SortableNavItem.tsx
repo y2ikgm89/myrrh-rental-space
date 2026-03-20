@@ -56,7 +56,6 @@ export function SortableNavRow({
     isDragging,
   } = useSortable({ id: item.id });
 
-  // Translate only -- suppress scale to prevent layout shift
   const style = {
     transform: transform
       ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
@@ -66,14 +65,9 @@ export function SortableNavRow({
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // During drag, show projected depth for the dragged item
   const displayDepth =
     isDragTarget && isDragging ? getProjectedDepth(dragOffsetX, depth) : depth;
   const isChild = displayDepth === 1;
-
-  // Compute projected drop depth for the drop indicator
-  const projectedDropDepth =
-    isDragTarget && isDragging ? getProjectedDepth(dragOffsetX, depth) : depth;
 
   return (
     <>
@@ -81,14 +75,13 @@ export function SortableNavRow({
       {isDropTarget && !isDragging && (
         <div
           className="h-0.5 rounded-full bg-primary"
-          style={{ marginLeft: projectedDropDepth === 1 ? 32 : 0 }}
+          style={{ marginLeft: displayDepth === 1 ? 32 : 0 }}
         />
       )}
       <div
         ref={setNodeRef}
         style={{
           ...style,
-          // Use padding instead of margin for indent -- prevents layout shift
           paddingLeft: isChild ? 32 : undefined,
         }}
         className={cn(
@@ -98,7 +91,14 @@ export function SortableNavRow({
           isChild && "border-l-2 border-l-primary/30",
         )}
       >
-        <div className="shrink-0 cursor-grab" {...attributes} {...listeners}>
+        <div
+          className={cn(
+            "shrink-0",
+            isDragging ? "cursor-grabbing" : "cursor-grab",
+          )}
+          {...attributes}
+          {...listeners}
+        >
           <DragHandle />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -141,14 +141,15 @@ export function SortableNavRow({
             削除
           </ActionDropdownItem>
         </ActionDropdown>
-        <DeleteConfirmDialog
-          open={deleteDialogOpen}
-          onOpenChange={setDeleteDialogOpen}
-          itemName={item.label}
-          onConfirm={() => onDelete(item.id)}
-          isPending={isPending}
-        />
       </div>
+      {/* Dialog outside sortable div to prevent DnD clone conflicts */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemName={item.label}
+        onConfirm={() => onDelete(item.id)}
+        isPending={isPending}
+      />
     </>
   );
 }
@@ -189,55 +190,65 @@ export function SortableSocialRow({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
-        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
-        !link.isActive && "opacity-50",
-      )}
-    >
-      <div className="shrink-0 cursor-grab" {...attributes} {...listeners}>
-        <DragHandle />
-      </div>
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <span className="truncate text-sm font-medium">
-          {platformLabels[link.platform]}
-        </span>
-        <span className="hidden truncate text-xs text-muted-foreground sm:inline">
-          {link.url}
-        </span>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {!link.showOnDesktop && (
-          <Badge variant="secondary" className="text-xs">
-            PC非表示
-          </Badge>
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
+          isDragging && "opacity-30",
+          !link.isActive && "opacity-50",
         )}
-        {!link.showOnMobile && (
-          <Badge variant="secondary" className="text-xs">
-            モバイル非表示
-          </Badge>
-        )}
-        {!link.isActive && (
-          <Badge variant="secondary" className="text-xs">
-            無効
-          </Badge>
-        )}
-      </div>
-      <ActionDropdown disabled={isPending}>
-        <ActionDropdownItem onClick={() => onEdit(link)}>
-          編集
-        </ActionDropdownItem>
-        <ActionDropdownSeparator />
-        <ActionDropdownItem
-          destructive
-          onClick={() => setDeleteDialogOpen(true)}
+      >
+        <div
+          className={cn(
+            "shrink-0",
+            isDragging ? "cursor-grabbing" : "cursor-grab",
+          )}
+          {...attributes}
+          {...listeners}
         >
-          削除
-        </ActionDropdownItem>
-      </ActionDropdown>
+          <DragHandle />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-sm font-medium">
+            {platformLabels[link.platform]}
+          </span>
+          <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+            {link.url}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {!link.showOnDesktop && (
+            <Badge variant="secondary" className="text-xs">
+              PC非表示
+            </Badge>
+          )}
+          {!link.showOnMobile && (
+            <Badge variant="secondary" className="text-xs">
+              モバイル非表示
+            </Badge>
+          )}
+          {!link.isActive && (
+            <Badge variant="secondary" className="text-xs">
+              無効
+            </Badge>
+          )}
+        </div>
+        <ActionDropdown disabled={isPending}>
+          <ActionDropdownItem onClick={() => onEdit(link)}>
+            編集
+          </ActionDropdownItem>
+          <ActionDropdownSeparator />
+          <ActionDropdownItem
+            destructive
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            削除
+          </ActionDropdownItem>
+        </ActionDropdown>
+      </div>
+      {/* Dialog outside sortable div to prevent DnD clone conflicts */}
       <DeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -245,6 +256,6 @@ export function SortableSocialRow({
         onConfirm={() => onDelete(link.id)}
         isPending={isPending}
       />
-    </div>
+    </>
   );
 }

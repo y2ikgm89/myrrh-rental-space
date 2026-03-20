@@ -179,6 +179,7 @@ export function NavigationManager({
   const [dragOffsetX, setDragOffsetX] = useState(0);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [overItemId, setOverItemId] = useState<string | null>(null);
+  const [activeSocialId, setActiveSocialId] = useState<string | null>(null);
 
   // D&D Sensors
   const sensors = useSensors(
@@ -516,8 +517,13 @@ export function NavigationManager({
     });
   };
 
-  // Social D&D Handler
+  // Social D&D Handlers
+  const handleSocialDragStart = (event: DragStartEvent) => {
+    setActiveSocialId(String(event.active.id));
+  };
+
   const handleSocialDragEnd = (event: DragEndEvent) => {
+    setActiveSocialId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -630,9 +636,11 @@ export function NavigationManager({
             links={socialLinks}
             sensors={sensors}
             isPending={isPending}
+            activeSocialId={activeSocialId}
             onAdd={openSocialCreateDialog}
             onEdit={openSocialEditDialog}
             onDelete={handleSocialDelete}
+            onDragStart={handleSocialDragStart}
             onDragEnd={handleSocialDragEnd}
           />
         </TabsContent>

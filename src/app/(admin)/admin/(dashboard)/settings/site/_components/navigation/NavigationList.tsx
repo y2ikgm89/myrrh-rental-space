@@ -25,6 +25,7 @@ import type {
   SocialLinkData,
   FlatNavigationItem,
 } from "./types";
+import { platformLabels } from "./types";
 import { SortableNavRow, SortableSocialRow } from "./SortableNavItem";
 
 // =============================================================================
@@ -168,9 +169,11 @@ type SocialLinkListProps = {
   links: Serialized<SocialLinkData>[];
   sensors: SensorDescriptor<SensorOptions>[];
   isPending: boolean;
+  activeSocialId: string | null;
   onAdd: () => void;
   onEdit: (link: Serialized<SocialLinkData>) => void;
   onDelete: (id: string) => void;
+  onDragStart: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
 };
 
@@ -178,11 +181,17 @@ export function SocialLinkList({
   links,
   sensors,
   isPending,
+  activeSocialId,
   onAdd,
   onEdit,
   onDelete,
+  onDragStart,
   onDragEnd,
 }: SocialLinkListProps) {
+  const activeLink = activeSocialId
+    ? links.find((l) => l.id === activeSocialId)
+    : null;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -205,6 +214,7 @@ export function SocialLinkList({
               id="social-links-sortable"
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={onDragStart}
               onDragEnd={onDragEnd}
             >
               <SortableContext
@@ -223,6 +233,16 @@ export function SocialLinkList({
                   ))}
                 </div>
               </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeLink ? (
+                  <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 opacity-90 shadow-lg ring-2 ring-primary/20">
+                    <DragHandle />
+                    <span className="text-sm font-medium">
+                      {platformLabels[activeLink.platform]}
+                    </span>
+                  </div>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           </>
         )}

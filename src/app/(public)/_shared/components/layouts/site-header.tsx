@@ -471,8 +471,6 @@ export function Header({
                   </NavigationMenuPrimitive.Item>
                 ))}
               </NavigationMenuPrimitive.List>
-
-              <NavigationMenuPrimitive.Viewport />
             </NavigationMenuPrimitive.Root>
 
             <Button variant="primary" size="sm" href="/reservation">
