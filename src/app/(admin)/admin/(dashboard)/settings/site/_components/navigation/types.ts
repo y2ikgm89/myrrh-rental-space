@@ -88,6 +88,73 @@ export type FlatNavigationItem = NavigationItemData & {
 };
 
 // =============================================================================
+// D&D Indentation Constants & Helpers
+// =============================================================================
+
+export const INDENT_WIDTH = 50;
+
+export function getProjectedDepth(offsetX: number, currentDepth: 0 | 1): 0 | 1 {
+  const projectedPixels = currentDepth * INDENT_WIDTH + offsetX;
+  const raw = Math.round(projectedPixels / INDENT_WIDTH);
+  return Math.max(0, Math.min(1, raw)) === 1 ? 1 : 0;
+}
+
+/**
+ * Rebuild hierarchical NavigationItemData[] from flat items with parentId assignments.
+ */
+export function rebuildHierarchy(
+  updates: { id: string; order: number; parentId: string | null }[],
+  flatItems: FlatNavigationItem[],
+): NavigationItemData[] {
+  // Build a lookup from flat items for full data
+  const itemMap = new Map<string, FlatNavigationItem>();
+  for (const item of flatItems) {
+    itemMap.set(item.id, item);
+  }
+
+  // Sort by order
+  const sorted = [...updates].sort((a, b) => a.order - b.order);
+
+  // Group: roots first, then attach children
+  const roots: NavigationItemData[] = [];
+  const childrenByParent = new Map<string, NavigationItemData[]>();
+
+  for (const update of sorted) {
+    const original = itemMap.get(update.id);
+    if (!original) continue;
+
+    const item: NavigationItemData = {
+      id: original.id,
+      type: original.type,
+      label: original.label,
+      url: original.url,
+      isExternal: original.isExternal,
+      order: update.order,
+      isActive: original.isActive,
+      parentId: update.parentId,
+      createdAt: original.createdAt,
+      updatedAt: original.updatedAt,
+      children: [],
+    };
+
+    if (update.parentId === null) {
+      roots.push(item);
+    } else {
+      const siblings = childrenByParent.get(update.parentId) ?? [];
+      siblings.push(item);
+      childrenByParent.set(update.parentId, siblings);
+    }
+  }
+
+  // Attach children to their parents
+  for (const root of roots) {
+    root.children = childrenByParent.get(root.id) ?? [];
+  }
+
+  return roots;
+}
+
+// =============================================================================
 // Re-exports
 // =============================================================================
 

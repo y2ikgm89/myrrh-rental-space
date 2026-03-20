@@ -16,6 +16,7 @@ import {
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@/admin/components/ui";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
@@ -35,12 +36,14 @@ import type {
 } from "@/shared/domain/navigation/commands";
 import type { NavigationType } from "@/shared/db/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type {
-  NavigationItemData,
-  SocialLinkData,
-  NavFormData,
-  SocialFormData,
-  FlatNavigationItem,
+import {
+  getProjectedDepth,
+  rebuildHierarchy,
+  type NavigationItemData,
+  type SocialLinkData,
+  type NavFormData,
+  type SocialFormData,
+  type FlatNavigationItem,
 } from "./types";
 import {
   useNavigationForm,
@@ -51,16 +54,8 @@ import { NavigationList, SocialLinkList } from "./NavigationList";
 import { NavigationDialog, SocialLinkDialog } from "./NavigationDialog";
 
 // =============================================================================
-// Indentation Constants
+// Nesting Computation
 // =============================================================================
-
-const INDENT_WIDTH = 50;
-
-function getProjectedDepth(offsetX: number, currentDepth: 0 | 1): 0 | 1 {
-  const projectedPixels = currentDepth * INDENT_WIDTH + offsetX;
-  const raw = Math.round(projectedPixels / INDENT_WIDTH);
-  return Math.max(0, Math.min(1, raw)) === 1 ? 1 : 0;
-}
 
 /**
  * After reorder, walk through items top-to-bottom and assign parentId
@@ -96,6 +91,30 @@ function computeOrderWithNesting(
       updates.push({ id: item.id, order: i, parentId: lastRootId });
     } else {
       // Root item (or forced root because no parent above)
+      updates.push({ id: item.id, order: i, parentId: null });
+      lastRootId = item.id;
+    }
+  }
+
+  return updates;
+}
+
+/**
+ * Compute nesting from flat items without a drag offset (for indent/outdent buttons).
+ */
+function computeOrderFromFlat(
+  flatItems: FlatNavigationItem[],
+): { id: string; order: number; parentId: string | null }[] {
+  let lastRootId: string | null = null;
+  const updates: { id: string; order: number; parentId: string | null }[] = [];
+
+  for (let i = 0; i < flatItems.length; i++) {
+    const item = flatItems[i];
+    if (!item) continue;
+
+    if (item.depth === 1 && lastRootId !== null) {
+      updates.push({ id: item.id, order: i, parentId: lastRootId });
+    } else {
       updates.push({ id: item.id, order: i, parentId: null });
       lastRootId = item.id;
     }
@@ -159,6 +178,7 @@ export function NavigationManager({
   // D&D Drag-to-nest State
   const [dragOffsetX, setDragOffsetX] = useState(0);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [overItemId, setOverItemId] = useState<string | null>(null);
 
   // D&D Sensors
   const sensors = useSensors(
@@ -190,7 +210,7 @@ export function NavigationManager({
     setSocialLinks(social);
   };
 
-  // Navigation Item Handlers
+  // Navigation Item Helpers
   const getItemsByType = (type: NavigationType): NavigationItemData[] => {
     switch (type) {
       case "HEADER_DESKTOP":
@@ -201,6 +221,23 @@ export function NavigationManager({
         return footerItems;
       default:
         return [];
+    }
+  };
+
+  const setItemsByType = (
+    type: NavigationType,
+    items: NavigationItemData[],
+  ) => {
+    switch (type) {
+      case "HEADER_DESKTOP":
+        setDesktopItems(items);
+        break;
+      case "HEADER_MOBILE":
+        setMobileItems(items);
+        break;
+      case "FOOTER":
+        setFooterItems(items);
+        break;
     }
   };
 
@@ -238,7 +275,7 @@ export function NavigationManager({
 
         toast.success("ナビゲーションを更新しました");
         setIsNavDialogOpen(false);
-        loadData();
+        void loadData();
       } else {
         const result = await createNavigationItem(payload);
         if (isMutationError(result)) {
@@ -248,7 +285,7 @@ export function NavigationManager({
 
         toast.success("ナビゲーションを作成しました");
         setIsNavDialogOpen(false);
-        loadData();
+        void loadData();
       }
     });
   };
@@ -262,7 +299,7 @@ export function NavigationManager({
       }
 
       toast.success("ナビゲーションを削除しました");
-      loadData();
+      void loadData();
     });
   };
 
@@ -271,12 +308,18 @@ export function NavigationManager({
     (_type: NavigationType) => (event: DragStartEvent) => {
       setActiveItemId(String(event.active.id));
       setDragOffsetX(0);
+      setOverItemId(null);
     };
 
   const handleNavDragMove =
     (_type: NavigationType) => (event: DragMoveEvent) => {
       setActiveItemId(String(event.active.id));
       setDragOffsetX(event.delta.x);
+    };
+
+  const handleNavDragOver =
+    (_type: NavigationType) => (event: DragOverEvent) => {
+      setOverItemId(event.over ? String(event.over.id) : null);
     };
 
   const handleNavDragEnd = (type: NavigationType) => (event: DragEndEvent) => {
@@ -286,6 +329,7 @@ export function NavigationManager({
     // Reset drag state
     setActiveItemId(null);
     setDragOffsetX(0);
+    setOverItemId(null);
 
     if (!over) return;
 
@@ -323,15 +367,98 @@ export function NavigationManager({
       draggedItem.depth,
     );
 
+    // Optimistic: update local state immediately
+    const newHierarchical = rebuildHierarchy(updates, flatItems);
+    setItemsByType(type, newHierarchical);
+
+    // Background: send to server
     startTransition(async () => {
       const result = await updateNavigationOrder(updates);
       if (isMutationError(result)) {
         toast.error(result.error);
+        void loadData(); // Rollback on error
         return;
       }
 
       toast.success("順序を更新しました");
-      loadData();
+    });
+  };
+
+  // Indent/Outdent Handlers
+  const handleMakeChild = (type: NavigationType) => (id: string) => {
+    const items = getItemsByType(type);
+    const flatItems = flattenNavItems(items);
+
+    const itemIndex = flatItems.findIndex((item) => item.id === id);
+    if (itemIndex === -1) return;
+
+    const item = flatItems[itemIndex];
+    if (!item || item.depth !== 0) return;
+
+    // Find the previous root item
+    let prevRootIndex = -1;
+    for (let i = itemIndex - 1; i >= 0; i--) {
+      const prev = flatItems[i];
+      if (prev && prev.depth === 0) {
+        prevRootIndex = i;
+        break;
+      }
+    }
+    if (prevRootIndex === -1) return;
+
+    // Update the item's depth to 1
+    const updatedFlat = flatItems.map((fi, idx) =>
+      idx === itemIndex ? { ...fi, depth: 1 as const, isChild: true } : fi,
+    );
+
+    const updates = computeOrderFromFlat(updatedFlat);
+
+    // Optimistic update
+    const newHierarchical = rebuildHierarchy(updates, updatedFlat);
+    setItemsByType(type, newHierarchical);
+
+    startTransition(async () => {
+      const result = await updateNavigationOrder(updates);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        void loadData();
+        return;
+      }
+
+      toast.success("サブメニューに変更しました");
+    });
+  };
+
+  const handleMakeRoot = (type: NavigationType) => (id: string) => {
+    const items = getItemsByType(type);
+    const flatItems = flattenNavItems(items);
+
+    const itemIndex = flatItems.findIndex((item) => item.id === id);
+    if (itemIndex === -1) return;
+
+    const item = flatItems[itemIndex];
+    if (!item || item.depth !== 1) return;
+
+    // Update the item's depth to 0
+    const updatedFlat = flatItems.map((fi, idx) =>
+      idx === itemIndex ? { ...fi, depth: 0 as const, isChild: false } : fi,
+    );
+
+    const updates = computeOrderFromFlat(updatedFlat);
+
+    // Optimistic update
+    const newHierarchical = rebuildHierarchy(updates, updatedFlat);
+    setItemsByType(type, newHierarchical);
+
+    startTransition(async () => {
+      const result = await updateNavigationOrder(updates);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        void loadData();
+        return;
+      }
+
+      toast.success("トップレベルに移動しました");
     });
   };
 
@@ -361,7 +488,7 @@ export function NavigationManager({
 
         toast.success("SNSリンクを更新しました");
         setIsSocialDialogOpen(false);
-        loadData();
+        void loadData();
       } else {
         const result = await createSocialLink(payload);
         if (isMutationError(result)) {
@@ -371,7 +498,7 @@ export function NavigationManager({
 
         toast.success("SNSリンクを作成しました");
         setIsSocialDialogOpen(false);
-        loadData();
+        void loadData();
       }
     });
   };
@@ -385,7 +512,7 @@ export function NavigationManager({
       }
 
       toast.success("SNSリンクを削除しました");
-      loadData();
+      void loadData();
     });
   };
 
@@ -411,7 +538,7 @@ export function NavigationManager({
       const result = await updateSocialLinkOrder(updates);
       if (isMutationError(result)) {
         toast.error(result.error);
-        loadData();
+        void loadData();
         return;
       }
 
@@ -437,13 +564,17 @@ export function NavigationManager({
             sensors={sensors}
             isPending={isPending}
             activeItemId={activeItemId}
+            overItemId={overItemId}
             dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
             onDragStart={handleNavDragStart("HEADER_DESKTOP")}
             onDragMove={handleNavDragMove("HEADER_DESKTOP")}
+            onDragOver={handleNavDragOver("HEADER_DESKTOP")}
             onDragEnd={handleNavDragEnd("HEADER_DESKTOP")}
+            onMakeChild={handleMakeChild("HEADER_DESKTOP")}
+            onMakeRoot={handleMakeRoot("HEADER_DESKTOP")}
           />
         </TabsContent>
 
@@ -455,13 +586,17 @@ export function NavigationManager({
             sensors={sensors}
             isPending={isPending}
             activeItemId={activeItemId}
+            overItemId={overItemId}
             dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
             onDragStart={handleNavDragStart("HEADER_MOBILE")}
             onDragMove={handleNavDragMove("HEADER_MOBILE")}
+            onDragOver={handleNavDragOver("HEADER_MOBILE")}
             onDragEnd={handleNavDragEnd("HEADER_MOBILE")}
+            onMakeChild={handleMakeChild("HEADER_MOBILE")}
+            onMakeRoot={handleMakeRoot("HEADER_MOBILE")}
           />
           <p className="mt-4 text-sm text-muted-foreground">
             モバイルでは項目数を少なめに設定することをおすすめします。
@@ -476,13 +611,17 @@ export function NavigationManager({
             sensors={sensors}
             isPending={isPending}
             activeItemId={activeItemId}
+            overItemId={overItemId}
             dragOffsetX={dragOffsetX}
             onAdd={openNavCreateDialog}
             onEdit={openNavEditDialog}
             onDelete={handleNavDelete}
             onDragStart={handleNavDragStart("FOOTER")}
             onDragMove={handleNavDragMove("FOOTER")}
+            onDragOver={handleNavDragOver("FOOTER")}
             onDragEnd={handleNavDragEnd("FOOTER")}
+            onMakeChild={handleMakeChild("FOOTER")}
+            onMakeRoot={handleMakeRoot("FOOTER")}
           />
         </TabsContent>
 

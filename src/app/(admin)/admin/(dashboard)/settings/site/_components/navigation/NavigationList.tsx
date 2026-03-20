@@ -7,16 +7,19 @@ import {
   CardHeader,
   CardTitle,
   DndContext,
+  DragOverlay,
   closestCenter,
   SortableContext,
   verticalListSortingStrategy,
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@/admin/components/ui";
 import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
 import type { NavigationType } from "@/shared/db/enums";
 import type { Serialized } from "@/shared/lib/serialize";
+import { DragHandle } from "@/admin/components/ui/sortable";
 import type {
   NavigationItemData,
   SocialLinkData,
@@ -35,13 +38,17 @@ type NavigationListProps = {
   sensors: SensorDescriptor<SensorOptions>[];
   isPending: boolean;
   activeItemId: string | null;
+  overItemId: string | null;
   dragOffsetX: number;
   onAdd: (type: NavigationType) => void;
   onEdit: (item: NavigationItemData) => void;
   onDelete: (id: string) => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragMove: (event: DragMoveEvent) => void;
+  onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
+  onMakeChild: (id: string) => void;
+  onMakeRoot: (id: string) => void;
 };
 
 export function NavigationList({
@@ -51,19 +58,28 @@ export function NavigationList({
   sensors,
   isPending,
   activeItemId,
+  overItemId,
   dragOffsetX,
   onAdd,
   onEdit,
   onDelete,
   onDragStart,
   onDragMove,
+  onDragOver,
   onDragEnd,
+  onMakeChild,
+  onMakeRoot,
 }: NavigationListProps) {
   const title = {
     HEADER_DESKTOP: "デスクトップメニュー",
     HEADER_MOBILE: "モバイルメニュー",
     FOOTER: "フッターメニュー",
   }[type];
+
+  // Find the active item for DragOverlay
+  const activeItem = activeItemId
+    ? items.find((item) => item.id === activeItemId)
+    : null;
 
   return (
     <Card>
@@ -89,6 +105,7 @@ export function NavigationList({
               collisionDetection={closestCenter}
               onDragStart={onDragStart}
               onDragMove={onDragMove}
+              onDragOver={onDragOver}
               onDragEnd={onDragEnd}
             >
               <SortableContext
@@ -96,20 +113,45 @@ export function NavigationList({
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-1">
-                  {items.map((item) => (
-                    <SortableNavRow
-                      key={item.id}
-                      item={item}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      isPending={isPending}
-                      depth={item.depth}
-                      isDragTarget={item.id === activeItemId}
-                      dragOffsetX={dragOffsetX}
-                    />
-                  ))}
+                  {items.map((item, index) => {
+                    // Determine if this item can be made a child:
+                    // Must be root (depth 0) AND have a root item above it
+                    const canMakeChild =
+                      item.depth === 0 &&
+                      items.slice(0, index).some((prev) => prev.depth === 0);
+
+                    return (
+                      <SortableNavRow
+                        key={item.id}
+                        item={item}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        isPending={isPending}
+                        depth={item.depth}
+                        isDragTarget={item.id === activeItemId}
+                        isDropTarget={
+                          item.id === overItemId && item.id !== activeItemId
+                        }
+                        dragOffsetX={dragOffsetX}
+                        canMakeChild={canMakeChild}
+                        canMakeRoot={item.depth === 1}
+                        onMakeChild={onMakeChild}
+                        onMakeRoot={onMakeRoot}
+                      />
+                    );
+                  })}
                 </div>
               </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activeItem ? (
+                  <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 opacity-90 shadow-lg ring-2 ring-primary/20">
+                    <DragHandle />
+                    <span className="text-sm font-medium">
+                      {activeItem.label}
+                    </span>
+                  </div>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           </>
         )}

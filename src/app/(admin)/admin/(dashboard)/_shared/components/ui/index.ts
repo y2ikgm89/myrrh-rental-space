@@ -122,6 +122,7 @@ export type {
   DragEndEvent,
   DragStartEvent,
   DragMoveEvent,
+  DragOverEvent,
 } from "./sortable";
 
 // Pagination

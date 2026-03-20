@@ -261,6 +261,7 @@ export type {
   DragEndEvent,
   DragStartEvent,
   DragMoveEvent,
+  DragOverEvent,
 } from "@dnd-kit/core";
 
 export {
