@@ -12,6 +12,7 @@
 - **Prisma `Decimal` 型は `Number()` で変換** — `Space.hourlyPrice` 等は `Decimal` 型。ドメインクエリ層（`public-queries.ts` 等）で `Number()` 変換を一元化する（`as number` 禁止）。呼び出し側での個別変換は不要
 - **Prisma JSON フィールド（`imageUrls`, `facilities`）は `unknown` で受け取る** — `Array.isArray()` + type guard filter でランタイムパース。`as string[]` 禁止
 - **Three.js / PixiJS はパッケージのみ利用可能** — 旧 `effects/` インフラ（Provider/Canvas 29ファイル）は削除済みだが、パッケージは再インストール済み。使用時はページコンポーネントから直接 `import { Canvas } from "@react-three/fiber"` 等で import する。旧の `ExperienceShell` → `VisualEffectsProvider` パターンは禁止
+- **公開ヘッダーの NavigationMenu は `@radix-ui/react-navigation-menu` を直接使用** — shadcn/ui の NavigationMenu は `@/admin/components/ui` にインストールされるが、公開ページは admin の UI を import しない。`import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"` で直接使用する
 
 ## Multiple Root Layouts
 
@@ -36,6 +37,7 @@
 - **レンダー中の `new Date()` は避ける** — `@eslint-react/purity`。シリアライズ済み日付（ISO 文字列）を `input[type="date"]` に載せる場合は `dateInputValueFromSerialized()`（`@/shared/lib/serialize`）で文字列のみ正規化する。当日の `min` など「マウント時点で固定したい値」は `useState(() => { ... new Date() ... })` の遅延初期化で一度だけ評価する
 - **Turbopack ビルドはルート別 JS サイズを表示しない** — `bun run build` 出力の「Total client JS」は全チャンク合計。1ルートの First Load JS は `.next/server/app/<route>.html` 内の `<script>` 参照チャンクを合計して計算する
 - **Turbopack が `¥`（U+00A5）を JSX 属性内でエスケープシーケンスと誤認識** — `placeholder="¥1,000"` 等はビルドエラー（`Invalid unicode escape`）。モジュールレベル定数に `"\u00A51,000"` で定義し `placeholder={CONST}` で参照する
+- **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
 
 ## ファイル操作・Git
 

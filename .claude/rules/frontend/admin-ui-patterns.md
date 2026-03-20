@@ -622,6 +622,20 @@ export function DashboardHeader() {
 </AlertDialogContent>
 ```
 
+## ソータブルリスト標準パターン
+
+管理画面の全 dnd-kit ソータブルリストは以下を統一:
+
+- **ドラッグ中**: `z-50 shadow-lg ring-2 ring-primary/20`（`bg-muted/80` や `opacity-50` 禁止）
+- **DragOverlay 使用時**: 元アイテムは `opacity-30`、オーバーレイは `shadow-lg ring-2 ring-primary/20 opacity-90`
+- **ドラッグハンドル**: `DragHandle` コンポーネント（`@/admin/components/ui/sortable`）を統一使用
+- **DndContext**: 必ず `id` prop 付与（SSR hydration mismatch 防止）
+- **削除確認**: `DeleteConfirmDialog` を統一使用
+- **操作メニュー**: `ActionDropdown` を統一使用（インライン edit/delete ボタン禁止）
+- **transform**: `CSS.Transform.toString()` はスケール含むためレイアウトシフトの原因。`translate3d()` のみ使用
+
+---
+
 ## 設定セクション フォームパターン
 
 **設定ページ間の導線（`SettingsLayout` / `CardDescription`）:**
