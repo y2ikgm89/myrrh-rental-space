@@ -633,6 +633,8 @@ export function DashboardHeader() {
 - **削除確認**: `DeleteConfirmDialog` を統一使用
 - **操作メニュー**: `ActionDropdown` を統一使用（インライン edit/delete ボタン禁止）
 - **transform**: `CSS.Transform.toString()` はスケール含むためレイアウトシフトの原因。`translate3d()` のみ使用
+- **Dialog 配置**: `DeleteConfirmDialog` 等のダイアログは sortable `ref` の div 外（Fragment 兄弟）に配置。dnd-kit が要素を clone する際にポータルが巻き込まれるのを防止
+- **cursor**: ドラッグハンドルは `cursor-grab`、ドラッグ中は `cursor-grabbing` に動的切替
 
 ---
 
