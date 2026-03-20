@@ -59,7 +59,6 @@ export function SectionSidebarItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
 
   const label = sectionTypeLabels[section.type];
@@ -72,7 +71,7 @@ export function SectionSidebarItem({
         isSelected
           ? "bg-accent/10 border-l-2 border-l-primary"
           : "hover:bg-accent/5 border-l-2 border-l-transparent"
-      } ${!section.isActive ? "opacity-50" : ""} ${isDragging ? "shadow-lg z-10" : ""}`}
+      } ${!section.isActive ? "opacity-50" : ""} ${isDragging ? "z-50 shadow-lg ring-2 ring-primary/20" : ""}`}
       onClick={() => onSelect(section.id)}
     >
       {/* Drag Handle */}

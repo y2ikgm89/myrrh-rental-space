@@ -148,7 +148,6 @@ function SortableSectionItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
 
   const Icon = sectionTypeIcons[section.type];
@@ -159,8 +158,8 @@ function SortableSectionItem({
       ref={setNodeRef}
       style={style}
       className={`flex items-center gap-3 rounded-lg border bg-card p-4 ${
-        !section.isActive ? "opacity-60 bg-muted/30" : ""
-      } ${isDragging ? "shadow-lg" : ""}`}
+        !section.isActive ? "opacity-60" : ""
+      } ${isDragging ? "z-50 shadow-lg ring-2 ring-primary/20" : ""}`}
     >
       {/* Drag Handle */}
       <button

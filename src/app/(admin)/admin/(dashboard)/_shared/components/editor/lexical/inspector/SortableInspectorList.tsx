@@ -84,7 +84,7 @@ function SortableListItem({
       className={cn(
         "group/item flex items-center gap-1 rounded-md border px-1.5 h-9",
         item.isActive ? "border-primary/30 bg-primary/5" : "border-border",
-        isDragging && "z-50 opacity-50",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
       )}
       {...attributes}
     >

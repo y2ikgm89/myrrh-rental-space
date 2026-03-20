@@ -287,7 +287,7 @@ function SortableImageItem({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         "flex items-center gap-2 rounded border p-2",
-        isDragging && "z-50 bg-muted/80 shadow-lg",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
       )}
     >
       <div

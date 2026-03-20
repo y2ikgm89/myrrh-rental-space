@@ -1,21 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Button,
-  TableCell,
-  TableRow,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Badge,
-  useSortable,
-  CSS,
-} from "@/admin/components/ui";
+import { Badge, useSortable, CSS } from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -173,83 +159,62 @@ export function SortableSocialRow({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
-    <TableRow
+    <div
       ref={setNodeRef}
       style={style}
-      className={cn(isDragging && "z-50 bg-muted/80 shadow-lg")}
+      className={cn(
+        "flex items-center gap-2 rounded-md border bg-card px-3 py-2",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
+        !link.isActive && "opacity-50",
+      )}
     >
-      <TableCell className="w-12">
-        <div {...attributes} {...listeners}>
-          <DragHandle />
-        </div>
-      </TableCell>
-      <TableCell className="font-medium">
-        {platformLabels[link.platform]}
-      </TableCell>
-      <TableCell className="text-muted-foreground truncate max-w-xs">
-        {link.url}
-      </TableCell>
-      <TableCell>
-        <Badge variant={link.showOnDesktop ? "default" : "secondary"}>
-          {link.showOnDesktop ? "表示" : "非表示"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={link.showOnMobile ? "default" : "secondary"}>
-          {link.showOnMobile ? "表示" : "非表示"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge variant={link.isActive ? "default" : "secondary"}>
-          {link.isActive ? "有効" : "無効"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEdit(link)}
-            disabled={isPending}
-          >
-            編集
-          </Button>
-          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={isPending}>
-                削除
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>SNSリンクを削除しますか？</DialogTitle>
-                <DialogDescription>
-                  この操作は取り消せません。
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setDeleteDialogOpen(false)}
-                  disabled={isPending}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    onDelete(link.id);
-                    setDeleteDialogOpen(false);
-                  }}
-                  disabled={isPending}
-                >
-                  削除する
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </TableCell>
-    </TableRow>
+      <div className="shrink-0 cursor-grab" {...attributes} {...listeners}>
+        <DragHandle />
+      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <span className="truncate text-sm font-medium">
+          {platformLabels[link.platform]}
+        </span>
+        <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+          {link.url}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        {!link.showOnDesktop && (
+          <Badge variant="secondary" className="text-xs">
+            PC非表示
+          </Badge>
+        )}
+        {!link.showOnMobile && (
+          <Badge variant="secondary" className="text-xs">
+            モバイル非表示
+          </Badge>
+        )}
+        {!link.isActive && (
+          <Badge variant="secondary" className="text-xs">
+            無効
+          </Badge>
+        )}
+      </div>
+      <ActionDropdown disabled={isPending}>
+        <ActionDropdownItem onClick={() => onEdit(link)}>
+          編集
+        </ActionDropdownItem>
+        <ActionDropdownSeparator />
+        <ActionDropdownItem
+          destructive
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          削除
+        </ActionDropdownItem>
+      </ActionDropdown>
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        itemName={platformLabels[link.platform]}
+        onConfirm={() => onDelete(link.id)}
+        isPending={isPending}
+      />
+    </div>
   );
 }

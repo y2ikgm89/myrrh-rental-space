@@ -6,11 +6,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
   DndContext,
   closestCenter,
   SortableContext,
@@ -174,30 +169,17 @@ export function SocialLinkList({
                 items={links.map((link) => link.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead className="w-32">プラットフォーム</TableHead>
-                      <TableHead>URL</TableHead>
-                      <TableHead className="w-24">PC</TableHead>
-                      <TableHead className="w-24">モバイル</TableHead>
-                      <TableHead className="w-24">有効</TableHead>
-                      <TableHead className="w-32">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {links.map((link) => (
-                      <SortableSocialRow
-                        key={link.id}
-                        link={link}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        isPending={isPending}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-1">
+                  {links.map((link) => (
+                    <SortableSocialRow
+                      key={link.id}
+                      link={link}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      isPending={isPending}
+                    />
+                  ))}
+                </div>
               </SortableContext>
             </DndContext>
           </>

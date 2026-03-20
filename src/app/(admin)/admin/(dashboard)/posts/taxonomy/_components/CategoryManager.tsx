@@ -123,7 +123,7 @@ function SortableCategoryRow({
     <TableRow
       ref={setNodeRef}
       style={style}
-      className={cn(isDragging && "z-50 bg-muted/80 shadow-lg")}
+      className={cn(isDragging && "z-50 shadow-lg ring-2 ring-primary/20")}
     >
       <TableCell className="w-12">
         <div {...attributes} {...listeners}>
