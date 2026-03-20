@@ -86,7 +86,7 @@ export function NavigationList({
         ) : (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
-              ドラッグ&ドロップで順序を変更できます。右にドラッグするとサブメニューになります。
+              ドラッグで並べ替え・右に移動でサブメニュー化
             </p>
             <DndContext
               id={`nav-${type}-sortable`}
@@ -100,32 +100,20 @@ export function NavigationList({
                 items={items.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead>ラベル</TableHead>
-                      <TableHead>URL</TableHead>
-                      <TableHead className="w-24">外部</TableHead>
-                      <TableHead className="w-24">有効</TableHead>
-                      <TableHead className="w-32">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => (
-                      <SortableNavRow
-                        key={item.id}
-                        item={item}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        isPending={isPending}
-                        depth={item.depth}
-                        isDragTarget={item.id === activeItemId}
-                        dragOffsetX={dragOffsetX}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <SortableNavRow
+                      key={item.id}
+                      item={item}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      isPending={isPending}
+                      depth={item.depth}
+                      isDragTarget={item.id === activeItemId}
+                      dragOffsetX={dragOffsetX}
+                    />
+                  ))}
+                </div>
               </SortableContext>
             </DndContext>
           </>
