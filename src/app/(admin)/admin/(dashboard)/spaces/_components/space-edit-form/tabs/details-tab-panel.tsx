@@ -1,0 +1,232 @@
+"use client";
+
+import { X } from "lucide-react";
+import type {
+  Control,
+  FieldArrayWithId,
+  UseFormSetValue,
+} from "react-hook-form";
+import { useWatch } from "react-hook-form";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  TabsContent,
+} from "@/admin/components/ui";
+import type { SpaceEditFormData } from "../schema";
+import {
+  SELECT_NONE_VALUE,
+  type SpaceEditCategoryOption,
+  type SpaceEditLocationOption,
+  type SpaceEditTermsOption,
+} from "../types";
+
+type SpaceEditDetailsTabPanelProps = {
+  control: Control<SpaceEditFormData>;
+  setValue: UseFormSetValue<SpaceEditFormData>;
+  isPending: boolean;
+  availableTerms: SpaceEditTermsOption[];
+  availableLocations: SpaceEditLocationOption[];
+  availableCategories: SpaceEditCategoryOption[];
+  newFacility: string;
+  onNewFacilityChange: (value: string) => void;
+  onAddFacility: () => void;
+  facilityFields: FieldArrayWithId<SpaceEditFormData, "facilities", "id">[];
+  onRemoveFacility: (index: number) => void;
+};
+
+export function SpaceEditDetailsTabPanel({
+  control,
+  setValue,
+  isPending,
+  availableTerms,
+  availableLocations,
+  availableCategories,
+  newFacility,
+  onNewFacilityChange,
+  onAddFacility,
+  facilityFields,
+  onRemoveFacility,
+}: SpaceEditDetailsTabPanelProps) {
+  const locationId = useWatch({ control, name: "locationId" });
+  const categoryId = useWatch({ control, name: "categoryId" });
+  const termsId = useWatch({ control, name: "termsId" });
+
+  return (
+    <TabsContent
+      value="details"
+      forceMount
+      className="data-[state=inactive]:hidden"
+    >
+      <div className="space-y-6">
+        {(availableLocations.length > 0 || availableCategories.length > 0) && (
+          <Card>
+            <CardHeader>
+              <CardTitle>場所・カテゴリー</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {availableLocations.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="locationId">場所（建物・施設）</Label>
+                  <Select
+                    value={locationId ?? SELECT_NONE_VALUE}
+                    onValueChange={(value) =>
+                      setValue(
+                        "locationId",
+                        value === SELECT_NONE_VALUE ? undefined : value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger id="locationId">
+                      <SelectValue placeholder="場所を選択（任意）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
+                      {availableLocations.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}（{loc.address}）
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {availableCategories.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="categoryId">カテゴリー（用途）</Label>
+                  <Select
+                    value={categoryId ?? SELECT_NONE_VALUE}
+                    onValueChange={(value) =>
+                      setValue(
+                        "categoryId",
+                        value === SELECT_NONE_VALUE ? undefined : value,
+                        { shouldDirty: true },
+                      )
+                    }
+                    disabled={isPending}
+                  >
+                    <SelectTrigger id="categoryId">
+                      <SelectValue placeholder="カテゴリーを選択（任意）" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
+                      {availableCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.icon && (
+                            <span className="mr-1">{cat.icon}</span>
+                          )}
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>設備・アメニティ</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newFacility}
+                onChange={(e) => onNewFacilityChange(e.target.value)}
+                placeholder="例: WiFi、プロジェクター"
+                disabled={isPending}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onAddFacility();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onAddFacility}
+                disabled={isPending}
+              >
+                追加
+              </Button>
+            </div>
+            {facilityFields.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {facilityFields.map((field, index) => (
+                  <span
+                    key={field.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-sm"
+                  >
+                    {field.value}
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFacility(index)}
+                      disabled={isPending}
+                      className="ml-1 text-muted-foreground hover:text-foreground"
+                      aria-label={`${field.value}を削除`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {availableTerms.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>利用規約</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Label htmlFor="termsId">適用する利用規約</Label>
+              <Select
+                value={termsId ?? SELECT_NONE_VALUE}
+                onValueChange={(value) =>
+                  setValue(
+                    "termsId",
+                    value === SELECT_NONE_VALUE ? undefined : value,
+                    { shouldDirty: true },
+                  )
+                }
+                disabled={isPending}
+              >
+                <SelectTrigger id="termsId">
+                  <SelectValue placeholder="規約を選択（任意）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SELECT_NONE_VALUE}>
+                    なし（規約同意不要）
+                  </SelectItem>
+                  {availableTerms.map((term) => (
+                    <SelectItem key={term.id} value={term.id}>
+                      {term.title}（{term.type}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                規約を設定すると、予約時に顧客が同意する必要があります
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </TabsContent>
+  );
+}

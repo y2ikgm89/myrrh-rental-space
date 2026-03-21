@@ -15,3 +15,7 @@ export {
   DEFAULT_PAGE_SECTIONS,
   type DefaultSectionDef,
 } from "./default-page-sections";
+export {
+  ADMIN_SPACE_MANAGEMENT_TABS,
+  type AdminSpaceManagementTab,
+} from "./admin-space-management";

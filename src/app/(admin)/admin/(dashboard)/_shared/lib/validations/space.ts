@@ -170,6 +170,18 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   ...defaultSeoOgpValues,
 };
 
+/**
+ * スペースセレクト（API / フォーム候補）用の軽量項目
+ */
+export type SpaceSelectOption = {
+  id: string;
+  slug: string;
+  name: string;
+  mainImageUrl: string;
+  hourlyPrice: string;
+  capacity: number;
+};
+
 // =============================================================================
 // Server Action 用の型定義
 // =============================================================================

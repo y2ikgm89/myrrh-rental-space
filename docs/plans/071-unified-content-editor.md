@@ -1,5 +1,9 @@
 # 071: 統一ContentEditor設計計画
 
+> **設計変遷の記録** — 単一 `ContentEditor.tsx` への統合は未完了／方針変更の可能性あり。現行の **Post/News インライン + メタデータパネル**の正本は **`docs/reference/codex-rules/admin-inline-editor-patterns.md`** と `content-types/post.tsx` / `news.tsx`。下記コードブロックの `sidePanelConfig` / `TabDefinition` は **廃止**（`SidePanelDefinition` + `render(ctx)` に置換済み）。
+>
+> **以下の節（削除対象リスト・型サンプル・Phase・疑似コード・タスク一覧）は当時の草案本文**を残している。コピペ実装に使わないこと。
+
 ## 概要
 
 Blog/News/PageInlineEditorを統合し、設定駆動型の単一コンポーネント`ContentEditor`を実装する。
@@ -30,19 +34,19 @@ src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/
 ├── content-types/
 │   ├── index.ts                # 更新：エクスポート
 │   ├── types.ts                # 拡張：統合型定義
-│   ├── blog.ts                 # 新規：Blog完全設定
-│   ├── news.ts                 # 新規：News完全設定
-│   └── page.ts                 # 新規：Page完全設定
+│   ├── post.tsx                # 投稿設定（現行：`"use client"` + `render(ctx)`）
+│   ├── news.tsx                # お知らせ設定（同上）
+│   └── （固定ページはインライン `ContentTypeId` に含めず別管理画面）
 └── index.ts                    # 更新：ContentEditorエクスポート
 ```
 
-### 削除対象
+### 削除対象（当時案・パスは現行と一致しない場合あり）
 
 ```
-src/app/(admin)/admin/(dashboard)/blog/_components/BlogInlineEditor.tsx
+src/app/(admin)/admin/(dashboard)/blog/_components/BlogInlineEditor.tsx   # 現行: posts 系へ移行済み想定
 src/app/(admin)/admin/(dashboard)/news/_components/NewsInlineEditor.tsx
 src/app/(admin)/admin/(dashboard)/pages/_components/PageInlineEditor.tsx
-src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/blog-config.ts
+src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/blog-config.ts   # 現行: post.tsx / news.tsx
 src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/news-config.ts
 src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/content-types/page-config.ts
 ```
@@ -101,12 +105,9 @@ type ContentTypeConfig<
     unpublish?: (id: string) => Promise<ActionResult<void, string>>;
   };
 
-  // === サイドパネル ===
-  sidePanelConfig: {
-    title: string;
-    width: "default" | "narrow";
-    tabs: TabDefinition[];
-  };
+  // === サイドパネル（現行） ===
+  // sidePanel: SidePanelDefinition<TFormData, TSideExtra>
+  // セクションは { title, render: (ctx) => <Fields … /> }（旧 TabDefinition + component/props は廃止）
 };
 ```
 
@@ -139,11 +140,11 @@ type ContentEditorProps<
 1. `content-types/types.ts` - 統合型定義
 2. `hooks/useContentEditor.ts` - 統一ロジックフック
 
-### Phase 2: 設定ファイル
+### Phase 2: 設定ファイル（現行は Post/News のみ）
 
-1. `content-types/blog.ts` - Blog完全設定
-2. `content-types/news.ts` - News完全設定
-3. `content-types/page.ts` - Page完全設定
+1. `content-types/post.tsx` — 投稿（`"use client"` + `SidePanelDefinition`）
+2. `content-types/news.tsx` — お知らせ（同上）
+3. 固定ページ — インライン `content-types` 外。将来載せる場合のみ `ContentTypeId` ユニオン + `page.tsx` を追加
 
 ### Phase 3: 統一コンポーネント
 
@@ -222,6 +223,8 @@ function useContentEditor<TData, TFormData extends FieldValues, TPreviewData>({
 
 ## ContentEditorコンポーネント設計
 
+> `UnifiedSidePanel` に渡すメタデータ定義は現行では **`config.sidePanel`**。古い草案表記の `sidePanelConfig` は使わない。
+
 ```typescript
 export function ContentEditor<TData, TFormData extends FieldValues, TPreviewData>({
   config,
@@ -264,7 +267,7 @@ export function ContentEditor<TData, TFormData extends FieldValues, TPreviewData
           <UnifiedSidePanel
             isOpen={editor.isSettingsPanelOpen}
             onClose={editor.closePanel}
-            config={config.sidePanelConfig}
+            config={config.sidePanel}
             register={editor.form.register}
             control={editor.form.control}
             errors={editor.form.formState.errors}
@@ -365,13 +368,13 @@ export default async function PageEditPage({ params }: Props) {
 }
 ```
 
-## タスク一覧
+## タスク一覧（歴史的チェックリスト・未更新）
 
 1. [ ] `content-types/types.ts` - 統合型定義の拡張
 2. [ ] `hooks/useContentEditor.ts` - 統一ロジックフック作成
-3. [ ] `content-types/blog.ts` - Blog設定作成
-4. [ ] `content-types/news.ts` - News設定作成
-5. [ ] `content-types/page.ts` - Page設定作成
+3. [x] `content-types/post.tsx` - Post 設定（現行リポジトリで実装済み）
+4. [x] `content-types/news.tsx` - News 設定（同上）
+5. [ ] 固定ページをインラインに載せる場合のみ `content-types/page.tsx` + `ContentTypeId` 拡張（現方針では不要）
 6. [ ] `ContentEditor.tsx` - 統一エディタ作成
 7. [ ] Blog関連ページの移行
 8. [ ] News関連ページの移行

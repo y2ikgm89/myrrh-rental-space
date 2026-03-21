@@ -1,4 +1,3 @@
-// @ts-nocheck — Lexical 原版をほぼそのまま維持（型は upstream に追従）
 /**
  * Lexical `DraggableBlockPlugin` のフォーク（@lexical/react 0.41.0 の LexicalDraggableBlockPlugin をベース）。
  *
@@ -18,6 +17,7 @@ import {
 } from "@lexical/utils";
 import {
   type LexicalEditor,
+  type LexicalNode,
   DRAGOVER_COMMAND,
   COMMAND_PRIORITY_LOW,
   DROP_COMMAND,
@@ -29,7 +29,14 @@ import {
   $onUpdate,
   $getRoot,
 } from "lexical";
-import { useRef, useState, useCallback, useEffect } from "react";
+import {
+  useRef,
+  useState,
+  useCallback,
+  useEffect,
+  type RefObject,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { jsxs, Fragment, jsx } from "react/jsx-runtime";
 
@@ -97,7 +104,18 @@ class Point {
     return Math.sqrt(Math.pow(this.calcDeltaXTo(point), 2) + Math.pow(this.calcDeltaYTo(point), 2));
   }
 }
-function isPoint(x) {
+
+type PointContainment = {
+  reason: {
+    isOnBottomSide: boolean;
+    isOnLeftSide: boolean;
+    isOnRightSide: boolean;
+    isOnTopSide: boolean;
+  };
+  result: boolean;
+};
+
+function isPoint(x: unknown): x is Point {
   return x instanceof Point;
 }
 
@@ -143,11 +161,18 @@ class Rectangle {
     top,
     left,
     bottom,
-    right
+    right,
+  }: {
+    top: number;
+    left: number;
+    bottom: number;
+    right: number;
   }) {
     return top === this._top && bottom === this._bottom && left === this._left && right === this._right;
   }
-  contains(target: Point | Rectangle) {
+  contains(target: Point): PointContainment;
+  contains(target: Rectangle): boolean;
+  contains(target: Point | Rectangle): PointContainment | boolean {
     if (isPoint(target)) {
       const {
         x,
@@ -167,15 +192,14 @@ class Rectangle {
         },
         result
       };
-    } else {
-      const {
-        top,
-        left,
-        bottom,
-        right
-      } = target;
-      return top >= this._top && top <= this._bottom && bottom >= this._top && bottom <= this._bottom && left >= this._left && left <= this._right && right >= this._left && right <= this._right;
     }
+    const {
+      top,
+      left,
+      bottom,
+      right,
+    } = target;
+    return top >= this._top && top <= this._bottom && bottom >= this._top && bottom <= this._bottom && left >= this._left && left <= this._right && right >= this._left && right <= this._right;
   }
   intersectsWith(rect: Rectangle) {
     const {
@@ -209,10 +233,10 @@ class Rectangle {
   }) {
     return new Rectangle(left, top, right, bottom);
   }
-  static fromLTRB(left, top, right, bottom) {
+  static fromLTRB(left: number, top: number, right: number, bottom: number) {
     return new Rectangle(left, top, right, bottom);
   }
-  static fromLWTH(left, width, top, height) {
+  static fromLWTH(left: number, width: number, top: number, height: number) {
     return new Rectangle(left, top, left + width, top + height);
   }
   static fromPoints(startPoint: Point, endPoint: Point) {
@@ -273,7 +297,7 @@ const Downward = 1;
 const Upward = -1;
 const Indeterminate = 0;
 let prevIndex = Infinity;
-function getCurrentIndex(keysLength) {
+function getCurrentIndex(keysLength: number) {
   if (keysLength === 0) {
     return Infinity;
   }
@@ -282,7 +306,7 @@ function getCurrentIndex(keysLength) {
   }
   return Math.floor(keysLength / 2);
 }
-function getTopLevelNodeKeys(editor) {
+function getTopLevelNodeKeys(editor: LexicalEditor): string[] {
   return editor.getEditorState().read(() => $getRoot().getChildrenKeys());
 }
 function getCollapsedMargins(elem: HTMLElement) {
@@ -312,7 +336,15 @@ function getBlockElement(
   let blockElem: HTMLElement | null = null;
   editor.getEditorState().read(() => {
     if (useEdgeAsDefault) {
-      const [firstNode, lastNode] = [editor.getElementByKey(topLevelNodeKeys[0]), editor.getElementByKey(topLevelNodeKeys[topLevelNodeKeys.length - 1])];
+      const firstKey = topLevelNodeKeys[0];
+      const lastKey = topLevelNodeKeys[topLevelNodeKeys.length - 1];
+      if (firstKey === undefined || lastKey === undefined) {
+        return;
+      }
+      const [firstNode, lastNode] = [
+        editor.getElementByKey(firstKey),
+        editor.getElementByKey(lastKey),
+      ];
       const [firstNodeRect, lastNodeRect] = [firstNode != null ? firstNode.getBoundingClientRect() : undefined, lastNode != null ? lastNode.getBoundingClientRect() : undefined];
       if (firstNodeRect && lastNodeRect) {
         const firstNodeZoom = calculateZoomLevel(firstNode);
@@ -331,6 +363,9 @@ function getBlockElement(
     let direction = Indeterminate;
     while (index >= 0 && index < topLevelNodeKeys.length) {
       const key = topLevelNodeKeys[index];
+      if (key === undefined) {
+        break;
+      }
       const elem = editor.getElementByKey(key);
       if (elem === null) {
         break;
@@ -348,13 +383,17 @@ function getBlockElement(
         right: anchorElementRect.right,
         top: domRect.top - marginTop
       });
+      const containment = rect.contains(point);
+      if (typeof containment !== "object") {
+        break;
+      }
       const {
         result,
         reason: {
           isOnTopSide,
           isOnBottomSide
         }
-      } = rect.contains(point);
+      } = containment;
       if (result) {
         blockElem = elem;
         prevIndex = index;
@@ -447,18 +486,28 @@ function hideTargetLine(targetLineElem: HTMLElement | null) {
     targetLineElem.style.transform = 'translate(-10000px, -10000px)';
   }
 }
-function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEditable, menuComponent, targetLineComponent, isOnMenu, onElementChanged) {
+function useDraggableBlockMenu(
+  editor: LexicalEditor,
+  anchorElem: HTMLElement,
+  menuRef: RefObject<HTMLElement | null>,
+  targetLineRef: RefObject<HTMLElement | null>,
+  isEditable: boolean,
+  menuComponent: ReactNode,
+  targetLineComponent: ReactNode,
+  isOnMenu: (element: HTMLElement) => boolean,
+  onElementChanged: ((elem: HTMLElement | null) => void) | undefined,
+) {
   const scrollerElem = anchorElem.parentElement;
   const isDraggingBlockRef = useRef(false);
-  const [draggableBlockElem, setDraggableBlockElemState] = useState(null);
-  const setDraggableBlockElem = useCallback(elem => {
+  const [draggableBlockElem, setDraggableBlockElemState] = useState<HTMLElement | null>(null);
+  const setDraggableBlockElem = useCallback((elem: HTMLElement | null) => {
     setDraggableBlockElemState(elem);
     if (onElementChanged) {
       onElementChanged(elem);
     }
   }, [onElementChanged]);
   useEffect(() => {
-    function onMouseMove(event) {
+    function onMouseMove(event: MouseEvent) {
       const target = event.target;
       if (!isHTMLElement(target)) {
         setDraggableBlockElem(null);
@@ -485,13 +534,16 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
     };
   }, [scrollerElem, anchorElem, editor, isOnMenu, setDraggableBlockElem]);
   useEffect(() => {
-    const zoomLevel = calculateZoomLevel(document.getElementsByClassName('ContentEditable__root')[0], true);
+    const rootCandidate = document.getElementsByClassName("ContentEditable__root")[0];
+    const zoomRoot =
+      rootCandidate instanceof Element ? rootCandidate : anchorElem;
+    const zoomLevel = calculateZoomLevel(zoomRoot, true);
     if (menuRef.current) {
       setMenuPosition(draggableBlockElem, menuRef.current, anchorElem, zoomLevel);
     }
   }, [anchorElem, draggableBlockElem, menuRef]);
   useEffect(() => {
-    function onDragover(event) {
+    function onDragover(event: DragEvent) {
       if (!isDraggingBlockRef.current) {
         return false;
       }
@@ -516,7 +568,7 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
       event.preventDefault();
       return true;
     }
-    function $onDrop(event) {
+    function $onDrop(event: DragEvent) {
       if (!isDraggingBlockRef.current) {
         return false;
       }
@@ -530,7 +582,7 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
         pageY
       } = event;
       const dragData = dataTransfer != null ? dataTransfer.getData(DRAG_DATA_FORMAT) : '';
-      const draggedNode = $getNodeByKey(dragData);
+      const draggedNode: LexicalNode | null = $getNodeByKey(dragData);
       if (!draggedNode) {
         return false;
       }
@@ -570,9 +622,9 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
       }
       return true;
     }
-    return mergeRegister(editor.registerCommand(DRAGOVER_COMMAND, event => {
+    return mergeRegister(editor.registerCommand(DRAGOVER_COMMAND, (event) => {
       return onDragover(event);
-    }, COMMAND_PRIORITY_LOW), editor.registerCommand(DROP_COMMAND, event => {
+    }, COMMAND_PRIORITY_LOW), editor.registerCommand(DROP_COMMAND, (event) => {
       return $onDrop(event);
     }, COMMAND_PRIORITY_HIGH));
   }, [anchorElem, editor, targetLineRef, setDraggableBlockElem]);
@@ -584,8 +636,8 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
     if (!IS_FIREFOX || !isEditable) {
       return;
     }
-    return mergeRegister(editor.registerRootListener((rootElement, prevRootElement) => {
-      function onBlur(event) {
+    return mergeRegister(editor.registerRootListener((rootElement: HTMLElement | null, prevRootElement: HTMLElement | null) => {
+      function onBlur(event: FocusEvent) {
         const relatedTarget = event.relatedTarget;
         if (relatedTarget && relatedTarget instanceof HTMLElement && isOnMenu(relatedTarget)) {
           // Blur is caused by clicking on drag handle - restore focus immediately
@@ -633,7 +685,7 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
       return false;
     }, COMMAND_PRIORITY_HIGH));
   }, [editor, isEditable, isOnMenu]);
-  function onDragStart(event) {
+  function onDragStart(event: DragEvent) {
     const dataTransfer = event.dataTransfer;
     if (!dataTransfer || !draggableBlockElem) {
       return;
@@ -690,6 +742,16 @@ function useDraggableBlockMenu(editor, anchorElem, menuRef, targetLineRef, isEdi
     }), targetLineComponent]
   }), anchorElem);
 }
+type DraggableBlockPluginExperimentalProps = {
+  anchorElem?: HTMLElement;
+  menuRef: RefObject<HTMLElement | null>;
+  targetLineRef: RefObject<HTMLElement | null>;
+  menuComponent: ReactNode;
+  targetLineComponent: ReactNode;
+  isOnMenu: (element: HTMLElement) => boolean;
+  onElementChanged?: (element: HTMLElement | null) => void;
+};
+
 function DraggableBlockPlugin_EXPERIMENTAL({
   anchorElem = document.body,
   menuRef,
@@ -697,8 +759,8 @@ function DraggableBlockPlugin_EXPERIMENTAL({
   menuComponent,
   targetLineComponent,
   isOnMenu,
-  onElementChanged
-}) {
+  onElementChanged,
+}: DraggableBlockPluginExperimentalProps) {
   const [editor] = useLexicalComposerContext();
   return useDraggableBlockMenu(
     editor,

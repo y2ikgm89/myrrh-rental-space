@@ -33,6 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
   Checkbox,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { SortableTableHead } from "@/admin/components/SortableTableHead";
@@ -470,15 +471,11 @@ export function TagManager({ initialTags }: TagManagerProps) {
               >
                 キャンセル
               </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending
-                  ? editingTag
-                    ? "更新中..."
-                    : "作成中..."
-                  : editingTag
-                    ? "更新"
-                    : "作成"}
-              </Button>
+              <SubmitButton
+                isPending={isPending}
+                label={editingTag ? "更新" : "作成"}
+                pendingLabel={editingTag ? "更新中..." : "作成中..."}
+              />
             </DialogFooter>
           </form>
         </DialogContent>

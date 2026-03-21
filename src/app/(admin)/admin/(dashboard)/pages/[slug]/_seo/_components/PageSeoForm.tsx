@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useWatch } from "react-hook-form";
-import { ImagePlus, Save, Loader2 } from "lucide-react";
+import { ImagePlus, Save } from "lucide-react";
 import {
   Button,
   Card,
@@ -23,6 +23,7 @@ import {
   Textarea,
   Label,
   CharCount,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { SerpPreview } from "@/admin/components/seo/SerpPreview";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
@@ -332,14 +333,17 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
         >
           キャンセル
         </Button>
-        <Button type="submit" disabled={isPending || !isDirty}>
-          {isPending ? (
-            <Loader2 className="animate-spin" />
-          ) : (
+        <SubmitButton
+          isPending={isPending}
+          disabled={!isDirty}
+          label="保存"
+          pendingLabel="保存中..."
+        >
+          <>
             <Save className="h-4 w-4 mr-2" />
-          )}
-          {isPending ? "保存中..." : "保存"}
-        </Button>
+            保存
+          </>
+        </SubmitButton>
       </div>
 
       {/* メディアピッカーダイアログ */}

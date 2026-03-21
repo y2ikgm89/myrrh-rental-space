@@ -320,6 +320,12 @@ export async function updatePage(
 }
 ```
 
+### 複雑な管理フォームと `FormData`（`useActionState`）
+
+- **既定**: クライアントは `useFormAction` 経由でオブジェクトを渡し、Server Action が `zod.safeParse` してから `executeAdminMutationResult` する。
+- **例外**（DnD・`useFieldArray`・メディアピッカー等）: `.claude/rules/frontend/admin-ui-patterns.md` の「useFormAction 非適用の例外」に従う。クライアントで検証済みペイロードを **`FormData`** に載せ、**`useActionState(fn, initialState)`** の `fn(prev, formData)` で受け取り、共有コーデックでオブジェクト化して **同一の Zod スキーマでサーバー再検証**したうえで、既存の `createX` / `updateX`（`executeAdminMutationResult`）を呼ぶ。
+- **参照実装**: `submitSpaceFormAction`（`@/admin/actions/space-form-submit`）、`space-form-data-codec.ts`、`SpaceEditForm.tsx`。
+
 ### MutationResult 型と isMutationError
 
 ```typescript

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { Button } from "@/admin/components/ui";
+import { Button, SubmitButton } from "@/admin/components/ui";
 import {
   Dialog,
   DialogContent,
@@ -273,19 +273,12 @@ export function CreatePageDialog() {
             >
               キャンセル
             </Button>
-            <Button
-              type="submit"
-              disabled={isPending || slugStatus === "unavailable"}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  作成中...
-                </>
-              ) : (
-                "作成してエディターを開く"
-              )}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              disabled={slugStatus === "unavailable"}
+              label="作成してエディターを開く"
+              pendingLabel="作成中..."
+            />
           </div>
         </form>
       </DialogContent>

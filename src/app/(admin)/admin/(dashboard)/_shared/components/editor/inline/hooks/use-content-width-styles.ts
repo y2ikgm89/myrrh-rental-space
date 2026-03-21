@@ -21,8 +21,7 @@ import type { ContentWidth } from "@/shared/types/layout";
 // =============================================================================
 
 type UseContentWidthOptions<T extends FieldValues> = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: Control<T, any>;
+  control: Control<T, unknown, T>;
   widthFieldName: Path<T>;
   customFieldName: Path<T>;
   fallback?: ContentWidth | undefined;

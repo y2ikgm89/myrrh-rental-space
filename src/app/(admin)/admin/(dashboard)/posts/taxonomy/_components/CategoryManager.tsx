@@ -32,6 +32,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  SubmitButton,
   Textarea,
   DndContext,
   closestCenter,
@@ -514,15 +515,13 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               >
                 キャンセル
               </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending
-                  ? editingCategory
-                    ? "更新中..."
-                    : "作成中..."
-                  : editingCategory
-                    ? "更新"
-                    : "作成"}
-              </Button>
+              <SubmitButton
+                isPending={isPending}
+                label={editingCategory ? "更新" : "作成"}
+                pendingLabel={
+                  editingCategory ? "更新中..." : "作成中..."
+                }
+              />
             </DialogFooter>
           </form>
         </DialogContent>

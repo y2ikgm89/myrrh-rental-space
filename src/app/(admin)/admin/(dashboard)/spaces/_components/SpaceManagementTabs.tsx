@@ -1,68 +1,82 @@
 "use client";
 
-import { useQueryState, parseAsStringLiteral } from "nuqs";
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/admin/components/ui/tabs";
-import type { ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 import { Button } from "@/admin/components/ui";
 import { CreateCategoryDialog } from "../../_space-categories/_components/CreateCategoryDialog";
+import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
+import { cn } from "@/shared/lib/cn";
 
 // =============================================================================
-// 型定義
+// 型・定数
 // =============================================================================
 
-type TabValue = "spaces" | "locations" | "categories";
+type SpaceManagementTabsProps = {
+  activeTab: AdminSpaceManagementTab;
+  children: ReactNode;
+};
 
-const TAB_VALUES: [TabValue, ...TabValue[]] = [
-  "spaces",
-  "locations",
-  "categories",
+const TAB_ITEMS: { value: AdminSpaceManagementTab; label: string }[] = [
+  { value: "spaces", label: "スペース" },
+  { value: "locations", label: "場所" },
+  { value: "categories", label: "カテゴリー" },
 ];
-const TAB_VALUES_SET = new Set<string>(TAB_VALUES);
 
-function isValidTabValue(value: string): value is TabValue {
-  return TAB_VALUES_SET.has(value);
-}
+const tabTriggerClass = cn(
+  "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-background transition-all duration-200",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "hover:bg-background/50",
+);
 
-interface SpaceManagementTabsProps {
-  spacesContent: ReactNode;
-  locationsContent: ReactNode;
-  categoriesContent: ReactNode;
+function hrefForTab(
+  tab: AdminSpaceManagementTab,
+  current: URLSearchParams,
+): string {
+  const next = new URLSearchParams(current.toString());
+  next.set("tab", tab);
+  const qs = next.toString();
+  return qs ? `/admin/spaces?${qs}` : "/admin/spaces";
 }
 
 // =============================================================================
 // コンポーネント
 // =============================================================================
 
+/**
+ * スペース管理のタブナビ。`Link` で `tab` を切り替え、RSC がアクティブタブのみ再取得する。
+ */
 export function SpaceManagementTabs({
-  spacesContent,
-  locationsContent,
-  categoriesContent,
+  activeTab,
+  children,
 }: SpaceManagementTabsProps) {
-  const [activeTab, setActiveTab] = useQueryState(
-    "tab",
-    parseAsStringLiteral(TAB_VALUES)
-      .withDefault("spaces")
-      .withOptions({ history: "push", shallow: true }),
-  );
-
-  const handleTabChange = (value: string) => {
-    if (isValidTabValue(value)) void setActiveTab(value);
-  };
+  const searchParams = useSearchParams();
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+    <div className="w-full">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <TabsList>
-          <TabsTrigger value="spaces">スペース</TabsTrigger>
-          <TabsTrigger value="locations">場所</TabsTrigger>
-          <TabsTrigger value="categories">カテゴリー</TabsTrigger>
-        </TabsList>
+        <div
+          className="inline-flex h-10 w-fit max-w-full items-center justify-start gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground scrollbar-hide"
+          role="tablist"
+        >
+          {TAB_ITEMS.map(({ value, label }) => (
+            <Link
+              key={value}
+              href={hrefForTab(value, searchParams)}
+              scroll={false}
+              prefetch={false}
+              role="tab"
+              aria-selected={activeTab === value}
+              className={cn(
+                tabTriggerClass,
+                activeTab === value &&
+                  "bg-background text-foreground shadow-sm hover:bg-background",
+              )}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
         {activeTab === "spaces" && (
           <Button asChild>
             <Link href="/admin/spaces/new">新規作成</Link>
@@ -76,27 +90,7 @@ export function SpaceManagementTabs({
         {activeTab === "categories" && <CreateCategoryDialog />}
       </div>
 
-      <TabsContent
-        value="spaces"
-        forceMount
-        className="data-[state=inactive]:hidden"
-      >
-        {spacesContent}
-      </TabsContent>
-      <TabsContent
-        value="locations"
-        forceMount
-        className="data-[state=inactive]:hidden"
-      >
-        {locationsContent}
-      </TabsContent>
-      <TabsContent
-        value="categories"
-        forceMount
-        className="data-[state=inactive]:hidden"
-      >
-        {categoriesContent}
-      </TabsContent>
-    </Tabs>
+      <div role="tabpanel">{children}</div>
+    </div>
   );
 }

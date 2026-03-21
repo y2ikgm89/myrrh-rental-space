@@ -6,6 +6,9 @@
  */
 
 import {
+  ADMIN_SPACE_MANAGEMENT_TABS,
+} from "@/shared/lib/constants/admin-space-management";
+import {
   createParser,
   createSearchParamsCache,
   parseAsArrayOf,
@@ -342,17 +345,17 @@ export async function loadAdminPostSearchParams(
   return adminPostSearchParamsCache.all();
 }
 
-/** 管理画面スペース検索パラメータキャッシュ（SpaceTabContent / LocationTabContent / CategoryTabContent 共用） */
-const adminSpaceSearchParamsCache = createSearchParamsCache({
-  tab: parseAsString.withDefault("spaces"),
+/** 管理画面スペース検索パラメータキャッシュ（スペース管理ページの RSC ツリーで `parse` 後に `get` / `all`） */
+export const adminSpaceSearchParamsCache = createSearchParamsCache({
+  tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault("spaces"),
   search: parseAsQuery,
   status: parseAsString.withDefault(""), // SpaceTabContent: 'true' | 'false' | ''
-  page: parseAsPage, // SpaceTabContent: ページネーション
-  published: parseAsString.withDefault(""), // LocationTabContent: 'true' | ''
-  includeInactive: parseAsString.withDefault(""), // CategoryTabContent: 'true' | ''
+  page: parseAsPage,
+  published: parseAsString.withDefault(""), // LocationTabContent
+  includeInactive: parseAsBoolean.withDefault(false), // CategoryTabContent（クライアントの parseAsBoolean と一致）
 });
 
-/** 管理画面スペース検索パラメータローダー */
+/** 管理画面スペース検索パラメータローダー（`loadAdminPostSearchParams` と同形で `all()` を返す） */
 export async function loadAdminSpaceSearchParams(
   searchParams: Promise<SearchParams>,
 ) {

@@ -16,6 +16,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  SubmitButton,
 } from "@/admin/components/ui";
 import {
   updateSpaceCategory,
@@ -103,9 +104,12 @@ export function CategoryActionCell({ category }: CategoryActionCellProps) {
             >
               キャンセル
             </Button>
-            <Button type="submit" form="category-form" disabled={isEditPending}>
-              {isEditPending ? "更新中..." : "更新"}
-            </Button>
+            <SubmitButton
+              form="category-form"
+              isPending={isEditPending}
+              label="更新"
+              pendingLabel="更新中..."
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

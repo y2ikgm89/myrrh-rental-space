@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  SubmitButton,
 } from "@/admin/components/ui";
 import { isValidSocialPlatform } from "@/shared/lib/validations/enums";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -157,15 +158,11 @@ export function NavigationDialog({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && editingItem
-                ? "更新中..."
-                : isPending
-                  ? "作成中..."
-                  : editingItem
-                    ? "更新"
-                    : "作成"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={editingItem ? "更新" : "作成"}
+              pendingLabel={editingItem ? "更新中..." : "作成中..."}
+            />
           </DialogFooter>
         </form>
       </DialogContent>
@@ -298,15 +295,11 @@ export function SocialLinkDialog({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending && editingLink
-                ? "更新中..."
-                : isPending
-                  ? "作成中..."
-                  : editingLink
-                    ? "更新"
-                    : "作成"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label={editingLink ? "更新" : "作成"}
+              pendingLabel={editingLink ? "更新中..." : "作成中..."}
+            />
           </DialogFooter>
         </form>
       </DialogContent>

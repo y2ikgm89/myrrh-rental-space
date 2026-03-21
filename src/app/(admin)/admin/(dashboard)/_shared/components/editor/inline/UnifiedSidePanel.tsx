@@ -3,8 +3,8 @@
 /**
  * 統一サイドパネル
  *
- * ContentTypeConfigに基づいて動的にタブとセクションを描画
- * 全コンテンツタイプで共通のUI構造を提供
+ * ContentTypeConfig.sidePanel のタブ・セクションを `render(ctx)` で描画する。
+ * ctx は RHF（register / control / …）とコンテンツ種別固有の extraProps をマージしたもの。
  */
 
 import { useLayoutEffect, useMemo, useState } from "react";
@@ -21,7 +21,10 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import { SidePanelShell } from "./SidePanelShell";
-import type { UnifiedSidePanelProps } from "./content-types/types";
+import type {
+  SidePanelRenderContext,
+  UnifiedSidePanelProps,
+} from "./content-types/types";
 
 type TabCount = 2 | 3 | 4 | 5;
 const VALID_TAB_COUNTS = new Set<number>([2, 3, 4, 5]);
@@ -48,7 +51,27 @@ const styles = tv({
   },
 });
 
-export function UnifiedSidePanel<T extends FieldValues>({
+function buildRenderContext<TForm extends FieldValues, TExtra extends Record<string, unknown>>(
+  base: {
+    register: UnifiedSidePanelProps<TForm, TExtra>["register"];
+    control: UnifiedSidePanelProps<TForm, TExtra>["control"];
+    errors: UnifiedSidePanelProps<TForm, TExtra>["errors"];
+    setValue: UnifiedSidePanelProps<TForm, TExtra>["setValue"];
+    getValues: UnifiedSidePanelProps<TForm, TExtra>["getValues"];
+    disabled: UnifiedSidePanelProps<TForm, TExtra>["disabled"];
+  },
+  extraProps: TExtra,
+): SidePanelRenderContext<TForm, TExtra> {
+  const { disabled, ...rest } = base;
+  return disabled === undefined
+    ? { ...rest, ...extraProps }
+    : { ...rest, ...extraProps, disabled };
+}
+
+export function UnifiedSidePanel<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown> = Record<string, never>,
+>({
   isOpen,
   onClose,
   config,
@@ -58,22 +81,20 @@ export function UnifiedSidePanel<T extends FieldValues>({
   setValue,
   getValues,
   disabled,
-  extraProps = {},
-}: UnifiedSidePanelProps<T>) {
+  extraProps,
+}: UnifiedSidePanelProps<TForm, TExtra>) {
   const tabCount = isValidTabCount(config.tabs.length)
     ? config.tabs.length
     : undefined;
   const classes = styles({ tabCount });
 
-  // 最初のタブをデフォルト値として使用
   const defaultTab = config.tabs[0]?.id ?? "basic";
   const tabIds = useMemo(() => config.tabs.map((t) => t.id), [config.tabs]);
   const validTabIds = useMemo(() => new Set(tabIds), [tabIds]);
 
   const [activeTab, setActiveTab] = useState(defaultTab);
 
-  // localStorage は SSR 初回描画では読めないため、ハイドレーション後にのみ復元する
-  /* eslint-disable react-hooks/set-state-in-effect -- 上記 */
+  /* eslint-disable react-hooks/set-state-in-effect -- localStorage は SSR 後のみ復元 */
   /* eslint-disable @eslint-react/set-state-in-effect -- 上記 */
   useLayoutEffect(() => {
     if (!config.tabStorageKey) return;
@@ -91,6 +112,11 @@ export function UnifiedSidePanel<T extends FieldValues>({
       window.localStorage.setItem(config.tabStorageKey, value);
     }
   };
+
+  const sectionContext = buildRenderContext(
+    { register, control, errors, setValue, getValues, disabled },
+    extraProps,
+  );
 
   return (
     <SidePanelShell
@@ -122,30 +148,15 @@ export function UnifiedSidePanel<T extends FieldValues>({
             className={classes.tabContent()}
           >
             <div className={classes.sectionWrapper()}>
-              {tab.sections.map((section, index) => {
-                const SectionComponent = section.component;
-
-                return (
-                  // eslint-disable-next-line @eslint-react/no-array-index-key
-                  <Card key={`${tab.id}-${index}`}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">{section.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <SectionComponent
-                        register={register}
-                        control={control}
-                        errors={errors}
-                        setValue={setValue}
-                        getValues={getValues}
-                        disabled={disabled}
-                        {...(section.props ?? {})}
-                        {...extraProps}
-                      />
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {tab.sections.map((section, index) => (
+                // eslint-disable-next-line @eslint-react/no-array-index-key
+                <Card key={`${tab.id}-${index}`}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">{section.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>{section.render(sectionContext)}</CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         ))}

@@ -1,7 +1,7 @@
 /**
  * コンテンツタイプ設定のエクスポート
  *
- * Post/News/Pageエディタの統一設定
+ * Post / News インラインエディタの統一設定（固定ページは別ルート）
  */
 
 // 型定義
@@ -15,9 +15,13 @@ export type {
   TagOption,
 
   // サイドパネル型
-  SidePanelConfig,
-  TabDefinition,
-  SectionDefinition,
+  SidePanelDefinition,
+  SidePanelTabDefinition,
+  SidePanelSectionDefinition,
+  SidePanelRenderContext,
+  SidePanelInjectedProps,
+  PostSidePanelExtra,
+  NewsSidePanelExtra,
   FieldComponentProps,
   UnifiedSidePanelProps,
 

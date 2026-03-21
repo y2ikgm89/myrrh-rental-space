@@ -393,6 +393,10 @@ const { params, setCategory } = useFilterParamsWithCategory({
    useQueryStates(parsers, { history: "push", shallow: false });
    ```
 
+   **例外・補足**
+   - **RSC 一覧タブ**で URL の `searchParams` を正にしたい場合は、`Link` でクエリを更新するか `shallow: false` を使う（`admin-ui-patterns.md` のタブ (B)・スペース管理参照実装）。
+   - **同一ページ内のクライアント専用タブ**（例: 編集フォームの「基本 / 料金」切替で RSC を再取得しない）は `shallow: true` や `useQueryState` のみでもよい。
+
 ## ファイル配置
 
 | パス                                 | 内容                                                    |

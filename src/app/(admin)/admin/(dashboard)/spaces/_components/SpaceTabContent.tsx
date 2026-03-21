@@ -4,28 +4,15 @@ import { SpaceFilters } from "./SpaceFilters";
 import { SpaceTable } from "./SpaceTable";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
-import type { SearchParams } from "nuqs/server";
-
-// =============================================================================
-// 型定義
-// =============================================================================
-
-interface SpaceTabContentProps {
-  searchParams: Promise<SearchParams>;
-}
 
 // =============================================================================
 // 内部コンポーネント
 // =============================================================================
 
-async function SpaceList({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const params = await loadAdminSpaceSearchParams(searchParams);
+async function SpaceList() {
+  const params = adminSpaceSearchParamsCache.all();
 
   let isPublished: boolean | "ALL" = "ALL";
   if (params.status === "true") {
@@ -52,17 +39,17 @@ async function SpaceList({
 }
 
 // =============================================================================
-// メインコンポーネント
+// メインコンポーネント（親ページで `adminSpaceSearchParamsCache.parse` 済みであること）
 // =============================================================================
 
-export async function SpaceTabContent({ searchParams }: SpaceTabContentProps) {
+export async function SpaceTabContent() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>
         <SpaceFilters />
       </Suspense>
       <Suspense fallback={<LoadingState />}>
-        <SpaceList searchParams={searchParams} />
+        <SpaceList />
       </Suspense>
     </div>
   );

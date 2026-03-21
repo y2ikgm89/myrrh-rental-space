@@ -27,6 +27,7 @@ import {
   useNewsEditor,
   useContentWidth,
   newsConfig,
+  type NewsSidePanelExtra,
 } from "@/admin/components/editor/inline";
 import type { NewsData } from "@/shared/domain/news/types";
 import type { ContentWidth } from "@/shared/types";
@@ -126,7 +127,7 @@ export function NewsEditor({
     onIsPublishedChange: (value: boolean) => {
       editor.form.setValue("isPublished", value);
     },
-  };
+  } satisfies NewsSidePanelExtra;
 
   return (
     <InlineEditorShell

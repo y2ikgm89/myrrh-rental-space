@@ -44,11 +44,13 @@
 
 Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。`（Task）` 注釈があるもののみ Task ツール経由、それ以外は全て Skill ツール。
 
+リポジトリ定義スキルは **`.agents/skills/<name>/SKILL.md` が手順の正本**；**`.claude/skills/<name>/SKILL.md` はスタブ**（正本パスへのポインタ）。一覧・作成基準は `.agents/skills/README.md`。
+
 - **常に必須**: `test-driven-development`（実装時）、`verification-before-completion`（完了報告前）
 - **設計・計画**: `brainstorming` → `writing-plans` → `subagent-driven-development` / `finishing-a-development-branch`
 - **UI 実装**: `frontend-design`、`create-admin-page`、`create-page-content`、`create-server-action`
 - **スキーマ・設定**: `add-settings-field`、`prisma-migration`、`split-action-file`、`upgrade-deps`
-- **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`、`new-section`（手順の正本は **`.agents/skills/`**；`.claude/skills` の同名は **スタブ** → 正本と `reference/scaffold-*.md` を開く）。Lexical 監査・モダナイズ・`@lexical/react` 更新後のフォーク差分は **`.agents/skills/lexical-audit`** と `lexical-patterns.md`（`.claude/rules/frontend/lexical-patterns.md` は `paths:` 条件付きで同一方針）
+- **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`、`new-section`（長いひな形は `reference/scaffold-*.md`）。Lexical 監査・モダナイズ・`@lexical/react` 更新後のフォーク差分は **`.agents/skills/lexical-audit`** と `lexical-patterns.md`（`.claude/rules/frontend/lexical-patterns.md` は `paths:` 条件付きで同一方針）
 - **問題対応**: `systematic-debugging`、`stripe-debug`、`google-calendar-debug`、`turbopack-hmr`
 - **レビュー・メンテ**: `requesting-code-review`、`receiving-code-review`、`audit-settings-sections`、`claude-md-management:claude-md-improver`、`claude-md-management:revise-claude-md`
 - **リファクタリング**: `code-simplifier:code-simplifier`（Task）
@@ -144,6 +146,11 @@ prisma/                          # schema.prisma, migrations/, seed.ts
 - `showInspector={false}` でサイドバー無効、幅 1024px 未満で `MobileEditorFallback`（headless HTML プレビュー）
 - 初期化は `contentJson` のみ（空は `EMPTY_LEXICAL_EDITOR_STATE_JSON`）
 
+### インラインコンテンツエディタ（Post/News・メタデータサイドパネル）
+
+- 実装ディレクトリ: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/`（`UnifiedSidePanel`, `content-types/post.tsx` / `news.tsx`）
+- 詳細（`SidePanelDefinition` / `render(ctx)` / `PostSidePanelExtra` 等）: **`.claude/rules/frontend/admin-inline-editor-patterns.md`**（`docs/reference/codex-rules/admin-inline-editor-patterns.md` と同一方針）
+
 ### コマンド
 
 ```bash
@@ -176,6 +183,7 @@ bun update                                      # semver 範囲内の依存パ�
 - Zod バリデーション必須
 - フォーム送信ボタン: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）
 - 設定セクション: `useFormAction` + `Form`/`FormField`/`FormMessage` + `disabled={!form.formState.isDirty}` → `admin-ui-patterns.md`
+- **複雑な管理 CRUD フォーム**（DnD・`useFieldArray`・メディアピッカー等）: `admin-ui-patterns.md` の「useFormAction 非適用の例外」に従い、**`useActionState` + `FormData` + Server Action** 可。参照実装: `SpaceEditForm`、`submitSpaceFormAction`、`@/admin/lib/space-form-data-codec`（詳細は `.claude/rules/server-actions.md` の「複雑な管理フォームと FormData」）
 - 設定セクションのスキーマ: Server Action 用（`nullable()`）とフォーム用（空文字列許容）は責務分離。`emptyToNull()` で送信時変換
 - 命名: 管理画面コンポーネント `PascalCase.tsx`、公開ページコンポーネント `kebab-case.tsx`、その他 `kebab-case.ts`
 - 公開ページ: Page-First Architecture — ページ構成はコードで直接定義、`SectionRenderer` は `[...segments]` のみ

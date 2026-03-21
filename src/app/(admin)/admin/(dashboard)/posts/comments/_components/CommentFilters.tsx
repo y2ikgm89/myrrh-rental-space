@@ -6,7 +6,7 @@
 
 import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
 import { Search, X } from "lucide-react";
-import { Input, Button } from "@/admin/components/ui";
+import { Button, Input, SubmitButton } from "@/admin/components/ui";
 import { getFormString } from "@/shared/lib/utils";
 
 interface StatusOption {
@@ -83,9 +83,12 @@ export function CommentFilters() {
             </button>
           )}
         </div>
-        <Button type="submit" variant="outline" size="sm">
-          検索
-        </Button>
+        <SubmitButton
+          isPending={false}
+          label="検索"
+          variant="outline"
+          size="sm"
+        />
       </form>
     </div>
   );

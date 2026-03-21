@@ -1,7 +1,7 @@
 /**
  * Instagram バリデーションテスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/lib/validations/instagram.ts のユニットテスト
+ * 正本: src/shared/lib/validations/instagram.ts
  */
 
 import { describe, test, expect } from "bun:test";
@@ -13,7 +13,7 @@ import {
   isValidInstagramPostUrl,
   isValidInstagramToken,
   extractInstagramShortcode,
-} from "@/admin/lib/validations/instagram";
+} from "@/shared/lib/validations/instagram";
 
 describe("instagramSettingsSchema", () => {
   describe("正常系", () => {

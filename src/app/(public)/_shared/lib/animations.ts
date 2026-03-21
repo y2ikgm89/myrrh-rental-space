@@ -13,14 +13,8 @@ export const DURATION = {
   fast: 0.3,
   normal: 0.6,
   slow: 0.8,
-  /** Hero entrance — new pages use 1.2s */
+  /** Hero entrance — Page-First / Hero 系で統一 */
   hero: 1.2,
-
-  // Legacy compat — used by existing section components (HeroSection, StandardHeroSection)
-  /** @deprecated Use `hero` instead — legacy hero sections used 1.5s */
-  xslow: 1.2,
-  /** Legacy hero duration for existing HeroSection/StandardHeroSection */
-  legacyHero: 1.5,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -34,7 +28,7 @@ export const EASE = {
   inOut: "power2.inOut",
   elastic: "elastic.out(1, 0.3)",
 
-  // Full set — keep until legacy component refactoring
+  // Full set（ScrollReveal / セクション演出のバリエーション用）
   /** Smooth deceleration — general entrance */
   outExpo: "expo.out",
   /** Medium deceleration — UI interactions, overlays */

@@ -301,6 +301,12 @@ export const updatePage = withPermission<[string, PageInput]>(
 });
 ```
 
+### Myrrh 現行実装（Claude ルールとの整合）
+
+本リポジトリの管理画面 Server Action の**正本**は **`.claude/rules/server-actions.md`**（`executeAdminMutationResult`、`MutationResult`、`updateTag`）。上記の `withPermission` / `ActionResult` は歴史的説明または別パターンの参考として読み替えること。
+
+**複雑な管理フォーム**（DnD・複数 `useFieldArray`・メディアピッカー等）で **`FormData` + React 19 `useActionState`** を使う場合は、`.claude/rules/server-actions.md` の「**複雑な管理フォームと FormData（useActionState）**」および `.claude/rules/frontend/admin-ui-patterns.md` の「useFormAction 非適用の例外」を参照（参照実装: `SpaceEditForm`、`submitSpaceFormAction`、`space-form-data-codec.ts`）。
+
 ### ActionResult 型と createSuccess / createFailure
 
 ```typescript

@@ -9,37 +9,44 @@ paths:
 
 ## タブUI パターン（管理画面 CRUD）
 
-管理画面の CRUD タブページは以下を組み合わせて実装する:
+タブ付き CRUD は **用途で (A) / (B) を選ぶ**。アクションボタンは従来どおり **タブリスト右端**（タブがコンテキストを持つため、ページヘッダー単独に置かない）。
 
-| 設定                     | 値             | 理由                                                                 |
-| ------------------------ | -------------- | -------------------------------------------------------------------- |
-| `shallow`                | `true`         | タブ切り替えで RSC 再レンダリングしない（即時切り替え）              |
-| `TabsContent forceMount` | `true`         | 非アクティブタブを DOM 保持（再マウント防止）                        |
-| コンテンツレンダリング   | 全タブ常時     | 初回ロードで一括取得、以降は再フェッチなし                           |
-| アクションボタン         | タブリスト右端 | タブがコンテキストを持つため、ページヘッダーではなくタブと同行に配置 |
+### (A) 重いクライアント状態をタブ間で保持したい
+
+Lexical や複雑なフォーム状態を **非表示タブでもマウントしたまま** にしたい場合。
+
+| 設定                     | 値             | 理由                                                   |
+| ------------------------ | -------------- | ------------------------------------------------------ |
+| `shallow`                | `true`         | タブ切り替えで RSC を再実行しない（即時切り替え）    |
+| `TabsContent forceMount` | `true`         | 非アクティブタブを DOM 保持（再マウント防止）        |
+| コンテンツレンダリング   | 全タブ常時     | 初回で一括取得、以降は同一マウント内で切り替えのみ   |
 
 ```tsx
-// 推奨パターン（SpaceManagementTabs.tsx が実装例）
 const [activeTab, setActiveTab] = useQueryState(
   "tab",
   parseAsStringLiteral(TAB_VALUES)
-    .withDefault("spaces")
-    .withOptions({ history: "push", shallow: true }),  // ← shallow: true
+    .withDefault("posts")
+    .withOptions({ history: "push", shallow: true }),
 );
 
-// タブリストとアクションボタンを同行に配置
-<div className="mb-2 flex items-center justify-between">
-  <TabsList>...</TabsList>
-  {activeTab === "spaces" && <Button asChild><Link href="/admin/spaces/new">新規作成</Link></Button>}
-</div>
-
-// 全タブを常時レンダリング + forceMount で DOM 保持
-// Lexical エディタ等の重いコンポーネントを含む場合: forceMount（DOM保持）+ data-[state=inactive]:hidden（CSS非表示）をセットで
-<TabsContent value="spaces" forceMount className="data-[state=inactive]:hidden">{spacesContent}</TabsContent>
-<TabsContent value="locations" forceMount className="data-[state=inactive]:hidden">{locationsContent}</TabsContent>
+<TabsContent value="posts" forceMount className="data-[state=inactive]:hidden">
+  {postsContent}
+</TabsContent>
 ```
 
-**禁止**: `shallow: false` + 条件付きレンダリング（タブ切り替えのたびに RSC 再レンダリング + Suspense ローディングが発生する）
+### (B) 各タブが Server Components の一覧のみ（データ取得を抑えたい）
+
+タブごとの中身が **軽量な RSC（テーブル・フィルタ）** だけのときは、**アクティブタブの RSC だけ** を描画する。親ページで `createSearchParamsCache` を `parse` し、`tab` で分岐する。タブ切替は **`Link`（または `shallow: false` の URL 更新）** で `searchParams` を変え、Next.js が RSC を再実行する。
+
+**参照実装**: `src/app/(admin)/admin/(dashboard)/spaces/page.tsx` と `spaces/_components/SpaceManagementTabs.tsx`。`tab` は `src/shared/lib/constants/admin-space-management.ts` の `ADMIN_SPACE_MANAGEMENT_TABS` と `src/shared/lib/nuqs/parsers.ts` の `adminSpaceSearchParamsCache` でサーバー・クライアント一致させる。
+
+| 設定                     | 値                                      | 理由                                                         |
+| ------------------------ | --------------------------------------- | ------------------------------------------------------------ |
+| サーバー                 | `parse` 後に `tab` で条件付き 1 パネル | 非表示タブの `getLocations` 等を初回から走らせない         |
+| タブナビ                 | `Link` + 既存クエリの preserve          | RSC 再取得が必要なときに明示的なナビゲーションになる         |
+| 子のデータ読み           | `searchParamsCache.all()` / `get`       | 親で `parse` 済みなら子で二重 `parse` を避ける               |
+
+**(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧＋フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 
 ---
 
@@ -735,6 +742,7 @@ const [testPending, startTestTransition] = useTransition();
 - 読み取り専用 UI（PermissionsSection）
 - Lexical エディタ（RobotsTxtSection）
 - 複雑なネスト配列（BusinessHoursSection — 曜日×時間帯）
+- **スペース作成・編集フォーム**（`SpaceEditForm`）— DnD・メディアピッカー・`useFieldArray` 等のため RHF は維持し、送信のみ React 19 **`useActionState` + `FormData` + Server Action**（`submitSpaceFormAction`）へ統一。ペイロード変換は `spaceEditFormDataToSpaceFormPayload`、シリアライズは `@/admin/lib/space-form-data-codec`（`spaceFormSchema` でサーバー再検証）
 
 **禁止:**
 

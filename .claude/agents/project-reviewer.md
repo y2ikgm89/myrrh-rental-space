@@ -5,7 +5,7 @@ description: >
   Use proactively after writing or modifying code. Reviews for type safety (no `as` assertions),
   semantic color tokens (no hardcoded colors), React Compiler compatibility,
   eslint-react v3 patterns (no IIFE in JSX, no component-in-hook), Server Actions patterns,
-  Zod 4 validation, and all 29 project rules. Catches violations before they reach CI.
+  Zod 4 validation, and applicable `.claude/rules/**/*.md` (path-scoped where frontmatter says so). Catches violations before they reach CI.
 disallowedTools:
   - Write
   - Edit
@@ -109,6 +109,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - サイドバーナビホバー: `hover:bg-sidebar-nav-hover` (not `hover:bg-white/5`)
 - ページネーション: `<nav aria-label="...">` not bare `<div>`, `void setPage()` for Promise
 - 型 re-export 禁止: `@/admin/types/server-actions` から直接使用
+- **フォーム**: `.claude/rules/frontend/admin-ui-patterns.md` の「useFormAction 非適用の例外」と整合するか。複雑フォームの参照は `SpaceEditForm`（`useActionState` + `FormData` + `submitSpaceFormAction`）。標準 CRUD は `useFormAction`。`useFormStatus` で pending を取らない（`SubmitButton` + `isPending` prop）
 
 **`src/app/(admin)/**/lexical/**`**:
 
@@ -116,6 +117,13 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - Node properties must be JSON-serializable
 - `mergeRegister` imported from `lexical` (moved from `@lexical/utils` in 0.40)
 - No top-level Lexical imports in Server Actions — use `lazy-renderer.ts` dynamic import
+
+**`src/app/(admin)/**/editor/inline/**`**, **`PostEditor.tsx`**, **`NewsEditor.tsx`**:
+
+- Read `.claude/rules/frontend/admin-inline-editor-patterns.md` (synced with `docs/reference/codex-rules/admin-inline-editor-patterns.md`)
+- Side panel: **`SidePanelDefinition` + `render(ctx)`**; **`extraProps` and `getValues` required** on `UnifiedSidePanel`
+- Do not reintroduce **`component` + `props` + `ComponentType<any>`** section registry for the metadata panel
+- Only **`LayoutFields`** may use the documented **`any` + eslint-disable** escape (RHF generic invariance); do not expand `any` elsewhere in `side-panel/`
 
 **`src/app/(public\*)/**/seo/**`or`**/layouts/**`**:
 

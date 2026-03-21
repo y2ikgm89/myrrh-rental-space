@@ -32,18 +32,41 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 
 ## 現在の skill
 
-### Core workflow
+Claude Code 利用者は `.claude/skills/<name>/SKILL.md` スタブからここへ誘導される。
+
+### Core workflow（公開 UI）
 
 - `frontend-design`: 公開ページ UI 実装前に design brief を固める
 - `parallax-section`: GSAP / ScrollTrigger ベースのスクロール演出セクションを組む
 - `ui-ux-pro-max`: 付属データベースを検索して UI 方針やレビュー観点を集める
 
-### Lexical workflow
+### Admin / スキャフォールド
 
-- `lexical-node`: カスタム Lexical ノードを作る（任意の長ひな形: `reference/scaffold-lexical-node.md`）
-- `lexical-plugin`: カスタム Lexical プラグインを作る（任意: `reference/scaffold-lexical-plugin.md`）
-- `lexical-toolbar`: Lexical ツールバーを拡張する（任意: `reference/scaffold-lexical-toolbar.md`）
-- `lexical-audit`: Lexical 実装を監査し、deprecated / private API を除去して現行推奨へ寄せる
+- `create-admin-page`: 管理画面 CRUD 一式（`admin-ui-patterns` 準拠）
+- `create-server-action`: Server Action + Zod フルスキャフォールド
+- `create-page-content`: Page-First 公開ページコンテンツ一式
+- `add-settings-field`: Settings シングルトン 4 箇所更新パターン
+- `audit-settings-sections`: 設定セクション品質監査
+- `split-action-file`: 500 行超アクションを queries / mutations に分割
+- `new-section`: Component-Driven Sections の新セクション定義
+
+### スキーマ・依存・ビルド
+
+- `prisma-migration`: スキーマ変更後の migrate / generate 手順
+- `upgrade-deps`: `bun outdated` から validate / build までの更新フロー
+
+### 診断・トラブルシュート
+
+- `stripe-debug`: Stripe 接続・Webhook 診断
+- `google-calendar-debug`: Calendar 同期診断
+- `turbopack-hmr`: Next.js 16 境界越し HMR 失敗の回復
+
+### Lexical（管理エディタ）
+
+- `lexical-node`: カスタムノード（長ひな形: `reference/scaffold-lexical-node.md`）
+- `lexical-plugin`: カスタムプラグイン（`reference/scaffold-lexical-plugin.md`）
+- `lexical-toolbar`: ツールバー拡張（`reference/scaffold-lexical-toolbar.md`）
+- `lexical-audit`: deprecated / private API 除去と現行 API への寄せ
 
 ## 追加判断
 
@@ -59,6 +82,7 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 
 skill を変更したら次も確認する。
 
+- **`.claude/skills/<name>/SKILL.md` スタブ**の `description` を正本と矛盾させない（発火条件の変更はスタブにも反映）
 - 参照先が `docs/reference/codex-rules/` に揃っているか
 - `scripts/` や `reference/` の相対パスが正しいか
 - DoD がこの repo の検証コマンドに合っているか

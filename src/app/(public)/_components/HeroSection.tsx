@@ -65,7 +65,7 @@ export function HeroSection({
           {
             opacity: 1,
             y: 0,
-            duration: DURATION.legacyHero,
+            duration: DURATION.hero,
             ease: EASE.outExpo,
             delay: 0.3,
           },

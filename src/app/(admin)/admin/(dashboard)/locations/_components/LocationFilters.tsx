@@ -1,7 +1,13 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import {
+  useQueryStates,
+  parseAsString,
+  parseAsInteger,
+  parseAsStringLiteral,
+} from "nuqs";
+import { ADMIN_SPACE_MANAGEMENT_TABS } from "@/shared/lib/constants/admin-space-management";
 import { useRef, useEffect } from "react";
 import {
   Select,
@@ -26,7 +32,9 @@ export function LocationFilters() {
       search: parseAsString.withDefault(""),
       published: parseAsString.withDefault(""),
       page: parseAsInteger.withDefault(1),
-      tab: parseAsString.withDefault("locations"),
+      tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault(
+        "locations",
+      ),
     },
     {
       history: "push",

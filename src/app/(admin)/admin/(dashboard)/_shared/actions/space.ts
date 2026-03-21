@@ -23,6 +23,8 @@ import {
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
 
+export type { SpaceSelectOption } from "@/admin/lib/validations/space";
+
 async function renderDescriptionHtml(
   value: string | null | undefined,
 ): Promise<string | null> {
@@ -33,15 +35,6 @@ async function renderDescriptionHtml(
 
   return value;
 }
-
-export type SpaceSelectOption = {
-  id: string;
-  slug: string;
-  name: string;
-  mainImageUrl: string;
-  hourlyPrice: string;
-  capacity: number;
-};
 
 function revalidateSpaces(...ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);

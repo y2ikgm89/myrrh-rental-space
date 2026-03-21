@@ -20,6 +20,7 @@ import {
   CardTitle,
   Input,
   Label,
+  SubmitButton,
   Tabs,
   TabsContent,
   TabsList,
@@ -391,15 +392,18 @@ function TitleForm({
           空欄の場合はデフォルトのタイトルが使用されます
         </p>
       </div>
-      <Button
-        type="submit"
+      <SubmitButton
+        isPending={isPending || isUpdating}
+        label="タイトルを保存"
+        pendingLabel="保存中..."
         variant="outline"
         size="sm"
-        disabled={isPending || isUpdating}
       >
-        <Save className="h-4 w-4 mr-2" />
-        タイトルを保存
-      </Button>
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          タイトルを保存
+        </>
+      </SubmitButton>
     </form>
   );
 }

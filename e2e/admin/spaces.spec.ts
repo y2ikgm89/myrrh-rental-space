@@ -267,22 +267,31 @@ test.describe("スペースの編集", () => {
       .first();
     await firstEditButton.click();
 
+    await expect(page).toHaveURL(/\/admin\/spaces\/[a-f0-9-]+\/edit/);
+
+    const uniqueSuffix = Date.now().toString();
+    const newName = `更新されたスペース名-${uniqueSuffix}`;
+
     // フォームを編集
     const nameInput = page.locator('input[name="name"]');
-    await nameInput.fill("更新されたスペース名");
+    await nameInput.fill(newName);
 
     const capacityInput = page.locator('input[name="capacity"]');
     await capacityInput.fill("15");
 
-    // 送信
+    // 送信（useActionState 経路: 成功後も編集ページに留まり refresh）
     const submitButton = page.locator('button[type="submit"]');
     await submitButton.click();
 
-    // リダイレクトを待機
-    await page.waitForURL(urls.adminSpaces, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/admin\/spaces\/[a-f0-9-]+\/edit/, {
+      timeout: 15000,
+    });
+    await expect(page.getByText("スペースを保存しました")).toBeVisible({
+      timeout: 15000,
+    });
 
-    // 一覧ページで更新を確認
-    await expect(page.locator("text=更新されたスペース名")).toBeVisible();
+    await page.goto(urls.adminSpaces);
+    await expect(page.getByText(newName)).toBeVisible();
   });
 
   test("戻るボタンで一覧ページに戻れる", async ({ page }) => {

@@ -1,11 +1,10 @@
 "use client";
 
 /**
- * レイアウト設定フィールド
+ * レイアウト設定フィールド（インライン Post / News 用）
  *
- * コンテンツ幅の個別設定
- * サイドバー表示設定
- * デフォルト（サイト設定）または個別指定を選択可能
+ * コンテンツ幅の個別設定のみ。ブログ記事・お知らせに `showSidebar` カラムは無いため
+ * 当 UI では扱わない。固定ページのサイドバーは `validations/page` とページ編集フォームで永続化する。
  */
 
 import { useWatch } from "react-hook-form";
@@ -19,6 +18,13 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import type { SidePanelSectionProps } from "../types";
+
+/**
+ * RHF の Control / Register はジェネリクス不変のため、Post と News を 1 ジェネリクスに束ねると Path が破綻する。
+ * 本コンポーネントは `contentWidth` / `contentWidthCustom` のみ参照し、両フォームのスキーマに含める。
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 上記 RHF 境界（旧 SectionDefinition の component: any と同格）
+type LayoutFieldsProps = SidePanelSectionProps<any>;
 
 interface ContentWidthOption {
   value: string;
@@ -39,43 +45,20 @@ const CONTENT_WIDTH_OPTIONS: readonly ContentWidthOption[] = [
   { value: "CUSTOM", label: "カスタム", description: "任意の幅を指定" },
 ];
 
-interface SidebarOption {
-  value: string;
-  label: string;
-  description: string;
-}
-
-const SIDEBAR_OPTIONS: readonly SidebarOption[] = [
-  {
-    value: "default",
-    label: "デフォルト（非表示）",
-    description: "カスタムページは通常非表示",
-  },
-  { value: "true", label: "表示", description: "サイドバーを表示" },
-  { value: "false", label: "非表示", description: "サイドバーを非表示" },
-];
-
 export function LayoutFields({
   register,
   control,
   errors,
   setValue,
+  getValues: _getValues,
   disabled,
-}: SidePanelSectionProps) {
-  const contentWidth = useWatch({ control, name: "contentWidth" }) || "DEFAULT";
-  const showSidebarValue = useWatch({ control, name: "showSidebar" });
-
-  // showSidebar を文字列に変換（null → 'default', true → 'true', false → 'false'）
-  const sidebarSelectValue =
-    showSidebarValue === null || showSidebarValue === undefined
-      ? "default"
-      : showSidebarValue
-        ? "true"
-        : "false";
+}: LayoutFieldsProps) {
+  void _getValues;
+  const contentWidth =
+    useWatch({ control, name: "contentWidth" }) || "DEFAULT";
 
   return (
     <div className="space-y-6">
-      {/* コンテンツ幅設定 */}
       <div className="space-y-2">
         <Label htmlFor="contentWidth">コンテンツ幅</Label>
         <Select
@@ -133,41 +116,6 @@ export function LayoutFields({
           </p>
         </div>
       )}
-
-      {/* サイドバー表示設定 */}
-      <div className="space-y-2">
-        <Label htmlFor="showSidebar">サイドバー表示</Label>
-        <Select
-          value={sidebarSelectValue}
-          onValueChange={(value) => {
-            // 'default' → null, 'true' → true, 'false' → false
-            const booleanValue = value === "default" ? null : value === "true";
-            setValue?.("showSidebar", booleanValue);
-          }}
-          {...(disabled !== undefined && { disabled })}
-        >
-          <SelectTrigger id="showSidebar">
-            <SelectValue placeholder="デフォルト（非表示）" />
-          </SelectTrigger>
-          <SelectContent>
-            {SIDEBAR_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex flex-col">
-                  <span>{option.label}</span>
-                  {option.description && (
-                    <span className="text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">
-          ブログサイドバー（検索・新着・人気・カテゴリー・タグ）の表示設定
-        </p>
-      </div>
     </div>
   );
 }

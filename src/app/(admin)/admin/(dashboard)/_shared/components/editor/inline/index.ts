@@ -16,6 +16,8 @@ export type {
   ContentEditorExtraData,
   CategoryOption,
   TagOption,
+  PostSidePanelExtra,
+  NewsSidePanelExtra,
 } from "./content-types";
 
 // 基本フック

@@ -9,10 +9,10 @@ import { createHeadlessEditor } from "@lexical/headless";
 import { $getRoot, $getState, type LexicalEditor } from "lexical";
 
 // テスト対象
+import { INSPECTABLE_NODE_TYPES_FROM_REGISTRY } from "@/admin/components/editor/lexical/config/inspector-registry";
 import {
   getInspectableInfo,
   INSPECTABLE_NODE_TYPES,
-  type InspectableNodeType,
 } from "@/admin/components/editor/lexical/inspector/hooks/inspectable-nodes";
 
 // ノードのインポート
@@ -55,48 +55,9 @@ function createTestEditor(): LexicalEditor {
 
 describe("inspectable-nodes", () => {
   describe("INSPECTABLE_NODE_TYPES", () => {
-    test("対応しているノードタイプが34つ定義されている", () => {
-      expect(INSPECTABLE_NODE_TYPES).toHaveLength(34);
-    });
-
-    test("すべてのインスペクタブルノードタイプが含まれている", () => {
-      const expectedTypes: InspectableNodeType[] = [
-        "button",
-        "image",
-        "callout",
-        "bookmark",
-        "pullQuote",
-        "collapsible",
-        "steps",
-        "tabs",
-        "layout",
-        "youtube",
-        "vimeo",
-        "x",
-        "instagram",
-        "pageBreak",
-        "mapEmbed",
-        "code",
-        "audio",
-        "file",
-        "figma",
-        "spotify",
-        "galleryContainer",
-        "galleryItem",
-        "timelineContainer",
-        "timelineItem",
-        "pricingPlan",
-        "pricingFeature",
-        "inlineImage",
-        "testimonialContainer",
-        "testimonialItem",
-        "featureIconListContainer",
-        "featureIconItem",
-        "cover",
-        "table",
-        "tableCell",
-      ];
-      expect(INSPECTABLE_NODE_TYPES).toEqual(expectedTypes);
+    test("hooks の配列は inspector-registry の単一正本と同一参照である", () => {
+      expect(INSPECTABLE_NODE_TYPES).toBe(INSPECTABLE_NODE_TYPES_FROM_REGISTRY);
+      expect(INSPECTABLE_NODE_TYPES.length).toBeGreaterThan(0);
     });
 
     test("readonly配列である", () => {

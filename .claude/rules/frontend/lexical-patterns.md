@@ -5,7 +5,7 @@ paths:
 
 # Lexical エディタ実装パターン
 
-> Next.js 16 / React 19 / Turbopack / React Compiler 対応
+> **本文正本**（Codex / Claude Code 共通）。`.claude/rules/frontend/lexical-patterns.md` は CI で同一内容を強制。Next.js 16 / React 19 / Turbopack / React Compiler 対応
 
 ## 概要
 

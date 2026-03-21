@@ -5,7 +5,7 @@
  * エディタの挙動を制御する。
  */
 
-import type { ComponentType } from "react";
+import type { ReactNode } from "react";
 import type { ZodSchema } from "zod";
 import type {
   FieldValues,
@@ -22,7 +22,8 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 // コンテンツタイプID
 // =============================================================================
 
-export type ContentTypeId = "post" | "news" | "page";
+/** インライン `content-types` で登録済みの種別のみ（固定ページは別管理画面） */
+export type ContentTypeId = "post" | "news";
 
 // =============================================================================
 // 公開方式の型
@@ -65,48 +66,78 @@ export type FieldComponentProps<T extends FieldValues> = {
 };
 
 // =============================================================================
-// サイドパネル設定
+// サイドパネル設定（コンテンツ種別ごとに TForm / TExtra を束ねる）
 // =============================================================================
 
 /**
- * サイドパネルセクション定義
+ * サイドパネルが RHF に注入する共通プロパティ（getValues は必須）
  */
-export type SectionDefinition = {
-  /** セクションタイトル */
-  title: string;
-  /** フィールドコンポーネント */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: ComponentType<any>;
-  /** コンポーネントに渡す追加Props */
-  props?: Record<string, unknown>;
+export type SidePanelInjectedProps<T extends FieldValues> = {
+  register: UseFormRegister<T>;
+  control: Control<T>;
+  errors: FieldErrors<T>;
+  setValue: UseFormSetValue<T>;
+  getValues: UseFormGetValues<T>;
+  disabled?: boolean;
 };
 
 /**
- * サイドパネルタブ定義
+ * 投稿エディタのサイドパネルにのみ渡す追加データ（フォーム外のオプション・派生状態）
  */
-export type TabDefinition = {
-  /** タブID */
+export type PostSidePanelExtra = {
+  categories: readonly CategoryOption[];
+  availableTags: readonly TagOption[];
+  onCreateCategory: (name: string) => Promise<CategoryOption | null>;
+  onCreateTag: (name: string) => Promise<TagOption | null>;
+  statusValue: PostStatus;
+  onStatusChange: (value: PostStatus) => void;
+};
+
+/**
+ * お知らせエディタのサイドパネルにのみ渡す追加データ
+ */
+export type NewsSidePanelExtra = {
+  isPublishedValue: boolean;
+  onIsPublishedChange: (value: boolean) => void;
+};
+
+/**
+ * セクション `render` に渡すコンテキスト（RHF + コンテンツ種別固有の extra）
+ */
+export type SidePanelRenderContext<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown>,
+> = SidePanelInjectedProps<TForm> & TExtra;
+
+export type SidePanelSectionDefinition<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown>,
+> = {
+  title: string;
+  render: (ctx: SidePanelRenderContext<TForm, TExtra>) => ReactNode;
+};
+
+export type SidePanelTabDefinition<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown>,
+> = {
   id: string;
-  /** タブラベル */
   label: string;
-  /** タブ内のセクション */
-  sections: SectionDefinition[];
+  sections: readonly SidePanelSectionDefinition<TForm, TExtra>[];
 };
 
 /**
- * サイドパネル設定
+ * サイドパネル設定（タブ配下は `render(ctx)` で型安全に記述）
  */
-export type SidePanelConfig = {
-  /** パネルタイトル */
+export type SidePanelDefinition<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown> = Record<string, never>,
+> = {
   title: string;
-  /** ヘッダ直下の補足（任意・メタデータとブロック設定の区別など） */
   description?: string;
-  /** アクティブタブを localStorage に永続化するキー（コンテンツ種別ごとに一意） */
   tabStorageKey?: string;
-  /** パネル幅 */
   width: "default" | "narrow";
-  /** タブ定義 */
-  tabs: TabDefinition[];
+  tabs: readonly SidePanelTabDefinition<TForm, TExtra>[];
 };
 
 // =============================================================================
@@ -187,12 +218,12 @@ export type CategoryOption = {
 };
 
 /**
- * タグオプション
+ * タグオプション（エディターフックのタグ一覧と整合。slug は未取得時に欠ける）
  */
 export type TagOption = {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   _count?: { posts: number };
 };
 
@@ -227,6 +258,7 @@ export type ContentTypeConfig<
   TFormData extends FieldValues,
   TPreviewData,
   TSubmitPayload = unknown,
+  TSideExtra extends Record<string, unknown> = Record<string, never>,
 > = {
   // === 基本情報 ===
   /** コンテンツタイプID */
@@ -262,7 +294,7 @@ export type ContentTypeConfig<
 
   // === サイドパネル ===
   /** サイドパネル設定 */
-  sidePanel: SidePanelConfig;
+  sidePanel: SidePanelDefinition<TFormData, TSideExtra>;
 };
 
 // =============================================================================
@@ -277,9 +309,16 @@ export type ContentEditorProps<
   TFormData extends FieldValues,
   TPreviewData,
   TSubmitPayload = unknown,
+  TSideExtra extends Record<string, unknown> = Record<string, never>,
 > = {
   /** コンテンツタイプ設定 */
-  config: ContentTypeConfig<TData, TFormData, TPreviewData, TSubmitPayload>;
+  config: ContentTypeConfig<
+    TData,
+    TFormData,
+    TPreviewData,
+    TSubmitPayload,
+    TSideExtra
+  >;
   /** 編集対象データ（編集モード時） */
   data?: TData;
   /** 編集モード */
@@ -295,27 +334,21 @@ export type ContentEditorProps<
 /**
  * 統一サイドパネルのProps
  */
-export type UnifiedSidePanelProps<T extends FieldValues = FieldValues> = {
-  /** 開閉状態 */
+export type UnifiedSidePanelProps<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown> = Record<string, never>,
+> = {
   isOpen: boolean;
-  /** 閉じる時のコールバック */
   onClose: () => void;
-  /** サイドパネル設定 */
-  config: SidePanelConfig;
-  /** react-hook-form register */
-  register: UseFormRegister<T>;
-  /** react-hook-form control */
-  control: Control<T>;
-  /** フォームエラー */
-  errors: FieldErrors<T>;
-  /** setValue関数 */
-  setValue: UseFormSetValue<T>;
-  /** getValues関数 */
-  getValues?: UseFormGetValues<T>;
-  /** 無効化フラグ */
+  config: SidePanelDefinition<TForm, TExtra>;
+  register: UseFormRegister<TForm>;
+  control: Control<TForm>;
+  errors: FieldErrors<TForm>;
+  setValue: UseFormSetValue<TForm>;
+  getValues: UseFormGetValues<TForm>;
   disabled?: boolean;
-  /** 追加Props（コンテンツタイプ固有のデータ） */
-  extraProps?: Record<string, unknown>;
+  /** コンテンツ種別固有（カテゴリ一覧・公開トグル用の派生値など） */
+  extraProps: TExtra;
 };
 
 // =============================================================================
@@ -387,6 +420,19 @@ export const OGP_FIELD_NAMES = {
   ogpDescription: "ogpDescription",
   ogpImageUrl: "ogpImageUrl",
 } as const;
+
+// =============================================================================
+// サイドパネル render 用ユーティリティ
+// =============================================================================
+
+/**
+ * exactOptionalPropertyTypes 下で `disabled={undefined}` を渡さないためのスプレッド用オブジェクト
+ */
+export function spreadOptionalDisabled(ctx: {
+  disabled?: boolean;
+}): { disabled: boolean } | Record<string, never> {
+  return ctx.disabled !== undefined ? { disabled: ctx.disabled } : {};
+}
 
 // =============================================================================
 // 型ガード

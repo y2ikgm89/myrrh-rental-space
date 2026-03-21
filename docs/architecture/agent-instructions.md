@@ -23,12 +23,12 @@
 | ルート方針 | `AGENTS.md` | **`CLAUDE.md`** + `AGENTS.md`（共通不変条件） |
 | 詳細ルール（分野別） | `docs/reference/codex-rules/` | **`.claude/rules/**/*.md`**（`paths:` 付きで編集時に自動ロード） |
 | 自動ガード | （各エージェントの設定に依存） | **`.claude/hooks/*.sh`** + **`.claude/settings.json`** の hooks 登録 |
-| スキル（手順） | **`.agents/skills/` のみ**（本文・任意の `reference/scaffold-*.md`） | **`.claude/skills/<name>/SKILL.md`** は **スタブ**（`ui-ux-pro-max` / `frontend-design` / `lexical-node` / `lexical-plugin` / `lexical-toolbar` 等）→ 正本を読む |
+| スキル（手順） | **`.agents/skills/` のみ**（本文・任意の `reference/`・`scripts/`） | **`.claude/skills/<name>/SKILL.md`** は **すべてスタブ**（正本は `.agents/skills/<name>/SKILL.md`）。索引: `.agents/skills/README.md` |
 | レビュー用サブエージェント | 増やさない（skill / ルールへ寄せる） | **`.claude/agents/*.md`**（Task / 専門レビュー） |
 
 ## 二重管理が必要なトピック
 
-Lexical シェル、Three.js / Pixi 方針、`bun-patterns` 相当など、**同じ内容が** `docs/reference/codex-rules/` と `.claude/rules/` の両方にある場合は、**方針・公式リンク・「未依存」「削除済み」の事実を一致**させる。片方だけにレガシー説明を残さない。
+Lexical シェル、**Post/News インラインエディタ（UnifiedSidePanel / `content-types`）**、Three.js / Pixi 方針、`bun-patterns` 相当など、**同じ内容が** `docs/reference/codex-rules/` と `.claude/rules/` の両方にある場合は、**方針・公式リンク・「未依存」「削除済み」の事実を一致**させる。片方だけにレガシー説明を残さない。
 
 ## サブエージェント（`.claude/agents/`）
 

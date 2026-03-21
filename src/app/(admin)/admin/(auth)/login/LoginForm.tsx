@@ -10,6 +10,7 @@ import { useState, useEffect, type FormEvent, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/shared/lib/auth-client";
 import { credentialsSchema } from "@/admin/lib/validations/auth";
+import { SubmitButton } from "@/admin/components/ui";
 
 const STORAGE_KEY = "myrrh_admin_email";
 
@@ -137,13 +138,13 @@ export function LoginForm(): ReactElement {
         </label>
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full h-10 flex items-center justify-center rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary transition-all duration-200 hover:bg-primary/90 hover:-translate-y-px hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
-      >
-        {isLoading ? "ログイン中..." : "ログイン"}
-      </button>
+      <SubmitButton
+        isPending={isLoading}
+        label="ログイン"
+        pendingLabel="ログイン中..."
+        className="w-full"
+        size="lg"
+      />
     </form>
   );
 }

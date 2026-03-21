@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { Save } from "lucide-react";
-import { Button } from "@/admin/components/ui";
+import { SubmitButton } from "@/admin/components/ui";
 import type { PageSectionData } from "@/admin/actions/page-section";
 
 export interface ConfigFormSavePayload {
@@ -50,10 +50,17 @@ export function FormActions({
           未保存の変更があります
         </span>
       )}
-      <Button type="submit" disabled={isPending || !isDirty}>
-        <Save className="h-4 w-4 mr-2" />
-        {isPending ? "保存中..." : "保存"}
-      </Button>
+      <SubmitButton
+        isPending={isPending}
+        disabled={!isDirty}
+        label="保存"
+        pendingLabel="保存中..."
+      >
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          保存
+        </>
+      </SubmitButton>
     </div>
   );
 }

@@ -3,28 +3,15 @@ import { getLocations } from "@/admin/queries/location";
 import { LocationFilters } from "../../locations/_components/LocationFilters";
 import { LocationTable } from "../../locations/_components/LocationTable";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
-import type { SearchParams } from "nuqs/server";
-
-// =============================================================================
-// 型定義
-// =============================================================================
-
-interface LocationTabContentProps {
-  searchParams: Promise<SearchParams>;
-}
 
 // =============================================================================
 // 内部コンポーネント
 // =============================================================================
 
-async function LocationList({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const params = await loadAdminSpaceSearchParams(searchParams);
+async function LocationList() {
+  const params = adminSpaceSearchParamsCache.all();
   const includeInactive = params.published !== "true";
 
   const result = await getLocations(
@@ -38,19 +25,17 @@ async function LocationList({
 }
 
 // =============================================================================
-// メインコンポーネント
+// メインコンポーネント（親ページで `adminSpaceSearchParamsCache.parse` 済みであること）
 // =============================================================================
 
-export async function LocationTabContent({
-  searchParams,
-}: LocationTabContentProps) {
+export async function LocationTabContent() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>
         <LocationFilters />
       </Suspense>
       <Suspense fallback={<LoadingState />}>
-        <LocationList searchParams={searchParams} />
+        <LocationList />
       </Suspense>
     </div>
   );

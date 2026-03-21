@@ -1,5 +1,7 @@
 # 058: 統一エディターサイドパネル
 
+> **履歴資料（2026-01-21 完了）** — 現行の型・ファイル構成は **`docs/reference/codex-rules/admin-inline-editor-patterns.md`**（Claude: `.claude/rules/frontend/admin-inline-editor-patterns.md`）およびソースを正とする。下記の `blog-config.ts` / `TabDefinition` / `component`+`props` 等は **廃止済みまたは未採用**。
+
 ## 概要
 
 管理画面のコンテンツ編集UIを統一する大規模改修。全コンテンツタイプ（ブログ、お知らせ、ページ、スペース、FAQ）で一貫したUI/UXを実現するため、プラグイン型アーキテクチャを導入。
@@ -99,34 +101,15 @@ side-panel/
 UnifiedSidePanel.tsx      # 統一サイドパネル本体
 ```
 
-## 拡張方法
+## 拡張方法（現行パターン — 本計画当初案から変更）
 
-新しいコンテンツタイプを追加する場合:
+新しいコンテンツ種別を追加する場合（**後方互換なしの現行**）:
 
-1. `content-types/`に`xxx-config.ts`を作成
-2. `ContentTypeConfig`に従って設定を定義
-3. エディターで`UnifiedSidePanel`に`config`を渡す
+1. `content-types/types.ts` に `*SidePanelExtra` と `ContentTypeConfig<…, TSideExtra>` 第 5 引数を定義
+2. `content-types/<id>.tsx`（`"use client"`）で `post.tsx` / `news.tsx` を手本に `sidePanel` を **`SidePanelDefinition` + `render(ctx)`** で記述
+3. エディターで `UnifiedSidePanel` に **`config` + 必須 `getValues` + 必須 `extraProps`** を渡す
 
-```typescript
-// example-config.ts
-export const exampleContentTypeConfig: ContentTypeConfig = {
-  id: 'example',
-  label: '例',
-  sidePanelTitle: '例の設定',
-  sidePanelWidth: 'default',
-  publishControl: 'isPublished',
-  tabs: [
-    {
-      id: 'basic',
-      label: '基本',
-      sections: [
-        { title: '基本情報', component: TitleSlugFields, props: { ... } },
-      ],
-    },
-    // ...
-  ],
-}
-```
+詳細は **`admin-inline-editor-patterns.md`** を参照。
 
 ## 完了日
 

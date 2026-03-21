@@ -15,6 +15,11 @@
 
 ---
 
+## 監査・レポート
+
+- [2026-03-21] コードベース一貫性・技術スタック監査（自動検証・境界 grep・ドキュメント差分・重複解消）
+  - レポート: [`docs/plans/2026-03-21-codebase-consistency-audit.md`](./2026-03-21-codebase-consistency-audit.md)
+
 ## 進行中の計画
 
 - ✅ [2026-03-10] プロジェクト包括的クリーンアップ（ActionResult→MutationResult統一・PPR適合・CI/CD改善）
@@ -723,6 +728,8 @@ Next.js 16 PPR + Cloudflare CDN連携のためのCache-Controlヘッダーと自
 ### 059 - Unified Editor SidePanel (2026-01-21) ✅
 
 管理画面コンテンツ編集UIの統一。プラグイン型アーキテクチャ導入。
+
+**現行の型・パターン**: `docs/reference/codex-rules/admin-inline-editor-patterns.md`（`SidePanelDefinition` + `render(ctx)`、`post.tsx` / `news.tsx`）。本項のチェックリストは履歴用。
 
 **実装内容**:
 

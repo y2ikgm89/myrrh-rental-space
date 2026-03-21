@@ -14,6 +14,7 @@ import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/utils";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { SpaceActionCell } from "./SpaceActionCell";
+import { spaceDescriptionListSnippet } from "@/shared/lib/space-description-list-snippet";
 
 // =============================================================================
 // Types
@@ -76,7 +77,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                     <div>
                       <div className="font-medium">{space.name}</div>
                       <div className="text-sm text-muted-foreground line-clamp-1">
-                        {space.description.slice(0, 50)}...
+                        {spaceDescriptionListSnippet(space.description)}
                       </div>
                     </div>
                   </div>

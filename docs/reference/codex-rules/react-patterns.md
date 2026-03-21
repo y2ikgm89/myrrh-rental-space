@@ -274,6 +274,7 @@ const isValid = useWatch({
 | `watch('fieldName')` (React Hook Form)          | `useWatch({ control, name: 'fieldName' })`                                     |
 | `useOptimistic` なし で楽観的 UI を手動実装     | `useOptimistic` を使用                                                         |
 | `useFormStatus` を form の外で使用              | `<form>` 子孫コンポーネント内に配置                                            |
+| `useFormStatus` で RHF フォームの送信中状態を取る | 管理画面は `useFormAction` または `useActionState`+RHF ハイブリッドで **`SubmitButton` に `isPending` を prop で渡す**（`.claude/rules/react-patterns.md` Gotchas と同一方針） |
 | `"use no memo"` を恒久的に使用                  | Rules of React 違反を修正して削除                                              |
 | `eslint-plugin-react-compiler` の継続使用       | `eslint-plugin-react-hooks@latest` に統合済み                                  |
 | クラスコンポーネント（新規作成）                | 関数コンポーネントに書き換える（Compiler 対応）                                |

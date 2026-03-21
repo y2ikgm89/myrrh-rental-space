@@ -3,29 +3,16 @@ import { getSpaceCategories } from "@/admin/queries/space-category";
 import { CategoryFilters } from "../../_space-categories/_components/CategoryFilters";
 import { CategoryTable } from "../../_space-categories/_components/CategoryTable";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { loadAdminSpaceSearchParams } from "@/shared/lib/nuqs";
+import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
-import type { SearchParams } from "nuqs/server";
-
-// =============================================================================
-// 型定義
-// =============================================================================
-
-interface CategoryTabContentProps {
-  searchParams: Promise<SearchParams>;
-}
 
 // =============================================================================
 // 内部コンポーネント
 // =============================================================================
 
-async function CategoryList({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const params = await loadAdminSpaceSearchParams(searchParams);
-  const includeInactive = params.includeInactive === "true";
+async function CategoryList() {
+  const params = adminSpaceSearchParamsCache.all();
+  const includeInactive = params.includeInactive;
 
   const result = await getSpaceCategories(
     omitUndefined({
@@ -38,19 +25,17 @@ async function CategoryList({
 }
 
 // =============================================================================
-// メインコンポーネント
+// メインコンポーネント（親ページで `adminSpaceSearchParamsCache.parse` 済みであること）
 // =============================================================================
 
-export async function CategoryTabContent({
-  searchParams,
-}: CategoryTabContentProps) {
+export async function CategoryTabContent() {
   return (
     <div className="space-y-6">
       <Suspense fallback={<LoadingState variant="inline" />}>
         <CategoryFilters />
       </Suspense>
       <Suspense fallback={<LoadingState />}>
-        <CategoryList searchParams={searchParams} />
+        <CategoryList />
       </Suspense>
     </div>
   );

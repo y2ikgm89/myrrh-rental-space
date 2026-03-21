@@ -13,6 +13,17 @@ repo 全体の構造、境界、データ取得方針、キャッシュ戦略の
 | [TECH_STACK.md](./TECH_STACK.md)                                 | 採用技術とバージョン前提     |
 | [page-sections-design-guide.md](./page-sections-design-guide.md) | ページセクション設計         |
 | [agent-instructions.md](./agent-instructions.md)                 | AI 指示の配置（`.claude` 第一級・正本の切り分け） |
+| [typescript-version-policy.md](./typescript-version-policy.md)   | TypeScript 6.x RC / 安定版移行方針             |
+| [better-auth-configuration-checklist.md](./better-auth-configuration-checklist.md) | Better Auth 公式準拠チェックリスト     |
+| [next-cache-server-actions-review.md](./next-cache-server-actions-review.md) | Next 16 キャッシュ・Server Actions レビュー観点 |
+
+## 運用・クリーンアップ
+
+| ファイル | 内容 |
+| -------- | ---- |
+| [../operations/prisma-schema-cleanup.md](../operations/prisma-schema-cleanup.md) | Prisma 破壊的スキーマ整理の手順 |
+
+Lexical の網羅的モダン化は [`.agents/skills/lexical-audit/SKILL.md`](../../.agents/skills/lexical-audit/SKILL.md) を定期実行する。
 
 ## 現在の原則
 

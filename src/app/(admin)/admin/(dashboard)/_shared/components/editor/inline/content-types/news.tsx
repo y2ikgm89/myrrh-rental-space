@@ -1,11 +1,9 @@
+"use client";
+
 /**
  * お知らせコンテンツタイプ設定
  *
  * NewsInlineEditorで使用する完全な設定
- * - フォームスキーマ
- * - Server Actions
- * - データ変換
- * - サイドパネル設定
  */
 
 import { format } from "date-fns";
@@ -30,6 +28,8 @@ import {
   SEO_FIELD_NAMES,
   OGP_FIELD_NAMES,
   type ContentTypeConfig,
+  type NewsSidePanelExtra,
+  spreadOptionalDisabled,
 } from "./types";
 import {
   TitleSlugFields,
@@ -39,11 +39,6 @@ import {
   LayoutFields,
 } from "../side-panel";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/** News用送信ペイロード型 */
 type NewsSubmitPayload = {
   slug: string;
   title: string;
@@ -57,11 +52,6 @@ type NewsSubmitPayload = {
   ogpImageUrl: string | null;
 };
 
-// =============================================================================
-// Transforms
-// =============================================================================
-
-/** DBデータ → フォームデータ */
 function toFormData(data?: NewsData): NewsFormData {
   if (!data) {
     return {
@@ -98,7 +88,6 @@ function toFormData(data?: NewsData): NewsFormData {
   };
 }
 
-/** フォームデータ → 送信ペイロード */
 function toSubmitPayload(formData: NewsFormData): NewsSubmitPayload {
   return {
     slug: formData.slug,
@@ -118,7 +107,6 @@ function toSubmitPayload(formData: NewsFormData): NewsSubmitPayload {
   };
 }
 
-/** フォームデータ → プレビューデータ */
 function toPreviewData(formData: NewsFormData): NewsPreviewData {
   return {
     title: formData.title || "無題",
@@ -128,27 +116,21 @@ function toPreviewData(formData: NewsFormData): NewsPreviewData {
   };
 }
 
-// =============================================================================
-// Config
-// =============================================================================
-
 export const newsConfig: ContentTypeConfig<
   NewsData,
   NewsFormData,
   NewsPreviewData,
-  NewsSubmitPayload
+  NewsSubmitPayload,
+  NewsSidePanelExtra
 > = {
-  // 基本情報
   id: "news",
   label: "お知らせ",
   listPath: "/admin/news",
   slugPrefix: "news/",
   previewBasePath: "/news",
 
-  // スキーマ
   formSchema: newsFormSchema,
 
-  // 機能フラグ
   features: {
     create: true,
     delete: true,
@@ -156,19 +138,16 @@ export const newsConfig: ContentTypeConfig<
     comments: true,
   },
 
-  // 公開制御
   publishControl: {
     type: "isPublished",
   },
 
-  // データ変換
   transforms: {
     toFormData,
     toSubmitPayload,
     toPreviewData,
   },
 
-  // Server Actions
   actions: {
     create: createNews,
     update: updateNews,
@@ -177,7 +156,6 @@ export const newsConfig: ContentTypeConfig<
     unpublish: unpublishNews,
   },
 
-  // サイドパネル
   sidePanel: {
     title: "お知らせ設定",
     description:
@@ -191,13 +169,20 @@ export const newsConfig: ContentTypeConfig<
         sections: [
           {
             title: "基本情報",
-            component: TitleSlugFields,
-            props: {
-              fields: { title: "title", slug: "slug" },
-              slugPreviewPath: "/news",
-              titlePlaceholder: "お知らせのタイトル",
-              slugPlaceholder: "news-slug",
-            },
+            render: (ctx) => (
+              <TitleSlugFields<NewsFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                fields={{ title: "title", slug: "slug" }}
+                slugPreviewPath="/news"
+                titlePlaceholder="お知らせのタイトル"
+                slugPlaceholder="news-slug"
+              />
+            ),
           },
         ],
       },
@@ -207,17 +192,27 @@ export const newsConfig: ContentTypeConfig<
         sections: [
           {
             title: "SEO設定",
-            component: SEOFields,
-            props: {
-              fields: SEO_FIELD_NAMES,
-            },
+            render: (ctx) => (
+              <SEOFields<NewsFormData>
+                register={ctx.register}
+                errors={ctx.errors}
+                {...spreadOptionalDisabled(ctx)}
+                fields={SEO_FIELD_NAMES}
+              />
+            ),
           },
           {
             title: "OGP設定",
-            component: OGPFields,
-            props: {
-              fields: OGP_FIELD_NAMES,
-            },
+            render: (ctx) => (
+              <OGPFields<NewsFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                {...spreadOptionalDisabled(ctx)}
+                fields={OGP_FIELD_NAMES}
+              />
+            ),
           },
         ],
       },
@@ -227,18 +222,36 @@ export const newsConfig: ContentTypeConfig<
         sections: [
           {
             title: "公開設定",
-            component: UnifiedPublishFields,
-            props: {
-              controlType: "isPublished",
-              fields: {
-                publishedAt: "publishedAt",
-              },
-            },
+            render: (ctx) => (
+              <UnifiedPublishFields<NewsFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                controlType="isPublished"
+                fields={{
+                  publishedAt: "publishedAt",
+                  isPublished: "isPublished",
+                }}
+                isPublishedValue={ctx.isPublishedValue}
+                onIsPublishedChange={ctx.onIsPublishedChange}
+              />
+            ),
           },
           {
             title: "レイアウト",
-            component: LayoutFields,
-            props: {},
+            render: (ctx) => (
+              <LayoutFields
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+              />
+            ),
           },
         ],
       },

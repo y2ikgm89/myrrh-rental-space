@@ -22,7 +22,7 @@ import { cn } from "@/shared/lib/cn";
 export type TagOption = {
   id: string;
   name: string;
-  slug: string;
+  slug?: string;
   _count?: { posts: number };
 };
 
@@ -77,7 +77,7 @@ export function TagInput({
           (tag) =>
             !value.includes(tag.name) &&
             (tag.name.toLowerCase().includes(query) ||
-              tag.slug.toLowerCase().includes(query)),
+              (tag.slug?.toLowerCase() ?? "").includes(query)),
         )
         .slice(0, 10)
     : [];

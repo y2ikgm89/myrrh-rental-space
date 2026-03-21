@@ -1,7 +1,13 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import {
+  useQueryStates,
+  parseAsString,
+  parseAsInteger,
+  parseAsStringLiteral,
+} from "nuqs";
+import { ADMIN_SPACE_MANAGEMENT_TABS } from "@/shared/lib/constants/admin-space-management";
 import { parseAsBoolean } from "@/shared/lib/nuqs";
 import { useRef, useEffect } from "react";
 import { Checkbox, Label, Input } from "@/admin/components/ui";
@@ -14,7 +20,9 @@ export function CategoryFilters() {
       search: parseAsString.withDefault(""),
       includeInactive: parseAsBoolean.withDefault(false),
       page: parseAsInteger.withDefault(1),
-      tab: parseAsString.withDefault("categories"),
+      tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault(
+        "categories",
+      ),
     },
     {
       history: "push",

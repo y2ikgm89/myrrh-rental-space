@@ -1,11 +1,9 @@
+"use client";
+
 /**
  * 投稿コンテンツタイプ設定
  *
  * PostInlineEditorで使用する完全な設定
- * - フォームスキーマ
- * - Server Actions
- * - データ変換
- * - サイドパネル設定
  */
 
 import { format } from "date-fns";
@@ -27,8 +25,10 @@ import type { PostPreviewData } from "@/shared/types";
 import {
   SEO_FIELD_NAMES,
   OGP_FIELD_NAMES,
-  type ContentTypeConfig,
   type ContentEditorExtraData,
+  type ContentTypeConfig,
+  type PostSidePanelExtra,
+  spreadOptionalDisabled,
 } from "./types";
 import {
   TitleSlugFields,
@@ -42,11 +42,6 @@ import {
   LayoutFields,
 } from "../side-panel";
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/** Post用送信ペイロード型 */
 type PostSubmitPayload = {
   title: string;
   slug: string;
@@ -64,11 +59,6 @@ type PostSubmitPayload = {
   contentWidthCustom: number | null;
 };
 
-// =============================================================================
-// Transforms
-// =============================================================================
-
-/** DBデータ → フォームデータ */
 function toFormData(data?: PostData): PostFormData {
   if (!data) {
     return {
@@ -113,7 +103,6 @@ function toFormData(data?: PostData): PostFormData {
   };
 }
 
-/** フォームデータ → 送信ペイロード */
 function toSubmitPayload(formData: PostFormData): PostSubmitPayload {
   const tags = formData.tags
     ? formData.tags
@@ -145,7 +134,6 @@ function toSubmitPayload(formData: PostFormData): PostSubmitPayload {
   };
 }
 
-/** フォームデータ → プレビューデータ */
 function toPreviewData(
   formData: PostFormData,
   _data?: PostData,
@@ -177,27 +165,21 @@ function toPreviewData(
   };
 }
 
-// =============================================================================
-// Config
-// =============================================================================
-
 export const postConfig: ContentTypeConfig<
   PostData,
   PostFormData,
   PostPreviewData,
-  PostSubmitPayload
+  PostSubmitPayload,
+  PostSidePanelExtra
 > = {
-  // 基本情報
   id: "post",
   label: "投稿",
   listPath: "/admin/posts",
   slugPrefix: "posts/",
   previewBasePath: "/posts",
 
-  // スキーマ
   formSchema: postFormSchema,
 
-  // 機能フラグ
   features: {
     create: true,
     delete: true,
@@ -205,20 +187,17 @@ export const postConfig: ContentTypeConfig<
     comments: true,
   },
 
-  // 公開制御
   publishControl: {
     type: "status",
     statusEnum: PostStatus,
   },
 
-  // データ変換
   transforms: {
     toFormData,
     toSubmitPayload,
     toPreviewData,
   },
 
-  // Server Actions
   actions: {
     create: createPost,
     update: updatePost,
@@ -227,7 +206,6 @@ export const postConfig: ContentTypeConfig<
     unpublish: unpublishPost,
   },
 
-  // サイドパネル
   sidePanel: {
     title: "記事設定",
     description:
@@ -241,43 +219,81 @@ export const postConfig: ContentTypeConfig<
         sections: [
           {
             title: "基本情報",
-            component: TitleSlugFields,
-            props: {
-              fields: { title: "title", slug: "slug" },
-              slugPreviewPath: "/posts",
-              titlePlaceholder: "記事のタイトル",
-              slugPlaceholder: "article-slug",
-            },
+            render: (ctx) => (
+              <TitleSlugFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                fields={{ title: "title", slug: "slug" }}
+                slugPreviewPath="/posts"
+                titlePlaceholder="記事のタイトル"
+                slugPlaceholder="article-slug"
+              />
+            ),
           },
           {
             title: "抜粋",
-            component: ExcerptFields,
-            props: {
-              fields: { excerpt: "excerpt" },
-              label: "抜粋",
-              placeholder: "記事の抜粋（一覧ページに表示）",
-              helpText: "500文字以内",
-            },
+            render: (ctx) => (
+              <ExcerptFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                fields={{ excerpt: "excerpt" }}
+                label="抜粋"
+                placeholder="記事の抜粋（一覧ページに表示）"
+                helpText="500文字以内"
+              />
+            ),
           },
           {
             title: "カテゴリ",
-            component: CategoryFields,
-            props: {
-              fields: { categoryId: "categoryId" },
-              label: "カテゴリ",
-            },
+            render: (ctx) => (
+              <CategoryFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                fields={{ categoryId: "categoryId" }}
+                categories={[...ctx.categories]}
+                label="カテゴリ"
+                onCreateCategory={ctx.onCreateCategory}
+              />
+            ),
           },
           {
             title: "タグ",
-            component: PostTagFields,
-            props: {
-              fields: { tags: "tags" },
-            },
+            render: (ctx) => (
+              <PostTagFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                fields={{ tags: "tags" }}
+                availableTags={[...ctx.availableTags]}
+                onCreateTag={ctx.onCreateTag}
+              />
+            ),
           },
           {
             title: "画像",
-            component: ImageFields,
-            props: {},
+            render: (ctx) => (
+              <ImageFields
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                control={ctx.control}
+                {...spreadOptionalDisabled(ctx)}
+              />
+            ),
           },
         ],
       },
@@ -287,17 +303,27 @@ export const postConfig: ContentTypeConfig<
         sections: [
           {
             title: "SEO設定",
-            component: SEOFields,
-            props: {
-              fields: SEO_FIELD_NAMES,
-            },
+            render: (ctx) => (
+              <SEOFields<PostFormData>
+                register={ctx.register}
+                errors={ctx.errors}
+                {...spreadOptionalDisabled(ctx)}
+                fields={SEO_FIELD_NAMES}
+              />
+            ),
           },
           {
             title: "OGP設定",
-            component: OGPFields,
-            props: {
-              fields: OGP_FIELD_NAMES,
-            },
+            render: (ctx) => (
+              <OGPFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                {...spreadOptionalDisabled(ctx)}
+                fields={OGP_FIELD_NAMES}
+              />
+            ),
           },
         ],
       },
@@ -307,19 +333,36 @@ export const postConfig: ContentTypeConfig<
         sections: [
           {
             title: "公開設定",
-            component: UnifiedPublishFields,
-            props: {
-              controlType: "status",
-              fields: {
-                publishedAt: "publishedAt",
-                status: "status",
-              },
-            },
+            render: (ctx) => (
+              <UnifiedPublishFields<PostFormData>
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+                controlType="status"
+                fields={{
+                  publishedAt: "publishedAt",
+                  status: "status",
+                }}
+                statusValue={ctx.statusValue}
+                onStatusChange={ctx.onStatusChange}
+              />
+            ),
           },
           {
             title: "レイアウト",
-            component: LayoutFields,
-            props: {},
+            render: (ctx) => (
+              <LayoutFields
+                register={ctx.register}
+                control={ctx.control}
+                errors={ctx.errors}
+                setValue={ctx.setValue}
+                getValues={ctx.getValues}
+                {...spreadOptionalDisabled(ctx)}
+              />
+            ),
           },
         ],
       },

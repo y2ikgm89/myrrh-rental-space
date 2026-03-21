@@ -55,8 +55,7 @@ type UseFormActionOptions<TInput extends FieldValues, TOutput> = {
 
 type UseFormActionReturn<TInput extends FieldValues, TOutput> = {
   /** react-hook-form の form オブジェクト */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  form: UseFormReturn<TInput, any>;
+  form: UseFormReturn<TInput, unknown, TInput>;
   /** 送信中かどうか */
   isPending: boolean;
   /** フォーム送信ハンドラ（form の onSubmit に渡す） */

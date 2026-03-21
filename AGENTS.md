@@ -18,7 +18,12 @@
 - **Rules (canonical)**: `docs/reference/codex-rules/lexical-patterns.md` — Inspector, content width, layout constants (`editor-layout-constants.ts`), DraggableBlock fork, placeholder on `ContentEditable`, HTML→Lexical (`tryConvertHtmlStringToLexicalJsonString`), insert menu, etc. **Claude Code** loads the same policy from `.claude/rules/frontend/lexical-patterns.md` (`paths:` frontmatter). **Keep both files in sync** when changing the editor shell or Lexical conventions.
 - **`LexicalEditor` `showInspector={false}`**: hides the block inspector sidebar, toolbar toggle, and **Ctrl+Shift+0** (incl. Numpad 0) shortcut.
 - **Narrow / mobile (&lt; 1024px)**: `MobileEditorFallback`; headless HTML preview from **`contentJson`**; empty state use **`EMPTY_LEXICAL_EDITOR_STATE_JSON`**. Init uses **`contentJson`** only.
-- **Skills** (workflow + optional long scaffolds under `reference/`): `.agents/skills/lexical-node`, `lexical-plugin`, `lexical-toolbar`, `lexical-audit`. **Claude Code** discovers them via **`.claude/skills/<name>/SKILL.md` stubs** pointing at `.agents` (`docs/architecture/agent-instructions.md`).
+- **Skills** (workflow bodies + optional `reference/` / `scripts/`): canonical procedures live under **`.agents/skills/<name>/`**. **Claude Code** discovers skills via **`.claude/skills/<name>/SKILL.md` stubs** that point to the canonical path (`docs/architecture/agent-instructions.md`). Index: `.agents/skills/README.md`.
+
+### Inline content editor (Post/News — metadata side panel)
+
+- **Path**: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/inline/`（`UnifiedSidePanel`, `content-types/post.tsx`, `news.tsx`）
+- **Rules (canonical)**: `docs/reference/codex-rules/admin-inline-editor-patterns.md` — `SidePanelDefinition`, per-type `*SidePanelExtra`, `render(ctx)` sections, required `extraProps` / `getValues` on `UnifiedSidePanel`. **Claude Code** loads the same policy from `.claude/rules/frontend/admin-inline-editor-patterns.md` (`paths:` frontmatter). **Keep both files in sync** when changing metadata panel architecture.
 
 ### Tech stack
 
@@ -201,8 +206,10 @@ bun run e2e
 | `pixijs-patterns.md`         | Pixi 関連ファイルのみ（`paths:` 参照）。**現状 `pixi.js` は未依存** — 再導入時は公式に従い `bun add`      |
 | `accessibility.md`           | `src/app/(public*)/**`, `src/app/(admin)/**`                                                              |
 | `lexical-patterns.md`        | `src/app/(admin)/**/lexical/**`                                                                           |
+| `admin-inline-editor-patterns.md` | `src/app/(admin)/**/editor/inline/**`, `src/app/(admin)/admin/(dashboard)/posts/_components/**`, `src/app/(admin)/admin/(dashboard)/news/_components/**` |
 | `seo-patterns.md`            | `src/app/(public*)/**/seo/**`, `**/layouts/**`                                                            |
 | `ui-ux-patterns.md`          | `src/app/(public*\|admin)/**`                                                                             |
+| `admin-ui-patterns.md`       | `src/app/(admin)/**` — admin layout/forms/tables/tabs; includes `useFormAction` default and **exceptions** (e.g. `SpaceEditForm`: `useActionState` + `FormData` + `space-form-data-codec`) |
 | `deployment-patterns.md`     | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**`                   |
 
 詳細ルールは `docs/reference/codex-rules/` に配置。
@@ -305,5 +312,6 @@ bun run e2e
 - `docs/plans/` : 実装計画
 - `docs/reference/` : 詳細ルール
 - `docs/reference/codex-rules/lexical-patterns.md` : Admin Lexical の正本（`LexicalEditor` レイアウト定数、DraggableBlock フォーク、プレースホルダー）。Claude 用の `.claude/rules/frontend/lexical-patterns.md` と **同一方針**で保つ（`paths:` 条件付き）
+- `docs/reference/codex-rules/admin-inline-editor-patterns.md` : Post/News メタデータパネル（`UnifiedSidePanel`, `content-types`）。Claude 用の `.claude/rules/frontend/admin-inline-editor-patterns.md` と **同一方針**で保つ（`paths:` 条件付き）
 - `docs/reference/codex-rules/instruction-topology.md` : Codex 向け instruction / skill / override の責務整理
 - `.agents/skills/README.md` : Codex スキルの索引と作成基準

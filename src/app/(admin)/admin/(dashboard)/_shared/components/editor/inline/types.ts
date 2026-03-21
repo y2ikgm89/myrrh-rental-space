@@ -9,6 +9,7 @@ import type {
   FieldValues,
   UseFormRegister,
   UseFormSetValue,
+  UseFormGetValues,
   Control,
   Path,
   FieldPathByValue,
@@ -160,6 +161,8 @@ export type SidePanelSectionProps<T extends FieldValues = FieldValues> = {
   control: Control<T>;
   errors: FieldErrors<T>;
   setValue?: UseFormSetValue<T>;
+  /** UnifiedSidePanel から常に渡す（各セクションは未使用なら分割代入で省略可） */
+  getValues: UseFormGetValues<T>;
   disabled?: boolean;
 };
 

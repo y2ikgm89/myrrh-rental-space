@@ -12,6 +12,7 @@ import { setupPassword } from "@/admin/actions/staff-invitation";
 import { signIn } from "@/shared/lib/auth-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
+import { SubmitButton } from "@/admin/components/ui";
 
 type Props = {
   invitation: InvitationData;
@@ -152,13 +153,12 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? "設定中..." : "パスワードを設定してログイン"}
-      </button>
+      <SubmitButton
+        isPending={isLoading}
+        label="パスワードを設定してログイン"
+        pendingLabel="設定中..."
+        className="w-full"
+      />
     </form>
   );
 }

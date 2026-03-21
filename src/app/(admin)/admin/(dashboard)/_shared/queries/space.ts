@@ -10,18 +10,12 @@ import {
   type GetSpacesResult,
   type SpaceFilters,
   type SpacePagination,
+  type SpaceSelectOption,
   type SpaceWithStats,
 } from "@/admin/lib/validations/space";
 import { requireAdminPermission } from "./_helpers";
 
-export type SpaceSelectOption = {
-  id: string;
-  slug: string;
-  name: string;
-  mainImageUrl: string;
-  hourlyPrice: string;
-  capacity: number;
-};
+export type { SpaceSelectOption };
 
 export async function getSpaces(
   filters: SpaceFilters = {},

@@ -28,6 +28,7 @@ import {
   usePostEditor,
   useContentWidth,
   postConfig,
+  type PostSidePanelExtra,
 } from "@/admin/components/editor/inline";
 import { createPostCategory, createPostTag } from "@/admin/actions/post";
 import type {
@@ -37,7 +38,7 @@ import type {
 } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { generateSlug } from "@/shared/lib/utils";
-import { isValidPostStatus } from "@/shared/lib/validations/enums";
+import { PostStatus } from "@/shared/db/enums";
 import type { ContentWidth } from "@/shared/types";
 
 // =============================================================================
@@ -184,12 +185,10 @@ export function PostEditor({
     onCreateCategory: editor.handleCreateCategory,
     onCreateTag: editor.handleCreateTag,
     statusValue: editor.status,
-    onStatusChange: (value: string) => {
-      if (isValidPostStatus(value)) {
-        editor.form.setValue("status", value);
-      }
+    onStatusChange: (value: PostStatus) => {
+      editor.form.setValue("status", value);
     },
-  };
+  } satisfies PostSidePanelExtra;
 
   return (
     <InlineEditorShell
