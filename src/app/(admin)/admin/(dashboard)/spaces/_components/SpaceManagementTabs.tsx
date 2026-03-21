@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { Button } from "@/admin/components/ui";
-import { CreateCategoryDialog } from "../../_space-categories/_components/CreateCategoryDialog";
+import { CreateCategoryDialog } from "../../space-categories/_components/CreateCategoryDialog";
 import type { AdminSpaceManagementTab } from "@/shared/lib/constants";
 import { cn } from "@/shared/lib/cn";
 

@@ -1,5 +1,5 @@
 import { getActiveTermsForSelect } from "@/admin/queries/terms";
-import { getPublishedLocations } from "@/admin/queries/location";
+import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -14,7 +14,7 @@ export default async function NewSpacePage() {
   const [availableTerms, availableLocations, availableCategories, taxSettings] =
     await Promise.all([
       getActiveTermsForSelect(),
-      getPublishedLocations(),
+      getActiveLocationsForSelect(),
       getActiveSpaceCategories(),
       getTaxSettings(),
     ]);

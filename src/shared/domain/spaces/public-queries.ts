@@ -9,6 +9,7 @@ import {
   getCacheTag,
 } from "@/shared/lib/constants";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 const spaceListSelect = {
   id: true,
@@ -113,13 +114,13 @@ export async function getSpaceBySlug(slug: string) {
       mainImageUrl: true,
       imageUrls: true,
       facilities: true,
-      address: true,
+      addressDetail: true,
       metaDescription: true,
       ogpTitle: true,
       ogpDescription: true,
       ogpImageUrl: true,
       category: { select: { id: true, name: true } },
-      location: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, address: true } },
     },
   });
 
@@ -127,6 +128,10 @@ export async function getSpaceBySlug(slug: string) {
 
   return toPlainObject({
     ...space,
+    lineAddress: formatSpaceLineAddress(
+      space.location.address,
+      space.addressDetail,
+    ),
     hourlyPrice: Number(space.hourlyPrice),
     dailyPrice: space.dailyPrice ? Number(space.dailyPrice) : null,
   });

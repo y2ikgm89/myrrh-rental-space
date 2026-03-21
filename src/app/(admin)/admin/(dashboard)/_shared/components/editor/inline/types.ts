@@ -303,7 +303,7 @@ export const NEWS_PUBLISH_FIELDS = {
 export type SpaceEditorFormData = {
   name: string;
   description: string;
-  address: string;
+  addressDetail?: string;
   access?: string;
   capacity: number;
   area?: number;
@@ -313,7 +313,7 @@ export type SpaceEditorFormData = {
   imageUrls: string[];
   facilities: string[];
   categoryId?: string;
-  locationId?: string;
+  locationId: string;
   termsId?: string;
   contentWidth?: string;
   contentWidthCustom?: string;

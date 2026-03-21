@@ -10,13 +10,14 @@ import {
   getValidDurationDiscountOverride,
 } from "@/shared/lib/validations/enums";
 import type { TaxRateType } from "@/shared/db/enums";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 function formatSpaceToPlain(s: {
   id: string;
   slug: string;
   name: string;
   description: string;
-  address: string;
+  addressDetail: string | null;
   access: string | null;
   capacity: number;
   area: number | null;
@@ -32,8 +33,9 @@ function formatSpaceToPlain(s: {
   createdAt: Date;
   updatedAt: Date;
   termsId: string | null;
-  locationId: string | null;
+  locationId: string;
   categoryId: string | null;
+  location: { address: string };
   discountType: string | null;
   discountValue: number | null;
   durationDiscountOverride: string | null;
@@ -50,7 +52,8 @@ function formatSpaceToPlain(s: {
     slug: s.slug,
     name: s.name,
     description: s.description,
-    address: s.address,
+    addressDetail: s.addressDetail,
+    displayAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
     access: s.access,
     capacity: s.capacity,
     area: s.area,
@@ -108,8 +111,9 @@ export async function getSpacesQuery(
     isPublished?: boolean;
     OR?: Array<
       | { name: { contains: string; mode: "insensitive" } }
-      | { address: { contains: string; mode: "insensitive" } }
+      | { addressDetail: { contains: string; mode: "insensitive" } }
       | { description: { contains: string; mode: "insensitive" } }
+      | { location: { address: { contains: string; mode: "insensitive" } } }
     >;
   } = {
     isActive: true,
@@ -122,8 +126,9 @@ export async function getSpacesQuery(
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
-      { address: { contains: search, mode: "insensitive" } },
+      { addressDetail: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
+      { location: { address: { contains: search, mode: "insensitive" } } },
     ];
   }
 
@@ -132,6 +137,7 @@ export async function getSpacesQuery(
     prisma.space.findMany({
       where,
       include: {
+        location: { select: { address: true } },
         _count: {
           select: {
             reservations: true,
@@ -159,6 +165,7 @@ export async function getSpaceByIdQuery(id: string) {
   const space = await prisma.space.findUnique({
     where: { id },
     include: {
+      location: { select: { address: true } },
       _count: {
         select: {
           reservations: true,

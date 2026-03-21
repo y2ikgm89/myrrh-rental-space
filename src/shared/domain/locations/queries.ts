@@ -129,3 +129,18 @@ export async function getPublishedLocations(): Promise<
     },
   });
 }
+
+/** スペース編集で紐づけ可能な拠点（公開前の建物も含む） */
+export async function getActiveLocationsForSelect(): Promise<
+  PublishedLocationOption[]
+> {
+  return prisma.location.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true,
+      name: true,
+      address: true,
+    },
+  });
+}

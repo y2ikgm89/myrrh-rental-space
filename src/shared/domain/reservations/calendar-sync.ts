@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CalendarSyncMethod, ReservationStatus } from "@/shared/db/enums";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 export type FailedCalendarSyncReservation = {
   id: string;
@@ -12,7 +13,7 @@ export type FailedCalendarSyncReservation = {
   totalPrice: number | null;
   space: {
     name: string;
-    address: string | null;
+    lineAddress: string;
   };
   customer: {
     firstName: string;
@@ -104,7 +105,7 @@ export async function saveReservationOAuthCalendarEvent(input: {
 export async function getFailedCalendarSyncReservations(
   limit: number = 50,
 ): Promise<FailedCalendarSyncReservation[]> {
-  return prisma.reservation.findMany({
+  const rows = await prisma.reservation.findMany({
     where: {
       googleCalendarEventId: null,
       calendarSyncError: { not: null },
@@ -117,7 +118,11 @@ export async function getFailedCalendarSyncReservations(
       notes: true,
       totalPrice: true,
       space: {
-        select: { name: true, address: true },
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
       },
       customer: {
         select: { firstName: true, lastName: true, email: true },
@@ -125,6 +130,22 @@ export async function getFailedCalendarSyncReservations(
     },
     take: limit,
   });
+
+  return rows.map((r) => ({
+    id: r.id,
+    startTime: r.startTime,
+    endTime: r.endTime,
+    notes: r.notes,
+    totalPrice: r.totalPrice,
+    space: {
+      name: r.space.name,
+      lineAddress: formatSpaceLineAddress(
+        r.space.location.address,
+        r.space.addressDetail,
+      ),
+    },
+    customer: r.customer,
+  }));
 }
 
 export async function getCalendarSyncRuntimeState(): Promise<{

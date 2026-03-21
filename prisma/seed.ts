@@ -425,7 +425,7 @@ async function seedSpaces() {
 ・Wi-Fi（高速回線）
 ・電源タップ
 ・空調完備`,
-      address: "東京都渋谷区神宮前1-1-1 サンプルビル3F",
+      addressDetail: "3F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 8,
       area: new Prisma.Decimal(25.5),
@@ -466,7 +466,7 @@ async function seedSpaces() {
 ・マイク（ワイヤレス2本）
 ・Wi-Fi（高速回線）
 ・可動式テーブル・椅子`,
-      address: "東京都渋谷区神宮前1-1-1 サンプルビル4F",
+      addressDetail: "4F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 30,
       area: new Prisma.Decimal(60.0),
@@ -507,7 +507,7 @@ async function seedSpaces() {
 ・ロッカー（有料）
 ・ドリンクバー
 ・複合機（有料）`,
-      address: "東京都渋谷区神宮前1-1-1 サンプルビル2F",
+      addressDetail: "2F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 20,
       area: new Prisma.Decimal(80.0),

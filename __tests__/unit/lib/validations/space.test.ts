@@ -10,12 +10,14 @@ import {
   defaultSpaceFormValues,
 } from "@/admin/lib/validations/space";
 
+const TEST_LOCATION_ID = "11111111-1111-4111-8111-111111111111";
+
 // 有効なスペースデータ
 const VALID_SPACE_INPUT = {
   slug: "test-space",
   name: "テストスペース",
   description: "これはテスト用のスペースの説明文です。10文字以上必要です。",
-  address: "東京都渋谷区1-2-3",
+  addressDetail: "3F 会議室A",
   access: "渋谷駅から徒歩5分",
   capacity: 10,
   area: 50.5,
@@ -29,6 +31,8 @@ const VALID_SPACE_INPUT = {
   facilities: ["WiFi", "プロジェクター", "電源"],
   isPublished: false,
   termsId: null,
+  locationId: TEST_LOCATION_ID,
+  categoryId: null,
 };
 
 describe("spaceFormSchema", () => {
@@ -43,7 +47,7 @@ describe("spaceFormSchema", () => {
         slug: "test-space",
         name: "テストスペース",
         description: "これはテスト用のスペースの説明文です。",
-        address: "東京都渋谷区1-2-3",
+        locationId: TEST_LOCATION_ID,
         capacity: 1,
         hourlyPrice: 0,
         mainImageUrl: "https://example.com/images/main.jpg",
@@ -57,7 +61,7 @@ describe("spaceFormSchema", () => {
         slug: "test-space",
         name: "テストスペース",
         description: "これはテスト用のスペースの説明文です。",
-        address: "東京都渋谷区1-2-3",
+        locationId: TEST_LOCATION_ID,
         capacity: 1,
         hourlyPrice: 0,
         mainImageUrl: "https://example.com/images/main.jpg",
@@ -136,15 +140,28 @@ describe("spaceFormSchema", () => {
     });
   });
 
-  describe("address", () => {
+  describe("locationId", () => {
     test("空文字はエラー", () => {
       const result = spaceFormSchema.safeParse({
         ...VALID_SPACE_INPUT,
-        address: "",
+        locationId: "",
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("住所");
+        expect(result.error.issues[0].message).toContain("拠点");
+      }
+    });
+  });
+
+  describe("addressDetail", () => {
+    test("500文字超過はエラー", () => {
+      const result = spaceFormSchema.safeParse({
+        ...VALID_SPACE_INPUT,
+        addressDetail: "あ".repeat(501),
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain("500文字以内");
       }
     });
   });
@@ -483,7 +500,7 @@ describe("defaultSpaceFormValues", () => {
       slug: "",
       name: "",
       description: "",
-      address: "",
+      addressDetail: "",
       access: "",
       capacity: 10,
       area: null,
@@ -494,7 +511,7 @@ describe("defaultSpaceFormValues", () => {
       facilities: [],
       isPublished: false,
       termsId: null,
-      locationId: null,
+      locationId: "",
       categoryId: null,
       // 割引設定
       discountType: "none",

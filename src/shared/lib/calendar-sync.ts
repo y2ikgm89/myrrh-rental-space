@@ -356,7 +356,7 @@ export async function retryFailedSyncs(): Promise<{
         customerEmail: reservation.customer.email,
         startTime: reservation.startTime,
         endTime: reservation.endTime,
-        location: reservation.space.address ?? undefined,
+        location: reservation.space.lineAddress,
         notes: reservation.notes ?? undefined,
         totalPrice: reservation.totalPrice,
       }),

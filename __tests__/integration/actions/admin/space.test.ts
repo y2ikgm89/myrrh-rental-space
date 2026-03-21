@@ -21,7 +21,7 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   slug: "test-space",
   name: "テストスペース",
   description: "これはテスト用のスペースの説明です。10文字以上必要です。",
-  address: "東京都渋谷区渋谷1-1-1",
+  addressDetail: "3F",
   access: "渋谷駅から徒歩5分",
   capacity: 10,
   area: 50,
@@ -35,7 +35,7 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   facilities: ["Wi-Fi", "プロジェクター", "ホワイトボード"],
   isPublished: false,
   termsId: null,
-  locationId: null,
+  locationId: VALID_UUID,
   categoryId: null,
   discountType: "none",
   discountValue: null,
@@ -61,7 +61,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -85,7 +85,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -102,7 +102,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -119,7 +119,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -136,7 +136,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -153,7 +153,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -170,7 +170,7 @@ describe("Space Admin Action Integration", () => {
           slug: "test-space",
           name: "スペース",
           description: "10文字以上の説明文です。",
-          address: "東京都渋谷区",
+          locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
           mainImageUrl: "https://example.com/image.jpg",
@@ -297,15 +297,15 @@ describe("Space Admin Action Integration", () => {
       });
     });
 
-    describe("address", () => {
-      test("空の住所はエラー", () => {
+    describe("locationId", () => {
+      test("空の拠点はエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          address: "",
+          locationId: "",
         });
         expect(result.success).toBe(false);
         if (!result.success) {
-          expect(result.error.issues[0].message).toContain("住所を入力");
+          expect(result.error.issues[0].message).toContain("拠点");
         }
       });
     });

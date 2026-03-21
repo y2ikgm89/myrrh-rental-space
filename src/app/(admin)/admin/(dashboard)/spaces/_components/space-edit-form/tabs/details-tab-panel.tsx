@@ -26,7 +26,6 @@ import type { SpaceEditFormData } from "../schema";
 import {
   SELECT_NONE_VALUE,
   type SpaceEditCategoryOption,
-  type SpaceEditLocationOption,
   type SpaceEditTermsOption,
 } from "../types";
 
@@ -35,7 +34,6 @@ type SpaceEditDetailsTabPanelProps = {
   setValue: UseFormSetValue<SpaceEditFormData>;
   isPending: boolean;
   availableTerms: SpaceEditTermsOption[];
-  availableLocations: SpaceEditLocationOption[];
   availableCategories: SpaceEditCategoryOption[];
   newFacility: string;
   onNewFacilityChange: (value: string) => void;
@@ -49,7 +47,6 @@ export function SpaceEditDetailsTabPanel({
   setValue,
   isPending,
   availableTerms,
-  availableLocations,
   availableCategories,
   newFacility,
   onNewFacilityChange,
@@ -57,7 +54,6 @@ export function SpaceEditDetailsTabPanel({
   facilityFields,
   onRemoveFacility,
 }: SpaceEditDetailsTabPanelProps) {
-  const locationId = useWatch({ control, name: "locationId" });
   const categoryId = useWatch({ control, name: "categoryId" });
   const termsId = useWatch({ control, name: "termsId" });
 
@@ -68,71 +64,41 @@ export function SpaceEditDetailsTabPanel({
       className="data-[state=inactive]:hidden"
     >
       <div className="space-y-6">
-        {(availableLocations.length > 0 || availableCategories.length > 0) && (
+        {availableCategories.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>場所・カテゴリー</CardTitle>
+              <CardTitle>カテゴリー</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {availableLocations.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="locationId">場所（建物・施設）</Label>
-                  <Select
-                    value={locationId ?? SELECT_NONE_VALUE}
-                    onValueChange={(value) =>
-                      setValue(
-                        "locationId",
-                        value === SELECT_NONE_VALUE ? undefined : value,
-                        { shouldDirty: true },
-                      )
-                    }
-                    disabled={isPending}
-                  >
-                    <SelectTrigger id="locationId">
-                      <SelectValue placeholder="場所を選択（任意）" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
-                      {availableLocations.map((loc) => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}（{loc.address}）
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {availableCategories.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="categoryId">カテゴリー（用途）</Label>
-                  <Select
-                    value={categoryId ?? SELECT_NONE_VALUE}
-                    onValueChange={(value) =>
-                      setValue(
-                        "categoryId",
-                        value === SELECT_NONE_VALUE ? undefined : value,
-                        { shouldDirty: true },
-                      )
-                    }
-                    disabled={isPending}
-                  >
-                    <SelectTrigger id="categoryId">
-                      <SelectValue placeholder="カテゴリーを選択（任意）" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
-                      {availableCategories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon && (
-                            <span className="mr-1">{cat.icon}</span>
-                          )}
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="categoryId">カテゴリー（用途）</Label>
+                <Select
+                  value={categoryId ?? SELECT_NONE_VALUE}
+                  onValueChange={(value) =>
+                    setValue(
+                      "categoryId",
+                      value === SELECT_NONE_VALUE ? undefined : value,
+                      { shouldDirty: true },
+                    )
+                  }
+                  disabled={isPending}
+                >
+                  <SelectTrigger id="categoryId">
+                    <SelectValue placeholder="カテゴリーを選択（任意）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
+                    {availableCategories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.icon && (
+                          <span className="mr-1">{cat.icon}</span>
+                        )}
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         )}

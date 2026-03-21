@@ -9,6 +9,7 @@ import {
 } from "@/shared/lib/pricing";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 type ValidatedCoupon = {
   id: string;
@@ -129,7 +130,13 @@ export async function createAdminReservationCommand(input: {
   const [space, overlapCheck, settings] = await Promise.all([
     prisma.space.findUnique({
       where: { id: input.spaceId, isActive: true },
-      select: { id: true, name: true, address: true, hourlyPrice: true },
+      select: {
+        id: true,
+        name: true,
+        addressDetail: true,
+        hourlyPrice: true,
+        location: { select: { address: true } },
+      },
     }),
     checkReservationOverlap({
       spaceId: input.spaceId,
@@ -294,7 +301,10 @@ export async function createAdminReservationCommand(input: {
       endTime: endDateTime,
       totalPrice: calculatedPrice,
       notes,
-      location: space.address ?? undefined,
+      location: formatSpaceLineAddress(
+        space.location.address,
+        space.addressDetail,
+      ),
     } satisfies ReservationNotificationPayload,
     calendar: {
       reservationId: reservation.id,
@@ -305,7 +315,10 @@ export async function createAdminReservationCommand(input: {
       endTime: endDateTime,
       totalPrice: calculatedPrice,
       notes,
-      location: space.address ?? undefined,
+      location: formatSpaceLineAddress(
+        space.location.address,
+        space.addressDetail,
+      ),
     } satisfies ReservationCalendarPayload,
   };
 }
@@ -345,7 +358,13 @@ export async function updateAdminReservationCommand(
     }),
     prisma.space.findUnique({
       where: { id: input.spaceId, isActive: true },
-      select: { id: true, name: true, address: true, hourlyPrice: true },
+      select: {
+        id: true,
+        name: true,
+        addressDetail: true,
+        hourlyPrice: true,
+        location: { select: { address: true } },
+      },
     }),
     getReservationSettings(),
   ]);
@@ -464,7 +483,10 @@ export async function updateAdminReservationCommand(
       endTime: endDateTime,
       totalPrice: calculatedPrice,
       notes: input.notes ?? undefined,
-      location: space.address ?? undefined,
+      location: formatSpaceLineAddress(
+        space.location.address,
+        space.addressDetail,
+      ),
     } satisfies ReservationNotificationPayload,
   };
 }
@@ -476,7 +498,13 @@ export async function updateReservationStatusCommand(
   const reservation = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      space: { select: { name: true, address: true } },
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
       customer: { select: { firstName: true, lastName: true, email: true } },
     },
   });
@@ -502,7 +530,10 @@ export async function updateReservationStatusCommand(
     endTime: reservation.endTime,
     totalPrice: reservation.totalPrice,
     notes: reservation.notes ?? undefined,
-    location: reservation.space.address ?? undefined,
+    location: formatSpaceLineAddress(
+      reservation.space.location.address,
+      reservation.space.addressDetail,
+    ),
   } satisfies ReservationNotificationPayload;
 
   return {
@@ -571,7 +602,13 @@ export async function createPublicReservationCommand(
 
   const space = await prisma.space.findUnique({
     where: { id: input.spaceId, isActive: true, isPublished: true },
-    select: { id: true, name: true, address: true, hourlyPrice: true },
+    select: {
+      id: true,
+      name: true,
+      addressDetail: true,
+      hourlyPrice: true,
+      location: { select: { address: true } },
+    },
   });
 
   if (!space) {
@@ -679,7 +716,10 @@ export async function createPublicReservationCommand(
       endTime: endDateTime,
       totalPrice: basePrice,
       notes: input.notes ?? undefined,
-      location: space.address ?? undefined,
+      location: formatSpaceLineAddress(
+        space.location.address,
+        space.addressDetail,
+      ),
     } satisfies ReservationNotificationPayload,
   };
 }

@@ -1,6 +1,12 @@
 "use client";
 
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import type {
+  Control,
+  FieldErrors,
+  UseFormRegister,
+  UseFormSetValue,
+} from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
@@ -8,22 +14,36 @@ import {
   CardTitle,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   TabsContent,
   Textarea,
 } from "@/admin/components/ui";
 import type { SpaceEditFormData } from "../schema";
+import type { SpaceEditLocationOption } from "../types";
 
 type SpaceEditBasicTabPanelProps = {
+  control: Control<SpaceEditFormData>;
   register: UseFormRegister<SpaceEditFormData>;
+  setValue: UseFormSetValue<SpaceEditFormData>;
   errors: FieldErrors<SpaceEditFormData>;
   isPending: boolean;
+  availableLocations: SpaceEditLocationOption[];
 };
 
 export function SpaceEditBasicTabPanel({
+  control,
   register,
+  setValue,
   errors,
   isPending,
+  availableLocations,
 }: SpaceEditBasicTabPanelProps) {
+  const locationId = useWatch({ control, name: "locationId" });
+
   return (
     <TabsContent
       value="basic"
@@ -80,27 +100,64 @@ export function SpaceEditBasicTabPanel({
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="address">住所 *</Label>
-              <Input
-                id="address"
-                {...register("address")}
-                placeholder="例: 東京都渋谷区..."
+          <div className="space-y-2">
+            <Label htmlFor="locationId">拠点（建物）*</Label>
+            {availableLocations.length === 0 ? (
+              <p className="text-sm text-destructive">
+                拠点が登録されていません。スペース管理の「場所」タブから先に拠点を作成してください。
+              </p>
+            ) : (
+              <Select
+                {...(locationId !== "" ? { value: locationId } : {})}
+                onValueChange={(value) =>
+                  setValue("locationId", value, { shouldDirty: true })
+                }
                 disabled={isPending}
-              />
-              {errors.address && (
-                <p className="text-sm text-destructive">
-                  {errors.address.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="access">アクセス</Label>
+              >
+                <SelectTrigger id="locationId">
+                  <SelectValue placeholder="拠点を選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLocations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}（{loc.address}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {errors.locationId && (
+              <p className="text-sm text-destructive">
+                {errors.locationId.message}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              建物の住所は拠点マスタが正本です。号室やフロアは下の「所在地補足」に入力します。
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="addressDetail">所在地補足（号室・フロア等）</Label>
+            <Input
+              id="addressDetail"
+              {...register("addressDetail")}
+              placeholder="例: 3F 会議室A（任意）"
+              disabled={isPending}
+            />
+            {errors.addressDetail && (
+              <p className="text-sm text-destructive">
+                {errors.addressDetail.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="access">アクセス（スペース固有の補足）</Label>
               <Input
                 id="access"
                 {...register("access")}
-                placeholder="例: 渋谷駅から徒歩5分"
+                placeholder="例: エレベーター降りて右手（任意）"
                 disabled={isPending}
               />
             </div>

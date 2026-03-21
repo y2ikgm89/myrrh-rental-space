@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getSpaceCategories } from "@/admin/queries/space-category";
-import { CategoryFilters } from "../../_space-categories/_components/CategoryFilters";
-import { CategoryTable } from "../../_space-categories/_components/CategoryTable";
+import { CategoryFilters } from "../../space-categories/_components/CategoryFilters";
+import { CategoryTable } from "../../space-categories/_components/CategoryTable";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";

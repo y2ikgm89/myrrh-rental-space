@@ -34,6 +34,10 @@ function getOptionalUuid(formData: FormData, key: string): string | null {
   return s === "" ? null : s;
 }
 
+function getRequiredUuidString(formData: FormData, key: string): string {
+  return getTrimmedString(formData, key);
+}
+
 function getOptionalNullableNumber(
   formData: FormData,
   key: string,
@@ -91,7 +95,7 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     slug: getTrimmedString(formData, "slug"),
     name: getTrimmedString(formData, "name"),
     description: getTrimmedString(formData, "description"),
-    address: getTrimmedString(formData, "address"),
+    addressDetail: getTrimmedString(formData, "addressDetail"),
     access: getTrimmedString(formData, "access"),
     capacity: getRequiredInt(formData, "capacity"),
     area: getOptionalNullableNumber(formData, "area"),
@@ -102,7 +106,7 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     facilities,
     isPublished: getTrimmedString(formData, "isPublished") === "true",
     termsId: getOptionalUuid(formData, "termsId"),
-    locationId: getOptionalUuid(formData, "locationId"),
+    locationId: getRequiredUuidString(formData, "locationId"),
     categoryId: getOptionalUuid(formData, "categoryId"),
     discountType: getTrimmedString(formData, "discountType"),
     discountValue: getOptionalNullableNumber(formData, "discountValue"),
@@ -144,7 +148,7 @@ export function spaceFormDataToFormData(
   fd.set("slug", payload.slug);
   fd.set("name", payload.name);
   fd.set("description", payload.description);
-  fd.set("address", payload.address);
+  fd.set("addressDetail", payload.addressDetail ?? "");
   fd.set("access", payload.access ?? "");
   fd.set("capacity", String(payload.capacity));
   fd.set("hourlyPrice", String(payload.hourlyPrice));
@@ -174,7 +178,7 @@ export function spaceFormDataToFormData(
   fd.set("taxRateType", payload.taxRateType);
 
   fd.set("termsId", payload.termsId ?? "");
-  fd.set("locationId", payload.locationId ?? "");
+  fd.set("locationId", payload.locationId);
   fd.set("categoryId", payload.categoryId ?? "");
 
   fd.set("metaDescription", payload.metaDescription ?? "");

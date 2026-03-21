@@ -72,7 +72,7 @@ test.describe("スペース一覧ページ", () => {
     await expect(
       page.locator("th").filter({ hasText: "スペース名" }),
     ).toBeVisible();
-    await expect(page.locator("th").filter({ hasText: "住所" })).toBeVisible();
+    await expect(page.locator("th").filter({ hasText: "所在地" })).toBeVisible();
     await expect(page.locator("th").filter({ hasText: "定員" })).toBeVisible();
     await expect(
       page.locator("th").filter({ hasText: "時間料金" }),
@@ -133,7 +133,8 @@ test.describe("スペースの新規作成", () => {
     await expect(
       page.locator('textarea, [contenteditable="true"]').first(),
     ).toBeVisible(); // RichTextEditor
-    await expect(page.locator('input[name="address"]')).toBeVisible();
+    await expect(page.locator("#locationId")).toBeVisible();
+    await expect(page.locator('input[name="addressDetail"]')).toBeVisible();
     await expect(page.locator('input[name="capacity"]')).toBeVisible();
     await expect(page.locator('input[name="hourlyPrice"]')).toBeVisible();
   });
@@ -149,7 +150,9 @@ test.describe("スペースの新規作成", () => {
     await descriptionEditor.click();
     await descriptionEditor.fill(testSpaces.roomA.description);
 
-    await page.fill('input[name="address"]', "東京都渋谷区テスト1-2-3");
+    await page.locator("#locationId").click();
+    await page.getByRole("option").first().click();
+    await page.fill('input[name="addressDetail"]', "3F テスト");
     await page.fill(
       'input[name="capacity"]',
       testSpaces.roomA.capacity.toString(),
@@ -433,7 +436,7 @@ test.describe("フォームバリデーション", () => {
     // エラーメッセージを確認
     await expect(page.locator("text=名前を入力してください")).toBeVisible();
     await expect(page.locator("text=説明を入力してください")).toBeVisible();
-    await expect(page.locator("text=住所を入力してください")).toBeVisible();
+    await expect(page.locator("text=拠点を選択してください")).toBeVisible();
     await expect(page.locator("text=メイン画像")).toBeVisible();
   });
 

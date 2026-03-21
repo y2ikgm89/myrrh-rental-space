@@ -17,7 +17,7 @@ type SpaceCommandInput = {
   slug: string;
   name: string;
   description: string;
-  address: string;
+  addressDetail?: string | null | undefined;
   access?: string | null | undefined;
   capacity: number;
   area?: number | null | undefined;
@@ -28,7 +28,7 @@ type SpaceCommandInput = {
   facilities: string[];
   isPublished: boolean;
   termsId?: string | null | undefined;
-  locationId?: string | null | undefined;
+  locationId: string;
   categoryId?: string | null | undefined;
   discountType?: DiscountType | null | undefined;
   discountValue?: number | null | undefined;
@@ -56,7 +56,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     slug: input.slug,
     name: input.name,
     description: input.description,
-    address: input.address,
+    addressDetail: normalizeNullableString(input.addressDetail),
     access: normalizeNullableString(input.access),
     capacity: input.capacity,
     area: input.area ?? null,
@@ -68,7 +68,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     isPublished: input.isPublished,
     publishedAt,
     termsId: input.termsId ?? null,
-    locationId: input.locationId ?? null,
+    locationId: input.locationId,
     categoryId: input.categoryId ?? null,
     discountType: input.discountType ?? DiscountType.none,
     discountValue: input.discountValue ?? null,
@@ -97,6 +97,31 @@ async function ensureSlugAvailable(
   }
 }
 
+async function ensureAssignableLocation(locationId: string): Promise<void> {
+  const location = await prisma.location.findFirst({
+    where: { id: locationId, isActive: true },
+    select: { id: true },
+  });
+  if (!location) {
+    throw new DomainError("拠点が見つからないか、無効です", "VALIDATION");
+  }
+}
+
+async function ensureAssignableCategory(
+  categoryId: string | null | undefined,
+): Promise<void> {
+  if (categoryId === null || categoryId === undefined) {
+    return;
+  }
+  const category = await prisma.spaceCategory.findFirst({
+    where: { id: categoryId, isActive: true },
+    select: { id: true },
+  });
+  if (!category) {
+    throw new DomainError("カテゴリーが見つからないか、無効です", "VALIDATION");
+  }
+}
+
 async function ensureSpaceExists(id: string) {
   const space = await prisma.space.findUnique({
     where: { id },
@@ -114,6 +139,8 @@ export async function createSpaceCommand(
   input: SpaceCommandInput,
 ): Promise<{ id: string }> {
   await ensureSlugAvailable(input.slug);
+  await ensureAssignableLocation(input.locationId);
+  await ensureAssignableCategory(input.categoryId);
 
   const space = await prisma.space.create({
     data: buildSpaceData(input, input.isPublished ? new Date() : null),
@@ -128,6 +155,8 @@ export async function updateSpaceCommand(
   input: SpaceCommandInput,
 ): Promise<void> {
   const existingSpace = await ensureSpaceExists(id);
+  await ensureAssignableLocation(input.locationId);
+  await ensureAssignableCategory(input.categoryId);
   await ensureSlugAvailable(input.slug, id);
 
   let publishedAt = existingSpace.publishedAt;

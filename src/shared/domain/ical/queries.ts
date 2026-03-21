@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
 
 export async function getICalFeedRuntimeSettings(): Promise<{
@@ -70,7 +71,13 @@ export async function getICalReservations(input: {
       ...(input.spaceId ? { spaceId: input.spaceId } : {}),
     },
     include: {
-      space: { select: { name: true, address: true } },
+      space: {
+        select: {
+          name: true,
+          addressDetail: true,
+          location: { select: { address: true } },
+        },
+      },
       customer: { select: { firstName: true, lastName: true } },
     },
     orderBy: { startTime: "asc" },
@@ -82,7 +89,10 @@ export async function getICalReservations(input: {
     startTime: reservation.startTime,
     endTime: reservation.endTime,
     spaceName: reservation.space.name,
-    spaceAddress: reservation.space.address ?? null,
+    spaceAddress: formatSpaceLineAddress(
+      reservation.space.location.address,
+      reservation.space.addressDetail,
+    ),
     customerFirstName: reservation.customer.firstName,
     customerLastName: reservation.customer.lastName,
   }));

@@ -121,7 +121,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
               <span className="whitespace-pre-wrap">{space.description}</span>
             }
           />
-          <DetailField label="住所" value={space.address} />
+          <DetailField label="所在地" value={space.displayAddress} />
           {space.access && (
             <DetailField label="アクセス" value={space.access} />
           )}

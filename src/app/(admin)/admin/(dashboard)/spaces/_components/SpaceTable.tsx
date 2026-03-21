@@ -45,7 +45,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>スペース名</TableHead>
-              <TableHead className="hidden lg:table-cell">住所</TableHead>
+              <TableHead className="hidden lg:table-cell">所在地</TableHead>
               <TableHead className="hidden text-right md:table-cell">
                 定員
               </TableHead>
@@ -83,7 +83,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  <div className="text-sm">{space.address}</div>
+                  <div className="text-sm">{space.displayAddress}</div>
                 </TableCell>
                 <TableCell className="hidden text-right md:table-cell">
                   <Badge variant="secondary">{space.capacity}名</Badge>

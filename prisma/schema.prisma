@@ -416,7 +416,8 @@ model Space {
   slug          String    @unique
   name          String
   description   String    @db.Text
-  address       String
+  /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
+  addressDetail String?   @db.Text
   access        String?   @db.Text
   capacity      Int
   area          Decimal?  @db.Decimal(10, 2)
@@ -452,20 +453,20 @@ model Space {
   // 税率設定（Enum化）
   taxRateType TaxRateType @default(standard)
 
-  // 場所・カテゴリー設定
-  locationId String? @db.Uuid // 場所（建物）参照
-  categoryId String? @db.Uuid // カテゴリー参照
+  // 場所・カテゴリー設定（拠点は必須。カテゴリーは任意）
+  locationId String @db.Uuid
+  categoryId String? @db.Uuid
 
   // Relations
   reservations Reservation[]
   icalTokens   ICalToken[]
   terms        Terms?         @relation(fields: [termsId], references: [id], onDelete: SetNull)
-  location     Location?      @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   // OR検索用インデックス
   @@index([name])
-  @@index([address])
+  @@index([addressDetail])
   @@index([isPublished, isActive])
   @@index([termsId])
   @@index([locationId])

@@ -12,7 +12,8 @@ interface SpaceInfoProps {
     readonly description: string | null;
     readonly capacity: number;
     readonly area: number | null;
-    readonly address: string;
+    /** 拠点住所 + 所在地補足の1行 */
+    readonly lineAddress: string;
     readonly facilities: JsonValue;
     readonly category: { readonly name: string } | null;
     readonly location: { readonly name: string } | null;
@@ -47,7 +48,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
           ) : null}
           <span className="flex items-center gap-1">
             <MapPin className="h-4 w-4" />
-            {space.address}
+            {space.lineAddress}
           </span>
         </div>
       </div>

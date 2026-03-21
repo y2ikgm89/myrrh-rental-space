@@ -66,7 +66,11 @@ export const spaceFormSchema = z
       .string()
       .min(1, { error: "説明を入力してください" })
       .min(10, { error: "説明は10文字以上で入力してください" }),
-    address: z.string().min(1, { error: "住所を入力してください" }),
+    addressDetail: z
+      .string()
+      .max(500, { error: "所在地補足は500文字以内で入力してください" })
+      .optional()
+      .or(z.literal("")),
     access: z
       .string()
       .max(500, { error: "アクセス情報は500文字以内で入力してください" })
@@ -107,9 +111,8 @@ export const spaceFormSchema = z
       .nullable(),
     locationId: z
       .string()
-      .uuid({ error: "場所IDが無効です" })
-      .optional()
-      .nullable(),
+      .min(1, { error: "拠点を選択してください" })
+      .uuid({ error: "拠点IDが無効です" }),
     categoryId: z
       .string()
       .uuid({ error: "カテゴリーIDが無効です" })
@@ -148,7 +151,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   slug: "",
   name: "",
   description: "",
-  address: "",
+  addressDetail: "",
   access: "",
   capacity: 10,
   area: null,
@@ -159,7 +162,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   facilities: [],
   isPublished: false,
   termsId: null,
-  locationId: null,
+  locationId: "",
   categoryId: null,
   // 割引設定
   discountType: DiscountType.none,
@@ -194,7 +197,9 @@ export type SpaceWithStats = {
   slug: string;
   name: string;
   description: string;
-  address: string;
+  addressDetail: string | null;
+  /** 拠点住所 + addressDetail を結合した表示用1行 */
+  displayAddress: string;
   access: string | null;
   capacity: number;
   area: number | null;
@@ -213,7 +218,7 @@ export type SpaceWithStats = {
   /** toISOString() 済み ISO 8601 文字列 */
   updatedAt: string;
   termsId: string | null;
-  locationId: string | null;
+  locationId: string;
   categoryId: string | null;
   // 割引設定
   discountType: DiscountType;

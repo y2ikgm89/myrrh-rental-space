@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  getActiveLocationsForSelect as getActiveLocationsForSelectQuery,
   getLocationById as getLocationByIdQuery,
   getLocations as getLocationsQuery,
   getPublishedLocations as getPublishedLocationsQuery,
@@ -32,4 +33,11 @@ export async function getPublishedLocations(): Promise<
 > {
   await requireAdminPermission("location", "read");
   return getPublishedLocationsQuery();
+}
+
+export async function getActiveLocationsForSelect(): Promise<
+  PublishedLocationOption[]
+> {
+  await requireAdminPermission("location", "read");
+  return getActiveLocationsForSelectQuery();
 }

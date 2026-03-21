@@ -115,7 +115,7 @@ export function SpaceEditForm({
           slug: space.slug,
           name: space.name,
           description: space.description,
-          address: space.address,
+          addressDetail: space.addressDetail ?? "",
           access: space.access ?? "",
           capacity: space.capacity,
           area: space.area ?? undefined,
@@ -126,7 +126,7 @@ export function SpaceEditForm({
           facilities: space.facilities.map((value) => ({ value })),
           isPublished: space.isPublished,
           termsId: space.termsId ?? undefined,
-          locationId: space.locationId ?? undefined,
+          locationId: space.locationId,
           categoryId: space.categoryId ?? undefined,
           discountType: space.discountType ?? DiscountType.none,
           discountValue: space.discountValue ?? undefined,
@@ -145,7 +145,7 @@ export function SpaceEditForm({
           slug: "",
           name: "",
           description: "",
-          address: "",
+          addressDetail: "",
           access: "",
           capacity: 10,
           area: undefined,
@@ -156,7 +156,7 @@ export function SpaceEditForm({
           facilities: [],
           isPublished: false,
           termsId: undefined,
-          locationId: undefined,
+          locationId: availableLocations[0]?.id ?? "",
           categoryId: undefined,
           discountType: DiscountType.none,
           discountValue: undefined,
@@ -346,9 +346,12 @@ export function SpaceEditForm({
         </TabsList>
 
         <SpaceEditBasicTabPanel
+          control={control}
           register={register}
+          setValue={setValue}
           errors={errors}
           isPending={isPending}
+          availableLocations={availableLocations}
         />
 
         <SpaceEditPricingTabPanel
@@ -378,7 +381,6 @@ export function SpaceEditForm({
           setValue={setValue}
           isPending={isPending}
           availableTerms={availableTerms}
-          availableLocations={availableLocations}
           availableCategories={availableCategories}
           newFacility={newFacility}
           onNewFacilityChange={setNewFacility}
