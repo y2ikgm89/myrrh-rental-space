@@ -12,10 +12,11 @@
  * 競合時のシリアライゼーション失敗は安全に無視する（もう片方が作成済み）。
  */
 
+import { prisma } from "@/shared/db/prisma";
 import {
   ensureHomepageSectionsCommand,
   ensurePageSectionsCommand,
-} from "@/shared/domain/pages/system-pages";
+} from "@/shared/domain/pages/system-pages-commands";
 
 /**
  * ページのデフォルトセクションを確保（additive）
@@ -31,7 +32,7 @@ export async function ensurePageSections(
   pageId: string,
   slug: string,
 ): Promise<number> {
-  return ensurePageSectionsCommand(pageId, slug);
+  return ensurePageSectionsCommand(prisma, pageId, slug);
 }
 
 /**
@@ -43,5 +44,5 @@ export async function ensurePageSections(
  * @returns 作成されたセクション数
  */
 export async function ensureHomepageSections(): Promise<number> {
-  return ensureHomepageSectionsCommand();
+  return ensureHomepageSectionsCommand(prisma);
 }

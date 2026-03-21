@@ -99,6 +99,10 @@ export type TabDefinition = {
 export type SidePanelConfig = {
   /** パネルタイトル */
   title: string;
+  /** ヘッダ直下の補足（任意・メタデータとブロック設定の区別など） */
+  description?: string;
+  /** アクティブタブを localStorage に永続化するキー（コンテンツ種別ごとに一意） */
+  tabStorageKey?: string;
   /** パネル幅 */
   width: "default" | "narrow";
   /** タブ定義 */

@@ -62,7 +62,10 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
   { keys: "Ctrl+F", description: "検索" },
   { keys: "Ctrl+H", description: "置換" },
   { keys: "Ctrl+Shift+/", description: "ショートカット一覧" },
-  { keys: "Ctrl+Shift+0", description: "ブロック設定パネル表示切替" },
+  {
+    keys: "Ctrl+Shift+0",
+    description: "ブロック設定パネル表示切替（本文ブロック用）",
+  },
 ];
 
 // =============================================================================

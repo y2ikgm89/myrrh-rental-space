@@ -71,9 +71,9 @@ export async function createNews(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = parsed.data.contentJson
-    ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
-    : "";
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    parsed.data.contentJson,
+  );
   let createdNewsSlug: string | null = null;
 
   return executeAdminMutationResult({

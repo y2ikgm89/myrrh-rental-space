@@ -8,8 +8,8 @@
 export { usePostEditor } from "./usePostEditor";
 export { useNewsEditor } from "./useNewsEditor";
 
-// 共有スタイルフック
-export { useContentWidthStyles } from "./use-content-width-styles";
+// 共有フック
+export { useContentWidth } from "./use-content-width-styles";
 
 // 共有ユーティリティ
 export {

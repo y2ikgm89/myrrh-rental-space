@@ -5,6 +5,9 @@
  *
  * "/" を入力するとメニューが表示され、ブロックタイプやメディアを選択できる
  * カテゴリー別にグループ化されたメニュー表示
+ *
+ * 挿入処理は Lexical 推奨どおり、トリガー文字削除と `applyInsertItemInUpdate` を
+ * 同一の `editor.update` にまとめる（ネストした update を避ける）。
  */
 
 "use client";
@@ -20,10 +23,11 @@ import {
 import { TextNode } from "lexical";
 import {
   getPickerInsertItems,
-  executeInsertItem,
+  applyInsertItemInUpdate,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   type InsertCategory,
+  type InsertItem,
 } from "../config/insert-items";
 import type { DialogId } from "../dialogs/dialog-types";
 
@@ -36,6 +40,27 @@ type ComponentPickerPluginProps = {
 };
 
 // =============================================================================
+// Query matching (picker filter)
+// =============================================================================
+
+function pickerOptionMatchesQuery(
+  title: string,
+  keywords: readonly string[],
+  lowerQuery: string,
+): boolean {
+  if (lowerQuery === "") {
+    return true;
+  }
+  const t = title.toLowerCase();
+  if (t.includes(lowerQuery)) {
+    return true;
+  }
+  return keywords.some((keyword) =>
+    keyword.toLowerCase().includes(lowerQuery),
+  );
+}
+
+// =============================================================================
 // Menu Option Class
 // =============================================================================
 
@@ -44,23 +69,22 @@ class ComponentPickerOption extends MenuOption {
   icon: ReactNode;
   keywords: string[];
   category: InsertCategory;
-  onSelect: (queryString: string) => void;
+  readonly insertItem: InsertItem;
 
   constructor(
-    title: string,
+    insertItem: InsertItem,
     options: {
       icon: ReactNode;
       keywords?: string[];
       category: InsertCategory;
-      onSelect: (queryString: string) => void;
     },
   ) {
-    super(title);
-    this.title = title;
+    super(insertItem.label);
+    this.insertItem = insertItem;
+    this.title = insertItem.label;
     this.icon = options.icon;
     this.keywords = options.keywords ?? [];
     this.category = options.category;
-    this.onSelect = options.onSelect;
   }
 }
 
@@ -82,8 +106,7 @@ function ComponentPickerMenuItem({
   option: ComponentPickerOption;
 }) {
   return (
-    <li
-      key={option.key}
+    <div
       tabIndex={-1}
       role="option"
       aria-selected={isSelected}
@@ -98,7 +121,7 @@ function ComponentPickerMenuItem({
         {option.icon}
       </span>
       <span className="text-sm">{option.title}</span>
-    </li>
+    </div>
   );
 }
 
@@ -106,11 +129,21 @@ function ComponentPickerMenuItem({
 // Category Header Component
 // =============================================================================
 
-function CategoryHeader({ label }: { label: string }) {
+function CategoryHeader({
+  id,
+  label,
+}: {
+  id: string;
+  label: string;
+}) {
   return (
-    <li className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide select-none">
+    <div
+      id={id}
+      role="presentation"
+      className="px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide select-none"
+    >
       {label}
-    </li>
+    </div>
   );
 }
 
@@ -124,40 +157,36 @@ export function ComponentPickerPlugin({
   const [editor] = useLexicalComposerContext();
   const [queryString, setQueryString] = useState<string | null>(null);
 
-  // トリガー: "/" で発火
   const checkForTriggerMatch = useBasicTypeaheadTriggerMatch("/", {
     minLength: 0,
   });
 
-  // configからオプションを生成
   const configItems = getPickerInsertItems(!!openDialog);
   const allOptions = configItems.map(
     (item) =>
-      new ComponentPickerOption(item.label, {
+      new ComponentPickerOption(item, {
         icon: <item.icon className="h-4 w-4" />,
         keywords: [...item.keywords],
         category: item.category,
-        onSelect: () => executeInsertItem(item, editor, openDialog),
       }),
   );
 
-  // フィルタリング
-  const options = (() => {
-    if (queryString === null || queryString === "") {
-      return allOptions;
-    }
+  const lowerQuery =
+    queryString === null || queryString === ""
+      ? ""
+      : queryString.toLowerCase();
 
-    const lowerQuery = queryString.toLowerCase();
-    return allOptions.filter((option) => {
-      const titleMatch = option.title.toLowerCase().includes(lowerQuery);
-      const keywordMatch = option.keywords.some((keyword) =>
-        keyword.toLowerCase().includes(lowerQuery),
-      );
-      return titleMatch || keywordMatch;
-    });
-  })();
+  const options =
+    lowerQuery === ""
+      ? allOptions
+      : allOptions.filter((option) =>
+          pickerOptionMatchesQuery(
+            option.title,
+            option.keywords,
+            lowerQuery,
+          ),
+        );
 
-  // カテゴリー別にグループ化
   const groupedOptions = (() => {
     const groups: {
       category: InsertCategory;
@@ -180,18 +209,21 @@ export function ComponentPickerPlugin({
     selectedOption: ComponentPickerOption,
     nodeToRemove: TextNode | null,
     closeMenu: () => void,
-    matchingString: string,
+    _matchingString: string,
   ) => {
     editor.update(() => {
       if (nodeToRemove) {
         nodeToRemove.remove();
       }
-      selectedOption.onSelect(matchingString);
+      applyInsertItemInUpdate(
+        selectedOption.insertItem,
+        editor,
+        openDialog,
+      );
       closeMenu();
     });
   };
 
-  // フラットなオプションリスト（キーボードナビゲーション用）
   const flatOptions = groupedOptions.flatMap((group) => group.options);
 
   return (
@@ -200,6 +232,7 @@ export function ComponentPickerPlugin({
       onSelectOption={onSelectOption}
       triggerFn={checkForTriggerMatch}
       options={flatOptions}
+      preselectFirstItem
       menuRenderFn={(
         anchorElementRef,
         { selectedIndex, selectOptionAndCleanUp, setHighlightedIndex },
@@ -207,14 +240,23 @@ export function ComponentPickerPlugin({
         anchorElementRef.current && flatOptions.length > 0
           ? createPortal(
               <div className="fixed z-50 min-w-[220px] max-h-[320px] overflow-y-auto rounded-md border bg-popover shadow-md">
-                <ul className="py-1" role="listbox">
+                <div
+                  className="py-1"
+                  role="listbox"
+                  aria-label="ブロックを挿入"
+                >
                   {groupedOptions.map((group) => {
-                    // 検索時はカテゴリーヘッダーを非表示
-                    const showHeader = !queryString || queryString === "";
+                    const showHeader = lowerQuery === "";
+                    const headingId = `slash-picker-cat-${group.category}`;
                     return (
-                      <div key={group.category}>
+                      <div
+                        key={group.category}
+                        role="group"
+                        aria-labelledby={showHeader ? headingId : undefined}
+                      >
                         {showHeader && (
                           <CategoryHeader
+                            id={headingId}
                             label={CATEGORY_LABELS[group.category]}
                           />
                         )}
@@ -239,7 +281,7 @@ export function ComponentPickerPlugin({
                       </div>
                     );
                   })}
-                </ul>
+                </div>
               </div>,
               anchorElementRef.current,
             )

@@ -17,18 +17,19 @@ import {
   type ReactNode,
 } from "react";
 
-const STORAGE_KEY = "myrrh-lexical-inspector-expanded";
+/** 値: `"1"` = 展開、`"0"` = 折りたたみ。未設定時は折りたたみ（執筆領域を広く取る）。 */
+const STORAGE_KEY = "myrrh-lexical-inspector-panel";
 
 /**
  * localStorage から初期の開閉状態を読む（クライアントのみ）。
- * 未設定または破損時は開いた状態を既定とする。
+ * 未設定時は折りたたみを既定とする。
  */
 function readInitialExpanded(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
-    return localStorage.getItem(STORAGE_KEY) !== "0";
+    return localStorage.getItem(STORAGE_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 

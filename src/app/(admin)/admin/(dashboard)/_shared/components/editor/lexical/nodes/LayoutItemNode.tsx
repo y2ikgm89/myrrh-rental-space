@@ -1,12 +1,7 @@
-﻿/**
+/**
  * Layout Item Node
  *
- * @description レイアウトコンテナ内の個別カラム
- *
- * 公式Playgroundパターンに準拠
- * - ElementNodeを拡張
- * - LayoutContainerNode内に配置
- * - isShadowRoot()でネスト境界を形成
+ * @description レイアウトコンテナ内の 1 カラム（Lexical Playground の layout-item と同型）
  */
 
 "use client";
@@ -18,7 +13,12 @@ import type {
   EditorConfig,
   LexicalNode,
 } from "lexical";
-import { $create, $createParagraphNode, ElementNode } from "lexical";
+import {
+  $create,
+  $createParagraphNode,
+  $isParagraphNode,
+  ElementNode,
+} from "lexical";
 import { $isLayoutContainerNode } from "./LayoutContainerNode";
 
 // =============================================================================
@@ -29,6 +29,21 @@ export function $isLayoutItemNode(
   node: LexicalNode | null | undefined,
 ): node is LayoutItemNode {
   return node instanceof LayoutItemNode;
+}
+
+/**
+ * Playground の $isEmptyLayoutItemNode と同様。空カラムは通常「空段落 1 つのみ」。
+ */
+export function $isEmptyLayoutItemNode(node: LexicalNode): boolean {
+  if (!$isLayoutItemNode(node) || node.getChildrenSize() !== 1) {
+    return false;
+  }
+  const firstChild = node.getFirstChild();
+  return (
+    firstChild !== null &&
+    $isParagraphNode(firstChild) &&
+    firstChild.isEmpty()
+  );
 }
 
 // =============================================================================
@@ -103,12 +118,11 @@ export class LayoutItemNode extends ElementNode {
     const siblings = parent.getChildren();
     const isFirst = siblings[0] === this;
     const allEmpty = siblings.every(
-      (sibling) =>
-        $isLayoutItemNode(sibling) && sibling.getChildren().length === 0,
+      (sibling) => $isLayoutItemNode(sibling) && $isEmptyLayoutItemNode(sibling),
     );
 
     if (isFirst && allEmpty) {
-      // 全カラムが空なら、コンテナを段落に置換
+      // 全カラムが空（空段落のみ）ならコンテナを 1 段落に置換（Playground は remove のみ）
       const paragraph = $createParagraphNode();
       parent.replace(paragraph);
       paragraph.select();

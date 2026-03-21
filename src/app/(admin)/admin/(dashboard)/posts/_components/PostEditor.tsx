@@ -26,7 +26,7 @@ import {
   InlineEditorShell,
   UnifiedSidePanel,
   usePostEditor,
-  useContentWidthStyles,
+  useContentWidth,
   postConfig,
 } from "@/admin/components/editor/inline";
 import { createPostCategory, createPostTag } from "@/admin/actions/post";
@@ -166,8 +166,8 @@ export function PostEditor({
   // スラッグの表示
   const displaySlug = `posts/${editor.slug}`;
 
-  // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
-  const contentStyles = useContentWidthStyles({
+  // コンテンツ幅（px）— エディタに渡すテキスト領域の幅
+  const contentWidthPx = useContentWidth({
     control: editor.form.control,
     widthFieldName: "contentWidth",
     customFieldName: "contentWidthCustom",
@@ -204,6 +204,7 @@ export function PostEditor({
           isDirty={editor.isDirty}
           isPending={editor.isPending}
           isSidePanelOpen={editor.isSettingsPanelOpen}
+          metadataPanelLabel={postConfig.sidePanel.title}
           onToggleSidePanel={editor.toggleSettings}
           onSave={editor.handleSave}
           onPreview={editor.handlePreview}
@@ -245,7 +246,6 @@ export function PostEditor({
     >
       <LazyLexicalEditor
         contentJson={editor.contentJson}
-        contentHtml={editor.contentHtml}
         onChange={editor.handleContentChange}
         disabled={editor.isPending}
         className={EDITOR_PROSE_CLASSES}
@@ -255,8 +255,7 @@ export function PostEditor({
         onAddComment={
           mode === "edit" && post ? editor.handleAddComment : undefined
         }
-        contentWidthClassName={contentStyles.className}
-        contentWidthStyle={contentStyles.style}
+        contentWidth={contentWidthPx ?? undefined}
       />
     </InlineEditorShell>
   );

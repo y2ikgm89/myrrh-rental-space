@@ -37,7 +37,11 @@ export function StatusBar({ wordCount, saveStatus }: StatusBarProps) {
   if (charCount === 0 && !statusLabel) return null;
 
   return (
-    <div className="shrink-0 flex items-center gap-3 px-4 py-1.5 border-t border-border text-xs text-muted-foreground">
+    <div
+      role="status"
+      aria-live="off"
+      className="shrink-0 flex items-center gap-3 px-4 py-1.5 border-t border-border text-xs text-muted-foreground"
+    >
       {charCount > 0 && (
         <>
           <span>文字数: {charCount.toLocaleString()}</span>

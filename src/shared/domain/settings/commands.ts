@@ -140,9 +140,9 @@ export type TermsAgreementSettingsInput = {
 };
 
 export type ReservationSettingsInput = {
-  defaultTimeSlot: number | null;
-  minReservationDuration: number | null;
-  maxReservationDuration: number | null;
+  defaultTimeSlot: number;
+  minReservationDuration: number;
+  maxReservationDuration: number;
   cancellationTermsId: string | null;
 };
 

@@ -34,9 +34,9 @@ Google OAuth は `serverEnv`（env / Secret Manager）を正本とし、**DB か
 
 ### Prisma アダプター + Prisma 7（必須設定）
 
-- **アダプターに渡すクライアント**: `$extends` による Decimal 換算などを付けたアプリ用 `prisma` は使わない。`src/shared/db/prisma.ts` の **`prismaForBetterAuth`（拡張前の `PrismaClient`）** のみを `src/shared/db/better-auth-adapter.ts` から `prismaAdapter(...)` に渡す。
-- **`experimental.joins`**: `betterAuth({ experimental: { joins: true }, ... })` を **有効のまま維持**する。Prisma アダプター公式で、セッション取得などでリレーションを 1 クエリにまとめる推奨設定（遅延・無効なネスト `select` 回避）。
-- 詳細: [Better Auth — Prisma — Joins (Experimental)](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)
+- **アダプターに渡すクライアント**: `$extends` による Decimal 換算などを付けたアプリ用 `prisma` は使わない。`src/shared/db/prisma.ts` の **`prismaForBetterAuth`（拡張前の `PrismaClient`）** のみを `src/shared/db/better-auth-adapter.ts` から `prismaAdapter(...)` に渡す
+- **`generateId: "uuid"`**: DB スキーマが `@db.Uuid` のため `advanced.database.generateId: "uuid"` 必須（[公式](https://www.better-auth.com/docs/concepts/database)）。未設定だと Better Auth がランダム文字列 ID を生成し `invalid input syntax for type uuid` エラー
+- **`baseURL`**: `betterAuth({ baseURL: serverEnv.BETTER_AUTH_URL ?? getAppUrl(), ... })` で明示設定（[公式](https://www.better-auth.com/docs/concepts/dynamic-base-url)）
 
 ### Server Components でのセッション取得（推奨: DAL ヘルパー）
 
@@ -397,7 +397,8 @@ function logAction(
 
 ## Gotchas
 
-- **`get-session` が Prisma `findFirst` の `Invalid ... invocation` で失敗する** — アダプターが **`prismaForBetterAuth`**（拡張前クライアント）を受け取っているか、`betterAuth` に **`experimental: { joins: true }`** があるかを確認。拡張済み `prisma` のみ渡すと Prisma 7 組み合わせで壊れ得る
+- **セッション作成で `invalid input syntax for type uuid` エラー** — `advanced.database.generateId: "uuid"` が未設定。Better Auth のデフォルト ID 生成はランダム文字列で、DB の `@db.Uuid` 制約に違反する
+- **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例

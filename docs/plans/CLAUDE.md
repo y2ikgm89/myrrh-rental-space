@@ -2,46 +2,30 @@
 
 実装計画ドキュメント置き場。
 
-## プランの作成
-
-`brainstorming` → `writing-plans` スキルが自動的に `docs/plans/YYYY-MM-DD-<name>.md` を作成する。
-手動作成時は下記の命名規則とフォーマットに従う。
-
 ## セッション継続時
 
-`README.md` で進行中タスクを確認（大きいため最上部のみ参照）:
-
 ```bash
-head -100 docs/plans/README.md
-```
-
-進行中の計画を検索:
-
-```bash
+# 進行中の計画を検索（最も頻繁に使う）
 grep -l "実装中\|設計承認済み" docs/plans/*.md
-```
 
-最新の計画ファイル:
+# README.md 上部で進行中タスクを確認
+head -50 docs/plans/README.md
 
-```bash
+# 最新の計画ファイル
 ls -t docs/plans/*.md | head -10
 ```
 
-## ファイル命名規則
+## プランの作成
 
-2種類の命名が混在している（どちらも有効）:
+`brainstorming` → `writing-plans` スキルが `docs/plans/YYYY-MM-DD-<name>.md` を自動作成する。
 
-| 形式 | 例                                   | 用途                       |
-| ---- | ------------------------------------ | -------------------------- |
-| 連番 | `001-architecture-improvements.md`   | 初期の計画（完了済み多数） |
-| 日付 | `2026-02-18-lexical-accent-color.md` | 最近の計画（推奨）         |
+### 命名規則
 
-新規計画は **日付形式** (`YYYY-MM-DD-title.md`) を使う。
-設計ドキュメントは `-design` サフィックスを付ける（例: `2026-02-18-foo-design.md`）。
+新規は **日付形式** (`YYYY-MM-DD-title.md`) のみ使用。設計ドキュメントは `-design` サフィックス。
 
-## 計画ファイルのフォーマット
+> 連番形式（`001-*.md`）は初期の完了済み計画。新規には使わない。
 
-新規ファイルのヘッダーテンプレート:
+### フォーマット
 
 ```markdown
 # タイトル
@@ -62,27 +46,23 @@ ls -t docs/plans/*.md | head -10
 - [ ] Step 2
 ```
 
-## README.md の構造
+### ステータス管理
 
-- **プロジェクト品質スコア** — 上部に最新スコアを記載
-- **完了した計画** — 番号降順
-- **進行中・保留** — あれば上部付近
+`設計中` → `設計承認済み` → `実装中` → `完了`
 
-計画完了時は README.md の該当エントリに `✅` を付けて更新する。
-ステータス遷移: `設計中` → `設計承認済み` → `実装中` → `完了`（計画ファイルとREADME.mdの両方を更新）。
+完了時は計画ファイルと `README.md` の両方を更新（`README.md` には `✅` を付与）。
 
 ## 実行
 
-計画実行時のスキルチェーン（新規セッションで計画ファイルを参照）:
+計画実行時のスキルチェーン:
 
-1. `superpowers:using-git-worktrees` — 隔離 worktree を作成（実装開始前に必須）
+1. `superpowers:using-git-worktrees` — 隔離 worktree を作成
 2. `superpowers:subagent-driven-development` — 同一セッション内でサブエージェント実行（推奨）
 3. `superpowers:executing-plans` — 別セッションでバッチ実行・チェックポイントでレビュー
 
 ## superpowers による計画
 
-`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画を作成する。
-スペックは `docs/superpowers/specs/` に配置。
+`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画を作成。スペックは `docs/superpowers/specs/`。
 
 ```bash
 ls -t docs/superpowers/plans/*.md | head -10

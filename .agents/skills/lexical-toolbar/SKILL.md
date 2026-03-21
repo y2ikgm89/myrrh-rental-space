@@ -22,6 +22,7 @@ plugin や node を伴う場合でも、主目的が toolbar 操作の追加な�
 3. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`
+4. 長いコードひな形が必要なら `reference/scaffold-lexical-toolbar.md`（任意）
 
 ## ワークフロー
 

@@ -21,9 +21,18 @@ description: 付属データベースを検索して UI 方針を素早く集め
 
 ## コマンド
 
+ドキュメント例の `python3` は **Windows では `py -3` に読み替える**（Python Launcher。`python3` が無い・OS がアプリ選択を出す場合がある）。macOS / Linux / Git Bash（Unix 系）は `python3` のまま。
+
 ```bash
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain>
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
+```
+
+Windows（PowerShell / cmd）の例:
+
+```powershell
+py -3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain>
+py -3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
 ```
 
 既定の stack はこのプロジェクトでは `nextjs`。

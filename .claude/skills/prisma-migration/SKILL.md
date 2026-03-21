@@ -64,3 +64,5 @@ disable-model-invocation: true
 - `better-auth-schema.prisma` は Better Auth が管理するファイル。手動で編集しない
 - `--create-only` で生成された SQL は `prisma/migrations/<timestamp>_<name>/migration.sql` に保存される
 - マイグレーション失敗時は `bunx --bun prisma migrate reset` で開発DBをリセット可能（**本番では使用不可**）
+- 公式ワークフロー: [Development and production](https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production) / [Baselining](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining)。履歴の整理や空 DB への単一 baseline はプロジェクト方針に合わせ、**手作業で SQL をいじらず** Prisma の推奨手順（`migrate diff` 等）を優先する
+- スキーマ変更後は **`bun run db:generate`** を忘れずに（型とクライアントを `schema.prisma` に一致させる）

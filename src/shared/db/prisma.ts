@@ -21,7 +21,10 @@ import {
 } from "@generated/prisma/client";
 import type { Decimal } from "@prisma/client/runtime/client";
 
+import { createAppPrismaClient } from "./create-app-prisma-client";
+
 export { Role, Prisma, PrismaClient };
+export type { AppPrismaClient } from "./create-app-prisma-client";
 
 /**
  * Decimal → number 変換ユーティリティ型
@@ -90,142 +93,9 @@ export const prismaForBetterAuth = basePrisma;
 /**
  * Prisma Client with Decimal to Number conversion
  *
- * Decimal型を自動的にnumberに変換する拡張を追加
- * これにより、手動で Number() を呼び出す必要がなくなります
+ * `createAppPrismaClient` で拡張（`prisma/seed.ts` と同一設定）
  */
-export const prisma = basePrisma.$extends({
-  result: {
-    reservation: {
-      totalPrice: {
-        needs: { totalPrice: true },
-        compute(reservation) {
-          return reservation.totalPrice ? Number(reservation.totalPrice) : null;
-        },
-      },
-      basePrice: {
-        needs: { basePrice: true },
-        compute(reservation) {
-          return reservation.basePrice ? Number(reservation.basePrice) : null;
-        },
-      },
-      couponDiscountAmount: {
-        needs: { couponDiscountAmount: true },
-        compute(reservation) {
-          return reservation.couponDiscountAmount
-            ? Number(reservation.couponDiscountAmount)
-            : null;
-        },
-      },
-      durationDiscountAmount: {
-        needs: { durationDiscountAmount: true },
-        compute(reservation) {
-          return reservation.durationDiscountAmount
-            ? Number(reservation.durationDiscountAmount)
-            : null;
-        },
-      },
-      spaceDiscountAmount: {
-        needs: { spaceDiscountAmount: true },
-        compute(reservation) {
-          return reservation.spaceDiscountAmount
-            ? Number(reservation.spaceDiscountAmount)
-            : null;
-        },
-      },
-      taxRate: {
-        needs: { taxRate: true },
-        compute(reservation) {
-          return reservation.taxRate ? Number(reservation.taxRate) : null;
-        },
-      },
-      taxAmount: {
-        needs: { taxAmount: true },
-        compute(reservation) {
-          return reservation.taxAmount ? Number(reservation.taxAmount) : null;
-        },
-      },
-      totalPriceWithTax: {
-        needs: { totalPriceWithTax: true },
-        compute(reservation) {
-          return reservation.totalPriceWithTax
-            ? Number(reservation.totalPriceWithTax)
-            : null;
-        },
-      },
-    },
-    space: {
-      area: {
-        needs: { area: true },
-        compute(space) {
-          return space.area ? Number(space.area) : null;
-        },
-      },
-      hourlyPrice: {
-        needs: { hourlyPrice: true },
-        compute(space) {
-          return Number(space.hourlyPrice);
-        },
-      },
-      dailyPrice: {
-        needs: { dailyPrice: true },
-        compute(space) {
-          return space.dailyPrice ? Number(space.dailyPrice) : null;
-        },
-      },
-      discountValue: {
-        needs: { discountValue: true },
-        compute(space) {
-          return space.discountValue ? Number(space.discountValue) : null;
-        },
-      },
-    },
-    customer: {
-      totalSpent: {
-        needs: { totalSpent: true },
-        compute(customer) {
-          return customer.totalSpent ? Number(customer.totalSpent) : null;
-        },
-      },
-    },
-    settings: {
-      taxStandardRate: {
-        needs: { taxStandardRate: true },
-        compute(settings) {
-          return Number(settings.taxStandardRate);
-        },
-      },
-      taxReducedRate: {
-        needs: { taxReducedRate: true },
-        compute(settings) {
-          return Number(settings.taxReducedRate);
-        },
-      },
-    },
-    coupon: {
-      discountValue: {
-        needs: { discountValue: true },
-        compute(coupon) {
-          return Number(coupon.discountValue);
-        },
-      },
-      minReservationAmount: {
-        needs: { minReservationAmount: true },
-        compute(coupon) {
-          return coupon.minReservationAmount
-            ? Number(coupon.minReservationAmount)
-            : null;
-        },
-      },
-      maxDiscountAmount: {
-        needs: { maxDiscountAmount: true },
-        compute(coupon) {
-          return coupon.maxDiscountAmount
-            ? Number(coupon.maxDiscountAmount)
-            : null;
-        },
-      },
-    },
-  },
-});
+const prisma = createAppPrismaClient(basePrisma);
 
+export { prisma };
 export default prisma;

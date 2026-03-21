@@ -25,7 +25,8 @@ import {
   unpublishPost,
 } from "@/admin/actions/post";
 import { createPreviewHandlers } from "@/admin/hooks";
-import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import type { PostData } from "@/shared/domain/posts/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -62,24 +63,6 @@ type UsePostEditorOptions = {
   onCreateTag?: ((name: string) => Promise<TagOption | null>) | undefined;
 };
 
-async function fetchPreviewHtml(contentJson: string): Promise<string> {
-  const response = await fetchAdminJson<{ html: string }>(
-    "/admin/api/preview/html",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contentJson,
-        resource: "post",
-      }),
-    },
-  );
-
-  return response.html;
-}
-
 // =============================================================================
 // Transforms (Type-safe)
 // =============================================================================
@@ -90,7 +73,7 @@ function toFormData(data?: PostData): PostFormData {
       title: "",
       slug: "",
       excerpt: "",
-      contentJson: "",
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       thumbnailUrl: "",
       ogpImageUrl: "",
       categoryId: "",
@@ -110,7 +93,9 @@ function toFormData(data?: PostData): PostFormData {
     title: data.title,
     slug: data.slug,
     excerpt: data.excerpt,
-    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : "",
+    contentJson: data.contentJson
+      ? JSON.stringify(data.contentJson)
+      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: toFormString(data.ogpImageUrl),
     categoryId: data.categoryId,
@@ -207,7 +192,9 @@ export function usePostEditor({
   // 監視値（型アサーション不要 - 具体的な型が推論される）
   const title = useWatch({ control, name: "title" }) ?? "";
   const slug = useWatch({ control, name: "slug" }) ?? "";
-  const contentJson = useWatch({ control, name: "contentJson" }) ?? "";
+  const contentJson =
+    useWatch({ control, name: "contentJson" }) ??
+    EMPTY_LEXICAL_EDITOR_STATE_JSON;
   const status = useWatch({ control, name: "status" }) ?? PostStatus.DRAFT;
 
   // isDirty計算
@@ -313,12 +300,14 @@ export function usePostEditor({
     });
   };
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     try {
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = await fetchPreviewHtml(values.contentJson || "");
+      const contentHtml = renderEditorStateJsonToHtmlClient(
+        values.contentJson,
+      );
       const previewData = toPreviewData(values, categories, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/posts");
     } catch (error) {
@@ -366,7 +355,6 @@ export function usePostEditor({
     title,
     slug,
     contentJson,
-    contentHtml: post?.contentHtml ?? "",
     status,
 
     // パネル管理

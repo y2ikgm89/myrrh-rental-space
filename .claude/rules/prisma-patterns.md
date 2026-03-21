@@ -13,9 +13,26 @@ paths:
 
 ## Better Auth との境界
 
-- **アプリ本体**: `src/shared/db/prisma.ts` の **`prisma`**（`$extends` で Decimal → number 等）。
+- **アプリ本体**: `src/shared/db/prisma.ts` の **`prisma`**（**`createAppPrismaClient`** 適用済み）。
 - **Better Auth の `prismaAdapter`**: 同ファイルの **`prismaForBetterAuth`**（拡張前クライアント）だけを `src/shared/db/better-auth-adapter.ts` 経由で渡す。アダプターに拡張済みクライアントを渡さない。
 - 認証設定側では **`experimental.joins: true`** を維持（Prisma アダプター公式推奨）。理由は `.claude/rules/auth-patterns.md` の「Prisma アダプター + Prisma 7」を参照。
+
+## Prisma クライアントの組み立て（拡張の単一ソース）
+
+[`$extends`](https://www.prisma.io/docs/orm/prisma-client/client-extensions) の **result 拡張**は **`src/shared/db/create-app-prisma-client.ts`** にのみ書く。
+
+- **`createAppPrismaClient`** — seed と `prisma.ts` の両方で呼ぶ。戻り値型 **`AppPrismaClient`** を domain の「seed からも使うコマンド」の引数に使う。
+- **`prisma/seed.ts`** — 素の `new PrismaClient({ adapter })` に続けて **`createAppPrismaClient(...)`** を適用。`@/shared/db/prisma` は import しない（`server-only`）。
+- **ログ** — 共有コマンドが `@/shared/lib/errors/logger` を import すると seed が落ちる。**スクリプト可能なコードパスでは `@/shared/lib/errors/logger-core`** を使う。
+- **マイグレーション** — 開発は `bunx --bun prisma migrate dev --name <snake_case>`、本番は `migrate deploy`。[Baselining](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining) は公式手順に従う。
+
+## PageContent（Page-First）
+
+PostgreSQL の UUID 主キーは **native `uuid` + Prisma `String @db.Uuid`**（[Prisma スキーマ reference](https://www.prisma.io/docs/orm/reference/prisma-schema-reference#uuid)）。
+
+- 主キー: `String @id @default(uuid()) @db.Uuid`（DB 既定は `gen_random_uuid()`。`uuid-ossp` は不要）
+- 取得・`cacheTag` は **`pageKey`** を正とする（`id` は内部用）
+- 使っていない `updatedBy` 等の列は置かない。監査が必要なら `User` FK を付けて追加
 
 ## Enum パターン（Prisma 7 mapped enums）
 
@@ -284,7 +301,7 @@ if (new Date(coupon.validFrom) < now) { ... }
 
 ## Decimal 自動変換（$extends）
 
-`prisma.ts` の `$extends` により、全 Decimal フィールドが自動的に `number` に変換される。
+`createAppPrismaClient` の `$extends`（アプリ・seed で共通）により、対象モデルの Decimal が **結果として** `number` になる。
 **手動で `Number()` を呼び出す必要はない**:
 
 ```typescript
@@ -316,7 +333,7 @@ import type {
   Customer,
   Settings,
   Coupon,
-} from "@/shared/lib/prisma";
+} from "@/shared/db/prisma";
 
 // これらの型は Decimal が number に変換済み
 const space: Space = await prisma.space.findUniqueOrThrow({ where: { id } });
@@ -380,7 +397,7 @@ export function PostContent({ post }: { post: Post }) {
 }
 ```
 
-既存 HTML のみのデータ（`contentJson` が null）は `HtmlInitializerPlugin` でフォールバック表示。
+管理画面の LexicalEditor は `contentJson`（EditorState JSON）のみを初期化に使用する。`contentHtml` は公開表示用の生成キャッシュであり、エディタ復元には使わない。
 
 ---
 
@@ -520,10 +537,15 @@ await prisma.$transaction(async (tx) => {
 | パス                                | 内容                                                                       |
 | ----------------------------------- | -------------------------------------------------------------------------- |
 | `@/shared/generated/prisma/client`  | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
-| `@/shared/lib/prisma.ts`            | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート        |
+| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                  |
+| `@/shared/db/prisma.ts`             | `server-only` シングルトン・`createAppPrismaClient` 適用                   |
+| `@/shared/db/prisma-input-json.ts`  | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし） |
+| `@/shared/db/enums.ts`              | Prisma enum の公開窓口                                                     |
 | `@/shared/lib/json-validators.ts`   | JSON フィールド Zod スキーマ・型・パース関数                               |
 | `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
 | `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
+| `@/shared/lib/errors/logger-core.ts` | スクリプト可能な `logError`                                               |
+| `@/shared/lib/errors/logger.ts`      | Next Server 専用（`server-only` + `logger-core` re-export）              |
 | `@/admin/lib/lazy-renderer.ts`      | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
 
 ## Gotchas

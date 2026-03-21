@@ -1,7 +1,7 @@
 # Codex Skills
 
-このディレクトリは Codex 向け skill の正本。
-Claude 用 skill は `.claude/skills/` に残してよいが、Codex ではここだけを参照する。
+このディレクトリは **skill 本文・`scripts/`・`data/` の単一正本**。
+Claude Code 利用者は **`.claude/skills/`** からスキルを見つけたら、スタブに書かれたパスどおり **こちら（`.agents/skills/`）の `SKILL.md` を開いて**手順を実行する。`.claude` 側に長文や CSV を複製しない（`docs/architecture/agent-instructions.md`）。
 
 ## 目的
 
@@ -40,9 +40,9 @@ repo 全体ルールは `AGENTS.md`、詳細ルールは `docs/reference/codex-r
 
 ### Lexical workflow
 
-- `lexical-node`: カスタム Lexical ノードを作る
-- `lexical-plugin`: カスタム Lexical プラグインを作る
-- `lexical-toolbar`: Lexical ツールバーを拡張する
+- `lexical-node`: カスタム Lexical ノードを作る（任意の長ひな形: `reference/scaffold-lexical-node.md`）
+- `lexical-plugin`: カスタム Lexical プラグインを作る（任意: `reference/scaffold-lexical-plugin.md`）
+- `lexical-toolbar`: Lexical ツールバーを拡張する（任意: `reference/scaffold-lexical-toolbar.md`）
 - `lexical-audit`: Lexical 実装を監査し、deprecated / private API を除去して現行推奨へ寄せる
 
 ## 追加判断
@@ -64,7 +64,7 @@ skill を変更したら次も確認する。
 - DoD がこの repo の検証コマンドに合っているか
 - 追加 skill が既存 skill の責務を侵食していないか
 - `docs/plans/*` の履歴メモを現行ルールとして参照していないか
-- 現在の route/data 境界に追従しているか（`[...segments]`, preview 専用 route, `ExperienceShell` opt-in）
+- 現在の route/data 境界に追従しているか（`[...segments]`, preview 専用 route）
 - `shared/domain` / `shared/db/prisma` 境界を壊す指示や、削除済み shim の参照を含めていないか
 - `generated/prisma/*` を編集・commit する前提や、`shared/generated` の古いパスを含めていないか
 - Better Auth の静的 `auth` export 前提を壊す指示や、動的 auth bootstrap の再導入を促していないか

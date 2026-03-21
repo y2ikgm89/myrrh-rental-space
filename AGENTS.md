@@ -15,31 +15,30 @@
 ### Lexical editor (admin)
 
 - **Path**: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
-- **Block inspector** (right panel): collapsible WordPress/Gutenberg-style block settings. Toggle via toolbar or **Ctrl+Shift+0** (including **Numpad 0**). Collapsed/expanded preference persists in **`localStorage`** key **`myrrh-lexical-inspector-expanded`**. **`LexicalEditor` `showInspector={false}`** removes the panel, toolbar toggle, and shortcut handling
-- **Narrow / mobile viewport (&lt; 1024px)**: rich editing is disabled; `MobileEditorFallback` shows a read-only preview derived from **`contentJson`** via headless HTML generation when available (falls back to **`contentHtml`**)
-- **Rules**: `docs/reference/codex-rules/lexical-patterns.md` (Codex canonical text); Claude Code loads the same content from `.claude/rules/frontend/lexical-patterns.md` via `paths:` frontmatter
+- **Rules (canonical)**: `docs/reference/codex-rules/lexical-patterns.md` — Inspector, content width, layout constants (`editor-layout-constants.ts`), DraggableBlock fork, placeholder on `ContentEditable`, HTML→Lexical (`tryConvertHtmlStringToLexicalJsonString`), insert menu, etc. **Claude Code** loads the same policy from `.claude/rules/frontend/lexical-patterns.md` (`paths:` frontmatter). **Keep both files in sync** when changing the editor shell or Lexical conventions.
+- **`LexicalEditor` `showInspector={false}`**: hides the block inspector sidebar, toolbar toggle, and **Ctrl+Shift+0** (incl. Numpad 0) shortcut.
+- **Narrow / mobile (&lt; 1024px)**: `MobileEditorFallback`; headless HTML preview from **`contentJson`**; empty state use **`EMPTY_LEXICAL_EDITOR_STATE_JSON`**. Init uses **`contentJson`** only.
+- **Skills** (workflow + optional long scaffolds under `reference/`): `.agents/skills/lexical-node`, `lexical-plugin`, `lexical-toolbar`, `lexical-audit`. **Claude Code** discovers them via **`.claude/skills/<name>/SKILL.md` stubs** pointing at `.agents` (`docs/architecture/agent-instructions.md`).
 
 ### Tech stack
 
 下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
 
-| 技術         | バージョン         | 備考                                                 |
-| ------------ | ------------------ | ---------------------------------------------------- |
-| Next.js      | 16.1.6             | `'use cache'`, `updateTag`, PPR対応                  |
-| React        | 19.2.4             | React Compiler 1.0, `<Activity>`, `useEffectEvent`   |
-| TypeScript   | 6.0.1-rc           | `package.json` の解決版に合わせる（`erasableSyntaxOnly` 等） |
-| Bun          | 1.3.10             | Bun.SQL, HTML直接実行（`packageManager` 準拠）       |
-| Prisma       | 7.5.0              | 型生成98%削減, mapped enums                         |
-| PostgreSQL   | -                  | Supabase経由                                         |
-| Better Auth  | 1.5.5              | RBAC, Auth.js統合                                    |
-| Tailwind CSS | 4.2.1              | CSS-first設定, @theme                                |
-| Zod          | 4.3.6              | `{ error: }` パラメータ, z.fromJSONSchema()          |
-| nuqs         | 2.8.9              | createSearchParamsCache, Zod 4統合                   |
-| Lexical      | 0.41.0             | React 19対応, Node transforms, mergeRegister本体移動 |
-| GSAP         | 3.14.2             | ScrollTrigger, @gsap/react 2.1                       |
-| Three.js     | 0.183.2            | @react-three/fiber 9.5, @react-three/drei 10.7       |
-| PixiJS       | 8.17.1             | 2D WebGLレンダラー                                   |
-| Lenis        | 1.3.18             | スムーススクロール                                   |
+| 技術         | バージョン | 備考                                                                |
+| ------------ | ---------- | ------------------------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR対応                                 |
+| React        | 19.2.4     | React Compiler 1.0, `<Activity>`, `useEffectEvent`                  |
+| TypeScript   | 6.0.1-rc   | `package.json` の解決版に合わせる（`erasableSyntaxOnly` 等）        |
+| Bun          | 1.3.11     | ランタイム・`bun:test`（`package.json` の `packageManager` と一致） |
+| Prisma       | 7.5.0      | 型生成98%削減, mapped enums                                         |
+| PostgreSQL   | -          | Supabase経由                                                        |
+| Better Auth  | 1.5.5      | RBAC, Auth.js統合                                                   |
+| Tailwind CSS | 4.2.1      | CSS-first設定, @theme                                               |
+| Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()                         |
+| nuqs         | 2.8.9      | createSearchParamsCache, Zod 4統合                                  |
+| Lexical      | 0.41.0     | React 19対応, Node transforms, mergeRegister本体移動                |
+| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                                      |
+| Lenis        | 1.3.18     | スムーススクロール                                                  |
 
 ### Project structure
 
@@ -72,7 +71,7 @@ src/
 - `/terms/[slug]` - 規約詳細
 - `/[...segments]` - カスタムページ（DB管理）と、投稿 prefix 無効時のルート直下 fallback
 
-Path aliases: `@/admin/*`, `@/public/*`, `@/shared/*`
+Path aliases: `@/*` → `src/*`, `@generated/*` → `generated/*`, `@/admin/*`, `@/public/*`, `@/shared/*`
 
 補足:
 
@@ -98,6 +97,9 @@ docker compose ps
 bunx --bun prisma migrate dev
 bun run db:generate
 
+# Seed（アプリと同じ Decimal 拡張: createAppPrismaClient）
+bun prisma/seed.ts
+
 # 開発サーバー
 bun run dev
 
@@ -111,6 +113,10 @@ bun run build
 ```
 
 - `bun run build` は `SKIP_ENV_VALIDATION=true` で実行される（開発・既定 CI 向け）。本番デプロイ前に `.env` の充足確認をしたい場合は `bun run build:strict` を使う。
+
+### Python（任意・ui-ux-pro-max など）
+
+スキルや参照ドキュメントの例では Unix 慣習で `python3` を使う。 **Windows では Python Launcher の `py -3` を使う**（`python3` は PATH に無い・「アプリを選択」になることがある）。例: `py -3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain style --stack nextjs`。macOS/Linux は従来どおり `python3` でよい。
 
 ## Testing instructions
 
@@ -136,14 +142,16 @@ bun run e2e
 - 作業完了前の最低ライン: `bun run validate`
 - PR 作成前の必須ライン: `bun run validate && bun run build`（本番相当の env 検証が必要なら `build:strict` を追加）
 - 仕様変更・不具合修正では、該当テストの追加/更新をセットで実施すること
+- **ユニットテストの DOM**: `bunfig.toml` の `preload` で `__tests__/setup-dom.ts` を読み込む。[JSDOM](https://github.com/jsdom/jsdom) で `window` / `document` を提供（[`@lexical/html`](https://lexical.dev/docs/packages/lexical-html) の `$generateHtmlFromNodes` が headless 環境で JSDOM を要求するため）。並列実行でグローバルがずれる場合は `installJSDOMForTests()` を当該テストの `beforeEach` で呼ぶ
 
 ## Additional instructions
 
 ### Implementation philosophy
 
-- 公式ドキュメント準拠を最優先し、依存関係は安定版を前提に実装する
-- 後方互換ハックは追加しない。不要な旧コードは削除する
-- 「とりあえず通す」実装を禁止し、型安全・検証可能性を優先する
+- **公式ドキュメントを正とする** — Next.js / React / Prisma / Better Auth / Zod / Lexical / Bun の公式を優先し、非公式記事・過去バージョン前提の記述をそのまま実装に持ち込まない
+- 依存関係は `package.json` の解決版（セキュリティパッチ含む）に合わせ、API は当該バージョンの公式ドキュメントで確認する
+- 後方互換ハック・「とりあえず動けばよい」ラッパーは追加しない。不要な旧コードは削除する
+- 型安全・検証可能性（Zod / 型ガード）を優先する
 
 ### Required coding rules
 
@@ -156,9 +164,9 @@ bun run e2e
 - `forwardRef` 禁止（React 19 では ref は通常の prop として渡す）
 - Tailwind CSS 4: `@theme` とセマンティックトークンを使用し、`gray-*`/`blue-*` 等のハードコード色を避ける
 - Bun Test を使用。Jest API はほぼ互換だが `bun:test` から import する
-- エラーは握りつぶさない: `safeFetch` パターンを使い、`logger` でログを残す
+- エラーは握りつぶさない: `safeFetch` パターンを使い、Server では `logger`・seed/スクリプトでは `logger-core` でログを残す
 - 命名規則: コンポーネントは `PascalCase.tsx`、ユーティリティ/バリデーションは `kebab-case.ts`
-- インポートはエイリアス優先: `@/admin/*`, `@/public/*`, `@/shared/*`
+- インポートはエイリアス優先: 境界は `@/admin/*`, `@/public/*`, `@/shared/*`。Prisma 生成物は `@generated/*`。上記に当てはまらない `src` 直下は `@/*`（濫用しない）
 
 ### Rule files reference
 
@@ -182,20 +190,20 @@ bun run e2e
 
 条件付きルール（対象パスのみ）:
 
-| ルール                       | 対象パス                                                                                |
-| ---------------------------- | --------------------------------------------------------------------------------------- |
-| `anti-ai-design.md`          | `src/app/(public*)/**`                                                                  |
-| `project-design-config.md`   | `src/app/(public*)/**`                                                                  |
-| `design-system-memory.md`    | `src/app/(public*)/**`                                                                  |
-| `gsap-patterns.md`           | `src/app/(public*)/**`                                                                  |
-| `visual-effects-patterns.md` | `src/app/(public*)/**`                                                                  |
-| `threejs-patterns.md`        | `src/app/(public*)/**`                                                                  |
-| `pixijs-patterns.md`         | `src/app/(public*)/**`                                                                  |
-| `accessibility.md`           | `src/app/(public*)/**`, `src/app/(admin)/**`                                            |
-| `lexical-patterns.md`        | `src/app/(admin)/**/lexical/**`                                                         |
-| `seo-patterns.md`            | `src/app/(public*)/**/seo/**`, `**/layouts/**`                                          |
-| `ui-ux-patterns.md`          | `src/app/(public*\|admin)/**`                                                           |
-| `deployment-patterns.md`     | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**` |
+| ルール                       | 対象パス                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `anti-ai-design.md`          | `src/app/(public*)/**`                                                                                    |
+| `project-design-config.md`   | `src/app/(public*)/**`                                                                                    |
+| `design-system-memory.md`    | `src/app/(public*)/**`                                                                                    |
+| `gsap-patterns.md`           | `src/app/(public*)/**`                                                                                    |
+| `visual-effects-patterns.md` | `src/app/(public*)/**`                                                                                    |
+| `threejs-patterns.md`        | Three 関連ファイルのみ（`paths:` 参照）。**現状 `three` / R3F は未依存** — 再導入時は公式に従い `bun add` |
+| `pixijs-patterns.md`         | Pixi 関連ファイルのみ（`paths:` 参照）。**現状 `pixi.js` は未依存** — 再導入時は公式に従い `bun add`      |
+| `accessibility.md`           | `src/app/(public*)/**`, `src/app/(admin)/**`                                                              |
+| `lexical-patterns.md`        | `src/app/(admin)/**/lexical/**`                                                                           |
+| `seo-patterns.md`            | `src/app/(public*)/**/seo/**`, `**/layouts/**`                                                            |
+| `ui-ux-patterns.md`          | `src/app/(public*\|admin)/**`                                                                             |
+| `deployment-patterns.md`     | `Dockerfile`, `cloudbuild.yaml`, `.dockerignore`, `.gcloudignore`, `docs/operations/**`                   |
 
 詳細ルールは `docs/reference/codex-rules/` に配置。
 
@@ -216,8 +224,10 @@ bun run e2e
 ### Data, auth, and security constraints
 
 - Prisma は Edge Runtime 非対応。API Routes / Server Actions は Node.js/Bun ランタイムで実装
+- **`$extends`（Decimal→number 等）の正本**は `src/shared/db/create-app-prisma-client.ts` の **`createAppPrismaClient`**。`prisma.ts` のシングルトンと **`prisma/seed.ts`** のクライアントの両方に適用し、`AppPrismaClient` 型で揃える（[Prisma Client extensions](https://www.prisma.io/docs/orm/prisma-client/client-extensions)）
 - Better Auth の Prisma adapter は `src/shared/db/better-auth-adapter.ts` に隔離し、app/lib 層から直接組み立てない。**`prismaAdapter` には `prisma`（`$extends` 済み）ではなく `prismaForBetterAuth`（拡張前クライアント）のみを渡す**（`src/shared/db/prisma.ts`）
-- `betterAuth({ experimental: { joins: true } })` は Prisma 公式アダプター推奨として維持する（セッション取得で session + user を安全に join）。外す・無効化する変更はドキュメントとセットで検証すること
+- **`@/shared/lib/errors/logger`** は `import "server-only"` 付き。`prisma/seed.ts` や CLI スクリプトから間接 import しない。共有ロジックでは **`@/shared/lib/errors/logger-core`** を使う
+- `betterAuth({ advanced: { database: { generateId: "uuid" } }, baseURL: ... })` で UUID ID 生成と baseURL を明示設定する（[公式](https://www.better-auth.com/docs/concepts/database)）。DB スキーマの `@db.Uuid` 制約と整合させるため必須
 - Better Auth は `src/shared/lib/auth.ts` の静的 `auth` export を正本にし、Google OAuth provider 設定は env / Secret Manager で管理する
 - auth のために DB 管理の provider 設定や `getAuth()` / `resetAuthInstance()` のような動的 bootstrap を再導入しない
 - 権限制御が必要な管理系 Server Action では `checkPermission()` / `checkAdminAuth()` を必須化
@@ -236,10 +246,9 @@ bun run e2e
 ### Animation and visual effects
 
 - Reduced Motion 対応は `gsap.matchMedia('(prefers-reduced-motion: no-preference)')` を使う
-- 視覚効果は段階的フォールバックを維持する: L1 CSS → L2 GSAP → L3 Three.js → L4 PixiJS
+- 視覚効果は段階的フォールバックを維持する: **主軸は L1 CSS → L2 GSAP（[Scroll-driven animations](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Scroll-driven_animations) / [GSAP ScrollTrigger](https://gsap.com/docs/v3/Plugins/ScrollTrigger/)）**。L3 Three.js（[R3F](https://r3f.docs.pmnd.rs/getting-started/installation)）・L4 PixiJS は**オプション**（依存を追加するページのみ。未導入時は L2 以下へフォールバック）
 - GPU 性能差を考慮し、常に下位レベルへの退避経路を用意する
-- `src/app/(public)/layout.tsx` は軽量 shell を保ち、Lenis / Scroll orchestration / VisualEffectsProvider / PerformanceMonitor は `ExperienceShell` で opt-in する
-- `src/app/(public)/layout.tsx` に `NuqsAdapter` を置かず、URL state provider は必要な subtree だけで opt-in する
+- `src/app/(public)/layout.tsx` は LenisProvider / MobileNav / NuqsAdapter を含む軽量 shell。旧 ExperienceShell / VisualEffectsProvider / PerformanceMonitor の集約パターンは廃止済み — 再導入しない
 
 ### Delivery checklist for agents
 
@@ -263,7 +272,7 @@ bun run e2e
 - `docs/reference/codex-rules/*.md` は詳細リファレンスとして扱い、`AGENTS.md` には要約だけを置く
 - `docs/architecture/*` と `docs/reference/codex-rules/*` を現行の正本とし、`docs/plans/*` は履歴資料として扱う
 - `.agents/skills/<skill-name>/SKILL.md` は繰り返し実行する手順だけを書く。ポリシーや世界観は `AGENTS.md` / `codex-rules` 側に寄せる
-- Claude 用の `.claude/*` は維持してよいが、Codex では正本として扱わない。Codex 向け説明から `.claude/*` を参照しない
+- **Claude Code では `.claude/*` を第一級で使う**（`rules` / `agents` / `hooks` / `settings`）。Codex 向けの「コード正本」としては `AGENTS.md` と `docs/reference/codex-rules/` と `.agents/skills/` を優先し、**Codex 用 skill 本文から `.claude/*` を正本参照しない**（全体像は `docs/architecture/agent-instructions.md`）
 - 暗黙の memory API やツール固有状態に依存せず、永続化が必要な判断は `docs/reference/` や `docs/architecture/` に明示的に残す
 - 追加基準の詳細は `docs/reference/codex-rules/instruction-topology.md` を参照する
 
@@ -272,7 +281,7 @@ bun run e2e
 - Codex 用スキルはリポジトリ直下の `.agents/skills/<skill-name>/SKILL.md` に配置する
 - `SKILL.md` の frontmatter は `name` と `description` のみを使用する
 - ルールの一次情報は `AGENTS.md` / `AGENTS.override.md` とし、詳細資料は `docs/reference/` に置く
-- `.claude/rules` と `.claude/skills` は Codex の参照対象にしない（後方互換レイヤーは作らない）
+- `.claude/rules` と `.claude/skills` は Codex の参照対象にしない。`.claude/skills/<name>/SKILL.md` に本文を重複させず **スタブのみ** とし、手順の正本は `.agents/skills/` に置く（`docs/architecture/agent-instructions.md`）
 - 1 skill = 1 workflow を原則とし、複数の unrelated task をまとめた巨大スキルは作らない
 - `description` には「いつ使うか」「何をしないか」が分かる境界を書く
 - skill には入力、手順、使用コマンド、完了条件だけを書く。一般論や重複ルールは `codex-rules` へ寄せる
@@ -288,22 +297,13 @@ bun run e2e
 - Claude Code 用 sub-agent は `.claude/agents/` に維持してよいが、Codex 用に疑似 sub-agent を増やさない
 - Codex 側で別責務が必要になった場合も、まずは skill 化または `AGENTS.override.md` 化を優先する
 
-### Claude Code sub-agents (`.claude/agents/`)
-
-Claude Code 専用サブエージェント（Codex からは参照しない）:
-
-| エージェント        | モデル  | 役割                                                         |
-| ------------------- | ------- | ------------------------------------------------------------ |
-| `project-reviewer`  | inherit | コードレビュー専門。20ルール準拠チェック。書き込みツール禁止 |
-| `design-memory`     | sonnet  | デザイン決定の記憶・参照。公開ページUIに特化                 |
-| `codebase-explorer` | haiku   | 高速コードベース探索。ファイル位置・シンボル追跡             |
-| `verification`      | haiku   | ビルド/型チェック/lint検証。破壊的コマンドブロック済み       |
-
 ## Additional documentation
 
+- `docs/architecture/agent-instructions.md` : AI 向け指示の配置（**`.claude` を第一級で使う**前提・スキル正本とスタブ・Codex との切り分け）
 - `docs/architecture/` : アーキテクチャ、DB 設計、キャッシュ戦略
 - `docs/requirements/` : 機能要件
 - `docs/plans/` : 実装計画
 - `docs/reference/` : 詳細ルール
+- `docs/reference/codex-rules/lexical-patterns.md` : Admin Lexical の正本（`LexicalEditor` レイアウト定数、DraggableBlock フォーク、プレースホルダー）。Claude 用の `.claude/rules/frontend/lexical-patterns.md` と **同一方針**で保つ（`paths:` 条件付き）
 - `docs/reference/codex-rules/instruction-topology.md` : Codex 向け instruction / skill / override の責務整理
 - `.agents/skills/README.md` : Codex スキルの索引と作成基準

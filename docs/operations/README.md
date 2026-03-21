@@ -10,6 +10,7 @@
 | [Docker](./docker.md)         | Dockerイメージのビルド・実行     |
 | [Cloudflare](./cloudflare.md) | CDN・DDoS保護設定                |
 | [Bun](./bun.md)               | Bunランタイム設定                |
+| [Lexical JSON](./lexical-editor-state-json.md) | EditorState JSON の契約・レガシー行の SQL 修正 |
 
 ## 環境構成
 

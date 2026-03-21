@@ -6,6 +6,9 @@
  * 新しいインサートアイテムを追加する場合：
  * 1. INSERT_ITEMS 配列にエントリーを追加
  * 2. type: 'dialog' の場合は dialog-registry.ts にもエントリーを追加
+ *
+ * 挿入の実行は Lexical の推奨どおり **単一の `editor.update` 内**にまとめる。
+ * スラッシュメニューは `applyInsertItemInUpdate`、ツールバーは `executeInsertItem` を使う。
  */
 
 import type { ComponentType } from "react";
@@ -62,6 +65,7 @@ import {
   Clock,
   Table2,
   MessageSquareQuote,
+  Rows3,
 } from "lucide-react";
 import {
   SiX,
@@ -84,6 +88,8 @@ export type InsertCategory =
   | "list"
   | "media"
   | "layout"
+  /** 料金表・タイムライン等の複合コンテンツブロック（レイアウト骨格とは分離） */
+  | "patterns"
   | "format"
   | "widget"
   | "other"
@@ -119,7 +125,12 @@ type CommandInsertItem = InsertItemBase & {
 
 type TransformInsertItem = InsertItemBase & {
   type: "transform";
-  transform: (editor: LexicalEditor) => void;
+  /**
+   * 呼び出し側の `editor.update` コールバック内でのみ実行すること。
+   * `$getSelection` / `$setBlocksType` 等の Lexical $ API のみ使用し、
+   * ネストした `editor.update` を起動しない。
+   */
+  applyInUpdate: () => void;
 };
 
 export type InsertItem =
@@ -136,6 +147,7 @@ export const CATEGORY_LABELS: Record<InsertCategory, string> = {
   list: "リスト",
   media: "メディア",
   layout: "レイアウト",
+  patterns: "コンテンツパターン",
   format: "テキスト変換",
   widget: "ウィジェット",
   other: "その他",
@@ -147,28 +159,28 @@ export const CATEGORY_ORDER: readonly InsertCategory[] = [
   "list",
   "media",
   "layout",
+  "patterns",
   "format",
   "widget",
   "other",
   "template",
 ] as const;
 
-/** セパレータを表示しないカテゴリ遷移ペア（Toolbar Insertメニューのビジュアルグループ化用） */
+/** セパレータを表示しないカテゴリ遷移ペア（挿入メニュー root のビジュアルグループ化用） */
 export const MERGED_CATEGORY_PAIRS: ReadonlySet<string> = new Set([
   "media→layout",
+  "layout→patterns",
 ]);
 
 // =============================================================================
-// Helpers for transform items
+// Helpers for transform items ($ API only; caller must be inside editor.update)
 // =============================================================================
 
-function setBlockType(editor: LexicalEditor, createNode: () => ElementNode) {
-  editor.update(() => {
-    const selection = $getSelection();
-    if ($isRangeSelection(selection)) {
-      $setBlocksType(selection, createNode);
-    }
-  });
+function applySetBlocksType(createNode: () => ElementNode): void {
+  const selection = $getSelection();
+  if ($isRangeSelection(selection)) {
+    $setBlocksType(selection, createNode);
+  }
 }
 
 // =============================================================================
@@ -186,7 +198,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createParagraphNode()),
+    applyInUpdate: () => applySetBlocksType(() => $createParagraphNode()),
   },
   {
     id: "h1",
@@ -197,7 +209,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h1")),
+    applyInUpdate: () => applySetBlocksType(() => $createHeadingNode("h1")),
   },
   {
     id: "h2",
@@ -208,7 +220,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h2")),
+    applyInUpdate: () => applySetBlocksType(() => $createHeadingNode("h2")),
   },
   {
     id: "h3",
@@ -219,7 +231,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h3")),
+    applyInUpdate: () => applySetBlocksType(() => $createHeadingNode("h3")),
   },
   {
     id: "h4",
@@ -230,7 +242,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createHeadingNode("h4")),
+    applyInUpdate: () => applySetBlocksType(() => $createHeadingNode("h4")),
   },
   {
     id: "quote",
@@ -241,7 +253,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createQuoteNode()),
+    applyInUpdate: () => applySetBlocksType(() => $createQuoteNode()),
   },
   {
     id: "code",
@@ -252,7 +264,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     category: "basic",
     showInToolbar: false,
     showInPicker: true,
-    transform: (editor) => setBlockType(editor, () => $createCodeNode()),
+    applyInUpdate: () => applySetBlocksType(() => $createCodeNode()),
   },
 
   // ========== リスト ==========
@@ -462,7 +474,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
       "chronology",
       "年表",
     ],
-    category: "layout",
+    category: "patterns",
     showInToolbar: false,
     showInPicker: true,
     dialogId: "timeline",
@@ -473,7 +485,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     label: "料金比較表",
     icon: Table2,
     keywords: ["pricing", "price", "plan", "料金", "比較", "table", "プラン"],
-    category: "layout",
+    category: "patterns",
     showInToolbar: false,
     showInPicker: true,
     dialogId: "pricingTable",
@@ -491,7 +503,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
       "評価",
       "customer",
     ],
-    category: "layout",
+    category: "patterns",
     showInToolbar: false,
     showInPicker: true,
     dialogId: "testimonial",
@@ -500,7 +512,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     id: "feature-icon-list",
     type: "dialog",
     label: "設備・特徴リスト",
-    icon: ListChecks,
+    icon: Rows3,
     keywords: [
       "feature",
       "icon",
@@ -511,7 +523,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
       "アイコン",
       "リスト",
     ],
-    category: "layout",
+    category: "patterns",
     showInToolbar: false,
     showInPicker: true,
     dialogId: "feature-icon-list",
@@ -777,21 +789,46 @@ export function getPickerInsertItems(
   });
 }
 
-/** アイテムのonSelect実行 */
+/**
+ * ツールバー「挿入」など、既存の update 外から挿入を実行する。
+ * ダイアログ型は同期的に `openDialog` のみ。それ以外は 1 回の `editor.update` に集約する。
+ */
 export function executeInsertItem(
   item: InsertItem,
   editor: LexicalEditor,
   openDialog?: (id: DialogId) => void,
 ): void {
+  if (item.type === "dialog") {
+    openDialog?.(item.dialogId);
+    return;
+  }
+  editor.update(() => {
+    applyInsertItemInUpdate(item, editor, openDialog);
+  });
+}
+
+/**
+ * 既に `editor.update` のコールバック内にいるときに呼ぶ（スラッシュメニューと併用）。
+ * ダイアログ型は `openDialog` を `queueMicrotask` で遅延し、同一 update 内の DOM 確定後に開く。
+ */
+export function applyInsertItemInUpdate(
+  item: InsertItem,
+  editor: LexicalEditor,
+  openDialog?: (id: DialogId) => void,
+): void {
   switch (item.type) {
-    case "dialog":
-      openDialog?.(item.dialogId);
+    case "dialog": {
+      const dialogId = item.dialogId;
+      queueMicrotask(() => {
+        openDialog?.(dialogId);
+      });
       break;
+    }
     case "command":
       item.dispatch(editor);
       break;
     case "transform":
-      item.transform(editor);
+      item.applyInUpdate();
       break;
   }
 }

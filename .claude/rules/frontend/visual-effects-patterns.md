@@ -6,13 +6,13 @@ paths:
 
 # ビジュアルエフェクトアーキテクチャ
 
-> **注意**: 旧 ExperienceShell / VisualEffectsProvider / effects/ インフラは削除済み。
-> Three.js/PixiJS はパッケージとして利用可能だが、ページコンポーネントから直接 import して使用すること。
+> **注意**: 旧 ExperienceShell / VisualEffectsProvider / `effects/` インフラは削除済み。後方互換レイヤーは置かない。
 
 ## 概要
 
 公開ページのビジュアルエフェクトは Page-First Architecture に基づき、ページコンポーネントから直接制御する。
-GSAP + Lenis が主要アニメーション基盤。Three.js/PixiJS は必要なページに直接統合する。
+**既定の基盤は GSAP + Lenis**（[Reduced Motion](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/@media/prefers-reduced-motion) は `gsap-patterns.md`）。
+**L3 Three.js / L4 PixiJS** は現状リポジトリの依存に含めない。必要なページのみ [`three` + R3F](https://r3f.docs.pmnd.rs/getting-started/installation) / [PixiJS 8](https://pixijs.com/8.x/guides) を `bun add` し、Client + 動的ロードで直接統合する（`threejs-patterns.md` / `pixijs-patterns.md`）。
 
 > **詳細リファレンス**: `docs/reference/claude-rules/visual-effects-reference.md`
 
@@ -48,4 +48,4 @@ GSAP + Lenis が主要アニメーション基盤。Three.js/PixiJS は必要な
 1. **React stateでスクロールデータ管理禁止** — mutable ref パターン使用
 2. **reduced-motion 対応無視禁止** — → `gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）
 3. **サーバーコンポーネントでのアニメーション制御禁止** — `'use client'` 必須
-4. **フォールバック未定義の高レベルエフェクト禁止** — L3/L4は必ずL2/L1フォールバックを用意
+4. **フォールバック未定義の高レベルエフェクト禁止** — L3/L4 を入れるページでは L2/L1 への退避を必ず設計する。依存未導入の間は L2 以下のみで実装する

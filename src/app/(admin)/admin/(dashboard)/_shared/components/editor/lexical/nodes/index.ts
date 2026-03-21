@@ -33,12 +33,15 @@ export {
   LayoutContainerNode,
   $createLayoutContainerNode,
   $isLayoutContainerNode,
+  LAYOUT_MOBILE_COLUMNS_VAR,
+  templateColumnsNarrowState,
   templateColumnsState,
 } from "./LayoutContainerNode";
 
 export {
   LayoutItemNode,
   $createLayoutItemNode,
+  $isEmptyLayoutItemNode,
   $isLayoutItemNode,
 } from "./LayoutItemNode";
 

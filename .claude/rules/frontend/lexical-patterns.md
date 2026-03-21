@@ -12,6 +12,12 @@ paths:
 このプロジェクトでのLexical実装ガイドライン。
 実装パス: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`（インポートは `@/admin/...` エイリアスに従う）
 
+### 実装タスク用スキル（正本とひな形）
+
+- **手順の正本**: `.agents/skills/lexical-node` / `lexical-plugin` / `lexical-toolbar` の各 `SKILL.md`
+- **任意の長文コードひな形**: 各 skill の `reference/scaffold-*.md`
+- **Claude Code**: `.claude/skills/<同名>/SKILL.md` はスタブ — 上記正本（と必要なら `reference/`）を開く
+
 ## 技術スタック整合性
 
 | 技術           | バージョン         | 互換性                               |
@@ -80,16 +86,17 @@ lexical/
 
 右ペインは **開閉可能**（執筆エリアの確保・認知負荷の整理）。仕様の一次情報は本節。
 
-| 項目 | 内容 |
-| ---- | ---- |
-| 状態共有 | `inspector/inspector-sidebar-context.tsx` の **`InspectorSidebarProvider`**（`LexicalEditor` / `EditorInner` で `showInspector` に応じて `enabled` を渡す） |
-| 消費 API | **`useInspectorSidebar()`** — `toggle` / `expand` / `collapse` / `isExpanded` / `isInspectorAvailable` |
-| React 19 Context | **`<InspectorSidebarContext value={...}>`** でラップ。**`.Provider` は使わない**。フックは **`use(InspectorSidebarContext)`**（`useContext` 禁止に準拠） |
-| 永続化 | `localStorage` キー **`myrrh-lexical-inspector-expanded`**（`1` = 展開、`0` = 折りたたみ）。利用不可環境では黙って無視 |
-| ツールバー | `ToolbarPlugin` — パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`） |
-| キーボード | **`Ctrl+Shift+0`**（**`Numpad0` 可**）。`KeyboardShortcutsPlugin` 内で `isInspectorAvailable` が false のときはコマンドを処理しない |
-| 無効化 | `LexicalEditor` の **`showInspector={false}`** — サイドバー非マウント・トグル非表示・上記ショートカット無効 |
-| マークアップ | パネルルートは **`<aside id="lexical-block-inspector-panel" aria-label="ブロック設定パネル">`** |
+| 項目             | 内容                                                                                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 状態共有         | `inspector/inspector-sidebar-context.tsx` の **`InspectorSidebarProvider`**（`LexicalEditor` / `EditorInner` で `showInspector` に応じて `enabled` を渡す） |
+| 消費 API         | **`useInspectorSidebar()`** — `toggle` / `expand` / `collapse` / `isExpanded` / `isInspectorAvailable`                                                      |
+| React 19 Context | **`<InspectorSidebarContext value={...}>`** でラップ。**`.Provider` は使わない**。フックは **`use(InspectorSidebarContext)`**（`useContext` 禁止に準拠）    |
+| 永続化           | `localStorage` キー **`myrrh-lexical-inspector-panel`**（`1` = 展開、`0` = 折りたたみ、未設定は折りたたみ）。利用不可環境では黙って無視                        |
+| ツールバー       | `ToolbarPlugin` — APG Toolbar（`role="toolbar"`）。パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`）                             |
+| キーボード       | **`Ctrl+Shift+0`**（**`Numpad0` 可**）。`KeyboardShortcutsPlugin` 内で `isInspectorAvailable` が false のときはコマンドを処理しない                         |
+| 無効化           | `LexicalEditor` の **`showInspector={false}`** — サイドバー非マウント・トグル非表示・上記ショートカット無効                                                 |
+| 展開時の幅       | **420px**（インライン記事設定パネル default と揃える）                                                                                                    |
+| マークアップ     | パネルルートは **`<aside id="lexical-block-inspector-panel" aria-label="ブロック設定パネル（本文中のブロック用）">`**                                       |
 
 **新規プラグイン**がパネル開閉に連動する場合: `LexicalComposer` 配下かつ **`InspectorSidebarProvider` 内**で `useInspectorSidebar()` を呼ぶこと。Provider 外ではフックが throw する。
 
@@ -283,6 +290,16 @@ isShadowRoot(): boolean {
 
 - CollapsibleContainerNode, CollapsibleContentNode
 - LayoutContainerNode, LayoutItemNode
+
+#### カラムレイアウト（LayoutContainer / LayoutItem）
+
+- **状態**: `templateColumnsState`（広い画面の `grid-template-columns`）と `templateColumnsNarrowState`（狭い画面用。DOM では `LAYOUT_MOBILE_COLUMNS_VAR` = `--lexical-layout-mobile`）。列数と子 `LayoutItem` の整合は **`register-layout-node-transforms.ts` のコンテナ Transform のみ**が行い、`templateColumns` のトークン数のみを見る（狭い画面の列数はレイアウトのみ変更しスロット数は変えない）。
+- **DOM 取り込み**: `data-lexical-layout-container` かつ **インライン `gridTemplateColumns` が空でない**ときのみコンテナとして変換。狭い画面用は `style` の `--lexical-layout-mobile` が無ければ `1fr`。
+- **DOM 出力**: `data-lexical-layout-container` + インライン `grid-template-columns`（広い画面）+ `--lexical-layout-mobile`（狭い画面）。`lexical-content.css` の `@media (max-width: 768px)` で後者に `!important` 切替（ブレークポイントは `layout-templates.ts` の `LAYOUT_BREAKPOINT_MAX_PX` と一致させる）。
+- **編集 UX**: キャレットがカラム内にあるときツールバーに「カラム」ドロップダウン（`LayoutToolbarSection`）。挿入ダイアログ・インスペクターと同一プリセット（`LAYOUT_TEMPLATES` / `LAYOUT_NARROW_TEMPLATES`）を共有する。
+- **挿入**: スロット生成は `lib/layout-insert.ts` の `$createPopulatedLayoutContainer`。配置は `@lexical/utils` の `$insertNodeToNearestRoot`（公式 JSDocどおり root/shadow root 境界で分割。キャレットに応じカラム内ネスト可）。ダイアログ等で選択が失われた場合のみ先頭列へフォールバック。列テンプレ変更は `$setState` のみ（ツールバー / インスペクター）。専用 `LexicalCommand` は置かない。
+- **列減**: 右端列の子ブロックは `register-layout-node-transforms` により新しい最終列へマージされる（データ消失なし。編集 UI に注意書きあり）。
+- **空カラム**: 通常は空段落 1 つ。`$isEmptyLayoutItemNode`（Playground 同名）で「未入力カラム」を判定する。`collapseAtStart` の全列空判定に使用する。
 - StepsContainerNode, StepContentNode
 - TabsContainerNode, TabPanelNode
 - PullQuoteNode
@@ -687,6 +704,26 @@ const initialConfig = {
 };
 ```
 
+## LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー
+
+[Lexical React 公式](https://lexical.dev/docs/getting-started/react) では **`ContentEditable` に `placeholder` を渡す**。`@lexical/react` の [`ContentEditable` 実装](https://github.com/facebook/lexical/blob/main/packages/lexical-react/src/LexicalContentEditable.tsx) では、プレースホルダーは **編集ルートの兄弟ノード**として描画されるため、`ContentEditable` に付けた `prose` / `prose-p:leading-relaxed` は **プレースホルダーには継承されない**。本文と揃えるには `LexicalEditor.tsx` 側で **`text-base leading-relaxed lg:text-lg`** 等を明示する（`top-6` / `left-10` は `py-6` / `pl-10` と一致）。
+
+### レイアウト定数（単一正本）
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `editor-layout-constants.ts` | `EDITOR_PADDING_LEFT`（40）、`EDITOR_PADDING_RIGHT`（24）、`EDITOR_PADDING_HORIZONTAL`（64）。`LexicalEditor` の `ContentEditable` の `pl-10` / `pr-6` と **同値**に保つ。 |
+
+`contentWidth` の `maxWidth` は `contentWidth + EDITOR_PADDING_HORIZONTAL` で計算する（`CLAUDE.md` のコンテンツ幅節と同じ）。
+
+### DraggableBlockPlugin（ローカルフォーク）
+
+`@lexical/react` の `DraggableBlockPlugin_EXPERIMENTAL` は内部で固定パディング（例: `TEXT_BOX_HORIZONTAL_PADDING = 28`）を使う。当プロジェクトの **左 40px / 右 24px** と一致しないため、**`plugins/lexical-draggable-block-plugin.ts` にフォーク**し、`editor-layout-constants` と `getBlockLineHeightPx`（unitless `line-height` 対応）を組み込む。メインエディタは **`plugins/DraggableBlockPlugin.tsx` 経由のみ** — **`@lexical/react/LexicalDraggableBlockPlugin` を直接 import しない**。
+
+- ドラッグ UI の横位置はフォークが付与する **`transform` のみ**。メニュー／ドロップライン用 DOM に **`left-*` を重ねない**（`left-1` + `translate` や `left-6` + `translate` は二重オフセットになる）。
+- `@lexical/react` を上げたら **`node_modules/.../LexicalDraggableBlockPlugin` と差分マージ**し、必要ならフォークを更新する。
+- `eslint.config.mjs` の `lexical-draggable-fork` が当該ファイル用のルール緩和を担う。フォークを大きく変えたら **要否を再確認**する。
+
 ## 禁止事項
 
 1. **直接的なDOM操作禁止**: `editor.update()` / `editor.read()` を経由
@@ -696,7 +733,7 @@ const initialConfig = {
 5. **型アサーション禁止**: 型ガード関数 `$isXxxNode()` を使用
 6. **制御コンポーネント化禁止**: EditorStateを親コンポーネントで管理しない
 7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
-8. **RichTextPlugin の placeholder prop 使用禁止**: ContentEditable に直接 `placeholder` を渡す
+8. **プレースホルダーの渡し先を誤らない**: `RichTextPlugin` に `placeholder` を渡さない。`ContentEditable` に `placeholder` と `aria-placeholder` を渡す（[Lexical React の用法](https://lexical.dev/docs/getting-started/react)）
 9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
 10. **レガシーノードパターン禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `__property`, `getWritable()`, `getLatest()`, `$applyNodeReplacement`, `SerializedXxxNode` interface — すべて `$config` + `createState` + `$getState` / `$setState` に置換済み
 11. **ブロックレベルノードへの `$insertNodes` 使用禁止**: `$insertNodeToNearestRoot` (`@lexical/utils`) を使用。`$insertNodes` はインライン/混合ノード専用
@@ -727,6 +764,8 @@ editor.update(() => {
 24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する
 25. **`$getStateChange` の truthy チェック禁止** — `if (change)` ではなく `if (change !== null)` を使用。公式ドキュメントと一致させる
 26. **常に `false` を返す `updateDOM` に `boolean` 戻り型禁止** — 引数なし・常に `return false` のメソッドは `override updateDOM(): false` とリテラル型で宣言する。DecoratorNode や状態を持たない子ノードが該当
+27. **`contentWidthClassName` / `contentWidthStyle` 禁止（削除済み）** — `contentWidth?: number`（テキスト領域の純粋な幅 px）を使用。エディタ内部で `EDITOR_PADDING_HORIZONTAL`（64px）を加算。`useContentWidth` フック → `resolveWidthStyles().px`
+28. **Route Handler での `$generateHtmlFromNodes` 使用禁止** — DOM API 不在で 500 エラー。プレビュー HTML はクライアント側の `renderEditorStateJsonToHtmlClient` で生成。保存時は Server Actions の `renderEditorStateToHtmlLazy`（動作する）
 
 ## 新規ノード登録チェックリスト
 
@@ -744,6 +783,12 @@ editor.update(() => {
 | `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                 |
 | `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
 | `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
+
+**HTML→Lexical JSON**: `tryConvertHtmlStringToLexicalJsonString`（`html-to-lexical-json.ts`）の戻りは `ConvertHtmlToLexicalJsonResult`。失敗時に `EMPTY` へ黙ってフォールバックしない。空 HTML（trim 後）のみ意図した空ドキュメントとして `ok: true` + `EMPTY_LEXICAL_EDITOR_STATE_JSON`。
+
+**挿入メニュー UI**: ツールバー「挿入」は **カテゴリごとのサブメニュー**（`DropdownMenuSub`）。項目が **6 件以上**のカテゴリはサブメニュー内 **2 カラム**。タイムライン・料金表等は `patterns`、カラム・コールアウト等は `layout`。詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
+
+**挿入実行**: ツールバーは `executeInsertItem`（`dialog` は同期 `openDialog`、それ以外は 1 回の `editor.update`）。スラッシュメニューはトリガー削除と同一 `update` 内で `applyInsertItemInUpdate`（`dialog` は `queueMicrotask` で `openDialog`）。`type: "transform"` は `applyInUpdate` で $ API のみとし、ネストした `editor.update` を禁止。
 
 **ポイント**: FloatingToolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
 
@@ -794,7 +839,7 @@ return { node, after: () => [] };
 
 ## Gotchas
 
-- **`MobileEditorFallback`（画面幅 &lt; 1024px）** — 親から渡された **`contentJson` を headless で HTML に変換**してプレビューする（未保存の変更を反映）。`contentJson` が無い・変換失敗時は **`contentHtml`** にフォールバック。headless 変換は `parseEditorState` のあと **`editor.setEditorState(editorState)`** を挟んでから `$generateHtmlFromNodes` すること（省略すると空 HTML になりうる）。実装: `preview/render-editor-state-to-html-client.ts` / サーバー側は `preview/headless-renderer.ts`
+- **`MobileEditorFallback`（画面幅 &lt; 1024px）** — 親から渡された **`contentJson` を headless で HTML に変換**してプレビューする（未保存の変更を反映）。**`lexicalJsonSchema` 非適合時はプレビューせず警告**（自動正規化しない）。`EMPTY_LEXICAL_EDITOR_STATE_JSON` は **空段落 1 ブロック**。DB 修正は `docs/operations/lexical-editor-state-json.md`。headless 変換は `parseEditorState` のあと **`editor.setEditorState(editorState)`** を挟んでから `$generateHtmlFromNodes` すること（省略すると空 HTML になりうる）。実装: `preview/render-editor-state-to-html-client.ts` / サーバー側は `preview/headless-renderer.ts`
 - **`createDOM` → data-attribute 変換後は `theme.ts` の旧エントリを削除** — `config.theme.*` 参照除去後、`theme.ts` に残った CSS クラスエントリが dead code になる。変換時にセットで削除する
 - **`createEnumGuard` の型ガードは `string` を要求** — `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー。AccentColor 等の parse パターン: `parse: (v: unknown): AccentColor => typeof v === "string" && isAccentColor(v) ? v : "default"`
 - **`importDOM` で `getAttribute()` → AccentColor 変換に型ガード必須** — `element.getAttribute("data-color") ?? "default"` の型は `string`（`AccentColor` ではない）。必ず `isAccentColor(colorAttr) ? colorAttr : "default"` でガードする

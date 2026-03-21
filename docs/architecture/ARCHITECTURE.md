@@ -1,6 +1,6 @@
 # システムアーキテクチャ
 
-最終更新: 2026-03-08
+最終更新: 2026-03-22
 
 ## 概要
 
@@ -70,7 +70,10 @@ graph TB
 ### 3. DB 境界
 
 - `src/shared/db/*` が Prisma の唯一の公開窓口
-- `src/shared/db/prisma.ts`, `src/shared/db/enums.ts`, `src/shared/db/better-auth-adapter.ts` だけを公開境界とし、barrel / model shim は置かない
+- **クライアント拡張**（`$extends` / Decimal→number）の実装は **`create-app-prisma-client.ts`** に集約。Next のシングルトン（`prisma.ts`）と **`prisma/seed.ts`** はいずれも **`createAppPrismaClient`** を通す（型 `AppPrismaClient` を共有）
+- Better Auth 用は拡張前ベースクライアント **`prismaForBetterAuth`** のみアダプターに渡す（`prisma.ts`）
+- **`@/shared/db/prisma.ts`** は `server-only`。seed / Bun スクリプトは **`@/shared/db/prisma` を import せず**、自前の `PrismaClient` + `createAppPrismaClient` または domain の「`PrismaClient` を引数で受けるコマンド」を使う
+- `src/shared/db/prisma.ts`, `src/shared/db/create-app-prisma-client.ts`, `src/shared/db/enums.ts`, `src/shared/db/better-auth-adapter.ts` を境界の中心とし、barrel / model shim は置かない
 - Prisma 生成物は `generated/prisma/*` に配置し、`src/` 配下へ置かない
 - Prisma 生成物は git 管理せず、`prisma generate` を install / validate / test / build の前に実行する
 - アプリ本体から `@generated/prisma/*` を直接 import しない

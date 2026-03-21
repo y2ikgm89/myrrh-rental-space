@@ -1299,17 +1299,26 @@ details[data-collapsible-item]
  *
  * grid-template-columns は動的値のため inline style で設定。
  * display: grid / gap は CSS で設定。
- * モバイルでは1カラムに強制（inline style のオーバーライドに !important 必須）
+ * align-items: start — 片カラムにコールアウト等で高さ差が出ても、隣カラムを
+ *   行全体に stretch させずコンテンツ高に留める（キャレット周りが上寄り・二行分に見えるのを防ぐ）。
+ * 狭いビューポート: インラインの `--lexical-layout-mobile` で grid-template-columns を上書き
+ * （ブレークポイントは layout-templates.ts の LAYOUT_BREAKPOINT_MAX_PX と揃える）
  * -------------------------------------------------------------------------- */
 
 [data-lexical-layout-container] {
   display: grid;
   gap: 1rem;
+  align-items: start;
+}
+
+/* グリッド子の min-width:auto による子のはみ出しを抑え、狭い列でも折り返しやすくする */
+[data-lexical-layout-item] {
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
   [data-lexical-layout-container] {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: var(--lexical-layout-mobile, 1fr) !important;
   }
 }
 

@@ -19,7 +19,11 @@ import {
   SidePanelShell,
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
-import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
+import {
+  LazyLexicalEditor,
+  EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  tryConvertHtmlStringToLexicalJsonString,
+} from "@/admin/components/editor/lexical";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   createTermsWithVersion,
@@ -184,8 +188,6 @@ export function TermsInlineEditor({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasEditorChanges, setHasEditorChanges] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
-  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
-
   // Version management state (edit mode only)
   const [selectedVersionId, setSelectedVersionId] = useState<string>(
     initialVersion?.id ?? "",
@@ -215,14 +217,14 @@ export function TermsInlineEditor({
           type: terms.type,
           contentJson: initialVersion?.contentJson
             ? JSON.stringify(initialVersion.contentJson)
-            : "",
+            : EMPTY_LEXICAL_EDITOR_STATE_JSON,
           selectedTemplate: "",
         }
       : {
           title: "",
           slug: "",
           type: "",
-          contentJson: "",
+          contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           selectedTemplate: "",
         },
   });
@@ -253,8 +255,9 @@ export function TermsInlineEditor({
   const handleTemplateChange = (templateId: string) => {
     setValue("selectedTemplate", templateId);
     if (templateId === "blank") {
-      setValue("contentJson", "", { shouldDirty: true });
-      setTemplateHtml("");
+      setValue("contentJson", EMPTY_LEXICAL_EDITOR_STATE_JSON, {
+        shouldDirty: true,
+      });
       setEditorKey((k) => k + 1);
       setHasEditorChanges(true);
       return;
@@ -264,8 +267,12 @@ export function TermsInlineEditor({
       const appliedContent = businessInfo
         ? applyBusinessInfo(template.content, businessInfo)
         : template.content;
-      setValue("contentJson", "", { shouldDirty: true });
-      setTemplateHtml(appliedContent);
+      const converted = tryConvertHtmlStringToLexicalJsonString(appliedContent);
+      if (!converted.ok) {
+        toast.error(converted.error);
+        return;
+      }
+      setValue("contentJson", converted.json, { shouldDirty: true });
       setEditorKey((k) => k + 1);
       setHasEditorChanges(true);
     }
@@ -294,7 +301,9 @@ export function TermsInlineEditor({
       const version = await fetchTermsVersionById(newVersionId);
       setValue(
         "contentJson",
-        version.contentJson ? JSON.stringify(version.contentJson) : "",
+        version.contentJson
+          ? JSON.stringify(version.contentJson)
+          : EMPTY_LEXICAL_EDITOR_STATE_JSON,
         { shouldDirty: false },
       );
       setSelectedVersionContent(version);
@@ -324,7 +333,7 @@ export function TermsInlineEditor({
       try {
         const result = await createTermsVersion({
           termsId: terms.id,
-          contentJson: contentJson || "",
+          contentJson: contentJson || EMPTY_LEXICAL_EDITOR_STATE_JSON,
         });
         if (isMutationError(result)) {
           toast.error(result.error);
@@ -991,13 +1000,7 @@ export function TermsInlineEditor({
     >
       <LazyLexicalEditor
         key={editorKey}
-        contentJson={contentJson || undefined}
-        contentHtml={
-          templateHtml ??
-          (initialVersion?.contentHtml && editorKey === 0
-            ? initialVersion.contentHtml
-            : "")
-        }
+        contentJson={contentJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
         onChange={handleJsonChange}
         disabled={isPending || isLoadingVersion}
         className={EDITOR_PROSE_CLASSES}

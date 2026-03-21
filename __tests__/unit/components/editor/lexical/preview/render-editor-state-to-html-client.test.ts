@@ -2,9 +2,14 @@
  * @description `renderEditorStateJsonToHtmlClient` の smoke テスト
  */
 
-import { describe, test, expect } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
+import { installJSDOMForTests } from "../../../../../setup-dom";
+
+beforeEach(() => {
+  installJSDOMForTests();
+});
 
 /** Lexical 0.41 で検証した最小 paragraph + text の EditorState JSON */
 const MINIMAL_PARAGRAPH_STATE_JSON = JSON.stringify({

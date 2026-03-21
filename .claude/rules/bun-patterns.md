@@ -238,6 +238,12 @@ afterEach(() => {
 
 **使い分け**: テストスコープに閉じるモックは `using` キーワード推奨。複数テストで共有・設定が必要なモックは従来パターン。
 
+## DOM 環境（`jsdom` + Lexical）
+
+- **`bunfig.toml`**: `preload = ["./__tests__/setup-dom.ts", "./__tests__/setup.ts"]` で全テストの前に [jsdom](https://github.com/jsdom/jsdom) を起動する
+- **`__tests__/setup-dom.ts`**: `window` / `document` / `Element` 等を `globalThis`（および Node の `global`）へ設定。[`@lexical/html` の `$generateHtmlFromNodes`](https://lexical.dev/docs/packages/lexical-html) は未定義 DOM で失敗するため **happy-dom では代替しない**
+- **並列テストでグローバルが壊れた場合**: `setup-dom.ts` が export する `installJSDOMForTests()` を、当該ファイルの `beforeEach` で呼び出す（Lexical headless HTML の smoke テストで使用）
+
 ## 環境変数のモック
 
 テストごとに環境変数を変更する場合は `beforeAll` / `afterAll` でオリジナルを保存・復元する。
@@ -361,6 +367,7 @@ describe("createPost", () => {
 | `__tests__/mocks/auth.ts`              | Better Auth モック                     |              |
 | `__tests__/mocks/next.ts`              | Next.js API モック                     |              |
 | `__tests__/mocks/resend.ts`            | Resend メールモック                    |              |
+| `__tests__/setup-dom.ts`               | JSDOM プリロード（`installJSDOMForTests`） |            |
 | `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）     |              |
 
 ### テストファイル命名

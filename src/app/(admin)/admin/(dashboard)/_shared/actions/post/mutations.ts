@@ -94,9 +94,9 @@ export async function createPost(
     return createValidationMutationError(parsed.error);
   }
 
-  const contentHtml = parsed.data.contentJson
-    ? await renderEditorStateToHtmlLazy(parsed.data.contentJson)
-    : "";
+  const contentHtml = await renderEditorStateToHtmlLazy(
+    parsed.data.contentJson,
+  );
   let createdPostSlug: string | null = null;
 
   return executeAdminMutationResult({

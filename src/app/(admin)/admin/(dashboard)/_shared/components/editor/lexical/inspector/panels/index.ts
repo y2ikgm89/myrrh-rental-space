@@ -7,6 +7,8 @@ export { ImageInspectorPanel } from "./ImageInspectorPanel";
 export { CalloutInspectorPanel } from "./CalloutInspectorPanel";
 export { BookmarkInspectorPanel } from "./BookmarkInspectorPanel";
 export { PullQuoteInspectorPanel } from "./PullQuoteInspectorPanel";
+export { RubyInspectorPanel } from "./RubyInspectorPanel";
+export { TooltipInspectorPanel } from "./TooltipInspectorPanel";
 export { CollapsibleInspectorPanel } from "./CollapsibleInspectorPanel";
 export { StepsInspectorPanel } from "./StepsInspectorPanel";
 export { TabsInspectorPanel } from "./TabsInspectorPanel";

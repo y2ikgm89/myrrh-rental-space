@@ -6,15 +6,13 @@ import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 /**
- * ページコンテンツを取得し、Zod スキーマでバリデーションする
+ * DB からページコンテンツの生データを取得（キャッシュ済み）
  *
- * DB にデータがない場合やバリデーション失敗時はデフォルト値を返す
+ * 'use cache' の引数は React シリアライゼーションを通るため、
+ * Zod スキーマ等のシリアライズ不可オブジェクトは渡せない。
+ * DB フェッチのみをキャッシュし、バリデーションは呼び出し側で行う。
  */
-export async function getPageContent<T>(
-  pageKey: string,
-  schema: z.ZodType<T>,
-  defaultContent: T,
-): Promise<T> {
+async function getPageContentRaw(pageKey: string): Promise<unknown> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGE_CONTENT, getCacheTag.pageContent.detail(pageKey));
@@ -24,9 +22,24 @@ export async function getPageContent<T>(
     select: { content: true },
   });
 
-  if (!row) return defaultContent;
+  return row?.content ?? null;
+}
 
-  const result = schema.safeParse(row.content);
+/**
+ * ページコンテンツを取得し、Zod スキーマでバリデーションする
+ *
+ * DB にデータがない場合やバリデーション失敗時はデフォルト値を返す。
+ * Zod バリデーションは 'use cache' 境界の外で実行される。
+ */
+export async function getPageContent<T>(
+  pageKey: string,
+  schema: z.ZodType<T>,
+  defaultContent: T,
+): Promise<T> {
+  const raw = await getPageContentRaw(pageKey);
+  if (raw === null) return defaultContent;
+
+  const result = schema.safeParse(raw);
   if (!result.success) return defaultContent;
 
   return result.data;

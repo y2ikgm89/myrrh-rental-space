@@ -20,6 +20,8 @@ import { $isImageNode } from "../nodes/ImageNode";
 import { $isCalloutNode } from "../nodes/CalloutNode";
 import { $isBookmarkNode } from "../nodes/BookmarkNode";
 import { $isPullQuoteNode } from "../nodes/PullQuoteNode";
+import { $isRubyNode } from "../nodes/RubyNode";
+import { $isTooltipNode } from "../nodes/TooltipNode";
 import { $isCollapsibleContainerNode } from "../nodes/CollapsibleContainerNode";
 import { $isStepsContainerNode } from "../nodes/StepsContainerNode";
 import { $isTabsContainerNode } from "../nodes/TabsContainerNode";
@@ -82,6 +84,8 @@ export function getInspectableInfoFromRegistry(
   if ($isCalloutNode(node)) return { nodeType: "callout", node, nodeKey };
   if ($isBookmarkNode(node)) return { nodeType: "bookmark", node, nodeKey };
   if ($isPullQuoteNode(node)) return { nodeType: "pullQuote", node, nodeKey };
+  if ($isRubyNode(node)) return { nodeType: "ruby", node, nodeKey };
+  if ($isTooltipNode(node)) return { nodeType: "tooltip", node, nodeKey };
   if ($isCollapsibleContainerNode(node))
     return { nodeType: "collapsible", node, nodeKey };
   if ($isStepsContainerNode(node)) return { nodeType: "steps", node, nodeKey };
@@ -139,6 +143,8 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
     "callout",
     "bookmark",
     "pullQuote",
+    "ruby",
+    "tooltip",
     "collapsible",
     "steps",
     "tabs",

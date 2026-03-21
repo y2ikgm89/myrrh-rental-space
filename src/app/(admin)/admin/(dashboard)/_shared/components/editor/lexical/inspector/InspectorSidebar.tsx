@@ -17,6 +17,8 @@ import {
   CalloutInspectorPanel,
   BookmarkInspectorPanel,
   PullQuoteInspectorPanel,
+  RubyInspectorPanel,
+  TooltipInspectorPanel,
   CollapsibleInspectorPanel,
   StepsInspectorPanel,
   TabsInspectorPanel,
@@ -74,6 +76,12 @@ function renderPanel(info: SelectedNodeInfo) {
     case "pullQuote":
       return (
         <PullQuoteInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
+    case "ruby":
+      return <RubyInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "tooltip":
+      return (
+        <TooltipInspectorPanel nodeKey={info.nodeKey} node={info.node} />
       );
     case "collapsible":
       return (
@@ -193,11 +201,11 @@ export function InspectorSidebar() {
   return (
     <aside
       id={INSPECTOR_PANEL_ID}
-      aria-label="ブロック設定パネル"
+      aria-label="ブロック設定パネル（本文中のブロック用）"
       className={
         isExpanded
-          ? "shrink-0 w-64 border-l border-border bg-background flex flex-col h-full transition-[width] duration-200 ease-out min-w-0"
-          : "shrink-0 w-11 border-l border-border bg-background flex flex-col items-center pt-2 h-full transition-[width] duration-200 ease-out"
+          ? "shrink-0 w-[420px] border-l border-border bg-background flex flex-col h-full min-h-0 transition-[width] duration-200 ease-out min-w-0"
+          : "shrink-0 w-11 border-l border-border bg-background flex flex-col items-center pt-2 h-full min-h-0 transition-[width] duration-200 ease-out"
       }
     >
       {isExpanded ? (
@@ -213,7 +221,7 @@ export function InspectorSidebar() {
               className="h-8 w-8 shrink-0"
               aria-expanded={true}
               onClick={collapse}
-              title="ブロック設定パネルを閉じる"
+              title="ブロック設定を閉じる（本文ブロック用）"
             >
               <ChevronRight className="h-4 w-4" aria-hidden />
               <span className="sr-only">ブロック設定パネルを閉じる</span>
@@ -231,6 +239,11 @@ export function InspectorSidebar() {
                 <br />
                 設定を編集できます
               </p>
+              <p className="text-xs text-center text-muted-foreground mt-3 leading-relaxed">
+                タイトル・SEO・公開日は
+                <br />
+                画面上部の設定ボタンから
+              </p>
             </div>
           )}
         </>
@@ -243,7 +256,7 @@ export function InspectorSidebar() {
             className="h-9 w-9 shrink-0"
             aria-expanded={false}
             onClick={expand}
-            title="ブロック設定パネルを開く（Ctrl+Shift+0）"
+            title="ブロック設定を開く（本文ブロック用）Ctrl+Shift+0"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
             <span className="sr-only">ブロック設定パネルを開く</span>

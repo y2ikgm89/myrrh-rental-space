@@ -21,6 +21,9 @@ import {
 } from "@/shared/lib/validations/terms";
 import { isValidTermsType } from "@/shared/lib/validations/enums";
 import type { TermsWithVersion } from "@/shared/lib/validations/terms";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+
+const VALID_LEXICAL_JSON = EMPTY_LEXICAL_EDITOR_STATE_JSON;
 
 // 有効な規約作成データ
 const VALID_CREATE_TERMS = {
@@ -202,10 +205,6 @@ describe("updateTermsSchema", () => {
     expect(result.success).toBe(false);
   });
 });
-
-// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
-const VALID_LEXICAL_JSON =
-  '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}';
 
 describe("createTermsVersionSchema", () => {
   describe("正常系", () => {

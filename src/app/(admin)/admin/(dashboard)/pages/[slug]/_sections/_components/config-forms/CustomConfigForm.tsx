@@ -23,6 +23,7 @@ import {
 } from "@/shared/lib/validations/section";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { FormActions, type ConfigFormProps } from "./shared";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
 
 const LexicalEditor = dynamic(
   () =>
@@ -136,9 +137,8 @@ export default function CustomConfigForm({
             contentJson={
               section.contentJson
                 ? JSON.stringify(section.contentJson)
-                : undefined
+                : EMPTY_LEXICAL_EDITOR_STATE_JSON
             }
-            contentHtml={section.contentHtml || ""}
             onChange={setEditorContentJson}
             placeholder="セクションのコンテンツを入力..."
             className={EDITOR_PROSE_CLASSES}

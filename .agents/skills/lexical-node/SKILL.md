@@ -23,6 +23,7 @@ description: 管理画面の Lexical に新しいノード型を追加すると�
 4. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/YouTubeNode.tsx`
+5. 長いコードひな形が必要なら `reference/scaffold-lexical-node.md`（任意）
 
 ## ワークフロー
 

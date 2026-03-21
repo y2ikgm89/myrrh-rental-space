@@ -859,7 +859,7 @@ function useFpsMonitor(onDegrade: (fps: number) => void) {
 
 ```bash
 # レンタルスペース/ホスピタリティ向け検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "hospitality rental space" --domain product
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "hospitality rental space" --domain product
 ```
 
 | プロダクトタイプ | 推奨スタイル                 | 推奨L | 理由                         |

@@ -16,7 +16,7 @@ description: 管理画面の Lexical 実装を監査またはモダナイズす�
 
 ## 先に読む
 
-1. `docs/reference/codex-rules/lexical-patterns.md`
+1. `docs/reference/codex-rules/lexical-patterns.md`（**「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」** 節、および **「HTML → Lexical JSON」** 節 — シェル・フォーク・`tryConvertHtmlStringToLexicalJsonString` 等の正本）
 2. `docs/reference/codex-rules/react-patterns.md`
 3. `docs/reference/codex-rules/type-safety.md`
 4. 必要なら `package.json` の Lexical バージョン
@@ -45,9 +45,10 @@ root.select(
 
 4. 誤検知を除き、deprecated / private / duplicate pattern をまとめて置換する
 5. 互換レイヤーを足さず、現行の canonical pattern に寄せる
-6. ローカルの `codex-rules` や関連 skill が古ければ同じ変更で更新する
-7. `bun run validate` を実行する
-8. 変更が広い場合は `bun run build` まで確認する
+6. **`@lexical/react` を上げた場合**: `node_modules/.../LexicalDraggableBlockPlugin` と `plugins/lexical-draggable-block-plugin.ts` を差分比較し、upstream のバグ修正・座標ロジックをフォークへマージする（直接パッケージ import に戻さない）
+7. ローカルの `codex-rules`（および条件付きで `.claude/rules/frontend/lexical-patterns.md`）や関連 skill が古ければ **同じ変更で同期**する
+8. `bun run validate` を実行する
+9. 変更が広い場合は `bun run build` まで確認する
 
 ## ガードレール
 
@@ -55,7 +56,8 @@ root.select(
 - `updateListener` は読み取り専用に保ち、変更は command / transform / 明示的な `editor.update()` へ寄せる
 - `DecoratorNode` の React props へ private field を直接渡さない
 - deprecated API を別名で包んで延命しない
-- ルール更新が必要な場合は `AGENTS.md` ではなく `docs/reference/codex-rules/` か skill 側に寄せる
+- **メインエディタの DraggableBlock** は `@lexical/react` のみに置き換えず、`editor-layout-constants` とフォークを前提に監査する
+- ルール更新が必要な場合は `AGENTS.md` ではなく `docs/reference/codex-rules/`（＋ Codex と二重管理のトピックは `.claude/rules` も同期）か skill 側に寄せる
 
 ## Done
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { ChevronRight } from "lucide-react";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
 
@@ -163,6 +164,55 @@ function DropdownMenuSeparator({
   );
 }
 
+type DropdownMenuSubTriggerProps = React.ComponentPropsWithRef<
+  typeof DropdownMenuPrimitive.SubTrigger
+> & {
+  inset?: boolean;
+};
+
+function DropdownMenuSubTrigger({
+  className,
+  inset,
+  ref,
+  children,
+  ...props
+}: DropdownMenuSubTriggerProps) {
+  return (
+    <DropdownMenuPrimitive.SubTrigger
+      ref={ref}
+      className={cn(
+        dropdownMenuItemVariants(),
+        "cursor-default data-[state=open]:bg-accent",
+        inset && "pl-8",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <ChevronRight
+        aria-hidden
+        className="ml-auto size-4 shrink-0 text-muted-foreground"
+      />
+    </DropdownMenuPrimitive.SubTrigger>
+  );
+}
+
+function DropdownMenuSubContent({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof DropdownMenuPrimitive.SubContent>) {
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.SubContent
+        ref={ref}
+        className={cn(dropdownMenuContentVariants(), className)}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+}
+
 function DropdownMenuShortcut({
   className,
   ...props
@@ -188,5 +238,7 @@ export {
   DropdownMenuGroup,
   DropdownMenuPortal,
   DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuRadioGroup,
 };

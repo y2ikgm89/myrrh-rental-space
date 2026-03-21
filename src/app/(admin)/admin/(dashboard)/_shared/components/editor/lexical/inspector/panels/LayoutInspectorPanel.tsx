@@ -11,6 +11,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import {
   $isLayoutContainerNode,
   type LayoutContainerNode,
+  templateColumnsNarrowState,
   templateColumnsState,
 } from "../../nodes/LayoutContainerNode";
 import { InspectorHeader } from "../InspectorHeader";
@@ -24,14 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui/select";
-
-const LAYOUT_TEMPLATES = [
-  { value: "1fr 1fr", label: "2カラム（均等）" },
-  { value: "1fr 2fr", label: "2カラム（1:2）" },
-  { value: "2fr 1fr", label: "2カラム（2:1）" },
-  { value: "1fr 1fr 1fr", label: "3カラム（均等）" },
-  { value: "1fr 1fr 1fr 1fr", label: "4カラム（均等）" },
-] as const;
+import {
+  LAYOUT_BREAKPOINT_MAX_PX,
+  LAYOUT_NARROW_TEMPLATES,
+  LAYOUT_TEMPLATES,
+} from "../../config/layout-templates";
 
 type LayoutInspectorPanelProps = {
   nodeKey: string;
@@ -45,13 +43,22 @@ export function LayoutInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isLayoutContainerNode);
 
-  const templateColumns = editor
+  const { templateColumns, templateColumnsNarrow } = editor
     .getEditorState()
-    .read(() => $getState(node, templateColumnsState));
+    .read(() => ({
+      templateColumns: $getState(node, templateColumnsState),
+      templateColumnsNarrow: $getState(node, templateColumnsNarrowState),
+    }));
 
-  const handleTemplateChange = (value: string) => {
+  const handleWideChange = (value: string) => {
     updateNode((n) => {
       $setState(n, templateColumnsState, value);
+    });
+  };
+
+  const handleNarrowChange = (value: string) => {
+    updateNode((n) => {
+      $setState(n, templateColumnsNarrowState, value);
     });
   };
 
@@ -61,25 +68,58 @@ export function LayoutInspectorPanel({
 
       <InspectorFields title="レイアウト">
         <div className="space-y-2">
-          <Label className="text-xs">カラム配置</Label>
-          <Select value={templateColumns} onValueChange={handleTemplateChange}>
+          <Label className="text-xs">広い画面の列</Label>
+          <Select value={templateColumns} onValueChange={handleWideChange}>
             <SelectTrigger className="h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {LAYOUT_TEMPLATES.map((template) => (
-                <SelectItem key={template.value} value={template.value}>
+                <SelectItem
+                  key={template.value}
+                  value={template.value}
+                  title={template.description}
+                  textValue={template.label}
+                >
                   {template.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <p className="text-muted-foreground font-mono text-xs">
+            {templateColumns}
+          </p>
+          <p className="text-muted-foreground text-xs leading-snug">
+            列を減らすと、右端の列の内容はその左隣の列（新しい最終列）にまとまります。
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs">grid-template-columns</Label>
-          <p className="text-xs text-muted-foreground font-mono">
-            {templateColumns}
+          <Label className="text-xs">
+            狭い画面の列（〜{LAYOUT_BREAKPOINT_MAX_PX}px）
+          </Label>
+          <Select
+            value={templateColumnsNarrow}
+            onValueChange={handleNarrowChange}
+          >
+            <SelectTrigger className="h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LAYOUT_NARROW_TEMPLATES.map((template) => (
+                <SelectItem
+                  key={template.value}
+                  value={template.value}
+                  title={template.description}
+                  textValue={template.label}
+                >
+                  {template.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground font-mono text-xs">
+            --lexical-layout-mobile: {templateColumnsNarrow}
           </p>
         </div>
       </InspectorFields>

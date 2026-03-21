@@ -40,6 +40,8 @@ paths:
 
 ## 検索コマンド
 
+**Windows**（PowerShell / cmd）では `python3` の代わりに **`py -3`** を使う。以下の `python3` は macOS / Linux 向け。
+
 ```bash
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "hospitality editorial" --domain style
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "warm serif elegant" --domain typography

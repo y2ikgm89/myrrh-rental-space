@@ -8,17 +8,16 @@ import {
 } from "@/admin/lib/validations/post";
 import { LayoutWidth } from "@/shared/types/prisma";
 import { PostStatus } from "@/shared/db/enums";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
-// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
-const VALID_LEXICAL_JSON =
-  '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}';
+const VALID_LEXICAL_JSON = EMPTY_LEXICAL_EDITOR_STATE_JSON;
 
 describe("createPostSchema", () => {
   const validBaseData = {
     title: "投稿記事タイトル",
     slug: "sample-post",
     excerpt: "記事の抜粋です",
-    contentJson: "",
+    contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     thumbnailUrl: "https://example.com/image.jpg",
     categoryId: "123e4567-e89b-12d3-a456-426614174000",
     tags: [
@@ -124,11 +123,11 @@ describe("createPostSchema", () => {
     }
   });
 
-  test("contentJsonフィールドはデフォルトで空文字列", () => {
+  test("contentJson に空の Lexical 初期状態を渡せる", () => {
     const result = createPostSchema.safeParse(validBaseData);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.contentJson).toBe("");
+      expect(result.data.contentJson).toBe(EMPTY_LEXICAL_EDITOR_STATE_JSON);
     }
   });
 });

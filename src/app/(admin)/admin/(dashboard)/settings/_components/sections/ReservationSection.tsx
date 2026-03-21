@@ -63,16 +63,16 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
     reservationFormSchema,
     (data) =>
       updateReservationSettings({
-        defaultTimeSlot: data.defaultTimeSlot || null,
-        minReservationDuration: data.minReservationDuration || null,
-        maxReservationDuration: data.maxReservationDuration || null,
+        defaultTimeSlot: data.defaultTimeSlot,
+        minReservationDuration: data.minReservationDuration,
+        maxReservationDuration: data.maxReservationDuration,
         cancellationTermsId: data.cancellationTermsId || null,
       }),
     {
       defaultValues: {
-        defaultTimeSlot: settings.defaultTimeSlot || 60,
-        minReservationDuration: settings.minReservationDuration || 60,
-        maxReservationDuration: settings.maxReservationDuration || 480,
+        defaultTimeSlot: settings.defaultTimeSlot,
+        minReservationDuration: settings.minReservationDuration,
+        maxReservationDuration: settings.maxReservationDuration,
         cancellationTermsId: settings.cancellationTermsId || "",
       },
       refresh: true,

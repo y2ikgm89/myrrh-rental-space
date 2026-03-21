@@ -1,8 +1,8 @@
 /**
- * コンテンツ幅スタイルフック
+ * コンテンツ幅フック
  *
- * React Hook Form公式推奨のuseWatch() + Path<T>で型安全なリアルタイム幅更新
- * 型アサーション完全排除
+ * React Hook Form 公式推奨の useWatch() + Path<T> で型安全なリアルタイム幅更新。
+ * 解決済みピクセル値を返す（エディタの contentWidth prop にそのまま渡せる）。
  */
 
 import {
@@ -11,10 +11,7 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form";
-import {
-  resolveWidthStyles,
-  type WidthStyles,
-} from "@/shared/lib/styles/layout-mapper";
+import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { LayoutWidth } from "@/shared/types/prisma";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
 import type { ContentWidth } from "@/shared/types/layout";
@@ -23,7 +20,7 @@ import type { ContentWidth } from "@/shared/types/layout";
 // Types
 // =============================================================================
 
-type UseContentWidthStylesOptions<T extends FieldValues> = {
+type UseContentWidthOptions<T extends FieldValues> = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<T, any>;
   widthFieldName: Path<T>;
@@ -41,24 +38,19 @@ const DEFAULT_FALLBACK: ContentWidth = {
 // =============================================================================
 
 /**
- * コンテンツ幅スタイルを計算するフック
+ * コンテンツ幅をピクセル値で返すフック
  *
- * @description
- * - React Hook Form公式 Path<T> パターンで型安全
- * - フォーム値の変更をリアルタイムで反映
- * - フォーム値が未設定の場合はfallbackをフォールバック
+ * @returns コンテンツ幅（px）。FULL の場合は null。
  */
-export function useContentWidthStyles<T extends FieldValues>({
+export function useContentWidth<T extends FieldValues>({
   control,
   widthFieldName,
   customFieldName,
   fallback = DEFAULT_FALLBACK,
-}: UseContentWidthStylesOptions<T>): WidthStyles {
-  // Path<T> により型安全 — 型アサーション不要
+}: UseContentWidthOptions<T>): number | null {
   const rawWidth = useWatch({ control, name: widthFieldName });
   const rawCustom = useWatch({ control, name: customFieldName });
 
-  // typeof ナローイング（型アサーション不要）
   const effectiveWidth =
     typeof rawWidth === "string" && isValidLayoutWidth(rawWidth)
       ? rawWidth
@@ -74,5 +66,5 @@ export function useContentWidthStyles<T extends FieldValues>({
   return resolveWidthStyles({
     width: effectiveWidth,
     customPx: effectiveCustomPx,
-  });
+  }).px;
 }

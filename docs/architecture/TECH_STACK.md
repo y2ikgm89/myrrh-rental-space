@@ -1,6 +1,6 @@
 # 技術スタック
 
-最終更新: 2026-03-08
+最終更新: 2026-03-22
 
 ## コア
 
@@ -8,17 +8,17 @@
 | ---------- | ------------------ | ------------------------------------------ |
 | Next.js    | 16.1.6             | App Router, PPR, `proxy.ts`, Metadata API  |
 | React      | 19.2.4             | Server / Client Components, React Compiler |
-| TypeScript | 6.0.0-dev.20260228 | strict type-checking, `erasableSyntaxOnly` |
-| Bun        | 1.3.10             | package manager, test runner, app runtime  |
+| TypeScript | 6.0.1-rc           | strict type-checking, `erasableSyntaxOnly` |
+| Bun        | 1.3.11             | package manager, test runner, app runtime  |
 
 ## データと認証
 
 | 技術                 | バージョン | 用途                  |
 | -------------------- | ---------- | --------------------- |
-| Prisma               | 7.4.2      | ORM, generated client |
+| Prisma               | 7.5.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
 | PostgreSQL           | Supabase   | 本番 DB               |
-| `@prisma/adapter-pg` | 7.4.2      | Prisma driver adapter |
-| Better Auth          | 1.5.3      | session / RBAC        |
+| `@prisma/adapter-pg` | 7.5.0      | Prisma driver adapter（seed / `prisma.ts` で必須） |
+| Better Auth          | 1.5.5      | session / RBAC        |
 | Zod                  | 4.3.6      | 入出力検証            |
 
 ## UI と体験
@@ -27,9 +27,7 @@
 | ------------ | ---------- | --------------------------- |
 | Tailwind CSS | 4.2.1      | styling, theme tokens       |
 | GSAP         | 3.14.2     | scroll / timeline animation |
-| Lenis        | 1.3.17     | smooth scroll               |
-| Three.js     | 0.183.2    | 3D visual effects           |
-| PixiJS       | 8.16.0     | 2D visual effects           |
+| Lenis        | 1.3.18     | smooth scroll               |
 | nuqs         | 2.8.9      | search params state         |
 | Lexical      | 0.41.0     | admin rich text editor      |
 
@@ -41,6 +39,7 @@
 - 生成物は git 管理しない
 - `src/` 配下には置かない
 - アプリからは `src/shared/db/*` 経由で参照する
+- **`createAppPrismaClient`**（`src/shared/db/create-app-prisma-client.ts`）が `$extends` の単一ソース。`prisma.ts` と `prisma/seed.ts` の両方で適用し、Better Auth には拡張前 **`prismaForBetterAuth`** のみ渡す（`ARCHITECTURE.md` §DB 境界）
 
 ### Proxy
 
@@ -51,10 +50,10 @@
 
 ### 公開レンダリング
 
-- 静的 shell は `src/app/(public)/layout.tsx`
-- 視覚効果は `ExperienceShell` で opt-in
+- 静的 shell は `src/app/(public)/layout.tsx`（LenisProvider / MobileNav 等の軽量 shell）
+- 視覚効果はページ単位で GSAP / CSS（[AGENTS.md の Animation 節](../../AGENTS.md)）。旧 `ExperienceShell` 集約パターンは廃止
 - preview は専用 route で分離
-- public route group は domain query 経由でデータ取得し、`prisma` facade を直接 import しない
+- public route group は domain query 経由でデータ取得し、route から `prisma` を直接 import しない
 
 ### キャッシュ
 
@@ -77,6 +76,7 @@
 
 ## 補足
 
-- TypeScript は 6 系 dev build を使用しており、TS 7 移行前提の制約を一部先取りしている
+- TypeScript は 6 系（rc）を使用。`erasableSyntaxOnly` 等の制約は `type-safety.md` を参照
 - Prisma は Bun runtime で使用するが、Edge Runtime 対応は前提にしない
+- **Three.js / PixiJS** は現状 `package.json` に未依存。再導入時は公式手順で依存追加し L3/L4 として限定利用（`AGENTS.md` / `visual-effects-patterns.md`）
 - 管理画面は Lexical と Better Auth を中心にした Node/Bun runtime 前提

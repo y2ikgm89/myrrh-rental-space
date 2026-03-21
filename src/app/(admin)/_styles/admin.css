@@ -207,9 +207,10 @@
   padding: 0.75rem;
 }
 
-/* LayoutItemNode — エディタ内の視覚ヒント（ホバーボーダー） */
+/* LayoutItemNode — エディタ内の視覚ヒント（ホバーボーダー）
+ * min-height は付けない。グリッド行が高いときに stretch + 固定 min-height で
+ * 隣カラムのテキストが上寄り・行高が不自然に見えるため。 */
 [data-lexical-layout-item] {
-  min-height: 60px;
   padding: 0.75rem;
   border-radius: 0.25rem;
   border: 1px solid transparent;

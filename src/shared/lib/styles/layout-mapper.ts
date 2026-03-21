@@ -21,6 +21,8 @@ export interface WidthPreset {
 export interface WidthStyles {
   className: string;
   style: CSSProperties | undefined;
+  /** 解決済みピクセル値（FULL の場合は null） */
+  px: number | null;
 }
 
 // =============================================================================
@@ -87,17 +89,25 @@ export function resolveWidthStyles(
   const { width, customPx } = cw;
 
   if (width === LayoutWidth.FULL) {
-    return { className: "mx-auto max-w-full", style: undefined };
+    return { className: "mx-auto max-w-full", style: undefined, px: null };
   }
 
   if (width === LayoutWidth.CUSTOM && customPx) {
-    return { className: "mx-auto", style: { maxWidth: `${customPx}px` } };
+    return {
+      className: "mx-auto",
+      style: { maxWidth: `${customPx}px` },
+      px: customPx,
+    };
   }
 
   const preset = presets[width];
   if (preset.px) {
-    return { className: "mx-auto", style: { maxWidth: `${preset.px}px` } };
+    return {
+      className: "mx-auto",
+      style: { maxWidth: `${preset.px}px` },
+      px: preset.px,
+    };
   }
 
-  return { className: "mx-auto", style: undefined };
+  return { className: "mx-auto", style: undefined, px: null };
 }

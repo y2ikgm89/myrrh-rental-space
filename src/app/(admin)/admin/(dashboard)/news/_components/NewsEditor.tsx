@@ -25,7 +25,7 @@ import {
   InlineEditorShell,
   UnifiedSidePanel,
   useNewsEditor,
-  useContentWidthStyles,
+  useContentWidth,
   newsConfig,
 } from "@/admin/components/editor/inline";
 import type { NewsData } from "@/shared/domain/news/types";
@@ -112,8 +112,8 @@ export function NewsEditor({
   // スラッグの表示
   const displaySlug = `news/${editor.slug}`;
 
-  // コンテンツ幅スタイル（useWatch公式パターン + グローバル設定フォールバック）
-  const contentStyles = useContentWidthStyles({
+  // コンテンツ幅（px）— エディタに渡すテキスト領域の幅
+  const contentWidthPx = useContentWidth({
     control: editor.form.control,
     widthFieldName: "contentWidth",
     customFieldName: "contentWidthCustom",
@@ -141,6 +141,7 @@ export function NewsEditor({
           isDirty={editor.isDirty}
           isPending={editor.isPending}
           isSidePanelOpen={editor.isSettingsPanelOpen}
+          metadataPanelLabel={newsConfig.sidePanel.title}
           onToggleSidePanel={editor.toggleSettings}
           onSave={editor.handleSave}
           onPreview={editor.handlePreview}
@@ -182,7 +183,6 @@ export function NewsEditor({
     >
       <LazyLexicalEditor
         contentJson={editor.contentJson}
-        contentHtml={editor.contentHtml}
         onChange={editor.handleContentChange}
         disabled={editor.isPending}
         className={EDITOR_PROSE_CLASSES}
@@ -192,8 +192,7 @@ export function NewsEditor({
         onAddComment={
           mode === "edit" && news ? editor.handleAddComment : undefined
         }
-        contentWidthClassName={contentStyles.className}
-        contentWidthStyle={contentStyles.style}
+        contentWidth={contentWidthPx ?? undefined}
       />
     </InlineEditorShell>
   );

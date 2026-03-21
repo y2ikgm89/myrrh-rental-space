@@ -62,6 +62,8 @@ type SidePanelShellProps = {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  /** タイトル直下の説明文（任意） */
+  description?: string;
   children: ReactNode;
   width?: "default" | "narrow";
 };
@@ -70,6 +72,7 @@ export function SidePanelShell({
   isOpen,
   onClose,
   title,
+  description,
   children,
   width = "default",
 }: SidePanelShellProps) {
@@ -82,7 +85,14 @@ export function SidePanelShell({
 
       <aside className={classes.panel()} aria-label="設定パネル">
         <div className={classes.header()}>
-          <h2 className={classes.title()}>{title}</h2>
+          <div className="min-w-0 flex-1 pr-2">
+            <h2 className={classes.title()}>{title}</h2>
+            {description ? (
+              <p className="text-sm text-muted-foreground mt-1 leading-snug">
+                {description}
+              </p>
+            ) : null}
+          </div>
           <Button
             type="button"
             variant="ghost"

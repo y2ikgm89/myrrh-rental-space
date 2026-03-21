@@ -14,7 +14,7 @@ import { logger } from "@/shared/lib/logger";
 
 /**
  * Lexical の EditorState JSON 文字列から HTML を生成する。
- * 空文字・パース失敗時は空文字を返し、呼び出し側で `contentHtml` にフォールバックできる。
+ * 空文字・パース失敗時は空文字を返す。
  */
 export function renderEditorStateJsonToHtmlClient(
   editorStateJson: string,

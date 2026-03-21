@@ -16,7 +16,7 @@ paths:
 ## スキル配置
 
 ```
-.claude/skills/ui-ux-pro-max/   # プロジェクトローカル（CLIでインストール済み）
+.agents/skills/ui-ux-pro-max/   # スキル本文・データの正本（リポジトリ同梱）
 ├── SKILL.md                    # スキル定義
 ├── scripts/
 │   ├── search.py               # 検索スクリプト
@@ -40,12 +40,14 @@ paths:
 
 ## 検索コマンド
 
+**Windows** では `python3` の代わりに **`py -3`**（Python Launcher）を使う。
+
 ```bash
 # 基本検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain>
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain>
 
 # スタック別ガイドライン
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
 ```
 
 ### 検索ドメイン
@@ -91,10 +93,10 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 
 ```bash
 # 1. スタイル検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "card dashboard" --domain style
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "card dashboard" --domain style
 
 # 2. UXガイドライン確認
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "hover animation" --domain ux
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "hover animation" --domain ux
 
 # 3. frontend-design で実装
 ```
@@ -103,10 +105,10 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "hover animation" --domai
 
 ```bash
 # 1. プロダクトタイプ検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "admin dashboard" --domain product
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "admin dashboard" --domain product
 
 # 2. レイアウト検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack nextjs
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack nextjs
 
 # 3. frontend-design で実装
 ```
@@ -115,10 +117,10 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 
 ```bash
 # 1. 現状レビュー（UXガイドライン）
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "accessibility contrast" --domain ux
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "accessibility contrast" --domain ux
 
 # 2. 改善スタイル検索
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "modern clean" --domain style
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "modern clean" --domain style
 
 # 3. frontend-design で実装
 ```
@@ -168,7 +170,7 @@ src/app/
 
 ```bash
 # このプロジェクトではnextjsスタックを使用
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextjs
 ```
 
 ## 品質チェックリスト
@@ -222,7 +224,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
    // - "Create beautiful and modern UI" という指示のみで実装
    // - デフォルトのシャドウ・グラデーション・角丸を無思考に使用
 
-   // OK: .claude/skills/frontend-design を使用してプロジェクト固有の
+   // OK: .agents/skills/frontend-design を使用してプロジェクト固有の
    //     デザインシステムに沿った独自デザインを実装
    ```
 
@@ -266,8 +268,8 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 コンポーネント / ページの新規実装前に `/frontend-design <ComponentName>` を実行し、
 Design Brief を作成してから実装に入る。
 
-- スキル定義: `.claude/skills/frontend-design/SKILL.md`
-- Anti-AI パターンカタログ: `.claude/skills/frontend-design/reference/anti-ai-patterns.md`
+- スキル定義: `.agents/skills/frontend-design/SKILL.md`
+- Anti-AI パターンカタログ: `.agents/skills/frontend-design/reference/anti-ai-patterns.md`
 
 ### Design System Memory
 
@@ -282,8 +284,8 @@ CSS 優先、GSAP は orchestrated sequence のみ。
 
 ## 参考
 
-- `.claude/skills/ui-ux-pro-max/SKILL.md` - スキル詳細
-- `.claude/skills/frontend-design/SKILL.md` - デザイン分析スキル
+- `.agents/skills/ui-ux-pro-max/SKILL.md` - スキル詳細
+- `.agents/skills/frontend-design/SKILL.md` - デザイン分析スキル
 - `.claude/rules/anti-ai-design.md` - Anti-AI 強制ルール
 - `.claude/rules/design-system-memory.md` - デザイン記憶プロトコル
 - `docs/reference/claude-rules/micro-interactions-reference.md` - マイクロインタラクション

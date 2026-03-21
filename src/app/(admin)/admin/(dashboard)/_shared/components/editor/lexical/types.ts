@@ -4,8 +4,6 @@
  * @description エディタコンポーネントの型定義
  */
 
-import type { CSSProperties } from "react";
-
 /**
  * コメント追加ペイロード
  */
@@ -17,16 +15,12 @@ export type AddCommentPayload = {
 /**
  * LexicalEditor コンポーネントのプロパティ
  *
- * JSON primary + HTML cache パターン:
- * - contentJson があれば JSON から EditorState を復元（プライマリ）
- * - contentJson がなく contentHtml がある場合は HTML からフォールバック復元（レガシー）
- * - onChange は JSON 文字列を返す
+ * 保存形式は EditorState JSON のみ。`lexicalJsonSchema` を満たすこと（空本文は `EMPTY_LEXICAL_EDITOR_STATE_JSON`）。満たさない場合はマウントせずエラー表示する。
+ * onChange は JSON 文字列を返す。
  */
 export type LexicalEditorProps = {
-  /** EditorState JSON 文字列（プライマリ） */
-  contentJson?: string | null | undefined;
-  /** レガシー HTML コンテンツ（contentJson がない場合のフォールバック） */
-  contentHtml?: string | undefined;
+  /** EditorState JSON 文字列（必須・プライマリ） */
+  contentJson: string;
   /** コンテンツ変更時のコールバック（JSON文字列を返す） */
   onChange?: ((json: string) => void) | undefined;
   /** エディタを無効化するかどうか */
@@ -45,10 +39,12 @@ export type LexicalEditorProps = {
   onMarkClick?: ((markId: string | null) => void) | undefined;
   /** コメント追加時のコールバック（FloatingToolbarからのコメントボタンクリック） */
   onAddComment?: ((payload: AddCommentPayload) => void) | undefined;
-  /** コンテンツ幅制御用クラス名（公開ページと同じ幅を適用） */
-  contentWidthClassName?: string | undefined;
-  /** コンテンツ幅制御用スタイル（カスタム幅用） */
-  contentWidthStyle?: CSSProperties | undefined;
+  /**
+   * コンテンツ幅（px）— テキスト領域の幅を指定。
+   * エディタのパディング（ドラッグハンドル用ガター等）は内部で自動加算される。
+   * 未指定時はエディタ全幅。
+   */
+  contentWidth?: number | undefined;
   /** オートセーブコールバック（Server Action経由保存） */
   onAutoSave?: ((json: string) => Promise<void>) | undefined;
   /** オートセーブのstorageキー（LocalStorage保存用） */

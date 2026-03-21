@@ -180,6 +180,9 @@ export const newsConfig: ContentTypeConfig<
   // サイドパネル
   sidePanel: {
     title: "お知らせ設定",
+    description:
+      "タイトル・スラッグ・SEO・公開日など。本文中のブロック設定はエディタ右のパネルです。",
+    tabStorageKey: "myrrh-inline-editor-sidepanel:news",
     width: "default",
     tabs: [
       {

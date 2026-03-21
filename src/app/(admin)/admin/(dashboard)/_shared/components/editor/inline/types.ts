@@ -124,6 +124,11 @@ export type EditorHeaderProps = {
   isSidePanelOpen?: boolean;
   /** サイドパネル切り替えコールバック（省略時は設定ボタン非表示） */
   onToggleSidePanel?: () => void;
+  /**
+   * メタデータ用サイドパネルの短いラベル（例: postConfig.sidePanel.title）
+   * 指定時はツールチップ・aria-label・幅のあるビューでのボタン表記に使う
+   */
+  metadataPanelLabel?: string;
   /** プレビューコールバック（省略時はプレビューボタン非表示） */
   onPreview?: () => void;
   extraActions?: ReactNode | undefined;

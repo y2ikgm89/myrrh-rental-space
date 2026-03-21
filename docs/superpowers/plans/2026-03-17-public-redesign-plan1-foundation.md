@@ -975,7 +975,7 @@ git commit -m "refactor(public): simplify layout — remove ExperienceShell, add
 
 ```prisma
 model PageContent {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid()) @db.Uuid
   pageKey         String   @unique
   content         Json
   metaTitle       String?
@@ -984,7 +984,6 @@ model PageContent {
   ogpDescription  String?
   ogpImage        String?
   updatedAt       DateTime @updatedAt
-  updatedBy       String?
 
   @@map("page_contents")
 }

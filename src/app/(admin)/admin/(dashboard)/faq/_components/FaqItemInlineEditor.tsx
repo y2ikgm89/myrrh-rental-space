@@ -34,6 +34,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/admin/components/ui";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
 
 const LexicalEditor = dynamic(
   () =>
@@ -143,7 +144,9 @@ export function FaqItemInlineEditor({
     defaultValues: item
       ? {
           question: item.question,
-          answerJson: item.answerJson ? JSON.stringify(item.answerJson) : "",
+          answerJson: item.answerJson
+            ? JSON.stringify(item.answerJson)
+            : EMPTY_LEXICAL_EDITOR_STATE_JSON,
           categoryId: item.categoryId,
           order: item.order,
           isPublished: item.isPublished,
@@ -155,7 +158,7 @@ export function FaqItemInlineEditor({
         }
       : {
           question: "",
-          answerJson: "",
+          answerJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           categoryId: defaultCategoryId || "",
           order: 0,
           isPublished: true,
@@ -500,8 +503,7 @@ export function FaqItemInlineEditor({
           回答
         </Label>
         <LexicalEditor
-          contentJson={answerJson || null}
-          contentHtml={item?.answerHtml ?? ""}
+          contentJson={answerJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
           onChange={handleJsonChange}
           disabled={isPending}
           className={EDITOR_PROSE_CLASSES}

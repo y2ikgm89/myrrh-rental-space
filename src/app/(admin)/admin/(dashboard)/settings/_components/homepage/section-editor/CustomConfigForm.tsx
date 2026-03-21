@@ -14,6 +14,7 @@ import {
 import type { HomepageSectionData } from "@/admin/actions/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
 
 const LexicalEditor = dynamic(
   () =>
@@ -92,9 +93,8 @@ export function CustomConfigForm({
             contentJson={
               section.contentJson
                 ? JSON.stringify(section.contentJson)
-                : undefined
+                : EMPTY_LEXICAL_EDITOR_STATE_JSON
             }
-            contentHtml={section.contentHtml || ""}
             onChange={setEditorContentJson}
             placeholder="セクションのコンテンツを入力..."
             className={EDITOR_PROSE_CLASSES}

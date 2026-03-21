@@ -52,6 +52,8 @@ description: 公開ページのスクロール演出セクションを追加す�
 
 ## 検索コマンド例
 
+Windows では `python3` を **`py -3`** に読み替える（理由と例はリポジトリ直下 `AGENTS.md` の Setup を参照）。
+
 ```bash
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "scroll storytelling hospitality" --domain style
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "motion accessibility" --domain ux

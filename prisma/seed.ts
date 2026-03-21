@@ -4,6 +4,7 @@
  * 初期データを作成する（Prisma 7 ベストプラクティス準拠）
  *
  * 使用方法:
+ *   bun prisma/seed.ts                                      # 引数なし = --demo（migrate reset の既定）
  *   bun prisma/seed.ts --admin <email> <password> [name]  # 管理者のみ
  *   bun prisma/seed.ts --demo                              # デモデータ生成（既存スキップ）
  *   bun prisma/seed.ts --fresh <email> <password> [name]   # 全削除 + 再作成
@@ -19,6 +20,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
+import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import {
   defaultHomepageContent,
@@ -38,10 +40,12 @@ const adapter = new PrismaPg({
   connectionString: process.env["DATABASE_URL"],
 });
 
-// Prisma Client
-const prisma = new PrismaClient({
-  adapter,
-});
+// Prisma Client（アプリ本番と同じ Decimal→number 拡張を適用）
+const prisma = createAppPrismaClient(
+  new PrismaClient({
+    adapter,
+  }),
+);
 
 // =============================================================================
 // Helper: Clear All Data (--fresh用)
@@ -1887,8 +1891,10 @@ async function seedNews() {
 // =============================================================================
 
 async function seedPages() {
-  const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
-  await bootstrapSystemPages();
+  const { bootstrapSystemPagesCommand } = await import(
+    "@/shared/domain/pages/system-pages-commands"
+  );
+  await bootstrapSystemPagesCommand(prisma);
   console.log("✅ System pages ensured");
 
   // seed 固有: privacy ページに metaDescription を設定
@@ -1907,11 +1913,11 @@ async function seedPages() {
 
 async function seedTerms() {
   const existing = await prisma.terms.findFirst({
-    where: { type: "TERMS_OF_USE", isSiteWide: true },
+    where: { type: "TERMS_OF_USE", slug: "terms-of-use" },
   });
 
   if (existing) {
-    console.log("⏭️ Site-wide terms already exists");
+    console.log("⏭️ Default terms of use already exists");
     return;
   }
 
@@ -1939,7 +1945,6 @@ async function seedTerms() {
       type: "TERMS_OF_USE",
       title: "サイト利用規約",
       slug: "terms-of-use",
-      isSiteWide: true,
       versions: {
         create: {
           version: 1,
@@ -1953,7 +1958,7 @@ async function seedTerms() {
     },
   });
 
-  console.log("✅ Created site-wide terms");
+  console.log("✅ Created default terms of use");
 }
 
 // =============================================================================
@@ -2777,20 +2782,14 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log(`
-Usage:
-  bun prisma/seed.ts --admin <email> <password> [name]  # Create admin user only
-  bun prisma/seed.ts --demo                              # Create demo data only
-  bun prisma/seed.ts --fresh <email> <password> [name]   # Clear all + create all
-  bun prisma/seed.ts --all <email> <password> [name]     # Create all data
-
-Examples:
-  bun prisma/seed.ts --admin admin@example.com mypassword123
-  bun prisma/seed.ts --demo
-  bun prisma/seed.ts --fresh admin@example.com mypassword123
-  bun prisma/seed.ts --all admin@example.com mypassword123 "Administrator"
-`);
-    process.exit(1);
+    // prisma migrate reset / prisma db seed: 引数なしはデモデータのみ（管理者は別途 --admin）
+    console.log("");
+    console.log("🌱 prisma seed（引数なし）→ --demo 相当を実行します");
+    console.log("");
+    await seedDemo();
+    console.log("");
+    console.log("✨ Seed completed successfully!");
+    return;
   }
 
   const mode = args[0];

@@ -23,7 +23,8 @@ import {
   unpublishNews,
 } from "@/admin/actions/news";
 import { createPreviewHandlers } from "@/admin/hooks";
-import { fetchAdminJson } from "@/admin/lib/admin-api-client";
+import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import type { NewsData } from "@/shared/domain/news/types";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -51,24 +52,6 @@ type UseNewsEditorOptions = {
   mode: "create" | "edit";
 };
 
-async function fetchPreviewHtml(contentJson: string): Promise<string> {
-  const response = await fetchAdminJson<{ html: string }>(
-    "/admin/api/preview/html",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contentJson,
-        resource: "news",
-      }),
-    },
-  );
-
-  return response.html;
-}
-
 // =============================================================================
 // Transforms (Type-safe)
 // =============================================================================
@@ -78,7 +61,7 @@ function toFormData(data?: NewsData): NewsFormData {
     return {
       slug: "",
       title: "",
-      contentJson: "",
+      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       isPublished: false,
       publishedAt: "",
       contentWidth: "",
@@ -94,7 +77,9 @@ function toFormData(data?: NewsData): NewsFormData {
   return {
     slug: data.slug,
     title: data.title,
-    contentJson: data.contentJson ? JSON.stringify(data.contentJson) : "",
+    contentJson: data.contentJson
+      ? JSON.stringify(data.contentJson)
+      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
     isPublished: data.isPublished,
     publishedAt: toFormDateString(data.publishedAt),
     contentWidth: toFormContentWidth(data.contentWidth),
@@ -161,7 +146,9 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // 監視値（型アサーション不要 - 具体的な型が推論される）
   const title = useWatch({ control, name: "title" }) ?? "";
   const slug = useWatch({ control, name: "slug" }) ?? "";
-  const contentJson = useWatch({ control, name: "contentJson" }) ?? "";
+  const contentJson =
+    useWatch({ control, name: "contentJson" }) ??
+    EMPTY_LEXICAL_EDITOR_STATE_JSON;
   const isPublished = useWatch({ control, name: "isPublished" }) ?? false;
 
   // isDirty計算
@@ -267,12 +254,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     });
   };
 
-  const handlePreview = async () => {
+  const handlePreview = () => {
     try {
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = await fetchPreviewHtml(values.contentJson || "");
+      const contentHtml = renderEditorStateJsonToHtmlClient(
+        values.contentJson,
+      );
       const previewData = toPreviewData(values, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/news");
     } catch (error) {
@@ -298,7 +287,6 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
     title,
     slug,
     contentJson,
-    contentHtml: news?.contentHtml ?? "",
     isPublished,
 
     // パネル管理

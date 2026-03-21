@@ -30,7 +30,7 @@ export const createNewsSchema = z.object({
     .string()
     .min(1, { error: "タイトルは必須です" })
     .max(200, { error: "タイトルは200文字以内で入力してください" }),
-  contentJson: z.string().default(""),
+  contentJson: lexicalJsonSchema,
 });
 
 export type CreateNewsInput = z.infer<typeof createNewsSchema>;

@@ -66,9 +66,9 @@ export type SettingsData = {
   googleSearchConsoleId: string | null;
   bingWebmasterToolsId: string | null;
   gaPropertyId: string | null;
-  defaultTimeSlot: number | null;
-  minReservationDuration: number | null;
-  maxReservationDuration: number | null;
+  defaultTimeSlot: number;
+  minReservationDuration: number;
+  maxReservationDuration: number;
   cancellationTermsId: string | null;
   sendReservationConfirmationEmail: boolean;
   sendAdminNotificationEmail: boolean;

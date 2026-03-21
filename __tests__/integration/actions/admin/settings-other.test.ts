@@ -49,9 +49,9 @@ const termsAgreementSettingsSchema = z.object({
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 
 const reservationSettingsSchema = z.object({
-  defaultTimeSlot: z.number().int().min(15).max(240).nullable(),
-  minReservationDuration: z.number().int().min(15).max(480).nullable(),
-  maxReservationDuration: z.number().int().min(60).max(1440).nullable(),
+  defaultTimeSlot: z.number().int().min(15).max(240),
+  minReservationDuration: z.number().int().min(15).max(480),
+  maxReservationDuration: z.number().int().min(60).max(1440),
   cancellationTermsId: z.string().uuid().nullable(),
 });
 
@@ -401,14 +401,14 @@ describe("Settings Other Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("全フィールドnullでもOK", () => {
+      test("予約時間フィールドは null 不可（キャンセル規約のみ null 可）", () => {
         const result = reservationSettingsSchema.safeParse({
           defaultTimeSlot: null,
           minReservationDuration: null,
           maxReservationDuration: null,
           cancellationTermsId: null,
         });
-        expect(result.success).toBe(true);
+        expect(result.success).toBe(false);
       });
     });
 

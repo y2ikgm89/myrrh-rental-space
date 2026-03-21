@@ -2,6 +2,8 @@
 
 > Myrrh Rental Space - レンタルスペース予約管理システム
 
+**併読**: `AGENTS.md`（不変条件）、`.claude/rules/`（自動ロード）、`docs/architecture/agent-instructions.md`（指示配置）
+
 ## 🔴 必須（違反禁止）
 
 ### 禁止
@@ -24,6 +26,10 @@
 
 `.claude/rules/` の全 `.md` ファイルは自動ロード。`paths:` フロントマターで条件適用（対象ファイル編集時のみ）。
 
+**スキル手順の正本**: 繰り返しワークフローは **`.agents/skills/<name>/`** のみに本文・`scripts/`・`data/` を置く。`.claude/skills/<name>/SKILL.md` は **スタブ**（正本へのポインタ）にとどめ、重複コピーを増やさない（`docs/architecture/agent-instructions.md`）。
+
+**Codex との二重管理**: 同トピックが `docs/reference/codex-rules/` にもある場合（ビジュアルエフェクト、Three.js、PixiJS、`bun-patterns` 相当の記述など）、**方針と公式リンクは同一に保つ**。削除済みパス（旧 `effects/`）や未依存パッケージの記述を片方だけに残さない。
+
 ---
 
 ## 🟡 ワークフロー
@@ -38,46 +44,14 @@
 
 Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。`（Task）` 注釈があるもののみ Task ツール経由、それ以外は全て Skill ツール。
 
-**常時（ワークフロー）**
-
-| スキル                           | 呼び出しタイミング                                 |
-| -------------------------------- | -------------------------------------------------- |
-| `brainstorming`                  | 機能追加・設計時                                   |
-| `writing-plans`                  | 複数ステップのタスク計画時                         |
-| `subagent-driven-development`    | 計画を同一セッション内でサブエージェント実行する時 |
-| `test-driven-development`        | 実装時（**常に必須**）                             |
-| `verification-before-completion` | 完了報告前（**常に必須**）                         |
-| `finishing-a-development-branch` | ブランチ完了時                                     |
-
-**機能追加（ドメイン別）**
-
-| スキル                                                | 呼び出しタイミング                                |
-| ----------------------------------------------------- | ------------------------------------------------- |
-| `frontend-design`                                     | フロントエンド UI 実装時                          |
-| `create-admin-page`                                   | 管理画面に新リソースを追加する時                  |
-| `create-server-action`                                | Server Action を新規作成する時                    |
-| `create-page-content`                                 | 公開ページ追加時（スキーマ+デフォルト+seed+page） |
-| `add-settings-field`                                  | Settings シングルトンにフィールド追加する時       |
-| `prisma-migration`                                    | DBスキーマ変更時                                  |
-| `new-section`                                         | `[...segments]` カスタムページ用セクション追加時  |
-| `lexical-node` / `lexical-plugin` / `lexical-toolbar` | Lexical 拡張追加時                                |
-| `split-action-file`                                   | 500行超の Server Action ファイル分割時            |
-| `audit-settings-sections`                             | 設定セクション追加後・定期メンテ時の品質監査      |
-| `upgrade-deps`                                        | 依存パッケージアップグレード時                    |
-
-**問題対応・メンテ**
-
-| スキル                                    | 呼び出しタイミング                         |
-| ----------------------------------------- | ------------------------------------------ |
-| `systematic-debugging`                    | バグ・テスト失敗時                         |
-| `requesting-code-review`                  | 実装完了・PR 前                            |
-| `receiving-code-review`                   | レビュー受け取り時                         |
-| `stripe-debug`                            | Stripe 問題発生時                          |
-| `google-calendar-debug`                   | カレンダー同期問題時                       |
-| `turbopack-hmr`                           | Turbopack HMR エラー時                     |
-| `claude-md-management:claude-md-improver` | CLAUDE.md・rules・agents の定期メンテ時    |
-| `claude-md-management:revise-claude-md`   | セッション終了時の学びを CLAUDE.md に記録  |
-| `code-simplifier:code-simplifier`（Task） | コードリファクタリング・重複排除・最適化時 |
+- **常に必須**: `test-driven-development`（実装時）、`verification-before-completion`（完了報告前）
+- **設計・計画**: `brainstorming` → `writing-plans` → `subagent-driven-development` / `finishing-a-development-branch`
+- **UI 実装**: `frontend-design`、`create-admin-page`、`create-page-content`、`create-server-action`
+- **スキーマ・設定**: `add-settings-field`、`prisma-migration`、`split-action-file`、`upgrade-deps`
+- **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`、`new-section`（手順の正本は **`.agents/skills/`**；`.claude/skills` の同名は **スタブ** → 正本と `reference/scaffold-*.md` を開く）。Lexical 監査・モダナイズ・`@lexical/react` 更新後のフォーク差分は **`.agents/skills/lexical-audit`** と `lexical-patterns.md`（`.claude/rules/frontend/lexical-patterns.md` は `paths:` 条件付きで同一方針）
+- **問題対応**: `systematic-debugging`、`stripe-debug`、`google-calendar-debug`、`turbopack-hmr`
+- **レビュー・メンテ**: `requesting-code-review`、`receiving-code-review`、`audit-settings-sections`、`claude-md-management:claude-md-improver`、`claude-md-management:revise-claude-md`
+- **リファクタリング**: `code-simplifier:code-simplifier`（Task）
 
 ### ツール
 
@@ -101,7 +75,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 - **グローバル Plugin/MCP** (`serena`, `context7`, `playwright`): ユーザーレベルで設定済
   - `context7`: ライブラリ公式ドキュメント参照時 — `resolve-library-id` → `query-docs`（対象: Lexical / React 19 / Next.js 16 / Prisma 7 / Zod 4 / Better Auth）
   - `playwright`: UI 実装後の視覚確認・E2E デバッグ（`browser_navigate` → `browser_take_screenshot`）
-- **ui-ux-pro-max**: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`
+- **ui-ux-pro-max**: Unix は `python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --domain <domain> --stack nextjs`、Windows は `py -3` を `python3` の代わりに使う（`.claude/skills/ui-ux-pro-max` はスタブ）
 - **ドキュメント更新**: `docs/plans/YYYY-MM-DD-title.md` → `docs/plans/README.md`
 - **スペック/計画**: `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` / `docs/superpowers/plans/YYYY-MM-DD-<name>.md`
 
@@ -111,16 +85,17 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 
 ### 技術スタック
 
-| 技術         | バージョン | 重要な注意点                                                                                            |
-| ------------ | ---------- | ------------------------------------------------------------------------------------------------------- |
-| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                                               |
-| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)                                                  |
-| TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md                                           |
-| Prisma       | 7.5.0      | WASM エンジン, mapped enums（`as const` オブジェクト）                                                  |
-| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                                                   |
-| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                                                          |
-| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` 必須。**Prisma**: `prismaAdapter(prismaForBetterAuth)` + `experimental.joins: true`（[公式](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)）。動的 `getAuth()` は禁止 |
-| Bun          | 1.3.11     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致） |
+| 技術         | バージョン | 重要な注意点                                                                                                                                                                                                                                                                                                                                        |
+| ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js      | 16.1.6     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                                                                                                                                                                                                                                                                                           |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)                                                                                                                                                                                                                                                                                              |
+| TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md                                                                                                                                                                                                                                                                                       |
+| Prisma       | 7.5.0      | WASM エンジン, mapped enums。`$extends`（Decimal→number 等）は **`createAppPrismaClient`**（`src/shared/db/create-app-prisma-client.ts`）に集約し、`prisma.ts` と **`prisma/seed.ts` で同一適用**（[Client extensions](https://www.prisma.io/docs/orm/prisma-client/client-extensions)）。`prismaAdapter` には拡張前 **`prismaForBetterAuth` のみ** |
+| Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                                                                                                                                                                                                                                                                                               |
+| Zod          | 4.3.6      | `{ error: }` パラメータ（`message:` は非推奨）                                                                                                                                                                                                                                                                                                      |
+| Better Auth  | 1.5.5      | RBAC, `executeAdminMutationResult` 必須。**Prisma**: `prismaAdapter(prismaForBetterAuth)` + `advanced.database.generateId: "uuid"`（[公式](https://www.better-auth.com/docs/concepts/database)）+ `baseURL` 明示設定。動的 `getAuth()` は禁止                                                                                                       |
+| Bun          | 1.3.11     | テストランナー (`bun:test`), `bunx --bun` でネイティブ実行（`package.json` の `packageManager` と一致）                                                                                                                                                                                                                                             |
+| jsdom（dev） | ^28.x      | ユニットテスト用 DOM（`__tests__/setup-dom.ts`）。[`@lexical/html` headless は DOM が必要](https://lexical.dev/docs/packages/lexical-html)                                                                                                                                                                                                          |
 
 ### 構造
 
@@ -137,7 +112,7 @@ src/app/
     │   ├── actions/             # 公開フォーム Server Actions（認証不要、Turnstile保護）
     │   ├── hooks/               # usePublicForm 等
     │   ├── components/
-    │   │   ├── design-system/   # Primitives (Button, Card, Container, Heading 等 11種)
+    │   │   ├── design-system/   # Primitives 10（直接 import のみ・barrel 禁止）: badge, button, container, heading, image-frame, input, prose, select, stack, textarea
     │   │   ├── layouts/         # site-header, site-footer, page-hero, site-cta, breadcrumb, mobile-nav 等
     │   │   ├── ui/              # image-gallery, filter-bar, share-buttons, step-indicator, section-label
     │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, parallax-image, magnetic-button
@@ -151,40 +126,37 @@ src/shared/                      # 両方で共有（CSS変数非依存）
 prisma/                          # schema.prisma, migrations/, seed.ts
 ```
 
-| パス                                         | 用途                                              |
-| -------------------------------------------- | ------------------------------------------------- |
-| `src/app/(admin)/_styles/admin.css`          | 管理画面専用テーマ                                |
-| `src/app/(public)/_styles/public.css`        | 公開ページテーマ（Deep Neutral + Warm Accent）    |
-| `src/app/(admin)/admin/(dashboard)/_shared/` | 管理画面専用コンポーネント                        |
-| `src/app/(public)/_shared/`                  | 公開ページ Design System + Layout                 |
-| `src/app/(public)/[...segments]/`            | カスタムページ + ポスト詳細（セクション方式維持） |
-| `src/app/(public)/spaces/[slug]/`            | スペース詳細（Page-First）                        |
-| `src/shared/`                                | 共有（CSS変数に依存しないコード）                 |
+| パス（ツリー図に無いもの）                  | 用途                                               |
+| ------------------------------------------- | -------------------------------------------------- |
+| `src/app/(admin)/_styles/admin.css`         | 管理画面専用テーマ                                 |
+| `src/app/(public)/_styles/public.css`       | 公開ページテーマ（Deep Neutral + Warm Accent）     |
+| `src/shared/db/create-app-prisma-client.ts` | Prisma `$extends` の単一実装・`AppPrismaClient` 型 |
+| `src/shared/lib/errors/logger-core.ts`      | 構造化ログ（seed / `server-only` 外モジュール用）  |
 
-**インポートエイリアス**: `@/admin/*`, `@/public/*`, `@/shared/*`
+**インポートエイリアス**: `@/*`（`src/*`）, `@/admin/*`, `@/public/*`, `@/shared/*`, `@generated/*`
 
-**管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL は `/admin/...`
-
-**公開ページ ↔ 管理画面の遷移はフルページリロード**（異なる Root Layout 間の仕様）
+**管理画面パスの二重構造**: `src/app/(admin)/admin/(dashboard)/...` → URL `/admin/...`。**公開 ↔ 管理の遷移はフルページリロード**（異なる Root Layout）
 
 ### Lexical エディタ（管理画面・ブロック設定パネル）
 
 - 実装ディレクトリ: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
-- 右ペインの **ブロック設定（インスペクター）は開閉可能**（ツールバーアイコン・**Ctrl+Shift+0**、テンキーの **0** も可）。開閉状態は **`localStorage` キー `myrrh-lexical-inspector-expanded`** に永続化
-- **`LexicalEditor` の `showInspector={false}`** — サイドバー非表示・トグル非表示・上記ショートカット無効
-- **幅 1024px 未満** — `MobileEditorFallback` が表示され、**`contentJson` を headless で HTML 化したプレビュー**（未保存を含む）を優先。失敗時および JSON 未供給時は **`contentHtml`** にフォールバック
-- Context / a11y / 拡張時の注意: **`.claude/rules/frontend/lexical-patterns.md`** の **「ブロック設定パネル（Inspector Sidebar）」** 節および **Gotchas**
+- 詳細（Inspector・コンテンツ幅・レイアウト定数・DraggableBlock フォーク・プレースホルダー）: **`.claude/rules/frontend/lexical-patterns.md`**
+- `showInspector={false}` でサイドバー無効、幅 1024px 未満で `MobileEditorFallback`（headless HTML プレビュー）
+- 初期化は `contentJson` のみ（空は `EMPTY_LEXICAL_EDITOR_STATE_JSON`）
 
 ### コマンド
 
 ```bash
 bun dev                                         # 開発サーバー
-bun run test                                    # テスト
-bun run test:all                                # Unit + Integration 並列テスト
-bun run validate                                # type-check + lint 並列検証
+bun run test                                    # テスト（`bunfig.toml` preload: setup-dom.ts で JSDOM 注入）
+bun run test:unit                               # Unit テストのみ（__tests__/unit）
+bun run test:integration                        # Integration テストのみ（__tests__/integration）
+bun run test:all                                # Unit → Integration 順次テスト
+bun run validate                                # type-check → lint 順次検証
 bun run validate && bun run build               # 完全検証
 bun run build:strict                            # 環境変数チェック有りビルド（本番確認用）
-bunx --bun prisma migrate dev --name <name>     # マイグレーション
+bunx --bun prisma migrate dev --name <name>     # マイグレーション（[開発ワークフロー](https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production)）
+bun prisma/seed.ts                               # Seed（引数なしは demo 相当。`createAppPrismaClient` 適用済みクライアントを使用）
 bun run db:generate                             # Prisma スキーマ再生成
 bun run db:studio                               # Prisma Studio（DB GUI）
 bun run e2e                                     # E2E テスト（Playwright）

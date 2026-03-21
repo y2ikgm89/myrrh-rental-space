@@ -13,6 +13,7 @@ import {
   $findMatchingParent,
   $getRoot,
   $getSelection,
+  $getState,
   $isRangeSelection,
   $isRootOrShadowRoot,
   CAN_REDO_COMMAND,
@@ -24,6 +25,7 @@ import {
   REDO_COMMAND,
   UNDO_COMMAND,
   type ElementFormatType,
+  type LexicalEditor,
 } from "lexical";
 import {
   $isListNode,
@@ -86,6 +88,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/admin/components/ui/dropdown-menu";
 import {
   Dialog,
@@ -101,16 +106,27 @@ import { FontSizePlugin } from "./FontSizePlugin";
 import { HighlightPlugin } from "./HighlightPlugin";
 import { TextColorPlugin } from "./TextColorPlugin";
 import { TextCasePlugin } from "./TextCasePlugin";
+import { cn } from "@/shared/lib/cn";
 import { entriesOf } from "@/shared/lib/serialize";
 import {
   getToolbarInsertItems,
   executeInsertItem,
   MERGED_CATEGORY_PAIRS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type InsertItem,
 } from "../config/insert-items";
 import { EDITOR_TRANSFORMERS } from "../MarkdownTransformers";
 import type { DialogId } from "../dialogs/dialog-types";
+import type { LayoutToolbarContext } from "./LayoutToolbarSection";
 import { ShortcutsHelpDialog } from "./KeyboardShortcutsPlugin";
 import { useInspectorSidebar } from "../inspector/inspector-sidebar-context";
+import {
+  templateColumnsNarrowState,
+  templateColumnsState,
+} from "../nodes/LayoutContainerNode";
+import { $findEnclosingLayoutContainer } from "./layout-navigation";
+import { LayoutToolbarSection } from "./LayoutToolbarSection";
 
 // =============================================================================
 // Types
@@ -121,6 +137,94 @@ type ToolbarPluginProps = {
   isFullscreen: boolean;
   onFullscreenToggle: () => void;
 };
+
+type ToolbarInsertMenuItemsProps = {
+  insertItems: readonly InsertItem[];
+  editor: LexicalEditor;
+  openDialog?: (id: DialogId) => void;
+};
+
+/** サブメニュー内を 2 カラムにする最小件数（Radix サブメニュー + 高密度グリッド） */
+const TOOLBAR_INSERT_SUBMENU_GRID_MIN_ITEMS = 6;
+
+function toolbarInsertSubContentClassName(itemCount: number): string {
+  if (itemCount >= TOOLBAR_INSERT_SUBMENU_GRID_MIN_ITEMS) {
+    return cn(
+      "min-w-[272px] max-h-[min(70vh,440px)] overflow-y-auto p-1",
+      "grid grid-cols-2 gap-0.5",
+    );
+  }
+  return "min-w-[200px] max-h-[min(70vh,440px)] overflow-y-auto p-1";
+}
+
+function ToolbarInsertMenuItems({
+  insertItems,
+  editor,
+  openDialog,
+}: ToolbarInsertMenuItemsProps) {
+  const categoriesWithItems = CATEGORY_ORDER.filter((category) =>
+    insertItems.some((i) => i.category === category),
+  );
+  return categoriesWithItems.map((category, catIndex) => {
+    const prevCategory = categoriesWithItems[catIndex - 1];
+    const showSeparator =
+      prevCategory !== undefined &&
+      !MERGED_CATEGORY_PAIRS.has(`${prevCategory}→${category}`);
+    const categoryItems = insertItems.filter((i) => i.category === category);
+
+    if (categoryItems.length === 1) {
+      const item = categoryItems[0];
+      if (item === undefined) {
+        return null;
+      }
+      return (
+        <Fragment key={category}>
+          {showSeparator && <DropdownMenuSeparator />}
+          <DropdownMenuItem
+            onClick={() => executeInsertItem(item, editor, openDialog)}
+            className="flex items-center gap-2"
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">{item.label}</span>
+          </DropdownMenuItem>
+        </Fragment>
+      );
+    }
+
+    return (
+      <Fragment key={category}>
+        {showSeparator && <DropdownMenuSeparator />}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="gap-2">
+            <span className="min-w-0 flex-1 truncate text-left">
+              {CATEGORY_LABELS[category]}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            sideOffset={4}
+            alignOffset={-4}
+            className={toolbarInsertSubContentClassName(categoryItems.length)}
+          >
+            {categoryItems.map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                onClick={() => executeInsertItem(item, editor, openDialog)}
+                className={cn(
+                  "flex items-center gap-2",
+                  categoryItems.length >= TOOLBAR_INSERT_SUBMENU_GRID_MIN_ITEMS &&
+                    "py-2 text-xs",
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">{item.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+      </Fragment>
+    );
+  });
+}
 
 type BlockType =
   | "paragraph"
@@ -293,11 +397,16 @@ export function ToolbarPlugin({
   const [elementFormat, setElementFormat] = useState<AlignmentType>("left");
   const [showMarkdownImport, setShowMarkdownImport] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [layoutToolbarContext, setLayoutToolbarContext] =
+    useState<LayoutToolbarContext | null>(null);
 
   // ツールバー状態を更新
   const updateToolbar = useEffectEvent(() => {
     const selection = $getSelection();
-    if (!$isRangeSelection(selection)) return;
+    if (!$isRangeSelection(selection)) {
+      setLayoutToolbarContext(null);
+      return;
+    }
 
     // テキストフォーマット
     setIsBold(selection.hasFormat("bold"));
@@ -350,6 +459,17 @@ export function ToolbarPlugin({
       const topElement = anchorNode.getTopLevelElementOrThrow();
       const formatType = topElement.getFormatType();
       setElementFormat(isAlignmentType(formatType) ? formatType : "left");
+    }
+
+    const layoutNode = $findEnclosingLayoutContainer(anchorNode);
+    if (layoutNode) {
+      setLayoutToolbarContext({
+        nodeKey: layoutNode.getKey(),
+        wide: $getState(layoutNode, templateColumnsState),
+        narrow: $getState(layoutNode, templateColumnsNarrowState),
+      });
+    } else {
+      setLayoutToolbarContext(null);
     }
   });
 
@@ -513,8 +633,15 @@ export function ToolbarPlugin({
     ALIGNMENT_CONFIG[elementFormat];
 
   return (
-    <div className="flex items-center border-b bg-background p-1">
-      <div className="flex flex-wrap items-center gap-0.5 flex-1">
+    <>
+      <div
+        role="toolbar"
+        aria-label="書式・挿入・書き出し"
+        className="flex min-h-10 min-w-0 items-stretch border-b border-border bg-muted/40"
+      >
+        {/* 左右 flex-1 で主ツールバーをビューポート中央に配置 */}
+        <div className="min-w-0 flex-1 basis-0 shrink" aria-hidden="true" />
+        <div className="flex min-h-10 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
         {/* Undo/Redo */}
         <Button
           type="button"
@@ -695,6 +822,11 @@ export function ToolbarPlugin({
           </DropdownMenuContent>
         </DropdownMenu>
 
+        <LayoutToolbarSection
+          editor={editor}
+          context={layoutToolbarContext}
+        />
+
         <Separator orientation="vertical" className="mx-1 h-6" />
 
         {/* Link */}
@@ -726,30 +858,12 @@ export function ToolbarPlugin({
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[160px]">
-              {insertItems.map((item, index) => {
-                const prev = insertItems[index - 1];
-                const showSeparator =
-                  prev !== undefined &&
-                  prev.category !== item.category &&
-                  !MERGED_CATEGORY_PAIRS.has(
-                    `${prev.category}→${item.category}`,
-                  );
-                return (
-                  <Fragment key={item.id}>
-                    {showSeparator && <DropdownMenuSeparator />}
-                    <DropdownMenuItem
-                      onClick={() =>
-                        executeInsertItem(item, editor, openDialog)
-                      }
-                      className="flex items-center gap-2"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </DropdownMenuItem>
-                  </Fragment>
-                );
-              })}
+            <DropdownMenuContent align="start" className="min-w-[200px]">
+              <ToolbarInsertMenuItems
+                insertItems={insertItems}
+                editor={editor}
+                {...(openDialog !== undefined ? { openDialog } : {})}
+              />
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -808,8 +922,13 @@ export function ToolbarPlugin({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-      <div className="ml-auto shrink-0 flex items-center">
+        </div>
+        <div className="flex min-w-0 flex-1 basis-0 shrink items-center justify-end">
+        <div
+          role="group"
+          aria-label="ブロック設定と表示"
+          className="flex shrink-0 items-center gap-0.5 border-l border-border px-1 py-1 pl-2"
+        >
         {isInspectorAvailable ? (
           <Button
             type="button"
@@ -818,11 +937,16 @@ export function ToolbarPlugin({
             className="h-10 w-10 md:h-8 md:w-8"
             aria-pressed={isInspectorExpanded}
             aria-controls="lexical-block-inspector-panel"
+            aria-label={
+              isInspectorExpanded
+                ? "ブロック設定パネルを閉じる"
+                : "ブロック設定パネルを開く（本文中のブロック用）"
+            }
             onClick={toggleInspector}
             title={
               isInspectorExpanded
-                ? "ブロック設定パネルを閉じる（Ctrl+Shift+0）"
-                : "ブロック設定パネルを開く（Ctrl+Shift+0）"
+                ? "ブロック設定を閉じる（Ctrl+Shift+0）"
+                : "ブロック設定を開く（本文ブロック用。タイトル・SEOはヘッダの設定）Ctrl+Shift+0"
             }
           >
             {isInspectorExpanded ? (
@@ -856,6 +980,8 @@ export function ToolbarPlugin({
             <Maximize className="h-5 w-5 md:h-4 md:w-4" />
           )}
         </Button>
+        </div>
+        </div>
       </div>
       <MarkdownImportDialog
         open={showMarkdownImport}
@@ -864,6 +990,6 @@ export function ToolbarPlugin({
       {showShortcuts && (
         <ShortcutsHelpDialog onClose={() => setShowShortcuts(false)} />
       )}
-    </div>
+    </>
   );
 }

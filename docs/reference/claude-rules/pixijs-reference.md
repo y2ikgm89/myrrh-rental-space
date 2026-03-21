@@ -475,10 +475,10 @@ PixiJS フィルターと `ui-ux-pro-max` スタイルデータベースの対�
 
 ```bash
 # PixiJSフィルターに適したスタイルを調査
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "film grain cinematic texture" --domain style
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "film grain cinematic texture" --domain style
 
 # フィルターエフェクトのUXガイドライン
-python3 .claude/skills/ui-ux-pro-max/scripts/search.py "filter effect performance GPU" --domain ux
+python3 .agents/skills/ui-ux-pro-max/scripts/search.py "filter effect performance GPU" --domain ux
 ```
 
 → `.claude/skills/parallax-section/SKILL.md` の Step 1.5 で詳細な検索フローを参照

@@ -6,19 +6,19 @@ paths:
 
 # PixiJS パターンルール
 
-> PixiJS 8.17.1 / WebGL2
+> [PixiJS v8](https://pixijs.com/8.x/guides) / WebGL2
 
-## 概要
+## 依存関係
 
-旧 `effects/pixi/` インフラ（PixiCanvas, PixiCanvasInner 等 7ファイル）は削除済み。
-パッケージ（`pixi.js`）は利用可能。使用時はページコンポーネントから直接 import する。
+**現状のリポジトリ既定では `pixi.js` は `package.json` に含めない。**
+L4 を使うページを追加する際のみ `bun add pixi.js`（公式ガイドの API に合わせる）。
+旧 `effects/pixi/` インフラは削除済み — 復活させない。
 
-> **詳細リファレンス**: `docs/reference/claude-rules/pixijs-reference.md`
+## 非同期ロード（SSR 安全）
 
-## 直接 import パターン（現行）
+トップレベルでの同期 `import "pixi.js"` はバンドル／SSR 時に問題になり得るため、**クライアントの `useEffect`（または event ハンドラ）内で動的 `import`** する。
 
 ```typescript
-// OK: useEffect 内で動的 import（SSR 安全）
 "use client";
 import { useEffect } from "react";
 
@@ -29,31 +29,34 @@ export function PixiEffect() {
       const { Application } = await import("pixi.js");
       const app = new Application();
       await app.init({ backgroundAlpha: 0, preference: "webgl" });
-      if (destroyed) { app.destroy(true); return; }
-      // 描画処理
+      if (destroyed) {
+        app.destroy(true);
+        return;
+      }
+      // シーン構築 …
     };
     void setup();
-    return () => { destroyed = true; };
+    return () => {
+      destroyed = true;
+    };
   }, []);
 
   return <canvas />;
 }
 ```
 
-## v8 API（v7 との差分）
+## v8 移行メモ（v7 禁止）
 
-| v7                                  | v8                                              |
-| ----------------------------------- | ----------------------------------------------- |
-| `new Application({ ... })`          | `new Application()` + `await app.init({ ... })` |
-| `app.view`                          | `app.canvas`                                    |
-| `PIXI.` グローバル                  | 名前付き import                                 |
-| `app.destroy({ removeView: true })` | `app.destroy(true)`                             |
+| v7                                  | v8                                |
+| ----------------------------------- | --------------------------------- |
+| `new Application({ ... })`        | `new Application()` + `await app.init({ ... })` |
+| `app.view`                          | `app.canvas`                      |
+| `PIXI.*` グローバル前提             | 名前付き ESM import               |
 
 ## 禁止事項
 
-1. **トップレベルの同期 import 禁止** — `await import('pixi.js')` で非同期ロード（SSR クラッシュ防止）
-2. **destroyed チェック省略禁止** — 非同期セットアップ後に `if (destroyed) return`
-3. **Math.random() 禁止** — 決定的ハッシュを使用
-4. **cleanup でのリソース解放必須** — ticker 除去 + フィルター除去 + `destroy()`
-5. **v7 API 禁止** — `app.view` → `app.canvas` 等
-6. **旧 ExperienceShell / VisualEffectsProvider パターン禁止** — 直接 import のみ
+1. **トップレベルの同期 `import "pixi.js"`**（Client 境界内でも、可能なら動的 import）
+2. **非同期 `init` 後の `destroyed` ガード省略**
+3. **`Math.random()` のみによる再現不能なビジュアル**
+4. **クリーンアップでの `destroy` / ticker・フィルター解放の省略**
+5. **v7 API・旧インフラパターンの混在**

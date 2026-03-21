@@ -548,11 +548,10 @@ type ContactContent = {
 
 ```prisma
 model PageContent {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid()) @db.Uuid
   pageKey   String   @unique    // "homepage", "space-list", "contact" 等
   content   Json                // 型定義に準拠した JSON
   updatedAt DateTime @updatedAt
-  updatedBy String?
 
   // SEO（既存 Page モデルから移行）
   metaTitle       String?

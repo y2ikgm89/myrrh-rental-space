@@ -63,6 +63,7 @@ export function EditorHeader({
   isCommentPanelOpen,
   onToggleCommentPanel,
   commentCount,
+  metadataPanelLabel,
 }: EditorHeaderProps) {
   const isPublished = checkIsPublished(publishActions);
 
@@ -110,10 +111,38 @@ export function EditorHeader({
               variant="outline"
               size="sm"
               onClick={onToggleSidePanel}
-              className={isSidePanelOpen ? "bg-accent" : ""}
+              className={`gap-1.5 ${isSidePanelOpen ? "bg-accent" : ""}`}
+              aria-expanded={isSidePanelOpen}
+              title={
+                metadataPanelLabel
+                  ? isSidePanelOpen
+                    ? `${metadataPanelLabel}を閉じる`
+                    : `${metadataPanelLabel}を開く（タイトル・SEO・公開など）`
+                  : isSidePanelOpen
+                    ? "設定パネルを閉じる"
+                    : "設定パネルを開く（タイトル・SEO・公開など）"
+              }
+              aria-label={
+                metadataPanelLabel
+                  ? isSidePanelOpen
+                    ? `${metadataPanelLabel}を閉じる`
+                    : `${metadataPanelLabel}を開く`
+                  : isSidePanelOpen
+                    ? "設定パネルを閉じる"
+                    : "設定パネルを開く"
+              }
             >
-              <Settings className="h-4 w-4" />
-              <span className="sr-only">設定</span>
+              <Settings className="h-4 w-4 shrink-0" aria-hidden />
+              {metadataPanelLabel ? (
+                <span
+                  className="hidden xl:inline max-w-[7rem] truncate"
+                  aria-hidden
+                >
+                  {metadataPanelLabel}
+                </span>
+              ) : (
+                <span className="sr-only">設定</span>
+              )}
             </Button>
           )}
 

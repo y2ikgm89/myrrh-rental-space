@@ -149,8 +149,6 @@ import { createSuccess, createFailure } from "@/shared/types/server-actions";
 
 `@/admin/types/server-actions` は `@/shared/types/server-actions` の re-export に加え、`AuditUser` 型も提供する。
 
-**例外**: `src/app/(admin)/admin/(dashboard)/_shared/types/server-actions.ts` バレルファイル自体（このファイルのみ `@/shared` から import する）。
-
 ## Server Actions の認証パターン
 
 管理画面の書き込み系 Server Actions は `executeAdminMutationResult` を使用（認証・権限チェック・監査ログ・DomainError ハンドリングを一括処理）:

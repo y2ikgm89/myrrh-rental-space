@@ -9,9 +9,33 @@ paths:
 
 ## Better Auth との境界
 
-- **アプリ**: `src/shared/db/prisma.ts` の **`prisma`**（`$extends` 済み）。
+- **アプリ**: `src/shared/db/prisma.ts` の **`prisma`**（`createAppPrismaClient` 適用済み）。
 - **`prismaAdapter`**: **`prismaForBetterAuth`**（拡張前）のみを `src/shared/db/better-auth-adapter.ts` から渡す。
 - **`experimental.joins`** は `auth.ts` 側で有効維持。理由は `auth-patterns.md` および [Better Auth Prisma ドキュメント](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)。
+
+## Prisma クライアントの組み立て（拡張の単一ソース）
+
+[Prisma Client extensions](https://www.prisma.io/docs/orm/prisma-client/client-extensions) の **`$extends`** 設定は **`src/shared/db/create-app-prisma-client.ts`** にだけ書く。
+
+- **`createAppPrismaClient(base: PrismaClient)`** — Decimal→number など result 拡張の実装と **`AppPrismaClient`** 型（`ReturnType`）をここで定義する。
+- **`src/shared/db/prisma.ts`** — `server-only`。`PrismaPg` で構築した **ベース** `PrismaClient` に `createAppPrismaClient` を適用した **`prisma`** を export。`AppPrismaClient` 型も re-export。
+- **`prisma/seed.ts`** — `new PrismaClient({ adapter })` の直後に **同じ `createAppPrismaClient` を適用**する。アプリと seed で **型とランタイム振る舞いを揃える**（`$transaction` のオーバーロード整合もここで担保）。
+- **ドメインの「スクリプトからも呼ぶコマンド」**（例: `system-pages-commands`）の DB 引数は **`AppPrismaClient`** を正とする。`@/shared/db/prisma` をスクリプトから import しない（`server-only` のため）。
+- **スクリプトで構造化ログが必要なとき** — `@/shared/lib/errors/logger` は `server-only`。**`@/shared/lib/errors/logger-core`** を使う（実装は同一、境界だけ分離）。
+
+### マイグレーション運用
+
+- 開発: [Prisma Migrate `migrate dev`](https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production) — `bunx --bun prisma migrate dev --name <snake_case>`
+- 本番・CI: `prisma migrate deploy`
+- 履歴のすり合わせやベースライン化は [Baselining](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining) を参照。後方互換を残さない方針なら **空 DB に対する単一 baseline** や **`migrate diff` で再生成**も選択肢（チームで合意した手順に従う）。
+
+## PageContent（Page-First）
+
+PostgreSQL では UUID 主キーは **native `uuid` 型** を使う（[Prisma `@db.Uuid`](https://www.prisma.io/docs/orm/reference/prisma-schema-reference#uuid)）。
+
+- **主キー**: `String @id @default(uuid()) @db.Uuid`（PostgreSQL の **`gen_random_uuid()`** 既定。Prisma / PostgreSQL の定番。native `uuid` 型、TEXT に UUID 文字列だけ載せない）。
+- **アプリの識別子**: 取得・ルックアップ・キャッシュは **`pageKey`** を正とする。`id` は内部用。
+- **未使用の監査列は置かない**: 更新者トラッキングが必要になったら `User` への FK 付きで追加する。
 
 ## Enum パターン（Prisma 7 mapped enums）
 
@@ -204,7 +228,7 @@ return toPlainArray(items)
 
 ## Decimal 自動変換（$extends）
 
-`prisma.ts` の `$extends` により、全 Decimal フィールドが自動的に `number` に変換される。
+`createAppPrismaClient` 内の `$extends`（`prisma.ts` / `seed.ts` で共通利用）により、対象モデルの Decimal フィールドが **結果として** `number` になる。
 **手動で `Number()` を呼び出す必要はない**:
 
 ```typescript
@@ -300,7 +324,7 @@ export function PostContent({ post }: { post: Post }) {
 }
 ```
 
-既存 HTML のみのデータ（`contentJson` が null）は `HtmlInitializerPlugin` でフォールバック表示。
+管理画面の LexicalEditor は `contentJson`（EditorState JSON）のみを初期化に使用する。`contentHtml` は公開表示用の生成キャッシュであり、エディタ復元には使わない。
 
 ---
 
@@ -396,8 +420,12 @@ await prisma.$transaction(async (tx) => {
 | パス                                | 内容                                                                       |
 | ----------------------------------- | -------------------------------------------------------------------------- |
 | `@generated/prisma/client`          | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
-| `@/shared/db/prisma.ts`             | Prisma シングルトン・`$extends`（Decimal 自動変換）・型エクスポート        |
+| `@/shared/db/create-app-prisma-client.ts` | `$extends`（Decimal→number 等）の単一実装・`AppPrismaClient` 型      |
+| `@/shared/db/prisma.ts`             | `server-only` シングルトン・`createAppPrismaClient` 適用・型 re-export     |
+| `@/shared/db/prisma-input-json.ts`  | Prisma JSON 入力ヘルパー（`server-only` を付けない。seed から import 可）   |
 | `@/shared/db/enums.ts`              | Prisma enum の公開窓口                                                     |
+| `@/shared/lib/errors/logger-core.ts` | 構造化 `logError`（スクリプト・非 Next モジュール用）                    |
+| `@/shared/lib/errors/logger.ts`      | `server-only` エントリ（Next Server 向け、`logger-core` を re-export）   |
 | `@/shared/lib/json-validators.ts`   | JSON フィールド Zod スキーマ・型・パース関数                               |
 | `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
 | `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |

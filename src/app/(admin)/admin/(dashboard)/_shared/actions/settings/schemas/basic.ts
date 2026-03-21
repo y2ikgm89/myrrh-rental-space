@@ -267,9 +267,9 @@ export type TermsAgreementSettingsInput = z.infer<
 >;
 
 export const reservationSettingsSchema = z.object({
-  defaultTimeSlot: z.number().int().min(15).max(240).nullable(),
-  minReservationDuration: z.number().int().min(15).max(480).nullable(),
-  maxReservationDuration: z.number().int().min(60).max(1440).nullable(),
+  defaultTimeSlot: z.number().int().min(15).max(240),
+  minReservationDuration: z.number().int().min(15).max(480),
+  maxReservationDuration: z.number().int().min(60).max(1440),
   cancellationTermsId: z.string().uuid().nullable(),
 });
 

@@ -9,14 +9,15 @@
  * - 絶対に throw しない（サーバー起動をブロックしない）
  */
 
-import { bootstrapSystemPagesCommand } from "@/shared/domain/pages/system-pages";
+import { prisma } from "@/shared/db/prisma";
+import { bootstrapSystemPagesCommand } from "@/shared/domain/pages/system-pages-commands";
 
 /**
  * 全システムページ + デフォルトセクションを保証
  *
- * instrumentation.ts および prisma/seed.ts から呼び出される。
+ * instrumentation.ts から呼び出される（seed は system-pages-commands に Prisma を直接渡す）。
  * 認証不要（インフラ操作）。
  */
 export async function bootstrapSystemPages(): Promise<void> {
-  await bootstrapSystemPagesCommand();
+  await bootstrapSystemPagesCommand(prisma);
 }

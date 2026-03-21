@@ -22,6 +22,7 @@ node 自体の追加が主目的なら `lexical-node`、toolbar 追加が主目�
 3. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ImagePlugin.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/YouTubePlugin.tsx`
+4. 長いコードひな形が必要なら `reference/scaffold-lexical-plugin.md`（任意）
 
 ## ワークフロー
 

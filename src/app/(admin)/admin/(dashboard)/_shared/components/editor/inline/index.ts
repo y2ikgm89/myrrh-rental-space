@@ -27,11 +27,7 @@ export {
 } from "./hooks";
 
 // 専用エディターフック
-export {
-  usePostEditor,
-  useNewsEditor,
-  useContentWidthStyles,
-} from "./hooks/index";
+export { usePostEditor, useNewsEditor, useContentWidth } from "./hooks/index";
 
 // 基本コンポーネント
 export { EditorHeader } from "./EditorHeader";

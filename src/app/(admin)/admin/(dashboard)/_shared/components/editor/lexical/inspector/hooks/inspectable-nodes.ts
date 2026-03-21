@@ -56,6 +56,8 @@ import type {
 import type { CoverNode } from "../../nodes/CoverNode";
 import type { CustomTableNode } from "../../nodes/CustomTableNode";
 import type { CustomTableCellNode } from "../../nodes/CustomTableCellNode";
+import type { RubyNode } from "../../nodes/RubyNode";
+import type { TooltipNode } from "../../nodes/TooltipNode";
 
 // =============================================================================
 // Types
@@ -67,6 +69,8 @@ export type InspectableNodeType =
   | "callout"
   | "bookmark"
   | "pullQuote"
+  | "ruby"
+  | "tooltip"
   | "collapsible"
   | "steps"
   | "tabs"
@@ -109,6 +113,8 @@ export type SelectedNodeInfo =
   | { nodeType: "callout"; node: CalloutNode; nodeKey: NodeKey }
   | { nodeType: "bookmark"; node: BookmarkNode; nodeKey: NodeKey }
   | { nodeType: "pullQuote"; node: PullQuoteNode; nodeKey: NodeKey }
+  | { nodeType: "ruby"; node: RubyNode; nodeKey: NodeKey }
+  | { nodeType: "tooltip"; node: TooltipNode; nodeKey: NodeKey }
   | {
       nodeType: "collapsible";
       node: CollapsibleContainerNode;

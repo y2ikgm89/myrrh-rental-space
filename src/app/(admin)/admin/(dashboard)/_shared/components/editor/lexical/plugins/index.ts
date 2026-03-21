@@ -28,7 +28,11 @@ export { XPlugin } from "./XPlugin";
 export { InstagramPlugin } from "./InstagramPlugin";
 export { LinkDialogPlugin } from "./LinkDialogPlugin";
 export { TableInsertPlugin } from "./TableInsertPlugin";
-export { LayoutPlugin, INSERT_LAYOUT_COMMAND } from "./LayoutPlugin";
+export {
+  LayoutPlugin,
+  INSERT_LAYOUT_COMMAND,
+  type InsertLayoutPayload,
+} from "./LayoutPlugin";
 export { ComponentPickerPlugin } from "./ComponentPickerPlugin";
 export { ToolbarPlugin } from "./ToolbarPlugin";
 export { DraggableBlockPlugin } from "./DraggableBlockPlugin";

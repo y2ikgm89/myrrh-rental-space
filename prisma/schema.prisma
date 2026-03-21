@@ -226,7 +226,7 @@ enum InstagramMediaType {
 // ==============================================
 
 model User {
-  id            String   @id @default(uuid())
+  id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
   name          String
   emailVerified Boolean  @default(false)
@@ -270,8 +270,8 @@ model User {
 
 /// EDITOR用のページ割り当て（中間テーブル）
 model UserPageAssignment {
-  userId String
-  pageId String
+  userId String @db.Uuid
+  pageId String @db.Uuid
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
   page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
@@ -281,8 +281,8 @@ model UserPageAssignment {
 }
 
 model Account {
-  id                    String    @id @default(uuid())
-  userId                String
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
   accountId             String // Better Auth: ユーザーID or プロバイダーのアカウントID
   providerId            String // Better Auth: "credential" or "google" etc.
   accessToken           String?   @db.Text
@@ -302,9 +302,9 @@ model Account {
 }
 
 model Session {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid()) @db.Uuid
   token     String   @unique
-  userId    String
+  userId String @db.Uuid
   expiresAt DateTime
   ipAddress String?
   userAgent String?
@@ -318,7 +318,7 @@ model Session {
 }
 
 model Verification {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @db.Uuid
   identifier String
   value      String
   expiresAt  DateTime
@@ -330,9 +330,9 @@ model Verification {
 }
 
 model LoginToken {
-  id        String    @id @default(uuid())
+  id        String    @id @default(uuid()) @db.Uuid
   token     String    @unique
-  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
   usedAt    DateTime?
   expiresAt DateTime
   createdAt DateTime  @default(now())
@@ -347,7 +347,7 @@ model LoginToken {
 }
 
 model StaffInvitation {
-  id        String    @id @default(uuid())
+  id        String    @id @default(uuid()) @db.Uuid
   email     String
   token     String    @unique
   role      Role      @default(USER)
@@ -355,7 +355,7 @@ model StaffInvitation {
   usedAt    DateTime? // 使用済み = パスワード設定完了
   expiresAt DateTime
   createdAt DateTime  @default(now())
-  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   creator User? @relation("StaffInvitationCreator", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -371,7 +371,7 @@ model StaffInvitation {
 // ==============================================
 
 model Location {
-  id            String   @id @default(uuid())
+  id            String   @id @default(uuid()) @db.Uuid
   name          String // 例: 本館、渋谷店
   description   String?  @db.Text
   address       String // 住所
@@ -394,7 +394,7 @@ model Location {
 }
 
 model SpaceCategory {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String // 例: 会議室、スタジオ、セミナー室
   description String?  @db.Text
   icon        String? // アイコン名（任意）
@@ -412,7 +412,7 @@ model SpaceCategory {
 }
 
 model Space {
-  id            String    @id @default(uuid())
+  id            String    @id @default(uuid()) @db.Uuid
   slug          String    @unique
   name          String
   description   String    @db.Text
@@ -442,7 +442,7 @@ model Space {
   ogpImageUrl    String?
 
   // 規約設定
-  termsId String? // 任意の規約参照
+  termsId String? @db.Uuid // 任意の規約参照
 
   // 割引設定（Enum化）
   discountType             DiscountType             @default(none)
@@ -453,8 +453,8 @@ model Space {
   taxRateType TaxRateType @default(standard)
 
   // 場所・カテゴリー設定
-  locationId String? // 場所（建物）参照
-  categoryId String? // カテゴリー参照
+  locationId String? @db.Uuid // 場所（建物）参照
+  categoryId String? @db.Uuid // カテゴリー参照
 
   // Relations
   reservations Reservation[]
@@ -474,10 +474,10 @@ model Space {
 }
 
 model Reservation {
-  id            String            @id @default(uuid())
-  spaceId       String
-  userId        String?
-  customerId    String
+  id            String            @id @default(uuid()) @db.Uuid
+  spaceId String @db.Uuid
+  userId String? @db.Uuid
+  customerId String @db.Uuid
   startTime     DateTime
   endTime       DateTime
   status        ReservationStatus @default(PENDING)
@@ -487,7 +487,7 @@ model Reservation {
   updatedAt     DateTime          @updatedAt
 
   // 割引情報
-  couponId               String? // 適用されたクーポンID
+  couponId String? @db.Uuid // 適用されたクーポンID
   couponDiscountAmount   Decimal? @db.Decimal(10, 2) // クーポン割引額
   durationDiscountAmount Decimal? @db.Decimal(10, 2) // 長時間割引額
   spaceDiscountAmount    Decimal? @db.Decimal(10, 2) // スペース固有割引額
@@ -526,7 +526,7 @@ model Reservation {
 }
 
 model Customer {
-  id                 String         @id @default(uuid())
+  id                 String         @id @default(uuid()) @db.Uuid
   lastName           String
   firstName          String
   lastNameKana       String?        // 姓カナ（任意）
@@ -562,7 +562,7 @@ model Customer {
 // ==============================================
 
 model Coupon {
-  id          String     @id @default(uuid())
+  id          String     @id @default(uuid()) @db.Uuid
   code        String     @unique // クーポンコード (大文字英数字)
   name        String // 管理用名称
   description String? // 説明
@@ -600,7 +600,7 @@ model Coupon {
 }
 
 model Inquiry {
-  id        String        @id @default(uuid())
+  id        String        @id @default(uuid()) @db.Uuid
   name      String
   email     String
   subject   String
@@ -616,7 +616,7 @@ model Inquiry {
 }
 
 model News {
-  id                 String       @id @default(uuid())
+  id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
   contentHtml        String       @db.Text @map("content") // HTMLキャッシュ（公開表示用）
@@ -649,13 +649,13 @@ model News {
 
 /// Newsのバージョン履歴
 model NewsVersion {
-  id          String   @id @default(uuid())
-  newsId      String
+  id          String   @id @default(uuid()) @db.Uuid
+  newsId String @db.Uuid
   version     Int // 自動インクリメント（News内でユニーク）
   contentHtml String   @db.Text @map("content") // HTMLスナップショット
   contentJson Json? // Lexical EditorState JSON
   createdAt   DateTime @default(now())
-  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   news    News  @relation(fields: [newsId], references: [id], onDelete: Cascade)
@@ -667,7 +667,7 @@ model NewsVersion {
 }
 
 model AnnouncementBar {
-  id        String              @id @default(uuid())
+  id        String              @id @default(uuid()) @db.Uuid
   message   String              @db.VarChar(200)
   type      AnnouncementBarType @default(info)
   linkUrl   String?
@@ -691,7 +691,7 @@ model AnnouncementBar {
 // ==============================================
 
 model Post {
-  id                 String      @id @default(uuid())
+  id                 String      @id @default(uuid()) @db.Uuid
   title              String
   slug               String      @unique
   excerpt            String      @db.Text
@@ -699,14 +699,14 @@ model Post {
   contentJson        Json? // Lexical EditorState JSON（プライマリ）
   thumbnailUrl       String
   ogpImageUrl        String?
-  categoryId         String
+  categoryId String @db.Uuid
   metaDescription    String?
   metaKeywords       String?
   ogpTitle           String?
   ogpDescription     String?
   publishedAt        DateTime?
   status             PostStatus  @default(DRAFT)
-  authorId           String? // ユーザー削除時にnull化
+  authorId String? @db.Uuid // ユーザー削除時にnull化
   viewCount          Int         @default(0)
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
@@ -731,8 +731,8 @@ model Post {
 
 /// Post ↔ PostTag 中間テーブル（JSON配列からの正規化）
 model PostTagOnPost {
-  postId String
-  tagId  String
+  postId String @db.Uuid
+  tagId String @db.Uuid
   post   Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   tag    PostTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
@@ -743,13 +743,13 @@ model PostTagOnPost {
 
 /// Postのバージョン履歴
 model PostVersion {
-  id          String   @id @default(uuid())
-  postId      String
+  id          String   @id @default(uuid()) @db.Uuid
+  postId String @db.Uuid
   version     Int // 自動インクリメント（Post内でユニーク）
   contentHtml String   @db.Text @map("content") // HTMLスナップショット
   contentJson Json? // Lexical EditorState JSON
   createdAt   DateTime @default(now())
-  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   post    Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
@@ -761,7 +761,7 @@ model PostVersion {
 }
 
 model PostCategory {
-  id              String   @id @default(uuid())
+  id              String   @id @default(uuid()) @db.Uuid
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
@@ -780,7 +780,7 @@ model PostCategory {
 }
 
 model PostTag {
-  id              String   @id @default(uuid())
+  id              String   @id @default(uuid()) @db.Uuid
   name            String   @unique
   slug            String   @unique
   description     String?  @db.Text
@@ -797,15 +797,15 @@ model PostTag {
 }
 
 model PostComment {
-  id              String  @id @default(uuid())
-  postId          String
-  parentCommentId String? // Self-reference for nested comments
+  id              String  @id @default(uuid()) @db.Uuid
+  postId String @db.Uuid
+  parentCommentId String? @db.Uuid // Self-reference for nested comments
 
   // Content
   content String @db.Text
 
   // Author info (either userId OR guest info)
-  userId     String? // For logged-in users
+  userId String? @db.Uuid // For logged-in users
   guestName  String? // For guest comments
   guestEmail String? // For guest comments
 
@@ -816,7 +816,7 @@ model PostComment {
   // Status
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
-  deletedBy String? // userId of admin who deleted
+  deletedBy String? @db.Uuid // userId of admin who deleted
 
   // Timestamps
   createdAt DateTime @default(now())
@@ -846,7 +846,7 @@ model PostComment {
 // ==============================================
 
 model Page {
-  id                 String       @id @default(uuid())
+  id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
   description        String?      @db.Text
@@ -877,8 +877,8 @@ model Page {
 /// 統一セクション（ホームページ + カスタムページ共通）
 /// pageId = null でホームページセクション判別
 model Section {
-  id          String      @id @default(uuid())
-  pageId      String? // null = ホームページ
+  id          String      @id @default(uuid()) @db.Uuid
+  pageId String? @db.Uuid // null = ホームページ
   type        SectionType
   order       Int         @default(0) // 表示順序（DnDで変更可能）
   isActive    Boolean     @default(true) // ON/OFF制御
@@ -899,9 +899,9 @@ model Section {
 }
 
 model NavigationItem {
-  id         String         @id @default(uuid())
+  id         String         @id @default(uuid()) @db.Uuid
   type       NavigationType
-  parentId   String?
+  parentId String? @db.Uuid
   label      String
   url        String
   isExternal Boolean        @default(false)
@@ -920,7 +920,7 @@ model NavigationItem {
 }
 
 model SocialLink {
-  id            String         @id @default(uuid())
+  id            String         @id @default(uuid()) @db.Uuid
   platform      SocialPlatform
   url           String
   iconUrl       String?
@@ -940,7 +940,7 @@ model SocialLink {
 // ==============================================
 
 model FaqCategory {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   slug        String   @unique
   description String?  @db.Text
@@ -958,8 +958,8 @@ model FaqCategory {
 }
 
 model FaqItem {
-  id          String    @id @default(uuid())
-  categoryId  String
+  id          String    @id @default(uuid()) @db.Uuid
+  categoryId String @db.Uuid
   question    String
   answerHtml  String    @db.Text @map("answer") // HTMLキャッシュ（公開表示用）
   answerJson  Json? // Lexical EditorState JSON（プライマリ）
@@ -1097,11 +1097,11 @@ model Settings {
   bingWebmasterToolsId  String? // Bing verification meta tag
   gaPropertyId          String? // GA4 Property ID for Data API
 
-  // Reservation Settings
-  defaultTimeSlot                  Int?    @default(60)
-  minReservationDuration           Int?    @default(60)
-  maxReservationDuration           Int?    @default(480)
-  cancellationTermsId              String?
+  // Reservation Settings（常に有効な整数。未設定行は DB default で埋めたうえで NOT NULL）
+  defaultTimeSlot                  Int     @default(60)
+  minReservationDuration           Int     @default(60)
+  maxReservationDuration           Int     @default(480)
+  cancellationTermsId String? @db.Uuid
   cancellationTerms                Terms?  @relation("CancellationPolicy", fields: [cancellationTermsId], references: [id], onDelete: SetNull)
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
@@ -1279,7 +1279,7 @@ model Settings {
 
 /// Instagram投稿のキャッシュ
 model InstagramPost {
-  id           String   @id @default(uuid())
+  id           String   @id @default(uuid()) @db.Uuid
   postId       String   @unique // Instagram投稿ID
   postUrl      String // 投稿URL
   mediaUrl     String? // メディアURL
@@ -1301,11 +1301,11 @@ model InstagramPost {
 
 /// iCalフィード公開用トークン
 model ICalToken {
-  id         String    @id @default(uuid())
+  id         String    @id @default(uuid()) @db.Uuid
   token      String    @unique // 公開URL用トークン（32バイトBase64URL）
   name       String // トークン名（識別用）
-  spaceId    String? // null = 全予約、指定時 = 特定スペースのみ
-  createdBy  String // 作成した管理者ID
+  spaceId String? @db.Uuid // null = 全予約、指定時 = 特定スペースのみ
+  createdBy String @db.Uuid // 作成した管理者ID
   expiresAt  DateTime? // null = 無期限
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime? // 最終アクセス日時
@@ -1364,8 +1364,8 @@ enum MediaUsage {
 
 /// 監査ログ（書き込み操作 + セキュリティイベント）
 model AuditLog {
-  id         String      @id @default(uuid())
-  userId     String? // 実行ユーザー（null = システム or 未認証）
+  id         String      @id @default(uuid()) @db.Uuid
+  userId String? @db.Uuid // 実行ユーザー（null = システム or 未認証）
   action     AuditAction // 操作種別
   resource   String // 対象リソース種別 ('space', 'blog' 等)
   resourceId String? // 対象リソースID
@@ -1391,7 +1391,7 @@ model AuditLog {
 
 /// メディアファイル管理
 model Media {
-  id          String @id @default(uuid())
+  id          String @id @default(uuid()) @db.Uuid
   filename    String // 元のファイル名
   storagePath String // Supabase Storage パス
   url         String // 公開URL
@@ -1410,7 +1410,7 @@ model Media {
   tags        Json       @default("[]") // タグ配列
 
   // 管理情報
-  uploadedBy String? // アップロードユーザーID（User削除時にnull化）
+  uploadedBy String? @db.Uuid // アップロードユーザーID（User削除時にnull化）
   isActive   Boolean  @default(true) // ソフトデリート
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -1431,7 +1431,7 @@ model Media {
 
 /// ログイン試行記録（レートリミット用）
 model LoginAttempt {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid()) @db.Uuid
   identifier String // IPアドレス or メールのハッシュ
   email      String // 試行されたメールアドレス
   success    Boolean // 成功/失敗
@@ -1448,7 +1448,7 @@ model LoginAttempt {
 
 /// 規約マスター（複数のバージョンを持つ）
 model Terms {
-  id         String    @id @default(uuid())
+  id         String    @id @default(uuid()) @db.Uuid
   type       TermsType
   title      String // 表示タイトル（例: "利用規約"）
   slug       String    @unique // URL用スラッグ（例: "terms-of-use"）
@@ -1468,17 +1468,17 @@ model Terms {
 
 /// 規約バージョン（不変オブジェクト）
 model TermsVersion {
-  id               String      @id @default(uuid())
-  termsId          String
+  id               String      @id @default(uuid()) @db.Uuid
+  termsId String @db.Uuid
   version          Int // 自動インクリメント（Terms内でユニーク）
   contentHtml      String      @db.Text @map("content") // HTMLキャッシュ（公開表示用）
   contentJson      Json? // Lexical EditorState JSON（プライマリ）
   status           TermsStatus @default(DRAFT)
   publishedAt      DateTime? // 公開日時
-  publishedBy      String? // 公開者ID（User.id）- ユーザー削除時にnull化
+  publishedBy String? @db.Uuid // 公開者ID（User.id）- ユーザー削除時にnull化
   isCurrentVersion Boolean     @default(false) // 現在の有効バージョン
   createdAt        DateTime    @default(now())
-  createdBy        String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   terms      Terms            @relation(fields: [termsId], references: [id], onDelete: Cascade)
@@ -1494,11 +1494,11 @@ model TermsVersion {
 
 /// 規約同意記録（監査証跡）
 model TermsAgreement {
-  id            String  @id @default(uuid())
-  termsId       String
-  versionId     String // 同意した規約バージョンID
-  reservationId String? // 予約ID（予約時の同意の場合）
-  userId        String? // ユーザーID（ログイン済みの場合）
+  id            String  @id @default(uuid()) @db.Uuid
+  termsId String @db.Uuid
+  versionId String @db.Uuid // 同意した規約バージョンID
+  reservationId String? @db.Uuid // 予約ID（予約時の同意の場合）
+  userId String? @db.Uuid // ユーザーID（ログイン済みの場合）
 
   // 同意者情報（ゲストユーザー用）
   guestName  String? // ゲスト氏名
@@ -1528,17 +1528,17 @@ model TermsAgreement {
 
 /// エディタコメントスレッド（Lexical MarkNodeに紐づく）
 model EditorCommentThread {
-  id          String              @id @default(uuid())
+  id          String              @id @default(uuid()) @db.Uuid
   markId      String // Lexical MarkNode ID（エディタ内での一意識別子）
   contentType String // コンテンツタイプ: "post" | "news" | "page" | "faq"
-  contentId   String // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
+  contentId String @db.Uuid // コンテンツID（Post.id, News.id, Page.id, FaqItem.id）
   quotedText  String              @db.Text // マークされたテキスト（参照用）
   status      EditorCommentStatus @default(ACTIVE)
   resolvedAt  DateTime? // 解決日時
-  resolvedBy  String? // 解決者ID（User.id）- ユーザー削除時にnull化
+  resolvedBy String? @db.Uuid // 解決者ID（User.id）- ユーザー削除時にnull化
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
-  createdBy   String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   comments EditorComment[]
@@ -1555,15 +1555,15 @@ model EditorCommentThread {
 
 /// エディタコメント（スレッド内の個別コメント）
 model EditorComment {
-  id        String    @id @default(uuid())
-  threadId  String
+  id        String    @id @default(uuid()) @db.Uuid
+  threadId String @db.Uuid
   content   String    @db.Text // コメント本文
   isDeleted Boolean   @default(false) // ソフトデリート
   deletedAt DateTime? // 削除日時
-  deletedBy String? // 削除者ID（User.id）- ユーザー削除時にnull化
+  deletedBy String? @db.Uuid // 削除者ID（User.id）- ユーザー削除時にnull化
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  createdBy String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   thread  EditorCommentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
@@ -1578,13 +1578,13 @@ model EditorComment {
 
 /// エディタブロックテンプレート（再利用可能なブロック）
 model BlockTemplate {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String // テンプレート名
   description String?  @db.Text // 説明
   nodeJson    Json // Lexical SerializedEditorState JSON
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  createdBy   String? // 作成者ID（User.id）- ユーザー削除時にnull化
+  createdBy String? @db.Uuid // 作成者ID（User.id）- ユーザー削除時にnull化
 
   // Relations
   creator User? @relation("BlockTemplateCreator", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -1596,8 +1596,9 @@ model BlockTemplate {
 
 /// ページ固有コンテンツ（Page-First Architecture）
 /// pageKey でページを識別し、content JSON に Zod バリデーション済みデータを格納
+/// id は PostgreSQL native UUID（Prisma: String @db.Uuid）
 model PageContent {
-  id              String   @id @default(cuid())
+  id              String   @id @default(uuid()) @db.Uuid
   pageKey         String   @unique
   content         Json
   metaTitle       String?
@@ -1606,7 +1607,6 @@ model PageContent {
   ogpDescription  String?
   ogpImage        String?
   updatedAt       DateTime @updatedAt
-  updatedBy       String?
 
   @@map("page_contents")
 }

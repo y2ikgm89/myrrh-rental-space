@@ -16,6 +16,8 @@ tools:
 Lexical 0.41 / NodeState API の規約準拠を検証する専門レビュアー。
 **高信頼度の問題のみ報告**（確実に違反しているもの）。
 
+**実装ワークフローとの関係**: 新規 node / plugin / toolbar の手順の正本は **`.agents/skills/lexical-{node,plugin,toolbar}/SKILL.md`**。長いコピペ用ひな形は任意で **`reference/scaffold-*.md`**。`.claude/skills` の同名はスタブのみ — レビュー対象がスタブだけを参照している場合は正本・ひな形へ誘導する。
+
 ## チェックリスト
 
 ### 1. `parse` 関数のヘルパー使用
@@ -70,6 +72,10 @@ NodeState API 移行後、以下の型が obsolete になりやすい:
 
 **検出方法**: `types.ts` の export 型名を `src/` 全体で検索し、参照ゼロのものを報告。
 
+### 4a. HTML→Lexical JSON
+
+`html-to-lexical-json.ts` は `tryConvertHtmlStringToLexicalJsonString` と `ConvertHtmlToLexicalJsonResult` を正とする。`ok: false` を `EMPTY_LEXICAL_EDITOR_STATE_JSON` に黙って落とさない。呼び出し側でユーザー通知（例: toast）し、`contentJson` を更新しない。
+
 ### 5. `updateDOM` の効率性
 
 `updateDOM` で変更されていないステートまで DOM を再更新していないか:
@@ -92,7 +98,32 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 }
 ```
 
-### 6. `exportDOM` / `importDOM` ペア確認
+### 6. `LexicalEditor` シェル・DraggableBlock フォーク・プレースホルダー
+
+`LexicalEditor.tsx` / `editor-layout-constants.ts` / `plugins/lexical-draggable-block-plugin.ts` / `plugins/DraggableBlockPlugin.tsx` を触った場合の高シグナル確認:
+
+| チェック | 内容 |
+| -------- | ---- |
+| 定数の単一正本 | `EDITOR_PADDING_*` が `pl-10` / `pr-6` / `maxWidth` 計算と矛盾していないか |
+| フォークの境界 | `DraggableBlockPlugin.tsx` が **`./lexical-draggable-block-plugin`** から import しているか。`@lexical/react/LexicalDraggableBlockPlugin` の **直接 import が紛れ込んでいないか** |
+| 二重オフセット | ドラッグメニュー／ターゲットラインに **`left-*` + `transform` の二重**が再発していないか |
+| プレースホルダー | `ContentEditable` に `placeholder` を渡しているか。プレースホルダー DOM に **`text-base` / `leading-relaxed` / `lg:text-lg`** 等、本文 `EDITOR_PROSE_CLASSES` と揃える意図があるか（兄弟描画のため `prose` 継承なし） |
+
+詳細は `lexical-patterns.md` の「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」。
+
+### 6b. `insert-items.ts` / 挿入プラグイン（高シグナル）
+
+`config/insert-items.ts`・`ComponentPickerPlugin.tsx`・`ToolbarPlugin.tsx`（挿入ドロップダウン）を触った場合:
+
+| チェック | 内容 |
+| -------- | ---- |
+| ネスト update | スラッシュ選択で `editor.update` の内側から `executeInsertItem` を呼んでいないか（`applyInsertItemInUpdate` を同一 update 内で使う） |
+| transform 型 | `transform: (editor) => …` ではなく **`applyInUpdate`**（$ API のみ）か |
+| ツールバー | 挿入クリックは **`executeInsertItem`**（dialog は同期 `openDialog`）か |
+
+詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
+
+### 7. `exportDOM` / `importDOM` ペア確認
 
 `exportDOM` を定義しているすべてのノードクラスに `static override importDOM()` も実装されているか:
 
@@ -107,7 +138,7 @@ override exportDOM() { ... }
 
 **検出方法**: `exportDOM` を含む各クラスで `importDOM` の有無を確認。`importDOM` が存在しないクラスを報告。
 
-### 7. インスペクター Context（`inspector-sidebar-context.tsx`）
+### 8. インスペクター Context（`inspector-sidebar-context.tsx`）
 
 `InspectorSidebarProvider` / `useInspectorSidebar` を変更・追加レビューする場合:
 
@@ -115,10 +146,10 @@ override exportDOM() { ... }
 | -------- | ---- |
 | React 19 Context | **`<InspectorSidebarContext value={...}>`** を使用。**`<InspectorSidebarContext.Provider>` は禁止**（eslint: `@eslint-react/no-context-provider`） |
 | フック | 消費側は **`use(InspectorSidebarContext)`**。**`useContext` は禁止**（`@eslint-react/no-use-context`） |
-| 永続化キー | ブロックパネル開閉は **`myrrh-lexical-inspector-expanded` のみ**を正とする。理由なく別キーを増やさない |
+| 永続化キー | ブロックパネル開閉は **`myrrh-lexical-inspector-panel` のみ**を正とする。理由なく別キーを増やさない |
 | DOM id | パネルは **`id="lexical-block-inspector-panel"`**（ツールバー `aria-controls` と一致） |
 
-### 8. `'use client'` ディレクティブ
+### 9. `'use client'` ディレクティブ
 
 全ての Node ファイルは `"use client"` で始まる必要がある。Lexical ノードは DOM API / React に依存するため:
 
@@ -134,7 +165,7 @@ import type { ... } from "lexical";
 
 **検出方法**: `nodes/` 配下の各 `*Node.tsx` ファイルの1行目が `"use client"` でないものを報告。
 
-### 9. コンポジットノードの `canInsertTextBefore` / `canInsertTextAfter`
+### 10. コンポジットノードの `canInsertTextBefore` / `canInsertTextAfter`
 
 `isShadowRoot()` を持つコンポジットノードは **メソッドの存在** と **戻り型リテラル `false`** の両方を確認する:
 
@@ -160,7 +191,7 @@ override canInsertTextAfter(): false { return false }
 2. `canInsertTextBefore\(\): boolean` / `canInsertTextAfter\(\): boolean` を grep し、`false` を返しているものを報告（戻り型違反）。
 3. `canBeEmpty\(\): boolean` を grep し、`false` を返しているものを報告（`canBeEmpty(): false` が正しい戻り型）。
 
-### 10. `$isXxxNode` の引数型
+### 11. `$isXxxNode` の引数型
 
 型ガード関数のパラメータは `LexicalNode | null | undefined`。`unknown` は違反:
 
@@ -174,7 +205,7 @@ export function $isFooNode(node: LexicalNode | null | undefined): node is FooNod
 
 **検出方法**: `\(node: unknown\)` パターンを grep し、`$is` プレフィックス関数を特定。
 
-### 11. `createEnumGuard` / カスタム型ガードを `parse` 関数で使う際の型安全性
+### 12. `createEnumGuard` / カスタム型ガードを `parse` 関数で使う際の型安全性
 
 `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー:
 
@@ -189,7 +220,7 @@ parse: (v: unknown): FooType =>
 
 **検出方法**: ノードファイルの `parse:` 内で `isXxx(v)` パターン（`typeof v === "string"` チェックなし）を探す。
 
-### 12. `updateDOM` の `prevNode` パラメータ型
+### 13. `updateDOM` の `prevNode` パラメータ型
 
 `prevNode` は具象クラス名ではなく `this` を使用する（公式パターン）:
 
@@ -203,7 +234,7 @@ override updateDOM(prevNode: this, dom: HTMLElement): boolean {
 
 **検出方法**: `override updateDOM(prevNode: [A-Z]` パターンを grep。
 
-### 13. `$getStateChange` の null チェック
+### 14. `$getStateChange` の null チェック
 
 `$getStateChange` の結果は `!== null` で比較する（truthy チェック禁止）:
 
@@ -217,7 +248,7 @@ if (change !== null) {
 
 **検出方法**: `getStateChange` 呼び出し直後の `if (変数名) {` パターンを検索。
 
-### 14. `updateDOM` の `false` リテラル戻り型
+### 15. `updateDOM` の `false` リテラル戻り型
 
 引数なし・常に `return false` の `updateDOM` は `boolean` ではなく `false` リテラル型:
 

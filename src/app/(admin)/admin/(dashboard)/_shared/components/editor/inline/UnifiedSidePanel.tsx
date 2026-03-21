@@ -7,6 +7,7 @@
  * 全コンテンツタイプで共通のUI構造を提供
  */
 
+import { useLayoutEffect, useMemo, useState } from "react";
 import { tv } from "tailwind-variants";
 import type { FieldValues } from "react-hook-form";
 import {
@@ -66,6 +67,30 @@ export function UnifiedSidePanel<T extends FieldValues>({
 
   // 最初のタブをデフォルト値として使用
   const defaultTab = config.tabs[0]?.id ?? "basic";
+  const tabIds = useMemo(() => config.tabs.map((t) => t.id), [config.tabs]);
+  const validTabIds = useMemo(() => new Set(tabIds), [tabIds]);
+
+  const [activeTab, setActiveTab] = useState(defaultTab);
+
+  // localStorage は SSR 初回描画では読めないため、ハイドレーション後にのみ復元する
+  /* eslint-disable react-hooks/set-state-in-effect -- 上記 */
+  /* eslint-disable @eslint-react/set-state-in-effect -- 上記 */
+  useLayoutEffect(() => {
+    if (!config.tabStorageKey) return;
+    const stored = window.localStorage.getItem(config.tabStorageKey);
+    if (stored && validTabIds.has(stored)) {
+      setActiveTab(stored);
+    }
+  }, [config.tabStorageKey, validTabIds]);
+  /* eslint-enable @eslint-react/set-state-in-effect */
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (config.tabStorageKey && validTabIds.has(value)) {
+      window.localStorage.setItem(config.tabStorageKey, value);
+    }
+  };
 
   return (
     <SidePanelShell
@@ -73,8 +98,15 @@ export function UnifiedSidePanel<T extends FieldValues>({
       onClose={onClose}
       title={config.title}
       width={config.width}
+      {...(config.description !== undefined
+        ? { description: config.description }
+        : {})}
     >
-      <Tabs defaultValue={defaultTab} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className={classes.tabsList()}>
           {config.tabs.map((tab) => (
             <TabsTrigger key={tab.id} value={tab.id}>

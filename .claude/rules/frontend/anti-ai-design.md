@@ -75,6 +75,7 @@ paths:
 - `(public*)/_styles/public*.css` — テーマ変数
 - `(public*)/_shared/lib/animations.ts` — DURATION / EASE / STAGGER / PARALLAX 定数
 - `(public*)/_shared/components/animations/` — SplitText, ParallaxImage, MagneticButton, ScrollReveal
-- `.claude/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
-- `.claude/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
+- `.agents/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル（正本）
+- `.agents/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
+- `.claude/skills/frontend-design/SKILL.md` — Claude Code 用スタブ（正本へのポインタのみ）
 - `docs/reference/claude-rules/micro-interactions-reference.md` — マイクロインタラクション標準

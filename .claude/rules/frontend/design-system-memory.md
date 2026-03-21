@@ -89,24 +89,23 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 ## Page-First Design System
 
 公開ページは `src/app/(public)/_shared/components/design-system/` の Primitives を使用。
-barrel: `index.ts` から全 11 コンポーネントを export。
+直接 import のみ（barrel 禁止 — tree-shaking 不安定）。Primitives 10:
 
 | Primitive    | 用途                                                       |
 | ------------ | ---------------------------------------------------------- |
+| `Badge`      | ステータス表示（variant: default/success/warning/info）    |
 | `Button`     | CTA、フォーム送信（variant: primary/secondary/ghost/link） |
-| `Card`       | スペース/記事カード（hover shadow+scale）                  |
 | `Container`  | max-w + padding（variant: default/narrow/wide）            |
 | `Heading`    | h1-h4 自動スタイリング（font-heading + tracking-tight）    |
-| `Stack`      | flex layout（direction + gap）                             |
-| `Badge`      | ステータス表示（variant: default/success/warning/info）    |
-| `Prose`      | 本文コンテンツ（max-w-[65ch]）                             |
 | `ImageFrame` | next/image wrapper（aspect-ratio + skeleton）              |
 | `Input`      | テキスト入力（label + error + min-h-11）                   |
+| `Prose`      | 本文コンテンツ（max-w-[65ch]）                             |
 | `Select`     | セレクトボックス                                           |
+| `Stack`      | flex layout（direction + gap）                             |
 | `Textarea`   | テキストエリア                                             |
 
 ## 参照
 
 - `.claude/rules/project-design-config.md` — プロジェクト固有デザイン値（Memory 未作成時の初期値）
 - `.claude/rules/anti-ai-design.md` — Anti-AI 強制ルール・セルフレビュー
-- `.claude/skills/frontend-design/SKILL.md` — Design Brief 作成スキル
+- `.agents/skills/frontend-design/SKILL.md` — Design Brief 作成スキル（正本）

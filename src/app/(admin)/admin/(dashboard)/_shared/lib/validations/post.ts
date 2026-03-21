@@ -28,7 +28,7 @@ export const createPostSchema = z
       .string()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
-    contentJson: z.string().default(""),
+    contentJson: lexicalJsonSchema,
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
     tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),

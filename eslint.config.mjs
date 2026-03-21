@@ -199,6 +199,20 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  // Lexical DraggableBlock フォーク（@lexical/react 由来のパターン・@ts-nocheck を許容）
+  {
+    name: "lexical-draggable-fork",
+    files: [
+      "src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/lexical-draggable-block-plugin.ts",
+    ],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
+      "react-hooks/refs": "off",
+      "@eslint-react/use-state": "off",
+      "@eslint-react/web-api/no-leaked-event-listener": "off",
+    },
+  },
+
   // Media components: Allow <img> for dynamic URLs, blob URLs, and external URLs
   // These cannot be optimized by Next.js Image (user uploads, external sources, local previews)
   {

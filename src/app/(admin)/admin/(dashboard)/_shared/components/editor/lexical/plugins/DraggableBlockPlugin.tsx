@@ -3,7 +3,7 @@
  *
  * @description ブロックのドラッグ＆ドロップ並べ替えを提供するプラグイン
  *
- * @lexical/react の DraggableBlockPlugin_EXPERIMENTAL をラップ
+ * `lexical-draggable-block-plugin`（Lexical 0.41 フォーク）の DraggableBlockPlugin_EXPERIMENTAL をラップ
  */
 
 "use client";
@@ -11,7 +11,7 @@
 import { useState, useRef } from "react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
-import { DraggableBlockPlugin_EXPERIMENTAL } from "@lexical/react/LexicalDraggableBlockPlugin";
+import { DraggableBlockPlugin_EXPERIMENTAL } from "./lexical-draggable-block-plugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getNearestNodeFromDOMNode,
@@ -55,7 +55,7 @@ function DragHandle({
   return (
     <div
       ref={menuRef}
-      className="draggable-block-menu absolute left-1 top-0 flex items-center cursor-grab rounded p-0.5 opacity-0 transition-opacity hover:bg-muted active:cursor-grabbing"
+      className="draggable-block-menu absolute left-0 top-0 flex size-8 cursor-grab items-center justify-center rounded p-0.5 opacity-0 transition-opacity hover:bg-muted active:cursor-grabbing"
       onClick={onMenuOpen}
     >
       <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -75,8 +75,7 @@ function TargetLine({
   return (
     <div
       ref={targetLineRef}
-      className="draggable-block-target-line pointer-events-none absolute left-6 top-0 h-1 rounded-sm bg-primary opacity-0"
-      style={{ width: "calc(100% - 1.5rem)" }}
+      className="draggable-block-target-line pointer-events-none absolute left-0 top-0 h-1 rounded-sm bg-primary opacity-0"
     />
   );
 }
@@ -164,7 +163,7 @@ export function DraggableBlockPlugin({
         isOnMenu={(element: HTMLElement) =>
           element.closest(".draggable-block-menu") !== null
         }
-        onElementChanged={(element) => {
+        onElementChanged={(element: HTMLElement | null) => {
           currentBlockElemRef.current = element;
         }}
       />

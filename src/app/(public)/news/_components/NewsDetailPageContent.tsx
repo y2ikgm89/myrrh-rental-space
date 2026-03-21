@@ -91,23 +91,23 @@ export async function NewsDetailPageContent({
       />
 
       <article className="py-[var(--spacing-section)]">
-        <Container variant="narrow">
-          <div className="mb-6 text-sm text-muted-foreground">
-            <time dateTime={newsItem.publishedAt ?? undefined}>
-              {formatSerializedDate(newsItem.publishedAt)}
-            </time>
-          </div>
+        <Container>
           <div className={contentClassName} style={contentStyle}>
+            <div className="mb-6 text-sm text-muted-foreground">
+              <time dateTime={newsItem.publishedAt ?? undefined}>
+                {formatSerializedDate(newsItem.publishedAt)}
+              </time>
+            </div>
             <SanitizedHtml
               html={newsItem.contentHtml}
               className="prose prose-lg max-w-none"
             />
-          </div>
-          <div className="mt-12 border-t border-border pt-6">
-            <ShareButtons
-              url={`${baseUrl}${newsItem.url}`}
-              title={newsItem.title}
-            />
+            <div className="mt-12 border-t border-border pt-6">
+              <ShareButtons
+                url={`${baseUrl}${newsItem.url}`}
+                title={newsItem.title}
+              />
+            </div>
           </div>
         </Container>
       </article>

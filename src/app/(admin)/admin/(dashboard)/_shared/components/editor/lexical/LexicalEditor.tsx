@@ -4,7 +4,7 @@
  * @description リッチテキストエディタのメインコンポーネント
  *
  * 非制御コンポーネント設計: EditorStateを親で管理せず、
- * onChangeでHTML形式のコンテンツを返す
+ * onChange で EditorState JSON 文字列を返す
  */
 
 "use client";
@@ -27,13 +27,14 @@ import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { CharacterLimitPlugin } from "@lexical/react/LexicalCharacterLimitPlugin";
 import type { EditorState, LexicalEditor as LexicalEditorType } from "lexical";
+import { AlertCircle } from "lucide-react";
 
 import { useMediaQuery } from "@/shared/hooks";
+import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { cn } from "@/shared/lib/cn";
 import { EDITOR_TRANSFORMERS } from "./MarkdownTransformers";
 import { EDITOR_NODES } from "./config/nodes";
 import { MATCHERS, validateUrl } from "./config/url-matchers";
-import { HtmlInitializerPlugin } from "./internal-plugins/HtmlInitializerPlugin";
 import { DisablePlugin } from "./internal-plugins/DisablePlugin";
 import { useDialogManager } from "./dialogs/use-dialog-manager";
 import { DialogRenderer } from "./dialogs/DialogRenderer";
@@ -64,15 +65,15 @@ import { editorTheme } from "./theme";
 import { InspectorSidebar, InspectorSidebarProvider } from "./inspector";
 import { MobileEditorFallback } from "./parts/MobileEditorFallback";
 import { logger } from "@/shared/lib/logger";
+import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { LexicalEditorProps } from "./types";
+import { EDITOR_PADDING_HORIZONTAL } from "./editor-layout-constants";
 
 // =============================================================================
 // EditorInner - LexicalComposer内で使用
 // =============================================================================
 
 function EditorInner({
-  contentJson,
-  contentHtml,
   onChange,
   disabled = false,
   className,
@@ -82,12 +83,11 @@ function EditorInner({
   placeholder = "ここに内容を入力...",
   onMarkClick,
   onAddComment,
-  contentWidthClassName,
-  contentWidthStyle,
+  contentWidth,
   onAutoSave,
   autoSaveKey,
   characterLimit,
-}: LexicalEditorProps) {
+}: Omit<LexicalEditorProps, "contentJson">) {
   const [contentWrapperRef, setContentWrapperRef] =
     useState<HTMLDivElement | null>(null);
   const [contentWidthRef, setContentWidthRef] = useState<HTMLDivElement | null>(
@@ -140,12 +140,16 @@ function EditorInner({
   return (
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
-        className={cn("flex h-full", isFullscreen && "fixed inset-0 z-[100]")}
+        className={cn(
+          "flex h-full min-h-0",
+          isFullscreen && `fixed inset-0 z-[${Z_INDEX.editorFullscreen}]`,
+        )}
       >
         {/* メインエディタ部分 */}
-        <div
+        <section
+          aria-label="本文エディタ"
           className={cn(
-            "flex flex-col flex-1 bg-background border rounded-lg overflow-hidden min-w-0",
+            "flex flex-col flex-1 bg-background border border-border rounded-lg overflow-hidden min-w-0 min-h-0",
             isFullscreen && "rounded-none border-0",
           )}
           style={isFullscreen ? undefined : { height }}
@@ -162,18 +166,36 @@ function EditorInner({
           )}
 
           {/* コンテンツラッパー */}
-          <div ref={setContentWrapperRef} className="flex-1 overflow-y-auto">
+          <div
+            ref={setContentWrapperRef}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
             <div
               ref={setContentWidthRef}
-              className={cn("relative", contentWidthClassName)}
-              style={contentWidthStyle}
+              className={cn("relative", contentWidth != null && "mx-auto")}
+              style={
+                contentWidth != null
+                  ? {
+                      maxWidth: contentWidth + EDITOR_PADDING_HORIZONTAL,
+                    }
+                  : undefined
+              }
             >
               <RichTextPlugin
                 contentEditable={
                   <ContentEditable
+                    aria-multiline
+                    role="textbox"
                     aria-placeholder={placeholder}
                     placeholder={
-                      <div className="pointer-events-none absolute top-6 left-10 text-muted-foreground">
+                      <div
+                        className={cn(
+                          "pointer-events-none absolute top-6 left-10 select-none text-muted-foreground",
+                          // Lexical の Placeholder は contenteditable の兄弟のため prose の子にならない。
+                          // 本文（prose-base / lg:prose-lg + prose-p:leading-relaxed）と行ボックスを揃える
+                          "text-base leading-relaxed lg:text-lg",
+                        )}
+                      >
                         {placeholder}
                       </div>
                     }
@@ -199,12 +221,6 @@ function EditorInner({
           <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
 
           {/* カスタムプラグイン */}
-          {/* contentJson がない場合のみ HTML フォールバック初期化 */}
-          {!contentJson && (
-            <HtmlInitializerPlugin
-              {...(contentHtml !== undefined && { content: contentHtml })}
-            />
-          )}
           <DisablePlugin disabled={disabled} />
           <DraggableBlockPlugin anchorElem={contentWidthRef} />
           <TableActionMenuPlugin anchorElem={contentWidthRef} />
@@ -255,12 +271,47 @@ function EditorInner({
 
           {/* ステータスバー */}
           <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
-        </div>
+        </section>
 
         {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
         {inspectorEnabled && <InspectorSidebar />}
       </div>
     </InspectorSidebarProvider>
+  );
+}
+
+// =============================================================================
+// 無効な contentJson（正規化しない — DB / 親を修正する）
+// =============================================================================
+
+function LexicalInvalidContentJsonNotice() {
+  return (
+    <div
+      role="alert"
+      className="flex gap-3 rounded-md border border-border bg-muted/30 p-4 text-sm text-foreground"
+    >
+      <AlertCircle
+        className="h-5 w-5 shrink-0 text-muted-foreground"
+        aria-hidden
+      />
+      <div className="min-w-0 space-y-1">
+        <p className="font-medium">EditorState JSON が無効です</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+            lexicalJsonSchema
+          </code>{" "}
+          を満たす文字列のみマウントします。空の本文は{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+            EMPTY_LEXICAL_EDITOR_STATE_JSON
+          </code>{" "}
+          を渡してください。DB に古い形式が残る場合は{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-foreground">
+            docs/operations/lexical-editor-state-json.md
+          </code>{" "}
+          を参照してください。
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -276,11 +327,7 @@ export function LexicalEditor(props: LexicalEditorProps) {
   if (!isDesktop) {
     return (
       <MobileEditorFallback
-        {...(props.contentJson !== undefined &&
-          props.contentJson !== null && { contentJson: props.contentJson })}
-        {...(props.contentHtml !== undefined && {
-          contentHtml: props.contentHtml,
-        })}
+        contentJson={props.contentJson}
         {...(props.height !== undefined && { height: props.height })}
       />
     );
@@ -294,21 +341,39 @@ export function LexicalEditor(props: LexicalEditorProps) {
 // =============================================================================
 
 function LexicalEditorDesktop(props: LexicalEditorProps) {
+  const trimmed = props.contentJson.trim();
+  if (!isLexicalComposerReadyEditorStateJson(trimmed)) {
+    return <LexicalInvalidContentJsonNotice />;
+  }
+  return <LexicalEditorDesktopMounted {...props} editorStateJson={trimmed} />;
+}
+
+type LexicalEditorDesktopMountedProps = LexicalEditorProps & {
+  editorStateJson: string;
+};
+
+function LexicalEditorDesktopMounted({
+  editorStateJson,
+  ...props
+}: LexicalEditorDesktopMountedProps) {
   // useState lazy initializer: 初回マウント時のみ実行（非制御コンポーネント設計）
-  // contentJson は初期値としてのみ使用。以降の props.contentJson 変更は無視される
+  // editorStateJson は初期値としてのみ使用。以降の props.contentJson 変更は無視される
   const [initialConfig] = useState(() => ({
     namespace: "LexicalEditor",
     theme: editorTheme,
     nodes: [...EDITOR_NODES],
-    ...(props.contentJson ? { editorState: props.contentJson } : {}),
+    editorState: editorStateJson,
     onError: (error: Error) => {
       logger.error("Lexical initialization error", { error: error.message });
     },
   }));
 
+  const { contentJson: _contentJsonForInitialStateOnly, ...editorInnerProps } =
+    props;
+
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <EditorInner {...props} />
+      <EditorInner {...editorInnerProps} />
     </LexicalComposer>
   );
 }

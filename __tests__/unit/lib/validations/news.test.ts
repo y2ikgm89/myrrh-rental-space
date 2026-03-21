@@ -6,10 +6,9 @@ import {
   newsFormSchema,
 } from "@/admin/lib/validations/news";
 import { LayoutWidth } from "@/shared/types/prisma";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
-// 有効なLexical EditorState JSON（lexicalJsonSchema準拠）
-const VALID_LEXICAL_JSON =
-  '{"root":{"children":[],"direction":null,"format":"","indent":0,"type":"root","version":1}}';
+const VALID_LEXICAL_JSON = EMPTY_LEXICAL_EDITOR_STATE_JSON;
 
 describe("newsSlugSchema", () => {
   test("有効なスラッグでバリデーションに成功する", () => {
@@ -72,7 +71,7 @@ describe("createNewsSchema", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: "",
+      contentJson: VALID_LEXICAL_JSON,
     };
 
     const result = createNewsSchema.safeParse(validData);
@@ -83,7 +82,7 @@ describe("createNewsSchema", () => {
     const invalidData = {
       slug: "sample-news",
       title: "",
-      contentJson: "",
+      contentJson: VALID_LEXICAL_JSON,
     };
 
     const result = createNewsSchema.safeParse(invalidData);
@@ -97,7 +96,7 @@ describe("createNewsSchema", () => {
     const invalidData = {
       slug: "sample-news",
       title: "あ".repeat(201),
-      contentJson: "",
+      contentJson: VALID_LEXICAL_JSON,
     };
 
     const result = createNewsSchema.safeParse(invalidData);
@@ -107,17 +106,14 @@ describe("createNewsSchema", () => {
     }
   });
 
-  test("contentJsonフィールドはデフォルトで空文字列", () => {
+  test("contentJson 省略時はエラー", () => {
     const data = {
       slug: "sample-news",
       title: "サンプルニュース",
     };
 
     const result = createNewsSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.contentJson).toBe("");
-    }
+    expect(result.success).toBe(false);
   });
 });
 

@@ -60,13 +60,10 @@ const nextConfig: NextConfig = {
   // use cache ディレクティブによる明示的キャッシュ制御を有効化
   cacheComponents: true,
 
-  // Transpile packages that need ESM module resolution fixes
-  // better-auth uses dynamic import("next/headers") without .js extension
+  // Better Auth: ESM module resolution fix for Turbopack
+  // serverExternalPackages は Turbopack 開発サーバーで 500 エラーを起こすため transpilePackages を使用
+  // turbopack.resolveAlias で next/headers.js 等のエクステンション解決済み
   transpilePackages: ["better-auth"],
-
-  // Native Node.js modules that cannot be bundled by Next.js
-  // bcrypt has C++ bindings requiring native require() at runtime
-  serverExternalPackages: ["bcrypt"],
 
   // Experimental features
   experimental: {

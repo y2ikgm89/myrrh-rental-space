@@ -46,10 +46,12 @@ description: 公開ページの新規 UI や大幅なリデザイン前に使う
 
 7. 実装では既存トークン、既存 UI、既存 animation primitive を優先して使う
 8. データ取得が必要なら `src/shared/domain/*` を正本にし、公開側には必要最小限の `src/app/(public)/_shared/data/*` だけを置く
-9. 強い演出が必要なら global layout を重くせず `ExperienceShell` の opt-in で閉じ込める
+9. 強い演出が必要なら `src/app/(public)/layout.tsx` を重くせず、ページ／セクション単位のコンポーネントに閉じ込める（ルート shell は `AGENTS.md` の現行構成に従う）
 10. 新しい project-wide 規約が必要になったら、承認後に `project-design-config.md` か関連 `codex-rules` を更新する
 
 ## 検索コマンド例
+
+Windows では `python3` を **`py -3`** に読み替える（理由と例はリポジトリ直下 `AGENTS.md` の Setup を参照）。
 
 ```bash
 python3 .agents/skills/ui-ux-pro-max/scripts/search.py "luxury hospitality editorial" --domain style

@@ -12,6 +12,7 @@ repo 全体の構造、境界、データ取得方針、キャッシュ戦略の
 | [CACHING.md](./CACHING.md)                                       | `use cache` / tag 運用       |
 | [TECH_STACK.md](./TECH_STACK.md)                                 | 採用技術とバージョン前提     |
 | [page-sections-design-guide.md](./page-sections-design-guide.md) | ページセクション設計         |
+| [agent-instructions.md](./agent-instructions.md)                 | AI 指示の配置（`.claude` 第一級・正本の切り分け） |
 
 ## 現在の原則
 
@@ -21,4 +22,4 @@ repo 全体の構造、境界、データ取得方針、キャッシュ戦略の
 - auth は `/api/auth/[...all]` と `src/shared/lib/auth.ts` の静的 `auth` export を正本にする
 - `proxy.ts` は coarse gate と共通セキュリティヘッダーに限定し、本認可の正本にはしない
 
-最終更新: 2026-03-09
+最終更新: 2026-03-21

@@ -2,6 +2,11 @@
 
 > Next.js 16 Server Actions / safeFetch / criticalFetch / logger 対応
 
+## Logger と `server-only`
+
+- **Next.js Server**（RSC / Route Handler / `server-only` モジュール内）: `@/shared/lib/errors/logger` から `logError` / `createErrorLogger` を import する。
+- **`prisma/seed.ts`・Bun スクリプト・`server-only` を付けない共有モジュール**: `@/shared/lib/errors/logger` は **`import "server-only"` で実行時エラーになる**。実装の重複ではなく **`@/shared/lib/errors/logger-core`** を import する（GCP 構造化ログの本体はここ）。
+
 ## ActionResult 型
 
 ### createSuccess / createFailure

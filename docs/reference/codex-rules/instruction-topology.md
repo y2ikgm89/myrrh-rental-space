@@ -54,6 +54,8 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 - Codex で使えないツール固有 API
 - Claude 専用 path を正本として扱う説明
 
+**Claude と本文の同期**: 同じトピックが `.claude/rules/` にもある場合（公開ページの L3/L4、ヘッドレス Lexical テスト、`bunfig` preload 等）、**方針・公式リンク・「削除済み」「未依存」の事実を乖離させない**。レガシー用の後方互換説明や存在しないパス（旧 `effects/` 等）を codex-rules にだけ残さない。
+
 ### `.agents/skills/<skill-name>/SKILL.md`
 
 置くもの:
@@ -98,8 +100,16 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 
 ## Claude 資産との共存
 
-`.claude/*` は Claude Code 用の資産として残してよい。
-ただし Codex の正本は `AGENTS.md`、`AGENTS.override.md`、`docs/reference/codex-rules/`、`.agents/skills/` とする。
+**Claude Code を使う場合、`.claude/*` は第一級のプロジェクト資産**（`rules` / `agents` / `hooks` / `settings.json`）。補助フォルダではない。
+
+Codex の「コード正本」の優先順位は `AGENTS.md`、`AGENTS.override.md`、`docs/reference/codex-rules/`、`.agents/skills/` とする。これは **Codex 向けドキュメントの参照先**を指し、Claude 利用者が `.claude` を使わないという意味ではない。役割の切り分けは `docs/architecture/agent-instructions.md` を参照する。
+
+### スキル本文の単一正本（推奨）
+
+繰り返しワークフローの本文・`scripts/`・`data/` は **`.agents/skills/<name>/` にのみ**置く。
+Claude Code がスキルディレクトリを参照する場合、`.claude/skills/<name>/SKILL.md` は **スタブ**（正本パスと実行例 1 行）にとどめ、**大容量データや重複手順を `.claude` 側に複製しない**。
+
+全体像は `docs/architecture/agent-instructions.md` を参照する。
 
 Codex 用文書で避けるもの:
 
