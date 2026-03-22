@@ -84,6 +84,7 @@ function TableHead({ className, ref, ...props }: TableHeadProps) {
   return (
     <th
       ref={ref}
+      scope="col"
       className={cn(
         "h-10 px-2 text-left align-middle md:h-11 md:px-4",
         // Swiss Typography: 小さめ、大文字、トラッキング広め

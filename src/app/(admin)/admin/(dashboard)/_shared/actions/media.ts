@@ -105,11 +105,16 @@ export async function updateMedia(
   });
 }
 
+const singleIdSchema = z.string().uuid();
+
 export async function deleteMedia(id: string): Promise<MutationResult> {
+  const parsed = singleIdSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "media",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
       await deleteMediaCommand(id);
       return null;

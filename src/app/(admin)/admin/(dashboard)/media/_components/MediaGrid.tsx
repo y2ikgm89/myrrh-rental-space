@@ -27,11 +27,13 @@ export function MediaGrid({ items }: Props) {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {items.map((item) => (
-          <div
+          <button
+            type="button"
             key={item.id}
+            aria-label={`${item.alt || item.filename} を選択`}
             className={`
               group relative aspect-square rounded-lg border overflow-hidden
-              transition-all duration-200 cursor-pointer
+              transition-all duration-200 cursor-pointer text-left
               hover:ring-2 hover:ring-primary hover:shadow-lg
               ${selectedId === item.id ? "ring-2 ring-primary" : ""}
             `}
@@ -53,6 +55,7 @@ export function MediaGrid({ items }: Props) {
                     handleCopyUrl(item.url);
                   }}
                   className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
+                  aria-label="URLをコピー"
                   title="URLをコピー"
                 >
                   <Copy className="h-4 w-4 text-primary-foreground" />
@@ -64,6 +67,7 @@ export function MediaGrid({ items }: Props) {
                     setDetailItem(item);
                   }}
                   className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
+                  aria-label="詳細を表示"
                   title="詳細"
                 >
                   <Eye className="h-4 w-4 text-primary-foreground" />
@@ -76,6 +80,7 @@ export function MediaGrid({ items }: Props) {
                   }}
                   disabled={isPending}
                   className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50"
+                  aria-label="削除"
                   title="削除"
                 >
                   <Trash2 className="h-4 w-4 text-primary-foreground" />
@@ -100,7 +105,7 @@ export function MediaGrid({ items }: Props) {
 
             {/* Type badge */}
             <TypeBadge type={item.type} />
-          </div>
+          </button>
         ))}
       </div>
 
