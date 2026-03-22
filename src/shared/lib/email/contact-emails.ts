@@ -9,7 +9,7 @@
 import "server-only";
 import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
-import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries";
+import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../constants";
 import { sendEmail } from "./send";
 import type { ContactEmailData, EmailResult } from "./types";

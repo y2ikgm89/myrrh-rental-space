@@ -12,10 +12,8 @@ import {
 } from "@/admin/components/ui";
 import { updateReservationStatus } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  isValidReservationStatus,
-  type ReservationStatus,
-} from "@/shared/lib/validations/enums";
+import type { ReservationStatus } from "@/shared/db/enums";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 
 type ReservationStatusSelectProps = {
   reservationId: string;

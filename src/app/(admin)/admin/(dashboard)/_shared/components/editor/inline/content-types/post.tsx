@@ -20,7 +20,7 @@ import {
   unpublishPost,
 } from "@/admin/actions/post";
 import type { PostData } from "@/shared/domain/posts/types";
-import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { PostPreviewData } from "@/shared/types";
 import {
   SEO_FIELD_NAMES,

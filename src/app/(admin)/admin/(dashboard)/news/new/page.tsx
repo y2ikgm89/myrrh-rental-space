@@ -1,9 +1,7 @@
 import { NewsEditor } from "../_components/NewsEditor";
-import { getLayoutSettings } from "@/shared/domain/settings/queries";
-import {
-  getValidLayoutWidth,
-  LayoutWidth,
-} from "@/shared/lib/validations/enums";
+import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
+import { LayoutWidth } from "@/shared/db/enums";
+import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
 import type { Metadata } from "next";
 

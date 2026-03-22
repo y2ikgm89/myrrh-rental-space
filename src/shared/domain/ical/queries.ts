@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 export async function getICalFeedRuntimeSettings(): Promise<{
   enabled: boolean;

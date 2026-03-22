@@ -15,7 +15,7 @@ import { TermsStatus, TermsType } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import type { DurationDiscountRule } from "@/shared/lib/pricing";
+import type { DurationDiscountRule } from "@/shared/lib/pricing/types";
 import { checkRobotsTxtWarnings } from "@/shared/domain/settings/robots-txt";
 
 export type BasicInfoInput = {

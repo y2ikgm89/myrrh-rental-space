@@ -37,7 +37,7 @@ import {
   AnnouncementBarDesignStyle,
   AnnouncementBarType,
 } from "@/shared/db/enums";
-import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums";
+import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { BarList } from "./BarList";
 import { BarDialog, DeleteDialog } from "./BarDialog";
@@ -94,11 +94,11 @@ export function AnnouncementBarManager({
   initialCarouselSettings,
 }: AnnouncementBarManagerProps) {
   const [isPending, startTransition] = useTransition();
-  const [bars, setBars] = useState<Serialized<AnnouncementBarData>[]>(initialBars);
+  const [bars, setBars] =
+    useState<Serialized<AnnouncementBarData>[]>(initialBars);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingBar, setEditingBar] = useState<Serialized<AnnouncementBarData> | null>(
-    null,
-  );
+  const [editingBar, setEditingBar] =
+    useState<Serialized<AnnouncementBarData> | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 

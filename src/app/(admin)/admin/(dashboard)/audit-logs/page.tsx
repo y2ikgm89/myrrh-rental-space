@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
-import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums";
+import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";

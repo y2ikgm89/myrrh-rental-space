@@ -15,7 +15,8 @@ import {
   TermsType,
   TermsStatus,
   CouponType,
-  ACTIVE_RESERVATION_STATUSES,
+} from "@/shared/db/enums";
+import {
   isValidRole,
   isValidReservationStatus,
   isValidInquiryStatus,
@@ -32,6 +33,9 @@ import {
   isValidTermsType,
   isValidTermsStatus,
   isValidCouponType,
+} from "@/shared/lib/validations/enums/guards";
+import {
+  ACTIVE_RESERVATION_STATUSES,
   getValidRole,
   getValidReservationStatus,
   getValidInquiryStatus,
@@ -50,7 +54,7 @@ import {
   getRoleFilterOrAll,
   getAuditActionFilterOrAll,
   getReservationStatusFilterOrAll,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/helpers";
 
 describe("ACTIVE_RESERVATION_STATUSES", () => {
   test("PENDING と CONFIRMED を含む", () => {

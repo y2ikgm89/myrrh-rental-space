@@ -16,7 +16,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import { slugParamSchema } from "@/shared/lib/validations/params";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 
 const postListSelect = {

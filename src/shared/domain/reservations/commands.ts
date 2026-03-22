@@ -3,12 +3,10 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  calculateReservationPrice,
-  parseDurationDiscountRules,
-} from "@/shared/lib/pricing";
+import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
+import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
-import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 type ValidatedCoupon = {

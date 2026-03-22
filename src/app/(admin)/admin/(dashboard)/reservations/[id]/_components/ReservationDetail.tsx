@@ -25,10 +25,8 @@ import {
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  isValidReservationStatus,
-  type ReservationStatus,
-} from "@/shared/lib/validations/enums";
+import type { ReservationStatus } from "@/shared/db/enums";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { formatDateTimeFull, formatPrice } from "@/shared/lib/utils";
 
 type ReservationDetailProps = {

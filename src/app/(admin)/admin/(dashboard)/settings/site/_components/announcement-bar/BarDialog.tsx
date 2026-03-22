@@ -20,7 +20,7 @@ import {
   Switch,
 } from "@/admin/components/ui";
 import { AnnouncementBarType } from "@/shared/db/enums";
-import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums";
+import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
 import type { BarDialogProps, DeleteDialogProps } from "./types";
 
 export function BarDialog({

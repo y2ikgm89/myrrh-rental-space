@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { SocialLinkForFooter } from "@/shared/domain/settings/queries";
+import type { SocialLinkForFooter } from "@/shared/domain/settings/queries/organization";
 
 // =============================================================================
 // Platform Icons（SVG inline — Lucide にないブランドアイコン）

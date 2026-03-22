@@ -41,7 +41,7 @@ import {
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { AnalyticsType } from "@/shared/db/enums";
-import { isValidAnalyticsType } from "@/shared/lib/validations/enums";
+import { isValidAnalyticsType } from "@/shared/lib/validations/enums/guards";
 
 interface SeoSectionProps {
   settings: Serialized<SettingsData>;

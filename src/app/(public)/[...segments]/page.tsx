@@ -11,7 +11,7 @@ import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "../_shared/components/sections/SectionRenderer";
 
 interface PageProps {

@@ -14,7 +14,7 @@ import type { MetadataRoute } from "next";
 import { getSitemapContentData } from "@/shared/domain/sitemap/queries";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 
 // =============================================================================
 // Types

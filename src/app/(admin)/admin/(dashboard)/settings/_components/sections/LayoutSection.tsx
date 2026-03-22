@@ -34,11 +34,9 @@ import { updateLayoutSettings } from "@/admin/actions/settings";
 import { layoutFormSchema } from "@/admin/actions/settings/schemas";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  LayoutWidth,
-  isValidLayoutWidth,
-  getValidLayoutWidth,
-} from "@/shared/lib/validations/enums";
+import { LayoutWidth } from "@/shared/db/enums";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
+import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import {
   SITE_WIDTH_PRESETS,
   CONTENT_WIDTH_PRESETS,

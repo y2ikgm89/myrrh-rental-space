@@ -19,6 +19,7 @@ export function Input({
   ...props
 }: InputProps) {
   const inputId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const errorId = error ? `${inputId}-error` : undefined;
   return (
     <div className={wrapperClassName}>
       <label
@@ -30,6 +31,8 @@ export function Input({
       <input
         id={inputId}
         ref={ref}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId}
         {...props}
         className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           placeholder:text-muted-foreground
@@ -37,7 +40,11 @@ export function Input({
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-destructive" : "border-border"}`}
       />
-      {error ? <p className="mt-1 text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

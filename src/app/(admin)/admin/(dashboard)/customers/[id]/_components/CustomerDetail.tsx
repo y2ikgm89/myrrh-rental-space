@@ -44,10 +44,8 @@ import {
 } from "@/admin/actions/customer";
 import type { CustomerWithReservations } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  isValidCustomerStatus,
-  type CustomerStatus,
-} from "@/shared/lib/validations/enums";
+import type { CustomerStatus } from "@/shared/db/enums";
+import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
 
 type CustomerDetailProps = {
   customer: CustomerWithReservations;

@@ -19,7 +19,7 @@ import {
   serializeTermsWithVersion,
   TERMS_TYPES,
 } from "@/shared/lib/validations/terms";
-import { isValidTermsType } from "@/shared/lib/validations/enums";
+import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
 import type { TermsWithVersion } from "@/shared/lib/validations/terms";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 

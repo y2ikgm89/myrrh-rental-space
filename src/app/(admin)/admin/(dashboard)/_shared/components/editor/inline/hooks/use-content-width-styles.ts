@@ -13,7 +13,7 @@ import {
 } from "react-hook-form";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { LayoutWidth } from "@/shared/types/prisma";
-import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { ContentWidth } from "@/shared/types/layout";
 
 // =============================================================================

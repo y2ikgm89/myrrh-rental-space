@@ -13,7 +13,7 @@ import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { ShareButtons } from "@/public/components/ui/share-buttons";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
-import { getNewsLayoutSettings } from "@/shared/domain/settings/queries";
+import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString } from "@/shared/lib/serialize";
 import { formatSerializedDate } from "@/shared/lib/serialize";

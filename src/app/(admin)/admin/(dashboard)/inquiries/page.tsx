@@ -4,7 +4,7 @@ import { InquiryFilters } from "./_components/InquiryFilters";
 import { InquiryTable } from "./_components/InquiryTable";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums";
+import { parseInquiryStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminInquirySearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";

@@ -8,7 +8,7 @@
 
 import "server-only";
 import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
-import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries";
+import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { getAdminUrl, SITE_DEFAULTS } from "../constants";

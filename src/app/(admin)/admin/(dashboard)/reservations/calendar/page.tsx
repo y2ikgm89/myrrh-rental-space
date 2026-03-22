@@ -9,7 +9,7 @@ import {
   getCalendarDateRange,
   getValidCalendarView,
 } from "@/admin/lib/calendar";
-import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums";
+import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminCalendarSearchParams } from "@/shared/lib/nuqs";
 import { CalendarViewWrapper } from "../_components/calendar";
 import { Button, Breadcrumb } from "@/admin/components/ui";

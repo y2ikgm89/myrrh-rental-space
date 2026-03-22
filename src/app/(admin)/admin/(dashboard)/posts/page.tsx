@@ -20,7 +20,7 @@ import { CommentTable } from "./comments/_components/CommentTable";
 import { CommentStats } from "./comments/_components/CommentStats";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parsePostStatusFilter } from "@/shared/lib/validations/enums";
+import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { createTypeGuard, omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
 import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";

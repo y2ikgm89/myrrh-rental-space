@@ -29,10 +29,8 @@ import {
 import { createAdminReservation } from "@/admin/actions/reservation";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/utils";
-import {
-  ReservationStatus,
-  isValidReservationStatus,
-} from "@/shared/lib/validations/enums";
+import { ReservationStatus } from "@/shared/db/enums";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { CustomerSelector } from "./CustomerSelector";
 
 // =============================================================================

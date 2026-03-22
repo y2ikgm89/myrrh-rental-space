@@ -29,14 +29,14 @@ import {
 import {
   calculateTaxIncludedPrice,
   getTaxRate,
-  getTaxRateLabel,
-  type TaxSettings,
-} from "@/shared/lib/pricing";
+} from "@/shared/lib/pricing/tax";
+import { getTaxRateLabel } from "@/shared/lib/pricing/format";
+import type { TaxSettings } from "@/shared/lib/pricing/types";
 import {
   getValidTaxRateType,
   getValidDiscountType,
   getValidDurationDiscountOverride,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/helpers";
 import {
   DiscountType,
   DurationDiscountOverride,
@@ -308,7 +308,10 @@ export function SpaceEditPricingTabPanel({
                     )}
                     <div className="text-sm">
                       ¥
-                      {(hasDiscount ? discountedHourlyPrice : hourlyPrice).toLocaleString()}
+                      {(hasDiscount
+                        ? discountedHourlyPrice
+                        : hourlyPrice
+                      ).toLocaleString()}
                       （税抜）
                     </div>
                     <div className="text-sm font-semibold text-primary">

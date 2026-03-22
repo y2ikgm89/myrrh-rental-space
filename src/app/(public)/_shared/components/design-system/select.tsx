@@ -24,6 +24,7 @@ export function Select({
   ...props
 }: SelectProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const errorId = error ? `${selectId}-error` : undefined;
   return (
     <div className={wrapperClassName}>
       <label
@@ -35,6 +36,8 @@ export function Select({
       <select
         id={selectId}
         ref={ref}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={errorId}
         {...props}
         className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent
@@ -47,7 +50,11 @@ export function Select({
           </option>
         ))}
       </select>
-      {error ? <p className="mt-1 text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

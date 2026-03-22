@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { CalendarSyncMethod, ReservationStatus } from "@/shared/db/enums";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 export type FailedCalendarSyncReservation = {

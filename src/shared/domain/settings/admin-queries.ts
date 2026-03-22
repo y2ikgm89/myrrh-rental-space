@@ -30,13 +30,11 @@ import {
   parseBusinessHours,
   parseStringArrayOrNull,
 } from "@/shared/lib/json-validators";
-import {
-  DEFAULT_TAX_SETTINGS,
-  parseDurationDiscountRules,
-} from "@/shared/lib/pricing";
+import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
+import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";
-import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import {
   DEFAULT_ROBOTS_TXT,
   checkRobotsTxtWarnings,

@@ -11,10 +11,8 @@ import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
-import {
-  getFooterSettings,
-  getSocialLinksForFooter,
-} from "@/shared/domain/settings/queries";
+import { getFooterSettings } from "@/shared/domain/settings/queries/display";
+import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organization";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { CopyrightYear } from "./CopyrightYear";

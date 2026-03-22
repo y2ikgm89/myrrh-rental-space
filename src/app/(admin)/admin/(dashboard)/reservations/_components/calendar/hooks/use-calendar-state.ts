@@ -14,7 +14,7 @@ import {
   getEventsForDay,
   getValidCalendarView,
 } from "@/admin/lib/calendar";
-import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums";
+import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { toDateString } from "@/shared/lib/serialize";
 import type { ReservationStatus } from "@/shared/db/enums";
 

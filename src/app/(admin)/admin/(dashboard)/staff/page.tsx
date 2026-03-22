@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getUsers } from "@/admin/queries/user";
 import { getPendingInvitations } from "@/admin/queries/staff-invitation";
 import { loadAdminUserSearchParams } from "@/shared/lib/nuqs";
-import { getRoleFilterOrAll } from "@/shared/lib/validations/enums";
+import { getRoleFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { Button, Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";

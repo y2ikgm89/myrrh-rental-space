@@ -27,14 +27,15 @@ import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateHeaderSettings } from "@/admin/actions/settings";
 import { headerFormSchema } from "@/admin/actions/settings/schemas";
 import type { SelectionBoxOption } from "@/admin/components/ui";
+import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
 import {
-  HeaderScrollBehavior,
-  HeaderBackgroundMode,
   isValidHeaderScrollBehavior,
   isValidHeaderBackgroundMode,
+} from "@/shared/lib/validations/enums/guards";
+import {
   getValidHeaderScrollBehavior,
   getValidHeaderBackgroundMode,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Constants

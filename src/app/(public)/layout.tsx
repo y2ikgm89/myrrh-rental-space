@@ -41,12 +41,12 @@ import {
   getHeaderSettings,
   getFooterSettings,
   type HeaderSettings,
-} from "@/shared/domain/settings/queries";
+} from "@/shared/domain/settings/queries/display";
 import { HeaderBackgroundMode } from "@/shared/db/enums";
 import {
   getCookieConsentSettings,
   getMaintenanceSettings,
-} from "@/shared/domain/settings/queries";
+} from "@/shared/domain/settings/queries/site";
 import { MaintenancePage } from "@/public/components/MaintenancePage";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";

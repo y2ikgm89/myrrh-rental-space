@@ -20,7 +20,7 @@ import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
 import { MainContent } from "./_components/MainContent";
 import { TopBar } from "./_components/TopBar";
 import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
-import { getAdminBrandingSettings } from "@/shared/domain/settings/queries";
+import { getAdminBrandingSettings } from "@/shared/domain/settings/queries/organization";
 import type { ReactElement, ReactNode } from "react";
 import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
 

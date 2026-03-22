@@ -10,7 +10,12 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm, type FieldValues, type Path } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import {
@@ -35,8 +40,9 @@ import {
   useSingleMediaPicker,
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
-import { type TaxSettings, DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing";
-import { getValidTaxRateType } from "@/shared/lib/validations/enums";
+import type { TaxSettings } from "@/shared/lib/pricing/types";
+import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
+import { getValidTaxRateType } from "@/shared/lib/validations/enums/helpers";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import {
   DiscountType,
@@ -132,8 +138,7 @@ export function SpaceEditForm({
           discountType: space.discountType ?? DiscountType.none,
           discountValue: space.discountValue ?? undefined,
           durationDiscountOverride:
-            space.durationDiscountOverride ??
-            DurationDiscountOverride.inherit,
+            space.durationDiscountOverride ?? DurationDiscountOverride.inherit,
           taxRateType: getValidTaxRateType(space.taxRateType),
           metaDescription: space.metaDescription ?? "",
           metaKeywords: space.metaKeywords ?? "",
@@ -183,7 +188,9 @@ export function SpaceEditForm({
       const payload = spaceEditFormDataToSpaceFormPayload(data);
       const fd = spaceFormDataToFormData(payload, {
         intent: mode === "create" ? "create" : "update",
-        ...(mode === "edit" && space !== undefined ? { spaceId: space.id } : {}),
+        ...(mode === "edit" && space !== undefined
+          ? { spaceId: space.id }
+          : {}),
         clientNonce: nonce,
       });
       startTransition(() => {

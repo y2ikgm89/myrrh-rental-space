@@ -12,7 +12,7 @@ import {
 import {
   isValidAnnouncementBarAnimation,
   isValidAnnouncementBarDesignStyle,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/guards";
 
 // =============================================================================
 // Types

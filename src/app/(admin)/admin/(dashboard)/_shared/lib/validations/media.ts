@@ -3,12 +3,11 @@
  */
 
 import { z } from "zod";
+import { MediaType, MediaUsage } from "@/shared/db/enums";
 import {
-  MediaType,
-  MediaUsage,
   isValidMediaType,
   isValidMediaUsage,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/guards";
 
 // Re-export
 export { MediaType, MediaUsage, isValidMediaType, isValidMediaUsage };

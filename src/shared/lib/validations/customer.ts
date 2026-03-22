@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CustomerStatus } from "@/shared/lib/validations/enums";
+import { CustomerStatus } from "@/shared/db/enums";
 
 // =============================================================================
 // Customer Schemas

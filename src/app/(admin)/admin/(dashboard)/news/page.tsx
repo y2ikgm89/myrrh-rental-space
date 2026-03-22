@@ -13,7 +13,7 @@ import { NewsManagementTabs } from "./_components/NewsManagementTabs";
 import { ListPageSeoForm } from "@/admin/components/ListPageSeoForm";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parseNewsStatusFilter } from "@/shared/lib/validations/enums";
+import { parseNewsStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminNewsSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";

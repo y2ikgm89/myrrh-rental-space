@@ -8,7 +8,7 @@ import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import {
   getOrganizationSettings,
   getSocialLinkUrls,
-} from "@/shared/domain/settings/queries";
+} from "@/shared/domain/settings/queries/organization";
 import { isRecord, omitUndefined } from "@/shared/lib/serialize";
 
 const BASE_URL = getBaseUrl();

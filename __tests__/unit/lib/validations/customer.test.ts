@@ -4,7 +4,7 @@ import {
   updateCustomerStatusSchema,
   updateCustomerNotesSchema,
 } from "@/shared/lib/validations/customer";
-import { CustomerStatus } from "@/shared/lib/validations/enums";
+import { CustomerStatus } from "@/shared/db/enums";
 
 describe("customerFormSchema", () => {
   test("有効なデータでバリデーションに成功する", () => {

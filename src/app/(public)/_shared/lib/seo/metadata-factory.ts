@@ -9,7 +9,7 @@ import { SITE_DEFAULTS } from "@/shared/lib/constants";
 import {
   getSeoSettings,
   type SeoSettings,
-} from "@/shared/domain/settings/queries";
+} from "@/shared/domain/settings/queries/site";
 
 // =============================================================================
 // Types

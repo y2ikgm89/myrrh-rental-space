@@ -6,7 +6,7 @@ import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parseReservationStatusFilter } from "@/shared/lib/validations/enums";
+import { parseReservationStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminReservationSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";

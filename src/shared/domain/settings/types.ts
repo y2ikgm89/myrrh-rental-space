@@ -16,7 +16,10 @@ import type {
   BusinessHoursDay,
   BusinessTimeSlot,
 } from "@/shared/lib/json-validators";
-import type { DurationDiscountRule, TaxSettings } from "@/shared/lib/pricing";
+import type {
+  DurationDiscountRule,
+  TaxSettings,
+} from "@/shared/lib/pricing/types";
 
 export type { BusinessTimeSlot, BusinessHoursDay, BusinessHours };
 

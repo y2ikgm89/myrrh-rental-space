@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TermsType, TermsStatus } from "@/shared/db/enums";
-import { isValidTermsType } from "@/shared/lib/validations/enums";
+import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
 /**

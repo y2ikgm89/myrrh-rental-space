@@ -26,6 +26,7 @@ export function ScrollIndicator(): ReactElement {
           noPreference: "(prefers-reduced-motion: no-preference)",
         },
         (ctx) => {
+          // ctx.conditions は GSAP matchMedia により常に提供される
           const { reduce } = ctx.conditions ?? {};
           gsap.to(el, {
             y: reduce ? 4 : 8,

@@ -18,7 +18,7 @@ import {
   Switch,
   SubmitButton,
 } from "@/admin/components/ui";
-import { isValidSocialPlatform } from "@/shared/lib/validations/enums";
+import { isValidSocialPlatform } from "@/shared/lib/validations/enums/guards";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
   NavFormData,

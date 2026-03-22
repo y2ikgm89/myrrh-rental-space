@@ -14,7 +14,7 @@ import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { ShareButtons } from "@/public/components/ui/share-buttons";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
-import { getPostLayoutSettings } from "@/shared/domain/settings/queries";
+import { getPostLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString, formatSerializedDate } from "@/shared/lib/serialize";
 

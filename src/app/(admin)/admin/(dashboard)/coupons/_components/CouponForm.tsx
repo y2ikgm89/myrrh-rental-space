@@ -20,7 +20,8 @@ import {
   SelectValue,
   SubmitButton,
 } from "@/admin/components/ui";
-import { CouponType, isValidCouponType } from "@/shared/lib/validations/enums";
+import { CouponType } from "@/shared/db/enums";
+import { isValidCouponType } from "@/shared/lib/validations/enums/guards";
 import { useFormAction } from "@/admin/hooks";
 
 // =============================================================================

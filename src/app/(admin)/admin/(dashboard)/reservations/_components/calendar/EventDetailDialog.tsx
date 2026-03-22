@@ -26,10 +26,8 @@ import {
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import type { CalendarEvent } from "@/admin/lib/calendar";
-import {
-  isValidReservationStatus,
-  type ReservationStatus,
-} from "@/shared/lib/validations/enums";
+import type { ReservationStatus } from "@/shared/db/enums";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;

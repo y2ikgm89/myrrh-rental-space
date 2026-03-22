@@ -6,7 +6,7 @@
  */
 
 import { format } from "date-fns";
-import { isValidLayoutWidth } from "@/shared/lib/validations/enums";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { LayoutWidth } from "@/shared/db/enums";
 
 // =============================================================================

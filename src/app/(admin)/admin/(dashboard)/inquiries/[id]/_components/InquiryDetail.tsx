@@ -21,10 +21,8 @@ import { updateInquiryStatus } from "@/admin/actions/inquiry";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InquiryData } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  isValidInquiryStatus,
-  type InquiryStatus,
-} from "@/shared/lib/validations/enums";
+import type { InquiryStatus } from "@/shared/db/enums";
+import { isValidInquiryStatus } from "@/shared/lib/validations/enums/guards";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 

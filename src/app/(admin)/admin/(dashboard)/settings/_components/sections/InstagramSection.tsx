@@ -42,7 +42,7 @@ import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas";
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { InstagramFeedLayout } from "@/shared/db/enums";
-import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums";
+import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums/guards";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================

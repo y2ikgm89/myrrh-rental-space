@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   parseBusinessHours,
   type BusinessHours,

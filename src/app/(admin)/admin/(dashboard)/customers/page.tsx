@@ -6,7 +6,7 @@ import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
 import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
-import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums";
+import { parseCustomerStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminCustomerSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { Metadata } from "next";

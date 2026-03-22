@@ -8,7 +8,7 @@ import {
 import {
   getValidDiscountType,
   getValidDurationDiscountOverride,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/helpers";
 import type { TaxRateType } from "@/shared/db/enums";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 

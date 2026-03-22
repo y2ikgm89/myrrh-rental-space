@@ -8,9 +8,9 @@
  */
 
 import { cacheLife, cacheTag } from "next/cache";
-export type { AnalyticsConfig } from "@/shared/domain/settings/queries";
-import { getAnalyticsConfig as getAnalyticsSettingsConfig } from "@/shared/domain/settings/queries";
-import type { AnalyticsConfig } from "@/shared/domain/settings/queries";
+export type { AnalyticsConfig } from "@/shared/domain/settings/queries/site";
+import { getAnalyticsConfig as getAnalyticsSettingsConfig } from "@/shared/domain/settings/queries/site";
+import type { AnalyticsConfig } from "@/shared/domain/settings/queries/site";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 import {
   logError,

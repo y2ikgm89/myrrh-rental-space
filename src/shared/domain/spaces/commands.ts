@@ -7,7 +7,7 @@ import {
   TaxRateType,
 } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   checkSlugAvailability,
   getSlugErrorMessage,

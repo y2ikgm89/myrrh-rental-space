@@ -10,10 +10,8 @@ import "server-only";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
-import {
-  getCalendarEmailSettings as getCalendarEmailSettingsQuery,
-  getNotificationEmailAddresses as getNotificationEmailAddressesQuery,
-} from "@/shared/domain/settings/queries";
+import { getCalendarEmailSettings as getCalendarEmailSettingsQuery } from "@/shared/domain/settings/queries/notification";
+import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {

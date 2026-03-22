@@ -20,7 +20,7 @@ import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
 import {
   isValidAnnouncementBarAnimation,
   isValidAnnouncementBarDesignStyle,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/guards";
 import { DesignPreview } from "./DesignPreview";
 import {
   ANIMATION_OPTIONS,

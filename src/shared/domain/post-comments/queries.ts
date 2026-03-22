@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma, type Prisma } from "@/shared/db/prisma";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries";
+import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import type {
   AdminCommentData,
   CommentFilters,

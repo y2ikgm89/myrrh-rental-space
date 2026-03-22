@@ -19,10 +19,8 @@ import {
   unpublishNews,
 } from "@/admin/actions/news";
 import type { NewsData } from "@/shared/domain/news/types";
-import {
-  isValidLayoutWidth,
-  type LayoutWidth,
-} from "@/shared/lib/validations/enums";
+import type { LayoutWidth } from "@/shared/db/enums";
+import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { NewsPreviewData } from "@/shared/types";
 import {
   SEO_FIELD_NAMES,

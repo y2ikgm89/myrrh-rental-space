@@ -1,47 +1,49 @@
 import { describe, test, expect } from "bun:test";
 import {
-  // Type guards & defaults (from enums.ts)
   isValidDiscountType,
-  getValidDiscountType,
   isValidDurationDiscountOverride,
-  getValidDurationDiscountOverride,
   isValidDiscountCombinationMode,
-  getValidDiscountCombinationMode,
   isValidTaxRateType,
-  getValidTaxRateType,
   isValidTaxDisplayMode,
-  getValidTaxDisplayMode,
   isValidTaxInputMode,
-  getValidTaxInputMode,
-} from "@/shared/lib/validations/enums";
+} from "@/shared/lib/validations/enums/guards";
 import {
-  // Calculation functions
+  getValidDiscountType,
+  getValidDurationDiscountOverride,
+  getValidDiscountCombinationMode,
+  getValidTaxRateType,
+  getValidTaxDisplayMode,
+  getValidTaxInputMode,
+} from "@/shared/lib/validations/enums/helpers";
+import {
   calculateSpaceDiscount,
   calculateDurationDiscount,
   calculateCouponDiscount,
-  calculateReservationPrice,
-  // Validation helpers
   validateDurationDiscountRules,
   parseDurationDiscountRules,
-  // Formatting helpers
+} from "@/shared/lib/pricing/discount";
+import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
+import {
   formatDiscountAmount,
   formatDiscountSummary,
-  // Tax calculation functions
+  formatPrice,
+  formatPriceWithTax,
+  getTaxRateLabel,
+} from "@/shared/lib/pricing/format";
+import {
   getTaxRate,
   calculateTaxIncludedPrice,
   calculateTaxExcludedPrice,
   calculateTaxAmount,
-  formatPrice,
-  formatPriceWithTax,
-  getTaxRateLabel,
-  // Constants & types
   DEFAULT_TAX_SETTINGS,
-  type DurationDiscountRule,
-  type SpaceDiscountSettings,
-  type PriceCalculationParams,
-  type PriceCalculation,
-  type TaxSettings,
-} from "@/shared/lib/pricing";
+} from "@/shared/lib/pricing/tax";
+import type {
+  DurationDiscountRule,
+  SpaceDiscountSettings,
+  PriceCalculationParams,
+  PriceCalculation,
+  TaxSettings,
+} from "@/shared/lib/pricing/types";
 
 // =============================================================================
 // 型ガード & デフォルト値関数

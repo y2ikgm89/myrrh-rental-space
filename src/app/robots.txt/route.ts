@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPublicRobotsTxtSettings } from "@/shared/domain/settings/queries";
+import { getPublicRobotsTxtSettings } from "@/shared/domain/settings/queries/site";
 import { DEFAULT_ROBOTS_TXT } from "@/shared/domain/settings/robots-txt";
 
 const RESPONSE_HEADERS = {
