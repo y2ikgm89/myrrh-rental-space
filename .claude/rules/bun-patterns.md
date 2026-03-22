@@ -352,23 +352,23 @@ describe("createPost", () => {
 
 ## ファイル配置と命名規則
 
-| パス                                   | 内容                                   | ファイル形式 |
-| -------------------------------------- | -------------------------------------- | ------------ |
-| `__tests__/unit/`                      | 単体テスト（純粋関数・ユーティリティ） | `*.test.ts`  |
-| `__tests__/unit/lib/`                  | ライブラリ関数のテスト                 | `*.test.ts`  |
-| `__tests__/unit/components/`           | コンポーネントのテスト                 | `*.test.ts`  |
-| `__tests__/unit/lib/validations/`      | Zodスキーマバリデーションのテスト      | `*.test.ts`  |
-| `__tests__/integration/`               | 統合テスト（Server Actions・API）      | `*.test.ts`  |
-| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト         | `*.test.ts`  |
-| `__tests__/integration/api/`           | API Route Handler の統合テスト         | `*.test.ts`  |
-| `__tests__/mocks/`                     | モック定義（共有）                     | `*.ts`       |
-| `__tests__/mocks/index.ts`             | バレルエクスポート                     |              |
-| `__tests__/mocks/prisma.ts`            | Prisma Client モック                   |              |
-| `__tests__/mocks/auth.ts`              | Better Auth モック                     |              |
-| `__tests__/mocks/next.ts`              | Next.js API モック                     |              |
-| `__tests__/mocks/resend.ts`            | Resend メールモック                    |              |
-| `__tests__/setup-dom.ts`               | JSDOM プリロード（`installJSDOMForTests`） |            |
-| `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）     |              |
+| パス                                   | 内容                                       | ファイル形式 |
+| -------------------------------------- | ------------------------------------------ | ------------ |
+| `__tests__/unit/`                      | 単体テスト（純粋関数・ユーティリティ）     | `*.test.ts`  |
+| `__tests__/unit/lib/`                  | ライブラリ関数のテスト                     | `*.test.ts`  |
+| `__tests__/unit/components/`           | コンポーネントのテスト                     | `*.test.ts`  |
+| `__tests__/unit/lib/validations/`      | Zodスキーマバリデーションのテスト          | `*.test.ts`  |
+| `__tests__/integration/`               | 統合テスト（Server Actions・API）          | `*.test.ts`  |
+| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト             | `*.test.ts`  |
+| `__tests__/integration/api/`           | API Route Handler の統合テスト             | `*.test.ts`  |
+| `__tests__/mocks/`                     | モック定義（共有）                         | `*.ts`       |
+| `__tests__/mocks/index.ts`             | バレルエクスポート                         |              |
+| `__tests__/mocks/prisma.ts`            | Prisma Client モック                       |              |
+| `__tests__/mocks/auth.ts`              | Better Auth モック                         |              |
+| `__tests__/mocks/next.ts`              | Next.js API モック                         |              |
+| `__tests__/mocks/resend.ts`            | Resend メールモック                        |              |
+| `__tests__/setup-dom.ts`               | JSDOM プリロード（`installJSDOMForTests`） |              |
+| `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）         |              |
 
 ### テストファイル命名
 
@@ -453,6 +453,11 @@ bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
    - Bun はこのキーを無視する
    - `bun test --conditions=react-server` は CLI フラグとして機能するが、React を server build に解決して `createContext`・`useRef` が消えるため `server-only` 対策には**使わない**こと
    - `server-only` 対策は `__tests__/setup.ts` の `mock.module('server-only', () => ({}))` で対処（設定済み）
+
+## Gotchas
+
+- **`mock.module()` のグローバルスコープ干渉** — 複数テストファイルを同時実行すると、ファイル A の `mock.module("@/shared/lib/foo", ...)` がファイル B の実 import を上書きし、`Export named 'X' not found` エラーやハングを引き起こす。対策: モック対象モジュールの**全 export をモックに含める**（使わない関数もスタブで返す）。単独実行（`bun test <file>`）では問題なし
+- **`Promise.reject()` が `fireAndForget` テストで "Unhandled error between tests"** — `Promise.reject()` は即座に rejected になり、`fireAndForget` の `.catch()` 登録前に Bun が未処理として検出する場合がある。`queueMicrotask(() => reject(error))` で遅延拒否し、`.catch()` が先に登録されるようにする
 
 ## 参考
 

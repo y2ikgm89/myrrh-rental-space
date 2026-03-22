@@ -129,12 +129,20 @@ src/shared/                      # 両方で共有（CSS変数非依存）
 prisma/                          # schema.prisma, migrations/, seed.ts
 ```
 
-| パス（ツリー図に無いもの）                  | 用途                                               |
-| ------------------------------------------- | -------------------------------------------------- |
-| `src/app/(admin)/_styles/admin.css`         | 管理画面専用テーマ                                 |
-| `src/app/(public)/_styles/public.css`       | 公開ページテーマ（Deep Neutral + Warm Accent）     |
-| `src/shared/db/create-app-prisma-client.ts` | Prisma `$extends` の単一実装・`AppPrismaClient` 型 |
-| `src/shared/lib/errors/logger-core.ts`      | 構造化ログ（seed / `server-only` 外モジュール用）  |
+| パス（ツリー図に無いもの）                           | 用途                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------ |
+| `src/app/(admin)/_styles/admin.css`                  | 管理画面専用テーマ                                                       |
+| `src/app/(public)/_styles/public.css`                | 公開ページテーマ（Deep Neutral + Warm Accent）                           |
+| `src/shared/db/create-app-prisma-client.ts`          | Prisma `$extends` の単一実装・`AppPrismaClient` 型                       |
+| `src/shared/lib/errors/logger-core.ts`               | 構造化ログ（seed / `server-only` 外モジュール用）                        |
+| `src/shared/lib/email/`                              | メール送信（types/send/reservation-emails/contact-emails/system-emails） |
+| `src/shared/lib/calendar-sync/`                      | カレンダー同期（types/outbound/inbound）                                 |
+| `src/shared/lib/pricing/`                            | 料金計算（types/discount/tax/format/reservation）                        |
+| `src/shared/domain/settings/queries/`                | 設定クエリ（site/organization/notification/display）                     |
+| `src/shared/domain/settings/integration-commands.ts` | Stripe/GCal/iCal コマンド                                                |
+| `src/shared/lib/validations/section-defaults.ts`     | セクション defaults/getters/parsers/getSafeConfig                        |
+| `src/shared/lib/validations/section-metadata.ts`     | セクション labels/icons/categories                                       |
+| `src/shared/lib/validations/enums/`                  | 型ガード（guards）+ ヘルパー（helpers）                                  |
 
 **インポートエイリアス**: `@/*`（`src/*`）, `@/admin/*`, `@/public/*`, `@/shared/*`, `@generated/*`
 
@@ -143,6 +151,7 @@ prisma/                          # schema.prisma, migrations/, seed.ts
 ### Lexical エディタ（管理画面・ブロック設定パネル）
 
 - 実装ディレクトリ: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
+- **barrel 廃止**: `editor/index.ts`, `editor/lexical/index.ts` は削除済み。`LazyLexicalEditor` は `lexical/LazyLexicalEditor` から、`EMPTY_LEXICAL_EDITOR_STATE_JSON` は `@/shared/lib/validations/lexical` から直接 import
 - 詳細（Inspector・コンテンツ幅・レイアウト定数・DraggableBlock フォーク・プレースホルダー）: **`.claude/rules/frontend/lexical-patterns.md`**
 - `showInspector={false}` でサイドバー無効、幅 1024px 未満で `MobileEditorFallback`（headless HTML プレビュー）
 - 初期化は `contentJson` のみ（空は `EMPTY_LEXICAL_EDITOR_STATE_JSON`）
@@ -190,7 +199,8 @@ bun update                                      # semver 範囲内の依存パ�
 - 公開ページ: Page-First Architecture — ページ構成はコードで直接定義、`SectionRenderer` は `[...segments]` のみ
 - 公開ページコンテンツ: `getPageContent(pageKey, schema, default)` で DB から取得（`'use cache'` + `cacheTag`）
 - 公開ページフォーム: `usePublicForm`（`@/public/hooks/use-public-form`）+ Turnstile + fireAndForget メール。`executeAdminMutationResult` は使わない
-- 公開ページ import: Design System は直接 import（`from "@/public/components/design-system/button"` 等）。barrel 経由禁止（tree-shaking 不安定）
+- **barrel export 禁止（全体）**: 新規 `index.ts` barrel の作成禁止。既存 barrel は直接 import に移行済み。例外: `plugins/index.ts`, `nodes/index.ts`（Lexical 内部用）
+- 公開ページ import: Design System は直接 import（`from "@/public/components/design-system/button"` 等）
 - コミット: `<type>(<scope>): <subject>`
 
 ### ⚠️ Gotchas
