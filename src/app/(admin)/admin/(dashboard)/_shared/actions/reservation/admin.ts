@@ -15,12 +15,12 @@ import {
 import {
   syncReservationToCalendar,
   updateCalendarSync,
-  type ReservationSyncData,
-} from "@/shared/lib/calendar-sync";
+} from "@/shared/lib/calendar-sync/outbound";
+import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
   sendReservationConfirmationEmail,
-} from "@/shared/lib/email-service";
+} from "@/shared/lib/email/reservation-emails";
 import {
   adminReservationSchema,
   type AdminReservationInput,

@@ -17,7 +17,7 @@ import { createInquiryCommand } from "@/shared/domain/inquiries/commands";
 import {
   sendContactConfirmationEmail,
   sendContactAdminNotification,
-} from "@/shared/lib/email-service";
+} from "@/shared/lib/email/contact-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";

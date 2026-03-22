@@ -15,13 +15,13 @@
 import { unstable_rethrow } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import {
   isTwoWaySyncEnabled,
   getTwoWaySyncSettings,
   renewWebhookIfNeeded,
 } from "@/shared/lib/google-calendar";
-import { sendWebhookRenewalNotification } from "@/shared/lib/email-service";
+import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
 import {
   logError,
   ErrorCategory,

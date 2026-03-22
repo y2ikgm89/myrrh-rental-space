@@ -14,7 +14,7 @@ import {
   type MutationResult,
 } from "@/shared/lib/mutation-result";
 import { createPublicReservationCommand } from "@/shared/domain/reservations/commands";
-import { sendReservationAdminNotification } from "@/shared/lib/email-service";
+import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";

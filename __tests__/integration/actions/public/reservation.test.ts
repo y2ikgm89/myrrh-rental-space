@@ -55,7 +55,7 @@ mock.module("@/shared/domain/reservations/commands", () => ({
 
 const mockSendReservationAdminNotification = mock(() => Promise.resolve());
 
-mock.module("@/shared/lib/email-service", () => ({
+mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationAdminNotification: mockSendReservationAdminNotification,
 }));
 

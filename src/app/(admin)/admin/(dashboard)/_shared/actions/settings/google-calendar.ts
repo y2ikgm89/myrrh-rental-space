@@ -35,7 +35,7 @@ import {
   testOAuthConnection,
   testServiceAccountConnection,
 } from "@/shared/lib/google-calendar";
-import { syncFromCalendar } from "@/shared/lib/calendar-sync";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import { clientEnv } from "@/shared/lib/env/client";
 import { serverEnv } from "@/shared/lib/env/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";

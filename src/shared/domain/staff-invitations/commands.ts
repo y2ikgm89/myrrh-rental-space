@@ -8,7 +8,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { getAppUrl } from "@/shared/lib/constants";
-import { sendStaffInvitationEmail } from "@/shared/lib/email-service";
+import { sendStaffInvitationEmail } from "@/shared/lib/email/system-emails";
 import {
   ErrorCategory,
   ErrorSeverity,

@@ -33,7 +33,7 @@ function timingSafeTokenEqual(
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
 }
-import { syncFromCalendar } from "@/shared/lib/calendar-sync";
+import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import {
   isTwoWaySyncEnabled,
   getTwoWaySyncSettings,

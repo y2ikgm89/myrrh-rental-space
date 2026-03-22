@@ -19,13 +19,13 @@ import {
   syncReservationToCalendar,
   updateCalendarSync,
   deleteCalendarSync,
-  type ReservationSyncData,
-} from "@/shared/lib/calendar-sync";
+} from "@/shared/lib/calendar-sync/outbound";
+import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import {
   sendReservationAdminNotification,
   sendReservationCancelledEmail,
   sendReservationConfirmationEmail,
-} from "@/shared/lib/email-service";
+} from "@/shared/lib/email/reservation-emails";
 
 const updateStatusSchema = z.object({
   id: z.string().uuid({ error: "IDが不正です" }),

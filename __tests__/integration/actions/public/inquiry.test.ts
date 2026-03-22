@@ -52,7 +52,7 @@ mock.module("@/shared/domain/inquiries/commands", () => ({
 const mockSendContactConfirmationEmail = mock(() => Promise.resolve());
 const mockSendContactAdminNotification = mock(() => Promise.resolve());
 
-mock.module("@/shared/lib/email-service", () => ({
+mock.module("@/shared/lib/email/contact-emails", () => ({
   sendContactConfirmationEmail: mockSendContactConfirmationEmail,
   sendContactAdminNotification: mockSendContactAdminNotification,
 }));
