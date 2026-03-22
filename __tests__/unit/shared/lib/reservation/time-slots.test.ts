@@ -143,9 +143,9 @@ describe("getWeekdayKey", () => {
 
 describe("generateFallbackSlots", () => {
   describe("正常系", () => {
-    test("DEFAULT_BUSINESS_HOURS (9-21) に基づき 12 スロットを生成する", () => {
+    test("DEFAULT_BUSINESS_HOURS (9-21) に基づき 24 スロットを生成する（30分刻み）", () => {
       const slots = generateFallbackSlots();
-      expect(slots).toHaveLength(12);
+      expect(slots).toHaveLength(24);
     });
 
     test('最初のスロットが "09:00" である', () => {
@@ -153,9 +153,9 @@ describe("generateFallbackSlots", () => {
       expect(slots[0]?.time).toBe("09:00");
     });
 
-    test('最後のスロットが "20:00" である', () => {
+    test('最後のスロットが "20:30" である', () => {
       const slots = generateFallbackSlots();
-      expect(slots[slots.length - 1]?.time).toBe("20:00");
+      expect(slots[slots.length - 1]?.time).toBe("20:30");
     });
 
     test("全スロットが available: true である", () => {
@@ -163,22 +163,34 @@ describe("generateFallbackSlots", () => {
       expect(slots.every((s) => s.available === true)).toBe(true);
     });
 
-    test("スロットが 1 時間刻みで連続している（09:00〜20:00）", () => {
+    test("スロットが 30 分刻みで連続している（09:00〜20:30）", () => {
       const slots = generateFallbackSlots();
       const times = slots.map((s) => s.time);
       expect(times).toEqual([
         "09:00",
+        "09:30",
         "10:00",
+        "10:30",
         "11:00",
+        "11:30",
         "12:00",
+        "12:30",
         "13:00",
+        "13:30",
         "14:00",
+        "14:30",
         "15:00",
+        "15:30",
         "16:00",
+        "16:30",
         "17:00",
+        "17:30",
         "18:00",
+        "18:30",
         "19:00",
+        "19:30",
         "20:00",
+        "20:30",
       ]);
     });
   });
@@ -190,15 +202,15 @@ describe("generateFallbackSlots", () => {
 
 describe("generateSlotsFromBusinessHours", () => {
   describe("businessHours が null の場合", () => {
-    test("フォールバックスロット（12スロット）を返す", () => {
+    test("フォールバックスロット（24スロット）を返す", () => {
       const slots = generateSlotsFromBusinessHours(null, MONDAY_DATE);
-      expect(slots).toHaveLength(12);
+      expect(slots).toHaveLength(24);
     });
 
-    test("フォールバックスロットの最初が 09:00、最後が 20:00 である", () => {
+    test("フォールバックスロットの最初が 09:00、最後が 20:30 である", () => {
       const slots = generateSlotsFromBusinessHours(null, MONDAY_DATE);
       expect(slots[0]?.time).toBe("09:00");
-      expect(slots[slots.length - 1]?.time).toBe("20:00");
+      expect(slots[slots.length - 1]?.time).toBe("20:30");
     });
   });
 
@@ -222,21 +234,21 @@ describe("generateSlotsFromBusinessHours", () => {
   });
 
   describe("単一時間帯（9:00-17:00）の場合", () => {
-    test("8 スロットを返す", () => {
+    test("16 スロットを返す（30分刻み）", () => {
       const slots = generateSlotsFromBusinessHours(
         BUSINESS_HOURS_SINGLE_SLOT,
         MONDAY_DATE,
       );
-      expect(slots).toHaveLength(8);
+      expect(slots).toHaveLength(16);
     });
 
-    test('最初のスロットが "09:00" で最後が "16:00" である', () => {
+    test('最初のスロットが "09:00" で最後が "16:30" である', () => {
       const slots = generateSlotsFromBusinessHours(
         BUSINESS_HOURS_SINGLE_SLOT,
         MONDAY_DATE,
       );
       expect(slots[0]?.time).toBe("09:00");
-      expect(slots[slots.length - 1]?.time).toBe("16:00");
+      expect(slots[slots.length - 1]?.time).toBe("16:30");
     });
 
     test("全スロットが available: true である", () => {
@@ -249,12 +261,12 @@ describe("generateSlotsFromBusinessHours", () => {
   });
 
   describe("複数時間帯（9:00-12:00, 13:00-17:00）の場合", () => {
-    test("昼休みを除いた 7 スロットを返す", () => {
+    test("昼休みを除いた 14 スロットを返す（30分刻み）", () => {
       const slots = generateSlotsFromBusinessHours(
         BUSINESS_HOURS_MULTIPLE_SLOTS,
         MONDAY_DATE,
       );
-      expect(slots).toHaveLength(7);
+      expect(slots).toHaveLength(14);
     });
 
     test("12:00 のスロットが存在しない（昼休み除外）", () => {
@@ -274,12 +286,19 @@ describe("generateSlotsFromBusinessHours", () => {
       const times = slots.map((s) => s.time);
       expect(times).toEqual([
         "09:00",
+        "09:30",
         "10:00",
+        "10:30",
         "11:00",
+        "11:30",
         "13:00",
+        "13:30",
         "14:00",
+        "14:30",
         "15:00",
+        "15:30",
         "16:00",
+        "16:30",
       ]);
     });
   });
@@ -290,8 +309,8 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_OVERLAPPING_SLOTS,
         MONDAY_DATE,
       );
-      // 09, 10, 11, 12, 13 の 5 スロット（重複なし）
-      expect(slots).toHaveLength(5);
+      // 09:00-14:00 の 30分刻み: 10 スロット（重複なし）
+      expect(slots).toHaveLength(10);
     });
 
     test("同じ時刻が 2 つ含まれない", () => {
@@ -310,7 +329,18 @@ describe("generateSlotsFromBusinessHours", () => {
         MONDAY_DATE,
       );
       const times = slots.map((s) => s.time);
-      expect(times).toEqual(["09:00", "10:00", "11:00", "12:00", "13:00"]);
+      expect(times).toEqual([
+        "09:00",
+        "09:30",
+        "10:00",
+        "10:30",
+        "11:00",
+        "11:30",
+        "12:00",
+        "12:30",
+        "13:00",
+        "13:30",
+      ]);
     });
   });
 
@@ -338,10 +368,10 @@ describe("generateSlotsFromBusinessHours", () => {
         businessHours,
         SATURDAY_DATE,
       );
-      // 10, 11, 12 の 3 スロット
-      expect(slots).toHaveLength(3);
+      // 10:00-13:00 の 30分刻み: 6 スロット
+      expect(slots).toHaveLength(6);
       expect(slots[0]?.time).toBe("10:00");
-      expect(slots[slots.length - 1]?.time).toBe("12:00");
+      expect(slots[slots.length - 1]?.time).toBe("12:30");
     });
   });
 });

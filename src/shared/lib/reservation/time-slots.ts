@@ -15,6 +15,9 @@ import type { BusinessHours } from "@/shared/lib/json-validators";
 import { DEFAULT_BUSINESS_HOURS } from "./constants";
 import type { TimeSlot } from "./types";
 
+/** スロットの時間間隔（分） */
+const SLOT_INTERVAL_MINUTES = 30;
+
 type WeekdayKey =
   | "sunday"
   | "monday"
@@ -61,7 +64,7 @@ export function parseTime(time: string): { hour: number; minute: number } {
  *
  * @param businessHours - 営業時間設定
  * @param date - 日付（YYYY-MM-DD形式）
- * @returns 営業時間内の時間枠（1時間刻み）
+ * @returns 営業時間内の時間枠（30分刻み）
  */
 export function generateSlotsFromBusinessHours(
   businessHours: BusinessHours | null,
@@ -88,11 +91,15 @@ export function generateSlotsFromBusinessHours(
   for (const timeSlot of daySettings.slots) {
     const start = parseTime(timeSlot.openTime);
     const end = parseTime(timeSlot.closeTime);
+    const startMinutes = start.hour * 60 + start.minute;
+    const endMinutes = end.hour * 60 + end.minute;
 
-    // 開始時刻から終了時刻まで1時間刻みでスロットを生成
-    for (let hour = start.hour; hour < end.hour; hour++) {
+    // 開始時刻から終了時刻まで30分刻みでスロットを生成
+    for (let m = startMinutes; m < endMinutes; m += SLOT_INTERVAL_MINUTES) {
+      const hour = Math.floor(m / 60);
+      const minute = m % 60;
       slots.push({
-        time: `${hour.toString().padStart(2, "0")}:00`,
+        time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
         available: true,
       });
     }
@@ -111,13 +118,14 @@ export function generateSlotsFromBusinessHours(
  */
 export function generateFallbackSlots(): TimeSlot[] {
   const slots: TimeSlot[] = [];
-  for (
-    let hour = DEFAULT_BUSINESS_HOURS.start;
-    hour < DEFAULT_BUSINESS_HOURS.end;
-    hour++
-  ) {
+  const startMinutes = DEFAULT_BUSINESS_HOURS.start * 60;
+  const endMinutes = DEFAULT_BUSINESS_HOURS.end * 60;
+
+  for (let m = startMinutes; m < endMinutes; m += SLOT_INTERVAL_MINUTES) {
+    const hour = Math.floor(m / 60);
+    const minute = m % 60;
     slots.push({
-      time: `${hour.toString().padStart(2, "0")}:00`,
+      time: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
       available: true,
     });
   }
@@ -168,13 +176,17 @@ export async function getAvailableTimeSlots(
 
   // 予約済みの時間枠を unavailable にマーク
   for (const reservation of reservations) {
-    const startHour = reservation.startTime.getHours();
-    const endHour = reservation.endTime.getHours();
+    const resStartMinutes =
+      reservation.startTime.getHours() * 60 +
+      reservation.startTime.getMinutes();
+    const resEndMinutes =
+      reservation.endTime.getHours() * 60 + reservation.endTime.getMinutes();
 
     for (const slot of slots) {
-      const slotHour = parseInt(slot.time.split(":")[0] ?? "0", 10);
+      const slotParsed = parseTime(slot.time);
+      const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
       // スロットが予約時間内にある場合は unavailable
-      if (slotHour >= startHour && slotHour < endHour) {
+      if (slotMinutes >= resStartMinutes && slotMinutes < resEndMinutes) {
         slot.available = false;
       }
     }
@@ -186,11 +198,12 @@ export async function getAvailableTimeSlots(
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   if (date === today) {
-    const currentHour = now.getHours();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
     for (const slot of slots) {
-      const slotHour = parseInt(slot.time.split(":")[0] ?? "0", 10);
+      const slotParsed = parseTime(slot.time);
+      const slotMinutes = slotParsed.hour * 60 + slotParsed.minute;
       // 現在時刻以前のスロットは予約不可（現在のスロットは予約可能）
-      if (slotHour < currentHour) {
+      if (slotMinutes < currentMinutes) {
         slot.available = false;
       }
     }
