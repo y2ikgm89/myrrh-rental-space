@@ -56,8 +56,10 @@ export default async function ReservationPage(): Promise<ReactElement> {
       />
 
       <section className="py-[var(--spacing-section)]">
-        <Container variant="narrow">
-          <ReservationForm spaces={spaces} businessHours={businessHours} />
+        <Container>
+          <div className="mx-auto max-w-4xl">
+            <ReservationForm spaces={spaces} businessHours={businessHours} />
+          </div>
         </Container>
       </section>
 

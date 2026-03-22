@@ -14,6 +14,7 @@ import {
   useEffect,
   type ReactElement,
 } from "react";
+import { useWatch } from "react-hook-form";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
@@ -80,9 +81,11 @@ export function ReservationForm({
     },
   );
 
-  const spaceId = form.getValues("spaceId");
+  const [spaceId, numberOfGuests] = useWatch({
+    control: form.control,
+    name: ["spaceId", "numberOfGuests"],
+  });
   const selectedSpace = spaces.find((s) => s.id === spaceId);
-  const numberOfGuests = form.getValues("numberOfGuests");
 
   // Auto-select single space
   useEffect(() => {
