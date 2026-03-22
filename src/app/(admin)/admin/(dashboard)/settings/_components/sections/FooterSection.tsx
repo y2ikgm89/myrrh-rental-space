@@ -27,11 +27,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateFooterSettings } from "@/admin/actions/settings";
-import {
-  footerFormSchema,
-  emptyToNull,
-} from "@/admin/actions/settings/schemas";
-
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { footerFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 // =============================================================================
 // Types
 // =============================================================================

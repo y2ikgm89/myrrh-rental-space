@@ -32,7 +32,7 @@ import {
 } from "@/admin/components/ui/accordion";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateSidebarSettings } from "@/admin/actions/settings";
-import { sidebarFormSchema } from "@/admin/actions/settings/schemas";
+import { sidebarFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import {

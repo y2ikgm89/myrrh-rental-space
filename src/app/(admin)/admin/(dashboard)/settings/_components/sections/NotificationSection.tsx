@@ -22,7 +22,7 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateNotificationSettings } from "@/admin/actions/settings";
-import { notificationFormSchema } from "@/admin/actions/settings/schemas";
+import { notificationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 

@@ -24,7 +24,7 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updatePermalinkSettings } from "@/admin/actions/settings";
-import { permalinkFormSchema } from "@/admin/actions/settings/schemas";
+import { permalinkFormSchema } from "@/admin/actions/settings/schemas/form-schemas-brand-contact";
 import { PostPermalinkStructure } from "@/shared/db/enums";
 import { isValidPostPermalinkStructure } from "@/shared/lib/validations/enums/guards";
 import { getValidPostPermalinkStructure } from "@/shared/lib/validations/enums/helpers";

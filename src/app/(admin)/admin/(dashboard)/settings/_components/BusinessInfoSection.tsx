@@ -23,10 +23,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateBusinessInfo } from "@/admin/actions/settings";
-import {
-  businessInfoFormSchema,
-  emptyToNull,
-} from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { businessInfoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-brand-contact";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { dateInputValueFromSerialized } from "@/shared/lib/serialize";

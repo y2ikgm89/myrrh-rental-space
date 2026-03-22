@@ -35,7 +35,7 @@ import {
   clearGoogleCalendarServiceAccount,
   type SettingsData,
 } from "@/admin/actions/settings";
-import { googleCalendarFormSchema } from "@/admin/actions/settings/schemas";
+import { googleCalendarFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";

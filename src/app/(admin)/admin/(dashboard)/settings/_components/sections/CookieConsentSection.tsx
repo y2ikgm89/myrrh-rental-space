@@ -27,10 +27,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateCookieConsentSettings } from "@/admin/actions/settings";
-import {
-  cookieConsentFormSchema,
-  emptyToNull,
-} from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { cookieConsentFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 

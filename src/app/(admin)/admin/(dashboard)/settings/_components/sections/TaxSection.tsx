@@ -32,7 +32,7 @@ import {
   updateTaxSettings,
   type TaxSettingsData,
 } from "@/admin/actions/settings";
-import { taxFormSchema } from "@/admin/actions/settings/schemas";
+import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
 import { TaxDisplayMode, TaxInputMode } from "@/shared/db/enums";
 
 interface TaxSectionProps {

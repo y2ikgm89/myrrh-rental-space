@@ -25,7 +25,7 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateHeaderSettings } from "@/admin/actions/settings";
-import { headerFormSchema } from "@/admin/actions/settings/schemas";
+import { headerFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SelectionBoxOption } from "@/admin/components/ui";
 import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
 import {

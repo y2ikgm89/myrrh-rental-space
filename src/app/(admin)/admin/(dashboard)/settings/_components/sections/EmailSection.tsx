@@ -25,7 +25,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateEmailSettings } from "@/admin/actions/settings";
-import { emailFormSchema, emptyToNull } from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { emailFormSchema } from "@/admin/actions/settings/schemas/form-schemas-email-notification";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 

@@ -31,7 +31,7 @@ import {
   testGoogleMapsConnectionAction,
   clearGoogleMapsKeys,
 } from "@/admin/actions/api-keys";
-import { googleMapsFormSchema } from "@/admin/actions/settings/schemas";
+import { googleMapsFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { GoogleMapsConfig } from "@/admin/types/api-keys";
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";

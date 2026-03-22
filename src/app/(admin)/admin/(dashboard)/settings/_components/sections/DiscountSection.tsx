@@ -35,7 +35,7 @@ import {
   updateDiscountSettings,
   type DiscountSettingsData,
 } from "@/admin/actions/settings";
-import { discountFormSchema } from "@/admin/actions/settings/schemas";
+import { discountFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { DiscountCombinationMode } from "@/shared/db/enums";
 
 interface DiscountSectionProps {

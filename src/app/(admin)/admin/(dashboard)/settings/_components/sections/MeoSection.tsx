@@ -27,7 +27,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateMeoSettings } from "@/admin/actions/settings";
-import { meoFormSchema, emptyToNull } from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { meoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
 import { parseBusinessAttributes } from "@/shared/lib/json-validators";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";

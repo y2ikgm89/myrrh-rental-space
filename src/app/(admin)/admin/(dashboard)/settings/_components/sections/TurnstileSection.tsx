@@ -31,7 +31,7 @@ import {
   testTurnstileConnectionAction,
   clearTurnstileKeys,
 } from "@/admin/actions/api-keys";
-import { turnstileFormSchema } from "@/admin/actions/settings/schemas";
+import { turnstileFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { TurnstileConfig } from "@/admin/types/api-keys";
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";

@@ -43,7 +43,7 @@ import {
   SUPPORTED_CURRENCY_VALUES,
 } from "@/admin/lib/stripe-shared";
 import { createTypeGuard } from "@/shared/lib/serialize";
-import { stripeFormSchema } from "@/admin/actions/settings/schemas";
+import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";

@@ -38,7 +38,7 @@ import {
   disconnectInstagram,
   type InstagramConfig,
 } from "@/admin/actions/instagram";
-import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas";
+import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { InstagramFeedLayout } from "@/shared/db/enums";

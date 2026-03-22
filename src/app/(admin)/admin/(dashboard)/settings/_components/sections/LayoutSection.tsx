@@ -31,7 +31,7 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateLayoutSettings } from "@/admin/actions/settings";
-import { layoutFormSchema } from "@/admin/actions/settings/schemas";
+import { layoutFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { LayoutWidth } from "@/shared/db/enums";

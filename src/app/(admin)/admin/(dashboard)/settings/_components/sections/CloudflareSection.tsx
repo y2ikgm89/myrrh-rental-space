@@ -26,7 +26,7 @@ import {
   clearCloudflareKeys,
 } from "@/admin/actions/api-keys";
 import type { CloudflareConfig } from "@/admin/types/api-keys";
-import { cloudflareFormSchema } from "@/admin/actions/settings/schemas";
+import { cloudflareFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";

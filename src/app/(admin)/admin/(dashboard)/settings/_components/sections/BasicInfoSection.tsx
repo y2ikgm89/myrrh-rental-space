@@ -25,10 +25,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateBasicInfo } from "@/admin/actions/settings";
-import {
-  basicInfoFormSchema,
-  emptyToNull,
-} from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { basicInfoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-brand-contact";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 

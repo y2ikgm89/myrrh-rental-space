@@ -43,7 +43,7 @@ import {
   triggerManualSync,
   type SettingsData,
 } from "@/admin/actions/settings";
-import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas";
+import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import {
   RefreshCw,
   Clock,

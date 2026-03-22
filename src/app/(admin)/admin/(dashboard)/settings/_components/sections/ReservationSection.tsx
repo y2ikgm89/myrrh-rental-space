@@ -32,7 +32,7 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateReservationSettings } from "@/admin/actions/settings";
-import { reservationFormSchema } from "@/admin/actions/settings/schemas";
+import { reservationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { SettingsData } from "@/shared/domain/settings/types";
 import { ExternalLink, AlertCircle } from "lucide-react";

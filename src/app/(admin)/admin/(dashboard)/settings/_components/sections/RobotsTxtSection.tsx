@@ -28,7 +28,7 @@ import {
   resetRobotsTxtToDefault,
 } from "@/admin/actions/settings";
 import type { RobotsTxtData } from "@/shared/domain/settings/types";
-import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas";
+import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas/basic";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 

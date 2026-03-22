@@ -24,10 +24,8 @@ import {
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateContactInfo } from "@/admin/actions/settings";
-import {
-  contactInfoFormSchema,
-  emptyToNull,
-} from "@/admin/actions/settings/schemas";
+import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
+import { contactInfoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-brand-contact";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 
