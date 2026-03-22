@@ -1,47 +1,70 @@
 "use client";
 
 /**
- * ReservationForm — 3-step reservation form with real submission
+ * ReservationForm — 2-step adaptive reservation form
  *
- * Step 1: Space + date/time selection
- * Step 2: Customer information
- * Step 3: Confirmation + submit
- *
- * GSAP animation on step transitions.
+ * Step 1: Space + date/time selection (2-column desktop, stacked mobile)
+ * Step 2: Customer information + booking summary + submit
  */
 
-import { useState, useRef, type ReactElement } from "react";
-import { gsap } from "@/public/lib/gsap-config";
-import { useMotionPreference } from "@/public/hooks/use-motion-preference";
-import { StepIndicator } from "@/public/components/ui/step-indicator";
-import { DURATION, EASE } from "@/public/lib/animations";
-import { usePublicForm } from "@/public/hooks/use-public-form";
+import {
+  useState,
+  useTransition,
+  useRef,
+  useEffect,
+  type ReactElement,
+} from "react";
+import type { BusinessHours } from "@/shared/lib/json-validators";
+import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { publicReservationSchema } from "@/shared/lib/validations/public-reservation";
 import { submitReservation } from "@/public/actions/reservation";
+import { fetchAvailableSlots } from "@/public/actions/availability";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { usePublicForm } from "@/public/hooks/use-public-form";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
-import { DateTimeStep } from "./date-time-step";
+import { Button } from "@/public/components/design-system/button";
+import { SpaceSelector, type SpaceOption } from "./space-selector";
+import { CalendarPicker } from "./calendar-picker";
+import { TimeSlotGrid } from "./time-slot-grid";
+import { DurationPills } from "./duration-pills";
+import { GuestStepper } from "./guest-stepper";
+import { BookingSummary } from "./booking-summary";
+import { StickyBottomBar } from "./sticky-bottom-bar";
 import { CustomerStep } from "./customer-step";
-import { ConfirmationStep } from "./confirmation-step";
 
-type SpaceOption = {
-  id: string;
-  name: string;
-  capacity: number;
-  hourlyPrice: number;
-  mainImageUrl: string | null;
-};
+function formatDateToISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const totalMinutes = (h ?? 0) * 60 + (m ?? 0) + minutes;
+  const newH = Math.floor(totalMinutes / 60);
+  const newM = totalMinutes % 60;
+  return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+}
 
 export function ReservationForm({
   spaces,
+  businessHours,
 }: {
   readonly spaces: readonly SpaceOption[];
+  readonly businessHours: BusinessHours | null;
 }): ReactElement {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const motionOk = useMotionPreference();
+  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [isFetchingSlots, startFetchTransition] = useTransition();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedStartTime, setSelectedStartTime] = useState<string | null>(
+    null,
+  );
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const timeGridRef = useRef<HTMLDivElement>(null);
 
   const { form, isPending, onSubmit } = usePublicForm(
     publicReservationSchema,
@@ -57,53 +80,124 @@ export function ReservationForm({
     },
   );
 
-  const animateTransition = () => {
-    const content = contentRef.current;
-    if (!content) return;
+  const spaceId = form.getValues("spaceId");
+  const selectedSpace = spaces.find((s) => s.id === spaceId);
+  const numberOfGuests = form.getValues("numberOfGuests");
 
-    const stepContent = content.querySelector("[data-step]");
-    if (!stepContent) return;
-
-    const reduced = !motionOk.current;
-    gsap.fromTo(
-      stepContent,
-      { opacity: 0, y: reduced ? 0 : 20 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: reduced ? DURATION.fast : DURATION.normal,
-        ease: EASE.outQuart,
-      },
-    );
-  };
-
-  const goNext = async () => {
-    if (step === 1) {
-      const isValid = await form.trigger([
-        "spaceId",
-        "date",
-        "startTime",
-        "endTime",
-        "numberOfGuests",
-      ] as const);
-      if (!isValid) return;
-    } else if (step === 2) {
-      const isValid = await form.trigger([
-        "lastName",
-        "firstName",
-        "email",
-        "phoneNumber",
-        "notes",
-      ] as const);
-      if (!isValid) return;
+  // Auto-select single space
+  useEffect(() => {
+    if (spaces.length === 1 && spaces[0]) {
+      form.setValue("spaceId", spaces[0].id);
+      form.setValue("numberOfGuests", 1);
     }
-    setStep((prev) => Math.min(3, prev + 1));
-    animateTransition();
+  }, [spaces, form]);
+
+  // Derived: endTime from startTime + duration
+  const endTime =
+    selectedStartTime !== null && selectedDuration !== null
+      ? addMinutesToTime(selectedStartTime, selectedDuration)
+      : null;
+
+  // Derived: max duration from consecutive available slots
+  const maxDuration = (() => {
+    if (selectedStartTime === null) return 0;
+    const startIndex = slots.findIndex((s) => s.time === selectedStartTime);
+    if (startIndex === -1) return 0;
+    let consecutive = 0;
+    for (let i = startIndex; i < slots.length; i++) {
+      const slot = slots[i];
+      if (!slot || !slot.available) break;
+      consecutive++;
+    }
+    return consecutive * 30;
+  })();
+
+  // Derived: price
+  const price =
+    selectedSpace && selectedDuration !== null
+      ? Math.floor(selectedSpace.hourlyPrice * (selectedDuration / 60))
+      : null;
+
+  // Derived: isStep1Complete
+  const isStep1Complete =
+    spaceId !== "" &&
+    spaceId !== undefined &&
+    selectedDate !== undefined &&
+    selectedStartTime !== null &&
+    selectedDuration !== null &&
+    endTime !== null &&
+    (numberOfGuests ?? 0) >= 1;
+
+  const fetchSlots = (fetchSpaceId: string, date: Date) => {
+    const dateStr = formatDateToISO(date);
+    startFetchTransition(async () => {
+      const result = await fetchAvailableSlots(fetchSpaceId, dateStr);
+      setSlots(result);
+    });
   };
 
-  const goBack = () => {
-    setStep((prev) => Math.max(1, prev - 1));
-    animateTransition();
+  const handleSpaceSelect = (id: string) => {
+    form.setValue("spaceId", id);
+    form.setValue("numberOfGuests", 1);
+    setSelectedStartTime(null);
+    setSelectedDuration(null);
+    if (selectedDate) {
+      fetchSlots(id, selectedDate);
+    }
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setSelectedStartTime(null);
+    setSelectedDuration(null);
+    if (date) {
+      form.setValue("date", formatDateToISO(date));
+      const currentSpaceId = form.getValues("spaceId");
+      if (currentSpaceId) {
+        fetchSlots(currentSpaceId, date);
+      }
+      // Scroll to time grid on mobile
+      requestAnimationFrame(() => {
+        timeGridRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    }
+  };
+
+  const handleStartTimeSelect = (time: string) => {
+    setSelectedStartTime(time);
+    setSelectedDuration(null);
+    form.setValue("startTime", time);
+  };
+
+  const handleDurationSelect = (minutes: number) => {
+    if (selectedStartTime === null) return;
+    setSelectedDuration(minutes);
+    const computedEndTime = addMinutesToTime(selectedStartTime, minutes);
+    form.setValue("endTime", computedEndTime);
+  };
+
+  const handleGuestChange = (value: number) => {
+    form.setValue("numberOfGuests", value);
+  };
+
+  const goToStep2 = async () => {
+    const isValid = await form.trigger([
+      "spaceId",
+      "date",
+      "startTime",
+      "endTime",
+      "numberOfGuests",
+    ]);
+    if (!isValid) return;
+    setStep(2);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const goBackToStep1 = () => {
+    setStep(1);
   };
 
   if (submitted) {
@@ -123,30 +217,161 @@ export function ReservationForm({
     );
   }
 
+  if (step === 2) {
+    return (
+      <form onSubmit={onSubmit}>
+        <CustomerStep
+          form={form}
+          isPending={isPending}
+          errorMessage={errorMessage}
+          summary={{
+            spaceName: selectedSpace?.name ?? "",
+            date: selectedDate ? formatDateToISO(selectedDate) : "",
+            startTime: selectedStartTime ?? "",
+            endTime: endTime ?? "",
+            guests: numberOfGuests ?? 1,
+            price,
+          }}
+          onBack={goBackToStep1}
+        />
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit}>
-      <div className="mb-10 md:mb-12">
-        <StepIndicator currentStep={step} />
-      </div>
-      <div ref={contentRef}>
-        <div data-step="">
-          {step === 1 && (
-            <DateTimeStep form={form} spaces={spaces} onNext={goNext} />
-          )}
-          {step === 2 && (
-            <CustomerStep form={form} onNext={goNext} onBack={goBack} />
-          )}
-          {step === 3 && (
-            <ConfirmationStep
-              form={form}
-              spaces={spaces}
-              isPending={isPending}
-              errorMessage={errorMessage}
-              onBack={goBack}
+      {/* Space selector */}
+      {spaces.length > 1 ? (
+        <div className="mb-8">
+          <h3 className="mb-3 text-sm font-medium text-foreground">
+            スペースを選択
+          </h3>
+          <SpaceSelector
+            spaces={spaces}
+            selectedId={spaceId ?? ""}
+            onSelect={handleSpaceSelect}
+          />
+        </div>
+      ) : null}
+
+      {/* 2-column grid: calendar + selections */}
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Left column: Calendar */}
+        <div>
+          <h3 className="mb-3 text-sm font-medium text-foreground">
+            日付を選択
+          </h3>
+          <div className="rounded-lg border border-border bg-card p-3">
+            <CalendarPicker
+              selectedDate={selectedDate}
+              onSelect={handleDateSelect}
+              businessHours={businessHours}
             />
+          </div>
+        </div>
+
+        {/* Right column: Time + Duration + Guests */}
+        <div ref={timeGridRef}>
+          {/* Time slots — shown after date selection */}
+          {selectedDate ? (
+            <div>
+              <h3 className="mb-3 text-sm font-medium text-foreground">
+                開始時間を選択
+              </h3>
+              <TimeSlotGrid
+                slots={slots}
+                selectedTime={selectedStartTime}
+                onSelect={handleStartTimeSelect}
+                isLoading={isFetchingSlots}
+              />
+            </div>
+          ) : (
+            <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed border-border">
+              <p className="text-sm text-muted-foreground">
+                カレンダーから日付を選択してください
+              </p>
+            </div>
           )}
+
+          {/* Duration pills — shown after start time */}
+          {selectedStartTime !== null ? (
+            <div className="mt-6">
+              <h3 className="mb-3 text-sm font-medium text-foreground">
+                利用時間を選択
+              </h3>
+              <DurationPills
+                selectedMinutes={selectedDuration}
+                onSelect={handleDurationSelect}
+                maxMinutes={maxDuration}
+              />
+            </div>
+          ) : null}
+
+          {/* Guest stepper — shown after start time */}
+          {selectedStartTime !== null && selectedSpace ? (
+            <div className="mt-6">
+              <GuestStepper
+                value={numberOfGuests ?? 1}
+                onChange={handleGuestChange}
+                max={selectedSpace.capacity}
+              />
+            </div>
+          ) : null}
+
+          {/* Desktop: Summary + CTA (hidden on mobile) */}
+          {isStep1Complete ? (
+            <div className="mt-6 hidden md:block">
+              <BookingSummary
+                spaceName={selectedSpace?.name ?? ""}
+                date={selectedDate ? formatDateToISO(selectedDate) : ""}
+                startTime={selectedStartTime ?? ""}
+                endTime={endTime ?? ""}
+                guests={numberOfGuests ?? 1}
+                price={price}
+              />
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    void goToStep2();
+                  }}
+                >
+                  お客様情報の入力へ
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {/* Mobile: Sticky bottom bar */}
+      {isStep1Complete ? (
+        <>
+          <div className="h-20 md:hidden" />
+          <StickyBottomBar>
+            <div className="flex items-center justify-between">
+              <div>
+                {price !== null ? (
+                  <p className="font-heading text-lg text-accent">
+                    &yen;{price.toLocaleString()}
+                  </p>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  {selectedStartTime} → {endTime}
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  void goToStep2();
+                }}
+              >
+                次へ
+              </Button>
+            </div>
+          </StickyBottomBar>
+        </>
+      ) : null}
     </form>
   );
 }

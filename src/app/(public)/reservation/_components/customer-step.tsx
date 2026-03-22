@@ -6,18 +6,46 @@ import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
+import { BookingSummary } from "./booking-summary";
+import { StickyBottomBar } from "./sticky-bottom-bar";
+
+interface CustomerStepProps {
+  readonly form: UseFormReturn<PublicReservationInput>;
+  readonly isPending: boolean;
+  readonly errorMessage: string | null;
+  readonly summary: {
+    spaceName: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    guests: number;
+    price: number | null;
+  };
+  readonly onBack: () => void;
+}
 
 export function CustomerStep({
   form,
-  onNext,
+  isPending,
+  errorMessage,
+  summary,
   onBack,
-}: {
-  readonly form: UseFormReturn<PublicReservationInput>;
-  readonly onNext: () => void;
-  readonly onBack: () => void;
-}): ReactElement {
+}: CustomerStepProps): ReactElement {
   return (
     <div>
+      {/* Booking summary card */}
+      <div className="mb-8">
+        <BookingSummary
+          spaceName={summary.spaceName}
+          date={summary.date}
+          startTime={summary.startTime}
+          endTime={summary.endTime}
+          guests={summary.guests}
+          price={summary.price}
+          onEdit={onBack}
+        />
+      </div>
+
       <h2 className="mb-6 font-heading text-xl tracking-tight md:text-2xl">
         お客様情報
       </h2>
@@ -84,14 +112,71 @@ export function CustomerStep({
         />
       </div>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
-        <Button type="button" variant="secondary" onClick={onBack}>
+      {/* Terms checkbox */}
+      <div className="mt-6">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-border accent-primary"
+            {...form.register("agreeToTerms")}
+          />
+          <span className="text-sm text-muted-foreground">
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline"
+            >
+              利用規約
+            </a>
+            に同意します
+          </span>
+        </label>
+        {form.formState.errors.agreeToTerms?.message ? (
+          <p className="mt-1 text-sm text-destructive">
+            {form.formState.errors.agreeToTerms.message}
+          </p>
+        ) : null}
+      </div>
+
+      {/* Error message */}
+      {errorMessage ? (
+        <p className="mt-4 text-sm text-destructive">{errorMessage}</p>
+      ) : null}
+
+      {/* Desktop: inline buttons */}
+      <div className="mt-8 hidden flex-col gap-3 sm:flex-row sm:gap-4 md:flex">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onBack}
+          disabled={isPending}
+        >
           戻る
         </Button>
-        <Button type="button" onClick={onNext}>
-          確認画面へ
+        <Button type="submit" disabled={isPending}>
+          {isPending ? "送信中..." : "予約を確定する"}
         </Button>
       </div>
+
+      {/* Mobile: Sticky bottom bar */}
+      <div className="h-20 md:hidden" />
+      <StickyBottomBar>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onBack}
+            disabled={isPending}
+            className="flex-1"
+          >
+            戻る
+          </Button>
+          <Button type="submit" disabled={isPending} className="flex-1">
+            {isPending ? "送信中..." : "予約を確定する"}
+          </Button>
+        </div>
+      </StickyBottomBar>
     </div>
   );
 }

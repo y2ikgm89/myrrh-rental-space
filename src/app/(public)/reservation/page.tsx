@@ -2,7 +2,7 @@
  * /reservation — ご予約ページ（Page-First アーキテクチャ）
  *
  * SEO: generatePageMetadata
- * コンテンツ: 3ステップ予約フォーム（スペース選択 → 顧客情報 → 確認・送信）
+ * コンテンツ: 2ステップ予約フォーム（日時選択 → 顧客情報・確認・送信）
  */
 
 import type { Metadata } from "next";
@@ -17,6 +17,7 @@ import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Container } from "@/public/components/design-system/container";
 import { getPublishedSpaces } from "@/shared/domain/spaces/public-queries";
+import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
 import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -28,13 +29,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ReservationPage(): Promise<ReactElement> {
   await connection();
 
-  const [content, allSpaces] = await Promise.all([
+  const [content, allSpaces, businessHours] = await Promise.all([
     getPageContent(
       "reservation",
       simplePageContentSchema,
       defaultReservationContent,
     ),
     getPublishedSpaces(),
+    getBusinessHoursSettingsQuery(),
   ]);
 
   const spaces = allSpaces.map((s) => ({
@@ -55,7 +57,7 @@ export default async function ReservationPage(): Promise<ReactElement> {
 
       <section className="py-[var(--spacing-section)]">
         <Container variant="narrow">
-          <ReservationForm spaces={spaces} />
+          <ReservationForm spaces={spaces} businessHours={businessHours} />
         </Container>
       </section>
 
