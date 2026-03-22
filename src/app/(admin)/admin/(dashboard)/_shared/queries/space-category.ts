@@ -11,9 +11,11 @@ import type {
 } from "@/shared/lib/validations/space-category";
 import { requireAdminPermission } from "./_helpers";
 
-export async function getSpaceCategories(options?: {
+export async function getSpaceCategories(options: {
   includeInactive?: boolean;
   search?: string;
+  page: number;
+  limit: number;
 }): Promise<GetSpaceCategoriesResult> {
   await requireAdminPermission("spaceCategory", "read");
   return getSpaceCategoriesQuery(options);

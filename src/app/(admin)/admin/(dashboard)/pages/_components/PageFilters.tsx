@@ -17,12 +17,12 @@ import {
   SelectContent,
   SelectItem,
 } from "@/admin/components/ui";
-import { adminPageParsers } from "@/shared/lib/nuqs";
+import { adminPageSearchParamsParsers } from "@/shared/lib/nuqs";
 
 export function PageFilters() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [params, setParams] = useQueryStates(adminPageParsers, {
+  const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
     history: "push",
     shallow: false,
   });

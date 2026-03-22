@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,6 +12,10 @@ import {
   CardTitle,
   Badge,
   Switch,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
 } from "@/admin/components/ui";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
@@ -49,8 +54,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
     if (!isModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsModalOpen(false);
-      else if (e.key === "ArrowLeft") {
+      if (e.key === "ArrowLeft") {
         setSelectedIndex((prev) =>
           prev === 0 ? allImages.length - 1 : prev - 1,
         );
@@ -122,6 +126,9 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             }
           />
           <DetailField label="所在地" value={space.displayAddress} />
+          {space.category ? (
+            <DetailField label="カテゴリ" value={space.category.name} />
+          ) : null}
           {space.access && (
             <DetailField label="アクセス" value={space.access} />
           )}
@@ -209,103 +216,56 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
         </CardContent>
       </Card>
 
-      {/* 画像モーダル */}
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
-          onClick={() => setIsModalOpen(false)}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent
+          className="max-h-[95vh] max-w-[min(100vw-2rem,80rem)] gap-0 border-border bg-card p-4 shadow-lg"
+          aria-describedby={undefined}
         >
-          {/* 閉じるボタン */}
-          <button
-            type="button"
-            className="absolute top-4 right-4 text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-            onClick={() => setIsModalOpen(false)}
-          >
-            <svg
-              className="h-8 w-8"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18 18 6M6 6l12 12"
+          <DialogTitle className="sr-only">
+            {space.name}の画像ギャラリー
+          </DialogTitle>
+          <div className="relative flex min-h-[40vh] items-center justify-center">
+            {allImages.length > 1 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="absolute left-0 top-1/2 z-10 -translate-y-1/2"
+                onClick={handlePrev}
+              >
+                <ChevronLeft className="size-5" />
+                <span className="sr-only">前の画像</span>
+              </Button>
+            ) : null}
+            {allImages[selectedIndex] ? (
+              <Image
+                src={allImages[selectedIndex]}
+                alt={`${space.name} - 画像${selectedIndex + 1}`}
+                width={1920}
+                height={1080}
+                className="max-h-[85vh] w-auto max-w-full object-contain"
               />
-            </svg>
-          </button>
-
-          {/* 前へボタン */}
-          {allImages.length > 1 && (
-            <button
-              type="button"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-primary-foreground hover:text-primary-foreground/70 transition-colors p-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                handlePrev();
-              }}
-            >
-              <svg
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
+            ) : null}
+            {allImages.length > 1 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="absolute right-0 top-1/2 z-10 -translate-y-1/2"
+                onClick={handleNext}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 19.5 8.25 12l7.5-7.5"
-                />
-              </svg>
-            </button>
-          )}
-
-          {/* 画像 */}
-          {allImages[selectedIndex] && (
-            <Image
-              src={allImages[selectedIndex]}
-              alt={`${space.name} - 画像${selectedIndex + 1}`}
-              width={1920}
-              height={1080}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-            />
-          )}
-
-          {/* 次へボタン */}
-          {allImages.length > 1 && (
-            <button
-              type="button"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-primary-foreground hover:text-primary-foreground/70 transition-colors p-2"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNext();
-              }}
-            >
-              <svg
-                className="h-8 w-8"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                />
-              </svg>
-            </button>
-          )}
-
-          {/* カウンター */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-primary-foreground text-sm">
-            {selectedIndex + 1} / {allImages.length}
+                <ChevronRight className="size-5" />
+                <span className="sr-only">次の画像</span>
+              </Button>
+            ) : null}
           </div>
-        </div>
-      )}
+          {allImages.length > 1 ? (
+            <p className="pt-2 text-center text-sm text-muted-foreground">
+              {selectedIndex + 1} / {allImages.length}
+            </p>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* 設備 */}
       {space.facilities.length > 0 && (

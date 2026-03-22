@@ -1,11 +1,15 @@
 import { Suspense } from "react";
+import { z } from "zod";
 import { getSpaces } from "@/admin/queries/space";
+import { getActiveLocationsForSelect } from "@/admin/queries/location";
+import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { SpaceFilters } from "./SpaceFilters";
 import { SpaceTable } from "./SpaceTable";
 import { Pagination } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED } from "@/shared/lib/constants/admin-space-management";
 
 // =============================================================================
 // 内部コンポーネント
@@ -15,21 +19,47 @@ async function SpaceList() {
   const params = adminSpaceSearchParamsCache.all();
 
   let isPublished: boolean | "ALL" = "ALL";
-  if (params.status === "true") {
+  if (params.spStatus === "true") {
     isPublished = true;
-  } else if (params.status === "false") {
+  } else if (params.spStatus === "false") {
     isPublished = false;
   }
 
+  const locationParsed = z.string().uuid().safeParse(params.spLocationId);
+  const locationId = locationParsed.success ? locationParsed.data : undefined;
+
+  let uncategorizedOnly: boolean | undefined;
+  let categoryId: string | undefined;
+  if (params.spCategoryId === ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED) {
+    uncategorizedOnly = true;
+  } else if (params.spCategoryId !== "") {
+    const categoryParsed = z.string().uuid().safeParse(params.spCategoryId);
+    if (categoryParsed.success) {
+      categoryId = categoryParsed.data;
+    }
+  }
+
   const result = await getSpaces(
-    omitUndefined({ isPublished, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    omitUndefined({
+      isPublished,
+      search: params.spSearch || undefined,
+      locationId,
+      categoryId,
+      uncategorizedOnly,
+    }),
+    {
+      page: params.spPage,
+      limit: params.spPerPage,
+      sortBy: params.spSortBy,
+      sortOrder: params.spSortOrder,
+    },
   );
 
   return (
     <>
       <SpaceTable spaces={result.spaces} />
       <Pagination
+        pageUrlKey="spPage"
         currentPage={result.page}
         totalPages={result.totalPages}
         total={result.total}
@@ -43,11 +73,23 @@ async function SpaceList() {
 // =============================================================================
 
 export async function SpaceTabContent() {
+  const [locations, categories] = await Promise.all([
+    getActiveLocationsForSelect(),
+    getActiveSpaceCategories(),
+  ]);
+
   return (
     <div className="space-y-6">
-      <Suspense fallback={<LoadingState variant="inline" />}>
-        <SpaceFilters />
-      </Suspense>
+      <SpaceFilters
+        locationOptions={locations.map((loc) => ({
+          id: loc.id,
+          name: loc.name,
+        }))}
+        categoryOptions={categories.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+        }))}
+      />
       <Suspense fallback={<LoadingState />}>
         <SpaceList />
       </Suspense>

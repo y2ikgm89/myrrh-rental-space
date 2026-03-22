@@ -54,7 +54,10 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   const [sections, setSections] = useState<PageSectionData[] | null>(
     page.sections,
   );
-  const [selectedId, setSelectedId] = useQueryState("section", parseAsString);
+  const [selectedId, setSelectedId] = useQueryState(
+    "section",
+    parseAsString.withOptions({ history: "push", shallow: false }),
+  );
   const [showAddDialog, setShowAddDialog] = useState(false);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

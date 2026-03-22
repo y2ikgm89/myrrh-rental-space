@@ -6,7 +6,7 @@ paths:
 # GSAP パターンルール
 
 > Codex 用参照ドキュメント。公開ページの GSAP 実装はこのファイルを正本とする。
-> GSAP 3.14.2 / @gsap/react 2.1 / ScrollTrigger / Lenis 1.3.17 対応
+> GSAP 3.14.2 / @gsap/react 2.1.2 / ScrollTrigger / Lenis 1.3.19 対応（`package.json` と `bun.lock` の解決版に合わせる）
 
 ## 基本ルール
 

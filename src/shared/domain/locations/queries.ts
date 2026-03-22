@@ -47,11 +47,16 @@ function formatLocation(location: {
   };
 }
 
-export async function getLocations(options?: {
+export async function getLocations(options: {
   includeInactive?: boolean;
   search?: string;
+  page: number;
+  limit: number;
 }): Promise<GetLocationsResult> {
-  const { includeInactive = false, search } = options ?? {};
+  const { includeInactive = false, search } = options;
+  const page = Math.max(1, options.page);
+  const limit = Math.max(1, options.limit);
+  const skip = (page - 1) * limit;
 
   const where: Prisma.LocationWhereInput = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -69,6 +74,8 @@ export async function getLocations(options?: {
     prisma.location.findMany({
       where,
       orderBy: { sortOrder: "asc" },
+      skip,
+      take: limit,
       select: {
         id: true,
         name: true,
@@ -91,9 +98,14 @@ export async function getLocations(options?: {
     prisma.location.count({ where }),
   ]);
 
+  const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+
   return {
     locations: locations.map(formatLocation),
     total,
+    page,
+    limit,
+    totalPages,
   };
 }
 

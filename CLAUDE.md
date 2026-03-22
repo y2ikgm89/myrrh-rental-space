@@ -50,7 +50,8 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 - **設計・計画**: `brainstorming` → `writing-plans` → `subagent-driven-development` / `finishing-a-development-branch`
 - **UI 実装**: `frontend-design`、`create-admin-page`、`create-page-content`、`create-server-action`
 - **スキーマ・設定**: `add-settings-field`、`prisma-migration`、`split-action-file`、`upgrade-deps`
-- **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`、`new-section`（長いひな形は `reference/scaffold-*.md`）。Lexical 監査・モダナイズ・`@lexical/react` 更新後のフォーク差分は **`.agents/skills/lexical-audit`** と `lexical-patterns.md`（`.claude/rules/frontend/lexical-patterns.md` は `paths:` 条件付きで同一方針）
+- **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`（長いひな形は `reference/scaffold-*.md`）、`lexical-audit`（既存実装の監査・モダナイズ）
+- **公開ページ演出**: `parallax-section`（スクロール連動セクション、GSAP + reduced motion）
 - **問題対応**: `systematic-debugging`、`stripe-debug`、`google-calendar-debug`、`turbopack-hmr`
 - **レビュー・メンテ**: `requesting-code-review`、`receiving-code-review`、`audit-settings-sections`、`claude-md-management:claude-md-improver`、`claude-md-management:revise-claude-md`
 - **リファクタリング**: `code-simplifier:code-simplifier`（Task）

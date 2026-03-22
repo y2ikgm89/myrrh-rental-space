@@ -31,7 +31,7 @@ async function ReservationList({
 
   const result = await getReservations(
     omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (

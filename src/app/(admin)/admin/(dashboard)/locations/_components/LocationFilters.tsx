@@ -1,13 +1,8 @@
 "use client";
 
 import { Search } from "lucide-react";
-import {
-  useQueryStates,
-  parseAsString,
-  parseAsInteger,
-  parseAsStringLiteral,
-} from "nuqs";
-import { ADMIN_SPACE_MANAGEMENT_TABS } from "@/shared/lib/constants/admin-space-management";
+import { useQueryStates } from "nuqs";
+import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useRef, useEffect } from "react";
 import {
   Select,
@@ -27,20 +22,10 @@ const PUBLISH_STATUS_OPTIONS = [
 export function LocationFilters() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(""),
-      published: parseAsString.withDefault(""),
-      page: parseAsInteger.withDefault(1),
-      tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault(
-        "locations",
-      ),
-    },
-    {
-      history: "push",
-      shallow: false,
-    },
-  );
+  const [params, setParams] = useQueryStates(adminSpaceSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   useEffect(() => {
     return () => {
@@ -55,16 +40,16 @@ export function LocationFilters() {
       clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ search: value || null, page: 1 });
+      void setParams({ locSearch: value || null, locPage: 1 });
     }, 300);
   };
 
   const setPublished = (value: string) => {
     const publishedValue = value === "ALL" ? null : value || null;
-    void setParams({ published: publishedValue, page: 1 });
+    void setParams({ locPublished: publishedValue, locPage: 1 });
   };
 
-  const currentPublished = params.published || "ALL";
+  const currentPublished = params.locPublished || "ALL";
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -90,7 +75,7 @@ export function LocationFilters() {
         <Input
           type="search"
           placeholder="名前・住所で検索..."
-          defaultValue={params.search}
+          defaultValue={params.locSearch}
           onChange={(e) => setSearchDebounced(e.target.value)}
           className="pl-9"
         />

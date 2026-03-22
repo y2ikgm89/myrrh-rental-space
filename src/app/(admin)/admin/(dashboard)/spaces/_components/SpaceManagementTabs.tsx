@@ -44,7 +44,9 @@ function hrefForTab(
 // =============================================================================
 
 /**
- * スペース管理のタブナビ。`Link` で `tab` を切り替え、RSC がアクティブタブのみ再取得する。
+ * スペース管理のタブナビ。
+ * nuqs ではなく `Link` + `URLSearchParams` で `tab` を切り替える（フルナビで RSC がアクティブタブのみ再取得）。
+ * 各タブ内のフィルタは `adminSpaceSearchParamsParsers`（nuqs）とキーを共有する。
  */
 export function SpaceManagementTabs({
   activeTab,

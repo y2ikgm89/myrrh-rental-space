@@ -1,6 +1,7 @@
 "use client";
 
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminUserSearchParamsParsers } from "@/shared/lib/nuqs";
 import { Search } from "lucide-react";
 import { useDebouncedCallback } from "@/admin/hooks";
 import {
@@ -13,14 +14,10 @@ import {
 } from "@/admin/components/ui";
 
 export function StaffFilters() {
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(""),
-      role: parseAsString.withDefault("ALL"),
-      page: parseAsInteger.withDefault(1),
-    },
-    { history: "push", shallow: false },
-  );
+  const [params, setParams] = useQueryStates(adminUserSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   const setSearchDebounced = useDebouncedCallback(
     (value: string) => void setParams({ search: value || null, page: 1 }),
@@ -40,7 +37,7 @@ export function StaffFilters() {
       </div>
       <div className="w-full sm:w-[180px]">
         <Select
-          value={params.role}
+          value={params.role === "" ? "ALL" : params.role}
           onValueChange={(value) =>
             void setParams({ role: value === "ALL" ? null : value, page: 1 })
           }

@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminMediaSearchParamsParsers } from "@/shared/lib/nuqs";
 import { Search, Grid, List, Upload } from "lucide-react";
 import {
   Button,
@@ -23,16 +24,10 @@ export function MediaFilters() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(""),
-      type: parseAsString.withDefault(""),
-      usage: parseAsString.withDefault(""),
-      view: parseAsString.withDefault("grid"),
-      page: parseAsInteger.withDefault(1),
-    },
-    { history: "push", shallow: false },
-  );
+  const [params, setParams] = useQueryStates(adminMediaSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value;

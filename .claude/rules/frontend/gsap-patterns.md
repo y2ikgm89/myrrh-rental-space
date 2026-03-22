@@ -9,7 +9,7 @@ paths:
 
 # GSAP パターンルール
 
-> GSAP 3.14.2 / @gsap/react 2.1 / ScrollTrigger / Lenis 1.3.18 対応（`package.json` の `lenis` と一致）
+> GSAP 3.14.2 / @gsap/react 2.1.2 / ScrollTrigger / Lenis 1.3.19 対応（`package.json` と `bun.lock` の解決版に合わせる）
 
 ## 基本ルール
 

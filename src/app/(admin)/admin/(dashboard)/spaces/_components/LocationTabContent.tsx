@@ -3,6 +3,7 @@ import { getLocations } from "@/admin/queries/location";
 import { LocationFilters } from "../../locations/_components/LocationFilters";
 import { LocationTable } from "../../locations/_components/LocationTable";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { Pagination } from "@/admin/components/ui";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 
@@ -12,16 +13,28 @@ import { omitUndefined } from "@/shared/lib/serialize";
 
 async function LocationList() {
   const params = adminSpaceSearchParamsCache.all();
-  const includeInactive = params.published !== "true";
+  const includeInactive = params.locPublished !== "true";
 
   const result = await getLocations(
     omitUndefined({
       includeInactive,
-      search: params.search || undefined,
+      search: params.locSearch || undefined,
+      page: params.locPage,
+      limit: params.locPerPage,
     }),
   );
 
-  return <LocationTable locations={result.locations} />;
+  return (
+    <>
+      <LocationTable locations={result.locations} />
+      <Pagination
+        pageUrlKey="locPage"
+        currentPage={result.page}
+        totalPages={result.totalPages}
+        total={result.total}
+      />
+    </>
+  );
 }
 
 // =============================================================================

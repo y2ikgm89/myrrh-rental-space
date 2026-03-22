@@ -38,12 +38,12 @@ const [activeTab, setActiveTab] = useQueryState(
 
 タブごとの中身が **軽量な RSC（テーブル・フィルタ）** だけのときは、**アクティブタブの RSC だけ** を描画する。親ページで `createSearchParamsCache` を `parse` し、`tab` で分岐する。タブ切替は **`Link`（または `shallow: false` の URL 更新）** で `searchParams` を変え、Next.js が RSC を再実行する。
 
-**参照実装**: `src/app/(admin)/admin/(dashboard)/spaces/page.tsx` と `spaces/_components/SpaceManagementTabs.tsx`。`tab` は `src/shared/lib/constants/admin-space-management.ts` の `ADMIN_SPACE_MANAGEMENT_TABS` と `src/shared/lib/nuqs/parsers.ts` の `adminSpaceSearchParamsCache` でサーバー・クライアント一致させる。
+**参照実装**: `src/app/(admin)/admin/(dashboard)/spaces/page.tsx` と `spaces/_components/SpaceManagementTabs.tsx`。ハブの `tab`（`ADMIN_SPACE_MANAGEMENT_TABS`）に加え、一覧状態はタブ別プレフィックスで分離する: スペース一覧 `spSearch` / `spStatus` / `spPage` / `spSortBy` / `spSortOrder` / `spLocationId` / `spCategoryId`、場所 `locSearch` / `locPublished` / `locPage`、カテゴリ `catSearch` / `catIncludeInactive` / `catPage`（`adminSpaceSearchParamsCache`）。スペース編集フォームのタブ URL はハブと衝突しないよう `section` クエリを使用する。
 
 | 設定                     | 値                                      | 理由                                                         |
 | ------------------------ | --------------------------------------- | ------------------------------------------------------------ |
 | サーバー                 | `parse` 後に `tab` で条件付き 1 パネル | 非表示タブの `getLocations` 等を初回から走らせない         |
-| タブナビ                 | `Link` + 既存クエリの preserve          | RSC 再取得が必要なときに明示的なナビゲーションになる         |
+| タブナビ                 | `Link` + 名前空間付きクエリの preserve   | タブ切替で他タブのフィルタが汚染されない                   |
 | 子のデータ読み           | `searchParamsCache.all()` / `get`       | 親で `parse` 済みなら子で二重 `parse` を避ける               |
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧＋フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
@@ -678,7 +678,7 @@ export function DashboardHeader() {
 ```tsx
 // 標準パターン（BasicInfoSection.tsx が実装例）
 const { form, isPending, onSubmit } = useFormAction(
-  basicInfoFormSchema,           // form-schemas.ts のフォーム用スキーマ
+  basicInfoFormSchema,           // schemas/form-schemas-*.ts のフォーム用スキーマ
   (data) => updateBasicInfo({    // emptyToNull で空文字→null 変換
     siteName: emptyToNull(data.siteName),
   }),
@@ -724,7 +724,7 @@ const { form, isPending, onSubmit } = useFormAction(
 **スキーマ構成（責務分離）:**
 
 - Server Action スキーマ（`schemas/basic.ts`）: `z.string().nullable()` — サーバーバリデーション用
-- フォーム用スキーマ（`schemas/form-schemas.ts`）: `z.string().max(100)` — クライアントバリデーション用
+- フォーム用スキーマ（`schemas/form-schemas-*.ts` + `form-schema-helpers.ts`、barrel は `schemas/index.ts`）: `z.string().max(100)` — クライアントバリデーション用
 - `emptyToNull()` で送信時に空文字列 → null 変換
 
 **接続テスト・OAuth ボタンの共存:**

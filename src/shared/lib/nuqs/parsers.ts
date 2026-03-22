@@ -1,11 +1,14 @@
 /**
  * nuqs カスタムパーサー
  *
- * @description 型安全な URL パラメータパーサーを提供
+ * @description 型安全な URL パラメータパーサー。各リソースのパーサーマップを1つ定義し、
+ *              `createSearchParamsCache(そのマップ)` と Client の `useQueryStates(同一マップ)` で共有する。
  * @see https://nuqs.dev/docs/parsers
+ * @see https://nuqs.dev/docs/server-side
  */
 
 import {
+  ADMIN_SPACE_LIST_SORT_BY,
   ADMIN_SPACE_MANAGEMENT_TABS,
 } from "@/shared/lib/constants/admin-space-management";
 import {
@@ -27,6 +30,9 @@ export const parseAsPage = parseAsInteger.withDefault(1);
 
 /** 1ページあたりの件数（デフォルト: 10） */
 export const parseAsPerPage = parseAsInteger.withDefault(10);
+
+/** メディア一覧の 1 ページ件数（グリッド想定、既定 24） */
+export const parseAsMediaPerPage = parseAsInteger.withDefault(24);
 
 // ============================================================
 // ソート
@@ -64,16 +70,17 @@ export const parseAsBoolean = createParser<boolean>({
 });
 
 // ============================================================
-// Search Params Caches (Server-side)
+// 公開・ブログ・ニュース（Server のみ Client 共有不要）
 // ============================================================
 
-/** スペース検索パラメータキャッシュ */
-const spaceSearchParamsCache = createSearchParamsCache({
+const spaceSearchParamsParsers = {
   q: parseAsQuery,
   page: parseAsPage,
   perPage: parseAsPerPage,
   sort: parseAsSortOrder,
-});
+};
+
+const spaceSearchParamsCache = createSearchParamsCache(spaceSearchParamsParsers);
 
 /** スペース検索パラメータローダー */
 export async function loadSpaceSearchParams(
@@ -83,15 +90,16 @@ export async function loadSpaceSearchParams(
   return spaceSearchParamsCache.all();
 }
 
-/** ブログ検索パラメータキャッシュ */
-const blogSearchParamsCache = createSearchParamsCache({
+const blogSearchParamsParsers = {
   q: parseAsQuery,
   page: parseAsPage,
   perPage: parseAsPerPage,
   category: parseAsString.withDefault(""),
   tags: parseAsCommaSeparated.withDefault([]),
   sort: parseAsSortOrder,
-});
+};
+
+const blogSearchParamsCache = createSearchParamsCache(blogSearchParamsParsers);
 
 /** ブログ検索パラメータローダー */
 export async function loadBlogSearchParams(
@@ -101,13 +109,14 @@ export async function loadBlogSearchParams(
   return blogSearchParamsCache.all();
 }
 
-/** ニュース検索パラメータキャッシュ */
-const newsSearchParamsCache = createSearchParamsCache({
+const newsSearchParamsParsers = {
   q: parseAsQuery,
   page: parseAsPage,
   perPage: parseAsPerPage,
   sort: parseAsSortOrder,
-});
+};
+
+const newsSearchParamsCache = createSearchParamsCache(newsSearchParamsParsers);
 
 /** ニュース検索パラメータローダー */
 export async function loadNewsSearchParams(
@@ -117,15 +126,22 @@ export async function loadNewsSearchParams(
   return newsSearchParamsCache.all();
 }
 
-/** 管理画面ユーザー検索パラメータキャッシュ */
-const adminUserSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: スタッフ（ユーザー一覧）
+// ============================================================
+
+export const adminUserSearchParamsParsers = {
   search: parseAsQuery,
   page: parseAsPage,
   perPage: parseAsPerPage,
   role: parseAsString.withDefault(""),
   sortBy: parseAsString.withDefault("createdAt"),
   sortOrder: parseAsSortOrder,
-});
+};
+
+const adminUserSearchParamsCache = createSearchParamsCache(
+  adminUserSearchParamsParsers,
+);
 
 /** 管理画面ユーザー検索パラメータローダー */
 export async function loadAdminUserSearchParams(
@@ -135,8 +151,11 @@ export async function loadAdminUserSearchParams(
   return adminUserSearchParamsCache.all();
 }
 
-/** 管理画面監査ログ検索パラメータキャッシュ */
-const adminAuditLogSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: 監査ログ
+// ============================================================
+
+export const adminAuditLogSearchParamsParsers = {
   page: parseAsPage,
   perPage: parseAsPerPage,
   action: parseAsString.withDefault(""),
@@ -144,7 +163,11 @@ const adminAuditLogSearchParamsCache = createSearchParamsCache({
   userId: parseAsString.withDefault(""),
   dateFrom: parseAsString.withDefault(""),
   dateTo: parseAsString.withDefault(""),
-});
+};
+
+const adminAuditLogSearchParamsCache = createSearchParamsCache(
+  adminAuditLogSearchParamsParsers,
+);
 
 /** 管理画面監査ログ検索パラメータローダー */
 export async function loadAdminAuditLogSearchParams(
@@ -154,13 +177,21 @@ export async function loadAdminAuditLogSearchParams(
   return adminAuditLogSearchParamsCache.all();
 }
 
-/** 管理画面クーポン検索パラメータキャッシュ */
-const adminCouponSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: クーポン
+// ============================================================
+
+export const adminCouponSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   type: parseAsString.withDefault(""),
   page: parseAsPage,
-});
+  perPage: parseAsPerPage,
+};
+
+const adminCouponSearchParamsCache = createSearchParamsCache(
+  adminCouponSearchParamsParsers,
+);
 
 /** 管理画面クーポン検索パラメータローダー */
 export async function loadAdminCouponSearchParams(
@@ -170,14 +201,22 @@ export async function loadAdminCouponSearchParams(
   return adminCouponSearchParamsCache.all();
 }
 
-/** 管理画面メディア検索パラメータキャッシュ */
-const adminMediaSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: メディア
+// ============================================================
+
+export const adminMediaSearchParamsParsers = {
   search: parseAsQuery,
   type: parseAsString.withDefault(""),
   usage: parseAsString.withDefault(""),
   view: parseAsString.withDefault("grid"),
   page: parseAsPage,
-});
+  perPage: parseAsMediaPerPage,
+};
+
+const adminMediaSearchParamsCache = createSearchParamsCache(
+  adminMediaSearchParamsParsers,
+);
 
 /** 管理画面メディア検索パラメータローダー */
 export async function loadAdminMediaSearchParams(
@@ -187,13 +226,20 @@ export async function loadAdminMediaSearchParams(
   return adminMediaSearchParamsCache.all();
 }
 
-/** 管理画面コメント検索パラメータキャッシュ */
-const adminCommentSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: コメント（専用キャッシュ — 現状ローダー未使用だがパーサー単一化のため保持）
+// ============================================================
+
+const adminCommentSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
   perPage: parseAsPerPage,
-});
+};
+
+const adminCommentSearchParamsCache = createSearchParamsCache(
+  adminCommentSearchParamsParsers,
+);
 
 /** 管理画面コメント検索パラメータローダー */
 export async function loadAdminCommentSearchParams(
@@ -203,15 +249,22 @@ export async function loadAdminCommentSearchParams(
   return adminCommentSearchParamsCache.all();
 }
 
-/** 管理画面ページ管理検索パラメータキャッシュ */
-const adminPageSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: 固定ページ一覧
+// ============================================================
+
+export const adminPageSearchParamsParsers = {
   q: parseAsQuery,
   status: parseAsString.withDefault("all"),
   type: parseAsString.withDefault("all"),
   page: parseAsPage,
   perPage: parseAsInteger.withDefault(20),
   sort: parseAsSortOrder,
-});
+};
+
+const adminPageSearchParamsCache = createSearchParamsCache(
+  adminPageSearchParamsParsers,
+);
 
 /** 管理画面ページ管理検索パラメータローダー */
 export async function loadAdminPageSearchParams(
@@ -221,23 +274,23 @@ export async function loadAdminPageSearchParams(
   return adminPageSearchParamsCache.all();
 }
 
-/** 管理画面ページ管理パーサー（Client Component用） */
-export const adminPageParsers = {
-  q: parseAsQuery,
-  status: parseAsString.withDefault("all"),
-  type: parseAsString.withDefault("all"),
-  page: parseAsPage,
-  perPage: parseAsInteger.withDefault(20),
-  sort: parseAsSortOrder,
-};
+/** PageFilters 等の既存 import 向けエイリアス（`adminPageSearchParamsParsers` と同一参照） */
+export const adminPageParsers = adminPageSearchParamsParsers;
 
-/** 管理画面カレンダー検索パラメータキャッシュ */
-const adminCalendarSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: 予約カレンダー
+// ============================================================
+
+export const adminCalendarSearchParamsParsers = {
   view: parseAsString.withDefault(""),
   date: parseAsString.withDefault(""),
   spaceId: parseAsString.withDefault(""),
   status: parseAsString.withDefault(""),
-});
+};
+
+const adminCalendarSearchParamsCache = createSearchParamsCache(
+  adminCalendarSearchParamsParsers,
+);
 
 /** 管理画面カレンダー検索パラメータローダー */
 export async function loadAdminCalendarSearchParams(
@@ -247,12 +300,24 @@ export async function loadAdminCalendarSearchParams(
   return adminCalendarSearchParamsCache.all();
 }
 
-/** 管理画面顧客検索パラメータキャッシュ */
-const adminCustomerSearchParamsCache = createSearchParamsCache({
+// ============================================================
+// 管理画面: 顧客
+// ============================================================
+
+/**
+ * 顧客・お問い合わせ・予約一覧などのベース。
+ * `BaseFilters` / `useFilterParams` の `perPage` とサーバー `limit` を一致させる。
+ */
+export const adminCustomerSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
-});
+  perPage: parseAsPerPage,
+};
+
+const adminCustomerSearchParamsCache = createSearchParamsCache(
+  adminCustomerSearchParamsParsers,
+);
 
 /** 管理画面顧客検索パラメータローダー */
 export async function loadAdminCustomerSearchParams(
@@ -264,13 +329,17 @@ export async function loadAdminCustomerSearchParams(
 
 const adminNewsTabs = ["posts", "meta"] as const;
 
-/** 管理画面お知らせ検索パラメータキャッシュ */
-const adminNewsSearchParamsCache = createSearchParamsCache({
+const adminNewsSearchParamsParsers = {
   tab: parseAsStringLiteral(adminNewsTabs).withDefault("posts"),
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
-});
+  perPage: parseAsPerPage,
+};
+
+const adminNewsSearchParamsCache = createSearchParamsCache(
+  adminNewsSearchParamsParsers,
+);
 
 /** 管理画面お知らせ検索パラメータローダー */
 export async function loadAdminNewsSearchParams(
@@ -280,12 +349,16 @@ export async function loadAdminNewsSearchParams(
   return adminNewsSearchParamsCache.all();
 }
 
-/** 管理画面お問い合わせ検索パラメータキャッシュ */
-const adminInquirySearchParamsCache = createSearchParamsCache({
+const adminInquirySearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
-});
+  perPage: parseAsPerPage,
+};
+
+const adminInquirySearchParamsCache = createSearchParamsCache(
+  adminInquirySearchParamsParsers,
+);
 
 /** 管理画面お問い合わせ検索パラメータローダー */
 export async function loadAdminInquirySearchParams(
@@ -295,12 +368,16 @@ export async function loadAdminInquirySearchParams(
   return adminInquirySearchParamsCache.all();
 }
 
-/** 管理画面予約検索パラメータキャッシュ */
-const adminReservationSearchParamsCache = createSearchParamsCache({
+const adminReservationSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
-});
+  perPage: parseAsPerPage,
+};
+
+const adminReservationSearchParamsCache = createSearchParamsCache(
+  adminReservationSearchParamsParsers,
+);
 
 /** 管理画面予約検索パラメータローダー */
 export async function loadAdminReservationSearchParams(
@@ -312,10 +389,13 @@ export async function loadAdminReservationSearchParams(
 
 const adminTermsTabs = ["list"] as const;
 
-/** 管理画面利用規約検索パラメータキャッシュ */
-const adminTermsSearchParamsCache = createSearchParamsCache({
+const adminTermsSearchParamsParsers = {
   tab: parseAsStringLiteral(adminTermsTabs).withDefault("list"),
-});
+};
+
+const adminTermsSearchParamsCache = createSearchParamsCache(
+  adminTermsSearchParamsParsers,
+);
 
 /** 管理画面利用規約検索パラメータローダー */
 export async function loadAdminTermsSearchParams(
@@ -327,15 +407,20 @@ export async function loadAdminTermsSearchParams(
 
 const adminPostTabs = ["posts", "categories", "tags", "comments"] as const;
 
-/** 管理画面投稿検索パラメータキャッシュ */
-const adminPostSearchParamsCache = createSearchParamsCache({
+/** 投稿管理ページ（タブ・一覧・コメント）で共有する URL パーサー */
+export const adminPostSearchParamsParsers = {
   tab: parseAsStringLiteral(adminPostTabs).withDefault("posts"),
   status: parseAsString.withDefault(""),
   categoryId: parseAsString.withDefault(""),
   search: parseAsQuery,
   page: parseAsPage,
+  perPage: parseAsPerPage,
   postId: parseAsString.withDefault(""),
-});
+};
+
+const adminPostSearchParamsCache = createSearchParamsCache(
+  adminPostSearchParamsParsers,
+);
 
 /** 管理画面投稿検索パラメータローダー */
 export async function loadAdminPostSearchParams(
@@ -345,20 +430,63 @@ export async function loadAdminPostSearchParams(
   return adminPostSearchParamsCache.all();
 }
 
-/** 管理画面スペース検索パラメータキャッシュ（スペース管理ページの RSC ツリーで `parse` 後に `get` / `all`） */
-export const adminSpaceSearchParamsCache = createSearchParamsCache({
-  tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault("spaces"),
-  search: parseAsQuery,
-  status: parseAsString.withDefault(""), // SpaceTabContent: 'true' | 'false' | ''
-  page: parseAsPage,
-  published: parseAsString.withDefault(""), // LocationTabContent
-  includeInactive: parseAsBoolean.withDefault(false), // CategoryTabContent（クライアントの parseAsBoolean と一致）
-});
+// ============================================================
+// 投稿管理: タクソノミー（カテゴリー / タグ タブ）
+// ============================================================
 
-/** 管理画面スペース検索パラメータローダー（`loadAdminPostSearchParams` と同形で `all()` を返す） */
-export async function loadAdminSpaceSearchParams(
-  searchParams: Promise<SearchParams>,
-) {
-  await adminSpaceSearchParamsCache.parse(searchParams);
-  return adminSpaceSearchParamsCache.all();
-}
+export const postTaxonomySortFields = ["name", "postCount", "createdAt"] as const;
+export type PostTaxonomySortField = (typeof postTaxonomySortFields)[number];
+
+const postTaxonomyCategoryTabs = ["categories"] as const;
+
+/** カテゴリー管理サブビュー用（`/admin/posts` の `tab=categories` 時） */
+export const postTaxonomyCategorySearchParamsParsers = {
+  search: parseAsQuery,
+  tab: parseAsStringLiteral(postTaxonomyCategoryTabs).withDefault("categories"),
+};
+
+const postTaxonomyTagTabs = ["tags"] as const;
+
+const parseAsTaxonomyTagSortOrder =
+  parseAsStringLiteral(sortOrders).withDefault("asc");
+
+/** タグ管理サブビュー用（`/admin/posts` の `tab=tags` 時） */
+export const postTaxonomyTagSearchParamsParsers = {
+  search: parseAsQuery,
+  sortBy: parseAsStringLiteral(postTaxonomySortFields).withDefault("name"),
+  sortOrder: parseAsTaxonomyTagSortOrder,
+  unusedOnly: parseAsBoolean.withDefault(false),
+  tab: parseAsStringLiteral(postTaxonomyTagTabs).withDefault("tags"),
+};
+
+const parseAsAdminSpaceSortBy = parseAsStringLiteral(
+  ADMIN_SPACE_LIST_SORT_BY,
+).withDefault("createdAt");
+
+/**
+ * スペース管理ハブ（`/admin/spaces`）の URL 状態。
+ * タブごとにキーを分離し、タブ切替時も他タブのフィルタを汚染しない。
+ */
+export const adminSpaceSearchParamsParsers = {
+  tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault("spaces"),
+  spSearch: parseAsQuery,
+  spStatus: parseAsString.withDefault(""),
+  spPage: parseAsPage,
+  spPerPage: parseAsPerPage,
+  spSortBy: parseAsAdminSpaceSortBy,
+  spSortOrder: parseAsSortOrder,
+  spLocationId: parseAsString.withDefault(""),
+  spCategoryId: parseAsString.withDefault(""),
+  locSearch: parseAsQuery,
+  locPublished: parseAsString.withDefault(""),
+  locPage: parseAsPage,
+  locPerPage: parseAsPerPage,
+  catSearch: parseAsQuery,
+  catIncludeInactive: parseAsBoolean.withDefault(false),
+  catPage: parseAsPage,
+  catPerPage: parseAsPerPage,
+};
+
+export const adminSpaceSearchParamsCache = createSearchParamsCache(
+  adminSpaceSearchParamsParsers,
+);

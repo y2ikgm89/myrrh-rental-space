@@ -37,7 +37,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
 
   const result = await getNewsList(
     omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (

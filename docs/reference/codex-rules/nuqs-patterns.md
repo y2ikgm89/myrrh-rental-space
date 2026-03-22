@@ -5,7 +5,7 @@ paths:
 
 # nuqs パターンルール
 
-> nuqs 2.8.8 / Next.js 16対応
+> nuqs 2.8.9 / Next.js 16対応
 
 ## 概要
 
@@ -14,9 +14,10 @@ nuqsはURL状態管理ライブラリ。クエリパラメータを型安全に�
 ## NuqsAdapter（必要な subtree に限定）
 
 `NuqsAdapter` は `useQueryState` / `useQueryStates` を使う subtree の共通親にだけ置く。
-このプロジェクトでは admin dashboard layout を共通親とし、public root layout には置かない:
+このプロジェクトでは **管理ダッシュボード**（`src/app/(admin)/admin/(dashboard)/layout.tsx`）と **公開サイト**（`src/app/(public)/layout.tsx` の `FilterBar` 等）の両方でラップする。Multiple Root Layouts のため二重ラップにはならない。
 
 ```typescript
+// 例: 管理画面
 // src/app/(admin)/admin/(dashboard)/layout.tsx
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
@@ -49,17 +50,48 @@ function SearchForm() {
 }
 ```
 
+### 1a. `useQueryState` の options（`.withOptions()` にチェーン）
+
+**⚠️ options は `.withOptions()` でパーサーにチェーンする（3引数形式は非対応）**:
+
+```typescript
+// NG: 3引数形式（nuqs 2.8.8 非対応 — コンパイルエラー）
+useQueryState("tab", parseAsStringLiteral(TAB_VALUES).withDefault("spaces"), {
+  history: "push",
+  shallow: false,
+});
+
+// OK: .withOptions() をパーサーにチェーン
+const TAB_VALUES = ["spaces", "locations", "categories"] as const;
+const [tab, setTab] = useQueryState(
+  "tab",
+  parseAsStringLiteral(TAB_VALUES)
+    .withDefault("spaces")
+    .withOptions({ history: "push", shallow: false }),
+);
+const handleChange = (value: string) => {
+  for (const t of TAB_VALUES) {
+    if (t === value) {
+      void setTab(t);
+      return;
+    }
+  }
+};
+```
+
+**スペース管理との使い分け**: ハブのメインタブ（スペース / 場所 / カテゴリー）は **`Link` + `URLSearchParams`**（`SpaceManagementTabs`）で切り替え、RSC をフルで回す。一覧内フィルタは `sp*` / `loc*` / `cat*` の **同一パーサーマップ**（`adminSpaceSearchParamsParsers` / `adminSpaceSearchParamsCache`、詳細は `.claude/rules/frontend/admin-ui-patterns.md`）。**スペース新規・編集フォーム内のタブ**はクエリキー **`section`**（`basic` | `pricing` | …）を使う（ハブの `tab` と衝突しない）。
+
 ### 2. useQueryStates（複数パラメータ一括）
 
 ```typescript
 'use client'
 
 import { useQueryStates, parseAsString, parseAsInteger } from 'nuqs'
-import { adminPageParsers } from '@/shared/lib/nuqs'  // 共有パーサーmap
+import { adminPageSearchParamsParsers } from '@/shared/lib/nuqs'  // 共有パーサーmap
 
 function PageFilters() {
-  // 共有パーサーmapを渡す
-  const [params, setParams] = useQueryStates(adminPageParsers, {
+  // 共有パーサーmapを渡す（Server 側は同じ map から createSearchParamsCache）
+  const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
     history: 'push',   // URLを履歴に追加（ブラウザ「戻る」が機能する）
     shallow: false,    // Server Componentの再レンダリングを発火
   })
@@ -84,12 +116,14 @@ import {
   type SearchParams,
 } from 'nuqs/server'
 
-// キャッシュ定義
-const mySearchParamsCache = createSearchParamsCache({
+// 公式推奨: パーサーマップを1か所定義し、cache に渡す
+const mySearchParamsParsers = {
   q: parseAsString.withDefault(''),
   page: parseAsInteger.withDefault(1),
   limit: parseAsInteger.withDefault(10),
-})
+}
+const mySearchParamsCache = createSearchParamsCache(mySearchParamsParsers)
+// Client では同じ mySearchParamsParsers を useQueryStates に渡す
 
 // ローダー関数（parse + all をラップ）
 export async function loadMySearchParams(searchParams: Promise<SearchParams>) {
@@ -146,22 +180,26 @@ export function Results() {
 }
 ```
 
-### 5. クライアントコンポーネントでのkeyMap再利用
+### 5. クライアントで Server と同一のパーサーマップを import
+
+nuqs 2.8 の `createSearchParamsCache` 戻り値に `keyMap` はない。`searchParams.ts`（または `parsers.ts`）で **export したパーサーオブジェクト**を Server の `createSearchParamsCache(...)` と Client の `useQueryStates(...)` の両方で使う。
 
 ```typescript
 'use client'
 
 import { useQueryStates } from 'nuqs'
-import { searchParamsCache } from './searchParams'
+import { mySearchParamsParsers } from './searchParams'
 
 export function SearchControls() {
-  // keyMapでキャッシュ定義のパーサー設定を再利用
-  const [params, setParams] = useQueryStates(searchParamsCache.keyMap)
+  const [params, setParams] = useQueryStates(mySearchParamsParsers, {
+    history: 'push',
+    shallow: false,
+  })
 
   return (
     <input
       value={params.q}
-      onChange={(e) => setParams({ q: e.target.value })}
+      onChange={(e) => void setParams({ q: e.target.value })}
     />
   )
 }
@@ -229,7 +267,8 @@ import {
   loadSpaceSearchParams,
   loadBlogSearchParams,
   loadAdminAuditLogSearchParams,
-  adminPageParsers,
+  adminPageSearchParamsParsers,
+  adminSpaceSearchParamsParsers,
   // ...
 } from "@/shared/lib/nuqs";
 ```
@@ -254,19 +293,27 @@ export const parseAsQuery = parseAsString.withDefault("");
 export const parseAsCommaSeparated = parseAsArrayOf(parseAsString, ",");
 ```
 
-**パーサーmapパターン**（Client Componentで `useQueryStates` に渡す）:
+**パーサーmapパターン**（[公式 Server-Side](https://nuqs.dev/docs/server-side) と同じく、**1オブジェクト**を cache と Client で共有）:
 
 ```typescript
-// キャッシュと独立したパーサーmap（Client Component用）
-export const adminPageParsers = {
+export const adminPageSearchParamsParsers = {
   q: parseAsQuery,
   status: parseAsString.withDefault("all"),
+  type: parseAsString.withDefault("all"),
   page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
   sort: parseAsSortOrder,
 };
 
-// Client Componentで使用
-const [params, setParams] = useQueryStates(adminPageParsers, {
+const adminPageSearchParamsCache = createSearchParamsCache(
+  adminPageSearchParamsParsers,
+);
+
+// 後方互換エイリアス
+export const adminPageParsers = adminPageSearchParamsParsers;
+
+// Client
+const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
   history: "push",
   shallow: false,
 });
@@ -304,7 +351,7 @@ const { params, setCategory } = useFilterParamsWithCategory({
 });
 ```
 
-フックは `useQueryStates` + `{ history: 'push', shallow: false }` で実装されており、`null` セット（URLパラメータ削除）と `page: 1` リセットを自動処理する。
+フックは `adminCustomerSearchParamsParsers` を spread しつつ `perPage` / `categoryId` 等を合成した `useQueryStates` + `{ history: 'push', shallow: false }` で実装されており、`null` セット（URLパラメータ削除）と `page: 1` リセットを自動処理する。
 
 ## 禁止事項
 
@@ -328,16 +375,18 @@ const { params, setCategory } = useFilterParamsWithCategory({
    const [sort] = useQueryState("sort", parseAsSortOrder); // 'asc' | 'desc'
    ```
 
-3. **直接的なURLSearchParams操作禁止**
+3. **直接的な URL 操作は原則禁止（意図的例外あり）**
 
    ```typescript
-   // NG: 手動URLSearchParams
+   // NG: 手動でクエリだけ書き換え（フィルタ・ページネーション）
    const sp = new URLSearchParams(window.location.search);
    sp.set("page", "2");
 
    // OK: nuqsのsetParamsを使用
    void setParams({ page: 2 });
    ```
+
+   **例外**: ハブのタブ切替で RSC をフルナビさせる `Link` の `href` 組み立て（例: `SpaceManagementTabs`）は `URLSearchParams` 可。
 
 4. **パーサーの重複定義禁止**
    - `@/shared/lib/nuqs/parsers.ts` に集約。各ドメインファイルにはパーサーを定義しない

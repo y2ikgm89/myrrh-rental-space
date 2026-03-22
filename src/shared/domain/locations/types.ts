@@ -25,6 +25,9 @@ export type LocationWithStats = Serialized<LocationRecord>;
 export type GetLocationsResult = {
   locations: LocationWithStats[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 };
 
 export type PublishedLocationOption = {

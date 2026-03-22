@@ -48,7 +48,6 @@ Claude Code 利用者は `.claude/skills/<name>/SKILL.md` スタブからここ�
 - `add-settings-field`: Settings シングルトン 4 箇所更新パターン
 - `audit-settings-sections`: 設定セクション品質監査
 - `split-action-file`: 500 行超アクションを queries / mutations に分割
-- `new-section`: Component-Driven Sections の新セクション定義
 
 ### スキーマ・依存・ビルド
 
@@ -94,3 +93,4 @@ skill を変更したら次も確認する。
 - Better Auth の静的 `auth` export 前提を壊す指示や、動的 auth bootstrap の再導入を促していないか
 - admin 向け task で `@/admin/queries/*` read、`/admin/api/*` client read、`@/admin/actions/*` mutation only の境界を崩していないか
 - public 向け task で `src/app/(public)/layout.tsx` に URL state provider や effect provider を戻していないか
+- 管理一覧の URL 状態: `@/shared/lib/nuqs/parsers.ts` の単一パーサーマップと、クエリの `page`/`limit`（または `perPage`）が整合しているか（`nuqs-patterns.md`）

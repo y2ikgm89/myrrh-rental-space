@@ -27,7 +27,7 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
 
   const result = await getCustomers(
     omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (

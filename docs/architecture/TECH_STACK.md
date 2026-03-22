@@ -27,7 +27,7 @@
 | ------------ | ---------- | --------------------------- |
 | Tailwind CSS | 4.2.1      | styling, theme tokens       |
 | GSAP         | 3.14.2     | scroll / timeline animation |
-| Lenis        | 1.3.18     | smooth scroll               |
+| Lenis        | 1.3.19     | smooth scroll（`bun.lock` 解決版） |
 | nuqs         | 2.8.9      | search params state         |
 | Lexical      | 0.41.0     | admin rich text editor      |
 

@@ -1,3 +1,9 @@
+/**
+ * 管理画面リスト用ページネーション（nuqs で URL 同期）。
+ *
+ * @see src/app/(public)/_shared/components/Pagination.tsx — 公開側は Link ベース。
+ * ページ番号の省略ロジックやアクセシビリティを変える場合は両方を確認すること。
+ */
 "use client";
 
 import { useTransition } from "react";
@@ -9,6 +15,8 @@ type PaginationProps = {
   currentPage: number;
   totalPages: number;
   total: number;
+  /** nuqs のページ番号クエリキー（既定: `page`） */
+  pageUrlKey?: string;
 };
 
 /**
@@ -50,10 +58,11 @@ export function Pagination({
   currentPage,
   totalPages,
   total,
+  pageUrlKey = "page",
 }: PaginationProps) {
   const [isPending, startTransition] = useTransition();
 
-  const [, setPage] = useQueryState("page", {
+  const [, setPage] = useQueryState(pageUrlKey, {
     ...parseAsPage,
     shallow: false,
     history: "push",
@@ -93,6 +102,7 @@ export function Pagination({
             <span
               /* eslint-disable-next-line @eslint-react/no-array-index-key */
               key={`ellipsis-${i}`}
+              aria-hidden
               className="flex h-8 w-8 items-center justify-center text-sm text-muted-foreground"
             >
               ...

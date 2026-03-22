@@ -150,7 +150,7 @@ if (!uniform) return;
 uniform.value = 42;
 ```
 
-### `as` の許可例外（4種のみ）
+### `as` の許可例外（限定的・次に列挙）
 
 **1. DOM event target**
 
@@ -210,18 +210,24 @@ if (result.success) {
 return result as unknown as ActionSuccess<T>;
 ```
 
-**5. `keysOf()` / `entriesOf()` 内部実装（`@/shared/lib/serialize` のみ）**
+**5. `keysOf` / `entriesOf` / `omitUndefined`（`@/shared/lib/serialize.ts` の実装内部のみ）**
+
+`Object.keys` / `Object.entries` / `Object.fromEntries` の標準戻り型が広すぎる、または `exactOptionalPropertyTypes` 向けに `undefined` プロパティを除去した型 `OmitUndefined<T>` へ寄せる必要があるため、**当該ファイルの実装内**でのみ `as` を許可する。呼び出し側で `Object.keys(x) as Foo[]` や `fromEntries(...) as T` と書くことは禁止し、ヘルパーを使う。新規の類似「境界ヘルパー」を増やさないこと。
 
 ```typescript
-// OK: keysOf / entriesOf の実装内部のみ許可（呼び出し側では as 不要）
-// @/shared/lib/serialize.ts
+// @/shared/lib/serialize.ts（実装内部のみ）
 export function keysOf<T extends object>(obj: T): (keyof T)[] {
   return Object.keys(obj) as (keyof T)[];
 }
 export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
   return Object.entries(obj) as [keyof T, T[keyof T]][];
 }
-// 呼び出し側: keysOf(config) と書くだけで as 不要
+export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined),
+  ) as OmitUndefined<T>;
+}
+// 呼び出し側: keysOf(config) / entriesOf(obj) / omitUndefined(parsed) — as 不要
 ```
 
 > ジェネリック制約 `T extends object` によりキーが `keyof T` に限定されるため型安全。

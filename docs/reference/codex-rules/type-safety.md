@@ -73,9 +73,9 @@ if (!style) return;
 
 ## 型アサーション（`as`）禁止
 
-型アサーションはコンパイラの型検査を無効化するため、原則禁止。以下の4種のみ許可:
+型アサーションはコンパイラの型検査を無効化するため、原則禁止。次に列挙する**限定的例外**のみ許可（新規の `as` 追加はレビュー必須）。
 
-### 許可例外（4種のみ）
+### 許可例外（限定的・列挙のみ）
 
 **1. DOM event target**
 
@@ -133,6 +133,25 @@ if (result.success) {
 // OK: 条件型を含む型への代入（TS 6.0 で厳格化）
 // ActionSuccess<T> は条件型のため直接 as では不可、二段階キャストが必要
 return result as unknown as ActionSuccess<T>;
+```
+
+**5. `keysOf` / `entriesOf` / `omitUndefined`（[`@/shared/lib/serialize`](../../../src/shared/lib/serialize.ts) の実装内部のみ）**
+
+`Object.keys` / `Object.entries` / `Object.fromEntries` の標準戻り型が広すぎる、または `exactOptionalPropertyTypes` 向けに `undefined` プロパティを除去した型 `OmitUndefined<T>` へ寄せる必要があるため、**当該モジュールの実装内**でのみ `as` を許可する。呼び出し側で `Object.keys(x) as Foo[]` や `fromEntries(...) as T` と書くことは禁止し、ヘルパーを使う。
+
+```typescript
+// @/shared/lib/serialize.ts（実装内部のみ — 新規の類似ヘルパーを増やさないこと）
+export function keysOf<T extends object>(obj: T): (keyof T)[] {
+  return Object.keys(obj) as (keyof T)[];
+}
+export function entriesOf<T extends object>(obj: T): [keyof T, T[keyof T]][] {
+  return Object.entries(obj) as [keyof T, T[keyof T]][];
+}
+export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined),
+  ) as OmitUndefined<T>;
+}
 ```
 
 ### 禁止パターンと代替手段

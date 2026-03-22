@@ -89,8 +89,9 @@ export function SpaceEditForm({
   taxSettings = DEFAULT_TAX_SETTINGS,
 }: SpaceEditFormProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useQueryState(
-    "tab",
+  /** スペース管理ハブの `tab` と衝突しないよう `section` を使用 */
+  const [activeSection, setActiveSection] = useQueryState(
+    "section",
     parseAsStringLiteral(SPACE_EDIT_TAB_VALUES)
       .withDefault("basic")
       .withOptions({ history: "push", shallow: true }),
@@ -156,7 +157,7 @@ export function SpaceEditForm({
           facilities: [],
           isPublished: false,
           termsId: undefined,
-          locationId: availableLocations[0]?.id ?? "",
+          locationId: "",
           categoryId: undefined,
           discountType: DiscountType.none,
           discountValue: undefined,
@@ -318,10 +319,10 @@ export function SpaceEditForm({
   return (
     <form onSubmit={runSpaceFormSubmit}>
       <Tabs
-        value={activeTab}
+        value={activeSection}
         onValueChange={(v) => {
           const tab = parseSpaceEditTabValue(v);
-          if (tab) void setActiveTab(tab);
+          if (tab) void setActiveSection(tab);
         }}
         className="space-y-4"
       >

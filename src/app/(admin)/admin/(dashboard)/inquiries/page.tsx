@@ -24,7 +24,7 @@ async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
 
   const result = await getInquiries(
     omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (

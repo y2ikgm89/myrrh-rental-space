@@ -13,11 +13,16 @@ type ActiveSpaceCategoryOption = {
   color: string | null;
 };
 
-export async function getSpaceCategories(options?: {
+export async function getSpaceCategories(options: {
   includeInactive?: boolean;
   search?: string;
+  page: number;
+  limit: number;
 }): Promise<GetSpaceCategoriesResult> {
-  const { includeInactive = false, search } = options ?? {};
+  const { includeInactive = false, search } = options;
+  const page = Math.max(1, options.page);
+  const limit = Math.max(1, options.limit);
+  const skip = (page - 1) * limit;
 
   const where = {
     ...(includeInactive ? {} : { isActive: true }),
@@ -37,6 +42,8 @@ export async function getSpaceCategories(options?: {
     prisma.spaceCategory.findMany({
       where,
       orderBy: { sortOrder: "asc" },
+      skip,
+      take: limit,
       include: {
         _count: {
           select: { spaces: true },
@@ -61,9 +68,14 @@ export async function getSpaceCategories(options?: {
     }),
   );
 
+  const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+
   return {
     categories: formattedCategories,
     total,
+    page,
+    limit,
+    totalPages,
   };
 }
 

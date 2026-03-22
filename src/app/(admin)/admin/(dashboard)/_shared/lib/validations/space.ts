@@ -220,6 +220,8 @@ export type SpaceWithStats = {
   termsId: string | null;
   locationId: string;
   categoryId: string | null;
+  /** 一覧・詳細でカテゴリ名表示用（Prisma include） */
+  category: { id: string; name: string } | null;
   // 割引設定
   discountType: DiscountType;
   discountValue: number | null;
@@ -254,6 +256,9 @@ export type GetSpacesResult = {
 export type SpaceFilters = {
   isPublished?: boolean | "ALL" | undefined;
   search?: string | undefined;
+  locationId?: string | undefined;
+  categoryId?: string | undefined;
+  uncategorizedOnly?: boolean | undefined;
 };
 
 /**
@@ -262,6 +267,6 @@ export type SpaceFilters = {
 export type SpacePagination = {
   page?: number;
   limit?: number;
-  sortBy?: "name" | "createdAt" | "hourlyPrice";
+  sortBy?: "name" | "createdAt" | "updatedAt" | "hourlyPrice";
   sortOrder?: "asc" | "desc";
 };

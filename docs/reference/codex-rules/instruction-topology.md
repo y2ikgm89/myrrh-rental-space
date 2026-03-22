@@ -56,6 +56,8 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 
 **Claude と本文の同期**: 同じトピックが `.claude/rules/` にもある場合（公開ページの L3/L4、ヘッドレス Lexical テスト、`bunfig` preload 等）、**方針・公式リンク・「削除済み」「未依存」の事実を乖離させない**。レガシー用の後方互換説明や存在しないパス（旧 `effects/` 等）を codex-rules にだけ残さない。
 
+**lexical-patterns / admin-inline-editor-patterns の二重配置**: `docs/reference/codex-rules/` の該当ファイルと `.claude/rules/frontend/` の対応ファイルは **同一バイト列**を保つ（Claude Code の `paths:` 条件付きルール用ミラー）。編集後は `bun run docs:verify-policy-sync`（実装: [`scripts/verify-policy-docs.mjs`](../../../scripts/verify-policy-docs.mjs)）で検証する。いずれか片方だけ更新したコミットは CI で失敗する。
+
 ### `.agents/skills/<skill-name>/SKILL.md`
 
 置くもの:

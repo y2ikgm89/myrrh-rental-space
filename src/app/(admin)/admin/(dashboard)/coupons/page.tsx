@@ -47,7 +47,7 @@ async function CouponList({ searchParams }: { searchParams: SearchParams }) {
 
   const result = await getCoupons(
     omitUndefined({ status, type, search: params.search || undefined }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (

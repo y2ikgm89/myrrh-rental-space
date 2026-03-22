@@ -425,6 +425,9 @@ describe("SpaceCategory Admin Action Integration", () => {
       type GetSpaceCategoriesResult = {
         categories: SpaceCategoryWithStats[];
         total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
       };
 
       const result: GetSpaceCategoriesResult = {
@@ -443,10 +446,15 @@ describe("SpaceCategory Admin Action Integration", () => {
           },
         ],
         total: 1,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
       };
 
       expect(result.categories).toHaveLength(1);
       expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
+      expect(result.totalPages).toBe(1);
     });
   });
 });

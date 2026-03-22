@@ -1,6 +1,7 @@
 "use client";
 
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminAuditLogSearchParamsParsers } from "@/shared/lib/nuqs";
 import {
   Button,
   Input,
@@ -43,13 +44,7 @@ const RESOURCE_OPTIONS = [
 
 export function AuditLogFilters() {
   const [params, setParams] = useQueryStates(
-    {
-      page: parseAsInteger.withDefault(1),
-      action: parseAsString.withDefault(""),
-      resource: parseAsString.withDefault(""),
-      dateFrom: parseAsString.withDefault(""),
-      dateTo: parseAsString.withDefault(""),
-    },
+    adminAuditLogSearchParamsParsers,
     { history: "push", shallow: false },
   );
 

@@ -67,7 +67,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 - モーションの定数は共有実装を使い、マジックナンバーを増やさない
 - `prefers-reduced-motion` を無視しない
 - `src/app/(public)/layout.tsx` に新しい effect provider や scroll provider を直接積まない
-- `src/app/(public)/layout.tsx` に `NuqsAdapter` や URL state provider を戻さない
+- **nuqs 以外**の URL state 用 Context を public root に足さない。既存の **`NuqsAdapter`**（nuqs）は維持前提（二重ラップも禁止）。`docs/reference/codex-rules/nuqs-patterns.md`
 - 公開 UI のために `@/shared/db/prisma` や新規 `public/_shared/actions` を足さない
 - 履歴資料の `docs/plans/*` を現行ルールとして引用しない
 - 永続化が必要な判断を hidden state に置かず、ドキュメントに残す

@@ -4,7 +4,8 @@
  * コメントフィルター
  */
 
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminPostSearchParamsParsers } from "@/shared/lib/nuqs";
 import { Search, X } from "lucide-react";
 import { Button, Input, SubmitButton } from "@/admin/components/ui";
 import { getFormString } from "@/shared/lib/utils";
@@ -21,14 +22,10 @@ const STATUS_OPTIONS: readonly StatusOption[] = [
 ];
 
 export function CommentFilters() {
-  const [params, setParams] = useQueryStates(
-    {
-      status: parseAsString.withDefault(""),
-      search: parseAsString.withDefault(""),
-      page: parseAsInteger.withDefault(1),
-    },
-    { history: "push", shallow: false },
-  );
+  const [params, setParams] = useQueryStates(adminPostSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   const currentStatus = params.status || "ALL";
 

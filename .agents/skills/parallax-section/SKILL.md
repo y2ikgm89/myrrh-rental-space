@@ -67,7 +67,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - `Math.random()` を使わず決定的な値でレイアウトや粒子を生成する
 - Three.js / PixiJS はフォールバックなしで入れない
 - `SmoothScrollProvider` / `ScrollOrchestratorProvider` / `VisualEffectsProvider` を global layout に戻さない
-- `NuqsAdapter` や URL state provider を public root layout に戻さない
+- **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `docs/reference/codex-rules/nuqs-patterns.md`
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
 - 履歴資料の `docs/plans/*` を実装ルールとして扱わない
 

@@ -58,7 +58,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
       categoryId: params.categoryId || undefined,
       search: params.search || undefined,
     }),
-    { page: params.page, limit: 10 },
+    { page: params.page, limit: params.perPage },
   );
 
   return (
@@ -114,7 +114,7 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
 
   const result = await getAdminComments(filters, {
     page: params.page,
-    limit: 20,
+    limit: params.perPage,
   });
 
   return (

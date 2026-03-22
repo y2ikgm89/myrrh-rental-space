@@ -90,6 +90,11 @@ export default async function SpacesPage({
             currentPage={currentPage}
             totalPages={totalPages}
             basePath="/spaces"
+            {...(categoryId !== undefined &&
+            categoryId !== null &&
+            categoryId !== ""
+              ? { preservedQuery: { category: categoryId } }
+              : {})}
           />
         </Container>
       </section>

@@ -3,6 +3,7 @@ import { getSpaceCategories } from "@/admin/queries/space-category";
 import { CategoryFilters } from "../../space-categories/_components/CategoryFilters";
 import { CategoryTable } from "../../space-categories/_components/CategoryTable";
 import { LoadingState } from "@/admin/components/LoadingState";
+import { Pagination } from "@/admin/components/ui";
 import { adminSpaceSearchParamsCache } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 
@@ -12,16 +13,27 @@ import { omitUndefined } from "@/shared/lib/serialize";
 
 async function CategoryList() {
   const params = adminSpaceSearchParamsCache.all();
-  const includeInactive = params.includeInactive;
 
   const result = await getSpaceCategories(
     omitUndefined({
-      includeInactive,
-      search: params.search || undefined,
+      includeInactive: params.catIncludeInactive,
+      search: params.catSearch || undefined,
+      page: params.catPage,
+      limit: params.catPerPage,
     }),
   );
 
-  return <CategoryTable categories={result.categories} />;
+  return (
+    <>
+      <CategoryTable categories={result.categories} />
+      <Pagination
+        pageUrlKey="catPage"
+        currentPage={result.page}
+        totalPages={result.totalPages}
+        total={result.total}
+      />
+    </>
+  );
 }
 
 // =============================================================================

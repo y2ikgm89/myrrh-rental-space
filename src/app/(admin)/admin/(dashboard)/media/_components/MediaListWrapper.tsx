@@ -21,6 +21,7 @@ type Props = {
     search: string;
     view: string;
     page: number;
+    perPage: number;
   };
 };
 
@@ -33,7 +34,7 @@ export async function MediaListWrapper({ searchParams }: Props) {
 
   const pagination: MediaPagination = {
     page: searchParams.page,
-    limit: 24,
+    limit: searchParams.perPage,
   };
 
   const result = await getMediaList(filters, pagination);

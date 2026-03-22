@@ -462,20 +462,36 @@ export async function delete<Resource>(
 
 ## nuqs パーサー追加（`@/shared/lib/nuqs/parsers.ts`）
 
-一覧ページの searchParams 用に以下を追加:
+一覧ページの searchParams 用に **パーサーマップを1つ**定義し、Server と Client で同一マップを共有する（`nuqs-patterns.md` の単一ソースパターン）。
 
 ```typescript
-// @/shared/lib/nuqs/parsers.ts に追加
-export const admin<Resource>Parsers = {
+// @/shared/lib/nuqs/parsers.ts（例: 既存の adminXxxSearchParamsParsers を踏襲）
+import {
+  createSearchParamsCache,
+  type SearchParams,
+} from "nuqs/server";
+
+const admin<Resource>SearchParamsParsers = {
   q: parseAsQuery,
   page: parseAsPage,
-}
+  perPage: parseAsPerPage, // 一覧の take/limit と必ず一致させる
+};
 
-export const load<Resource>SearchParams = createSearchParamsCache(admin<Resource>Parsers)
-  .parse
+const admin<Resource>SearchParamsCache = createSearchParamsCache(
+  admin<Resource>SearchParamsParsers,
+);
+
+export { admin<Resource>SearchParamsParsers };
+
+export async function loadAdmin<Resource>SearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await admin<Resource>SearchParamsCache.parse(searchParams);
+  return admin<Resource>SearchParamsCache.all();
+}
 ```
 
-実際には `createSearchParamsCache` + ローダー関数パターンで追加する（`loadAdminCouponSearchParams` 等の既存パターンを参照）。
+フィルター用 Client では `useQueryStates(admin<Resource>SearchParamsParsers, ...)` と同一マップを import する。実装は `loadAdminCouponSearchParams` / `adminCouponSearchParamsParsers` 等の既存定義を参照。
 
 ## 実装手順
 

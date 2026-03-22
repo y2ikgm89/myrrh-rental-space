@@ -1,6 +1,7 @@
 "use client";
 
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminCouponSearchParamsParsers } from "@/shared/lib/nuqs";
 import { Search, X } from "lucide-react";
 import { useDebouncedCallback } from "@/admin/hooks";
 import {
@@ -14,15 +15,10 @@ import {
 } from "@/admin/components/ui";
 
 export function CouponFilters() {
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(""),
-      status: parseAsString.withDefault(""),
-      type: parseAsString.withDefault(""),
-      page: parseAsInteger.withDefault(1),
-    },
-    { history: "push", shallow: false },
-  );
+  const [params, setParams] = useQueryStates(adminCouponSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   const setSearchDebounced = useDebouncedCallback(
     (value: string) => void setParams({ search: value || null, page: 1 }),

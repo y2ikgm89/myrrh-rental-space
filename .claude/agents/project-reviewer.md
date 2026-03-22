@@ -84,8 +84,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **nuqs** (`.claude/rules/nuqs-patterns.md`):
 
-- **`void setParams(...)`** — TypeScript no-floating-promises; nuqs setters return a Promise
-- **`NuqsAdapter`** must be present in the public layout (`(public)/layout.tsx`) for nuqs to work
+- **`void setParams(...)`** / **`void setPage(...)`** — TypeScript no-floating-promises; nuqs setters return a Promise
+- **`NuqsAdapter`** wraps each Root Layout subtree that uses `useQueryState(s)`: **`(public)/layout.tsx`** and **`(admin)/admin/(dashboard)/layout.tsx`** (Multiple Root Layouts — not nested duplicates)
+- **Admin 一覧**: `@/shared/lib/nuqs/parsers.ts` のパーサーマップを Server の `createSearchParamsCache` と Client の `useQueryStates` で共有する。DB の `skip`/`take`（または同等）が URL の `page` / `perPage`（リソース別キー含む）と一致しているか
 
 **Testing** (`.claude/rules/test-quality.md`):
 

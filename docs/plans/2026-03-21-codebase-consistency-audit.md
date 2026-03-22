@@ -28,8 +28,8 @@
 ### Medium
 
 - **二重管理ドキュメントの内容差分**:  
-  - [`docs/reference/codex-rules/lexical-patterns.md`](../../docs/reference/codex-rules/lexical-patterns.md) と [`.claude/rules/frontend/lexical-patterns.md`](../../.claude/rules/frontend/lexical-patterns.md) は **非一致**（行数 714 vs 854）。`.claude` 側に AccentColor システム等の追記があり、AGENTS.md が求める「方針・公式リンク・事実の一致」から **乖離**。Codex 利用者と Claude Code 利用者で読む内容が分岐するリスク。  
-  - [`admin-inline-editor-patterns.md`](../../docs/reference/codex-rules/admin-inline-editor-patterns.md) ペアは diff 上 **主にフロントマター／導入文の差**で、本文はほぼ同一。
+  - [`docs/reference/codex-rules/lexical-patterns.md`](../../docs/reference/codex-rules/lexical-patterns.md) と [`.claude/rules/frontend/lexical-patterns.md`](../../.claude/rules/frontend/lexical-patterns.md) は、**`bun run docs:verify-policy-sync`**（[`scripts/verify-policy-docs.mjs`](../../scripts/verify-policy-docs.mjs)）で **バイト一致を強制**する。監査当時に観測した行数差は解消済み／以降は同コマンドで再発を防ぐ。運用は [`docs/reference/codex-rules/instruction-topology.md`](../reference/codex-rules/instruction-topology.md) に追記。  
+  - [`admin-inline-editor-patterns.md`](../../docs/reference/codex-rules/admin-inline-editor-patterns.md) ペアも上記スクリプトの検証対象（同一バイト列必須）。
 
 ### Low / 情報
 
@@ -38,15 +38,30 @@
 - **Tailwind ハードコード色**: `bg-gray-*` 等の典型的パターンは `src/**/*.tsx` grep で **ヒットなし**（網羅ではない）。
 - **危険な型アサーション**: `as any` / `as unknown` / `as never` は **ヒットなし**（サンプル範囲）。
 - **Zod `message:` 非推奨パターン**: 調査した `.min(..., message:)` 形式は **ヒットなし**（`error:` 運用と整合）。
-- **大きいアクション**: `_shared/actions` 直下で 500 行超は [`settings/schemas/form-schemas.ts`](../../src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas.ts)（約 520 行）。分割候補として記録。
+- **大きいアクション**: ~~[`settings/schemas/form-schemas.ts`](../../src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/form-schemas.ts)（約 520 行）~~ **2026-03-22 分割済み** — `form-schema-helpers.ts` と `form-schemas-*.ts` に按分し、[`schemas/index.ts`](../../src/app/(admin)/admin/(dashboard)/_shared/actions/settings/schemas/index.ts) から再エクスポート。
 - **eslint-disable**: 約 35 ファイル・コメント付き局所化。`LayoutFields.tsx` の `no-explicit-any` 等、境界理由付き。件数の異常増加は見ていない。
 
 ## 推奨バックログ（未実施）
 
-1. **lexical-patterns 二重ファイルの同期**: `.claude` 側の追記を `docs/reference/codex-rules/lexical-patterns.md` に反映するか、意図的に Codex 向けを短く保つ方針なら両ファイル先頭に「差分の理由」を明記。
-2. **form-schemas.ts**: 500 行超の維持負荷が高い場合は [`split-action-file`](../../.agents/skills/split-action-file/SKILL.md) 相当の方針でスキーマ分割を検討。
-3. **本番相当ビルド**: 必要に応じて `bun run build:strict` で環境変数充足を確認（今回は CI 相当として `build` のみ）。
+1. ~~**lexical-patterns 二重ファイルの同期**~~ **運用で固定済み（2026-03-22）**: ペアはバイト一致必須。`docs:verify-policy-sync` と `instruction-topology.md` に手順を明記。差分を許容しない。
+2. ~~**form-schemas.ts**~~ **完了（2026-03-22）**: `form-schema-helpers.ts` と領域別 `form-schemas-*.ts` に分割。import は引き続き `@/admin/actions/settings/schemas`（barrel）を使用。
+3. **本番相当ビルド**: `bun run build:strict` は `ENCRYPTION_KEY` / `CRON_SECRET` 等の本番必須 env がローカルに無いと失敗しうる。充足時に実行し、通常 CI は `bun run build`（`SKIP_ENV_VALIDATION=true`）でよい。
 
 ## 作業ツリー注意
 
 `git status` に `.next/` や `.claude/` の未追跡が混ざるとレビューノイズになる。監査・PR 前は生成物と意図したエージェント資産の取り扱いをチームで固定すること。
+
+---
+
+## 追記（2026-03-22）一貫性フォローアップ
+
+- **技術スタック表と lockfile**: `bun.lock` の解決版に合わせ、Lenis **1.3.19**、@gsap/react **2.1.2** を `AGENTS.md`・[`docs/architecture/TECH_STACK.md`](../architecture/TECH_STACK.md)・[`docs/reference/codex-rules/gsap-patterns.md`](../reference/codex-rules/gsap-patterns.md)・[`.claude/rules/frontend/gsap-patterns.md`](../../.claude/rules/frontend/gsap-patterns.md) で揃えた（`CLAUDE.md` の技術表は Lenis 行を持たないため対象外）。
+- **ページネーション**: 管理（nuqs + `Button`）と公開（`Link`）は実装が分岐している。ソース先頭に相互 `@see` を置き、省略表示は装飾として `aria-hidden` を付与。アルゴリズム変更時は両ファイルをペアレビューすること。
+- **証跡（本追記時）**: `bun run validate` / `bun run test:all` / `bun run docs:verify-policy-sync` / `bun run build` の結果を下表に追記する。
+
+| コマンド | 結果（2026-03-22 追記時） |
+|----------|---------------------------|
+| `bun run validate` | 成功（type-check + lint） |
+| `bun run test:all` | 成功（unit → integration） |
+| `bun run docs:verify-policy-sync` | 成功（`policy docs: codex-rules and .claude/rules are in sync`） |
+| `bun run build` | 成功（`SKIP_ENV_VALIDATION=true`、`✓ Compiled successfully`） |

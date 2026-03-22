@@ -137,8 +137,9 @@ canonical URL は常に現在の permalink 設定から再生成する。代替�
 
 ### 公開 shell
 
-- `src/app/(public)/layout.tsx` は Header / Footer / SEO / Cookie Consent / Analytics / a11y だけを持つ
-- `src/app/(public)/layout.tsx` は `NuqsAdapter` を持たず、URL state provider を global に広げない
+- `src/app/(public)/layout.tsx` は Header / Footer / SEO / Cookie Consent / Analytics / a11y を持つ
+- 公開側で `useQueryState(s)` を使うため **`NuqsAdapter`** で `children` をラップする（`docs/reference/codex-rules/nuqs-patterns.md`）。管理画面用アダプタ（`(dashboard)/layout.tsx`）とは Multiple Root Layouts により別 subtree
+- URL 同期は nuqs に限定し、独自の URL 用 React Context をルートに広げない
 - blanket な `connection()` は使わない
 - 年表示のような時刻依存 UI は leaf component へ分離する
 

@@ -1,34 +1,18 @@
 "use client";
 
 import { Search } from "lucide-react";
-import {
-  useQueryStates,
-  parseAsString,
-  parseAsInteger,
-  parseAsStringLiteral,
-} from "nuqs";
-import { ADMIN_SPACE_MANAGEMENT_TABS } from "@/shared/lib/constants/admin-space-management";
-import { parseAsBoolean } from "@/shared/lib/nuqs";
+import { useQueryStates } from "nuqs";
+import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useRef, useEffect } from "react";
 import { Checkbox, Label, Input } from "@/admin/components/ui";
 
 export function CategoryFilters() {
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [params, setParams] = useQueryStates(
-    {
-      search: parseAsString.withDefault(""),
-      includeInactive: parseAsBoolean.withDefault(false),
-      page: parseAsInteger.withDefault(1),
-      tab: parseAsStringLiteral(ADMIN_SPACE_MANAGEMENT_TABS).withDefault(
-        "categories",
-      ),
-    },
-    {
-      history: "push",
-      shallow: false,
-    },
-  );
+  const [params, setParams] = useQueryStates(adminSpaceSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
 
   useEffect(() => {
     return () => {
@@ -43,12 +27,12 @@ export function CategoryFilters() {
       clearTimeout(searchTimeoutRef.current);
     }
     searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ search: value || null, page: 1 });
+      void setParams({ catSearch: value || null, catPage: 1 });
     }, 300);
   };
 
   const handleIncludeInactiveChange = (checked: boolean) => {
-    void setParams({ includeInactive: checked || null, page: 1 });
+    void setParams({ catIncludeInactive: checked || null, catPage: 1 });
   };
 
   return (
@@ -57,7 +41,7 @@ export function CategoryFilters() {
       <div className="flex items-center gap-2">
         <Checkbox
           id="includeInactive"
-          checked={params.includeInactive}
+          checked={params.catIncludeInactive}
           onCheckedChange={handleIncludeInactiveChange}
         />
         <Label htmlFor="includeInactive" className="text-sm cursor-pointer">
@@ -71,7 +55,7 @@ export function CategoryFilters() {
         <Input
           type="search"
           placeholder="名前・説明で検索..."
-          defaultValue={params.search}
+          defaultValue={params.catSearch}
           onChange={(e) => setSearchDebounced(e.target.value)}
           className="pl-9"
         />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useQueryStates, parseAsString } from "nuqs";
+import { useQueryStates } from "nuqs";
+import { adminCalendarSearchParamsParsers } from "@/shared/lib/nuqs";
 import type {
   CalendarView,
   CalendarEvent,
@@ -23,15 +24,11 @@ interface UseCalendarStateOptions {
 }
 
 export function useCalendarState({ events, spaces }: UseCalendarStateOptions) {
-  const [params, setParams] = useQueryStates(
-    {
-      view: parseAsString.withDefault(""),
-      date: parseAsString.withDefault(""),
-      spaceId: parseAsString.withDefault(""),
-      status: parseAsString.withDefault(""),
-    },
-    { history: "push", shallow: false, scroll: false },
-  );
+  const [params, setParams] = useQueryStates(adminCalendarSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+    scroll: false,
+  });
 
   // URL State から読み取り
   const view = getValidCalendarView(params.view, "week");

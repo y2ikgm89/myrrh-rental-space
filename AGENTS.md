@@ -42,8 +42,8 @@
 | Zod          | 4.3.6      | `{ error: }` パラメータ, z.fromJSONSchema()                         |
 | nuqs         | 2.8.9      | createSearchParamsCache, Zod 4統合                                  |
 | Lexical      | 0.41.0     | React 19対応, Node transforms, mergeRegister本体移動                |
-| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1                                      |
-| Lenis        | 1.3.18     | スムーススクロール                                                  |
+| GSAP         | 3.14.2     | ScrollTrigger, @gsap/react 2.1.2                                    |
+| Lenis        | 1.3.19     | スムーススクロール（`bun.lock` 解決版）                              |
 
 ### Project structure
 

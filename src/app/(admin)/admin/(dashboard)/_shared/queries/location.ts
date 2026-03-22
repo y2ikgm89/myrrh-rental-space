@@ -13,9 +13,11 @@ import type {
 } from "@/shared/domain/locations/types";
 import { requireAdminPermission } from "./_helpers";
 
-export async function getLocations(options?: {
+export async function getLocations(options: {
   includeInactive?: boolean;
   search?: string;
+  page: number;
+  limit: number;
 }): Promise<GetLocationsResult> {
   await requireAdminPermission("location", "read");
   return getLocationsQuery(options);

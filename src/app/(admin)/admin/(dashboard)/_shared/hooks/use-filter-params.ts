@@ -7,7 +7,8 @@
 
 "use client";
 
-import { useQueryStates, parseAsString, parseAsInteger } from "nuqs";
+import { useQueryStates, parseAsInteger, parseAsString } from "nuqs";
+import { adminCustomerSearchParamsParsers } from "@/shared/lib/nuqs";
 import { useRef, useEffect } from "react";
 
 // ============================================================
@@ -113,9 +114,8 @@ function useBaseFilterParams(options: {
 
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(""),
+      ...adminCustomerSearchParamsParsers,
       status: parseAsString.withDefault(defaultStatus),
-      page: parseAsInteger.withDefault(1),
       perPage: parseAsInteger.withDefault(defaultPerPage),
     },
     { history: "push", shallow: false },
@@ -176,9 +176,8 @@ function useCategoryFilterParams(options: {
 
   const [params, setParams] = useQueryStates(
     {
-      search: parseAsString.withDefault(""),
+      ...adminCustomerSearchParamsParsers,
       status: parseAsString.withDefault(defaultStatus),
-      page: parseAsInteger.withDefault(1),
       perPage: parseAsInteger.withDefault(defaultPerPage),
       categoryId: parseAsString.withDefault(""),
     },

@@ -98,15 +98,21 @@ export function withAuth<TArgs, TData>(fn) {
 | ファイル                      | 変更内容                                               |
 | ----------------------------- | ------------------------------------------------------ |
 | `src/app/(admin)/admin/`      | 新しいRoute Group（移動）                              |
-| `src/lib/auth.ts`             | verifySession, verifyAdminSession追加（cache()ラップ） |
-| `src/types/server-actions.ts` | withAuth HOFを直接auth()呼び出しに変更                 |
+| `src/shared/lib/auth.ts`      | verifySession, verifyAdminSession 追加（cache() ラップ）※現行正本パス |
+| `src/types/server-actions.ts` | withAuth HOF を直接 auth() 呼び出しに変更（当時）      |
 
 ## 後方互換性
 
-**意図的に削除:**
+**意図的に削除（deprecated エイリアスは置かない）:**
 
-- `requireAuth()` → `verifySession()` に置換（@deprecated として残存）
-- `requireAdmin()` → `verifyAdminSession()` に置換（@deprecated として残存）
+- `requireAuth()` → `verifySession()` に置換し、旧名は **削除済み**（現行 `src` に `requireAuth` なし）
+- `requireAdmin()` → `verifyAdminSession()` に置換し、旧名は **削除済み**（現行 `src` に `requireAdmin` なし）
+
+### 現行補足（2026-03 時点）
+
+- セッション検証の正本: `@/shared/lib/auth.ts` の `verifySession` / `verifyAdminSession` / `getCurrentUser`（引数で `Headers` を渡せる形に拡張済み）
+- 管理画面 private query の入口: `@/admin/.../_shared/queries/_helpers` の `requireAdminPermission` / `requireAdminResourcePermission` 等（RBAC）
+- Server Actions / Route Handler: `checkPermission`（`@/admin/lib/action-auth`）と `executeAdminMutationResult` パターンが主軸。当時記載の `withAuth` 単体 HOF は以降のリファクタで置き換えられている場合があるため、**最新の `@/admin` 実装を正とする**
 
 ## 技術詳細
 

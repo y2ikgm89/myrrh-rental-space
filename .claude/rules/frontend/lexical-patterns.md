@@ -5,7 +5,7 @@ paths:
 
 # Lexical エディタ実装パターン
 
-> **本文正本**（Codex / Claude Code 共通）。`.claude/rules/frontend/lexical-patterns.md` は CI で同一内容を強制。Next.js 16 / React 19 / Turbopack / React Compiler 対応
+> **本文正本**（Codex / Claude Code 共通）。`docs/reference/codex-rules/lexical-patterns.md` と `.claude/rules/frontend/lexical-patterns.md` は **同一バイト列**（検証: `bun run docs:verify-policy-sync` → `scripts/verify-policy-docs.mjs`）。運用: `docs/reference/codex-rules/instruction-topology.md`。Next.js 16 / React 19 / Turbopack / React Compiler 対応
 
 ## 概要
 

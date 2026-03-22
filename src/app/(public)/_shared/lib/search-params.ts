@@ -10,11 +10,19 @@ import {
   parseAsString,
 } from "nuqs/server";
 
-export const paginationSearchParams = createSearchParamsCache({
+const paginationSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
-});
+};
 
-export const spaceSearchParams = createSearchParamsCache({
+export const paginationSearchParams = createSearchParamsCache(
+  paginationSearchParamsParsers,
+);
+
+const spaceSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   category: parseAsString,
-});
+};
+
+export const spaceSearchParams = createSearchParamsCache(
+  spaceSearchParamsParsers,
+);

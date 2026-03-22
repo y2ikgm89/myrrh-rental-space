@@ -59,4 +59,7 @@ export type SpaceCategoryWithStats = {
 export type GetSpaceCategoriesResult = {
   categories: SpaceCategoryWithStats[];
   total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 };

@@ -36,6 +36,7 @@ function formatSpaceToPlain(s: {
   locationId: string;
   categoryId: string | null;
   location: { address: string };
+  category: { id: string; name: string } | null;
   discountType: string | null;
   discountValue: number | null;
   durationDiscountOverride: string | null;
@@ -71,6 +72,7 @@ function formatSpaceToPlain(s: {
     termsId: s.termsId,
     locationId: s.locationId,
     categoryId: s.categoryId,
+    category: s.category,
     discountType: getValidDiscountType(s.discountType),
     discountValue: s.discountValue,
     durationDiscountOverride: getValidDurationDiscountOverride(
@@ -90,6 +92,9 @@ export async function getSpacesQuery(
   filters: {
     isPublished?: boolean | "ALL" | undefined;
     search?: string | undefined;
+    locationId?: string | undefined;
+    categoryId?: string | undefined;
+    uncategorizedOnly?: boolean | undefined;
   } = {},
   pagination: {
     page?: number;
@@ -98,7 +103,8 @@ export async function getSpacesQuery(
     sortOrder?: "asc" | "desc";
   } = {},
 ) {
-  const { isPublished, search } = filters;
+  const { isPublished, search, locationId, categoryId, uncategorizedOnly } =
+    filters;
   const {
     page = 1,
     limit = 10,
@@ -109,6 +115,8 @@ export async function getSpacesQuery(
   const where: {
     isActive: boolean;
     isPublished?: boolean;
+    locationId?: string;
+    categoryId?: string | null;
     OR?: Array<
       | { name: { contains: string; mode: "insensitive" } }
       | { addressDetail: { contains: string; mode: "insensitive" } }
@@ -121,6 +129,16 @@ export async function getSpacesQuery(
 
   if (isPublished !== undefined && isPublished !== "ALL") {
     where.isPublished = isPublished;
+  }
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  if (uncategorizedOnly) {
+    where.categoryId = null;
+  } else if (categoryId) {
+    where.categoryId = categoryId;
   }
 
   if (search) {
@@ -138,6 +156,7 @@ export async function getSpacesQuery(
       where,
       include: {
         location: { select: { address: true } },
+        category: { select: { id: true, name: true } },
         _count: {
           select: {
             reservations: true,
@@ -166,6 +185,7 @@ export async function getSpaceByIdQuery(id: string) {
     where: { id },
     include: {
       location: { select: { address: true } },
+      category: { select: { id: true, name: true } },
       _count: {
         select: {
           reservations: true,
