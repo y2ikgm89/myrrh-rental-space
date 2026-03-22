@@ -2,7 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import reactPlugin from "@eslint-react/eslint-plugin";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
-import importPlugin from "eslint-plugin-import";
+import importXPlugin from "eslint-plugin-import-x";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import tseslint from "typescript-eslint";
 import globals from "globals";
@@ -20,7 +20,7 @@ const eslintConfig = defineConfig([
     plugins: {
       "react-hooks": reactHooksPlugin,
       "@next/next": nextPlugin,
-      import: importPlugin,
+      "import-x": importXPlugin,
       "jsx-a11y": jsxA11yPlugin,
     },
     languageOptions: {
@@ -30,12 +30,8 @@ const eslintConfig = defineConfig([
       },
     },
     settings: {
-      "import/parsers": {
-        "@typescript-eslint/parser": [".ts", ".mts", ".cts", ".tsx", ".d.ts"],
-      },
-      "import/resolver": {
-        node: { extensions: [".js", ".jsx", ".ts", ".tsx"] },
-        typescript: { alwaysTryTypes: true },
+      "import-x/resolver": {
+        typescript: true,
       },
     },
     rules: {
@@ -53,7 +49,7 @@ const eslintConfig = defineConfig([
       "react-hooks/void-use-memo": "error",
 
       // Import
-      "import/no-anonymous-default-export": "warn",
+      "import-x/no-anonymous-default-export": "warn",
       "no-restricted-imports": [
         "error",
         {

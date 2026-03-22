@@ -69,6 +69,10 @@ const nextConfig: NextConfig = {
   experimental: {
     // Turbopack ファイルシステムキャッシュ: 開発サーバー再起動後もビルドキャッシュを永続化
     turbopackFileSystemCacheForDev: true,
+    // ナビゲーション結果をキャッシュして再訪問を即時表示（cacheComponents 必須）
+    cachedNavigations: true,
+    // ナビゲーション後のフォーカス管理改善（active element を blur、ブラウザ標準挙動に準拠）
+    appNewScrollHandler: true,
     // Optimize package imports - tree shaking for barrel exports
     optimizePackageImports: [
       // Icons

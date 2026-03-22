@@ -7,33 +7,21 @@
  * サイドバーレイアウトは維持される。
  */
 
-import { useEffect, startTransition } from "react";
-import { useRouter } from "next/navigation";
+import type { ErrorInfo } from "next/error";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/admin/components/ui";
 import { logger } from "@/shared/lib/logger";
 
-interface ErrorProps {
-  error: Error & { digest?: string };
-  reset: () => void;
-}
-
-export default function AdminError({ error, reset }: ErrorProps) {
-  const router = useRouter();
+export default function AdminError({ error, unstable_retry }: ErrorInfo) {
+  const digest = "digest" in error ? String(error.digest) : undefined;
 
   useEffect(() => {
     logger.error("Admin error boundary triggered", {
       error: error.message,
-      digest: error.digest,
+      digest,
     });
-  }, [error]);
-
-  const handleReset = () => {
-    startTransition(() => {
-      reset();
-      router.refresh();
-    });
-  };
+  }, [error, digest]);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
@@ -64,9 +52,9 @@ export default function AdminError({ error, reset }: ErrorProps) {
           再度お試しいただくか、ダッシュボードにお戻りください。
         </p>
 
-        {error.digest && (
+        {digest && (
           <p className="mb-4 rounded bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
-            Error ID: {error.digest}
+            Error ID: {digest}
           </p>
         )}
 
@@ -83,7 +71,7 @@ export default function AdminError({ error, reset }: ErrorProps) {
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button onClick={handleReset}>再試行</Button>
+          <Button onClick={() => unstable_retry()}>再試行</Button>
           <Button variant="outline" asChild>
             <Link href="/admin">ダッシュボードへ</Link>
           </Button>

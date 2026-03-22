@@ -7,32 +7,20 @@
  * Header/Footerレイアウトは維持される。
  */
 
-import { useEffect, startTransition } from "react";
-import { useRouter } from "next/navigation";
+import type { ErrorInfo } from "next/error";
+import { useEffect } from "react";
 import Link from "next/link";
 import { logger } from "@/shared/lib/logger";
 
-interface ErrorProps {
-  error: Error & { digest?: string };
-  reset: () => void;
-}
-
-export default function PublicError({ error, reset }: ErrorProps) {
-  const router = useRouter();
+export default function PublicError({ error, unstable_retry }: ErrorInfo) {
+  const digest = "digest" in error ? String(error.digest) : undefined;
 
   useEffect(() => {
     logger.error("Public page error boundary triggered", {
       error: error.message,
-      digest: error.digest,
+      digest,
     });
-  }, [error]);
-
-  const handleReset = () => {
-    startTransition(() => {
-      reset();
-      router.refresh();
-    });
-  };
+  }, [error, digest]);
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 md:px-8">
@@ -64,9 +52,9 @@ export default function PublicError({ error, reset }: ErrorProps) {
           再度お試しいただくか、ホームページにお戻りください。
         </p>
 
-        {error.digest && (
+        {digest && (
           <p className="mb-6 rounded-lg bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
-            Error ID: {error.digest}
+            Error ID: {digest}
           </p>
         )}
 
@@ -85,7 +73,7 @@ export default function PublicError({ error, reset }: ErrorProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
             type="button"
-            onClick={handleReset}
+            onClick={() => unstable_retry()}
             className="rounded-full border border-accent bg-transparent px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             再試行

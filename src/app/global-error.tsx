@@ -10,27 +10,19 @@
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
  */
 
-import { useEffect, startTransition } from "react";
+import type { ErrorInfo } from "next/error";
+import { useEffect } from "react";
 import { logger } from "@/shared/lib/logger";
 
-interface GlobalErrorProps {
-  error: Error & { digest?: string };
-  reset: () => void;
-}
+export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
+  const digest = "digest" in error ? String(error.digest) : undefined;
 
-export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
     logger.error("Global error boundary triggered", {
       error: error.message,
-      digest: error.digest,
+      digest,
     });
-  }, [error]);
-
-  const handleReset = () => {
-    startTransition(() => {
-      reset();
-    });
-  };
+  }, [error, digest]);
 
   return (
     <html lang="ja">
@@ -93,7 +85,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               しばらく時間をおいてから再度お試しください。
             </p>
 
-            {error.digest && (
+            {digest && (
               <p
                 style={{
                   marginBottom: "1.5rem",
@@ -101,7 +93,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
                   color: "#999",
                 }}
               >
-                エラーID: {error.digest}
+                エラーID: {digest}
               </p>
             )}
 
@@ -113,7 +105,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               }}
             >
               <button
-                onClick={handleReset}
+                onClick={() => unstable_retry()}
                 style={{
                   padding: "0.75rem 1.5rem",
                   borderRadius: "0.5rem",

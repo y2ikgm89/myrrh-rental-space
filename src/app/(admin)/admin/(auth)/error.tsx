@@ -1,20 +1,18 @@
 "use client";
 
-import { useEffect, startTransition } from "react";
+import type { ErrorInfo } from "next/error";
+import { useEffect } from "react";
 import { logger } from "@/shared/lib/logger";
 
-interface ErrorProps {
-  error: Error & { digest?: string };
-  reset: () => void;
-}
+export default function AuthError({ error, unstable_retry }: ErrorInfo) {
+  const digest = "digest" in error ? String(error.digest) : undefined;
 
-export default function AuthError({ error, reset }: ErrorProps) {
   useEffect(() => {
     logger.error("Auth error boundary triggered", {
       error: error.message,
-      digest: error.digest,
+      digest,
     });
-  }, [error]);
+  }, [error, digest]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
@@ -25,14 +23,14 @@ export default function AuthError({ error, reset }: ErrorProps) {
         <p className="mb-8 text-muted-foreground">
           申し訳ございません。しばらく時間をおいてから再度お試しください。
         </p>
-        {error.digest && (
+        {digest && (
           <p className="mb-6 text-sm text-muted-foreground/70">
-            エラーID: {error.digest}
+            エラーID: {digest}
           </p>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <button
-            onClick={() => startTransition(() => reset())}
+            onClick={() => unstable_retry()}
             className="rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             再試行する
