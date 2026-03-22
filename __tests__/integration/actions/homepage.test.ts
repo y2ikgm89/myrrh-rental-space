@@ -10,8 +10,10 @@ import { describe, test, expect } from "bun:test";
 import {
   SectionType,
   validateSectionConfig,
-  defaultSectionConfigs,
 } from "@/shared/lib/validations/section";
+import {
+  defaultSectionConfigs,
+} from "@/shared/lib/validations/section-defaults";
 
 // =============================================================================
 // SectionType Tests

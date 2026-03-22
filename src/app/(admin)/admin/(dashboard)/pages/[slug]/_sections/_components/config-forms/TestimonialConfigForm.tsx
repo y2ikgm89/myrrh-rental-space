@@ -22,12 +22,14 @@ import { ImagePlus, Plus, Trash2, Star } from "lucide-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   testimonialConfigSchema,
-  getTestimonialConfig,
   parseTestimonialLayout,
   parseTestimonialVariant,
   type TestimonialConfig,
   type TestimonialConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getTestimonialConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   testimonialLayoutLabels,
   testimonialVariantLabels,

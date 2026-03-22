@@ -20,7 +20,6 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   heroParallaxConfigSchema,
-  getHeroParallaxConfig,
   parseContentPosition,
   parseOverlayStyle,
   parseHeroParallaxHeight,
@@ -28,6 +27,9 @@ import {
   type HeroParallaxConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
+import {
+  getHeroParallaxConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   contentPositionLabels,
   overlayStyleLabels,

@@ -8,13 +8,15 @@ import { ensureHomepageSections } from "@/shared/lib/section-defaults";
 import {
   SectionType,
   defaultHomepageSectionOrder,
-  defaultSectionConfigs,
   type CreateSectionInput,
   type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
+import {
+  defaultSectionConfigs,
+} from "@/shared/lib/validations/section-defaults";
 
 function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);

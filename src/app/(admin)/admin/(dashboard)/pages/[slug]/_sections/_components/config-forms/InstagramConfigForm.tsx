@@ -13,11 +13,13 @@ import {
 } from "@/admin/components/ui";
 import {
   instagramConfigSchema,
-  getInstagramConfig,
   parseGapSize,
   type InstagramConfig,
   type InstagramConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getInstagramConfig,
+} from "@/shared/lib/validations/section-defaults";
 import { gapSizeLabels } from "@/shared/lib/validations/section-options";
 import { keysOf } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

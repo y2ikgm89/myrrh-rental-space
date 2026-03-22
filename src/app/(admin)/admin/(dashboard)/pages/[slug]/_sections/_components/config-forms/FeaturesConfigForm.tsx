@@ -18,11 +18,13 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import {
   featuresConfigSchema,
-  getFeaturesConfig,
   parseFeaturesLayout,
   type FeaturesConfig,
   type FeaturesConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getFeaturesConfig,
+} from "@/shared/lib/validations/section-defaults";
 import { featuresLayoutLabels } from "@/shared/lib/validations/section-options";
 import { keysOf } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

@@ -14,12 +14,14 @@ import {
 } from "@/admin/components/ui";
 import {
   mapConfigSchema,
-  getMapConfig,
   parseMapHeight,
   parseBorderRadius,
   type MapConfig,
   type MapConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getMapConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   borderRadiusLabels,
   mapHeightLabels,

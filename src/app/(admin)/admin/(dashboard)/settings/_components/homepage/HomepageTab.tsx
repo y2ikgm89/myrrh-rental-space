@@ -78,8 +78,10 @@ import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   SectionType,
   sectionTypeLabels,
-  defaultSectionConfigs,
 } from "@/admin/lib/validations/homepage-section";
+import {
+  defaultSectionConfigs,
+} from "@/shared/lib/validations/section-defaults";
 import {
   isMutationError,
   type MutationResult,

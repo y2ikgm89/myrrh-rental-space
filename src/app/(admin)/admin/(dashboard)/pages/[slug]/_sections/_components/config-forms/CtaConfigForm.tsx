@@ -16,12 +16,14 @@ import {
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   ctaConfigSchema,
-  getCtaConfig,
   parseCtaVariant,
   type CtaConfig,
   type CtaConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
+import {
+  getCtaConfig,
+} from "@/shared/lib/validations/section-defaults";
 import { ctaVariantLabels } from "@/shared/lib/validations/section-options";
 import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

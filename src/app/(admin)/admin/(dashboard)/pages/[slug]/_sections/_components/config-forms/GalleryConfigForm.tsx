@@ -18,7 +18,6 @@ import { Plus, Trash2 } from "lucide-react";
 import { useMultipleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   galleryConfigSchema,
-  getGalleryConfig,
   parseGalleryLayout,
   parseGalleryGap,
   parseGalleryImageAspect,
@@ -26,6 +25,9 @@ import {
   type GalleryConfig,
   type GalleryConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getGalleryConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   galleryLayoutLabels,
   galleryGapLabels,

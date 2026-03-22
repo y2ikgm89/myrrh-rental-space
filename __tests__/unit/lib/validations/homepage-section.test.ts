@@ -30,9 +30,8 @@ import {
   // CRUD
   createSectionSchema,
   updateSectionSchema,
-  // デフォルト
-  defaultSectionConfigs,
 } from "@/admin/lib/validations/homepage-section";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 
 describe("homepage-section re-export", () => {
   test("スキーマがインポート可能", () => {

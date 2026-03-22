@@ -15,12 +15,14 @@ import {
 import dynamic from "next/dynamic";
 import {
   customConfigSchema,
-  getCustomConfig,
   parseMaxWidth,
   parsePadding,
   type CustomConfig,
   type CustomConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getCustomConfig,
+} from "@/shared/lib/validations/section-defaults";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { FormActions, type ConfigFormProps } from "./shared";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";

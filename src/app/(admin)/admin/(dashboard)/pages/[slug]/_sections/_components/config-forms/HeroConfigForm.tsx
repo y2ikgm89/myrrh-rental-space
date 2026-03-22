@@ -21,13 +21,15 @@ import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import { CTAButtonEditor } from "@/admin/components/cta-button-editor";
 import {
   heroConfigSchema,
-  getHeroConfig,
   parseHeroHeight,
   parseHeroVariant,
   type HeroConfig,
   type HeroConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
+import {
+  getHeroConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   heroVariantLabels,
   heroHeightLabels,

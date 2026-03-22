@@ -4,10 +4,12 @@ import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import {
   SectionType,
-  defaultSectionConfigs,
   type SectionConfig,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
+import {
+  defaultSectionConfigs,
+} from "@/shared/lib/validations/section-defaults";
 
 function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);

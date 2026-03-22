@@ -37,6 +37,8 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   SectionType,
   sectionTypeLabels,
+} from "@/admin/lib/validations/homepage-section";
+import {
   getHeroConfig,
   getHeroParallaxConfig,
   getConceptConfig,
@@ -54,7 +56,7 @@ import {
   getContactFormConfig,
   getMapConfig,
   getEmbedConfig,
-} from "@/admin/lib/validations/homepage-section";
+} from "@/shared/lib/validations/section-defaults";
 import { HeroConfigForm } from "./section-editor/HeroConfigForm";
 import { HeroParallaxConfigForm } from "./section-editor/HeroParallaxConfigForm";
 import { ConceptConfigForm } from "./section-editor/ConceptConfigForm";

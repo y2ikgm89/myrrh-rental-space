@@ -14,12 +14,14 @@ import {
 } from "@/admin/components/ui";
 import {
   spaceShowcaseConfigSchema,
-  getSpaceShowcaseConfig,
   parseCardStyle,
   parseShowcaseImageAspect,
   type SpaceShowcaseConfig,
   type SpaceShowcaseConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getSpaceShowcaseConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   cardStyleLabels,
   showcaseImageAspectLabels,

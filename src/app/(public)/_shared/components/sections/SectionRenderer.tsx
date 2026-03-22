@@ -8,6 +8,9 @@
 import type { ReactElement } from "react";
 import { SectionType } from "@/shared/db/enums";
 import {
+  parseSectionDesign,
+} from "@/shared/lib/validations/section";
+import {
   getHeroConfig,
   getHeroParallaxConfig,
   getCustomConfig,
@@ -25,8 +28,7 @@ import {
   getMapConfig,
   getEmbedConfig,
   getInstagramConfig,
-  parseSectionDesign,
-} from "@/shared/lib/validations/section";
+} from "@/shared/lib/validations/section-defaults";
 import {
   getPublishedFaqItems,
   getShowcaseSpaces,

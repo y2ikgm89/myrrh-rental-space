@@ -18,7 +18,6 @@ import { ImagePlus } from "lucide-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   conceptConfigSchema,
-  getConceptConfig,
   parseConceptLayout,
   parseImageAspect,
   parseImagePosition,
@@ -26,6 +25,9 @@ import {
   type ConceptConfig,
   type ConceptConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getConceptConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   conceptLayoutLabels,
   imageAspectLabels,

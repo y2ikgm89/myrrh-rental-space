@@ -14,13 +14,15 @@ import {
 } from "@/admin/components/ui";
 import {
   faqListConfigSchema,
-  getFaqListConfig,
   parseContainerWidth,
   parseFaqInitialOpen,
   parseFaqVariant,
   type FaqListConfig,
   type FaqListConfigInput,
 } from "@/shared/lib/validations/section";
+import {
+  getFaqListConfig,
+} from "@/shared/lib/validations/section-defaults";
 import {
   containerWidthLabels,
   faqInitialOpenLabels,

@@ -35,10 +35,9 @@ import {
   parseNewsLayout,
   parsePostLayout,
   parseCtaVariant,
-  // Default configs
-  defaultSectionConfigs,
   SectionType,
 } from "@/shared/lib/validations/section";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 
 // =============================================================================
 // Hero セクション
