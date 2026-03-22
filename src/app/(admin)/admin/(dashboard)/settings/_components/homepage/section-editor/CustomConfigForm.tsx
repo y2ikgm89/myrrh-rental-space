@@ -14,7 +14,7 @@ import {
 import type { HomepageSectionData } from "@/admin/actions/homepage-settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
-import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const LexicalEditor = dynamic(
   () =>

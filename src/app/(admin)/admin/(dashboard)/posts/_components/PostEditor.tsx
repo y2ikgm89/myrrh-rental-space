@@ -20,7 +20,7 @@ import {
 } from "@/admin/components/ui";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { CommentPanel } from "@/admin/components/editor/comment-panel";
-import { LazyLexicalEditor } from "@/admin/components/editor/lexical";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import {
   EditorHeader,
   InlineEditorShell,

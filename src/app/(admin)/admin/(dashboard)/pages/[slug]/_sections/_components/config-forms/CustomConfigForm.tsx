@@ -23,7 +23,7 @@ import {
 } from "@/shared/lib/validations/section";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { FormActions, type ConfigFormProps } from "./shared";
-import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const LexicalEditor = dynamic(
   () =>

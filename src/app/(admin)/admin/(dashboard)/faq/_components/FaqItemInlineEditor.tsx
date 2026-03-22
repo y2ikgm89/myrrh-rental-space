@@ -34,11 +34,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/admin/components/ui";
-import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/admin/components/editor/lexical";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const LexicalEditor = dynamic(
   () =>
-    import("@/admin/components/editor/lexical").then((mod) => ({
+    import("@/admin/components/editor/lexical/LexicalEditor").then((mod) => ({
       default: mod.LexicalEditor,
     })),
   {

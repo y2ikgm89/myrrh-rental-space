@@ -19,11 +19,9 @@ import {
   SidePanelShell,
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
-import {
-  LazyLexicalEditor,
-  EMPTY_LEXICAL_EDITOR_STATE_JSON,
-  tryConvertHtmlStringToLexicalJsonString,
-} from "@/admin/components/editor/lexical";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { tryConvertHtmlStringToLexicalJsonString } from "@/admin/components/editor/lexical/html-to-lexical-json";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
   createTermsWithVersion,
