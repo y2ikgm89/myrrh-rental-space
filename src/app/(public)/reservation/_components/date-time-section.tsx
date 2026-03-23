@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useTransition, useEffect, type ReactElement } from "react";
+import type { ReactElement } from "react";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
-import { fetchAvailableSlots } from "@/public/actions/availability";
 import { CalendarPicker } from "./calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { DurationPills } from "./duration-pills";
 import { GuestStepper } from "./guest-stepper";
-
-const EMPTY_SLOTS: TimeSlot[] = [];
 
 function calcMaxDuration(
   slots: readonly TimeSlot[],
@@ -25,18 +22,11 @@ function calcMaxDuration(
   return consecutive * 30;
 }
 
-function formatDateString(date: Date): string {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-}
-
 interface DateTimeSectionProps {
-  readonly spaceId: string;
-  readonly spaceCapacity: number;
   readonly businessHours: BusinessHours | null;
+  readonly slots: readonly TimeSlot[];
+  readonly isFetchingSlots: boolean;
+  readonly spaceCapacity: number;
   readonly selectedDate: Date | undefined;
   readonly selectedStartTime: string | null;
   readonly selectedDuration: number | null;
@@ -48,9 +38,10 @@ interface DateTimeSectionProps {
 }
 
 export function DateTimeSection({
-  spaceId,
-  spaceCapacity,
   businessHours,
+  slots,
+  isFetchingSlots,
+  spaceCapacity,
   selectedDate,
   selectedStartTime,
   selectedDuration,
@@ -60,24 +51,9 @@ export function DateTimeSection({
   onDurationChange,
   onGuestsChange,
 }: DateTimeSectionProps): ReactElement {
-  const [fetchedSlots, setFetchedSlots] = useState<TimeSlot[]>([]);
-  const [isFetchingSlots, startFetchTransition] = useTransition();
-
-  const slots = selectedDate && spaceId ? fetchedSlots : EMPTY_SLOTS;
   const maxDuration = selectedStartTime
     ? calcMaxDuration(slots, selectedStartTime)
     : 0;
-
-  useEffect(() => {
-    if (!selectedDate || !spaceId) return;
-    startFetchTransition(async () => {
-      const result = await fetchAvailableSlots(
-        spaceId,
-        formatDateString(selectedDate),
-      );
-      setFetchedSlots(result);
-    });
-  }, [selectedDate, spaceId]);
 
   return (
     <div className="space-y-6">

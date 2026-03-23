@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement } from "react";
+import { useReducer, useTransition, type ReactElement } from "react";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
@@ -12,8 +12,10 @@ import {
 } from "@/shared/lib/validations/public-reservation";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
+import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
 import { submitReservation } from "@/public/actions/reservation";
+import { fetchAvailableSlots } from "@/public/actions/availability";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
@@ -32,6 +34,8 @@ const ALL_STEPS = [
 
 const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
 
+const EMPTY_SLOTS: TimeSlot[] = [];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -45,6 +49,13 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior });
 }
 
+function formatDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function resolveAutoIds(locations: readonly LocationWithSpaces[]) {
   const locationId = locations.length === 1 ? (locations[0]?.id ?? null) : null;
   const location = locationId
@@ -53,6 +64,84 @@ function resolveAutoIds(locations: readonly LocationWithSpaces[]) {
   const spaceId =
     location?.spaces.length === 1 ? (location.spaces[0]?.id ?? null) : null;
   return { locationId, spaceId };
+}
+
+// ---------------------------------------------------------------------------
+// Reducer
+// ---------------------------------------------------------------------------
+
+type SelectionState = {
+  locationId: string | null;
+  spaceId: string | null;
+  date: Date | undefined;
+  startTime: string | null;
+  duration: number | null;
+  guests: number;
+  slots: TimeSlot[];
+  step: 1 | 2 | 3;
+  submitted: boolean;
+  errorMessage: string | null;
+};
+
+type SelectionAction =
+  | { type: "selectLocation"; id: string; autoSpaceId: string | null }
+  | { type: "selectSpace"; id: string }
+  | { type: "selectDate"; date: Date | undefined }
+  | { type: "setSlots"; slots: TimeSlot[] }
+  | { type: "selectStartTime"; time: string | null }
+  | { type: "selectDuration"; minutes: number | null }
+  | { type: "setGuests"; count: number }
+  | { type: "goToStep"; step: 1 | 2 | 3 }
+  | { type: "setSubmitted" }
+  | { type: "setError"; message: string };
+
+function selectionReducer(
+  state: SelectionState,
+  action: SelectionAction,
+): SelectionState {
+  switch (action.type) {
+    case "selectLocation":
+      return {
+        ...state,
+        locationId: action.id,
+        spaceId: action.autoSpaceId,
+        date: undefined,
+        startTime: null,
+        duration: null,
+        slots: EMPTY_SLOTS,
+      };
+    case "selectSpace":
+      return {
+        ...state,
+        spaceId: action.id,
+        date: undefined,
+        startTime: null,
+        duration: null,
+        slots: EMPTY_SLOTS,
+      };
+    case "selectDate":
+      return {
+        ...state,
+        date: action.date,
+        startTime: null,
+        duration: null,
+        slots: action.date ? state.slots : EMPTY_SLOTS,
+      };
+    case "setSlots":
+      return { ...state, slots: action.slots };
+    case "selectStartTime":
+      return { ...state, startTime: action.time, duration: null };
+    case "selectDuration":
+      return { ...state, duration: action.minutes };
+    case "setGuests":
+      return { ...state, guests: action.count };
+    case "goToStep":
+      return { ...state, step: action.step, errorMessage: null };
+    case "setSubmitted":
+      return { ...state, submitted: true };
+    case "setError":
+      return { ...state, errorMessage: action.message };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -68,46 +157,47 @@ export function ReservationForm({
   locations,
   businessHours,
 }: ReservationFormProps): ReactElement {
-  // --- Auto-skip ---
   const auto = resolveAutoIds(locations);
   const skipStep1 = auto.locationId != null && auto.spaceId != null;
 
-  // --- Selection state (Single Source of Truth) ---
-  const [selectedLocationId, setSelectedLocationId] = useState(auto.locationId);
-  const [selectedSpaceId, setSelectedSpaceId] = useState(auto.spaceId);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [selectedStartTime, setSelectedStartTime] = useState<string | null>(
-    null,
-  );
-  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  const [numberOfGuests, setNumberOfGuests] = useState(1);
-  const [step, setStep] = useState<1 | 2 | 3>(skipStep1 ? 2 : 1);
-  const [submitted, setSubmitted] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(selectionReducer, {
+    locationId: auto.locationId,
+    spaceId: auto.spaceId,
+    date: undefined,
+    startTime: null,
+    duration: null,
+    guests: 1,
+    slots: EMPTY_SLOTS,
+    step: skipStep1 ? 2 : 1,
+    submitted: false,
+    errorMessage: null,
+  });
+
+  const [isFetchingSlots, startSlotTransition] = useTransition();
 
   // --- Derived ---
-  const currentLocation = locations.find((l) => l.id === selectedLocationId);
+  const currentLocation = locations.find((l) => l.id === state.locationId);
   const currentSpaces = currentLocation?.spaces ?? [];
-  const currentSpace = currentSpaces.find((s) => s.id === selectedSpaceId);
+  const currentSpace = currentSpaces.find((s) => s.id === state.spaceId);
 
   const endTime =
-    selectedStartTime && selectedDuration
-      ? addMinutesToTime(selectedStartTime, selectedDuration)
+    state.startTime && state.duration
+      ? addMinutesToTime(state.startTime, state.duration)
       : null;
   const price =
-    currentSpace && selectedDuration
-      ? (currentSpace.hourlyPrice * selectedDuration) / 60
+    currentSpace && state.duration
+      ? (currentSpace.hourlyPrice * state.duration) / 60
       : null;
 
-  const isStep1Complete = selectedLocationId != null && selectedSpaceId != null;
+  const isStep1Complete = state.locationId != null && state.spaceId != null;
   const isStep2Complete =
-    selectedDate != null &&
-    selectedStartTime != null &&
-    selectedDuration != null &&
+    state.date != null &&
+    state.startTime != null &&
+    state.duration != null &&
     endTime != null;
 
   const visibleSteps = skipStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
-  const displayStep = skipStep1 ? step - 1 : step;
+  const displayStep = skipStep1 ? state.step - 1 : state.step;
 
   // --- Form ---
   const { form, isPending, onSubmit } = usePublicForm(
@@ -115,10 +205,10 @@ export function ReservationForm({
     async (data: PublicReservationInput) => {
       const result = await submitReservation(data);
       if (isMutationError(result)) {
-        setErrorMessage(result.error);
+        dispatch({ type: "setError", message: result.error });
         return result;
       }
-      setSubmitted(true);
+      dispatch({ type: "setSubmitted" });
       return result;
     },
     {
@@ -130,78 +220,78 @@ export function ReservationForm({
     },
   );
 
-  // --- Reset helpers ---
-  function resetDateTimeFields() {
-    setSelectedDate(undefined);
-    setSelectedStartTime(null);
-    setSelectedDuration(null);
-    form.setValue("date", "");
-    form.setValue("startTime", "");
-    form.setValue("endTime", "");
+  // --- Sync reducer state → RHF (one-way) ---
+  function syncFormField(
+    field: keyof PublicReservationInput,
+    value: string | number,
+  ) {
+    form.setValue(field, value);
   }
 
-  // --- Cascade handlers ---
+  // --- Handlers ---
   function handleLocationSelect(id: string) {
-    setSelectedLocationId(id);
-    setSelectedSpaceId(null);
-    form.setValue("locationId", id);
-    form.setValue("spaceId", "");
-    resetDateTimeFields();
-
     const loc = locations.find((l) => l.id === id);
-    if (loc?.spaces.length === 1 && loc.spaces[0]) {
-      setSelectedSpaceId(loc.spaces[0].id);
-      form.setValue("spaceId", loc.spaces[0].id);
-    }
+    const autoSpace =
+      loc?.spaces.length === 1 ? (loc.spaces[0]?.id ?? null) : null;
+    dispatch({ type: "selectLocation", id, autoSpaceId: autoSpace });
+    syncFormField("locationId", id);
+    syncFormField("spaceId", autoSpace ?? "");
+    syncFormField("date", "");
+    syncFormField("startTime", "");
+    syncFormField("endTime", "");
   }
 
   function handleSpaceSelect(id: string) {
-    setSelectedSpaceId(id);
-    form.setValue("spaceId", id);
-    resetDateTimeFields();
+    dispatch({ type: "selectSpace", id });
+    syncFormField("spaceId", id);
+    syncFormField("date", "");
+    syncFormField("startTime", "");
+    syncFormField("endTime", "");
   }
 
   function handleDateChange(date: Date | undefined) {
-    setSelectedDate(date);
-    setSelectedStartTime(null);
-    setSelectedDuration(null);
-    form.setValue("startTime", "");
-    form.setValue("endTime", "");
+    dispatch({ type: "selectDate", date });
+    syncFormField("startTime", "");
+    syncFormField("endTime", "");
     if (date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      form.setValue("date", `${y}-${m}-${d}`);
+      syncFormField("date", formatDateString(date));
+      // Fetch slots via startTransition (React 19 pattern — no useEffect)
+      if (state.spaceId) {
+        const spaceId = state.spaceId;
+        const dateStr = formatDateString(date);
+        startSlotTransition(async () => {
+          const result = await fetchAvailableSlots(spaceId, dateStr);
+          dispatch({ type: "setSlots", slots: result });
+        });
+      }
     } else {
-      form.setValue("date", "");
+      syncFormField("date", "");
     }
   }
 
   function handleStartTimeChange(time: string | null) {
-    setSelectedStartTime(time);
-    setSelectedDuration(null);
-    form.setValue("startTime", time ?? "");
-    form.setValue("endTime", "");
+    dispatch({ type: "selectStartTime", time });
+    syncFormField("startTime", time ?? "");
+    syncFormField("endTime", "");
   }
 
   function handleDurationChange(minutes: number | null) {
-    setSelectedDuration(minutes);
-    if (minutes && selectedStartTime) {
-      form.setValue("endTime", addMinutesToTime(selectedStartTime, minutes));
+    dispatch({ type: "selectDuration", minutes });
+    if (minutes && state.startTime) {
+      syncFormField("endTime", addMinutesToTime(state.startTime, minutes));
     } else {
-      form.setValue("endTime", "");
+      syncFormField("endTime", "");
     }
   }
 
   function handleGuestsChange(count: number) {
-    setNumberOfGuests(count);
-    form.setValue("numberOfGuests", count);
+    dispatch({ type: "setGuests", count });
+    syncFormField("numberOfGuests", count);
   }
 
   // --- Navigation ---
   function goToStep(target: 1 | 2 | 3) {
-    setStep(target);
-    setErrorMessage(null);
+    dispatch({ type: "goToStep", step: target });
     scrollToTop();
   }
 
@@ -234,7 +324,6 @@ export function ReservationForm({
   function renderStepNavigation(config: {
     onBack?: (() => void) | undefined;
     onNext?: (() => void) | undefined;
-    nextDisabled?: boolean | undefined;
     price?: number | null | undefined;
   }) {
     return (
@@ -248,7 +337,7 @@ export function ReservationForm({
           ) : (
             <div />
           )}
-          {config.onNext && !config.nextDisabled ? (
+          {config.onNext ? (
             <Button type="button" onClick={config.onNext}>
               次へ
             </Button>
@@ -277,7 +366,7 @@ export function ReservationForm({
                   &yen;{config.price.toLocaleString()}
                 </span>
               ) : null}
-              {config.onNext && !config.nextDisabled ? (
+              {config.onNext ? (
                 <Button type="button" onClick={config.onNext}>
                   次へ
                 </Button>
@@ -301,7 +390,7 @@ export function ReservationForm({
     );
   }
 
-  if (submitted) {
+  if (state.submitted) {
     return (
       <div className="py-12 text-center">
         <Heading level={2}>ご予約を受け付けました</Heading>
@@ -313,21 +402,21 @@ export function ReservationForm({
   }
 
   // --- Step 3: Customer info ---
-  if (step === 3) {
+  if (state.step === 3) {
     return (
       <form onSubmit={onSubmit}>
         {renderStepIndicator()}
         <CustomerStep
           form={form}
           isPending={isPending}
-          errorMessage={errorMessage}
+          errorMessage={state.errorMessage}
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
             date: form.getValues("date"),
             startTime: form.getValues("startTime"),
             endTime: form.getValues("endTime"),
-            guests: numberOfGuests,
+            guests: state.guests,
             price,
           }}
           onBack={() => goToStep(2)}
@@ -337,18 +426,19 @@ export function ReservationForm({
   }
 
   // --- Step 2: Date & Time ---
-  if (step === 2 && selectedSpaceId) {
+  if (state.step === 2 && state.spaceId) {
     return (
       <div>
         {renderStepIndicator()}
         <DateTimeSection
-          spaceId={selectedSpaceId}
-          spaceCapacity={currentSpace?.capacity ?? 1}
           businessHours={businessHours}
-          selectedDate={selectedDate}
-          selectedStartTime={selectedStartTime}
-          selectedDuration={selectedDuration}
-          numberOfGuests={numberOfGuests}
+          slots={state.slots}
+          isFetchingSlots={isFetchingSlots}
+          spaceCapacity={currentSpace?.capacity ?? 1}
+          selectedDate={state.date}
+          selectedStartTime={state.startTime}
+          selectedDuration={state.duration}
+          numberOfGuests={state.guests}
           onDateChange={handleDateChange}
           onStartTimeChange={handleStartTimeChange}
           onDurationChange={handleDurationChange}
@@ -375,20 +465,20 @@ export function ReservationForm({
           </Heading>
           <LocationSelector
             locations={locations}
-            selectedId={selectedLocationId}
+            selectedId={state.locationId}
             onSelect={handleLocationSelect}
           />
         </section>
       ) : null}
 
-      {selectedLocationId != null && currentSpaces.length > 1 ? (
+      {state.locationId != null && currentSpaces.length > 1 ? (
         <section className="animate-section-enter">
           <Heading level={3} className="mb-4">
             スペースを選択
           </Heading>
           <SpaceSelector
             spaces={currentSpaces}
-            selectedId={selectedSpaceId}
+            selectedId={state.spaceId}
             onSelect={handleSpaceSelect}
           />
         </section>
