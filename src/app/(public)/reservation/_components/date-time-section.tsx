@@ -82,7 +82,7 @@ export function DateTimeSection({
   return (
     <div ref={sectionRef} className="space-y-6">
       {/* Row 1: Calendar (left) + Time slots (right) */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 rounded-xl bg-surface p-4 md:grid-cols-2 md:p-6">
         <div>
           <h3 className="mb-3 font-heading text-base tracking-tight">
             日付を選択
@@ -117,7 +117,7 @@ export function DateTimeSection({
 
       {/* Row 2: Duration pills (full width) */}
       {selectedStartTime ? (
-        <div>
+        <div className="rounded-xl bg-surface p-4 md:p-6">
           <h3 className="mb-3 font-heading text-base tracking-tight">
             利用時間
           </h3>
