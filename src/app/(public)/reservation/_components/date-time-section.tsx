@@ -80,24 +80,23 @@ export function DateTimeSection({
   })();
 
   return (
-    <div ref={sectionRef} className="grid gap-6 md:grid-cols-2">
-      {/* Left: Calendar */}
-      <div>
-        <h3 className="mb-3 font-heading text-base tracking-tight">
-          日付を選択
-        </h3>
-        <CalendarPicker
-          selectedDate={selectedDate}
-          onSelect={onDateChange}
-          businessHours={businessHours}
-        />
-      </div>
+    <div ref={sectionRef} className="space-y-6">
+      {/* Row 1: Calendar (left) + Time slots (right) */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <div>
+          <h3 className="mb-3 font-heading text-base tracking-tight">
+            日付を選択
+          </h3>
+          <CalendarPicker
+            selectedDate={selectedDate}
+            onSelect={onDateChange}
+            businessHours={businessHours}
+          />
+        </div>
 
-      {/* Right: Time + Duration + Guests */}
-      <div className="space-y-6">
-        {selectedDate ? (
-          <>
-            <div>
+        <div>
+          {selectedDate ? (
+            <>
               <h3 className="mb-3 font-heading text-base tracking-tight">
                 時間帯を選択
               </h3>
@@ -107,39 +106,40 @@ export function DateTimeSection({
                 onSelect={onStartTimeChange}
                 isLoading={isFetchingSlots}
               />
-            </div>
-
-            {selectedStartTime ? (
-              <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-                <div>
-                  <h3 className="mb-3 font-heading text-base tracking-tight">
-                    利用時間
-                  </h3>
-                  <DurationPills
-                    selectedMinutes={selectedDuration}
-                    maxMinutes={maxDuration}
-                    onSelect={onDurationChange}
-                  />
-                </div>
-                <div className="flex flex-col justify-end">
-                  <h3 className="mb-3 font-heading text-base tracking-tight">
-                    利用人数
-                  </h3>
-                  <GuestStepper
-                    value={numberOfGuests}
-                    max={spaceCapacity}
-                    onChange={onGuestsChange}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            カレンダーから日付を選択してください
-          </p>
-        )}
+            </>
+          ) : (
+            <p className="mt-10 text-sm text-muted-foreground">
+              カレンダーから日付を選択してください
+            </p>
+          )}
+        </div>
       </div>
+
+      {/* Row 2: Duration pills (full width) */}
+      {selectedStartTime ? (
+        <div>
+          <h3 className="mb-3 font-heading text-base tracking-tight">
+            利用時間
+          </h3>
+          <DurationPills
+            selectedMinutes={selectedDuration}
+            maxMinutes={maxDuration}
+            onSelect={onDurationChange}
+          />
+        </div>
+      ) : null}
+
+      {/* Row 3: Guest stepper (inline bar) */}
+      {selectedStartTime ? (
+        <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
+          <span className="text-sm font-medium text-foreground">利用人数</span>
+          <GuestStepper
+            value={numberOfGuests}
+            max={spaceCapacity}
+            onChange={onGuestsChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
