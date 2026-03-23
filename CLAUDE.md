@@ -80,6 +80,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
   - `db-migration-reviewer`: `bunx --bun prisma migrate dev` 実行前
   - `large-file-detector`: 500行超アクションファイルの定期チェック・分割候補の洗い出し
   - `route-structure-reviewer`: ルート追加・移行後の構造整合性チェック（Suspense boundary・空ディレクトリ・html/body 漏れ）
+  - `reservation-flow-reviewer`: 予約フロー整合性チェック（reducer ↔ RHF同期 ↔ スキーマ ↔ Server Action）
 - **プロジェクト MCP** (`github`): `.mcp.json` 設定済 — PR・Issue・ブランチ操作
 - **グローバル Plugin/MCP** (`serena`, `context7`, `playwright`): ユーザーレベルで設定済
   - `context7`: ライブラリ公式ドキュメント参照時 — `resolve-library-id` → `query-docs`（対象: Lexical / React 19 / Next.js 16 / Prisma 7 / Zod 4 / Better Auth）
