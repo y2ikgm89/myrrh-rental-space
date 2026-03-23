@@ -129,8 +129,8 @@ export function DateTimeSection({
         </div>
       ) : null}
 
-      {/* Row 3: Guest stepper (inline bar) */}
-      {selectedStartTime ? (
+      {/* Row 3: Guest stepper (shown after duration selected) */}
+      {selectedDuration ? (
         <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
           <span className="text-sm font-medium text-foreground">利用人数</span>
           <GuestStepper
