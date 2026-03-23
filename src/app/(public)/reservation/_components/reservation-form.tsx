@@ -20,6 +20,22 @@ import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const ALL_STEPS = [
+  { number: 1, label: "スペース選択" },
+  { number: 2, label: "日時選択" },
+  { number: 3, label: "情報入力" },
+] as const;
+
+const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function scrollToTop() {
   const behavior =
     typeof window !== "undefined" &&
@@ -29,11 +45,19 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior });
 }
 
-const RESERVATION_STEPS = [
-  { number: 1, label: "スペース選択" },
-  { number: 2, label: "日時選択" },
-  { number: 3, label: "情報入力" },
-] as const;
+function resolveAutoIds(locations: readonly LocationWithSpaces[]) {
+  const locationId = locations.length === 1 ? (locations[0]?.id ?? null) : null;
+  const location = locationId
+    ? locations.find((l) => l.id === locationId)
+    : undefined;
+  const spaceId =
+    location?.spaces.length === 1 ? (location.spaces[0]?.id ?? null) : null;
+  return { locationId, spaceId };
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 interface ReservationFormProps {
   readonly locations: readonly LocationWithSpaces[];
@@ -44,27 +68,13 @@ export function ReservationForm({
   locations,
   businessHours,
 }: ReservationFormProps): ReactElement {
-  // --- Auto-skip logic ---
-  const autoLocationId =
-    locations.length === 1 ? (locations[0]?.id ?? null) : null;
-  const autoLocation = autoLocationId
-    ? locations.find((l) => l.id === autoLocationId)
-    : null;
-  const autoSpaceId =
-    autoLocation?.spaces.length === 1
-      ? (autoLocation.spaces[0]?.id ?? null)
-      : null;
-
-  // Skip step 1 entirely when both location and space are auto-selected
-  const skipStep1 = autoLocationId != null && autoSpaceId != null;
+  // --- Auto-skip ---
+  const auto = resolveAutoIds(locations);
+  const skipStep1 = auto.locationId != null && auto.spaceId != null;
 
   // --- Selection state (Single Source of Truth) ---
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    autoLocationId,
-  );
-  const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(
-    autoSpaceId,
-  );
+  const [selectedLocationId, setSelectedLocationId] = useState(auto.locationId);
+  const [selectedSpaceId, setSelectedSpaceId] = useState(auto.spaceId);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedStartTime, setSelectedStartTime] = useState<string | null>(
     null,
@@ -75,14 +85,10 @@ export function ReservationForm({
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // --- Derived values ---
+  // --- Derived ---
   const currentLocation = locations.find((l) => l.id === selectedLocationId);
   const currentSpaces = currentLocation?.spaces ?? [];
   const currentSpace = currentSpaces.find((s) => s.id === selectedSpaceId);
-
-  const showLocationSelector = locations.length > 1;
-  const showSpaceSelector =
-    selectedLocationId != null && currentSpaces.length > 1;
 
   const endTime =
     selectedStartTime && selectedDuration
@@ -93,14 +99,17 @@ export function ReservationForm({
       ? (currentSpace.hourlyPrice * selectedDuration) / 60
       : null;
 
-  // --- Visible steps (skip step 1 when auto-selected) ---
-  const visibleSteps = skipStep1
-    ? RESERVATION_STEPS.filter((s) => s.number !== 1)
-    : RESERVATION_STEPS;
-  // Map display step for indicator: when step1 skipped, step 2 shows as position 1
+  const isStep1Complete = selectedLocationId != null && selectedSpaceId != null;
+  const isStep2Complete =
+    selectedDate != null &&
+    selectedStartTime != null &&
+    selectedDuration != null &&
+    endTime != null;
+
+  const visibleSteps = skipStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
   const displayStep = skipStep1 ? step - 1 : step;
 
-  // --- react-hook-form (3-arg signature: schema, action, options) ---
+  // --- Form ---
   const { form, isPending, onSubmit } = usePublicForm(
     publicReservationSchema,
     async (data: PublicReservationInput) => {
@@ -114,29 +123,31 @@ export function ReservationForm({
     },
     {
       defaultValues: {
-        locationId: autoLocationId ?? "",
-        spaceId: autoSpaceId ?? "",
+        locationId: auto.locationId ?? "",
+        spaceId: auto.spaceId ?? "",
         numberOfGuests: 1,
       },
     },
   );
 
-  // --- Cascade reset handlers ---
-  function handleLocationSelect(id: string) {
-    setSelectedLocationId(id);
-    form.setValue("locationId", id);
-
-    // Reset downstream
-    setSelectedSpaceId(null);
+  // --- Reset helpers ---
+  function resetDateTimeFields() {
     setSelectedDate(undefined);
     setSelectedStartTime(null);
     setSelectedDuration(null);
-    form.setValue("spaceId", "");
     form.setValue("date", "");
     form.setValue("startTime", "");
     form.setValue("endTime", "");
+  }
 
-    // Auto-select space if only one
+  // --- Cascade handlers ---
+  function handleLocationSelect(id: string) {
+    setSelectedLocationId(id);
+    setSelectedSpaceId(null);
+    form.setValue("locationId", id);
+    form.setValue("spaceId", "");
+    resetDateTimeFields();
+
     const loc = locations.find((l) => l.id === id);
     if (loc?.spaces.length === 1 && loc.spaces[0]) {
       setSelectedSpaceId(loc.spaces[0].id);
@@ -147,14 +158,7 @@ export function ReservationForm({
   function handleSpaceSelect(id: string) {
     setSelectedSpaceId(id);
     form.setValue("spaceId", id);
-
-    // Reset downstream
-    setSelectedDate(undefined);
-    setSelectedStartTime(null);
-    setSelectedDuration(null);
-    form.setValue("date", "");
-    form.setValue("startTime", "");
-    form.setValue("endTime", "");
+    resetDateTimeFields();
   }
 
   function handleDateChange(date: Date | undefined) {
@@ -164,12 +168,10 @@ export function ReservationForm({
     form.setValue("startTime", "");
     form.setValue("endTime", "");
     if (date) {
-      const dateStr = [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, "0"),
-        String(date.getDate()).padStart(2, "0"),
-      ].join("-");
-      form.setValue("date", dateStr);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      form.setValue("date", `${y}-${m}-${d}`);
     } else {
       form.setValue("date", "");
     }
@@ -185,8 +187,7 @@ export function ReservationForm({
   function handleDurationChange(minutes: number | null) {
     setSelectedDuration(minutes);
     if (minutes && selectedStartTime) {
-      const end = addMinutesToTime(selectedStartTime, minutes);
-      form.setValue("endTime", end);
+      form.setValue("endTime", addMinutesToTime(selectedStartTime, minutes));
     } else {
       form.setValue("endTime", "");
     }
@@ -197,15 +198,7 @@ export function ReservationForm({
     form.setValue("numberOfGuests", count);
   }
 
-  // --- Step transition ---
-  const isStep1Complete = selectedLocationId != null && selectedSpaceId != null;
-
-  const isStep2Complete =
-    selectedDate != null &&
-    selectedStartTime != null &&
-    selectedDuration != null &&
-    endTime != null;
-
+  // --- Navigation ---
   function goToStep(target: 1 | 2 | 3) {
     setStep(target);
     setErrorMessage(null);
@@ -214,9 +207,7 @@ export function ReservationForm({
 
   async function advanceToStep2() {
     const valid = await form.trigger(["locationId", "spaceId"]);
-    if (valid && isStep1Complete) {
-      goToStep(2);
-    }
+    if (valid && isStep1Complete) goToStep(2);
   }
 
   async function advanceToStep3() {
@@ -228,12 +219,80 @@ export function ReservationForm({
       "endTime",
       "numberOfGuests",
     ]);
-    if (valid && isStep2Complete) {
-      goToStep(3);
-    }
+    if (valid && isStep2Complete) goToStep(3);
   }
 
-  // --- Empty state ---
+  // --- Render helpers ---
+  function renderStepIndicator() {
+    return (
+      <div className="mb-8">
+        <StepIndicator currentStep={displayStep} steps={visibleSteps} />
+      </div>
+    );
+  }
+
+  function renderStepNavigation(config: {
+    onBack?: (() => void) | undefined;
+    onNext?: (() => void) | undefined;
+    nextDisabled?: boolean | undefined;
+    price?: number | null | undefined;
+  }) {
+    return (
+      <>
+        {/* Desktop */}
+        <div className="mt-10 hidden md:flex md:items-center md:justify-between">
+          {config.onBack ? (
+            <Button type="button" variant="secondary" onClick={config.onBack}>
+              戻る
+            </Button>
+          ) : (
+            <div />
+          )}
+          {config.onNext && !config.nextDisabled ? (
+            <Button type="button" onClick={config.onNext}>
+              次へ
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Mobile */}
+        <div className="h-20 md:hidden" />
+        <StickyBottomBar>
+          <div className="flex items-center justify-between gap-4">
+            {config.onBack ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={config.onBack}
+                className="shrink-0"
+              >
+                戻る
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-3">
+              {config.price != null ? (
+                <span className="font-heading text-lg text-accent">
+                  &yen;{config.price.toLocaleString()}
+                </span>
+              ) : null}
+              {config.onNext && !config.nextDisabled ? (
+                <Button type="button" onClick={config.onNext}>
+                  次へ
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </StickyBottomBar>
+      </>
+    );
+  }
+
+  // =========================================================================
+  // Render
+  // =========================================================================
+
   if (locations.length === 0) {
     return (
       <p className="py-12 text-center text-muted-foreground">
@@ -242,7 +301,6 @@ export function ReservationForm({
     );
   }
 
-  // --- Success state ---
   if (submitted) {
     return (
       <div className="py-12 text-center">
@@ -254,18 +312,11 @@ export function ReservationForm({
     );
   }
 
-  // --- Step indicator (always visible) ---
-  const stepIndicator = (
-    <div className="mb-8">
-      <StepIndicator currentStep={displayStep} steps={visibleSteps} />
-    </div>
-  );
-
   // --- Step 3: Customer info ---
   if (step === 3) {
     return (
       <form onSubmit={onSubmit}>
-        {stepIndicator}
+        {renderStepIndicator()}
         <CustomerStep
           form={form}
           isPending={isPending}
@@ -289,8 +340,7 @@ export function ReservationForm({
   if (step === 2 && selectedSpaceId) {
     return (
       <div>
-        {stepIndicator}
-
+        {renderStepIndicator()}
         <DateTimeSection
           spaceId={selectedSpaceId}
           spaceCapacity={currentSpace?.capacity ?? 1}
@@ -304,68 +354,21 @@ export function ReservationForm({
           onDurationChange={handleDurationChange}
           onGuestsChange={handleGuestsChange}
         />
-
-        {/* Desktop: Navigation buttons */}
-        <div className="mt-10 hidden md:flex md:items-center md:justify-between">
-          {!skipStep1 ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => goToStep(1)}
-            >
-              戻る
-            </Button>
-          ) : (
-            <div />
-          )}
-          {isStep2Complete ? (
-            <Button type="button" onClick={advanceToStep3}>
-              次へ
-            </Button>
-          ) : null}
-        </div>
-
-        {/* Mobile: Sticky bottom bar with back + next */}
-        <div className="h-20 md:hidden" />
-        <StickyBottomBar>
-          <div className="flex items-center justify-between gap-4">
-            {!skipStep1 ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => goToStep(1)}
-                className="shrink-0"
-              >
-                戻る
-              </Button>
-            ) : (
-              <div />
-            )}
-            <div className="flex items-center gap-3">
-              {price !== null ? (
-                <span className="font-heading text-lg text-accent">
-                  &yen;{price.toLocaleString()}
-                </span>
-              ) : null}
-              {isStep2Complete ? (
-                <Button type="button" onClick={advanceToStep3}>
-                  次へ
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </StickyBottomBar>
+        {renderStepNavigation({
+          onBack: skipStep1 ? undefined : () => goToStep(1),
+          onNext: isStep2Complete ? advanceToStep3 : undefined,
+          price,
+        })}
       </div>
     );
   }
 
-  // --- Step 1: Location + Space selection ---
+  // --- Step 1: Location + Space ---
   return (
     <div className="space-y-8">
-      {stepIndicator}
+      {renderStepIndicator()}
 
-      {/* Location selection */}
-      {showLocationSelector ? (
+      {locations.length > 1 ? (
         <section>
           <Heading level={3} className="mb-4">
             場所を選択
@@ -378,8 +381,7 @@ export function ReservationForm({
         </section>
       ) : null}
 
-      {/* Space selection (shown after location is selected) */}
-      {showSpaceSelector ? (
+      {selectedLocationId != null && currentSpaces.length > 1 ? (
         <section className="animate-section-enter">
           <Heading level={3} className="mb-4">
             スペースを選択
@@ -392,7 +394,6 @@ export function ReservationForm({
         </section>
       ) : null}
 
-      {/* Next button */}
       {isStep1Complete ? (
         <div className="flex justify-end">
           <Button type="button" onClick={advanceToStep2}>

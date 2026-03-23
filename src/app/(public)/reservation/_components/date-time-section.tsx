@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useTransition,
-  useEffect,
-  useRef,
-  type ReactElement,
-} from "react";
+import { useState, useTransition, useEffect, type ReactElement } from "react";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { fetchAvailableSlots } from "@/public/actions/availability";
@@ -16,6 +10,28 @@ import { DurationPills } from "./duration-pills";
 import { GuestStepper } from "./guest-stepper";
 
 const EMPTY_SLOTS: TimeSlot[] = [];
+
+function calcMaxDuration(
+  slots: readonly TimeSlot[],
+  startTime: string,
+): number {
+  const startIdx = slots.findIndex((s) => s.time === startTime);
+  if (startIdx === -1) return 0;
+  let consecutive = 0;
+  for (let i = startIdx; i < slots.length; i++) {
+    if (!slots[i]?.available) break;
+    consecutive++;
+  }
+  return consecutive * 30;
+}
+
+function formatDateString(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
 
 interface DateTimeSectionProps {
   readonly spaceId: string;
@@ -46,42 +62,26 @@ export function DateTimeSection({
 }: DateTimeSectionProps): ReactElement {
   const [fetchedSlots, setFetchedSlots] = useState<TimeSlot[]>([]);
   const [isFetchingSlots, startFetchTransition] = useTransition();
-  const sectionRef = useRef<HTMLDivElement>(null);
 
-  // Slots are empty when no date or space is selected
   const slots = selectedDate && spaceId ? fetchedSlots : EMPTY_SLOTS;
+  const maxDuration = selectedStartTime
+    ? calcMaxDuration(slots, selectedStartTime)
+    : 0;
 
-  // Fetch slots when date changes
   useEffect(() => {
     if (!selectedDate || !spaceId) return;
-    const dateStr = [
-      selectedDate.getFullYear(),
-      String(selectedDate.getMonth() + 1).padStart(2, "0"),
-      String(selectedDate.getDate()).padStart(2, "0"),
-    ].join("-");
-
     startFetchTransition(async () => {
-      const result = await fetchAvailableSlots(spaceId, dateStr);
+      const result = await fetchAvailableSlots(
+        spaceId,
+        formatDateString(selectedDate),
+      );
       setFetchedSlots(result);
     });
   }, [selectedDate, spaceId]);
 
-  // Calculate max consecutive duration from selected start time
-  const maxDuration = (() => {
-    if (!selectedStartTime) return 0;
-    const startIdx = slots.findIndex((s) => s.time === selectedStartTime);
-    if (startIdx === -1) return 0;
-    let count = 0;
-    for (let i = startIdx; i < slots.length; i++) {
-      if (!slots[i]?.available) break;
-      count++;
-    }
-    return count * 30;
-  })();
-
   return (
-    <div ref={sectionRef} className="space-y-6">
-      {/* Row 1: Calendar (left) + Time slots (right) */}
+    <div className="space-y-6">
+      {/* Row 1: Calendar + Time slots */}
       <div className="grid gap-6 rounded-xl bg-surface p-4 md:grid-cols-2 md:p-6">
         <div>
           <h3 className="mb-3 font-heading text-base tracking-tight">
@@ -93,7 +93,6 @@ export function DateTimeSection({
             businessHours={businessHours}
           />
         </div>
-
         <div>
           {selectedDate ? (
             <>
@@ -115,7 +114,7 @@ export function DateTimeSection({
         </div>
       </div>
 
-      {/* Row 2: Duration pills (full width) */}
+      {/* Row 2: Duration pills */}
       {selectedStartTime ? (
         <div className="rounded-xl bg-surface p-4 md:p-6">
           <h3 className="mb-3 font-heading text-base tracking-tight">
@@ -129,7 +128,7 @@ export function DateTimeSection({
         </div>
       ) : null}
 
-      {/* Row 3: Guest stepper (shown after duration selected) */}
+      {/* Row 3: Guest count */}
       {selectedDuration ? (
         <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
           <span className="text-sm font-medium text-foreground">利用人数</span>

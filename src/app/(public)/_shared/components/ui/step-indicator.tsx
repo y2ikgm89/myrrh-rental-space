@@ -1,28 +1,18 @@
-/**
- * StepIndicator — Horizontal step progress display
- *
- * 3 steps with gold highlight on active step.
- * Server Component — no GSAP needed.
- */
-
 import type { ReactElement } from "react";
 
-type StepDef = { readonly number: number; readonly label: string };
+interface Step {
+  readonly number: number;
+  readonly label: string;
+}
 
 interface StepIndicatorProps {
   readonly currentStep: number;
-  readonly steps?: readonly StepDef[];
+  readonly steps: readonly Step[];
 }
-
-const DEFAULT_STEPS: readonly StepDef[] = [
-  { number: 1, label: "日時選択" },
-  { number: 2, label: "情報入力" },
-  { number: 3, label: "確認" },
-];
 
 export function StepIndicator({
   currentStep,
-  steps = DEFAULT_STEPS,
+  steps,
 }: StepIndicatorProps): ReactElement {
   return (
     <div
@@ -41,7 +31,6 @@ export function StepIndicator({
             aria-current={isActive ? "step" : undefined}
           >
             <div className="flex flex-col items-center gap-2">
-              {/* Circle */}
               <div
                 className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-medium transition-all duration-300 md:h-10 md:w-10 ${
                   isActive
@@ -69,8 +58,6 @@ export function StepIndicator({
                   step.number
                 )}
               </div>
-
-              {/* Label */}
               <span
                 className={`text-[11px] tracking-wide transition-colors duration-300 ${
                   isActive ? "text-foreground" : "text-muted-foreground"
@@ -80,7 +67,6 @@ export function StepIndicator({
               </span>
             </div>
 
-            {/* Connector line */}
             {i < steps.length - 1 && (
               <div
                 className={`mx-3 mb-5 h-px w-12 transition-colors duration-300 md:mx-4 md:w-16 ${
