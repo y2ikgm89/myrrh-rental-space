@@ -305,8 +305,8 @@ export function ReservationForm({
           onGuestsChange={handleGuestsChange}
         />
 
-        {/* Navigation buttons */}
-        <div className="mt-8 hidden md:flex md:justify-between">
+        {/* Desktop: Navigation buttons */}
+        <div className="mt-10 hidden md:flex md:items-center md:justify-between">
           {!skipStep1 ? (
             <Button
               type="button"
@@ -325,28 +325,36 @@ export function ReservationForm({
           ) : null}
         </div>
 
-        {/* Mobile sticky bar */}
-        {isStep2Complete ? (
-          <>
-            <div className="h-20 md:hidden" />
-            <StickyBottomBar>
-              <div className="flex items-center gap-3">
-                {price !== null ? (
-                  <span className="font-heading text-lg text-accent">
-                    &yen;{price.toLocaleString()}
-                  </span>
-                ) : null}
-                <Button
-                  type="button"
-                  onClick={advanceToStep3}
-                  className="ml-auto"
-                >
+        {/* Mobile: Sticky bottom bar with back + next */}
+        <div className="h-20 md:hidden" />
+        <StickyBottomBar>
+          <div className="flex items-center justify-between gap-4">
+            {!skipStep1 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => goToStep(1)}
+                className="shrink-0"
+              >
+                戻る
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-3">
+              {price !== null ? (
+                <span className="font-heading text-lg text-accent">
+                  &yen;{price.toLocaleString()}
+                </span>
+              ) : null}
+              {isStep2Complete ? (
+                <Button type="button" onClick={advanceToStep3}>
                   次へ
                 </Button>
-              </div>
-            </StickyBottomBar>
-          </>
-        ) : null}
+              ) : null}
+            </div>
+          </div>
+        </StickyBottomBar>
       </div>
     );
   }

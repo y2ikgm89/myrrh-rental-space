@@ -123,10 +123,10 @@ export function DateTimeSection({
             ) : null}
 
             {selectedDuration ? (
-              <div>
-                <h3 className="mb-3 font-heading text-base tracking-tight">
+              <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
+                <span className="text-sm font-medium text-foreground">
                   利用人数
-                </h3>
+                </span>
                 <GuestStepper
                   value={numberOfGuests}
                   max={spaceCapacity}
