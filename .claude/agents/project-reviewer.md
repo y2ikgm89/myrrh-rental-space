@@ -43,10 +43,14 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **No `useContext`** — use `use(Context)` instead (React 19 stable; can be called after conditionals)
 - **No `createContext<T | null>(null)`** — use `createContext<T | undefined>(undefined)` (pairs with `use()`)
 - **No `watch()` from React Hook Form** — must use `useWatch()` for React Compiler compatibility
+- **No `form.getValues()` in render** — non-reactive snapshot; use `useState`/`useReducer` state or `useWatch()` instead. Safe only in event handlers
+- **`useReducer` for cascade resets** — if a handler resets 3+ related `useState` fields, flag for `useReducer` refactoring
+- **`startTransition` for user-initiated fetching** — flag `useEffect` that fetches data in response to state changes triggered by user events (should be in the event handler instead)
 - **No manual `useCallback`/`useMemo`** unless external library requires reference identity
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
 - **Use `useEffectEvent`** for event callbacks in `useEffect` deps — `import { useEffectEvent } from 'react'`
 - **GSAP / Three.js / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
+- **`useSyncExternalStore` の `getServerSnapshot`**: 配列・オブジェクトを返すときは**参照固定**（モジュール定数の `[]` 等）。インラインの `return []` / `return {}` はランタイム警告の原因
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
 - **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
 - **eslint-disable コメントのルール名が最新か確認** — `@eslint-react/hooks-extra/*` は v3 で廃止。`@eslint-react/set-state-in-effect` 等の新名に置換済みか検証

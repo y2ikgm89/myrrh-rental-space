@@ -396,6 +396,92 @@ imageUrls: data.imageUrls.map((i) => i.url);
 
 ---
 
+## useReducer — カスケードステート管理（React 公式推奨）
+
+関連する複数の `useState` がカスケードリセット（親変更→子リセット）を伴う場合、`useReducer` で一元化する（[React 公式: Extracting State Logic into a Reducer](https://react.dev/learn/extracting-state-logic-into-a-reducer)）。
+
+**判断基準**: リセットが3段以上連鎖する場合は `useReducer` を選択
+
+```typescript
+// NG: 7つの useState + 各ハンドラで 3〜5個の set* が散在
+const [locationId, setLocationId] = useState(null);
+const [spaceId, setSpaceId] = useState(null);
+const [date, setDate] = useState(undefined);
+// handleLocationSelect 内で: setSpaceId(null); setDate(undefined); setTime(null); ...
+
+// OK: useReducer でカスケードリセットを reducer に一元化
+type Action =
+  | { type: "selectLocation"; id: string; autoSpaceId: string | null }
+  | { type: "selectSpace"; id: string }
+  | { type: "selectDate"; date: Date | undefined };
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "selectLocation":
+      return {
+        ...state,
+        locationId: action.id,
+        spaceId: action.autoSpaceId,
+        date: undefined,
+        startTime: null,
+        duration: null,
+      };
+    // ... 各アクションで下流ステートをリセット
+  }
+}
+```
+
+---
+
+## startTransition — ユーザー操作起点のデータ取得（React 19 推奨）
+
+ユーザー操作（ボタンクリック、セレクト変更等）に起因するデータ取得は、`useEffect` ではなくイベントハンドラ内の `startTransition` で実行する（[React 19 useTransition ドキュメント](https://react.dev/reference/react/useTransition)）。
+
+```typescript
+// NG: useEffect で依存値を監視してフェッチ（データフローが暗黙的）
+useEffect(() => {
+  if (!selectedDate) return;
+  startTransition(async () => {
+    const slots = await fetchSlots(spaceId, selectedDate);
+    setSlots(slots);
+  });
+}, [selectedDate, spaceId]);
+
+// OK: イベントハンドラ内で直接 startTransition（データフローが明示的）
+function handleDateChange(date: Date | undefined) {
+  dispatch({ type: "selectDate", date });
+  if (date && spaceId) {
+    startTransition(async () => {
+      const slots = await fetchSlots(spaceId, formatDate(date));
+      dispatch({ type: "setSlots", slots });
+    });
+  }
+}
+```
+
+**`useEffect` が適切な場面**: 外部ストア同期（`useSyncExternalStore` 代替）、サブスクリプション（WebSocket、イベントリスナー）等、ユーザー操作に起因しない副作用のみ。
+
+---
+
+## React Hook Form — `form.getValues()` は非リアクティブ
+
+`form.getValues()` はスナップショット読み取りであり、値が変わっても再レンダリングをトリガーしない。**render 中に使うとステールな値を表示する原因になる**。
+
+```typescript
+// NG: render 中の getValues（非リアクティブ — 値が更新されてもUIに反映されない）
+<Summary date={form.getValues("date")} />
+
+// OK: useState / useReducer の state を直接使用（リアクティブ）
+<Summary date={state.date ? formatDateString(state.date) : ""} />
+
+// OK: リアクティブに値を監視する必要がある場合は useWatch
+const date = useWatch({ control: form.control, name: "date" });
+```
+
+**例外**: `handleSubmit` コールバック内、`trigger()` 後の条件判定等、イベントハンドラ内での使用は安全。
+
+---
+
 > **詳細リファレンス（React 19.2 新API / Compiler 制限事項）**: `docs/reference/claude-rules/react-api-reference.md`
 
 ---
@@ -457,6 +543,28 @@ const data = useSyncExternalStore(
 | `getSnapshot`       | `useRef` でキャッシュした読み取り関数 | 毎レンダーで新しい参照を返すと無限ループ       |
 | `getServerSnapshot` | エラー/空状態の fallback 値           | `dynamic({ ssr: false })` でも型安全のため必須 |
 
+**`getServerSnapshot` の参照安定性（必須）**: React はサーバー／ハイドレーション時に `getServerSnapshot` を複数回呼ぶ。戻り値が**オブジェクトや配列**のとき、呼び出しのたびに**新しい参照**を返すと「The result of getServerSnapshot should be cached to avoid an infinite loop」警告や再レンダーループの原因になる。**論理値が同じなら `Object.is` で同一参照になるようにする**。
+
+```typescript
+// NG: 毎回新しい配列 → 警告・ループの原因
+function getServerSnapshot(): string[] {
+  return [];
+}
+
+// OK: モジュールスコープの定数を返す（空配列の典型例）
+const SERVER_DISMISSED_IDS: string[] = [];
+function getServerSnapshot(): string[] {
+  return SERVER_DISMISSED_IDS;
+}
+
+// OK: プリミティブ（null / false 等）は毎回同じ値なのでそのままでよい
+function getServerSnapshot(): null {
+  return null;
+}
+```
+
+オブジェクトスナップショットが「空オブジェクト」など固定値なら、同様にモジュール定数 1 つにまとめる。実装例: `src/app/(public)/_shared/components/announcement-bar/use-dismissed-bars.ts`。
+
 **注意**: ブラウザ API 依存のため `dynamic({ ssr: false })` とセットで使用する。
 
 ---
@@ -504,14 +612,15 @@ function useDialog() {
 
 上記各セクションに加え、以下のパターンも禁止:
 
-| 禁止パターン                                    | 代替                                                      |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| `useOptimistic` なしで楽観的 UI を手動実装      | `useOptimistic` を使用                                    |
-| `useFormStatus` を `<form>` の外で使用          | `<form>` 子孫コンポーネント内に配置                       |
-| クラスコンポーネント（新規作成）                | 関数コンポーネント（Compiler 対応）                       |
-| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す           |
-| `ViewTransition` を `startTransition` 外で使用  | `startTransition` で状態更新をラップする                  |
-| `useId` の生成値を文字列として依存              | `id` 属性への渡し方のみ使用（形式は変更される可能性あり） |
+| 禁止パターン                                                           | 代替                                                                 |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `useOptimistic` なしで楽観的 UI を手動実装                             | `useOptimistic` を使用                                               |
+| `useFormStatus` を `<form>` の外で使用                                 | `<form>` 子孫コンポーネント内に配置                                  |
+| クラスコンポーネント（新規作成）                                       | 関数コンポーネント（Compiler 対応）                                  |
+| `use(fetchData())` をコンポーネント内に直接記述                        | Suspense boundary の外で Promise を生成して渡す                      |
+| `ViewTransition` を `startTransition` 外で使用                         | `startTransition` で状態更新をラップする                             |
+| `useId` の生成値を文字列として依存                                     | `id` 属性への渡し方のみ使用（形式は変更される可能性あり）            |
+| `useSyncExternalStore` の `getServerSnapshot` で毎回新しい `[]` / `{}` | モジュール定数で参照を固定（上記「getServerSnapshot の参照安定性」） |
 
 ---
 
@@ -528,6 +637,7 @@ function useDialog() {
 - **`DndContext`（@dnd-kit）には必ず `id` prop を付与** — 未指定だと内部カウンター（`DndDescribedBy-N`）が SSR/クライアントでずれ hydration mismatch が発生する。固定コンポーネントは文字列リテラル（`id="xxx-sortable"`）、汎用コンポーネントは `useId()` を使用
 - **`@eslint-react/eslint-plugin` v3 でルール名変更** — `@eslint-react/hooks-extra/no-direct-set-state-in-use-effect` → `@eslint-react/set-state-in-effect`。アップグレード時に全 eslint-disable コメントを一括置換する。`@eslint-react/purity` の `new Date()` 警告は Server Component で false positive（warn レベルのため放置可）
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
+- **`useSyncExternalStore` の `getServerSnapshot` で配列・オブジェクトを毎回新規生成しない** — `return []` / `return {}` は NG。モジュール定数や固定参照を返す。プリミティブ（`null`, `false` 等）は OK
 
 ## 参考
 
