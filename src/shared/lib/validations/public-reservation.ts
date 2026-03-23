@@ -10,6 +10,7 @@ const timeStringSchema = z.string().regex(/^\d{2}:\d{2}$/, {
 
 export const publicReservationSchema = z
   .object({
+    locationId: z.string().uuid({ error: "場所を選択してください" }),
     spaceId: z.string().uuid({ error: "スペースを選択してください" }),
     date: dateStringSchema,
     startTime: timeStringSchema,
