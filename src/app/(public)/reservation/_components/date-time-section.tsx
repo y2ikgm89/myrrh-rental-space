@@ -56,7 +56,7 @@ export function DateTimeSection({
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div role="group" aria-label="日時選択" className="space-y-6">
       {/* Row 1: Calendar + Time slots */}
       <div className="grid gap-6 rounded-xl bg-surface p-4 md:grid-cols-2 md:p-6">
         <div>

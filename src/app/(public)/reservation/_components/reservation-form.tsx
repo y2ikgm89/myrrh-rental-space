@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useTransition, type ReactElement } from "react";
+import { useReducer, useRef, useTransition, type ReactElement } from "react";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
@@ -40,13 +40,22 @@ const EMPTY_SLOTS: TimeSlot[] = [];
 // Helpers
 // ---------------------------------------------------------------------------
 
-function scrollToTop() {
-  const behavior =
-    typeof window !== "undefined" &&
+function getScrollBehavior(): ScrollBehavior {
+  return typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "instant"
-      : "smooth";
-  window.scrollTo({ top: 0, behavior });
+    ? "instant"
+    : "smooth";
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: getScrollBehavior() });
+}
+
+function scrollToRef(ref: React.RefObject<HTMLElement | null>) {
+  ref.current?.scrollIntoView({
+    behavior: getScrollBehavior(),
+    block: "start",
+  });
 }
 
 function formatDateString(date: Date): string {
@@ -174,6 +183,7 @@ export function ReservationForm({
   });
 
   const [isFetchingSlots, startSlotTransition] = useTransition();
+  const spaceSectionRef = useRef<HTMLElement>(null);
 
   // --- Derived ---
   const currentLocation = locations.find((l) => l.id === state.locationId);
@@ -239,6 +249,10 @@ export function ReservationForm({
     syncFormField("date", "");
     syncFormField("startTime", "");
     syncFormField("endTime", "");
+    // Scroll to space section if multiple spaces revealed
+    if (!autoSpace) {
+      setTimeout(() => scrollToRef(spaceSectionRef), 100);
+    }
   }
 
   function handleSpaceSelect(id: string) {
@@ -413,9 +427,9 @@ export function ReservationForm({
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
-            date: form.getValues("date"),
-            startTime: form.getValues("startTime"),
-            endTime: form.getValues("endTime"),
+            date: state.date ? formatDateString(state.date) : "",
+            startTime: state.startTime ?? "",
+            endTime: endTime ?? "",
             guests: state.guests,
             price,
           }}
@@ -472,7 +486,7 @@ export function ReservationForm({
       ) : null}
 
       {state.locationId != null && currentSpaces.length > 1 ? (
-        <section className="animate-section-enter">
+        <section ref={spaceSectionRef} className="animate-section-enter">
           <Heading level={3} className="mb-4">
             スペースを選択
           </Heading>
