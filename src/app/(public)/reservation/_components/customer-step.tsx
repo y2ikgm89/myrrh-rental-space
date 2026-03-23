@@ -14,6 +14,7 @@ interface CustomerStepProps {
   readonly isPending: boolean;
   readonly errorMessage: string | null;
   readonly summary: {
+    locationName: string;
     spaceName: string;
     date: string;
     startTime: string;
@@ -36,6 +37,7 @@ export function CustomerStep({
       {/* Booking summary card */}
       <div className="mb-8">
         <BookingSummary
+          locationName={summary.locationName}
           spaceName={summary.spaceName}
           date={summary.date}
           startTime={summary.startTime}

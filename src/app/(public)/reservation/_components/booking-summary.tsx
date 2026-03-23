@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 
 interface BookingSummaryProps {
+  readonly locationName: string;
   readonly spaceName: string;
   readonly date: string;
   readonly startTime: string;
@@ -38,6 +39,7 @@ function formatDurationLabel(start: string, end: string): string {
 }
 
 export function BookingSummary({
+  locationName,
   spaceName,
   date,
   startTime,
@@ -51,7 +53,7 @@ export function BookingSummary({
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <p className="font-heading text-sm font-medium tracking-tight">
-            {spaceName}
+            {locationName} &rsaquo; {spaceName}
           </p>
           <p className="text-sm text-muted-foreground">
             {formatDateJa(date)} {startTime} → {endTime}（
