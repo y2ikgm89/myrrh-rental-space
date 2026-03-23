@@ -295,6 +295,17 @@
   }
 }
 
+@keyframes section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ==========================================================================
  * react-day-picker v9 — Full standalone styles (Tailwind preflight resets table)
  * ========================================================================== */
@@ -518,6 +529,14 @@
   @media (prefers-reduced-motion: no-preference) {
     .animate-maintenance-in {
       animation: maintenance-fade-in 0.7s ease-out both;
+    }
+  }
+
+  @utility animate-section-enter {
+    animation: section-enter 0.3s ease-out both;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
     }
   }
 
