@@ -42,19 +42,25 @@
 
 ### スキル
 
-Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。`（Task）` 注釈があるもののみ Task ツール経由、それ以外は全て Skill ツール。
+Skill ツールで明示的に呼び出す。1% でも該当する可能性があれば必ず呼び出すこと。
 
-リポジトリ定義スキルは **`.agents/skills/<name>/SKILL.md` が手順の正本**；**`.claude/skills/<name>/SKILL.md` はスタブ**（正本パスへのポインタ）。一覧・作成基準は `.agents/skills/README.md`。
+**正本**: `.agents/skills/<name>/SKILL.md`（`.claude/skills/` はスタブ）。一覧・作成基準は `.agents/skills/README.md`。
+
+#### 外部プラグイン（superpowers 等 — 常にチェック）
 
 - **常に必須**: `test-driven-development`（実装時）、`verification-before-completion`（完了報告前）
 - **設計・計画**: `brainstorming` → `writing-plans` → `subagent-driven-development` / `finishing-a-development-branch`
+- **レビュー**: `requesting-code-review`、`receiving-code-review`
+- **リファクタリング（Task）**: `code-simplifier:code-simplifier`
+
+#### プロジェクト固有（`.claude/skills/`）
+
 - **UI 実装**: `frontend-design`、`create-admin-page`、`create-page-content`、`create-server-action`
 - **スキーマ・設定**: `add-settings-field`、`prisma-migration`、`split-action-file`、`upgrade-deps`
 - **エディタ拡張**: `lexical-node` / `lexical-plugin` / `lexical-toolbar`（長いひな形は `reference/scaffold-*.md`）、`lexical-audit`（既存実装の監査・モダナイズ）
 - **公開ページ演出**: `parallax-section`（スクロール連動セクション、GSAP + reduced motion）
 - **問題対応**: `systematic-debugging`、`stripe-debug`、`google-calendar-debug`、`turbopack-hmr`
-- **レビュー・メンテ**: `requesting-code-review`、`receiving-code-review`、`audit-settings-sections`、`claude-md-management:claude-md-improver`、`claude-md-management:revise-claude-md`
-- **リファクタリング**: `code-simplifier:code-simplifier`（Task）
+- **監査・メンテ**: `audit-settings-sections`、`claude-md-management:claude-md-improver`、`claude-md-management:revise-claude-md`
 
 ### ツール
 
@@ -91,7 +97,7 @@ Skill ツールで明示的に呼び出す。1% でも該当する可能性が�
 | 技術         | バージョン | 重要な注意点                                                                                                                                                                                                                                                                                                                                        |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Next.js      | 16.2.1     | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                                                                                                                                                                                                                                                                                           |
-| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)                                                                                                                                                                                                                                                                                              |
+| React        | 19.2.4     | React Compiler 1.0, `use()`, `useEffectEvent` (stable)。`useSyncExternalStore` の `getServerSnapshot` は配列・オブジェクトを毎回新規生成しない（参照固定）→ `react-patterns.md`                                                                                                                                                                     |
 | TypeScript   | 6.0.1-rc   | `erasableSyntaxOnly`, `verbatimModuleSyntax` → type-safety.md                                                                                                                                                                                                                                                                                       |
 | Prisma       | 7.5.0      | WASM エンジン, mapped enums。`$extends`（Decimal→number 等）は **`createAppPrismaClient`**（`src/shared/db/create-app-prisma-client.ts`）に集約し、`prisma.ts` と **`prisma/seed.ts` で同一適用**（[Client extensions](https://www.prisma.io/docs/orm/prisma-client/client-extensions)）。`prismaAdapter` には拡張前 **`prismaForBetterAuth` のみ** |
 | Tailwind CSS | 4.2.1      | CSS-first, `@theme`, セマンティックカラートークン必須                                                                                                                                                                                                                                                                                               |
@@ -191,7 +197,7 @@ bun update                                      # semver 範囲内の依存パ�
 
 - Server Components 優先、Server Actions
 - Zod バリデーション必須
-- フォーム送信ボタン: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）
+- フォーム送信ボタン（管理画面）: `<SubmitButton isPending={isPending} label="保存" />` — `@/admin/components/ui`（インライン `isPending ? "X中..." : "X"` パターン禁止）。公開ページは `Button` + インラインテキスト可
 - 設定セクション: `useFormAction` + `Form`/`FormField`/`FormMessage` + `disabled={!form.formState.isDirty}` → `admin-ui-patterns.md`
 - **複雑な管理 CRUD フォーム**（DnD・`useFieldArray`・メディアピッカー等）: `admin-ui-patterns.md` の「useFormAction 非適用の例外」に従い、**`useActionState` + `FormData` + Server Action** 可。参照実装: `SpaceEditForm`、`submitSpaceFormAction`、`@/admin/lib/space-form-data-codec`（詳細は `.claude/rules/server-actions.md` の「複雑な管理フォームと FormData」）
 - 設定セクションのスキーマ: Server Action 用（`nullable()`）とフォーム用（空文字列許容）は責務分離。`emptyToNull()` で送信時変換
@@ -199,11 +205,15 @@ bun update                                      # semver 範囲内の依存パ�
 - 公開ページ: Page-First Architecture — ページ構成はコードで直接定義、`SectionRenderer` は `[...segments]` のみ
 - 公開ページコンテンツ: `getPageContent(pageKey, schema, default)` で DB から取得（`'use cache'` + `cacheTag`）
 - 公開ページフォーム: `usePublicForm`（`@/public/hooks/use-public-form`）+ Turnstile + fireAndForget メール。`executeAdminMutationResult` は使わない
+- **複数の関連 `useState` → `useReducer`**: カスケードリセット（親変更→子リセット）が3段以上なら `useReducer` で一元化（[React 公式推奨](https://react.dev/learn/extracting-state-logic-into-a-reducer)）
+- **データ取得は `useEffect` より `startTransition`**: ユーザー操作起点のフェッチはハンドラ内で `startTransition(async () => { ... })`（React 19 推奨パターン）。`useEffect` は外部ストア同期のみ
 - **barrel export 禁止（全体）**: 新規 `index.ts` barrel の作成禁止。既存 barrel は直接 import に移行済み。例外: `plugins/index.ts`, `nodes/index.ts`（Lexical 内部用）
 - 公開ページ import: Design System は直接 import（`from "@/public/components/design-system/button"` 等）
 - コミット: `<type>(<scope>): <subject>`
 
 ### ⚠️ Gotchas
 
-→ `.claude/rules/gotchas.md`（環境・ビルド・デプロイ・ツール系 — 常時ロード）
-→ ドメイン固有の gotcha は各 `.claude/rules/` ファイルの `## Gotchas` セクションに統合済み
+`.claude/rules/` の自動ロードで提供（`gotchas.md` + 各ルールの `## Gotchas` セクション）
+
+- クライアントで `useSyncExternalStore`（sessionStorage / localStorage 等）を書くとき: **`getServerSnapshot` が `[]` / `{}` を毎回返さない**こと。`react-patterns.md` の「useSyncExternalStore」節と `announcement-bar/use-dismissed-bars.ts` を参照。
+- **`exactOptionalPropertyTypes` 有効** — optional prop の型は `field?: T | undefined` と明示。`field?: T` だけだと `undefined` を渡せない
