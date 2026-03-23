@@ -90,9 +90,11 @@ mock.module("server-only", () => ({}));
 // テストデータ
 // =============================================================================
 
+const VALID_LOCATION_ID = "00000000-0000-4000-a000-000000000001";
 const VALID_SPACE_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 const VALID_INPUT = {
+  locationId: VALID_LOCATION_ID,
   spaceId: VALID_SPACE_ID,
   date: "2025-06-01",
   startTime: "10:00",
@@ -474,6 +476,7 @@ describe("submitReservation", () => {
         await import("@/shared/lib/validations/public-reservation");
 
       const result = publicReservationSchema.safeParse({
+        locationId: VALID_LOCATION_ID,
         spaceId: VALID_SPACE_ID,
         date: "2025-06-01",
         startTime: "10:00",
@@ -493,6 +496,7 @@ describe("submitReservation", () => {
         await import("@/shared/lib/validations/public-reservation");
 
       const result = publicReservationSchema.safeParse({
+        locationId: VALID_LOCATION_ID,
         spaceId: VALID_SPACE_ID,
         date: "2025-06-01",
         startTime: "10:00",

@@ -3,6 +3,7 @@ import { publicReservationSchema } from "@/shared/lib/validations/public-reserva
 
 describe("publicReservationSchema", () => {
   const validInput = {
+    locationId: "00000000-0000-4000-a000-000000000001",
     spaceId: "550e8400-e29b-41d4-a716-446655440000",
     date: "2026-04-01",
     startTime: "10:00",

@@ -179,6 +179,21 @@ export async function getRelatedSpaces(
 /**
  * 有効なスペースカテゴリ一覧を取得（フィルター UI 用）
  */
+/**
+ * スペースが指定ロケーションに属するか検証する（予約フォーム用）
+ * キャッシュなし（ミューテーション前の整合性チェック用途）
+ */
+export async function verifySpaceBelongsToLocation(
+  spaceId: string,
+  locationId: string,
+): Promise<boolean> {
+  const space = await prisma.space.findUnique({
+    where: { id: spaceId },
+    select: { locationId: true },
+  });
+  return space !== null && space.locationId === locationId;
+}
+
 export async function getActiveCategories() {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);

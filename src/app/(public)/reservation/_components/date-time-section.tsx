@@ -15,6 +15,8 @@ import { TimeSlotGrid } from "./time-slot-grid";
 import { DurationPills } from "./duration-pills";
 import { GuestStepper } from "./guest-stepper";
 
+const EMPTY_SLOTS: TimeSlot[] = [];
+
 interface DateTimeSectionProps {
   readonly spaceId: string;
   readonly spaceCapacity: number;
@@ -42,16 +44,16 @@ export function DateTimeSection({
   onDurationChange,
   onGuestsChange,
 }: DateTimeSectionProps): ReactElement {
-  const [slots, setSlots] = useState<TimeSlot[]>([]);
+  const [fetchedSlots, setFetchedSlots] = useState<TimeSlot[]>([]);
   const [isFetchingSlots, startFetchTransition] = useTransition();
   const sectionRef = useRef<HTMLDivElement>(null);
 
+  // Slots are empty when no date or space is selected
+  const slots = selectedDate && spaceId ? fetchedSlots : EMPTY_SLOTS;
+
   // Fetch slots when date changes
   useEffect(() => {
-    if (!selectedDate || !spaceId) {
-      setSlots([]);
-      return;
-    }
+    if (!selectedDate || !spaceId) return;
     const dateStr = [
       selectedDate.getFullYear(),
       String(selectedDate.getMonth() + 1).padStart(2, "0"),
@@ -60,7 +62,7 @@ export function DateTimeSection({
 
     startFetchTransition(async () => {
       const result = await fetchAvailableSlots(spaceId, dateStr);
-      setSlots(result);
+      setFetchedSlots(result);
     });
   }, [selectedDate, spaceId]);
 

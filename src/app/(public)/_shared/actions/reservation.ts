@@ -20,6 +20,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
+import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 
 export async function submitReservation(
   input: PublicReservationInput,
@@ -34,6 +35,17 @@ export async function submitReservation(
   const turnstile = await validateTurnstile(parsed.data.turnstileToken);
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
+  }
+
+  // 2.5. Verify space belongs to location
+  const belongsToLocation = await verifySpaceBelongsToLocation(
+    parsed.data.spaceId,
+    parsed.data.locationId,
+  );
+  if (!belongsToLocation) {
+    return createMutationError(
+      "選択されたスペースは指定された場所に属していません",
+    );
   }
 
   // 3. Create reservation

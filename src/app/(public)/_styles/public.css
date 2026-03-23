@@ -532,14 +532,6 @@
     }
   }
 
-  @utility animate-section-enter {
-    animation: section-enter 0.3s ease-out both;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  }
-
   /* アクセントライン — セクションラベル装飾 */
   .gold-line {
     position: relative;
@@ -555,5 +547,13 @@
     width: 1.5rem;
     height: 1px;
     background-color: var(--color-accent);
+  }
+}
+
+@utility animate-section-enter {
+  animation: section-enter 0.3s ease-out both;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
 }
