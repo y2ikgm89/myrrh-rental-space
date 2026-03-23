@@ -127,10 +127,12 @@ src/app/
     │   │   └── animations/      # scroll-reveal, fade-in, split-text, parallax-layer, parallax-image, magnetic-button
     │   └── lib/content/         # PageContent 型・スキーマ・クエリ・デフォルト値
     ├── _components/homepage/    # ホームページ専用コンポーネント
+    ├── reservation/             # 予約ページ（3ステップウィザード: Location+Space → 日時 → 顧客情報）
     └── spaces/[slug]/           # スペース詳細（Page-First）
 
 src/shared/                      # 両方で共有（CSS変数非依存）
   ├── domain/page-content/       # PageContent キャッシュ付きクエリ
+  ├── domain/locations/           # Location クエリ (public-queries.ts)
   └── domain/spaces/             # 公開スペースクエリ (public-queries.ts)
 prisma/                          # schema.prisma, migrations/, seed.ts
 ```
