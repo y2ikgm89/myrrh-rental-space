@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
+import { StepIndicator } from "@/public/components/ui/step-indicator";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
@@ -16,23 +17,23 @@ import { submitReservation } from "@/public/actions/reservation";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
-import { BookingSummary } from "./booking-summary";
 import { CustomerStep } from "./customer-step";
 import { StickyBottomBar } from "./sticky-bottom-bar";
 
-function prefersReducedMotion(): boolean {
-  return (
+function scrollToTop() {
+  const behavior =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
+      ? "instant"
+      : "smooth";
+  window.scrollTo({ top: 0, behavior });
 }
 
-function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {
-  ref.current?.scrollIntoView({
-    behavior: prefersReducedMotion() ? "instant" : "smooth",
-    block: "start",
-  });
-}
+const RESERVATION_STEPS = [
+  { number: 1, label: "スペース選択" },
+  { number: 2, label: "日時選択" },
+  { number: 3, label: "情報入力" },
+] as const;
 
 interface ReservationFormProps {
   readonly locations: readonly LocationWithSpaces[];
@@ -54,6 +55,9 @@ export function ReservationForm({
       ? (autoLocation.spaces[0]?.id ?? null)
       : null;
 
+  // Skip step 1 entirely when both location and space are auto-selected
+  const skipStep1 = autoLocationId != null && autoSpaceId != null;
+
   // --- Selection state (Single Source of Truth) ---
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     autoLocationId,
@@ -67,7 +71,7 @@ export function ReservationForm({
   );
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
   const [numberOfGuests, setNumberOfGuests] = useState(1);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(skipStep1 ? 2 : 1);
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -79,7 +83,6 @@ export function ReservationForm({
   const showLocationSelector = locations.length > 1;
   const showSpaceSelector =
     selectedLocationId != null && currentSpaces.length > 1;
-  const showDateTimeSection = selectedSpaceId != null;
 
   const endTime =
     selectedStartTime && selectedDuration
@@ -90,10 +93,12 @@ export function ReservationForm({
       ? (currentSpace.hourlyPrice * selectedDuration) / 60
       : null;
 
-  // --- Section refs for scroll ---
-  const spaceRef = useRef<HTMLDivElement>(null);
-  const dateTimeRef = useRef<HTMLDivElement>(null);
-  const summaryRef = useRef<HTMLDivElement>(null);
+  // --- Visible steps (skip step 1 when auto-selected) ---
+  const visibleSteps = skipStep1
+    ? RESERVATION_STEPS.filter((s) => s.number !== 1)
+    : RESERVATION_STEPS;
+  // Map display step for indicator: when step1 skipped, step 2 shows as position 1
+  const displayStep = skipStep1 ? step - 1 : step;
 
   // --- react-hook-form (3-arg signature: schema, action, options) ---
   const { form, isPending, onSubmit } = usePublicForm(
@@ -116,7 +121,7 @@ export function ReservationForm({
     },
   );
 
-  // --- Cascade reset handlers (plain functions — React Compiler handles memoization) ---
+  // --- Cascade reset handlers ---
   function handleLocationSelect(id: string) {
     setSelectedLocationId(id);
     form.setValue("locationId", id);
@@ -136,9 +141,6 @@ export function ReservationForm({
     if (loc?.spaces.length === 1 && loc.spaces[0]) {
       setSelectedSpaceId(loc.spaces[0].id);
       form.setValue("spaceId", loc.spaces[0].id);
-      setTimeout(() => scrollToRef(dateTimeRef), 100);
-    } else {
-      setTimeout(() => scrollToRef(spaceRef), 100);
     }
   }
 
@@ -153,8 +155,6 @@ export function ReservationForm({
     form.setValue("date", "");
     form.setValue("startTime", "");
     form.setValue("endTime", "");
-
-    setTimeout(() => scrollToRef(dateTimeRef), 100);
   }
 
   function handleDateChange(date: Date | undefined) {
@@ -198,15 +198,28 @@ export function ReservationForm({
   }
 
   // --- Step transition ---
-  const isStep1Complete =
-    selectedLocationId != null &&
-    selectedSpaceId != null &&
+  const isStep1Complete = selectedLocationId != null && selectedSpaceId != null;
+
+  const isStep2Complete =
     selectedDate != null &&
     selectedStartTime != null &&
     selectedDuration != null &&
     endTime != null;
 
-  async function goToStep2() {
+  function goToStep(target: 1 | 2 | 3) {
+    setStep(target);
+    setErrorMessage(null);
+    scrollToTop();
+  }
+
+  async function advanceToStep2() {
+    const valid = await form.trigger(["locationId", "spaceId"]);
+    if (valid && isStep1Complete) {
+      goToStep(2);
+    }
+  }
+
+  async function advanceToStep3() {
     const valid = await form.trigger([
       "locationId",
       "spaceId",
@@ -215,18 +228,9 @@ export function ReservationForm({
       "endTime",
       "numberOfGuests",
     ]);
-    if (valid) {
-      setStep(2);
-      window.scrollTo({
-        top: 0,
-        behavior: prefersReducedMotion() ? "instant" : "smooth",
-      });
+    if (valid && isStep2Complete) {
+      goToStep(3);
     }
-  }
-
-  function goToStep1() {
-    setStep(1);
-    setErrorMessage(null);
   }
 
   // --- Empty state ---
@@ -250,10 +254,18 @@ export function ReservationForm({
     );
   }
 
-  // --- Step 2: Customer info ---
-  if (step === 2) {
+  // --- Step indicator (always visible) ---
+  const stepIndicator = (
+    <div className="mb-8">
+      <StepIndicator currentStep={displayStep} steps={visibleSteps} />
+    </div>
+  );
+
+  // --- Step 3: Customer info ---
+  if (step === 3) {
     return (
       <form onSubmit={onSubmit}>
+        {stepIndicator}
         <CustomerStep
           form={form}
           isPending={isPending}
@@ -267,15 +279,83 @@ export function ReservationForm({
             guests: numberOfGuests,
             price,
           }}
-          onBack={goToStep1}
+          onBack={() => goToStep(2)}
         />
       </form>
     );
   }
 
-  // --- Step 1: Progressive disclosure ---
+  // --- Step 2: Date & Time ---
+  if (step === 2 && selectedSpaceId) {
+    return (
+      <div>
+        {stepIndicator}
+
+        <DateTimeSection
+          spaceId={selectedSpaceId}
+          spaceCapacity={currentSpace?.capacity ?? 1}
+          businessHours={businessHours}
+          selectedDate={selectedDate}
+          selectedStartTime={selectedStartTime}
+          selectedDuration={selectedDuration}
+          numberOfGuests={numberOfGuests}
+          onDateChange={handleDateChange}
+          onStartTimeChange={handleStartTimeChange}
+          onDurationChange={handleDurationChange}
+          onGuestsChange={handleGuestsChange}
+        />
+
+        {/* Navigation buttons */}
+        <div className="mt-8 hidden md:flex md:justify-between">
+          {!skipStep1 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => goToStep(1)}
+            >
+              戻る
+            </Button>
+          ) : (
+            <div />
+          )}
+          {isStep2Complete ? (
+            <Button type="button" onClick={advanceToStep3}>
+              次へ
+            </Button>
+          ) : null}
+        </div>
+
+        {/* Mobile sticky bar */}
+        {isStep2Complete ? (
+          <>
+            <div className="h-20 md:hidden" />
+            <StickyBottomBar>
+              <div className="flex items-center gap-3">
+                {price !== null ? (
+                  <span className="font-heading text-lg text-accent">
+                    &yen;{price.toLocaleString()}
+                  </span>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={advanceToStep3}
+                  className="ml-auto"
+                >
+                  次へ
+                </Button>
+              </div>
+            </StickyBottomBar>
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
+  // --- Step 1: Location + Space selection ---
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
+    <div className="space-y-8">
+      {stepIndicator}
+
       {/* Location selection */}
       {showLocationSelector ? (
         <section>
@@ -290,9 +370,9 @@ export function ReservationForm({
         </section>
       ) : null}
 
-      {/* Space selection */}
+      {/* Space selection (shown after location is selected) */}
       {showSpaceSelector ? (
-        <section ref={spaceRef} className="animate-section-enter">
+        <section className="animate-section-enter">
           <Heading level={3} className="mb-4">
             スペースを選択
           </Heading>
@@ -304,67 +384,14 @@ export function ReservationForm({
         </section>
       ) : null}
 
-      {/* Date & Time selection */}
-      {showDateTimeSection && selectedSpaceId ? (
-        <section ref={dateTimeRef} className="animate-section-enter">
-          <DateTimeSection
-            spaceId={selectedSpaceId}
-            spaceCapacity={currentSpace?.capacity ?? 1}
-            businessHours={businessHours}
-            selectedDate={selectedDate}
-            selectedStartTime={selectedStartTime}
-            selectedDuration={selectedDuration}
-            numberOfGuests={numberOfGuests}
-            onDateChange={handleDateChange}
-            onStartTimeChange={handleStartTimeChange}
-            onDurationChange={handleDurationChange}
-            onGuestsChange={handleGuestsChange}
-          />
-        </section>
+      {/* Next button */}
+      {isStep1Complete ? (
+        <div className="flex justify-end">
+          <Button type="button" onClick={advanceToStep2}>
+            次へ
+          </Button>
+        </div>
       ) : null}
-
-      {/* Summary + Next button */}
-      {isStep1Complete && currentLocation && currentSpace ? (
-        <>
-          {/* Desktop summary */}
-          <section
-            ref={summaryRef}
-            className="hidden animate-section-enter md:block"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <BookingSummary
-                  locationName={currentLocation.name}
-                  spaceName={currentSpace.name}
-                  date={form.getValues("date")}
-                  startTime={selectedStartTime ?? ""}
-                  endTime={endTime ?? ""}
-                  guests={numberOfGuests}
-                  price={price}
-                />
-              </div>
-              <Button type="button" onClick={goToStep2}>
-                次へ
-              </Button>
-            </div>
-          </section>
-
-          {/* Mobile sticky bar */}
-          <div className="h-20 md:hidden" />
-          <StickyBottomBar>
-            <div className="flex items-center gap-3">
-              {price !== null ? (
-                <span className="font-heading text-lg text-accent">
-                  &yen;{price.toLocaleString()}
-                </span>
-              ) : null}
-              <Button type="button" onClick={goToStep2} className="ml-auto">
-                次へ
-              </Button>
-            </div>
-          </StickyBottomBar>
-        </>
-      ) : null}
-    </form>
+    </div>
   );
 }

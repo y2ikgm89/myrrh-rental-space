@@ -7,18 +7,22 @@
 
 import type { ReactElement } from "react";
 
+type StepDef = { readonly number: number; readonly label: string };
+
 interface StepIndicatorProps {
   readonly currentStep: number;
+  readonly steps?: readonly StepDef[];
 }
 
-const STEPS = [
+const DEFAULT_STEPS: readonly StepDef[] = [
   { number: 1, label: "日時選択" },
   { number: 2, label: "情報入力" },
   { number: 3, label: "確認" },
-] as const;
+];
 
 export function StepIndicator({
   currentStep,
+  steps = DEFAULT_STEPS,
 }: StepIndicatorProps): ReactElement {
   return (
     <div
@@ -26,7 +30,7 @@ export function StepIndicator({
       aria-label="予約手順"
       className="flex items-center justify-center gap-0"
     >
-      {STEPS.map((step, i) => {
+      {steps.map((step, i) => {
         const isActive = step.number === currentStep;
         const isCompleted = step.number < currentStep;
 
@@ -77,7 +81,7 @@ export function StepIndicator({
             </div>
 
             {/* Connector line */}
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div
                 className={`mx-3 mb-5 h-px w-12 transition-colors duration-300 md:mx-4 md:w-16 ${
                   isCompleted ? "bg-accent" : "bg-border"
