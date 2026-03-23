@@ -110,28 +110,27 @@ export function DateTimeSection({
             </div>
 
             {selectedStartTime ? (
-              <div>
-                <h3 className="mb-3 font-heading text-base tracking-tight">
-                  利用時間
-                </h3>
-                <DurationPills
-                  selectedMinutes={selectedDuration}
-                  maxMinutes={maxDuration}
-                  onSelect={onDurationChange}
-                />
-              </div>
-            ) : null}
-
-            {selectedDuration ? (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
-                <span className="text-sm font-medium text-foreground">
-                  利用人数
-                </span>
-                <GuestStepper
-                  value={numberOfGuests}
-                  max={spaceCapacity}
-                  onChange={onGuestsChange}
-                />
+              <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+                <div>
+                  <h3 className="mb-3 font-heading text-base tracking-tight">
+                    利用時間
+                  </h3>
+                  <DurationPills
+                    selectedMinutes={selectedDuration}
+                    maxMinutes={maxDuration}
+                    onSelect={onDurationChange}
+                  />
+                </div>
+                <div className="flex flex-col justify-end">
+                  <h3 className="mb-3 font-heading text-base tracking-tight">
+                    利用人数
+                  </h3>
+                  <GuestStepper
+                    value={numberOfGuests}
+                    max={spaceCapacity}
+                    onChange={onGuestsChange}
+                  />
+                </div>
               </div>
             ) : null}
           </>
