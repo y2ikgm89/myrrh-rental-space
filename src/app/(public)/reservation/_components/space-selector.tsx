@@ -7,7 +7,6 @@ export type SpaceOption = {
   name: string;
   capacity: number;
   hourlyPrice: number;
-  mainImageUrl: string | null;
 };
 
 export function SpaceSelector({

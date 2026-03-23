@@ -7,13 +7,7 @@
  * Step 2: Customer information + booking summary + submit
  */
 
-import {
-  useState,
-  useTransition,
-  useRef,
-  useEffect,
-  type ReactElement,
-} from "react";
+import { useState, useTransition, useRef, type ReactElement } from "react";
 import { useWatch } from "react-hook-form";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
@@ -79,6 +73,12 @@ export function ReservationForm({
       }
       return result;
     },
+    {
+      defaultValues: {
+        spaceId: spaces.length === 1 ? (spaces[0]?.id ?? "") : "",
+        numberOfGuests: 1,
+      },
+    },
   );
 
   const [spaceId, numberOfGuests] = useWatch({
@@ -86,14 +86,6 @@ export function ReservationForm({
     name: ["spaceId", "numberOfGuests"],
   });
   const selectedSpace = spaces.find((s) => s.id === spaceId);
-
-  // Auto-select single space
-  useEffect(() => {
-    if (spaces.length === 1 && spaces[0]) {
-      form.setValue("spaceId", spaces[0].id);
-      form.setValue("numberOfGuests", 1);
-    }
-  }, [spaces, form]);
 
   // Derived: endTime from startTime + duration
   const endTime =
@@ -159,13 +151,15 @@ export function ReservationForm({
       if (currentSpaceId) {
         fetchSlots(currentSpaceId, date);
       }
-      // Scroll to time grid on mobile
-      requestAnimationFrame(() => {
-        timeGridRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
+      // Scroll to time grid on mobile only
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        requestAnimationFrame(() => {
+          timeGridRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
         });
-      });
+      }
     }
   };
 
@@ -310,8 +304,8 @@ export function ReservationForm({
             </div>
           ) : null}
 
-          {/* Guest stepper — shown after start time */}
-          {selectedStartTime !== null && selectedSpace ? (
+          {/* Guest stepper — shown after duration selection */}
+          {selectedDuration !== null && selectedSpace ? (
             <div className="mt-6">
               <GuestStepper
                 value={numberOfGuests ?? 1}

@@ -145,7 +145,7 @@ export function CustomerStep({
       ) : null}
 
       {/* Desktop: inline buttons */}
-      <div className="mt-8 hidden flex-col gap-3 sm:flex-row sm:gap-4 md:flex">
+      <div className="mt-8 hidden md:flex md:gap-4">
         <Button
           type="button"
           variant="secondary"

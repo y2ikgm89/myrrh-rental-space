@@ -44,7 +44,6 @@ export default async function ReservationPage(): Promise<ReactElement> {
     name: s.name,
     capacity: s.capacity,
     hourlyPrice: s.hourlyPrice,
-    mainImageUrl: s.mainImageUrl,
   }));
 
   return (
