@@ -75,16 +75,26 @@ function toLocalTimeString(date: string | Date): string {
 // =============================================================================
 
 const RESERVATION_STATUS_OPTIONS = [
+  { value: ReservationStatus.PENDING, label: "保留", description: "確認待ち" },
   {
     value: ReservationStatus.CONFIRMED,
     label: "確定",
     description: "予約が確定済み",
   },
-  { value: ReservationStatus.PENDING, label: "保留", description: "確認待ち" },
+  {
+    value: ReservationStatus.COMPLETED,
+    label: "完了",
+    description: "利用完了",
+  },
   {
     value: ReservationStatus.CANCELLED,
     label: "キャンセル",
     description: "予約をキャンセル",
+  },
+  {
+    value: ReservationStatus.NO_SHOW,
+    label: "無断キャンセル",
+    description: "連絡なしキャンセル",
   },
 ];
 

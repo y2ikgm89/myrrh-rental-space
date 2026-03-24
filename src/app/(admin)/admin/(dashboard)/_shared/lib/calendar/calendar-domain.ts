@@ -247,6 +247,10 @@ export function getStatusColorClass(status: string): string {
       return "bg-warning/10 border-l-warning text-warning-foreground";
     case "CONFIRMED":
       return "bg-success/10 border-l-success text-success";
+    case "COMPLETED":
+      return "bg-muted border-l-muted-foreground text-muted-foreground";
+    case "NO_SHOW":
+      return "bg-destructive/10 border-l-destructive text-destructive";
     case "CANCELLED":
       return "bg-muted border-l-muted-foreground text-muted-foreground line-through";
     default:

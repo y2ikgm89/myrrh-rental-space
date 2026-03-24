@@ -6,7 +6,9 @@ const STATUS_OPTIONS: StatusOption[] = [
   { value: "ALL", label: "すべて" },
   { value: "PENDING", label: "確認待ち" },
   { value: "CONFIRMED", label: "確定" },
+  { value: "COMPLETED", label: "完了" },
   { value: "CANCELLED", label: "キャンセル" },
+  { value: "NO_SHOW", label: "無断キャンセル" },
 ];
 
 export function ReservationFilters() {

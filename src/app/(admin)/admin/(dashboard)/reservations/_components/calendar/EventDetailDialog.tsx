@@ -26,8 +26,39 @@ import {
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import type { CalendarEvent } from "@/admin/lib/calendar";
-import type { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+
+// =============================================================================
+// Status transition rules (mirrors domain validateStatusTransition)
+// =============================================================================
+
+const ALLOWED_TRANSITIONS: Record<
+  ReservationStatus,
+  readonly ReservationStatus[]
+> = {
+  [ReservationStatus.PENDING]: [
+    ReservationStatus.CONFIRMED,
+    ReservationStatus.CANCELLED,
+  ],
+  [ReservationStatus.CONFIRMED]: [
+    ReservationStatus.COMPLETED,
+    ReservationStatus.NO_SHOW,
+    ReservationStatus.CANCELLED,
+  ],
+  [ReservationStatus.COMPLETED]: [],
+  [ReservationStatus.CANCELLED]: [],
+  [ReservationStatus.NO_SHOW]: [],
+};
+
+const STATUS_LABELS: Record<ReservationStatus, string> = {
+  [ReservationStatus.PENDING]: "保留中",
+  [ReservationStatus.CONFIRMED]: "確認済み",
+  [ReservationStatus.COMPLETED]: "完了",
+  [ReservationStatus.CANCELLED]: "キャンセル",
+  [ReservationStatus.NO_SHOW]: "無断キャンセル",
+};
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;
@@ -144,15 +175,23 @@ export function EventDetailDialog({
                   if (isValidReservationStatus(value))
                     handleStatusChange(value);
                 }}
-                disabled={isPending}
+                disabled={
+                  isPending ||
+                  TERMINAL_RESERVATION_STATUSES.includes(event.status)
+                }
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PENDING">保留中</SelectItem>
-                  <SelectItem value="CONFIRMED">確認済み</SelectItem>
-                  <SelectItem value="CANCELLED">キャンセル</SelectItem>
+                  <SelectItem value={event.status}>
+                    {STATUS_LABELS[event.status]}
+                  </SelectItem>
+                  {ALLOWED_TRANSITIONS[event.status].map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

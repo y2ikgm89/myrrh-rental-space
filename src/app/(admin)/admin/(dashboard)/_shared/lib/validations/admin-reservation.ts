@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ReservationStatus } from "@/shared/db/enums";
+import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 /**
  * 管理者用予約作成バリデーションスキーマ
@@ -88,6 +89,16 @@ export const adminReservationSchema = z
       .optional(),
     sendEmail: z.boolean().default(true),
   })
+  .refine(
+    (data) =>
+      CREATABLE_RESERVATION_STATUSES.includes(
+        data.status ?? ReservationStatus.CONFIRMED,
+      ),
+    {
+      error: "作成時は「保留中」または「確認済み」のステータスのみ指定できます",
+      path: ["status"],
+    },
+  )
   .refine((data) => data.customerId || data.customerData, {
     error: "顧客を選択するか、新規顧客情報を入力してください",
     path: ["customerId"],

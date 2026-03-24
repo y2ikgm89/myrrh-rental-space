@@ -245,40 +245,56 @@ export async function getReservationStatsQuery() {
   const weekStart = new Date(today);
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
-  const [total, pending, confirmed, cancelled, todayCount, thisWeekCount] =
-    await Promise.all([
-      prisma.reservation.count(),
-      prisma.reservation.count({
-        where: { status: ReservationStatus.PENDING },
-      }),
-      prisma.reservation.count({
-        where: { status: ReservationStatus.CONFIRMED },
-      }),
-      prisma.reservation.count({
-        where: { status: ReservationStatus.CANCELLED },
-      }),
-      prisma.reservation.count({
-        where: {
-          startTime: {
-            gte: today,
-            lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-          },
+  const [
+    total,
+    pending,
+    confirmed,
+    completed,
+    cancelled,
+    noShow,
+    todayCount,
+    thisWeekCount,
+  ] = await Promise.all([
+    prisma.reservation.count(),
+    prisma.reservation.count({
+      where: { status: ReservationStatus.PENDING },
+    }),
+    prisma.reservation.count({
+      where: { status: ReservationStatus.CONFIRMED },
+    }),
+    prisma.reservation.count({
+      where: { status: ReservationStatus.COMPLETED },
+    }),
+    prisma.reservation.count({
+      where: { status: ReservationStatus.CANCELLED },
+    }),
+    prisma.reservation.count({
+      where: { status: ReservationStatus.NO_SHOW },
+    }),
+    prisma.reservation.count({
+      where: {
+        startTime: {
+          gte: today,
+          lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
         },
-      }),
-      prisma.reservation.count({
-        where: {
-          startTime: {
-            gte: weekStart,
-          },
+      },
+    }),
+    prisma.reservation.count({
+      where: {
+        startTime: {
+          gte: weekStart,
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return {
     total,
     pending,
     confirmed,
+    completed,
     cancelled,
+    noShow,
     todayCount,
     thisWeekCount,
   };

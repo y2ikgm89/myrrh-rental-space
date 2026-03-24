@@ -43,9 +43,9 @@ const inquiryStatusConfig: StatusConfig<InquiryStatus> = {
 const reservationStatusConfig: StatusConfig<ReservationStatus> = {
   PENDING: { label: "保留中", variant: "pending" },
   CONFIRMED: { label: "確認済み", variant: "success" },
-  COMPLETED: { label: "完了", variant: "outline" },
-  NO_SHOW: { label: "無断キャンセル", variant: "destructive" },
+  COMPLETED: { label: "完了", variant: "default" },
   CANCELLED: { label: "キャンセル", variant: "destructive" },
+  NO_SHOW: { label: "無断キャンセル", variant: "warning" },
 };
 
 const postStatusConfig: StatusConfig<PostStatus> = {

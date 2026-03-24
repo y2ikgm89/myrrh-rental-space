@@ -12,8 +12,43 @@ import {
 } from "@/admin/components/ui";
 import { updateReservationStatus } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+
+// =============================================================================
+// Status transition rules (UI layer — mirrors domain validateStatusTransition)
+// =============================================================================
+
+const ALLOWED_TRANSITIONS: Record<
+  ReservationStatus,
+  readonly ReservationStatus[]
+> = {
+  [ReservationStatus.PENDING]: [
+    ReservationStatus.CONFIRMED,
+    ReservationStatus.CANCELLED,
+  ],
+  [ReservationStatus.CONFIRMED]: [
+    ReservationStatus.COMPLETED,
+    ReservationStatus.NO_SHOW,
+    ReservationStatus.CANCELLED,
+  ],
+  [ReservationStatus.COMPLETED]: [],
+  [ReservationStatus.CANCELLED]: [],
+  [ReservationStatus.NO_SHOW]: [],
+};
+
+const STATUS_LABELS: Record<ReservationStatus, string> = {
+  [ReservationStatus.PENDING]: "保留中",
+  [ReservationStatus.CONFIRMED]: "確認済み",
+  [ReservationStatus.COMPLETED]: "完了",
+  [ReservationStatus.CANCELLED]: "キャンセル",
+  [ReservationStatus.NO_SHOW]: "無断キャンセル",
+};
+
+// =============================================================================
+// Component
+// =============================================================================
 
 type ReservationStatusSelectProps = {
   reservationId: string;
@@ -26,6 +61,9 @@ export function ReservationStatusSelect({
 }: ReservationStatusSelectProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  const isTerminal = TERMINAL_RESERVATION_STATUSES.includes(currentStatus);
+  const allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus];
 
   const handleStatusChange = (newStatus: ReservationStatus) => {
     if (newStatus === currentStatus) return;
@@ -48,15 +86,22 @@ export function ReservationStatusSelect({
       onValueChange={(value) => {
         if (isValidReservationStatus(value)) handleStatusChange(value);
       }}
-      disabled={isPending}
+      disabled={isPending || isTerminal}
     >
-      <SelectTrigger className="w-32">
+      <SelectTrigger className="w-36">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="PENDING">保留中</SelectItem>
-        <SelectItem value="CONFIRMED">確認済み</SelectItem>
-        <SelectItem value="CANCELLED">キャンセル</SelectItem>
+        {/* Current status is always shown */}
+        <SelectItem value={currentStatus}>
+          {STATUS_LABELS[currentStatus]}
+        </SelectItem>
+        {/* Allowed transitions */}
+        {allowedNextStatuses.map((status) => (
+          <SelectItem key={status} value={status}>
+            {STATUS_LABELS[status]}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );

@@ -103,7 +103,9 @@ export async function getReservationStats(): Promise<{
   total: number;
   pending: number;
   confirmed: number;
+  completed: number;
   cancelled: number;
+  noShow: number;
   todayCount: number;
   thisWeekCount: number;
 }> {

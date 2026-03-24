@@ -1,5 +1,6 @@
 import "server-only";
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import { InquiryStatus, ReservationStatus } from "@/shared/db/enums";
 import { toDateString } from "@/shared/lib/serialize";
@@ -119,26 +120,34 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.reservation.count({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: { not: ReservationStatus.CANCELLED },
+        status: {
+          notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
+        },
       },
     }),
     prisma.reservation.count({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: { not: ReservationStatus.CANCELLED },
+        status: {
+          notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
+        },
       },
     }),
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: thisMonthStart },
-        status: ReservationStatus.CONFIRMED,
+        status: {
+          in: [ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED],
+        },
       },
       _sum: { totalPrice: true },
     }),
     prisma.reservation.aggregate({
       where: {
         createdAt: { gte: lastMonthStart, lte: lastMonthEnd },
-        status: ReservationStatus.CONFIRMED,
+        status: {
+          in: [ReservationStatus.CONFIRMED, ReservationStatus.COMPLETED],
+        },
       },
       _sum: { totalPrice: true },
     }),
@@ -251,7 +260,9 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
   const reservations = await prisma.reservation.findMany({
     where: {
       startTime: { gte: todayStart, lte: todayEnd },
-      status: { not: ReservationStatus.CANCELLED },
+      status: {
+        notIn: [ReservationStatus.CANCELLED, ReservationStatus.NO_SHOW],
+      },
     },
     orderBy: { startTime: "asc" },
     select: {
@@ -280,14 +291,23 @@ export async function getReservationChartData(): Promise<ChartDataPoint[]> {
     revenue: number | null;
   };
 
+  const excludedStatuses = Prisma.join([
+    ReservationStatus.CANCELLED,
+    ReservationStatus.NO_SHOW,
+  ]);
+  const revenueStatuses = Prisma.join([
+    ReservationStatus.CONFIRMED,
+    ReservationStatus.COMPLETED,
+  ]);
+
   const dailyStats = await prisma.$queryRaw<DailyStats[]>`
     SELECT
       DATE("createdAt") as date,
       COUNT(*)::bigint as reservations,
-      SUM(CASE WHEN status = 'CONFIRMED' THEN "totalPrice"::numeric ELSE 0 END) as revenue
+      SUM(CASE WHEN status IN (${revenueStatuses}) THEN "totalPrice"::numeric ELSE 0 END) as revenue
     FROM "reservations"
     WHERE "createdAt" >= ${oldestIncludedDate}
-      AND status != 'CANCELLED'
+      AND status NOT IN (${excludedStatuses})
     GROUP BY DATE("createdAt")
     ORDER BY date ASC
   `;
