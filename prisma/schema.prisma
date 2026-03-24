@@ -29,7 +29,9 @@ enum Role {
 enum ReservationStatus {
   PENDING
   CONFIRMED
+  COMPLETED
   CANCELLED
+  NO_SHOW
 }
 
 enum InquiryStatus {
