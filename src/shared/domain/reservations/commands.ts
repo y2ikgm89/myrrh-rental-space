@@ -1,26 +1,69 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus } from "@/shared/db/enums";
+import { CouponType, ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
-import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
+import {
+  getValidDiscountCombinationMode,
+  CREATABLE_RESERVATION_STATUSES,
+} from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type ValidatedCoupon = {
   id: string;
   code: string;
   name: string;
-  type: "PERCENTAGE" | "FIXED_AMOUNT";
+  type: CouponType;
   discountValue: number;
   maxDiscountAmount: number | null;
   canCombineWithDurationDiscount: boolean;
 } | null;
 
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+type CustomerData = {
+  lastName: string;
+  firstName: string;
+  email: string;
+  phoneNumber?: string | null | undefined;
+};
+
+export type ReservationPayload = {
+  reservationId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  startTime: Date;
+  endTime: Date;
+  totalPrice: number | null;
+  notes?: string | undefined;
+  location?: string | undefined;
+};
+
+// ---------------------------------------------------------------------------
+// Shared helpers
+// ---------------------------------------------------------------------------
+
 function buildDateTime(date: string, time: string): Date {
   return new Date(`${date}T${time}:00`);
+}
+
+function calculateHoursAndBasePrice(
+  startDateTime: Date,
+  endDateTime: Date,
+  hourlyPrice: number,
+) {
+  const hours =
+    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
+  const basePrice = Math.floor(hourlyPrice * hours);
+  return { hours, basePrice };
 }
 
 async function getReservationSettings() {
@@ -37,7 +80,7 @@ async function getReservationSettings() {
 async function validateCoupon(
   code: string | null | undefined,
   basePrice: number,
-  tx?: typeof prisma,
+  tx?: Tx,
 ): Promise<ValidatedCoupon> {
   if (!code || !code.trim()) {
     return null;
@@ -89,19 +132,177 @@ async function validateCoupon(
   };
 }
 
-type ReservationNotificationPayload = {
+async function ensureNoOverlap(
+  params: {
+    spaceId: string;
+    startTime: Date;
+    endTime: Date;
+    excludeReservationId?: string;
+  },
+  tx?: Tx,
+): Promise<void> {
+  const result = await checkReservationOverlap(params, tx);
+  if (result.hasOverlap) {
+    throw new DomainError(
+      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
+      "CONFLICT",
+    );
+  }
+}
+
+async function resolveOrCreateCustomer(
+  tx: Tx,
+  data: CustomerData,
+): Promise<string> {
+  const customer = await tx.customer.upsert({
+    where: { email: data.email },
+    create: {
+      lastName: data.lastName,
+      firstName: data.firstName,
+      email: data.email,
+      phoneNumber: data.phoneNumber || null,
+    },
+    update: {
+      lastName: data.lastName,
+      firstName: data.firstName,
+      ...(data.phoneNumber ? { phoneNumber: data.phoneNumber } : {}),
+    },
+    select: { id: true },
+  });
+  return customer.id;
+}
+
+async function incrementCustomerReservationStats(
+  tx: Tx,
+  customerId: string,
+): Promise<void> {
+  const customer = await tx.customer.findUniqueOrThrow({
+    where: { id: customerId },
+    select: { firstReservationAt: true },
+  });
+  const now = new Date();
+  await tx.customer.update({
+    where: { id: customerId },
+    data: {
+      totalReservations: { increment: 1 },
+      lastReservationAt: now,
+      ...(customer.firstReservationAt === null
+        ? { firstReservationAt: now }
+        : {}),
+    },
+  });
+}
+
+function calculatePricing(params: {
+  hourlyPrice: number;
+  hours: number;
+  basePrice: number;
+  settings: Awaited<ReturnType<typeof getReservationSettings>>;
+  coupon: ValidatedCoupon;
+}) {
+  const priceCalculation = calculateReservationPrice({
+    hourlyPrice: params.hourlyPrice,
+    hours: params.hours,
+    durationRules: parseDurationDiscountRules(
+      params.settings?.durationDiscountRules,
+    ),
+    durationDiscountEnabled: params.settings?.durationDiscountEnabled ?? false,
+    coupon: params.coupon,
+    combinationMode: getValidDiscountCombinationMode(
+      params.settings?.discountCombinationMode,
+    ),
+    showWarning: false,
+  });
+
+  return {
+    totalPrice: priceCalculation.totalPrice,
+    couponId: priceCalculation.appliedCoupon?.id ?? null,
+    couponDiscountAmount:
+      priceCalculation.couponDiscount > 0
+        ? priceCalculation.couponDiscount
+        : null,
+    durationDiscountAmount:
+      priceCalculation.durationDiscount > 0
+        ? priceCalculation.durationDiscount
+        : null,
+  };
+}
+
+function buildPayload(params: {
   reservationId: string;
-  customerEmail: string;
-  customerName: string;
-  spaceName: string;
+  customer: { lastName: string; firstName: string; email: string };
+  space: {
+    name: string;
+    addressDetail: string | null;
+    location: { address: string };
+  };
   startTime: Date;
   endTime: Date;
   totalPrice: number | null;
-  notes?: string | undefined;
-  location?: string | undefined;
-};
+  notes?: string | null | undefined;
+}): ReservationPayload {
+  return {
+    reservationId: params.reservationId,
+    customerEmail: params.customer.email,
+    customerName: `${params.customer.lastName} ${params.customer.firstName}`,
+    spaceName: params.space.name,
+    startTime: params.startTime,
+    endTime: params.endTime,
+    totalPrice: params.totalPrice,
+    notes: params.notes ?? undefined,
+    location: formatSpaceLineAddress(
+      params.space.location.address,
+      params.space.addressDetail,
+    ),
+  };
+}
 
-type ReservationCalendarPayload = ReservationNotificationPayload;
+const ALLOWED_TRANSITIONS: ReadonlyMap<
+  ReservationStatus,
+  readonly ReservationStatus[]
+> = new Map([
+  [
+    ReservationStatus.PENDING,
+    [ReservationStatus.CONFIRMED, ReservationStatus.CANCELLED],
+  ],
+  [
+    ReservationStatus.CONFIRMED,
+    [
+      ReservationStatus.COMPLETED,
+      ReservationStatus.NO_SHOW,
+      ReservationStatus.CANCELLED,
+    ],
+  ],
+]);
+
+export function validateStatusTransition(
+  from: ReservationStatus,
+  to: ReservationStatus,
+): void {
+  if (from === to) return;
+  const allowed = ALLOWED_TRANSITIONS.get(from);
+  if (!allowed || !allowed.includes(to)) {
+    throw new DomainError("このステータスからは変更できません", "VALIDATION");
+  }
+}
+
+const SPACE_SELECT = {
+  id: true,
+  name: true,
+  addressDetail: true,
+  hourlyPrice: true,
+  location: { select: { address: true } },
+} as const;
+
+const CUSTOMER_SELECT = {
+  firstName: true,
+  lastName: true,
+  email: true,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Admin: Create
+// ---------------------------------------------------------------------------
 
 export async function createAdminReservationCommand(input: {
   spaceId: string;
@@ -109,12 +310,7 @@ export async function createAdminReservationCommand(input: {
   startTime: string;
   endTime: string;
   customerId?: string | undefined;
-  customerData?: {
-    lastName: string;
-    firstName: string;
-    email: string;
-    phoneNumber?: string | null | undefined;
-  };
+  customerData?: CustomerData;
   totalPrice?: number | undefined;
   couponCode?: string | null | undefined;
   manualDiscountAmount?: number | undefined;
@@ -122,21 +318,22 @@ export async function createAdminReservationCommand(input: {
   status: ReservationStatus;
   notes?: string | null | undefined;
 }) {
+  if (!CREATABLE_RESERVATION_STATUSES.includes(input.status)) {
+    throw new DomainError(
+      "作成時のステータスは「保留中」または「確認済み」のみ指定できます",
+      "VALIDATION",
+    );
+  }
+
   const startDateTime = buildDateTime(input.date, input.startTime);
   const endDateTime = buildDateTime(input.date, input.endTime);
 
-  const [space, overlapCheck, settings] = await Promise.all([
+  const [space, , settings] = await Promise.all([
     prisma.space.findUnique({
       where: { id: input.spaceId, isActive: true },
-      select: {
-        id: true,
-        name: true,
-        addressDetail: true,
-        hourlyPrice: true,
-        location: { select: { address: true } },
-      },
+      select: SPACE_SELECT,
     }),
-    checkReservationOverlap({
+    ensureNoOverlap({
       spaceId: input.spaceId,
       startTime: startDateTime,
       endTime: endDateTime,
@@ -148,43 +345,24 @@ export async function createAdminReservationCommand(input: {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
   }
 
-  if (overlapCheck.hasOverlap) {
-    throw new DomainError(
-      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-      "CONFLICT",
-    );
-  }
-
-  const hours =
-    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-  const basePrice = Math.floor(space.hourlyPrice * hours);
+  const { hours, basePrice } = calculateHoursAndBasePrice(
+    startDateTime,
+    endDateTime,
+    space.hourlyPrice,
+  );
   const validatedCoupon = await validateCoupon(input.couponCode, basePrice);
-
-  const priceCalculation = calculateReservationPrice({
+  const pricing = calculatePricing({
     hourlyPrice: space.hourlyPrice,
     hours,
-    durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
-    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    basePrice,
+    settings,
     coupon: validatedCoupon,
-    combinationMode: getValidDiscountCombinationMode(
-      settings?.discountCombinationMode,
-    ),
-    showWarning: false,
   });
 
-  const calculatedPrice = input.totalPrice ?? priceCalculation.totalPrice;
-  const couponId = priceCalculation.appliedCoupon?.id ?? null;
-  const couponDiscountAmount =
-    priceCalculation.couponDiscount > 0
-      ? priceCalculation.couponDiscount
-      : null;
-  const durationDiscountAmount =
-    priceCalculation.durationDiscount > 0
-      ? priceCalculation.durationDiscount
-      : null;
+  const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
 
   const reservation = await prisma.$transaction(async (tx) => {
-    const overlapCheckTx = await checkReservationOverlap(
+    await ensureNoOverlap(
       {
         spaceId: input.spaceId,
         startTime: startDateTime,
@@ -192,41 +370,14 @@ export async function createAdminReservationCommand(input: {
       },
       tx,
     );
-    if (overlapCheckTx.hasOverlap) {
-      throw new DomainError(
-        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-        "CONFLICT",
-      );
-    }
 
     let resolvedCustomerId = input.customerId;
 
     if (!resolvedCustomerId && input.customerData) {
-      let customer = await tx.customer.findUnique({
-        where: { email: input.customerData.email },
-      });
-
-      if (!customer) {
-        customer = await tx.customer.create({
-          data: {
-            lastName: input.customerData.lastName,
-            firstName: input.customerData.firstName,
-            email: input.customerData.email,
-            phoneNumber: input.customerData.phoneNumber || null,
-          },
-        });
-      } else {
-        customer = await tx.customer.update({
-          where: { email: input.customerData.email },
-          data: {
-            lastName: input.customerData.lastName,
-            firstName: input.customerData.firstName,
-            phoneNumber: input.customerData.phoneNumber || customer.phoneNumber,
-          },
-        });
-      }
-
-      resolvedCustomerId = customer.id;
+      resolvedCustomerId = await resolveOrCreateCustomer(
+        tx,
+        input.customerData,
+      );
     }
 
     if (!resolvedCustomerId) {
@@ -241,85 +392,47 @@ export async function createAdminReservationCommand(input: {
         endTime: endDateTime,
         totalPrice: calculatedPrice,
         basePrice,
-        couponId,
-        couponDiscountAmount,
-        durationDiscountAmount,
+        couponId: pricing.couponId,
+        couponDiscountAmount: pricing.couponDiscountAmount,
+        durationDiscountAmount: pricing.durationDiscountAmount,
         notes:
           input.manualDiscountAmount && input.manualDiscountReason
             ? `${input.notes || ""}\n【手動割引】¥${input.manualDiscountAmount.toLocaleString()} - ${input.manualDiscountReason}`.trim()
             : input.notes || null,
         status: input.status,
       },
-      include: {
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
+      include: { customer: { select: CUSTOMER_SELECT } },
     });
 
-    if (couponId) {
+    if (pricing.couponId) {
       await tx.coupon.update({
-        where: { id: couponId },
+        where: { id: pricing.couponId },
         data: { usageCount: { increment: 1 } },
       });
     }
 
-    const customer = await tx.customer.findUnique({
-      where: { id: resolvedCustomerId },
-      select: { firstReservationAt: true },
-    });
-
-    await tx.customer.update({
-      where: { id: resolvedCustomerId },
-      data: {
-        totalReservations: { increment: 1 },
-        lastReservationAt: new Date(),
-        firstReservationAt: customer?.firstReservationAt ?? new Date(),
-      },
-    });
+    await incrementCustomerReservationStats(tx, resolvedCustomerId);
 
     return createdReservation;
   });
 
-  const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-  const notes = input.notes ?? undefined;
-
   return {
     id: reservation.id,
-    notification: {
+    payload: buildPayload({
       reservationId: reservation.id,
-      customerEmail: reservation.customer.email,
-      customerName,
-      spaceName: space.name,
+      customer: reservation.customer,
+      space,
       startTime: startDateTime,
       endTime: endDateTime,
       totalPrice: calculatedPrice,
-      notes,
-      location: formatSpaceLineAddress(
-        space.location.address,
-        space.addressDetail,
-      ),
-    } satisfies ReservationNotificationPayload,
-    calendar: {
-      reservationId: reservation.id,
-      customerEmail: reservation.customer.email,
-      customerName,
-      spaceName: space.name,
-      startTime: startDateTime,
-      endTime: endDateTime,
-      totalPrice: calculatedPrice,
-      notes,
-      location: formatSpaceLineAddress(
-        space.location.address,
-        space.addressDetail,
-      ),
-    } satisfies ReservationCalendarPayload,
+      notes: input.notes,
+    }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Update
+// ---------------------------------------------------------------------------
 
 export async function updateAdminReservationCommand(
   id: string,
@@ -343,26 +456,15 @@ export async function updateAdminReservationCommand(
       where: { id },
       select: {
         id: true,
+        status: true,
         couponId: true,
         googleCalendarEventId: true,
-        customer: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
+        customer: { select: CUSTOMER_SELECT },
       },
     }),
     prisma.space.findUnique({
       where: { id: input.spaceId, isActive: true },
-      select: {
-        id: true,
-        name: true,
-        addressDetail: true,
-        hourlyPrice: true,
-        location: { select: { address: true } },
-      },
+      select: SPACE_SELECT,
     }),
     getReservationSettings(),
   ]);
@@ -374,51 +476,36 @@ export async function updateAdminReservationCommand(
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
   }
 
-  const overlapCheck = await checkReservationOverlap({
+  validateStatusTransition(currentReservation.status, input.status);
+
+  await ensureNoOverlap({
     spaceId: input.spaceId,
     startTime: startDateTime,
     endTime: endDateTime,
     excludeReservationId: id,
   });
-  if (overlapCheck.hasOverlap) {
-    throw new DomainError(
-      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-      "CONFLICT",
-    );
-  }
 
-  const hours =
-    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-  const basePrice = Math.floor(space.hourlyPrice * hours);
+  const { hours, basePrice } = calculateHoursAndBasePrice(
+    startDateTime,
+    endDateTime,
+    space.hourlyPrice,
+  );
   const validatedCoupon = await validateCoupon(input.couponCode, basePrice);
-  const newCouponId = validatedCoupon?.id ?? null;
-
-  const priceCalculation = calculateReservationPrice({
+  const pricing = calculatePricing({
     hourlyPrice: space.hourlyPrice,
     hours,
-    durationRules: parseDurationDiscountRules(settings?.durationDiscountRules),
-    durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+    basePrice,
+    settings,
     coupon: validatedCoupon,
-    combinationMode: getValidDiscountCombinationMode(
-      settings?.discountCombinationMode,
-    ),
-    showWarning: false,
   });
 
-  const calculatedPrice = input.totalPrice ?? priceCalculation.totalPrice;
-  const couponDiscountAmount =
-    priceCalculation.couponDiscount > 0
-      ? priceCalculation.couponDiscount
-      : null;
-  const durationDiscountAmount =
-    priceCalculation.durationDiscount > 0
-      ? priceCalculation.durationDiscount
-      : null;
+  const calculatedPrice = input.totalPrice ?? pricing.totalPrice;
+  const newCouponId = validatedCoupon?.id ?? null;
   const oldCouponId = currentReservation.couponId;
   const couponChanged = oldCouponId !== newCouponId;
 
   await prisma.$transaction(async (tx) => {
-    const overlapCheckTx = await checkReservationOverlap(
+    await ensureNoOverlap(
       {
         spaceId: input.spaceId,
         startTime: startDateTime,
@@ -427,13 +514,6 @@ export async function updateAdminReservationCommand(
       },
       tx,
     );
-
-    if (overlapCheckTx.hasOverlap) {
-      throw new DomainError(
-        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-        "CONFLICT",
-      );
-    }
 
     await tx.reservation.update({
       where: { id },
@@ -446,8 +526,8 @@ export async function updateAdminReservationCommand(
         totalPrice: calculatedPrice,
         basePrice,
         couponId: newCouponId,
-        couponDiscountAmount,
-        durationDiscountAmount,
+        couponDiscountAmount: pricing.couponDiscountAmount,
+        durationDiscountAmount: pricing.durationDiscountAmount,
         notes: input.notes || null,
       },
     });
@@ -468,26 +548,23 @@ export async function updateAdminReservationCommand(
     }
   });
 
-  const customerName = `${currentReservation.customer.lastName} ${currentReservation.customer.firstName}`;
-
   return {
     googleCalendarEventId: currentReservation.googleCalendarEventId,
-    notification: {
+    payload: buildPayload({
       reservationId: id,
-      customerEmail: currentReservation.customer.email,
-      customerName,
-      spaceName: space.name,
+      customer: currentReservation.customer,
+      space,
       startTime: startDateTime,
       endTime: endDateTime,
       totalPrice: calculatedPrice,
-      notes: input.notes ?? undefined,
-      location: formatSpaceLineAddress(
-        space.location.address,
-        space.addressDetail,
-      ),
-    } satisfies ReservationNotificationPayload,
+      notes: input.notes,
+    }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Status update
+// ---------------------------------------------------------------------------
 
 export async function updateReservationStatusCommand(
   id: string,
@@ -503,13 +580,15 @@ export async function updateReservationStatusCommand(
           location: { select: { address: true } },
         },
       },
-      customer: { select: { firstName: true, lastName: true, email: true } },
+      customer: { select: CUSTOMER_SELECT },
     },
   });
 
   if (!reservation) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
+
+  validateStatusTransition(reservation.status, status);
 
   const previousStatus = reservation.status;
 
@@ -518,28 +597,24 @@ export async function updateReservationStatusCommand(
     data: { status },
   });
 
-  const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-  const payload = {
-    reservationId: id,
-    customerEmail: reservation.customer.email,
-    customerName,
-    spaceName: reservation.space.name,
-    startTime: reservation.startTime,
-    endTime: reservation.endTime,
-    totalPrice: reservation.totalPrice,
-    notes: reservation.notes ?? undefined,
-    location: formatSpaceLineAddress(
-      reservation.space.location.address,
-      reservation.space.addressDetail,
-    ),
-  } satisfies ReservationNotificationPayload;
-
   return {
     previousStatus,
     googleCalendarEventId: reservation.googleCalendarEventId,
-    notification: payload,
+    payload: buildPayload({
+      reservationId: id,
+      customer: reservation.customer,
+      space: reservation.space,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      totalPrice: reservation.totalPrice,
+      notes: reservation.notes,
+    }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Admin: Notes update
+// ---------------------------------------------------------------------------
 
 export async function updateReservationNotesCommand(
   id: string,
@@ -560,6 +635,10 @@ export async function updateReservationNotesCommand(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Admin: Delete
+// ---------------------------------------------------------------------------
+
 export async function deleteReservationCommand(id: string) {
   const reservation = await prisma.reservation.findUnique({
     where: { id },
@@ -579,12 +658,15 @@ export async function deleteReservationCommand(id: string) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Public: Create
+// ---------------------------------------------------------------------------
+
 type PublicReservationInput = {
   spaceId: string;
   date: string;
   startTime: string;
   endTime: string;
-  numberOfGuests: number;
   lastName: string;
   firstName: string;
   email: string;
@@ -600,38 +682,27 @@ export async function createPublicReservationCommand(
 
   const space = await prisma.space.findUnique({
     where: { id: input.spaceId, isActive: true, isPublished: true },
-    select: {
-      id: true,
-      name: true,
-      addressDetail: true,
-      hourlyPrice: true,
-      location: { select: { address: true } },
-    },
+    select: SPACE_SELECT,
   });
 
   if (!space) {
     throw new DomainError("指定されたスペースが見つかりません", "NOT_FOUND");
   }
 
-  const overlapCheck = await checkReservationOverlap({
+  await ensureNoOverlap({
     spaceId: input.spaceId,
     startTime: startDateTime,
     endTime: endDateTime,
   });
 
-  if (overlapCheck.hasOverlap) {
-    throw new DomainError(
-      "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-      "CONFLICT",
-    );
-  }
-
-  const hours =
-    (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-  const basePrice = Math.floor(Number(space.hourlyPrice) * hours);
+  const { basePrice } = calculateHoursAndBasePrice(
+    startDateTime,
+    endDateTime,
+    space.hourlyPrice,
+  );
 
   const reservation = await prisma.$transaction(async (tx) => {
-    const overlapCheckTx = await checkReservationOverlap(
+    await ensureNoOverlap(
       {
         spaceId: input.spaceId,
         startTime: startDateTime,
@@ -639,41 +710,18 @@ export async function createPublicReservationCommand(
       },
       tx,
     );
-    if (overlapCheckTx.hasOverlap) {
-      throw new DomainError(
-        "選択された時間帯は既に予約されています。別の時間帯をお選びください。",
-        "CONFLICT",
-      );
-    }
 
-    let customer = await tx.customer.findUnique({
-      where: { email: input.email },
+    const customerId = await resolveOrCreateCustomer(tx, {
+      lastName: input.lastName,
+      firstName: input.firstName,
+      email: input.email,
+      phoneNumber: input.phoneNumber,
     });
-
-    if (!customer) {
-      customer = await tx.customer.create({
-        data: {
-          lastName: input.lastName,
-          firstName: input.firstName,
-          email: input.email,
-          phoneNumber: input.phoneNumber || null,
-        },
-      });
-    } else {
-      customer = await tx.customer.update({
-        where: { email: input.email },
-        data: {
-          lastName: input.lastName,
-          firstName: input.firstName,
-          phoneNumber: input.phoneNumber || customer.phoneNumber,
-        },
-      });
-    }
 
     const created = await tx.reservation.create({
       data: {
         spaceId: input.spaceId,
-        customerId: customer.id,
+        customerId,
         startTime: startDateTime,
         endTime: endDateTime,
         totalPrice: basePrice,
@@ -681,43 +729,24 @@ export async function createPublicReservationCommand(
         status: ReservationStatus.PENDING,
         notes: input.notes || null,
       },
-      include: {
-        customer: { select: { firstName: true, lastName: true, email: true } },
-      },
+      include: { customer: { select: CUSTOMER_SELECT } },
     });
 
-    const firstReservationAt = customer.firstReservationAt;
-    await tx.customer.update({
-      where: { id: customer.id },
-      data: {
-        totalReservations: { increment: 1 },
-        lastReservationAt: new Date(),
-        ...(firstReservationAt === null
-          ? { firstReservationAt: new Date() }
-          : {}),
-      },
-    });
+    await incrementCustomerReservationStats(tx, customerId);
 
     return created;
   });
 
-  const customerName = `${reservation.customer.lastName} ${reservation.customer.firstName}`;
-
   return {
     id: reservation.id,
-    notification: {
+    payload: buildPayload({
       reservationId: reservation.id,
-      customerEmail: reservation.customer.email,
-      customerName,
-      spaceName: space.name,
+      customer: reservation.customer,
+      space,
       startTime: startDateTime,
       endTime: endDateTime,
       totalPrice: basePrice,
-      notes: input.notes ?? undefined,
-      location: formatSpaceLineAddress(
-        space.location.address,
-        space.addressDetail,
-      ),
-    } satisfies ReservationNotificationPayload,
+      notes: input.notes,
+    }),
   };
 }

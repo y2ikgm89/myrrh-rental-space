@@ -74,6 +74,24 @@ export const ACTIVE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
   ReservationStatus.CONFIRMED,
 ];
 
+/**
+ * 終端ステータス（COMPLETED, CANCELLED, NO_SHOW）
+ * これらのステータスからは他のステータスへ遷移できない
+ */
+export const TERMINAL_RESERVATION_STATUSES: readonly ReservationStatus[] = [
+  ReservationStatus.COMPLETED,
+  ReservationStatus.CANCELLED,
+  ReservationStatus.NO_SHOW,
+];
+
+/**
+ * 作成時に指定可能なステータス（PENDING, CONFIRMED）
+ */
+export const CREATABLE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
+  ReservationStatus.PENDING,
+  ReservationStatus.CONFIRMED,
+];
+
 // =============================================================================
 // Helper: Get valid value or default
 // =============================================================================
