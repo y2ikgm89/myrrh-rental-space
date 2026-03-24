@@ -1153,7 +1153,7 @@ async function seedReservations() {
     daysOffset: number;
     startHour: number;
     duration: number;
-    status: "PENDING" | "CONFIRMED" | "CANCELLED";
+    status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
     notes?: string;
     applyCoupon?: boolean;
   }> = [
@@ -1164,7 +1164,7 @@ async function seedReservations() {
       daysOffset: -60,
       startHour: 10,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
       notes: "電話予約",
     },
     {
@@ -1173,7 +1173,7 @@ async function seedReservations() {
       daysOffset: -55,
       startHour: 14,
       duration: 3,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 2,
@@ -1181,7 +1181,7 @@ async function seedReservations() {
       daysOffset: -50,
       startHour: 9,
       duration: 4,
-      status: "CONFIRMED",
+      status: "COMPLETED",
       notes: "研修で利用",
     },
     {
@@ -1190,7 +1190,8 @@ async function seedReservations() {
       daysOffset: -45,
       startHour: 13,
       duration: 2,
-      status: "CONFIRMED",
+      status: "NO_SHOW",
+      notes: "連絡なし不来店",
     },
     {
       spaceIndex: 1,
@@ -1207,7 +1208,7 @@ async function seedReservations() {
       daysOffset: -35,
       startHour: 10,
       duration: 5,
-      status: "CONFIRMED",
+      status: "COMPLETED",
       notes: "セミナー開催",
     },
     {
@@ -1216,7 +1217,7 @@ async function seedReservations() {
       daysOffset: -30,
       startHour: 11,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 1,
@@ -1233,7 +1234,7 @@ async function seedReservations() {
       daysOffset: -25,
       startHour: 9,
       duration: 3,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 0,
@@ -1241,8 +1242,8 @@ async function seedReservations() {
       daysOffset: -22,
       startHour: 14,
       duration: 4,
-      status: "CONFIRMED",
-      notes: "面接会場として",
+      status: "NO_SHOW",
+      notes: "面接会場として予約も当日不来店",
     },
     {
       spaceIndex: 1,
@@ -1250,7 +1251,7 @@ async function seedReservations() {
       daysOffset: -20,
       startHour: 10,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 2,
@@ -1267,7 +1268,7 @@ async function seedReservations() {
       daysOffset: -15,
       startHour: 15,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 1,
@@ -1275,7 +1276,7 @@ async function seedReservations() {
       daysOffset: -12,
       startHour: 9,
       duration: 6,
-      status: "CONFIRMED",
+      status: "COMPLETED",
       notes: "ワークショップ",
     },
     {
@@ -1284,7 +1285,7 @@ async function seedReservations() {
       daysOffset: -10,
       startHour: 11,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 0,
@@ -1301,7 +1302,7 @@ async function seedReservations() {
       daysOffset: -8,
       startHour: 10,
       duration: 4,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 2,
@@ -1309,7 +1310,7 @@ async function seedReservations() {
       daysOffset: -7,
       startHour: 16,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
     },
     {
       spaceIndex: 0,
@@ -1326,7 +1327,7 @@ async function seedReservations() {
       daysOffset: -3,
       startHour: 13,
       duration: 2,
-      status: "CONFIRMED",
+      status: "COMPLETED",
       notes: "打ち合わせ",
     },
     // Today
@@ -1891,9 +1892,8 @@ async function seedNews() {
 // =============================================================================
 
 async function seedPages() {
-  const { bootstrapSystemPagesCommand } = await import(
-    "@/shared/domain/pages/system-pages-commands"
-  );
+  const { bootstrapSystemPagesCommand } =
+    await import("@/shared/domain/pages/system-pages-commands");
   await bootstrapSystemPagesCommand(prisma);
   console.log("✅ System pages ensured");
 
