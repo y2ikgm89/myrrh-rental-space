@@ -39,7 +39,7 @@ import {
   SEOFields,
   OGPFields,
   UnifiedPublishFields,
-  LayoutFields,
+  LayoutFieldsConnected,
 } from "../side-panel";
 
 type PostSubmitPayload = {
@@ -354,12 +354,11 @@ export const postConfig: ContentTypeConfig<
           {
             title: "レイアウト",
             render: (ctx) => (
-              <LayoutFields
+              <LayoutFieldsConnected
                 register={ctx.register}
                 control={ctx.control}
                 errors={ctx.errors}
                 setValue={ctx.setValue}
-                getValues={ctx.getValues}
                 {...spreadOptionalDisabled(ctx)}
               />
             ),

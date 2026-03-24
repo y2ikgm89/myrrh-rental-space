@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertCircle, Monitor } from "lucide-react";
+import { CircleAlert, Monitor } from "lucide-react";
 import { SanitizedHtml } from "@/admin/components/SanitizedHtml";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { renderEditorStateJsonToHtmlClient } from "../preview/render-editor-state-to-html-client";
@@ -45,7 +45,7 @@ export function MobileEditorFallback({
           role="alert"
           className="flex gap-3 border-b border-border p-4 text-sm text-foreground"
         >
-          <AlertCircle
+          <CircleAlert
             className="h-5 w-5 shrink-0 text-muted-foreground"
             aria-hidden
           />

@@ -48,8 +48,8 @@ import {
   RefreshCw,
   Clock,
   Webhook,
-  AlertCircle,
-  CheckCircle2,
+  CircleAlert,
+  CircleCheck,
 } from "lucide-react";
 import { CalendarSyncMethod } from "@/shared/db/enums";
 import { formatDateTimeShort } from "@/shared/lib/utils";
@@ -303,7 +303,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                         </FormLabel>
                         {settings.googleCalendarWebhookActive ? (
                           <p className="text-sm text-success flex items-center gap-1">
-                            <CheckCircle2 className="h-4 w-4" />
+                            <CircleCheck className="h-4 w-4" />
                             有効（有効期限:{" "}
                             {formatDateTimeShort(
                               settings.googleCalendarWebhookExpiration,
@@ -312,7 +312,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <AlertCircle className="h-4 w-4" />
+                            <CircleAlert className="h-4 w-4" />
                             未設定
                           </p>
                         )}

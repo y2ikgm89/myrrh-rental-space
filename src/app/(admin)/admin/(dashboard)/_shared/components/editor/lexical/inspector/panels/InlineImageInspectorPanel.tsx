@@ -23,7 +23,7 @@ import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label } from "@/admin/components/ui";
 import { Button } from "@/admin/components/ui/button";
-import { AlignLeft, AlignRight, Maximize2 } from "lucide-react";
+import { AlignLeft, AlignRight, Maximize } from "lucide-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
 // =============================================================================
@@ -33,7 +33,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 const POSITION_ICONS: Record<InlineImagePosition, typeof AlignLeft> = {
   left: AlignLeft,
   right: AlignRight,
-  full: Maximize2,
+  full: Maximize,
 };
 
 const POSITION_LABELS: Record<InlineImagePosition, string> = {

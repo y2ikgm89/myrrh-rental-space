@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 import { Button, type ButtonProps } from "./button";
 
@@ -42,7 +42,7 @@ function SubmitButton({
     >
       {isPending ? (
         <>
-          <Loader2 className="animate-spin" />
+          <LoaderCircle className="animate-spin" />
           {pending}
         </>
       ) : (

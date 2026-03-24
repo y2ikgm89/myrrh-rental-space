@@ -12,7 +12,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import { COMMAND_PRIORITY_LOW, createCommand } from "lexical";
-import { Loader2, ExternalLink, AlertCircle } from "lucide-react";
+import { LoaderCircle, ExternalLink, CircleAlert } from "lucide-react";
 import { logger } from "@/shared/lib/logger";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
@@ -177,7 +177,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                 disabled={!url.trim() || isPending}
               >
                 {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : (
                   "取得"
                 )}
@@ -188,7 +188,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
           {/* エラー表示 */}
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4" />
+              <CircleAlert className="h-4 w-4" />
               <span>{error}</span>
             </div>
           )}

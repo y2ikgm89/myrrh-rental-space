@@ -12,7 +12,7 @@ import {
   Settings,
   Eye,
   Save,
-  Loader2,
+  LoaderCircle,
   Globe,
   GlobeLock,
   MessageSquare,
@@ -170,7 +170,7 @@ export function EditorHeader({
             className="gap-1"
           >
             {isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <LoaderCircle className="h-4 w-4 animate-spin" />
             ) : (
               <Save className="h-4 w-4" />
             )}

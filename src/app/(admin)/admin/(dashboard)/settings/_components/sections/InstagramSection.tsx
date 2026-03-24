@@ -11,7 +11,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
-import { Instagram, Link2, Key, Unlink, ExternalLink } from "lucide-react";
+import { Aperture, Link2, Key, Unlink, ExternalLink } from "lucide-react";
 import {
   Button,
   Card,
@@ -184,7 +184,7 @@ function ConnectionCard({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Instagram className="h-5 w-5" />
+            <Aperture className="h-5 w-5" />
             Instagram連携
           </CardTitle>
           <CardDescription>アカウント接続状況</CardDescription>
@@ -254,7 +254,7 @@ function ConnectionCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Instagram className="h-5 w-5" />
+          <Aperture className="h-5 w-5" />
           Instagram連携
         </CardTitle>
         <CardDescription>
@@ -290,7 +290,7 @@ function ConnectionCard({
               onClick={handleOAuthConnect}
               className="w-full"
             >
-              <Instagram className="mr-2 h-4 w-4" />
+              <Aperture className="mr-2 h-4 w-4" />
               Instagramと連携
             </Button>
           </div>
@@ -392,7 +392,7 @@ function FeedSettingsCard({ config, parentIsPending }: FeedSettingsCardProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Instagram className="h-5 w-5" />
+              <Aperture className="h-5 w-5" />
               フィード表示設定
             </CardTitle>
             <CardDescription>

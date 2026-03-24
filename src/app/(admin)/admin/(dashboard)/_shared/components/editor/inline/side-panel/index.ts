@@ -5,7 +5,7 @@ export { UnifiedPublishFields } from "./UnifiedPublishFields";
 export { BasicInfoFields } from "./BasicInfoFields";
 export { CategoryTagFields } from "./CategoryTagFields";
 export { ImageFields } from "./ImageFields";
-export { LayoutFields } from "./LayoutFields";
+export { LayoutFields, LayoutFieldsConnected } from "./LayoutFields";
 
 // フォームフィールド
 export { TitleSlugFields } from "./TitleSlugFields";

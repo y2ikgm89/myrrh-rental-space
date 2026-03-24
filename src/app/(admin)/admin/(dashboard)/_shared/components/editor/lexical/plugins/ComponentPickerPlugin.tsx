@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -55,9 +55,7 @@ function pickerOptionMatchesQuery(
   if (t.includes(lowerQuery)) {
     return true;
   }
-  return keywords.some((keyword) =>
-    keyword.toLowerCase().includes(lowerQuery),
-  );
+  return keywords.some((keyword) => keyword.toLowerCase().includes(lowerQuery));
 }
 
 // =============================================================================
@@ -65,8 +63,8 @@ function pickerOptionMatchesQuery(
 // =============================================================================
 
 class ComponentPickerOption extends MenuOption {
-  title: string;
-  icon: ReactNode;
+  override title: string;
+  override icon: ReactElement;
   keywords: string[];
   category: InsertCategory;
   readonly insertItem: InsertItem;
@@ -74,7 +72,7 @@ class ComponentPickerOption extends MenuOption {
   constructor(
     insertItem: InsertItem,
     options: {
-      icon: ReactNode;
+      icon: ReactElement;
       keywords?: string[];
       category: InsertCategory;
     },
@@ -129,13 +127,7 @@ function ComponentPickerMenuItem({
 // Category Header Component
 // =============================================================================
 
-function CategoryHeader({
-  id,
-  label,
-}: {
-  id: string;
-  label: string;
-}) {
+function CategoryHeader({ id, label }: { id: string; label: string }) {
   return (
     <div
       id={id}
@@ -172,19 +164,13 @@ export function ComponentPickerPlugin({
   );
 
   const lowerQuery =
-    queryString === null || queryString === ""
-      ? ""
-      : queryString.toLowerCase();
+    queryString === null || queryString === "" ? "" : queryString.toLowerCase();
 
   const options =
     lowerQuery === ""
       ? allOptions
       : allOptions.filter((option) =>
-          pickerOptionMatchesQuery(
-            option.title,
-            option.keywords,
-            lowerQuery,
-          ),
+          pickerOptionMatchesQuery(option.title, option.keywords, lowerQuery),
         );
 
   const groupedOptions = (() => {
@@ -215,11 +201,7 @@ export function ComponentPickerPlugin({
       if (nodeToRemove) {
         nodeToRemove.remove();
       }
-      applyInsertItemInUpdate(
-        selectedOption.insertItem,
-        editor,
-        openDialog,
-      );
+      applyInsertItemInUpdate(selectedOption.insertItem, editor, openDialog);
       closeMenu();
     });
   };

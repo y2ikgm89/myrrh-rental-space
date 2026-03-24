@@ -54,7 +54,7 @@ import {
   Lightbulb,
   Newspaper,
   FileText,
-  HelpCircle,
+  CircleHelp,
   Star,
   MessageSquare,
   Image,
@@ -62,8 +62,8 @@ import {
   Mail,
   MapPin,
   Code,
-  Wand2,
-  Instagram,
+  WandSparkles,
+  Aperture,
 } from "lucide-react";
 import {
   updateSectionOrder,
@@ -79,9 +79,7 @@ import {
   SectionType,
   sectionTypeLabels,
 } from "@/admin/lib/validations/homepage-section";
-import {
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section-defaults";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 import {
   isMutationError,
   type MutationResult,
@@ -102,13 +100,13 @@ async function fetchHomepageSections(): Promise<
 const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
   [SectionType.HERO]: Sparkles,
   [SectionType.HERO_PARALLAX]: Layers,
-  [SectionType.CUSTOM]: Wand2,
+  [SectionType.CUSTOM]: WandSparkles,
   [SectionType.CONCEPT]: Lightbulb,
   [SectionType.SPACE_LIST]: Layout,
   [SectionType.SPACE_SHOWCASE]: LayoutList,
   [SectionType.NEWS_LIST]: Newspaper,
   [SectionType.POST_LIST]: FileText,
-  [SectionType.FAQ_LIST]: HelpCircle,
+  [SectionType.FAQ_LIST]: CircleHelp,
   [SectionType.FEATURES]: Star,
   [SectionType.TESTIMONIAL]: MessageSquare,
   [SectionType.GALLERY]: Image,
@@ -116,7 +114,7 @@ const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
   [SectionType.CONTACT_FORM]: Mail,
   [SectionType.MAP]: MapPin,
   [SectionType.EMBED]: Code,
-  [SectionType.INSTAGRAM]: Instagram,
+  [SectionType.INSTAGRAM]: Aperture,
 };
 
 // =============================================================================

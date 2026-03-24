@@ -9,10 +9,10 @@ import {
   Image,
   FileText,
   Mail,
-  HelpCircle,
+  CircleHelp,
   LayoutGrid,
   Newspaper,
-  FileEdit,
+  FilePen,
   MousePointerClick,
   Images,
   Quote,
@@ -22,7 +22,7 @@ import {
   Lightbulb,
   LayoutList,
   Star,
-  Instagram,
+  Aperture,
 } from "lucide-react";
 import { SectionType } from "@/shared/lib/validations/section";
 
@@ -35,18 +35,18 @@ export const sectionTypeIconComponents: Record<SectionType, LucideIcon> = {
   [SectionType.CUSTOM]: FileText,
   [SectionType.CONCEPT]: Lightbulb,
   [SectionType.CONTACT_FORM]: Mail,
-  [SectionType.FAQ_LIST]: HelpCircle,
+  [SectionType.FAQ_LIST]: CircleHelp,
   [SectionType.SPACE_LIST]: LayoutGrid,
   [SectionType.SPACE_SHOWCASE]: LayoutList,
   [SectionType.NEWS_LIST]: Newspaper,
-  [SectionType.POST_LIST]: FileEdit,
+  [SectionType.POST_LIST]: FilePen,
   [SectionType.FEATURES]: Star,
   [SectionType.CTA]: MousePointerClick,
   [SectionType.GALLERY]: Images,
   [SectionType.TESTIMONIAL]: Quote,
   [SectionType.MAP]: MapPin,
   [SectionType.EMBED]: Code,
-  [SectionType.INSTAGRAM]: Instagram,
+  [SectionType.INSTAGRAM]: Aperture,
 };
 
 interface SectionTypeIconProps {

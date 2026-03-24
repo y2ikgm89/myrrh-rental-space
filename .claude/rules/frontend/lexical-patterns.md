@@ -22,7 +22,7 @@ paths:
 
 | 技術           | バージョン         | 互換性                               |
 | -------------- | ------------------ | ------------------------------------ |
-| Lexical        | 0.41.x             | React 17+対応                        |
+| Lexical        | 0.42.x             | React 17+対応                        |
 | React          | 19.2.4             | ✅ peerDependencies対応              |
 | React Compiler | 1.0.0              | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack      | Next.js 16 default | ✅ optimizePackageImports設定済み    |
@@ -91,11 +91,11 @@ lexical/
 | 状態共有         | `inspector/inspector-sidebar-context.tsx` の **`InspectorSidebarProvider`**（`LexicalEditor` / `EditorInner` で `showInspector` に応じて `enabled` を渡す） |
 | 消費 API         | **`useInspectorSidebar()`** — `toggle` / `expand` / `collapse` / `isExpanded` / `isInspectorAvailable`                                                      |
 | React 19 Context | **`<InspectorSidebarContext value={...}>`** でラップ。**`.Provider` は使わない**。フックは **`use(InspectorSidebarContext)`**（`useContext` 禁止に準拠）    |
-| 永続化           | `localStorage` キー **`myrrh-lexical-inspector-panel`**（`1` = 展開、`0` = 折りたたみ、未設定は折りたたみ）。利用不可環境では黙って無視                        |
-| ツールバー       | `ToolbarPlugin` — APG Toolbar（`role="toolbar"`）。パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`）                             |
+| 永続化           | `localStorage` キー **`myrrh-lexical-inspector-panel`**（`1` = 展開、`0` = 折りたたみ、未設定は折りたたみ）。利用不可環境では黙って無視                     |
+| ツールバー       | `ToolbarPlugin` — APG Toolbar（`role="toolbar"`）。パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`）                           |
 | キーボード       | **`Ctrl+Shift+0`**（**`Numpad0` 可**）。`KeyboardShortcutsPlugin` 内で `isInspectorAvailable` が false のときはコマンドを処理しない                         |
 | 無効化           | `LexicalEditor` の **`showInspector={false}`** — サイドバー非マウント・トグル非表示・上記ショートカット無効                                                 |
-| 展開時の幅       | **420px**（インライン記事設定パネル default と揃える）                                                                                                    |
+| 展開時の幅       | **420px**（インライン記事設定パネル default と揃える）                                                                                                      |
 | マークアップ     | パネルルートは **`<aside id="lexical-block-inspector-panel" aria-label="ブロック設定パネル（本文中のブロック用）">`**                                       |
 
 **新規プラグイン**がパネル開閉に連動する場合: `LexicalComposer` 配下かつ **`InspectorSidebarProvider` 内**で `useInspectorSidebar()` を呼ぶこと。Provider 外ではフックが throw する。
@@ -710,8 +710,8 @@ const initialConfig = {
 
 ### レイアウト定数（単一正本）
 
-| ファイル | 内容 |
-| -------- | ---- |
+| ファイル                     | 内容                                                                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `editor-layout-constants.ts` | `EDITOR_PADDING_LEFT`（40）、`EDITOR_PADDING_RIGHT`（24）、`EDITOR_PADDING_HORIZONTAL`（64）。`LexicalEditor` の `ContentEditable` の `pl-10` / `pr-6` と **同値**に保つ。 |
 
 `contentWidth` の `maxWidth` は `contentWidth + EDITOR_PADDING_HORIZONTAL` で計算する（`CLAUDE.md` のコンテンツ幅節と同じ）。
@@ -758,7 +758,7 @@ editor.update(() => {
 });
 ```
 
-21. **`TableCellResizerPlugin` は @lexical/react 0.41.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+21. **`TableCellResizerPlugin` は @lexical/react 0.42.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
 22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
 23. **組み込みノード（TableNode 等）を継承する場合は Node Replacement パターン必須**: 独自型文字列（`"custom-table"`）を持つカスタムノードと `{ replace: TableNode, with: factory, withKlass: CustomTableNode }` をセットで `EDITOR_NODES` に登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を登録するため `TablePlugin.hasNodes([TableNode])` が通過し、`$isTableNode(customTableNode)` も `instanceof` で `true` になる。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外であり禁止
 24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する

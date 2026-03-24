@@ -55,7 +55,7 @@ import {
   Code,
   FileDown,
   FileText,
-  HelpCircle,
+  CircleHelp,
   Heading1,
   Heading2,
   Heading3,
@@ -964,7 +964,7 @@ export function ToolbarPlugin({
           onClick={() => setShowShortcuts(true)}
           title="キーボードショートカット (Ctrl+Shift+/)"
         >
-          <HelpCircle className="h-5 w-5 md:h-4 md:w-4" />
+          <CircleHelp className="h-5 w-5 md:h-4 md:w-4" />
         </Button>
         <Button
           type="button"

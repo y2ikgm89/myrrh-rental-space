@@ -10,7 +10,7 @@ import {
   ExternalLink,
   Trash2,
   Save,
-  Loader2,
+  LoaderCircle,
   FileText,
   Film,
   File,
@@ -320,7 +320,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   disabled={!hasChanges || isPending}
                 >
                   {isPending && (
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    <LoaderCircle className="h-4 w-4 mr-1 animate-spin" />
                   )}
                   <Save className="h-4 w-4 mr-1" />
                   保存

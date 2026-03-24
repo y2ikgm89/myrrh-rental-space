@@ -5,7 +5,7 @@ import {
   Star,
   Users,
   MapPin,
-  Camera,
+  Aperture,
   Wifi,
   Coffee,
 } from "lucide-react";
@@ -24,7 +24,7 @@ const iconMap: Record<string, LucideIcon> = {
   Star,
   Users,
   MapPin,
-  Camera,
+  Aperture,
   Wifi,
   Coffee,
 };
@@ -77,7 +77,9 @@ function FeatureCard({
       {IconComponent ? (
         <IconComponent className="mx-auto mb-4 h-8 w-8 text-accent" />
       ) : null}
-      <h3 className="mb-2 font-heading text-lg font-semibold">{title}</h3>
+      <Heading level={3} className="mb-2 !text-lg font-semibold">
+        {title}
+      </Heading>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
   );

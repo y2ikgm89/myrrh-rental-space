@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import type {
   Control,
   FieldErrors,
@@ -222,7 +222,7 @@ export function SpaceEditPricingTabPanel({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 cursor-help text-muted-foreground" />
+                      <CircleHelp className="h-4 w-4 cursor-help text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>

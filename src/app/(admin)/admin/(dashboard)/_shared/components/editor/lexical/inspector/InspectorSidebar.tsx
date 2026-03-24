@@ -49,7 +49,7 @@ import {
   TableInspectorPanel,
   TableCellInspectorPanel,
 } from "./panels";
-import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, SlidersVertical } from "lucide-react";
 import { Button } from "@/admin/components/ui/button";
 
 const INSPECTOR_PANEL_ID = "lexical-block-inspector-panel";
@@ -233,7 +233,7 @@ export function InspectorSidebar() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4 min-h-0">
-              <Settings2 className="h-8 w-8 mb-2 opacity-50" aria-hidden />
+              <SlidersVertical className="h-8 w-8 mb-2 opacity-50" aria-hidden />
               <p className="text-sm text-center">
                 ブロックを選択すると
                 <br />
@@ -261,7 +261,7 @@ export function InspectorSidebar() {
             <ChevronLeft className="h-4 w-4" aria-hidden />
             <span className="sr-only">ブロック設定パネルを開く</span>
           </Button>
-          <Settings2
+          <SlidersVertical
             className="h-4 w-4 mt-3 text-muted-foreground opacity-60"
             aria-hidden
           />

@@ -23,7 +23,7 @@ import {
   type SerializedLexicalNode,
 } from "lexical";
 import { z } from "zod";
-import { Blocks, Trash2, Loader2, Save } from "lucide-react";
+import { Blocks, Trash2, LoaderCircle, Save } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -236,7 +236,7 @@ function SaveTemplateDialog({
             disabled={!name.trim() || isPending}
           >
             {isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
@@ -344,7 +344,7 @@ function InsertTemplateDialog({
         <div className="max-h-[400px] overflow-y-auto py-2">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : !templates || templates.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
@@ -385,7 +385,7 @@ function InsertTemplateDialog({
                     title="削除"
                   >
                     {deletingId === template.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                     ) : (
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     )}

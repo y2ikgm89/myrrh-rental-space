@@ -9,7 +9,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, Trash2, X, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Trash2, X, LoaderCircle } from "lucide-react";
 import { Button } from "@/admin/components/ui";
 import { bulkTogglePagePublished, bulkDeletePages } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -73,7 +73,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           disabled={isPending}
         >
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
           ) : (
             <Eye className="h-4 w-4 mr-1" />
           )}
@@ -87,7 +87,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           disabled={isPending}
         >
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
           ) : (
             <EyeOff className="h-4 w-4 mr-1" />
           )}
@@ -102,7 +102,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           className="text-destructive hover:text-destructive"
         >
           {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
           ) : (
             <Trash2 className="h-4 w-4 mr-1" />
           )}

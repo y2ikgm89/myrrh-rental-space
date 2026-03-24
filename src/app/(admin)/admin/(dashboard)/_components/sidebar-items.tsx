@@ -8,9 +8,9 @@ import {
   Building2,
   Mail,
   Newspaper,
-  FileEdit,
+  FilePen,
   FileText,
-  HelpCircle,
+  CircleHelp,
   ScrollText,
   Users,
   Shield,
@@ -50,7 +50,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   {
     label: "投稿",
     href: "/admin/posts",
-    icon: <FileEdit className="h-5 w-5" />,
+    icon: <FilePen className="h-5 w-5" />,
   },
   {
     label: "メディア",
@@ -65,7 +65,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   {
     label: "FAQ",
     href: "/admin/faq",
-    icon: <HelpCircle className="h-5 w-5" />,
+    icon: <CircleHelp className="h-5 w-5" />,
   },
   {
     label: "利用規約",

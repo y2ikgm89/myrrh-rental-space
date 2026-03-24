@@ -65,8 +65,8 @@ export const sectionTypeIcons: Record<SectionType, string> = {
   [SectionType.SPACE_LIST]: "LayoutGrid",
   [SectionType.SPACE_SHOWCASE]: "GalleryVerticalEnd",
   [SectionType.NEWS_LIST]: "Newspaper",
-  [SectionType.POST_LIST]: "FileEdit",
-  [SectionType.FAQ_LIST]: "HelpCircle",
+  [SectionType.POST_LIST]: "FilePen",
+  [SectionType.FAQ_LIST]: "CircleHelp",
   [SectionType.FEATURES]: "Zap",
   [SectionType.TESTIMONIAL]: "Quote",
   [SectionType.GALLERY]: "Images",
@@ -74,7 +74,7 @@ export const sectionTypeIcons: Record<SectionType, string> = {
   [SectionType.CONTACT_FORM]: "Mail",
   [SectionType.MAP]: "MapPin",
   [SectionType.EMBED]: "Code",
-  [SectionType.INSTAGRAM]: "Instagram",
+  [SectionType.INSTAGRAM]: "Aperture",
 };
 
 // =============================================================================

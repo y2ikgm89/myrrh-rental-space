@@ -30,7 +30,7 @@ import {
 import type { RobotsTxtData } from "@/shared/domain/settings/types";
 import { checkRobotsTxtWarnings } from "@/admin/actions/settings/schemas/basic";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { TriangleAlert, RotateCcw } from "lucide-react";
 
 async function fetchRobotsTxtSettings(): Promise<RobotsTxtData> {
   return fetchAdminJson("/admin/api/settings/robots-txt");
@@ -177,7 +177,7 @@ export function RobotsTxtSection() {
         {formData.robotsTxtEnabled && warnings.length > 0 && (
           <div className="rounded-lg border border-warning/50 bg-warning/10 p-4">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+              <TriangleAlert className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <p className="text-sm font-medium text-warning">
                   設定に関する警告

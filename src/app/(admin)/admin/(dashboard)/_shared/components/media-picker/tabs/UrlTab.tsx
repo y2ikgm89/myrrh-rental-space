@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Link, AlertCircle, Image as ImageIcon } from "lucide-react";
+import { Link, CircleAlert, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/admin/components/ui";
 
 interface UrlTabProps {
@@ -85,7 +85,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         </div>
         {error && (
           <p className="flex items-center gap-1 text-sm text-destructive">
-            <AlertCircle className="h-3 w-3" />
+            <CircleAlert className="h-3 w-3" />
             {error}
           </p>
         )}

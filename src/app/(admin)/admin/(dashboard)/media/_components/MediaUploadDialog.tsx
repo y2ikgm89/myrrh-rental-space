@@ -5,7 +5,7 @@
  */
 
 import { useState, useTransition, useId } from "react";
-import { X, Upload, File, Loader2 } from "lucide-react";
+import { X, Upload, File, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { uploadMedia } from "@/admin/actions/media";
@@ -298,7 +298,7 @@ export function MediaUploadDialog({
             キャンセル
           </Button>
           <Button onClick={handleSubmit} disabled={!file || isPending}>
-            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />}
             アップロード
           </Button>
         </DialogFooter>

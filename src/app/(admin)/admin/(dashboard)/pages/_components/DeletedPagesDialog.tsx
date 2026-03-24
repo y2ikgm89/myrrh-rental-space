@@ -9,7 +9,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, RotateCcw, Loader2, AlertTriangle } from "lucide-react";
+import { Trash2, RotateCcw, LoaderCircle, TriangleAlert } from "lucide-react";
 import { Button } from "@/admin/components/ui";
 import {
   Dialog,
@@ -130,7 +130,7 @@ export function DeletedPagesDialog() {
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : pages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -199,7 +199,7 @@ export function DeletedPagesDialog() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <TriangleAlert className="h-5 w-5 text-destructive" />
               完全に削除しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -217,7 +217,7 @@ export function DeletedPagesDialog() {
             >
               {isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
                   削除中...
                 </>
               ) : (
