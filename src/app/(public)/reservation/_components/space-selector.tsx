@@ -34,13 +34,18 @@ export function SpaceSelector({
         {spaces.map((space) => {
           const isSelected = space.id === selectedId;
           return (
-            <button
+            <div
               key={space.id}
-              type="button"
               role="radio"
+              tabIndex={isSingle ? -1 : 0}
               aria-checked={isSelected}
               onClick={() => onSelect(space.id)}
-              disabled={isSingle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(space.id);
+                }
+              }}
               className={`flex min-w-[75vw] snap-start flex-col overflow-hidden rounded-xl border text-left transition-all
                 ${
                   isSelected
@@ -82,7 +87,7 @@ export function SpaceSelector({
                   詳細を見る →
                 </button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

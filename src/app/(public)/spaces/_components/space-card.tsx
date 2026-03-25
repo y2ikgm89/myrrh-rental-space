@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Users, Ruler } from "lucide-react";
@@ -41,6 +41,12 @@ export function SpaceCard({
   const [showOverlay, setShowOverlay] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!hasHoverData || e.pointerType !== "mouse") return;
     timerRef.current = setTimeout(() => setShowOverlay(true), 2000);
@@ -79,23 +85,25 @@ export function SpaceCard({
         {hasHoverData ? (
           <div
             aria-hidden="true"
-            className={`absolute inset-0 flex flex-col justify-end bg-black/70 p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0 ${
+            className={`absolute inset-0 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0 ${
               showOverlay ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
           >
-            <div className="space-y-2 text-sm text-white">
+            <div className="space-y-2 text-sm text-overlay-foreground">
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium">{locationName}</span>
               </div>
-              <p className="text-xs text-white/80">{lineAddress}</p>
+              <p className="text-xs text-overlay-foreground/80">
+                {lineAddress}
+              </p>
 
               {facilities && facilities.length > 0 ? (
                 <div className="flex flex-wrap gap-1 pt-1">
                   {facilities.slice(0, 4).map((f) => (
                     <span
                       key={f}
-                      className="rounded bg-white/20 px-1.5 py-0.5 text-[11px]"
+                      className="rounded bg-overlay-foreground/20 px-1.5 py-0.5 text-[11px]"
                     >
                       {f}
                     </span>
@@ -107,7 +115,7 @@ export function SpaceCard({
                 <div className="pt-1 text-xs font-medium">
                   <span>&yen;{hourlyPrice.toLocaleString()}/h</span>
                   {dailyPrice != null ? (
-                    <span className="ml-2 text-white/80">
+                    <span className="ml-2 text-overlay-foreground/80">
                       &yen;{dailyPrice.toLocaleString()}/day
                     </span>
                   ) : null}
