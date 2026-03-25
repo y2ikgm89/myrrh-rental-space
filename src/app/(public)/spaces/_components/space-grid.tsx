@@ -8,8 +8,12 @@ interface Space {
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
+  readonly dailyPrice: number | null;
+  readonly facilities: readonly string[];
+  readonly lineAddress: string;
   readonly mainImageUrl: string;
   readonly category: { readonly name: string } | null;
+  readonly location: { readonly name: string };
 }
 
 interface SpaceGridProps {
@@ -36,6 +40,10 @@ export function SpaceGrid({ spaces }: SpaceGridProps) {
           capacity={space.capacity}
           area={space.area}
           hourlyPrice={space.hourlyPrice}
+          dailyPrice={space.dailyPrice}
+          locationName={space.location.name}
+          lineAddress={space.lineAddress}
+          facilities={space.facilities}
           mainImageUrl={space.mainImageUrl}
           categoryName={space.category?.name}
         />
