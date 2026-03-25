@@ -70,21 +70,29 @@ const appUrl = serverEnv.BETTER_AUTH_URL ?? getAppUrl();
 function createAuth() {
   const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
   const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
-  const socialProviders =
-    googleClientId && googleClientSecret
+  const lineClientId = serverEnv.LINE_CLIENT_ID;
+  const lineClientSecret = serverEnv.LINE_CLIENT_SECRET;
+
+  const socialProviders = {
+    ...(googleClientId && googleClientSecret
       ? {
           google: {
             clientId: googleClientId,
             clientSecret: googleClientSecret,
-            scope: [
-              "openid",
-              "email",
-              "profile",
-              "https://www.googleapis.com/auth/calendar.events",
-            ],
+            scope: ["openid", "email", "profile"],
           },
         }
-      : undefined;
+      : {}),
+    ...(lineClientId && lineClientSecret
+      ? {
+          line: {
+            clientId: lineClientId,
+            clientSecret: lineClientSecret,
+            scope: ["openid", "profile", "email"],
+          },
+        }
+      : {}),
+  };
 
   return betterAuth({
     baseURL: appUrl,
@@ -106,12 +114,18 @@ function createAuth() {
     emailAndPassword: {
       enabled: true,
     },
-    ...(socialProviders ? { socialProviders } : {}),
+    ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ["google", "line"],
+      },
+    },
     user: {
       additionalFields: {
         role: {
           type: "string",
-          defaultValue: Role.USER,
+          defaultValue: "CUSTOMER",
           input: false,
         },
       },
@@ -242,6 +256,23 @@ export const isAdmin = cache(
     return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
   },
 );
+
+/** 顧客セッション検証（管理者ロールはリダイレクト） */
+const ADMIN_ROLES: Role[] = [
+  Role.SUPER_ADMIN,
+  Role.ADMIN,
+  Role.EDITOR,
+  Role.VIEWER,
+];
+
+export async function verifyCustomerSession() {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  const user = getSessionUser(session);
+  if (!user) redirect("/login");
+  if (ADMIN_ROLES.includes(user.role)) redirect("/admin");
+  return { session, user };
+}
 
 /** セッション取得（キャッシュなし — Server Actions 用） */
 export async function getSession(

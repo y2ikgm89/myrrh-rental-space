@@ -56,6 +56,10 @@ export const serverEnv = createEnv({
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
+    // LINE OAuth
+    LINE_CLIENT_ID: z.string().optional(),
+    LINE_CLIENT_SECRET: z.string().optional(),
+
     // Instagram API
     INSTAGRAM_APP_ID: z.string().optional(),
     INSTAGRAM_APP_SECRET: z.string().optional(),
@@ -106,6 +110,8 @@ export const serverEnv = createEnv({
     STRIPE_SECRET_KEY: process.env["STRIPE_SECRET_KEY"],
     GOOGLE_CLIENT_ID: process.env["GOOGLE_CLIENT_ID"],
     GOOGLE_CLIENT_SECRET: process.env["GOOGLE_CLIENT_SECRET"],
+    LINE_CLIENT_ID: process.env["LINE_CLIENT_ID"],
+    LINE_CLIENT_SECRET: process.env["LINE_CLIENT_SECRET"],
     INSTAGRAM_APP_ID: process.env["INSTAGRAM_APP_ID"],
     INSTAGRAM_APP_SECRET: process.env["INSTAGRAM_APP_SECRET"],
     INSTAGRAM_REDIRECT_URI: process.env["INSTAGRAM_REDIRECT_URI"],

@@ -19,5 +19,12 @@ export const authClient = createAuthClient({
 /**
  * 認証フック・メソッドをエクスポート
  */
-export const { signIn, signOut, signUp, useSession, getSession, $Infer } =
-  authClient;
+export const {
+  signIn,
+  signOut,
+  signUp,
+  useSession,
+  getSession,
+  linkSocial,
+  $Infer,
+} = authClient;
