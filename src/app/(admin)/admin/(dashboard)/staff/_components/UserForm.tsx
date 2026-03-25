@@ -30,6 +30,7 @@ const ROLE_LABELS: Record<Role, string> = {
   EDITOR: "編集者",
   VIEWER: "閲覧者",
   USER: "ユーザー",
+  CUSTOMER: "顧客",
 };
 
 type Props =

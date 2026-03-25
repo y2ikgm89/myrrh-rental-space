@@ -105,6 +105,7 @@ const roleConfig = {
   EDITOR: { label: "編集者", variant: "secondary" },
   VIEWER: { label: "閲覧者", variant: "outline" },
   USER: { label: "ユーザー", variant: "outline" },
+  CUSTOMER: { label: "顧客", variant: "outline" },
 } satisfies Record<Role, { label: string; variant: BadgeVariant }>;
 
 export function RoleBadge({ role }: { role: Role }) {

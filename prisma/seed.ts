@@ -290,6 +290,8 @@ async function seedSettings() {
     city: "渋谷区",
     streetAddress: "神宮前1-1-1 サンプルビル",
     footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
+    cancellationDeadlineHours: 24,
+    modificationDeadlineHours: 24,
   };
 
   await prisma.settings.upsert({
@@ -897,8 +899,9 @@ async function seedCustomers() {
     },
     // Corporate customers (4)
     {
-      lastName: "株式会社ABC",
-      firstName: "（担当: 田村）",
+      lastName: "田村",
+      firstName: "健一",
+      companyName: "株式会社ABC",
       email: "tamura@abc-corp.example.com",
       phoneNumber: "03-1234-5678",
       status: "REGULAR" as const,
@@ -906,8 +909,9 @@ async function seedCustomers() {
       totalSpent: 200000,
     },
     {
-      lastName: "合同会社XYZ",
-      firstName: "（担当: 森田）",
+      lastName: "森田",
+      firstName: "裕子",
+      companyName: "合同会社XYZ",
       email: "morita@xyz-llc.example.com",
       phoneNumber: "03-9876-5432",
       status: "VIP" as const,
@@ -915,8 +919,9 @@ async function seedCustomers() {
       totalSpent: 800000,
     },
     {
-      lastName: "有限会社サンプル",
-      firstName: "（担当: 西村）",
+      lastName: "西村",
+      firstName: "誠",
+      companyName: "有限会社サンプル",
       email: "nishimura@sample.example.com",
       phoneNumber: "03-1111-2222",
       status: "REGULAR" as const,
@@ -924,8 +929,9 @@ async function seedCustomers() {
       totalSpent: 250000,
     },
     {
-      lastName: "NPO法人地域支援",
-      firstName: "（担当: 村上）",
+      lastName: "村上",
+      firstName: "恵美",
+      companyName: "NPO法人地域支援",
       email: "murakami@npo.example.com",
       phoneNumber: "03-3333-4444",
       status: "REGULAR" as const,
@@ -1023,7 +1029,8 @@ async function seedInquiries() {
       status: "CLOSED" as const,
     },
     {
-      name: "株式会社ABC 田村",
+      name: "田村 健一",
+      companyName: "株式会社ABC",
       email: "tamura@abc.example.com",
       subject: "定期利用",
       message: "毎週水曜日の定期利用を希望します。優先予約は可能ですか？",
@@ -1098,7 +1105,8 @@ async function seedInquiries() {
       status: "RESOLVED" as const,
     },
     {
-      name: "NPO法人地域支援 村上",
+      name: "村上 恵美",
+      companyName: "NPO法人地域支援",
       email: "murakami.npo@example.com",
       subject: "非営利団体割引",
       message:

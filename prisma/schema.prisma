@@ -24,6 +24,7 @@ enum Role {
   EDITOR // 割り当てページ編集のみ
   VIEWER // 閲覧のみ
   USER // 公開ユーザー（非管理者）
+  CUSTOMER // 顧客（ソーシャルログイン）
 }
 
 enum ReservationStatus {
@@ -247,6 +248,7 @@ model User {
   auditLogs       AuditLog[]
   mediaFiles      Media[]
   termsAgreements TermsAgreement[]
+  customer        Customer?          @relation("CustomerUser")
 
   // RBAC: EDITOR用の割り当てページ（中間テーブル）
   pageAssignments UserPageAssignment[]
@@ -534,6 +536,7 @@ model Customer {
   firstName          String
   lastNameKana       String?        // 姓カナ（任意）
   firstNameKana      String?        // 名カナ（任意）
+  companyName        String?        // 会社名・団体名（法人の場合）
   email              String         @unique
   phoneNumber        String?
   address            String?        @db.Text
@@ -547,6 +550,10 @@ model Customer {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
+  // Social Auth Link
+  userId  String? @unique @db.Uuid
+  user    User?   @relation("CustomerUser", fields: [userId], references: [id], onDelete: SetNull)
+
   // Relations
   reservations Reservation[]
 
@@ -557,6 +564,7 @@ model Customer {
   @@index([isActive])
   @@index([lastReservationAt])
   @@index([lastName, firstName])
+  @@index([userId])
   @@map("customers")
 }
 
@@ -603,9 +611,10 @@ model Coupon {
 }
 
 model Inquiry {
-  id        String        @id @default(uuid()) @db.Uuid
-  name      String
-  email     String
+  id          String        @id @default(uuid()) @db.Uuid
+  name        String
+  companyName String?       // 会社名・団体名（法人の場合）
+  email       String
   subject   String
   message   String        @db.Text
   status    InquiryStatus @default(NEW)
@@ -1272,6 +1281,10 @@ model Settings {
   // ==============================================
   robotsTxtEnabled Boolean @default(false) // カスタムrobots.txtを使用
   robotsTxtCustom  String? @db.Text // カスタムrobots.txt内容
+
+  // Mypage Deadline Settings（マイページ操作期限）
+  cancellationDeadlineHours  Int @default(24) // キャンセル可能期限（時間前）
+  modificationDeadlineHours  Int @default(24) // 変更可能期限（時間前）
 
   @@map("settings")
 }

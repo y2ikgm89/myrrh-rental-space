@@ -281,6 +281,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "media:read",
   ],
   USER: [],
+  CUSTOMER: [],
 };
 
 /**
@@ -339,6 +340,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   EDITOR: "編集者",
   VIEWER: "閲覧者",
   USER: "ユーザー",
+  CUSTOMER: "顧客",
 };
 
 // =============================================================================
