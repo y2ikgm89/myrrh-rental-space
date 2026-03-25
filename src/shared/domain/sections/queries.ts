@@ -10,6 +10,7 @@ import {
   ErrorSeverity,
   safeFetch,
 } from "@/shared/lib/errors/server";
+import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 import { toPlainArray } from "@/shared/lib/serialize";
 import {
   idParamSchema,
@@ -101,8 +102,13 @@ export async function getShowcaseSpaces(
           description: true,
           capacity: true,
           hourlyPrice: true,
+          dailyPrice: true,
           area: true,
           mainImageUrl: true,
+          facilities: true,
+          addressDetail: true,
+          category: { select: { id: true, name: true } },
+          location: { select: { name: true, address: true } },
         },
         orderBy: { createdAt: "desc" },
         take: maxItems,
@@ -113,7 +119,18 @@ export async function getShowcaseSpaces(
     operationName: "getShowcaseSpaces",
   });
 
-  return toPlainArray(spaces);
+  return toPlainArray(
+    spaces.map((s) => ({
+      ...s,
+      hourlyPrice: Number(s.hourlyPrice),
+      dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
+      area: s.area ? Number(s.area) : null,
+      facilities: Array.isArray(s.facilities)
+        ? s.facilities.filter((f): f is string => typeof f === "string")
+        : [],
+      lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
+    })),
+  );
 }
 
 export async function getPageSections(
