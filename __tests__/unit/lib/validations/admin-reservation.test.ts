@@ -301,16 +301,25 @@ describe("adminReservationSchema", () => {
     }
   });
 
-  test("すべてのReservationStatus値を許可", () => {
-    const statuses = [
-      ReservationStatus.PENDING,
-      ReservationStatus.CONFIRMED,
-      ReservationStatus.CANCELLED,
-    ];
-    statuses.forEach((status) => {
+  test("作成時は PENDING / CONFIRMED のみ許可", () => {
+    const allowed = [ReservationStatus.PENDING, ReservationStatus.CONFIRMED];
+    allowed.forEach((status) => {
       const data = { ...validReservationData, status };
       const result = adminReservationSchema.safeParse(data);
       expect(result.success).toBe(true);
+    });
+  });
+
+  test("作成時に終端ステータスを拒否", () => {
+    const terminal = [
+      ReservationStatus.COMPLETED,
+      ReservationStatus.CANCELLED,
+      ReservationStatus.NO_SHOW,
+    ];
+    terminal.forEach((status) => {
+      const data = { ...validReservationData, status };
+      const result = adminReservationSchema.safeParse(data);
+      expect(result.success).toBe(false);
     });
   });
 
