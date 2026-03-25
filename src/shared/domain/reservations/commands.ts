@@ -34,12 +34,15 @@ type CustomerData = {
   firstName: string;
   email: string;
   phoneNumber?: string | null | undefined;
+  companyName?: string | null | undefined;
+  userId?: string | null | undefined;
 };
 
 export type ReservationPayload = {
   reservationId: string;
   customerEmail: string;
   customerName: string;
+  companyName?: string | null;
   spaceName: string;
   startTime: Date;
   endTime: Date;
@@ -155,6 +158,26 @@ async function resolveOrCreateCustomer(
   tx: Tx,
   data: CustomerData,
 ): Promise<string> {
+  // userId が提供されている場合、まず userId で顧客を検索
+  if (data.userId) {
+    const existingByUser = await tx.customer.findUnique({
+      where: { userId: data.userId },
+      select: { id: true },
+    });
+    if (existingByUser) {
+      await tx.customer.update({
+        where: { id: existingByUser.id },
+        data: {
+          lastName: data.lastName,
+          firstName: data.firstName,
+          phoneNumber: data.phoneNumber || null,
+          companyName: data.companyName || null,
+        },
+      });
+      return existingByUser.id;
+    }
+  }
+
   const customer = await tx.customer.upsert({
     where: { email: data.email },
     create: {
@@ -162,11 +185,15 @@ async function resolveOrCreateCustomer(
       firstName: data.firstName,
       email: data.email,
       phoneNumber: data.phoneNumber || null,
+      companyName: data.companyName || null,
+      userId: data.userId || null,
     },
     update: {
       lastName: data.lastName,
       firstName: data.firstName,
-      ...(data.phoneNumber ? { phoneNumber: data.phoneNumber } : {}),
+      phoneNumber: data.phoneNumber || null,
+      companyName: data.companyName || null,
+      userId: data.userId || null,
     },
     select: { id: true },
   });
@@ -231,7 +258,12 @@ function calculatePricing(params: {
 
 function buildPayload(params: {
   reservationId: string;
-  customer: { lastName: string; firstName: string; email: string };
+  customer: {
+    lastName: string;
+    firstName: string;
+    companyName: string | null;
+    email: string;
+  };
   space: {
     name: string;
     addressDetail: string | null;
@@ -246,6 +278,7 @@ function buildPayload(params: {
     reservationId: params.reservationId,
     customerEmail: params.customer.email,
     customerName: `${params.customer.lastName} ${params.customer.firstName}`,
+    companyName: params.customer.companyName,
     spaceName: params.space.name,
     startTime: params.startTime,
     endTime: params.endTime,
@@ -280,6 +313,7 @@ const SPACE_SELECT = {
 const CUSTOMER_SELECT = {
   firstName: true,
   lastName: true,
+  companyName: true,
   email: true,
 } as const;
 
@@ -654,7 +688,9 @@ type PublicReservationInput = {
   firstName: string;
   email: string;
   phoneNumber?: string | null | undefined;
+  companyName?: string | null | undefined;
   notes?: string | null | undefined;
+  userId?: string | null | undefined;
 };
 
 export async function createPublicReservationCommand(
@@ -699,6 +735,8 @@ export async function createPublicReservationCommand(
       firstName: input.firstName,
       email: input.email,
       phoneNumber: input.phoneNumber,
+      companyName: input.companyName,
+      userId: input.userId,
     });
 
     const created = await tx.reservation.create({
@@ -711,6 +749,7 @@ export async function createPublicReservationCommand(
         basePrice,
         status: ReservationStatus.PENDING,
         notes: input.notes || null,
+        userId: input.userId || null,
       },
       include: { customer: { select: CUSTOMER_SELECT } },
     });
