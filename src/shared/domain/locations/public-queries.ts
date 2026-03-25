@@ -8,9 +8,14 @@ import { toPlainArray } from "@/shared/lib/serialize";
 export type SpaceOption = {
   id: string;
   name: string;
+  description: string;
   capacity: number;
+  area: number | null;
   hourlyPrice: number;
+  dailyPrice: number | null;
   mainImageUrl: string;
+  imageUrls: string[];
+  facilities: string[];
 };
 
 export type LocationWithSpaces = {
@@ -45,9 +50,14 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         select: {
           id: true,
           name: true,
+          description: true,
           capacity: true,
+          area: true,
           hourlyPrice: true,
+          dailyPrice: true,
           mainImageUrl: true,
+          imageUrls: true,
+          facilities: true,
         },
       },
     },
@@ -61,6 +71,14 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         spaces: l.spaces.map((s) => ({
           ...s,
           hourlyPrice: Number(s.hourlyPrice),
+          dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
+          area: s.area ? Number(s.area) : null,
+          imageUrls: Array.isArray(s.imageUrls)
+            ? s.imageUrls.filter((u): u is string => typeof u === "string")
+            : [],
+          facilities: Array.isArray(s.facilities)
+            ? s.facilities.filter((f): f is string => typeof f === "string")
+            : [],
         })),
       })),
   );
