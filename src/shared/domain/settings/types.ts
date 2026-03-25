@@ -73,6 +73,8 @@ export type SettingsData = {
   minReservationDuration: number;
   maxReservationDuration: number;
   cancellationTermsId: string | null;
+  cancellationDeadlineHours: number;
+  modificationDeadlineHours: number;
   sendReservationConfirmationEmail: boolean;
   sendAdminNotificationEmail: boolean;
   notifyNewReservation: boolean;

@@ -138,6 +138,8 @@ export type ReservationSettingsInput = {
   minReservationDuration: number;
   maxReservationDuration: number;
   cancellationTermsId: string | null;
+  cancellationDeadlineHours: number;
+  modificationDeadlineHours: number;
 };
 
 export type SidebarSettingsInput = SidebarSettings;

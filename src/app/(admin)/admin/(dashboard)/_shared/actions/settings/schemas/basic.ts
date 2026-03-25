@@ -271,6 +271,8 @@ export const reservationSettingsSchema = z.object({
   minReservationDuration: z.number().int().min(15).max(480),
   maxReservationDuration: z.number().int().min(60).max(1440),
   cancellationTermsId: z.string().uuid().nullable(),
+  cancellationDeadlineHours: z.number().int().min(1).max(720),
+  modificationDeadlineHours: z.number().int().min(1).max(720),
 });
 
 export type ReservationSettingsInput = z.infer<
