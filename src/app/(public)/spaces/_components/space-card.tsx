@@ -1,7 +1,11 @@
+"use client";
+
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Users, Ruler } from "lucide-react";
+import { MapPin, Users, Ruler } from "lucide-react";
 import { Badge } from "@/public/components/design-system/badge";
+import { Heading } from "@/public/components/design-system/heading";
 
 interface SpaceCardProps {
   readonly slug: string;
@@ -12,6 +16,11 @@ interface SpaceCardProps {
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
   readonly categoryName?: string | null | undefined;
+  // Hover preview data (optional — overlay only renders when provided)
+  readonly locationName?: string | undefined;
+  readonly lineAddress?: string | undefined;
+  readonly facilities?: readonly string[] | undefined;
+  readonly dailyPrice?: number | null | undefined;
 }
 
 export function SpaceCard({
@@ -23,11 +32,38 @@ export function SpaceCard({
   hourlyPrice,
   mainImageUrl,
   categoryName,
+  locationName,
+  lineAddress,
+  facilities,
+  dailyPrice,
 }: SpaceCardProps) {
+  const hasHoverData = locationName !== undefined && lineAddress !== undefined;
+  const [showOverlay, setShowOverlay] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePointerEnter = (e: React.PointerEvent) => {
+    if (!hasHoverData || e.pointerType !== "mouse") return;
+    timerRef.current = setTimeout(() => setShowOverlay(true), 2000);
+  };
+
+  const handlePointerLeave = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setShowOverlay(false);
+  };
+
   return (
     <Link
       href={`/spaces/${slug}`}
       className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      onFocus={() => {
+        if (hasHoverData) setShowOverlay(true);
+      }}
+      onBlur={() => setShowOverlay(false)}
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -38,6 +74,49 @@ export function SpaceCard({
           sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
+
+        {/* Hover Preview Overlay */}
+        {hasHoverData ? (
+          <div
+            aria-hidden="true"
+            className={`absolute inset-0 flex flex-col justify-end bg-black/70 p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0 ${
+              showOverlay ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          >
+            <div className="space-y-2 text-sm text-white">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="font-medium">{locationName}</span>
+              </div>
+              <p className="text-xs text-white/80">{lineAddress}</p>
+
+              {facilities && facilities.length > 0 ? (
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {facilities.slice(0, 4).map((f) => (
+                    <span
+                      key={f}
+                      className="rounded bg-white/20 px-1.5 py-0.5 text-[11px]"
+                    >
+                      {f}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
+              {hourlyPrice != null ? (
+                <div className="pt-1 text-xs font-medium">
+                  <span>&yen;{hourlyPrice.toLocaleString()}/h</span>
+                  {dailyPrice != null ? (
+                    <span className="ml-2 text-white/80">
+                      &yen;{dailyPrice.toLocaleString()}/day
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {categoryName ? (
           <div className="absolute left-3 top-3">
             <Badge>{categoryName}</Badge>
@@ -47,9 +126,9 @@ export function SpaceCard({
 
       {/* Content */}
       <div className="p-4 md:p-5">
-        <h3 className="font-heading text-base font-medium tracking-tight md:text-lg">
+        <Heading level={3} className="!text-base font-medium md:!text-lg">
           {name}
-        </h3>
+        </Heading>
         {description ? (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {description}
