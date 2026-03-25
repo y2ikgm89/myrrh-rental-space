@@ -1,0 +1,61 @@
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@prisma/client";
+
+const CUSTOMER_LINK_SELECT = {
+  id: true,
+  email: true,
+  lastName: true,
+  firstName: true,
+  userId: true,
+} as const;
+
+export async function ensureCustomerLinked(user: {
+  id: string;
+  email: string;
+  name: string;
+}) {
+  // 1. userId で紐づけ済み確認
+  const linked = await prisma.customer.findUnique({
+    where: { userId: user.id },
+    select: CUSTOMER_LINK_SELECT,
+  });
+  if (linked) return linked;
+
+  // 2. email で既存 Customer 検索 → userId 紐づけ
+  const byEmail = await prisma.customer.findUnique({
+    where: { email: user.email },
+    select: CUSTOMER_LINK_SELECT,
+  });
+  if (byEmail) {
+    return prisma.customer.update({
+      where: { id: byEmail.id },
+      data: { userId: user.id },
+      select: CUSTOMER_LINK_SELECT,
+    });
+  }
+
+  // 3. 新規作成（競合状態対策付き）
+  try {
+    return await prisma.customer.create({
+      data: {
+        email: user.email,
+        lastName: user.name || "未設定",
+        firstName: "",
+        userId: user.id,
+      },
+      select: CUSTOMER_LINK_SELECT,
+    });
+  } catch (e) {
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      const fallback = await prisma.customer.findUnique({
+        where: { userId: user.id },
+        select: CUSTOMER_LINK_SELECT,
+      });
+      if (fallback) return fallback;
+    }
+    throw e;
+  }
+}

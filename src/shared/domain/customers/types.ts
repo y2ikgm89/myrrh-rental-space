@@ -7,6 +7,7 @@ type CustomerRecord = {
   firstName: string;
   lastNameKana: string | null;
   firstNameKana: string | null;
+  companyName: string | null;
   email: string;
   phoneNumber: string | null;
   address: string | null;
@@ -17,6 +18,7 @@ type CustomerRecord = {
   lastReservationAt: Date | null;
   firstReservationAt: Date | null;
   isActive: boolean;
+  userId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -75,7 +77,18 @@ export type CustomerSearchResult = {
   id: string;
   lastName: string;
   firstName: string;
+  companyName: string | null;
   email: string;
   phoneNumber: string | null;
   status: CustomerStatus;
+};
+
+export type CustomerAccountInfo = {
+  provider: string;
+};
+
+export type CustomerWithAccount = CustomerRecord & {
+  user: {
+    accounts: CustomerAccountInfo[];
+  } | null;
 };

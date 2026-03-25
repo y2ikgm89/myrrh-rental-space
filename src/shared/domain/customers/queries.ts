@@ -1,5 +1,6 @@
 import "server-only";
 
+import { CustomerStatus } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import type {
   CustomerData,
@@ -29,6 +30,7 @@ function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {
       { lastName: { contains: filters.search, mode: "insensitive" } },
       { email: { contains: filters.search, mode: "insensitive" } },
       { phoneNumber: { contains: filters.search, mode: "insensitive" } },
+      { companyName: { contains: filters.search, mode: "insensitive" } },
     ];
   }
 
@@ -62,6 +64,7 @@ export async function getCustomers(
         firstName: true,
         lastNameKana: true,
         firstNameKana: true,
+        companyName: true,
         email: true,
         phoneNumber: true,
         address: true,
@@ -72,6 +75,7 @@ export async function getCustomers(
         lastReservationAt: true,
         firstReservationAt: true,
         isActive: true,
+        userId: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -84,6 +88,7 @@ export async function getCustomers(
     firstName: customer.firstName,
     lastNameKana: customer.lastNameKana,
     firstNameKana: customer.firstNameKana,
+    companyName: customer.companyName,
     email: customer.email,
     phoneNumber: customer.phoneNumber,
     address: customer.address,
@@ -94,6 +99,7 @@ export async function getCustomers(
     lastReservationAt: customer.lastReservationAt?.toISOString() ?? null,
     firstReservationAt: customer.firstReservationAt?.toISOString() ?? null,
     isActive: customer.isActive,
+    userId: customer.userId,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
   }));
@@ -140,6 +146,7 @@ export async function getCustomerById(
     firstName: customer.firstName,
     lastNameKana: customer.lastNameKana,
     firstNameKana: customer.firstNameKana,
+    companyName: customer.companyName,
     email: customer.email,
     phoneNumber: customer.phoneNumber,
     address: customer.address,
@@ -150,6 +157,7 @@ export async function getCustomerById(
     lastReservationAt: customer.lastReservationAt?.toISOString() ?? null,
     firstReservationAt: customer.firstReservationAt?.toISOString() ?? null,
     isActive: customer.isActive,
+    userId: customer.userId,
     createdAt: customer.createdAt.toISOString(),
     updatedAt: customer.updatedAt.toISOString(),
     reservations: customer.reservations.map((reservation) => ({
@@ -174,11 +182,11 @@ export async function getCustomerStats(): Promise<CustomerStats> {
 
   return {
     total,
-    new: statusCounts.get("NEW") ?? 0,
-    regular: statusCounts.get("REGULAR") ?? 0,
-    vip: statusCounts.get("VIP") ?? 0,
-    inactive: statusCounts.get("INACTIVE") ?? 0,
-    blacklist: statusCounts.get("BLACKLIST") ?? 0,
+    new: statusCounts.get(CustomerStatus.NEW) ?? 0,
+    regular: statusCounts.get(CustomerStatus.REGULAR) ?? 0,
+    vip: statusCounts.get(CustomerStatus.VIP) ?? 0,
+    inactive: statusCounts.get(CustomerStatus.INACTIVE) ?? 0,
+    blacklist: statusCounts.get(CustomerStatus.BLACKLIST) ?? 0,
   };
 }
 
@@ -198,12 +206,14 @@ export async function searchCustomers(
         { lastName: { contains: searchTerm, mode: "insensitive" } },
         { email: { contains: searchTerm, mode: "insensitive" } },
         { phoneNumber: { contains: searchTerm, mode: "insensitive" } },
+        { companyName: { contains: searchTerm, mode: "insensitive" } },
       ],
     },
     select: {
       id: true,
       lastName: true,
       firstName: true,
+      companyName: true,
       email: true,
       phoneNumber: true,
       status: true,
@@ -213,4 +223,31 @@ export async function searchCustomers(
   });
 
   return customers;
+}
+
+export async function getCustomerByUserId(userId: string) {
+  return prisma.customer.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      lastName: true,
+      firstName: true,
+      lastNameKana: true,
+      firstNameKana: true,
+      companyName: true,
+      email: true,
+      phoneNumber: true,
+      address: true,
+      status: true,
+      notes: true,
+      totalReservations: true,
+      totalSpent: true,
+      lastReservationAt: true,
+      firstReservationAt: true,
+      isActive: true,
+      userId: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 }
