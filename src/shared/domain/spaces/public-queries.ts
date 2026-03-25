@@ -19,9 +19,30 @@ const spaceListSelect = {
   capacity: true,
   area: true,
   hourlyPrice: true,
+  dailyPrice: true,
   mainImageUrl: true,
+  facilities: true,
+  addressDetail: true,
   category: { select: { id: true, name: true } },
+  location: { select: { name: true, address: true } },
 } as const;
+
+type SpaceListRow = Awaited<
+  ReturnType<typeof prisma.space.findMany<{ select: typeof spaceListSelect }>>
+>[number];
+
+function mapSpaceListItem(s: SpaceListRow) {
+  return {
+    ...s,
+    hourlyPrice: Number(s.hourlyPrice),
+    dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
+    area: s.area ? Number(s.area) : null,
+    facilities: Array.isArray(s.facilities)
+      ? s.facilities.filter((f): f is string => typeof f === "string")
+      : [],
+    lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
+  };
+}
 
 /**
  * 公開済み・有効なスペース一覧を取得（カテゴリ付き）
@@ -41,12 +62,8 @@ export async function getPublishedSpaces(categoryId?: string) {
     orderBy: { name: "asc" },
   });
 
-  return toPlainArray(
-    spaces.map((s) => ({
-      ...s,
-      hourlyPrice: Number(s.hourlyPrice),
-    })),
-  );
+  const mapped = spaces.map(mapSpaceListItem);
+  return toPlainArray(mapped);
 }
 
 /**
@@ -81,12 +98,7 @@ export async function getPublishedSpacesPaginated(
   ]);
 
   return {
-    items: toPlainArray(
-      rawItems.map((s) => ({
-        ...s,
-        hourlyPrice: Number(s.hourlyPrice),
-      })),
-    ),
+    items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
     totalPages: Math.ceil(totalCount / perPage),
     currentPage: page,
   };
