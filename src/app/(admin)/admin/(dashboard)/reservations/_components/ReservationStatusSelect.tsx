@@ -14,29 +14,10 @@ import { updateReservationStatus } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
-import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-
-// =============================================================================
-// Status transition rules (UI layer — mirrors domain validateStatusTransition)
-// =============================================================================
-
-const ALLOWED_TRANSITIONS: Record<
-  ReservationStatus,
-  readonly ReservationStatus[]
-> = {
-  [ReservationStatus.PENDING]: [
-    ReservationStatus.CONFIRMED,
-    ReservationStatus.CANCELLED,
-  ],
-  [ReservationStatus.CONFIRMED]: [
-    ReservationStatus.COMPLETED,
-    ReservationStatus.NO_SHOW,
-    ReservationStatus.CANCELLED,
-  ],
-  [ReservationStatus.COMPLETED]: [],
-  [ReservationStatus.CANCELLED]: [],
-  [ReservationStatus.NO_SHOW]: [],
-};
+import {
+  TERMINAL_RESERVATION_STATUSES,
+  RESERVATION_STATUS_TRANSITIONS,
+} from "@/shared/lib/validations/enums/helpers";
 
 const STATUS_LABELS: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: "保留中",
@@ -63,7 +44,8 @@ export function ReservationStatusSelect({
   const [isPending, startTransition] = useTransition();
 
   const isTerminal = TERMINAL_RESERVATION_STATUSES.includes(currentStatus);
-  const allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus];
+  const allowedNextStatuses =
+    RESERVATION_STATUS_TRANSITIONS[currentStatus] ?? [];
 
   const handleStatusChange = (newStatus: ReservationStatus) => {
     if (newStatus === currentStatus) return;

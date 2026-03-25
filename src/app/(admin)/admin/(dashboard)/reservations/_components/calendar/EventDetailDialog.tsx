@@ -28,29 +28,10 @@ import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import type { CalendarEvent } from "@/admin/lib/calendar";
 import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
-import { TERMINAL_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-
-// =============================================================================
-// Status transition rules (mirrors domain validateStatusTransition)
-// =============================================================================
-
-const ALLOWED_TRANSITIONS: Record<
-  ReservationStatus,
-  readonly ReservationStatus[]
-> = {
-  [ReservationStatus.PENDING]: [
-    ReservationStatus.CONFIRMED,
-    ReservationStatus.CANCELLED,
-  ],
-  [ReservationStatus.CONFIRMED]: [
-    ReservationStatus.COMPLETED,
-    ReservationStatus.NO_SHOW,
-    ReservationStatus.CANCELLED,
-  ],
-  [ReservationStatus.COMPLETED]: [],
-  [ReservationStatus.CANCELLED]: [],
-  [ReservationStatus.NO_SHOW]: [],
-};
+import {
+  TERMINAL_RESERVATION_STATUSES,
+  RESERVATION_STATUS_TRANSITIONS,
+} from "@/shared/lib/validations/enums/helpers";
 
 const STATUS_LABELS: Record<ReservationStatus, string> = {
   [ReservationStatus.PENDING]: "保留中",
@@ -187,11 +168,13 @@ export function EventDetailDialog({
                   <SelectItem value={event.status}>
                     {STATUS_LABELS[event.status]}
                   </SelectItem>
-                  {ALLOWED_TRANSITIONS[event.status].map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {STATUS_LABELS[status]}
-                    </SelectItem>
-                  ))}
+                  {(RESERVATION_STATUS_TRANSITIONS[event.status] ?? []).map(
+                    (status) => (
+                      <SelectItem key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>

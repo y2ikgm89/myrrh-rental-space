@@ -29,6 +29,7 @@ import {
   type CalendarChange,
 } from "@/shared/lib/google-calendar";
 import { sendCalendarSyncRejectionEmail } from "@/shared/lib/email/system-emails";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import type { TwoWaySyncResult } from "./types";
 
 // 同期の最小間隔（秒）- 連続呼び出しを防ぐ
@@ -134,7 +135,7 @@ async function processCalendarChange(
 
   // カレンダーで削除された場合
   if (change.deleted) {
-    if (reservation.status !== "CANCELLED") {
+    if (ACTIVE_RESERVATION_STATUSES.includes(reservation.status)) {
       await cancelReservationFromCalendar({
         reservationId: reservation.id,
         existingNotes: reservation.notes,

@@ -92,6 +92,23 @@ export const CREATABLE_RESERVATION_STATUSES: readonly ReservationStatus[] = [
   ReservationStatus.CONFIRMED,
 ];
 
+/**
+ * ステータス遷移ルール（UI層・ドメイン層で共有）
+ */
+export const RESERVATION_STATUS_TRANSITIONS: Readonly<
+  Record<string, readonly ReservationStatus[]>
+> = {
+  [ReservationStatus.PENDING]: [
+    ReservationStatus.CONFIRMED,
+    ReservationStatus.CANCELLED,
+  ],
+  [ReservationStatus.CONFIRMED]: [
+    ReservationStatus.COMPLETED,
+    ReservationStatus.NO_SHOW,
+    ReservationStatus.CANCELLED,
+  ],
+};
+
 // =============================================================================
 // Helper: Get valid value or default
 // =============================================================================

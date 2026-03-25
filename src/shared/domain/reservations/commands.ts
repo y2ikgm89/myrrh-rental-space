@@ -9,6 +9,7 @@ import { checkReservationOverlap } from "@/shared/lib/reservation";
 import {
   getValidDiscountCombinationMode,
   CREATABLE_RESERVATION_STATUSES,
+  RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
@@ -257,30 +258,12 @@ function buildPayload(params: {
   };
 }
 
-const ALLOWED_TRANSITIONS: ReadonlyMap<
-  ReservationStatus,
-  readonly ReservationStatus[]
-> = new Map([
-  [
-    ReservationStatus.PENDING,
-    [ReservationStatus.CONFIRMED, ReservationStatus.CANCELLED],
-  ],
-  [
-    ReservationStatus.CONFIRMED,
-    [
-      ReservationStatus.COMPLETED,
-      ReservationStatus.NO_SHOW,
-      ReservationStatus.CANCELLED,
-    ],
-  ],
-]);
-
 export function validateStatusTransition(
   from: ReservationStatus,
   to: ReservationStatus,
 ): void {
   if (from === to) return;
-  const allowed = ALLOWED_TRANSITIONS.get(from);
+  const allowed = RESERVATION_STATUS_TRANSITIONS[from];
   if (!allowed || !allowed.includes(to)) {
     throw new DomainError("このステータスからは変更できません", "VALIDATION");
   }

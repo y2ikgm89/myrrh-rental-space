@@ -115,6 +115,8 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
             <SelectItem value="ALL">すべて</SelectItem>
             <SelectItem value="PENDING">保留中</SelectItem>
             <SelectItem value="CONFIRMED">確認済み</SelectItem>
+            <SelectItem value="COMPLETED">完了</SelectItem>
+            <SelectItem value="NO_SHOW">無断キャンセル</SelectItem>
             <SelectItem value="CANCELLED">キャンセル</SelectItem>
           </SelectContent>
         </Select>

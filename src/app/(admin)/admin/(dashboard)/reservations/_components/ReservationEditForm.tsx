@@ -32,6 +32,7 @@ import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/utils";
 import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { RESERVATION_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 
 // =============================================================================
@@ -74,29 +75,35 @@ function toLocalTimeString(date: string | Date): string {
 // Constants
 // =============================================================================
 
-const RESERVATION_STATUS_OPTIONS = [
-  { value: ReservationStatus.PENDING, label: "保留", description: "確認待ち" },
-  {
-    value: ReservationStatus.CONFIRMED,
+const ALL_STATUS_OPTIONS: Record<
+  string,
+  { label: string; description: string }
+> = {
+  [ReservationStatus.PENDING]: { label: "保留", description: "確認待ち" },
+  [ReservationStatus.CONFIRMED]: {
     label: "確定",
     description: "予約が確定済み",
   },
-  {
-    value: ReservationStatus.COMPLETED,
-    label: "完了",
-    description: "利用完了",
-  },
-  {
-    value: ReservationStatus.CANCELLED,
+  [ReservationStatus.COMPLETED]: { label: "完了", description: "利用完了" },
+  [ReservationStatus.CANCELLED]: {
     label: "キャンセル",
     description: "予約をキャンセル",
   },
-  {
-    value: ReservationStatus.NO_SHOW,
+  [ReservationStatus.NO_SHOW]: {
     label: "無断キャンセル",
     description: "連絡なしキャンセル",
   },
-];
+};
+
+function getStatusOptionsForCurrent(currentStatus: ReservationStatus) {
+  const transitions = RESERVATION_STATUS_TRANSITIONS[currentStatus] ?? [];
+  const allowed = [currentStatus, ...transitions];
+  return allowed.flatMap((value) => {
+    const option = ALL_STATUS_OPTIONS[value];
+    if (!option) return [];
+    return [{ value, label: option.label, description: option.description }];
+  });
+}
 
 // 時間オプション（9:00-21:00、1時間刻み）
 const TIME_OPTIONS = Array.from({ length: 13 }, (_, i) => {
@@ -390,7 +397,7 @@ export function ReservationEditForm({
               <div className="space-y-2">
                 <Label>予約ステータス</Label>
                 <SelectionBox
-                  options={RESERVATION_STATUS_OPTIONS}
+                  options={getStatusOptionsForCurrent(reservation.status)}
                   value={status ?? ReservationStatus.CONFIRMED}
                   onChange={(value) => {
                     if (isValidReservationStatus(value))
