@@ -115,8 +115,14 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Cache-Control（セキュリティヘッダーは proxy.ts に一元化）
+  // Cache-Control + セキュリティヘッダー
   async headers() {
+    const securityHeaders = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    ];
+
     return [
       // 管理画面（キャッシュ禁止）
       {
@@ -126,6 +132,7 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "private, no-cache, no-store, must-revalidate",
           },
+          ...securityHeaders,
         ],
       },
       // 予約ページ（キャッシュ禁止）
@@ -136,6 +143,7 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "private, no-cache, no-store, must-revalidate",
           },
+          ...securityHeaders,
         ],
       },
       // API Routes（キャッシュ禁止）
@@ -146,6 +154,7 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "private, no-cache",
           },
+          ...securityHeaders,
         ],
       },
       // 公開ページ（積極的キャッシュ - Cloudflare CDN連携）
@@ -155,6 +164,11 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value: "public, s-maxage=3600, stale-while-revalidate=3600",
+          },
+          ...securityHeaders,
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
         ],
       },
