@@ -32,8 +32,18 @@ export async function getCustomerReservationDetail(
       couponId: true,
       couponDiscountAmount: true,
       durationDiscountAmount: true,
+      spaceDiscountAmount: true,
       basePrice: true,
       spaceId: true,
+      space: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          locationId: true,
+          capacity: true,
+        },
+      },
     },
   });
 }

@@ -219,3 +219,24 @@ export async function getActiveCategories() {
 
   return toPlainArray(categories);
 }
+
+/**
+ * 指定ロケーションの公開済み・有効スペース一覧（編集フォーム用）
+ */
+export async function getActiveSpacesByLocationId(locationId: string) {
+  const spaces = await prisma.space.findMany({
+    where: { locationId, isPublished: true, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+      hourlyPrice: true,
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return spaces.map((s) => ({
+    ...s,
+    hourlyPrice: Number(s.hourlyPrice),
+  }));
+}

@@ -12,6 +12,7 @@ import { getCustomerReservationDetail } from "@/shared/domain/reservations/custo
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { Heading } from "@/public/components/design-system/heading";
+import { Button } from "@/public/components/design-system/button";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
 
@@ -50,11 +51,29 @@ export default async function ReservationDetailPage({
     notFound();
   }
 
+  const isCancellableStatus = CANCELLABLE_STATUSES.has(reservation.status);
+
   const canCancel =
-    CANCELLABLE_STATUSES.has(reservation.status) &&
+    isCancellableStatus &&
     isWithinDeadline(
       new Date(reservation.startTime),
       deadlineSettings.cancellationDeadlineHours,
+    );
+
+  const hasManualDiscount =
+    (reservation.couponDiscountAmount != null &&
+      Number(reservation.couponDiscountAmount) > 0) ||
+    (reservation.durationDiscountAmount != null &&
+      Number(reservation.durationDiscountAmount) > 0) ||
+    (reservation.spaceDiscountAmount != null &&
+      Number(reservation.spaceDiscountAmount) > 0);
+
+  const canEdit =
+    isCancellableStatus &&
+    !hasManualDiscount &&
+    isWithinDeadline(
+      new Date(reservation.startTime),
+      deadlineSettings.modificationDeadlineHours,
     );
 
   return (
@@ -65,9 +84,17 @@ export default async function ReservationDetailPage({
 
       <ReservationDetail reservation={reservation} />
 
-      {canCancel && (
-        <div className="mt-6">
-          <CancelButton reservationId={reservation.id} />
+      {(canEdit || canCancel) && (
+        <div className="mt-6 flex items-center gap-3">
+          {canEdit && (
+            <Button
+              size="sm"
+              href={`/mypage/reservations/${reservation.id}/edit`}
+            >
+              予約を変更する
+            </Button>
+          )}
+          {canCancel && <CancelButton reservationId={reservation.id} />}
         </div>
       )}
     </div>

@@ -9,6 +9,8 @@ interface Space {
   readonly id: string;
   readonly name: string;
   readonly slug: string;
+  readonly locationId: string;
+  readonly capacity: number;
 }
 
 interface ReservationDetailData {
@@ -23,6 +25,7 @@ interface ReservationDetailData {
   readonly couponId: string | null;
   readonly couponDiscountAmount: number | null;
   readonly durationDiscountAmount: number | null;
+  readonly spaceDiscountAmount: number | null;
   readonly spaceId: string;
   readonly space: Space;
 }
