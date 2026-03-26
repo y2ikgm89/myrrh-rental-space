@@ -12,7 +12,7 @@ import type {
   CustomerPagination,
   CustomerSearchResult,
   CustomerStats,
-  CustomerWithReservations,
+  CustomerWithReservationsAndAccount,
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
 import { requireAdminPermission } from "./_helpers";
@@ -29,7 +29,7 @@ export async function getCustomers(
 
 export async function getCustomerById(
   id: string,
-): Promise<CustomerWithReservations | null> {
+): Promise<CustomerWithReservationsAndAccount | null> {
   await requireAdminPermission("customer", "read");
 
   const validated = idSchema.safeParse(id);

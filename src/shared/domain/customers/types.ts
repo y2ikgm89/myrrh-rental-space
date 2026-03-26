@@ -43,6 +43,15 @@ export type CustomerWithReservations = Serialized<
   }
 >;
 
+export type CustomerWithReservationsAndAccount = Serialized<
+  CustomerRecord & {
+    reservations: CustomerReservationRecord[];
+    user: {
+      accounts: CustomerAccountInfo[];
+    } | null;
+  }
+>;
+
 export type GetCustomersResult = {
   customers: CustomerData[];
   total: number;

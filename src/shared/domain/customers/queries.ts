@@ -8,7 +8,7 @@ import type {
   CustomerPagination,
   CustomerSearchResult,
   CustomerStats,
-  CustomerWithReservations,
+  CustomerWithReservationsAndAccount,
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
 import type { CustomerWhereInput } from "@/shared/types/prisma";
@@ -115,7 +115,7 @@ export async function getCustomers(
 
 export async function getCustomerById(
   id: string,
-): Promise<CustomerWithReservations | null> {
+): Promise<CustomerWithReservationsAndAccount | null> {
   const customer = await prisma.customer.findUnique({
     where: { id },
     include: {
@@ -132,6 +132,13 @@ export async function getCustomerById(
           startTime: "desc",
         },
         take: 20,
+      },
+      user: {
+        select: {
+          accounts: {
+            select: { providerId: true },
+          },
+        },
       },
     },
   });
@@ -168,6 +175,13 @@ export async function getCustomerById(
       totalPrice: reservation.totalPrice,
       space: reservation.space,
     })),
+    user: customer.user
+      ? {
+          accounts: customer.user.accounts.map((account) => ({
+            provider: account.providerId,
+          })),
+        }
+      : null,
   };
 }
 

@@ -42,14 +42,22 @@ import {
   updateCustomerNotes,
   toggleCustomerActive,
 } from "@/admin/actions/customer";
-import type { CustomerWithReservations } from "@/shared/domain/customers/types";
+import type { CustomerWithReservationsAndAccount } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { CustomerStatus } from "@/shared/db/enums";
 import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
 
 type CustomerDetailProps = {
-  customer: CustomerWithReservations;
+  customer: CustomerWithReservationsAndAccount;
 };
+
+const PROVIDER_LABELS: Record<string, string> = {
+  google: "Google",
+  line: "LINE",
+  credential: "メール/パスワード",
+};
+
+const ALL_PROVIDERS = ["google", "line"] as const;
 
 export function CustomerDetail({ customer }: CustomerDetailProps) {
   const router = useRouter();
@@ -102,6 +110,12 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               label="お名前"
               value={`${customer.lastName} ${customer.firstName}`}
             />
+            {customer.companyName ? (
+              <DetailField
+                label="会社名・団体名"
+                value={customer.companyName}
+              />
+            ) : null}
             <DetailField
               label="メールアドレス"
               value={
@@ -145,6 +159,35 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               }
             />
           </div>
+        </DetailSection>
+
+        <DetailSection title="アカウント連携">
+          {customer.user === null ? (
+            <p className="text-sm text-muted-foreground">未連携</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {ALL_PROVIDERS.map((provider) => {
+                const linked = customer.user?.accounts.some(
+                  (account) => account.provider === provider,
+                );
+                return (
+                  <DetailField
+                    key={provider}
+                    label={PROVIDER_LABELS[provider] ?? provider}
+                    value={
+                      <span
+                        className={
+                          linked ? "text-foreground" : "text-muted-foreground"
+                        }
+                      >
+                        {linked ? "連携済み" : "未連携"}
+                      </span>
+                    }
+                  />
+                );
+              })}
+            </div>
+          )}
         </DetailSection>
 
         {/* 予約履歴 */}
