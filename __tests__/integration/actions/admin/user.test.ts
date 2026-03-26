@@ -12,13 +12,20 @@ import { z } from "zod";
 import { Role } from "@/shared/db/enums";
 
 // user.ts 内で定義されているスキーマを再現
-type RoleValue = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER" | "USER";
+type RoleValue =
+  | "SUPER_ADMIN"
+  | "ADMIN"
+  | "EDITOR"
+  | "VIEWER"
+  | "USER"
+  | "CUSTOMER";
 const ROLE_VALUES: readonly RoleValue[] = [
   "SUPER_ADMIN",
   "ADMIN",
   "EDITOR",
   "VIEWER",
   "USER",
+  "CUSTOMER",
 ];
 
 const createUserSchema = z.object({

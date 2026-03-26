@@ -13,8 +13,8 @@ coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
 
-# カバレッジ閾値（CI側で管理、ローカルでは無効化）
-# coverageThreshold = { lines = 60, functions = 45 }
+# カバレッジ閾値
+coverageThreshold = { lines = 60, functions = 45 }
 
 # カバレッジ除外パターン
 coverageSkipTestFiles = true
