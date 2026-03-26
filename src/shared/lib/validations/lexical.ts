@@ -27,7 +27,7 @@ export function isLexicalComposerReadyEditorStateJson(val: string): boolean {
     if (typeof parsed !== "object" || parsed === null || !("root" in parsed)) {
       return false;
     }
-    const root = (parsed as { root: unknown }).root;
+    const root: unknown = parsed.root;
     if (
       typeof root !== "object" ||
       root === null ||
@@ -36,8 +36,7 @@ export function isLexicalComposerReadyEditorStateJson(val: string): boolean {
     ) {
       return false;
     }
-    const children = (root as { children: unknown }).children;
-    return Array.isArray(children) && children.length > 0;
+    return Array.isArray(root.children) && root.children.length > 0;
   } catch {
     return false;
   }
@@ -46,7 +45,8 @@ export function isLexicalComposerReadyEditorStateJson(val: string): boolean {
 /**
  * Lexical EditorState JSON 文字列のバリデーション（保存・Server Action 用）
  */
-export const lexicalJsonSchema = z.string().refine(
-  (val) => isLexicalComposerReadyEditorStateJson(val),
-  { error: "有効なLexical EditorState JSONではありません" },
-);
+export const lexicalJsonSchema = z
+  .string()
+  .refine((val) => isLexicalComposerReadyEditorStateJson(val), {
+    error: "有効なLexical EditorState JSONではありません",
+  });
