@@ -80,7 +80,7 @@ const someAuthenticatedAction = async () => {
 ## 権限階層
 
 ```
-SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER
+SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER / CUSTOMER
 ```
 
 | ロール        | 権限                                                                        |
@@ -90,6 +90,7 @@ SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER
 | `EDITOR`      | 割り当てられたページのみ編集可能（`userPageAssignment` でリソース単位制御） |
 | `VIEWER`      | 閲覧のみ（編集不可）                                                        |
 | `USER`        | 公開ユーザー（管理画面アクセス不可）                                        |
+| `CUSTOMER`    | ソーシャルログイン顧客（マイページのみアクセス可）                          |
 
 ### リソース別アクション一覧
 
@@ -282,13 +283,14 @@ export default async function Page() {
 
 ### セッション取得関数の使い分け
 
-| 関数                           | キャッシュ     | 未認証時               | 用途                                            |
-| ------------------------------ | -------------- | ---------------------- | ----------------------------------------------- |
-| `verifySession()`              | `cache()` あり | リダイレクト           | Server Components（認証必須）                   |
-| `verifyAdminSession()`         | `cache()` あり | リダイレクト           | Server Components（SUPER_ADMIN 必須）           |
-| `getCurrentUser()`             | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）               |
-| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（書き込み系 — **標準パターン**） |
-| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）  |
+| 関数                           | キャッシュ     | 未認証時                | 用途                                            |
+| ------------------------------ | -------------- | ----------------------- | ----------------------------------------------- |
+| `verifySession()`              | `cache()` あり | `/admin/login` redirect | Server Components（管理認証必須）               |
+| `verifyAdminSession()`         | `cache()` あり | リダイレクト            | Server Components（SUPER_ADMIN 必須）           |
+| `verifyCustomerSession()`      | なし           | `/login` redirect       | マイページ（CUSTOMER 認証、管理者→`/admin`）    |
+| `getCurrentUser()`             | `cache()` あり | `undefined` を返す      | Server Components（オプショナル）               |
+| `executeAdminMutationResult()` | なし           | `MutationError` を返す  | Server Actions（書き込み系 — **標準パターン**） |
+| `checkPermission()`            | なし           | `ActionFailure` を返す  | API Route（`request.headers` を第3引数に渡す）  |
 
 ---
 
@@ -395,8 +397,72 @@ function logAction(
 | `@/admin/lib/audit.ts`        | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |
 | `@/admin/lib/role-guards.ts`  | ロール判定ヘルパー（`isEditorRole` 等）                                                                  |
 
+## 公開顧客認証（ソーシャルログイン）
+
+### verifyCustomerSession（マイページ用）
+
+未認証→`/login`、管理者ロール→`/admin` にリダイレクト。`verifySession`（→`/admin/login`）とは分離:
+
+```typescript
+import { verifyCustomerSession } from "@/shared/lib/auth";
+
+export default async function MypageLayout({ children }) {
+  const { user } = await verifyCustomerSession();
+  const customer = await ensureCustomerLinked(user);
+  // ...
+}
+```
+
+### ensureCustomerLinked（User ↔ Customer 遅延紐づけ）
+
+`databaseHooks.user.create.after` は FK 制約違反を起こすため使用禁止（[GitHub Issue #7260](https://github.com/better-auth/better-auth/issues/7260)）。マイページ layout で `ensureCustomerLinked(user)` を呼び、アプリケーション層で紐づけ:
+
+- 検索順: `userId` → `email` → 新規作成（P2002 競合対策付き）
+- `Customer.userId String? @unique @db.Uuid` — 一意制約で重複防止
+- ソーシャルログイン初回は `lastName: user.name || "未設定"` で仮登録
+
+### accountLinking
+
+`trustedProviders: ["google", "line"]` で同一メールの自動統合。管理者メールで顧客がログインした場合、ADMIN User に統合され `/admin` にリダイレクト（`ensureCustomerLinked` は CUSTOMER ロール以外では呼ばれない）。
+
+### マイページ Server Actions の認証パターン
+
+```typescript
+"use server";
+import { getSession } from "@/shared/lib/auth";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+
+export async function myAction(reservationId: string) {
+  const session = await getSession();
+  if (!session) return { error: "認証が必要です" };
+  const customer = await getCustomerByUserId(session.user.id);
+  if (!customer) return { error: "顧客情報が見つかりません" };
+  // ドメインコマンドに customerId を渡して所有者チェック
+}
+```
+
+### 公開ページ Settings クエリの分離
+
+`admin-queries.ts` を公開ページから import しない。公開ページが必要なフィールドのみ取得する `public-queries.ts` を作成:
+
+```typescript
+// src/shared/domain/settings/public-queries.ts
+export async function getReservationDeadlineSettings() {
+  return prisma.settings.findFirstOrThrow({
+    select: {
+      cancellationDeadlineHours: true,
+      modificationDeadlineHours: true,
+    },
+  });
+}
+```
+
+---
+
 ## Gotchas
 
+- **`databaseHooks.user.create.after` はソーシャルログイン時に FK 制約違反** — トランザクション内で実行されるため外部テーブルへの FK 参照が失敗する（Issue #7260, #4614）。`ensureCustomerLinked` のようなアプリ層での遅延紐づけを使用
+- **`prisma migrate dev` は非対話環境でブロック** — `prisma migrate diff --script` + `prisma db execute` + `prisma migrate resolve --applied` で代替
 - **セッション作成で `invalid input syntax for type uuid` エラー** — `advanced.database.generateId: "uuid"` が未設定。Better Auth のデフォルト ID 生成はランダム文字列で、DB の `@db.Uuid` 制約に違反する
 - **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
