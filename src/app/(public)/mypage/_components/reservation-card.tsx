@@ -2,25 +2,19 @@
 
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
-import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface DeadlineSettings {
-  readonly cancellationDeadlineHours: number;
-  readonly modificationDeadlineHours: number;
-}
-
 interface Reservation {
   readonly id: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
+  readonly startTime: string;
+  readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
   readonly notes: string | null;
-  readonly createdAt: Date;
+  readonly createdAt: string;
   readonly space: {
     readonly id: string;
     readonly name: string;
@@ -30,7 +24,9 @@ interface Reservation {
 
 interface ReservationCardProps {
   readonly reservation: Reservation;
-  readonly deadlineSettings: DeadlineSettings;
+  readonly canModify: boolean;
+  readonly canCancel: boolean;
+  readonly showPastDeadlineMessage: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +63,7 @@ function getStatusVariant(status: string): BadgeVariant {
 // Date formatting
 // ---------------------------------------------------------------------------
 
-function formatDateTime(date: Date): string {
+function formatDateTime(date: string): string {
   const d = new Date(date);
   const year = d.getFullYear();
   const month = d.getMonth() + 1;
@@ -77,7 +73,7 @@ function formatDateTime(date: Date): string {
   return `${year}年${month}月${day}日 ${hours}:${minutes}`;
 }
 
-function formatTimeOnly(date: Date): string {
+function formatTimeOnly(date: string): string {
   const d = new Date(date);
   const hours = String(d.getHours()).padStart(2, "0");
   const minutes = String(d.getMinutes()).padStart(2, "0");
@@ -88,31 +84,13 @@ function formatTimeOnly(date: Date): string {
 // Component
 // ---------------------------------------------------------------------------
 
-const MODIFIABLE_STATUSES = new Set(["PENDING", "CONFIRMED"]);
-
 export function ReservationCard({
   reservation,
-  deadlineSettings,
+  canModify,
+  canCancel,
+  showPastDeadlineMessage,
 }: ReservationCardProps) {
   const { status, space, totalPrice, startTime, endTime, id } = reservation;
-  const isModifiable = MODIFIABLE_STATUSES.has(status);
-  const now = new Date();
-
-  const canModify =
-    isModifiable &&
-    isWithinDeadline(
-      new Date(startTime),
-      deadlineSettings.modificationDeadlineHours,
-      now,
-    );
-  const canCancel =
-    isModifiable &&
-    isWithinDeadline(
-      new Date(startTime),
-      deadlineSettings.cancellationDeadlineHours,
-      now,
-    );
-  const showPastDeadlineMessage = isModifiable && !canModify && !canCancel;
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-lg">

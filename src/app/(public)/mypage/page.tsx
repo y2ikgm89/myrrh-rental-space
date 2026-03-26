@@ -10,6 +10,8 @@ import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservations } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
+import { buildReservationListItems } from "./_lib/build-reservation-list-items";
+import { toPlainArray } from "@/shared/lib/serialize";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { ReservationList } from "./_components/reservation-list";
@@ -26,6 +28,19 @@ export default async function MypagePage(): Promise<ReactElement> {
     getCustomerReservations(customer.id),
     getReservationDeadlineSettings(),
   ]);
+
+  const rawItems = buildReservationListItems(reservations, deadlineSettings);
+  const reservationListItems = toPlainArray(
+    rawItems.map((item) => ({
+      ...item,
+      reservation: {
+        ...item.reservation,
+        startTime: item.reservation.startTime.toISOString(),
+        endTime: item.reservation.endTime.toISOString(),
+        createdAt: item.reservation.createdAt.toISOString(),
+      },
+    })),
+  );
 
   const isNameIncomplete =
     customer.lastName === "未設定" || customer.firstName === "";
@@ -44,10 +59,7 @@ export default async function MypagePage(): Promise<ReactElement> {
           から姓名を入力してください。
         </div>
       )}
-      <ReservationList
-        reservations={reservations}
-        deadlineSettings={deadlineSettings}
-      />
+      <ReservationList items={reservationListItems} />
     </div>
   );
 }

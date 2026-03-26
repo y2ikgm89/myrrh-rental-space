@@ -13,12 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/public/components/design-system/dialog";
-import {
-  linkSocial,
-  unlinkAccount,
-  deleteUser,
-  signOut,
-} from "@/shared/lib/auth-client";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
 
 // ---------------------------------------------------------------------------
@@ -84,15 +80,13 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
     startTransition(async () => {
       try {
         const result = await deleteAccountAction();
-        if ("error" in result) {
+        if (isMutationError(result)) {
           setError(result.error);
           setIsDeleting(false);
           return;
         }
         // Server-side user deleted, now sign out client
         await signOut({ fetchOptions: { onSuccess: () => {} } });
-        // Use deleteUser client-side to clear session if needed
-        void deleteUser;
         window.location.href = "/login";
       } catch {
         setError("アカウントの削除に失敗しました");

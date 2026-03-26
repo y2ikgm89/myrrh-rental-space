@@ -1,11 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
+import { usePublicForm } from "@/public/hooks/use-public-form";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import {
+  customerReservationEditSchema,
+  type CustomerReservationEditInput,
+} from "@/shared/lib/validations/customer-reservation";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
 
 // ---------------------------------------------------------------------------
@@ -28,6 +33,7 @@ interface InitialValues {
 
 interface EditReservationFormProps {
   readonly reservationId: string;
+  readonly numberOfGuests: number;
   readonly spaces: readonly SpaceOption[];
   readonly initialValues: InitialValues;
 }
@@ -51,88 +57,98 @@ function generateTimeOptions(): readonly { value: string; label: string }[] {
 const TIME_OPTIONS = generateTimeOptions();
 
 // ---------------------------------------------------------------------------
-// Form state
-// ---------------------------------------------------------------------------
-
-type FormState = { success: true } | { error: string } | null;
-
-async function formAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  return updateReservationAction(formData);
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function EditReservationForm({
   reservationId,
+  numberOfGuests,
   spaces,
   initialValues,
 }: EditReservationFormProps) {
   const router = useRouter();
-  const [state, dispatch, isPending] = useActionState(formAction, null);
-
-  useEffect(() => {
-    if (state != null && "success" in state && state.success) {
-      router.push(`/mypage/reservations/${reservationId}`);
-    }
-  }, [state, router, reservationId]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const spaceOptions = spaces.map((s) => ({
     value: s.id,
     label: `${s.name}（定員${String(s.capacity)}名・¥${s.hourlyPrice.toLocaleString()}/h）`,
   }));
 
-  const error = state != null && "error" in state ? state.error : null;
+  const { form, isPending, onSubmit } =
+    usePublicForm<CustomerReservationEditInput>(
+      customerReservationEditSchema,
+      async (data) => {
+        setErrorMessage(null);
+        const result = await updateReservationAction(data);
+        if (isMutationError(result)) {
+          setErrorMessage(result.error);
+        } else {
+          router.push(`/mypage/reservations/${reservationId}`);
+        }
+        return result;
+      },
+      {
+        defaultValues: {
+          reservationId,
+          spaceId: initialValues.spaceId,
+          date: initialValues.date,
+          startTime: initialValues.startTime,
+          endTime: initialValues.endTime,
+          numberOfGuests,
+        },
+      },
+    );
 
   return (
-    <form action={dispatch} className="space-y-6">
-      <input type="hidden" name="reservationId" value={reservationId} />
-      <input type="hidden" name="numberOfGuests" value="1" />
-
-      {error != null && (
+    <form onSubmit={onSubmit} className="space-y-6">
+      {errorMessage != null && (
         <div
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
-          {error}
+          {errorMessage}
         </div>
       )}
 
       <Select
         label="スペース"
-        name="spaceId"
         options={spaceOptions}
-        defaultValue={initialValues.spaceId}
         required
+        {...form.register("spaceId")}
+        {...(form.formState.errors.spaceId?.message && {
+          error: form.formState.errors.spaceId.message,
+        })}
       />
 
       <Input
         label="利用日"
-        name="date"
         type="date"
-        defaultValue={initialValues.date}
         required
+        {...form.register("date")}
+        {...(form.formState.errors.date?.message && {
+          error: form.formState.errors.date.message,
+        })}
       />
 
       <div className="grid grid-cols-2 gap-4">
         <Select
           label="開始時間"
-          name="startTime"
           options={TIME_OPTIONS}
-          defaultValue={initialValues.startTime}
           required
+          {...form.register("startTime")}
+          {...(form.formState.errors.startTime?.message && {
+            error: form.formState.errors.startTime.message,
+          })}
         />
 
         <Select
           label="終了時間"
-          name="endTime"
           options={TIME_OPTIONS}
-          defaultValue={initialValues.endTime}
           required
+          {...form.register("endTime")}
+          {...(form.formState.errors.endTime?.message && {
+            error: form.formState.errors.endTime.message,
+          })}
         />
       </div>
 

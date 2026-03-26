@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/public/components/design-system/dialog";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { cancelReservationAction } from "../../../_shared/actions/reservation";
 
 interface CancelButtonProps {
@@ -27,7 +28,7 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
     setError(null);
     startTransition(async () => {
       const result = await cancelReservationAction(reservationId);
-      if ("error" in result) {
+      if (isMutationError(result)) {
         setError(result.error);
         return;
       }

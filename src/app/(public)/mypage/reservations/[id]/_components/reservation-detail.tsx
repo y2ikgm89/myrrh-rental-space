@@ -15,13 +15,13 @@ interface Space {
 
 interface ReservationDetailData {
   readonly id: string;
-  readonly startTime: Date;
-  readonly endTime: Date;
+  readonly startTime: string;
+  readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
   readonly basePrice: number | null;
   readonly notes: string | null;
-  readonly createdAt: Date;
+  readonly createdAt: string;
   readonly couponId: string | null;
   readonly couponDiscountAmount: number | null;
   readonly durationDiscountAmount: number | null;
@@ -68,7 +68,7 @@ function getStatusVariant(status: string): BadgeVariant {
 // Date formatting
 // ---------------------------------------------------------------------------
 
-function formatDate(date: Date): string {
+function formatDate(date: string): string {
   const d = new Date(date);
   const year = d.getFullYear();
   const month = d.getMonth() + 1;
@@ -78,14 +78,14 @@ function formatDate(date: Date): string {
   return `${year}年${month}月${day}日（${weekday ?? ""}）`;
 }
 
-function formatTime(date: Date): string {
+function formatTime(date: string): string {
   const d = new Date(date);
   const hours = String(d.getHours()).padStart(2, "0");
   const minutes = String(d.getMinutes()).padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 
-function formatCreatedAt(date: Date): string {
+function formatCreatedAt(date: string): string {
   const d = new Date(date);
   const year = d.getFullYear();
   const month = d.getMonth() + 1;

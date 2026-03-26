@@ -1,8 +1,14 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
+import { usePublicForm } from "@/public/hooks/use-public-form";
+import { isMutationError } from "@/shared/lib/mutation-result";
+import {
+  customerProfileSchema,
+  type CustomerProfileInput,
+} from "@/shared/lib/validations/customer-profile";
 import { updateProfileAction } from "../../_shared/actions/profile";
 
 // ---------------------------------------------------------------------------
@@ -19,45 +25,43 @@ interface ProfileFormProps {
 }
 
 // ---------------------------------------------------------------------------
-// Form state
-// ---------------------------------------------------------------------------
-
-type FormState = { success: true } | { error: string } | null;
-
-async function formAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  return updateProfileAction(formData);
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function ProfileForm({ defaultValues }: ProfileFormProps) {
-  const [state, dispatch, isPending] = useActionState(formAction, null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const showSuccess = state != null && "success" in state && state.success;
-  const error = state != null && "error" in state ? state.error : null;
-
-  useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => {
-        // Clear success message after 3 seconds — state resets on next submission
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccess]);
+  const { form, isPending, onSubmit } = usePublicForm<CustomerProfileInput>(
+    customerProfileSchema,
+    async (data) => {
+      setErrorMessage(null);
+      setShowSuccess(false);
+      const result = await updateProfileAction(data);
+      if (isMutationError(result)) {
+        setErrorMessage(result.error);
+      } else {
+        setShowSuccess(true);
+      }
+      return result;
+    },
+    {
+      defaultValues: {
+        lastName: defaultValues.lastName,
+        firstName: defaultValues.firstName,
+        phoneNumber: defaultValues.phoneNumber,
+      },
+    },
+  );
 
   return (
-    <form action={dispatch} className="max-w-md space-y-4">
-      {error != null && (
+    <form onSubmit={onSubmit} className="max-w-md space-y-4">
+      {errorMessage != null && (
         <div
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
-          {error}
+          {errorMessage}
         </div>
       )}
 
@@ -73,23 +77,26 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="姓"
-          name="lastName"
           required
-          defaultValue={defaultValues.lastName}
           autoComplete="family-name"
+          {...form.register("lastName")}
+          {...(form.formState.errors.lastName?.message && {
+            error: form.formState.errors.lastName.message,
+          })}
         />
         <Input
           label="名"
-          name="firstName"
           required
-          defaultValue={defaultValues.firstName}
           autoComplete="given-name"
+          {...form.register("firstName")}
+          {...(form.formState.errors.firstName?.message && {
+            error: form.formState.errors.firstName.message,
+          })}
         />
       </div>
 
       <Input
         label="メールアドレス"
-        name="email"
         type="email"
         value={defaultValues.email}
         disabled
@@ -100,11 +107,13 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
       </p>
 
       <Input
-        label="電話番号"
-        name="phoneNumber"
+        label="電話番号（任意）"
         type="tel"
-        defaultValue={defaultValues.phoneNumber}
         autoComplete="tel"
+        {...form.register("phoneNumber")}
+        {...(form.formState.errors.phoneNumber?.message && {
+          error: form.formState.errors.phoneNumber.message,
+        })}
       />
 
       <Button type="submit" disabled={isPending}>

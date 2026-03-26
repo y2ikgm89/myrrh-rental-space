@@ -7,18 +7,32 @@ import {
   updateCustomerReservation,
 } from "@/shared/domain/reservations/customer-commands";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
-import { customerReservationEditSchema } from "@/shared/lib/validations/customer-reservation";
+import {
+  customerReservationEditSchema,
+  type CustomerReservationEditInput,
+} from "@/shared/lib/validations/customer-reservation";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import {
+  createMutationError,
+  type MutationResult,
+} from "@/shared/lib/mutation-result";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
+
+function invalidateReservationCache(): void {
+  updateTag(CACHE_TAGS.RESERVATIONS);
+  updateTag(getCacheTag.reservations.list());
+  updateTag(getCacheTag.reservations.calendar());
+}
 
 export async function cancelReservationAction(
   reservationId: string,
-): Promise<{ success: true } | { error: string }> {
+): Promise<MutationResult<null>> {
   const session = await getSession();
-  if (!session) return { error: "認証が必要です" };
+  if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);
-  if (!customer) return { error: "顧客情報が見つかりません" };
+  if (!customer) return createMutationError("顧客情報が見つかりません");
 
   const settings = await getReservationDeadlineSettings();
   const result = await cancelCustomerReservation(
@@ -27,34 +41,23 @@ export async function cancelReservationAction(
     settings.cancellationDeadlineHours,
   );
 
-  if (!result.success) return { error: result.error };
+  if (!result.success) return createMutationError(result.error);
 
-  updateTag(CACHE_TAGS.RESERVATIONS);
-  updateTag(getCacheTag.reservations.list());
-  updateTag(getCacheTag.reservations.calendar());
-  return { success: true };
+  invalidateReservationCache();
+  return null;
 }
 
 export async function updateReservationAction(
-  formData: FormData,
-): Promise<{ success: true } | { error: string }> {
+  input: CustomerReservationEditInput,
+): Promise<MutationResult<null>> {
   const session = await getSession();
-  if (!session) return { error: "認証が必要です" };
+  if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);
-  if (!customer) return { error: "顧客情報が見つかりません" };
+  if (!customer) return createMutationError("顧客情報が見つかりません");
 
-  const raw = {
-    reservationId: formData.get("reservationId"),
-    spaceId: formData.get("spaceId"),
-    date: formData.get("date"),
-    startTime: formData.get("startTime"),
-    endTime: formData.get("endTime"),
-    numberOfGuests: Number(formData.get("numberOfGuests")),
-  };
-
-  const parsed = customerReservationEditSchema.safeParse(raw);
-  if (!parsed.success) return { error: "入力内容を確認してください" };
+  const parsed = customerReservationEditSchema.safeParse(input);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
 
   const settings = await getReservationDeadlineSettings();
   const result = await updateCustomerReservation(
@@ -64,10 +67,8 @@ export async function updateReservationAction(
     settings.modificationDeadlineHours,
   );
 
-  if (!result.success) return { error: result.error };
+  if (!result.success) return createMutationError(result.error);
 
-  updateTag(CACHE_TAGS.RESERVATIONS);
-  updateTag(getCacheTag.reservations.list());
-  updateTag(getCacheTag.reservations.calendar());
-  return { success: true };
+  invalidateReservationCache();
+  return null;
 }

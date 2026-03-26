@@ -12,6 +12,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
+import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { EditReservationForm } from "./_components/edit-reservation-form";
@@ -59,8 +60,9 @@ export default async function ReservationEditPage({
   // 変更期限チェック
   if (
     !isWithinDeadline(
-      new Date(reservation.startTime),
+      reservation.startTime,
       deadlineSettings.modificationDeadlineHours,
+      reservationDeadlineNow(),
     )
   ) {
     redirect(`/mypage/reservations/${id}`);
@@ -84,9 +86,8 @@ export default async function ReservationEditPage({
     reservation.space.locationId,
   );
 
-  // 日付・時間の初期値を算出
-  const startDate = new Date(reservation.startTime);
-  const endDate = new Date(reservation.endTime);
+  const startDate = reservation.startTime;
+  const endDate = reservation.endTime;
   const dateStr = `${String(startDate.getFullYear())}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
   const startTimeStr = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")}`;
   const endTimeStr = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
@@ -99,6 +100,7 @@ export default async function ReservationEditPage({
 
       <EditReservationForm
         reservationId={reservation.id}
+        numberOfGuests={1}
         spaces={spaces}
         initialValues={{
           spaceId: reservation.spaceId,

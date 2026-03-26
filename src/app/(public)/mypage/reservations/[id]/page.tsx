@@ -11,6 +11,8 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
+import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
+import { toPlainObject } from "@/shared/lib/serialize";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { ReservationDetail } from "./_components/reservation-detail";
@@ -53,11 +55,14 @@ export default async function ReservationDetailPage({
 
   const isCancellableStatus = CANCELLABLE_STATUSES.has(reservation.status);
 
+  const now = reservationDeadlineNow();
+
   const canCancel =
     isCancellableStatus &&
     isWithinDeadline(
-      new Date(reservation.startTime),
+      reservation.startTime,
       deadlineSettings.cancellationDeadlineHours,
+      now,
     );
 
   const hasManualDiscount =
@@ -72,9 +77,17 @@ export default async function ReservationDetailPage({
     isCancellableStatus &&
     !hasManualDiscount &&
     isWithinDeadline(
-      new Date(reservation.startTime),
+      reservation.startTime,
       deadlineSettings.modificationDeadlineHours,
+      now,
     );
+
+  const serializedReservation = toPlainObject({
+    ...reservation,
+    startTime: reservation.startTime.toISOString(),
+    endTime: reservation.endTime.toISOString(),
+    createdAt: reservation.createdAt.toISOString(),
+  });
 
   return (
     <div className="max-w-2xl">
@@ -82,7 +95,7 @@ export default async function ReservationDetailPage({
         予約詳細
       </Heading>
 
-      <ReservationDetail reservation={reservation} />
+      <ReservationDetail reservation={serializedReservation} />
 
       {(canEdit || canCancel) && (
         <div className="mt-6 flex items-center gap-3">
