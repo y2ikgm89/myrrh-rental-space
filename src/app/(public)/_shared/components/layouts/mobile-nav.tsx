@@ -2,17 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, CalendarCheck, Menu } from "lucide-react";
+import { Home, LayoutGrid, CalendarCheck, User } from "lucide-react";
+import { useSession } from "@/shared/lib/auth-client";
 
-const navItems = [
+const staticNavItems = [
   { href: "/", icon: Home, label: "ホーム" },
   { href: "/spaces", icon: LayoutGrid, label: "スペース" },
   { href: "/reservation", icon: CalendarCheck, label: "予約" },
-  { href: "/contact", icon: Menu, label: "メニュー" },
 ] as const;
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const isCustomer =
+    session?.user?.role === "CUSTOMER" || session?.user?.role === "USER";
+  const authItem = session
+    ? isCustomer
+      ? { href: "/mypage", icon: User, label: "マイページ" }
+      : null
+    : { href: "/login", icon: User, label: "ログイン" };
 
   return (
     <nav
@@ -20,7 +29,7 @@ export function MobileNav() {
       aria-label="モバイルナビゲーション"
     >
       <ul className="flex items-center justify-around py-2">
-        {navItems.map(({ href, icon: Icon, label }) => {
+        {staticNavItems.map(({ href, icon: Icon, label }) => {
           const isActive =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
@@ -37,6 +46,21 @@ export function MobileNav() {
             </li>
           );
         })}
+        {authItem && (
+          <li>
+            <Link
+              href={authItem.href}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
+                pathname.startsWith(authItem.href)
+                  ? "text-accent"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <authItem.icon className="h-5 w-5" />
+              <span>{authItem.label}</span>
+            </Link>
+          </li>
+        )}
       </ul>
     </nav>
   );

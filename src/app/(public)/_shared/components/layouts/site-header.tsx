@@ -30,11 +30,17 @@ import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "../design-system/button";
 
+interface AuthLink {
+  readonly href: string;
+  readonly label: string;
+}
+
 interface HeaderProps {
   readonly brandName?: string;
   readonly navItems?: readonly PublicNavItem[];
   readonly scrollBehavior?: HeaderScrollBehavior;
   readonly backgroundMode?: HeaderBackgroundMode;
+  readonly authLink?: AuthLink;
 }
 
 const FALLBACK_NAV: readonly PublicNavItem[] = [
@@ -234,6 +240,7 @@ export function Header({
   navItems,
   scrollBehavior = HeaderScrollBehavior.always_visible,
   backgroundMode = HeaderBackgroundMode.solid,
+  authLink,
 }: HeaderProps): ReactElement {
   const items = navItems ?? FALLBACK_NAV;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -473,6 +480,14 @@ export function Header({
               </NavigationMenuPrimitive.List>
             </NavigationMenuPrimitive.Root>
 
+            {authLink && (
+              <Link
+                href={authLink.href}
+                className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
+              >
+                {authLink.label}
+              </Link>
+            )}
             <Button variant="primary" size="sm" href="/reservation">
               予約する
             </Button>
@@ -538,6 +553,16 @@ export function Header({
                 予約する
               </Button>
             </div>
+            {authLink && (
+              <Link
+                href={authLink.href}
+                data-menu-link=""
+                onClick={closeMenu}
+                className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-accent"
+              >
+                {authLink.label}
+              </Link>
+            )}
             {items.map((item) => (
               <MobileNavItem key={item.id} item={item} onClose={closeMenu} />
             ))}

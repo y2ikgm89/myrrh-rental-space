@@ -7,13 +7,18 @@
  */
 
 import { createAuthClient } from "better-auth/react";
+import { inferAdditionalFields } from "better-auth/client/plugins";
+import type { auth } from "./auth";
 import { getAppUrl } from "./constants";
 
 /**
  * Better Auth クライアントインスタンス
+ *
+ * inferAdditionalFields でサーバー側の additionalFields（role 等）を型推論
  */
 export const authClient = createAuthClient({
   baseURL: getAppUrl(),
+  plugins: [inferAdditionalFields<typeof auth>()],
 });
 
 /**

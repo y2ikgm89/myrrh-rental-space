@@ -26,17 +26,19 @@ import {
   AnalyticsProvider,
   WebVitalsReporter,
 } from "@/public/components/analytics";
-import { CookieConsentBanner } from "@/public/components/CookieConsentBanner";
-import { AnnouncementBarWrapper } from "@/public/components/AnnouncementBarWrapper";
+import { CookieConsentBanner } from "@/public/components/cookie-consent-banner";
+import { AnnouncementBarWrapper } from "@/public/components/announcement-bar-wrapper";
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
 import { LenisProvider } from "@/public/components/providers/LenisProvider";
 import { MobileNav } from "@/public/components/layouts/mobile-nav";
-import { GraphJsonLd } from "@/public/components/seo/JsonLd";
+import { GraphJsonLd } from "@/public/components/seo/json-ld";
 import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
 import { getBusinessInfo } from "@/public/data/business";
+import { getCurrentUser } from "@/shared/lib/auth";
+import { Role } from "@/shared/db/enums";
 import {
   getHeaderSettings,
   getFooterSettings,
@@ -47,7 +49,7 @@ import {
   getCookieConsentSettings,
   getMaintenanceSettings,
 } from "@/shared/domain/settings/queries/site";
-import { MaintenancePage } from "@/public/components/MaintenancePage";
+import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
 import { clientEnv } from "@/shared/lib/env/client";
@@ -162,16 +164,27 @@ async function HeaderWithData({
 }: {
   headerSettings: HeaderSettings;
 }): Promise<ReactElement> {
-  const [navItems, businessInfo] = await Promise.all([
+  const [navItems, businessInfo, currentUser] = await Promise.all([
     getHeaderNavigation(),
     getBusinessInfo(),
+    getCurrentUser(),
   ]);
+
+  const isCustomer =
+    currentUser?.role === Role.CUSTOMER || currentUser?.role === Role.USER;
+  const authLink =
+    currentUser && isCustomer
+      ? { href: "/mypage", label: "マイページ" }
+      : currentUser
+        ? undefined
+        : { href: "/login", label: "ログイン" };
 
   const headerProps = {
     brandName: businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH",
     scrollBehavior: headerSettings.scrollBehavior,
     backgroundMode: headerSettings.backgroundMode,
     ...(navItems.length > 0 ? { navItems } : {}),
+    ...(authLink ? { authLink } : {}),
   };
 
   return <Header {...headerProps} />;
@@ -237,9 +250,7 @@ export default async function PublicRootLayout({
                 })}
               >
                 <LenisProvider>
-                  <Suspense fallback={null}>
-                    <NuqsAdapter>{children}</NuqsAdapter>
-                  </Suspense>
+                  <NuqsAdapter>{children}</NuqsAdapter>
                 </LenisProvider>
               </main>
 
