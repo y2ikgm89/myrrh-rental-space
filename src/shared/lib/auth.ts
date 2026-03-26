@@ -129,6 +129,9 @@ function createAuth() {
           input: false,
         },
       },
+      deleteUser: {
+        enabled: true,
+      },
     },
     hooks: {
       after: createAuthMiddleware(async (ctx) => {

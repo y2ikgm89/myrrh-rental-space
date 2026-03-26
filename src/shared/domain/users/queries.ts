@@ -109,6 +109,15 @@ export async function getUser(id: string): Promise<UserData | null> {
   return toUserData(user);
 }
 
+/** ユーザーに紐づくアカウントのプロバイダーID一覧を取得 */
+export async function getAccountProviders(userId: string): Promise<string[]> {
+  const accounts = await prisma.account.findMany({
+    where: { userId },
+    select: { providerId: true },
+  });
+  return accounts.map((a) => a.providerId);
+}
+
 export async function getUserStats(): Promise<UserStats> {
   const [total, admins, users, recentUsers] = await Promise.all([
     prisma.user.count(),

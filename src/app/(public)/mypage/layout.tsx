@@ -3,11 +3,11 @@
  *
  * - verifyCustomerSession() で認証チェック
  * - ensureCustomerLinked() で Customer 紐づけ
- * - メール未登録の場合は設定ページへリダイレクト
+ *
+ * NOTE: メール未登録チェックは各ページで実施（設定ページとの循環リダイレクト防止）
  */
 
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { Container } from "@/public/components/design-system/container";
@@ -19,11 +19,7 @@ export default async function MypageLayout({
   readonly children: ReactNode;
 }) {
   const { user } = await verifyCustomerSession();
-  const customer = await ensureCustomerLinked(user);
-
-  if (!customer.email) {
-    redirect("/mypage/settings?require_email=true");
-  }
+  await ensureCustomerLinked(user);
 
   return (
     <section className="py-[var(--spacing-section)]">

@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CustomerStatus } from "@/shared/db/enums";
+import { CustomerStatus } from "@/shared/db/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
@@ -47,6 +47,7 @@ function toCustomerData(data: CustomerFormData) {
     firstName: data.firstName,
     lastNameKana: data.lastNameKana || null,
     firstNameKana: data.firstNameKana || null,
+    companyName: data.companyName || null,
     email: data.email,
     phoneNumber: data.phoneNumber || null,
     address: data.address || null,
@@ -62,7 +63,7 @@ export async function createCustomer(
   const customer = await prisma.customer.create({
     data: {
       ...toCustomerData(data),
-      status: "NEW",
+      status: CustomerStatus.NEW,
       isActive: true,
     },
   });
@@ -120,6 +121,25 @@ export async function updateCustomer(
   await prisma.customer.update({
     where: { id },
     data: toCustomerData(data),
+  });
+}
+
+/** 顧客が自身のプロフィールを更新（userId ベース） */
+export async function updateCustomerProfileByUserId(
+  userId: string,
+  data: {
+    lastName: string;
+    firstName: string;
+    phoneNumber: string | null;
+  },
+): Promise<void> {
+  await prisma.customer.update({
+    where: { userId },
+    data: {
+      lastName: data.lastName,
+      firstName: data.firstName,
+      phoneNumber: data.phoneNumber,
+    },
   });
 }
 

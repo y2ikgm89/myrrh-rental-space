@@ -26,5 +26,7 @@ export const {
   useSession,
   getSession,
   linkSocial,
+  unlinkAccount,
+  deleteUser,
   $Infer,
 } = authClient;
