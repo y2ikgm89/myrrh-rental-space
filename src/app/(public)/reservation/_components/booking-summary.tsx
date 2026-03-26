@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { MapPin, CalendarDays, Clock, Users, Pencil } from "lucide-react";
+import { Heading } from "@/public/components/design-system/heading";
 
 interface BookingSummaryProps {
   readonly locationName: string;
@@ -38,6 +40,32 @@ function formatDurationLabel(start: string, end: string): string {
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
 
+function SummaryRow({
+  icon,
+  label,
+  value,
+}: {
+  readonly icon: ReactElement;
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+          {label}
+        </p>
+        <p className="font-heading text-sm font-medium tracking-tight">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function BookingSummary({
   locationName,
   spaceName,
@@ -48,36 +76,63 @@ export function BookingSummary({
   price,
   onEdit,
 }: BookingSummaryProps): ReactElement {
+  const durationLabel = formatDurationLabel(startTime, endTime);
+
   return (
-    <div className="rounded-lg border border-accent/20 bg-accent/5 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1">
-          <p className="font-heading text-sm font-medium tracking-tight">
-            {locationName} &rsaquo; {spaceName}
+    <div className="rounded-xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
+      {/* Header: title + price */}
+      <div className="flex items-baseline justify-between gap-4">
+        <Heading level={3} className="!text-base font-medium">
+          予約内容
+        </Heading>
+        {price !== null ? (
+          <p className="font-heading text-xl tracking-tight text-accent">
+            &yen;{price.toLocaleString()}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {formatDateJa(date)} {startTime} → {endTime}（
-            {formatDurationLabel(startTime, endTime)}）
-          </p>
-          <p className="text-sm text-muted-foreground">{guests}名</p>
-        </div>
-        <div className="text-right">
-          {price !== null ? (
-            <p className="font-heading text-lg text-accent">
-              &yen;{price.toLocaleString()}
-            </p>
-          ) : null}
-          {onEdit ? (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="mt-1 text-xs text-accent underline underline-offset-2 hover:text-accent/80"
-            >
-              変更する
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </div>
+
+      {/* Divider */}
+      <div className="my-5 border-t border-border" />
+
+      {/* Detail rows */}
+      <div className="grid gap-5 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-5">
+        <SummaryRow
+          icon={<MapPin size={16} />}
+          label="場所"
+          value={`${locationName} › ${spaceName}`}
+        />
+        <SummaryRow
+          icon={<CalendarDays size={16} />}
+          label="日付"
+          value={formatDateJa(date)}
+        />
+        <SummaryRow
+          icon={<Clock size={16} />}
+          label="時間"
+          value={`${startTime} → ${endTime}（${durationLabel}）`}
+        />
+        <SummaryRow
+          icon={<Users size={16} />}
+          label="人数"
+          value={`${guests}名`}
+        />
+      </div>
+
+      {/* Edit button */}
+      {onEdit ? (
+        <>
+          <div className="my-5 border-t border-border" />
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent/5"
+          >
+            <Pencil size={14} />
+            予約内容を変更する
+          </button>
+        </>
+      ) : null}
     </div>
   );
 }

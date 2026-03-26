@@ -41,7 +41,8 @@ export async function submitInquiry(
   // 3. Create inquiry
   try {
     const result = await createInquiryCommand({
-      name: parsed.data.name,
+      name: `${parsed.data.lastName} ${parsed.data.firstName}`,
+      companyName: parsed.data.companyName || null,
       email: parsed.data.email,
       subject: parsed.data.subject,
       message: parsed.data.message,
@@ -52,11 +53,11 @@ export async function submitInquiry(
     updateTag(getCacheTag.inquiries.list());
 
     // 5. Send emails (fire-and-forget)
-    fireAndForget(sendContactConfirmationEmail(result.emailData), {
+    fireAndForget(sendContactConfirmationEmail(result.payload), {
       operation: "sendContactConfirmationEmail",
       category: ErrorCategory.EXTERNAL_API,
     });
-    fireAndForget(sendContactAdminNotification(result.emailData), {
+    fireAndForget(sendContactAdminNotification(result.payload), {
       operation: "sendContactAdminNotification",
       category: ErrorCategory.EXTERNAL_API,
     });

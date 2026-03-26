@@ -1,8 +1,10 @@
 "use client";
 
 import { useReducer, useRef, useTransition, type ReactElement } from "react";
+import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
+import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -12,7 +14,6 @@ import {
 } from "@/shared/lib/validations/public-reservation";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
-import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
 import { submitReservation } from "@/public/actions/reservation";
 import { fetchAvailableSlots } from "@/public/actions/availability";
@@ -21,6 +22,12 @@ import { SpaceSelector } from "./space-selector";
 import { DateTimeSection } from "./date-time-section";
 import { CustomerStep } from "./customer-step";
 import { StickyBottomBar } from "./sticky-bottom-bar";
+import { selectionReducer, EMPTY_SLOTS } from "./use-reservation-selection";
+import {
+  scrollToTop,
+  scrollToElement,
+  scrollToSectionAfterRender,
+} from "./scroll-utils";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -34,29 +41,9 @@ const ALL_STEPS = [
 
 const STEPS_WITHOUT_SPACE = ALL_STEPS.filter((s) => s.number !== 1);
 
-const EMPTY_SLOTS: TimeSlot[] = [];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function getScrollBehavior(): ScrollBehavior {
-  return typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ? "instant"
-    : "smooth";
-}
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: getScrollBehavior() });
-}
-
-function scrollToRef(ref: React.RefObject<HTMLElement | null>) {
-  ref.current?.scrollIntoView({
-    behavior: getScrollBehavior(),
-    block: "start",
-  });
-}
 
 function formatDateString(date: Date): string {
   const y = date.getFullYear();
@@ -76,95 +63,31 @@ function resolveAutoIds(locations: readonly LocationWithSpaces[]) {
 }
 
 // ---------------------------------------------------------------------------
-// Reducer
-// ---------------------------------------------------------------------------
-
-type SelectionState = {
-  locationId: string | null;
-  spaceId: string | null;
-  date: Date | undefined;
-  startTime: string | null;
-  duration: number | null;
-  guests: number;
-  slots: TimeSlot[];
-  step: 1 | 2 | 3;
-  submitted: boolean;
-  errorMessage: string | null;
-};
-
-type SelectionAction =
-  | { type: "selectLocation"; id: string; autoSpaceId: string | null }
-  | { type: "selectSpace"; id: string }
-  | { type: "selectDate"; date: Date | undefined }
-  | { type: "setSlots"; slots: TimeSlot[] }
-  | { type: "selectStartTime"; time: string | null }
-  | { type: "selectDuration"; minutes: number | null }
-  | { type: "setGuests"; count: number }
-  | { type: "goToStep"; step: 1 | 2 | 3 }
-  | { type: "setSubmitted" }
-  | { type: "setError"; message: string };
-
-function selectionReducer(
-  state: SelectionState,
-  action: SelectionAction,
-): SelectionState {
-  switch (action.type) {
-    case "selectLocation":
-      return {
-        ...state,
-        locationId: action.id,
-        spaceId: action.autoSpaceId,
-        date: undefined,
-        startTime: null,
-        duration: null,
-        slots: EMPTY_SLOTS,
-      };
-    case "selectSpace":
-      return {
-        ...state,
-        spaceId: action.id,
-        date: undefined,
-        startTime: null,
-        duration: null,
-        slots: EMPTY_SLOTS,
-      };
-    case "selectDate":
-      return {
-        ...state,
-        date: action.date,
-        startTime: null,
-        duration: null,
-        slots: action.date ? state.slots : EMPTY_SLOTS,
-      };
-    case "setSlots":
-      return { ...state, slots: action.slots };
-    case "selectStartTime":
-      return { ...state, startTime: action.time, duration: null };
-    case "selectDuration":
-      return { ...state, duration: action.minutes };
-    case "setGuests":
-      return { ...state, guests: action.count };
-    case "goToStep":
-      return { ...state, step: action.step, errorMessage: null };
-    case "setSubmitted":
-      return { ...state, submitted: true };
-    case "setError":
-      return { ...state, errorMessage: action.message };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+interface PrefillData {
+  readonly lastName: string;
+  readonly firstName: string;
+  readonly email: string;
+  readonly phoneNumber: string | null;
+  readonly companyName: string | null;
+}
 
 interface ReservationFormProps {
   readonly locations: readonly LocationWithSpaces[];
   readonly businessHours: BusinessHours | null;
+  readonly turnstileSiteKey: string | null;
+  readonly prefillData?: PrefillData | undefined;
+  readonly isLoggedIn?: boolean | undefined;
 }
 
 export function ReservationForm({
   locations,
   businessHours,
+  turnstileSiteKey,
+  prefillData,
+  isLoggedIn = false,
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations);
   const skipStep1 = auto.locationId != null && auto.spaceId != null;
@@ -226,6 +149,10 @@ export function ReservationForm({
         locationId: auto.locationId ?? "",
         spaceId: auto.spaceId ?? "",
         numberOfGuests: 1,
+        lastName: prefillData?.lastName ?? "",
+        firstName: prefillData?.firstName ?? "",
+        email: prefillData?.email ?? "",
+        phoneNumber: prefillData?.phoneNumber ?? "",
       },
     },
   );
@@ -251,7 +178,7 @@ export function ReservationForm({
     syncFormField("endTime", "");
     // Scroll to space section if multiple spaces revealed
     if (!autoSpace) {
-      setTimeout(() => scrollToRef(spaceSectionRef), 100);
+      setTimeout(() => scrollToElement(spaceSectionRef.current), 100);
     }
   }
 
@@ -269,6 +196,7 @@ export function ReservationForm({
     syncFormField("endTime", "");
     if (date) {
       syncFormField("date", formatDateString(date));
+      scrollToSectionAfterRender("reservation-time-slots");
       // Fetch slots via startTransition (React 19 pattern — no useEffect)
       if (state.spaceId) {
         const spaceId = state.spaceId;
@@ -287,12 +215,16 @@ export function ReservationForm({
     dispatch({ type: "selectStartTime", time });
     syncFormField("startTime", time ?? "");
     syncFormField("endTime", "");
+    if (time) {
+      scrollToSectionAfterRender("reservation-duration");
+    }
   }
 
   function handleDurationChange(minutes: number | null) {
     dispatch({ type: "selectDuration", minutes });
     if (minutes && state.startTime) {
       syncFormField("endTime", addMinutesToTime(state.startTime, minutes));
+      scrollToSectionAfterRender("reservation-guests");
     } else {
       syncFormField("endTime", "");
     }
@@ -411,6 +343,14 @@ export function ReservationForm({
         <p className="mt-4 text-muted-foreground">
           確認メールをお送りしましたのでご確認ください。
         </p>
+        {!isLoggedIn ? (
+          <p className="mt-6 text-sm text-muted-foreground">
+            次回から入力を省略するにはアカウント連携がおすすめです。{" "}
+            <Link href="/login" className="text-accent underline">
+              アカウント連携はこちら
+            </Link>
+          </p>
+        ) : null}
       </div>
     );
   }
@@ -424,6 +364,7 @@ export function ReservationForm({
           form={form}
           isPending={isPending}
           errorMessage={state.errorMessage}
+          turnstileSiteKey={turnstileSiteKey}
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
@@ -472,24 +413,52 @@ export function ReservationForm({
     <div className="space-y-8">
       {renderStepIndicator()}
 
-      {locations.length > 1 ? (
-        <section>
-          <Heading level={3} className="mb-4">
-            場所を選択
-          </Heading>
+      {/* Location section */}
+      <section>
+        <Heading level={3} className="mb-1 !text-base">
+          場所を選択
+        </Heading>
+        <p className="mb-4 text-sm text-muted-foreground">
+          ご利用になる場所をお選びください
+        </p>
+        {locations.length > 1 ? (
           <LocationSelector
             locations={locations}
             selectedId={state.locationId}
             onSelect={handleLocationSelect}
           />
-        </section>
-      ) : null}
+        ) : currentLocation ? (
+          <div className="flex items-center gap-4 rounded-xl border border-accent bg-accent/5 p-3 ring-2 ring-accent/20">
+            <ImageFrame
+              src={currentLocation.imageUrl}
+              alt={currentLocation.name}
+              width={160}
+              height={90}
+              aspect="video"
+              sizes="160px"
+              className="w-40 shrink-0"
+            />
+            <div>
+              <span className="font-heading text-base font-medium tracking-tight">
+                {currentLocation.name}
+              </span>
+              <span className="mt-1 block truncate text-sm text-muted-foreground">
+                {currentLocation.address}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </section>
 
+      {/* Space section */}
       {state.locationId != null && currentSpaces.length > 1 ? (
         <section ref={spaceSectionRef} className="animate-section-enter">
-          <Heading level={3} className="mb-4">
+          <Heading level={3} className="mb-1 !text-base">
             スペースを選択
           </Heading>
+          <p className="mb-4 text-sm text-muted-foreground">
+            ご利用になるスペースをお選びください
+          </p>
           <SpaceSelector
             spaces={currentSpaces}
             selectedId={state.spaceId}
@@ -498,13 +467,9 @@ export function ReservationForm({
         </section>
       ) : null}
 
-      {isStep1Complete ? (
-        <div className="flex justify-end">
-          <Button type="button" onClick={advanceToStep2}>
-            次へ
-          </Button>
-        </div>
-      ) : null}
+      {renderStepNavigation({
+        onNext: isStep1Complete ? advanceToStep2 : undefined,
+      })}
     </div>
   );
 }

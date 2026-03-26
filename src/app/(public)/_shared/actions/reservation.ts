@@ -21,6 +21,7 @@ import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
+import { getCurrentUser } from "@/shared/lib/auth";
 
 export async function submitReservation(
   input: PublicReservationInput,
@@ -48,23 +49,26 @@ export async function submitReservation(
     );
   }
 
-  // 3. Create reservation
-  try {
-    const result = await createPublicReservationCommand(parsed.data);
+  // 3. Get current user (non-blocking — undefined if not logged in)
+  const user = await getCurrentUser();
 
-    // 4. Invalidate cache: reservations (list + calendar) + customers
+  // 4. Create reservation
+  try {
+    const result = await createPublicReservationCommand({
+      ...parsed.data,
+      userId: user?.id,
+    });
+
+    // 5. Invalidate cache: reservations (list + calendar) + customers
     updateTag(CACHE_TAGS.RESERVATIONS);
     updateTag(getCacheTag.reservations.list());
     updateTag(getCacheTag.reservations.calendar());
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.list());
 
-    // 5. Send admin notification email (fire-and-forget)
+    // 6. Send admin notification email (fire-and-forget)
     fireAndForget(
-      sendReservationAdminNotification(
-        omitUndefined(result.notification),
-        "new",
-      ),
+      sendReservationAdminNotification(omitUndefined(result.payload), "new"),
       {
         operation: "sendReservationAdminNotification",
         category: ErrorCategory.EXTERNAL_API,

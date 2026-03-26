@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import type { SpaceOption } from "@/shared/domain/locations/public-queries";
+import { Info } from "lucide-react";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { SpaceDetailDialog } from "./space-detail-dialog";
 
@@ -71,21 +72,24 @@ export function SpaceSelector({
                   定員{space.capacity}名
                   {space.area != null ? ` / ${String(space.area)}㎡` : ""}
                 </span>
-                <span className="mt-0.5 block font-heading text-sm text-accent">
-                  {YEN}
-                  {space.hourlyPrice.toLocaleString()}/h
-                </span>
-                <button
-                  type="button"
-                  aria-label={`${space.name}の詳細を見る`}
-                  className="mt-1.5 text-xs text-accent hover:underline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDetailSpace(space);
-                  }}
-                >
-                  詳細を見る →
-                </button>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <span className="font-heading text-sm text-accent">
+                    {YEN}
+                    {space.hourlyPrice.toLocaleString()}/h
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`${space.name}の詳細を見る`}
+                    className="inline-flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDetailSpace(space);
+                    }}
+                  >
+                    <Info className="h-3 w-3" />
+                    詳細を見る
+                  </button>
+                </div>
               </div>
             </div>
           );

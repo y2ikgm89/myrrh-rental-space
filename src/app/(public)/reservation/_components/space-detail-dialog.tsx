@@ -51,7 +51,7 @@ export function SpaceDetailDialog({
             {allImages.length === 1 ? (
               <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
                 <Image
-                  src={allImages[0]}
+                  src={allImages[0] ?? ""}
                   alt={space.name}
                   fill
                   sizes="(max-width: 640px) 100vw, 448px"

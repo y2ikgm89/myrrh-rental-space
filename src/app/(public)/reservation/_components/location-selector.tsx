@@ -28,28 +28,31 @@ export function LocationSelector({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onSelect(location.id)}
-            className={`flex gap-4 rounded-xl border p-3 text-left transition-all
+            className={`group flex flex-col overflow-hidden rounded-xl border text-left transition-all
               ${
                 isSelected
                   ? "border-accent ring-2 ring-accent/20 bg-accent/5"
-                  : "border-border bg-card hover:border-accent/40"
+                  : "border-border bg-card hover:border-accent/40 hover:shadow-lg"
               }`}
           >
             <ImageFrame
               src={location.imageUrl}
               alt={location.name}
-              width={160}
-              height={90}
-              aspect="video"
-              sizes="160px"
-              className="w-40 shrink-0"
+              width={400}
+              height={225}
+              sizes="(max-width: 768px) 100vw, 400px"
+              className="aspect-video w-full transition-transform duration-500 group-hover:scale-105"
             />
-            <div className="flex min-w-0 flex-col justify-center">
+            <div className="p-4">
               <span className="font-heading text-base font-medium tracking-tight">
                 {location.name}
               </span>
-              <span className="mt-1 truncate text-sm text-muted-foreground">
+              <span className="mt-1 block text-sm text-muted-foreground">
                 {location.address}
+              </span>
+              <span className="mt-2 block text-xs text-muted-foreground">
+                {location.spaces.length}
+                {location.spaces.length === 1 ? " スペース" : " スペース"}
               </span>
             </div>
           </button>

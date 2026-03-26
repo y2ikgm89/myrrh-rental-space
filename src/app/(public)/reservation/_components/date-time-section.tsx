@@ -6,6 +6,7 @@ import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { CalendarPicker } from "./calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { DurationPills } from "./duration-pills";
+import { Heading } from "@/public/components/design-system/heading";
 import { GuestStepper } from "./guest-stepper";
 
 function calcMaxDuration(
@@ -56,64 +57,60 @@ export function DateTimeSection({
     : 0;
 
   return (
-    <div role="group" aria-label="日時選択" className="space-y-6">
-      {/* Row 1: Calendar + Time slots */}
-      <div className="grid gap-6 rounded-xl bg-surface p-4 md:grid-cols-2 md:p-6">
-        <div>
-          <h3 className="mb-3 font-heading text-base tracking-tight">
-            日付を選択
-          </h3>
-          <CalendarPicker
-            selectedDate={selectedDate}
-            onSelect={onDateChange}
-            businessHours={businessHours}
+    <div role="group" aria-label="日時選択" className="space-y-8">
+      {/* Calendar */}
+      <section id="reservation-calendar">
+        <Heading level={3} className="mb-3 !text-base">
+          日付を選択
+        </Heading>
+        <CalendarPicker
+          selectedDate={selectedDate}
+          onSelect={onDateChange}
+          businessHours={businessHours}
+        />
+      </section>
+
+      {/* Time slots */}
+      {selectedDate ? (
+        <section id="reservation-time-slots">
+          <Heading level={3} className="mb-3 !text-base">
+            時間帯を選択
+          </Heading>
+          <TimeSlotGrid
+            slots={slots}
+            selectedTime={selectedStartTime}
+            onSelect={onStartTimeChange}
+            isLoading={isFetchingSlots}
           />
-        </div>
-        <div>
-          {selectedDate ? (
-            <>
-              <h3 className="mb-3 font-heading text-base tracking-tight">
-                時間帯を選択
-              </h3>
-              <TimeSlotGrid
-                slots={slots}
-                selectedTime={selectedStartTime}
-                onSelect={onStartTimeChange}
-                isLoading={isFetchingSlots}
-              />
-            </>
-          ) : (
-            <p className="mt-10 text-sm text-muted-foreground">
-              カレンダーから日付を選択してください
-            </p>
-          )}
-        </div>
-      </div>
+        </section>
+      ) : null}
 
       {/* Row 2: Duration pills */}
       {selectedStartTime ? (
-        <div className="rounded-xl bg-surface p-4 md:p-6">
-          <h3 className="mb-3 font-heading text-base tracking-tight">
+        <section id="reservation-duration">
+          <Heading level={3} className="mb-3 !text-base">
             利用時間
-          </h3>
+          </Heading>
           <DurationPills
             selectedMinutes={selectedDuration}
             maxMinutes={maxDuration}
             onSelect={onDurationChange}
           />
-        </div>
+        </section>
       ) : null}
 
       {/* Row 3: Guest count */}
       {selectedDuration ? (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-surface/50 px-4 py-3">
-          <span className="text-sm font-medium text-foreground">利用人数</span>
+        <section id="reservation-guests">
+          <Heading level={3} className="mb-3 !text-base">
+            利用人数
+          </Heading>
           <GuestStepper
             value={numberOfGuests}
             max={spaceCapacity}
             onChange={onGuestsChange}
           />
-        </div>
+        </section>
       ) : null}
     </div>
   );
