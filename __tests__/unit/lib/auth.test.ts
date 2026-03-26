@@ -231,8 +231,9 @@ describe("Role enum consistency", () => {
     expect(Role.USER).toBe("USER");
   });
 
-  test("Role enumは5つの値を持つ", () => {
+  test("Role enumは6つの値を持つ", () => {
     const roleValues = Object.values(Role);
-    expect(roleValues).toHaveLength(5);
+    expect(roleValues).toHaveLength(6);
+    expect(roleValues).toContain("CUSTOMER");
   });
 });

@@ -235,8 +235,8 @@ describe("User Admin Action Integration", () => {
       expect(enumValues.sort()).toEqual([...ROLE_VALUES].sort());
     });
 
-    test("Role enumは5つの値を持つ", () => {
-      expect(Object.values(Role)).toHaveLength(5);
+    test("Role enumは6つの値を持つ", () => {
+      expect(Object.values(Role)).toHaveLength(6);
     });
   });
 
