@@ -17,13 +17,13 @@ function looksLikeLexicalEditorStateJson(value: string): boolean {
     if (typeof parsed !== "object" || parsed === null || !("root" in parsed)) {
       return false;
     }
-    const root = (parsed as { root: unknown }).root;
+    const root: unknown = parsed.root;
     if (typeof root !== "object" || root === null) return false;
     return (
       "type" in root &&
-      (root as { type: unknown }).type === "root" &&
+      root.type === "root" &&
       "children" in root &&
-      Array.isArray((root as { children: unknown }).children)
+      Array.isArray(root.children)
     );
   } catch {
     return false;
