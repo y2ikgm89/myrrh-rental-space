@@ -11,6 +11,7 @@ import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getAccountLinksAction } from "../_shared/actions/account";
+import { isMutationError } from "@/shared/lib/mutation-result";
 import { Heading } from "@/public/components/design-system/heading";
 import { ProfileForm } from "./_components/profile-form";
 import { AccountLinking } from "./_components/account-linking";
@@ -31,7 +32,9 @@ export default async function SettingsPage({
   }
 
   const accountResult = await getAccountLinksAction();
-  const providers = "accounts" in accountResult ? accountResult.accounts : [];
+  const providers = isMutationError(accountResult)
+    ? []
+    : accountResult.accounts;
 
   return (
     <div className="space-y-10">
