@@ -15,8 +15,12 @@
 import type Stripe from "stripe";
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { PaymentStatus } from "@/shared/db/enums";
-import { prisma } from "@/shared/db/prisma";
+import {
+  updateReservationPaymentCompleted,
+  markReservationPaymentFailed,
+  findReservationByPaymentIntent,
+  markReservationRefunded,
+} from "@/shared/domain/reservations/payment-queries";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import {
@@ -150,35 +154,8 @@ async function handleCheckoutSessionCompleted(
   const paymentIntentId =
     typeof session.payment_intent === "string" ? session.payment_intent : null;
 
-  const reservation = await prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
-    data: {
-      paymentStatus: PaymentStatus.PAID,
-      stripePaymentIntentId: paymentIntentId,
-      paidAt: new Date(),
-    },
-    select: {
-      id: true,
-      startTime: true,
-      endTime: true,
-      totalPrice: true,
-      notes: true,
-      customer: {
-        select: {
-          email: true,
-          lastName: true,
-          firstName: true,
-        },
-      },
-      space: {
-        select: {
-          name: true,
-          location: {
-            select: { name: true },
-          },
-        },
-      },
-    },
+  const reservation = await updateReservationPaymentCompleted(reservationId, {
+    stripePaymentIntentId: paymentIntentId,
   });
 
   // キャッシュ無効化
@@ -231,12 +208,7 @@ async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
     return;
   }
 
-  await prisma.reservation.update({
-    where: { id: reservationId, deletedAt: null },
-    data: {
-      paymentStatus: PaymentStatus.FAILED,
-    },
-  });
+  await markReservationPaymentFailed(reservationId);
 
   // キャッシュ無効化
   revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
@@ -267,13 +239,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  const reservation = await prisma.reservation.findFirst({
-    where: {
-      stripePaymentIntentId: paymentIntentId,
-      deletedAt: null,
-    },
-    select: { id: true },
-  });
+  const reservation = await findReservationByPaymentIntent(paymentIntentId);
 
   if (!reservation) {
     logError(
@@ -290,12 +256,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  await prisma.reservation.update({
-    where: { id: reservation.id },
-    data: {
-      paymentStatus: PaymentStatus.REFUNDED,
-    },
-  });
+  await markReservationRefunded(reservation.id);
 
   // キャッシュ無効化
   revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
