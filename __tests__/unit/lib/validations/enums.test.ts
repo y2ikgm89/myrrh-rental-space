@@ -15,6 +15,7 @@ import {
   TermsType,
   TermsStatus,
   CouponType,
+  PaymentStatus,
 } from "@/shared/db/enums";
 import {
   isValidRole,
@@ -33,6 +34,7 @@ import {
   isValidTermsType,
   isValidTermsStatus,
   isValidCouponType,
+  isValidPaymentStatus,
 } from "@/shared/lib/validations/enums/guards";
 import {
   ACTIVE_RESERVATION_STATUSES,
@@ -54,6 +56,7 @@ import {
   getRoleFilterOrAll,
   getAuditActionFilterOrAll,
   getReservationStatusFilterOrAll,
+  getValidPaymentStatus,
 } from "@/shared/lib/validations/enums/helpers";
 
 describe("ACTIVE_RESERVATION_STATUSES", () => {
@@ -395,5 +398,48 @@ describe("getReservationStatusFilterOrAll", () => {
 
   test("無効な予約ステータスの場合 ALL を返す", () => {
     expect(getReservationStatusFilterOrAll("INVALID")).toBe("ALL");
+  });
+});
+
+describe("isValidPaymentStatus", () => {
+  test("有効な決済ステータスの場合 true を返す", () => {
+    expect(isValidPaymentStatus("UNPAID")).toBe(true);
+    expect(isValidPaymentStatus("PENDING")).toBe(true);
+    expect(isValidPaymentStatus("PAID")).toBe(true);
+    expect(isValidPaymentStatus("REFUNDED")).toBe(true);
+    expect(isValidPaymentStatus("FAILED")).toBe(true);
+  });
+
+  test("無効な決済ステータスの場合 false を返す", () => {
+    expect(isValidPaymentStatus("invalid")).toBe(false);
+    expect(isValidPaymentStatus("paid")).toBe(false);
+    expect(isValidPaymentStatus(null)).toBe(false);
+    expect(isValidPaymentStatus(undefined)).toBe(false);
+    expect(isValidPaymentStatus(123)).toBe(false);
+  });
+});
+
+describe("getValidPaymentStatus", () => {
+  test("有効な決済ステータスの場合そのステータスを返す", () => {
+    expect(getValidPaymentStatus("PAID")).toBe(PaymentStatus.PAID);
+    expect(getValidPaymentStatus("REFUNDED")).toBe(PaymentStatus.REFUNDED);
+    expect(getValidPaymentStatus("UNPAID")).toBe(PaymentStatus.UNPAID);
+    expect(getValidPaymentStatus("PENDING")).toBe(PaymentStatus.PENDING);
+    expect(getValidPaymentStatus("FAILED")).toBe(PaymentStatus.FAILED);
+  });
+
+  test("無効な決済ステータスの場合デフォルト値（UNPAID）を返す", () => {
+    expect(getValidPaymentStatus("invalid")).toBe(PaymentStatus.UNPAID);
+    expect(getValidPaymentStatus(null)).toBe(PaymentStatus.UNPAID);
+    expect(getValidPaymentStatus(undefined)).toBe(PaymentStatus.UNPAID);
+  });
+
+  test("カスタムフォールバック値を使用する", () => {
+    expect(getValidPaymentStatus("invalid", PaymentStatus.FAILED)).toBe(
+      PaymentStatus.FAILED,
+    );
+    expect(getValidPaymentStatus(null, PaymentStatus.PENDING)).toBe(
+      PaymentStatus.PENDING,
+    );
   });
 });
