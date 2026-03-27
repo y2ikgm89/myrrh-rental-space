@@ -474,6 +474,7 @@ model Space {
   // Relations
   reservations Reservation[]
   icalTokens   ICalToken[]
+  reviews      SpaceReview[]
   terms        Terms?         @relation(fields: [termsId], references: [id], onDelete: SetNull)
   location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -526,6 +527,7 @@ model Reservation {
   customer        Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   coupon          Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
   termsAgreements TermsAgreement[]
+  review          SpaceReview?
 
   // Soft-delete
   deletedAt    DateTime?
@@ -581,6 +583,7 @@ model Customer {
   // Relations
   reservations Reservation[]
   inquiries    Inquiry[]
+  reviews      SpaceReview[]
 
   @@index([lastName])
   @@index([firstName])
@@ -1661,4 +1664,29 @@ model PageContent {
   updatedAt       DateTime @updatedAt
 
   @@map("page_contents")
+}
+
+// ==============================================
+// Space Review Model (スペースレビュー)
+// ==============================================
+
+model SpaceReview {
+  id            String   @id @default(uuid()) @db.Uuid
+  spaceId       String   @db.Uuid
+  customerId    String   @db.Uuid
+  reservationId String   @unique @db.Uuid
+  rating        Int
+  title         String?  @db.VarChar(100)
+  comment       String?  @db.VarChar(1000)
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId, isPublished, createdAt(sort: Desc)])
+  @@index([customerId])
+  @@map("space_reviews")
 }

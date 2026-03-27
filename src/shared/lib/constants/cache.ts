@@ -150,6 +150,8 @@ export const CACHE_TAGS = {
   PERMISSIONS: "permissions",
   /** ページコンテンツ（Page-First Architecture） */
   PAGE_CONTENT: "page-content",
+  /** スペースレビュー */
+  REVIEWS: "reviews",
 } as const;
 
 /**
@@ -228,6 +230,10 @@ export const getCacheTag = {
   pageContent: {
     detail: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-${pageKey}`,
     meta: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-meta-${pageKey}`,
+  },
+  reviews: {
+    space: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-space-${spaceId}`,
+    stats: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-stats-${spaceId}`,
   },
 } as const;
 
