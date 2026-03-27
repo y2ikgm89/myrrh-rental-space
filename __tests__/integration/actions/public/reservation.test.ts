@@ -5,6 +5,7 @@
  *
  * モック方針:
  * - validateTurnstile: action-helpers をモック（常に成功を返す）
+ * - verifySpaceBelongsToLocation: スペース所属確認を DB なしで成功に固定
  * - createPublicReservationCommand: domain コマンドをモック
  * - email 送信: email-service をモック
  * - updateTag: next/cache をモック
@@ -35,7 +36,7 @@ mock.module("@/shared/lib/action-helpers", () => ({
 const mockCreatePublicReservationCommand = mock(() =>
   Promise.resolve({
     id: "reservation-001",
-    notification: {
+    payload: {
       reservationId: "reservation-001",
       customerEmail: "yamada@example.com",
       customerName: "山田 太郎",
@@ -51,6 +52,13 @@ const mockCreatePublicReservationCommand = mock(() =>
 
 mock.module("@/shared/domain/reservations/commands", () => ({
   createPublicReservationCommand: mockCreatePublicReservationCommand,
+}));
+
+/** DB を使わず、ロケーションとスペースの整合チェックを通過させる */
+const mockVerifySpaceBelongsToLocation = mock(() => Promise.resolve(true));
+
+mock.module("@/shared/domain/spaces/public-queries", () => ({
+  verifySpaceBelongsToLocation: mockVerifySpaceBelongsToLocation,
 }));
 
 const mockSendReservationAdminNotification = mock(() => Promise.resolve());
@@ -117,6 +125,7 @@ describe("submitReservation", () => {
   beforeEach(() => {
     mockValidateTurnstile.mockClear();
     mockCreatePublicReservationCommand.mockClear();
+    mockVerifySpaceBelongsToLocation.mockClear();
     mockSendReservationAdminNotification.mockClear();
     mockUpdateTag.mockClear();
     // 成功レスポンスにリセット
@@ -126,7 +135,7 @@ describe("submitReservation", () => {
     mockCreatePublicReservationCommand.mockImplementation(() =>
       Promise.resolve({
         id: "reservation-001",
-        notification: {
+        payload: {
           reservationId: "reservation-001",
           customerEmail: "yamada@example.com",
           customerName: "山田 太郎",
@@ -138,6 +147,9 @@ describe("submitReservation", () => {
           location: "東京都渋谷区",
         },
       }),
+    );
+    mockVerifySpaceBelongsToLocation.mockImplementation(() =>
+      Promise.resolve(true),
     );
   });
 

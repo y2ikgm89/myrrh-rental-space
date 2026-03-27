@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
+  Badge,
   Card,
   CardContent,
   CardHeader,
@@ -19,15 +20,31 @@ import {
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import {
   updateReservationStatus,
   updateReservationNotes,
+  createCheckoutSession,
+  refundReservationPayment,
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { ReservationStatus } from "@/shared/db/enums";
+import { PaymentStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { PAYMENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { formatDateTimeFull, formatPrice } from "@/shared/lib/utils";
+
+const PAYMENT_BADGE_VARIANTS: Record<
+  string,
+  "secondary" | "warning" | "success" | "outline" | "destructive"
+> = {
+  [PaymentStatus.UNPAID]: "secondary",
+  [PaymentStatus.PENDING]: "warning",
+  [PaymentStatus.PAID]: "success",
+  [PaymentStatus.REFUNDED]: "outline",
+  [PaymentStatus.FAILED]: "destructive",
+};
 
 type ReservationDetailProps = {
   reservation: ReservationWithRelations;
@@ -36,7 +53,9 @@ type ReservationDetailProps = {
 export function ReservationDetail({ reservation }: ReservationDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isPaymentPending, startPaymentTransition] = useTransition();
   const [notes, setNotes] = useState(reservation.notes || "");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
   const handleStatusChange = async (newStatus: ReservationStatus) => {
     if (newStatus === reservation.status) return;
@@ -65,6 +84,38 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       }
 
       toast.success("メモを更新しました");
+      router.refresh();
+    });
+  };
+
+  const handleCreateCheckoutSession = () => {
+    startPaymentTransition(async () => {
+      const result = await createCheckoutSession(reservation.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      if (result.sessionUrl) {
+        window.open(result.sessionUrl, "_blank", "noopener,noreferrer");
+        toast.success("決済リンクを作成しました");
+      } else {
+        toast.error("決済URLの取得に失敗しました");
+      }
+      router.refresh();
+    });
+  };
+
+  const handleRefund = () => {
+    startPaymentTransition(async () => {
+      const result = await refundReservationPayment(reservation.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("返金処理が完了しました");
+      setRefundDialogOpen(false);
       router.refresh();
     });
   };
@@ -126,6 +177,50 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         </div>
       </DetailSection>
 
+      {/* 決済情報 */}
+      <DetailSection title="決済情報">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DetailField
+            label="決済ステータス"
+            value={
+              <Badge
+                variant={PAYMENT_BADGE_VARIANTS[reservation.paymentStatus]}
+              >
+                {PAYMENT_STATUS_LABELS[reservation.paymentStatus]}
+              </Badge>
+            }
+          />
+          {reservation.paidAt ? (
+            <DetailField
+              label="支払い日時"
+              value={formatDateTimeFull(reservation.paidAt)}
+            />
+          ) : null}
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          {reservation.paymentStatus === PaymentStatus.UNPAID ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isPaymentPending}
+              onClick={() => void handleCreateCheckoutSession()}
+            >
+              {isPaymentPending ? "作成中..." : "決済リンクを作成"}
+            </Button>
+          ) : null}
+          {reservation.paymentStatus === PaymentStatus.PAID ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isPaymentPending}
+              onClick={() => setRefundDialogOpen(true)}
+            >
+              返金する
+            </Button>
+          ) : null}
+        </div>
+      </DetailSection>
+
       {/* 顧客情報 */}
       <DetailSection title="顧客情報">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -133,6 +228,12 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             label="氏名"
             value={`${reservation.customer.lastName} ${reservation.customer.firstName}`}
           />
+          {reservation.customer.companyName ? (
+            <DetailField
+              label="会社名・団体名"
+              value={reservation.customer.companyName}
+            />
+          ) : null}
           <DetailField
             label="メールアドレス"
             value={reservation.customer.email}
@@ -164,6 +265,15 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
           </Button>
         </CardContent>
       </Card>
+
+      <DeleteConfirmDialog
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        title="返金確認"
+        description="この予約の決済を返金しますか？この操作は取り消せません。"
+        onConfirm={handleRefund}
+        isPending={isPaymentPending}
+      />
     </div>
   );
 }

@@ -13,13 +13,14 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageContent } from "@/public/lib/content/queries";
 import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultFaqContent } from "@/public/lib/content/defaults/faq";
+import { defaultFaqContent } from "@/public/lib/content/defaults";
 import { getPublishedFaqItems } from "@/shared/domain/sections/queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { FaqAccordion } from "./_components/FaqAccordion";
+import { FAQPageJsonLd } from "@/public/components/seo/json-ld";
+import { FaqAccordion } from "./_components/faq-accordion";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -36,33 +37,15 @@ export default async function FaqPage(): Promise<ReactElement> {
   ]);
 
   // Strip HTML tags for plain text in JSON-LD Answer
-  // Content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
-  // JSON.stringify escapes all special characters, making this safe for JSON-LD output.
-  const faqJsonLd =
-    items.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: items.map((item) => ({
-            "@type": "Question",
-            name: item.question,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
-            },
-          })),
-        }
-      : null;
+  const faqJsonLdItems = items.map((item) => ({
+    question: item.question,
+    answer: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
+  }));
 
   return (
     <>
-      {/* FAQPage JSON-LD -- sanitized via JSON.stringify (no raw HTML in output) */}
-      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */}
-      {faqJsonLd ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-        />
+      {faqJsonLdItems.length > 0 ? (
+        <FAQPageJsonLd items={faqJsonLdItems} />
       ) : null}
 
       <PageHero

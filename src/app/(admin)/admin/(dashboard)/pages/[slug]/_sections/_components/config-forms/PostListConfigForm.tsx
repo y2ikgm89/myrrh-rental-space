@@ -19,9 +19,7 @@ import {
   type PostListConfig,
   type PostListConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getPostListConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getPostListConfig } from "@/shared/lib/validations/section-defaults";
 import {
   postLayoutLabels,
   postImageAspectLabels,

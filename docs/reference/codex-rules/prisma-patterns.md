@@ -417,16 +417,16 @@ await prisma.$transaction(async (tx) => {
 
 ## ファイル配置
 
-| パス                                | 内容                                                                       |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| `@generated/prisma/client`          | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
-| `@/shared/db/create-app-prisma-client.ts` | `$extends`（Decimal→number 等）の単一実装・`AppPrismaClient` 型      |
-| `@/shared/db/prisma.ts`             | `server-only` シングルトン・`createAppPrismaClient` 適用・型 re-export     |
-| `@/shared/db/prisma-input-json.ts`  | Prisma JSON 入力ヘルパー（`server-only` を付けない。seed から import 可）   |
-| `@/shared/db/enums.ts`              | Prisma enum の公開窓口                                                     |
-| `@/shared/lib/errors/logger-core.ts` | 構造化 `logError`（スクリプト・非 Next モジュール用）                    |
-| `@/shared/lib/errors/logger.ts`      | `server-only` エントリ（Next Server 向け、`logger-core` を re-export）   |
-| `@/shared/lib/json-validators.ts`   | JSON フィールド Zod スキーマ・型・パース関数                               |
-| `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
-| `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
-| `@/admin/lib/lazy-renderer.ts`      | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
+| パス                                      | 内容                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `@generated/prisma/client`                | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
+| `@/shared/db/create-app-prisma-client.ts` | `$extends`（Decimal→number 等）の単一実装・`AppPrismaClient` 型            |
+| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`createAppPrismaClient` 適用・型 re-export     |
+| `@/shared/db/prisma-input-json.ts`        | Prisma JSON 入力ヘルパー（`server-only` を付けない。seed から import 可）  |
+| `@/shared/db/enums.ts`                    | Prisma enum の公開窓口                                                     |
+| `@/shared/lib/errors/logger-core.ts`      | 構造化 `logError`（スクリプト・非 Next モジュール用）                      |
+| `@/shared/lib/errors/logger.ts`           | `server-only` エントリ（Next Server 向け、`logger-core` を re-export）     |
+| `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |
+| `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
+| `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
+| `@/admin/lib/lazy-renderer.ts`            | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |

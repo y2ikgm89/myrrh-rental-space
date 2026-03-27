@@ -23,6 +23,55 @@ export async function updateInquiryStatus(
   });
 }
 
+/** 返信メール送信用にアクション層へ渡す（Prisma はドメイン内に閉じる） */
+export type InquiryReplyEmailContext = {
+  readonly name: string;
+  readonly email: string;
+  readonly subject: string;
+  readonly message: string;
+};
+
+export async function replyToInquiryCommand(
+  inquiryId: string,
+  replyMessage: string,
+  userId: string,
+): Promise<{ id: string; emailContext: InquiryReplyEmailContext }> {
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id: inquiryId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      subject: true,
+      message: true,
+    },
+  });
+
+  if (!inquiry) {
+    throw new DomainError("お問い合わせが見つかりません", "NOT_FOUND");
+  }
+
+  await prisma.inquiry.update({
+    where: { id: inquiryId },
+    data: {
+      replyMessage,
+      repliedAt: new Date(),
+      repliedById: userId,
+      status: InquiryStatus.IN_PROGRESS,
+    },
+  });
+
+  return {
+    id: inquiryId,
+    emailContext: {
+      name: inquiry.name,
+      email: inquiry.email,
+      subject: inquiry.subject,
+      message: inquiry.message,
+    },
+  };
+}
+
 export async function deleteInquiry(id: string): Promise<void> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
@@ -40,6 +89,17 @@ export async function deleteInquiry(id: string): Promise<void> {
 
 type CreateInquiryInput = {
   name: string;
+  companyName: string | null;
+  email: string;
+  subject: string;
+  message: string;
+  customerId?: string | null;
+};
+
+export type InquiryPayload = {
+  inquiryId: string;
+  name: string;
+  companyName: string | null;
   email: string;
   subject: string;
   message: string;
@@ -47,33 +107,42 @@ type CreateInquiryInput = {
 
 type CreateInquiryResult = {
   id: string;
-  emailData: {
-    inquiryId: string;
-    name: string;
-    email: string;
-    subject: string;
-    message: string;
-  };
+  payload: InquiryPayload;
 };
 
 export async function createInquiryCommand(
   input: CreateInquiryInput,
 ): Promise<CreateInquiryResult> {
+  // Resolve customerId: explicit > email lookup > null
+  let resolvedCustomerId = input.customerId ?? null;
+  if (!resolvedCustomerId) {
+    const existingCustomer = await prisma.customer.findUnique({
+      where: { email: input.email },
+      select: { id: true },
+    });
+    if (existingCustomer) {
+      resolvedCustomerId = existingCustomer.id;
+    }
+  }
+
   const inquiry = await prisma.inquiry.create({
     data: {
       name: input.name,
+      companyName: input.companyName || null,
       email: input.email,
       subject: input.subject,
       message: input.message,
       status: InquiryStatus.NEW,
+      customerId: resolvedCustomerId,
     },
   });
 
   return {
     id: inquiry.id,
-    emailData: {
+    payload: {
       inquiryId: inquiry.id,
       name: input.name,
+      companyName: input.companyName,
       email: input.email,
       subject: input.subject,
       message: input.message,

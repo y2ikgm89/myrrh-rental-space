@@ -6,7 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/admin/components/ui";
-import { ReservationStatusBadge } from "@/admin/components/status-badges";
+import {
+  PaymentStatusBadge,
+  ReservationStatusBadge,
+} from "@/admin/components/status-badges";
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
 import { ReservationActionCell } from "./ReservationActionCell";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
@@ -67,13 +70,19 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
               <TableHead className="hidden text-right md:table-cell">
                 料金
               </TableHead>
-              <TableHead>ステータス</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead className="hidden whitespace-nowrap md:table-cell">
+                決済
+              </TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {reservations.map((reservation) => (
-              <TableRow key={reservation.id}>
+              <TableRow
+                key={reservation.id}
+                {...(reservation.deletedAt ? { className: "opacity-50" } : {})}
+              >
                 <TableCell>
                   <div>
                     <div className="font-medium">
@@ -100,8 +109,17 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                 <TableCell className="hidden text-right md:table-cell">
                   {formatPrice(reservation.totalPrice)}
                 </TableCell>
-                <TableCell>
-                  <ReservationStatusBadge status={reservation.status} />
+                <TableCell className="whitespace-nowrap">
+                  {reservation.deletedAt ? (
+                    <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+                      削除済み
+                    </span>
+                  ) : (
+                    <ReservationStatusBadge status={reservation.status} />
+                  )}
+                </TableCell>
+                <TableCell className="hidden whitespace-nowrap md:table-cell">
+                  <PaymentStatusBadge status={reservation.paymentStatus} />
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
@@ -111,7 +129,10 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                         currentStatus={reservation.status}
                       />
                     </div>
-                    <ReservationActionCell reservationId={reservation.id} />
+                    <ReservationActionCell
+                      reservationId={reservation.id}
+                      isDeleted={reservation.deletedAt != null}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

@@ -1,5 +1,9 @@
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@prisma/client";
+import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory } from "@/shared/lib/errors/server";
+import { getAppUrl } from "@/shared/lib/constants";
 
 /** ensureCustomerLinked で使用する仮名（LINE ログイン時に name がない場合） */
 export const CUSTOMER_PLACEHOLDER_NAME = "未設定";
@@ -39,7 +43,7 @@ export async function ensureCustomerLinked(user: {
 
   // 3. 新規作成（競合状態対策付き）
   try {
-    return await prisma.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         email: user.email,
         lastName: user.name || CUSTOMER_PLACEHOLDER_NAME,
@@ -48,6 +52,17 @@ export async function ensureCustomerLinked(user: {
       },
       select: CUSTOMER_LINK_SELECT,
     });
+
+    fireAndForget(
+      sendWelcomeEmail({
+        customerName: customer.lastName ?? user.name ?? "お客様",
+        customerEmail: user.email,
+        loginUrl: `${getAppUrl()}/mypage`,
+      }),
+      { operation: "sendWelcomeEmail", category: ErrorCategory.EXTERNAL_API },
+    );
+
+    return customer;
   } catch (e) {
     if (
       e instanceof Prisma.PrismaClientKnownRequestError &&

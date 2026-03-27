@@ -27,9 +27,7 @@ import {
   type TestimonialConfig,
   type TestimonialConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getTestimonialConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getTestimonialConfig } from "@/shared/lib/validations/section-defaults";
 import {
   testimonialLayoutLabels,
   testimonialVariantLabels,

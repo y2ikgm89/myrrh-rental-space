@@ -19,6 +19,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 ### 1. SPACES (Rental Spaces) ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts` (lines 1-99)
+
 - `createSpace()` → `updateTag(CACHE_TAGS.SPACES)` + detail cache
 - `updateSpace()` → both tags
 - `updateSpacePublish()` → both tags
@@ -26,11 +27,13 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 - Cloudflare: `fireAndForget(purgeSpaceCache(id))` (line 48)
 
 **Public Queries**: `src/shared/domain/spaces/public-queries.ts`
+
 - `getPublishedSpaces()` (line 23) → `cacheTag(CACHE_TAGS.SPACES)` + `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`
 - `getSpaceBySlug(slug)` (line 53) → detail tags + hours cache
 - `getActiveCategories()` (line 96) → `cacheTag(CACHE_TAGS.SPACE_CATEGORIES)`
 
 **Public Pages**:
+
 - `/spaces` → `src/app/(public)/spaces/page.tsx` (line 34)
 - `/spaces/[slug]` → `src/app/(public)/spaces/[slug]/page.tsx` (line 38)
 
@@ -39,6 +42,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 ### 2. NEWS (お知らせ) ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/news.ts` (lines 1-200+)
+
 - `createNews()` (line 54) → `updateTag(CACHE_TAGS.NEWS)` + purge
 - `updateNews()` (line 78) → old + new slug tags
 - `deleteNews()` (line 119) → both tags
@@ -47,11 +51,13 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 - `restoreNewsVersion()` (line 223) → both tags + purge
 
 **Public Queries**: `src/shared/domain/news/queries.ts`
+
 - `getPublishedNewsList()` (line 39) → `cacheTag(CACHE_TAGS.NEWS)` + hours
 - `getPublishedNewsItem()` (line 64) → detail tags
 - `getPublishedNews()` (line 102) → `cacheTag(CACHE_TAGS.NEWS)`
 
 **Public Pages**:
+
 - `/news` → `src/app/(public)/news/page.tsx` (line 28)
 
 ---
@@ -59,6 +65,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 ### 3. POSTS (ブログ記事) ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/post/mutations.ts`
+
 - `createPost()` (line 74) → `invalidatePostCollectionCaches()`
 - `updatePost()` (line 100) → collection + detail tags
 - `deletePost()` (line 144) → all post tags
@@ -70,6 +77,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 - `updatePostTag()` (line 361) → both tags + purge
 
 **Public Queries**: `src/shared/domain/posts/queries.ts`
+
 - `getPublishedPostsList()` (line 64) → `cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK)` + hours
 - `getPublishedPost()` (line 110) → detail tags + permalink tag
 - `getPublishedPosts()` (line 156) → collection + permalink tags
@@ -77,6 +85,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 **Key Note**: Post queries include `CACHE_TAGS.PERMALINK` because URLs change with permalink settings. Correct.
 
 **Public Pages**:
+
 - `/posts` → `src/app/(public)/posts/page.tsx`
 
 ---
@@ -84,6 +93,7 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 ### 4. PAGE CONTENT & CUSTOM PAGES ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/page.ts`
+
 - `createPage()` (line 58) → `updateTag(CACHE_TAGS.PAGES)` + detail
 - `updatePage()` (line 39) → detail tags
 - `deletePage()` (line 96) → both tags
@@ -97,14 +107,17 @@ Complete tracing of data flow from all 8 key admin-managed resources to public p
 **Public Queries**:
 
 Custom Pages: `src/shared/domain/pages/queries.ts`
+
 - `getPublicPage()` (line 102) → `cacheTag(CACHE_TAGS.PAGES, getCacheTag.pages.detail(slug))` + hours
 - `getPageSeo()` (line 121) → `cacheTag(CACHE_TAGS.PAGE_SEO, getCacheTag.pageSeo.detail(slug))` + hours
 
 Page Content: `src/shared/domain/page-content/queries.ts`
+
 - `getPageContent()` (line 22) → `cacheTag(CACHE_TAGS.PAGE_CONTENT, getCacheTag.pageContent.detail(pageKey))` + hours
 - `getPageContentMeta()` (line 37) → `cacheTag(CACHE_TAGS.PAGE_CONTENT, getCacheTag.pageContent.meta(pageKey))` + hours
 
 **Public Pages**:
+
 - `/spaces` → calls `getPageContent("space-list", ...)`
 - `/news` → calls `getPageContent("news", ...)`
 - `/faq` → calls `getPageContent("faq", ...)`
@@ -118,11 +131,13 @@ Page Content: `src/shared/domain/page-content/queries.ts`
 **Admin Actions** (multiple files):
 
 `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/basic.ts`:
+
 - `updateBasicInfo()` → `updateTag(CACHE_TAGS.SETTINGS)`
 - `updateLayoutSettings()` → `updateTag(CACHE_TAGS.SETTINGS)`
 - `updateSeoSettings()` → `updateTag(CACHE_TAGS.SETTINGS)`
 
 `src/app/(admin)/admin/(dashboard)/_shared/actions/settings/other.ts`:
+
 - `updateMaintenanceSettings()` → `updateTag(CACHE_TAGS.SETTINGS)`
 - `updateCookieConsentSettings()` → `updateTag(CACHE_TAGS.SETTINGS)`
 - `updateHeaderSettings()` → `updateTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)` (line 141)
@@ -132,6 +147,7 @@ Page Content: `src/shared/domain/page-content/queries.ts`
 - `updateSidebarSettings()` → `updateTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.POSTS)` (line 125)
 
 **Public Queries**: `src/shared/domain/settings/queries.ts`
+
 - `getHeaderSettings()` (line 124) → `cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS)` + days
 - `getFooterSettings()` (line 144) → same tags + days
 - `getPublicBusinessSettings()` (line 87) → `cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS)` + days
@@ -143,6 +159,7 @@ Page Content: `src/shared/domain/page-content/queries.ts`
 **Special Note**: Maintenance settings use DYNAMIC_DATA (minutes) for immediate effect.
 
 **Public Pages**:
+
 - `layout.tsx` (line 56-60) → calls `getHeaderSettings()`, `getFooterSettings()`, `getAnalyticsConfig()`, `getMaintenanceSettings()`
 - Site footer → calls `getFooterSettings()`
 
@@ -151,6 +168,7 @@ Page Content: `src/shared/domain/page-content/queries.ts`
 ### 6. FAQ (よくある質問) ⚠️
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/faq.ts`
+
 - `createFaqCategory()` (line 51) → `updateTag(CACHE_TAGS.FAQ)` + purge
 - `updateFaqCategory()` (line 71) → both
 - `deleteFaqCategory()` (line 95) → both
@@ -164,9 +182,11 @@ Page Content: `src/shared/domain/page-content/queries.ts`
 **Public Queries**:
 
 CACHED (correct): `src/shared/domain/sections/queries.ts`
+
 - `getPublishedFaqItems()` (line 162) → `cacheTag(CACHE_TAGS.FAQ)` + hours
 
 NOT CACHED (⚠️): `src/shared/domain/faq/queries.ts`
+
 - `getFaqCategories()` (line 26) → NO CACHE
 - `getFaqItems()` (line 72) → NO CACHE
 - `getFaqCategoryById()` (line 57) → NO CACHE
@@ -179,6 +199,7 @@ NOT CACHED (⚠️): `src/shared/domain/faq/queries.ts`
 ### 7. TERMS (利用規約) ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/terms/mutations.ts`
+
 - `createTerms()` (line 58) → `invalidateTermsCache()` (line 39)
 - `createTermsWithVersion()` (line 77) → `invalidateTermsCache()`
 - `updateTerms()` (line 103) → `invalidateTermsCache()`
@@ -187,6 +208,7 @@ NOT CACHED (⚠️): `src/shared/domain/faq/queries.ts`
 - All version operations → `invalidateTermsCache()` or `updateTag(CACHE_TAGS.TERMS)`
 
 `invalidateTermsCache()` (line 39):
+
 ```typescript
 function invalidateTermsCache(): void {
   updateTag(CACHE_TAGS.TERMS)
@@ -195,9 +217,11 @@ function invalidateTermsCache(): void {
 ```
 
 **Public Queries**: `src/shared/domain/terms/queries.ts`
+
 - `getPublicTermsBySlug()` (line 41) → `cacheTag(CACHE_TAGS.TERMS)` + hours
 
 **Public Pages**:
+
 - `/terms` → calls `getPublicTermsBySlug("terms")`
 - `/privacy` → calls `getPublicTermsBySlug("privacy")`
 
@@ -206,12 +230,15 @@ function invalidateTermsCache(): void {
 ### 8. SPACE CATEGORIES (スペースカテゴリ) ✅
 
 **Admin Actions**: `src/app/(admin)/admin/(dashboard)/_shared/actions/space-category.ts`
+
 - All operations → `updateTag(CACHE_TAGS.SPACE_CATEGORIES)`
 
 **Public Queries**: `src/shared/domain/spaces/public-queries.ts`
+
 - `getActiveCategories()` (line 96) → `cacheTag(CACHE_TAGS.SPACE_CATEGORIES)` + hours
 
 **Public Pages**:
+
 - `/spaces` filter bar uses categories
 
 ---
@@ -219,12 +246,14 @@ function invalidateTermsCache(): void {
 ## Cache Configuration Summary
 
 **Cache Lifetimes** (`src/shared/lib/constants/cache.ts`):
+
 - `PUBLIC_CONTENT: "hours"` — Blog, news, spaces, FAQs, pages
 - `STATIC_SETTINGS: "days"` — Site config, business info, analytics IDs
 - `DYNAMIC_DATA: "minutes"` — Maintenance mode (needs immediate effect)
 - `METADATA: "hours"` — SEO metadata
 
 **Cache Tags** (`src/shared/lib/constants/cache.ts` lines 34-100):
+
 ```
 CACHE_TAGS.POSTS, NEWS, SPACES, PAGES, FAQ, TERMS, SETTINGS
 getCacheTag.posts.detail(slug), getCacheTag.news.detail(id), etc.
@@ -232,6 +261,7 @@ getCacheTag.pageContent.detail(pageKey), getCacheTag.pageContent.meta(pageKey)
 ```
 
 **Cloudflare Purge** (all in actions):
+
 - `fireAndForget(purgeSpaceCache(id))`
 - `fireAndForget(purgeNewsCache(slug))`
 - `fireAndForget(purgePostCache(slug))`
@@ -245,6 +275,7 @@ getCacheTag.pageContent.detail(pageKey), getCacheTag.pageContent.meta(pageKey)
 ## Issues Found
 
 ### Critical: None
+
 All 8 core resources have complete cache invalidation.
 
 ### Warnings:

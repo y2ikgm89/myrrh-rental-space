@@ -350,23 +350,23 @@ describe("createPost", () => {
 
 ## ファイル配置と命名規則
 
-| パス                                   | 内容                                   | ファイル形式 |
-| -------------------------------------- | -------------------------------------- | ------------ |
-| `__tests__/unit/`                      | 単体テスト（純粋関数・ユーティリティ） | `*.test.ts`  |
-| `__tests__/unit/lib/`                  | ライブラリ関数のテスト                 | `*.test.ts`  |
-| `__tests__/unit/components/`           | コンポーネントのテスト                 | `*.test.ts`  |
-| `__tests__/unit/lib/validations/`      | Zodスキーマバリデーションのテスト      | `*.test.ts`  |
-| `__tests__/integration/`               | 統合テスト（Server Actions・API）      | `*.test.ts`  |
-| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト         | `*.test.ts`  |
-| `__tests__/integration/api/`           | API Route Handler の統合テスト         | `*.test.ts`  |
-| `__tests__/mocks/`                     | モック定義（共有）                     | `*.ts`       |
-| `__tests__/mocks/index.ts`             | バレルエクスポート                     |              |
-| `__tests__/mocks/prisma.ts`            | Prisma Client モック                   |              |
-| `__tests__/mocks/auth.ts`              | Better Auth モック                     |              |
-| `__tests__/mocks/next.ts`              | Next.js API モック                     |              |
-| `__tests__/mocks/resend.ts`            | Resend メールモック                    |              |
-| `__tests__/setup-dom.ts`               | JSDOM プリロード（`installJSDOMForTests`） |            |
-| `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）     |              |
+| パス                                   | 内容                                       | ファイル形式 |
+| -------------------------------------- | ------------------------------------------ | ------------ |
+| `__tests__/unit/`                      | 単体テスト（純粋関数・ユーティリティ）     | `*.test.ts`  |
+| `__tests__/unit/lib/`                  | ライブラリ関数のテスト                     | `*.test.ts`  |
+| `__tests__/unit/components/`           | コンポーネントのテスト                     | `*.test.ts`  |
+| `__tests__/unit/lib/validations/`      | Zodスキーマバリデーションのテスト          | `*.test.ts`  |
+| `__tests__/integration/`               | 統合テスト（Server Actions・API）          | `*.test.ts`  |
+| `__tests__/integration/actions/admin/` | 管理画面アクションの統合テスト             | `*.test.ts`  |
+| `__tests__/integration/api/`           | API Route Handler の統合テスト             | `*.test.ts`  |
+| `__tests__/mocks/`                     | モック定義（共有）                         | `*.ts`       |
+| `__tests__/mocks/index.ts`             | バレルエクスポート                         |              |
+| `__tests__/mocks/prisma.ts`            | Prisma Client モック                       |              |
+| `__tests__/mocks/auth.ts`              | Better Auth モック                         |              |
+| `__tests__/mocks/next.ts`              | Next.js API モック                         |              |
+| `__tests__/mocks/resend.ts`            | Resend メールモック                        |              |
+| `__tests__/setup-dom.ts`               | JSDOM プリロード（`installJSDOMForTests`） |              |
+| `__tests__/setup.ts`                   | グローバルセットアップ（環境変数）         |              |
 
 ### テストファイル命名
 

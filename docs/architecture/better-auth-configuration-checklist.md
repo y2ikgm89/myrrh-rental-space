@@ -9,13 +9,13 @@
 
 ## 必須項目（現行方針）
 
-| 項目 | 期待 |
-|------|------|
-| `advanced.database.generateId` | `"uuid"`（DB `@db.Uuid` と整合） |
-| `baseURL` | `BETTER_AUTH_URL` または `getAppUrl()` 由来で明示 |
-| `database` | Prisma アダプタ（Kysely 併用なし） |
-| `plugins` | `nextCookies()` は **配列末尾** |
-| 動的 `getAuth()` | **再導入禁止**（静的 `auth` export のみ） |
+| 項目                           | 期待                                              |
+| ------------------------------ | ------------------------------------------------- |
+| `advanced.database.generateId` | `"uuid"`（DB `@db.Uuid` と整合）                  |
+| `baseURL`                      | `BETTER_AUTH_URL` または `getAppUrl()` 由来で明示 |
+| `database`                     | Prisma アダプタ（Kysely 併用なし）                |
+| `plugins`                      | `nextCookies()` は **配列末尾**                   |
+| 動的 `getAuth()`               | **再導入禁止**（静的 `auth` export のみ）         |
 
 ## RBAC / サーバー側
 

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { getCustomers } from "@/admin/queries/customer";
 import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
@@ -55,12 +55,20 @@ export default async function CustomersPage({ searchParams }: PageProps) {
             顧客情報の確認・ステータス管理を行います
           </p>
         </div>
-        <Button asChild className="min-h-10 sm:min-h-9">
-          <Link href="/admin/customers/new">
-            <Plus className="mr-2 h-4 w-4" />
-            新規顧客
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild className="min-h-10 sm:min-h-9">
+            <Link href="/admin/customers/new">
+              <Plus className="mr-2 h-4 w-4" />
+              新規顧客
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/admin/export/customers" download>
+              <Download className="mr-2 h-4 w-4" />
+              CSV
+            </a>
+          </Button>
+        </div>
       </div>
 
       {/* フィルター */}

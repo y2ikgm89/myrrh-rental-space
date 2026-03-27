@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  customerTypeSchema,
+  companyNameSchema,
+  requireCompanyNameForCorporate,
+  COMPANY_NAME_REFINE_ERROR,
+} from "./customer-type";
 
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
   error: "日付の形式が正しくありません（YYYY-MM-DD）",
@@ -20,6 +26,8 @@ export const publicReservationSchema = z
       .int()
       .min(1, { error: "利用人数は1名以上です" })
       .max(500, { error: "利用人数は500名以下です" }),
+    customerType: customerTypeSchema,
+    companyName: companyNameSchema,
     lastName: z
       .string()
       .min(1, { error: "姓は必須です" })
@@ -53,6 +61,7 @@ export const publicReservationSchema = z
       return end > start;
     },
     { error: "終了時間は開始時間より後にしてください", path: ["endTime"] },
-  );
+  )
+  .refine(requireCompanyNameForCorporate, COMPANY_NAME_REFINE_ERROR);
 
 export type PublicReservationInput = z.input<typeof publicReservationSchema>;

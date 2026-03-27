@@ -84,12 +84,6 @@
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/connection-reminder.sh",
-            "statusMessage": "Checking connection()...",
-            "timeout": 10
-          },
-          {
-            "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-server-action-hof.sh",
             "statusMessage": "Checking HOF pattern...",
             "timeout": 10
@@ -110,12 +104,6 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-disable-audit.sh",
             "statusMessage": "ESLint disable 監査中...",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context7-reminder.sh",
-            "statusMessage": "context7 リマインダー...",
             "timeout": 5
           }
         ]

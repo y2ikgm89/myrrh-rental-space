@@ -29,7 +29,7 @@ interface PageListTableProps {
   total: number;
   currentPage: number;
   perPage: number;
-  homepageLastUpdated: Date | null;
+  homepageLastUpdated: string | null;
 }
 
 export function PageListTable({
@@ -84,7 +84,7 @@ export function PageListTable({
                 <TableHead className="hidden sm:table-cell">スラッグ</TableHead>
                 <TableHead>タイトル</TableHead>
                 <TableHead className="hidden md:table-cell">種別</TableHead>
-                <TableHead>ステータス</TableHead>
+                <TableHead className="whitespace-nowrap">ステータス</TableHead>
                 <TableHead className="hidden md:table-cell">更新日時</TableHead>
                 <TableHead className="w-40 text-right">操作</TableHead>
               </TableRow>
@@ -104,7 +104,7 @@ export function PageListTable({
                     セクション管理
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Badge variant="success">公開中</Badge>
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
@@ -155,7 +155,7 @@ export function PageListTable({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     {page.isPublished ? (
                       <Badge variant="success">公開中</Badge>
                     ) : (
@@ -180,17 +180,6 @@ export function PageListTable({
                   </TableCell>
                 </TableRow>
               ))}
-
-              {pages.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    条件に一致するページがありません
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>

@@ -40,9 +40,7 @@ export function $isEmptyLayoutItemNode(node: LexicalNode): boolean {
   }
   const firstChild = node.getFirstChild();
   return (
-    firstChild !== null &&
-    $isParagraphNode(firstChild) &&
-    firstChild.isEmpty()
+    firstChild !== null && $isParagraphNode(firstChild) && firstChild.isEmpty()
   );
 }
 
@@ -118,7 +116,8 @@ export class LayoutItemNode extends ElementNode {
     const siblings = parent.getChildren();
     const isFirst = siblings[0] === this;
     const allEmpty = siblings.every(
-      (sibling) => $isLayoutItemNode(sibling) && $isEmptyLayoutItemNode(sibling),
+      (sibling) =>
+        $isLayoutItemNode(sibling) && $isEmptyLayoutItemNode(sibling),
     );
 
     if (isFirst && allEmpty) {

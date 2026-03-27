@@ -13,7 +13,7 @@ import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageContent } from "@/public/lib/content/queries";
 import { spaceListContentSchema } from "@/public/lib/content/schemas/space-list";
-import { defaultSpaceListContent } from "@/public/lib/content/defaults/space-list";
+import { defaultSpaceListContent } from "@/public/lib/content/defaults";
 import {
   getPublishedSpacesPaginated,
   getActiveCategories,
@@ -23,7 +23,7 @@ import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { Pagination } from "@/public/components/Pagination";
+import { Pagination } from "@/public/components/pagination";
 import { FadeIn } from "@/public/components/animations/fade-in";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import { SpaceGrid } from "./_components/space-grid";

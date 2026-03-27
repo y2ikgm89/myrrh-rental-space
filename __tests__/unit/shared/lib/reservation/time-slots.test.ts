@@ -5,7 +5,7 @@ import {
   parseTime,
   generateFallbackSlots,
   generateSlotsFromBusinessHours,
-} from "@/shared/lib/reservation/time-slots";
+} from "@/shared/lib/reservation/time-slots-utils";
 
 // =============================================================================
 // テスト用フィクスチャ
@@ -160,12 +160,18 @@ describe("generateFallbackSlots", () => {
 
     test("全スロットが available: true である", () => {
       const slots = generateFallbackSlots();
-      expect(slots.every((s) => s.available === true)).toBe(true);
+      expect(
+        slots.every(
+          (s: { time: string; available: boolean }) => s.available === true,
+        ),
+      ).toBe(true);
     });
 
     test("スロットが 30 分刻みで連続している（09:00〜20:30）", () => {
       const slots = generateFallbackSlots();
-      const times = slots.map((s) => s.time);
+      const times = slots.map(
+        (s: { time: string; available: boolean }) => s.time,
+      );
       expect(times).toEqual([
         "09:00",
         "09:30",
@@ -256,7 +262,11 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_SINGLE_SLOT,
         MONDAY_DATE,
       );
-      expect(slots.every((s) => s.available === true)).toBe(true);
+      expect(
+        slots.every(
+          (s: { time: string; available: boolean }) => s.available === true,
+        ),
+      ).toBe(true);
     });
   });
 
@@ -274,7 +284,9 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_MULTIPLE_SLOTS,
         MONDAY_DATE,
       );
-      const times = slots.map((s) => s.time);
+      const times = slots.map(
+        (s: { time: string; available: boolean }) => s.time,
+      );
       expect(times).not.toContain("12:00");
     });
 
@@ -283,7 +295,9 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_MULTIPLE_SLOTS,
         MONDAY_DATE,
       );
-      const times = slots.map((s) => s.time);
+      const times = slots.map(
+        (s: { time: string; available: boolean }) => s.time,
+      );
       expect(times).toEqual([
         "09:00",
         "09:30",
@@ -318,7 +332,9 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_OVERLAPPING_SLOTS,
         MONDAY_DATE,
       );
-      const times = slots.map((s) => s.time);
+      const times = slots.map(
+        (s: { time: string; available: boolean }) => s.time,
+      );
       const uniqueTimes = new Set(times);
       expect(times).toHaveLength(uniqueTimes.size);
     });
@@ -328,7 +344,9 @@ describe("generateSlotsFromBusinessHours", () => {
         BUSINESS_HOURS_OVERLAPPING_SLOTS,
         MONDAY_DATE,
       );
-      const times = slots.map((s) => s.time);
+      const times = slots.map(
+        (s: { time: string; available: boolean }) => s.time,
+      );
       expect(times).toEqual([
         "09:00",
         "09:30",

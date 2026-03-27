@@ -50,7 +50,7 @@ export type { SimplePageContent as <PageKey>Content } from "../schemas"
 カスタムフィールドがある場合は専用スキーマを定義:
 
 ```typescript
-import { z } from "zod/v4"
+import { z } from "zod"
 import { imageRefSchema, buttonItemSchema } from "../schemas"
 
 export const <pageKey>ContentSchema = z.object({

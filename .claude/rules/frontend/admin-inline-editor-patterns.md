@@ -19,13 +19,13 @@ paths:
 
 ## ディレクトリ正本
 
-| 領域 | パス（エイリアス例） |
-|------|----------------------|
-| シェル・パネル | `…/editor/inline/UnifiedSidePanel.tsx`, `SidePanelShell.tsx`, `InlineEditorShell.tsx` |
-| 型・定数 | `…/editor/inline/content-types/types.ts`（`ContentTypeConfig`, `SidePanelDefinition`, `PostSidePanelExtra`, `NewsSidePanelExtra`, `spreadOptionalDisabled`） |
-| 設定（実装） | `…/content-types/post.tsx`, `news.tsx`（**`"use client"`** — `render` で JSX を返す） |
-| 共有フィールド | `…/editor/inline/side-panel/*.tsx` |
-| ページ | `posts/_components/PostEditor.tsx`, `news/_components/NewsEditor.tsx` |
+| 領域           | パス（エイリアス例）                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| シェル・パネル | `…/editor/inline/UnifiedSidePanel.tsx`, `SidePanelShell.tsx`, `InlineEditorShell.tsx`                                                                        |
+| 型・定数       | `…/editor/inline/content-types/types.ts`（`ContentTypeConfig`, `SidePanelDefinition`, `PostSidePanelExtra`, `NewsSidePanelExtra`, `spreadOptionalDisabled`） |
+| 設定（実装）   | `…/content-types/post.tsx`, `news.tsx`（**`"use client"`** — `render` で JSX を返す）                                                                        |
+| 共有フィールド | `…/editor/inline/side-panel/*.tsx`                                                                                                                           |
+| ページ         | `posts/_components/PostEditor.tsx`, `news/_components/NewsEditor.tsx`                                                                                        |
 
 ## サイドパネル設計（現行・後方互換なし）
 
@@ -72,11 +72,11 @@ paths:
 
 ## 関連ドキュメント
 
-| 内容 | 参照 |
-|------|------|
-| Lexical 本文・ブロック | `lexical-patterns.md` |
-| 管理 UI 全般 | `admin-ui-patterns.md` |
-| Server Actions | `server-actions.md` |
+| 内容                   | 参照                   |
+| ---------------------- | ---------------------- |
+| Lexical 本文・ブロック | `lexical-patterns.md`  |
+| 管理 UI 全般           | `admin-ui-patterns.md` |
+| Server Actions         | `server-actions.md`    |
 
 ## 履歴計画書について
 

@@ -18,9 +18,7 @@ import {
   type NewsListConfig,
   type NewsListConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getNewsListConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getNewsListConfig } from "@/shared/lib/validations/section-defaults";
 import { newsLayoutLabels } from "@/shared/lib/validations/section-options";
 import { keysOf } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

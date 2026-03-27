@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { deleteInquiry } from "@/admin/actions/inquiry";
 import { getInquiryById } from "@/admin/queries/inquiry";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { InquiryDetail } from "./_components/InquiryDetail";
 import type { Metadata } from "next";
 
@@ -42,14 +42,15 @@ export default async function InquiryDetailPage({ params }: PageProps) {
       backHref="/admin/inquiries"
       title="お問い合わせ詳細"
       subtitle={`${inquiry.name}（${inquiry.email}）`}
+      actions={
+        <DetailDeleteButton
+          itemName={inquiry.subject}
+          onDelete={deleteInquiry.bind(null, inquiry.id)}
+          redirectTo="/admin/inquiries"
+        />
+      }
     >
       <InquiryDetail inquiry={inquiry} />
-      <DangerZone
-        deleteLabel="お問い合わせを削除"
-        itemName={inquiry.subject}
-        onDelete={deleteInquiry.bind(null, inquiry.id)}
-        redirectTo="/admin/inquiries"
-      />
     </AdminDetailLayout>
   );
 }

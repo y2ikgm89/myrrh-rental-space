@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { NewsPreviewContent } from "../../_components/NewsPreviewContent";
+import { NewsPreviewContent } from "../../_components/news-preview-content";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Home } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 
 interface BreadcrumbItem {
   readonly label: string;
@@ -11,31 +12,16 @@ interface BreadcrumbProps {
 }
 
 export function Breadcrumb({ items }: BreadcrumbProps) {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "ホーム", item: "/" },
-      ...items.map((item, i) => ({
-        "@type": "ListItem",
-        position: i + 2,
-        name: item.label,
-        ...(item.href ? { item: item.href } : {}),
-      })),
-    ],
-  };
-
-  // JSON-LD structured data — JSON.stringify produces safe output (no raw HTML)
-  const jsonLdHtml = JSON.stringify(jsonLd);
-
   return (
     <>
-      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD structured data: JSON.stringify produces safe output */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdHtml }}
+      <BreadcrumbJsonLd
+        items={[
+          { name: "ホーム", url: "/" },
+          ...items
+            .filter((item) => item.href)
+            .map((item) => ({ name: item.label, url: item.href ?? "/" })),
+        ]}
       />
-      {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}
       <nav
         aria-label="パンくずリスト"
         className="text-sm text-muted-foreground"

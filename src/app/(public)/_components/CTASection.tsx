@@ -7,9 +7,9 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { SplitText } from "@/public/components/animations/SplitText";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { SplitText } from "@/public/components/animations/split-text";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,

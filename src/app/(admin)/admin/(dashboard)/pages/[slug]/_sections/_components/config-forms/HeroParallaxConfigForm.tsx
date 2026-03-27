@@ -27,9 +27,7 @@ import {
   type HeroParallaxConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
-import {
-  getHeroParallaxConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getHeroParallaxConfig } from "@/shared/lib/validations/section-defaults";
 import {
   contentPositionLabels,
   overlayStyleLabels,

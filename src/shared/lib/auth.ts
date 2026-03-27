@@ -31,6 +31,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "./errors/server";
+import { sendPasswordResetEmail } from "./email/password-reset-emails";
 import { serverEnv } from "./env/server";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +114,13 @@ function createAuth() {
     },
     emailAndPassword: {
       enabled: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendPasswordResetEmail({
+          email: user.email,
+          name: user.name,
+          resetUrl: url,
+        });
+      },
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     account: {

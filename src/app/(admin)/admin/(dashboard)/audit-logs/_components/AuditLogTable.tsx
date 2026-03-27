@@ -29,7 +29,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
             <TableRow>
               <TableHead>日時</TableHead>
               <TableHead>ユーザー</TableHead>
-              <TableHead>アクション</TableHead>
+              <TableHead className="whitespace-nowrap">アクション</TableHead>
               <TableHead>リソース</TableHead>
               <TableHead className="hidden md:table-cell">リソースID</TableHead>
               <TableHead className="hidden lg:table-cell">IPアドレス</TableHead>
@@ -44,7 +44,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                 <TableCell>
                   {log.user?.name ?? log.user?.email ?? "(システム)"}
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <AuditActionBadge action={log.action} />
                 </TableCell>
                 <TableCell>{log.resource}</TableCell>

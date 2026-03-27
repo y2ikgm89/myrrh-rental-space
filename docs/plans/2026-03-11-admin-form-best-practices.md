@@ -2,35 +2,41 @@
 
 ## Overview
 
-This document consolidates emerging patterns from the current codebase and proposes 
+This document consolidates emerging patterns from the current codebase and proposes
 standardized patterns for CRUD form development in the admin dashboard.
 
 **Current Status:**
+
 - Customers: Full CRUD (separate create/edit forms, 99% code duplication)
-- Coupons: Unified form (single component handles both create and edit) 
+- Coupons: Unified form (single component handles both create and edit)
 - **Pattern Goal:** Unify on unified form approach for all CRUD resources
 
 ## Pattern Comparison
 
-### Pattern A: Separate Forms (CustomerForm + CustomerEditForm) 
+### Pattern A: Separate Forms (CustomerForm + CustomerEditForm)
+
 ❌ NOT RECOMMENDED
 
 Files:
+
 - CustomerForm.tsx (create only)
-- CustomerEditForm.tsx (edit only) 
+- CustomerEditForm.tsx (edit only)
 - Pages: new/page.tsx + [id]/edit/page.tsx
 
 Pros: Explicit separation
 Cons: 99% code duplication, maintenance nightmare, inconsistent error handling
 
-### Pattern B: Unified Form (CouponForm) 
+### Pattern B: Unified Form (CouponForm)
+
 ✅ RECOMMENDED
 
 Files:
+
 - CouponForm.tsx (handles both create and edit)
 - Pages: new/page.tsx + [id]/page.tsx (detail page embeds form)
 
 Pros:
+
 - Single source of truth
 - DRY principle
 - Feature parity guaranteed
@@ -40,9 +46,10 @@ Cons: Slightly more component logic
 
 ## Key Pattern Details
 
-### 1. Form Component (src/app/(admin)/admin/(dashboard)/<resource>/_components/<Resource>Form.tsx)
+### 1. Form Component (src/app/(admin)/admin/(dashboard)/<resource>/\_components/<Resource>Form.tsx)
 
 Single component with optional prop:
+
 - coupon?: CouponData (undefined = create mode, defined = edit mode)
 - useFormAction hook manages form state
 - Both create and update Server Actions handled
@@ -51,6 +58,7 @@ Single component with optional prop:
 ### 2. Create Page (new/page.tsx)
 
 Server Component using AdminDetailLayout:
+
 - Renders <Resource>Form without prop
 - Clean minimal page.tsx
 - Header/back button handled by layout
@@ -58,6 +66,7 @@ Server Component using AdminDetailLayout:
 ### 3. Detail Page ([id]/page.tsx)
 
 Server Component + Client Detail Component:
+
 - Displays read-only data via <Resource>Detail
 - Edit button in AdminDetailLayout actions
 - DangerZone for delete at bottom
@@ -66,21 +75,24 @@ Server Component + Client Detail Component:
 ### 4. Edit Page ([id]/edit/page.tsx)
 
 Server Component using AdminDetailLayout:
+
 - Renders <Resource>Form with resource prop
 - backLabel="詳細に戻る" (required for edit pages)
 - Fetches data server-side, passes to form
 
-### 5. Detail Component ([id]/_components/<Resource>Detail.tsx)
+### 5. Detail Component ([id]/\_components/<Resource>Detail.tsx)
 
 Client Component:
+
 - 2-column layout (main content + sidebar)
 - Main: DetailSection components for read-only info
 - Sidebar: Status selector, notes editor, quick actions
 - All interactive controls use separate Server Actions
 
-### 6. Danger Zone ([id]/_components/<Resource>DangerZone.tsx)
+### 6. Danger Zone ([id]/\_components/<Resource>DangerZone.tsx)
 
 Client Component at page bottom:
+
 - DeleteConfirmDialog for confirmation
 - Redirects to list after success
 - Toast notifications
@@ -88,6 +100,7 @@ Client Component at page bottom:
 ### 7. Action Cell (table operation menu)
 
 Client Component using ActionDropdown:
+
 - Links for navigation (detail, edit)
 - Buttons for dialogs (delete)
 - Destructive action at bottom
@@ -97,20 +110,24 @@ Client Component using ActionDropdown:
 ### For Customers Resource:
 
 Phase 1: Create Unified Form
+
 - Merge CustomerForm.tsx + CustomerEditForm.tsx
 - Add optional customer?: CustomerWithReservations prop
 - Test in isolation
 
 Phase 2: Update Routes
+
 - Create customers/[id]/edit/page.tsx (new route)
 - Update customers/[id]/page.tsx for detail component
 - Update customers/new/page.tsx to use unified form
 
 Phase 3: Delete Duplicates
+
 - Remove CustomerEditForm.tsx
 - Remove redundant code
 
 Phase 4: Test
+
 - E2E tests for create/edit flows
 - Verify error handling
 
@@ -170,4 +187,3 @@ Spaces: Check current pattern
 News: Check current pattern
 Posts: Check current pattern
 Settings: Special case (singleton)
-

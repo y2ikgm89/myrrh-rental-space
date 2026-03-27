@@ -35,6 +35,11 @@ export const newCustomerSchema = z.object({
     .string()
     .min(1, { error: "名を入力してください" })
     .max(50, { error: "名は50文字以内で入力してください" }),
+  companyName: z
+    .string()
+    .max(100, { error: "会社名は100文字以内で入力してください" })
+    .optional()
+    .or(z.literal("")),
   email: z
     .string()
     .min(1, { error: "メールアドレスを入力してください" })

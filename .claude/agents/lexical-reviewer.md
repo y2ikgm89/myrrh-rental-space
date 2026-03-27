@@ -102,11 +102,11 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 
 `LexicalEditor.tsx` / `editor-layout-constants.ts` / `plugins/lexical-draggable-block-plugin.ts` / `plugins/DraggableBlockPlugin.tsx` を触った場合の高シグナル確認:
 
-| チェック | 内容 |
-| -------- | ---- |
-| 定数の単一正本 | `EDITOR_PADDING_*` が `pl-10` / `pr-6` / `maxWidth` 計算と矛盾していないか |
-| フォークの境界 | `DraggableBlockPlugin.tsx` が **`./lexical-draggable-block-plugin`** から import しているか。`@lexical/react/LexicalDraggableBlockPlugin` の **直接 import が紛れ込んでいないか** |
-| 二重オフセット | ドラッグメニュー／ターゲットラインに **`left-*` + `transform` の二重**が再発していないか |
+| チェック         | 内容                                                                                                                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 定数の単一正本   | `EDITOR_PADDING_*` が `pl-10` / `pr-6` / `maxWidth` 計算と矛盾していないか                                                                                                                                            |
+| フォークの境界   | `DraggableBlockPlugin.tsx` が **`./lexical-draggable-block-plugin`** から import しているか。`@lexical/react/LexicalDraggableBlockPlugin` の **直接 import が紛れ込んでいないか**                                     |
+| 二重オフセット   | ドラッグメニュー／ターゲットラインに **`left-*` + `transform` の二重**が再発していないか                                                                                                                              |
 | プレースホルダー | `ContentEditable` に `placeholder` を渡しているか。プレースホルダー DOM に **`text-base` / `leading-relaxed` / `lg:text-lg`** 等、本文 `EDITOR_PROSE_CLASSES` と揃える意図があるか（兄弟描画のため `prose` 継承なし） |
 
 詳細は `lexical-patterns.md` の「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」。
@@ -115,11 +115,11 @@ updateDOM(prevNode: this, dom: HTMLElement): boolean {
 
 `config/insert-items.ts`・`ComponentPickerPlugin.tsx`・`ToolbarPlugin.tsx`（挿入ドロップダウン）を触った場合:
 
-| チェック | 内容 |
-| -------- | ---- |
+| チェック      | 内容                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | ネスト update | スラッシュ選択で `editor.update` の内側から `executeInsertItem` を呼んでいないか（`applyInsertItemInUpdate` を同一 update 内で使う） |
-| transform 型 | `transform: (editor) => …` ではなく **`applyInUpdate`**（$ API のみ）か |
-| ツールバー | 挿入クリックは **`executeInsertItem`**（dialog は同期 `openDialog`）か |
+| transform 型  | `transform: (editor) => …` ではなく **`applyInUpdate`**（$ API のみ）か                                                              |
+| ツールバー    | 挿入クリックは **`executeInsertItem`**（dialog は同期 `openDialog`）か                                                               |
 
 詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
 
@@ -142,12 +142,12 @@ override exportDOM() { ... }
 
 `InspectorSidebarProvider` / `useInspectorSidebar` を変更・追加レビューする場合:
 
-| チェック | 内容 |
-| -------- | ---- |
+| チェック         | 内容                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | React 19 Context | **`<InspectorSidebarContext value={...}>`** を使用。**`<InspectorSidebarContext.Provider>` は禁止**（eslint: `@eslint-react/no-context-provider`） |
-| フック | 消費側は **`use(InspectorSidebarContext)`**。**`useContext` は禁止**（`@eslint-react/no-use-context`） |
-| 永続化キー | ブロックパネル開閉は **`myrrh-lexical-inspector-panel` のみ**を正とする。理由なく別キーを増やさない |
-| DOM id | パネルは **`id="lexical-block-inspector-panel"`**（ツールバー `aria-controls` と一致） |
+| フック           | 消費側は **`use(InspectorSidebarContext)`**。**`useContext` は禁止**（`@eslint-react/no-use-context`）                                             |
+| 永続化キー       | ブロックパネル開閉は **`myrrh-lexical-inspector-panel` のみ**を正とする。理由なく別キーを増やさない                                                |
+| DOM id           | パネルは **`id="lexical-block-inspector-panel"`**（ツールバー `aria-controls` と一致）                                                             |
 
 ### 9. `'use client'` ディレクティブ
 

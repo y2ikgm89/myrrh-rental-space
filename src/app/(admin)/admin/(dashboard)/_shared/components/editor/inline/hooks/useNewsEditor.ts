@@ -259,9 +259,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(
-        values.contentJson,
-      );
+      const contentHtml = renderEditorStateJsonToHtmlClient(values.contentJson);
       const previewData = toPreviewData(values, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/news");
     } catch (error) {

@@ -72,7 +72,9 @@ test.describe("スペース一覧ページ", () => {
     await expect(
       page.locator("th").filter({ hasText: "スペース名" }),
     ).toBeVisible();
-    await expect(page.locator("th").filter({ hasText: "所在地" })).toBeVisible();
+    await expect(
+      page.locator("th").filter({ hasText: "所在地" }),
+    ).toBeVisible();
     await expect(page.locator("th").filter({ hasText: "定員" })).toBeVisible();
     await expect(
       page.locator("th").filter({ hasText: "時間料金" }),

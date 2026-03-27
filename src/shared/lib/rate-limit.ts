@@ -123,6 +123,18 @@ export const tokenRateLimiter = createRateLimiter({
   maxRequests: 30,
 });
 
+// 公開フォーム送信用（5リクエスト/分/IP）— スパム対策
+export const formSubmitRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 5,
+});
+
+// 公開クエリ用（30リクエスト/分/IP）— DoS対策
+export const publicQueryRateLimiter = createRateLimiter({
+  interval: 60 * 1000, // 1分
+  maxRequests: 30,
+});
+
 /**
  * パス名に基づいて適切なレートリミッターを選択しチェックする
  */
@@ -137,4 +149,26 @@ export function checkRateLimit(
     return tokenRateLimiter.check(clientIp);
   }
   return apiRateLimiter.check(clientIp);
+}
+
+/**
+ * Server Action 用のIP取得（headers() 経由）
+ */
+export async function getClientIpFromHeaders(): Promise<string> {
+  const { headers } = await import("next/headers");
+  const hdrs = await headers();
+
+  const cfConnectingIp = hdrs.get("cf-connecting-ip");
+  if (cfConnectingIp) return cfConnectingIp;
+
+  const xForwardedFor = hdrs.get("x-forwarded-for");
+  if (xForwardedFor) {
+    const ips = xForwardedFor.split(",").map((ip) => ip.trim());
+    return ips[0] ?? "unknown";
+  }
+
+  const xRealIp = hdrs.get("x-real-ip");
+  if (xRealIp) return xRealIp;
+
+  return "unknown";
 }

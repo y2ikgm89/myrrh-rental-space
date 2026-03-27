@@ -41,7 +41,7 @@ export function PostTable({ posts }: PostTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ステータス</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
               <TableHead>タイトル</TableHead>
               <TableHead className="hidden md:table-cell">カテゴリ</TableHead>
               <TableHead className="hidden text-right lg:table-cell">
@@ -54,7 +54,7 @@ export function PostTable({ posts }: PostTableProps) {
           <TableBody>
             {posts.map((post) => (
               <TableRow key={post.id}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <PostStatusBadge status={post.status} />
                 </TableCell>
                 <TableCell>

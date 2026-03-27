@@ -8,9 +8,9 @@
  */
 
 import type { ReactElement } from "react";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { SplitText } from "@/public/components/animations/SplitText";
-import { MagneticButton } from "@/public/components/animations/MagneticButton";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SplitText } from "@/public/components/animations/split-text";
+import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import {
   SectionWrapper,
   getTitleClasses,

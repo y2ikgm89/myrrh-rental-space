@@ -153,12 +153,36 @@ describe("customerFormSchema", () => {
     }
   });
 
+  test("会社名が100文字以内で通過", () => {
+    const result = customerFormSchema.safeParse({
+      lastName: "田村",
+      firstName: "健一",
+      companyName: "株式会社テスト",
+      email: "test@example.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("会社名が100文字超でエラー", () => {
+    const result = customerFormSchema.safeParse({
+      lastName: "田村",
+      firstName: "健一",
+      companyName: "あ".repeat(101),
+      email: "test@example.com",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].message).toContain("100文字以内");
+    }
+  });
+
   test("オプショナルフィールドは空文字列を許可", () => {
     const validData = {
       lastName: "山田",
       firstName: "太郎",
       lastNameKana: "",
       firstNameKana: "",
+      companyName: "",
       email: "test@example.com",
       phoneNumber: "",
       address: "",

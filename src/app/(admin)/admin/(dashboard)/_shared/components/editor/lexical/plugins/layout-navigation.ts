@@ -62,7 +62,8 @@ export function $onVerticalEscapeLayout(direction: "up" | "down"): boolean {
 
   if (direction === "up") {
     if (!isFirst) return false;
-    if (!$shouldOverrideDefaultCharacterSelection(selection, true)) return false;
+    if (!$shouldOverrideDefaultCharacterSelection(selection, true))
+      return false;
     const paragraph = $createParagraphNode();
     container.insertBefore(paragraph);
     paragraph.select();
@@ -71,7 +72,8 @@ export function $onVerticalEscapeLayout(direction: "up" | "down"): boolean {
 
   if (direction === "down") {
     if (!isLastColumn) return false;
-    if (!$shouldOverrideDefaultCharacterSelection(selection, false)) return false;
+    if (!$shouldOverrideDefaultCharacterSelection(selection, false))
+      return false;
     const paragraph = $createParagraphNode();
     container.insertAfter(paragraph);
     paragraph.select();

@@ -14,7 +14,7 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageContent } from "@/public/lib/content/queries";
 import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultAboutContent } from "@/public/lib/content/defaults/about";
+import { defaultAboutContent } from "@/public/lib/content/defaults";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { PageHero } from "@/public/components/layouts/page-hero";

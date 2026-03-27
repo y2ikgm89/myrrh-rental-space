@@ -15,11 +15,7 @@
  */
 import { JSDOM } from "jsdom";
 
-function defineGlobal(
-  target: object,
-  key: string,
-  value: unknown,
-): void {
+function defineGlobal(target: object, key: string, value: unknown): void {
   Object.defineProperty(target, key, {
     value,
     writable: true,
@@ -67,7 +63,11 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "MutationObserver", window.MutationObserver);
   defineGlobal(globalThis, "customElements", window.customElements);
   defineGlobal(globalThis, "Event", window.Event);
-  defineGlobal(globalThis, "getComputedStyle", window.getComputedStyle.bind(window));
+  defineGlobal(
+    globalThis,
+    "getComputedStyle",
+    window.getComputedStyle.bind(window),
+  );
   defineGlobal(globalThis, "DOMParser", window.DOMParser);
 }
 

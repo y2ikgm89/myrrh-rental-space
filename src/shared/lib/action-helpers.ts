@@ -99,6 +99,39 @@ export async function validateTurnstile(
 }
 
 // =============================================================================
+// Rate Limiting for Server Actions
+// =============================================================================
+
+type RateLimitCheckResult =
+  | { success: true }
+  | { success: false; error: string };
+
+/**
+ * Server Action 内でレート制限を適用
+ *
+ * @param limiter - createRateLimiter で作成したレートリミッター
+ * @returns レート制限結果。超過時はエラーメッセージを返す
+ *
+ * @example
+ * const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+ * if (!rateLimit.success) return createMutationError(rateLimit.error);
+ */
+export async function checkActionRateLimit(limiter: {
+  check(token: string): { success: boolean };
+}): Promise<RateLimitCheckResult> {
+  const { getClientIpFromHeaders } = await import("./rate-limit");
+  const ip = await getClientIpFromHeaders();
+  const result = limiter.check(ip);
+  if (!result.success) {
+    return {
+      success: false,
+      error: "リクエストが多すぎます。しばらく経ってから再度お試しください。",
+    };
+  }
+  return { success: true };
+}
+
+// =============================================================================
 // Retry Utilities
 // =============================================================================
 

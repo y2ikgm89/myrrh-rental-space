@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { Pencil } from "lucide-react";
+import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
 import { ReservationDetail } from "./_components/ReservationDetail";
-import { ReservationDangerZone } from "./_components/ReservationDangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
+import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import type { Metadata } from "next";
@@ -43,19 +44,23 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       title={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
       subtitle={reservation.space.name}
       actions={
-        <Button size="sm" asChild>
-          <Link href={`/admin/reservations/${id}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            編集
-          </Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
+            onDelete={deleteReservation.bind(null, reservation.id)}
+            redirectTo="/admin/reservations"
+            successMessage="予約を削除しました"
+          />
+          <Button size="sm" asChild>
+            <Link href={`/admin/reservations/${id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
       <ReservationDetail reservation={reservation} />
-      <ReservationDangerZone
-        reservationId={reservation.id}
-        itemName={`${reservation.customer.lastName}${reservation.customer.firstName} 様の予約`}
-      />
     </AdminDetailLayout>
   );
 }

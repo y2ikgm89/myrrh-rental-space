@@ -5,6 +5,8 @@ import type { TimeSlot } from "@/shared/lib/reservation/types";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import { getAvailableTimeSlots } from "@/shared/lib/reservation/time-slots";
 import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
+import { publicQueryRateLimiter } from "@/shared/lib/rate-limit";
 
 const fetchSlotsSchema = z.object({
   spaceId: z.string().uuid(),
@@ -15,6 +17,9 @@ export async function fetchAvailableSlots(
   spaceId: string,
   date: string,
 ): Promise<TimeSlot[]> {
+  const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
+  if (!rateLimit.success) return [];
+
   const parsed = fetchSlotsSchema.safeParse({ spaceId, date });
   if (!parsed.success) return [];
 

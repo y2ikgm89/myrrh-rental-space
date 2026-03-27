@@ -80,7 +80,9 @@ const spaceSearchParamsParsers = {
   sort: parseAsSortOrder,
 };
 
-const spaceSearchParamsCache = createSearchParamsCache(spaceSearchParamsParsers);
+const spaceSearchParamsCache = createSearchParamsCache(
+  spaceSearchParamsParsers,
+);
 
 /** スペース検索パラメータローダー */
 export async function loadSpaceSearchParams(
@@ -434,7 +436,11 @@ export async function loadAdminPostSearchParams(
 // 投稿管理: タクソノミー（カテゴリー / タグ タブ）
 // ============================================================
 
-export const postTaxonomySortFields = ["name", "postCount", "createdAt"] as const;
+export const postTaxonomySortFields = [
+  "name",
+  "postCount",
+  "createdAt",
+] as const;
 export type PostTaxonomySortField = (typeof postTaxonomySortFields)[number];
 
 const postTaxonomyCategoryTabs = ["categories"] as const;

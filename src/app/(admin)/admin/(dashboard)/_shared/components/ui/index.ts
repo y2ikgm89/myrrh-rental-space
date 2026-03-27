@@ -113,7 +113,7 @@ export {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  CSS,
+  toTranslate3d,
 } from "./sortable";
 export type {
   SortableItem,

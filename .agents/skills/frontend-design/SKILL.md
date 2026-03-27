@@ -62,6 +62,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 
 ## ガードレール
 
+- クライアントで `useSyncExternalStore`（ストレージ同期など）を足すときは `react-patterns.md`: **`getServerSnapshot` で `return []` / `return {}` 禁止**（モジュール定数で参照を固定）。空配列の実装例は `announcement-bar/use-dismissed-bars.ts`
 - ハードコードカラーや場当たりのフォントスタックを足さない
 - Generic hero、均一カードグリッド、過剰な gradient をデフォルトにしない
 - モーションの定数は共有実装を使い、マジックナンバーを増やさない

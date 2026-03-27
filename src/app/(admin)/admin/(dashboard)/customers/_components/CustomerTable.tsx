@@ -40,7 +40,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ステータス</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
               <TableHead>お名前</TableHead>
               <TableHead className="hidden lg:table-cell">
                 メールアドレス
@@ -56,11 +56,18 @@ export function CustomerTable({ customers }: CustomerTableProps) {
           <TableBody>
             {customers.map((customer) => (
               <TableRow key={customer.id}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <CustomerStatusBadge status={customer.status} />
                 </TableCell>
-                <TableCell className="font-medium">
-                  {customer.lastName} {customer.firstName}
+                <TableCell>
+                  <div className="font-medium">
+                    {customer.lastName} {customer.firstName}
+                  </div>
+                  {customer.companyName ? (
+                    <div className="text-xs text-muted-foreground">
+                      {customer.companyName}
+                    </div>
+                  ) : null}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <a

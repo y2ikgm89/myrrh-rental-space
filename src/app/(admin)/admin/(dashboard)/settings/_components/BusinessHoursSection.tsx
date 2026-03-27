@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
 import { Plus, X, Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -27,11 +27,21 @@ import { updateBusinessHoursSettings } from "@/admin/actions/settings";
 import type {
   SettingsData,
   BusinessHours,
-  BusinessHoursDay,
   BusinessTimeSlot,
 } from "@/admin/actions/settings";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { useTransition } from "react";
+import {
+  DEFAULT_BUSINESS_HOURS,
+  DEFAULT_SLOT,
+  TEMPLATES,
+  isTemplateKey,
+  type TemplateKey,
+} from "./business-hours-defaults";
+import {
+  TIME_REGEX,
+  hasOverlappingSlots,
+  type SlotError,
+} from "./business-hours-validation";
 
 interface BusinessHoursSectionProps {
   settings: Serialized<SettingsData>;
@@ -51,87 +61,6 @@ const DAYS_OF_WEEK: readonly DayOfWeek[] = [
   { key: "saturday", label: "土曜日" },
   { key: "sunday", label: "日曜日" },
 ];
-
-// テンプレート定義
-const TEMPLATE_KEYS = ["continuous", "lunch-break", "custom"] as const;
-type TemplateKey = (typeof TEMPLATE_KEYS)[number];
-const TEMPLATE_KEY_SET = new Set<string>(TEMPLATE_KEYS);
-function isTemplateKey(value: string): value is TemplateKey {
-  return TEMPLATE_KEY_SET.has(value);
-}
-
-interface Template {
-  label: string;
-  description: string;
-  slots: BusinessTimeSlot[];
-}
-
-const TEMPLATES: Record<TemplateKey, Template> = {
-  continuous: {
-    label: "連続営業",
-    description: "9:00〜21:00（休憩なし）",
-    slots: [{ openTime: "09:00", closeTime: "21:00" }],
-  },
-  "lunch-break": {
-    label: "昼休憩あり",
-    description: "9:00〜12:00 / 13:00〜18:00",
-    slots: [
-      { openTime: "09:00", closeTime: "12:00" },
-      { openTime: "13:00", closeTime: "18:00" },
-    ],
-  },
-  custom: {
-    label: "カスタム",
-    description: "個別に設定",
-    slots: [],
-  },
-};
-
-const DEFAULT_SLOT: BusinessTimeSlot = {
-  openTime: "09:00",
-  closeTime: "18:00",
-};
-
-function createDefaultDay(isOpen: boolean): BusinessHoursDay {
-  return isOpen
-    ? { isOpen: true, slots: [{ openTime: "09:00", closeTime: "21:00" }] }
-    : { isOpen: false, slots: [] };
-}
-
-const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  monday: createDefaultDay(true),
-  tuesday: createDefaultDay(true),
-  wednesday: createDefaultDay(true),
-  thursday: createDefaultDay(true),
-  friday: createDefaultDay(true),
-  saturday: createDefaultDay(true),
-  sunday: createDefaultDay(false),
-};
-
-// 時刻フォーマット検証
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-// 時間帯の重複チェック
-function hasOverlappingSlots(slots: BusinessTimeSlot[]): boolean {
-  for (let i = 0; i < slots.length; i++) {
-    for (let j = i + 1; j < slots.length; j++) {
-      const a = slots[i];
-      const b = slots[j];
-      if (a && b && a.openTime < b.closeTime && a.closeTime > b.openTime) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-// エラー型
-type SlotError = {
-  day: keyof BusinessHours;
-  slotIndex: number;
-  field: "openTime" | "closeTime" | "overlap";
-  message: string;
-};
 
 export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
   const router = useRouter();

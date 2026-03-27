@@ -108,6 +108,16 @@ const subscribe = useCallback((callback: () => void) => {
 // OK: パフォーマンス計測で明確なボトルネックが確認された場合のみ
 ```
 
+### useSyncExternalStore — `getServerSnapshot` の参照安定性
+
+`getServerSnapshot` は SSR / ハイドレーション中に**複数回**呼ばれる。戻り値が配列・オブジェクトのとき、呼び出しごとに**新しいインスタンス**（例: `return []`）を返すと、React が「The result of getServerSnapshot should be cached to avoid an infinite loop」を出し、再レンダーループの原因になる。
+
+- **NG**: `return []`, `return {}` を関数本体で毎回生成
+- **OK**: モジュールスコープの定数 1 つを返す（空配列・空オブジェクトの典型）
+- **OK**: プリミティブ（`null`, `false`, `0` 等）は参照の問題がないためそのまま返してよい
+
+詳細・例: `.claude/rules/react-patterns.md` の「useSyncExternalStore」節（本リポジトリでは Claude / Codex で同一方針）。
+
 ### useCallback + ref.current の衝突（重要）
 
 `useCallback` 内で `ref.current` を参照すると、React Compiler が推論する依存（`ref.current`）と
@@ -263,24 +273,25 @@ const isValid = useWatch({
 
 ## 禁止事項
 
-| 禁止パターン                                    | 代替                                                                           |
-| ----------------------------------------------- | ------------------------------------------------------------------------------ |
-| `forwardRef` / `React.forwardRef`               | `ref` を通常の prop として受け取る                                             |
-| `ComponentPropsWithoutRef`                      | `ComponentPropsWithRef`                                                        |
-| `Input.displayName = 'Input'`                   | 名前付き関数で自動推論                                                         |
-| `useCallback` / `useMemo`（原則）               | プレーン関数・式（Compiler が最適化）                                          |
-| `React.memo()`（原則）                          | プレーン関数コンポーネント（Compiler が最適化）                                |
-| `useCallback` 内で `ref.current` を参照         | プレーン関数に変更                                                             |
-| `watch('fieldName')` (React Hook Form)          | `useWatch({ control, name: 'fieldName' })`                                     |
-| `useOptimistic` なし で楽観的 UI を手動実装     | `useOptimistic` を使用                                                         |
-| `useFormStatus` を form の外で使用              | `<form>` 子孫コンポーネント内に配置                                            |
-| `useFormStatus` で RHF フォームの送信中状態を取る | 管理画面は `useFormAction` または `useActionState`+RHF ハイブリッドで **`SubmitButton` に `isPending` を prop で渡す**（`.claude/rules/react-patterns.md` Gotchas と同一方針） |
-| `"use no memo"` を恒久的に使用                  | Rules of React 違反を修正して削除                                              |
-| `eslint-plugin-react-compiler` の継続使用       | `eslint-plugin-react-hooks@latest` に統合済み                                  |
-| クラスコンポーネント（新規作成）                | 関数コンポーネントに書き換える（Compiler 対応）                                |
-| `use(fetchData())` をコンポーネント内に直接記述 | Suspense boundary の外で Promise を生成して渡す                                |
-| `ViewTransition` を `startTransition` 外で使用  | `startTransition` で状態更新をラップする                                       |
-| `useId` の生成値を文字列として依存              | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する |
+| 禁止パターン                                                           | 代替                                                                                                                                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `forwardRef` / `React.forwardRef`                                      | `ref` を通常の prop として受け取る                                                                                                                                             |
+| `ComponentPropsWithoutRef`                                             | `ComponentPropsWithRef`                                                                                                                                                        |
+| `Input.displayName = 'Input'`                                          | 名前付き関数で自動推論                                                                                                                                                         |
+| `useCallback` / `useMemo`（原則）                                      | プレーン関数・式（Compiler が最適化）                                                                                                                                          |
+| `React.memo()`（原則）                                                 | プレーン関数コンポーネント（Compiler が最適化）                                                                                                                                |
+| `useCallback` 内で `ref.current` を参照                                | プレーン関数に変更                                                                                                                                                             |
+| `watch('fieldName')` (React Hook Form)                                 | `useWatch({ control, name: 'fieldName' })`                                                                                                                                     |
+| `useOptimistic` なし で楽観的 UI を手動実装                            | `useOptimistic` を使用                                                                                                                                                         |
+| `useFormStatus` を form の外で使用                                     | `<form>` 子孫コンポーネント内に配置                                                                                                                                            |
+| `useFormStatus` で RHF フォームの送信中状態を取る                      | 管理画面は `useFormAction` または `useActionState`+RHF ハイブリッドで **`SubmitButton` に `isPending` を prop で渡す**（`.claude/rules/react-patterns.md` Gotchas と同一方針） |
+| `"use no memo"` を恒久的に使用                                         | Rules of React 違反を修正して削除                                                                                                                                              |
+| `eslint-plugin-react-compiler` の継続使用                              | `eslint-plugin-react-hooks@latest` に統合済み                                                                                                                                  |
+| クラスコンポーネント（新規作成）                                       | 関数コンポーネントに書き換える（Compiler 対応）                                                                                                                                |
+| `use(fetchData())` をコンポーネント内に直接記述                        | Suspense boundary の外で Promise を生成して渡す                                                                                                                                |
+| `ViewTransition` を `startTransition` 外で使用                         | `startTransition` で状態更新をラップする                                                                                                                                       |
+| `useId` の生成値を文字列として依存                                     | 形式が変更される（19.0: `:r:` → 19.2: `_r_`）。`id` 属性への渡し方のみ使用する                                                                                                 |
+| `useSyncExternalStore` の `getServerSnapshot` で毎回新しい `[]` / `{}` | モジュールスコープの定数を返し参照を固定（プリミティブはそのままで可）                                                                                                         |
 
 ---
 

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # PostToolUse (Edit/Write): 編集されたファイル内の eslint-disable コメントが
 # 廃止されたルール名を参照していないか検出する
 # eslint-react v3 でルール名が変更されたため

@@ -13,12 +13,12 @@ coverage = true
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
 
-# カバレッジ閾値
-coverageThreshold = { lines = 60, functions = 45 }
+# カバレッジ閾値は未設定（Bun の coverageThreshold は終了コードと不整合になることがある）。
 
 # カバレッジ除外パターン
 coverageSkipTestFiles = true
 coverageIgnoreSourcemaps = true
+coveragePathIgnorePatterns = ["**/__tests__/setup.ts", "**/__tests__/setup-dom.ts"]
 
 # タイムアウト設定（5秒）
 timeout = 5000

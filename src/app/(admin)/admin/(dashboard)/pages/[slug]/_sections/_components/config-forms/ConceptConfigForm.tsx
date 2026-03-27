@@ -25,9 +25,7 @@ import {
   type ConceptConfig,
   type ConceptConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getConceptConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getConceptConfig } from "@/shared/lib/validations/section-defaults";
 import {
   conceptLayoutLabels,
   imageAspectLabels,

@@ -51,7 +51,9 @@ describe("renderEditorStateJsonToHtmlClient", () => {
   });
 
   test("段落付き EditorState JSON から HTML が生成されテキストを含む", () => {
-    const html = renderEditorStateJsonToHtmlClient(MINIMAL_PARAGRAPH_STATE_JSON);
+    const html = renderEditorStateJsonToHtmlClient(
+      MINIMAL_PARAGRAPH_STATE_JSON,
+    );
 
     expect(html.length).toBeGreaterThan(0);
     expect(html).toContain("hello mobile preview");

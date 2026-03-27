@@ -47,11 +47,11 @@ export function PixiEffect() {
 
 ## v8 移行メモ（v7 禁止）
 
-| v7                                  | v8                                |
-| ----------------------------------- | --------------------------------- |
-| `new Application({ ... })`        | `new Application()` + `await app.init({ ... })` |
-| `app.view`                          | `app.canvas`                      |
-| `PIXI.*` グローバル前提             | 名前付き ESM import               |
+| v7                         | v8                                              |
+| -------------------------- | ----------------------------------------------- |
+| `new Application({ ... })` | `new Application()` + `await app.init({ ... })` |
+| `app.view`                 | `app.canvas`                                    |
+| `PIXI.*` グローバル前提    | 名前付き ESM import                             |
 
 ## 禁止事項
 

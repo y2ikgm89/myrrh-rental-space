@@ -8,7 +8,7 @@ import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
 import { SpaceEditForm } from "../../_components/SpaceEditForm";
 import type { Metadata } from "next";
@@ -51,16 +51,23 @@ export default async function EditSpacePage({ params }: PageProps) {
       title="スペースを編集"
       subtitle={space.name}
       actions={
-        <Button variant="outline" size="sm" asChild>
-          <Link
-            href={`/spaces/${space.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            公開ページを見る
-          </Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={space.name}
+            onDelete={deleteSpace.bind(null, space.id)}
+            redirectTo="/admin/spaces"
+          />
+          <Button variant="outline" size="sm" asChild>
+            <Link
+              href={`/spaces/${space.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              公開ページを見る
+            </Link>
+          </Button>
+        </>
       }
     >
       <SpaceEditForm
@@ -70,12 +77,6 @@ export default async function EditSpacePage({ params }: PageProps) {
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}
-      />
-      <DangerZone
-        deleteLabel="スペースを削除"
-        itemName={space.name}
-        onDelete={deleteSpace.bind(null, space.id)}
-        redirectTo="/admin/spaces"
       />
     </AdminDetailLayout>
   );

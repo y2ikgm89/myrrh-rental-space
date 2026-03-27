@@ -50,6 +50,7 @@ function attachNewsUrl<T extends { slug: string }>(
 export async function getPublishedNewsList(
   page: number = 1,
   perPage: number = PAGINATION_DEFAULTS.public.default,
+  search: string = "",
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
@@ -57,11 +58,18 @@ export async function getPublishedNewsList(
 
   const skip = (page - 1) * perPage;
 
+  const where = {
+    isPublished: true,
+    ...(search
+      ? { title: { contains: search, mode: "insensitive" as const } }
+      : {}),
+  };
+
   const [items, totalCount] = await Promise.all([
     safeFetch({
       fetch: () =>
         prisma.news.findMany({
-          where: { isPublished: true },
+          where,
           select: newsListSelect,
           orderBy: { publishedAt: "desc" },
           skip,
@@ -73,10 +81,7 @@ export async function getPublishedNewsList(
       operationName: "getPublishedNewsList",
     }),
     safeFetch({
-      fetch: () =>
-        prisma.news.count({
-          where: { isPublished: true },
-        }),
+      fetch: () => prisma.news.count({ where }),
       fallback: 0,
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.LOW,

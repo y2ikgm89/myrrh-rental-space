@@ -14,7 +14,7 @@ model: sonnet
 memory: project
 ---
 
-You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0.1-rc).
+You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0.1).
 
 ## Your workflow
 
@@ -170,7 +170,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **Always-load (1):** gotchas
 
-**Conditional by paths: (28):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, resend-patterns, api-routes, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, visual-effects-patterns, threejs-patterns, pixijs-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
+**Conditional by paths: (25):** type-safety, implementation-quality, test-quality, bun-patterns, error-handling, react-patterns, server-actions, auth-patterns, prisma-patterns, zod-patterns, nuqs-patterns, tailwind-patterns, server-only-patterns, resend-patterns, api-routes, anti-ai-design, project-design-config, design-system-memory, gsap-patterns, accessibility, lexical-patterns, seo-patterns, ui-ux-patterns, admin-ui-patterns, deployment-patterns
 
 ## Output format
 

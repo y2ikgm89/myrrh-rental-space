@@ -27,9 +27,7 @@ import {
   type HeroConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
-import {
-  getHeroConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getHeroConfig } from "@/shared/lib/validations/section-defaults";
 import {
   heroVariantLabels,
   heroHeightLabels,

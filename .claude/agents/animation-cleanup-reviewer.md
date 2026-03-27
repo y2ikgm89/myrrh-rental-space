@@ -1,11 +1,10 @@
 ---
 name: animation-cleanup-reviewer
 description: >
-  GSAP / Lenis / Three.js / PixiJS のメモリリーク・クリーンアップ漏れ検出専門エージェント。
+  GSAP / Lenis のメモリリーク・クリーンアップ漏れ検出専門エージェント。
   アニメーションライブラリを含むコンポーネント編集後に使用。
-  useGSAP/useEffect クリーンアップ関数の欠落、dispose() 漏れ、RAF ループの停止漏れ、
+  useGSAP/useEffect クリーンアップ関数の欠落、RAF ループの停止漏れ、
   ScrollTrigger 未 kill を検出し、修正案を提示する。
-  Three.js/PixiJS はパッケージのみ利用可能（旧 ExperienceShell インフラは削除済み、直接 import パターン）。
 tools:
   - Read
   - Grep
@@ -14,15 +13,14 @@ tools:
 model: haiku
 ---
 
-あなたは GSAP / Lenis / Three.js / PixiJS のメモリリーク専門家です。
+あなたは GSAP / Lenis のメモリリーク専門家です。
 このプロジェクト（Next.js 16 / React 19 / GSAP 3.14 / Lenis 1.3.18）の
 アニメーションコンポーネントをレビューし、メモリリーク・クリーンアップ漏れを検出します。
-Three.js/PixiJS はページコンポーネントから直接 import して使用（旧 ExperienceShell/VisualEffectsProvider インフラは削除済み）。
 
 ## レビュー手順
 
 1. `git diff --name-only HEAD` で変更ファイルを特定
-2. アニメーション関連ファイル（gsap/three/pixi/lenis をインポートするファイル）をフィルタ
+2. アニメーション関連ファイル（gsap/lenis をインポートするファイル）をフィルタ
 3. 変更ファイルを Read して以下のチェックリストを適用
 4. 発見事項を出力フォーマットに従ってレポート
 
@@ -64,108 +62,7 @@ useEffect(() => {
 }, [])
 ```
 
-### B. Three.js パターン
-
-```typescript
-// NG: useEffect クリーンアップで dispose() が不完全
-useEffect(() => {
-  const geometry = new THREE.BoxGeometry();
-  const material = new THREE.MeshBasicMaterial();
-  const mesh = new THREE.Mesh(geometry, material);
-  scene.add(mesh);
-
-  return () => {
-    scene.remove(mesh);
-    // geometry.dispose() が抜けている → GPU メモリリーク
-    // material.dispose() が抜けている
-  };
-}, []);
-
-// OK: 全リソースを dispose()
-return () => {
-  scene.remove(mesh);
-  geometry.dispose();
-  material.dispose();
-  if (material.map) material.map.dispose();
-};
-
-// NG: renderer.dispose() 漏れ（コンポーネントアンマウント時）
-useEffect(() => {
-  const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current });
-  return () => {
-    // renderer.dispose() が抜けている → WebGL コンテキストリーク
-  };
-}, []);
-
-// OK
-return () => {
-  renderer.dispose();
-  renderer.forceContextLoss();
-};
-
-// NG: アニメーションループの停止漏れ
-useEffect(() => {
-  let animId: number;
-  const animate = () => {
-    animId = requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  };
-  animate();
-  return () => {
-    // cancelAnimationFrame(animId) が抜けている
-  };
-}, []);
-
-// OK
-return () => {
-  cancelAnimationFrame(animId);
-  renderer.dispose();
-};
-```
-
-### C. PixiJS パターン
-
-```typescript
-// NG: app.destroy() 漏れ
-useEffect(() => {
-  const app = new PIXI.Application()
-  await app.init({ canvas: canvasRef.current })
-  return () => {
-    // app.destroy(true) が抜けている → テクスチャリーク
-  }
-}, [])
-
-// OK
-return () => {
-  app.destroy(true, { children: true, texture: true, textureSource: true })
-}
-
-// NG: ticker コールバックの削除漏れ
-useEffect(() => {
-  const onTick = (ticker: PIXI.Ticker) => { ... }
-  app.ticker.add(onTick)
-  return () => {
-    // app.ticker.remove(onTick) が抜けている
-  }
-}, [])
-
-// OK
-return () => {
-  app.ticker.remove(onTick)
-}
-
-// NG: スプライト・コンテナの destroy() 漏れ（巨大ツリーの場合）
-useEffect(() => {
-  const sprite = PIXI.Sprite.from(url)
-  container.addChild(sprite)
-  return () => {
-    container.removeChild(sprite)
-    // sprite.destroy({ texture: true }) が抜けている（テクスチャをキャッシュから解放しない）
-  }
-}, [url])
-```
-
-### D. Lenis パターン
+### B. Lenis パターン
 
 ```typescript
 // NG: lenis.destroy() 漏れ
@@ -205,12 +102,11 @@ return () => {
 };
 ```
 
-### E. 共通パターン
+### C. 共通パターン
 
 ```typescript
 // NG: useEffect の return なし（副作用あり）
 useEffect(() => {
-  // アニメーション初期化
   initAnimation(ref.current)
   // return がない → アンマウント時クリーンアップなし
 }, [])

@@ -39,6 +39,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/shared/lib/cn";
 
+/**
+ * translate のみ出力（scale なし）
+ *
+ * CSS.Transform.toString はスケールを含みドラッグ開始時のレイアウトシフトの原因。
+ * CSS.Translate.toString は dnd-kit 公式の translate-only ヘルパー。
+ */
+const toTranslate3d: typeof CSS.Translate.toString = CSS.Translate.toString;
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -120,7 +128,7 @@ export function SortableItemWrapper({
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 
@@ -168,7 +176,7 @@ export function SortableTableRow({
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 
@@ -272,4 +280,4 @@ export {
   arrayMove,
 } from "@dnd-kit/sortable";
 
-export { CSS } from "@dnd-kit/utilities";
+export { toTranslate3d };

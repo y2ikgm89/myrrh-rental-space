@@ -50,6 +50,8 @@ function Comp({ data }) { ... }
 
 **例外**: `useSyncExternalStore` の subscribe 関数、外部ライブラリが参照同一性を明示的に要求する場合。
 
+**`useSyncExternalStore` の `getServerSnapshot`**: 戻り値が配列・オブジェクトのときは**呼び出し間で同一参照**を返すこと（例: モジュール定数の空配列）。`return []` や毎回の `return {}` はランタイム警告・無限ループの原因。プリミティブ（`null`, `false` 等）は問題なし。参照: `.claude/rules/react-patterns.md` の useSyncExternalStore 節。
+
 ### B. ref.current の render 中アクセス（禁止）
 
 ```typescript
@@ -241,4 +243,3 @@ function Input({ ref, ...props }: InputProps & { ref?: React.Ref<HTMLInputElemen
 
 - `.claude/rules/react-patterns.md` — React Compiler パターン詳細
 - `.claude/rules/frontend/gsap-patterns.md` — GSAP 固有パターン
-- `.claude/rules/frontend/threejs-patterns.md` — Three.js 固有パターン

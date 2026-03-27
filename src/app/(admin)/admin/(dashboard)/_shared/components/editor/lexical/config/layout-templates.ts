@@ -64,7 +64,8 @@ export const LAYOUT_NARROW_TEMPLATES = [
   },
 ] as const;
 
-export type LayoutNarrowTemplateEntry = (typeof LAYOUT_NARROW_TEMPLATES)[number];
+export type LayoutNarrowTemplateEntry =
+  (typeof LAYOUT_NARROW_TEMPLATES)[number];
 
 /**
  * `grid-template-columns` 相当の空白区切りトークン数から列数を得る。

@@ -4,12 +4,12 @@
 
 ## ドキュメント一覧
 
-| ドキュメント                  | 説明                             |
-| ----------------------------- | -------------------------------- |
-| [デプロイ](./deployment.md)   | Google Cloud Runへのデプロイ手順 |
-| [Docker](./docker.md)         | Dockerイメージのビルド・実行     |
-| [Cloudflare](./cloudflare.md) | CDN・DDoS保護設定                |
-| [Bun](./bun.md)               | Bunランタイム設定                |
+| ドキュメント                                   | 説明                                           |
+| ---------------------------------------------- | ---------------------------------------------- |
+| [デプロイ](./deployment.md)                    | Google Cloud Runへのデプロイ手順               |
+| [Docker](./docker.md)                          | Dockerイメージのビルド・実行                   |
+| [Cloudflare](./cloudflare.md)                  | CDN・DDoS保護設定                              |
+| [Bun](./bun.md)                                | Bunランタイム設定                              |
 | [Lexical JSON](./lexical-editor-state-json.md) | EditorState JSON の契約・レガシー行の SQL 修正 |
 
 ## 環境構成

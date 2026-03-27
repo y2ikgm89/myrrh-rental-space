@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getCouponById } from "@/admin/queries/coupon";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { CouponForm } from "../_components/CouponForm";
-import { CouponDangerZone } from "./_components/CouponDangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
+import { deleteCoupon } from "@/admin/actions/coupon";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { formatPrice } from "@/shared/lib/price-format";
@@ -19,15 +20,17 @@ export async function generateMetadata({
   const coupon = await getCouponById(id);
 
   if (!coupon) {
-    return { title: "クーポンが見つかりません | Myrrh Rental Space" };
+    return {
+      title: "クーポンが見つかりません | Myrrh Rental Space",
+    };
   }
 
   return {
-    title: `${coupon.code} の編集 | Myrrh Rental Space`,
+    title: `${coupon.name} | クーポン管理 | Myrrh Rental Space`,
   };
 }
 
-export default async function EditCouponPage({ params }: PageProps) {
+export default async function CouponDetailPage({ params }: PageProps) {
   const { id } = await params;
   const coupon = await getCouponById(id);
 
@@ -38,56 +41,40 @@ export default async function EditCouponPage({ params }: PageProps) {
   return (
     <AdminDetailLayout
       backHref="/admin/coupons"
-      backLabel="一覧に戻る"
-      title={`${coupon.code} の編集`}
-      subtitle={coupon.name}
+      title={coupon.name}
+      subtitle={`コード: ${coupon.code}`}
+      actions={
+        <DetailDeleteButton
+          itemName={coupon.code}
+          onDelete={deleteCoupon.bind(null, coupon.id)}
+          redirectTo="/admin/coupons"
+          successMessage="クーポンを削除しました"
+        />
+      }
     >
-      {/* 利用統計 */}
-      <DetailSection title="利用統計">
-        <div className="grid gap-4 sm:grid-cols-4">
+      <DetailSection title="利用状況">
+        <div className="grid gap-4 sm:grid-cols-3">
           <DetailField
             label="利用回数"
+            value={`${coupon.usageCount}${coupon.usageLimit !== null ? ` / ${coupon.usageLimit}` : ""} 回`}
+          />
+          <DetailField
+            label="割引額"
             value={
-              <span className="text-2xl font-bold">
-                {coupon.usageCount}
-                {coupon.usageLimit && (
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {" "}
-                    / {coupon.usageLimit}
-                  </span>
-                )}
-              </span>
+              coupon.type === "PERCENTAGE"
+                ? `${coupon.discountValue}%`
+                : formatPrice(coupon.discountValue)
             }
           />
           <DetailField
-            label="割引タイプ"
-            value={
-              <span className="text-lg font-medium">
-                {coupon.type === "PERCENTAGE"
-                  ? `${coupon.discountValue}%`
-                  : formatPrice(coupon.discountValue)}
-              </span>
-            }
-          />
-          <DetailField
-            label="開始日"
-            value={<span className="text-lg">{coupon.validFromLabel}</span>}
-          />
-          <DetailField
-            label="終了日"
-            value={
-              <span className="text-lg">
-                {coupon.validUntilLabel ?? "無期限"}
-              </span>
-            }
+            label="最低利用金額"
+            value={formatPrice(coupon.minReservationAmount, "なし")}
           />
         </div>
       </DetailSection>
 
       {/* フォーム */}
       <CouponForm coupon={coupon} />
-
-      <CouponDangerZone couponId={coupon.id} itemName={coupon.code} />
     </AdminDetailLayout>
   );
 }

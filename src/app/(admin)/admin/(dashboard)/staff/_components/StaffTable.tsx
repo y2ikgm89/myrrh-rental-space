@@ -30,7 +30,7 @@ export function StaffTable({ users }: StaffTableProps) {
             <TableRow>
               <TableHead>名前</TableHead>
               <TableHead>メールアドレス</TableHead>
-              <TableHead>ロール</TableHead>
+              <TableHead className="whitespace-nowrap">ロール</TableHead>
               <TableHead className="hidden md:table-cell">予約数</TableHead>
               <TableHead className="hidden md:table-cell">記事数</TableHead>
               <TableHead className="hidden lg:table-cell">登録日</TableHead>
@@ -49,7 +49,7 @@ export function StaffTable({ users }: StaffTableProps) {
                   </Link>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <RoleBadge role={user.role} />
                 </TableCell>
                 <TableCell className="hidden md:table-cell">

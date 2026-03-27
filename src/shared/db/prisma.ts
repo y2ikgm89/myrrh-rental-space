@@ -98,4 +98,3 @@ export const prismaForBetterAuth = basePrisma;
 const prisma = createAppPrismaClient(basePrisma);
 
 export { prisma };
-export default prisma;

@@ -4,6 +4,7 @@ import { Badge, type BadgeProps } from "@/admin/components/ui";
 import type {
   CustomerStatus,
   InquiryStatus,
+  PaymentStatus,
   ReservationStatus,
   PostStatus,
   Role,
@@ -48,6 +49,14 @@ const reservationStatusConfig: StatusConfig<ReservationStatus> = {
   NO_SHOW: { label: "無断キャンセル", variant: "warning" },
 };
 
+const paymentStatusConfig: StatusConfig<PaymentStatus> = {
+  UNPAID: { label: "未払い", variant: "secondary" },
+  PENDING: { label: "決済待ち", variant: "warning" },
+  PAID: { label: "支払い済み", variant: "success" },
+  REFUNDED: { label: "返金済み", variant: "outline" },
+  FAILED: { label: "決済失敗", variant: "destructive" },
+};
+
 const postStatusConfig: StatusConfig<PostStatus> = {
   DRAFT: { label: "下書き", variant: "secondary" },
   PUBLISHED: { label: "公開中", variant: "success" },
@@ -80,6 +89,11 @@ export function ReservationStatusBadge({
   status: ReservationStatus;
 }) {
   const config = reservationStatusConfig[status];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  const config = paymentStatusConfig[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

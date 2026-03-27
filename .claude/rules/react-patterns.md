@@ -302,7 +302,7 @@ React Compiler 1.0 から、コンパイラ用 lint ルールは `eslint-plugin-
 
 **太字**の2ルール（`incompatible-library`, `unsupported-syntax`）は `eslint-config-next` が warn に設定するため、`eslint.config.mjs` で明示的に error に昇格済み。
 
-**専門レビュー**: GSAP / Three.js / Lenis / Lexical を含むファイル編集後は `react-compiler-reviewer` サブエージェントを使用。
+**専門レビュー**: GSAP / Lenis / Lexical を含むファイル編集後は `react-compiler-reviewer` サブエージェントを使用。
 
 ### React Hook Form — watch() 禁止
 

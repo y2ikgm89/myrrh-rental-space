@@ -78,7 +78,9 @@ export async function getICalReservations(input: {
           location: { select: { address: true } },
         },
       },
-      customer: { select: { firstName: true, lastName: true } },
+      customer: {
+        select: { firstName: true, lastName: true, companyName: true },
+      },
     },
     orderBy: { startTime: "asc" },
     take: 500,

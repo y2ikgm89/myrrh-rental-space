@@ -19,9 +19,7 @@ import {
   type MapConfig,
   type MapConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getMapConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getMapConfig } from "@/shared/lib/validations/section-defaults";
 import {
   borderRadiusLabels,
   mapHeightLabels,

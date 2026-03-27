@@ -50,6 +50,14 @@ enum CustomerStatus {
   BLACKLIST
 }
 
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
 enum NavigationType {
   HEADER_DESKTOP // デスクトップ用ヘッダーメニュー
   HEADER_MOBILE // モバイル用ヘッダーメニュー
@@ -261,6 +269,8 @@ model User {
   createdEditorComments   EditorComment[]        @relation("EditorCommentCreator")
   deletedEditorComments   EditorComment[]        @relation("EditorCommentDeleter")
   deletedPostComments     PostComment[]          @relation("PostCommentDeleter")
+  inquiryReplies          Inquiry[]              @relation("InquiryReplies")
+  reservationDeletions    Reservation[]          @relation("ReservationDeletions")
   createdTermsVersions    TermsVersion[]         @relation("TermsVersionCreator")
   publishedTermsVersions  TermsVersion[]         @relation("TermsVersionPublisher")
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
@@ -517,6 +527,17 @@ model Reservation {
   coupon          Coupon?          @relation(fields: [couponId], references: [id], onDelete: SetNull)
   termsAgreements TermsAgreement[]
 
+  // Soft-delete
+  deletedAt    DateTime?
+  deletedById  String?   @db.Uuid
+  deletedBy    User?     @relation("ReservationDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
+
+  // Payment (Stripe)
+  paymentStatus           PaymentStatus @default(UNPAID)
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId   String?
+  paidAt                  DateTime?
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])
@@ -527,6 +548,9 @@ model Reservation {
   @@index([spaceId, startTime, endTime])
   @@index([customerId, startTime])
   @@index([couponId])
+  @@index([deletedAt])
+  @@index([paymentStatus])
+  @@index([stripePaymentIntentId])
   @@map("reservations")
 }
 
@@ -556,6 +580,7 @@ model Customer {
 
   // Relations
   reservations Reservation[]
+  inquiries    Inquiry[]
 
   @@index([lastName])
   @@index([firstName])
@@ -621,9 +646,20 @@ model Inquiry {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Reply（管理者からの返信）
+  replyMessage String?   @db.Text
+  repliedAt    DateTime?
+  repliedById  String?   @db.Uuid
+  repliedBy    User?     @relation("InquiryReplies", fields: [repliedById], references: [id], onDelete: SetNull)
+
+  // Customer Link（ログインユーザーのお問い合わせ紐づけ）
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
   @@index([email])
   @@index([status])
   @@index([createdAt])
+  @@index([customerId])
   @@map("inquiries")
 }
 

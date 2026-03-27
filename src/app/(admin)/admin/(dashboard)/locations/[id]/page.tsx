@@ -4,7 +4,7 @@ import Link from "next/link";
 import { deleteLocation } from "@/admin/actions/location";
 import { getLocationById } from "@/admin/queries/location";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
 import { LocationDetail } from "./_components/LocationDetail";
 import type { Metadata } from "next";
@@ -46,21 +46,22 @@ export default async function LocationDetailPage({ params }: PageProps) {
       title={location.name}
       subtitle="拠点詳細"
       actions={
-        <Button asChild size="sm">
-          <Link href={`/admin/locations/${location.id}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            編集
-          </Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={location.name}
+            onDelete={deleteLocation.bind(null, location.id)}
+            redirectTo="/admin/spaces?tab=locations"
+          />
+          <Button asChild size="sm">
+            <Link href={`/admin/locations/${location.id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
       <LocationDetail location={location} />
-      <DangerZone
-        deleteLabel="場所を削除"
-        itemName={location.name}
-        onDelete={deleteLocation.bind(null, location.id)}
-        redirectTo="/admin/spaces?tab=locations"
-      />
     </AdminDetailLayout>
   );
 }

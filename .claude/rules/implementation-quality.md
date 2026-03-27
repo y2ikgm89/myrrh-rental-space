@@ -104,6 +104,24 @@ function getValue(type: 'a' | 'b') {
 }
 ```
 
+### 5. ドメインコマンドの共通ロジックはヘルパー関数に抽出
+
+重複チェック・顧客統計更新・ペイロード構築など、複数コマンドで共有するロジックはヘルパー関数に抽出する:
+
+```typescript
+// NG: 同じ統計更新ロジックが create/update/cancel に散在
+await tx.customer.update({
+  where: { id: customerId },
+  data: {
+    totalReservations: { increment: 1 },
+    lastReservationAt: new Date(),
+  },
+});
+
+// OK: ヘルパー関数に抽出
+await updateCustomerStats(tx, customerId, "increment");
+```
+
 ## 必須事項
 
 ### 1. コードを書く前に読む

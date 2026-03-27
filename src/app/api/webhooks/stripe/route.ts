@@ -4,19 +4,29 @@
  * Stripe からの Webhook イベントを受信し、
  * 予約の決済ステータスを更新します。
  *
- * ## 処理イベント
- * - checkout.session.completed: 決済完了 → PAID
+ * ## 処理イベント（Stripe 公式推奨の Checkout フルセット）
+ * - checkout.session.completed: セッション完了（即時決済 → PAID / 非同期決済 → PENDING 維持）
+ * - checkout.session.async_payment_succeeded: 非同期決済成功 → PAID
+ * - checkout.session.async_payment_failed: 非同期決済失敗 → FAILED
  * - checkout.session.expired: セッション期限切れ → FAILED
  * - charge.refunded: 返金完了 → REFUNDED
  *
+ * ## べき等性
+ * 各ハンドラーは処理前に現在の paymentStatus をチェックし、
+ * 既に処理済みの場合はスキップする（Webhook の重複配信対策）
+ *
+ * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  * @module api/webhooks/stripe
  */
 
 import type Stripe from "stripe";
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
+import { PaymentStatus } from "@/shared/db/enums";
 import {
+  getReservationPaymentStatus,
   updateReservationPaymentCompleted,
+  savePaymentIntentId,
   markReservationPaymentFailed,
   findReservationByPaymentIntent,
   markReservationRefunded,
@@ -94,10 +104,18 @@ export async function POST(request: Request) {
       return jsonError("Invalid signature", 400);
     }
 
-    // 5. イベント処理
+    // 5. イベント処理（Stripe 公式推奨の Checkout フルセット）
     switch (event.type) {
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(event.data.object);
+        break;
+
+      case "checkout.session.async_payment_succeeded":
+        await handleAsyncPaymentSucceeded(event.data.object);
+        break;
+
+      case "checkout.session.async_payment_failed":
+        await handleAsyncPaymentFailed(event.data.object);
         break;
 
       case "checkout.session.expired":
@@ -127,30 +145,47 @@ export async function POST(request: Request) {
 }
 
 // =============================================================================
-// Event Handlers
+// Helpers
 // =============================================================================
 
 /**
- * checkout.session.completed: 決済完了
- * paymentStatus を PAID に更新し、確認メールを送信
+ * Checkout Session から reservationId を取得（共通バリデーション）
  */
-async function handleCheckoutSessionCompleted(
+function extractReservationId(
   session: Stripe.Checkout.Session,
-) {
+  operation: string,
+): string | null {
   const reservationId = session.metadata?.["reservationId"];
   if (!reservationId) {
     logError(new Error("Missing reservationId in session metadata"), {
       category: ErrorCategory.VALIDATION,
       severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "stripeWebhookCheckoutCompleted",
-        sessionId: session.id,
-      },
+      context: { operation, sessionId: session.id },
     });
-    return;
+    return null;
   }
+  return reservationId;
+}
 
-  // payment_intent は string | PaymentIntent | null — 文字列のみ保存
+/**
+ * 予約キャッシュを無効化（共通）
+ */
+function invalidateReservationCache(reservationId: string): void {
+  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
+  revalidateTag(
+    getCacheTag.reservations.detail(reservationId),
+    CACHE_LIFE.DYNAMIC_DATA,
+  );
+  revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
+}
+
+/**
+ * 決済完了後の確認メール送信 + キャッシュ無効化
+ */
+async function fulfillPayment(
+  reservationId: string,
+  session: Stripe.Checkout.Session,
+): Promise<void> {
   const paymentIntentId =
     typeof session.payment_intent === "string" ? session.payment_intent : null;
 
@@ -158,13 +193,7 @@ async function handleCheckoutSessionCompleted(
     stripePaymentIntentId: paymentIntentId,
   });
 
-  // キャッシュ無効化
-  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-  revalidateTag(
-    getCacheTag.reservations.detail(reservationId),
-    CACHE_LIFE.DYNAMIC_DATA,
-  );
-  revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
+  invalidateReservationCache(reservationId);
 
   // 確認メールを非同期送信
   fireAndForget(
@@ -190,40 +219,125 @@ async function handleCheckoutSessionCompleted(
   );
 }
 
+// =============================================================================
+// Event Handlers
+// =============================================================================
+
 /**
- * checkout.session.expired: セッション期限切れ
- * paymentStatus を FAILED に更新
+ * checkout.session.completed
+ *
+ * Stripe 公式: session.payment_status を確認する。
+ * - "paid": 即時決済（カード等）→ 即座に fulfill
+ * - "unpaid": 非同期決済（銀行振込等）→ async_payment_succeeded を待つ
+ *
+ * @see https://docs.stripe.com/payments/checkout/fulfill-orders
  */
-async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
-  const reservationId = session.metadata?.["reservationId"];
-  if (!reservationId) {
-    logError(new Error("Missing reservationId in session metadata"), {
-      category: ErrorCategory.VALIDATION,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "stripeWebhookCheckoutExpired",
-        sessionId: session.id,
-      },
-    });
-    return;
-  }
-
-  await markReservationPaymentFailed(reservationId);
-
-  // キャッシュ無効化
-  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-  revalidateTag(
-    getCacheTag.reservations.detail(reservationId),
-    CACHE_LIFE.DYNAMIC_DATA,
+async function handleCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session,
+) {
+  const reservationId = extractReservationId(
+    session,
+    "stripeWebhookCheckoutCompleted",
   );
+  if (!reservationId) return;
+
+  // べき等性チェック: 既に PAID なら重複処理をスキップ
+  const current = await getReservationPaymentStatus(reservationId);
+  if (current?.paymentStatus === PaymentStatus.PAID) return;
+
+  if (session.payment_status === "paid") {
+    // 即時決済（カード等）: すぐに fulfill
+    await fulfillPayment(reservationId, session);
+  } else {
+    // 非同期決済（銀行振込等）: PaymentIntent ID のみ保存
+    // paymentStatus は PENDING のまま維持。async_payment_succeeded で fulfill される
+    const paymentIntentId =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : null;
+
+    if (paymentIntentId) {
+      await savePaymentIntentId(reservationId, paymentIntentId);
+    }
+
+    invalidateReservationCache(reservationId);
+  }
 }
 
 /**
- * charge.refunded: 返金完了
- * stripePaymentIntentId で予約を検索し、paymentStatus を REFUNDED に更新
+ * checkout.session.async_payment_succeeded
+ *
+ * 銀行振込等の非同期決済が成功した場合に発火。
+ * checkout.session.completed で "unpaid" だった予約を fulfill する。
+ */
+async function handleAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
+  const reservationId = extractReservationId(
+    session,
+    "stripeWebhookAsyncPaymentSucceeded",
+  );
+  if (!reservationId) return;
+
+  // べき等性チェック
+  const current = await getReservationPaymentStatus(reservationId);
+  if (current?.paymentStatus === PaymentStatus.PAID) return;
+
+  await fulfillPayment(reservationId, session);
+}
+
+/**
+ * checkout.session.async_payment_failed
+ *
+ * 非同期決済が失敗した場合に発火。
+ */
+async function handleAsyncPaymentFailed(session: Stripe.Checkout.Session) {
+  const reservationId = extractReservationId(
+    session,
+    "stripeWebhookAsyncPaymentFailed",
+  );
+  if (!reservationId) return;
+
+  // べき等性チェック
+  const current = await getReservationPaymentStatus(reservationId);
+  if (
+    current?.paymentStatus === PaymentStatus.FAILED ||
+    current?.paymentStatus === PaymentStatus.PAID
+  )
+    return;
+
+  await markReservationPaymentFailed(reservationId);
+  invalidateReservationCache(reservationId);
+}
+
+/**
+ * checkout.session.expired
+ *
+ * Checkout Session の有効期限切れ。paymentStatus → FAILED。
+ */
+async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
+  const reservationId = extractReservationId(
+    session,
+    "stripeWebhookCheckoutExpired",
+  );
+  if (!reservationId) return;
+
+  // べき等性チェック: PAID / REFUNDED なら expire しない
+  const current = await getReservationPaymentStatus(reservationId);
+  if (
+    current?.paymentStatus === PaymentStatus.PAID ||
+    current?.paymentStatus === PaymentStatus.REFUNDED
+  )
+    return;
+
+  await markReservationPaymentFailed(reservationId);
+  invalidateReservationCache(reservationId);
+}
+
+/**
+ * charge.refunded
+ *
+ * 返金完了。stripePaymentIntentId で予約を検索し REFUNDED に更新。
  */
 async function handleChargeRefunded(charge: Stripe.Charge) {
-  // charge.payment_intent は string | PaymentIntent | null
   const paymentIntentId =
     typeof charge.payment_intent === "string" ? charge.payment_intent : null;
 
@@ -256,12 +370,9 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  await markReservationRefunded(reservation.id);
+  // べき等性チェック: 既に REFUNDED なら skip
+  if (reservation.paymentStatus === PaymentStatus.REFUNDED) return;
 
-  // キャッシュ無効化
-  revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-  revalidateTag(
-    getCacheTag.reservations.detail(reservation.id),
-    CACHE_LIFE.DYNAMIC_DATA,
-  );
+  await markReservationRefunded(reservation.id);
+  invalidateReservationCache(reservation.id);
 }

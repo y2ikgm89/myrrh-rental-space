@@ -6,7 +6,7 @@
  */
 
 import type { ReactElement } from "react";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,

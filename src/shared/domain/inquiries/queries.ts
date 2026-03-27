@@ -7,10 +7,10 @@ import type { Serialized } from "@/shared/lib/serialize";
 import type { InquiryWhereInput } from "@/shared/types/prisma";
 import type {
   GetInquiriesResult,
-  InquiryData,
   InquiryFilters,
   InquiryPagination,
   InquiryStats,
+  InquiryWithCustomer,
 } from "@/shared/domain/inquiries/types";
 
 export async function getInquiries(
@@ -47,10 +47,23 @@ export async function getInquiries(
       select: {
         id: true,
         name: true,
+        companyName: true,
         email: true,
         subject: true,
         message: true,
         status: true,
+        customerId: true,
+        replyMessage: true,
+        repliedAt: true,
+        repliedBy: { select: { name: true } },
+        customer: {
+          select: {
+            id: true,
+            lastName: true,
+            firstName: true,
+            email: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -73,9 +86,32 @@ export async function getInquiries(
 
 export async function getInquiryById(
   id: string,
-): Promise<Serialized<InquiryData> | null> {
+): Promise<Serialized<InquiryWithCustomer> | null> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },
+    select: {
+      id: true,
+      name: true,
+      companyName: true,
+      email: true,
+      subject: true,
+      message: true,
+      status: true,
+      customerId: true,
+      replyMessage: true,
+      repliedAt: true,
+      repliedBy: { select: { name: true } },
+      customer: {
+        select: {
+          id: true,
+          lastName: true,
+          firstName: true,
+          email: true,
+        },
+      },
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 
   return toPlainObject(inquiry);

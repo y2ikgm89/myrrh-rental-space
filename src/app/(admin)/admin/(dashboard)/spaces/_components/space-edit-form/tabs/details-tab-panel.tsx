@@ -90,9 +90,7 @@ export function SpaceEditDetailsTabPanel({
                     <SelectItem value={SELECT_NONE_VALUE}>なし</SelectItem>
                     {availableCategories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
-                        {cat.icon && (
-                          <span className="mr-1">{cat.icon}</span>
-                        )}
+                        {cat.icon && <span className="mr-1">{cat.icon}</span>}
                         {cat.name}
                       </SelectItem>
                     ))}

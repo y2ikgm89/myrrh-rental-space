@@ -12,6 +12,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   deleteReservationCommand,
+  restoreReservationCommand,
   updateReservationNotesCommand,
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/commands";
@@ -25,7 +26,9 @@ import {
   sendReservationAdminNotification,
   sendReservationCancelledEmail,
   sendReservationConfirmationEmail,
+  sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
+import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 const updateStatusSchema = z.object({
   id: z.string().uuid({ error: "IDが不正です" }),
@@ -63,8 +66,8 @@ export const updateReservationStatus = async (
         return;
       }
 
-      const notification = omitUndefined(result.notification);
-      const calendarData: ReservationSyncData = { ...notification };
+      const payloadData = omitUndefined(result.payload);
+      const calendarData: ReservationSyncData = payloadData;
 
       if (
         status === ReservationStatus.CONFIRMED &&
@@ -91,9 +94,9 @@ export const updateReservationStatus = async (
 
         fireAndForget(
           Promise.all([
-            sendReservationConfirmationEmail(notification),
+            sendReservationConfirmationEmail(payloadData),
             sendReservationAdminNotification(
-              notification,
+              payloadData,
               result.previousStatus === ReservationStatus.PENDING
                 ? "new"
                 : "update",
@@ -123,8 +126,8 @@ export const updateReservationStatus = async (
 
         fireAndForget(
           Promise.all([
-            sendReservationCancelledEmail(notification),
-            sendReservationAdminNotification(notification, "cancel"),
+            sendReservationCancelledEmail(payloadData),
+            sendReservationAdminNotification(payloadData, "cancel"),
           ]),
           {
             operation: "sendCancellationEmails",
@@ -135,8 +138,44 @@ export const updateReservationStatus = async (
         );
       }
 
+      // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール
+      if (
+        result.previousStatus !== status &&
+        status !== ReservationStatus.CONFIRMED &&
+        status !== ReservationStatus.CANCELLED
+      ) {
+        const oldLabel =
+          RESERVATION_STATUS_LABELS[result.previousStatus] ??
+          result.previousStatus;
+        const newLabel = RESERVATION_STATUS_LABELS[status] ?? status;
+
+        fireAndForget(
+          sendReservationStatusChangedEmail({
+            reservationId: payloadData.reservationId,
+            customerEmail: payloadData.customerEmail,
+            customerName: payloadData.customerName,
+            spaceName: payloadData.spaceName,
+            startTime: payloadData.startTime,
+            endTime: payloadData.endTime,
+            totalPrice: payloadData.totalPrice,
+            oldStatus: oldLabel,
+            newStatus: newLabel,
+            ...(payloadData.location != null
+              ? { location: payloadData.location }
+              : {}),
+          }),
+          {
+            operation: "sendReservationStatusChangedEmail",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.MEDIUM,
+            context: { reservationId: id },
+          },
+        );
+      }
+
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(getCacheTag.reservations.detail(id));
+      updateTag(getCacheTag.reservations.calendar());
     },
   });
 };
@@ -168,14 +207,17 @@ export const updateReservationNotes = async (
 export const deleteReservation = async (
   id: string,
 ): Promise<MutationResult> => {
+  const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   let googleCalendarEventId: string | null = null;
 
   return executeAdminMutationResult({
     resource: "reservation",
     action: "delete",
     resourceId: id,
-    execute: async () => {
-      const result = await deleteReservationCommand(id);
+    execute: async (user) => {
+      const result = await deleteReservationCommand(id, user.id);
       googleCalendarEventId = result.googleCalendarEventId;
       return null;
     },
@@ -190,6 +232,32 @@ export const deleteReservation = async (
       }
 
       updateTag(CACHE_TAGS.RESERVATIONS);
+      updateTag(getCacheTag.reservations.detail(id));
+      updateTag(getCacheTag.reservations.calendar());
+      updateTag(CACHE_TAGS.CUSTOMERS);
+    },
+  });
+};
+
+export const restoreReservation = async (
+  id: string,
+): Promise<MutationResult> => {
+  const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  return executeAdminMutationResult({
+    resource: "reservation",
+    action: "update",
+    resourceId: id,
+    execute: async () => {
+      await restoreReservationCommand(id);
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.RESERVATIONS);
+      updateTag(getCacheTag.reservations.detail(id));
+      updateTag(getCacheTag.reservations.calendar());
+      updateTag(CACHE_TAGS.CUSTOMERS);
     },
   });
 };

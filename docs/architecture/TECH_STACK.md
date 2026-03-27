@@ -4,32 +4,32 @@
 
 ## コア
 
-| 技術       | バージョン         | 用途                                       |
-| ---------- | ------------------ | ------------------------------------------ |
-| Next.js    | 16.1.6             | App Router, PPR, `proxy.ts`, Metadata API  |
-| React      | 19.2.4             | Server / Client Components, React Compiler |
-| TypeScript | 6.0.1-rc           | strict type-checking, `erasableSyntaxOnly` |
-| Bun        | 1.3.11             | package manager, test runner, app runtime  |
+| 技術       | バージョン | 用途                                       |
+| ---------- | ---------- | ------------------------------------------ |
+| Next.js    | 16.1.6     | App Router, PPR, `proxy.ts`, Metadata API  |
+| React      | 19.2.4     | Server / Client Components, React Compiler |
+| TypeScript | 6.0.1-rc   | strict type-checking, `erasableSyntaxOnly` |
+| Bun        | 1.3.11     | package manager, test runner, app runtime  |
 
 ## データと認証
 
-| 技術                 | バージョン | 用途                  |
-| -------------------- | ---------- | --------------------- |
+| 技術                 | バージョン | 用途                                                           |
+| -------------------- | ---------- | -------------------------------------------------------------- |
 | Prisma               | 7.5.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
-| PostgreSQL           | Supabase   | 本番 DB               |
-| `@prisma/adapter-pg` | 7.5.0      | Prisma driver adapter（seed / `prisma.ts` で必須） |
-| Better Auth          | 1.5.5      | session / RBAC        |
-| Zod                  | 4.3.6      | 入出力検証            |
+| PostgreSQL           | Supabase   | 本番 DB                                                        |
+| `@prisma/adapter-pg` | 7.5.0      | Prisma driver adapter（seed / `prisma.ts` で必須）             |
+| Better Auth          | 1.5.5      | session / RBAC                                                 |
+| Zod                  | 4.3.6      | 入出力検証                                                     |
 
 ## UI と体験
 
-| 技術         | バージョン | 用途                        |
-| ------------ | ---------- | --------------------------- |
-| Tailwind CSS | 4.2.1      | styling, theme tokens       |
-| GSAP         | 3.14.2     | scroll / timeline animation |
+| 技術         | バージョン | 用途                               |
+| ------------ | ---------- | ---------------------------------- |
+| Tailwind CSS | 4.2.1      | styling, theme tokens              |
+| GSAP         | 3.14.2     | scroll / timeline animation        |
 | Lenis        | 1.3.19     | smooth scroll（`bun.lock` 解決版） |
-| nuqs         | 2.8.9      | search params state         |
-| Lexical      | 0.41.0     | admin rich text editor      |
+| nuqs         | 2.8.9      | search params state                |
+| Lexical      | 0.41.0     | admin rich text editor             |
 
 ## 実装上の判断
 
@@ -78,5 +78,5 @@
 
 - TypeScript は 6 系（rc）を使用。`erasableSyntaxOnly` 等の制約は `type-safety.md` を参照
 - Prisma は Bun runtime で使用するが、Edge Runtime 対応は前提にしない
-- **Three.js / PixiJS** は現状 `package.json` に未依存。再導入時は公式手順で依存追加し L3/L4 として限定利用（`AGENTS.md` / `visual-effects-patterns.md`）
+- **Three.js / PixiJS** は未使用（削除済み）。再導入しない
 - 管理画面は Lexical と Better Auth を中心にした Node/Bun runtime 前提

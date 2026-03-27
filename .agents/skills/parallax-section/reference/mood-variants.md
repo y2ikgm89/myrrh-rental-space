@@ -132,10 +132,8 @@ mm.add({
 
 各セルの組み合わせは、対応するルールファイル参照:
 
-- L1: `docs/reference/codex-rules/visual-effects-patterns.md` (CSSエフェクトカタログ)
-- L2: `docs/reference/codex-rules/gsap-patterns.md`
-- L3: `docs/reference/codex-rules/threejs-patterns.md`
-- L4: `docs/reference/codex-rules/pixijs-patterns.md`
+- L1: CSS エフェクト（transition, transform, filter）
+- L2: `docs/reference/codex-rules/gsap-patterns.md`（GSAP / ScrollTrigger）
 
 ## Three.js ムード別エンハンスメント
 

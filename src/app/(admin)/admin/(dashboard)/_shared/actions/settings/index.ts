@@ -156,7 +156,7 @@ export type { TaxSettingsInput } from "./schemas";
 
 export { updateRobotsTxtSettings, resetRobotsTxtToDefault } from "./robots-txt";
 
-export { DEFAULT_ROBOTS_TXT } from "./robots-txt-constants";
+export { DEFAULT_ROBOTS_TXT } from "@/shared/domain/settings/robots-txt";
 
 export type { RobotsTxtData } from "@/shared/domain/settings/types";
 export type { RobotsTxtSettingsInput } from "./schemas";

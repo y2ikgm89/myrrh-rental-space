@@ -134,6 +134,31 @@ type Foo = { discountType: DiscountType };
 | `@/shared/lib/validations/enums.ts` | 全 enum の型ガード（`isValid*`）、デフォルト値取得（`getValid*`）、re-export、フィルターヘルパー |
 | 各ドメインファイル                  | enum 定数の import のみ。型ガードは `enums.ts` から import                                       |
 
+### 7. Enum 拡張時のチェックリスト
+
+新しい enum 値を追加した場合、以下を **すべて** 確認すること:
+
+- Badge コンポーネント（ステータス表示）
+- Filter / Select の選択肢
+- Calendar 色マッピング
+- Zod schema（`z.enum()`）
+- 統計クエリ（`count({ where: { status } })`）
+- カレンダー同期ロジック
+- `prisma/seed.ts`
+
+### 8. Customer / Inquiry フィールド追加時のチェックリスト
+
+モデルにフィールドを追加した場合、以下を **すべて** 確認すること:
+
+- `types.ts`（型定義）
+- `queries.ts`（全 `select` 句）
+- 管理画面 Form / Detail / Table コンポーネント
+- メール `types` / テンプレート
+- `prisma/seed.ts`
+- テスト
+- カレンダー同期（予約関連のみ）
+- ドメインコマンドの `CUSTOMER_SELECT` 定数
+
 ---
 
 ## JSON フィールドの型安全化
@@ -534,19 +559,19 @@ await prisma.$transaction(async (tx) => {
 
 ## ファイル配置
 
-| パス                                | 内容                                                                       |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| `@/shared/generated/prisma/client`  | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
-| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                  |
-| `@/shared/db/prisma.ts`             | `server-only` シングルトン・`createAppPrismaClient` 適用                   |
-| `@/shared/db/prisma-input-json.ts`  | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし） |
-| `@/shared/db/enums.ts`              | Prisma enum の公開窓口                                                     |
-| `@/shared/lib/json-validators.ts`   | JSON フィールド Zod スキーマ・型・パース関数                               |
-| `@/shared/lib/serialize.ts`         | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
-| `@/shared/lib/validations/enums.ts` | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
-| `@/shared/lib/errors/logger-core.ts` | スクリプト可能な `logError`                                               |
-| `@/shared/lib/errors/logger.ts`      | Next Server 専用（`server-only` + `logger-core` re-export）              |
-| `@/admin/lib/lazy-renderer.ts`      | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
+| パス                                      | 内容                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `@/shared/generated/prisma/client`        | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
+| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                         |
+| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`createAppPrismaClient` 適用                   |
+| `@/shared/db/prisma-input-json.ts`        | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし） |
+| `@/shared/db/enums.ts`                    | Prisma enum の公開窓口                                                     |
+| `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |
+| `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
+| `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
+| `@/shared/lib/errors/logger-core.ts`      | スクリプト可能な `logError`                                                |
+| `@/shared/lib/errors/logger.ts`           | Next Server 専用（`server-only` + `logger-core` re-export）                |
+| `@/admin/lib/lazy-renderer.ts`            | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
 
 ## Gotchas
 

@@ -91,11 +91,11 @@ lexical/
 | 状態共有         | `inspector/inspector-sidebar-context.tsx` の **`InspectorSidebarProvider`**（`LexicalEditor` / `EditorInner` で `showInspector` に応じて `enabled` を渡す） |
 | 消費 API         | **`useInspectorSidebar()`** — `toggle` / `expand` / `collapse` / `isExpanded` / `isInspectorAvailable`                                                      |
 | React 19 Context | **`<InspectorSidebarContext value={...}>`** でラップ。**`.Provider` は使わない**。フックは **`use(InspectorSidebarContext)`**（`useContext` 禁止に準拠）    |
-| 永続化           | `localStorage` キー **`myrrh-lexical-inspector-panel`**（`1` = 展開、`0` = 折りたたみ、未設定は折りたたみ）。利用不可環境では黙って無視                        |
-| ツールバー       | `ToolbarPlugin` — APG Toolbar（`role="toolbar"`）。パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`）                             |
+| 永続化           | `localStorage` キー **`myrrh-lexical-inspector-panel`**（`1` = 展開、`0` = 折りたたみ、未設定は折りたたみ）。利用不可環境では黙って無視                     |
+| ツールバー       | `ToolbarPlugin` — APG Toolbar（`role="toolbar"`）。パネル開閉（`aria-pressed` / `aria-controls="lexical-block-inspector-panel"`）                           |
 | キーボード       | **`Ctrl+Shift+0`**（**`Numpad0` 可**）。`KeyboardShortcutsPlugin` 内で `isInspectorAvailable` が false のときはコマンドを処理しない                         |
 | 無効化           | `LexicalEditor` の **`showInspector={false}`** — サイドバー非マウント・トグル非表示・上記ショートカット無効                                                 |
-| 展開時の幅       | **420px**（インライン記事設定パネル default と揃える）                                                                                                    |
+| 展開時の幅       | **420px**（インライン記事設定パネル default と揃える）                                                                                                      |
 | マークアップ     | パネルルートは **`<aside id="lexical-block-inspector-panel" aria-label="ブロック設定パネル（本文中のブロック用）">`**                                       |
 
 **新規プラグイン**がパネル開閉に連動する場合: `LexicalComposer` 配下かつ **`InspectorSidebarProvider` 内**で `useInspectorSidebar()` を呼ぶこと。Provider 外ではフックが throw する。
@@ -710,8 +710,8 @@ const initialConfig = {
 
 ### レイアウト定数（単一正本）
 
-| ファイル | 内容 |
-| -------- | ---- |
+| ファイル                     | 内容                                                                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `editor-layout-constants.ts` | `EDITOR_PADDING_LEFT`（40）、`EDITOR_PADDING_RIGHT`（24）、`EDITOR_PADDING_HORIZONTAL`（64）。`LexicalEditor` の `ContentEditable` の `pl-10` / `pr-6` と **同値**に保つ。 |
 
 `contentWidth` の `maxWidth` は `contentWidth + EDITOR_PADDING_HORIZONTAL` で計算する（`CLAUDE.md` のコンテンツ幅節と同じ）。

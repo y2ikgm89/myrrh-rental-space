@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { BreadcrumbJsonLd } from "@/public/components/seo/JsonLd";
+import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 import {
   PostDetailPageContent,
   buildPostMetadata,
-} from "../posts/_components/PostDetailPageContent";
+} from "../posts/_components/post-detail-page-content";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";

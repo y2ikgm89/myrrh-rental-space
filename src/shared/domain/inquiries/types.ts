@@ -3,16 +3,30 @@ import type { InquiryStatus } from "@/shared/db/enums";
 export type InquiryData = {
   id: string;
   name: string;
+  companyName: string | null;
   email: string;
   subject: string;
   message: string;
   status: InquiryStatus;
+  customerId: string | null;
+  replyMessage: string | null;
+  repliedAt: Date | null;
+  repliedBy: { name: string } | null;
   createdAt: Date;
   updatedAt: Date;
 };
 
+export type InquiryWithCustomer = InquiryData & {
+  customer: {
+    id: string;
+    lastName: string;
+    firstName: string;
+    email: string;
+  } | null;
+};
+
 export type GetInquiriesResult = {
-  inquiries: InquiryData[];
+  inquiries: InquiryWithCustomer[];
   total: number;
   page: number;
   limit: number;

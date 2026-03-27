@@ -30,6 +30,7 @@ import {
   CalendarSyncMethod,
   EditorCommentStatus,
   PostPermalinkStructure,
+  PaymentStatus,
 } from "@/shared/db/enums";
 import {
   isValidRole,
@@ -57,6 +58,7 @@ import {
   isValidCalendarSyncMethod,
   isValidEditorCommentStatus,
   isValidPostPermalinkStructure,
+  isValidPaymentStatus,
   isValidNewsStatusFilter,
   type NewsStatusFilter,
 } from "./guards";
@@ -280,6 +282,13 @@ export function getValidPostPermalinkStructure(
   return value && isValidPostPermalinkStructure(value) ? value : fallback;
 }
 
+export function getValidPaymentStatus(
+  value: string | null | undefined,
+  fallback: PaymentStatus = PaymentStatus.UNPAID,
+): PaymentStatus {
+  return value && isValidPaymentStatus(value) ? value : fallback;
+}
+
 // =============================================================================
 // Filter helpers (for 'ALL' patterns)
 // =============================================================================
@@ -360,3 +369,35 @@ export function getReservationStatusFilterOrAll(
   if (!value || value === "ALL") return "ALL";
   return isValidReservationStatus(value) ? value : "ALL";
 }
+
+// =============================================================================
+// ReservationStatus Labels
+// =============================================================================
+
+export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
+  [ReservationStatus.PENDING]: "保留中",
+  [ReservationStatus.CONFIRMED]: "確認済み",
+  [ReservationStatus.COMPLETED]: "完了",
+  [ReservationStatus.CANCELLED]: "キャンセル",
+  [ReservationStatus.NO_SHOW]: "無断キャンセル",
+};
+
+// =============================================================================
+// PaymentStatus Labels & Badge Variants
+// =============================================================================
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  [PaymentStatus.UNPAID]: "未払い",
+  [PaymentStatus.PENDING]: "決済待ち",
+  [PaymentStatus.PAID]: "支払い済み",
+  [PaymentStatus.REFUNDED]: "返金済み",
+  [PaymentStatus.FAILED]: "決済失敗",
+};
+
+export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
+  [PaymentStatus.UNPAID]: "secondary",
+  [PaymentStatus.PENDING]: "warning",
+  [PaymentStatus.PAID]: "success",
+  [PaymentStatus.REFUNDED]: "outline",
+  [PaymentStatus.FAILED]: "destructive",
+};

@@ -10,7 +10,7 @@ paths:
 
 ## 概要
 
-公開ページはアニメーションが多い（GSAP / Three.js / PixiJS）。すべてのエフェクトに `prefers-reduced-motion` 対応が必須。
+公開ページはアニメーションが多い（GSAP / Lenis）。すべてのエフェクトに `prefers-reduced-motion` 対応が必須。
 管理画面（Lexical エディタ含む）でも基本的な a11y 規則を守る。
 
 本プロジェクトの a11y インフラ:
@@ -312,11 +312,6 @@ function MagneticButton() {
 }
 ```
 
-### Three.js / PixiJS フォールバック
-
-Three.js / PixiJS 使用時は `prefers-reduced-motion` を個別チェックし、CSS フォールバックを提供する。
-アニメーションコンポーネント側で `gsap.matchMedia()` または CSS `@media (prefers-reduced-motion: reduce)` で対応。
-
 ---
 
 ## フォームアクセシビリティ
@@ -464,18 +459,17 @@ useEffect(() => {
 
 ## ファイル配置
 
-| パス                                              | 内容                                                           |
-| ------------------------------------------------- | -------------------------------------------------------------- |
-| `@/public/components/a11y/SkipLink.tsx`           | キーボードナビゲーション用スキップリンク                       |
-| `@/public/components/a11y/AriaLiveRegion.tsx`     | スクリーンリーダー向け動的通知リージョン                       |
-| `@/shared/contexts`                               | `AriaLiveProvider`, `useAriaLive`, `useAriaLiveOptional`       |
-| `@/public/lib/a11y/`                              | `skip-link.ts`, `aria-live.ts`, `motion-utils.ts`              |
-| `@/public/hooks/use-motion-preference.ts`         | `gsap.matchMedia` ベースの reduced-motion フック（パターン C） |
-| `@/public/components/animations/ScrollReveal.tsx` | matchMedia 対応済みスクロールアニメーション                    |
+| パス                                               | 内容                                                           |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| `@/public/components/a11y/SkipLink.tsx`            | キーボードナビゲーション用スキップリンク                       |
+| `@/public/components/a11y/AriaLiveRegion.tsx`      | スクリーンリーダー向け動的通知リージョン                       |
+| `@/shared/contexts`                                | `AriaLiveProvider`, `useAriaLive`, `useAriaLiveOptional`       |
+| `@/public/lib/a11y/`                               | `skip-link.ts`, `aria-live.ts`, `motion-utils.ts`              |
+| `@/public/hooks/use-motion-preference.ts`          | `gsap.matchMedia` ベースの reduced-motion フック（パターン C） |
+| `@/public/components/animations/scroll-reveal.tsx` | matchMedia 対応済みスクロールアニメーション                    |
 
 ## 参照
 
 - [WCAG 2.2 (W3C)](https://www.w3.org/TR/WCAG22/)
 - [GSAP Accessibility Guide](https://gsap.com/resources/a11y)
-- `.claude/rules/gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）
-- `.claude/rules/visual-effects-patterns.md` §エフェクトレベル定義
+- `.claude/rules/frontend/gsap-patterns.md` §reduced-motion 対応（パターン A/B/C）

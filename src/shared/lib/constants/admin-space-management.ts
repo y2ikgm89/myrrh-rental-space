@@ -23,5 +23,4 @@ export const ADMIN_SPACE_LIST_SORT_BY = [
   "hourlyPrice",
 ] as const;
 
-export type AdminSpaceListSortBy =
-  (typeof ADMIN_SPACE_LIST_SORT_BY)[number];
+export type AdminSpaceListSortBy = (typeof ADMIN_SPACE_LIST_SORT_BY)[number];

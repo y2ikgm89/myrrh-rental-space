@@ -19,7 +19,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-  CSS,
+  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
@@ -73,7 +73,7 @@ function SortableListItem({
   } = useSortable({ id: item.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 

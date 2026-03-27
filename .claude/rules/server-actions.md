@@ -562,19 +562,25 @@ updateTag(CACHE_TAGS.POSTS);
    }
    ```
 
+8. **公開フォーム送信 Server Action のレート制限チェック省略禁止**
+   - `submitInquiry` / `submitReservation` 等の公開フォームは `checkActionRateLimit(formSubmitRateLimiter)` を最初のステップに配置
+   - `fetchAvailableSlots` 等の公開クエリは `checkActionRateLimit(publicQueryRateLimiter)` を使用
+   - Turnstile と併用（Turnstile bypass 攻撃への二重防御）
+
 ---
 
 ## ファイル配置
 
-| パス                              | 内容                                                                       |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| `@/shared/lib/constants/cache.ts` | `CACHE_TAGS`, `CACHE_LIFE`, `getCacheTag` 定数                             |
-| `@/admin/lib/admin-action.ts`     | `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理） |
-| `@/admin/lib/action-auth.ts`      | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`    |
-| `@/shared/lib/mutation-result.ts` | `MutationResult<T>`, `isMutationError()`                                   |
-| `@/shared/lib/action-helpers.ts`  | `createValidationMutationError`                                            |
-| `@/shared/lib/errors`             | `safeFetch`, `ErrorCategory`, `ErrorSeverity`                              |
-| `@/shared/lib/serialize.ts`       | `toPlainObject`, `toPlainArray`                                            |
+| パス                              | 内容                                                                        |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| `@/shared/lib/constants/cache.ts` | `CACHE_TAGS`, `CACHE_LIFE`, `getCacheTag` 定数                              |
+| `@/admin/lib/admin-action.ts`     | `executeAdminMutationResult`（認証・権限・監査ログ・DomainError 一括処理）  |
+| `@/admin/lib/action-auth.ts`      | `checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `logAction`     |
+| `@/shared/lib/mutation-result.ts` | `MutationResult<T>`, `isMutationError()`                                    |
+| `@/shared/lib/action-helpers.ts`  | `createValidationMutationError`, `checkActionRateLimit`                     |
+| `@/shared/lib/rate-limit.ts`      | `formSubmitRateLimiter`, `publicQueryRateLimiter`, `getClientIpFromHeaders` |
+| `@/shared/lib/errors`             | `safeFetch`, `ErrorCategory`, `ErrorSeverity`                               |
+| `@/shared/lib/serialize.ts`       | `toPlainObject`, `toPlainArray`                                             |
 
 ## Gotchas
 

@@ -11,9 +11,7 @@ import {
   SectionType,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
-import {
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section-defaults";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 
 // =============================================================================
 // SectionType Tests

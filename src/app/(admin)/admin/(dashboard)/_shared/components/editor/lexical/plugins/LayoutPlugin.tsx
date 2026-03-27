@@ -30,9 +30,7 @@ import {
   type LexicalCommand,
 } from "lexical";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
-import {
-  $isLayoutContainerNode,
-} from "../nodes/LayoutContainerNode";
+import { $isLayoutContainerNode } from "../nodes/LayoutContainerNode";
 import { $isLayoutItemNode } from "../nodes/LayoutItemNode";
 import {
   $createPopulatedLayoutContainer,

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { PostPreviewContent } from "../../_components/PostPreviewContent";
+import { PostPreviewContent } from "../../_components/post-preview-content";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

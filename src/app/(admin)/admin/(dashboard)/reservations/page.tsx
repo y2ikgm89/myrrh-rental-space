@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Download, Plus } from "lucide-react";
 import { getReservations } from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
@@ -71,6 +71,12 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
               <Calendar className="mr-2 h-4 w-4" />
               カレンダー表示
             </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href="/api/admin/export/reservations" download>
+              <Download className="mr-2 h-4 w-4" />
+              CSV
+            </a>
           </Button>
         </div>
       </div>

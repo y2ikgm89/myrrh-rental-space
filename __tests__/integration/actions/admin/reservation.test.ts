@@ -11,10 +11,10 @@ import { describe, test, expect } from "bun:test";
 import { z } from "zod";
 import { ReservationStatus } from "@/shared/db/enums";
 
-// reservation.ts 内で定義されているスキーマを再現
+// 管理画面のステータス更新は Prisma ReservationStatus と z.enum(ReservationStatus) に準拠
 const updateStatusSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(["PENDING", "CONFIRMED", "CANCELLED"]),
+  status: z.enum(ReservationStatus),
 });
 
 const updateNotesSchema = z.object({
@@ -46,8 +46,7 @@ describe("Reservation Admin Action Integration", () => {
       });
 
       test("全ステータス値が許可される", () => {
-        const statuses = ["PENDING", "CONFIRMED", "CANCELLED"] as const;
-        for (const status of statuses) {
+        for (const status of Object.values(ReservationStatus)) {
           const result = updateStatusSchema.safeParse({
             id: VALID_UUID,
             status,
@@ -91,7 +90,7 @@ describe("Reservation Admin Action Integration", () => {
           "INVALID",
           "APPROVED",
           "REJECTED",
-          "COMPLETED",
+          "completed",
         ];
 
         for (const status of invalidStatuses) {
@@ -183,18 +182,23 @@ describe("Reservation Admin Action Integration", () => {
   });
 
   describe("ReservationStatus enum 整合性", () => {
-    test("ReservationStatus enumはスキーマのステータスと一致", () => {
-      const schemaStatuses = ["PENDING", "CONFIRMED", "CANCELLED"];
-      const enumValues = Object.values(ReservationStatus) as string[];
-
-      // スキーマで定義された全ステータスがenumに存在
-      for (const status of schemaStatuses) {
-        expect(enumValues).toContain(status);
+    test("Prisma ReservationStatus と updateStatusSchema が一致", () => {
+      const enumValues = Object.values(ReservationStatus);
+      expect(enumValues).toEqual(
+        expect.arrayContaining([
+          "PENDING",
+          "CONFIRMED",
+          "COMPLETED",
+          "CANCELLED",
+          "NO_SHOW",
+        ]),
+      );
+      expect(enumValues).toHaveLength(5);
+      for (const status of enumValues) {
+        expect(
+          updateStatusSchema.safeParse({ id: VALID_UUID, status }).success,
+        ).toBe(true);
       }
-    });
-
-    test("ReservationStatus enumは3つの値を持つ", () => {
-      expect(Object.values(ReservationStatus)).toHaveLength(3);
     });
   });
 
@@ -238,7 +242,13 @@ describe("Reservation Admin Action Integration", () => {
     // ReservationFilters型のテスト（型安全性確認）
     test("有効なフィルター値", () => {
       type ReservationFilters = {
-        status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "ALL";
+        status?:
+          | "PENDING"
+          | "CONFIRMED"
+          | "COMPLETED"
+          | "CANCELLED"
+          | "NO_SHOW"
+          | "ALL";
         search?: string;
         startDate?: string;
         endDate?: string;
@@ -259,7 +269,13 @@ describe("Reservation Admin Action Integration", () => {
 
     test("ALL ステータスフィルター", () => {
       type ReservationFilters = {
-        status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "ALL";
+        status?:
+          | "PENDING"
+          | "CONFIRMED"
+          | "COMPLETED"
+          | "CANCELLED"
+          | "NO_SHOW"
+          | "ALL";
       };
 
       const filters: ReservationFilters = {

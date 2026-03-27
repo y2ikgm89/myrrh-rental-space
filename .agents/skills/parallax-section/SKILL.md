@@ -14,16 +14,13 @@ description: 公開ページのスクロール演出セクションを追加す�
 - セクションの目的
 - タイプ: `hero`, `content`, `cta`, `stacking`, `gallery`, `zoom`, `sequence`, `split`
 - 期待するムード
-- Three.js / PixiJS 拡張の要否
 
 ## 先に読む
 
 1. `docs/reference/codex-rules/project-design-config.md`
 2. `docs/reference/codex-rules/gsap-patterns.md`
-3. `docs/reference/codex-rules/visual-effects-patterns.md`
-4. WebGL を使うなら `docs/reference/codex-rules/threejs-patterns.md` または `docs/reference/codex-rules/pixijs-patterns.md`
-5. `reference/mood-variants.md`
-6. `reference/section-templates.md`
+3. `reference/mood-variants.md`
+4. `reference/section-templates.md`
 
 ## タイプの目安
 
@@ -45,10 +42,8 @@ description: 公開ページのスクロール演出セクションを追加す�
 3. `ui-ux-pro-max` が必要なら `style`, `ux`, `nextjs` だけ検索する
 4. `gsap.matchMedia()` 前提で desktop / mobile / reduced-motion の 3 条件を先に決める
 5. 実装は `useGSAP` + `scope`、`@/public/.../gsap-config` 経由 import、共有 animation 定数の使用を守る
-6. ページ全体の演出基盤が必要な場合だけ `ExperienceShell` に opt-in し、public root layout は触らない
-7. WebGL を使う場合は `ExperienceShell` 配下で `VisualEffectsProvider` と effect level gate を前提にする
-8. index export や呼び出し側統合を更新する
-9. reduced motion、モバイル、パフォーマンスを確認する
+6. index export や呼び出し側統合を更新する
+7. reduced motion、モバイル、パフォーマンスを確認する
 
 ## 検索コマンド例
 
@@ -65,8 +60,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - reduced motion 時は GSAP 不介入か軽量化のどちらかを明示する
 - モバイルではパララックス量を縮小し、`pin: true` を安易に使わない
 - `Math.random()` を使わず決定的な値でレイアウトや粒子を生成する
-- Three.js / PixiJS はフォールバックなしで入れない
-- `SmoothScrollProvider` / `ScrollOrchestratorProvider` / `VisualEffectsProvider` を global layout に戻さない
+- Three.js / PixiJS / WebGL は未使用（削除済み）。再導入しない
 - **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `docs/reference/codex-rules/nuqs-patterns.md`
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
 - 履歴資料の `docs/plans/*` を実装ルールとして扱わない

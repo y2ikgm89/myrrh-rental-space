@@ -24,14 +24,14 @@ WHERE "contentJson" IS NOT NULL
 
 同様の条件で、該当カラムを更新する:
 
-| テーブル | カラム |
-| -------- | ------ |
-| `news` | `contentJson` |
-| `news_versions` | `contentJson` |
-| `posts` | `contentJson` |
-| `post_versions` | `contentJson` |
-| `sections` | `contentJson` |
-| `faq_items` | `answerJson` |
+| テーブル         | カラム        |
+| ---------------- | ------------- |
+| `news`           | `contentJson` |
+| `news_versions`  | `contentJson` |
+| `posts`          | `contentJson` |
+| `post_versions`  | `contentJson` |
+| `sections`       | `contentJson` |
+| `faq_items`      | `answerJson`  |
 | `terms_versions` | `contentJson` |
 
 `block_templates.nodeJson` は EditorState 全体とは限らないため、条件を絞るか手動確認する。

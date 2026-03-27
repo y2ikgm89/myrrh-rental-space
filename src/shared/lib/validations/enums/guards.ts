@@ -37,6 +37,7 @@ import {
   CalendarSyncMethod,
   EditorCommentStatus,
   PostPermalinkStructure,
+  PaymentStatus,
 } from "@/shared/db/enums";
 
 // =============================================================================
@@ -99,6 +100,7 @@ const VALID_EDITOR_COMMENT_STATUSES = new Set<string>(
 const VALID_POST_PERMALINK_STRUCTURES = new Set<string>(
   Object.values(PostPermalinkStructure),
 );
+const VALID_PAYMENT_STATUSES = new Set<string>(Object.values(PaymentStatus));
 
 // =============================================================================
 // Type Guards
@@ -269,4 +271,8 @@ export function isValidPostPermalinkStructure(
   return (
     typeof value === "string" && VALID_POST_PERMALINK_STRUCTURES.has(value)
   );
+}
+
+export function isValidPaymentStatus(value: unknown): value is PaymentStatus {
+  return typeof value === "string" && VALID_PAYMENT_STATUSES.has(value);
 }

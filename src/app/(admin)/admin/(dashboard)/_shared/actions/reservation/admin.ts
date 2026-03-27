@@ -60,13 +60,13 @@ export const createAdminReservation = async (
         return;
       }
 
-      const calendarData: ReservationSyncData = omitUndefined(result.calendar);
-      const notificationData = omitUndefined(result.notification);
+      const payloadData = omitUndefined(result.payload);
+      const calendarData: ReservationSyncData = payloadData;
       if (validation.data.sendEmail) {
         fireAndForget(
           Promise.all([
-            sendReservationConfirmationEmail(notificationData),
-            sendReservationAdminNotification(notificationData, "new"),
+            sendReservationConfirmationEmail(payloadData),
+            sendReservationAdminNotification(payloadData, "new"),
             syncReservationToCalendar(calendarData),
           ]),
           {
@@ -90,6 +90,7 @@ export const createAdminReservation = async (
 
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(getCacheTag.reservations.calendar());
+      updateTag(CACHE_TAGS.CUSTOMERS);
     },
     resolveAuditResourceId: (payload) => payload.id,
   });
@@ -124,9 +125,8 @@ export const updateAdminReservation = async (
         return;
       }
 
-      const calendarData: ReservationSyncData = omitUndefined(
-        result.notification,
-      );
+      const payloadData = omitUndefined(result.payload);
+      const calendarData: ReservationSyncData = payloadData;
       if (result.googleCalendarEventId) {
         fireAndForget(
           updateCalendarSync(calendarData, result.googleCalendarEventId),
@@ -147,15 +147,12 @@ export const updateAdminReservation = async (
       }
 
       if (validation.data.sendNotificationEmail) {
-        fireAndForget(
-          sendReservationConfirmationEmail(omitUndefined(result.notification)),
-          {
-            operation: "sendNotificationEmail",
-            category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.LOW,
-            context: { reservationId: id },
-          },
-        );
+        fireAndForget(sendReservationConfirmationEmail(payloadData), {
+          operation: "sendNotificationEmail",
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.LOW,
+          context: { reservationId: id },
+        });
       }
 
       updateTag(CACHE_TAGS.RESERVATIONS);

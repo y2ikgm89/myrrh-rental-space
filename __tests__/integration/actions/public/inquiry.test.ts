@@ -77,12 +77,21 @@ mock.module("@/shared/lib/async-utils", () => ({
 // server-only モック（テスト環境で server-only を無効化）
 mock.module("server-only", () => ({}));
 
+/** Next の request scope なしでも動かす（getSession は headers に依存） */
+const mockGetSession = mock(() => Promise.resolve(null));
+
+mock.module("@/shared/lib/auth", () => ({
+  getSession: mockGetSession,
+}));
+
 // =============================================================================
 // テストデータ
 // =============================================================================
 
 const VALID_INPUT = {
-  name: "山田太郎",
+  customerType: "personal" as const,
+  lastName: "山田",
+  firstName: "太郎",
   email: "yamada@example.com",
   subject: "スペース利用について",
   message: "大人数での利用は可能でしょうか？詳しく教えていただけますか。",
@@ -95,6 +104,8 @@ const VALID_INPUT = {
 
 describe("submitInquiry", () => {
   beforeEach(() => {
+    mockGetSession.mockClear();
+    mockGetSession.mockImplementation(() => Promise.resolve(null));
     mockValidateTurnstile.mockClear();
     mockCreateInquiryCommand.mockClear();
     mockSendContactConfirmationEmail.mockClear();
@@ -109,7 +120,7 @@ describe("submitInquiry", () => {
         id: "inquiry-001",
         emailData: {
           inquiryId: "inquiry-001",
-          name: VALID_INPUT.name,
+          name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
           email: VALID_INPUT.email,
           subject: VALID_INPUT.subject,
           message: VALID_INPUT.message,
@@ -136,7 +147,9 @@ describe("submitInquiry", () => {
 
       expect(mockCreateInquiryCommand).toHaveBeenCalledTimes(1);
       expect(mockCreateInquiryCommand).toHaveBeenCalledWith({
-        name: VALID_INPUT.name,
+        name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
+        companyName: null,
+        customerId: null,
         email: VALID_INPUT.email,
         subject: VALID_INPUT.subject,
         message: VALID_INPUT.message,
@@ -164,11 +177,11 @@ describe("submitInquiry", () => {
   });
 
   describe("異常系: バリデーションエラー", () => {
-    test("name が空文字列のとき fieldErrors を含むエラーを返す", async () => {
+    test("lastName が空文字列のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      const result = await submitInquiry({ ...VALID_INPUT, name: "" });
+      const result = await submitInquiry({ ...VALID_INPUT, lastName: "" });
 
       expect(result).toHaveProperty("error");
       expect(result).toHaveProperty("fieldErrors");
@@ -176,7 +189,7 @@ describe("submitInquiry", () => {
         error: string;
         fieldErrors: Record<string, string[]>;
       };
-      expect(errorResult.fieldErrors).toHaveProperty("name");
+      expect(errorResult.fieldErrors).toHaveProperty("lastName");
     });
 
     test("email が無効な形式のとき fieldErrors を含むエラーを返す", async () => {
@@ -224,13 +237,13 @@ describe("submitInquiry", () => {
       expect(errorResult.fieldErrors).toHaveProperty("message");
     });
 
-    test("name が 100 文字超のとき fieldErrors を含むエラーを返す", async () => {
+    test("lastName が 50 文字超のとき fieldErrors を含むエラーを返す", async () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
       const result = await submitInquiry({
         ...VALID_INPUT,
-        name: "あ".repeat(101),
+        lastName: "あ".repeat(51),
       });
 
       expect(result).toHaveProperty("error");
@@ -238,7 +251,7 @@ describe("submitInquiry", () => {
         error: string;
         fieldErrors: Record<string, string[]>;
       };
-      expect(errorResult.fieldErrors).toHaveProperty("name");
+      expect(errorResult.fieldErrors).toHaveProperty("lastName");
     });
 
     test("message が 5000 文字超のとき fieldErrors を含むエラーを返す", async () => {
@@ -262,7 +275,7 @@ describe("submitInquiry", () => {
       const { submitInquiry } =
         await import("@/app/(public)/_shared/actions/inquiry");
 
-      await submitInquiry({ ...VALID_INPUT, name: "" });
+      await submitInquiry({ ...VALID_INPUT, lastName: "" });
 
       expect(mockCreateInquiryCommand).not.toHaveBeenCalled();
     });
@@ -343,7 +356,8 @@ describe("submitInquiry", () => {
         await import("@/shared/lib/validations/inquiry");
 
       const result = publicInquirySchema.safeParse({
-        name: "田中花子",
+        lastName: "田中",
+        firstName: "花子",
         email: "tanaka@example.com",
         subject: "件名",
         message: "本文",
@@ -357,7 +371,8 @@ describe("submitInquiry", () => {
         await import("@/shared/lib/validations/inquiry");
 
       const result = publicInquirySchema.safeParse({
-        name: "田中花子",
+        lastName: "田中",
+        firstName: "花子",
         email: "tanaka@example.com",
         subject: "件名",
         message: "本文",

@@ -20,9 +20,7 @@ import {
   type SpaceListConfig,
   type SpaceListConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getSpaceListConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getSpaceListConfig } from "@/shared/lib/validations/section-defaults";
 import {
   cardStyleLabels,
   spaceLayoutLabels,

@@ -132,7 +132,7 @@ export function CommentTable({ comments }: Props) {
   }
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className="overflow-hidden rounded-lg border bg-card">
       {/* 一括操作バー */}
       {selected.length > 0 && (
         <div className="flex items-center gap-4 p-4 border-b bg-muted/50">
@@ -160,115 +160,117 @@ export function CommentTable({ comments }: Props) {
       )}
 
       {/* テーブル */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12">
-              <Checkbox
-                checked={selected.length === comments.length}
-                onCheckedChange={toggleAll}
-              />
-            </TableHead>
-            <TableHead className="min-w-[200px]">コメント</TableHead>
-            <TableHead className="hidden lg:table-cell">投稿者</TableHead>
-            <TableHead className="hidden md:table-cell">記事</TableHead>
-            <TableHead className="hidden md:table-cell">投稿日時</TableHead>
-            <TableHead>ステータス</TableHead>
-            <TableHead className="w-24">操作</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {comments.map((comment) => (
-            <TableRow
-              key={comment.id}
-              className={cn(comment.isDeleted && "opacity-50")}
-            >
-              <TableCell>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
                 <Checkbox
-                  checked={selected.includes(comment.id)}
-                  onCheckedChange={() => toggleOne(comment.id)}
+                  checked={selected.length === comments.length}
+                  onCheckedChange={toggleAll}
                 />
-              </TableCell>
-              <TableCell>
-                <p className="text-sm line-clamp-2 max-w-[300px]">
-                  {comment.content}
-                </p>
-                {comment.parentCommentId && (
-                  <span className="text-xs text-muted-foreground mt-1 block">
-                    ↳ 返信コメント
-                  </span>
-                )}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-3 h-3 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {getAuthorName(comment)}
-                    </p>
-                    {comment.author.type === "guest" && (
-                      <p className="text-xs text-muted-foreground">
-                        {comment.author.guestEmail}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <Link
-                  href={comment.postUrl}
-                  target="_blank"
-                  className="text-sm text-primary hover:underline flex items-center gap-1"
-                >
-                  <span className="line-clamp-1 max-w-[150px]">
-                    {comment.postTitle}
-                  </span>
-                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                </Link>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <span className="text-sm text-muted-foreground">
-                  {formatDistanceToNow(new Date(comment.createdAt), {
-                    addSuffix: true,
-                    locale: ja,
-                  })}
-                </span>
-              </TableCell>
-              <TableCell>
-                {comment.isDeleted ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-destructive/10 text-destructive">
-                    削除済み
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-success/10 text-success">
-                    アクティブ
-                  </span>
-                )}
-              </TableCell>
-              <TableCell>
-                <ActionDropdown disabled={isPending}>
-                  {comment.isDeleted ? (
-                    <ActionDropdownItem
-                      onClick={() => handleRestore(comment.id)}
-                    >
-                      復元
-                    </ActionDropdownItem>
-                  ) : (
-                    <ActionDropdownItem
-                      destructive
-                      onClick={() => handleDelete(comment.id)}
-                    >
-                      削除
-                    </ActionDropdownItem>
-                  )}
-                </ActionDropdown>
-              </TableCell>
+              </TableHead>
+              <TableHead className="min-w-[200px]">コメント</TableHead>
+              <TableHead className="hidden lg:table-cell">投稿者</TableHead>
+              <TableHead className="hidden md:table-cell">記事</TableHead>
+              <TableHead className="hidden md:table-cell">投稿日時</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead className="w-24">操作</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {comments.map((comment) => (
+              <TableRow
+                key={comment.id}
+                className={cn(comment.isDeleted && "opacity-50")}
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={selected.includes(comment.id)}
+                    onCheckedChange={() => toggleOne(comment.id)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <p className="text-sm line-clamp-2 max-w-[300px]">
+                    {comment.content}
+                  </p>
+                  {comment.parentCommentId && (
+                    <span className="text-xs text-muted-foreground mt-1 block">
+                      ↳ 返信コメント
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {getAuthorName(comment)}
+                      </p>
+                      {comment.author.type === "guest" && (
+                        <p className="text-xs text-muted-foreground">
+                          {comment.author.guestEmail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Link
+                    href={comment.postUrl}
+                    target="_blank"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
+                    <span className="line-clamp-1 max-w-[150px]">
+                      {comment.postTitle}
+                    </span>
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  </Link>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <span className="text-sm text-muted-foreground">
+                    {formatDistanceToNow(new Date(comment.createdAt), {
+                      addSuffix: true,
+                      locale: ja,
+                    })}
+                  </span>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {comment.isDeleted ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-destructive/10 text-destructive">
+                      削除済み
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-success/10 text-success">
+                      アクティブ
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <ActionDropdown disabled={isPending}>
+                    {comment.isDeleted ? (
+                      <ActionDropdownItem
+                        onClick={() => handleRestore(comment.id)}
+                      >
+                        復元
+                      </ActionDropdownItem>
+                    ) : (
+                      <ActionDropdownItem
+                        destructive
+                        onClick={() => handleDelete(comment.id)}
+                      >
+                        削除
+                      </ActionDropdownItem>
+                    )}
+                  </ActionDropdown>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

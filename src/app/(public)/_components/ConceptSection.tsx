@@ -8,9 +8,9 @@
  */
 
 import type { ReactElement } from "react";
-import { SplitText } from "@/public/components/animations/SplitText";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { ParallaxImage } from "@/public/components/animations/ParallaxImage";
+import { SplitText } from "@/public/components/animations/split-text";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { ParallaxImage } from "@/public/components/animations/parallax-image";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,

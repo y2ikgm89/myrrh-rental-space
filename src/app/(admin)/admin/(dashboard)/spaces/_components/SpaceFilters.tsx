@@ -172,10 +172,7 @@ export function SpaceFilters({
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={params.spSortOrder}
-                onValueChange={setSortOrder}
-              >
+              <Select value={params.spSortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="順序" />
                 </SelectTrigger>

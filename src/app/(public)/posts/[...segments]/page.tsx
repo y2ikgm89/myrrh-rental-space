@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import {
   PostDetailPageContent,
   buildPostMetadata,
-} from "../_components/PostDetailPageContent";
+} from "../_components/post-detail-page-content";
 import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 

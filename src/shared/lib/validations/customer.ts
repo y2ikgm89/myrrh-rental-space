@@ -28,6 +28,11 @@ export const customerFormSchema = z.object({
     .max(50, { error: "メイは50文字以内で入力してください" })
     .optional()
     .or(z.literal("")),
+  companyName: z
+    .string()
+    .max(100, { error: "会社名は100文字以内で入力してください" })
+    .optional()
+    .or(z.literal("")),
   email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
   phoneNumber: z
     .string()

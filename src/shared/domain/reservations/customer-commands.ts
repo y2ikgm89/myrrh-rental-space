@@ -4,7 +4,11 @@ import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
+import { reservationDeadlineNow } from "./server-deadline-instant";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
+import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
+import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,7 +49,13 @@ export async function cancelCustomerReservation(
       return { success: false, error: "この予約はキャンセルできません" };
     }
 
-    if (!isWithinDeadline(reservation.startTime, deadlineHours)) {
+    if (
+      !isWithinDeadline(
+        reservation.startTime,
+        deadlineHours,
+        reservationDeadlineNow(),
+      )
+    ) {
       return {
         success: false,
         error: `キャンセル期限（${String(deadlineHours)}時間前）を過ぎています`,
@@ -88,14 +98,29 @@ export async function updateCustomerReservation(
 
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
-      where: { id: reservationId, customerId },
+      where: { id: reservationId, customerId, deletedAt: null },
       select: {
         id: true,
         status: true,
         startTime: true,
-        couponDiscountAmount: true,
-        durationDiscountAmount: true,
-        spaceDiscountAmount: true,
+        taxRateType: true,
+        taxRate: true,
+        couponId: true,
+        coupon: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            type: true,
+            discountValue: true,
+            maxDiscountAmount: true,
+            canCombineWithDurationDiscount: true,
+            validFrom: true,
+            validUntil: true,
+            usageLimit: true,
+            usageCount: true,
+          },
+        },
       },
     });
 
@@ -107,34 +132,29 @@ export async function updateCustomerReservation(
       return { success: false, error: "この予約は変更できません" };
     }
 
-    if (!isWithinDeadline(reservation.startTime, modificationDeadlineHours)) {
+    if (
+      !isWithinDeadline(
+        reservation.startTime,
+        modificationDeadlineHours,
+        reservationDeadlineNow(),
+      )
+    ) {
       return {
         success: false,
         error: `変更期限（${String(modificationDeadlineHours)}時間前）を過ぎています`,
       };
     }
 
-    // 手動割引が適用されている場合は顧客による変更を拒否
-    const hasManualDiscount =
-      (reservation.couponDiscountAmount != null &&
-        Number(reservation.couponDiscountAmount) > 0) ||
-      (reservation.durationDiscountAmount != null &&
-        Number(reservation.durationDiscountAmount) > 0) ||
-      (reservation.spaceDiscountAmount != null &&
-        Number(reservation.spaceDiscountAmount) > 0);
-
-    if (hasManualDiscount) {
-      return {
-        success: false,
-        error:
-          "割引が適用されている予約はオンラインで変更できません。お電話でお問い合わせください。",
-      };
-    }
-
-    // スペースの存在確認
+    // スペースの存在確認（割引設定も取得）
     const space = await tx.space.findUnique({
       where: { id: input.spaceId, isActive: true, isPublished: true },
-      select: { id: true, hourlyPrice: true },
+      select: {
+        id: true,
+        hourlyPrice: true,
+        discountType: true,
+        discountValue: true,
+        durationDiscountOverride: true,
+      },
     });
 
     if (!space) {
@@ -160,20 +180,82 @@ export async function updateCustomerReservation(
       };
     }
 
-    // 基本料金の再計算
+    // 割引設定を取得
+    const settings = await tx.settings.findFirst({
+      select: {
+        durationDiscountEnabled: true,
+        durationDiscountRules: true,
+        discountCombinationMode: true,
+      },
+    });
+
+    // 料金の再計算（クーポン・長時間割引含む）
     const hours =
       (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60);
-    const basePrice = Math.floor(space.hourlyPrice * hours);
 
-    // TODO: クーポン・長時間割引の再計算は未実装（将来タスク）
+    const spaceDiscount:
+      | import("@/shared/lib/pricing/types").SpaceDiscountSettings
+      | null =
+      space.discountType !== "none" &&
+      space.discountValue != null &&
+      space.discountValue > 0
+        ? {
+            discountType: space.discountType,
+            discountValue: space.discountValue,
+            durationDiscountOverride: space.durationDiscountOverride,
+          }
+        : null;
+
+    const coupon = reservation.coupon;
+    const couponForCalc =
+      coupon &&
+      coupon.validFrom &&
+      coupon.validUntil &&
+      new Date(coupon.validFrom) <= startDateTime &&
+      new Date(coupon.validUntil) >= endDateTime
+        ? {
+            id: coupon.id,
+            code: coupon.code,
+            name: coupon.name,
+            type: coupon.type,
+            discountValue: coupon.discountValue,
+            maxDiscountAmount: coupon.maxDiscountAmount,
+            canCombineWithDurationDiscount:
+              coupon.canCombineWithDurationDiscount,
+          }
+        : null;
+
+    const priceResult = calculateReservationPrice({
+      hourlyPrice: space.hourlyPrice,
+      hours,
+      spaceDiscount,
+      durationDiscountEnabled: settings?.durationDiscountEnabled ?? false,
+      durationRules: parseDurationDiscountRules(
+        settings?.durationDiscountRules,
+      ),
+      coupon: couponForCalc,
+      combinationMode: getValidDiscountCombinationMode(
+        settings?.discountCombinationMode ?? undefined,
+      ),
+    });
+
+    const taxRate = reservation.taxRate ? Number(reservation.taxRate) : 0;
+    const taxAmount = Math.floor(priceResult.totalPrice * taxRate);
+
     await tx.reservation.update({
       where: { id: reservationId },
       data: {
         spaceId: input.spaceId,
         startTime: startDateTime,
         endTime: endDateTime,
-        basePrice,
-        totalPrice: basePrice,
+        basePrice: priceResult.basePrice,
+        totalPrice: priceResult.totalPrice,
+        spaceDiscountAmount: priceResult.spaceDiscount,
+        durationDiscountAmount: priceResult.durationDiscount,
+        couponDiscountAmount: priceResult.couponDiscount,
+        taxAmount,
+        totalPriceWithTax: priceResult.totalPrice + taxAmount,
+        couponId: couponForCalc ? reservation.couponId : null,
       },
     });
 

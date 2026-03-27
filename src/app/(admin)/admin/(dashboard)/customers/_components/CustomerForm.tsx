@@ -139,6 +139,25 @@ export function CustomerForm(): ReactElement {
             </div>
           </div>
 
+          {/* 会社名・団体名 */}
+          <div className="space-y-2">
+            <Label htmlFor="companyName">会社名・団体名</Label>
+            <Input
+              id="companyName"
+              {...register("companyName")}
+              placeholder="株式会社〇〇"
+              aria-invalid={!!errors.companyName}
+              aria-describedby={
+                errors.companyName ? "companyName-error" : undefined
+              }
+            />
+            {errors.companyName && (
+              <p id="companyName-error" className="text-xs text-destructive">
+                {errors.companyName.message}
+              </p>
+            )}
+          </div>
+
           {/* メールアドレス */}
           <div className="space-y-2">
             <Label htmlFor="email">

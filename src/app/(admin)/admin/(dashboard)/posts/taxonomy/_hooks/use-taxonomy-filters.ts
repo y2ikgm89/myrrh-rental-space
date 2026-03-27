@@ -83,10 +83,13 @@ export function useCategoryFilters() {
 }
 
 export function useTagFilters() {
-  const [params, setParams] = useQueryStates(postTaxonomyTagSearchParamsParsers, {
-    history: "push",
-    shallow: false,
-  });
+  const [params, setParams] = useQueryStates(
+    postTaxonomyTagSearchParamsParsers,
+    {
+      history: "push",
+      shallow: false,
+    },
+  );
 
   const setSearch = (value: string) => {
     void setParams({ search: value || null });

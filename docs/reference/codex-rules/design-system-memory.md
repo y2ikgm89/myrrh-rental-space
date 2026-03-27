@@ -19,7 +19,7 @@ paths:
 
 1. `project-design-config.md`
 2. `anti-ai-design.md`
-3. 必要に応じて `ui-ux-patterns.md`, `gsap-patterns.md`, `visual-effects-patterns.md`
+3. 必要に応じて `ui-ux-patterns.md`, `gsap-patterns.md`
 
 ## 更新プロトコル
 

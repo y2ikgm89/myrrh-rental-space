@@ -5,11 +5,7 @@
 "use client";
 
 import { Check, ChevronDown, LayoutGrid } from "lucide-react";
-import {
-  $getNodeByKey,
-  $setState,
-  type LexicalEditor,
-} from "lexical";
+import { $getNodeByKey, $setState, type LexicalEditor } from "lexical";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
 import {
@@ -87,9 +83,7 @@ export function LayoutToolbarSection({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[220px]">
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              広い画面（既定）
-            </DropdownMenuSubTrigger>
+            <DropdownMenuSubTrigger>広い画面（既定）</DropdownMenuSubTrigger>
             <DropdownMenuSubContent className="max-h-[min(70vh,360px)] overflow-y-auto">
               {LAYOUT_TEMPLATES.map((t) => (
                 <DropdownMenuItem

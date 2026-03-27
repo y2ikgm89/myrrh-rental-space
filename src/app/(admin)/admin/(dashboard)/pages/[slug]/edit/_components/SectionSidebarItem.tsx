@@ -7,7 +7,7 @@
  */
 
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { toTranslate3d } from "@/admin/components/ui/sortable";
 import {
   Button,
   DropdownMenu,
@@ -57,7 +57,7 @@ export function SectionSidebarItem({
   } = useSortable({ id: section.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 

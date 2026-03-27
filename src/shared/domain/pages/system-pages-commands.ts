@@ -4,12 +4,8 @@ export type SystemPagesDbClient = AppPrismaClient;
 import { clonePrismaInputJson } from "@/shared/db/prisma-input-json";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
-import {
-  defaultHomepageSectionOrder,
-} from "@/shared/lib/validations/section";
-import {
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section-defaults";
+import { defaultHomepageSectionOrder } from "@/shared/lib/validations/section";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 

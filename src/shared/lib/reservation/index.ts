@@ -34,3 +34,11 @@ export {
   isBusinessDay,
   getBusinessHoursSettings,
 } from "./time-slots";
+
+// Client-safe utilities
+export {
+  getWeekdayKey,
+  parseTime,
+  generateSlotsFromBusinessHours,
+  generateFallbackSlots,
+} from "./time-slots-utils";

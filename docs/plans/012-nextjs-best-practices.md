@@ -95,11 +95,11 @@ export function withAuth<TArgs, TData>(fn) {
 
 ## 変更ファイル
 
-| ファイル                      | 変更内容                                               |
-| ----------------------------- | ------------------------------------------------------ |
-| `src/app/(admin)/admin/`      | 新しいRoute Group（移動）                              |
+| ファイル                      | 変更内容                                                              |
+| ----------------------------- | --------------------------------------------------------------------- |
+| `src/app/(admin)/admin/`      | 新しいRoute Group（移動）                                             |
 | `src/shared/lib/auth.ts`      | verifySession, verifyAdminSession 追加（cache() ラップ）※現行正本パス |
-| `src/types/server-actions.ts` | withAuth HOF を直接 auth() 呼び出しに変更（当時）      |
+| `src/types/server-actions.ts` | withAuth HOF を直接 auth() 呼び出しに変更（当時）                     |
 
 ## 後方互換性
 

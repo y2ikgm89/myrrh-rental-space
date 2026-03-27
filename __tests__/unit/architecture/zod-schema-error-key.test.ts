@@ -11,7 +11,8 @@ const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
 
 /** z.min(1, { message: }) のようなパターン（error: に統一すべき） */
-const ZOD_DEPRECATED_MESSAGE_ARG = /\.(?:min|max|length|email|uuid)\([^)]*\{\s*message\s*:/;
+const ZOD_DEPRECATED_MESSAGE_ARG =
+  /\.(?:min|max|length|email|uuid)\([^)]*\{\s*message\s*:/;
 
 function collectTsFiles(dir: string): string[] {
   const out: string[] = [];

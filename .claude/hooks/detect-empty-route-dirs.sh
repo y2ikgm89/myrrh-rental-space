@@ -17,7 +17,7 @@ while IFS= read -r dir; do
   if [[ -z "$(find "$dir" -maxdepth 1 -type f 2>/dev/null)" ]]; then
     EMPTY_DIRS="${EMPTY_DIRS}${dir#"$CLAUDE_PROJECT_DIR/"}\n"
   fi
-done < <(find "$APP_DIR" -type d -name '\[*\]' -o -type d -name '\[\[*\]\]' 2>/dev/null)
+done < <(find "$APP_DIR" -type d \( -name '\[*\]' -o -name '\[\[*\]\]' \) 2>/dev/null)
 
 if [[ -n "$EMPTY_DIRS" ]]; then
   echo "⚠️ 空の動的ルートディレクトリを検出（移行残骸の可能性）:"

@@ -305,9 +305,7 @@ export function usePostEditor({
       const values = getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(
-        values.contentJson,
-      );
+      const contentHtml = renderEditorStateJsonToHtmlClient(values.contentJson);
       const previewData = toPreviewData(values, categories, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/posts");
     } catch (error) {

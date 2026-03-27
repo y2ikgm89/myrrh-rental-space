@@ -25,9 +25,7 @@ import {
   type GalleryConfig,
   type GalleryConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getGalleryConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getGalleryConfig } from "@/shared/lib/validations/section-defaults";
 import {
   galleryLayoutLabels,
   galleryGapLabels,

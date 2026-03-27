@@ -80,9 +80,7 @@ function renderPanel(info: SelectedNodeInfo) {
     case "ruby":
       return <RubyInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "tooltip":
-      return (
-        <TooltipInspectorPanel nodeKey={info.nodeKey} node={info.node} />
-      );
+      return <TooltipInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "collapsible":
       return (
         <CollapsibleInspectorPanel nodeKey={info.nodeKey} node={info.node} />
@@ -233,7 +231,10 @@ export function InspectorSidebar() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4 min-h-0">
-              <SlidersVertical className="h-8 w-8 mb-2 opacity-50" aria-hidden />
+              <SlidersVertical
+                className="h-8 w-8 mb-2 opacity-50"
+                aria-hidden
+              />
               <p className="text-sm text-center">
                 ブロックを選択すると
                 <br />

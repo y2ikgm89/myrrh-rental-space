@@ -46,9 +46,9 @@ const VALID_FULL_JSON = JSON.stringify({
 
 describe("isLexicalComposerReadyEditorStateJson", () => {
   test("EMPTY 定数は Composer 初期化可能", () => {
-    expect(isLexicalComposerReadyEditorStateJson(EMPTY_LEXICAL_EDITOR_STATE_JSON)).toBe(
-      true,
-    );
+    expect(
+      isLexicalComposerReadyEditorStateJson(EMPTY_LEXICAL_EDITOR_STATE_JSON),
+    ).toBe(true);
   });
 
   test("空文字は不可", () => {
@@ -56,14 +56,18 @@ describe("isLexicalComposerReadyEditorStateJson", () => {
   });
 
   test("root の子が空配列のレガシー JSON は不可", () => {
-    expect(isLexicalComposerReadyEditorStateJson(LEGACY_EMPTY_ROOT_ONLY)).toBe(false);
+    expect(isLexicalComposerReadyEditorStateJson(LEGACY_EMPTY_ROOT_ONLY)).toBe(
+      false,
+    );
   });
 });
 
 describe("lexicalJsonSchema バリデーション", () => {
   describe("正常系", () => {
     test("EMPTY 定数で通過", () => {
-      const result = lexicalJsonSchema.safeParse(EMPTY_LEXICAL_EDITOR_STATE_JSON);
+      const result = lexicalJsonSchema.safeParse(
+        EMPTY_LEXICAL_EDITOR_STATE_JSON,
+      );
       expect(result.success).toBe(true);
     });
 

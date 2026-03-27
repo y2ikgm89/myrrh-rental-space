@@ -5,7 +5,8 @@ import { getCustomerById } from "@/admin/queries/customer";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Button } from "@/admin/components/ui/button";
 import { CustomerDetail } from "./_components/CustomerDetail";
-import { CustomerDangerZone } from "./_components/CustomerDangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
+import { deleteCustomer } from "@/admin/actions/customer";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -45,19 +46,23 @@ export default async function CustomerDetailPage({ params }: PageProps) {
       title={`${customer.lastName} ${customer.firstName}`}
       subtitle={customer.email}
       actions={
-        <Button size="sm" asChild>
-          <Link href={`/admin/customers/${customer.id}/edit`}>
-            <Pencil className="mr-2 h-4 w-4" />
-            編集
-          </Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={`${customer.lastName} ${customer.firstName}`}
+            onDelete={deleteCustomer.bind(null, customer.id)}
+            redirectTo="/admin/customers"
+            successMessage="顧客を削除しました"
+          />
+          <Button size="sm" asChild>
+            <Link href={`/admin/customers/${customer.id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
       <CustomerDetail customer={customer} />
-      <CustomerDangerZone
-        customerId={customer.id}
-        itemName={`${customer.lastName} ${customer.firstName}`}
-      />
     </AdminDetailLayout>
   );
 }

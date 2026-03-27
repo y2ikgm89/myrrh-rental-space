@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import {
   NewsDetailPageContent,
   buildNewsMetadata,
-} from "../_components/NewsDetailPageContent";
+} from "../_components/news-detail-page-content";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 
 interface PageProps {

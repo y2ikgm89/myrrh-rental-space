@@ -1,30 +1,27 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["dom", "esnext"],
+    "target": "es2025",
+    "lib": [
+      "dom",
+      "esnext"
+    ],
     "skipLibCheck": true,
     "noEmit": true,
-    // TS 6.0: types のデフォルトが [] に変更。@types/node を明示して Node.js グローバル型を有効化。
-    "types": ["node"],
+    // TS 6.0: デフォルト [] — @types/node を明示して Node.js グローバル型を有効化
+    "types": [
+      "node"
+    ],
     // ── Strict type-checking ──────────────────────────────────────────────
-    // Next.js が自動注入するが strict: true は明示必須（未指定だと false が注入される）
-    // TS 6.0 でデフォルト true になったが Next.js の挙動を考慮し明示を維持。
+    // Next.js が未指定だと false を注入するため明示必須
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    // TS 6.0 tsc --init 推奨: optional プロパティの undefined 代入を禁止。
-    // `{ field?: T | null }` に `{ field: undefined }` を渡すとエラー。
+    // optional プロパティへの undefined 代入を禁止
     "exactOptionalPropertyTypes": true,
-    // TS 6.0: 副作用のみの import のタイポを検出。6.0 デフォルト true。
-    "noUncheckedSideEffectImports": true,
-    // TS 6.0: non-erasable TypeScript syntax (enum, namespace, parameter properties) をエラーにする。
-    // TS 7.0 + Node.js native TypeScript 実行に向けた準備。
+    // TS 7.0 (Go native) 準備: enum, namespace, parameter properties をエラー
     "erasableSyntaxOnly": true,
-    // インデックスシグネチャ由来のプロパティはブラケット記法を強制。
-    // 明示的に宣言されたプロパティはドット記法で引き続き OK。
+    // インデックスシグネチャ由来はブラケット記法を強制
     "noPropertyAccessFromIndexSignature": true,
-    // class の override は明示的な override キーワードを要求。
     "noImplicitOverride": true,
-    // import/export のないファイルもモジュールとして扱い、グローバルスコープ汚染を防ぐ。
     "moduleDetection": "force",
     // ── Module resolution ─────────────────────────────────────────────────
     "moduleResolution": "bundler",
@@ -42,25 +39,38 @@
     ],
     // ── Path aliases ──────────────────────────────────────────────────────
     "paths": {
-      "@/*": ["./src/*"],
-      "@generated/*": ["./generated/*"],
-      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
-      "@/public/*": ["./src/app/(public)/_shared/*"],
-      "@/shared/*": ["./src/shared/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@generated/*": [
+        "./generated/*"
+      ],
+      "@/admin/*": [
+        "./src/app/(admin)/admin/(dashboard)/_shared/*"
+      ],
+      "@/public/*": [
+        "./src/app/(public)/_shared/*"
+      ],
+      "@/shared/*": [
+        "./src/shared/*"
+      ]
     },
-    // ── Next.js 自動注入（Next.js が上書きするが明示して意図を示す） ───────
+    // ── Next.js 自動注入 ─────────────────────────────────────────────────
     "allowJs": true,
     "module": "esnext",
-    // esModuleInterop: TS 6.0 で常時有効。Next.js が自動注入するため明示。
     "esModuleInterop": true
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
     "**/*.mts",
+    ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "__tests__", "generated"]
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "generated"
+  ]
 }

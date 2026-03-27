@@ -9,6 +9,9 @@
 
 export async function register(): Promise<void> {
   if (process.env["NEXT_RUNTIME"] === "nodejs") {
+    const { validateProductionEnv } = await import("@/shared/lib/env/server");
+    validateProductionEnv();
+
     const { bootstrapSystemPages } = await import("@/shared/lib/bootstrap");
     await bootstrapSystemPages();
   }

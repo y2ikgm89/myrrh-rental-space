@@ -8,12 +8,45 @@ paths:
 
 プロジェクト固有の落とし穴と対処法。
 
+## Route Handler（PPR 環境）
+
+- **Route Handler の catch ブロックに `unstable_rethrow(error)` 必須** — PPR (`cacheComponents: true`) 環境では Route Handler GET のプリレンダリング時に `request.headers` アクセスで bail out エラーがスローされる。catch で握り潰すと `logError` が ERROR 出力しビルドログにノイズ。`unstable_rethrow(error)` を catch 先頭に配置して Next.js 内部エラーを再スロー
+
+- **`export const dynamic = 'force-dynamic'` は PPR 環境で使用不可** — `cacheComponents: true` と Route Segment Config は非互換（ビルドエラー）。公式: 「全ページがデフォルトで動的のため不要」
+
+## Stripe 決済
+
+- **Stripe `checkout.session.completed` で即座に fulfill しない** — `session.payment_status === "paid"` を必ずチェック。非同期決済（銀行振込等）は `"unpaid"` で来るため `async_payment_succeeded` を待つ。カード決済のみでも将来の決済手段追加に備える
+
+- **Webhook べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済み（PAID / REFUNDED）ならスキップ。Stripe は同じイベントを複数回配信する可能性がある
+
+- **`payment_intent` フィールドは `string | PaymentIntent | null`** — `typeof session.payment_intent === "string"` で型安全に取得。`as` 禁止
+
 ## ドメイン・予約
+
+- **予約アクションのキャッシュ無効化は3点セット必須** — `updateTag(CACHE_TAGS.RESERVATIONS)` + `updateTag(getCacheTag.reservations.detail(id))` + `updateTag(getCacheTag.reservations.calendar())`。ステータス変更・削除・顧客キャンセル/変更すべてに適用。顧客統計（`totalReservations` 等）が変わる操作は `updateTag(CACHE_TAGS.CUSTOMERS)` も追加
+
+- **予約削除時のクーポン使用数デクリメント必須** — `deleteReservationCommand` は `$transaction` 内で reservation 削除 + `coupon.updateMany({ where: { id, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } })`。キャンセル（`cancelCustomerReservation`）と同じパターン
+
+- **予約ステータス遷移は `RESERVATION_STATUS_TRANSITIONS`（`helpers.ts`）で一元管理** — UI Select / ドメイン commands 両方で参照。ローカルに遷移マップを定義しない
+
+- **予約ステータスのアクティブ判定は `ACTIVE_RESERVATION_STATUSES`（`enums/helpers.ts`）を使用** — `new Set(["PENDING", "CONFIRMED"])` のローカル定義禁止
 
 - **カレンダー inbound 同期は `ACTIVE_RESERVATION_STATUSES` で判定** — `reservation.status !== "CANCELLED"` のようなハードコード条件禁止。`ACTIVE_RESERVATION_STATUSES.includes(status)` を使い、終端ステータス（COMPLETED, NO_SHOW）への不正遷移を防ぐ
 
+- **Inquiry ↔ Customer 紐づけ: 3段解決** — `createInquiryCommand` が `customerId`（明示） > メール一致 > null で解決。公開フォーム（`submitInquiry`）はログイン時に `getSession()` → `getCustomerByUserId()` で自動紐づけ
+
+- **予約スペース選択: `<div role="radio">` + 内部 `<button>`** — カード全体をクリッカブルにしつつ内部に「詳細を見る」ボタンを配置。`<button>` 内 `<button>` のネスト禁止（HTML 仕様違反）。Booking.com 方式の Dialog でギャラリー・設備・料金表示
+
+- **公開フォーム autoComplete 属性** — `family-name` / `given-name` / `email` / `organization` を適切に設定。未設定はブラウザ自動入力が機能しない
+
+- **コミットメッセージ**: `<type>(<scope>): <subject>`
+
 - **SC 内の `Date.getHours()` / `getDate()` 等はローカルタイム依存** — Cloud Run は UTC 環境。JST の日付・時刻文字列が必要な場合は `Intl.DateTimeFormat` + `timeZone: "Asia/Tokyo"` を使用。`toISOString()` は UTC のため `input[type="date"]` の初期値には不適切
 - **Client Component の catch ブロックで `logError` は使えない（server-only）** — `getErrorMessage(error)` + `console.error` でログを残す。空 catch（エラー握り潰し）は禁止
+- **ソフトデリート追加時は全クエリの `select` に `deletedAt: true` を追加** — 型定義に `deletedAt` を加えても、Prisma の `select` に含めないと型不一致エラー。list/detail/calendar/stats の全クエリを更新すること
+- **`exactOptionalPropertyTypes` で pricing 関数の `null` と `undefined` を混同しない** — `calculateReservationPrice` の `spaceDiscount` は `SpaceDiscountSettings | null`。`undefined` を渡すと型エラー
+- **`proxy.ts` のレート制限は Server Actions をカバーしない** — Server Actions はページURLへのPOST（`/contact` 等）で、proxy の `/api` 判定をバイパスする。公開フォーム送信には `checkActionRateLimit(formSubmitRateLimiter)` を Server Action 冒頭で呼ぶ。`getClientIpFromHeaders()` で `headers()` 経由のIP取得
 
 ## Page-First Architecture（公開ページ）
 

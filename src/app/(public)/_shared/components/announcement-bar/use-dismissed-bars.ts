@@ -3,6 +3,9 @@ import { useSyncExternalStore } from "react";
 const STORAGE_KEY = "dismissed-announcement-bars";
 const CHANGE_EVENT = "announcement-bar-dismissed";
 
+/** Stable reference for SSR / hydration — `getServerSnapshot` must not return a new [] each call. */
+const SERVER_DISMISSED_IDS: string[] = [];
+
 let cachedIds: string[] = [];
 let cachedJson = "";
 
@@ -21,7 +24,7 @@ function getSnapshot(): string[] {
 }
 
 function getServerSnapshot(): string[] {
-  return [];
+  return SERVER_DISMISSED_IDS;
 }
 
 function subscribe(callback: () => void): () => void {

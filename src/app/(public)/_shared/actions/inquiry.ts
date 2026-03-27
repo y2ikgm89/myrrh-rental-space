@@ -6,9 +6,11 @@ import {
   type PublicInquiryInput,
 } from "@/shared/lib/validations/inquiry";
 import {
+  checkActionRateLimit,
   createValidationMutationError,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
   createMutationError,
   type MutationResult,
@@ -22,23 +24,39 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
+import { getSession } from "@/shared/lib/auth";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 
 export async function submitInquiry(
   input: PublicInquiryInput,
 ): Promise<MutationResult<{ id: string }>> {
-  // 1. Validate input
+  // 1. Rate limit check
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError(rateLimit.error);
+
+  // 2. Validate input
   const parsed = publicInquirySchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
 
-  // 2. Turnstile verification
+  // 3. Turnstile verification
   const turnstile = await validateTurnstile(parsed.data.turnstileToken);
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }
 
-  // 3. Create inquiry
+  // 4. Resolve customer if logged in
+  let customerId: string | null = null;
+  const session = await getSession();
+  if (session) {
+    const customer = await getCustomerByUserId(session.user.id);
+    if (customer) {
+      customerId = customer.id;
+    }
+  }
+
+  // 5. Create inquiry
   try {
     const result = await createInquiryCommand({
       name: `${parsed.data.lastName} ${parsed.data.firstName}`,
@@ -46,13 +64,15 @@ export async function submitInquiry(
       email: parsed.data.email,
       subject: parsed.data.subject,
       message: parsed.data.message,
+      customerId,
     });
 
-    // 4. Invalidate admin cache
+    // 6. Invalidate admin cache
     updateTag(CACHE_TAGS.INQUIRIES);
     updateTag(getCacheTag.inquiries.list());
+    updateTag(CACHE_TAGS.CUSTOMERS);
 
-    // 5. Send emails (fire-and-forget)
+    // 7. Send emails (fire-and-forget)
     fireAndForget(sendContactConfirmationEmail(result.payload), {
       operation: "sendContactConfirmationEmail",
       category: ErrorCategory.EXTERNAL_API,

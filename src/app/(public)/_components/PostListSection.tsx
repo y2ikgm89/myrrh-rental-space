@@ -12,8 +12,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { SplitText } from "@/public/components/animations/SplitText";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,

@@ -12,13 +12,12 @@
 
 import type { ErrorInfo } from "next/error";
 import { useEffect } from "react";
-import { logger } from "@/shared/lib/logger";
 
 export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
   const digest = "digest" in error ? String(error.digest) : undefined;
 
   useEffect(() => {
-    logger.error("Global error boundary triggered", {
+    console.error("Global error boundary triggered", {
       error: error.message,
       digest,
     });

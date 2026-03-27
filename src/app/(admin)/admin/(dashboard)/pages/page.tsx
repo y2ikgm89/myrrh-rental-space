@@ -72,7 +72,7 @@ export default async function PagesManagementPage({
         total={result.total}
         currentPage={result.page}
         perPage={result.perPage}
-        homepageLastUpdated={homepageLastUpdated}
+        homepageLastUpdated={homepageLastUpdated?.toISOString() ?? null}
       />
     </div>
   );

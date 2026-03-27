@@ -19,9 +19,7 @@ import {
   type ContactFormConfig,
   type ContactFormConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getContactFormConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getContactFormConfig } from "@/shared/lib/validations/section-defaults";
 import { contactFormVariantLabels } from "@/shared/lib/validations/section-options";
 import { keysOf } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

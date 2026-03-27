@@ -9,6 +9,7 @@
 import "server-only";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
+import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
 import { getCalendarEmailSettings as getCalendarEmailSettingsQuery } from "@/shared/domain/settings/queries/notification";
 import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
@@ -28,7 +29,11 @@ import {
   normalizeError,
 } from "../errors/server";
 import { sendEmail } from "./send";
-import type { ReservationEmailData, EmailResult } from "./types";
+import type {
+  ReservationEmailData,
+  StatusChangeEmailData,
+  EmailResult,
+} from "./types";
 
 // =============================================================================
 // Helper Functions
@@ -173,6 +178,48 @@ export async function sendReservationCancelledEmail(
       }),
     {
       operation: "sendReservationCancelledEmail",
+      reservationId: data.reservationId,
+      customerEmail: data.customerEmail,
+    },
+  );
+}
+
+/**
+ * 予約ステータス変更通知メールを送信
+ */
+export async function sendReservationStatusChangedEmail(
+  data: StatusChangeEmailData,
+): Promise<EmailResult> {
+  const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {
+    locale: ja,
+  });
+  const startTime = format(data.startTime, "HH:mm", { locale: ja });
+  const endTime = format(data.endTime, "HH:mm", { locale: ja });
+
+  return sendEmail(
+    (resend, from) =>
+      resend.emails.send(
+        omitUndefined({
+          from,
+          to: data.customerEmail,
+          subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
+          react: ReservationStatusChangedEmail(
+            omitUndefined({
+              customerName: data.customerName,
+              spaceName: data.spaceName,
+              reservationDate,
+              startTime,
+              endTime,
+              totalPrice: formatPrice(data.totalPrice),
+              reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+              newStatus: data.newStatus,
+              location: data.location,
+            }),
+          ),
+        }),
+      ),
+    {
+      operation: "sendReservationStatusChangedEmail",
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
     },

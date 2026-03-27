@@ -10,7 +10,7 @@ import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,

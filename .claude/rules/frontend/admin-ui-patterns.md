@@ -15,11 +15,11 @@ paths:
 
 Lexical や複雑なフォーム状態を **非表示タブでもマウントしたまま** にしたい場合。
 
-| 設定                     | 値             | 理由                                                   |
-| ------------------------ | -------------- | ------------------------------------------------------ |
-| `shallow`                | `true`         | タブ切り替えで RSC を再実行しない（即時切り替え）    |
-| `TabsContent forceMount` | `true`         | 非アクティブタブを DOM 保持（再マウント防止）        |
-| コンテンツレンダリング   | 全タブ常時     | 初回で一括取得、以降は同一マウント内で切り替えのみ   |
+| 設定                     | 値         | 理由                                               |
+| ------------------------ | ---------- | -------------------------------------------------- |
+| `shallow`                | `true`     | タブ切り替えで RSC を再実行しない（即時切り替え）  |
+| `TabsContent forceMount` | `true`     | 非アクティブタブを DOM 保持（再マウント防止）      |
+| コンテンツレンダリング   | 全タブ常時 | 初回で一括取得、以降は同一マウント内で切り替えのみ |
 
 ```tsx
 const [activeTab, setActiveTab] = useQueryState(
@@ -31,7 +31,7 @@ const [activeTab, setActiveTab] = useQueryState(
 
 <TabsContent value="posts" forceMount className="data-[state=inactive]:hidden">
   {postsContent}
-</TabsContent>
+</TabsContent>;
 ```
 
 ### (B) 各タブが Server Components の一覧のみ（データ取得を抑えたい）
@@ -40,11 +40,11 @@ const [activeTab, setActiveTab] = useQueryState(
 
 **参照実装**: `src/app/(admin)/admin/(dashboard)/spaces/page.tsx` と `spaces/_components/SpaceManagementTabs.tsx`。ハブの `tab`（`ADMIN_SPACE_MANAGEMENT_TABS`）に加え、一覧状態はタブ別プレフィックスで分離する: スペース一覧 `spSearch` / `spStatus` / `spPage` / `spSortBy` / `spSortOrder` / `spLocationId` / `spCategoryId`、場所 `locSearch` / `locPublished` / `locPage`、カテゴリ `catSearch` / `catIncludeInactive` / `catPage`（`adminSpaceSearchParamsCache`）。スペース編集フォームのタブ URL はハブと衝突しないよう `section` クエリを使用する。
 
-| 設定                     | 値                                      | 理由                                                         |
-| ------------------------ | --------------------------------------- | ------------------------------------------------------------ |
-| サーバー                 | `parse` 後に `tab` で条件付き 1 パネル | 非表示タブの `getLocations` 等を初回から走らせない         |
-| タブナビ                 | `Link` + 名前空間付きクエリの preserve   | タブ切替で他タブのフィルタが汚染されない                   |
-| 子のデータ読み           | `searchParamsCache.all()` / `get`       | 親で `parse` 済みなら子で二重 `parse` を避ける               |
+| 設定           | 値                                     | 理由                                               |
+| -------------- | -------------------------------------- | -------------------------------------------------- |
+| サーバー       | `parse` 後に `tab` で条件付き 1 パネル | 非表示タブの `getLocations` 等を初回から走らせない |
+| タブナビ       | `Link` + 名前空間付きクエリの preserve | タブ切替で他タブのフィルタが汚染されない           |
+| 子のデータ読み | `searchParamsCache.all()` / `get`      | 親で `parse` 済みなら子で二重 `parse` を避ける     |
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧＋フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
 
@@ -273,6 +273,26 @@ import { SubmitButton } from "@/admin/components/ui";
 | -------------------------- | ---------- | -------------------- | -------------------- |
 | ステータス・タイトル・操作 | スラッグ等 | 補助情報・料金・日時 | 詳細情報・住所・PV数 |
 
+### Badge 列の whitespace-nowrap（必須）
+
+ステータス・ロール・タイプ等の Badge を含むセルは `whitespace-nowrap` を付与する。
+日本語テキスト（「アクティブ」「非アクティブ」等）は狭い列幅で折り返される:
+
+```tsx
+// OK: Badge 列は折り返し防止
+<TableHead className="whitespace-nowrap">ステータス</TableHead>
+...
+<TableCell className="whitespace-nowrap">
+  <StatusBadge status={item.status} />
+</TableCell>
+
+// NG: whitespace-nowrap なし（Badge テキストが2行になる）
+<TableHead>ステータス</TableHead>
+<TableCell>
+  <StatusBadge status={item.status} />
+</TableCell>
+```
+
 ### インラインコントロールのモバイル非表示
 
 複雑なインラインコントロール（Select・フォーム等）は小画面で折り畳む:
@@ -413,9 +433,9 @@ export function CategoryActionCell({ id, name }: { id: string; name: string }) {
 ```tsx
 // reservations/[id]/page.tsx (Server Component)
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { DangerZone } from "@/admin/components/DangerZone";
 
 export default async function ReservationDetailPage({ params }) {
   const { id } = await params;
@@ -428,9 +448,20 @@ export default async function ReservationDetailPage({ params }) {
       title={`予約 #${reservation.id.slice(0, 8)}`}
       subtitle={`${reservation.space.name} — ${reservation.customer.name}`}
       actions={
-        <Button asChild>
-          <Link href={`/admin/reservations/${id}/edit`}>編集</Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={`予約 #${reservation.id.slice(0, 8)}`}
+            onDelete={deleteReservation.bind(null, id)}
+            redirectTo="/admin/reservations"
+            successMessage="予約を削除しました"
+          />
+          <Button asChild size="sm">
+            <Link href={`/admin/reservations/${id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
       <DetailSection title="予約情報">
@@ -438,20 +469,14 @@ export default async function ReservationDetailPage({ params }) {
           <DetailField label="スペース" value={reservation.space.name} />
         </div>
       </DetailSection>
-      <DangerZone
-        deleteLabel="予約を削除"
-        itemName={`予約 #${reservation.id.slice(0, 8)}`}
-        onDelete={deleteReservation.bind(null, id)}
-        redirectTo="/admin/reservations"
-      />
     </AdminDetailLayout>
   );
 }
 ```
 
-**`DangerZone` の `onDelete` は `.bind(null, id)` で渡す**:
+**`DetailDeleteButton` の `onDelete` は `.bind(null, id)` で渡す**:
 
-Server Component から `'use client'` の `DangerZone` へ `onDelete` を渡す際、
+Server Component から `'use client'` の `DetailDeleteButton` へ `onDelete` を渡す際、
 通常のアロー関数クロージャ `() => deleteAction(id)` は RSC 境界を越えられない（シリアライズ不可）。
 Server Action を `.bind()` することで RSC 境界を越えられるバインド済み Server Action を生成する:
 
@@ -465,12 +490,12 @@ onDelete={deleteReservation.bind(null, id)}
 
 **配置ルール**:
 
-| 要素         | 配置場所                                            | 禁止場所                |
-| ------------ | --------------------------------------------------- | ----------------------- |
-| バックボタン | `AdminDetailLayout backHref` — 左上                 | 詳細コンポーネント内    |
-| 編集ボタン   | `AdminDetailLayout actions` — 右                    | 詳細コンポーネント内    |
-| 削除ボタン   | `DangerZone` — **ページ最下部のみ**                 | ヘッダー・CardHeader 内 |
-| タイトル CSS | `text-2xl font-bold tracking-tight text-foreground` | `tracking-tight` 省略   |
+| 要素         | 配置場所                                            | 禁止場所              |
+| ------------ | --------------------------------------------------- | --------------------- |
+| バックボタン | `AdminDetailLayout backHref` — 左上                 | 詳細コンポーネント内  |
+| 削除ボタン   | `AdminDetailLayout actions` — 編集ボタンの**左**    | ページ最下部カード    |
+| 編集ボタン   | `AdminDetailLayout actions` — 最右                  | 詳細コンポーネント内  |
+| タイトル CSS | `text-2xl font-bold tracking-tight text-foreground` | `tracking-tight` 省略 |
 
 ### 新規作成ページ（Server Component + AdminDetailLayout）
 
@@ -550,12 +575,12 @@ export function DashboardHeader() {
 
 ### 共有コンポーネント一覧
 
-| コンポーネント      | パス                                   | 用途                              |
-| ------------------- | -------------------------------------- | --------------------------------- |
-| `AdminDetailLayout` | `@/admin/components/AdminDetailLayout` | 詳細・編集ページ統一ヘッダー      |
-| `DetailSection`     | `@/admin/components/DetailSection`     | Card ラッパー（セクション区切り） |
-| `DetailField`       | `@/admin/components/DetailField`       | ラベル + 値の行（dt/dd）          |
-| `DangerZone`        | `@/admin/components/DangerZone`        | 削除確認 + 実行（ページ最下部）   |
+| コンポーネント       | パス                                    | 用途                                |
+| -------------------- | --------------------------------------- | ----------------------------------- |
+| `AdminDetailLayout`  | `@/admin/components/AdminDetailLayout`  | 詳細・編集ページ統一ヘッダー        |
+| `DetailSection`      | `@/admin/components/DetailSection`      | Card ラッパー（セクション区切り）   |
+| `DetailField`        | `@/admin/components/DetailField`        | ラベル + 値の行（dt/dd）            |
+| `DetailDeleteButton` | `@/admin/components/DetailDeleteButton` | ヘッダー削除ボタン + ダイアログ確認 |
 
 ## フォームページ（新規作成・編集） 2カラムレイアウト
 
@@ -759,7 +784,7 @@ const [testPending, startTestTransition] = useTransition();
 4. **setPage/setParams の void なし呼び出し禁止** — `void setPage(n)`
 5. **`@/shared/types/server-actions` を管理画面で直接使用禁止** — `@/admin/types/server-actions` 経由
 6. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
-7. **削除ボタンをヘッダー・CardHeader 内に配置禁止** — `DangerZone` コンポーネントをページ最下部に配置
+7. **削除ボタンをページ最下部カードに配置禁止** — `DetailDeleteButton` をヘッダー `actions` の編集ボタン左に配置
 8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
 9. **管理画面ページで `connection()` 使用禁止** — `connection()` は公開ページ（`src/app/(public)/`）専用。管理画面では不要
 10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）

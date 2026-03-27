@@ -11,9 +11,9 @@ import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { SplitText } from "@/public/components/animations/SplitText";
-import { MagneticButton } from "@/public/components/animations/MagneticButton";
-import { ScrollIndicator } from "@/public/components/layouts/ScrollIndicator";
+import { SplitText } from "@/public/components/animations/split-text";
+import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { ScrollIndicator } from "@/public/components/layouts/scroll-indicator";
 import { DURATION, EASE, SCROLL_TRIGGER } from "@/public/lib/animations";
 import {
   CONTENT_POSITION_MAP,

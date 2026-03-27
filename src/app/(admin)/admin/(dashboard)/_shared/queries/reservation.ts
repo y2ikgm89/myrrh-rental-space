@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PaymentStatus } from "@/shared/db/enums";
 import { ReservationStatus } from "@/shared/db/enums";
 import {
   getReservationByIdQuery,
@@ -24,8 +25,12 @@ export type ReservationWithRelations = {
   couponDiscountAmount: number | null;
   durationDiscountAmount: number | null;
   notes: string | null;
+  deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  paymentStatus: PaymentStatus;
+  stripePaymentIntentId: string | null;
+  paidAt: string | null;
   space: {
     id: string;
     name: string;
@@ -34,6 +39,7 @@ export type ReservationWithRelations = {
     id: string;
     firstName: string;
     lastName: string;
+    companyName: string | null;
     email: string;
     phoneNumber: string | null;
   };

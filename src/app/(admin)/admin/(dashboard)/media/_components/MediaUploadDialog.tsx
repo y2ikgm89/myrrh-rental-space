@@ -298,7 +298,9 @@ export function MediaUploadDialog({
             キャンセル
           </Button>
           <Button onClick={handleSubmit} disabled={!file || isPending}>
-            {isPending && <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && (
+              <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+            )}
             アップロード
           </Button>
         </DialogFooter>

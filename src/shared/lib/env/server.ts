@@ -10,8 +10,9 @@
  * - その他: 任意（機能が無効化される）
  *
  * ## ビルド時の注意
- * `next build`は`NODE_ENV=production`で実行されるため、
- * NODE_ENVベースの条件分岐は使用しない（ランタイムで判定）
+ * `next build` は `NODE_ENV=production` のため、`isProduction()` が真になりうる。
+ * 本番必須シークレット（ENCRYPTION_KEY 等）の検証はモジュール読み込みでは行わず、
+ * `src/instrumentation.ts` の `register()` で Node サーバー起動時に一度だけ実行する。
  */
 
 import "server-only";
@@ -135,12 +136,12 @@ export const serverEnv = createEnv({
 // =============================================================================
 
 /**
- * 本番環境で必須の環境変数をランタイムで検証
- *
- * これはモジュール読み込み時に自動実行される
- * 本番環境で必須変数が未設定の場合、即座にエラーをスロー
+ * 本番環境で必須の環境変数を検証する。
+ * `next build` では未設定でもよい（ビルド時に `NODE_ENV=production` となるため、
+ * ここを import 時に走らせるとローカルビルドが失敗する）。
+ * Node サーバー起動時に `instrumentation.ts` から呼び出す。
  */
-function validateProductionEnv(): void {
+export function validateProductionEnv(): void {
   if (!isProduction()) return;
 
   const requiredInProd = [
@@ -175,6 +176,3 @@ function validateProductionEnv(): void {
     }
   }
 }
-
-// モジュール読み込み時に本番必須チェックを実行
-validateProductionEnv();

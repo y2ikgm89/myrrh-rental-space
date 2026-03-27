@@ -1,10 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Badge,
-  Button,
-  PublishSwitch,
-} from "@/admin/components/ui";
+import { Badge, Button, PublishSwitch } from "@/admin/components/ui";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/utils";

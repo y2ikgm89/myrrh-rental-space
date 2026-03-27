@@ -656,23 +656,64 @@ export async function updateReservationNotesCommand(
 // Admin: Delete
 // ---------------------------------------------------------------------------
 
-export async function deleteReservationCommand(id: string) {
+export async function deleteReservationCommand(
+  id: string,
+  userId: string | undefined,
+) {
   const reservation = await prisma.reservation.findUnique({
-    where: { id },
-    select: { id: true, googleCalendarEventId: true },
+    where: { id, deletedAt: null },
+    select: { id: true, googleCalendarEventId: true, couponId: true },
   });
 
   if (!reservation) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
 
-  await prisma.reservation.delete({
-    where: { id },
+  await prisma.$transaction(async (tx) => {
+    await tx.reservation.update({
+      where: { id },
+      data: { deletedAt: new Date(), deletedById: userId ?? null },
+    });
+
+    if (reservation.couponId) {
+      await tx.coupon.updateMany({
+        where: { id: reservation.couponId, usageCount: { gt: 0 } },
+        data: { usageCount: { decrement: 1 } },
+      });
+    }
   });
 
   return {
     googleCalendarEventId: reservation.googleCalendarEventId,
   };
+}
+
+export async function restoreReservationCommand(id: string) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id },
+    select: { id: true, deletedAt: true, couponId: true },
+  });
+
+  if (!reservation) {
+    throw new DomainError("予約が見つかりません", "NOT_FOUND");
+  }
+  if (!reservation.deletedAt) {
+    throw new DomainError("この予約は削除されていません");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.reservation.update({
+      where: { id },
+      data: { deletedAt: null, deletedById: null },
+    });
+
+    if (reservation.couponId) {
+      await tx.coupon.update({
+        where: { id: reservation.couponId },
+        data: { usageCount: { increment: 1 } },
+      });
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------

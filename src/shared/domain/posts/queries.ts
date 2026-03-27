@@ -91,6 +91,8 @@ function attachPostUrl<
 export async function getPublishedPostsList(
   page: number = 1,
   perPage: number = PAGINATION_DEFAULTS.public.default,
+  search: string = "",
+  categorySlug: string = "",
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
@@ -98,13 +100,26 @@ export async function getPublishedPostsList(
 
   const skip = (page - 1) * perPage;
 
+  const where = {
+    status: PostStatus.PUBLISHED,
+    ...(search
+      ? {
+          OR: [
+            { title: { contains: search, mode: "insensitive" as const } },
+            { excerpt: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+    ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+  };
+
   const [{ posts, totalCount }, settings] = await Promise.all([
     (async () => {
       const [records, count] = await Promise.all([
         safeFetch({
           fetch: () =>
             prisma.post.findMany({
-              where: { status: PostStatus.PUBLISHED },
+              where,
               select: postListSelect,
               orderBy: { publishedAt: "desc" },
               skip,
@@ -116,10 +131,7 @@ export async function getPublishedPostsList(
           operationName: "getPublishedPostsList",
         }),
         safeFetch({
-          fetch: () =>
-            prisma.post.count({
-              where: { status: PostStatus.PUBLISHED },
-            }),
+          fetch: () => prisma.post.count({ where }),
           fallback: 0,
           category: ErrorCategory.DATABASE,
           severity: ErrorSeverity.LOW,
@@ -222,4 +234,24 @@ export async function getPublishedPosts(maxItems: number, categoryId?: string) {
       };
     }),
   );
+}
+
+export async function getPostCategories() {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.POST_CATEGORIES);
+
+  const categories = await safeFetch({
+    fetch: () =>
+      prisma.postCategory.findMany({
+        select: { id: true, name: true, slug: true },
+        orderBy: { order: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPostCategories",
+  });
+
+  return toPlainArray(categories);
 }

@@ -48,7 +48,8 @@ function getEnvSecretKey(): string | null {
  */
 export function createStripeClient(secretKey: string): Stripe {
   return new Stripe(secretKey, {
-    apiVersion: "2026-02-25.clover",
+    // stripe@21 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
+    apiVersion: "2026-03-25.dahlia",
     typescript: true,
   });
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { deleteSpace } from "@/admin/actions/space";
 import { getSpaceById } from "@/admin/queries/space";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { DangerZone } from "@/admin/components/DangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
 import { SpaceDetail } from "./_components/SpaceDetail";
 import type { Metadata } from "next";
@@ -47,6 +47,11 @@ export default async function SpaceDetailPage({ params }: PageProps) {
       subtitle="スペース詳細"
       actions={
         <>
+          <DetailDeleteButton
+            itemName={space.name}
+            onDelete={deleteSpace.bind(null, space.id)}
+            redirectTo="/admin/spaces"
+          />
           <Button variant="outline" size="sm" asChild>
             <Link href={`/spaces/${space.slug}`} target="_blank">
               <ExternalLink className="mr-2 h-4 w-4" />
@@ -63,12 +68,6 @@ export default async function SpaceDetailPage({ params }: PageProps) {
       }
     >
       <SpaceDetail space={space} />
-      <DangerZone
-        deleteLabel="スペースを削除"
-        itemName={space.name}
-        onDelete={deleteSpace.bind(null, space.id)}
-        redirectTo="/admin/spaces"
-      />
     </AdminDetailLayout>
   );
 }

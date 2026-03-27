@@ -11,8 +11,8 @@ import { useRef, useState, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { SplitText } from "@/public/components/animations/SplitText";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SplitText } from "@/public/components/animations/split-text";
 import {
   SectionWrapper,
   getTitleClasses,

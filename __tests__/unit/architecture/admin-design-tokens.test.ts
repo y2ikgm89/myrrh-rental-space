@@ -10,12 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const ADMIN_APP_ROOT = join(
-  ROOT,
-  "src",
-  "app",
-  "(admin)",
-);
+const ADMIN_APP_ROOT = join(ROOT, "src", "app", "(admin)");
 
 /** admin-ui-patterns の禁止例に相当するパターン（コメント内は検査対象外にしない — 稀な誤検知より混入防止を優先） */
 const FORBIDDEN_ADMIN_CLASS_PATTERNS: RegExp[] = [
@@ -37,7 +32,10 @@ function collectTsxFiles(dir: string): string[] {
     const p = join(dir, ent.name);
     if (ent.isDirectory()) {
       out.push(...collectTsxFiles(p));
-    } else if (ent.isFile() && (ent.name.endsWith(".tsx") || ent.name.endsWith(".ts"))) {
+    } else if (
+      ent.isFile() &&
+      (ent.name.endsWith(".tsx") || ent.name.endsWith(".ts"))
+    ) {
       out.push(p);
     }
   }

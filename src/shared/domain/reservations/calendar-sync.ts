@@ -125,7 +125,12 @@ export async function getFailedCalendarSyncReservations(
         },
       },
       customer: {
-        select: { firstName: true, lastName: true, email: true },
+        select: {
+          firstName: true,
+          lastName: true,
+          companyName: true,
+          email: true,
+        },
       },
     },
     take: limit,
@@ -215,6 +220,7 @@ export async function getReservationByCalendarEventId(
         select: {
           lastName: true,
           firstName: true,
+          companyName: true,
           email: true,
         },
       },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, useSortable } from "@/admin/components/ui";
+import { Badge, useSortable, toTranslate3d } from "@/admin/components/ui";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -57,9 +57,7 @@ export function SortableNavRow({
   } = useSortable({ id: item.id });
 
   const style = {
-    transform: transform
-      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
-      : undefined,
+    transform: toTranslate3d(transform),
     transition,
   };
 
@@ -181,9 +179,7 @@ export function SortableSocialRow({
   } = useSortable({ id: link.id });
 
   const style = {
-    transform: transform
-      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
-      : undefined,
+    transform: toTranslate3d(transform),
     transition,
   };
 

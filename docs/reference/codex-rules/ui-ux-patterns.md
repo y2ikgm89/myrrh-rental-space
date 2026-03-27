@@ -61,7 +61,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 
 - `docs/reference/codex-rules/project-design-config.md` のブランド設定を守る
 - `docs/reference/codex-rules/anti-ai-design.md` のセルフレビューを通す
-- モーションは `docs/reference/codex-rules/gsap-patterns.md` と `visual-effects-patterns.md` に従う
+- モーションは `docs/reference/codex-rules/gsap-patterns.md` に従う
 
 ### 管理画面
 

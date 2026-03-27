@@ -18,6 +18,7 @@ import {
   Settings,
   Image as ImageIcon,
   Ticket,
+  MessageSquare,
 } from "lucide-react";
 import type { SidebarItem } from "@/admin/types/admin-layout";
 
@@ -51,6 +52,11 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "投稿",
     href: "/admin/posts",
     icon: <FilePen className="h-5 w-5" />,
+  },
+  {
+    label: "コメント管理",
+    href: "/admin/posts/comments",
+    icon: <MessageSquare className="h-5 w-5" />,
   },
   {
     label: "メディア",

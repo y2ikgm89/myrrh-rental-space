@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus } from "@/shared/db/enums";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { ReservationWhereInput } from "@/shared/types/prisma";
 
@@ -28,7 +29,7 @@ export async function getReservationsQuery(
     sortOrder = "desc",
   } = pagination;
 
-  const where: ReservationWhereInput = {};
+  const where: ReservationWhereInput = { deletedAt: null };
 
   if (status && status !== "ALL") {
     where.status = status;
@@ -75,12 +76,16 @@ export async function getReservationsQuery(
         startTime: true,
         endTime: true,
         status: true,
+        paymentStatus: true,
         totalPrice: true,
         basePrice: true,
         couponId: true,
         couponDiscountAmount: true,
         durationDiscountAmount: true,
+        stripePaymentIntentId: true,
+        paidAt: true,
         notes: true,
+        deletedAt: true,
         createdAt: true,
         updatedAt: true,
         space: {
@@ -94,6 +99,7 @@ export async function getReservationsQuery(
             id: true,
             firstName: true,
             lastName: true,
+            companyName: true,
             email: true,
             phoneNumber: true,
           },
@@ -111,6 +117,7 @@ export async function getReservationsQuery(
     ...reservation,
     startTime: reservation.startTime.toISOString(),
     endTime: reservation.endTime.toISOString(),
+    paidAt: reservation.paidAt?.toISOString() ?? null,
     createdAt: reservation.createdAt.toISOString(),
     updatedAt: reservation.updatedAt.toISOString(),
   }));
@@ -140,8 +147,12 @@ export async function getReservationByIdQuery(id: string) {
       couponDiscountAmount: true,
       durationDiscountAmount: true,
       notes: true,
+      deletedAt: true,
       createdAt: true,
       updatedAt: true,
+      paymentStatus: true,
+      stripePaymentIntentId: true,
+      paidAt: true,
       space: {
         select: {
           id: true,
@@ -153,6 +164,7 @@ export async function getReservationByIdQuery(id: string) {
           id: true,
           firstName: true,
           lastName: true,
+          companyName: true,
           email: true,
           phoneNumber: true,
         },
@@ -177,6 +189,7 @@ export async function getReservationByIdQuery(id: string) {
     endTime: reservation.endTime.toISOString(),
     createdAt: reservation.createdAt.toISOString(),
     updatedAt: reservation.updatedAt.toISOString(),
+    paidAt: reservation.paidAt?.toISOString() ?? null,
   });
 }
 
@@ -187,6 +200,7 @@ export async function getReservationsForCalendarQuery(
   status?: ReservationStatus | "ALL",
 ) {
   const where: ReservationWhereInput = {
+    deletedAt: null,
     AND: [{ startTime: { lt: endDate } }, { endTime: { gt: startDate } }],
   };
 
@@ -206,6 +220,7 @@ export async function getReservationsForCalendarQuery(
         select: {
           firstName: true,
           lastName: true,
+          companyName: true,
           email: true,
           phoneNumber: true,
         },
@@ -255,24 +270,25 @@ export async function getReservationStatsQuery() {
     todayCount,
     thisWeekCount,
   ] = await Promise.all([
-    prisma.reservation.count(),
+    prisma.reservation.count({ where: { deletedAt: null } }),
     prisma.reservation.count({
-      where: { status: ReservationStatus.PENDING },
+      where: { deletedAt: null, status: ReservationStatus.PENDING },
     }),
     prisma.reservation.count({
-      where: { status: ReservationStatus.CONFIRMED },
+      where: { deletedAt: null, status: ReservationStatus.CONFIRMED },
     }),
     prisma.reservation.count({
-      where: { status: ReservationStatus.COMPLETED },
+      where: { deletedAt: null, status: ReservationStatus.COMPLETED },
     }),
     prisma.reservation.count({
-      where: { status: ReservationStatus.CANCELLED },
+      where: { deletedAt: null, status: ReservationStatus.CANCELLED },
     }),
     prisma.reservation.count({
-      where: { status: ReservationStatus.NO_SHOW },
+      where: { deletedAt: null, status: ReservationStatus.NO_SHOW },
     }),
     prisma.reservation.count({
       where: {
+        deletedAt: null,
         startTime: {
           gte: today,
           lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
@@ -281,6 +297,7 @@ export async function getReservationStatsQuery() {
     }),
     prisma.reservation.count({
       where: {
+        deletedAt: null,
         startTime: {
           gte: weekStart,
         },
@@ -308,4 +325,33 @@ export async function getSpacesForReservationQuery() {
       orderBy: { name: "asc" },
     }),
   );
+}
+
+/** 予約リマインダー cron 用: 指定日時窓内のアクティブ予約とメール用関連を取得 */
+export async function findReservationsForReminderWindow(
+  startOfWindow: Date,
+  endOfWindow: Date,
+) {
+  return prisma.reservation.findMany({
+    where: {
+      startTime: { gte: startOfWindow, lte: endOfWindow },
+      status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      notes: true,
+      customer: {
+        select: { firstName: true, lastName: true, email: true },
+      },
+      space: {
+        select: {
+          name: true,
+          location: { select: { name: true } },
+        },
+      },
+    },
+  });
 }

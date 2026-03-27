@@ -15,8 +15,8 @@ import { getFooterSettings } from "@/shared/domain/settings/queries/display";
 import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organization";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
-import { CopyrightYear } from "./CopyrightYear";
-import { SocialLinks } from "./SocialLinks";
+import { CopyrightYear } from "./copyright-year";
+import { SocialLinks } from "./social-links";
 
 // =============================================================================
 // Constants

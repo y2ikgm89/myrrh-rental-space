@@ -211,8 +211,8 @@ function ToolbarInsertMenuItems({
                 onClick={() => executeInsertItem(item, editor, openDialog)}
                 className={cn(
                   "flex items-center gap-2",
-                  categoryItems.length >= TOOLBAR_INSERT_SUBMENU_GRID_MIN_ITEMS &&
-                    "py-2 text-xs",
+                  categoryItems.length >=
+                    TOOLBAR_INSERT_SUBMENU_GRID_MIN_ITEMS && "py-2 text-xs",
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
@@ -642,209 +642,233 @@ export function ToolbarPlugin({
         {/* 左右 flex-1 で主ツールバーをビューポート中央に配置 */}
         <div className="min-w-0 flex-1 basis-0 shrink" aria-hidden="true" />
         <div className="flex min-h-10 min-w-0 max-w-full items-center justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-1 py-1 scrollbar-hide">
-        {/* Undo/Redo */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleUndo}
-          disabled={!canUndo}
-          title="元に戻す"
-        >
-          <Undo className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleRedo}
-          disabled={!canRedo}
-          title="やり直す"
-        >
-          <Redo className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
+          {/* Undo/Redo */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            title="元に戻す"
+          >
+            <Undo className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            title="やり直す"
+          >
+            <Redo className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
 
-        <Separator orientation="vertical" className="mx-1 h-6" />
+          <Separator orientation="vertical" className="mx-1 h-6" />
 
-        {/* Text Format */}
-        <Button
-          type="button"
-          variant={isBold ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatBold}
-          title="太字"
-        >
-          <Bold className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={isItalic ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatItalic}
-          title="斜体"
-        >
-          <Italic className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={isUnderline ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatUnderline}
-          title="下線"
-        >
-          <Underline className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={isStrikethrough ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatStrikethrough}
-          title="取り消し線"
-        >
-          <Strikethrough className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={isSubscript ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatSubscript}
-          title="下付き文字"
-        >
-          <Subscript className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={isSuperscript ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleFormatSuperscript}
-          title="上付き文字"
-        >
-          <Superscript className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
+          {/* Text Format */}
+          <Button
+            type="button"
+            variant={isBold ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatBold}
+            title="太字"
+          >
+            <Bold className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isItalic ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatItalic}
+            title="斜体"
+          >
+            <Italic className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isUnderline ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatUnderline}
+            title="下線"
+          >
+            <Underline className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isStrikethrough ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatStrikethrough}
+            title="取り消し線"
+          >
+            <Strikethrough className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isSubscript ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatSubscript}
+            title="下付き文字"
+          >
+            <Subscript className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isSuperscript ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleFormatSuperscript}
+            title="上付き文字"
+          >
+            <Superscript className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
 
-        {/* Highlight */}
-        <HighlightPlugin />
+          {/* Highlight */}
+          <HighlightPlugin />
 
-        {/* Text Color */}
-        <TextColorPlugin />
+          {/* Text Color */}
+          <TextColorPlugin />
 
-        {/* Text Case */}
-        <TextCasePlugin />
+          {/* Text Case */}
+          <TextCasePlugin />
 
-        <Separator orientation="vertical" className="mx-1 h-6" />
+          <Separator orientation="vertical" className="mx-1 h-6" />
 
-        {/* Font Size */}
-        <FontSizePlugin />
+          {/* Font Size */}
+          <FontSizePlugin />
 
-        <Separator orientation="vertical" className="mx-1 h-6" />
+          <Separator orientation="vertical" className="mx-1 h-6" />
 
-        {/* Block Type Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 min-w-[100px] justify-between"
-            >
-              <span className="flex items-center gap-1.5">
-                <BlockTypeIcon className="h-4 w-4" />
-                <span className="text-xs">{blockTypeLabel}</span>
-              </span>
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[160px]">
-            {entriesOf(BLOCK_TYPE_CONFIG).map(
-              ([type, { label, icon: Icon }]) => (
-                <DropdownMenuItem
-                  key={type}
-                  onClick={() => handleBlockTypeChange(type)}
-                  className="flex items-center justify-between gap-2"
+          {/* Block Type Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 min-w-[100px] justify-between"
+              >
+                <span className="flex items-center gap-1.5">
+                  <BlockTypeIcon className="h-4 w-4" />
+                  <span className="text-xs">{blockTypeLabel}</span>
+                </span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[160px]">
+              {entriesOf(BLOCK_TYPE_CONFIG).map(
+                ([type, { label, icon: Icon }]) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => handleBlockTypeChange(type)}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </span>
+                    {blockType === type && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </DropdownMenuItem>
+                ),
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Separator orientation="vertical" className="mx-1 h-6" />
+
+          {/* Text Alignment Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 min-w-[90px] justify-between"
+              >
+                <span className="flex items-center gap-1.5">
+                  <AlignTypeIcon className="h-4 w-4" />
+                  <span className="text-xs">{alignTypeLabel}</span>
+                </span>
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[140px]">
+              {entriesOf(ALIGNMENT_CONFIG).map(
+                ([type, { label, icon: Icon }]) => (
+                  <DropdownMenuItem
+                    key={type}
+                    onClick={() => handleAlignmentChange(type)}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      <span>{label}</span>
+                    </span>
+                    {elementFormat === type && (
+                      <Check className="h-4 w-4 text-primary" />
+                    )}
+                  </DropdownMenuItem>
+                ),
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <LayoutToolbarSection
+            editor={editor}
+            context={layoutToolbarContext}
+          />
+
+          <Separator orientation="vertical" className="mx-1 h-6" />
+
+          {/* Link */}
+          <Button
+            type="button"
+            variant={isLink ? "secondary" : "ghost"}
+            size="icon"
+            className="h-10 w-10 md:h-8 md:w-8"
+            onClick={handleInsertLink}
+            title="リンク"
+          >
+            <Link className="h-5 w-5 md:h-4 md:w-4" />
+          </Button>
+
+          <Separator orientation="vertical" className="mx-1 h-6" />
+
+          {/* Insert Dropdown */}
+          {insertItems.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1"
                 >
-                  <span className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </span>
-                  {blockType === type && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </DropdownMenuItem>
-              ),
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  <Plus className="h-4 w-4" />
+                  <span className="text-xs">挿入</span>
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[200px]">
+                <ToolbarInsertMenuItems
+                  insertItems={insertItems}
+                  editor={editor}
+                  {...(openDialog !== undefined ? { openDialog } : {})}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
-        <Separator orientation="vertical" className="mx-1 h-6" />
-
-        {/* Text Alignment Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 min-w-[90px] justify-between"
-            >
-              <span className="flex items-center gap-1.5">
-                <AlignTypeIcon className="h-4 w-4" />
-                <span className="text-xs">{alignTypeLabel}</span>
-              </span>
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[140px]">
-            {entriesOf(ALIGNMENT_CONFIG).map(
-              ([type, { label, icon: Icon }]) => (
-                <DropdownMenuItem
-                  key={type}
-                  onClick={() => handleAlignmentChange(type)}
-                  className="flex items-center justify-between gap-2"
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
-                  </span>
-                  {elementFormat === type && (
-                    <Check className="h-4 w-4 text-primary" />
-                  )}
-                </DropdownMenuItem>
-              ),
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <LayoutToolbarSection
-          editor={editor}
-          context={layoutToolbarContext}
-        />
-
-        <Separator orientation="vertical" className="mx-1 h-6" />
-
-        {/* Link */}
-        <Button
-          type="button"
-          variant={isLink ? "secondary" : "ghost"}
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={handleInsertLink}
-          title="リンク"
-        >
-          <Link className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-
-        <Separator orientation="vertical" className="mx-1 h-6" />
-
-        {/* Insert Dropdown */}
-        {insertItems.length > 0 && (
+          {/* Export Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -853,134 +877,110 @@ export function ToolbarPlugin({
                 size="sm"
                 className="h-8 gap-1"
               >
-                <Plus className="h-4 w-4" />
-                <span className="text-xs">挿入</span>
+                <FileDown className="h-4 w-4" />
+                <span className="text-xs">書き出し</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[200px]">
-              <ToolbarInsertMenuItems
-                insertItems={insertItems}
-                editor={editor}
-                {...(openDialog !== undefined ? { openDialog } : {})}
-              />
+              <DropdownMenuItem
+                onClick={handleCopyMarkdown}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Markdown をコピー</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleCopyHtml}
+                className="flex items-center gap-2"
+              >
+                <Code className="h-4 w-4" />
+                <span>HTML をコピー</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleCopyPlainText}
+                className="flex items-center gap-2"
+              >
+                <AlignLeft className="h-4 w-4" />
+                <span>プレーンテキストをコピー</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShowMarkdownImport(true)}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Markdown をインポート</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleOpenPrintPreview}
+                className="flex items-center gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                <span>印刷プレビュー</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-
-        {/* Export Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        </div>
+        <div className="flex min-w-0 flex-1 basis-0 shrink items-center justify-end">
+          <div
+            role="group"
+            aria-label="ブロック設定と表示"
+            className="flex shrink-0 items-center gap-0.5 border-l border-border px-1 py-1 pl-2"
+          >
+            {isInspectorAvailable ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 md:h-8 md:w-8"
+                aria-pressed={isInspectorExpanded}
+                aria-controls="lexical-block-inspector-panel"
+                aria-label={
+                  isInspectorExpanded
+                    ? "ブロック設定パネルを閉じる"
+                    : "ブロック設定パネルを開く（本文中のブロック用）"
+                }
+                onClick={toggleInspector}
+                title={
+                  isInspectorExpanded
+                    ? "ブロック設定を閉じる（Ctrl+Shift+0）"
+                    : "ブロック設定を開く（本文ブロック用。タイトル・SEOはヘッダの設定）Ctrl+Shift+0"
+                }
+              >
+                {isInspectorExpanded ? (
+                  <PanelRightClose className="h-5 w-5 md:h-4 md:w-4" />
+                ) : (
+                  <PanelRightOpen className="h-5 w-5 md:h-4 md:w-4" />
+                )}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-8 gap-1"
+              size="icon"
+              className="h-10 w-10 md:h-8 md:w-8"
+              onClick={() => setShowShortcuts(true)}
+              title="キーボードショートカット (Ctrl+Shift+/)"
             >
-              <FileDown className="h-4 w-4" />
-              <span className="text-xs">書き出し</span>
-              <ChevronDown className="h-3 w-3" />
+              <CircleHelp className="h-5 w-5 md:h-4 md:w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[200px]">
-            <DropdownMenuItem
-              onClick={handleCopyMarkdown}
-              className="flex items-center gap-2"
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 md:h-8 md:w-8"
+              onClick={onFullscreenToggle}
+              title={isFullscreen ? "全画面終了" : "全画面表示"}
             >
-              <FileText className="h-4 w-4" />
-              <span>Markdown をコピー</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleCopyHtml}
-              className="flex items-center gap-2"
-            >
-              <Code className="h-4 w-4" />
-              <span>HTML をコピー</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleCopyPlainText}
-              className="flex items-center gap-2"
-            >
-              <AlignLeft className="h-4 w-4" />
-              <span>プレーンテキストをコピー</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setShowMarkdownImport(true)}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              <span>Markdown をインポート</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleOpenPrintPreview}
-              className="flex items-center gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              <span>印刷プレビュー</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        </div>
-        <div className="flex min-w-0 flex-1 basis-0 shrink items-center justify-end">
-        <div
-          role="group"
-          aria-label="ブロック設定と表示"
-          className="flex shrink-0 items-center gap-0.5 border-l border-border px-1 py-1 pl-2"
-        >
-        {isInspectorAvailable ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 md:h-8 md:w-8"
-            aria-pressed={isInspectorExpanded}
-            aria-controls="lexical-block-inspector-panel"
-            aria-label={
-              isInspectorExpanded
-                ? "ブロック設定パネルを閉じる"
-                : "ブロック設定パネルを開く（本文中のブロック用）"
-            }
-            onClick={toggleInspector}
-            title={
-              isInspectorExpanded
-                ? "ブロック設定を閉じる（Ctrl+Shift+0）"
-                : "ブロック設定を開く（本文ブロック用。タイトル・SEOはヘッダの設定）Ctrl+Shift+0"
-            }
-          >
-            {isInspectorExpanded ? (
-              <PanelRightClose className="h-5 w-5 md:h-4 md:w-4" />
-            ) : (
-              <PanelRightOpen className="h-5 w-5 md:h-4 md:w-4" />
-            )}
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={() => setShowShortcuts(true)}
-          title="キーボードショートカット (Ctrl+Shift+/)"
-        >
-          <CircleHelp className="h-5 w-5 md:h-4 md:w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 md:h-8 md:w-8"
-          onClick={onFullscreenToggle}
-          title={isFullscreen ? "全画面終了" : "全画面表示"}
-        >
-          {isFullscreen ? (
-            <Minimize className="h-5 w-5 md:h-4 md:w-4" />
-          ) : (
-            <Maximize className="h-5 w-5 md:h-4 md:w-4" />
-          )}
-        </Button>
-        </div>
+              {isFullscreen ? (
+                <Minimize className="h-5 w-5 md:h-4 md:w-4" />
+              ) : (
+                <Maximize className="h-5 w-5 md:h-4 md:w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
       <MarkdownImportDialog

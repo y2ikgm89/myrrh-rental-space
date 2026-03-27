@@ -15,17 +15,19 @@ After analyzing the admin dashboard CRUD patterns, I've identified:
 3. **Recommendation:** Standardize all CRUD resources on unified pattern
 
 ### Current Situation
+
 - **Customers:** Separate `CustomerForm.tsx` + `CustomerEditForm.tsx` (99% duplicate) ❌
 - **Coupons:** Single `CouponForm.tsx` handles both create and edit ✅
 
 ### Why Unified Form Wins
-| Aspect | Separate Forms | Unified Form |
-|--------|---|---|
-| Code duplication | 99% | 0% |
-| Maintenance | 2 components to sync | 1 component |
-| Feature parity | Risk of divergence | Guaranteed parity |
-| Route structure | new + [id]/edit | new + [id] + [id]/edit |
-| Learning curve | Easier | Slightly more complex |
+
+| Aspect           | Separate Forms       | Unified Form           |
+| ---------------- | -------------------- | ---------------------- |
+| Code duplication | 99%                  | 0%                     |
+| Maintenance      | 2 components to sync | 1 component            |
+| Feature parity   | Risk of divergence   | Guaranteed parity      |
+| Route structure  | new + [id]/edit      | new + [id] + [id]/edit |
+| Learning curve   | Easier               | Slightly more complex  |
 
 ---
 
@@ -55,10 +57,10 @@ export function <Resource>Form({ <resource> }: <Resource>FormProps) {
     },
     {
       redirectTo: `/admin/<resources>`,
-      successMessage: isEdit 
-        ? '<Resource>を更新しました' 
+      successMessage: isEdit
+        ? '<Resource>を更新しました'
         : '<Resource>を作成しました',
-      defaultValues: <resource> 
+      defaultValues: <resource>
         ? { /* existing */ }
         : { /* defaults */ },
     },
@@ -79,6 +81,7 @@ export function <Resource>Form({ <resource> }: <Resource>FormProps) {
 ```
 
 Key Points:
+
 - Optional prop determines mode
 - Single source of truth (isEdit)
 - Both Server Actions handled
@@ -89,6 +92,7 @@ Key Points:
 ## Route Structure
 
 ### Create: `new/page.tsx`
+
 ```typescript
 <AdminDetailLayout
   backHref="/admin/<resources>"
@@ -99,6 +103,7 @@ Key Points:
 ```
 
 ### Detail: `[id]/page.tsx`
+
 ```typescript
 <AdminDetailLayout
   backHref="/admin/<resources>"
@@ -115,6 +120,7 @@ Key Points:
 ```
 
 ### Edit: `[id]/edit/page.tsx` (NEW)
+
 ```typescript
 <AdminDetailLayout
   backHref={`/admin/<resources>/${id}`}
@@ -126,6 +132,7 @@ Key Points:
 ```
 
 **Structure Summary:**
+
 - `/new` → Form without prop (create)
 - `/[id]` → Detail component
 - `/[id]/edit` → Form WITH prop (edit)
@@ -135,6 +142,7 @@ Key Points:
 ## File Structure
 
 ### Before (Customers)
+
 ```
 customers/
 ├── new/page.tsx
@@ -146,6 +154,7 @@ customers/
 ```
 
 ### After (Recommended)
+
 ```
 customers/
 ├── new/page.tsx
@@ -165,6 +174,7 @@ customers/
 ## Migration Plan
 
 ### Phase 1: Customers (High Priority)
+
 1. Create unified `CustomerForm.tsx`
 2. Create `[id]/edit/page.tsx`
 3. Update `[id]/page.xyz`
@@ -172,10 +182,12 @@ customers/
 5. Test E2E flows
 
 ### Phase 2: Other Resources
+
 - Locations, Reservations, Categories, Spaces
 - Follow same pattern
 
 ### Phase 3: Documentation
+
 - Update CLAUDE.md
 - Create style guide
 
@@ -184,6 +196,7 @@ customers/
 ## Code Duplication Analysis
 
 CustomerForm vs CustomerEditForm:
+
 - Form fields: 100% identical
 - Validation: Same schema
 - Button layout: 100% identical
@@ -195,11 +208,11 @@ CustomerForm vs CustomerEditForm:
 
 ## Decision Matrix
 
-| Factor | Unified | Separate |
-|--------|---------|----------|
-| Duplication | ✅ None | ❌ 99% |
-| Maintenance | ✅ High | ❌ Low |
-| Feature parity | ✅ Guaranteed | ❌ Risk |
+| Factor         | Unified       | Separate |
+| -------------- | ------------- | -------- |
+| Duplication    | ✅ None       | ❌ 99%   |
+| Maintenance    | ✅ High       | ❌ Low   |
+| Feature parity | ✅ Guaranteed | ❌ Risk  |
 
 **Winner:** Unified Form
 
@@ -208,6 +221,7 @@ CustomerForm vs CustomerEditForm:
 ## Implementation Notes
 
 ### useFormAction Hook
+
 - Zod validation
 - Server Action execution
 - Field-level errors
@@ -215,13 +229,16 @@ CustomerForm vs CustomerEditForm:
 - Toast notifications
 
 ### AdminDetailLayout
+
 - Standardized header
 - Title + subtitle
 - Back button (left)
 - Action buttons (right)
 
 ### Edit Page backLabel Rule
+
 Edit pages MUST include `backLabel="詳細に戻る"`:
+
 ```tsx
 <AdminDetailLayout
   backHref={`/admin/customers/${id}`}

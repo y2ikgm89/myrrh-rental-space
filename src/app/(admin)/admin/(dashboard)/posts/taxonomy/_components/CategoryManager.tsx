@@ -45,7 +45,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
   arrayMove,
-  CSS,
+  toTranslate3d,
   type DragEndEvent,
 } from "@/admin/components/ui";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
@@ -114,7 +114,7 @@ function SortableCategoryRow({
   } = useSortable({ id: category.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 
@@ -518,9 +518,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               <SubmitButton
                 isPending={isPending}
                 label={editingCategory ? "更新" : "作成"}
-                pendingLabel={
-                  editingCategory ? "更新中..." : "作成中..."
-                }
+                pendingLabel={editingCategory ? "更新中..." : "作成中..."}
               />
             </DialogFooter>
           </form>

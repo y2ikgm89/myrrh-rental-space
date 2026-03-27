@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { GripVertical, X } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { toTranslate3d } from "@/admin/components/ui/sortable";
 import { Button } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 
@@ -34,7 +34,7 @@ export function SortableImageItem({
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{ transform: toTranslate3d(transform), transition }}
       className={cn(
         "flex items-center gap-2 rounded border p-2",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",

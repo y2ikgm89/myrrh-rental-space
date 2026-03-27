@@ -6,9 +6,13 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   updateInquiryStatus as updateInquiryStatusCommand,
   deleteInquiry as deleteInquiryCommand,
+  replyToInquiryCommand,
 } from "@/shared/domain/inquiries/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { sendInquiryReplyEmail } from "@/shared/lib/email/inquiry-emails";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 import { InquiryStatus } from "@/shared/db/enums";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
@@ -60,5 +64,57 @@ export async function deleteInquiry(id: string): Promise<MutationResult> {
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
     },
+  });
+}
+
+const replySchema = z.object({
+  id: z.string().uuid({ error: "お問い合わせIDが不正です" }),
+  replyMessage: z.string().min(1, { error: "回答内容を入力してください" }),
+});
+
+export async function replyToInquiry(
+  inquiryId: string,
+  replyMessage: string,
+): Promise<MutationResult<{ id: string }>> {
+  const parsed = replySchema.safeParse({ id: inquiryId, replyMessage });
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "update",
+    resourceId: parsed.data.id,
+    execute: async (user) => {
+      const result = await replyToInquiryCommand(
+        parsed.data.id,
+        parsed.data.replyMessage,
+        user.id,
+      );
+
+      const { emailContext } = result;
+      fireAndForget(
+        sendInquiryReplyEmail({
+          inquiryId: parsed.data.id,
+          customerName: emailContext.name,
+          customerEmail: emailContext.email,
+          originalSubject: emailContext.subject,
+          originalMessage: emailContext.message,
+          replyMessage: parsed.data.replyMessage,
+          repliedByName: user.name ?? "スタッフ",
+        }),
+        {
+          operation: "sendInquiryReplyEmail",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
+
+      return { id: result.id };
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(getCacheTag.inquiries.detail(parsed.data.id));
+    },
+    resolveAuditResourceId: (data) => data.id,
   });
 }

@@ -14,9 +14,7 @@ import {
   type UpdateSectionOrderInput,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
-import {
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section-defaults";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 
 function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);

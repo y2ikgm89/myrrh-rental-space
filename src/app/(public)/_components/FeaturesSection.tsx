@@ -15,7 +15,7 @@ import { useRef, type ReactElement } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import {
   SectionWrapper,
   getTitleClasses,

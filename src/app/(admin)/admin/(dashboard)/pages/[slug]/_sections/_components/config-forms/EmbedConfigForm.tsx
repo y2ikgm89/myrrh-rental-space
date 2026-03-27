@@ -20,9 +20,7 @@ import {
   type EmbedConfig,
   type EmbedConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getEmbedConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getEmbedConfig } from "@/shared/lib/validations/section-defaults";
 import {
   borderRadiusLabels,
   embedAspectRatioLabels,

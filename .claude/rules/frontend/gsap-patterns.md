@@ -611,9 +611,9 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 | `@/public/lib/animations.ts`                             | DURATION / EASE / STAGGER / SCROLL_TRIGGER / PARALLAX 定数                   |
 | `@/public/hooks/use-motion-preference.ts`                | `gsap.matchMedia()` ベースの reactive reduced-motion フック（パターン C 用） |
 | `@/public/components/providers/SmoothScrollProvider.tsx` | Lenis + GSAP ticker 同期（`lenis/react` LenisContext 提供）                  |
-| `@/public/components/animations/ScrollReveal.tsx`        | スクロール入場アニメーション（パターン A-1 の実装例）                        |
-| `@/public/components/animations/SplitText.tsx`           | テキスト分割スタガーアニメーション（パターン A-1 の実装例）                  |
-| `@/public/components/animations/ParallaxImage.tsx`       | scrub パララックス画像（パターン A-1 の実装例）                              |
-| `@/public/components/animations/MagneticButton.tsx`      | マウス追従マグネットボタン（パターン C の実装例）                            |
+| `@/public/components/animations/scroll-reveal.tsx`       | スクロール入場アニメーション（パターン A-1 の実装例）                        |
+| `@/public/components/animations/split-text.tsx`          | テキスト分割スタガーアニメーション（パターン A-1 の実装例）                  |
+| `@/public/components/animations/parallax-image.tsx`      | scrub パララックス画像（パターン A-1 の実装例）                              |
+| `@/public/components/animations/magnetic-button.tsx`     | マウス追従マグネットボタン（パターン C の実装例）                            |
 
 > **詳細リファレンス**: `docs/reference/claude-rules/gsap-reference.md`

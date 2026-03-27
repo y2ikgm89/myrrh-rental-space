@@ -24,7 +24,7 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  CSS,
+  toTranslate3d,
   Form,
   FormField,
   FormItem,
@@ -115,7 +115,7 @@ function SortableImageItem({
   } = useSortable({ id, ...(disabled !== undefined && { disabled }) });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: toTranslate3d(transform),
     transition,
   };
 

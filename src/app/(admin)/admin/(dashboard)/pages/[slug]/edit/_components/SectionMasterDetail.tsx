@@ -30,12 +30,8 @@ import type {
   PageForEdit,
   PageSectionData,
 } from "@/admin/queries/page-section";
-import {
-  SectionType,
-} from "@/shared/lib/validations/section";
-import {
-  defaultSectionConfigs,
-} from "@/shared/lib/validations/section-defaults";
+import { SectionType } from "@/shared/lib/validations/section";
+import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";

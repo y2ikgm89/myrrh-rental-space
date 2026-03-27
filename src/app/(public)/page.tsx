@@ -12,12 +12,12 @@ import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { connection } from "next/server";
 
-import { WebSiteJsonLd } from "@/public/components/seo/JsonLd";
+import { WebSiteJsonLd } from "@/public/components/seo/json-ld";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageContent } from "@/public/lib/content/queries";
 import { homepageContentSchema } from "@/public/lib/content/schemas";
-import { defaultHomepageContent } from "@/public/lib/content/defaults/homepage";
+import { defaultHomepageContent } from "@/public/lib/content/defaults";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { HeroSection } from "./_components/homepage/hero-section";
 import { ConceptSection } from "./_components/homepage/concept-section";

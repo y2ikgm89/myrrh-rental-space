@@ -57,7 +57,10 @@ function $convertLayoutContainerElement(
   const narrowRaw = element.style.getPropertyValue(LAYOUT_MOBILE_COLUMNS_VAR);
   const templateColumnsNarrow =
     narrowRaw.trim().length > 0 ? narrowRaw.trim() : "1fr";
-  const node = $createLayoutContainerNode(templateColumns, templateColumnsNarrow);
+  const node = $createLayoutContainerNode(
+    templateColumns,
+    templateColumnsNarrow,
+  );
   return { node };
 }
 
@@ -92,10 +95,7 @@ export class LayoutContainerNode extends ElementNode {
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const templateColumns = $getState(this, templateColumnsState);
-    const templateColumnsNarrow = $getState(
-      this,
-      templateColumnsNarrowState,
-    );
+    const templateColumnsNarrow = $getState(this, templateColumnsNarrowState);
     const dom = document.createElement("div");
     dom.setAttribute("data-lexical-layout-container", "true");
     dom.style.gridTemplateColumns = templateColumns;
@@ -105,10 +105,7 @@ export class LayoutContainerNode extends ElementNode {
 
   override exportDOM(): DOMExportOutput {
     const templateColumns = $getState(this, templateColumnsState);
-    const templateColumnsNarrow = $getState(
-      this,
-      templateColumnsNarrowState,
-    );
+    const templateColumnsNarrow = $getState(this, templateColumnsNarrowState);
     const element = document.createElement("div");
     element.setAttribute("data-lexical-layout-container", "true");
     element.style.gridTemplateColumns = templateColumns;

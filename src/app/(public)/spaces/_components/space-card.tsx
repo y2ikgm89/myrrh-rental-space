@@ -49,7 +49,7 @@ export function SpaceCard({
 
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!hasHoverData || e.pointerType !== "mouse") return;
-    timerRef.current = setTimeout(() => setShowOverlay(true), 2000);
+    timerRef.current = setTimeout(() => setShowOverlay(true), 500);
   };
 
   const handlePointerLeave = () => {

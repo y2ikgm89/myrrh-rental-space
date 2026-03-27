@@ -27,6 +27,11 @@ export function Input({
         className="mb-1.5 block text-sm font-medium text-foreground"
       >
         {label}
+        {props.required ? (
+          <span className="ml-1 text-base text-destructive" aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </label>
       <input
         id={inputId}

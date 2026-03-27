@@ -20,9 +20,7 @@ import {
   type FaqListConfig,
   type FaqListConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getFaqListConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getFaqListConfig } from "@/shared/lib/validations/section-defaults";
 import {
   containerWidthLabels,
   faqInitialOpenLabels,

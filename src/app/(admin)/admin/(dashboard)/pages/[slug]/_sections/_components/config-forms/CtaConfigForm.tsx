@@ -21,9 +21,7 @@ import {
   type CtaConfigInput,
   type CTAButtonItem,
 } from "@/shared/lib/validations/section";
-import {
-  getCtaConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getCtaConfig } from "@/shared/lib/validations/section-defaults";
 import { ctaVariantLabels } from "@/shared/lib/validations/section-options";
 import { keysOf, omitUndefined } from "@/shared/lib/serialize";
 import { FormActions, type ConfigFormProps } from "./shared";

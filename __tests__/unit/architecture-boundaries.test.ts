@@ -1009,7 +1009,7 @@ describe("architecture boundaries", () => {
         "_shared",
         "actions",
         "api-keys",
-        "mutations.ts",
+        "index.ts",
       ),
       join(
         SRC_ROOT,
@@ -1119,7 +1119,7 @@ describe("architecture boundaries", () => {
         "_shared",
         "actions",
         "post",
-        "mutations.ts",
+        "index.ts",
       ),
       join(
         SRC_ROOT,
@@ -1140,7 +1140,7 @@ describe("architecture boundaries", () => {
         "_shared",
         "actions",
         "terms",
-        "mutations.ts",
+        "index.ts",
       ),
       join(
         SRC_ROOT,

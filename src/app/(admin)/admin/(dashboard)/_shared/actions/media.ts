@@ -1,7 +1,7 @@
 "use server";
 
 import { updateTag } from "next/cache";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { isEditorRole } from "@/admin/lib/permissions";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";

@@ -33,7 +33,11 @@ import {
   updateSearchVerification,
 } from "@/admin/actions/settings";
 import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
-import { metaFormSchema, analyticsFormSchema, searchVerificationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
+import {
+  metaFormSchema,
+  analyticsFormSchema,
+  searchVerificationFormSchema,
+} from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import { AnalyticsType } from "@/shared/db/enums";

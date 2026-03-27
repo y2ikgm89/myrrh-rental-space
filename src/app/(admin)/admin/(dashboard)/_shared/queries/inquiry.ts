@@ -8,10 +8,10 @@ import {
 } from "@/shared/domain/inquiries/queries";
 import type {
   GetInquiriesResult,
-  InquiryData,
   InquiryFilters,
   InquiryPagination,
   InquiryStats,
+  InquiryWithCustomer,
 } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { requireAdminPermission } from "./_helpers";
@@ -28,7 +28,7 @@ export async function getInquiries(
 
 export async function getInquiryById(
   id: string,
-): Promise<Serialized<InquiryData> | null> {
+): Promise<Serialized<InquiryWithCustomer> | null> {
   await requireAdminPermission("inquiry", "read");
 
   const validated = idSchema.safeParse(id);

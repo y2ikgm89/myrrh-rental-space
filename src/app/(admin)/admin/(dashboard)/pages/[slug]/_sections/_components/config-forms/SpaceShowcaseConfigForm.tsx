@@ -19,9 +19,7 @@ import {
   type SpaceShowcaseConfig,
   type SpaceShowcaseConfigInput,
 } from "@/shared/lib/validations/section";
-import {
-  getSpaceShowcaseConfig,
-} from "@/shared/lib/validations/section-defaults";
+import { getSpaceShowcaseConfig } from "@/shared/lib/validations/section-defaults";
 import {
   cardStyleLabels,
   showcaseImageAspectLabels,

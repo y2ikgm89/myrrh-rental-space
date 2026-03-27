@@ -62,9 +62,4 @@ ls -t docs/plans/*.md | head -10
 
 ## superpowers による計画
 
-`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画を作成。スペックは `docs/superpowers/specs/`。
-
-```bash
-ls -t docs/superpowers/plans/*.md | head -10
-ls -t docs/superpowers/specs/*.md | head -10
-```
+`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画、`docs/superpowers/specs/` にスペックを作成する。

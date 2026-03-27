@@ -35,6 +35,7 @@ export async function checkReservationOverlapQuery(
   const overlappingReservation = await client.reservation.findFirst({
     where: {
       spaceId,
+      deletedAt: null,
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       ...(excludeReservationId && { id: { not: excludeReservationId } }),
       AND: [{ startTime: { lt: endTime } }, { endTime: { gt: startTime } }],
@@ -65,6 +66,7 @@ export async function getReservationsForDateQuery(
   return prisma.reservation.findMany({
     where: {
       spaceId,
+      deletedAt: null,
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
       startTime: { gte: dateStart, lte: dateEnd },
     },

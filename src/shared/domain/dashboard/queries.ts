@@ -207,7 +207,9 @@ export async function getRecentReservations(
       status: true,
       totalPrice: true,
       space: { select: { name: true } },
-      customer: { select: { lastName: true, firstName: true } },
+      customer: {
+        select: { lastName: true, firstName: true, companyName: true },
+      },
     },
   });
 
@@ -272,7 +274,9 @@ export async function getTodayReservations(): Promise<RecentReservation[]> {
       status: true,
       totalPrice: true,
       space: { select: { name: true } },
-      customer: { select: { lastName: true, firstName: true } },
+      customer: {
+        select: { lastName: true, firstName: true, companyName: true },
+      },
     },
   });
 

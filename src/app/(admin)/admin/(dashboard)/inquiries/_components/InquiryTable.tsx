@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
 import { formatDateTimeShort } from "@/shared/lib/utils";
-import type { InquiryData } from "@/shared/domain/inquiries/types";
+import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { InquiryActionCell } from "./InquiryActionCell";
 
@@ -18,7 +19,7 @@ import { InquiryActionCell } from "./InquiryActionCell";
 // =============================================================================
 
 type InquiryTableProps = {
-  inquiries: Serialized<InquiryData>[];
+  inquiries: Serialized<InquiryWithCustomer>[];
 };
 
 // =============================================================================
@@ -36,12 +37,13 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ステータス</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
               <TableHead>件名</TableHead>
               <TableHead className="hidden md:table-cell">お名前</TableHead>
               <TableHead className="hidden lg:table-cell">
                 メールアドレス
               </TableHead>
+              <TableHead className="hidden md:table-cell">顧客</TableHead>
               <TableHead className="hidden md:table-cell">受付日時</TableHead>
               <TableHead>操作</TableHead>
             </TableRow>
@@ -49,7 +51,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
           <TableBody>
             {inquiries.map((inquiry) => (
               <TableRow key={inquiry.id}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <InquiryStatusBadge status={inquiry.status} />
                 </TableCell>
                 <TableCell>
@@ -57,8 +59,13 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                     {inquiry.subject}
                   </div>
                 </TableCell>
-                <TableCell className="hidden font-medium md:table-cell">
-                  {inquiry.name}
+                <TableCell className="hidden md:table-cell">
+                  <div className="font-medium">{inquiry.name}</div>
+                  {inquiry.companyName ? (
+                    <div className="text-xs text-muted-foreground">
+                      {inquiry.companyName}
+                    </div>
+                  ) : null}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   <a
@@ -67,6 +74,18 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
                   >
                     {inquiry.email}
                   </a>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {inquiry.customer ? (
+                    <Link
+                      href={`/admin/customers/${inquiry.customer.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      {inquiry.customer.lastName} {inquiry.customer.firstName}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground md:table-cell">
                   {formatDateTimeShort(inquiry.createdAt)}

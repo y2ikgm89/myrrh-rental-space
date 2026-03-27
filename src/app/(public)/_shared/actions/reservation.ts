@@ -6,9 +6,11 @@ import {
   type PublicReservationInput,
 } from "@/shared/lib/validations/public-reservation";
 import {
+  checkActionRateLimit,
   createValidationMutationError,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
   createMutationError,
   type MutationResult,
@@ -26,19 +28,23 @@ import { getCurrentUser } from "@/shared/lib/auth";
 export async function submitReservation(
   input: PublicReservationInput,
 ): Promise<MutationResult<{ id: string }>> {
-  // 1. Validate input
+  // 1. Rate limit check
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError(rateLimit.error);
+
+  // 2. Validate input
   const parsed = publicReservationSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
 
-  // 2. Turnstile verification
+  // 3. Turnstile verification
   const turnstile = await validateTurnstile(parsed.data.turnstileToken);
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }
 
-  // 2.5. Verify space belongs to location
+  // 3.5. Verify space belongs to location
   const belongsToLocation = await verifySpaceBelongsToLocation(
     parsed.data.spaceId,
     parsed.data.locationId,
@@ -49,24 +55,24 @@ export async function submitReservation(
     );
   }
 
-  // 3. Get current user (non-blocking — undefined if not logged in)
+  // 4. Get current user (non-blocking — undefined if not logged in)
   const user = await getCurrentUser();
 
-  // 4. Create reservation
+  // 5. Create reservation
   try {
     const result = await createPublicReservationCommand({
       ...parsed.data,
       userId: user?.id,
     });
 
-    // 5. Invalidate cache: reservations (list + calendar) + customers
+    // 6. Invalidate cache: reservations (list + calendar) + customers
     updateTag(CACHE_TAGS.RESERVATIONS);
     updateTag(getCacheTag.reservations.list());
     updateTag(getCacheTag.reservations.calendar());
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.list());
 
-    // 6. Send admin notification email (fire-and-forget)
+    // 7. Send admin notification email (fire-and-forget)
     fireAndForget(
       sendReservationAdminNotification(omitUndefined(result.payload), "new"),
       {

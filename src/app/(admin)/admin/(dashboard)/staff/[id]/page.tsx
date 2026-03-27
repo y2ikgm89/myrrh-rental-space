@@ -6,7 +6,7 @@ import { getUser } from "@/admin/queries/user";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { DangerZone } from "@/admin/components/DangerZone";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import {
   Card,
   CardContent,
@@ -51,6 +51,11 @@ export default async function StaffDetailPage({ params }: Props) {
       subtitle={user.email}
       actions={
         <>
+          <DetailDeleteButton
+            itemName={user.name ?? user.email}
+            onDelete={deleteUser.bind(null, user.id)}
+            redirectTo="/admin/staff"
+          />
           <Button size="sm" asChild>
             <Link href={`/admin/staff/${user.id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" />
@@ -137,13 +142,6 @@ export default async function StaffDetailPage({ params }: Props) {
           </CardContent>
         </Card>
       )}
-
-      <DangerZone
-        deleteLabel="スタッフを削除"
-        itemName={user.name ?? user.email}
-        onDelete={deleteUser.bind(null, user.id)}
-        redirectTo="/admin/staff"
-      />
     </AdminDetailLayout>
   );
 }

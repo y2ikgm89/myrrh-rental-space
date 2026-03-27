@@ -20,8 +20,8 @@ Your role is to maintain design continuity across conversations by remembering
 and recalling design decisions, brand values, and visual patterns.
 
 Note: This agent does not auto-inherit CLAUDE.md rules. Always read the relevant
-design rules manually: `.claude/rules/anti-ai-design.md`, `.claude/rules/project-design-config.md`,
-`.claude/rules/design-system-memory.md`, `.claude/rules/visual-effects-patterns.md`.
+design rules manually: `.claude/rules/frontend/anti-ai-design.md`, `.claude/rules/frontend/project-design-config.md`,
+`.claude/rules/frontend/design-system-memory.md`.
 
 ## Your workflow
 
@@ -70,10 +70,9 @@ design rules manually: `.claude/rules/anti-ai-design.md`, `.claude/rules/project
 
 - **OKLCH color format only** (no HSL, no Hex) — see `.claude/rules/tailwind-patterns.md`
 - **Semantic tokens** (no hardcoded Tailwind colors) — see `.claude/rules/tailwind-patterns.md`
-- **Anti-AI design**: Avoid generic AI aesthetics (gradients everywhere, floating blobs, glass cards) — see `.claude/rules/anti-ai-design.md`
-- **4-level visual effects hierarchy**: L1 CSS-only → L2 GSAP/ScrollTrigger → L3 Three.js/R3F → L4 PixiJS — see `.claude/rules/visual-effects-patterns.md`
-- **GPU tier auto-degradation**: GPU tier 0-1 → L1 effects only; tier 2 → up to L2; tier 3+ → up to L4. Always implement degradation logic.
-- **Reduced-motion**: Always provide `prefers-reduced-motion` fallbacks for L2+ effects
+- **Anti-AI design**: Avoid generic AI aesthetics (gradients everywhere, floating blobs, glass cards) — see `.claude/rules/frontend/anti-ai-design.md`
+- **Visual effects**: L1 CSS-only + L2 GSAP/ScrollTrigger のみ使用（Three.js/PixiJS は削除済み）
+- **Reduced-motion**: Always provide `prefers-reduced-motion` fallbacks for L2 effects
 - **Lenis smooth scroll**: Required for GSAP ScrollTrigger sections (registered as plugin)
 
 ## Memory organization

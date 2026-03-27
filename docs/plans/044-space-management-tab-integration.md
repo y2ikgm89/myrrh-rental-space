@@ -65,11 +65,11 @@
 
 ハブの**アクティブタブ**は従来どおり **`tab`**（`spaces` | `locations` | `categories`）。一方、**各タブの一覧フィルタ・ページ・ソート**はタブ間でクエリキーを共有しないよう、**プレフィックス付きキー**で管理する（`src/shared/lib/nuqs/parsers.ts` の `adminSpaceSearchParamsCache`）。
 
-| 対象 | 主なクエリキー |
-|------|----------------|
+| 対象             | 主なクエリキー                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | スペース一覧タブ | `spSearch`, `spStatus`, `spPage`, `spSortBy`, `spSortOrder`, `spLocationId`, `spCategoryId`（未分類のみは `spCategoryId=_unassigned`） |
-| 場所タブ | `locSearch`, `locPublished`, `locPage` |
-| カテゴリータブ | `catSearch`, `catIncludeInactive`, `catPage` |
+| 場所タブ         | `locSearch`, `locPublished`, `locPage`                                                                                                 |
+| カテゴリータブ   | `catSearch`, `catIncludeInactive`, `catPage`                                                                                           |
 
 **スペース新規・編集**（`/admin/spaces/new`, `/admin/spaces/[id]/edit`）でフォーム内のタブ状態は、ハブの `tab` と衝突しないようクエリキー **`section`**（例: `basic`, `pricing`, …）を使用する。
 

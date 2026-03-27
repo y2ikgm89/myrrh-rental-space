@@ -12,8 +12,8 @@ import { useRef, type ReactElement } from "react";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
-import { ScrollReveal } from "@/public/components/animations/ScrollReveal";
-import { SplitText } from "@/public/components/animations/SplitText";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import {
   SectionWrapper,
@@ -187,8 +187,8 @@ export function FaqListSection({
         </div>
       </SectionWrapper>
 
-      {/* FAQ JSON-LD */}
-      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */}
+      {/* FAQ JSON-LD — Unicode-escape < > & to prevent script injection (same pattern as JsonLd.tsx) */}
+      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -203,7 +203,10 @@ export function FaqListSection({
                 text: item.answer.replace(/<[^>]*>/g, ""),
               },
             })),
-          }),
+          })
+            .replace(/</g, "\\u003c")
+            .replace(/>/g, "\\u003e")
+            .replace(/&/g, "\\u0026"),
         }}
       />
       {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}

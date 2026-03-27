@@ -23,8 +23,9 @@ import { z } from "zod";
 
 const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
 
-function invalidateReservationCache(): void {
+function invalidateReservationCache(reservationId: string): void {
   updateTag(CACHE_TAGS.RESERVATIONS);
+  updateTag(getCacheTag.reservations.detail(reservationId));
   updateTag(getCacheTag.reservations.calendar());
 }
 
@@ -50,7 +51,7 @@ export async function cancelReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache();
+    invalidateReservationCache(parsedId.data);
     return null;
   } catch (error) {
     if (error instanceof DomainError) {
@@ -83,7 +84,7 @@ export async function updateReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache();
+    invalidateReservationCache(parsed.data.reservationId);
     return null;
   } catch (error) {
     if (error instanceof DomainError) {

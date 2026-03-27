@@ -122,10 +122,11 @@ async function <Resource>TableWrapper({
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { DangerZone } from "@/admin/components/DangerZone";
-import { Button } from "@/shared/components/ui/button";
+import { Pencil } from "lucide-react";
+import { Button } from "@/admin/components/ui/button";
 import Link from "next/link";
 import { get<Resource>ById, delete<Resource> } from "@/admin/actions/<resources>";
 
@@ -150,9 +151,19 @@ export default async function <Resource>DetailPage({ params }: Props) {
       title={item.name}
       subtitle="<Resource>詳細"
       actions={
-        <Button asChild>
-          <Link href={`/admin/<resources>/${id}/edit`}>編集</Link>
-        </Button>
+        <>
+          <DetailDeleteButton
+            itemName={item.name}
+            onDelete={delete<Resource>.bind(null, id)}
+            redirectTo="/admin/<resources>"
+          />
+          <Button asChild size="sm">
+            <Link href={`/admin/<resources>/${id}/edit`}>
+              <Pencil className="mr-2 h-4 w-4" />
+              編集
+            </Link>
+          </Button>
+        </>
       }
     >
       <DetailSection title="基本情報">
@@ -162,12 +173,6 @@ export default async function <Resource>DetailPage({ params }: Props) {
           {/* 他フィールドをここに追加 */}
         </div>
       </DetailSection>
-      <DangerZone
-        deleteLabel="<Resource>を削除"
-        itemName={item.name}
-        onDelete={delete<Resource>.bind(null, id)}
-        redirectTo="/admin/<resources>"
-      />
     </AdminDetailLayout>
   );
 }
@@ -505,9 +510,9 @@ export async function loadAdmin<Resource>SearchParams(
 
 ## 禁止事項（admin-ui-patterns.md 準拠）
 
-- `DangerZone` をページ最下部以外に配置
+- 削除ボタンをページ最下部カードに配置（`DetailDeleteButton` をヘッダー `actions` に配置）
 - 管理画面ページでの `connection()` 使用（公開ページ専用）
 - `backLabel` に「<Resource>一覧に戻る」のような具体名（「一覧に戻る」のみ）
 - テーブル操作列の Button+Link 直書き（`ActionDropdown` の `*ActionCell` を使用）
-- `DangerZone.onDelete` にクロージャ（`.bind(null, id)` を使用）
+- `DetailDeleteButton.onDelete` にクロージャ（`.bind(null, id)` を使用）
 - バックナビゲーションに `ChevronLeft` 使用禁止（`AdminDetailLayout` が `ArrowLeft` を自動提供、手動実装も `ArrowLeft` のみ）

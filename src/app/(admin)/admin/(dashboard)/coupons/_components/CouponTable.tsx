@@ -52,10 +52,10 @@ export function CouponTable({ coupons }: CouponTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ステータス</TableHead>
+              <TableHead className="whitespace-nowrap">ステータス</TableHead>
               <TableHead>コード</TableHead>
               <TableHead>名称</TableHead>
-              <TableHead>タイプ</TableHead>
+              <TableHead className="whitespace-nowrap">タイプ</TableHead>
               <TableHead className="text-right">割引</TableHead>
               <TableHead className="hidden text-center md:table-cell">
                 利用数
@@ -67,14 +67,14 @@ export function CouponTable({ coupons }: CouponTableProps) {
           <TableBody>
             {coupons.map((coupon) => (
               <TableRow key={coupon.id}>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <CouponStatusBadge coupon={coupon} />
                 </TableCell>
                 <TableCell className="font-mono font-medium">
                   {coupon.code}
                 </TableCell>
                 <TableCell>{coupon.name}</TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <CouponTypeBadge type={coupon.type} />
                 </TableCell>
                 <TableCell className="text-right font-medium">
