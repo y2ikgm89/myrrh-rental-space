@@ -19,16 +19,21 @@ import {
 } from "@/shared/lib/mutation-result";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { DomainError } from "@/shared/domain/domain-error";
+import { z } from "zod";
+
+const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
 
 function invalidateReservationCache(): void {
   updateTag(CACHE_TAGS.RESERVATIONS);
-  updateTag(getCacheTag.reservations.list());
   updateTag(getCacheTag.reservations.calendar());
 }
 
 export async function cancelReservationAction(
   reservationId: string,
 ): Promise<MutationResult<null>> {
+  const parsedId = reservationIdSchema.safeParse(reservationId);
+  if (!parsedId.success) return createMutationError("予約IDが不正です");
+
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 
@@ -38,7 +43,7 @@ export async function cancelReservationAction(
   try {
     const settings = await getReservationDeadlineSettings();
     const result = await cancelCustomerReservation(
-      reservationId,
+      parsedId.data,
       customer.id,
       settings.cancellationDeadlineHours,
     );

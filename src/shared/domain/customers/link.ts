@@ -1,6 +1,9 @@
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@prisma/client";
 
+/** ensureCustomerLinked で使用する仮名（LINE ログイン時に name がない場合） */
+export const CUSTOMER_PLACEHOLDER_NAME = "未設定";
+
 const CUSTOMER_LINK_SELECT = {
   id: true,
   email: true,
@@ -39,7 +42,7 @@ export async function ensureCustomerLinked(user: {
     return await prisma.customer.create({
       data: {
         email: user.email,
-        lastName: user.name || "未設定",
+        lastName: user.name || CUSTOMER_PLACEHOLDER_NAME,
         firstName: "",
         userId: user.id,
       },

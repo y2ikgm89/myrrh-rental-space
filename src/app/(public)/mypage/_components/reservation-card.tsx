@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
+import { Heading } from "@/public/components/design-system/heading";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,9 +97,9 @@ export function ReservationCard({
     <div className="rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-lg">
       {/* Header: space name + status */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-heading text-lg font-semibold tracking-[var(--tracking-tight)]">
+        <Heading level={3} className="!text-lg">
           {space.name}
-        </h3>
+        </Heading>
         <Badge variant={getStatusVariant(status)}>
           {getStatusLabel(status)}
         </Badge>
@@ -134,8 +135,8 @@ export function ReservationCard({
 
         {canCancel && (
           <Link
-            href={`/mypage/reservations/${id}/cancel`}
-            className="text-sm text-primary hover:underline"
+            href={`/mypage/reservations/${id}`}
+            className="text-sm text-destructive hover:underline"
           >
             キャンセル
           </Link>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
+import { Heading } from "@/public/components/design-system/heading";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -127,19 +128,17 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
     createdAt,
   } = reservation;
 
-  const couponDiscount =
-    couponDiscountAmount != null ? Number(couponDiscountAmount) : 0;
-  const durationDiscount =
-    durationDiscountAmount != null ? Number(durationDiscountAmount) : 0;
+  const couponDiscount = couponDiscountAmount ?? 0;
+  const durationDiscount = durationDiscountAmount ?? 0;
   const hasDiscount = couponDiscount > 0 || durationDiscount > 0;
 
   return (
     <div className="rounded-lg border border-border bg-card">
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-border">
-        <h2 className="font-heading text-xl font-semibold tracking-tight">
+        <Heading level={2} className="!text-xl">
           {space.name}
-        </h2>
+        </Heading>
         <Badge variant={getStatusVariant(status)}>
           {getStatusLabel(status)}
         </Badge>
@@ -154,9 +153,7 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
         </DetailRow>
 
         {hasDiscount && basePrice != null && (
-          <DetailRow label="基本料金">
-            ¥{Number(basePrice).toLocaleString()}
-          </DetailRow>
+          <DetailRow label="基本料金">¥{basePrice.toLocaleString()}</DetailRow>
         )}
 
         {couponDiscount > 0 && (

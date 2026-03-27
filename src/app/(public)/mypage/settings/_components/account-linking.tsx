@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { Heading } from "@/public/components/design-system/heading";
 import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
 
@@ -86,7 +87,7 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
           return;
         }
         // Server-side user deleted, now sign out client
-        await signOut({ fetchOptions: { onSuccess: () => {} } });
+        await signOut();
         window.location.href = "/login";
       } catch {
         setError("アカウントの削除に失敗しました");
@@ -118,9 +119,12 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
             >
               <div className="flex items-center gap-3">
                 {isLinked ? (
-                  <Check className="h-4 w-4 text-accent" />
+                  <Check className="h-4 w-4 text-accent" aria-hidden="true" />
                 ) : (
-                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <Link2
+                    className="h-4 w-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                 )}
                 <span className="text-sm font-medium">{provider.label}</span>
                 {isLinked && (
@@ -141,7 +145,10 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
                     "解除中..."
                   ) : (
                     <>
-                      <Unlink className="mr-1.5 h-3.5 w-3.5" />
+                      <Unlink
+                        className="mr-1.5 h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
                       解除
                     </>
                   )}
@@ -168,9 +175,9 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
 
       {/* Account deletion */}
       <div className="pt-6 border-t border-border">
-        <h3 className="text-sm font-medium text-destructive mb-2">
+        <Heading level={3} className="!text-sm text-destructive mb-2">
           アカウント削除
-        </h3>
+        </Heading>
         <p className="text-xs text-muted-foreground mb-4">
           アカウントを削除すると、ログインできなくなります。予約履歴は管理上保持されます。
         </p>

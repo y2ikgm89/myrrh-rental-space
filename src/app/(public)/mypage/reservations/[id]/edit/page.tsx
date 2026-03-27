@@ -86,11 +86,27 @@ export default async function ReservationEditPage({
     reservation.space.locationId,
   );
 
+  // タイムゾーンを明示して JST で日付・時刻文字列を生成（Cloud Run は UTC）
+  const TZ = "Asia/Tokyo";
   const startDate = reservation.startTime;
   const endDate = reservation.endTime;
-  const dateStr = `${String(startDate.getFullYear())}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
-  const startTimeStr = `${String(startDate.getHours()).padStart(2, "0")}:${String(startDate.getMinutes()).padStart(2, "0")}`;
-  const endTimeStr = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+
+  const dateFormatter = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const dateStr = dateFormatter.format(startDate);
+  const startTimeStr = timeFormatter.format(startDate);
+  const endTimeStr = timeFormatter.format(endDate);
 
   return (
     <div className="max-w-2xl">

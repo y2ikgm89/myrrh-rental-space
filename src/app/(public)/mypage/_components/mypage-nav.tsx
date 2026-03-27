@@ -12,7 +12,10 @@ export function MypageNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-4 border-b border-border mb-8 pb-2">
+    <nav
+      aria-label="マイページナビゲーション"
+      className="flex gap-4 border-b border-border mb-8 pb-2"
+    >
       {NAV_ITEMS.map((item) => {
         const isActive =
           item.href === "/mypage"

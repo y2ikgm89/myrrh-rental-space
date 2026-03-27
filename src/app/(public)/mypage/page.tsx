@@ -14,6 +14,7 @@ import { buildReservationListItems } from "./_lib/build-reservation-list-items";
 import { toPlainArray } from "@/shared/lib/serialize";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
+import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
 import { ReservationList } from "./_components/reservation-list";
 
 export default async function MypagePage(): Promise<ReactElement> {
@@ -43,7 +44,8 @@ export default async function MypagePage(): Promise<ReactElement> {
   );
 
   const isNameIncomplete =
-    customer.lastName === "未設定" || customer.firstName === "";
+    customer.lastName === CUSTOMER_PLACEHOLDER_NAME ||
+    customer.firstName === "";
 
   return (
     <div>
