@@ -89,6 +89,8 @@ export async function getSpaceReviewStats(spaceId: string) {
 
 /**
  * 複数スペースのレビュー統計を一括取得（スペース一覧カード用）
+ *
+ * Record<spaceId, stats> を返す（Map は JSON シリアライズ不可のため Record を使用）
  */
 export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
   "use cache";
@@ -97,7 +99,7 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
 
   if (spaceIds.length === 0) {
     return toPlainObject(
-      new Map<string, { averageRating: number; totalCount: number }>(),
+      {} as Record<string, { averageRating: number; totalCount: number }>,
     );
   }
 
@@ -110,25 +112,49 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
         _count: { id: true },
       });
 
-      const statsMap = new Map<
+      const statsRecord: Record<
         string,
         { averageRating: number; totalCount: number }
-      >();
+      > = {};
 
       for (const r of reviews) {
-        statsMap.set(r.spaceId, {
+        statsRecord[r.spaceId] = {
           averageRating: r._avg.rating ? Number(r._avg.rating) : 0,
           totalCount: r._count.id,
-        });
+        };
       }
 
-      return statsMap;
+      return statsRecord;
     },
-    fallback: new Map<string, { averageRating: number; totalCount: number }>(),
+    fallback: {} as Record<
+      string,
+      { averageRating: number; totalCount: number }
+    >,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: "getSpaceReviewStatsMultiple",
   });
 
   return toPlainObject(result);
+}
+
+/**
+ * 予約に対するレビューを取得（マイページ用）
+ *
+ * 顧客の予約詳細ページで既存レビューの表示判定に使用
+ */
+export async function getReviewForReservation(
+  reservationId: string,
+  customerId: string,
+) {
+  return prisma.spaceReview.findFirst({
+    where: { reservationId, customerId },
+    select: {
+      id: true,
+      rating: true,
+      title: true,
+      comment: true,
+      createdAt: true,
+    },
+  });
 }

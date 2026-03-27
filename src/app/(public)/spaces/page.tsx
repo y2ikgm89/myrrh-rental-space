@@ -18,6 +18,7 @@ import {
   getPublishedSpacesPaginated,
   getActiveCategories,
 } from "@/shared/domain/spaces/public-queries";
+import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import { spaceSearchParams } from "@/public/lib/search-params";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
@@ -61,6 +62,8 @@ export default async function SpacesPage({
       getActiveCategories(),
     ]);
 
+  const reviewStats = await getSpaceReviewStatsMultiple(items.map((s) => s.id));
+
   return (
     <>
       <PageHero
@@ -84,7 +87,7 @@ export default async function SpacesPage({
             </div>
           </Suspense>
           <Suspense fallback={null}>
-            <SpaceGrid spaces={items} />
+            <SpaceGrid spaces={items} reviewStats={reviewStats} />
           </Suspense>
           <Pagination
             currentPage={currentPage}

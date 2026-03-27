@@ -12,6 +12,7 @@ import { SpaceGallery } from "./_components/space-gallery";
 import { SpaceInfo } from "./_components/space-info";
 import { ReservationWidget } from "./_components/reservation-widget";
 import { RelatedSpaces } from "./_components/related-spaces";
+import { SpaceReviews } from "./_components/space-reviews";
 
 interface SpaceDetailPageProps {
   readonly params: Promise<{ slug: string }>;
@@ -72,7 +73,12 @@ export default async function SpaceDetailPage({
           />
 
           <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_380px]">
-            <SpaceInfo space={space} />
+            <div>
+              <SpaceInfo space={space} />
+              <Suspense fallback={null}>
+                <SpaceReviews spaceId={space.id} />
+              </Suspense>
+            </div>
             <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
               <ReservationWidget
                 spaceName={space.name}

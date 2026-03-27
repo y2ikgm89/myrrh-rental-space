@@ -16,11 +16,17 @@ interface Space {
   readonly location: { readonly name: string };
 }
 
-interface SpaceGridProps {
-  readonly spaces: readonly Space[];
+interface ReviewStats {
+  readonly averageRating: number;
+  readonly totalCount: number;
 }
 
-export function SpaceGrid({ spaces }: SpaceGridProps) {
+interface SpaceGridProps {
+  readonly spaces: readonly Space[];
+  readonly reviewStats?: Readonly<Record<string, ReviewStats>>;
+}
+
+export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
   if (spaces.length === 0) {
     return (
       <p className="py-12 text-center text-muted-foreground">
@@ -31,23 +37,32 @@ export function SpaceGrid({ spaces }: SpaceGridProps) {
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
-      {spaces.map((space) => (
-        <SpaceCard
-          key={space.id}
-          slug={space.slug}
-          name={space.name}
-          description={space.description}
-          capacity={space.capacity}
-          area={space.area}
-          hourlyPrice={space.hourlyPrice}
-          dailyPrice={space.dailyPrice}
-          locationName={space.location.name}
-          lineAddress={space.lineAddress}
-          facilities={space.facilities}
-          mainImageUrl={space.mainImageUrl}
-          categoryName={space.category?.name}
-        />
-      ))}
+      {spaces.map((space) => {
+        const stats = reviewStats?.[space.id];
+        return (
+          <SpaceCard
+            key={space.id}
+            slug={space.slug}
+            name={space.name}
+            description={space.description}
+            capacity={space.capacity}
+            area={space.area}
+            hourlyPrice={space.hourlyPrice}
+            dailyPrice={space.dailyPrice}
+            locationName={space.location.name}
+            lineAddress={space.lineAddress}
+            facilities={space.facilities}
+            mainImageUrl={space.mainImageUrl}
+            categoryName={space.category?.name}
+            {...(stats && stats.totalCount > 0
+              ? {
+                  averageRating: stats.averageRating,
+                  reviewCount: stats.totalCount,
+                }
+              : {})}
+          />
+        );
+      })}
     </div>
   );
 }

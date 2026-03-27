@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Users, Ruler } from "lucide-react";
+import { MapPin, Users, Ruler, Star } from "lucide-react";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
 
@@ -21,6 +21,9 @@ interface SpaceCardProps {
   readonly lineAddress?: string | undefined;
   readonly facilities?: readonly string[] | undefined;
   readonly dailyPrice?: number | null | undefined;
+  // Review stats (optional — only renders when totalCount > 0)
+  readonly averageRating?: number | undefined;
+  readonly reviewCount?: number | undefined;
 }
 
 export function SpaceCard({
@@ -36,6 +39,8 @@ export function SpaceCard({
   lineAddress,
   facilities,
   dailyPrice,
+  averageRating,
+  reviewCount,
 }: SpaceCardProps) {
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
   const [showOverlay, setShowOverlay] = useState(false);
@@ -141,6 +146,19 @@ export function SpaceCard({
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
             {description}
           </p>
+        ) : null}
+        {reviewCount != null && reviewCount > 0 && averageRating != null ? (
+          <div className="mt-2 flex items-center gap-1 text-sm">
+            <Star
+              className="h-3.5 w-3.5 text-rating"
+              fill="currentColor"
+              aria-hidden="true"
+            />
+            <span className="font-medium text-rating">
+              {averageRating.toFixed(1)}
+            </span>
+            <span className="text-muted-foreground">({reviewCount}件)</span>
+          </div>
         ) : null}
         {capacity != null || hourlyPrice != null ? (
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">

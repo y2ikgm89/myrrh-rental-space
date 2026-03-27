@@ -13,11 +13,15 @@ import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
+import { ReservationStatus } from "@/shared/db/enums";
 import { toPlainObject } from "@/shared/lib/serialize";
+import { getReviewForReservation } from "@/shared/domain/reviews/public-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
+import { ReviewForm } from "./_components/review-form";
+import { ReviewDisplay } from "./_components/review-display";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -83,6 +87,12 @@ export default async function ReservationDetailPage({
       now,
     );
 
+  const isCompleted = reservation.status === ReservationStatus.COMPLETED;
+
+  const existingReview = isCompleted
+    ? await getReviewForReservation(reservation.id, customer.id)
+    : null;
+
   const serializedReservation = toPlainObject({
     ...reservation,
     startTime: reservation.startTime.toISOString(),
@@ -111,6 +121,17 @@ export default async function ReservationDetailPage({
           {canCancel && <CancelButton reservationId={reservation.id} />}
         </div>
       )}
+
+      {isCompleted && existingReview ? (
+        <ReviewDisplay review={existingReview} />
+      ) : null}
+
+      {isCompleted && !existingReview ? (
+        <ReviewForm
+          reservationId={reservation.id}
+          spaceName={reservation.space.name}
+        />
+      ) : null}
     </div>
   );
 }
