@@ -496,3 +496,27 @@ export const adminSpaceSearchParamsParsers = {
 export const adminSpaceSearchParamsCache = createSearchParamsCache(
   adminSpaceSearchParamsParsers,
 );
+
+// ============================================================
+// 管理画面レビュー検索
+// ============================================================
+
+export const adminReviewSearchParamsParsers = {
+  search: parseAsQuery,
+  rating: parseAsString.withDefault(""),
+  published: parseAsString.withDefault(""),
+  page: parseAsPage,
+  perPage: parseAsPerPage,
+};
+
+const adminReviewSearchParamsCache = createSearchParamsCache(
+  adminReviewSearchParamsParsers,
+);
+
+/** 管理画面レビュー検索パラメータローダー */
+export async function loadAdminReviewSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminReviewSearchParamsCache.parse(searchParams);
+  return adminReviewSearchParamsCache.all();
+}

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { prisma } from "@/shared/db/prisma";
+import { prisma, type Prisma } from "@/shared/db/prisma";
 
 const reviewListSelect = {
   id: true,
@@ -42,6 +42,7 @@ function formatReviewRow(r: ReviewListRow) {
 
 export async function getReviewsQuery(
   filters: {
+    search?: string;
     spaceId?: string;
     rating?: number;
     isPublished?: boolean | "ALL";
@@ -53,7 +54,7 @@ export async function getReviewsQuery(
     sortOrder?: "asc" | "desc";
   } = {},
 ) {
-  const { spaceId, rating, isPublished } = filters;
+  const { search, spaceId, rating, isPublished } = filters;
   const {
     page = 1,
     limit = 10,
@@ -61,23 +62,41 @@ export async function getReviewsQuery(
     sortOrder = "desc",
   } = pagination;
 
-  const where: {
-    spaceId?: string;
-    rating?: number;
-    isPublished?: boolean;
-  } = {};
+  const conditions: Prisma.SpaceReviewWhereInput[] = [];
 
   if (spaceId) {
-    where.spaceId = spaceId;
+    conditions.push({ spaceId });
   }
 
   if (rating !== undefined) {
-    where.rating = rating;
+    conditions.push({ rating });
   }
 
   if (isPublished !== undefined && isPublished !== "ALL") {
-    where.isPublished = isPublished;
+    conditions.push({ isPublished });
   }
+
+  if (search) {
+    conditions.push({
+      OR: [
+        { space: { name: { contains: search, mode: "insensitive" } } },
+        {
+          customer: {
+            lastName: { contains: search, mode: "insensitive" },
+          },
+        },
+        {
+          customer: {
+            firstName: { contains: search, mode: "insensitive" },
+          },
+        },
+        { title: { contains: search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  const where: Prisma.SpaceReviewWhereInput =
+    conditions.length > 0 ? { AND: conditions } : {};
 
   const [total, reviews] = await prisma.$transaction([
     prisma.spaceReview.count({ where }),
