@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.5.5 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
+> Better Auth 1.5.6 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
 
 ## Better Auth 公式パターン
 
@@ -468,3 +468,4 @@ export async function getReservationDeadlineSettings() {
 - **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例
+- **Better Auth クライアントの `forgetPassword` は `InferClientAPI` で型推論されない** — `emailAndPassword` のコア機能だが、クライアント型に含まれない。`authClient.$fetch("/request-password-reset", { method: "POST", body: { email, redirectTo } })` で直接呼び出す。`resetPassword` は型推論される

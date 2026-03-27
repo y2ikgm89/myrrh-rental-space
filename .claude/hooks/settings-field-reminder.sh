@@ -47,7 +47,7 @@ cat <<'MSG'
 📋 Settings モデルにフィールドが追加されました。以下 4 箇所の更新が必要です:
 
   1. src/shared/domain/settings/types.ts — SettingsData 型にフィールド追加
-  2. src/shared/domain/settings/queries.ts — get*Settings() クエリ追加
+  2. src/shared/domain/settings/queries/<category>.ts — get*Settings() クエリ追加
   3. src/shared/domain/settings/commands.ts — update*Settings() コマンド追加
   4. actions/settings/schemas.ts + other.ts — Zod スキーマ + Server Action 追加
 
