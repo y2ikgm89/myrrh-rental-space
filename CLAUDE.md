@@ -74,7 +74,8 @@ bun run e2e                                   # E2E テスト（Playwright）
 - 管理画面詳細の削除: `DetailDeleteButton` をヘッダー actions に配置（ページ最下部カード禁止）
 - 複雑な管理 CRUD: `useActionState` + `FormData` + Server Action 可（`admin-ui-patterns.md`）
 - 公開ページ: Page-First Architecture、Design System 直接 import（barrel 禁止）
-- 公開フォーム: `usePublicForm` + Turnstile + fireAndForget メール
+- 公開フォーム（未認証）: `usePublicForm` + Turnstile + fireAndForget メール
+- マイページ Server Actions: `getSession()` + `MutationResult<T>` + `DomainError` catch（`executeAdminMutationResult` 不使用、Turnstile 不要）
 - 公開フォーム autoComplete: `family-name` / `given-name` / `email` / `organization` を適切に設定
 - 公開フォーム個人/法人切り替え: `CustomerTypeToggle` + `customerType` Zod enum + `companyName` 条件必須 refine（`customer-type.ts` に共通化）
 - ドメインコマンド戻り値: 通知/カレンダー/メール用データは `payload` で統一返却（二重返却禁止）
@@ -82,6 +83,7 @@ bun run e2e                                   # E2E テスト（Playwright）
 - Prisma tx 内の顧客解決: `upsert` 使用（find+create/update の手動実装禁止）
 - ドメインコマンドの共通ロジック: ヘルパー関数に抽出（重複チェック・統計更新・ペイロード構築）
 - 予約ステータス遷移: `RESERVATION_STATUS_TRANSITIONS`（`helpers.ts`）で一元管理。UI Select / ドメイン commands 両方で参照
+- 予約ステータスのアクティブ判定: `ACTIVE_RESERVATION_STATUSES`（`enums/helpers.ts`）を使用（`new Set(["PENDING", "CONFIRMED"])` のローカル定義禁止）
 - enum 拡張時: Badge, Filter, Select, Calendar色, Zod schema, 統計クエリ, カレンダー同期, seed を全確認
 - Role enum 追加時: `Record<Role, ...>` 箇所（status-badges, permissions, UserForm）+ テスト（enum count）を全更新
 - 公開ページ認証: `verifyCustomerSession()` で CUSTOMER ロール確認（未認証→`/login`、管理者→`/admin`）
