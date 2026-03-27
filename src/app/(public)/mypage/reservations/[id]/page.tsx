@@ -123,7 +123,12 @@ export default async function ReservationDetailPage({
       )}
 
       {isCompleted && existingReview ? (
-        <ReviewDisplay review={existingReview} />
+        <ReviewDisplay
+          review={{
+            ...existingReview,
+            createdAt: existingReview.createdAt.toISOString(),
+          }}
+        />
       ) : null}
 
       {isCompleted && !existingReview ? (

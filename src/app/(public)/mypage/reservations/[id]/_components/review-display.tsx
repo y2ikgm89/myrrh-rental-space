@@ -1,6 +1,7 @@
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
 import { StarRating } from "@/public/components/ui/star-rating";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -11,7 +12,7 @@ interface ReviewDisplayProps {
     readonly rating: number;
     readonly title: string | null;
     readonly comment: string | null;
-    readonly createdAt: Date;
+    readonly createdAt: string;
   };
 }
 
@@ -39,7 +40,7 @@ export function ReviewDisplay({ review }: ReviewDisplayProps) {
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          投稿日: {new Date(review.createdAt).toLocaleDateString("ja-JP")}
+          投稿日: {formatSerializedDate(review.createdAt)}
         </p>
       </div>
     </section>
