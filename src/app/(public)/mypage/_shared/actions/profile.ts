@@ -10,6 +10,11 @@ import {
 } from "@/shared/lib/mutation-result";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
+import {
   customerProfileSchema,
   type CustomerProfileInput,
 } from "@/shared/lib/validations/customer-profile";
@@ -23,13 +28,22 @@ export async function updateProfileAction(
   const parsed = customerProfileSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  await updateCustomerProfileByUserId(session.user.id, {
-    lastName: parsed.data.lastName,
-    firstName: parsed.data.firstName,
-    phoneNumber: parsed.data.phoneNumber || null,
-  });
+  try {
+    await updateCustomerProfileByUserId(session.user.id, {
+      lastName: parsed.data.lastName,
+      firstName: parsed.data.firstName,
+      phoneNumber: parsed.data.phoneNumber || null,
+    });
 
-  updateTag(CACHE_TAGS.CUSTOMERS);
+    updateTag(CACHE_TAGS.CUSTOMERS);
 
-  return null;
+    return null;
+  } catch (error) {
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: "updateProfile", userId: session.user.id },
+    });
+    return createMutationError("プロフィールの更新に失敗しました");
+  }
 }

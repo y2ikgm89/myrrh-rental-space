@@ -12,6 +12,7 @@ import { getCustomerReservationDetail } from "@/shared/domain/reservations/custo
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { toPlainObject } from "@/shared/lib/serialize";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
@@ -22,7 +23,7 @@ import { CancelButton } from "./_components/cancel-button";
 // Constants
 // ---------------------------------------------------------------------------
 
-const CANCELLABLE_STATUSES = new Set(["PENDING", "CONFIRMED"]);
+const CANCELLABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
 
 // ---------------------------------------------------------------------------
 // Page
@@ -67,11 +68,11 @@ export default async function ReservationDetailPage({
 
   const hasManualDiscount =
     (reservation.couponDiscountAmount != null &&
-      Number(reservation.couponDiscountAmount) > 0) ||
+      reservation.couponDiscountAmount > 0) ||
     (reservation.durationDiscountAmount != null &&
-      Number(reservation.durationDiscountAmount) > 0) ||
+      reservation.durationDiscountAmount > 0) ||
     (reservation.spaceDiscountAmount != null &&
-      Number(reservation.spaceDiscountAmount) > 0);
+      reservation.spaceDiscountAmount > 0);
 
   const canEdit =
     isCancellableStatus &&

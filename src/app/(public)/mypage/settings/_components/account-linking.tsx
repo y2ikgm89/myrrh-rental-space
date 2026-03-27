@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { getErrorMessage } from "@/shared/lib/errors";
 import { Heading } from "@/public/components/design-system/heading";
 import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
@@ -66,7 +67,8 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
       try {
         await unlinkAccount({ providerId });
         router.refresh();
-      } catch {
+      } catch (error) {
+        console.error("Failed to unlink account", getErrorMessage(error));
         setError("連携解除に失敗しました");
       } finally {
         setUnlinkingProvider(null);
@@ -89,7 +91,8 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
         // Server-side user deleted, now sign out client
         await signOut();
         window.location.href = "/login";
-      } catch {
+      } catch (error) {
+        console.error("Failed to delete account", getErrorMessage(error));
         setError("アカウントの削除に失敗しました");
         setIsDeleting(false);
       }

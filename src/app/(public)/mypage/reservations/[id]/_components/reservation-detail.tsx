@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
@@ -100,7 +101,7 @@ function formatCreatedAt(date: string): string {
 
 interface DetailRowProps {
   readonly label: string;
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
 }
 
 function DetailRow({ label, children }: DetailRowProps) {

@@ -13,6 +13,7 @@ import { getCustomerReservationDetail } from "@/shared/domain/reservations/custo
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { EditReservationForm } from "./_components/edit-reservation-form";
@@ -21,7 +22,7 @@ import { EditReservationForm } from "./_components/edit-reservation-form";
 // Constants
 // ---------------------------------------------------------------------------
 
-const EDITABLE_STATUSES = new Set(["PENDING", "CONFIRMED"]);
+const EDITABLE_STATUSES = new Set(ACTIVE_RESERVATION_STATUSES);
 
 // ---------------------------------------------------------------------------
 // Page
@@ -71,11 +72,11 @@ export default async function ReservationEditPage({
   // 手動割引チェック
   const hasManualDiscount =
     (reservation.couponDiscountAmount != null &&
-      Number(reservation.couponDiscountAmount) > 0) ||
+      reservation.couponDiscountAmount > 0) ||
     (reservation.durationDiscountAmount != null &&
-      Number(reservation.durationDiscountAmount) > 0) ||
+      reservation.durationDiscountAmount > 0) ||
     (reservation.spaceDiscountAmount != null &&
-      Number(reservation.spaceDiscountAmount) > 0);
+      reservation.spaceDiscountAmount > 0);
 
   if (hasManualDiscount) {
     redirect(`/mypage/reservations/${id}`);
