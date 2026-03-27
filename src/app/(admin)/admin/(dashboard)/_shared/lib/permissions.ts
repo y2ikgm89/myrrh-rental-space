@@ -39,7 +39,8 @@ export type Resource =
   | "announcementBar"
   | "media"
   | "coupon"
-  | "blockTemplate";
+  | "blockTemplate"
+  | "review";
 
 /** アクション種別 */
 export type Action =
@@ -160,6 +161,9 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "blockTemplate:read",
     "blockTemplate:delete",
     "blockTemplate:manage",
+    "review:read",
+    "review:update",
+    "review:delete",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -244,6 +248,9 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "blockTemplate:read",
     "blockTemplate:delete",
     "blockTemplate:manage",
+    "review:read",
+    "review:update",
+    "review:delete",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -279,6 +286,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "navigation:read",
     "announcementBar:read",
     "media:read",
+    "review:read",
   ],
   USER: [],
   CUSTOMER: [],
@@ -317,6 +325,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   media: "メディア",
   coupon: "クーポン",
   blockTemplate: "ブロックテンプレート",
+  review: "レビュー",
 };
 
 /**
