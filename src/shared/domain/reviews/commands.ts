@@ -5,7 +5,6 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { ReservationStatus } from "@/shared/db/enums";
 
 type CreateReviewInput = {
-  spaceId: string;
   customerId: string;
   reservationId: string;
   rating: number;
@@ -50,13 +49,9 @@ export async function createReviewCommand(input: CreateReviewInput) {
     );
   }
 
-  if (reservation.spaceId !== input.spaceId) {
-    throw new DomainError("予約のスペースが一致しません", "VALIDATION");
-  }
-
   return prisma.spaceReview.create({
     data: {
-      spaceId: input.spaceId,
+      spaceId: reservation.spaceId,
       customerId: input.customerId,
       reservationId: input.reservationId,
       rating: input.rating,
