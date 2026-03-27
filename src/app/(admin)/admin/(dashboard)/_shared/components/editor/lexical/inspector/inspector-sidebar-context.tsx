@@ -8,14 +8,7 @@
 
 "use client";
 
-import {
-  createContext,
-  use,
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, use, useState, type ReactNode } from "react";
 
 /** 値: `"1"` = 展開、`"0"` = 折りたたみ。未設定時は折りたたみ（執筆領域を広く取る）。 */
 const STORAGE_KEY = "myrrh-lexical-inspector-panel";
@@ -62,50 +55,44 @@ export function InspectorSidebarProvider({
     enabled ? readInitialExpanded() : false,
   );
 
-  const persist = useCallback((next: boolean) => {
+  const persist = (next: boolean) => {
     try {
       localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
     } catch {
       /* Storage 利用不可（プライベートモード等）は無視 */
     }
-  }, []);
+  };
 
-  const setExpanded = useCallback(
-    (next: boolean) => {
-      if (!enabled) return;
-      setIsExpanded(next);
-      persist(next);
-    },
-    [enabled, persist],
-  );
+  const setExpanded = (next: boolean) => {
+    if (!enabled) return;
+    setIsExpanded(next);
+    persist(next);
+  };
 
-  const toggle = useCallback(() => {
+  const toggle = () => {
     if (!enabled) return;
     setIsExpanded((prev) => {
       const next = !prev;
       persist(next);
       return next;
     });
-  }, [enabled, persist]);
+  };
 
-  const expand = useCallback(() => {
+  const expand = () => {
     setExpanded(true);
-  }, [setExpanded]);
+  };
 
-  const collapse = useCallback(() => {
+  const collapse = () => {
     setExpanded(false);
-  }, [setExpanded]);
+  };
 
-  const value = useMemo(
-    (): InspectorSidebarContextValue => ({
-      isExpanded: Boolean(enabled && isExpanded),
-      isInspectorAvailable: enabled,
-      toggle,
-      expand,
-      collapse,
-    }),
-    [enabled, isExpanded, toggle, expand, collapse],
-  );
+  const value: InspectorSidebarContextValue = {
+    isExpanded: Boolean(enabled && isExpanded),
+    isInspectorAvailable: enabled,
+    toggle,
+    expand,
+    collapse,
+  };
 
   return (
     <InspectorSidebarContext value={value}>{children}</InspectorSidebarContext>

@@ -7,7 +7,7 @@
  * ctx は RHF（register / control / …）とコンテンツ種別固有の extraProps をマージしたもの。
  */
 
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { tv } from "tailwind-variants";
 import type { FieldValues } from "react-hook-form";
 import {
@@ -51,7 +51,10 @@ const styles = tv({
   },
 });
 
-function buildRenderContext<TForm extends FieldValues, TExtra extends Record<string, unknown>>(
+function buildRenderContext<
+  TForm extends FieldValues,
+  TExtra extends Record<string, unknown>,
+>(
   base: {
     register: UnifiedSidePanelProps<TForm, TExtra>["register"];
     control: UnifiedSidePanelProps<TForm, TExtra>["control"];
@@ -89,8 +92,6 @@ export function UnifiedSidePanel<
   const classes = styles({ tabCount });
 
   const defaultTab = config.tabs[0]?.id ?? "basic";
-  const tabIds = useMemo(() => config.tabs.map((t) => t.id), [config.tabs]);
-  const validTabIds = useMemo(() => new Set(tabIds), [tabIds]);
 
   const [activeTab, setActiveTab] = useState(defaultTab);
 
@@ -99,14 +100,16 @@ export function UnifiedSidePanel<
   useLayoutEffect(() => {
     if (!config.tabStorageKey) return;
     const stored = window.localStorage.getItem(config.tabStorageKey);
-    if (stored && validTabIds.has(stored)) {
+    const ids = new Set(config.tabs.map((t) => t.id));
+    if (stored && ids.has(stored)) {
       setActiveTab(stored);
     }
-  }, [config.tabStorageKey, validTabIds]);
+  }, [config.tabStorageKey, config.tabs]);
   /* eslint-enable @eslint-react/set-state-in-effect */
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleTabChange = (value: string) => {
+    const validTabIds = new Set(config.tabs.map((t) => t.id));
     setActiveTab(value);
     if (config.tabStorageKey && validTabIds.has(value)) {
       window.localStorage.setItem(config.tabStorageKey, value);

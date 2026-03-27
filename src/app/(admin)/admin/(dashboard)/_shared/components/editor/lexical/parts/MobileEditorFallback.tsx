@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { CircleAlert, Monitor } from "lucide-react";
-import { SanitizedHtml } from "@/admin/components/SanitizedHtml";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { renderEditorStateJsonToHtmlClient } from "../preview/render-editor-state-to-html-client";
 
@@ -19,12 +18,9 @@ export function MobileEditorFallback({
   const trimmed = contentJson.trim();
   const jsonOk = isLexicalComposerReadyEditorStateJson(trimmed);
 
-  const previewHtml = useMemo(() => {
-    if (!jsonOk) {
-      return null;
-    }
-    return renderEditorStateJsonToHtmlClient(trimmed).trim();
-  }, [trimmed, jsonOk]);
+  const previewHtml = jsonOk
+    ? renderEditorStateJsonToHtmlClient(trimmed).trim()
+    : null;
 
   return (
     <div className="flex flex-col" style={{ height }}>
