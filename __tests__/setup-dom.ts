@@ -63,6 +63,9 @@ export function installJSDOMForTests(): void {
   defineGlobal(globalThis, "MutationObserver", window.MutationObserver);
   defineGlobal(globalThis, "customElements", window.customElements);
   defineGlobal(globalThis, "Event", window.Event);
+  defineGlobal(globalThis, "CustomEvent", window.CustomEvent);
+  defineGlobal(globalThis, "sessionStorage", window.sessionStorage);
+  defineGlobal(globalThis, "localStorage", window.localStorage);
   defineGlobal(
     globalThis,
     "getComputedStyle",
