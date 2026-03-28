@@ -37,7 +37,7 @@ interface UseKanaInputReturn {
 /**
  * ひらがなをカタカナに変換
  */
-function toKatakana(str: string): string {
+export function toKatakana(str: string): string {
   return str.replace(/[\u3041-\u3096]/g, (match) =>
     String.fromCharCode(match.charCodeAt(0) + 0x60),
   );
@@ -46,14 +46,14 @@ function toKatakana(str: string): string {
 /**
  * 文字列がひらがなのみかチェック（カタカナは含まない）
  */
-function isHiraganaOnly(str: string): boolean {
+export function isHiraganaOnly(str: string): boolean {
   return /^[\u3040-\u309F\u30FC]*$/.test(str);
 }
 
 /**
  * 文字列がひらがな・カタカナのみかチェック
  */
-function isKanaOnly(str: string): boolean {
+export function isKanaOnly(str: string): boolean {
   return /^[\u3040-\u309F\u30A0-\u30FF\u30FC\u30FB]*$/.test(str);
 }
 
