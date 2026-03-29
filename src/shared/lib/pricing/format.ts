@@ -5,8 +5,12 @@
  * utils.ts / price-format.ts の formatPrice は廃止。
  */
 
-import type { CouponType } from "@/shared/db/enums";
-import { DiscountType, TaxDisplayMode, TaxRateType } from "@/shared/db/enums";
+import {
+  CouponType,
+  DiscountType,
+  TaxDisplayMode,
+  TaxRateType,
+} from "@/shared/db/enums";
 import type { PriceCalculation, TaxPriceDisplayOptions } from "./types";
 import { calculateTaxIncludedPrice } from "./tax";
 
@@ -85,7 +89,7 @@ export function getTaxRateLabel(
 
 /** 割引額をフォーマット（表示用） */
 export function formatDiscountAmount(type: CouponType, value: number): string {
-  if (type === "PERCENTAGE") {
+  if (type === CouponType.PERCENTAGE) {
     return `${value}%OFF`;
   }
   return `\u00A5${value.toLocaleString()}OFF`;

@@ -34,7 +34,7 @@ async function main() {
     data: { token, expiresAt },
   });
 
-  const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || "http://localhost:3000";
+  const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000";
   const loginUrl = `${baseUrl}/admin/login?token=${token}`;
 
   console.log("");
