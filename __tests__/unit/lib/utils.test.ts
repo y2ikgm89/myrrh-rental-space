@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { formatCurrency, formatPrice } from "@/shared/lib/pricing/format";
 import {
   cn,
   escapeHtml,
@@ -6,8 +7,6 @@ import {
   getFormStringOrNull,
   getFormNumber,
   getFormBoolean,
-  formatCurrency,
-  formatPrice,
   formatDate,
   formatDateShort,
   formatDateTimeShort,

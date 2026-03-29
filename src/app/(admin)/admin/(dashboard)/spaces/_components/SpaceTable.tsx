@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Badge, Button, PublishSwitch } from "@/admin/components/ui";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { spaceDescriptionListSnippet } from "@/shared/lib/space-description-list-snippet";
 import { SpaceTableDesktop } from "./space-table-desktop";

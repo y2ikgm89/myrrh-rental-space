@@ -225,22 +225,9 @@ describe("formatPrice", () => {
       expect(result).toBe("¥1,234,567");
     });
 
-    test("showCurrency: false で通貨記号なし", () => {
-      const result = formatPrice(1000, { showCurrency: false });
-      expect(result).toBe("1,000");
-    });
-
-    test("showTaxLabel: true かつ taxLabel 指定でラベル付きになる", () => {
-      const result = formatPrice(1100, {
-        showTaxLabel: true,
-        taxLabel: "税込",
-      });
-      expect(result).toBe("¥1,100（税込）");
-    });
-
-    test("showTaxLabel: true でも taxLabel 未指定ではラベルなし", () => {
-      const result = formatPrice(1000, { showTaxLabel: true });
-      expect(result).toBe("¥1,000");
+    test("null にカスタムフォールバックを指定できる", () => {
+      const result = formatPrice(null, "未設定");
+      expect(result).toBe("未設定");
     });
 
     test("0円を正しくフォーマットする", () => {

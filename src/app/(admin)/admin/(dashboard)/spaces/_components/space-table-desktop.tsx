@@ -15,7 +15,7 @@ import {
 } from "@/admin/components/ui";
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { spaceDescriptionListSnippet } from "@/shared/lib/space-description-list-snippet";
 import { SpaceActionCell } from "./SpaceActionCell";
 

@@ -3,11 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  formatDateShort,
-  formatDateTimeShort,
-  formatPrice,
-} from "@/shared/lib/utils";
+import { formatDateShort, formatDateTimeShort } from "@/shared/lib/utils";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import { toast } from "sonner";
 import {
   Button,

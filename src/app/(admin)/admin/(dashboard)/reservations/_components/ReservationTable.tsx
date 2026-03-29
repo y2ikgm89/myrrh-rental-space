@@ -13,7 +13,7 @@ import {
 import { ReservationStatusSelect } from "./ReservationStatusSelect";
 import { ReservationActionCell } from "./ReservationActionCell";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
-import { formatPrice } from "@/shared/lib/utils";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
 
 // =============================================================================

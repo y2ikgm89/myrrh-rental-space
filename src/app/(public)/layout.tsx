@@ -1,8 +1,8 @@
 /**
- * 公開ページ Root Layout
+ * 公開ページ Root IconLayout
  *
  * Next.js 16 Multiple Root Layouts パターン
- * - 管理画面とは完全に分離された独立したRoot Layout
+ * - 管理画面とは完全に分離された独立したRoot IconLayout
  * - public.css で公開ページ専用テーマを適用
  * - 公開ページ ↔ 管理画面の遷移はフルページリロード（仕様）
  *
@@ -53,6 +53,8 @@ import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
 import { clientEnv } from "@/shared/lib/env/client";
+import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
+import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
 import "./_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -209,9 +211,17 @@ export default async function PublicRootLayout({
     );
   }
 
-  const headerSettings = await getHeaderSettings();
+  const [headerSettings, taxSettings] = await Promise.all([
+    getHeaderSettings(),
+    getPublicTaxSettings(),
+  ]);
   const isTransparent =
     headerSettings.backgroundMode === HeaderBackgroundMode.transparent;
+  const publicTaxDisplay = {
+    standardRate: taxSettings.standardRate,
+    reducedRate: taxSettings.reducedRate,
+    displayMode: taxSettings.displayModePublic,
+  };
 
   return (
     <html lang="ja">
@@ -227,46 +237,46 @@ export default async function PublicRootLayout({
         <Suspense fallback={null}>
           <StructuredDataContent />
         </Suspense>
-        <Suspense fallback={null}>
-          <AriaLiveProvider>
-            <div className="flex min-h-screen flex-col pb-16 md:pb-0">
-              {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
-              <SkipLink />
+        <AriaLiveProvider>
+          <div className="flex min-h-screen flex-col pb-16 md:pb-0">
+            {/* アクセシビリティ: スキップリンク（初回Tabで表示） */}
+            <SkipLink />
 
-              {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
-              <AnnouncementBarWrapper />
-              <Suspense fallback={null}>
-                <HeaderWithData headerSettings={headerSettings} />
-              </Suspense>
+            {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
+            <AnnouncementBarWrapper />
+            <Suspense fallback={null}>
+              <HeaderWithData headerSettings={headerSettings} />
+            </Suspense>
 
-              <main
-                id="main-content"
-                className="flex-1"
-                {...(isTransparent && {
-                  "data-header-transparent": "",
-                  style: {
-                    marginTop: "calc(var(--header-height, 0px) * -1)",
-                  },
-                })}
-              >
+            <main
+              id="main-content"
+              className="flex-1"
+              {...(isTransparent && {
+                "data-header-transparent": "",
+                style: {
+                  marginTop: "calc(var(--header-height, 0px) * -1)",
+                },
+              })}
+            >
+              <TaxSettingsProvider value={publicTaxDisplay}>
                 <LenisProvider>
                   <NuqsAdapter>{children}</NuqsAdapter>
                 </LenisProvider>
-              </main>
+              </TaxSettingsProvider>
+            </main>
 
-              <Footer />
-              <MobileNav />
+            <Footer />
+            <MobileNav />
 
-              {/* 動的コンテンツ - リクエスト時にストリーミング */}
-              <Suspense fallback={null}>
-                <DynamicContent />
-              </Suspense>
+            {/* 動的コンテンツ - リクエスト時にストリーミング */}
+            <Suspense fallback={null}>
+              <DynamicContent />
+            </Suspense>
 
-              {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
-              <AriaLiveRegion />
-            </div>
-          </AriaLiveProvider>
-        </Suspense>
+            {/* アクセシビリティ: スクリーンリーダー向け通知領域 */}
+            <AriaLiveRegion />
+          </div>
+        </AriaLiveProvider>
       </body>
     </html>
   );

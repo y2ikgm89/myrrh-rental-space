@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { formatCurrency, formatPrice } from "@/shared/lib/price-format";
+import { formatCurrency, formatPrice } from "@/shared/lib/pricing/format";
 
 // =============================================================================
 // formatCurrency

@@ -7,6 +7,7 @@
  */
 
 import "server-only";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
@@ -41,14 +42,6 @@ import type {
 
 async function getNotificationEmails(): Promise<string[]> {
   return getNotificationEmailAddressesQuery();
-}
-
-function formatPrice(price: number | null): string {
-  if (price === null) return "未設定";
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-  }).format(price);
 }
 
 async function getCalendarEmailSettings(): Promise<{
@@ -132,7 +125,7 @@ export async function sendReservationConfirmationEmail(
               reservationDate,
               startTime,
               endTime,
-              totalPrice: formatPrice(data.totalPrice),
+              totalPrice: formatPrice(data.totalPrice, "未設定"),
               reservationId: data.reservationId.slice(0, 8).toUpperCase(),
               notes: data.notes,
               addToCalendarLinks,
@@ -210,7 +203,7 @@ export async function sendReservationStatusChangedEmail(
               reservationDate,
               startTime,
               endTime,
-              totalPrice: formatPrice(data.totalPrice),
+              totalPrice: formatPrice(data.totalPrice, "未設定"),
               reservationId: data.reservationId.slice(0, 8).toUpperCase(),
               newStatus: data.newStatus,
               location: data.location,
@@ -263,7 +256,7 @@ export async function sendReservationAdminNotification(
           reservationDate,
           startTime,
           endTime,
-          totalPrice: formatPrice(data.totalPrice),
+          totalPrice: formatPrice(data.totalPrice, "未設定"),
           reservationId: data.reservationId.slice(0, 8).toUpperCase(),
           adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
         }),

@@ -6,7 +6,7 @@ import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteCoupon } from "@/admin/actions/coupon";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
-import { formatPrice } from "@/shared/lib/price-format";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import type { Metadata } from "next";
 
 type PageProps = {

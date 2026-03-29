@@ -3,11 +3,10 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import type { SpaceOption } from "@/shared/domain/locations/public-queries";
-import { Info } from "lucide-react";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { SpaceDetailDialog } from "./space-detail-dialog";
-
-const YEN = "\u00A5";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 export function SpaceSelector({
   spaces,
@@ -18,6 +17,7 @@ export function SpaceSelector({
   readonly selectedId: string | null;
   readonly onSelect: (id: string) => void;
 }): ReactElement {
+  const { formatUnit } = useFormatPrice();
   const isSingle = spaces.length === 1;
   const [detailSpace, setDetailSpace] = useState<SpaceOption | null>(null);
 
@@ -74,8 +74,7 @@ export function SpaceSelector({
                 </span>
                 <div className="mt-1.5 flex items-center justify-between">
                   <span className="font-heading text-sm text-accent">
-                    {YEN}
-                    {space.hourlyPrice.toLocaleString()}/h
+                    {formatUnit(space.hourlyPrice, "/h")}
                   </span>
                   <button
                     type="button"
@@ -86,7 +85,7 @@ export function SpaceSelector({
                       setDetailSpace(space);
                     }}
                   >
-                    <Info className="h-3 w-3" />
+                    <IconInfoCircle className="h-3 w-3" />
                     詳細を見る
                   </button>
                 </div>

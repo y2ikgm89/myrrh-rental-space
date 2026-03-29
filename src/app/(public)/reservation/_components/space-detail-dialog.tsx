@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import Image from "next/image";
-import { Users, Ruler } from "lucide-react";
+import { IconUsers, IconRuler2 } from "@tabler/icons-react";
 import type { SpaceOption } from "@/shared/domain/locations/public-queries";
 import { Button } from "@/public/components/design-system/button";
 import {
@@ -12,8 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/public/components/design-system/dialog";
-
-const YEN = "\u00A5";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 export function SpaceDetailDialog({
   space,
@@ -26,6 +25,7 @@ export function SpaceDetailDialog({
   readonly onSelect: (id: string) => void;
   readonly isSelected: boolean;
 }): ReactElement {
+  const { formatUnit } = useFormatPrice();
   const allImages =
     space !== null
       ? [space.mainImageUrl, ...space.imageUrls].filter(Boolean)
@@ -83,22 +83,20 @@ export function SpaceDetailDialog({
             {/* Metadata */}
             <div className="space-y-2 border-t border-border pt-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4 shrink-0" />
+                <IconUsers className="h-4 w-4 shrink-0" />
                 <span>定員{space.capacity}名</span>
               </div>
               {space.area != null ? (
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Ruler className="h-4 w-4 shrink-0" />
+                  <IconRuler2 className="h-4 w-4 shrink-0" />
                   <span>{space.area}㎡</span>
                 </div>
               ) : null}
               <div className="font-heading text-base text-accent">
-                {YEN}
-                {space.hourlyPrice.toLocaleString()}/h
+                {formatUnit(space.hourlyPrice, "/h")}
                 {space.dailyPrice != null ? (
                   <span className="ml-2 text-sm text-muted-foreground">
-                    {YEN}
-                    {space.dailyPrice.toLocaleString()}/day
+                    {formatUnit(space.dailyPrice, "/day")}
                   </span>
                 ) : null}
               </div>

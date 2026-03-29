@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/admin/components/ui/card";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { formatChange, getChangeColor } from "@/admin/lib/utils";
 
 export async function DashboardStatsSection() {

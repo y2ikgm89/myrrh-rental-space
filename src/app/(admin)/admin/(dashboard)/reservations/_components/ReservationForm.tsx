@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
-import { CalendarIcon } from "lucide-react";
+import { IconCalendar } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -28,7 +28,7 @@ import {
 } from "@/admin/lib/validations/admin-reservation";
 import { createAdminReservation } from "@/admin/actions/reservation";
 import { useFormAction } from "@/admin/hooks/useFormAction";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { CustomerSelector } from "./CustomerSelector";
@@ -183,7 +183,7 @@ export function ReservationForm({ spaces }: ReservationFormProps) {
                   disabled={isPending}
                   className="pr-10"
                 />
-                <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <IconCalendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               {errors.date && (
                 <p className="text-sm text-destructive">

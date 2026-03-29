@@ -29,11 +29,16 @@ import {
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@/shared/db/enums";
 import { PaymentStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
-import { PAYMENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { formatDateTimeFull, formatPrice } from "@/shared/lib/utils";
+import {
+  PAYMENT_STATUS_LABELS,
+  CANCELLED_BY,
+  CANCELLED_BY_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { formatDateTimeFull } from "@/shared/lib/utils";
+import { formatPrice } from "@/shared/lib/pricing/format";
 
 const PAYMENT_BADGE_VARIANTS: Record<
   string,
@@ -244,6 +249,40 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
           />
         </div>
       </DetailSection>
+
+      {/* キャンセル情報 */}
+      {reservation.status === ReservationStatus.CANCELLED && (
+        <DetailSection title="キャンセル情報">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DetailField
+              label="キャンセル者"
+              value={
+                reservation.cancelledByType === CANCELLED_BY.CUSTOMER
+                  ? CANCELLED_BY_LABELS[CANCELLED_BY.CUSTOMER]
+                  : reservation.cancelledByType === CANCELLED_BY.ADMIN
+                    ? CANCELLED_BY_LABELS[CANCELLED_BY.ADMIN]
+                    : "不明"
+              }
+            />
+            {reservation.cancelledAt && (
+              <DetailField
+                label="キャンセル日時"
+                value={reservation.cancelledAt}
+              />
+            )}
+          </div>
+          {reservation.cancellationReason && (
+            <DetailField
+              label="キャンセル理由"
+              value={
+                <p className="whitespace-pre-wrap text-sm">
+                  {reservation.cancellationReason}
+                </p>
+              }
+            />
+          )}
+        </DetailSection>
+      )}
 
       {/* メモ */}
       <Card>

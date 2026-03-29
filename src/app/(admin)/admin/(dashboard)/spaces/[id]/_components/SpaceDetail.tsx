@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import {
   Card,
   CardContent,
@@ -22,7 +22,8 @@ import { DetailField } from "@/admin/components/DetailField";
 import { updateSpacePublish } from "@/admin/actions/space";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
-import { formatDateTimeShort, formatCurrency } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 
 type SpaceDetailProps = {
   space: SpaceWithStats;
@@ -233,7 +234,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
                 className="absolute left-0 top-1/2 z-10 -translate-y-1/2"
                 onClick={handlePrev}
               >
-                <ChevronLeft className="size-5" />
+                <IconChevronLeft className="size-5" />
                 <span className="sr-only">前の画像</span>
               </Button>
             ) : null}
@@ -254,7 +255,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
                 className="absolute right-0 top-1/2 z-10 -translate-y-1/2"
                 onClick={handleNext}
               >
-                <ChevronRight className="size-5" />
+                <IconChevronRight className="size-5" />
                 <span className="sr-only">次の画像</span>
               </Button>
             ) : null}

@@ -4,14 +4,15 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
-  Clock,
-  MapPin,
-  User,
-  Mail,
-  Phone,
-  FileText,
-  ExternalLink,
-} from "lucide-react";
+  IconClock,
+  IconMapPin,
+  IconUser,
+  IconMail,
+  IconPhone,
+  IconFileText,
+  IconExternalLink,
+} from "@tabler/icons-react";
+import { formatPrice as formatPriceUtil } from "@/shared/lib/pricing/format";
 import {
   Dialog,
   DialogContent,
@@ -60,11 +61,7 @@ export function EventDetailDialog({
   };
 
   const formatPrice = (price: number | null) => {
-    if (price === null) return "-";
-    return new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency: "JPY",
-    }).format(price);
+    return formatPriceUtil(price, "-");
   };
 
   return (
@@ -81,7 +78,7 @@ export function EventDetailDialog({
           <div className="space-y-4">
             {/* 日時 */}
             <div className="flex items-start gap-3">
-              <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <IconClock className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="font-medium">
                   {/* eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here */}
@@ -100,7 +97,7 @@ export function EventDetailDialog({
 
             {/* スペース */}
             <div className="flex items-start gap-3">
-              <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+              <IconMapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="font-medium">{event.spaceName}</div>
                 <div className="text-sm text-muted-foreground">
@@ -112,11 +109,11 @@ export function EventDetailDialog({
             {/* 顧客情報 */}
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <IconUser className="h-4 w-4 text-muted-foreground" />
                 <span>{event.customerName}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <IconMail className="h-4 w-4 text-muted-foreground" />
                 <a
                   href={`mailto:${event.customerEmail}`}
                   className="text-primary hover:underline"
@@ -126,7 +123,7 @@ export function EventDetailDialog({
               </div>
               {event.customerPhone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <IconPhone className="h-4 w-4 text-muted-foreground" />
                   <a
                     href={`tel:${event.customerPhone}`}
                     className="text-primary hover:underline"
@@ -140,7 +137,7 @@ export function EventDetailDialog({
             {/* メモ */}
             {event.notes && (
               <div className="flex items-start gap-3">
-                <FileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <IconFileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">{event.notes}</p>
               </div>
             )}
@@ -184,7 +181,7 @@ export function EventDetailDialog({
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/admin/reservations/${event.id}`}>
                   詳細を見る
-                  <ExternalLink className="ml-2 h-4 w-4" />
+                  <IconExternalLink className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
             </div>

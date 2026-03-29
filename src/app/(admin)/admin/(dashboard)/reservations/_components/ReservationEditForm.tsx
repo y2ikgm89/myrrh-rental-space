@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useWatch } from "react-hook-form";
-import { CalendarIcon, User, Mail, Phone } from "lucide-react";
+import {
+  IconCalendar,
+  IconUser,
+  IconMail,
+  IconPhone,
+} from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -29,7 +34,7 @@ import {
 } from "@/admin/lib/validations/admin-reservation";
 import { updateAdminReservation } from "@/admin/actions/reservation";
 import { useFormAction } from "@/admin/hooks/useFormAction";
-import { formatCurrency } from "@/shared/lib/utils";
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/db/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { RESERVATION_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
@@ -228,7 +233,7 @@ export function ReservationEditForm({
                   disabled={isPending}
                   className="pr-10"
                 />
-                <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <IconCalendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
               {errors.date && (
                 <p className="text-sm text-destructive">
@@ -361,7 +366,7 @@ export function ReservationEditForm({
               <input type="hidden" {...register("customerId")} />
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <IconUser className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <Link
                     href={`/admin/customers/${reservation.customer.id}`}
                     className="font-medium hover:underline"
@@ -371,14 +376,14 @@ export function ReservationEditForm({
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <IconMail className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
                     {reservation.customer.email}
                   </span>
                 </div>
                 {reservation.customer.phoneNumber && (
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <IconPhone className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       {reservation.customer.phoneNumber}
                     </span>

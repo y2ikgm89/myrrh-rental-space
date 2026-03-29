@@ -1,19 +1,89 @@
 /**
- * 料金フォーマット関数
+ * 料金フォーマット関数（統一エントリポイント）
+ *
+ * 全ての料金表示はこのモジュールの関数を使用する。
+ * utils.ts / price-format.ts の formatPrice は廃止。
  */
 
 import type { CouponType } from "@/shared/db/enums";
 import { DiscountType, TaxDisplayMode, TaxRateType } from "@/shared/db/enums";
-import type {
-  PriceCalculation,
-  PriceFormatOptions,
-  TaxPriceDisplayOptions,
-} from "./types";
+import type { PriceCalculation, TaxPriceDisplayOptions } from "./types";
 import { calculateTaxIncludedPrice } from "./tax";
 
-/**
- * 割引額をフォーマット（表示用）
- */
+// ---------------------------------------------------------------------------
+// Base formatters
+// ---------------------------------------------------------------------------
+
+/** 日本円の通貨フォーマット */
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency: "JPY",
+  }).format(value);
+}
+
+/** 価格フォーマット（null/undefined 対応） */
+export function formatPrice(
+  value: number | null | undefined,
+  fallback = "要問合せ",
+): string {
+  if (value === null || value === undefined) return fallback;
+  return formatCurrency(value);
+}
+
+// ---------------------------------------------------------------------------
+// Tax-aware formatters
+// ---------------------------------------------------------------------------
+
+/** 税込/税抜価格をフォーマット（TaxDisplayMode に応じて表示切替） */
+export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
+  const { taxExcludedPrice, taxRate, displayMode } = options;
+  const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
+
+  switch (displayMode) {
+    case TaxDisplayMode.tax_excluded:
+      return `\u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
+    case TaxDisplayMode.tax_included:
+      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）`;
+    case TaxDisplayMode.both:
+      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）/ \u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
+  }
+}
+
+/** 単価を税表示モード付きでフォーマット（/h, /day 等のサフィックス対応） */
+export function formatUnitPriceWithTax(
+  taxExcludedPrice: number,
+  taxRate: number,
+  displayMode: TaxDisplayMode,
+  unit: string,
+): string {
+  const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
+
+  switch (displayMode) {
+    case TaxDisplayMode.tax_excluded:
+      return `\u00A5${taxExcludedPrice.toLocaleString("ja-JP")}${unit}（税抜）`;
+    case TaxDisplayMode.tax_included:
+      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}${unit}（税込）`;
+    case TaxDisplayMode.both:
+      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}${unit}（税込）`;
+  }
+}
+
+/** 税率ラベルを取得 */
+export function getTaxRateLabel(
+  taxRateType: TaxRateType,
+  taxRate: number,
+): string {
+  const typeLabel =
+    taxRateType === TaxRateType.reduced ? "軽減税率" : "標準税率";
+  return `${typeLabel}（${taxRate}%）`;
+}
+
+// ---------------------------------------------------------------------------
+// Discount formatters
+// ---------------------------------------------------------------------------
+
+/** 割引額をフォーマット（表示用） */
 export function formatDiscountAmount(type: CouponType, value: number): string {
   if (type === "PERCENTAGE") {
     return `${value}%OFF`;
@@ -21,9 +91,7 @@ export function formatDiscountAmount(type: CouponType, value: number): string {
   return `\u00A5${value.toLocaleString()}OFF`;
 }
 
-/**
- * 割引サマリーを生成（表示用）
- */
+/** 割引サマリーを生成（表示用） */
 export function formatDiscountSummary(calculation: PriceCalculation): string[] {
   const summaries: string[] = [];
 
@@ -54,49 +122,4 @@ export function formatDiscountSummary(calculation: PriceCalculation): string[] {
   }
 
   return summaries;
-}
-
-/**
- * 価格をフォーマット
- */
-export function formatPrice(
-  price: number,
-  options: PriceFormatOptions = {},
-): string {
-  const { showCurrency = true, showTaxLabel = false, taxLabel } = options;
-  const formattedPrice = price.toLocaleString("ja-JP");
-  let result = showCurrency ? `\u00A5${formattedPrice}` : formattedPrice;
-  if (showTaxLabel && taxLabel) {
-    result += `（${taxLabel}）`;
-  }
-  return result;
-}
-
-/**
- * 税込/税抜価格をフォーマット
- */
-export function formatPriceWithTax(options: TaxPriceDisplayOptions): string {
-  const { taxExcludedPrice, taxRate, displayMode } = options;
-  const taxIncludedPrice = calculateTaxIncludedPrice(taxExcludedPrice, taxRate);
-
-  switch (displayMode) {
-    case TaxDisplayMode.tax_excluded:
-      return `\u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
-    case TaxDisplayMode.tax_included:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）`;
-    case TaxDisplayMode.both:
-      return `\u00A5${taxIncludedPrice.toLocaleString("ja-JP")}（税込）/ \u00A5${taxExcludedPrice.toLocaleString("ja-JP")}（税抜）`;
-  }
-}
-
-/**
- * 税率ラベルを取得
- */
-export function getTaxRateLabel(
-  taxRateType: TaxRateType,
-  taxRate: number,
-): string {
-  const typeLabel =
-    taxRateType === TaxRateType.reduced ? "軽減税率" : "標準税率";
-  return `${typeLabel}（${taxRate}%）`;
 }

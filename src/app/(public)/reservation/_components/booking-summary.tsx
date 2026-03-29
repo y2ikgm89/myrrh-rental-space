@@ -1,8 +1,15 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { MapPin, CalendarDays, Clock, Users, Pencil } from "lucide-react";
+import {
+  IconMapPin,
+  IconCalendarEvent,
+  IconClock,
+  IconUsers,
+  IconPencil,
+} from "@tabler/icons-react";
 import { Heading } from "@/public/components/design-system/heading";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 interface BookingSummaryProps {
   readonly locationName: string;
@@ -76,6 +83,7 @@ export function BookingSummary({
   price,
   onEdit,
 }: BookingSummaryProps): ReactElement {
+  const { formatTotal } = useFormatPrice();
   const durationLabel = formatDurationLabel(startTime, endTime);
 
   return (
@@ -87,7 +95,7 @@ export function BookingSummary({
         </Heading>
         {price !== null ? (
           <p className="font-heading text-xl tracking-tight text-accent">
-            &yen;{price.toLocaleString()}
+            {formatTotal(price)}
           </p>
         ) : null}
       </div>
@@ -98,28 +106,28 @@ export function BookingSummary({
       {/* Detail rows */}
       <div className="grid gap-5 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-5">
         <SummaryRow
-          icon={<MapPin size={16} />}
+          icon={<IconMapPin size={16} />}
           label="場所"
           value={`${locationName} › ${spaceName}`}
         />
         <SummaryRow
-          icon={<CalendarDays size={16} />}
+          icon={<IconCalendarEvent size={16} />}
           label="日付"
           value={formatDateJa(date)}
         />
         <SummaryRow
-          icon={<Clock size={16} />}
+          icon={<IconClock size={16} />}
           label="時間"
           value={`${startTime} → ${endTime}（${durationLabel}）`}
         />
         <SummaryRow
-          icon={<Users size={16} />}
+          icon={<IconUsers size={16} />}
           label="人数"
           value={`${guests}名`}
         />
       </div>
 
-      {/* Edit button */}
+      {/* IconEdit button */}
       {onEdit ? (
         <>
           <div className="my-5 border-t border-border" />
@@ -128,7 +136,7 @@ export function BookingSummary({
             onClick={onEdit}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent/5"
           >
-            <Pencil size={14} />
+            <IconPencil size={14} />
             予約内容を変更する
           </button>
         </>

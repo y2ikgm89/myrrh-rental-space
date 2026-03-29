@@ -10,6 +10,7 @@
  * admin.css テーマと一致する oklch 値を定数として定義する。
  */
 
+import { formatPrice as formatPriceUtil } from "@/shared/lib/pricing/format";
 import {
   BarChart,
   Bar,
@@ -47,7 +48,7 @@ const CHART_COLORS = {
   tooltipBg: "oklch(1 0 0)",
 } as const;
 
-function formatCurrency(value: number): string {
+function formatAxisCurrency(value: number): string {
   if (value >= 10000) {
     return `${(value / 10000).toFixed(1)}万`;
   }
@@ -105,7 +106,7 @@ export function ReservationChart({ data }: ReservationChartProps) {
               tick={{ fontSize: 11 }}
               tickLine={false}
               axisLine={false}
-              tickFormatter={formatCurrency}
+              tickFormatter={formatAxisCurrency}
               width={50}
             />
             <Tooltip
@@ -118,7 +119,7 @@ export function ReservationChart({ data }: ReservationChartProps) {
               formatter={(value, name) => {
                 const numValue = typeof value === "number" ? value : 0;
                 if (name === "売上") {
-                  return [`¥${numValue.toLocaleString()}`, name];
+                  return [formatPriceUtil(numValue), name];
                 }
                 return [numValue, name];
               }}

@@ -112,36 +112,7 @@ export function getFormBoolean(formData: FormData, key: string): boolean {
 // フォーマット関数
 // =============================================================================
 
-/**
- * 日本円の通貨フォーマット
- *
- * @example
- * formatCurrency(12345) // → '¥12,345'
- */
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("ja-JP", {
-    style: "currency",
-    currency: "JPY",
-  }).format(value);
-}
-
-/**
- * 価格フォーマット（null/undefined 対応）
- *
- * 公開ページでの価格表示用。値が不明な場合はフォールバック文字列を返す。
- *
- * @example
- * formatPrice(12345)           // → '¥12,345'
- * formatPrice(null)            // → '要問合せ'
- * formatPrice(undefined, '-')  // → '-'
- */
-export function formatPrice(
-  value: number | null | undefined,
-  fallback = "要問合せ",
-): string {
-  if (value === null || value === undefined) return fallback;
-  return formatCurrency(value);
-}
+// formatCurrency / formatPrice は @/shared/lib/pricing/format に統合済み
 
 /**
  * 日付を日本語形式でフォーマット

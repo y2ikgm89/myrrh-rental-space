@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
+import type { PaymentStatus } from "@/shared/db/enums";
+import {
+  getValidPaymentStatus,
+  PAYMENT_STATUS_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,6 +20,7 @@ interface Reservation {
   readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
+  readonly paymentStatus: string;
   readonly notes: string | null;
   readonly createdAt: string;
   readonly space: {
@@ -60,6 +67,14 @@ function getStatusVariant(status: string): BadgeVariant {
   return STATUS_VARIANTS[status] ?? "default";
 }
 
+const PAYMENT_BADGE_VARIANTS: Record<PaymentStatus, BadgeVariant> = {
+  UNPAID: "warning",
+  PENDING: "warning",
+  PAID: "success",
+  REFUNDED: "info",
+  FAILED: "default",
+};
+
 // ---------------------------------------------------------------------------
 // Date formatting
 // ---------------------------------------------------------------------------
@@ -91,12 +106,14 @@ export function ReservationCard({
   canCancel,
   showPastDeadlineMessage,
 }: ReservationCardProps) {
+  const { formatTotal } = useFormatPrice();
   const { status, space, totalPrice, startTime, endTime, id } = reservation;
+  const paymentStatusEnum = getValidPaymentStatus(reservation.paymentStatus);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-lg">
+    <div className="rounded-lg border border-border bg-card p-4 sm:p-6 transition-shadow hover:shadow-lg">
       {/* Header: space name + status */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Heading level={3} className="!text-lg">
           {space.name}
         </Heading>
@@ -110,16 +127,23 @@ export function ReservationCard({
         <p>
           {formatDateTime(startTime)} 〜 {formatTimeOnly(endTime)}
         </p>
-        <p className="text-foreground font-medium">
-          {totalPrice != null ? `¥${totalPrice.toLocaleString()}` : "未定"}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-foreground font-medium">
+            {formatTotal(totalPrice, "未定")}
+          </p>
+          {paymentStatusEnum !== "PAID" && (
+            <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
+              {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-4 border-t border-border">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 border-t border-border">
         <Link
           href={`/mypage/reservations/${id}`}
-          className="text-sm text-primary hover:underline"
+          className="inline-block rounded-md px-3 py-1.5 text-sm text-primary hover:bg-accent/5 transition-colors"
         >
           詳細を見る
         </Link>
@@ -127,7 +151,7 @@ export function ReservationCard({
         {canModify && (
           <Link
             href={`/mypage/reservations/${id}/edit`}
-            className="text-sm text-primary hover:underline"
+            className="inline-block rounded-md px-3 py-1.5 text-sm text-primary hover:bg-accent/5 transition-colors"
           >
             変更
           </Link>
@@ -136,7 +160,7 @@ export function ReservationCard({
         {canCancel && (
           <Link
             href={`/mypage/reservations/${id}`}
-            className="text-sm text-destructive hover:underline"
+            className="inline-block rounded-md px-3 py-1.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
           >
             キャンセル
           </Link>

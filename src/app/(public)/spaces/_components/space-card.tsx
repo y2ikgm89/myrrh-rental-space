@@ -3,9 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Users, Ruler, Star } from "lucide-react";
+import {
+  IconMapPin,
+  IconUsers,
+  IconRuler2,
+  IconStar,
+} from "@tabler/icons-react";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 interface SpaceCardProps {
   readonly slug: string;
@@ -42,6 +48,7 @@ export function SpaceCard({
   averageRating,
   reviewCount,
 }: SpaceCardProps) {
+  const { formatUnit } = useFormatPrice();
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
   const [showOverlay, setShowOverlay] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -96,7 +103,7 @@ export function SpaceCard({
           >
             <div className="space-y-2 text-sm text-overlay-foreground">
               <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <IconMapPin className="h-3.5 w-3.5 shrink-0" />
                 <span className="font-medium">{locationName}</span>
               </div>
               <p className="text-xs text-overlay-foreground/80">
@@ -118,10 +125,10 @@ export function SpaceCard({
 
               {hourlyPrice != null ? (
                 <div className="pt-1 text-xs font-medium">
-                  <span>&yen;{hourlyPrice.toLocaleString()}/h</span>
+                  <span>{formatUnit(hourlyPrice, "/h")}</span>
                   {dailyPrice != null ? (
                     <span className="ml-2 text-overlay-foreground/80">
-                      &yen;{dailyPrice.toLocaleString()}/day
+                      {formatUnit(dailyPrice, "/day")}
                     </span>
                   ) : null}
                 </div>
@@ -149,7 +156,7 @@ export function SpaceCard({
         ) : null}
         {reviewCount != null && reviewCount > 0 && averageRating != null ? (
           <div className="mt-2 flex items-center gap-1 text-sm">
-            <Star
+            <IconStar
               className="h-3.5 w-3.5 text-rating"
               fill="currentColor"
               aria-hidden="true"
@@ -165,20 +172,20 @@ export function SpaceCard({
             <div className="flex items-center gap-3">
               {capacity != null ? (
                 <span className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
+                  <IconUsers className="h-4 w-4" />
                   {capacity}名
                 </span>
               ) : null}
               {area != null ? (
                 <span className="flex items-center gap-1">
-                  <Ruler className="h-4 w-4" />
+                  <IconRuler2 className="h-4 w-4" />
                   {area}㎡
                 </span>
               ) : null}
             </div>
             {hourlyPrice != null ? (
               <span className="font-medium text-accent">
-                &yen;{hourlyPrice.toLocaleString()}/h
+                {formatUnit(hourlyPrice, "/h")}
               </span>
             ) : null}
           </div>
