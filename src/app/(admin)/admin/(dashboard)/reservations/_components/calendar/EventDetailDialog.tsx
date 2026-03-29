@@ -12,7 +12,7 @@ import {
   IconFileText,
   IconExternalLink,
 } from "@tabler/icons-react";
-import { formatPrice as formatPriceUtil } from "@/shared/lib/pricing/format";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import {
   Dialog,
   DialogContent,
@@ -60,10 +60,6 @@ export function EventDetailDialog({
     onStatusChange(event.id, status);
   };
 
-  const formatPrice = (price: number | null) => {
-    return formatPriceUtil(price, "-");
-  };
-
   return (
     <Dialog open={!!event} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -101,7 +97,7 @@ export function EventDetailDialog({
               <div>
                 <div className="font-medium">{event.spaceName}</div>
                 <div className="text-sm text-muted-foreground">
-                  {formatPrice(event.totalPrice)}
+                  {formatPrice(event.totalPrice, "-")}
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@
  * admin.css テーマと一致する oklch 値を定数として定義する。
  */
 
-import { formatPrice as formatPriceUtil } from "@/shared/lib/pricing/format";
+import { formatPrice } from "@/shared/lib/pricing/format";
 import {
   BarChart,
   Bar,
@@ -119,7 +119,7 @@ export function ReservationChart({ data }: ReservationChartProps) {
               formatter={(value, name) => {
                 const numValue = typeof value === "number" ? value : 0;
                 if (name === "売上") {
-                  return [formatPriceUtil(numValue), name];
+                  return [formatPrice(numValue), name];
                 }
                 return [numValue, name];
               }}
