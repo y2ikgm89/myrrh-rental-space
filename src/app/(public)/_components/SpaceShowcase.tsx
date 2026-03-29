@@ -1,4 +1,5 @@
 "use client";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 /**
  * SpaceShowcase — Space card grid with stagger reveal
@@ -55,6 +56,7 @@ export function SpaceShowcase({
   spaces,
   design,
 }: SpaceShowcaseProps): ReactElement {
+  const { formatUnit } = useFormatPrice();
   const gridRef = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -150,7 +152,7 @@ export function SpaceShowcase({
                   </span>
                   {space.hourlyPrice != null && (
                     <span className="text-sm font-medium text-primary-dark">
-                      &yen;{space.hourlyPrice.toLocaleString()}/h
+                      {formatUnit(space.hourlyPrice, "/h")}
                     </span>
                   )}
                 </div>

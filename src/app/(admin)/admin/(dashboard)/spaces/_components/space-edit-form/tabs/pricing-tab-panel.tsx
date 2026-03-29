@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleHelp } from "lucide-react";
+import { IconHelpCircle } from "@tabler/icons-react";
 import type {
   Control,
   FieldErrors,
@@ -30,7 +30,7 @@ import {
   calculateTaxIncludedPrice,
   getTaxRate,
 } from "@/shared/lib/pricing/tax";
-import { getTaxRateLabel } from "@/shared/lib/pricing/format";
+import { getTaxRateLabel, formatCurrency } from "@/shared/lib/pricing/format";
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import {
   getValidTaxRateType,
@@ -222,7 +222,7 @@ export function SpaceEditPricingTabPanel({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <CircleHelp className="h-4 w-4 cursor-help text-muted-foreground" />
+                      <IconHelpCircle className="h-4 w-4 cursor-help text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>
@@ -303,23 +303,16 @@ export function SpaceEditPricingTabPanel({
                   <div className="space-y-0.5 text-right">
                     {hasDiscount && (
                       <div className="text-xs text-muted-foreground line-through">
-                        ¥{hourlyPrice.toLocaleString()}（税抜）
+                        {formatCurrency(hourlyPrice)}（税抜）
                       </div>
                     )}
                     <div className="text-sm">
-                      ¥
-                      {(hasDiscount
-                        ? discountedHourlyPrice
-                        : hourlyPrice
-                      ).toLocaleString()}
+                      {formatCurrency(hasDiscount ? discountedHourlyPrice : hourlyPrice)}
                       （税抜）
                     </div>
                     <div className="text-sm font-semibold text-primary">
-                      ¥
-                      {(hasDiscount
-                        ? discountedTaxIncludedHourlyPrice
-                        : taxIncludedHourlyPrice
-                      ).toLocaleString()}
+                      {formatCurrency(hasDiscount ? discountedTaxIncludedHourlyPrice : taxIncludedHourlyPrice)}
+
                       （税込）
                     </div>
                   </div>
@@ -330,24 +323,20 @@ export function SpaceEditPricingTabPanel({
                     <div className="space-y-0.5 text-right">
                       {hasDiscount && discountedDailyPrice !== null && (
                         <div className="text-xs text-muted-foreground line-through">
-                          ¥{dailyPrice.toLocaleString()}（税抜）
+                          {formatCurrency(dailyPrice)}（税抜）
                         </div>
                       )}
                       <div className="text-sm">
-                        ¥
-                        {(hasDiscount && discountedDailyPrice !== null
-                          ? discountedDailyPrice
-                          : dailyPrice
-                        ).toLocaleString()}
+                        {formatCurrency(hasDiscount && discountedDailyPrice !== null ? discountedDailyPrice : dailyPrice)}
+
                         （税抜）
                       </div>
                       <div className="text-sm font-semibold text-primary">
-                        ¥
-                        {(
+                        {formatCurrency((
                           discountedTaxIncludedDailyPrice ??
                           taxIncludedDailyPrice ??
                           0
-                        ).toLocaleString()}
+                        ))}
                         （税込）
                       </div>
                     </div>
@@ -358,7 +347,7 @@ export function SpaceEditPricingTabPanel({
                     割引:{" "}
                     {discountType === DiscountType.percentage
                       ? `${discountValue}% OFF`
-                      : `¥${discountValue?.toLocaleString()}引`}
+                      : `${formatCurrency(discountValue ?? 0)}引`}
                   </p>
                 )}
               </div>

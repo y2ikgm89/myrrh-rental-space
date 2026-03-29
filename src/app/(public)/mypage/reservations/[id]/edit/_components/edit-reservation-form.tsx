@@ -6,6 +6,7 @@ import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
 import { usePublicForm } from "@/public/hooks/use-public-form";
+import { formatCurrency } from '@/shared/lib/pricing/format';
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   customerReservationEditSchema,
@@ -71,7 +72,7 @@ export function EditReservationForm({
 
   const spaceOptions = spaces.map((s) => ({
     value: s.id,
-    label: `${s.name}（定員${String(s.capacity)}名・¥${s.hourlyPrice.toLocaleString()}/h）`,
+    label: `${s.name}（定員${String(s.capacity)}名・${formatCurrency(s.hourlyPrice)}/h）`,
   }));
 
   const { form, isPending, onSubmit } =
@@ -130,7 +131,7 @@ export function EditReservationForm({
         })}
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Select
           label="開始時間"
           options={TIME_OPTIONS}
@@ -152,7 +153,7 @@ export function EditReservationForm({
         />
       </div>
 
-      <div className="flex items-center gap-3 pt-2">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "変更中..." : "予約を変更する"}
         </Button>
