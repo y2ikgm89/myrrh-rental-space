@@ -9,7 +9,7 @@
 
 import { cacheLife, cacheTag } from "next/cache";
 export type { AnalyticsConfig } from "@/shared/domain/settings/queries/site";
-import { getAnalyticsConfig as getAnalyticsSettingsConfig } from "@/shared/domain/settings/queries/site";
+import * as siteQueries from "@/shared/domain/settings/queries/site";
 import type { AnalyticsConfig } from "@/shared/domain/settings/queries/site";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 import {
@@ -46,7 +46,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS);
 
   try {
-    return await getAnalyticsSettingsConfig();
+    return await siteQueries.getAnalyticsConfig();
   } catch (error) {
     logError(normalizeError(error), {
       category: ErrorCategory.DATABASE,

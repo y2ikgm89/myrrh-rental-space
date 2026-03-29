@@ -15,7 +15,7 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { updateDiscountSettings as updateDiscountSettingsCommand } from "@/shared/domain/settings/commands";
+import * as settingsCommands from "@/shared/domain/settings/commands";
 
 import { discountSettingsSchema, type DiscountSettingsInput } from "./schemas";
 
@@ -35,7 +35,7 @@ export async function updateDiscountSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateDiscountSettingsCommand(parsed.data);
+      await settingsCommands.updateDiscountSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateSettingsCache,

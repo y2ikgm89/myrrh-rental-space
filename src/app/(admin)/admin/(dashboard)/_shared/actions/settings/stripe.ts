@@ -10,17 +10,13 @@ import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { testStripeConnection as testStripeConnectionLib } from "@/admin/lib/stripe";
+import * as stripeLib from "@/admin/lib/stripe";
 import {
   stripeSettingsSchema,
   type StripeSettingsInput,
 } from "@/admin/lib/validations/stripe";
 import { DomainError } from "@/shared/domain/domain-error";
-import {
-  clearStripeKeys as clearStripeKeysCommand,
-  recordStripeConnectionSuccess,
-  updateStripeSettings as updateStripeSettingsCommand,
-} from "@/shared/domain/settings/commands";
+import * as settingsCommands from "@/shared/domain/settings/commands";
 import {
   logError,
   ErrorCategory,
@@ -49,7 +45,7 @@ export async function updateStripeSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateStripeSettingsCommand(omitUndefined(parsed.data));
+      await settingsCommands.updateStripeSettings(omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: () => {
@@ -68,7 +64,7 @@ export async function testStripeConnectionAction(
     resource: "settings",
     action: "update",
     execute: async () => {
-      const result = await testStripeConnectionLib(secretKey);
+      const result = await stripeLib.testStripeConnection(secretKey);
       if (!result.success) {
         throw new DomainError(
           result.error ?? "接続テストに失敗しました",
@@ -77,7 +73,7 @@ export async function testStripeConnectionAction(
       }
 
       try {
-        await recordStripeConnectionSuccess(result.accountId);
+        await settingsCommands.recordStripeConnectionSuccess(result.accountId);
       } catch (error) {
         logError(normalizeError(error), {
           category: ErrorCategory.DATABASE,
@@ -105,7 +101,7 @@ export async function clearStripeKeys(): Promise<MutationResult> {
     resource: "settings",
     action: "update",
     execute: async () => {
-      await clearStripeKeysCommand();
+      await settingsCommands.clearStripeKeys();
       return null;
     },
     afterSuccess: () => {

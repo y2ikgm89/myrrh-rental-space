@@ -17,17 +17,8 @@ import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { updateAnnouncementBarCarouselSettings as updateAnnouncementBarCarouselSettingsCommand } from "@/shared/domain/settings/announcement-bar";
-import {
-  updateCookieConsentSettings as updateCookieConsentSettingsCommand,
-  updateFooterSettings as updateFooterSettingsCommand,
-  updateHeaderSettings as updateHeaderSettingsCommand,
-  updateMaintenanceSettings as updateMaintenanceSettingsCommand,
-  updatePermalinkSettings as updatePermalinkSettingsCommand,
-  updateReservationSettings as updateReservationSettingsCommand,
-  updateSidebarSettings as updateSidebarSettingsCommand,
-  updateTermsAgreementSettings as updateTermsAgreementSettingsCommand,
-} from "@/shared/domain/settings/commands";
+import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
+import * as settingsCommands from "@/shared/domain/settings/commands";
 
 import { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 import {
@@ -86,7 +77,7 @@ export async function updateMaintenanceSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateMaintenanceSettingsCommand(parsed.data);
+      await settingsCommands.updateMaintenanceSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateSettingsCache,
@@ -105,7 +96,7 @@ export async function updateCookieConsentSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateCookieConsentSettingsCommand(parsed.data);
+      await settingsCommands.updateCookieConsentSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateSettingsCache,
@@ -124,7 +115,7 @@ export async function updateTermsAgreementSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateTermsAgreementSettingsCommand(parsed.data);
+      await settingsCommands.updateTermsAgreementSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateReservationSettingsCache,
@@ -143,7 +134,7 @@ export async function updateReservationSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateReservationSettingsCommand(parsed.data);
+      await settingsCommands.updateReservationSettings(parsed.data);
       return null;
     },
     afterSuccess: () => {
@@ -165,7 +156,7 @@ export async function updateSidebarSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateSidebarSettingsCommand(parsed.data);
+      await settingsCommands.updateSidebarSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateSidebarSettingsCache,
@@ -184,7 +175,9 @@ export async function updateAnnouncementBarCarouselSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateAnnouncementBarCarouselSettingsCommand(parsed.data);
+      await announcementBarCommands.updateAnnouncementBarCarouselSettings(
+        parsed.data,
+      );
       return null;
     },
     afterSuccess: invalidateSettingsCache,
@@ -203,7 +196,7 @@ export async function updatePermalinkSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updatePermalinkSettingsCommand(parsed.data);
+      await settingsCommands.updatePermalinkSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidatePermalinkCache,
@@ -222,7 +215,7 @@ export async function updateHeaderSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateHeaderSettingsCommand(parsed.data);
+      await settingsCommands.updateHeaderSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateLayoutCache,
@@ -241,7 +234,7 @@ export async function updateFooterSettings(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await updateFooterSettingsCommand(parsed.data);
+      await settingsCommands.updateFooterSettings(parsed.data);
       return null;
     },
     afterSuccess: invalidateLayoutCache,
