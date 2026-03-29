@@ -14,6 +14,17 @@ paths:
 - **Admin Gate トークン生成の鶏と卵** — 管理画面APIでトークン生成するには既にログインが必要。初回は `bun prisma/seed.ts --admin`（自動URL出力）または `bun scripts/generate-login-url.ts` で生成
 - **proxy.ts の `/admin/login` ガードを削除しない** — Admin Gate が無効化されると管理画面ログインページが公開される。修正時は gate cookie / session / token の3条件を維持すること
 
+## 料金フォーマット
+
+- **`formatPrice` / `formatCurrency` は `@/shared/lib/pricing/format` が唯一の定義** — `utils.ts`・`price-format.ts` 等にローカル定義禁止。`formatPriceWithTax` / `formatUnitPriceWithTax` で税表示モード対応
+- **確定済み金額（予約レコード）には `formatPrice` を使う** — 予約確定時の税率で計算済みのため `formatPriceWithTax` で再計算しない
+- **公開ページの料金表示は `useFormatPrice` フック経由** — `TaxSettingsProvider`（layout.tsx）から税設定を取得。`toLocaleString()` での直接表示禁止
+
+## Import Alias
+
+- **パススルーラッパー + `import { X as XQuery }` 禁止** — 何も追加しないラッパー関数のための import alias は削除。直接 import して使う
+- **正当な alias**: 権限チェック付加（`admin/queries/settings.ts`）、`executeAdminMutationResult` ラップ（`admin/actions/*`）、Radix primitive（`toaster.tsx`、`command.tsx`）、`'use cache'` + エラーハンドリング（`analytics/config.ts`）
+
 ## Route Handler（PPR 環境）
 
 - **Route Handler の catch ブロックに `unstable_rethrow(error)` 必須** — PPR (`cacheComponents: true`) 環境では Route Handler GET のプリレンダリング時に `request.headers` アクセスで bail out エラーがスローされる。catch で握り潰すと `logError` が ERROR 出力しビルドログにノイズ。`unstable_rethrow(error)` を catch 先頭に配置して Next.js 内部エラーを再スロー
