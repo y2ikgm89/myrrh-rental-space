@@ -22,8 +22,9 @@ paths:
 
 ## Import Alias
 
-- **パススルーラッパー + `import { X as XQuery }` 禁止** — 何も追加しないラッパー関数のための import alias は削除。直接 import して使う
-- **正当な alias**: 権限チェック付加（`admin/queries/settings.ts`）、`executeAdminMutationResult` ラップ（`admin/actions/*`）、Radix primitive（`toaster.tsx`、`command.tsx`）、`'use cache'` + エラーハンドリング（`analytics/config.ts`）
+- **内部モジュールの `import { X as Y }` 禁止** — 名前衝突は namespace import（`import * as settingsCommands from "..."`）で解決。`settingsCommands.updateTaxSettings()` のように呼び出す
+- **許容される alias**: 第三者ライブラリの primitive リネームのみ（`Command as CommandPrimitive`、`Toaster as SonnerToaster`）
+- **パススルーラッパー関数禁止** — 何も追加しない `async function X() { return XQuery(); }` は削除。直接 import して使う
 
 ## Route Handler（PPR 環境）
 
