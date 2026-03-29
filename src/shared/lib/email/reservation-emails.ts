@@ -12,8 +12,10 @@ import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confir
 import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
 import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
-import { getCalendarEmailSettings as getCalendarEmailSettingsQuery } from "@/shared/domain/settings/queries/notification";
-import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
+import {
+  getCalendarEmailSettings,
+  getNotificationEmailAddresses,
+} from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {
@@ -35,21 +37,6 @@ import type {
   StatusChangeEmailData,
   EmailResult,
 } from "./types";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-async function getNotificationEmails(): Promise<string[]> {
-  return getNotificationEmailAddressesQuery();
-}
-
-async function getCalendarEmailSettings(): Promise<{
-  icalAttachmentEnabled: boolean;
-  addToCalendarLinksEnabled: boolean;
-}> {
-  return getCalendarEmailSettingsQuery();
-}
 
 // =============================================================================
 // Reservation Emails
@@ -226,7 +213,7 @@ export async function sendReservationAdminNotification(
   data: ReservationEmailData,
   action: "new" | "update" | "cancel",
 ): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmails();
+  const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 
   const reservationDate = format(data.startTime, "yyyy年M月d日 (EEEE)", {

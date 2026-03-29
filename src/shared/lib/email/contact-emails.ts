@@ -9,18 +9,10 @@
 import "server-only";
 import { ContactConfirmationEmail } from "@/shared/emails/contact-confirmation";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
-import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
+import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl } from "../constants";
 import { sendEmail } from "./send";
 import type { ContactEmailData, EmailResult } from "./types";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-async function getNotificationEmails(): Promise<string[]> {
-  return getNotificationEmailAddressesQuery();
-}
 
 // =============================================================================
 // Contact Emails
@@ -58,7 +50,7 @@ export async function sendContactConfirmationEmail(
 export async function sendContactAdminNotification(
   data: ContactEmailData,
 ): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmails();
+  const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 
   return sendEmail(

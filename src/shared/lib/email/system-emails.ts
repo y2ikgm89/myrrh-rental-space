@@ -8,20 +8,12 @@
 
 import "server-only";
 import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
-import { getNotificationEmailAddresses as getNotificationEmailAddressesQuery } from "@/shared/domain/settings/queries/notification";
+import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { getAdminUrl, SITE_DEFAULTS } from "../constants";
 import { sendEmail } from "./send";
 import type { StaffInvitationEmailData, EmailResult } from "./types";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-async function getNotificationEmails(): Promise<string[]> {
-  return getNotificationEmailAddressesQuery();
-}
 
 // =============================================================================
 // System Notification Emails
@@ -45,7 +37,7 @@ export async function sendCalendarSyncRejectionEmail(data: {
     endTime: Date;
   };
 }): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmails();
+  const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 
   const currentDate = format(data.currentStartTime, "yyyy年M月d日 (EEEE)", {
@@ -141,7 +133,7 @@ export async function sendWebhookRenewalNotification(data: {
   newExpiration?: Date;
   error?: string;
 }): Promise<EmailResult> {
-  const notificationEmails = await getNotificationEmails();
+  const notificationEmails = await getNotificationEmailAddresses();
   if (notificationEmails.length === 0) return { success: true };
 
   const subject = data.success
