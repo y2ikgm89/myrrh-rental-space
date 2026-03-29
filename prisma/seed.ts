@@ -22,6 +22,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
+import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import {
   defaultHomepageContent,
   defaultSpaceListContent,
@@ -113,6 +114,26 @@ async function clearAllData() {
   ]);
 
   console.log("✅ All data cleared");
+  console.log("");
+}
+
+// =============================================================================
+// Helper: Generate and print login URL
+// =============================================================================
+
+async function generateAndPrintLoginUrl() {
+  const { token, expiresAt } = await createAdminGateToken();
+
+  await prisma.loginToken.create({
+    data: { token, expiresAt },
+  });
+
+  const baseUrl = process.env["NEXT_PUBLIC_APP_URL"] || "http://localhost:3000";
+  const loginUrl = `${baseUrl}/admin/login?token=${token}`;
+
+  console.log("");
+  console.log("🔑 ログインURL（30日間有効）:");
+  console.log(`   ${loginUrl}`);
   console.log("");
 }
 
@@ -222,6 +243,9 @@ async function seedAdmin(
   } else {
     console.log(`✅ Updated existing admin user: ${email}`);
   }
+
+  // ログインURLを生成して表示
+  await generateAndPrintLoginUrl();
 }
 
 // =============================================================================

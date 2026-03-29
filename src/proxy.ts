@@ -1,13 +1,18 @@
 /**
  * Next.js 16 Proxy
  *
- * 認証前の admin gate と共通セキュリティヘッダーだけを担当する。
+ * 共通セキュリティヘッダー・レート制限・Admin Gate を担当する。
  * 公開ルーティングの解決は route 側で行う。
  */
 
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
-import { ADMIN_GATE_COOKIE_NAME } from "@/shared/lib/admin-login-gate-cookie";
+import {
+  ADMIN_GATE_COOKIE_NAME,
+  getAdminGateCookieOptions,
+  isSignedAdminGateToken,
+  verifyAdminGateToken,
+} from "@/shared/lib/admin-login-gate";
 import { serverEnv } from "@/shared/lib/env/server";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
 
@@ -63,8 +68,59 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
   return response;
 }
 
+// ---------------------------------------------------------------------------
+// Admin Gate: /admin/login のアクセス制御
+//
+// 以下のいずれかを満たす場合のみログインページを表示:
+// 1. admin-gate cookie が設定済み（過去にトークン検証済み）
+// 2. セッション cookie が存在（既にログイン済み）
+// 3. ?token= パラメータで有効なトークンを提示（初回アクセス）
+// ---------------------------------------------------------------------------
+
+async function handleAdminLoginGate(
+  req: NextRequest,
+  pathname: string,
+): Promise<NextResponse> {
+  const sessionCookie = getSessionCookie(req);
+  const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
+
+  // 既に gate cookie またはセッションがある → 通過
+  if (gateCookie?.value === "1" || sessionCookie) {
+    return createResponse(req, pathname);
+  }
+
+  // ?token= パラメータでトークン検証
+  const token = req.nextUrl.searchParams.get("token");
+  if (token && isSignedAdminGateToken(token)) {
+    if (await verifyAdminGateToken(token)) {
+      // トークン有効 → DB 消費は dynamic import（proxy.ts は Edge 互換を維持）
+      const { consumeAdminLoginToken } =
+        await import("@/shared/domain/admin-login-tokens/commands");
+      const consumed = await consumeAdminLoginToken(token);
+      if (consumed) {
+        // cookie 設定 + token パラメータを除去してリダイレクト
+        const cleanUrl = new URL("/admin/login", req.url);
+        const response = NextResponse.redirect(cleanUrl);
+        response.cookies.set(
+          ADMIN_GATE_COOKIE_NAME,
+          "1",
+          getAdminGateCookieOptions(),
+        );
+        return response;
+      }
+    }
+  }
+
+  // いずれの条件も満たさない → 404
+  return new NextResponse(null, { status: 404 });
+}
+
+// ---------------------------------------------------------------------------
+// Main proxy
+// ---------------------------------------------------------------------------
+
 export async function proxy(req: NextRequest): Promise<NextResponse> {
-  const { pathname, searchParams } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api")) {
     if (
@@ -104,25 +160,18 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   }
 
   if (pathname.startsWith("/admin")) {
-    const sessionCookie = getSessionCookie(req);
-
+    // Admin Gate: ログインページの隠蔽
     if (pathname === "/admin/login") {
-      const adminGateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
-      if (
-        adminGateCookie?.value === "1" ||
-        !!sessionCookie ||
-        searchParams.has("token")
-      ) {
-        return createResponse(req, pathname);
-      }
-
-      return new NextResponse(null, { status: 404 });
+      return handleAdminLoginGate(req, pathname);
     }
 
+    // セットアップページは認証不要
     if (pathname.startsWith("/admin/setup/")) {
       return createResponse(req, pathname);
     }
 
+    // その他の管理画面: セッション必須
+    const sessionCookie = getSessionCookie(req);
     if (!sessionCookie) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
