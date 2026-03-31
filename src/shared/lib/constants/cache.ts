@@ -84,8 +84,10 @@ export const CACHE_TAGS = {
   LOCATIONS: "locations",
   /** カスタムページ */
   PAGES: "pages",
-  /** サイト設定 */
-  SETTINGS: "settings",
+  /** 通知設定 */
+  NOTIFICATION_SETTINGS: "notification-settings",
+  /** 連携設定（Stripe/GCal/iCal） */
+  INTEGRATION_SETTINGS: "integration-settings",
   /** FAQ */
   FAQ: "faq",
   /** FAQカテゴリ */
@@ -148,8 +150,6 @@ export const CACHE_TAGS = {
   BLOCK_TEMPLATES: "block-templates",
   /** 権限 */
   PERMISSIONS: "permissions",
-  /** ページコンテンツ（Page-First Architecture） */
-  PAGE_CONTENT: "page-content",
   /** スペースレビュー */
   REVIEWS: "reviews",
 } as const;
@@ -226,10 +226,6 @@ export const getCacheTag = {
   },
   pageSeo: {
     detail: (slug: string) => `${CACHE_TAGS.PAGE_SEO}-${slug}`,
-  },
-  pageContent: {
-    detail: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-${pageKey}`,
-    meta: (pageKey: string) => `${CACHE_TAGS.PAGE_CONTENT}-meta-${pageKey}`,
   },
   reviews: {
     space: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-space-${spaceId}`,

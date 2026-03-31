@@ -18,7 +18,6 @@ import {
   updateHomepageSectionOrderCommand,
 } from "@/shared/domain/sections/commands";
 import {
-  SectionType,
   createSectionSchema,
   updateSectionOrderSchema,
   updateSectionSchema,
@@ -30,7 +29,7 @@ import {
 
 export type HomepageSectionData = {
   id: string;
-  type: SectionType;
+  type: string;
   title: string | null;
   config: SectionConfig;
   design: unknown;
@@ -46,7 +45,6 @@ function revalidateHomepage() {
   updateTag(CACHE_TAGS.SECTIONS);
   updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
   updateTag(CACHE_TAGS.PAGES);
-  updateTag(CACHE_TAGS.SETTINGS);
 
   fireAndForget(purgeHomeCache(), {
     operation: "purgeHomeCache",
