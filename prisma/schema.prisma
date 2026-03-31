@@ -84,30 +84,6 @@ enum LayoutWidth {
   CUSTOM
 }
 
-enum SectionType {
-  // Hero variants
-  HERO // ヒーローセクション
-  HERO_PARALLAX // パララックスヒーロー（v3）
-  // Content
-  CUSTOM // Lexicalリッチテキスト
-  CONCEPT // コンセプトセクション（v3）
-  // Lists
-  SPACE_LIST // スペース一覧
-  SPACE_SHOWCASE // スペースショーケース（v3）
-  NEWS_LIST // お知らせ一覧
-  POST_LIST // 記事一覧
-  FAQ_LIST // FAQ一覧
-  // Features
-  FEATURES // 特徴セクション（v3）
-  TESTIMONIAL // 体験談・レビュー
-  GALLERY // ギャラリー
-  // Functional
-  CTA // Call to Action
-  CONTACT_FORM // お問い合わせフォーム
-  MAP // 地図
-  EMBED // 埋め込み（iframe）
-  INSTAGRAM // Instagramフィード
-}
 
 enum PostStatus {
   DRAFT
@@ -935,7 +911,7 @@ model Page {
 model Section {
   id          String      @id @default(uuid()) @db.Uuid
   pageId String? @db.Uuid // null = ホームページ
-  type        SectionType
+  type        String      @db.VarChar(64)
   order       Int         @default(0) // 表示順序（DnDで変更可能）
   isActive    Boolean     @default(true) // ON/OFF制御
   title       String? // セクション見出し（表示用）
@@ -1653,22 +1629,6 @@ model BlockTemplate {
   @@map("block_templates")
 }
 
-/// ページ固有コンテンツ（Page-First Architecture）
-/// pageKey でページを識別し、content JSON に Zod バリデーション済みデータを格納
-/// id は PostgreSQL native UUID（Prisma: String @db.Uuid）
-model PageContent {
-  id              String   @id @default(uuid()) @db.Uuid
-  pageKey         String   @unique
-  content         Json
-  metaTitle       String?
-  metaDescription String?
-  ogpTitle        String?
-  ogpDescription  String?
-  ogpImage        String?
-  updatedAt       DateTime @updatedAt
-
-  @@map("page_contents")
-}
 
 // ==============================================
 // Space Review Model (スペースレビュー)
