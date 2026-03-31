@@ -233,6 +233,18 @@ export function omitUndefined<T extends object>(obj: T): OmitUndefined<T> {
 > ジェネリック制約 `T extends object` によりキーが `keyof T` に限定されるため型安全。
 > 呼び出し側で `Object.keys(obj) as ConfigKey[]` と書くことは禁止。`keysOf(obj)` を使う。
 
+**6. `withMeta` (`field-helpers.ts` の実装内部のみ)**
+
+Zod の `.describe()` は同一型を返すが TypeScript の型レベルで `ZodDefault<ZodString>` 等のラップ型を同一型として表現できないため、`as T` を使用する。`keysOf` と同じ「境界ヘルパー」パターン。
+
+```typescript
+// src/shared/lib/sections/field-helpers.ts（実装内部のみ）
+export function withMeta<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
+  return schema.describe(JSON.stringify(meta)) as T;
+}
+// 呼び出し側: withMeta(z.string().default("Hello"), { fieldType: "text", label: "Title" }) — as 不要
+```
+
 ### 禁止パターンと代替手段
 
 | 禁止パターン                        | 代替                                      |
