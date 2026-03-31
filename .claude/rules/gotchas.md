@@ -25,6 +25,11 @@ paths:
 - **内部モジュールの `import { X as Y }` 禁止** — 名前衝突は namespace import（`import * as settingsCommands from "..."`）で解決。`settingsCommands.updateTaxSettings()` のように呼び出す
 - **許容される alias**: 第三者ライブラリの primitive リネームのみ（`Command as CommandPrimitive`、`Toaster as SonnerToaster`）
 - **パススルーラッパー関数禁止** — 何も追加しない `async function X() { return XQuery(); }` は削除。直接 import して使う
+- **barrel export の不要な型リネーム禁止** — `export type { FooInput as Foo }` は消費者がいない場合は削除。元の名前でそのまま export する
+
+## shadcn/ui コンポーネント
+
+- **`import * as React from "react"` 禁止** — shadcn/ui 再生成時に混入する。`import type { ComponentProps } from "react"` 等の個別 import に変換。`React.ComponentProps` → `ComponentProps`、`React.HTMLAttributes` → `HTMLAttributes`
 
 ## Route Handler（PPR 環境）
 
@@ -44,7 +49,10 @@ paths:
 
 ## ドメイン・予約
 
-- **予約アクションのキャッシュ無効化は3点セット必須** — `updateTag(CACHE_TAGS.RESERVATIONS)` + `updateTag(getCacheTag.reservations.detail(id))` + `updateTag(getCacheTag.reservations.calendar())`。ステータス変更・削除・顧客キャンセル/変更すべてに適用。顧客統計（`totalReservations` 等）が変わる操作は `updateTag(CACHE_TAGS.CUSTOMERS)` も追加
+- **予約アクションのキャッシュ無効化は3点セット必須** — `updateTag(CACHE_TAGS.RESERVATIONS)` + `updateTag(getCacheTag.reservations.detail(id))` + `updateTag(getCacheTag.reservations.calendar())`。ステータス変更・削除・顧客キャンセル/変更すべてに適用。顧客統計（`totalReservations` 等）が変わる操作は `updateTag(CACHE_TAGS.CUSTOMERS)` + `updateTag(getCacheTag.customers.detail(customerId))` も追加
+- **顧客統計が変わる操作は `customers.detail(customerId)` も必須** — 予約作成・キャンセル・変更時に `updateTag(CACHE_TAGS.CUSTOMERS)` だけでなく `updateTag(getCacheTag.customers.detail(customerId))` も追加。マイページ・公開フォームの両方で必要（管理画面の顧客詳細キャッシュ用）
+- **`CACHE_TAGS.SETTINGS` は廃止済み** — 粒度タグ（`LAYOUT_SETTINGS`, `BUSINESS_SETTINGS`, `SEO_SETTINGS`, `ORGANIZATION_SETTINGS`, `NOTIFICATION_SETTINGS`, `INTEGRATION_SETTINGS`, `COOKIE_CONSENT`, `ANALYTICS_CONFIG`, `ROBOTS_TXT`, `PERMALINK`, `SOCIAL_LINKS`, `SIDEBAR_SETTINGS`）を直接使用。設定コマンドの `afterSuccess` では影響するドメインのタグのみ無効化する
+- **マイページ Server Actions には `formSubmitRateLimiter` を使用** — `publicQueryRateLimiter` は認証不要の公開クエリ専用。マイページの mutation/query アクションは認証済みのため `formSubmitRateLimiter` を使う
 
 - **予約削除時のクーポン使用数デクリメント必須** — `deleteReservationCommand` は `$transaction` 内で reservation 削除 + `coupon.updateMany({ where: { id, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } })`。キャンセル（`cancelCustomerReservation`）と同じパターン
 
@@ -92,7 +100,7 @@ paths:
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **旧カラートークンは `@layer compat` でエイリアス** — `--color-primary` → `var(--color-accent)` 等。レガシーセクションコンポーネントが依存。新コードでは `accent`/`foreground`/`surface` 等の新トークンを直接使用すること
 - **`@layer compat` の CSS 変数は Tailwind ユーティリティに反映されない** — `--color-info-foreground` 等を `@layer compat` のみに定義しても `text-info-foreground` クラスは正しい値を参照しない。Tailwind CSS 4 のユーティリティは `@theme` ブロック内の変数のみ参照する。新しいセマンティックカラーは必ず `@theme` に定義すること（`@layer compat` はレガシーエイリアス専用）
-- **`PageContent` モデルと `Page`/`Section` モデルは共存** — 固定ページ（トップ、一覧等）は `PageContent`、カスタムページは `Page` + `Section`。削除せず維持
+- **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。新セクションタイプは `src/shared/lib/sections/definitions/` にディレクトリ追加で Prisma マイグレーション不要
 - **アニメーションファイルは kebab-case のみ** — `scroll-reveal.tsx`, `split-text.tsx`, `magnetic-button.tsx`, `parallax-image.tsx`。旧 PascalCase re-export ラッパーは削除済み。レガシーセクションコンポーネント（`_components/*.tsx`）も kebab-case で直接 import
 - **公開ページのマルチステップフォームでは視覚パターンを全ステップで統一** — `bg-surface` ラッパー・見出しスタイル・ナビゲーション配置をステップ間で揃える。フロー全体の一貫性を優先
 - **Prisma `Decimal` と `createAppPrismaClient`** — アプリ標準の **`prisma`**（`src/shared/db/prisma.ts`）は **`createAppPrismaClient`** により対象モデルの金額等が **読み取り結果で `number`**。**集計**（`_sum` / `_avg`）や拡張前クライアント経由では `Number()` が必要なことがある。`as number` 禁止 → `prisma-patterns.md` の Decimal 節を参照
@@ -141,6 +149,7 @@ paths:
 - **`bun run build` は `@t3-oss/env-nextjs` の検証を有効化**（`SKIP_ENV_VALIDATION` 未設定）— ローカルで env が不足する場合は `bun run build:skip-env`
 - **`@t3-oss/env-nextjs` は `process.env` のスナップショット** — `SKIP_ENV_VALIDATION=true` 時、`createEnv()` は `{ ...process.env }` の浅いコピーを返す。テストで `process.env["KEY"] = ...` しても `serverEnv.KEY` に反映されない。テスト可能にしたいコードは `process.env["KEY"]` を直接参照する
 - **`verification` エージェントはコードを自動修正する** — `bun run validate && bun run build` 実行時に型エラーを検出するとコードを自動変更することがある。検証のみなら Bash で `bun run validate` を直接実行
+- **`useState` の setter 命名は `set` + state 変数名の PascalCase 必須** — `const [text, setIconText]` は `@eslint-react/use-state` warning。`const [text, setText]` に統一する
 - **レンダー中の `Object.assign` 禁止** — `@eslint-react/purity` 違反。`CSSProperties` 構築等で `Object.assign(target, source)` を使うとミュータブル操作とみなされる。`let styles = { ...base, ...conditional }` のスプレッドパターンを使用
 - **レンダー中の `new Date()` は避ける** — `@eslint-react/purity`。シリアライズ済み日付（ISO 文字列）を `input[type="date"]` に載せる場合は `dateInputValueFromSerialized()`（`@/shared/lib/serialize`）で文字列のみ正規化する。当日の `min` など「マウント時点で固定したい値」は `useState(() => { ... new Date() ... })` の遅延初期化で一度だけ評価する
 - **Turbopack チャンク重複は既知の制限** — Lexical core (275KB×3)、Prism.js (168KB×2) 等が admin 内の異なるルートグループ向けに独立チャンクとして生成される（合計 808KB 無駄）。Webpack の `splitChunks` / `cacheGroups` 相当機能が未成熟なため。`next build --webpack` でフォールバック可能だが、Turbopack の高速ビルドを失う。Next.js パッチ（PR #78194, #78199）で段階的改善中。各ページの First Load JS には影響しない（ディスク上の重複のみ）
@@ -150,6 +159,9 @@ paths:
 - **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
 - **`server-only` の間接依存チェーンに注意** — `safe-fetch.ts` 等の共有ユーティリティが `./logger`（`server-only`）を import すると、テストで `mock.module("server-only")` が効かない場合がある。`server-only` なしの `logger-core` を直接 import する。対象: `safe-fetch.ts`, `cron-auth.ts` 等のテスト対象モジュール
 - **`bun run test` はディレクトリ別分離実行** — `bun test` 一括実行では `mock.module` のグローバル干渉で unit テストと integration テストが相互汚染する。`package.json` の `test` スクリプトは `bun test __tests__/unit/lib && bun test __tests__/unit/api && ... && bun test __tests__/integration` の形式。一括実行（`bun test`）は避ける
+- **副作用なし純粋モジュールの `mock.module` 禁止** — `@/shared/lib/constants`（CACHE_TAGS/getCacheTag）と `@/shared/lib/route-responses` は DB 依存も `server-only` 依存もない純粋関数ファイル。`mock.module` すると不完全なモックがグローバル干渉して他テストを壊す。実モジュールをそのまま使用
+- **新規テストディレクトリ追加時は `package.json` の `test` スクリプトにバッチ追加必須** — `bun test __tests__/unit/domain` のような親ディレクトリ指定は `mock.module` 干渉を起こす。`bun test __tests__/unit/domain/<subdomain>` のようにサブディレクトリ単位で分離実行する
+- **テスト内で `mock.calls[0]?.[0] as Record<string, unknown>` パターン禁止** — `noUncheckedIndexedAccess` + `as` 禁止に違反。`expect(mockFn).toHaveBeenCalledWith(expect.objectContaining({...}))` を使用
 
 ## ファイル操作・Git
 

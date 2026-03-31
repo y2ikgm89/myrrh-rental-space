@@ -9,19 +9,12 @@
 - **型アサーション（`as`）禁止** → `type-safety.md`
 - **`'use cache'` 関数での直接 prisma 呼び出し禁止** → `safeFetch` + `toPlainObject`/`toPlainArray` 必須 → `server-actions.md`
 - **後方互換性ハック禁止** → 不要コード完全削除
-- **検証なしの完了報告禁止** → 必ず検証コマンド実行
+- **検証なしの完了報告禁止** → 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
 - **ハードコードカラー禁止** → テーマ変数使用 → `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`/`Stack gap="lg"`、エラー `<div role="alert">` + border スタイル
 - **ソフトデリート `where` 漏れ禁止** → Reservation の全 `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restoreReservationCommand` 除く）→ `gotchas.md`
-
-### 検証（完了報告前に必須）
-
-| タイミング    | コマンド                            |
-| ------------- | ----------------------------------- |
-| 作業中        | `bun run type-check`                |
-| 完了報告前    | `bun run validate`                  |
-| コミット/PR前 | `bun run validate && bun run build` |
+- **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
 
 ---
 
@@ -33,12 +26,29 @@
 要件確認 → 調査 → 設計 → 計画 → 実装(TDD) → 検証 → レビュー → 完了
 ```
 
+- **計画作成**: `brainstorming` → `writing-plans`（`docs/plans/YYYY-MM-DD-*.md`）
+- **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
+- **完了時**: `verification-before-completion` → `finishing-a-development-branch`
+
 スキル（`.claude/skills/`）・エージェント（`.claude/agents/`）・MCP（`.mcp.json`）は自動検出。
-`description` でトリガー条件を判定し、該当時に自動呼び出し。
 
 ---
 
 ## 🟢 プロジェクト情報
+
+### アーキテクチャ
+
+Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離。遷移はフルページリロード。
+
+```
+src/app/(admin)/admin/(dashboard)/   管理画面（admin.css, Better Auth）
+src/app/(public)/                    公開ページ（Page + Section で管理、Page-First Architecture）
+src/shared/lib/sections/             セクションレジストリ・定義・field ヘルパー
+src/shared/                          共有（CSS変数非依存）
+generated/prisma/                    Prisma Client（.gitignore対象、deps stageで再生成）
+__tests__/unit/                      単体テスト（lib/hooks/components/shared/api/queries/architecture/db/domain）
+__tests__/integration/               統合テスト（actions/admin, actions/public, api）
+```
 
 ### 技術スタック
 
@@ -61,9 +71,12 @@
 bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証
-bun run test                                  # テスト（ディレクトリ別分離実行: mock.module 干渉回避）
+bun run build:skip-env                        # env未設定時ビルド（SKIP_ENV_VALIDATION=true）
+bun run test                                  # 全テスト（34バッチ分離実行: mock.module 干渉回避）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
+bun test __tests__/unit/domain/reviews        # 特定ドメインのみ
+bun run test:coverage:check                   # カバレッジ計測 + 閾値チェック（90%）
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
 bun prisma/seed.ts                            # Seed（createAppPrismaClient 適用）
 bun run e2e                                   # E2E テスト（Playwright）
@@ -72,18 +85,39 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 > **フック**: Prettier + ESLint --fix（PostToolUse）/ schema-change-guard / type-check-on-stop
 > **保護**: `.env*`, `bun.lock`, `prisma/migrations/*.sql` 編集不可（PreToolUse）
+> **デプロイ**: Google Cloud Run（`Dockerfile` + `cloudbuild.yaml`）— Vercel 不使用
 
 ### コーディング規約
 
-`.claude/rules/` に `paths:` フロントマターで条件付き自動ロード。
-`docs/reference/codex-rules/` は CI/Codex 用コピー。正本は `.claude/rules/`。
+`.claude/rules/` に `paths:` フロントマターで条件付き自動ロード:
+
+| ルール               | 内容                                                                    |
+| -------------------- | ----------------------------------------------------------------------- |
+| `gotchas.md`         | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック等）       |
+| `server-actions.md`  | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限 |
+| `type-safety.md`     | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`            |
+| `bun-patterns.md`    | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止 |
+| `prisma-patterns.md` | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary    |
+| `auth-patterns.md`   | Better Auth・`executeAdminMutationResult`・セッション取得パターン       |
+| `error-handling.md`  | `logError`・`safeFetch`・`MutationResult`・DomainError                  |
+| `zod-patterns.md`    | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止             |
+| `test-quality.md`    | テスト分類・ドメインコマンドテストパターン・Playwright E2E              |
+
+### キーファイル
+
+| パス                                              | 内容                                                |
+| ------------------------------------------------- | --------------------------------------------------- |
+| `src/shared/db/prisma.ts`                         | `createAppPrismaClient`（`$extends` 集約）          |
+| `src/shared/lib/auth.ts`                          | Better Auth 設定・セッション検証                    |
+| `src/shared/lib/constants/cache.ts`               | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag` |
+| `src/shared/lib/sections/registry.ts`             | セクションレジストリ（17定義、field ヘルパー）      |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts` | `executeAdminMutationResult`                        |
+| `src/proxy.ts`                                    | Admin Gate + Rate Limit（Next.js 16 proxy）         |
 
 ### セキュリティ多層防御
 
-| 層             | 公開フォーム                    | 公開クエリ                        | 管理ログイン                             | 管理 Server Actions          | API Routes           |
-| -------------- | ------------------------------- | --------------------------------- | ---------------------------------------- | ---------------------------- | -------------------- |
-| Admin Gate     | —                               | —                                 | `proxy.ts`（トークン/cookie/セッション） | —                            | —                    |
-| Rate Limit     | `formSubmitRateLimiter` (5/min) | `publicQueryRateLimiter` (30/min) | —                                        | —                            | `proxy.ts` (100/min) |
-| 認証           | —                               | —                                 | Better Auth                              | `executeAdminMutationResult` | `checkPermission`    |
-| CAPTCHA        | Turnstile                       | —                                 | —                                        | —                            | —                    |
-| バリデーション | Zod                             | Zod                               | —                                        | Zod                          | Zod                  |
+- **公開フォーム**: Rate Limit (`formSubmitRateLimiter`) + Turnstile + Zod
+- **公開クエリ**: Rate Limit (`publicQueryRateLimiter`) + Zod
+- **マイページ**: Rate Limit (`formSubmitRateLimiter`) + `getSession` + `getCustomerByUserId` + Zod
+- **管理 Actions**: `executeAdminMutationResult`（認証・権限・監査ログ一括） + Zod
+- **API Routes**: `checkPermission` + Zod、管理ログインは `proxy.ts`（Admin Gate）
