@@ -1,24 +1,20 @@
 /**
- * /faq — よくある質問ページ（Page-First アーキテクチャ）
+ * /faq — よくある質問ページ（セクションベース）
  *
  * SEO: generatePageMetadata + FAQPage JSON-LD
- *
- * NOTE: FAQPage JSON-LD uses dangerouslySetInnerHTML for schema.org structured data.
- * The content is admin-managed via Lexical editor and stored as sanitized HTML in DB.
+ * Hero はセクションシステムから描画、FAQ コンテンツは中間に配置
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageContent } from "@/public/lib/content/queries";
-import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultFaqContent } from "@/public/lib/content/defaults";
-import { getPublishedFaqItems } from "@/shared/domain/sections/queries";
-import { PageHero } from "@/public/components/layouts/page-hero";
-import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import {
+  getPublishedFaqItems,
+  getPageSectionsWithFallback,
+} from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { Container } from "@/public/components/design-system/container";
-import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { FAQPageJsonLd } from "@/public/components/seo/json-ld";
 import { FaqAccordion } from "./_components/faq-accordion";
 
@@ -31,8 +27,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
 
-  const [content, items] = await Promise.all([
-    getPageContent("faq", simplePageContentSchema, defaultFaqContent),
+  const [sections, items] = await Promise.all([
+    getPageSectionsWithFallback("faq"),
     getPublishedFaqItems(50),
   ]);
 
@@ -42,17 +38,20 @@ export default async function FaqPage(): Promise<ReactElement> {
     answer: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
   }));
 
+  const heroSection = sections.find(
+    (s) => s.type === "hero" || s.type === "hero-parallax",
+  );
+  const trailingSections = sections.filter(
+    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+  );
+
   return (
     <>
       {faqJsonLdItems.length > 0 ? (
         <FAQPageJsonLd items={faqJsonLdItems} />
       ) : null}
 
-      <PageHero
-        variant="compact"
-        title={content.hero.title}
-        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
-      />
+      {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
       <section className="py-[var(--spacing-section)]">
         <Container variant="narrow">
@@ -60,7 +59,9 @@ export default async function FaqPage(): Promise<ReactElement> {
         </Container>
       </section>
 
-      <SiteCTA />
+      {trailingSections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
     </>
   );
 }

@@ -1,8 +1,8 @@
 /**
- * /news — ニュース一覧ページ（Page-First アーキテクチャ）
+ * /news — ニュース一覧ページ（セクションベース）
  *
  * SEO: generatePageMetadata
- * ページネーション + 検索: nuqs createSearchParamsCache
+ * Hero はセクションシステムから描画、ニュース一覧は中間に配置
  */
 
 import type { Metadata } from "next";
@@ -11,14 +11,10 @@ import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageContent } from "@/public/lib/content/queries";
-import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultNewsListContent } from "@/public/lib/content/defaults";
+import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
-import { PageHero } from "@/public/components/layouts/page-hero";
-import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
-import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { Pagination } from "@/public/components/pagination";
 import { newsSearchParams } from "@/public/lib/search-params";
 import { SearchBar } from "@/public/components/ui/search-bar";
@@ -41,18 +37,21 @@ export default async function NewsPage({
 
   const { page, q } = await newsSearchParams.parse(searchParams);
 
-  const [content, { items, totalPages, currentPage }] = await Promise.all([
-    getPageContent("news", simplePageContentSchema, defaultNewsListContent),
+  const [sections, { items, totalPages, currentPage }] = await Promise.all([
+    getPageSectionsWithFallback("news"),
     getPublishedNewsList(Math.max(1, page), undefined, q),
   ]);
 
+  const heroSection = sections.find(
+    (s) => s.type === "hero" || s.type === "hero-parallax",
+  );
+  const trailingSections = sections.filter(
+    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+  );
+
   return (
     <>
-      <PageHero
-        variant="compact"
-        title={content.hero.title}
-        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
-      />
+      {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
       <section className="py-[var(--spacing-section)]">
         <Container>
@@ -71,7 +70,9 @@ export default async function NewsPage({
         </Container>
       </section>
 
-      <SiteCTA />
+      {trailingSections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
     </>
   );
 }

@@ -1,20 +1,16 @@
 /**
- * /reservation — ご予約ページ（Page-First アーキテクチャ）
+ * /reservation — ご予約ページ（セクションベース）
  *
  * SEO: generatePageMetadata
- * コンテンツ: 3ステップ予約フォーム（スペース選択 → 日時選択 → 顧客情報・確認・送信）
+ * Hero はセクションシステムから描画、3ステップ予約フォームは中間に配置
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageContent } from "@/public/lib/content/queries";
-import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultReservationContent } from "@/public/lib/content/defaults";
-import { PageHero } from "@/public/components/layouts/page-hero";
-import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
-import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { Container } from "@/public/components/design-system/container";
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
 import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
@@ -32,13 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ReservationPage(): Promise<ReactElement> {
   await connection();
 
-  const [content, locations, businessHours, turnstileSiteKey, user] =
+  const [sections, locations, businessHours, turnstileSiteKey, user] =
     await Promise.all([
-      getPageContent(
-        "reservation",
-        simplePageContentSchema,
-        defaultReservationContent,
-      ),
+      getPageSectionsWithFallback("reservation"),
       getPublishedLocationsWithSpaces(),
       getBusinessHoursSettingsQuery(),
       getTurnstileSiteKey(),
@@ -57,13 +49,16 @@ export default async function ReservationPage(): Promise<ReactElement> {
       }
     : undefined;
 
+  const heroSection = sections.find(
+    (s) => s.type === "hero" || s.type === "hero-parallax",
+  );
+  const trailingSections = sections.filter(
+    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+  );
+
   return (
     <>
-      <PageHero
-        variant="compact"
-        title={content.hero.title}
-        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
-      />
+      {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
       <section className="py-[var(--spacing-section)]">
         <Container>
@@ -79,7 +74,9 @@ export default async function ReservationPage(): Promise<ReactElement> {
         </Container>
       </section>
 
-      <SiteCTA heading="お問い合わせ" body="ご不明点はお気軽にご相談ください" />
+      {trailingSections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
     </>
   );
 }

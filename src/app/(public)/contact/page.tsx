@@ -1,10 +1,8 @@
 /**
- * /contact — お問い合わせページ（Page-First アーキテクチャ）
+ * /contact — お問い合わせページ（セクションベース）
  *
  * レイアウト: default Container + 2カラム（フォーム主体 + sticky サイドバー）
- * - フォーム側: ~850px（lg時）— 名前+メール2列でも各400px以上
- * - サイドバー: 360px固定 — 営業情報を常に視野に入れて信頼感を維持
- * - lg未満: スタック（フォーム→営業情報の順）
+ * Hero はセクションシステムから描画、ページ固有コンテンツ（フォーム）は中間に配置
  */
 
 import type { Metadata } from "next";
@@ -14,13 +12,9 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageContent } from "@/public/lib/content/queries";
-import { simplePageContentSchema } from "@/public/lib/content/schemas";
-import { defaultContactContent } from "@/public/lib/content/defaults";
-import { PageHero } from "@/public/components/layouts/page-hero";
-import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
+import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { Container } from "@/public/components/design-system/container";
-import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { ContactForm } from "./_components/contact-form";
 import { BusinessInfo } from "./_components/business-info";
@@ -44,18 +38,21 @@ export default async function ContactPage({
       ? params["subject"].slice(0, 200)
       : undefined;
 
-  const [content, turnstileSiteKey] = await Promise.all([
-    getPageContent("contact", simplePageContentSchema, defaultContactContent),
+  const [sections, turnstileSiteKey] = await Promise.all([
+    getPageSectionsWithFallback("contact"),
     getTurnstileSiteKey(),
   ]);
 
+  const heroSection = sections.find(
+    (s) => s.type === "hero" || s.type === "hero-parallax",
+  );
+  const trailingSections = sections.filter(
+    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+  );
+
   return (
     <>
-      <PageHero
-        variant="compact"
-        title={content.hero.title}
-        breadcrumb={<Breadcrumb items={[{ label: content.hero.title }]} />}
-      />
+      {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
       <section className="py-[var(--spacing-section)]">
         <Container>
@@ -75,7 +72,9 @@ export default async function ContactPage({
         </Container>
       </section>
 
-      <SiteCTA />
+      {trailingSections.map((section) => (
+        <SectionRenderer key={section.id} section={section} />
+      ))}
     </>
   );
 }

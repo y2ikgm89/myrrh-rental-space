@@ -23,18 +23,7 @@ import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
-import {
-  defaultHomepageContent,
-  defaultSpaceListContent,
-  defaultContactContent,
-  defaultFaqContent,
-  defaultAboutContent,
-  defaultNewsListContent,
-  defaultPostsListContent,
-  defaultReservationContent,
-  defaultTermsContent,
-  defaultPrivacyContent,
-} from "../src/app/(public)/_shared/lib/content/defaults";
+import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
@@ -74,7 +63,6 @@ async function clearAllData() {
     prisma.faqItem.deleteMany(),
     prisma.faqCategory.deleteMany(),
     prisma.news.deleteMany(),
-    prisma.pageContent.deleteMany(),
     prisma.page.deleteMany(),
     prisma.termsVersion.deleteMany(),
     prisma.terms.deleteMany(),
@@ -2523,194 +2511,84 @@ async function seedSocialLinks() {
 }
 
 // =============================================================================
-// Page Content (All Pages)
+// System Page Sections (All Pages including Homepage)
 // =============================================================================
 
-async function seedPageContent() {
-  const pages = [
-    {
-      pageKey: "homepage",
-      content: defaultHomepageContent,
-      metaTitle: "Myrrh Rental Space | レンタルスペース",
-      metaDescription:
-        "撮影、会議、イベントに最適な上質レンタルスペース。1時間から柔軟にご利用いただけます。",
-    },
-    {
-      pageKey: "space-list",
-      content: defaultSpaceListContent,
-      metaTitle: "スペース一覧 | Myrrh Rental Space",
-      metaDescription:
-        "ご利用シーンに合わせた多彩なスペースをご用意しています。撮影、会議、イベントに最適な空間をお探しください。",
-    },
-    {
-      pageKey: "contact",
-      content: defaultContactContent,
-      metaTitle: "お問い合わせ | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space へのご質問・ご相談はお気軽にどうぞ。見学のご予約も承っております。",
-    },
-    {
-      pageKey: "faq",
-      content: defaultFaqContent,
-      metaTitle: "よくある質問 | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space のご利用に関するよくある質問をまとめました。",
-    },
-    {
-      pageKey: "about",
-      content: defaultAboutContent,
-      metaTitle: "私たちについて | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space のコンセプトとこだわりをご紹介します。",
-    },
-    {
-      pageKey: "news",
-      content: defaultNewsListContent,
-      metaTitle: "お知らせ | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space からの最新情報・キャンペーン情報をお届けします。",
-    },
-    {
-      pageKey: "posts",
-      content: defaultPostsListContent,
-      metaTitle: "ブログ | Myrrh Rental Space",
-      metaDescription: "スペース活用のヒントやイベントレポートをお届けします。",
-    },
-    {
-      pageKey: "reservation",
-      content: defaultReservationContent,
-      metaTitle: "ご予約 | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space のご予約はこちらから。ご希望の日時・スペースをお選びください。",
-    },
-    {
-      pageKey: "terms",
-      content: defaultTermsContent,
-      metaTitle: "利用規約 | Myrrh Rental Space",
-      metaDescription: "Myrrh Rental Space のご利用にあたっての規約です。",
-    },
-    {
-      pageKey: "privacy",
-      content: defaultPrivacyContent,
-      metaTitle: "プライバシーポリシー | Myrrh Rental Space",
-      metaDescription:
-        "Myrrh Rental Space における個人情報の取り扱いについてご説明します。",
-    },
-  ];
-
-  for (const page of pages) {
-    await prisma.pageContent.upsert({
-      where: { pageKey: page.pageKey },
-      update: {},
-      create: page,
-    });
-  }
-
-  console.log(`✅ Page content seeded (${pages.length} pages)`);
-}
-
-// =============================================================================
-// Homepage Sections
-// =============================================================================
-
-async function seedHomepageSections() {
-  const existingCount = await prisma.section.count({ where: { pageId: null } });
-  if (existingCount > 0) {
+async function seedSystemPageSections() {
+  // Seed homepage sections (pageId: null)
+  const existingHomepageCount = await prisma.section.count({
+    where: { pageId: null },
+  });
+  if (existingHomepageCount > 0) {
     console.log("⏭️ Homepage sections already exist");
-    return;
+  } else {
+    const homeSections = DEFAULT_PAGE_SECTIONS["home"];
+    if (homeSections) {
+      for (const section of homeSections) {
+        await prisma.section.create({
+          data: {
+            type: section.type,
+            title: section.title,
+            config: section.config,
+            design: section.design ?? {},
+            contentHtml: section.content,
+            order: section.order,
+            isActive: section.isActive,
+          },
+        });
+      }
+      console.log("✅ Created homepage sections");
+    }
   }
 
-  const sections: Prisma.SectionCreateManyInput[] = [
-    {
-      type: "HERO_PARALLAX",
-      config: {
-        title: "洗練された空間で 特別なひとときを",
-        subtitle:
-          "厳選されたレンタルスペースが、あなたの大切な瞬間を彩ります。",
-        backgroundImageUrl:
-          "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=1600&q=80",
-        parallaxSpeed: 0.3,
-        overlayGradient: true,
-        scrollIndicator: true,
-      },
-      design: {},
-      order: 0,
-      isActive: true,
-    },
-    {
-      type: "CONCEPT",
-      config: {
-        heading: "空間が、体験を変える",
-        body: "洗練されたデザインと上質な設備が調和する空間。\nビジネスミーティングからプライベートパーティーまで、\nあらゆるシーンに最適な環境をご用意しています。",
-        imageUrl:
-          "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=1000&q=80",
-        imagePosition: "right",
-      },
-      design: {},
-      order: 1,
-      isActive: true,
-    },
-    {
-      type: "SPACE_SHOWCASE",
-      config: {
-        title: "厳選されたスペース",
-        maxItems: 3,
-        showOnlyPublished: true,
-      },
-      design: {},
-      order: 2,
-      isActive: true,
-    },
-    {
-      type: "FEATURES",
-      config: {
-        title: "選ばれる理由",
-        items: [
-          {
-            icon: "clock",
-            title: "柔軟な利用プラン",
-            description:
-              "1時間単位でご利用いただけます。当日予約にも対応し、急なご要望にもお応えします。",
-          },
-          {
-            icon: "shield",
-            title: "安心のサポート体制",
-            description:
-              "専任スタッフが常駐し、設備の使い方からレイアウト変更まで丁寧にサポートいたします。",
-          },
-          {
-            icon: "sparkles",
-            title: "上質な空間デザイン",
-            description:
-              "プロのデザイナーが手がけた内装で、どの角度から撮影しても美しい空間をご提供します。",
-          },
-        ],
-        columns: 3,
-      },
-      design: {},
-      order: 3,
-      isActive: true,
-    },
-    {
-      type: "CTA",
-      config: {
-        title: "あなたの特別な一日を 私たちと共に",
-        description:
-          "お気軽にご相談ください。専任スタッフが最適なスペースをご提案いたします。",
-        ctaPrimary: { text: "Reserve Now", url: "/reservation" },
-        ctaSecondary: { text: "Contact Us", url: "/contact" },
-      },
-      design: {},
-      order: 4,
-      isActive: true,
-    },
+  // Seed system page sections (for pages that exist in Page table)
+  const systemPageSlugs = [
+    "about",
+    "contact",
+    "faq",
+    "news",
+    "posts",
+    "privacy",
+    "terms",
+    "reservation",
+    "spaces",
   ];
 
-  for (const section of sections) {
-    await prisma.section.create({ data: section });
+  let createdCount = 0;
+  for (const slug of systemPageSlugs) {
+    const page = await prisma.page.findFirst({ where: { slug } });
+    if (!page) continue;
+
+    const existingCount = await prisma.section.count({
+      where: { pageId: page.id },
+    });
+    if (existingCount > 0) continue;
+
+    const defaults = DEFAULT_PAGE_SECTIONS[slug];
+    if (!defaults || defaults.length === 0) continue;
+
+    for (const section of defaults) {
+      await prisma.section.create({
+        data: {
+          pageId: page.id,
+          type: section.type,
+          title: section.title,
+          config: section.config,
+          design: section.design ?? {},
+          contentHtml: section.content,
+          order: section.order,
+          isActive: section.isActive,
+        },
+      });
+    }
+    createdCount++;
   }
 
-  console.log("✅ Created homepage sections");
+  if (createdCount > 0) {
+    console.log(`✅ Created sections for ${createdCount} system pages`);
+  } else {
+    console.log("⏭️ System page sections already exist or no pages found");
+  }
 }
 
 // =============================================================================
@@ -2747,7 +2625,6 @@ async function seedAll(email: string, password: string, name: string) {
   // Phase 6: コンテンツ
   await seedNews();
   await seedPages();
-  await seedPageContent();
   await seedFaq();
   await seedBlogTags();
   await seedBlog();
@@ -2757,7 +2634,7 @@ async function seedAll(email: string, password: string, name: string) {
   await seedNavigation();
   await seedAnnouncementBar();
   await seedSocialLinks();
-  await seedHomepageSections();
+  await seedSystemPageSections();
 }
 
 async function seedDemo() {
@@ -2777,10 +2654,9 @@ async function seedDemo() {
   // コンテンツ
   await seedNews();
   await seedPages();
-  await seedPageContent();
   await seedTerms();
   await seedFaq();
-  await seedHomepageSections();
+  await seedSystemPageSections();
   await seedNavigation();
   await seedAnnouncementBar();
   await seedSocialLinks();

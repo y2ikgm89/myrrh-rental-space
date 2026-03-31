@@ -5,7 +5,7 @@
  * 各ページに適したセクションタイプとconfigを定義。
  */
 
-import { SectionType } from "@/shared/db/enums";
+import { SectionType } from "@/shared/lib/validations/section";
 import type { Prisma } from "@/shared/db/prisma";
 
 export type DefaultSectionDef = {
@@ -22,6 +22,94 @@ export type DefaultSectionDef = {
  * システムページごとのデフォルトセクション定義
  */
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
+  home: [
+    {
+      type: SectionType.HERO_PARALLAX,
+      title: null,
+      config: {
+        title: "Myrrh Rental Space",
+        subtitle: "特別な空間で、特別な時間を",
+        backgroundImageUrl: "/images/hero-default.jpg",
+        parallaxSpeed: 0.3,
+        overlayGradient: true,
+        scrollIndicator: true,
+      },
+      design: {},
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+    {
+      type: SectionType.CONCEPT,
+      title: null,
+      config: {
+        heading: "私たちの想い",
+        body: "Myrrh Rental Space は、撮影、会議、イベント、ワークショップなど、あらゆるシーンに対応する上質なレンタルスペースです。洗練された空間と柔軟なプランで、特別な瞬間をサポートします。",
+        imageUrl: "/images/concept-default.jpg",
+        imagePosition: "right",
+      },
+      content: null,
+      order: 1,
+      isActive: true,
+    },
+    {
+      type: SectionType.SPACE_SHOWCASE,
+      title: null,
+      config: {
+        title: "厳選されたスペース",
+        maxItems: 3,
+        showOnlyPublished: true,
+      },
+      content: null,
+      order: 2,
+      isActive: true,
+    },
+    {
+      type: SectionType.FEATURES,
+      title: null,
+      config: {
+        title: "選ばれる理由",
+        items: [
+          {
+            icon: "clock",
+            title: "柔軟な利用プラン",
+            description:
+              "1時間単位でご利用いただけます。当日予約にも対応し、急なご要望にもお応えします。",
+          },
+          {
+            icon: "shield",
+            title: "安心のサポート体制",
+            description:
+              "専任スタッフが常駐し、設備の使い方からレイアウト変更まで丁寧にサポートいたします。",
+          },
+          {
+            icon: "sparkles",
+            title: "上質な空間デザイン",
+            description:
+              "プロのデザイナーが手がけた内装で、どの角度から撮影しても美しい空間をご提供します。",
+          },
+        ],
+        columns: 3,
+      },
+      content: null,
+      order: 3,
+      isActive: true,
+    },
+    {
+      type: SectionType.CTA,
+      title: null,
+      config: {
+        title: "ご予約・お問い合わせ",
+        description: "お気軽にご相談ください。見学のご予約も承っております。",
+        ctaPrimary: { text: "予約する", url: "/reservation" },
+        ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+      },
+      content: null,
+      order: 4,
+      isActive: true,
+    },
+  ],
+
   about: [
     {
       type: SectionType.HERO,

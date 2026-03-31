@@ -1,8 +1,20 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 
-import type { ButtonItem, ImageRef } from "../../lib/content/types";
 import { Button } from "../design-system/button";
+
+interface ButtonItem {
+  readonly label: string;
+  readonly href: string;
+  readonly variant: "primary" | "secondary" | "ghost";
+}
+
+interface ImageRef {
+  readonly src: string;
+  readonly alt: string;
+  readonly width: number;
+  readonly height: number;
+}
 import { Container } from "../design-system/container";
 import { Heading } from "../design-system/heading";
 import { Stack } from "../design-system/stack";
