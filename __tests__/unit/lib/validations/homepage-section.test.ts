@@ -25,13 +25,14 @@ import {
   mapConfigSchema,
   embedConfigSchema,
   instagramConfigSchema,
-  // 型
-  SectionType,
   // CRUD
   createSectionSchema,
   updateSectionSchema,
 } from "@/admin/lib/validations/homepage-section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import {
+  getDefaultConfig,
+  getAllSectionDefinitions,
+} from "@/shared/lib/sections/registry";
 
 describe("homepage-section re-export", () => {
   test("スキーマがインポート可能", () => {
@@ -53,12 +54,11 @@ describe("homepage-section re-export", () => {
     expect(instagramConfigSchema).toBeDefined();
   });
 
-  test("SectionTypeがインポート可能", () => {
-    expect(SectionType).toBeDefined();
-    expect(SectionType.HERO).toBe("HERO");
-    expect(SectionType.HERO_PARALLAX).toBe("HERO_PARALLAX");
-    expect(SectionType.CUSTOM).toBe("CUSTOM");
-    expect(SectionType.CTA).toBe("CTA");
+  test("デフォルト設定にセクションタイプが含まれる", () => {
+    expect(getDefaultConfig("hero")).toBeDefined();
+    expect(getDefaultConfig("hero-parallax")).toBeDefined();
+    expect(getDefaultConfig("custom")).toBeDefined();
+    expect(getDefaultConfig("cta")).toBeDefined();
   });
 
   test("CRUDスキーマがインポート可能", () => {
@@ -66,9 +66,9 @@ describe("homepage-section re-export", () => {
     expect(updateSectionSchema).toBeDefined();
   });
 
-  test("デフォルト設定がインポート可能", () => {
-    expect(defaultSectionConfigs).toBeDefined();
-    expect(defaultSectionConfigs[SectionType.HERO]).toBeDefined();
+  test("レジストリにセクション定義が存在する", () => {
+    const definitions = getAllSectionDefinitions();
+    expect(definitions.length).toBeGreaterThan(0);
   });
 
   test("heroConfigSchemaが機能する", () => {

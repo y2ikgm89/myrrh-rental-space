@@ -8,21 +8,25 @@ import { ensureHomepageSections } from "@/shared/lib/section-defaults";
 import {
   SectionType,
   defaultHomepageSectionOrder,
+  isSectionType,
+  validateSectionConfig,
   type CreateSectionInput,
   type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  validateSectionConfig,
 } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultConfig } from "@/shared/lib/sections/registry";
+import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 
-function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
+function parseSectionConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);
   if (result.success) {
     return result.data;
   }
 
-  return defaultSectionConfigs[type];
+  return (getDefaultSectionConfig(type) ??
+    getDefaultSectionConfig(SectionType.CUSTOM) ??
+    {}) as SectionConfig;
 }
 
 function parseJsonValue(
@@ -86,7 +90,7 @@ async function ensurePageSectionExists(id: string) {
   };
 }
 
-function validateConfig(type: SectionType, config: unknown): SectionConfig {
+function validateConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);
   if (!result.success) {
     throw new DomainError("設定エラー", "VALIDATION");
@@ -207,7 +211,7 @@ export async function initializeDefaultHomepageSectionsCommand(): Promise<boolea
         data: {
           pageId: null,
           type,
-          config: cloneJsonValue(defaultSectionConfigs[type]),
+          config: cloneJsonValue(getDefaultConfig(type)),
           design: {},
           order: index,
           isActive: true,

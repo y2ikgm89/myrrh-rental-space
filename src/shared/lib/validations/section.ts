@@ -7,7 +7,6 @@
  */
 
 import { z } from "zod";
-import { SectionType } from "@/shared/db/enums";
 import {
   createSafeUrlSchema,
   createCtaSchemas,
@@ -51,7 +50,59 @@ import {
   maxWidthValues,
 } from "./section-options";
 
-export { SectionType };
+// =============================================================================
+// SectionType 文字列定数（Prisma enum 廃止後の定義）
+// =============================================================================
+
+/**
+ * セクションタイプ定数
+ *
+ * Prisma enum を廃止し、Section.type を String @db.VarChar(64) に変更。
+ * 既存コードとの互換性のため as const オブジェクトで定義。
+ */
+export const SectionType = {
+  HERO: "hero",
+  HERO_PARALLAX: "hero-parallax",
+  CUSTOM: "custom",
+  CONCEPT: "concept",
+  SPACE_LIST: "space-list",
+  SPACE_SHOWCASE: "space-showcase",
+  NEWS_LIST: "news-list",
+  POST_LIST: "post-list",
+  FAQ_LIST: "faq-list",
+  FEATURES: "features",
+  TESTIMONIAL: "testimonial",
+  GALLERY: "gallery",
+  CTA: "cta",
+  CONTACT_FORM: "contact-form",
+  MAP: "map",
+  EMBED: "embed",
+  INSTAGRAM: "instagram",
+} as const;
+
+export type SectionType = (typeof SectionType)[keyof typeof SectionType];
+
+/** SectionType の値配列（z.enum 用） */
+const SECTION_TYPE_VALUES = [
+  SectionType.HERO,
+  SectionType.HERO_PARALLAX,
+  SectionType.CUSTOM,
+  SectionType.CONCEPT,
+  SectionType.SPACE_LIST,
+  SectionType.SPACE_SHOWCASE,
+  SectionType.NEWS_LIST,
+  SectionType.POST_LIST,
+  SectionType.FAQ_LIST,
+  SectionType.FEATURES,
+  SectionType.TESTIMONIAL,
+  SectionType.GALLERY,
+  SectionType.CTA,
+  SectionType.CONTACT_FORM,
+  SectionType.MAP,
+  SectionType.EMBED,
+  SectionType.INSTAGRAM,
+] as const;
+
 export type {
   CTAButtonItem,
   SectionDesign,
@@ -523,45 +574,39 @@ export const instagramConfigSchema = z.object({
 });
 
 // =============================================================================
-// 統合スキーママップ
+// レジストリ委譲
 // =============================================================================
 
-/**
- * SectionType → config スキーマのマッピング
- */
-export const sectionConfigSchemas = {
-  [SectionType.HERO]: heroConfigSchema,
-  [SectionType.HERO_PARALLAX]: heroParallaxConfigSchema,
-  [SectionType.CUSTOM]: customConfigSchema,
-  [SectionType.CONCEPT]: conceptConfigSchema,
-  [SectionType.SPACE_LIST]: spaceListConfigSchema,
-  [SectionType.SPACE_SHOWCASE]: spaceShowcaseConfigSchema,
-  [SectionType.NEWS_LIST]: newsListConfigSchema,
-  [SectionType.POST_LIST]: postListConfigSchema,
-  [SectionType.FAQ_LIST]: faqListConfigSchema,
-  [SectionType.FEATURES]: featuresConfigSchema,
-  [SectionType.TESTIMONIAL]: testimonialConfigSchema,
-  [SectionType.GALLERY]: galleryConfigSchema,
-  [SectionType.CTA]: ctaConfigSchema,
-  [SectionType.CONTACT_FORM]: contactFormConfigSchema,
-  [SectionType.MAP]: mapConfigSchema,
-  [SectionType.EMBED]: embedConfigSchema,
-  [SectionType.INSTAGRAM]: instagramConfigSchema,
-} satisfies Record<SectionType, z.ZodType>;
+import { getSectionDefinition } from "@/shared/lib/sections/registry";
+
+/** SectionType 型ガード */
+const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
+export function isSectionType(value: unknown): value is SectionType {
+  return typeof value === "string" && VALID_SECTION_TYPES.has(value);
+}
 
 /**
- * セクションタイプに応じた config を検証
+ * セクションタイプに応じた config を検証（レジストリ委譲）
  *
+ * type は string を受け付け、未知の type は失敗を返す。
  * 戻り型を SectionConfig union に widening することで、
  * 呼び出し側の `as SectionConfig` が不要になる。
  */
 export function validateSectionConfig(
-  type: SectionType,
+  type: string,
   config: unknown,
-): z.ZodSafeParseResult<SectionConfig> {
-  const schema = sectionConfigSchemas[type];
-  // 各スキーマの safeParse 結果は個別型だが、SectionConfig union の部分型なので安全
-  return schema.safeParse(config);
+):
+  | { success: true; data: SectionConfig }
+  | { success: false; error: z.ZodError } {
+  const def = getSectionDefinition(type);
+  if (!def) {
+    return { success: false, error: new z.ZodError([]) };
+  }
+  const result = def.configSchema.safeParse(config);
+  if (result.success) {
+    return { success: true, data: result.data as SectionConfig };
+  }
+  return { success: false, error: result.error };
 }
 
 // =============================================================================
@@ -571,7 +616,7 @@ export function validateSectionConfig(
 /** セクション作成スキーマ */
 export const createSectionSchema = z.object({
   pageId: z.string().uuid().optional(), // null = ホームページ
-  type: z.enum(SectionType),
+  type: z.string().min(1).max(64),
   title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
   design: z.record(z.string(), z.unknown()).default({}),

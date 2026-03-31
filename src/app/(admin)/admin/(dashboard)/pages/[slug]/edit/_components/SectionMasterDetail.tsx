@@ -30,8 +30,7 @@ import type {
   PageForEdit,
   PageSectionData,
 } from "@/admin/queries/page-section";
-import { SectionType } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
@@ -201,12 +200,12 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     });
   }
 
-  function handleAddSection(type: SectionType) {
+  function handleAddSection(type: string) {
     startTransition(async () => {
       const result = await createPageSection({
         pageId: page.id,
         type,
-        config: defaultSectionConfigs[type],
+        config: getDefaultSectionConfig(type) ?? {},
         design: {},
         isActive: true,
       });

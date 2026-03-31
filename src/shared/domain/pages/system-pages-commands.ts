@@ -5,7 +5,7 @@ import { clonePrismaInputJson } from "@/shared/db/prisma-input-json";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import { defaultHomepageSectionOrder } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultConfig } from "@/shared/lib/sections/registry";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 
@@ -103,7 +103,7 @@ export async function ensureHomepageSectionsCommand(
           data: defaultHomepageSectionOrder.map((type, index) => ({
             type,
             config: clonePrismaInputJson(
-              defaultSectionConfigs[type],
+              getDefaultConfig(type),
               "セクション設定が不正です",
             ),
             design: {},

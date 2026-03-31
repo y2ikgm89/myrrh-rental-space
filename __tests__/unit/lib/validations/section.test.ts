@@ -37,7 +37,7 @@ import {
   parseCtaVariant,
   SectionType,
 } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultConfig } from "@/shared/lib/sections/registry";
 
 // =============================================================================
 // Hero セクション
@@ -775,24 +775,24 @@ describe("パーサー関数", () => {
 // デフォルト設定
 // =============================================================================
 
-describe("defaultSectionConfigs", () => {
+describe("getDefaultConfig (registry)", () => {
   test("全セクションタイプにデフォルト設定が存在", () => {
     const types = Object.values(SectionType);
     types.forEach((type) => {
-      expect(defaultSectionConfigs[type]).toBeDefined();
+      expect(getDefaultConfig(type)).toBeDefined();
     });
   });
 
   test("HEROデフォルト設定", () => {
-    const defaultHero = defaultSectionConfigs[SectionType.HERO];
-    expect(defaultHero.height).toBe("md");
-    expect(defaultHero.overlay).toBe(true);
-    expect(defaultHero.overlayOpacity).toBe(40);
+    const defaultHero = getDefaultConfig(SectionType.HERO);
+    expect(defaultHero["height"]).toBe("md");
+    expect(defaultHero["overlay"]).toBe(true);
+    expect(defaultHero["overlayOpacity"]).toBe(40);
   });
 
   test("CTAデフォルト設定", () => {
-    const defaultCta = defaultSectionConfigs[SectionType.CTA];
-    expect(defaultCta.title).toBe("ご予約・お問い合わせ");
-    expect(defaultCta.buttons).toHaveLength(2);
+    const defaultCta = getDefaultConfig(SectionType.CTA);
+    expect(defaultCta["title"]).toBe("ご予約・お問い合わせ");
+    expect(defaultCta["buttons"]).toHaveLength(2);
   });
 });

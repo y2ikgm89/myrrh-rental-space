@@ -4,24 +4,27 @@ import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import {
   SectionType,
+  isSectionType,
   type SectionConfig,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 
-function parseSectionConfig(type: SectionType, config: unknown): SectionConfig {
+function parseSectionConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);
   if (result.success) {
     return result.data;
   }
 
-  return defaultSectionConfigs[type];
+  return (getDefaultSectionConfig(type) ??
+    getDefaultSectionConfig(SectionType.CUSTOM) ??
+    {}) as SectionConfig;
 }
 
 function toSectionData(section: {
   id: string;
   pageId: string | null;
-  type: SectionType;
+  type: string;
   title: string | null;
   config: unknown;
   design: unknown;
@@ -109,7 +112,7 @@ export async function getHomepageSectionQuery(id: string) {
   });
 }
 
-export async function getHomepageSectionByTypeQuery(type: SectionType) {
+export async function getHomepageSectionByTypeQuery(type: string) {
   const section = await prisma.section.findFirst({
     where: { type, pageId: null },
     orderBy: { order: "asc" },

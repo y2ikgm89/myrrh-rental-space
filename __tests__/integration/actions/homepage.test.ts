@@ -11,7 +11,7 @@ import {
   SectionType,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultConfig } from "@/shared/lib/sections/registry";
 
 // =============================================================================
 // SectionType Tests
@@ -172,23 +172,23 @@ describe("Homepage Public Action Integration", () => {
   describe("defaultSectionConfigs", () => {
     test("全セクションタイプにデフォルト設定がある", () => {
       Object.values(SectionType).forEach((type) => {
-        expect(defaultSectionConfigs[type]).toBeDefined();
+        expect(getDefaultConfig(type)).toBeDefined();
       });
     });
 
     test("SPACE_LISTのデフォルト設定", () => {
-      const config = defaultSectionConfigs[SectionType.SPACE_LIST];
+      const config = getDefaultConfig(SectionType.SPACE_LIST);
       expect(config).toHaveProperty("maxItems");
-      expect(config.maxItems).toBeGreaterThan(0);
+      expect(config["maxItems"]).toBeGreaterThan(0);
     });
 
     test("NEWSのデフォルト設定", () => {
-      const config = defaultSectionConfigs[SectionType.NEWS_LIST];
+      const config = getDefaultConfig(SectionType.NEWS_LIST);
       expect(config).toHaveProperty("maxItems");
     });
 
     test("POST_LISTのデフォルト設定", () => {
-      const config = defaultSectionConfigs[SectionType.POST_LIST];
+      const config = getDefaultConfig(SectionType.POST_LIST);
       expect(config).toHaveProperty("maxItems");
     });
   });
@@ -201,7 +201,7 @@ describe("Homepage Public Action Integration", () => {
 
       if (!result.success) {
         // フォールバック先のデフォルト設定を確認
-        const defaultConfig = defaultSectionConfigs[SectionType.HERO];
+        const defaultConfig = getDefaultConfig(SectionType.HERO);
         expect(defaultConfig).toBeDefined();
       }
     });
@@ -215,8 +215,8 @@ describe("Homepage Public Action Integration", () => {
       const result = validateSectionConfig(SectionType.SPACE_LIST, config);
       // バリデーション結果に応じてフォールバック
       if (!result.success) {
-        const defaultConfig = defaultSectionConfigs[SectionType.SPACE_LIST];
-        expect(defaultConfig.maxItems).toBeGreaterThan(0);
+        const defaultConfig = getDefaultConfig(SectionType.SPACE_LIST);
+        expect(defaultConfig["maxItems"]).toBeGreaterThan(0);
       }
     });
   });
@@ -227,7 +227,7 @@ describe("Homepage Public Action Integration", () => {
         id: "section-123",
         type: SectionType.HERO,
         title: "ヒーローセクション",
-        config: defaultSectionConfigs[SectionType.HERO],
+        config: getDefaultConfig(SectionType.HERO),
         content: null,
         order: 1,
         isActive: true,

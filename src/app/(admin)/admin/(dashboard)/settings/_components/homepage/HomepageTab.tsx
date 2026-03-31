@@ -53,7 +53,7 @@ import {
   SectionType,
   sectionTypeLabels,
 } from "@/admin/lib/validations/homepage-section";
-import { defaultSectionConfigs } from "@/shared/lib/validations/section-defaults";
+import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 import {
   isMutationError,
   type MutationResult,
@@ -75,9 +75,9 @@ async function fetchHomepageSections(): Promise<
 interface AddSectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (type: SectionType) => void;
+  onAdd: (type: string) => void;
   disabled: boolean;
-  existingTypes: SectionType[];
+  existingTypes: string[];
   isInstagramConnected: boolean;
 }
 
@@ -109,8 +109,8 @@ function AddSectionDialog({
         </AlertDialogHeader>
         <div className="grid grid-cols-3 gap-2 py-4 max-h-[60vh] overflow-y-auto">
           {availableTypes.map((type) => {
-            const Icon = sectionTypeIcons[type];
-            const label = sectionTypeLabels[type];
+            const Icon = sectionTypeIcons[type] ?? IconSparkles;
+            const label = sectionTypeLabels[type] ?? type;
             const isCustom = type === SectionType.CUSTOM;
             const alreadyExists = existingTypes.includes(type);
 
@@ -281,12 +281,12 @@ export function HomepageTab({
     );
   };
 
-  const handleAddSection = (type: SectionType) => {
+  const handleAddSection = (type: string) => {
     runActionAndReload(
       () =>
         createHomepageSection({
           type,
-          config: defaultSectionConfigs[type],
+          config: getDefaultSectionConfig(type) ?? {},
           design: {},
           isActive: true,
         }),
