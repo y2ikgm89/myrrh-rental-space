@@ -99,7 +99,10 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
 
   if (spaceIds.length === 0) {
     return toPlainObject(
-      {} as Record<string, { averageRating: number; totalCount: number }>,
+      {} satisfies Record<
+        string,
+        { averageRating: number; totalCount: number }
+      >,
     );
   }
 
@@ -126,7 +129,7 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
 
       return statsRecord;
     },
-    fallback: {} as Record<
+    fallback: {} satisfies Record<
       string,
       { averageRating: number; totalCount: number }
     >,

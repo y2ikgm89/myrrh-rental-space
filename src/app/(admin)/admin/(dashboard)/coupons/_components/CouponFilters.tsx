@@ -2,7 +2,7 @@
 
 import { useQueryStates } from "nuqs";
 import { adminCouponSearchParamsParsers } from "@/shared/lib/nuqs";
-import { Search, X } from "lucide-react";
+import { IconSearch, IconX } from "@tabler/icons-react";
 import { useDebouncedCallback } from "@/admin/hooks";
 import {
   Button,
@@ -73,7 +73,7 @@ export function CouponFilters() {
       </div>
 
       <div className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="コード・名称で検索..."
           defaultValue={params.search}
@@ -84,7 +84,7 @@ export function CouponFilters() {
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters}>
-          <X className="mr-1 h-4 w-4" />
+          <IconX className="mr-1 h-4 w-4" />
           クリア
         </Button>
       )}

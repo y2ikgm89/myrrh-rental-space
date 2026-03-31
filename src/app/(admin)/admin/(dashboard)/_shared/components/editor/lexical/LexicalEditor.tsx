@@ -27,7 +27,7 @@ import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { HorizontalRulePlugin } from "@lexical/react/LexicalHorizontalRulePlugin";
 import { CharacterLimitPlugin } from "@lexical/react/LexicalCharacterLimitPlugin";
 import type { EditorState, LexicalEditor as LexicalEditorType } from "lexical";
-import { CircleAlert } from "lucide-react";
+import { IconAlertCircle } from "@tabler/icons-react";
 
 import { useMediaQuery } from "@/shared/hooks";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
@@ -290,7 +290,7 @@ function LexicalInvalidContentJsonNotice() {
       role="alert"
       className="flex gap-3 rounded-md border border-border bg-muted/30 p-4 text-sm text-foreground"
     >
-      <CircleAlert
+      <IconAlertCircle
         className="h-5 w-5 shrink-0 text-muted-foreground"
         aria-hidden
       />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
+import { IconStar } from "@tabler/icons-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,7 +62,7 @@ function ReadonlyStars({
       aria-label={`5段階中${Math.round(rating)}の評価`}
     >
       {Array.from({ length: MAX_STARS }, (_, i) => (
-        <Star
+        <IconStar
           key={i}
           className={
             i < Math.round(rating) ? "text-rating" : "text-muted-foreground/30"
@@ -110,7 +110,7 @@ function InteractiveStars({
             onClick={() => onChange(starValue)}
             onMouseEnter={() => setHoverRating(starValue)}
           >
-            <Star
+            <IconStar
               className={isFilled ? "text-rating" : "text-muted-foreground/30"}
               size={size}
               {...(isFilled ? { fill: "currentColor" } : {})}

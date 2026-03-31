@@ -121,7 +121,7 @@ export async function createCheckoutSessionCommand(reservationId: string) {
     });
 
     await prisma.reservation.update({
-      where: { id: reservationId },
+      where: { id: reservationId, deletedAt: null },
       data: {
         paymentStatus: PaymentStatus.PENDING,
         stripeCheckoutSessionId: session.id,
@@ -188,7 +188,7 @@ export async function refundReservationPaymentCommand(reservationId: string) {
     });
 
     await prisma.reservation.update({
-      where: { id: reservationId },
+      where: { id: reservationId, deletedAt: null },
       data: {
         paymentStatus: PaymentStatus.REFUNDED,
       },

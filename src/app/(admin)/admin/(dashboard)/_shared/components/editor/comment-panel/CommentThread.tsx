@@ -9,14 +9,7 @@
 import { useState, useTransition } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import {
-  Check,
-  ChevronDown,
-  ChevronUp,
-  MessageSquare,
-  RotateCcw,
-  Trash2,
-} from "lucide-react";
+import { IconCheck, IconChevronDown, IconChevronUp, IconMessage, IconRotate, IconTrash } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   Collapsible,
@@ -118,7 +111,7 @@ export function CommentThread({
             type="button"
             className="flex w-full items-start gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
           >
-            <MessageSquare className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+            <IconMessage className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
             <div className="flex-1 min-w-0">
               {/* 引用テキスト */}
               <p className="text-sm text-muted-foreground line-clamp-2">
@@ -136,9 +129,9 @@ export function CommentThread({
               </div>
             </div>
             {isOpen ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+              <IconChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              <IconChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
           </button>
         </CollapsibleTrigger>
@@ -157,7 +150,7 @@ export function CommentThread({
                   disabled={isResolvePending}
                   className="gap-1"
                 >
-                  <Check className="h-3 w-3" />
+                  <IconCheck className="h-3 w-3" />
                   解決
                 </Button>
               )}
@@ -170,7 +163,7 @@ export function CommentThread({
                   disabled={isReopenPending}
                   className="gap-1"
                 >
-                  <RotateCcw className="h-3 w-3" />
+                  <IconRotate className="h-3 w-3" />
                   再オープン
                 </Button>
               )}
@@ -183,7 +176,7 @@ export function CommentThread({
                   disabled={isDeletePending}
                   className="gap-1 text-destructive hover:text-destructive"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <IconTrash className="h-3 w-3" />
                   削除
                 </Button>
               )}

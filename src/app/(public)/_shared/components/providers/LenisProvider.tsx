@@ -50,13 +50,13 @@ export function LenisProvider({ children }: LenisProviderProps) {
     };
   }, []);
 
-  const getSnapshot = useCallback((): LenisContextValue | null => {
+  const getSnapshot = (): LenisContextValue | null => {
     return storeRef.current.value;
-  }, []);
+  };
 
-  const getServerSnapshot = useCallback((): LenisContextValue | null => {
+  const getServerSnapshot = (): LenisContextValue | null => {
     return null;
-  }, []);
+  };
 
   const contextValue = useSyncExternalStore(
     subscribe,

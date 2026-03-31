@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home } from "lucide-react";
+import { IconHome } from "@tabler/icons-react";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
 
 interface BreadcrumbItem {
@@ -29,7 +29,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
         <ol className="flex items-center gap-1.5">
           <li>
             <Link href="/" className="hover:text-accent" aria-label="ホーム">
-              <Home className="h-4 w-4" />
+              <IconHome className="h-4 w-4" />
             </Link>
           </li>
           {items.map((item, i) => (

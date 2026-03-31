@@ -15,7 +15,7 @@ export function MypageNav() {
   return (
     <nav
       aria-label="マイページナビゲーション"
-      className="flex gap-4 border-b border-border mb-8 pb-2"
+      className="flex gap-1 sm:gap-4 border-b border-border mb-4 md:mb-8"
     >
       {NAV_ITEMS.map((item) => {
         const isActive =
@@ -27,11 +27,11 @@ export function MypageNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={
+            className={`py-2 px-3 text-sm sm:text-base transition-colors ${
               isActive
-                ? "text-primary font-medium border-b-2 border-primary pb-2"
-                : "text-muted-foreground pb-2"
-            }
+                ? "text-primary font-medium border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             {item.label}
           </Link>

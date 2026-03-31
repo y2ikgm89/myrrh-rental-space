@@ -17,7 +17,7 @@ import type {
 import { $create, $getRoot, DecoratorNode } from "lexical";
 import { $isHeadingNode, type HeadingTagType } from "@lexical/rich-text";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { List } from "lucide-react";
+import { IconList } from "@tabler/icons-react";
 
 // =============================================================================
 // Types
@@ -92,7 +92,7 @@ function TableOfContentsComponent({ nodeKey }: { nodeKey: NodeKey }) {
         className="my-6 rounded-lg border border-border bg-muted/30 p-4"
       >
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <List className="h-4 w-4" />
+          <IconList className="h-4 w-4" />
           <span>見出しを追加すると目次が自動生成されます</span>
         </div>
       </div>
@@ -105,7 +105,7 @@ function TableOfContentsComponent({ nodeKey }: { nodeKey: NodeKey }) {
       className="my-6 rounded-lg border border-border bg-muted/30 p-4"
     >
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-        <List className="h-4 w-4" />
+        <IconList className="h-4 w-4" />
         <span>目次</span>
       </div>
       <ul className="space-y-1">

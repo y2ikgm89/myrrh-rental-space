@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { IconArrowLeft, IconExternalLink } from "@tabler/icons-react";
 import { getHomepageSection } from "@/admin/queries/homepage-settings";
 import { sectionTypeLabels } from "@/admin/lib/validations/homepage-section";
 import { toPlainObject } from "@/shared/lib/serialize";
@@ -48,7 +48,7 @@ export default async function HomepageSectionEditPage({
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon">
             <Link href="/admin/pages/homepage/edit?tab=sections">
-              <ArrowLeft className="h-4 w-4" />
+              <IconArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
@@ -60,7 +60,7 @@ export default async function HomepageSectionEditPage({
         </div>
         <Button asChild variant="outline" size="sm">
           <a href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-1" />
+            <IconExternalLink className="h-4 w-4 mr-1" />
             プレビュー
           </a>
         </Button>

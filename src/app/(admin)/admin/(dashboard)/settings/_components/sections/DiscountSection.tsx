@@ -7,7 +7,7 @@
  */
 
 import { useFieldArray, useWatch } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -130,7 +130,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                     onClick={addRule}
                     disabled={isPending}
                   >
-                    <Plus className="mr-1 h-4 w-4" />
+                    <IconPlus className="mr-1 h-4 w-4" />
                     ルールを追加
                   </Button>
                 </div>
@@ -209,7 +209,7 @@ export function DiscountSection({ settings }: DiscountSectionProps) {
                         disabled={isPending || fields.length <= 1}
                         className="text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <IconTrash className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}

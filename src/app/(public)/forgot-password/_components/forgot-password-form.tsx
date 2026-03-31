@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
 
   if (submitted) {
     return (
-      <Stack gap="md">
+      <Stack gap="lg">
         <div className="rounded-lg border border-border bg-surface p-6 text-center">
           <p className="text-lg font-medium text-foreground">
             メールを送信しました
@@ -64,7 +64,7 @@ export function ForgotPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Stack gap="md">
+      <Stack gap="lg">
         <Input
           label="メールアドレス"
           type="email"
@@ -77,9 +77,12 @@ export function ForgotPasswordForm() {
         />
 
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <div
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            role="alert"
+          >
             {error}
-          </p>
+          </div>
         ) : null}
 
         <Button type="submit" disabled={isPending}>

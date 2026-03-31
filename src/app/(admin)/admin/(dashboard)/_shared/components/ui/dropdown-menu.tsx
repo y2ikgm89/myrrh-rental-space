@@ -1,7 +1,7 @@
 "use client";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { ChevronRight } from "lucide-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { cn } from "@/shared/lib/cn";
 
@@ -189,7 +189,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRight
+      <IconChevronRight
         aria-hidden
         className="ml-auto size-4 shrink-0 text-muted-foreground"
       />

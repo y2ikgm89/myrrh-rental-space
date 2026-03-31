@@ -6,28 +6,6 @@
 
 import { describe, test, expect } from "bun:test";
 
-describe("GET /api/webhooks/google-calendar", () => {
-  test("エンドポイントが定義されている", async () => {
-    const routeModule =
-      await import("@/app/api/webhooks/google-calendar/route");
-    expect(routeModule.GET).toBeDefined();
-    expect(typeof routeModule.GET).toBe("function");
-  });
-
-  test("エンドポイント確認レスポンスを返す", async () => {
-    const routeModule =
-      await import("@/app/api/webhooks/google-calendar/route");
-
-    // GET関数を引数なしで呼び出せることを確認
-    const response = await routeModule.GET();
-    const data = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(data.status).toBe("ok");
-    expect(data.message).toContain("ready");
-  });
-});
-
 describe("POST /api/webhooks/google-calendar", () => {
   test("エンドポイントが定義されている", async () => {
     const routeModule =

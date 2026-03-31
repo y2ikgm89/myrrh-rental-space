@@ -1,5 +1,5 @@
 /**
- * Layout Inspector Panel
+ * IconLayout Inspector Panel
  *
  * @description LayoutContainerNodeのプロパティ編集パネル
  */

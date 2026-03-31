@@ -22,6 +22,15 @@ mock.module("next/headers", () => ({
 
 mock.module("@/shared/lib/auth", () => ({
   verifyAdminSession: () => mockVerifyAdminSession(),
+  verifySession: mock(() => Promise.resolve(null)),
+  verifyCustomerSession: mock(() => Promise.resolve(null)),
+  getCurrentUser: mock(() => Promise.resolve(null)),
+  getSession: mock(() => Promise.resolve(null)),
+  isAdmin: mock(() => Promise.resolve(false)),
+  getSessionUser: () => null,
+  getRoleFromSession: () => null,
+  isValidRole: () => false,
+  auth: {},
 }));
 
 mock.module("@/admin/lib/permissions", () => ({

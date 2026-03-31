@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { IconTrash } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Button } from "@/admin/components/ui/button";
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
@@ -49,7 +49,7 @@ export function DetailDeleteButton({
         onClick={() => setOpen(true)}
         disabled={isPending}
       >
-        <Trash2 className="mr-2 h-4 w-4" />
+        <IconTrash className="mr-2 h-4 w-4" />
         削除
       </Button>
       <DeleteConfirmDialog

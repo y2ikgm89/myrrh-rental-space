@@ -22,7 +22,7 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from "@lexical/selection";
-import { Minus, Plus } from "lucide-react";
+import { IconMinus, IconPlus } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui/input";
 
@@ -175,7 +175,7 @@ export function FontSizePlugin() {
         disabled={currentSize <= MIN_FONT_SIZE}
         title="フォントサイズを小さく"
       >
-        <Minus className="h-3 w-3" />
+        <IconMinus className="h-3 w-3" />
       </Button>
       <Input
         type="text"
@@ -196,7 +196,7 @@ export function FontSizePlugin() {
         disabled={currentSize >= MAX_FONT_SIZE}
         title="フォントサイズを大きく"
       >
-        <Plus className="h-3 w-3" />
+        <IconPlus className="h-3 w-3" />
       </Button>
     </div>
   );

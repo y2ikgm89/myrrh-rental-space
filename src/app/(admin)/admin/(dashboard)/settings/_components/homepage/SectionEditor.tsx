@@ -27,7 +27,7 @@ import {
   TabsTrigger,
 } from "@/admin/components/ui";
 import { DesignPanel } from "./DesignPanel";
-import { ArrowLeft, Save } from "lucide-react";
+import { IconArrowLeft, IconDeviceFloppy } from "@tabler/icons-react";
 import {
   updateHomepageSection,
   type HomepageSectionData,
@@ -275,7 +275,7 @@ export function SectionEditor({
       {showHeader && (
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <IconArrowLeft className="h-4 w-4 mr-2" />
             戻る
           </Button>
           <div>
@@ -287,7 +287,7 @@ export function SectionEditor({
         </div>
       )}
 
-      {/* Title Edit */}
+      {/* Title IconEdit */}
       <Card>
         <CardHeader>
           <CardTitle>セクション情報</CardTitle>
@@ -402,7 +402,7 @@ function TitleForm({
         size="sm"
       >
         <>
-          <Save className="h-4 w-4 mr-2" />
+          <IconDeviceFloppy className="h-4 w-4 mr-2" />
           タイトルを保存
         </>
       </SubmitButton>

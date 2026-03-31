@@ -9,6 +9,7 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
+import type { SearchParams } from "nuqs/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
@@ -30,8 +31,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("contact");
 }
 
-export default async function ContactPage(): Promise<ReactElement> {
+export default async function ContactPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<SearchParams>;
+}): Promise<ReactElement> {
   await connection();
+
+  const params = await searchParams;
+  const defaultSubject =
+    typeof params["subject"] === "string"
+      ? params["subject"].slice(0, 200)
+      : undefined;
 
   const [content, turnstileSiteKey] = await Promise.all([
     getPageContent("contact", simplePageContentSchema, defaultContactContent),
@@ -49,7 +60,10 @@ export default async function ContactPage(): Promise<ReactElement> {
       <section className="py-[var(--spacing-section)]">
         <Container>
           <div className="grid gap-12 lg:grid-cols-[1fr_360px] lg:gap-16">
-            <ContactForm turnstileSiteKey={turnstileSiteKey} />
+            <ContactForm
+              turnstileSiteKey={turnstileSiteKey}
+              defaultSubject={defaultSubject}
+            />
             <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
               <ScrollReveal delay={0.2}>
                 <Suspense fallback={null}>

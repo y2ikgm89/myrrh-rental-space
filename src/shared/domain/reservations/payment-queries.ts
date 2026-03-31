@@ -100,7 +100,7 @@ export async function savePaymentIntentId(
  */
 export async function markReservationRefunded(reservationId: string) {
   return prisma.reservation.update({
-    where: { id: reservationId },
+    where: { id: reservationId, deletedAt: null },
     data: { paymentStatus: PaymentStatus.REFUNDED },
   });
 }

@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
-import { Plus, LoaderCircle, CheckCircle, XCircle } from "lucide-react";
+import { IconPlus, IconLoader2, IconCircleCheck, IconCircleX } from "@tabler/icons-react";
 import { Button, SubmitButton } from "@/admin/components/ui";
 import {
   Dialog,
@@ -181,7 +181,7 @@ export function CreatePageDialog() {
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="gap-2">
-          <Plus className="h-4 w-4" />
+          <IconPlus className="h-4 w-4" />
           新規ページ
         </Button>
       </DialogTrigger>
@@ -225,13 +225,13 @@ export function CreatePageDialog() {
                 {/* スラッグ検証ステータス */}
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   {slugStatus === "checking" && (
-                    <LoaderCircle className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <IconLoader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   )}
                   {slugStatus === "available" && (
-                    <CheckCircle className="h-4 w-4 text-success" />
+                    <IconCircleCheck className="h-4 w-4 text-success" />
                   )}
                   {slugStatus === "unavailable" && (
-                    <XCircle className="h-4 w-4 text-destructive" />
+                    <IconCircleX className="h-4 w-4 text-destructive" />
                   )}
                 </div>
               </div>

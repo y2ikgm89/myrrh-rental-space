@@ -4,7 +4,7 @@ import type { DndContextProps } from "@dnd-kit/core";
 import Image from "next/image";
 import type { Control, FieldArrayWithId, FieldErrors } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -79,7 +79,7 @@ export function SpaceEditMediaTabPanel({
                 </div>
               ) : (
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                  <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 space-y-2">
@@ -89,7 +89,7 @@ export function SpaceEditMediaTabPanel({
                   onClick={() => mainImagePicker.openPicker()}
                   disabled={isPending}
                 >
-                  <ImagePlus className="mr-2 h-4 w-4" />
+                  <IconPhotoPlus className="mr-2 h-4 w-4" />
                   画像を選択
                 </Button>
                 {mainImageUrl && (
@@ -119,7 +119,7 @@ export function SpaceEditMediaTabPanel({
               onClick={() => additionalImagesPicker.openPicker()}
               disabled={isPending || imageFields.length >= 10}
             >
-              <ImagePlus className="mr-2 h-4 w-4" />
+              <IconPhotoPlus className="mr-2 h-4 w-4" />
               画像を追加
             </Button>
             {imageFields.length > 0 && (

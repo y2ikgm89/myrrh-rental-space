@@ -10,7 +10,7 @@
  * - デスクトップ（>= lg）: fixed配置、InlineEditorShellで幅調整
  */
 
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { Button } from "@/admin/components/ui";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
@@ -100,7 +100,7 @@ export function SidePanelShell({
             onClick={onClose}
             className="h-8 w-8 p-0"
           >
-            <X className="h-4 w-4" />
+            <IconX className="h-4 w-4" />
             <span className="sr-only">閉じる</span>
           </Button>
         </div>

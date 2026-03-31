@@ -9,7 +9,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, Trash2, X, LoaderCircle } from "lucide-react";
+import { IconEye, IconEyeOff, IconTrash, IconX, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { bulkTogglePagePublished, bulkDeletePages } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -73,9 +73,9 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           disabled={isPending}
         >
           {isPending ? (
-            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
           ) : (
-            <Eye className="h-4 w-4 mr-1" />
+            <IconEye className="h-4 w-4 mr-1" />
           )}
           一括公開
         </Button>
@@ -87,9 +87,9 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           disabled={isPending}
         >
           {isPending ? (
-            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
           ) : (
-            <EyeOff className="h-4 w-4 mr-1" />
+            <IconEyeOff className="h-4 w-4 mr-1" />
           )}
           一括非公開
         </Button>
@@ -102,9 +102,9 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           className="text-destructive hover:text-destructive"
         >
           {isPending ? (
-            <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
+            <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
           ) : (
-            <Trash2 className="h-4 w-4 mr-1" />
+            <IconTrash className="h-4 w-4 mr-1" />
           )}
           一括削除
         </Button>
@@ -117,7 +117,7 @@ export function BulkActions({ selectedSlugs, onClear }: BulkActionsProps) {
           onClick={onClear}
           disabled={isPending}
         >
-          <X className="h-4 w-4" />
+          <IconX className="h-4 w-4" />
         </Button>
       </div>
     </div>

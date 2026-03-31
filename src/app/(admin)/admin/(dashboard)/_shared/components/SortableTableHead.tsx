@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { IconArrowsUpDown, IconArrowUp, IconArrowDown } from "@tabler/icons-react";
 import { TableHead } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 
@@ -41,12 +41,12 @@ export function SortableTableHead<T extends string>({
         {children}
         {isActive ? (
           currentSortOrder === "asc" ? (
-            <ArrowUp className="h-4 w-4" />
+            <IconArrowUp className="h-4 w-4" />
           ) : (
-            <ArrowDown className="h-4 w-4" />
+            <IconArrowDown className="h-4 w-4" />
           )
         ) : (
-          <ArrowUpDown className="h-4 w-4 opacity-50" />
+          <IconArrowsUpDown className="h-4 w-4 opacity-50" />
         )}
       </button>
     </TableHead>

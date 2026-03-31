@@ -7,16 +7,7 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
-import {
-  ArrowLeft,
-  Settings,
-  Eye,
-  Save,
-  LoaderCircle,
-  Globe,
-  GlobeLock,
-  MessageSquare,
-} from "lucide-react";
+import { IconArrowLeft, IconSettings, IconEye, IconDeviceFloppy, IconLoader2, IconWorld, IconLock, IconMessage } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { Button } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
@@ -79,7 +70,7 @@ export function EditorHeader({
             onClick={onBack}
             className="gap-1"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <IconArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">戻る</span>
           </Button>
 
@@ -100,7 +91,7 @@ export function EditorHeader({
               onClick={onPreview}
               className="gap-1"
             >
-              <Eye className="h-4 w-4" />
+              <IconEye className="h-4 w-4" />
               <span className="hidden sm:inline">プレビュー</span>
             </Button>
           )}
@@ -132,7 +123,7 @@ export function EditorHeader({
                     : "設定パネルを開く"
               }
             >
-              <Settings className="h-4 w-4 shrink-0" aria-hidden />
+              <IconSettings className="h-4 w-4 shrink-0" aria-hidden />
               {metadataPanelLabel ? (
                 <span
                   className="hidden xl:inline max-w-[7rem] truncate"
@@ -154,7 +145,7 @@ export function EditorHeader({
               onClick={onToggleCommentPanel}
               className={isCommentPanelOpen ? "bg-accent" : ""}
             >
-              <MessageSquare className="h-4 w-4" />
+              <IconMessage className="h-4 w-4" />
               {commentCount !== undefined && commentCount > 0 && (
                 <span className="ml-1 text-xs">{commentCount}</span>
               )}
@@ -170,9 +161,9 @@ export function EditorHeader({
             className="gap-1"
           >
             {isPending ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <IconLoader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <IconDeviceFloppy className="h-4 w-4" />
             )}
             <span className="hidden sm:inline">
               {isPending ? "保存中..." : "保存"}
@@ -190,7 +181,7 @@ export function EditorHeader({
                 disabled={isPending}
                 className="gap-1 text-warning hover:text-warning/80"
               >
-                <GlobeLock className="h-4 w-4" />
+                <IconLock className="h-4 w-4" />
                 <span className="hidden sm:inline">非公開にする</span>
               </Button>
             ) : (
@@ -202,7 +193,7 @@ export function EditorHeader({
                 disabled={isPending || isDirty}
                 className="gap-1 bg-success hover:bg-success/90"
               >
-                <Globe className="h-4 w-4" />
+                <IconWorld className="h-4 w-4" />
                 <span className="hidden sm:inline">公開する</span>
               </Button>
             ))}

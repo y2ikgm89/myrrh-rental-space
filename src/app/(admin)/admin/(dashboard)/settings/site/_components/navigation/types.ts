@@ -1,4 +1,14 @@
 import { z } from "zod";
+import type { TablerIcon } from "@tabler/icons-react";
+import {
+  IconBrandX,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandYoutube,
+  IconBrandLine,
+  IconBrandTiktok,
+  IconExternalLink,
+} from "@tabler/icons-react";
 import type { NavigationType, SocialPlatform } from "@/shared/db/enums";
 import type {
   NavigationItemData,
@@ -36,7 +46,6 @@ export const navFormSchema = z.object({
 export type SocialFormData = {
   platform: SocialPlatform;
   url: string;
-  iconUrl: string | null;
   order: number;
   isActive: boolean;
   showOnDesktop: boolean;
@@ -57,7 +66,6 @@ export const socialFormSchema = z.object({
     .string()
     .min(1, { error: "URLは必須です" })
     .url({ error: "有効なURLを入力してください" }),
-  iconUrl: z.string().nullable(),
   order: z.number().int().min(0),
   isActive: z.boolean(),
   showOnDesktop: z.boolean(),
@@ -76,6 +84,16 @@ export const platformLabels: Record<SocialPlatform, string> = {
   LINE: "LINE",
   TIKTOK: "TikTok",
   OTHER: "その他",
+};
+
+export const platformIcons: Record<SocialPlatform, TablerIcon> = {
+  TWITTER: IconBrandX,
+  FACEBOOK: IconBrandFacebook,
+  INSTAGRAM: IconBrandInstagram,
+  YOUTUBE: IconBrandYoutube,
+  LINE: IconBrandLine,
+  TIKTOK: IconBrandTiktok,
+  OTHER: IconExternalLink,
 };
 
 // =============================================================================

@@ -8,7 +8,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
 import { getFooterSettings } from "@/shared/domain/settings/queries/display";
@@ -202,7 +202,7 @@ export async function Footer(): Promise<ReactElement> {
                       href="/"
                       className="text-sm text-foreground transition-colors hover:text-accent"
                     >
-                      Home
+                      IconHome
                     </Link>
                   </li>
                   <li>
@@ -325,7 +325,7 @@ export async function Footer(): Promise<ReactElement> {
                       className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
                     >
                       Google Maps で見る
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <IconExternalLink className="h-3.5 w-3.5" />
                     </a>
                   )}
                   {info.googleReviewUrl && (
@@ -336,7 +336,7 @@ export async function Footer(): Promise<ReactElement> {
                       className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
                     >
                       Google で口コミを書く
-                      <ExternalLink className="h-3.5 w-3.5" />
+                      <IconExternalLink className="h-3.5 w-3.5" />
                     </a>
                   )}
                 </li>

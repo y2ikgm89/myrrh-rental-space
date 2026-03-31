@@ -49,7 +49,7 @@ export function ResetPasswordForm({ token }: Props) {
 
   if (success) {
     return (
-      <Stack gap="md">
+      <Stack gap="lg">
         <div className="rounded-lg border border-border bg-surface p-6 text-center">
           <p className="text-lg font-medium text-foreground">
             パスワードを変更しました
@@ -65,7 +65,7 @@ export function ResetPasswordForm({ token }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Stack gap="md">
+      <Stack gap="lg">
         <Input
           label="新しいパスワード"
           type="password"
@@ -90,9 +90,12 @@ export function ResetPasswordForm({ token }: Props) {
         />
 
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <div
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            role="alert"
+          >
             {error}
-          </p>
+          </div>
         ) : null}
 
         <Button type="submit" disabled={isPending}>

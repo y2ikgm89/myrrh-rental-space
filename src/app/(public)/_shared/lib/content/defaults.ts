@@ -92,13 +92,13 @@ export const defaultHomepageContent: HomepageContent = {
     heading: "Myrrh の特徴",
     items: [
       {
-        icon: "Sparkles",
+        icon: "IconSparkles",
         title: "洗練された空間",
         description:
           "細部までこだわった上質な内装で、ブランドイメージにふさわしい空間を提供します",
       },
       {
-        icon: "Clock",
+        icon: "IconClock",
         title: "柔軟な利用時間",
         description:
           "1時間単位からご利用いただけます。早朝・深夜のご予約もご相談ください",

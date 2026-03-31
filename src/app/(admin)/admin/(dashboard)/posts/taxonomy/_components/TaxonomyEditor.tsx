@@ -12,13 +12,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  ExternalLink,
-  Image as ImageIcon,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { IconArrowLeft, IconExternalLink, IconPhoto, IconDeviceFloppy, IconTrash } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -251,7 +245,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <IconArrowLeft className="mr-2 h-4 w-4" />
             戻る
           </Button>
           <div>
@@ -271,7 +265,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 rel="noopener noreferrer"
                 className="hover:text-foreground"
               >
-                <ExternalLink className="h-3 w-3" />
+                <IconExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -288,7 +282,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                 size="sm"
                 className="text-destructive hover:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <IconTrash className="mr-2 h-4 w-4" />
                 削除
               </Button>
             </DialogTrigger>
@@ -329,7 +323,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
             onClick={handleSubmit(onSubmit)}
             disabled={isPending || !isDirty}
           >
-            <Save className="mr-2 h-4 w-4" />
+            <IconDeviceFloppy className="mr-2 h-4 w-4" />
             {isPending ? "保存中..." : "保存"}
           </Button>
         </div>
@@ -493,7 +487,7 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
                         disabled={isPending}
                         className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ImageIcon className="h-8 w-8" />
+                        <IconPhoto className="h-8 w-8" />
                         <span className="text-sm">クリックして画像を選択</span>
                         <span className="text-xs">推奨: 1200 × 630px</span>
                       </button>
@@ -629,7 +623,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <IconArrowLeft className="mr-2 h-4 w-4" />
             戻る
           </Button>
           <div>
@@ -649,7 +643,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 rel="noopener noreferrer"
                 className="hover:text-foreground"
               >
-                <ExternalLink className="h-3 w-3" />
+                <IconExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -666,7 +660,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                 size="sm"
                 className="text-destructive hover:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <IconTrash className="mr-2 h-4 w-4" />
                 削除
               </Button>
             </DialogTrigger>
@@ -707,7 +701,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
             onClick={handleSubmit(onSubmit)}
             disabled={isPending || !isDirty}
           >
-            <Save className="mr-2 h-4 w-4" />
+            <IconDeviceFloppy className="mr-2 h-4 w-4" />
             {isPending ? "保存中..." : "保存"}
           </Button>
         </div>
@@ -858,7 +852,7 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
                         disabled={isPending}
                         className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ImageIcon className="h-8 w-8" />
+                        <IconPhoto className="h-8 w-8" />
                         <span className="text-sm">クリックして画像を選択</span>
                         <span className="text-xs">推奨: 1200 × 630px</span>
                       </button>

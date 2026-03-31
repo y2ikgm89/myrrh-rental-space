@@ -44,13 +44,7 @@ import {
   type SettingsData,
 } from "@/admin/actions/settings";
 import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import {
-  RefreshCw,
-  Clock,
-  Webhook,
-  CircleAlert,
-  CircleCheck,
-} from "lucide-react";
+import { IconRefresh, IconClock, IconWebhook, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
 import { CalendarSyncMethod } from "@/shared/db/enums";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -168,7 +162,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
+              <IconRefresh className="h-5 w-5" />
               双方向同期（カレンダー → 予約システム）
             </CardTitle>
             <CardDescription>
@@ -223,19 +217,19 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                           <SelectContent>
                             <SelectItem value={CalendarSyncMethod.polling}>
                               <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4" />
+                                <IconClock className="h-4 w-4" />
                                 ポーリングのみ
                               </div>
                             </SelectItem>
                             <SelectItem value={CalendarSyncMethod.webhook}>
                               <div className="flex items-center gap-2">
-                                <Webhook className="h-4 w-4" />
+                                <IconWebhook className="h-4 w-4" />
                                 Webhookのみ
                               </div>
                             </SelectItem>
                             <SelectItem value={CalendarSyncMethod.both}>
                               <div className="flex items-center gap-2">
-                                <RefreshCw className="h-4 w-4" />
+                                <IconRefresh className="h-4 w-4" />
                                 両方使用（推奨）
                               </div>
                             </SelectItem>
@@ -298,12 +292,12 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <FormLabel className="flex items-center gap-2">
-                          <Webhook className="h-4 w-4" />
+                          <IconWebhook className="h-4 w-4" />
                           Webhook状態
                         </FormLabel>
                         {settings.googleCalendarWebhookActive ? (
                           <p className="text-sm text-success flex items-center gap-1">
-                            <CircleCheck className="h-4 w-4" />
+                            <IconCircleCheck className="h-4 w-4" />
                             有効（有効期限:{" "}
                             {formatDateTimeShort(
                               settings.googleCalendarWebhookExpiration,
@@ -312,7 +306,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <CircleAlert className="h-4 w-4" />
+                            <IconAlertCircle className="h-4 w-4" />
                             未設定
                           </p>
                         )}
@@ -362,7 +356,7 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                       onClick={handleManualSync}
                       disabled={isSyncing || isPending || actionPending}
                     >
-                      <RefreshCw
+                      <IconRefresh
                         className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
                       />
                       {isSyncing ? "同期中..." : "手動同期"}

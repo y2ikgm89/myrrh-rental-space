@@ -22,7 +22,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button, Separator } from "@/admin/components/ui";
-import { Globe, Plus } from "lucide-react";
+import { IconWorld, IconPlus } from "@tabler/icons-react";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { SectionSidebarItem } from "./SectionSidebarItem";
 
@@ -72,7 +72,7 @@ export function SectionSidebar({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Section List */}
+      {/* Section IconList */}
       <div className="flex-1 overflow-y-auto py-2">
         {sections.length > 0 ? (
           <DndContext
@@ -118,7 +118,7 @@ export function SectionSidebar({
           className="w-full"
           size="sm"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <IconPlus className="h-4 w-4 mr-2" />
           セクションを追加
         </Button>
 
@@ -133,7 +133,7 @@ export function SectionSidebar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
           }`}
         >
-          <Globe className="h-4 w-4" />
+          <IconWorld className="h-4 w-4" />
           SEO設定
         </button>
       </div>

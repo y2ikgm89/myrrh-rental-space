@@ -11,7 +11,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { MessageSquare, Plus, X } from "lucide-react";
+import { IconMessage, IconPlus, IconX } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import {
@@ -311,7 +311,7 @@ export function CommentPanel({
         {/* ヘッダー */}
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
+            <IconMessage className="h-5 w-5" />
             <h2 className="font-semibold">コメント</h2>
           </div>
           <div className="flex items-center gap-2">
@@ -323,7 +323,7 @@ export function CommentPanel({
                 onClick={onAddComment}
                 className="gap-1"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <IconPlus className="h-3.5 w-3.5" />
                 追加
               </Button>
             )}
@@ -335,7 +335,7 @@ export function CommentPanel({
                 onClick={onClose}
                 className="h-8 w-8"
               >
-                <X className="h-4 w-4" />
+                <IconX className="h-4 w-4" />
               </Button>
             )}
           </div>

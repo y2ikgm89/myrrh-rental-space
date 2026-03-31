@@ -1,8 +1,8 @@
 /**
  * ヘルスチェックAPI
  *
- * Cloud Run / Load Balancerからのヘルスチェックリクエストに応答します。
- * データベース接続の確認も行います。
+ * Cloud Run / Load Balancer / 監視からのヘルスチェック用。
+ * データベース接続を確認する（スタートアップは Cloud Run の TCP プローブでリッスンのみ確認）。
  *
  * @module api/health
  */
@@ -35,7 +35,6 @@ export async function GET() {
         status: "healthy",
         timestamp: new Date().toISOString(),
         responseTime: `${responseTime}ms`,
-        database: "connected",
       },
       {
         status: 200,
@@ -56,7 +55,6 @@ export async function GET() {
       {
         status: "unhealthy",
         timestamp: new Date().toISOString(),
-        database: "disconnected",
       },
       {
         status: 503,

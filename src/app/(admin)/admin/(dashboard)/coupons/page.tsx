@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import { getCoupons } from "@/admin/queries/coupon";
 import { CouponFilters } from "./_components/CouponFilters";
 import { CouponTable } from "./_components/CouponTable";
@@ -77,7 +77,7 @@ export default async function CouponsPage({ searchParams }: PageProps) {
         </div>
         <Button asChild className="min-h-10 sm:min-h-9">
           <Link href="/admin/coupons/new">
-            <Plus className="mr-2 h-4 w-4" />
+            <IconPlus className="mr-2 h-4 w-4" />
             新規クーポン
           </Link>
         </Button>

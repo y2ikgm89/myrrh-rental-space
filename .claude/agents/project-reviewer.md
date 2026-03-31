@@ -158,9 +158,9 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 - **No `--set-secrets` / `--set-env-vars`** — must use `--update-*` (merge, not replace)
 - **No `openssl`** in Dockerfile — Prisma 7 WASM engine doesn't need it
-- **No `node_modules/.prisma` copy** — Prisma 7 custom output is in `src/shared/generated/prisma/`
+- **No `node_modules/.prisma` copy** — Prisma 7 custom output is in `generated/prisma/`
 - **`NEXT_PUBLIC_*` must be Docker ARGs** in builder stage — runtime-only injection breaks client-side code
-- **`COPY --from=deps /app/src/shared/generated`** must exist in builder — `.gitignore` excludes this dir from Cloud Build source
+- **`COPY --from=deps /app/generated`** must exist in builder — `.gitignore` excludes this dir from Cloud Build source
 - **`node_modules/@prisma`** must be copied to runner — WASM runtime engine
 - **Non-root user** (`USER nextjs`) in runner stage
 - **Secret versions must be fixed** (not `latest`) in substitutions

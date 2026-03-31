@@ -23,7 +23,7 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { ExternalLink } from "lucide-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { parseString } from "../config/type-guards";
 
 // =============================================================================
@@ -109,7 +109,7 @@ function BookmarkComponent({
                   }}
                 />
               ) : (
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                <IconExternalLink className="w-4 h-4 text-muted-foreground" />
               )}
               <span className="text-xs text-muted-foreground truncate">
                 {siteName || hostname}

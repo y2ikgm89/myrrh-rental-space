@@ -14,7 +14,7 @@ import {
   SelectValue,
   Switch,
 } from "@/admin/components/ui";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMultipleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   galleryConfigSchema,
@@ -223,7 +223,7 @@ export default function GalleryConfigForm({
               onClick={() => imagePicker.openPicker()}
               disabled={isPending}
             >
-              <Plus className="h-3 w-3 mr-1" />
+              <IconPlus className="h-3 w-3 mr-1" />
               画像を追加
             </Button>
           </div>
@@ -245,7 +245,7 @@ export default function GalleryConfigForm({
                     onClick={() => removeImage(index)}
                     className="absolute top-1 right-1 p-1 rounded-full bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
-                    <Trash2 className="h-3 w-3 text-destructive" />
+                    <IconTrash className="h-3 w-3 text-destructive" />
                   </button>
                 </div>
               ))}

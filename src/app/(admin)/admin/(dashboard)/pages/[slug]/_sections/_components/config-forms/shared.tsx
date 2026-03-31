@@ -5,7 +5,7 @@
  */
 
 import { useEffect } from "react";
-import { Save } from "lucide-react";
+import { IconDeviceFloppy } from "@tabler/icons-react";
 import { SubmitButton } from "@/admin/components/ui";
 import type { PageSectionData } from "@/admin/actions/page-section";
 
@@ -57,7 +57,7 @@ export function FormActions({
         pendingLabel="保存中..."
       >
         <>
-          <Save className="h-4 w-4 mr-2" />
+          <IconDeviceFloppy className="h-4 w-4 mr-2" />
           保存
         </>
       </SubmitButton>

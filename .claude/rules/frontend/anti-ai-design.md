@@ -39,7 +39,7 @@ paths:
 ## コンポーネント禁止パターン
 
 - **均一シャドウカード** — `shadow-md` 統一禁止。`border border-border bg-card` + `hover:shadow-lg` 遷移
-- **絵文字装飾** — Lucide React SVG を使用（`ui-ux-patterns.md` と同一）
+- **絵文字装飾** — Tabler Icons React SVG を使用（`ui-ux-patterns.md` と同一）
 - **ストックフォト等間隔グリッド** — 画像アスペクト比に変化をつける。hover で `scale-105`
 - **汎用 hero: 中央タイトル + 2 ボタン** — パララックス背景 + gradient overlay + SplitText + 単一 CTA + ScrollIndicator
 

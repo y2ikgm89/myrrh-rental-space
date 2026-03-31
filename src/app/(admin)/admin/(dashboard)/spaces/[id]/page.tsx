@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Pencil, ExternalLink } from "lucide-react";
+import { IconPencil, IconExternalLink } from "@tabler/icons-react";
 import Link from "next/link";
 import { deleteSpace } from "@/admin/actions/space";
 import { getSpaceById } from "@/admin/queries/space";
@@ -54,13 +54,13 @@ export default async function SpaceDetailPage({ params }: PageProps) {
           />
           <Button variant="outline" size="sm" asChild>
             <Link href={`/spaces/${space.slug}`} target="_blank">
-              <ExternalLink className="mr-2 h-4 w-4" />
+              <IconExternalLink className="mr-2 h-4 w-4" />
               公開ページを見る
             </Link>
           </Button>
           <Button size="sm" asChild>
             <Link href={`/admin/spaces/${space.id}/edit`}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <IconPencil className="mr-2 h-4 w-4" />
               編集
             </Link>
           </Button>

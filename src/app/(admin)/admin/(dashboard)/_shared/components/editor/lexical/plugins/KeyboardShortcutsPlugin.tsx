@@ -21,7 +21,7 @@ import {
   INSERT_UNORDERED_LIST_COMMAND,
 } from "@lexical/list";
 import { createPortal } from "react-dom";
-import { X, Keyboard } from "lucide-react";
+import { IconX, IconKeyboard } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import type { DialogId } from "../dialogs/dialog-types";
 import { useInspectorSidebar } from "../inspector/inspector-sidebar-context";
@@ -91,7 +91,7 @@ export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md rounded-lg border border-border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2 font-semibold">
-            <Keyboard className="h-4 w-4" />
+            <IconKeyboard className="h-4 w-4" />
             <span>キーボードショートカット</span>
           </div>
           <Button
@@ -101,7 +101,7 @@ export function ShortcutsHelpDialog({ onClose }: { onClose: () => void }) {
             className="h-6 w-6"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <IconX className="h-4 w-4" />
           </Button>
         </div>
         <div className="max-h-80 overflow-y-auto p-4">

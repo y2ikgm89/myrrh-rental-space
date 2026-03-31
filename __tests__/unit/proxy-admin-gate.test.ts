@@ -3,19 +3,17 @@ import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
 describe("proxy admin gate", () => {
-  test("token query がある /admin/login は route 側の検証へ通す", async () => {
-    const response = await proxy(
-      new NextRequest("https://example.com/admin/login?token=plain-token"),
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-pathname")).toBe("/admin/login");
-    expect(response.headers.get("set-cookie")).toBeNull();
-  });
-
   test("token も gate cookie もない /admin/login は 404 にする", async () => {
     const response = await proxy(
       new NextRequest("https://example.com/admin/login"),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test("token 形式が無効な /admin/login は 404 にする", async () => {
+    const response = await proxy(
+      new NextRequest("https://example.com/admin/login?token=invalid"),
     );
 
     expect(response.status).toBe(404);

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { IconChevronLeft, IconChevronRight, IconCalendar } from "@tabler/icons-react";
 import {
   Button,
   Select,
@@ -64,7 +64,7 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
       {/* 中央: 日付ナビゲーション */}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="icon" onClick={goPrevious}>
-          <ChevronLeft className="h-4 w-4" />
+          <IconChevronLeft className="h-4 w-4" />
         </Button>
         <Button
           variant="outline"
@@ -72,11 +72,11 @@ export function CalendarToolbar({ state }: CalendarToolbarProps) {
           onClick={goToday}
           className="min-w-[80px]"
         >
-          <Calendar className="mr-2 h-4 w-4" />
+          <IconCalendar className="mr-2 h-4 w-4" />
           今日
         </Button>
         <Button variant="outline" size="icon" onClick={goNext}>
-          <ChevronRight className="h-4 w-4" />
+          <IconChevronRight className="h-4 w-4" />
         </Button>
         <span className="ml-2 min-w-[160px] text-center text-lg font-semibold">
           {dateLabel}

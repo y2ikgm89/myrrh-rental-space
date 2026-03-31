@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { Home } from "lucide-react";
+import { IconHome } from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -95,7 +95,7 @@ export function PageListTable({
                 <TableCell />
                 <TableCell className="hidden font-mono text-sm sm:table-cell">
                   <div className="flex items-center gap-2">
-                    <Home className="h-4 w-4 text-primary" />/
+                    <IconHome className="h-4 w-4 text-primary" />/
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">ホームページ</TableCell>

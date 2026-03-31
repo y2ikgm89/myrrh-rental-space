@@ -6,7 +6,7 @@
  */
 
 import { getPublicBusinessSettings } from "@/shared/domain/settings/queries/organization";
-import { isRecord } from "@/shared/lib/serialize";
+import { parseBusinessAttributes } from "@/shared/lib/json-validators";
 
 export interface BusinessInfo {
   readonly name: string;
@@ -42,20 +42,7 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     settings?.buildingName,
   ].filter(Boolean);
 
-  // businessAttributes の型安全なパース
-  const rawAttrs = settings?.businessAttributes;
-  let parsedAttrs: Record<string, boolean> | null = null;
-  if (isRecord(rawAttrs)) {
-    const result: Record<string, boolean> = {};
-    for (const [key, value] of Object.entries(rawAttrs)) {
-      if (typeof value === "boolean") {
-        result[key] = value;
-      }
-    }
-    if (Object.keys(result).length > 0) {
-      parsedAttrs = result;
-    }
-  }
+  const parsedAttrs = parseBusinessAttributes(settings?.businessAttributes);
 
   return {
     name: settings?.businessName ?? "Myrrh Rental Space",

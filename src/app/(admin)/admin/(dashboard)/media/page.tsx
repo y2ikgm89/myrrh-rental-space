@@ -47,7 +47,7 @@ export default async function MediaPage({ searchParams }: PageProps) {
         <MediaFilters />
       </Suspense>
 
-      {/* Media List */}
+      {/* Media IconList */}
       <Suspense fallback={<MediaGridSkeleton />}>
         <MediaListWithLoader searchParams={searchParams} />
       </Suspense>

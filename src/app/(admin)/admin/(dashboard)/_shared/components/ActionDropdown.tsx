@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
+import { IconDots } from "@tabler/icons-react";
 import {
   Button,
   DropdownMenu,
@@ -50,7 +50,7 @@ export function ActionDropdown({ children, disabled }: ActionDropdownProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" disabled={disabled}>
-          <MoreHorizontal className="h-4 w-4" />
+          <IconDots className="h-4 w-4" />
           <span className="sr-only">操作メニューを開く</span>
         </Button>
       </DropdownMenuTrigger>

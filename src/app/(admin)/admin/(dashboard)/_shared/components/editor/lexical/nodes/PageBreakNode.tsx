@@ -28,7 +28,7 @@ import {
   mergeRegister,
 } from "lexical";
 import { useEffect, useEffectEvent } from "react";
-import { Scissors } from "lucide-react";
+import { IconScissors } from "@tabler/icons-react";
 
 // =============================================================================
 // Component
@@ -93,7 +93,7 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
       }`}
     >
       <div className="flex items-center gap-2 bg-background px-3 py-1 rounded-full">
-        <Scissors className="h-3 w-3" />
+        <IconScissors className="h-3 w-3" />
         <span>ページ区切り</span>
       </div>
     </div>

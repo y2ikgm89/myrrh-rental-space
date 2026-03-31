@@ -5,7 +5,7 @@
  *
  * ルートレベルのエラーをキャッチ。
  * layout.tsxを上書きするため、html/bodyタグが必須。
- * Root Layout の外で動くため CSS 変数が存在しない — 全てインラインスタイルで記述。
+ * Root IconLayout の外で動くため CSS 変数が存在しない — 全てインラインスタイルで記述。
  *
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/error
  */

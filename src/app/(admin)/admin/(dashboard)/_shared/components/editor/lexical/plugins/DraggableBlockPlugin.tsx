@@ -18,7 +18,7 @@ import {
   $getNodeByKey,
   $parseSerializedNode,
 } from "lexical";
-import { GripVertical } from "lucide-react";
+import { IconGripVertical } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +58,7 @@ function DragHandle({
       className="draggable-block-menu absolute left-0 top-0 flex size-8 cursor-grab items-center justify-center rounded p-0.5 opacity-0 transition-opacity hover:bg-muted active:cursor-grabbing"
       onClick={onMenuOpen}
     >
-      <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <IconGripVertical className="h-4 w-4 text-muted-foreground" />
     </div>
   );
 }

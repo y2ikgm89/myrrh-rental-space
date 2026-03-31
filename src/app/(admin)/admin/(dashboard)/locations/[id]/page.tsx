@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { deleteLocation } from "@/admin/actions/location";
 import { getLocationById } from "@/admin/queries/location";
@@ -54,7 +54,7 @@ export default async function LocationDetailPage({ params }: PageProps) {
           />
           <Button asChild size="sm">
             <Link href={`/admin/locations/${location.id}/edit`}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <IconPencil className="mr-2 h-4 w-4" />
               編集
             </Link>
           </Button>

@@ -1,5 +1,5 @@
 /**
- * Layout Container Node
+ * IconLayout Container Node
  *
  * @description CSS Grid のカラムレイアウト（Lexical Playground の layout-container を拡張）
  *

@@ -185,14 +185,3 @@ export async function POST(request: Request) {
     });
   }
 }
-
-/**
- * Webhook検証用（GETリクエスト）
- */
-export async function GET() {
-  return jsonSuccess({
-    status: "ok",
-    message: "Google Calendar webhook endpoint is ready",
-    timestamp: new Date().toISOString(),
-  });
-}

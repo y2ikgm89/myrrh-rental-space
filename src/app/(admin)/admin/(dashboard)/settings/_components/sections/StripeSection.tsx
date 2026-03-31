@@ -170,7 +170,7 @@ export function StripeSection({ settings }: StripeSectionProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <svg
-                className="h-5 w-5 text-[#635BFF]"
+                className="h-5 w-5 text-stripe-brand"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >

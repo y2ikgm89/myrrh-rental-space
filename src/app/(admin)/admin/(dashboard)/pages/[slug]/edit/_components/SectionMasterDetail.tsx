@@ -15,7 +15,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useQueryState, parseAsString } from "nuqs";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { cn } from "@/shared/lib/cn";
@@ -342,7 +342,7 @@ function MobileBackButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden"
     >
-      <ArrowLeft className="h-4 w-4" />
+      <IconArrowLeft className="h-4 w-4" />
       セクション一覧
     </button>
   );

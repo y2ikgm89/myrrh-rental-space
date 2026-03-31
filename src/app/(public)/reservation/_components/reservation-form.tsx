@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPrice } from "@/shared/lib/pricing/format";
 import { useReducer, useRef, useTransition, type ReactElement } from "react";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
@@ -309,7 +310,7 @@ export function ReservationForm({
             <div className="flex items-center gap-3">
               {config.price != null ? (
                 <span className="font-heading text-lg text-accent">
-                  &yen;{config.price.toLocaleString()}
+                  {formatPrice(config.price)}
                 </span>
               ) : null}
               {config.onNext ? (

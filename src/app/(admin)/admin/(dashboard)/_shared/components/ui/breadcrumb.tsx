@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import type { ReactElement } from "react";
 
@@ -25,7 +25,7 @@ export function Breadcrumb({
           return (
             <li key={item.label} className="flex items-center gap-1">
               {index > 0 && (
-                <ChevronRight
+                <IconChevronRight
                   className="h-3.5 w-3.5 shrink-0"
                   aria-hidden="true"
                 />

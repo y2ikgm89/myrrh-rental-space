@@ -6,7 +6,7 @@
  * グリッド/リスト表示切り替え
  */
 
-import { Grid, List } from "lucide-react";
+import { IconLayoutGrid, IconList } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
 interface ViewToggleProps {
@@ -26,7 +26,7 @@ export function ViewToggle({ mode, onChange }: ViewToggleProps) {
         )}
         aria-label="グリッド表示"
       >
-        <Grid className="h-4 w-4" />
+        <IconLayoutGrid className="h-4 w-4" />
       </button>
       <button
         type="button"
@@ -37,7 +37,7 @@ export function ViewToggle({ mode, onChange }: ViewToggleProps) {
         )}
         aria-label="リスト表示"
       >
-        <List className="h-4 w-4" />
+        <IconList className="h-4 w-4" />
       </button>
     </div>
   );

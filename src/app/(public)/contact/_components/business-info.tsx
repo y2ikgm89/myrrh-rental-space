@@ -6,22 +6,7 @@
  */
 
 import type { ReactElement } from "react";
-import {
-  ExternalLink,
-  Wifi,
-  Car,
-  Accessibility,
-  ArrowUpFromDot,
-  Cigarette,
-  Utensils,
-  Aperture,
-  Music,
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  CalendarOff,
-} from "lucide-react";
+import { IconExternalLink, IconWifi, IconCar, IconAccessible, IconArrowUp, IconSmoking, IconToolsKitchen2, IconAperture, IconMusic, IconMapPin, IconPhone, IconMail, IconClock, IconCalendarOff } from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { DAY_LABELS, ATTR_LABELS } from "@/public/lib/seo/json-ld-config";
 import { Heading } from "@/public/components/design-system/heading";
@@ -41,15 +26,15 @@ const DAY_ORDER = [
   "sunday",
 ] as const;
 
-const ATTR_ICONS: Record<string, typeof Wifi> = {
-  wifi: Wifi,
-  parking: Car,
-  barrier_free: Accessibility,
-  elevator: ArrowUpFromDot,
-  smoking_area: Cigarette,
-  food_allowed: Utensils,
-  photography_allowed: Aperture,
-  music_allowed: Music,
+const ATTR_ICONS: Record<string, typeof IconWifi> = {
+  wifi: IconWifi,
+  parking: IconCar,
+  barrier_free: IconAccessible,
+  elevator: IconArrowUp,
+  smoking_area: IconSmoking,
+  food_allowed: IconToolsKitchen2,
+  photography_allowed: IconAperture,
+  music_allowed: IconMusic,
 };
 
 const DAY_ABBREV: Record<string, string> = {
@@ -151,7 +136,7 @@ function InfoSection({
   label,
   children,
 }: {
-  readonly icon: typeof MapPin;
+  readonly icon: typeof IconMapPin;
   readonly label: string;
   readonly children: ReactElement;
 }) {
@@ -191,7 +176,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
 
       <dl className="mt-5 space-y-4">
         {info.address && (
-          <InfoSection icon={MapPin} label="住所">
+          <InfoSection icon={IconMapPin} label="住所">
             <div
               itemProp="address"
               itemScope
@@ -215,7 +200,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
         )}
 
         {info.phone && (
-          <InfoSection icon={Phone} label="電話番号">
+          <InfoSection icon={IconPhone} label="電話番号">
             <a
               itemProp="telephone"
               href={`tel:${info.phone}`}
@@ -227,7 +212,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
         )}
 
         {info.email && (
-          <InfoSection icon={Mail} label="メール">
+          <InfoSection icon={IconMail} label="メール">
             <a
               itemProp="email"
               href={`mailto:${info.email}`}
@@ -239,7 +224,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
         )}
 
         {hoursDisplay.length > 0 && (
-          <InfoSection icon={Clock} label="営業時間">
+          <InfoSection icon={IconClock} label="営業時間">
             <div className="space-y-1">
               {hoursDisplay.map((h) => (
                 <div
@@ -259,7 +244,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
         )}
 
         {info.holidayNotice && (
-          <InfoSection icon={CalendarOff} label="休業日">
+          <InfoSection icon={IconCalendarOff} label="休業日">
             <>{info.holidayNotice}</>
           </InfoSection>
         )}
@@ -303,7 +288,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
             >
               Google Maps で見る
-              <ExternalLink className="h-3.5 w-3.5" />
+              <IconExternalLink className="h-3.5 w-3.5" />
             </a>
           )}
           {info.googleReviewUrl && (
@@ -314,7 +299,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
             >
               Google で口コミを書く
-              <ExternalLink className="h-3.5 w-3.5" />
+              <IconExternalLink className="h-3.5 w-3.5" />
             </a>
           )}
         </div>

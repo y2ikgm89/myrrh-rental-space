@@ -9,7 +9,7 @@
  * CSS変数に依存しないスタイリング
  */
 
-import { ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
+import { IconArrowUp, IconArrowDown, IconTrash, IconPlus } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {
@@ -123,7 +123,7 @@ export function CTAButtonEditor({
           disabled={disabled}
           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-current/20 px-3 py-2 text-sm opacity-70 transition-opacity hover:opacity-100 disabled:pointer-events-none disabled:opacity-40"
         >
-          <Plus className="h-4 w-4" />
+          <IconPlus className="h-4 w-4" />
           ボタンを追加
         </button>
       )}
@@ -213,7 +213,7 @@ function ButtonItemEditor({
             className={iconBtnClass}
             aria-label="上に移動"
           >
-            <ArrowUp className="h-3.5 w-3.5" />
+            <IconArrowUp className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -222,7 +222,7 @@ function ButtonItemEditor({
             className={iconBtnClass}
             aria-label="下に移動"
           >
-            <ArrowDown className="h-3.5 w-3.5" />
+            <IconArrowDown className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -231,7 +231,7 @@ function ButtonItemEditor({
             className={iconBtnClass}
             aria-label="削除"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <IconTrash className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

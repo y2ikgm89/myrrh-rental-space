@@ -42,7 +42,7 @@ import {
   updateICalFeedSettings,
 } from "@/admin/actions/ical-tokens";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { Copy, Trash2, Plus, ExternalLink, Calendar } from "lucide-react";
+import { IconCopy, IconTrash, IconPlus, IconExternalLink, IconCalendar } from "@tabler/icons-react";
 
 // =============================================================================
 // Types
@@ -229,7 +229,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
+          <IconCalendar className="h-5 w-5" />
           iCalフィード（外部カレンダー連携）
         </CardTitle>
         <CardDescription>
@@ -298,7 +298,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                       });
                     }}
                   >
-                    <Plus className="mr-2 h-4 w-4" />
+                    <IconPlus className="mr-2 h-4 w-4" />
                     新規トークン作成
                   </Button>
                 </DialogTrigger>
@@ -328,14 +328,14 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                           onClick={() => copyToClipboard(createdTokenUrl)}
                           className="flex-1"
                         >
-                          <Copy className="mr-2 h-4 w-4" />
+                          <IconCopy className="mr-2 h-4 w-4" />
                           URLをコピー
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => window.open(createdTokenUrl, "_blank")}
                         >
-                          <ExternalLink className="mr-2 h-4 w-4" />
+                          <IconExternalLink className="mr-2 h-4 w-4" />
                           開く
                         </Button>
                       </div>
@@ -486,7 +486,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                           copyToClipboard(getTokenUrl(token.token))
                         }
                       >
-                        <Copy className="h-4 w-4" />
+                        <IconCopy className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -495,7 +495,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                           window.open(getTokenUrl(token.token), "_blank")
                         }
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <IconExternalLink className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -503,7 +503,7 @@ export function ICalFeedSection({ onUpdate }: ICalFeedSectionProps) {
                         onClick={() => handleDeleteToken(token.id, token.name)}
                         disabled={isPending}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <IconTrash className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>

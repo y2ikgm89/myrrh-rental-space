@@ -3,7 +3,7 @@
 /**
  * NewsListSection — News article listing with list/card layout
  *
- * List layout: date badge + title row. Card layout: 2-column card grid.
+ * IconList layout: date badge + title row. Card layout: 2-column card grid.
  * useGSAP stagger for entrance animation.
  */
 

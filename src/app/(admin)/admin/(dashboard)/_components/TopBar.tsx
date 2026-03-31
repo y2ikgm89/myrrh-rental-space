@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Menu } from "lucide-react";
+import { IconMenu2 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
@@ -77,7 +77,7 @@ export function TopBar({
             className="h-9 w-9 p-0"
             aria-label="メニューを開く"
           >
-            <Menu className="h-5 w-5" />
+            <IconMenu2 className="h-5 w-5" />
           </Button>
         )}
         <Link href="/admin" className="flex items-center">

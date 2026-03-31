@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { Check, Copy, Trash2, Eye, FileText, Film, File } from "lucide-react";
+import { IconCheck, IconCopy, IconTrash, IconEye, IconFileText, IconMovie, IconFile } from "@tabler/icons-react";
 import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
 import { formatBytes } from "@/admin/lib/utils";
@@ -58,7 +58,7 @@ export function MediaGrid({ items }: Props) {
                   aria-label="URLをコピー"
                   title="URLをコピー"
                 >
-                  <Copy className="h-4 w-4 text-primary-foreground" />
+                  <IconCopy className="h-4 w-4 text-primary-foreground" />
                 </button>
                 <button
                   type="button"
@@ -70,7 +70,7 @@ export function MediaGrid({ items }: Props) {
                   aria-label="詳細を表示"
                   title="詳細"
                 >
-                  <Eye className="h-4 w-4 text-primary-foreground" />
+                  <IconEye className="h-4 w-4 text-primary-foreground" />
                 </button>
                 <button
                   type="button"
@@ -83,7 +83,7 @@ export function MediaGrid({ items }: Props) {
                   aria-label="削除"
                   title="削除"
                 >
-                  <Trash2 className="h-4 w-4 text-primary-foreground" />
+                  <IconTrash className="h-4 w-4 text-primary-foreground" />
                 </button>
               </div>
 
@@ -99,7 +99,7 @@ export function MediaGrid({ items }: Props) {
             {/* Selection indicator */}
             {selectedId === item.id && (
               <div className="absolute top-2 left-2 p-1 rounded-full bg-primary">
-                <Check className="h-3 w-3 text-primary-foreground" />
+                <IconCheck className="h-3 w-3 text-primary-foreground" />
               </div>
             )}
 
@@ -131,19 +131,19 @@ function MediaThumbnail({ item }: { item: MediaData }) {
     case "VIDEO":
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
-          <Film className="h-12 w-12 text-muted-foreground" />
+          <IconMovie className="h-12 w-12 text-muted-foreground" />
         </div>
       );
     case "DOCUMENT":
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
-          <FileText className="h-12 w-12 text-muted-foreground" />
+          <IconFileText className="h-12 w-12 text-muted-foreground" />
         </div>
       );
     default:
       return (
         <div className="w-full h-full bg-muted flex items-center justify-center">
-          <File className="h-12 w-12 text-muted-foreground" />
+          <IconFile className="h-12 w-12 text-muted-foreground" />
         </div>
       );
   }

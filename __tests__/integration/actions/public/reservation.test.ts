@@ -23,8 +23,14 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockCheckActionRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
+  checkActionRateLimit: mockCheckActionRateLimit,
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
     fieldErrors: Object.fromEntries(
@@ -64,6 +70,9 @@ mock.module("@/shared/domain/spaces/public-queries", () => ({
 const mockSendReservationAdminNotification = mock(() => Promise.resolve());
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
+  sendReservationConfirmationEmail: mock(() => Promise.resolve()),
+  sendReservationCancelledEmail: mock(() => Promise.resolve()),
+  sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
   sendReservationAdminNotification: mockSendReservationAdminNotification,
 }));
 
@@ -89,6 +98,35 @@ mock.module("@/shared/lib/serialize", () => ({
       Object.entries(obj).filter(([, v]) => v !== undefined),
     ) as Partial<T>;
   },
+  toPlainObject: <T>(obj: T): T => JSON.parse(JSON.stringify(obj)),
+  toPlainArray: <T>(arr: T[]): T[] => JSON.parse(JSON.stringify(arr)),
+  keysOf: <T extends object>(obj: T) => Object.keys(obj),
+  entriesOf: <T extends object>(obj: T) => Object.entries(obj),
+  filterTruthy: <T>(arr: readonly (T | false | null | undefined)[]): T[] =>
+    arr.filter(Boolean) as T[],
+  createTypeGuard:
+    <T extends string>(values: readonly T[]) =>
+    (value: unknown): value is T =>
+      typeof value === "string" && new Set<string>(values).has(value),
+  isRecord: (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value),
+  toDateString: (date: Date) => date.toISOString().split("T")[0],
+  dateInputValueFromSerialized: (v: string) => v.split("T")[0],
+}));
+
+const mockGetCurrentUser = mock(() => Promise.resolve(null));
+
+mock.module("@/shared/lib/auth", () => ({
+  getSession: mock(() => Promise.resolve(null)),
+  getCurrentUser: mockGetCurrentUser,
+  verifySession: mock(() => Promise.resolve(null)),
+  verifyAdminSession: mock(() => Promise.resolve(null)),
+  verifyCustomerSession: mock(() => Promise.resolve(null)),
+  isAdmin: mock(() => Promise.resolve(false)),
+  getSessionUser: () => null,
+  getRoleFromSession: () => null,
+  isValidRole: () => false,
+  auth: {},
 }));
 
 // server-only モック（テスト環境で server-only を無効化）

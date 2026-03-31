@@ -23,8 +23,13 @@ mock.module("@/shared/db/prisma", () => ({
 
 // cryptoモジュールをモック（復号処理）
 mock.module("@/shared/lib/crypto", () => ({
-  decrypt: (value: string) => value, // 暗号化された値をそのまま返す（テスト用）
-  isEncrypted: (_value: string) => true, // テスト用: 暗号化済みとみなす
+  encrypt: (value: string) => `v1:generic:iv:${value}:tag`,
+  decrypt: (value: string) => value,
+  isEncrypted: (_value: string) => true,
+  safeEncrypt: (value: string) => `v1:generic:iv:${value}:tag`,
+  safeDecrypt: (value: string) => value,
+  encryptApiKey: (value: string) => `v1:api-key:iv:${value}:tag`,
+  encryptStripeData: (value: string) => `v1:stripe:iv:${value}:tag`,
 }));
 
 // モジュールモック

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
 import { useCarousel } from "./use-carousel";
@@ -126,7 +126,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           )}
           aria-label="前のお知らせ"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <IconChevronLeft className="h-4 w-4" />
         </button>
       )}
 
@@ -182,7 +182,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
           )}
           aria-label="次のお知らせ"
         >
-          <ChevronRight className="h-4 w-4" />
+          <IconChevronRight className="h-4 w-4" />
         </button>
       )}
 
@@ -196,7 +196,7 @@ export function AnnouncementBar({ bars, settings }: AnnouncementBarProps) {
         )}
         aria-label="閉じる"
       >
-        <X className="h-4 w-4" />
+        <IconX className="h-4 w-4" />
       </button>
     </div>
   );

@@ -5,7 +5,7 @@
  */
 
 import { useState, useTransition, useId } from "react";
-import { X, Upload, File, LoaderCircle } from "lucide-react";
+import { IconX, IconUpload, IconFile, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { uploadMedia } from "@/admin/actions/media";
@@ -164,7 +164,7 @@ export function MediaUploadDialog({
               onDrop={handleDrop}
               onClick={() => document.getElementById("file-input")?.click()}
             >
-              <Upload className="h-10 w-10 text-muted-foreground" />
+              <IconUpload className="h-10 w-10 text-muted-foreground" />
               <p className="text-sm text-muted-foreground text-center">
                 ドラッグ&ドロップ または クリックして選択
               </p>
@@ -195,7 +195,7 @@ export function MediaUploadDialog({
                 </div>
               ) : (
                 <div className="mb-4 rounded-lg bg-muted p-8 flex items-center justify-center">
-                  <File className="h-16 w-16 text-muted-foreground" />
+                  <IconFile className="h-16 w-16 text-muted-foreground" />
                 </div>
               )}
 
@@ -212,7 +212,7 @@ export function MediaUploadDialog({
                   onClick={clearFile}
                   className="p-1 rounded hover:bg-muted text-muted-foreground"
                 >
-                  <X className="h-4 w-4" />
+                  <IconX className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -299,7 +299,7 @@ export function MediaUploadDialog({
           </Button>
           <Button onClick={handleSubmit} disabled={!file || isPending}>
             {isPending && (
-              <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+              <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
             )}
             アップロード
           </Button>

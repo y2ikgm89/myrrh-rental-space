@@ -6,7 +6,7 @@
  * メディア検索入力
  */
 
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 
 interface SearchBarProps {
   value: string;
@@ -21,7 +21,7 @@ export function SearchBar({
 }: SearchBarProps) {
   return (
     <div className="relative flex-1">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
         type="search"
         placeholder={placeholder}

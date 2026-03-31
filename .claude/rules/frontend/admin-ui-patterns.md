@@ -802,7 +802,7 @@ const [testPending, startTestTransition] = useTransition();
 
 - **`PublishSwitch.onToggle` は `(id, checked: boolean)` 必須** — 既存の「DB を読んで反転」パターン（`data: { isActive: !current }`）は非互換。`executeAdminMutationResult` で boolean を直接受け取り `data: { isActive }` で set する形に変更する
 - **tailwind-variants 複数スロット合成時の `text-*` 競合** — `${base()} ${variant()}` のように同一要素に2つの `text-*` が適用されると、CSS 生成順次第でどちらが勝つか不定（HTML クラス順は無関係）。動的に変わる色（アクティブ状態等）は継承に頼らず子要素に直接 `text-*` を明示する
-- **Lucide アイコンの `currentColor`** — アイコンの色を動的に切り替えたい場合、アイコン定義側では制御できないため呼び出し元で `<span className={isActive ? "text-sidebar-text" : ""}>` でラップして色クラスを付与する
+- **Tabler アイコンの `currentColor`** — アイコンの色を動的に切り替えたい場合、アイコン定義側では制御できないため呼び出し元で `<span className={isActive ? "text-sidebar-text" : ""}>` でラップして色クラスを付与する
 - **`bg-overlay` に opacity modifier 禁止** — `--color-overlay: oklch(0 0 0 / 0.6)` はアルファ値が CSS 変数値に組み込み済み。`bg-overlay/30` 等の Tailwind opacity modifier は期待通り機能しない。`bg-overlay` のみ使用する
 - **`DialogContent` には必ず `DialogTitle` が必要** — Radix `DialogTitle`（または VisuallyHidden でラップ）がないと `role="dialog"` に `aria-labelledby` が接続されず WCAG 4.1.2 違反。`DialogContent` 追加時は必ずセットで記述する
 - **Settings singleton にフィールド追加は4箇所同時更新** — ① `schema.prisma` + migrate ② `domain/settings/types.ts` の `SettingsData` 型 ③ `domain/settings/queries.ts` の get クエリ + `commands.ts` の update コマンド ④ `actions/settings/schemas.ts` の Zod スキーマ + `other.ts` の Server Action + `index.ts` barrel。`SettingsData` は `getOrCreateSettings()` が `select` なしで全カラムを返すため型追加のみで値は自動伝播

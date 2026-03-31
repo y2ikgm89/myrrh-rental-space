@@ -11,7 +11,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { X, Plus, Check } from "lucide-react";
+import { IconX, IconPlus, IconCheck } from "@tabler/icons-react";
 import { Input, Label, Badge } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 
@@ -252,7 +252,7 @@ export function TagInput({
                 className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
                 aria-label={`${tagName}を削除`}
               >
-                <X className="h-3 w-3" />
+                <IconX className="h-3 w-3" />
               </button>
             </Badge>
           ))}
@@ -314,7 +314,7 @@ export function TagInput({
                     >
                       {item.type === "existing" ? (
                         <>
-                          <Check className="h-4 w-4 opacity-0" />
+                          <IconCheck className="h-4 w-4 opacity-0" />
                           <span>{item.tag?.name}</span>
                           {item.tag?._count?.posts !== undefined && (
                             <span className="ml-auto text-xs text-muted-foreground">
@@ -324,7 +324,7 @@ export function TagInput({
                         </>
                       ) : (
                         <>
-                          <Plus className="h-4 w-4 text-primary" />
+                          <IconPlus className="h-4 w-4 text-primary" />
                           <span>「{item.name}」を作成</span>
                         </>
                       )}
@@ -353,7 +353,7 @@ export function TagInput({
                       }}
                       disabled={disabled}
                     >
-                      <Check className="h-4 w-4 opacity-0" />
+                      <IconCheck className="h-4 w-4 opacity-0" />
                       <span>{tag.name}</span>
                       <span className="ml-auto text-xs text-muted-foreground">
                         {tag._count?.posts ?? 0}件

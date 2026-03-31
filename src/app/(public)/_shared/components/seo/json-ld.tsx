@@ -78,10 +78,16 @@ interface ProductData {
   description: string;
   image: string;
   url: string;
-  offers?: {
+  offers: {
     price: number;
     priceCurrency?: string;
     availability?: string;
+  };
+  aggregateRating?: {
+    ratingValue: number;
+    reviewCount: number;
+    bestRating?: number;
+    worstRating?: number;
   };
 }
 
@@ -312,6 +318,12 @@ export function GraphJsonLd({
 
 /**
  * Product構造化データ（スペース詳細ページ向け）
+ *
+ * Google リッチリザルト対応:
+ * - offers: 必須（price + priceCurrency）
+ * - aggregateRating: レビュー1件以上で出力（星評価リッチリザルト）
+ *
+ * @see https://developers.google.com/search/docs/appearance/structured-data/product
  */
 export function ProductJsonLd({
   name,
@@ -319,6 +331,7 @@ export function ProductJsonLd({
   image,
   url,
   offers,
+  aggregateRating,
 }: ProductData): ReactElement {
   const data = {
     "@context": "https://schema.org",
@@ -327,14 +340,22 @@ export function ProductJsonLd({
     description,
     image,
     url,
-    ...(offers && {
-      offers: {
-        "@type": "Offer",
-        price: offers.price,
-        priceCurrency: offers.priceCurrency || "JPY",
-        availability: offers.availability || "https://schema.org/InStock",
-      },
-    }),
+    offers: {
+      "@type": "Offer",
+      price: offers.price,
+      priceCurrency: offers.priceCurrency || "JPY",
+      availability: offers.availability || "https://schema.org/InStock",
+    },
+    ...(aggregateRating &&
+      aggregateRating.reviewCount > 0 && {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: aggregateRating.ratingValue,
+          reviewCount: aggregateRating.reviewCount,
+          bestRating: aggregateRating.bestRating ?? 5,
+          worstRating: aggregateRating.worstRating ?? 1,
+        },
+      }),
   };
 
   return <JsonLd data={data} />;

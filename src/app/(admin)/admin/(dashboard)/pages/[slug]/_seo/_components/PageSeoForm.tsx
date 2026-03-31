@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useWatch } from "react-hook-form";
-import { ImagePlus, Save } from "lucide-react";
+import { IconPhotoPlus, IconDeviceFloppy } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -239,7 +239,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                 </div>
               ) : (
                 <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                  <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                  <IconPhotoPlus className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 space-y-2">
@@ -250,7 +250,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                   onClick={() => ogpPicker.openPicker()}
                   disabled={isPending}
                 >
-                  <ImagePlus className="mr-1 h-3 w-3" />
+                  <IconPhotoPlus className="mr-1 h-3 w-3" />
                   画像を選択
                 </Button>
                 {ogpImageUrl && (
@@ -298,7 +298,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                    <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -340,7 +340,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
           pendingLabel="保存中..."
         >
           <>
-            <Save className="h-4 w-4 mr-2" />
+            <IconDeviceFloppy className="h-4 w-4 mr-2" />
             保存
           </>
         </SubmitButton>

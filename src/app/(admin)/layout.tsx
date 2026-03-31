@@ -1,8 +1,8 @@
 /**
- * 管理画面 Root Layout
+ * 管理画面 Root IconLayout
  *
  * Next.js 16 Multiple Root Layouts パターン
- * - 公開ページとは完全に分離された独立したRoot Layout
+ * - 公開ページとは完全に分離された独立したRoot IconLayout
  * - admin.css で管理画面専用テーマを適用
  * - 公開ページ ↔ 管理画面の遷移はフルページリロード（仕様）
  */

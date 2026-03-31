@@ -75,8 +75,7 @@ const nextConfig: NextConfig = {
     appNewScrollHandler: true,
     // Optimize package imports - tree shaking for barrel exports
     optimizePackageImports: [
-      // Icons
-      "lucide-react",
+      // Icons (@tabler/icons-react is optimized by Next.js by default)
       // Date utilities
       "date-fns",
       // UI components (Radix)

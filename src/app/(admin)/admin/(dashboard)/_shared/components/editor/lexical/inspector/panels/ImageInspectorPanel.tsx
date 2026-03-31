@@ -25,17 +25,17 @@ import { InspectorFields } from "../InspectorFields";
 import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label, Textarea } from "@/admin/components/ui";
-import { AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { IconAlignLeft, IconAlignCenter, IconAlignRight } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const ALIGNMENT_ICONS: Record<ImageAlignment, typeof AlignLeft> = {
-  left: AlignLeft,
-  center: AlignCenter,
-  right: AlignRight,
+const ALIGNMENT_ICONS: Record<ImageAlignment, typeof IconAlignLeft> = {
+  left: IconAlignLeft,
+  center: IconAlignCenter,
+  right: IconAlignRight,
 };
 
 const ALIGNMENT_LABELS: Record<ImageAlignment, string> = {

@@ -8,7 +8,7 @@
  */
 
 import Image from "next/image";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import type { FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
 import { Button, Input, Label, Textarea } from "@/admin/components/ui";
@@ -90,7 +90,7 @@ export function OGPFields<T extends FieldValues>({
             </div>
           ) : (
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-              <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              <IconPhotoPlus className="h-5 w-5 text-muted-foreground" />
             </div>
           )}
           <div className="flex-1 space-y-1">
@@ -101,7 +101,7 @@ export function OGPFields<T extends FieldValues>({
               onClick={() => ogpPicker.openPicker()}
               disabled={disabled}
             >
-              <ImagePlus className="mr-1 h-3 w-3" />
+              <IconPhotoPlus className="mr-1 h-3 w-3" />
               選択
             </Button>
             {ogpImageUrlStr && (

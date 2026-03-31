@@ -1,8 +1,5 @@
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-} from "@/shared/lib/errors/server";
+import { logError } from "@/shared/lib/errors/logger-core";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 import { jsonError } from "@/shared/lib/route-responses";
 
 type AuthorizeCronRequestOptions = {

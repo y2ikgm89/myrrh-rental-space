@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Search, X, Settings } from "lucide-react";
+import { IconSearch, IconX, IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
 import {
   Button,
@@ -121,7 +121,7 @@ function TagRow({ tag, onEdit, onDelete, isPending }: TagRowProps) {
             aria-label={`${tag.name}タグのSEO設定`}
           >
             <Link href={`/admin/posts/tags/${tag.id}`}>
-              <Settings className="h-4 w-4" />
+              <IconSettings className="h-4 w-4" />
             </Link>
           </Button>
           <Button
@@ -315,7 +315,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
           <div className="flex flex-wrap items-center gap-4">
             {/* 検索 */}
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="タグを検索..."
@@ -341,7 +341,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
             {/* リセット */}
             {hasFilters && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
-                <X className="mr-1 h-4 w-4" />
+                <IconX className="mr-1 h-4 w-4" />
                 リセット
               </Button>
             )}

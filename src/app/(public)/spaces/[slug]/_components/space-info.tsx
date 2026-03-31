@@ -1,5 +1,5 @@
 import type { JsonValue } from "@prisma/client/runtime/client";
-import { Users, Ruler, MapPin } from "lucide-react";
+import { IconUsers, IconRuler2, IconMapPin } from "@tabler/icons-react";
 
 import { Heading } from "../../../_shared/components/design-system/heading";
 import { Prose } from "../../../_shared/components/design-system/prose";
@@ -37,17 +37,17 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
         </div>
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
+            <IconUsers className="h-4 w-4" />
             {space.capacity}名
           </span>
           {space.area ? (
             <span className="flex items-center gap-1">
-              <Ruler className="h-4 w-4" />
+              <IconRuler2 className="h-4 w-4" />
               {Number(space.area)}㎡
             </span>
           ) : null}
           <span className="flex items-center gap-1">
-            <MapPin className="h-4 w-4" />
+            <IconMapPin className="h-4 w-4" />
             {space.lineAddress}
           </span>
         </div>

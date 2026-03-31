@@ -52,7 +52,14 @@ import { omitUndefined } from "@/shared/lib/serialize";
 
 export async function POST(request: Request) {
   try {
-    // 1. Stripe 設定を取得
+    // 1. 署名ヘッダーの早期チェック（DB アクセス前に偽造リクエストを弾く）
+    const body = await request.text();
+    const signature = request.headers.get("stripe-signature");
+    if (!signature) {
+      return jsonError("Missing stripe-signature header", 400);
+    }
+
+    // 2. Stripe 設定を取得
     const settings = await getStripeSettings();
     if (!settings?.stripeEnabled || !settings.stripeWebhookSecret) {
       logError(new Error("Stripe webhook not configured"), {
@@ -63,7 +70,7 @@ export async function POST(request: Request) {
       return jsonError("Stripe webhook not configured", 503);
     }
 
-    // 2. Webhook シークレットを復号
+    // 3. Webhook シークレットを復号
     const webhookSecret = safeDecrypt(settings.stripeWebhookSecret);
     if (!webhookSecret) {
       logError(new Error("Failed to decrypt Stripe webhook secret"), {
@@ -74,7 +81,7 @@ export async function POST(request: Request) {
       return jsonError("Stripe webhook not configured", 503);
     }
 
-    // 3. Stripe クライアント取得
+    // 4. Stripe クライアント取得 + 署名検証
     const { client } = await getStripeClient(settings.stripeSecretKey);
     if (!client) {
       logError(new Error("Stripe client not available"), {
@@ -83,13 +90,6 @@ export async function POST(request: Request) {
         context: { operation: "stripeWebhook" },
       });
       return jsonError("Stripe webhook not configured", 503);
-    }
-
-    // 4. 署名検証
-    const body = await request.text();
-    const signature = request.headers.get("stripe-signature");
-    if (!signature) {
-      return jsonError("Missing stripe-signature header", 400);
     }
 
     let event: Stripe.Event;

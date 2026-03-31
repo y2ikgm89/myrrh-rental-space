@@ -119,7 +119,7 @@ export function useSocialForm(): UseSocialFormReturn {
     defaultValues: {
       platform: "TWITTER",
       url: "",
-      iconUrl: null,
+
       order: 0,
       isActive: true,
       showOnDesktop: true,
@@ -142,7 +142,7 @@ export function useSocialForm(): UseSocialFormReturn {
     form.reset({
       platform: "TWITTER",
       url: "",
-      iconUrl: null,
+
       order: linkCount,
       isActive: true,
       showOnDesktop: true,
@@ -154,7 +154,6 @@ export function useSocialForm(): UseSocialFormReturn {
     form.reset({
       platform: link.platform,
       url: link.url,
-      iconUrl: link.iconUrl,
       order: link.order,
       isActive: link.isActive,
       showOnDesktop: link.showOnDesktop,

@@ -98,18 +98,25 @@ export default async function ReservationDetailPage({
     startTime: reservation.startTime.toISOString(),
     endTime: reservation.endTime.toISOString(),
     createdAt: reservation.createdAt.toISOString(),
+    paidAt: reservation.paidAt ? reservation.paidAt.toISOString() : null,
+    cancelledAt: reservation.cancelledAt
+      ? reservation.cancelledAt.toISOString()
+      : null,
   });
 
   return (
     <div className="max-w-2xl">
-      <Heading level={1} className="mb-8">
+      <Heading level={1} className="mb-4 md:mb-8">
         予約詳細
       </Heading>
 
-      <ReservationDetail reservation={serializedReservation} />
+      <ReservationDetail
+        reservation={serializedReservation}
+        deadlineSettings={deadlineSettings}
+      />
 
       {(canEdit || canCancel) && (
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {canEdit && (
             <Button
               size="sm"

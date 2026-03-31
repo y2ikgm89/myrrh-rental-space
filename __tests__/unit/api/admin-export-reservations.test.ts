@@ -25,7 +25,11 @@ mock.module("@/shared/lib/csv", () => ({
     mockGenerateCsv(...args),
 }));
 
+// 実際のモジュールを re-export し、テストで必要なラベルのみオーバーライド
+// （不完全なモックは他テストファイルの import を壊す — Bun 既知制限）
+const actualHelpers = await import("@/shared/lib/validations/enums/helpers");
 mock.module("@/shared/lib/validations/enums/helpers", () => ({
+  ...actualHelpers,
   RESERVATION_STATUS_LABELS: {
     PENDING: "仮予約",
     CONFIRMED: "確定",

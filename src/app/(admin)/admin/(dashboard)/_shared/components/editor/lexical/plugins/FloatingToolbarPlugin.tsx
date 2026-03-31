@@ -30,24 +30,7 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from "@lexical/selection";
-import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Code,
-  ExternalLink,
-  Italic,
-  Link,
-  MessageSquarePlus,
-  Minus,
-  Plus,
-  Strikethrough,
-  Subscript,
-  Superscript,
-  Underline,
-} from "lucide-react";
+import { IconAlignCenter, IconAlignJustified, IconAlignLeft, IconAlignRight, IconBold, IconCode, IconExternalLink, IconItalic, IconLink, IconMessagePlus, IconMinus, IconPlus, IconStrikethrough, IconSubscript, IconSuperscript, IconUnderline } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
 import {
@@ -177,10 +160,10 @@ function isAlignmentType(value: string): value is AlignmentType {
 }
 
 const ALIGNMENT_OPTIONS = [
-  { type: "left" as const, label: "左揃え", icon: AlignLeft },
-  { type: "center" as const, label: "中央揃え", icon: AlignCenter },
-  { type: "right" as const, label: "右揃え", icon: AlignRight },
-  { type: "justify" as const, label: "両端揃え", icon: AlignJustify },
+  { type: "left" as const, label: "左揃え", icon: IconAlignLeft },
+  { type: "center" as const, label: "中央揃え", icon: IconAlignCenter },
+  { type: "right" as const, label: "右揃え", icon: IconAlignRight },
+  { type: "justify" as const, label: "両端揃え", icon: IconAlignJustified },
 ];
 
 type FloatingToolbarProps = {
@@ -389,7 +372,7 @@ function FloatingToolbar({
         aria-label="太字"
         title="太字"
       >
-        <Bold className="h-4 w-4" />
+        <IconBold className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -400,7 +383,7 @@ function FloatingToolbar({
         aria-label="斜体"
         title="斜体"
       >
-        <Italic className="h-4 w-4" />
+        <IconItalic className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -411,7 +394,7 @@ function FloatingToolbar({
         aria-label="下線"
         title="下線"
       >
-        <Underline className="h-4 w-4" />
+        <IconUnderline className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -422,7 +405,7 @@ function FloatingToolbar({
         aria-label="取り消し線"
         title="取り消し線"
       >
-        <Strikethrough className="h-4 w-4" />
+        <IconStrikethrough className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -433,7 +416,7 @@ function FloatingToolbar({
         aria-label="下付き"
         title="下付き"
       >
-        <Subscript className="h-4 w-4" />
+        <IconSubscript className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -444,7 +427,7 @@ function FloatingToolbar({
         aria-label="上付き"
         title="上付き"
       >
-        <Superscript className="h-4 w-4" />
+        <IconSuperscript className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -455,7 +438,7 @@ function FloatingToolbar({
         aria-label="コード"
         title="コード"
       >
-        <Code className="h-4 w-4" />
+        <IconCode className="h-4 w-4" />
       </Button>
       <Button
         type="button"
@@ -466,7 +449,7 @@ function FloatingToolbar({
         aria-label="リンク"
         title="リンク"
       >
-        <Link className="h-4 w-4" />
+        <IconLink className="h-4 w-4" />
       </Button>
       <HighlightCompact
         highlightColor={highlightColor}
@@ -487,7 +470,7 @@ function FloatingToolbar({
           aria-label="コメントを追加"
           title="コメントを追加"
         >
-          <MessageSquarePlus className="h-4 w-4" />
+          <IconMessagePlus className="h-4 w-4" />
         </Button>
       )}
       {onOpenRuby && (
@@ -528,7 +511,7 @@ function FloatingToolbar({
           aria-label="フォントサイズを小さく"
           title="フォントサイズを小さく"
         >
-          <Minus className="h-3 w-3" />
+          <IconMinus className="h-3 w-3" />
         </Button>
         <span className="min-w-[2rem] text-center text-xs tabular-nums">
           {fontSize}
@@ -543,7 +526,7 @@ function FloatingToolbar({
           aria-label="フォントサイズを大きく"
           title="フォントサイズを大きく"
         >
-          <Plus className="h-3 w-3" />
+          <IconPlus className="h-3 w-3" />
         </Button>
       </div>
       <Separator orientation="vertical" className="mx-0.5 h-5" />
@@ -841,7 +824,7 @@ function LinkHoverPreview({ url, position }: LinkPreviewState) {
       style={{ top: position.top, left: position.left }}
     >
       {isExternal && (
-        <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <IconExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
       )}
       <span className="text-muted-foreground text-xs">{domain}</span>
       <span className="max-w-[200px] truncate text-xs">{url}</span>

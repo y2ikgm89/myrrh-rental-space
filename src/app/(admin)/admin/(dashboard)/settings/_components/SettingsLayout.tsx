@@ -7,7 +7,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { Button, Breadcrumb } from "@/admin/components/ui";
 
 interface SettingsLayoutProps {
@@ -31,7 +31,7 @@ export function SettingsLayout({
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="icon">
           <Link href="/admin/settings">
-            <ArrowLeft className="h-5 w-5" />
+            <IconArrowLeft className="h-5 w-5" />
             <span className="sr-only">設定に戻る</span>
           </Link>
         </Button>

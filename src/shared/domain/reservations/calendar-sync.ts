@@ -45,7 +45,7 @@ export async function markReservationCalendarSyncSuccess(input: {
   eventId: string;
 }): Promise<void> {
   await prisma.reservation.update({
-    where: { id: input.reservationId },
+    where: { id: input.reservationId, deletedAt: null },
     data: {
       googleCalendarEventId: input.eventId,
       calendarSyncedAt: new Date(),
@@ -58,7 +58,7 @@ export async function markReservationCalendarSyncUpdated(
   reservationId: string,
 ): Promise<void> {
   await prisma.reservation.update({
-    where: { id: reservationId },
+    where: { id: reservationId, deletedAt: null },
     data: {
       calendarSyncedAt: new Date(),
       calendarSyncError: null,
@@ -71,7 +71,7 @@ export async function markReservationCalendarSyncError(input: {
   error: string;
 }): Promise<void> {
   await prisma.reservation.update({
-    where: { id: input.reservationId },
+    where: { id: input.reservationId, deletedAt: null },
     data: {
       calendarSyncError: input.error,
     },
@@ -82,7 +82,7 @@ export async function clearReservationCalendarEvent(
   reservationId: string,
 ): Promise<void> {
   await prisma.reservation.update({
-    where: { id: reservationId },
+    where: { id: reservationId, deletedAt: null },
     data: {
       googleCalendarEventId: null,
       calendarSyncError: null,
@@ -95,7 +95,7 @@ export async function saveReservationOAuthCalendarEvent(input: {
   eventId: string;
 }): Promise<void> {
   await prisma.reservation.update({
-    where: { id: input.reservationId },
+    where: { id: input.reservationId, deletedAt: null },
     data: {
       googleCalendarOAuthEventId: input.eventId,
     },
@@ -110,6 +110,7 @@ export async function getFailedCalendarSyncReservations(
       googleCalendarEventId: null,
       calendarSyncError: { not: null },
       status: { in: [...ACTIVE_RESERVATION_STATUSES] },
+      deletedAt: null,
     },
     select: {
       id: true,
@@ -206,6 +207,7 @@ export async function getReservationByCalendarEventId(
   return prisma.reservation.findFirst({
     where: {
       googleCalendarEventId: eventId,
+      deletedAt: null,
     },
     select: {
       id: true,
@@ -238,7 +240,7 @@ export async function cancelReservationFromCalendar(input: {
     : syncNote;
 
   await prisma.reservation.update({
-    where: { id: input.reservationId },
+    where: { id: input.reservationId, deletedAt: null },
     data: {
       status: ReservationStatus.CANCELLED,
       googleCalendarEventId: null,
@@ -271,6 +273,7 @@ export async function applyCalendarTimeChange(input: {
         spaceId: input.spaceId,
         status: { in: [...ACTIVE_RESERVATION_STATUSES] },
         id: { not: input.reservationId },
+        deletedAt: null,
         AND: [
           { startTime: { lt: input.endTime } },
           { endTime: { gt: input.startTime } },
@@ -305,7 +308,7 @@ export async function applyCalendarTimeChange(input: {
     }
 
     await tx.reservation.update({
-      where: { id: input.reservationId },
+      where: { id: input.reservationId, deletedAt: null },
       data: {
         startTime: input.startTime,
         endTime: input.endTime,

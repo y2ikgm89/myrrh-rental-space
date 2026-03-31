@@ -8,59 +8,59 @@ import { formatCurrency, formatPrice } from "@/shared/lib/pricing/format";
 describe("formatCurrency", () => {
   describe("正常系", () => {
     test("一般的な金額を日本円フォーマットで返す", () => {
-      expect(formatCurrency(1000)).toBe("￥1,000");
+      expect(formatCurrency(1000)).toBe("¥1,000");
     });
 
     test("3桁区切りが正しく適用される", () => {
-      expect(formatCurrency(1000000)).toBe("￥1,000,000");
+      expect(formatCurrency(1000000)).toBe("¥1,000,000");
     });
 
     test("100円を正しくフォーマットする", () => {
-      expect(formatCurrency(100)).toBe("￥100");
+      expect(formatCurrency(100)).toBe("¥100");
     });
 
     test("5000円を正しくフォーマットする", () => {
-      expect(formatCurrency(5000)).toBe("￥5,000");
+      expect(formatCurrency(5000)).toBe("¥5,000");
     });
 
     test("1円を正しくフォーマットする", () => {
-      expect(formatCurrency(1)).toBe("￥1");
+      expect(formatCurrency(1)).toBe("¥1");
     });
   });
 
   describe("ゼロ・境界値", () => {
     test("0円を正しくフォーマットする", () => {
-      expect(formatCurrency(0)).toBe("￥0");
+      expect(formatCurrency(0)).toBe("¥0");
     });
 
     test("999円（3桁区切りなし）を正しくフォーマットする", () => {
-      expect(formatCurrency(999)).toBe("￥999");
+      expect(formatCurrency(999)).toBe("¥999");
     });
 
     test("1000円（3桁区切り境界値）を正しくフォーマットする", () => {
-      expect(formatCurrency(1000)).toBe("￥1,000");
+      expect(formatCurrency(1000)).toBe("¥1,000");
     });
 
     test("9999円を正しくフォーマットする", () => {
-      expect(formatCurrency(9999)).toBe("￥9,999");
+      expect(formatCurrency(9999)).toBe("¥9,999");
     });
 
     test("10000円を正しくフォーマットする", () => {
-      expect(formatCurrency(10000)).toBe("￥10,000");
+      expect(formatCurrency(10000)).toBe("¥10,000");
     });
   });
 
   describe("大きな数値", () => {
     test("100万円を正しくフォーマットする", () => {
-      expect(formatCurrency(1000000)).toBe("￥1,000,000");
+      expect(formatCurrency(1000000)).toBe("¥1,000,000");
     });
 
     test("1億円を正しくフォーマットする", () => {
-      expect(formatCurrency(100000000)).toBe("￥100,000,000");
+      expect(formatCurrency(100000000)).toBe("¥100,000,000");
     });
 
     test("10億円を正しくフォーマットする", () => {
-      expect(formatCurrency(1000000000)).toBe("￥1,000,000,000");
+      expect(formatCurrency(1000000000)).toBe("¥1,000,000,000");
     });
   });
 
@@ -73,7 +73,7 @@ describe("formatCurrency", () => {
 
     test("負のゼロは円フォーマットで返される（Intl が処理）", () => {
       const result = formatCurrency(-0);
-      // Intl.NumberFormat は -0 を "-￥0" または "￥0" と表示する（実装依存）
+      // Intl.NumberFormat は -0 を "-¥0" または "¥0" と表示する（実装依存）
       expect(result).toContain("0");
     });
   });
@@ -86,7 +86,7 @@ describe("formatCurrency", () => {
     test("円マーク記号を含む", () => {
       const result = formatCurrency(1000);
       expect(result).toContain("1,000");
-      // 通貨記号が含まれる（￥ または ¥）
+      // 通貨記号が含まれる（¥ または ¥）
       expect(result.length).toBeGreaterThan(5);
     });
   });
@@ -99,21 +99,21 @@ describe("formatCurrency", () => {
 describe("formatPrice", () => {
   describe("正常系（数値入力）", () => {
     test("通常の金額を円フォーマットで返す", () => {
-      expect(formatPrice(1000)).toBe("￥1,000");
+      expect(formatPrice(1000)).toBe("¥1,000");
     });
 
     test("5000円を正しくフォーマットする", () => {
-      expect(formatPrice(5000)).toBe("￥5,000");
+      expect(formatPrice(5000)).toBe("¥5,000");
     });
 
     test("100万円を正しくフォーマットする", () => {
-      expect(formatPrice(1000000)).toBe("￥1,000,000");
+      expect(formatPrice(1000000)).toBe("¥1,000,000");
     });
   });
 
   describe("ゼロ", () => {
     test("0円を正しくフォーマットする", () => {
-      expect(formatPrice(0)).toBe("￥0");
+      expect(formatPrice(0)).toBe("¥0");
     });
   });
 
@@ -145,17 +145,17 @@ describe("formatPrice", () => {
     });
 
     test("数値が渡された場合はフォールバックを無視して金額を返す", () => {
-      expect(formatPrice(500, "未設定")).toBe("￥500");
+      expect(formatPrice(500, "未設定")).toBe("¥500");
     });
 
-    test("0円が渡された場合はフォールバックではなく「￥0」を返す", () => {
-      expect(formatPrice(0, "要問合せ")).toBe("￥0");
+    test("0円が渡された場合はフォールバックではなく「¥0」を返す", () => {
+      expect(formatPrice(0, "要問合せ")).toBe("¥0");
     });
   });
 
   describe("大きな数値・負の値", () => {
     test("大きな金額を正しくフォーマットする", () => {
-      expect(formatPrice(9999999)).toBe("￥9,999,999");
+      expect(formatPrice(9999999)).toBe("¥9,999,999");
     });
 
     test("負の値もフォーマットされる（nullにはならない）", () => {

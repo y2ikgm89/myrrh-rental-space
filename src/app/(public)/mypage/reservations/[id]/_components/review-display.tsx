@@ -22,7 +22,7 @@ interface ReviewDisplayProps {
 
 export function ReviewDisplay({ review }: ReviewDisplayProps) {
   return (
-    <section className="mt-8 rounded-lg border border-border bg-surface p-6">
+    <section className="mt-4 md:mt-8 rounded-lg border border-border bg-surface p-4 sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <Heading level={2} className="!text-lg">
           レビュー

@@ -22,7 +22,7 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from "@lexical/selection";
-import { Check, ChevronDown, Type, X } from "lucide-react";
+import { IconCheck, IconChevronDown, IconTypography, IconX } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -224,7 +224,7 @@ export function TextColorPlugin() {
           title="文字色"
         >
           <div className="relative">
-            <Type className="h-4 w-4" />
+            <IconTypography className="h-4 w-4" />
             {hasColor && (
               <div
                 className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
@@ -237,7 +237,7 @@ export function TextColorPlugin() {
               />
             )}
           </div>
-          <ChevronDown className="h-3 w-3" />
+          <IconChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <TextColorMenu
@@ -289,7 +289,7 @@ function TextColorMenu({
               />
               <span>{config.label}</span>
             </span>
-            {textColor === color && <Check className="h-4 w-4 text-primary" />}
+            {textColor === color && <IconCheck className="h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         );
       })}
@@ -309,7 +309,7 @@ function TextColorMenu({
           <span>カスタム</span>
         </label>
         {textColor === "custom" && (
-          <Check className="ml-auto h-4 w-4 text-primary" />
+          <IconCheck className="ml-auto h-4 w-4 text-primary" />
         )}
       </div>
       <DropdownMenuSeparator />
@@ -318,7 +318,7 @@ function TextColorMenu({
         className="flex items-center gap-2"
         disabled={!hasColor}
       >
-        <X className="h-4 w-4" />
+        <IconX className="h-4 w-4" />
         <span>{compactRemoveLabel ? "解除" : "文字色を解除"}</span>
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -357,7 +357,7 @@ export function TextColorCompact({
           title="文字色"
         >
           <div className="relative">
-            <Type className="h-4 w-4" />
+            <IconTypography className="h-4 w-4" />
             {hasColor && (
               <div
                 className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"

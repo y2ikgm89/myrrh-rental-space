@@ -6,7 +6,7 @@
 
 import { useQueryStates } from "nuqs";
 import { adminPostSearchParamsParsers } from "@/shared/lib/nuqs";
-import { Search, X } from "lucide-react";
+import { IconSearch, IconX } from "@tabler/icons-react";
 import { Button, Input, SubmitButton } from "@/admin/components/ui";
 import { getFormString } from "@/shared/lib/utils";
 
@@ -63,7 +63,7 @@ export function CommentFilters() {
       {/* 検索 */}
       <form onSubmit={handleSearch} className="flex items-center gap-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             name="search"
             placeholder="コメント内容・投稿者名で検索"
@@ -76,7 +76,7 @@ export function CommentFilters() {
               onClick={handleClearSearch}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <X className="w-4 h-4" />
+              <IconX className="w-4 h-4" />
             </button>
           )}
         </div>

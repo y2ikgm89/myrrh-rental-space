@@ -5,6 +5,7 @@ import { ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";
+import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
@@ -34,10 +35,11 @@ export async function cancelCustomerReservation(
   reservationId: string,
   customerId: string,
   deadlineHours: number,
+  cancellationReason: string | null = null,
 ): Promise<CommandResult<CancelPayload>> {
   return prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.findFirst({
-      where: { id: reservationId, customerId },
+      where: { id: reservationId, customerId, deletedAt: null },
       select: { id: true, status: true, startTime: true, couponId: true },
     });
 
@@ -63,8 +65,13 @@ export async function cancelCustomerReservation(
     }
 
     await tx.reservation.update({
-      where: { id: reservationId },
-      data: { status: ReservationStatus.CANCELLED },
+      where: { id: reservationId, deletedAt: null },
+      data: {
+        status: ReservationStatus.CANCELLED,
+        cancelledAt: new Date(),
+        cancelledByType: CANCELLED_BY.CUSTOMER,
+        ...(cancellationReason ? { cancellationReason } : {}),
+      },
     });
 
     if (reservation.couponId) {
@@ -243,7 +250,7 @@ export async function updateCustomerReservation(
     const taxAmount = Math.floor(priceResult.totalPrice * taxRate);
 
     await tx.reservation.update({
-      where: { id: reservationId },
+      where: { id: reservationId, deletedAt: null },
       data: {
         spaceId: input.spaceId,
         startTime: startDateTime,

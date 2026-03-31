@@ -16,14 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/admin/components/ui";
-import {
-  GripVertical,
-  MoreHorizontal,
-  Eye,
-  EyeOff,
-  Copy,
-  Trash2,
-} from "lucide-react";
+import { IconGripVertical, IconDots, IconEye, IconEyeOff, IconCopy, IconTrash } from "@tabler/icons-react";
 import { sectionTypeLabels } from "@/shared/lib/validations/section";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
@@ -83,7 +76,7 @@ export function SectionSidebarItem({
         disabled={disabled}
         onClick={(e) => e.stopPropagation()}
       >
-        <GripVertical className="h-4 w-4" />
+        <IconGripVertical className="h-4 w-4" />
       </button>
 
       {/* Icon */}
@@ -101,7 +94,7 @@ export function SectionSidebarItem({
 
       {/* Status */}
       {!section.isActive && (
-        <EyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
+        <IconEyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
       )}
 
       {/* Menu */}
@@ -113,7 +106,7 @@ export function SectionSidebarItem({
             className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <MoreHorizontal className="h-3.5 w-3.5" />
+            <IconDots className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40">
@@ -125,12 +118,12 @@ export function SectionSidebarItem({
           >
             {section.isActive ? (
               <>
-                <EyeOff className="h-4 w-4 mr-2" />
+                <IconEyeOff className="h-4 w-4 mr-2" />
                 非表示にする
               </>
             ) : (
               <>
-                <Eye className="h-4 w-4 mr-2" />
+                <IconEye className="h-4 w-4 mr-2" />
                 表示する
               </>
             )}
@@ -141,7 +134,7 @@ export function SectionSidebarItem({
               onDuplicate(section.id);
             }}
           >
-            <Copy className="h-4 w-4 mr-2" />
+            <IconCopy className="h-4 w-4 mr-2" />
             複製
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -152,7 +145,7 @@ export function SectionSidebarItem({
               onDelete(section.id);
             }}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
+            <IconTrash className="h-4 w-4 mr-2" />
             削除
           </DropdownMenuItem>
         </DropdownMenuContent>

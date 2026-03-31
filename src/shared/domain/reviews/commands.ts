@@ -65,10 +65,10 @@ export async function createReviewCommand(input: CreateReviewInput) {
 export async function toggleReviewPublishedCommand(
   id: string,
   isPublished: boolean,
-) {
+): Promise<{ spaceId: string }> {
   const review = await prisma.spaceReview.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, spaceId: true },
   });
 
   if (!review) {
@@ -79,6 +79,8 @@ export async function toggleReviewPublishedCommand(
     where: { id },
     data: { isPublished },
   });
+
+  return { spaceId: review.spaceId };
 }
 
 export async function deleteReviewCommand(id: string) {

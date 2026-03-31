@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
-import { logError, createErrorLogger } from "@/shared/lib/errors/logger";
+import { logError, createErrorLogger } from "@/shared/lib/errors/logger-core";
 import {
   normalizeError,
   getErrorMessage,
@@ -17,9 +17,13 @@ import type { ErrorLogContext } from "@/shared/lib/errors/types";
 // console.error をモック化
 const originalConsoleError = console.error;
 const originalNodeEnv = process.env["NODE_ENV"];
+const mockConsoleError = mock<(message?: unknown, ...args: unknown[]) => void>(
+  () => {},
+);
 
 beforeEach(() => {
-  console.error = mock(() => {});
+  mockConsoleError.mockClear();
+  console.error = mockConsoleError as any;
 });
 
 afterEach(() => {

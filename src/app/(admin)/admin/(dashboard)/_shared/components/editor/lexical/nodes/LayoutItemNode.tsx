@@ -1,5 +1,5 @@
 /**
- * Layout Item Node
+ * IconLayout Item Node
  *
  * @description レイアウトコンテナ内の 1 カラム（Lexical Playground の layout-item と同型）
  */

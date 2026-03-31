@@ -148,6 +148,8 @@ paths:
 - **Turbopack が `¥`（U+00A5）を JSX 属性内でエスケープシーケンスと誤認識** — `placeholder="¥1,000"` 等はビルドエラー（`Invalid unicode escape`）。モジュールレベル定数に `"\u00A51,000"` で定義し `placeholder={CONST}` で参照する
 - **Turbopack HMR がコンポーネント変更を反映しない場合がある** — Playwright MCP で確認する際に古いレンダリングが残る。`?_t=N` パラメータ付きナビゲーションでも解消しない場合は dev サーバー再起動（`bun dev`）が必要
 - **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
+- **`server-only` の間接依存チェーンに注意** — `safe-fetch.ts` 等の共有ユーティリティが `./logger`（`server-only`）を import すると、テストで `mock.module("server-only")` が効かない場合がある。`server-only` なしの `logger-core` を直接 import する。対象: `safe-fetch.ts`, `cron-auth.ts` 等のテスト対象モジュール
+- **`bun run test` はディレクトリ別分離実行** — `bun test` 一括実行では `mock.module` のグローバル干渉で unit テストと integration テストが相互汚染する。`package.json` の `test` スクリプトは `bun test __tests__/unit/lib && bun test __tests__/unit/api && ... && bun test __tests__/integration` の形式。一括実行（`bun test`）は避ける
 
 ## ファイル操作・Git
 

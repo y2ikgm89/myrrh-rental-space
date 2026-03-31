@@ -31,6 +31,9 @@ export type ReservationWithRelations = {
   paymentStatus: PaymentStatus;
   stripePaymentIntentId: string | null;
   paidAt: string | null;
+  cancellationReason: string | null;
+  cancelledAt: string | null;
+  cancelledByType: string | null;
   space: {
     id: string;
     name: string;

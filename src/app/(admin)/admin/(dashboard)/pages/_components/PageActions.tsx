@@ -9,7 +9,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, Trash2, ExternalLink, Pencil } from "lucide-react";
+import { IconEye, IconEyeOff, IconTrash, IconExternalLink, IconPencil } from "@tabler/icons-react";
 import {
   ActionDropdown,
   ActionDropdownItem,
@@ -81,7 +81,7 @@ export function PageActions({
         {editHref && (
           <>
             <ActionDropdownItem href={editHref}>
-              <Pencil className="h-4 w-4 mr-2" />
+              <IconPencil className="h-4 w-4 mr-2" />
               編集
             </ActionDropdownItem>
             <ActionDropdownSeparator />
@@ -89,7 +89,7 @@ export function PageActions({
         )}
 
         <ActionDropdownItem onClick={handlePreview}>
-          <ExternalLink className="h-4 w-4 mr-2" />
+          <IconExternalLink className="h-4 w-4 mr-2" />
           プレビュー
         </ActionDropdownItem>
 
@@ -102,12 +102,12 @@ export function PageActions({
             >
               {isPublished ? (
                 <>
-                  <EyeOff className="h-4 w-4 mr-2" />
+                  <IconEyeOff className="h-4 w-4 mr-2" />
                   非公開にする
                 </>
               ) : (
                 <>
-                  <Eye className="h-4 w-4 mr-2" />
+                  <IconEye className="h-4 w-4 mr-2" />
                   公開する
                 </>
               )}
@@ -123,7 +123,7 @@ export function PageActions({
               onClick={() => setShowDeleteDialog(true)}
               disabled={isPending}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <IconTrash className="h-4 w-4 mr-2" />
               削除
             </ActionDropdownItem>
           </>

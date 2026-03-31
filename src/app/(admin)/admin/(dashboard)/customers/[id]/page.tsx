@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getCustomerById } from "@/admin/queries/customer";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -55,7 +55,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
           />
           <Button size="sm" asChild>
             <Link href={`/admin/customers/${customer.id}/edit`}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <IconPencil className="mr-2 h-4 w-4" />
               編集
             </Link>
           </Button>

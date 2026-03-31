@@ -4,49 +4,48 @@
  * セクションタイプ別アイコンコンポーネント
  */
 
-import type { LucideIcon } from "lucide-react";
+import type { TablerIcon } from "@tabler/icons-react";
 import {
-  Image,
-  FileText,
-  Mail,
-  CircleHelp,
-  LayoutGrid,
-  Newspaper,
-  FilePen,
-  MousePointerClick,
-  Images,
-  Quote,
-  MapPin,
-  Code,
-  Layers,
-  Lightbulb,
-  LayoutList,
-  Star,
-  Aperture,
-} from "lucide-react";
+  IconPhoto,
+  IconFileText,
+  IconMail,
+  IconHelpCircle,
+  IconLayoutGrid,
+  IconNews,
+  IconFileDescription,
+  IconPointer,
+  IconQuote,
+  IconMapPin,
+  IconCode,
+  IconStack2,
+  IconBulb,
+  IconLayoutList,
+  IconStar,
+  IconAperture,
+} from "@tabler/icons-react";
 import { SectionType } from "@/shared/lib/validations/section";
 
 /**
  * セクションタイプからアイコンコンポーネントを取得
  */
-export const sectionTypeIconComponents: Record<SectionType, LucideIcon> = {
-  [SectionType.HERO]: Image,
-  [SectionType.HERO_PARALLAX]: Layers,
-  [SectionType.CUSTOM]: FileText,
-  [SectionType.CONCEPT]: Lightbulb,
-  [SectionType.CONTACT_FORM]: Mail,
-  [SectionType.FAQ_LIST]: CircleHelp,
-  [SectionType.SPACE_LIST]: LayoutGrid,
-  [SectionType.SPACE_SHOWCASE]: LayoutList,
-  [SectionType.NEWS_LIST]: Newspaper,
-  [SectionType.POST_LIST]: FilePen,
-  [SectionType.FEATURES]: Star,
-  [SectionType.CTA]: MousePointerClick,
-  [SectionType.GALLERY]: Images,
-  [SectionType.TESTIMONIAL]: Quote,
-  [SectionType.MAP]: MapPin,
-  [SectionType.EMBED]: Code,
-  [SectionType.INSTAGRAM]: Aperture,
+export const sectionTypeIconComponents: Record<SectionType, TablerIcon> = {
+  [SectionType.HERO]: IconPhoto,
+  [SectionType.HERO_PARALLAX]: IconStack2,
+  [SectionType.CUSTOM]: IconFileText,
+  [SectionType.CONCEPT]: IconBulb,
+  [SectionType.CONTACT_FORM]: IconMail,
+  [SectionType.FAQ_LIST]: IconHelpCircle,
+  [SectionType.SPACE_LIST]: IconLayoutGrid,
+  [SectionType.SPACE_SHOWCASE]: IconLayoutList,
+  [SectionType.NEWS_LIST]: IconNews,
+  [SectionType.POST_LIST]: IconFileDescription,
+  [SectionType.FEATURES]: IconStar,
+  [SectionType.CTA]: IconPointer,
+  [SectionType.GALLERY]: IconPhoto,
+  [SectionType.TESTIMONIAL]: IconQuote,
+  [SectionType.MAP]: IconMapPin,
+  [SectionType.EMBED]: IconCode,
+  [SectionType.INSTAGRAM]: IconAperture,
 };
 
 interface SectionTypeIconProps {

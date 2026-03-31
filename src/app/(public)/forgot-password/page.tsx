@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/shared/lib/auth";
@@ -5,6 +6,11 @@ import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { ForgotPasswordForm } from "./_components/forgot-password-form";
+
+export const metadata: Metadata = {
+  title: "パスワードをお忘れの方",
+  robots: { index: false, follow: false },
+};
 
 export default async function ForgotPasswordPage() {
   const user = await getCurrentUser();

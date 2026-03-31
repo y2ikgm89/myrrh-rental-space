@@ -1723,47 +1723,12 @@ describe("formatPrice", () => {
     expect(formatPrice(100000)).toBe("¥100,000");
   });
 
-  test("通貨記号なしでフォーマットする", () => {
-    expect(formatPrice(1000, { showCurrency: false })).toBe("1,000");
+  test("null にカスタムフォールバックを指定できる", () => {
+    expect(formatPrice(null, "未設定")).toBe("未設定");
   });
 
-  test("税ラベル付きでフォーマットする", () => {
-    expect(formatPrice(1000, { showTaxLabel: true, taxLabel: "税込" })).toBe(
-      "¥1,000（税込）",
-    );
-    expect(formatPrice(1000, { showTaxLabel: true, taxLabel: "税抜" })).toBe(
-      "¥1,000（税抜）",
-    );
-  });
-
-  test("税ラベル表示がtrueでもtaxLabelがない場合、ラベルなし", () => {
-    expect(formatPrice(1000, { showTaxLabel: true })).toBe("¥1,000");
-  });
-
-  test("showTaxLabelがfalseの場合、taxLabelは表示されない", () => {
-    expect(formatPrice(1000, { showTaxLabel: false, taxLabel: "税込" })).toBe(
-      "¥1,000",
-    );
-  });
-
-  test("全オプション指定", () => {
-    expect(
-      formatPrice(5000, {
-        showCurrency: true,
-        showTaxLabel: true,
-        taxLabel: "税込",
-      }),
-    ).toBe("¥5,000（税込）");
-  });
-
-  test("通貨記号なし + 税ラベル付き", () => {
-    expect(
-      formatPrice(5000, {
-        showCurrency: false,
-        showTaxLabel: true,
-        taxLabel: "税抜",
-      }),
-    ).toBe("5,000（税抜）");
+  test("undefined にカスタムフォールバックを指定できる", () => {
+    expect(formatPrice(undefined, "-")).toBe("-");
   });
 });
 

@@ -7,7 +7,7 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { Image as ImageIcon, Link, Upload } from "lucide-react";
+import { IconPhoto, IconLink, IconUpload } from "@tabler/icons-react";
 import { useMediaSelection } from "@/admin/hooks/use-media-selection";
 import { LibraryTab, UrlTab, UploadTab } from "./tabs";
 import {
@@ -116,21 +116,21 @@ export function MediaPickerDialog({
           <TabButton
             active={activeTab === "library"}
             onClick={() => setActiveTab("library")}
-            icon={<ImageIcon className="mr-1 h-4 w-4" />}
+            icon={<IconPhoto className="mr-1 h-4 w-4" />}
             label="ライブラリ"
           />
           {showUrlTab && (
             <TabButton
               active={activeTab === "url"}
               onClick={() => setActiveTab("url")}
-              icon={<Link className="mr-1 h-4 w-4" />}
+              icon={<IconLink className="mr-1 h-4 w-4" />}
               label="URL入力"
             />
           )}
           <TabButton
             active={activeTab === "upload"}
             onClick={() => setActiveTab("upload")}
-            icon={<Upload className="mr-1 h-4 w-4" />}
+            icon={<IconUpload className="mr-1 h-4 w-4" />}
             label="アップロード"
           />
         </div>

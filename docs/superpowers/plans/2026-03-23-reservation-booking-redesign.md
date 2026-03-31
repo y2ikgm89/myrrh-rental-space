@@ -1,5 +1,7 @@
 # 予約ページ日時選択 UI 完全刷新 — 実装計画
 
+**ステータス**: 完了（2026-03-27 実装済み）
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 予約ページの日時選択を react-day-picker カレンダー + タイムスロットグリッド + Duration pill に刷新し、2ステップ・アダプティブレイアウトに再構築する

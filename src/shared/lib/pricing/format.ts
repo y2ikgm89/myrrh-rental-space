@@ -20,10 +20,12 @@ import { calculateTaxIncludedPrice } from "./tax";
 
 /** 日本円の通貨フォーマット */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("ja-JP", {
+  const formatted = new Intl.NumberFormat("ja-JP", {
     style: "currency",
     currency: "JPY",
   }).format(value);
+  // Intl.NumberFormat は全幅yen（￥）を返すため、半幅に統一（U+00A5）
+  return formatted.replace("￥", "\u00A5");
 }
 
 /** 価格フォーマット（null/undefined 対応） */

@@ -1,5 +1,5 @@
 /**
- * Sortable Inspector List
+ * Sortable Inspector IconList
  *
  * @description DnD対応のインスペクターパネル用アイテムリスト
  * Tabs / Steps / Collapsible のインスペクターパネルで共通使用
@@ -7,7 +7,7 @@
 
 "use client";
 
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { IconGripVertical, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   DndContext,
   closestCenter,
@@ -94,7 +94,7 @@ function SortableListItem({
         aria-label="ドラッグして並び替え"
         {...listeners}
       >
-        <GripVertical className="h-3.5 w-3.5" />
+        <IconGripVertical className="h-3.5 w-3.5" />
       </button>
       <span
         className={cn(
@@ -114,7 +114,7 @@ function SortableListItem({
         className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 hover:bg-destructive/10 hover:text-destructive disabled:opacity-0 disabled:pointer-events-none"
         title={canRemove ? `${position} を削除` : minMessage}
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <IconTrash className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -189,7 +189,7 @@ export function SortableInspectorList({
         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border h-9 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
         title={canAdd ? undefined : maxMessage}
       >
-        <Plus className="h-3.5 w-3.5" />
+        <IconPlus className="h-3.5 w-3.5" />
         {addLabel}
       </button>
     </>

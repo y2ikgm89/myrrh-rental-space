@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { KeyboardEvent } from "react";
 
 interface ImageGalleryProps {
@@ -162,7 +162,7 @@ function LightboxOverlay({
         className="absolute right-4 top-4 rounded-full bg-background/80 p-2 text-foreground"
         aria-label="閉じる"
       >
-        <X className="h-6 w-6" />
+        <IconX className="h-6 w-6" />
       </button>
       {hasMultiple ? (
         <>
@@ -175,7 +175,7 @@ function LightboxOverlay({
             className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground"
             aria-label="前の画像"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <IconChevronLeft className="h-6 w-6" />
           </button>
           <button
             type="button"
@@ -186,7 +186,7 @@ function LightboxOverlay({
             className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-background/80 p-2 text-foreground"
             aria-label="次の画像"
           >
-            <ChevronRight className="h-6 w-6" />
+            <IconChevronRight className="h-6 w-6" />
           </button>
         </>
       ) : null}

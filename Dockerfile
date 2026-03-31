@@ -1,6 +1,10 @@
 # syntax=docker.io/docker/dockerfile:1
+#
+# ビルド・実行とも Bun（package.json の packageManager と一致）
+# standalone の server.js は Node API 互換のため Bun でそのまま起動可能
+# https://bun.sh/guides/ecosystem/docker
 
-FROM oven/bun:1.3.10-alpine AS base
+FROM oven/bun:1.3.11-alpine AS base
 WORKDIR /app
 
 # --- Stage 1: Dependencies ---
@@ -16,7 +20,6 @@ FROM base AS builder-base
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/generated ./generated
 COPY . .
-RUN bun install --frozen-lockfile
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \

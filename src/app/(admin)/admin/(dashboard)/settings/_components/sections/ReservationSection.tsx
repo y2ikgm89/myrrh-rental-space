@@ -35,7 +35,7 @@ import { updateReservationSettings } from "@/admin/actions/settings";
 import { reservationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { SettingsData } from "@/shared/domain/settings/types";
-import { ExternalLink, CircleAlert } from "lucide-react";
+import { IconExternalLink, IconAlertCircle } from "@tabler/icons-react";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 
@@ -238,7 +238,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
 
                   {cancellationPolicies.length === 0 && !isLoadingPolicies && (
                     <div className="flex items-center gap-2 rounded-md border border-warning/20 bg-warning/10 p-3 text-sm text-warning-foreground">
-                      <CircleAlert className="h-4 w-4 flex-shrink-0" />
+                      <IconAlertCircle className="h-4 w-4 flex-shrink-0" />
                       <span>
                         キャンセルポリシーが登録されていません。先に利用規約管理で作成してください。
                       </span>
@@ -252,7 +252,7 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
                       className="mx-1 inline-flex items-center gap-1 text-primary hover:underline"
                     >
                       利用規約管理
-                      <ExternalLink className="h-3 w-3" />
+                      <IconExternalLink className="h-3 w-3" />
                     </Link>
                     で作成・編集できます。予約フォームや確認メールに表示されます。
                   </p>

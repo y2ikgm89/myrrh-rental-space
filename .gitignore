@@ -23,7 +23,6 @@ next-env.d.ts
 
 # Prisma (generated)
 generated/
-src/shared/generated/
 !prisma/migrations/.gitkeep
 
 # Testing

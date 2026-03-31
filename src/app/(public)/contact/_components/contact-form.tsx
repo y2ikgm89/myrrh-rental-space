@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ReactElement } from "react";
 import { useWatch } from "react-hook-form";
-import { CircleCheck } from "lucide-react";
+import { IconCircleCheck } from "@tabler/icons-react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Button } from "@/public/components/design-system/button";
 import { Heading } from "@/public/components/design-system/heading";
@@ -23,10 +23,12 @@ import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle"
 
 interface ContactFormProps {
   readonly turnstileSiteKey: string | null;
+  readonly defaultSubject: string | undefined;
 }
 
 export function ContactForm({
   turnstileSiteKey,
+  defaultSubject,
 }: ContactFormProps): ReactElement {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export function ContactForm({
       }
       return result;
     },
+    defaultSubject ? { defaultValues: { subject: defaultSubject } } : undefined,
   );
 
   const customerType = useWatch({
@@ -74,7 +77,7 @@ export function ContactForm({
     return (
       <ScrollReveal>
         <div className="rounded-lg border border-accent/20 bg-surface px-8 py-12 text-center">
-          <CircleCheck className="mx-auto h-10 w-10 text-accent" />
+          <IconCircleCheck className="mx-auto h-10 w-10 text-accent" />
           <Heading level={2} className="mt-4">
             お問い合わせを受け付けました
           </Heading>
@@ -190,7 +193,12 @@ export function ContactForm({
           />
 
           {errorMessage !== null && (
-            <p className="text-sm text-destructive">{errorMessage}</p>
+            <div
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+              role="alert"
+            >
+              {errorMessage}
+            </div>
           )}
 
           <div className="flex items-center gap-6 pt-2">

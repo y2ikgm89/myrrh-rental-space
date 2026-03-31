@@ -42,9 +42,35 @@ mock.module("@/shared/lib/email/reminder-emails", () => ({
 
 mock.module("@/shared/lib/errors/server", () => ({
   logError: (...args: Parameters<typeof mockLogError>) => mockLogError(...args),
+  createErrorLogger: mock(() => ({
+    error: mock(),
+    warn: mock(),
+    info: mock(),
+  })),
+  normalizeError: (error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
+  getErrorMessage: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  ReservationOverlapError: class extends Error {
+    readonly code = "RESERVATION_OVERLAP" as const;
+    constructor(message = "選択された時間帯は既に予約されています") {
+      super(message);
+      this.name = "ReservationOverlapError";
+    }
+  },
+  isReservationOverlapError: (error: unknown) =>
+    error instanceof Error && error.name === "ReservationOverlapError",
+  safeFetch: mock(async (opts: { fetch: () => unknown; fallback: unknown }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  }),
+  criticalFetch: mock(async (opts: { fetch: () => unknown }) => opts.fetch()),
   ErrorCategory: {
-    EXTERNAL_API: "EXTERNAL_API",
     DATABASE: "DATABASE",
+    EXTERNAL_API: "EXTERNAL_API",
     VALIDATION: "VALIDATION",
     AUTHORIZATION: "AUTHORIZATION",
     CACHE: "CACHE",
@@ -72,10 +98,15 @@ mock.module("@/shared/lib/cron-auth", () => ({
 }));
 
 mock.module("@/shared/lib/route-responses", () => ({
+  getRouteErrorStatus: (message: string) =>
+    message.includes("ログイン") || message.includes("権限") ? 403 : 400,
   jsonError: (error: string, status = 400) =>
     NextResponse.json({ error }, { status }),
   jsonSuccess: <T>(data: T, status = 200) =>
     NextResponse.json(data, { status }),
+  jsonValidationError: mock(() =>
+    NextResponse.json({ error: "入力内容に誤りがあります" }, { status: 400 }),
+  ),
 }));
 
 const { GET } = await import("@/app/api/cron/reservation-reminder/route");

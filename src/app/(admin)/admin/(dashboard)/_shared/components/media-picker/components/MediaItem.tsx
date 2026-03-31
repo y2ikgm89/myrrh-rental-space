@@ -6,7 +6,7 @@
  * メディアグリッド/リストの個別アイテム
  */
 
-import { Check } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import type { MediaData } from "@/admin/types/media-picker";
 
@@ -54,7 +54,7 @@ export function MediaItem({
         />
         {isSelected && (
           <div className="absolute right-1 top-1 rounded-full bg-primary p-1">
-            <Check className="h-3 w-3 text-primary-foreground" />
+            <IconCheck className="h-3 w-3 text-primary-foreground" />
           </div>
         )}
       </button>
@@ -84,7 +84,7 @@ export function MediaItem({
           {formatBytes(media.size)}
         </p>
       </div>
-      {isSelected && <Check className="h-5 w-5 shrink-0 text-primary" />}
+      {isSelected && <IconCheck className="h-5 w-5 shrink-0 text-primary" />}
     </button>
   );
 }

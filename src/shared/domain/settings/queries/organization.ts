@@ -154,6 +154,8 @@ export async function getOrganizationSettings(): Promise<Serialized<Organization
 export interface SocialLinkForFooter {
   platform: string;
   url: string;
+  showOnDesktop: boolean;
+  showOnMobile: boolean;
 }
 
 export async function getSocialLinkUrls(): Promise<string[]> {
@@ -188,7 +190,12 @@ export async function getSocialLinksForFooter(): Promise<
     fetch: () =>
       prisma.socialLink.findMany({
         where: { isActive: true },
-        select: { platform: true, url: true },
+        select: {
+          platform: true,
+          url: true,
+          showOnDesktop: true,
+          showOnMobile: true,
+        },
         orderBy: { order: "asc" },
       }),
     fallback: [],
@@ -200,5 +207,7 @@ export async function getSocialLinksForFooter(): Promise<
   return result.map((link) => ({
     platform: link.platform,
     url: link.url,
+    showOnDesktop: link.showOnDesktop,
+    showOnMobile: link.showOnMobile,
   }));
 }

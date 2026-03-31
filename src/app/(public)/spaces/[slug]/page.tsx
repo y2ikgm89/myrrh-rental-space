@@ -4,6 +4,12 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { getSpaceBySlug } from "@/shared/domain/spaces/public-queries";
+import { getSpaceReviewStats } from "@/shared/domain/reviews/public-queries";
+import { getBaseUrl } from "@/shared/lib/constants";
+import {
+  ProductJsonLd,
+  BreadcrumbJsonLd,
+} from "../../_shared/components/seo/json-ld";
 import { PageHero } from "../../_shared/components/layouts/page-hero";
 import { Breadcrumb } from "../../_shared/components/layouts/breadcrumb";
 import { SiteCTA } from "../../_shared/components/layouts/site-cta";
@@ -49,8 +55,35 @@ export default async function SpaceDetailPage({
   const space = await getSpaceBySlug(slug);
   if (!space) notFound();
 
+  const reviewStats = await getSpaceReviewStats(space.id);
+  const baseUrl = getBaseUrl();
+  const spaceUrl = `${baseUrl}/spaces/${slug}`;
+
   return (
     <>
+      <BreadcrumbJsonLd
+        items={[
+          { name: "ホーム", url: "/" },
+          { name: "スペース一覧", url: "/spaces" },
+          { name: space.name, url: spaceUrl },
+        ]}
+      />
+      <ProductJsonLd
+        name={space.name}
+        description={space.description ?? space.name}
+        image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
+        url={spaceUrl}
+        offers={{
+          price: space.hourlyPrice,
+          priceCurrency: "JPY",
+        }}
+        {...(reviewStats.totalCount > 0 && {
+          aggregateRating: {
+            ratingValue: reviewStats.averageRating,
+            reviewCount: reviewStats.totalCount,
+          },
+        })}
+      />
       <PageHero
         variant="compact"
         title={space.name}

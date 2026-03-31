@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { createPortal } from "react-dom";
-import { FileDown, Copy, Check, Download, X } from "lucide-react";
+import { IconFileDownload, IconCopy, IconCheck, IconDownload, IconX } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { EDITOR_TRANSFORMERS } from "../MarkdownTransformers";
 
@@ -54,7 +54,7 @@ function MarkdownExportDialog({
       <div className="w-full max-w-2xl rounded-lg border border-border bg-background shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2 font-semibold">
-            <FileDown className="h-4 w-4" />
+            <IconFileDownload className="h-4 w-4" />
             <span>Markdownエクスポート</span>
           </div>
           <div className="flex items-center gap-1">
@@ -66,9 +66,9 @@ function MarkdownExportDialog({
               onClick={handleCopy}
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5" />
+                <IconCheck className="h-3.5 w-3.5" />
               ) : (
-                <Copy className="h-3.5 w-3.5" />
+                <IconCopy className="h-3.5 w-3.5" />
               )}
               <span className="text-xs">
                 {copied ? "コピー済み" : "コピー"}
@@ -81,7 +81,7 @@ function MarkdownExportDialog({
               className="h-7 gap-1.5"
               onClick={handleDownload}
             >
-              <Download className="h-3.5 w-3.5" />
+              <IconDownload className="h-3.5 w-3.5" />
               <span className="text-xs">ダウンロード</span>
             </Button>
             <Button
@@ -91,7 +91,7 @@ function MarkdownExportDialog({
               className="h-7 w-7"
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              <IconX className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -131,7 +131,7 @@ export function MarkdownExportPlugin() {
         onClick={handleExport}
         title="Markdownエクスポート"
       >
-        <FileDown className="h-3.5 w-3.5" />
+        <IconFileDownload className="h-3.5 w-3.5" />
       </Button>
       {markdown !== null && (
         <MarkdownExportDialog

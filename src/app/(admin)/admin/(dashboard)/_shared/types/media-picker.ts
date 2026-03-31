@@ -28,8 +28,8 @@ export type MediaData = {
   title: string | null;
   description: string | null;
   tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   uploader: {
     id: string;
     name: string;

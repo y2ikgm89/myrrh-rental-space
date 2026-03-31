@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Calendar, Download, Plus } from "lucide-react";
+import { IconCalendar, IconDownload, IconPlus } from "@tabler/icons-react";
 import { getReservations } from "@/admin/queries/reservation";
 import { ReservationFilters } from "./_components/ReservationFilters";
 import { ReservationTable } from "./_components/ReservationTable";
@@ -62,19 +62,19 @@ export default async function ReservationsPage({ searchParams }: PageProps) {
         <div className="flex gap-2">
           <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/reservations/new">
-              <Plus className="mr-2 h-4 w-4" />
+              <IconPlus className="mr-2 h-4 w-4" />
               新規予約
             </Link>
           </Button>
           <Button variant="outline" asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/reservations/calendar">
-              <Calendar className="mr-2 h-4 w-4" />
+              <IconCalendar className="mr-2 h-4 w-4" />
               カレンダー表示
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <a href="/api/admin/export/reservations" download>
-              <Download className="mr-2 h-4 w-4" />
+              <IconDownload className="mr-2 h-4 w-4" />
               CSV
             </a>
           </Button>

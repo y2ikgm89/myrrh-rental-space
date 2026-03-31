@@ -49,7 +49,7 @@ export default async function MypagePage(): Promise<ReactElement> {
 
   return (
     <div>
-      <Heading level={1} className="mb-8">
+      <Heading level={1} className="mb-4 md:mb-8">
         予約一覧
       </Heading>
       {isNameIncomplete && (

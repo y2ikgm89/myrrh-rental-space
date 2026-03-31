@@ -14,7 +14,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/admin/components/ui";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   conceptConfigSchema,
@@ -125,7 +125,7 @@ export default function ConceptConfigForm({
               </div>
             ) : (
               <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                <IconPhotoPlus className="h-6 w-6 text-muted-foreground" />
               </div>
             )}
             <div className="flex-1 space-y-2">
@@ -136,7 +136,7 @@ export default function ConceptConfigForm({
                 onClick={() => imagePicker.openPicker()}
                 disabled={isPending}
               >
-                <ImagePlus className="mr-1 h-3 w-3" />
+                <IconPhotoPlus className="mr-1 h-3 w-3" />
                 画像を選択
               </Button>
               {imageUrl && (

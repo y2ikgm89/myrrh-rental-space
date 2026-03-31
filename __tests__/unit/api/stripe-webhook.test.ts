@@ -17,14 +17,13 @@ const mockSafeDecrypt = mock<(value: string) => string | null>();
 // Stripe Client
 const mockConstructEvent =
   mock<(body: string, sig: string, secret: string) => unknown>();
-const mockGetStripeClient =
-  mock<
-    () => Promise<{
-      client: {
-        webhooks: { constructEvent: typeof mockConstructEvent };
-      } | null;
-    }>
-  >();
+const mockGetStripeClient = mock<
+  () => Promise<{
+    client: {
+      webhooks: { constructEvent: typeof mockConstructEvent };
+    } | null;
+  }>
+>();
 
 // Payment Queries
 const mockGetReservationPaymentStatus =
@@ -81,8 +80,8 @@ const mockNormalizeError = mock<(error: unknown) => Error>((e) => {
 const mockJsonError = mock<(msg: string, status: number) => Response>(
   (msg, status) => new Response(JSON.stringify({ error: msg }), { status }),
 );
-const mockJsonSuccess = mock<(data: unknown) => Response>(
-  (data) => new Response(JSON.stringify(data), { status: 200 }),
+const mockJsonSuccess = mock<(data: unknown, status?: number) => Response>(
+  (data, status = 200) => new Response(JSON.stringify(data), { status }),
 );
 
 // Serialize
@@ -98,7 +97,11 @@ mock.module("@/shared/domain/settings/queries/integration", () => ({
   getStripeSettings: () => mockGetStripeSettings(),
 }));
 
+// 実際の crypto モジュールを re-export し、safeDecrypt のみオーバーライド
+// （不完全なモックは他テストファイルの crypto テストを壊す — Bun 既知制限）
+const actualCrypto = await import("@/shared/lib/crypto");
 mock.module("@/shared/lib/crypto", () => ({
+  ...actualCrypto,
   safeDecrypt: (value: string) => mockSafeDecrypt(value),
 }));
 
@@ -134,61 +137,171 @@ mock.module("next/navigation", () => ({
 mock.module("@/shared/lib/async-utils", () => ({
   fireAndForget: (promise: Promise<unknown>, opts?: unknown) =>
     mockFireAndForget(promise, opts),
+  settleAllWithLogging: <T>(promises: Promise<T>[]) =>
+    Promise.allSettled(promises),
+  withTimeout: <T>(promise: Promise<T>) => promise,
+  withRetry: <T>(fn: () => Promise<T>) => fn(),
 }));
 
 mock.module("@/shared/lib/email/reservation-emails", () => ({
   sendReservationConfirmationEmail: (data: unknown) =>
     mockSendReservationConfirmationEmail(data),
+  sendReservationCancelledEmail: mock(() => Promise.resolve()),
+  sendReservationStatusChangedEmail: mock(() => Promise.resolve()),
+  sendReservationAdminNotification: mock(() => Promise.resolve()),
 }));
 
+const actualErrors = await import("@/shared/lib/errors/server");
 mock.module("@/shared/lib/errors/server", () => ({
+  ...actualErrors,
   logError: (error: unknown, opts?: unknown) => mockLogError(error, opts),
   normalizeError: (error: unknown) => mockNormalizeError(error),
-  ErrorCategory: {
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    LOW: "LOW",
-    MEDIUM: "MEDIUM",
-    HIGH: "HIGH",
-    CRITICAL: "CRITICAL",
-  },
 }));
 
-mock.module("@/shared/lib/constants", () => ({
-  CACHE_TAGS: {
+mock.module("@/shared/lib/constants", () => {
+  const tags = {
+    POSTS: "posts",
+    POST_COMMENTS: "post-comments",
+    POST_TAGS: "post-tags",
+    NEWS: "news",
+    SPACES: "spaces",
+    SPACE_CATEGORIES: "space-categories",
+    LOCATIONS: "locations",
+    PAGES: "pages",
+    SETTINGS: "settings",
+    FAQ: "faq",
+    FAQ_CATEGORIES: "faq-categories",
     RESERVATIONS: "reservations",
-  },
-  CACHE_LIFE: {
-    DYNAMIC_DATA: "minutes",
-  },
-  getCacheTag: {
-    reservations: {
-      detail: (id: string) => `reservations-${id}`,
-      calendar: () => "reservations-calendar",
+    CUSTOMERS: "customers",
+    INQUIRIES: "inquiries",
+    MEDIA: "media",
+    NAVIGATION: "navigation",
+    ANNOUNCEMENT_BAR: "announcement-bar",
+    SECTIONS: "sections",
+    HOMEPAGE_SECTIONS: "homepage-sections",
+    PAGE_SECTIONS: "page-sections",
+    TERMS: "terms",
+    STAFF: "staff",
+    COUPONS: "coupons",
+    BUSINESS_SETTINGS: "business-settings",
+    COOKIE_CONSENT: "cookie-consent",
+    PERMALINK: "permalink",
+    ROBOTS_TXT: "robots-txt",
+    LAYOUT: "layout",
+    LAYOUT_SETTINGS: "layout-settings",
+    ANALYTICS_CONFIG: "analytics-config",
+    SEO_SETTINGS: "seo-settings",
+    ORGANIZATION_SETTINGS: "organization-settings",
+    SOCIAL_LINKS: "social-links",
+    PAGE_SEO: "page-seo",
+    SIDEBAR_DATA: "sidebar-data",
+    SIDEBAR_SETTINGS: "sidebar-settings",
+    INSTAGRAM_FEED: "instagram-feed",
+    CANCELLATION_POLICY: "cancellation-policy",
+    BLOCK_TEMPLATES: "block-templates",
+    PERMISSIONS: "permissions",
+    PAGE_CONTENT: "page-content",
+    REVIEWS: "reviews",
+  };
+  return {
+    CACHE_TAGS: tags,
+    CACHE_LIFE: {
+      PUBLIC_CONTENT: "hours",
+      STATIC_SETTINGS: "days",
+      DYNAMIC_DATA: "minutes",
+      METADATA: "hours",
     },
-  },
-}));
+    getCacheTag: {
+      posts: {
+        list: () => tags.POSTS,
+        detail: (slug: string) => `${tags.POSTS}-${slug}`,
+        comments: (slug: string) => `${tags.POST_COMMENTS}-${slug}`,
+        tags: () => tags.POST_TAGS,
+        tagPage: (slug: string) => `${tags.POST_TAGS}-${slug}`,
+      },
+      news: {
+        list: () => tags.NEWS,
+        detail: (id: string) => `${tags.NEWS}-${id}`,
+      },
+      spaces: {
+        list: () => tags.SPACES,
+        detail: (id: string) => `${tags.SPACES}-${id}`,
+      },
+      pages: {
+        list: () => tags.PAGES,
+        detail: (slug: string) => `${tags.PAGES}-${slug}`,
+      },
+      faq: {
+        list: () => tags.FAQ,
+        detail: (id: string) => `${tags.FAQ}-${id}`,
+      },
+      reservations: {
+        list: () => tags.RESERVATIONS,
+        detail: (id: string) => `${tags.RESERVATIONS}-${id}`,
+        calendar: () => `${tags.RESERVATIONS}-calendar`,
+      },
+      customers: {
+        list: () => tags.CUSTOMERS,
+        detail: (id: string) => `${tags.CUSTOMERS}-${id}`,
+      },
+      inquiries: {
+        list: () => tags.INQUIRIES,
+        detail: (id: string) => `${tags.INQUIRIES}-${id}`,
+      },
+      coupons: {
+        list: () => tags.COUPONS,
+        detail: (id: string) => `${tags.COUPONS}-${id}`,
+      },
+      media: {
+        list: () => tags.MEDIA,
+        detail: (id: string) => `${tags.MEDIA}-${id}`,
+      },
+      staff: {
+        list: () => tags.STAFF,
+        detail: (id: string) => `${tags.STAFF}-${id}`,
+      },
+      layoutSettings: {
+        site: () => tags.LAYOUT_SETTINGS,
+        post: (postId: string) => `${tags.LAYOUT_SETTINGS}-post-${postId}`,
+        news: (newsId: string) => `${tags.LAYOUT_SETTINGS}-news-${newsId}`,
+        page: (slug: string) => `${tags.LAYOUT_SETTINGS}-page-${slug}`,
+      },
+      pageSeo: {
+        detail: (slug: string) => `${tags.PAGE_SEO}-${slug}`,
+      },
+      pageContent: {
+        detail: (pageKey: string) => `${tags.PAGE_CONTENT}-${pageKey}`,
+        meta: (pageKey: string) => `${tags.PAGE_CONTENT}-meta-${pageKey}`,
+      },
+      reviews: {
+        space: (spaceId: string) => `${tags.REVIEWS}-space-${spaceId}`,
+        stats: (spaceId: string) => `${tags.REVIEWS}-stats-${spaceId}`,
+      },
+    },
+  };
+});
 
 mock.module("@/shared/lib/route-responses", () => ({
-  jsonError: (msg: string, status: number) => mockJsonError(msg, status),
-  jsonSuccess: (data: unknown) => mockJsonSuccess(data),
+  getRouteErrorStatus: (message: string) =>
+    message.includes("ログイン") || message.includes("権限") ? 403 : 400,
+  jsonError: (msg: string, status = 400) => mockJsonError(msg, status),
+  jsonSuccess: (data: unknown, status = 200) => mockJsonSuccess(data, status),
+  jsonValidationError: (
+    error: { issues: Array<{ message: string }> },
+    fallback = "入力内容に誤りがあります",
+  ) => mockJsonError(error.issues[0]?.message ?? fallback, 400),
 }));
 
+// 実際の serialize を re-export し、omitUndefined のみオーバーライド
+const actualSerialize = await import("@/shared/lib/serialize");
 mock.module("@/shared/lib/serialize", () => ({
+  ...actualSerialize,
   omitUndefined: (obj: Record<string, unknown>) => mockOmitUndefined(obj),
 }));
 
-mock.module("@/shared/db/enums", () => ({
-  PaymentStatus: {
-    PAID: "PAID",
-    PENDING: "PENDING",
-    FAILED: "FAILED",
-    REFUNDED: "REFUNDED",
-  },
-}));
+// 実際のPrisma enumsを使用（ハードコード enum はモック汚染で他テストを壊す）
+const actualEnums = await import("@generated/prisma/enums");
+mock.module("@/shared/db/enums", () => actualEnums);
 
 // =============================================================================
 // 3. テスト対象を import
@@ -298,7 +411,7 @@ describe("POST /api/webhooks/stripe", () => {
       (msg, status) => new Response(JSON.stringify({ error: msg }), { status }),
     );
     mockJsonSuccess.mockImplementation(
-      (data) => new Response(JSON.stringify(data), { status: 200 }),
+      (data, status = 200) => new Response(JSON.stringify(data), { status }),
     );
     mockNormalizeError.mockImplementation((e) => {
       if (e instanceof Error) return e;
@@ -337,18 +450,28 @@ describe("POST /api/webhooks/stripe", () => {
   // ---------------------------------------------------------------------------
 
   test("stripe-signature ヘッダーがない → 400", async () => {
-    // signature なしのリクエスト
     const request = makeRequest("body", null);
-    // Stripeは設定済み・署名検証前に止まるので getStripeSettings は呼ばれる
-    mockConstructEvent.mockImplementation(() => {
-      throw new Error("No signature");
-    });
 
     const response = await POST(request);
     const body = (await response.json()) as { error: string };
 
     expect(response.status).toBe(400);
     expect(body.error).toContain("stripe-signature");
+    // constructEvent は呼ばれない（signature ガードで先に返る）
+    expect(mockConstructEvent).not.toHaveBeenCalled();
+  });
+
+  test("署名検証失敗（constructEvent 例外）→ 400", async () => {
+    mockConstructEvent.mockImplementation(() => {
+      throw new Error("Invalid signature");
+    });
+
+    const response = await POST(makeRequest("body"));
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("Invalid signature");
+    expect(mockLogError).toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------

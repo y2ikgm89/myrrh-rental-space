@@ -11,7 +11,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
-import { Aperture, Link2, Key, Unlink, ExternalLink } from "lucide-react";
+import {
+  IconAperture,
+  IconLink,
+  IconKey,
+  IconUnlink,
+  IconExternalLink,
+} from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -30,6 +36,7 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateInstagramSettings,
@@ -69,13 +76,13 @@ const CONNECTION_METHOD_OPTIONS = [
     value: "oauth" as const,
     label: "OAuth連携（推奨）",
     description: "Instagramアカウントで認証して自動的にトークンを取得します",
-    icon: <Link2 />,
+    icon: <IconLink />,
   },
   {
     value: "manual" as const,
     label: "手動トークン入力",
     description: "自分でアクセストークンを取得して入力します",
-    icon: <Key />,
+    icon: <IconKey />,
   },
 ];
 
@@ -184,7 +191,7 @@ function ConnectionCard({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Aperture className="h-5 w-5" />
+            <IconAperture className="h-5 w-5" />
             Instagram連携
           </CardTitle>
           <CardDescription>アカウント接続状況</CardDescription>
@@ -229,7 +236,7 @@ function ConnectionCard({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <IconExternalLink className="h-4 w-4" />
                   プロフィールを表示
                 </a>
               </Button>
@@ -240,7 +247,7 @@ function ConnectionCard({
               onClick={onDisconnect}
               disabled={isPending}
             >
-              <Unlink className="mr-1 h-4 w-4" />
+              <IconUnlink className="mr-1 h-4 w-4" />
               連携解除
             </Button>
           </div>
@@ -254,7 +261,7 @@ function ConnectionCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Aperture className="h-5 w-5" />
+          <IconAperture className="h-5 w-5" />
           Instagram連携
         </CardTitle>
         <CardDescription>
@@ -290,7 +297,7 @@ function ConnectionCard({
               onClick={handleOAuthConnect}
               className="w-full"
             >
-              <Aperture className="mr-2 h-4 w-4" />
+              <IconAperture className="mr-2 h-4 w-4" />
               Instagramと連携
             </Button>
           </div>
@@ -383,7 +390,7 @@ function FeedSettingsCard({ config, parentIsPending }: FeedSettingsCardProps) {
     },
   );
 
-  const feedEnabled = form.getValues("feedEnabled");
+  const feedEnabled = useWatch({ control: form.control, name: "feedEnabled" });
   const formIsPending = isPending || parentIsPending;
 
   return (
@@ -392,7 +399,7 @@ function FeedSettingsCard({ config, parentIsPending }: FeedSettingsCardProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Aperture className="h-5 w-5" />
+              <IconAperture className="h-5 w-5" />
               フィード表示設定
             </CardTitle>
             <CardDescription>

@@ -22,8 +22,14 @@ const mockValidateTurnstile = mock(
     Promise.resolve({ success: true }),
 );
 
+const mockCheckActionRateLimit = mock(
+  (): Promise<{ success: boolean; error?: string }> =>
+    Promise.resolve({ success: true }),
+);
+
 mock.module("@/shared/lib/action-helpers", () => ({
   validateTurnstile: mockValidateTurnstile,
+  checkActionRateLimit: mockCheckActionRateLimit,
   createValidationMutationError: (error: import("zod").ZodError) => ({
     error: "入力内容に誤りがあります",
     fieldErrors: Object.fromEntries(
@@ -82,6 +88,15 @@ const mockGetSession = mock(() => Promise.resolve(null));
 
 mock.module("@/shared/lib/auth", () => ({
   getSession: mockGetSession,
+  getCurrentUser: mock(() => Promise.resolve(null)),
+  verifySession: mock(() => Promise.resolve(null)),
+  verifyAdminSession: mock(() => Promise.resolve(null)),
+  verifyCustomerSession: mock(() => Promise.resolve(null)),
+  isAdmin: mock(() => Promise.resolve(false)),
+  getSessionUser: () => null,
+  getRoleFromSession: () => null,
+  isValidRole: () => false,
+  auth: {},
 }));
 
 // =============================================================================

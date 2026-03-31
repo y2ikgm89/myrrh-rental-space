@@ -562,7 +562,6 @@ const SERVER_ONLY_QUERY_FILES = [
   join(SRC_ROOT, "shared", "domain", "user-page-assignments", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "users", "queries.ts"),
   join(SRC_ROOT, "shared", "domain", "users", "commands.ts"),
-  join(SRC_ROOT, "shared", "lib", "admin-login-gate.ts"),
   join(SRC_ROOT, "shared", "lib", "google-calendar", "settings.ts"),
   join(SRC_ROOT, "shared", "lib", "google-calendar", "webhook.ts"),
 ];

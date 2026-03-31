@@ -61,7 +61,7 @@
 bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証
-bun run test                                  # テスト（bunfig.toml preload: JSDOM）
+bun run test                                  # テスト（ディレクトリ別分離実行: mock.module 干渉回避）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
 bunx --bun prisma migrate dev --name <name>   # マイグレーション

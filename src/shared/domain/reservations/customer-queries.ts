@@ -8,6 +8,7 @@ const CUSTOMER_RESERVATION_SELECT = {
   endTime: true,
   status: true,
   totalPrice: true,
+  paymentStatus: true,
   notes: true,
   createdAt: true,
   space: { select: { id: true, name: true, slug: true } },
@@ -15,7 +16,7 @@ const CUSTOMER_RESERVATION_SELECT = {
 
 export async function getCustomerReservations(customerId: string) {
   return prisma.reservation.findMany({
-    where: { customerId },
+    where: { customerId, deletedAt: null },
     select: CUSTOMER_RESERVATION_SELECT,
     orderBy: { startTime: "desc" },
   });
@@ -26,7 +27,7 @@ export async function getCustomerReservationDetail(
   customerId: string,
 ) {
   return prisma.reservation.findFirst({
-    where: { id: reservationId, customerId },
+    where: { id: reservationId, customerId, deletedAt: null },
     select: {
       ...CUSTOMER_RESERVATION_SELECT,
       couponId: true,
@@ -34,6 +35,14 @@ export async function getCustomerReservationDetail(
       durationDiscountAmount: true,
       spaceDiscountAmount: true,
       basePrice: true,
+      taxRateType: true,
+      taxRate: true,
+      taxAmount: true,
+      totalPriceWithTax: true,
+      paidAt: true,
+      cancellationReason: true,
+      cancelledAt: true,
+      cancelledByType: true,
       spaceId: true,
       space: {
         select: {

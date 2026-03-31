@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryStates } from "nuqs";
 import { adminMediaSearchParamsParsers } from "@/shared/lib/nuqs";
-import { Search, Grid, List, Upload } from "lucide-react";
+import { IconSearch, IconLayoutGrid, IconList, IconUpload } from "@tabler/icons-react";
 import {
   Button,
   Input,
@@ -56,7 +56,7 @@ export function MediaFilters() {
         <div className="flex flex-wrap gap-2 items-center">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="検索..."
@@ -123,7 +123,7 @@ export function MediaFilters() {
               }`}
               aria-label="グリッド表示"
             >
-              <Grid className="h-4 w-4" />
+              <IconLayoutGrid className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -135,13 +135,13 @@ export function MediaFilters() {
               }`}
               aria-label="リスト表示"
             >
-              <List className="h-4 w-4" />
+              <IconList className="h-4 w-4" />
             </button>
           </div>
 
           {/* Upload Button */}
           <Button onClick={() => setIsUploadOpen(true)}>
-            <Upload className="h-4 w-4 mr-2" />
+            <IconUpload className="h-4 w-4 mr-2" />
             アップロード
           </Button>
         </div>

@@ -133,7 +133,7 @@ export function TestimonialSection({
               data-testimonial-card=""
               className={`${cardClasses} ${CARD_CLASS[config.layout]}`}
             >
-              {/* Quote decoration (not shown in minimal) */}
+              {/* IconQuote decoration (not shown in minimal) */}
               {variant !== "minimal" && (
                 <span
                   className="block font-serif text-4xl leading-none text-primary/20"

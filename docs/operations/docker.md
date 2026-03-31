@@ -25,66 +25,31 @@ myrrh-rental-space/
 3-stage multi-stage build。共通 `base` ステージで DRY:
 
 ```
-base (oven/bun:1.3.9-alpine)
-├── deps     → 依存インストール + Prisma generate
-├── builder  → validate + build（standalone output）
-└── runner   → 最小限の本番実行環境（非root）
+base (oven/bun:1.3.x-alpine)
+├── deps          → 依存インストール + Prisma generate
+├── builder-base  → ソース + 依存（ビルド準備）
+├── builder       → type-check + lint + build（standalone、Secret で SA 鍵注入）
+└── runner        → 同一 Bun 系イメージ、`bun server.js` で standalone 実行
 ```
 
 ### 実際の Dockerfile
 
+正本はリポジトリルートの `Dockerfile`。ビルド・本番実行とも **Bun**。
+
 ```dockerfile
 # syntax=docker.io/docker/dockerfile:1
-
-FROM oven/bun:1.3.9-alpine AS base
+FROM oven/bun:1.3.11-alpine AS base
 WORKDIR /app
+# ... deps, builder-base, builder ...
 
-# --- Stage 1: Dependencies ---
-FROM base AS deps
-RUN apk add --no-cache libc6-compat
-COPY package.json bun.lock ./
-COPY prisma ./prisma/
-RUN bun install --frozen-lockfile && \
-    bunx --bun prisma generate --schema=./prisma/schema.prisma
-
-# --- Stage 2: Build ---
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/src/shared/generated ./src/shared/generated
-COPY . .
-
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    NODE_ENV=production \
-    SKIP_ENV_VALIDATION=true \
-    STANDALONE=true
-
-# NEXT_PUBLIC_* はビルド時にクライアント JS へインライン化される
-ARG NEXT_PUBLIC_BASE_URL
-ARG NEXT_PUBLIC_APP_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
-
-RUN bun run validate && bun run build
-
-# --- Stage 3: Runner ---
 FROM base AS runner
-
-RUN apk add --no-cache libc6-compat && \
-    addgroup --system --gid 1001 nodejs && \
+RUN apk add --no-cache libc6-compat && addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
-
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
-    PORT=8080 \
-    HOSTNAME=0.0.0.0
-
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=8080 HOSTNAME=0.0.0.0
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-
 USER nextjs
 EXPOSE 8080
 CMD ["bun", "server.js"]
@@ -92,19 +57,19 @@ CMD ["bun", "server.js"]
 
 ### 設計のポイント
 
-| 項目                 | 詳細                                                                     |
-| -------------------- | ------------------------------------------------------------------------ |
-| **ベースイメージ**   | `oven/bun:1.3.9-alpine`（軽量 + `base` ステージで共有）                  |
-| **libc6-compat**     | bcrypt 等のネイティブモジュール互換に必要。deps + runner の両方          |
-| **Prisma generate**  | deps ステージで実行。出力先: `generated/prisma/`                         |
-| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須 |
-| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化         |
-| **validate**         | builder で `bun run validate`（type-check + lint）を実行してからビルド   |
-| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                |
-| **Prisma WASM**      | `node_modules/@prisma`（WASM ランタイムエンジン）を runner にコピー      |
-| **ポート**           | 8080（Cloud Run 標準）                                                   |
-| **起動コマンド**     | `bun server.js`（standalone の server.js を直接実行）                    |
-| **非root**           | `adduser --system nextjs` + `USER nextjs`                                |
+| 項目                 | 詳細                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]` |
+| **ベース**           | `oven/bun:1.3.11-alpine`（`base` を builder / runner で共有）                             |
+| **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                   |
+| **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                 |
+| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                   |
+| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化                           |
+| **builder**          | `bun run type-check && bun run lint && bun run build`（`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は BuildKit secret） |
+| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                                  |
+| **Prisma WASM**      | `node_modules/@prisma` を runner にコピー（standalone trace に含まれないため）             |
+| **ポート**           | 8080（Cloud Run 標準）。スタートアップは [TCP プローブ](https://cloud.google.com/run/docs/configuring/healthchecks) |
+| **非 root**          | `adduser nextjs` + `USER nextjs`                                                          |
 
 ### なぜ STANDALONE 環境変数が必要か
 
@@ -142,12 +107,12 @@ docker compose down -v
 
 ## .dockerignore
 
-Docker ビルドコンテキストから除外するファイル。`src/shared/generated` を含む（deps ステージで再生成するため）:
+Docker ビルドコンテキストから除外するファイル。`generated` を含む（deps ステージで再生成するため）:
 
 ```
 node_modules
 .next
-src/shared/generated
+generated
 .git
 .env
 .env.*
@@ -174,10 +139,10 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
 ### generated ディレクトリが空
 
-`.gitignore` で `src/shared/generated/` が除外されているため Cloud Build ソースに含まれない。builder ステージで deps からコピー:
+`.gitignore` で `generated/` が除外されているため Cloud Build ソースに含まれない。builder ステージで deps からコピー:
 
 ```dockerfile
-COPY --from=deps /app/src/shared/generated ./src/shared/generated
+COPY --from=deps /app/generated ./generated
 ```
 
 ### NEXT*PUBLIC*\* がクライアントで undefined
@@ -200,4 +165,4 @@ COPY --from=deps /app/src/shared/generated ./src/shared/generated
 
 ---
 
-最終更新: 2026-02-18
+最終更新: 2026-03-29

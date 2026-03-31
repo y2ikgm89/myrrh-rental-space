@@ -58,7 +58,7 @@ export default async function MypageInquiryDetailPage({
       </Link>
 
       <div className="mt-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <Heading level={2}>{inquiry.subject}</Heading>
           {statusConfig && (
             <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>

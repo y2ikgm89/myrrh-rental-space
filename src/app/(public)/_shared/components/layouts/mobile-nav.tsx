@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, CalendarCheck, User } from "lucide-react";
+import { IconHome, IconLayoutGrid, IconCalendarCheck, IconUser } from "@tabler/icons-react";
 import { useSession } from "@/shared/lib/auth-client";
 
 const staticNavItems = [
-  { href: "/", icon: Home, label: "ホーム" },
-  { href: "/spaces", icon: LayoutGrid, label: "スペース" },
-  { href: "/reservation", icon: CalendarCheck, label: "予約" },
+  { href: "/", icon: IconHome, label: "ホーム" },
+  { href: "/spaces", icon: IconLayoutGrid, label: "スペース" },
+  { href: "/reservation", icon: IconCalendarCheck, label: "予約" },
 ] as const;
 
 export function MobileNav() {
@@ -19,9 +19,9 @@ export function MobileNav() {
     session?.user?.role === "CUSTOMER" || session?.user?.role === "USER";
   const authItem = session
     ? isCustomer
-      ? { href: "/mypage", icon: User, label: "マイページ" }
+      ? { href: "/mypage", icon: IconUser, label: "マイページ" }
       : null
-    : { href: "/login", icon: User, label: "ログイン" };
+    : { href: "/login", icon: IconUser, label: "ログイン" };
 
   return (
     <nav

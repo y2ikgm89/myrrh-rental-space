@@ -1,3 +1,5 @@
+import "server-only";
+
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@prisma/client";
 import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
@@ -14,6 +16,7 @@ const CUSTOMER_LINK_SELECT = {
   lastName: true,
   firstName: true,
   userId: true,
+  isActive: true,
 } as const;
 
 export async function ensureCustomerLinked(user: {

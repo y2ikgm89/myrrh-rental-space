@@ -5,7 +5,12 @@
  */
 
 import { useState } from "react";
-import { FileText, Film, File, Image } from "lucide-react";
+import {
+  IconFileText,
+  IconMovie,
+  IconFile,
+  IconPhoto,
+} from "@tabler/icons-react";
 import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
 import { formatDate } from "@/shared/lib/utils";
@@ -32,10 +37,10 @@ type Props = {
 };
 
 const TYPE_ICONS = {
-  IMAGE: Image,
-  VIDEO: Film,
-  DOCUMENT: FileText,
-  OTHER: File,
+  IMAGE: IconPhoto,
+  VIDEO: IconMovie,
+  DOCUMENT: IconFileText,
+  OTHER: IconFile,
 } as const;
 
 function hasTypeIcon(type: string): type is keyof typeof TYPE_ICONS {
@@ -69,7 +74,7 @@ export function MediaTable({ items }: Props) {
             {items.map((item) => {
               const TypeIcon = hasTypeIcon(item.type)
                 ? TYPE_ICONS[item.type]
-                : File;
+                : IconFile;
 
               return (
                 <TableRow key={item.id}>

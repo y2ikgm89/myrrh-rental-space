@@ -31,6 +31,7 @@ function invalidateReservationCache(reservationId: string): void {
 
 export async function cancelReservationAction(
   reservationId: string,
+  cancellationReason: string | null = null,
 ): Promise<MutationResult<null>> {
   const parsedId = reservationIdSchema.safeParse(reservationId);
   if (!parsedId.success) return createMutationError("予約IDが不正です");
@@ -43,10 +44,15 @@ export async function cancelReservationAction(
 
   try {
     const settings = await getReservationDeadlineSettings();
+    const trimmedReason =
+      cancellationReason && cancellationReason.trim().length > 0
+        ? cancellationReason.trim()
+        : null;
     const result = await cancelCustomerReservation(
       parsedId.data,
       customer.id,
       settings.cancellationDeadlineHours,
+      trimmedReason,
     );
 
     if (!result.success) return createMutationError(result.error);

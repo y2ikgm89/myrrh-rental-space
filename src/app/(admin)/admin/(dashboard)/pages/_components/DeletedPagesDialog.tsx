@@ -9,7 +9,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, RotateCcw, LoaderCircle, TriangleAlert } from "lucide-react";
+import { IconTrash, IconRotate, IconLoader2, IconAlertTriangle } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import {
   Dialog,
@@ -119,7 +119,7 @@ export function DeletedPagesDialog() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
-            <Trash2 className="h-4 w-4 mr-1" />
+            <IconTrash className="h-4 w-4 mr-1" />
             ゴミ箱
           </Button>
         </DialogTrigger>
@@ -130,11 +130,11 @@ export function DeletedPagesDialog() {
 
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
+              <IconLoader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : pages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Trash2 className="h-10 w-10 mb-3 opacity-50" />
+              <IconTrash className="h-10 w-10 mb-3 opacity-50" />
               <p>削除済みページはありません</p>
             </div>
           ) : (
@@ -168,7 +168,7 @@ export function DeletedPagesDialog() {
                             onClick={() => handleRestore(page.slug)}
                             disabled={isPending}
                           >
-                            <RotateCcw className="h-4 w-4 mr-1" />
+                            <IconRotate className="h-4 w-4 mr-1" />
                             復元
                           </Button>
                           <Button
@@ -178,7 +178,7 @@ export function DeletedPagesDialog() {
                             disabled={isPending}
                             className="text-destructive hover:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
+                            <IconTrash className="h-4 w-4 mr-1" />
                             完全削除
                           </Button>
                         </div>
@@ -199,7 +199,7 @@ export function DeletedPagesDialog() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <TriangleAlert className="h-5 w-5 text-destructive" />
+              <IconAlertTriangle className="h-5 w-5 text-destructive" />
               完全に削除しますか？
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -217,7 +217,7 @@ export function DeletedPagesDialog() {
             >
               {isPending ? (
                 <>
-                  <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+                  <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
                   削除中...
                 </>
               ) : (

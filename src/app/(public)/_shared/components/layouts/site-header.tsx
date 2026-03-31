@@ -20,7 +20,7 @@
 import { useState, useRef, useEffect, useId, type ReactElement } from "react";
 import Link from "next/link";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
-import { ChevronDown } from "lucide-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
@@ -44,7 +44,7 @@ interface HeaderProps {
 }
 
 const FALLBACK_NAV: readonly PublicNavItem[] = [
-  { id: "home", label: "Home", url: "/", isExternal: false, children: [] },
+  { id: "home", label: "IconHome", url: "/", isExternal: false, children: [] },
   {
     id: "reservation",
     label: "Reservation",
@@ -192,7 +192,7 @@ function MobileNavItem({
         className={cn(parentClass, "inline-flex items-center gap-2")}
       >
         {item.label}
-        <ChevronDown
+        <IconChevronDown
           className={cn(
             "h-4 w-4 transition-transform duration-200",
             expanded && "rotate-180",
@@ -464,7 +464,7 @@ export function Header({
                       <>
                         <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">
                           {item.label}
-                          <ChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                          <IconChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </NavigationMenuPrimitive.Trigger>
                         <NavigationMenuPrimitive.Content className="absolute top-full mt-2 min-w-[180px] rounded-md border border-border bg-background p-2 shadow-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0">
                           {item.children.map((child) => (

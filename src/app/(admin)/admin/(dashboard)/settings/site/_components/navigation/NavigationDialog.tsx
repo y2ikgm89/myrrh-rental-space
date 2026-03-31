@@ -26,7 +26,7 @@ import type {
   NavigationItemData,
   SocialLinkData,
 } from "./types";
-import { platformLabels } from "./types";
+import { platformLabels, platformIcons } from "./types";
 
 // =============================================================================
 // Navigation Dialog Component
@@ -224,11 +224,20 @@ export function SocialLinkDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(platformLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(platformLabels).map(([value, label]) => {
+                    const PIcon =
+                      platformIcons[value as keyof typeof platformIcons];
+                    return (
+                      <SelectItem key={value} value={value}>
+                        <span className="flex items-center gap-2">
+                          {PIcon ? (
+                            <PIcon className="h-4 w-4 text-muted-foreground" />
+                          ) : null}
+                          {label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

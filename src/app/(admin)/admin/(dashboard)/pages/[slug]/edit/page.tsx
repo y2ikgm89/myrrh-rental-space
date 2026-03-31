@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { IconArrowLeft, IconExternalLink } from "@tabler/icons-react";
 import {
   getPageForEdit,
   getPageWithSections,
@@ -62,7 +62,7 @@ export default async function EditPagePage({
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon">
             <Link href="/admin/pages">
-              <ArrowLeft className="h-4 w-4" />
+              <IconArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
@@ -83,7 +83,7 @@ export default async function EditPagePage({
           )}
           <Button asChild variant="outline" size="sm">
             <a href={`/${slug}`} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-1" />
+              <IconExternalLink className="h-4 w-4 mr-1" />
               プレビュー
             </a>
           </Button>

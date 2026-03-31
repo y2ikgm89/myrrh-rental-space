@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Building2, User } from "lucide-react";
+import { IconBuilding, IconUser } from "@tabler/icons-react";
 import type { CustomerType } from "@/shared/lib/validations/inquiry";
 
 interface CustomerTypeToggleProps {
@@ -35,7 +35,7 @@ export function CustomerTypeToggle({
               : "border-border text-muted-foreground hover:border-accent/40"
           }`}
         >
-          <User className="h-4 w-4" />
+          <IconUser className="h-4 w-4" />
           個人
         </button>
         <button
@@ -50,7 +50,7 @@ export function CustomerTypeToggle({
               : "border-border text-muted-foreground hover:border-accent/40"
           }`}
         >
-          <Building2 className="h-4 w-4" />
+          <IconBuilding className="h-4 w-4" />
           法人・団体
         </button>
       </div>

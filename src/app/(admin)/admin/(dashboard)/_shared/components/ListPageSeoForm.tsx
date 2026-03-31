@@ -9,7 +9,7 @@
 
 import Image from "next/image";
 import { useWatch } from "react-hook-form";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -198,7 +198,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                 </div>
               ) : (
                 <div className="flex h-20 w-36 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-                  <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                  <IconPhotoPlus className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 space-y-2">
@@ -209,7 +209,7 @@ export function ListPageSeoForm({ slug, seoData }: ListPageSeoFormProps) {
                   onClick={() => ogpPicker.openPicker()}
                   disabled={isPending}
                 >
-                  <ImagePlus className="mr-1 h-3 w-3" />
+                  <IconPhotoPlus className="mr-1 h-3 w-3" />
                   画像を選択
                 </Button>
                 {ogpImageUrl && (

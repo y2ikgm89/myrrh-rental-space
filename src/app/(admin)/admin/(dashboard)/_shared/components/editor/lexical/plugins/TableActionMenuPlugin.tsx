@@ -29,7 +29,7 @@ import {
   SELECTION_CHANGE_COMMAND,
   mergeRegister,
 } from "lexical";
-import { ChevronDown } from "lucide-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,7 +124,7 @@ function TableActionMenu({
             className="flex h-6 w-6 items-center justify-center rounded border border-border bg-popover text-popover-foreground shadow-sm hover:bg-muted"
             aria-label="テーブル操作メニュー"
           >
-            <ChevronDown className="h-3.5 w-3.5" />
+            <IconChevronDown className="h-3.5 w-3.5" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[160px]">

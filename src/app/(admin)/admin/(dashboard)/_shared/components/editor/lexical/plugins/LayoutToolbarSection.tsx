@@ -4,7 +4,7 @@
 
 "use client";
 
-import { Check, ChevronDown, LayoutGrid } from "lucide-react";
+import { IconCheck, IconChevronDown, IconLayoutGrid } from "@tabler/icons-react";
 import { $getNodeByKey, $setState, type LexicalEditor } from "lexical";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
@@ -76,9 +76,9 @@ export function LayoutToolbarSection({
             className="h-8 gap-1 max-w-[140px]"
             title="カラムレイアウト（選択中のブロック内）"
           >
-            <LayoutGrid className="h-4 w-4 shrink-0" />
+            <IconLayoutGrid className="h-4 w-4 shrink-0" />
             <span className="truncate text-xs">カラム</span>
-            <ChevronDown className="h-3 w-3 shrink-0" />
+            <IconChevronDown className="h-3 w-3 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[220px]">
@@ -98,7 +98,7 @@ export function LayoutToolbarSection({
                     </span>
                   </span>
                   {context.wide === t.value ? (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                    <IconCheck className="h-4 w-4 shrink-0 text-primary" />
                   ) : null}
                 </DropdownMenuItem>
               ))}
@@ -122,7 +122,7 @@ export function LayoutToolbarSection({
                     </span>
                   </span>
                   {context.narrow === t.value ? (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                    <IconCheck className="h-4 w-4 shrink-0 text-primary" />
                   ) : null}
                 </DropdownMenuItem>
               ))}

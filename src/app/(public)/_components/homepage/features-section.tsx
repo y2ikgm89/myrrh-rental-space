@@ -1,15 +1,5 @@
-import {
-  Sparkles,
-  Clock,
-  Shield,
-  Star,
-  Users,
-  MapPin,
-  Aperture,
-  Wifi,
-  Coffee,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { IconSparkles, IconClock, IconShield, IconStar, IconUsers, IconMapPin, IconAperture, IconWifi, IconCoffee } from "@tabler/icons-react";
+import type { TablerIcon } from "@tabler/icons-react";
 
 import { Container } from "../../_shared/components/design-system/container";
 import { Heading } from "../../_shared/components/design-system/heading";
@@ -17,16 +7,16 @@ import { Stack } from "../../_shared/components/design-system/stack";
 import { ScrollReveal } from "../../_shared/components/animations/scroll-reveal";
 import type { HomepageContent } from "../../_shared/lib/content/schemas";
 
-const iconMap: Record<string, LucideIcon> = {
-  Sparkles,
-  Clock,
-  Shield,
-  Star,
-  Users,
-  MapPin,
-  Aperture,
-  Wifi,
-  Coffee,
+const iconMap: Record<string, TablerIcon> = {
+  IconSparkles,
+  IconClock,
+  IconShield,
+  IconStar,
+  Users: IconUsers,
+  IconMapPin,
+  IconAperture,
+  IconWifi,
+  IconCoffee,
 };
 
 interface FeaturesSectionProps {

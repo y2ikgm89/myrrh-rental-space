@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Download, Plus } from "lucide-react";
+import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getCustomers } from "@/admin/queries/customer";
 import { CustomerFilters } from "./_components/CustomerFilters";
 import { CustomerTable } from "./_components/CustomerTable";
@@ -58,13 +58,13 @@ export default async function CustomersPage({ searchParams }: PageProps) {
         <div className="flex gap-2">
           <Button asChild className="min-h-10 sm:min-h-9">
             <Link href="/admin/customers/new">
-              <Plus className="mr-2 h-4 w-4" />
+              <IconPlus className="mr-2 h-4 w-4" />
               新規顧客
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <a href="/api/admin/export/customers" download>
-              <Download className="mr-2 h-4 w-4" />
+              <IconDownload className="mr-2 h-4 w-4" />
               CSV
             </a>
           </Button>

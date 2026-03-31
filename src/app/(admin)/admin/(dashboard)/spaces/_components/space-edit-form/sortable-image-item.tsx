@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { GripVertical, X } from "lucide-react";
+import { IconGripVertical, IconX } from "@tabler/icons-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { toTranslate3d } from "@/admin/components/ui/sortable";
 import { Button } from "@/admin/components/ui";
@@ -45,7 +45,7 @@ export function SortableImageItem({
         {...listeners}
         className="cursor-grab active:cursor-grabbing"
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <IconGripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
       <Image
         src={url}
@@ -64,7 +64,7 @@ export function SortableImageItem({
         disabled={disabled}
         aria-label={`画像${index + 1}を削除`}
       >
-        <X className="h-4 w-4" />
+        <IconX className="h-4 w-4" />
       </Button>
     </div>
   );

@@ -22,13 +22,7 @@ import {
   SELECTION_CHANGE_COMMAND,
   type TextFormatType,
 } from "lexical";
-import {
-  CaseLower,
-  CaseUpper,
-  CaseSensitive,
-  ChevronDown,
-  Check,
-} from "lucide-react";
+import { IconLetterCaseLower, IconLetterCaseUpper, IconLetterCase, IconChevronDown, IconCheck } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -52,17 +46,17 @@ type TextCaseConfig = {
 const TEXT_CASE_CONFIG = {
   lowercase: {
     label: "小文字",
-    icon: CaseLower,
+    icon: IconLetterCaseLower,
     format: "lowercase" as const,
   },
   uppercase: {
     label: "大文字",
-    icon: CaseUpper,
+    icon: IconLetterCaseUpper,
     format: "uppercase" as const,
   },
   capitalize: {
     label: "先頭大文字",
-    icon: CaseSensitive,
+    icon: IconLetterCase,
     format: "capitalize" as const,
   },
 } satisfies Record<TextCaseType, TextCaseConfig>;
@@ -135,7 +129,7 @@ export function TextCasePlugin() {
   // アクティブな状態のアイコンを取得
   const ActiveIcon = activeCase
     ? TEXT_CASE_CONFIG[activeCase].icon
-    : CaseSensitive;
+    : IconLetterCase;
 
   return (
     <DropdownMenu>
@@ -148,7 +142,7 @@ export function TextCasePlugin() {
           title="テキスト変換"
         >
           <ActiveIcon className="h-4 w-4" />
-          <ChevronDown className="h-3 w-3" />
+          <IconChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[140px]">
@@ -165,7 +159,7 @@ export function TextCasePlugin() {
                 <span>{label}</span>
               </span>
               {activeCase === caseType && (
-                <Check className="h-4 w-4 text-primary" />
+                <IconCheck className="h-4 w-4 text-primary" />
               )}
             </DropdownMenuItem>
           );

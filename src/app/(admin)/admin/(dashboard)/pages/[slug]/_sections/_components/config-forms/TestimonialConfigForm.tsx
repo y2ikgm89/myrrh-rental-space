@@ -18,7 +18,7 @@ import {
   Switch,
   Textarea,
 } from "@/admin/components/ui";
-import { ImagePlus, Plus, Trash2, Star } from "lucide-react";
+import { IconPhotoPlus, IconPlus, IconTrash, IconStar } from "@tabler/icons-react";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
 import {
   testimonialConfigSchema,
@@ -177,7 +177,7 @@ export default function TestimonialConfigForm({
               }
               disabled={isPending}
             >
-              <Plus className="h-3 w-3 mr-1" />
+              <IconPlus className="h-3 w-3 mr-1" />
               追加
             </Button>
           </div>
@@ -200,7 +200,7 @@ export default function TestimonialConfigForm({
                     onClick={() => remove(index)}
                     disabled={isPending}
                   >
-                    <Trash2 className="h-3 w-3 text-destructive" />
+                    <IconTrash className="h-3 w-3 text-destructive" />
                   </Button>
                 </div>
 
@@ -247,7 +247,7 @@ export default function TestimonialConfigForm({
                       </div>
                     ) : (
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed bg-muted">
-                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                        <IconPhotoPlus className="h-4 w-4 text-muted-foreground" />
                       </div>
                     )}
                     <Button
@@ -260,7 +260,7 @@ export default function TestimonialConfigForm({
                       }}
                       disabled={isPending}
                     >
-                      <ImagePlus className="h-3 w-3 mr-1" />
+                      <IconPhotoPlus className="h-3 w-3 mr-1" />
                       画像を選択
                     </Button>
                     {watchedItems?.[index]?.authorImageUrl && (
@@ -273,7 +273,7 @@ export default function TestimonialConfigForm({
                         }
                         disabled={isPending}
                       >
-                        <Trash2 className="h-3 w-3 text-destructive" />
+                        <IconTrash className="h-3 w-3 text-destructive" />
                       </Button>
                     )}
                   </div>
@@ -290,7 +290,7 @@ export default function TestimonialConfigForm({
                         disabled={isPending}
                         className="p-0.5"
                       >
-                        <Star
+                        <IconStar
                           className={`h-5 w-5 ${
                             star <= (field.rating ?? 0)
                               ? "fill-warning text-warning"

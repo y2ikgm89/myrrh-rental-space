@@ -23,15 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/admin/components/ui/accordion";
-import {
-  Shield,
-  Settings,
-  Edit,
-  Eye,
-  Check,
-  X,
-  ChevronRight,
-} from "lucide-react";
+import { IconShield, IconSettings, IconEdit, IconEye, IconCheck, IconX, IconChevronRight } from "@tabler/icons-react";
 
 // =============================================================================
 // Types & Constants
@@ -42,7 +34,7 @@ type StaffRole = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
 interface RoleConfig {
   id: StaffRole;
   label: string;
-  icon: typeof Shield;
+  icon: typeof IconShield;
   color: string;
   bgColor: string;
   borderColor: string;
@@ -55,7 +47,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
   {
     id: "SUPER_ADMIN",
     label: "スーパー管理者",
-    icon: Shield,
+    icon: IconShield,
     color: "text-destructive",
     bgColor: "bg-destructive/10",
     borderColor: "border-destructive/20",
@@ -72,7 +64,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
   {
     id: "ADMIN",
     label: "管理者",
-    icon: Settings,
+    icon: IconSettings,
     color: "text-primary",
     bgColor: "bg-primary/10",
     borderColor: "border-primary/20",
@@ -92,7 +84,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
   {
     id: "EDITOR",
     label: "編集者",
-    icon: Edit,
+    icon: IconEdit,
     color: "text-warning",
     bgColor: "bg-warning/10",
     borderColor: "border-warning/20",
@@ -111,7 +103,7 @@ const ROLE_CONFIGS: RoleConfig[] = [
   {
     id: "VIEWER",
     label: "閲覧者",
-    icon: Eye,
+    icon: IconEye,
     color: "text-muted-foreground",
     bgColor: "bg-muted/50",
     borderColor: "border-border",
@@ -155,7 +147,7 @@ function RoleCard({ config }: { config: RoleConfig }) {
         {/* できること */}
         <div>
           <h4 className="text-sm font-medium text-success mb-2 flex items-center gap-1.5">
-            <Check className="h-4 w-4" />
+            <IconCheck className="h-4 w-4" />
             できること
           </h4>
           <ul className="space-y-1.5">
@@ -175,7 +167,7 @@ function RoleCard({ config }: { config: RoleConfig }) {
         {config.restrictions.length > 0 && (
           <div>
             <h4 className="text-sm font-medium text-destructive mb-2 flex items-center gap-1.5">
-              <X className="h-4 w-4" />
+              <IconX className="h-4 w-4" />
               制限
             </h4>
             <ul className="space-y-1.5">
@@ -266,7 +258,7 @@ export function PermissionsSection() {
         <Button asChild>
           <Link href="/admin/staff">
             スタッフ管理
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <IconChevronRight className="h-4 w-4 ml-1" />
           </Link>
         </Button>
       </div>

@@ -8,7 +8,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Trash2, User } from "lucide-react";
+import { IconTrash, IconUser } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import type { EditorComment } from "@/admin/types/editor-comment";
 
@@ -33,7 +33,7 @@ export function CommentItem({
     <div className="group flex gap-3 py-3">
       {/* アバター */}
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-        <User className="h-4 w-4 text-muted-foreground" />
+        <IconUser className="h-4 w-4 text-muted-foreground" />
       </div>
 
       {/* コンテンツ */}
@@ -60,7 +60,7 @@ export function CommentItem({
             onClick={() => onDelete(comment.id)}
             title="削除"
           >
-            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <IconTrash className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
         </div>
       )}

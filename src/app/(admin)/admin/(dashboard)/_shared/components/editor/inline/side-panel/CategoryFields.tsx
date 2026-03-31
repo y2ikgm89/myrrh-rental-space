@@ -11,7 +11,7 @@
 import { useState } from "react";
 import type { FieldPathByValue, FieldValues } from "react-hook-form";
 import { useController } from "react-hook-form";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import {
   Label,
   Select,
@@ -165,7 +165,7 @@ export function CategoryFields<T extends FieldValues>({
             disabled={disabled}
             aria-label="新規カテゴリを作成"
           >
-            <Plus className="h-4 w-4" />
+            <IconPlus className="h-4 w-4" />
           </Button>
         )}
       </div>

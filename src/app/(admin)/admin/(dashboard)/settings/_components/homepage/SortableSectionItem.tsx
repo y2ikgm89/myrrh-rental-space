@@ -2,29 +2,29 @@ import { useSortable } from "@dnd-kit/sortable";
 import { toTranslate3d } from "@/admin/components/ui/sortable";
 import { Button, Switch } from "@/admin/components/ui";
 import {
-  GripVertical,
-  Settings,
-  Trash2,
-  Eye,
-  EyeOff,
-  Sparkles,
-  Layers,
-  Layout,
-  LayoutList,
-  Lightbulb,
-  Newspaper,
-  FileText,
-  CircleHelp,
-  Star,
-  MessageSquare,
-  Image,
-  MousePointerClick,
-  Mail,
-  MapPin,
-  Code,
-  WandSparkles,
-  Aperture,
-} from "lucide-react";
+  IconGripVertical,
+  IconSettings,
+  IconTrash,
+  IconEye,
+  IconEyeOff,
+  IconSparkles,
+  IconStack2,
+  IconLayout,
+  IconLayoutList,
+  IconBulb,
+  IconNews,
+  IconFileText,
+  IconHelpCircle,
+  IconStar,
+  IconMessage,
+  IconPhoto,
+  IconPointer,
+  IconMail,
+  IconMapPin,
+  IconCode,
+  IconWand,
+  IconAperture,
+} from "@tabler/icons-react";
 import {
   SectionType,
   sectionTypeLabels,
@@ -36,24 +36,24 @@ import type { Serialized } from "@/shared/lib/serialize";
 // Icons Mapping
 // =============================================================================
 
-export const sectionTypeIcons: Record<SectionType, typeof Sparkles> = {
-  [SectionType.HERO]: Sparkles,
-  [SectionType.HERO_PARALLAX]: Layers,
-  [SectionType.CUSTOM]: WandSparkles,
-  [SectionType.CONCEPT]: Lightbulb,
-  [SectionType.SPACE_LIST]: Layout,
-  [SectionType.SPACE_SHOWCASE]: LayoutList,
-  [SectionType.NEWS_LIST]: Newspaper,
-  [SectionType.POST_LIST]: FileText,
-  [SectionType.FAQ_LIST]: CircleHelp,
-  [SectionType.FEATURES]: Star,
-  [SectionType.TESTIMONIAL]: MessageSquare,
-  [SectionType.GALLERY]: Image,
-  [SectionType.CTA]: MousePointerClick,
-  [SectionType.CONTACT_FORM]: Mail,
-  [SectionType.MAP]: MapPin,
-  [SectionType.EMBED]: Code,
-  [SectionType.INSTAGRAM]: Aperture,
+export const sectionTypeIcons: Record<SectionType, typeof IconSparkles> = {
+  [SectionType.HERO]: IconSparkles,
+  [SectionType.HERO_PARALLAX]: IconStack2,
+  [SectionType.CUSTOM]: IconWand,
+  [SectionType.CONCEPT]: IconBulb,
+  [SectionType.SPACE_LIST]: IconLayout,
+  [SectionType.SPACE_SHOWCASE]: IconLayoutList,
+  [SectionType.NEWS_LIST]: IconNews,
+  [SectionType.POST_LIST]: IconFileText,
+  [SectionType.FAQ_LIST]: IconHelpCircle,
+  [SectionType.FEATURES]: IconStar,
+  [SectionType.TESTIMONIAL]: IconMessage,
+  [SectionType.GALLERY]: IconPhoto,
+  [SectionType.CTA]: IconPointer,
+  [SectionType.CONTACT_FORM]: IconMail,
+  [SectionType.MAP]: IconMapPin,
+  [SectionType.EMBED]: IconCode,
+  [SectionType.INSTAGRAM]: IconAperture,
 };
 
 // =============================================================================
@@ -108,7 +108,7 @@ export function SortableSectionItem({
         {...listeners}
         disabled={disabled}
       >
-        <GripVertical className="h-5 w-5" />
+        <IconGripVertical className="h-5 w-5" />
       </button>
 
       {/* Icon & Label */}
@@ -126,12 +126,12 @@ export function SortableSectionItem({
       <div className="flex items-center gap-2">
         {section.isActive ? (
           <span className="flex items-center gap-1 text-xs text-success bg-success/10 px-2 py-1 rounded">
-            <Eye className="h-3 w-3" />
+            <IconEye className="h-3 w-3" />
             表示
           </span>
         ) : (
           <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-            <EyeOff className="h-3 w-3" />
+            <IconEyeOff className="h-3 w-3" />
             非表示
           </span>
         )}
@@ -151,7 +151,7 @@ export function SortableSectionItem({
           onClick={() => onEdit(section)}
           disabled={disabled}
         >
-          <Settings className="h-4 w-4" />
+          <IconSettings className="h-4 w-4" />
         </Button>
         <Button
           type="button"
@@ -160,7 +160,7 @@ export function SortableSectionItem({
           onClick={() => onDelete(section.id)}
           disabled={disabled}
         >
-          <Trash2 className="h-4 w-4 text-destructive" />
+          <IconTrash className="h-4 w-4 text-destructive" />
         </Button>
       </div>
     </div>

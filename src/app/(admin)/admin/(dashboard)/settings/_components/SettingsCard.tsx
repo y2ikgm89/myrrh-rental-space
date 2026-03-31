@@ -6,8 +6,8 @@
  */
 
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
-import { ChevronRight } from "lucide-react";
+import type { TablerIcon } from "@tabler/icons-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import {
   Card,
   CardHeader,
@@ -19,7 +19,7 @@ export interface SettingsCardProps {
   title: string;
   description: string;
   href: string;
-  icon: LucideIcon;
+  icon: TablerIcon;
   items?: string[];
 }
 
@@ -46,7 +46,7 @@ export function SettingsCard({
                 </CardDescription>
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+            <IconChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
           </div>
           {items && items.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">

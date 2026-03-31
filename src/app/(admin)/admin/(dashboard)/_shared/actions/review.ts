@@ -9,7 +9,6 @@ import {
   deleteReviewCommand,
 } from "@/shared/domain/reviews/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { prisma } from "@/shared/db/prisma";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
@@ -30,12 +29,11 @@ export async function toggleReviewVisibility(
     action: "update",
     resourceId: validated.data,
     execute: async () => {
-      const review = await prisma.spaceReview.findUnique({
-        where: { id: validated.data },
-        select: { spaceId: true },
-      });
-      spaceId = review?.spaceId ?? null;
-      await toggleReviewPublishedCommand(validated.data, isPublished);
+      const result = await toggleReviewPublishedCommand(
+        validated.data,
+        isPublished,
+      );
+      spaceId = result.spaceId;
       return null;
     },
     afterSuccess: () => {

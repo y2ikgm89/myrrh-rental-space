@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { CouponType, ReservationStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
+import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
@@ -470,7 +471,7 @@ export async function updateAdminReservationCommand(
 
   const [currentReservation, space, settings] = await Promise.all([
     prisma.reservation.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       select: {
         id: true,
         status: true,
@@ -533,7 +534,7 @@ export async function updateAdminReservationCommand(
     );
 
     await tx.reservation.update({
-      where: { id },
+      where: { id, deletedAt: null },
       data: {
         spaceId: input.spaceId,
         customerId: input.customerId,
@@ -588,7 +589,7 @@ export async function updateReservationStatusCommand(
   status: ReservationStatus,
 ) {
   const reservation = await prisma.reservation.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: {
       space: {
         select: {
@@ -609,9 +610,18 @@ export async function updateReservationStatusCommand(
 
   const previousStatus = reservation.status;
 
+  const isCancellation =
+    status === ReservationStatus.CANCELLED &&
+    previousStatus !== ReservationStatus.CANCELLED;
+
   await prisma.reservation.update({
-    where: { id },
-    data: { status },
+    where: { id, deletedAt: null },
+    data: {
+      status,
+      ...(isCancellation
+        ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
+        : {}),
+    },
   });
 
   return {
@@ -638,7 +648,7 @@ export async function updateReservationNotesCommand(
   notes: string | null,
 ): Promise<void> {
   const reservation = await prisma.reservation.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     select: { id: true },
   });
 
@@ -647,7 +657,7 @@ export async function updateReservationNotesCommand(
   }
 
   await prisma.reservation.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: { notes },
   });
 }
@@ -659,20 +669,43 @@ export async function updateReservationNotesCommand(
 export async function deleteReservationCommand(
   id: string,
   userId: string | undefined,
+  cancellationReason?: string | null,
 ) {
   const reservation = await prisma.reservation.findUnique({
     where: { id, deletedAt: null },
-    select: { id: true, googleCalendarEventId: true, couponId: true },
+    select: {
+      id: true,
+      status: true,
+      googleCalendarEventId: true,
+      couponId: true,
+    },
   });
 
   if (!reservation) {
     throw new DomainError("予約が見つかりません", "NOT_FOUND");
   }
 
+  const now = new Date();
+  const needsCancellationTracking =
+    reservation.status !== ReservationStatus.CANCELLED &&
+    reservation.status !== ReservationStatus.COMPLETED &&
+    reservation.status !== ReservationStatus.NO_SHOW;
+
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
-      where: { id },
-      data: { deletedAt: new Date(), deletedById: userId ?? null },
+      where: { id, deletedAt: null },
+      data: {
+        deletedAt: now,
+        deletedById: userId ?? null,
+        ...(needsCancellationTracking
+          ? {
+              status: ReservationStatus.CANCELLED,
+              cancelledAt: now,
+              cancelledByType: CANCELLED_BY.ADMIN,
+              cancellationReason: cancellationReason ?? "管理者による削除",
+            }
+          : {}),
+      },
     });
 
     if (reservation.couponId) {

@@ -4,7 +4,7 @@
  * Server Componentsでのデータ取得時のエラーハンドリングを統一
  */
 
-import { logError } from "./logger";
+import { logError } from "./logger-core";
 import { ErrorCategory, ErrorSeverity } from "./types";
 
 interface SafeFetchOptions<T> {

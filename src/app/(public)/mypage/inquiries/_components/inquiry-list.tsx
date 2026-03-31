@@ -29,7 +29,7 @@ export function InquiryList({
             href={`/mypage/inquiries/${inquiry.id}`}
             className="block rounded-lg border border-border bg-card p-4 transition-shadow hover:shadow-md"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-foreground">
                   {inquiry.subject}

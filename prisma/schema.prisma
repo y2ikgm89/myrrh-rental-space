@@ -540,6 +540,11 @@ model Reservation {
   stripePaymentIntentId   String?
   paidAt                  DateTime?
 
+  // Cancellation tracking
+  cancellationReason String?  @db.Text
+  cancelledAt        DateTime?
+  cancelledByType    String?  @db.VarChar(20) // "CUSTOMER" | "ADMIN"
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])
@@ -974,7 +979,6 @@ model SocialLink {
   id            String         @id @default(uuid()) @db.Uuid
   platform      SocialPlatform
   url           String
-  iconUrl       String?
   order         Int
   isActive      Boolean        @default(true)
   showOnDesktop Boolean        @default(true) // デスクトップで表示

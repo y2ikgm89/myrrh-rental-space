@@ -23,5 +23,5 @@ export function requireCompanyNameForCorporate(data: {
 
 export const COMPANY_NAME_REFINE_ERROR = {
   error: "法人の場合、会社名は必須です",
-  path: ["companyName"] as string[],
+  path: ["companyName"],
 };

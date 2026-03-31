@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { tv } from "tailwind-variants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { SIDEBAR_ITEMS } from "./sidebar-items";
@@ -138,7 +138,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
           className={classes.closeButton()}
           aria-label="メニューを閉じる"
         >
-          <X className="h-5 w-5" />
+          <IconX className="h-5 w-5" />
         </Button>
 
         {/* ロゴ */}

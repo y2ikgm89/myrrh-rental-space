@@ -1,5 +1,8 @@
 {
-  "enableAllProjectMcpServers": true,
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
+    "PYTHONUTF8": "1"
+  },
   "permissions": {
     "allow": [
       "mcp__github__*",
@@ -8,10 +11,7 @@
       "mcp__plugin_playwright_playwright__*"
     ]
   },
-  "env": {
-    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85",
-    "PYTHONUTF8": "1"
-  },
+  "enableAllProjectMcpServers": true,
   "hooks": {
     "SessionStart": [
       {
@@ -30,8 +30,8 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/update-current-date.sh",
-            "statusMessage": "日付を確認中...",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "日付を確認中..."
           }
         ]
       }
@@ -43,8 +43,8 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous-bash.sh",
-            "statusMessage": "Checking dangerous commands...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Checking dangerous commands..."
           }
         ]
       },
@@ -54,8 +54,8 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
-            "statusMessage": "Checking file protection...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Checking file protection..."
           }
         ]
       }
@@ -67,44 +67,44 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
-            "statusMessage": "Formatting...",
-            "timeout": 30
+            "timeout": 30,
+            "statusMessage": "Formatting..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-fix.sh",
-            "statusMessage": "Linting...",
-            "timeout": 30
+            "timeout": 30,
+            "statusMessage": "Linting..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
-            "statusMessage": "Checking schema changes...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Checking schema changes..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-server-action-hof.sh",
-            "statusMessage": "Checking HOF pattern...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Checking HOF pattern..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/settings-field-reminder.sh",
-            "statusMessage": "Settings フィールド確認中...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Settings フィールド確認中..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/import-boundary-check.sh",
-            "statusMessage": "Import 境界チェック中...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Import 境界チェック中..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-disable-audit.sh",
-            "statusMessage": "ESLint disable 監査中...",
-            "timeout": 5
+            "timeout": 5,
+            "statusMessage": "ESLint disable 監査中..."
           }
         ]
       },
@@ -114,8 +114,8 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
-            "statusMessage": "空ルートディレクトリをチェック中...",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "空ルートディレクトリをチェック中..."
           }
         ]
       }
@@ -137,11 +137,14 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/type-check-on-stop.sh",
-            "statusMessage": "型チェック中...",
-            "timeout": 60
+            "timeout": 60,
+            "statusMessage": "型チェック中..."
           }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "autofix-bot@claude-plugins-official": true
   }
 }

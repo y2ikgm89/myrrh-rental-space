@@ -15,7 +15,7 @@ import {
   SelectValue,
   Textarea,
 } from "@/admin/components/ui";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   featuresConfigSchema,
   parseFeaturesLayout,
@@ -129,7 +129,7 @@ export default function FeaturesConfigForm({
               }
               disabled={isPending}
             >
-              <Plus className="h-3 w-3 mr-1" />
+              <IconPlus className="h-3 w-3 mr-1" />
               追加
             </Button>
           </div>
@@ -152,7 +152,7 @@ export default function FeaturesConfigForm({
                     onClick={() => remove(index)}
                     disabled={isPending}
                   >
-                    <Trash2 className="h-3 w-3 text-destructive" />
+                    <IconTrash className="h-3 w-3 text-destructive" />
                   </Button>
                 </div>
 

@@ -4,6 +4,12 @@ import { cacheLife, cacheTag } from "next/cache";
 import type { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
+import { toPlainObject } from "@/shared/lib/serialize";
 
 /**
  * DB からページコンテンツの生データを取得（キャッシュ済み）
@@ -17,9 +23,16 @@ async function getPageContentRaw(pageKey: string): Promise<unknown> {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGE_CONTENT, getCacheTag.pageContent.detail(pageKey));
 
-  const row = await prisma.pageContent.findUnique({
-    where: { pageKey },
-    select: { content: true },
+  const row = await safeFetch({
+    fetch: () =>
+      prisma.pageContent.findUnique({
+        where: { pageKey },
+        select: { content: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPageContentRaw",
   });
 
   return row?.content ?? null;
@@ -53,14 +66,23 @@ export async function getPageContentMeta(pageKey: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGE_CONTENT, getCacheTag.pageContent.meta(pageKey));
 
-  return prisma.pageContent.findUnique({
-    where: { pageKey },
-    select: {
-      metaTitle: true,
-      metaDescription: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImage: true,
-    },
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.pageContent.findUnique({
+        where: { pageKey },
+        select: {
+          metaTitle: true,
+          metaDescription: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          ogpImage: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPageContentMeta",
   });
+
+  return toPlainObject(result);
 }

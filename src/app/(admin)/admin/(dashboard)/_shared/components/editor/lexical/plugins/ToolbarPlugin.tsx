@@ -44,42 +44,7 @@ import {
   $convertToMarkdownString,
 } from "@lexical/markdown";
 import { $generateHtmlFromNodes } from "@lexical/html";
-import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Check,
-  ChevronDown,
-  Code,
-  FileDown,
-  FileText,
-  CircleHelp,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Italic,
-  Link,
-  List,
-  ListOrdered,
-  Maximize,
-  Minimize,
-  PanelRightClose,
-  PanelRightOpen,
-  Pilcrow,
-  Plus,
-  Printer,
-  Redo,
-  Strikethrough,
-  Subscript,
-  Superscript,
-  TextQuote,
-  Underline,
-  Undo,
-  Upload,
-} from "lucide-react";
+import { IconAlignCenter, IconAlignJustified, IconAlignLeft, IconAlignRight, IconBold, IconCheck, IconChevronDown, IconCode, IconFileDownload, IconFileText, IconHelpCircle, IconH1, IconH2, IconH3, IconH4, IconItalic, IconLink, IconList, IconListNumbers, IconMaximize, IconMinimize, IconLayoutSidebarRightCollapse, IconLayoutSidebarRightExpand, IconPilcrow, IconPlus, IconPrinter, IconArrowForwardUp, IconStrikethrough, IconSubscript, IconSuperscript, IconBlockquote, IconUnderline, IconArrowBackUp, IconUpload } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";
 import {
@@ -258,14 +223,14 @@ type BlockTypeConfig = {
 };
 
 const BLOCK_TYPE_CONFIG: Record<BlockType, BlockTypeConfig> = {
-  paragraph: { label: "本文", icon: Pilcrow },
-  h1: { label: "見出し1", icon: Heading1 },
-  h2: { label: "見出し2", icon: Heading2 },
-  h3: { label: "見出し3", icon: Heading3 },
-  h4: { label: "見出し4", icon: Heading4 },
-  quote: { label: "引用", icon: TextQuote },
-  ul: { label: "箇条書き", icon: List },
-  ol: { label: "番号付き", icon: ListOrdered },
+  paragraph: { label: "本文", icon: IconPilcrow },
+  h1: { label: "見出し1", icon: IconH1 },
+  h2: { label: "見出し2", icon: IconH2 },
+  h3: { label: "見出し3", icon: IconH3 },
+  h4: { label: "見出し4", icon: IconH4 },
+  quote: { label: "引用", icon: IconBlockquote },
+  ul: { label: "箇条書き", icon: IconList },
+  ol: { label: "番号付き", icon: IconListNumbers },
 };
 
 // テキスト配置オプション
@@ -292,10 +257,10 @@ type AlignmentConfig = {
 };
 
 const ALIGNMENT_CONFIG: Record<AlignmentType, AlignmentConfig> = {
-  left: { label: "左揃え", icon: AlignLeft },
-  center: { label: "中央揃え", icon: AlignCenter },
-  right: { label: "右揃え", icon: AlignRight },
-  justify: { label: "両端揃え", icon: AlignJustify },
+  left: { label: "左揃え", icon: IconAlignLeft },
+  center: { label: "中央揃え", icon: IconAlignCenter },
+  right: { label: "右揃え", icon: IconAlignRight },
+  justify: { label: "両端揃え", icon: IconAlignJustified },
 };
 
 // =============================================================================
@@ -652,7 +617,7 @@ export function ToolbarPlugin({
             disabled={!canUndo}
             title="元に戻す"
           >
-            <Undo className="h-5 w-5 md:h-4 md:w-4" />
+            <IconArrowBackUp className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -663,7 +628,7 @@ export function ToolbarPlugin({
             disabled={!canRedo}
             title="やり直す"
           >
-            <Redo className="h-5 w-5 md:h-4 md:w-4" />
+            <IconArrowForwardUp className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
 
           <Separator orientation="vertical" className="mx-1 h-6" />
@@ -677,7 +642,7 @@ export function ToolbarPlugin({
             onClick={handleFormatBold}
             title="太字"
           >
-            <Bold className="h-5 w-5 md:h-4 md:w-4" />
+            <IconBold className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -687,7 +652,7 @@ export function ToolbarPlugin({
             onClick={handleFormatItalic}
             title="斜体"
           >
-            <Italic className="h-5 w-5 md:h-4 md:w-4" />
+            <IconItalic className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -697,7 +662,7 @@ export function ToolbarPlugin({
             onClick={handleFormatUnderline}
             title="下線"
           >
-            <Underline className="h-5 w-5 md:h-4 md:w-4" />
+            <IconUnderline className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -707,7 +672,7 @@ export function ToolbarPlugin({
             onClick={handleFormatStrikethrough}
             title="取り消し線"
           >
-            <Strikethrough className="h-5 w-5 md:h-4 md:w-4" />
+            <IconStrikethrough className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -717,7 +682,7 @@ export function ToolbarPlugin({
             onClick={handleFormatSubscript}
             title="下付き文字"
           >
-            <Subscript className="h-5 w-5 md:h-4 md:w-4" />
+            <IconSubscript className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
           <Button
             type="button"
@@ -727,7 +692,7 @@ export function ToolbarPlugin({
             onClick={handleFormatSuperscript}
             title="上付き文字"
           >
-            <Superscript className="h-5 w-5 md:h-4 md:w-4" />
+            <IconSuperscript className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
 
           {/* Highlight */}
@@ -759,7 +724,7 @@ export function ToolbarPlugin({
                   <BlockTypeIcon className="h-4 w-4" />
                   <span className="text-xs">{blockTypeLabel}</span>
                 </span>
-                <ChevronDown className="h-3 w-3" />
+                <IconChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
@@ -775,7 +740,7 @@ export function ToolbarPlugin({
                       <span>{label}</span>
                     </span>
                     {blockType === type && (
-                      <Check className="h-4 w-4 text-primary" />
+                      <IconCheck className="h-4 w-4 text-primary" />
                     )}
                   </DropdownMenuItem>
                 ),
@@ -798,7 +763,7 @@ export function ToolbarPlugin({
                   <AlignTypeIcon className="h-4 w-4" />
                   <span className="text-xs">{alignTypeLabel}</span>
                 </span>
-                <ChevronDown className="h-3 w-3" />
+                <IconChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[140px]">
@@ -814,7 +779,7 @@ export function ToolbarPlugin({
                       <span>{label}</span>
                     </span>
                     {elementFormat === type && (
-                      <Check className="h-4 w-4 text-primary" />
+                      <IconCheck className="h-4 w-4 text-primary" />
                     )}
                   </DropdownMenuItem>
                 ),
@@ -838,7 +803,7 @@ export function ToolbarPlugin({
             onClick={handleInsertLink}
             title="リンク"
           >
-            <Link className="h-5 w-5 md:h-4 md:w-4" />
+            <IconLink className="h-5 w-5 md:h-4 md:w-4" />
           </Button>
 
           <Separator orientation="vertical" className="mx-1 h-6" />
@@ -853,9 +818,9 @@ export function ToolbarPlugin({
                   size="sm"
                   className="h-8 gap-1"
                 >
-                  <Plus className="h-4 w-4" />
+                  <IconPlus className="h-4 w-4" />
                   <span className="text-xs">挿入</span>
-                  <ChevronDown className="h-3 w-3" />
+                  <IconChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -877,9 +842,9 @@ export function ToolbarPlugin({
                 size="sm"
                 className="h-8 gap-1"
               >
-                <FileDown className="h-4 w-4" />
+                <IconFileDownload className="h-4 w-4" />
                 <span className="text-xs">書き出し</span>
-                <ChevronDown className="h-3 w-3" />
+                <IconChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[200px]">
@@ -887,21 +852,21 @@ export function ToolbarPlugin({
                 onClick={handleCopyMarkdown}
                 className="flex items-center gap-2"
               >
-                <FileText className="h-4 w-4" />
+                <IconFileText className="h-4 w-4" />
                 <span>Markdown をコピー</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleCopyHtml}
                 className="flex items-center gap-2"
               >
-                <Code className="h-4 w-4" />
+                <IconCode className="h-4 w-4" />
                 <span>HTML をコピー</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleCopyPlainText}
                 className="flex items-center gap-2"
               >
-                <AlignLeft className="h-4 w-4" />
+                <IconAlignLeft className="h-4 w-4" />
                 <span>プレーンテキストをコピー</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -909,7 +874,7 @@ export function ToolbarPlugin({
                 onClick={() => setShowMarkdownImport(true)}
                 className="flex items-center gap-2"
               >
-                <Upload className="h-4 w-4" />
+                <IconUpload className="h-4 w-4" />
                 <span>Markdown をインポート</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -917,7 +882,7 @@ export function ToolbarPlugin({
                 onClick={handleOpenPrintPreview}
                 className="flex items-center gap-2"
               >
-                <Printer className="h-4 w-4" />
+                <IconPrinter className="h-4 w-4" />
                 <span>印刷プレビュー</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -950,9 +915,9 @@ export function ToolbarPlugin({
                 }
               >
                 {isInspectorExpanded ? (
-                  <PanelRightClose className="h-5 w-5 md:h-4 md:w-4" />
+                  <IconLayoutSidebarRightCollapse className="h-5 w-5 md:h-4 md:w-4" />
                 ) : (
-                  <PanelRightOpen className="h-5 w-5 md:h-4 md:w-4" />
+                  <IconLayoutSidebarRightExpand className="h-5 w-5 md:h-4 md:w-4" />
                 )}
               </Button>
             ) : null}
@@ -964,7 +929,7 @@ export function ToolbarPlugin({
               onClick={() => setShowShortcuts(true)}
               title="キーボードショートカット (Ctrl+Shift+/)"
             >
-              <CircleHelp className="h-5 w-5 md:h-4 md:w-4" />
+              <IconHelpCircle className="h-5 w-5 md:h-4 md:w-4" />
             </Button>
             <Button
               type="button"
@@ -975,9 +940,9 @@ export function ToolbarPlugin({
               title={isFullscreen ? "全画面終了" : "全画面表示"}
             >
               {isFullscreen ? (
-                <Minimize className="h-5 w-5 md:h-4 md:w-4" />
+                <IconMinimize className="h-5 w-5 md:h-4 md:w-4" />
               ) : (
-                <Maximize className="h-5 w-5 md:h-4 md:w-4" />
+                <IconMaximize className="h-5 w-5 md:h-4 md:w-4" />
               )}
             </Button>
           </div>

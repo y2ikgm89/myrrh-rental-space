@@ -5,15 +5,7 @@
  * 各カテゴリをクリックすると詳細ページへ遷移
  */
 
-import {
-  Globe,
-  Building2,
-  Bell,
-  Key,
-  Settings,
-  Navigation,
-  Megaphone,
-} from "lucide-react";
+import { IconWorld, IconBuilding, IconBell, IconKey, IconSettings, IconNavigation, IconSpeakerphone } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
 const SETTINGS_CATEGORIES: SettingsCardProps[] = [
@@ -21,49 +13,49 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     title: "サイト設定",
     description: "サイトの基本情報、SEO、レイアウトを設定",
     href: "/admin/settings/site",
-    icon: Globe,
+    icon: IconWorld,
     items: ["一般", "SEO", "レイアウト"],
   },
   {
     title: "ナビゲーション",
     description: "ヘッダー・フッターのメニューとSNSリンクを管理",
     href: "/admin/settings/navigation",
-    icon: Navigation,
+    icon: IconNavigation,
     items: ["デスクトップ", "モバイル", "フッター", "SNS"],
   },
   {
     title: "お知らせバー",
     description: "サイト上部のお知らせバーを管理",
     href: "/admin/settings/announcement-bar",
-    icon: Megaphone,
+    icon: IconSpeakerphone,
     items: ["お知らせ一覧", "カルーセル設定"],
   },
   {
     title: "ビジネス設定",
     description: "事業者情報、営業時間、予約設定を管理",
     href: "/admin/settings/business",
-    icon: Building2,
+    icon: IconBuilding,
     items: ["事業者情報", "営業時間", "予約"],
   },
   {
     title: "通知・決済",
     description: "メール通知、オンライン決済を設定",
     href: "/admin/settings/notify",
-    icon: Bell,
+    icon: IconBell,
     items: ["メール", "決済 (Stripe)"],
   },
   {
     title: "外部連携",
     description: "外部サービスのAPIキーを管理",
     href: "/admin/settings/api",
-    icon: Key,
+    icon: IconKey,
     items: ["Resend", "Cloudflare", "Google", "Instagram"],
   },
   {
     title: "システム管理",
     description: "メンテナンス、Cookie同意、権限を管理",
     href: "/admin/settings/system",
-    icon: Settings,
+    icon: IconSettings,
     items: ["メンテナンス", "Cookie", "権限"],
   },
 ];

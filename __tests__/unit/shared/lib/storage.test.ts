@@ -25,7 +25,31 @@ const mockNormalizeError = mock((err: unknown): Error => {
 
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mockLogError,
+  createErrorLogger: mock(() => ({
+    error: mock(),
+    warn: mock(),
+    info: mock(),
+  })),
   normalizeError: mockNormalizeError,
+  getErrorMessage: (error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  ReservationOverlapError: class extends Error {
+    readonly code = "RESERVATION_OVERLAP" as const;
+    constructor(message = "選択された時間帯は既に予約されています") {
+      super(message);
+      this.name = "ReservationOverlapError";
+    }
+  },
+  isReservationOverlapError: (error: unknown) =>
+    error instanceof Error && error.name === "ReservationOverlapError",
+  safeFetch: mock(async (opts: { fetch: () => unknown; fallback: unknown }) => {
+    try {
+      return await opts.fetch();
+    } catch {
+      return opts.fallback;
+    }
+  }),
+  criticalFetch: mock(async (opts: { fetch: () => unknown }) => opts.fetch()),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",

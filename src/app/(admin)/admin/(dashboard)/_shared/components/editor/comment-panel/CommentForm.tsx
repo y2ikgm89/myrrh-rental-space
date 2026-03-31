@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Send } from "lucide-react";
+import { IconSend } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Textarea } from "@/admin/components/ui/textarea";
 
@@ -61,7 +61,7 @@ export function CommentForm({
         disabled={!content.trim() || disabled || isPending}
         title="送信 (Ctrl+Enter)"
       >
-        <Send className="h-4 w-4" />
+        <IconSend className="h-4 w-4" />
       </Button>
     </div>
   );

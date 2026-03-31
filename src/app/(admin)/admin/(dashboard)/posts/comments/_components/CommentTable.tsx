@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Trash2, ExternalLink, User } from "lucide-react";
+import { IconTrash, IconExternalLink, IconUser } from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -143,7 +143,7 @@ export function CommentTable({ comments }: Props) {
             onClick={handleBulkDelete}
             disabled={isPending}
           >
-            <Trash2 className="w-4 h-4 mr-1" />
+            <IconTrash className="w-4 h-4 mr-1" />
             選択したコメントを削除
           </Button>
           <Button variant="outline" size="sm" onClick={() => setSelected([])}>
@@ -203,7 +203,7 @@ export function CommentTable({ comments }: Props) {
                 <TableCell className="hidden lg:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-3 h-3 text-muted-foreground" />
+                      <IconUser className="w-3 h-3 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium">
@@ -226,7 +226,7 @@ export function CommentTable({ comments }: Props) {
                     <span className="line-clamp-1 max-w-[150px]">
                       {comment.postTitle}
                     </span>
-                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    <IconExternalLink className="w-3 h-3 flex-shrink-0" />
                   </Link>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">

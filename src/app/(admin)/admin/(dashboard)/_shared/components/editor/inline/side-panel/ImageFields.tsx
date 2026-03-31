@@ -8,7 +8,7 @@
  */
 
 import Image from "next/image";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import type { FieldErrors, UseFormSetValue, Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { Button, Label } from "@/admin/components/ui";
@@ -55,7 +55,7 @@ export function ImageFields({
           </div>
         ) : (
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
-            <ImagePlus className="h-5 w-5 text-muted-foreground" />
+            <IconPhotoPlus className="h-5 w-5 text-muted-foreground" />
           </div>
         )}
         <div className="flex-1 space-y-1">
@@ -66,7 +66,7 @@ export function ImageFields({
             onClick={() => thumbnailPicker.openPicker()}
             disabled={disabled}
           >
-            <ImagePlus className="mr-1 h-3 w-3" />
+            <IconPhotoPlus className="mr-1 h-3 w-3" />
             選択
           </Button>
           {thumbnailUrl && (

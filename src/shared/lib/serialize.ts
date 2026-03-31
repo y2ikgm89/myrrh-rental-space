@@ -52,7 +52,7 @@
  *
  * @example
  * ```typescript
- * interface User {
+ * interface IconUser {
  *   id: string
  *   createdAt: Date
  *   deletedAt: Date | null

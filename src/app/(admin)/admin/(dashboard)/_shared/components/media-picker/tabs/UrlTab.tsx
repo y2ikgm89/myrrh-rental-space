@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Link, CircleAlert, Image as ImageIcon } from "lucide-react";
+import { IconLink, IconAlertCircle, IconPhoto } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 
 interface UrlTabProps {
@@ -73,7 +73,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
       <div className="space-y-2">
         <label className="text-sm font-medium">画像URL</label>
         <div className="relative">
-          <Link className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <IconLink className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="url"
             value={url}
@@ -85,7 +85,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
         </div>
         {error && (
           <p className="flex items-center gap-1 text-sm text-destructive">
-            <CircleAlert className="h-3 w-3" />
+            <IconAlertCircle className="h-3 w-3" />
             {error}
           </p>
         )}
@@ -122,7 +122,7 @@ export function UrlTab({ onAdd, canAddMore }: UrlTabProps) {
       {!previewUrl && url && !error && (
         <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed bg-muted/30">
           <div className="text-center text-muted-foreground">
-            <ImageIcon className="mx-auto h-8 w-8" />
+            <IconPhoto className="mx-auto h-8 w-8" />
             <p className="mt-2 text-sm">
               URLを入力するとプレビューが表示されます
             </p>

@@ -68,7 +68,7 @@ function formatLog(
  * @example
  * logger.error('Failed to save', { userId, error: e.message })
  * logger.warn('Deprecated API called')
- * logger.info('User logged in', { userId })
+ * logger.info('IconUser logged in', { userId })
  * logger.debug('Processing item', { itemId }) // 開発環境のみ
  */
 export const logger = {

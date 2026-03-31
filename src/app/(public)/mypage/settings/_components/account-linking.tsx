@@ -2,7 +2,7 @@
 
 import { useState, startTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Link2, Unlink } from "lucide-react";
+import { IconCheck, IconLink, IconUnlink } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
 import {
   Dialog,
@@ -118,13 +118,13 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
           return (
             <div
               key={provider.id}
-              className="flex items-center justify-between rounded-lg border border-border p-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border p-4"
             >
               <div className="flex items-center gap-3">
                 {isLinked ? (
-                  <Check className="h-4 w-4 text-accent" aria-hidden="true" />
+                  <IconCheck className="h-4 w-4 text-accent" aria-hidden="true" />
                 ) : (
-                  <Link2
+                  <IconLink
                     className="h-4 w-4 text-muted-foreground"
                     aria-hidden="true"
                   />
@@ -148,7 +148,7 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
                     "解除中..."
                   ) : (
                     <>
-                      <Unlink
+                      <IconUnlink
                         className="mr-1.5 h-3.5 w-3.5"
                         aria-hidden="true"
                       />

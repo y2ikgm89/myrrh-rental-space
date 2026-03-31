@@ -9,6 +9,7 @@ interface Reservation {
   readonly endTime: string;
   readonly status: string;
   readonly totalPrice: number | null;
+  readonly paymentStatus: string;
   readonly notes: string | null;
   readonly createdAt: string;
   readonly space: {
@@ -32,7 +33,7 @@ interface ReservationListProps {
 export function ReservationList({ items }: ReservationListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-12 text-center">
+      <div className="rounded-lg border border-border bg-surface p-6 md:p-12 text-center">
         <p className="text-muted-foreground">予約がありません</p>
       </div>
     );

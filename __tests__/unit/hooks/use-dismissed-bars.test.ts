@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "bun:test";
+import { installJSDOMForTests } from "../../setup-dom";
 import {
   dismissBar,
   STORAGE_KEY,
@@ -6,6 +7,7 @@ import {
 
 describe("dismissBar", () => {
   beforeEach(() => {
+    installJSDOMForTests();
     sessionStorage.clear();
   });
 

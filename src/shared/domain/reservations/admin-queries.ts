@@ -84,6 +84,9 @@ export async function getReservationsQuery(
         durationDiscountAmount: true,
         stripePaymentIntentId: true,
         paidAt: true,
+        cancellationReason: true,
+        cancelledAt: true,
+        cancelledByType: true,
         notes: true,
         deletedAt: true,
         createdAt: true,
@@ -133,7 +136,7 @@ export async function getReservationsQuery(
 
 export async function getReservationByIdQuery(id: string) {
   const reservation = await prisma.reservation.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     select: {
       id: true,
       spaceId: true,
@@ -153,6 +156,9 @@ export async function getReservationByIdQuery(id: string) {
       paymentStatus: true,
       stripePaymentIntentId: true,
       paidAt: true,
+      cancellationReason: true,
+      cancelledAt: true,
+      cancelledByType: true,
       space: {
         select: {
           id: true,

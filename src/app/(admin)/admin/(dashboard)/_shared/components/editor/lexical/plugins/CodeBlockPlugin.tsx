@@ -1,5 +1,5 @@
 /**
- * Code Block Plugin
+ * IconCode Block Plugin
  *
  * @description コードブロック強化プラグイン（言語セレクタ + コピーボタン）
  */
@@ -16,7 +16,7 @@ import {
 } from "lexical";
 import { $isCodeNode } from "@lexical/code";
 import { createPortal } from "react-dom";
-import { Copy, Check } from "lucide-react";
+import { IconCopy, IconCheck } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
@@ -110,9 +110,9 @@ function CodeToolbar({
         title="コードをコピー"
       >
         {copied ? (
-          <Check className="h-3 w-3 text-success" />
+          <IconCheck className="h-3 w-3 text-success" />
         ) : (
-          <Copy className="h-3 w-3" />
+          <IconCopy className="h-3 w-3" />
         )}
       </Button>
     </div>,

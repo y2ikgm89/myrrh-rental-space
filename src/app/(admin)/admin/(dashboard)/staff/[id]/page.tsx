@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { deleteUser } from "@/admin/actions/user";
 import { getUser } from "@/admin/queries/user";
@@ -58,7 +58,7 @@ export default async function StaffDetailPage({ params }: Props) {
           />
           <Button size="sm" asChild>
             <Link href={`/admin/staff/${user.id}/edit`}>
-              <Pencil className="mr-2 h-4 w-4" />
+              <IconPencil className="mr-2 h-4 w-4" />
               編集
             </Link>
           </Button>

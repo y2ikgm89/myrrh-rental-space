@@ -1,11 +1,14 @@
 ---
 paths:
-  - src/app/(public*)/**
+  - src/app/(public*)/_shared/lib/seo/**
+  - src/app/(public*)/_shared/components/seo/**
+  - src/app/(public*)/_shared/lib/page-metadata*
+  - src/app/(public*)/*/page.tsx
+  - src/app/(public*)/[*]/page.tsx
 ---
 
 # SEO / 構造化データパターンルール
 
-> Codex 用参照ドキュメント。公開ページの SEO / JSON-LD 実装はこのファイルを正本とする。
 > JSON-LD @graph / microdata / NAP一貫性 / MEO対応
 
 ## 構造化データ配置
@@ -14,13 +17,14 @@ paths:
 
 **@graph パターン**（現在の実装）: `LocalBusiness` + `WebSite` を1つの `<script>` タグにまとめ、`@id` で相互参照:
 
-| 型               | @id                        | 配置場所                 | 備考                                 |
-| ---------------- | -------------------------- | ------------------------ | ------------------------------------ |
-| `LocalBusiness`  | `{BASE_URL}/#organization` | `(public)/layout.tsx`    | 全公開ページ共通                     |
-| `WebSite`        | `{BASE_URL}/#website`      | `(public)/layout.tsx`    | `publisher` で `/#organization` 参照 |
-| `BreadcrumbList` | —                          | 各ページの `page.tsx`    | ページ固有                           |
-| `Article`        | —                          | `/posts/[slug]/page.tsx` | ブログ記事詳細                       |
-| `NewsArticle`    | —                          | `/news/[slug]/page.tsx`  | ニュース詳細                         |
+| 型               | @id                        | 配置場所                  | 備考                                 |
+| ---------------- | -------------------------- | ------------------------- | ------------------------------------ |
+| `LocalBusiness`  | `{BASE_URL}/#organization` | `(public)/layout.tsx`     | 全公開ページ共通                     |
+| `WebSite`        | `{BASE_URL}/#website`      | `(public)/layout.tsx`     | `publisher` で `/#organization` 参照 |
+| `BreadcrumbList` | —                          | 各ページの `page.tsx`     | ページ固有                           |
+| `Product`        | —                          | `/spaces/[slug]/page.tsx` | AggregateRating + Offer 付き         |
+| `Article`        | —                          | `/posts/[slug]/page.tsx`  | ブログ記事詳細                       |
+| `NewsArticle`    | —                          | `/news/[slug]/page.tsx`   | ニュース詳細                         |
 
 ```typescript
 // layout.tsx — @graph パターン（実際の実装）
@@ -227,6 +231,46 @@ Footer・BusinessInfo で共通のパースロジック:
 }
 ```
 
+## スペース詳細ページの構造化データ
+
+### Product + AggregateRating JSON-LD
+
+スペース詳細ページでは `ProductJsonLd` + `BreadcrumbJsonLd` を使用。レビューが1件以上ある場合のみ `aggregateRating` を出力:
+
+```tsx
+// /spaces/[slug]/page.tsx（実際の実装）
+const reviewStats = await getSpaceReviewStats(space.id);
+const baseUrl = getBaseUrl();
+const spaceUrl = `${baseUrl}/spaces/${slug}`;
+
+<BreadcrumbJsonLd
+  items={[
+    { name: "ホーム", url: "/" },
+    { name: "スペース一覧", url: "/spaces" },
+    { name: space.name, url: spaceUrl },
+  ]}
+/>
+<ProductJsonLd
+  name={space.name}
+  description={space.description ?? space.name}
+  image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
+  url={spaceUrl}
+  offers={{ price: space.hourlyPrice, priceCurrency: "JPY" }}
+  {...(reviewStats.totalCount > 0 && {
+    aggregateRating: {
+      ratingValue: reviewStats.averageRating,
+      reviewCount: reviewStats.totalCount,
+    },
+  })}
+/>
+```
+
+**注意**:
+
+- `offers` は Google 必須フィールド（price + priceCurrency）
+- `aggregateRating` はレビュー0件時に出力すると Google Search Console でエラー
+- `bestRating` / `worstRating` は省略時デフォルト 5/1（コンポーネント内部で設定）
+
 ## 記事詳細ページの構造化データ
 
 ### Article / NewsArticle JSON-LD
@@ -407,8 +451,9 @@ const jsonLd = `{"name": "${businessName}"}` // businessName に <script> が含
 4. **@graph 外での WebSite/LocalBusiness 個別出力禁止**
    - `GraphJsonLd` を使用し、`@graph` 配列で統合出力
 
-5. **AggregateRating の使用禁止**
+5. **LocalBusiness への AggregateRating 禁止**
    - Googleポリシー（2019年9月〜）により自社レビューの LocalBusiness 星評価はリッチリザルト非対象
+   - **Product 型への AggregateRating は許可**（スペース詳細ページで使用。レビュー1件以上で出力）
 
 6. **`generatePageMetadata(slug, fallback)` 形式の呼び出し禁止**
    - 第2引数は存在しない。`generatePageMetadata(slug)` のみ
@@ -438,6 +483,18 @@ export async function generateMetadata({ params }: Props) {
    - `hasMap`（JSON-LD内）: 緯度経度 URL (`maps?q=lat,lng`)
    - `googleMapsUrl`（コンポーネント表示用）: Place ID URL
 
+## noindex 対象ページ
+
+| ページ             | ファイル                                                        | 方式                                |
+| ------------------ | --------------------------------------------------------------- | ----------------------------------- |
+| 404                | `not-found.tsx`                                                 | static metadata                     |
+| プレビュー         | `posts/preview/[slug]/page.tsx`, `news/preview/[slug]/page.tsx` | static metadata                     |
+| ログイン           | `login/page.tsx`                                                | static metadata                     |
+| パスワードリセット | `forgot-password/page.tsx`, `reset-password/page.tsx`           | static metadata                     |
+| マイページ         | `mypage/layout.tsx`                                             | layout metadata（全サブページ継承） |
+
+**新規認証・プライベートページ追加時は必ず `robots: { index: false, follow: false }` を設定すること。**
+
 ## ファイル配置
 
 | パス                                   | 内容                                                                                                                                                                |
@@ -448,4 +505,4 @@ export async function generateMetadata({ params }: Props) {
 | `@/public/lib/seo/index.ts`            | SEOライブラリ barrel export                                                                                                                                         |
 | `@/public/lib/page-metadata.ts`        | `generatePageMetadata(slug)`, `getPageSeo(slug)`, `getDefaultPageSeo(slug)`                                                                                         |
 | `@/public/data/business.ts`            | `getBusinessInfo()` — コンポーネント向けビジネス情報                                                                                                                |
-| `@/shared/domain/settings/queries.ts`  | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                             |
+| `@/shared/lib/settings/public.ts`      | `getPublicBusinessSettings()` — 公開設定取得（NAP含む）                                                                                                             |

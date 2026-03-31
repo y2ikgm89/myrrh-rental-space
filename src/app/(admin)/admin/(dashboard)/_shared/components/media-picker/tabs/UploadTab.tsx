@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
 import {
   useMediaUpload,
   type UploadResult,
@@ -99,7 +99,7 @@ export function UploadTab({
         disabled={isUploading || !canAddMore}
         className="w-full"
       >
-        {isUploading && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+        {isUploading && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
         アップロードして追加
       </Button>
     </div>

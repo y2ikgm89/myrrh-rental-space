@@ -4,7 +4,7 @@
  * 列数（templateColumnsState）はここだけが子 LayoutItem 数と整合させる正本とする。
  * 列プリセットの更新はインスペクター / ツールバーが `$setState` のみ行う（二重ロジックを避ける）。
  *
- * @see https://github.com/facebook/lexical/tree/main/packages/lexical-playground（Layout 関連は playground ソース参照）
+ * @see https://github.com/facebook/lexical/tree/main/packages/lexical-playground（IconLayout 関連は playground ソース参照）
  */
 
 import {

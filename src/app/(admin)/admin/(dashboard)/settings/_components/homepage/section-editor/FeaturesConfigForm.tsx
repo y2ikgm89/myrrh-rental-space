@@ -14,7 +14,7 @@ import {
   SelectValue,
   SubmitButton,
 } from "@/admin/components/ui";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { IconPlus, IconTrash, IconGripVertical } from "@tabler/icons-react";
 import { keysOf } from "@/shared/lib/serialize";
 import {
   featuresConfigSchema,
@@ -140,7 +140,7 @@ export function FeaturesConfigForm({
               onClick={addItem}
               disabled={isPending}
             >
-              <Plus className="h-3 w-3 mr-1" />
+              <IconPlus className="h-3 w-3 mr-1" />
               追加
             </Button>
           </div>
@@ -159,7 +159,7 @@ export function FeaturesConfigForm({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  <IconGripVertical className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">
                     アイテム {index + 1}
                   </span>
@@ -171,7 +171,7 @@ export function FeaturesConfigForm({
                   onClick={() => removeItem(index)}
                   disabled={isPending}
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <IconTrash className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
 

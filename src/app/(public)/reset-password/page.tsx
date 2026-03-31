@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/shared/lib/auth";
@@ -5,6 +6,11 @@ import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { ResetPasswordForm } from "./_components/reset-password-form";
+
+export const metadata: Metadata = {
+  title: "パスワードリセット",
+  robots: { index: false, follow: false },
+};
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

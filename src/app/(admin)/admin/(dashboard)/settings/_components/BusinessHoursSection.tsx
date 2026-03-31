@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
-import { Plus, X, Copy } from "lucide-react";
+import { IconPlus, IconX, IconCopy } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -396,7 +396,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                       disabled={isPending}
                       title="この設定を全曜日にコピー"
                     >
-                      <Copy className="h-4 w-4" />
+                      <IconCopy className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -463,7 +463,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                                 disabled={isPending}
                                 className="h-8 w-8"
                               >
-                                <X className="h-4 w-4" />
+                                <IconX className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -482,7 +482,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                       onClick={() => handleAddSlot(key)}
                       disabled={isPending}
                     >
-                      <Plus className="mr-1 h-4 w-4" />
+                      <IconPlus className="mr-1 h-4 w-4" />
                       時間帯を追加
                     </Button>
                   </div>
@@ -510,7 +510,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
               onClick={handleAddHoliday}
               disabled={isPending || !newHolidayDate}
             >
-              <Plus className="h-4 w-4" />
+              <IconPlus className="h-4 w-4" />
             </Button>
           </div>
           {specialHolidays.length > 0 && (
@@ -527,7 +527,7 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                     disabled={isPending}
                     className="ml-1 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"
                   >
-                    <X className="h-3 w-3" />
+                    <IconX className="h-3 w-3" />
                   </button>
                 </div>
               ))}

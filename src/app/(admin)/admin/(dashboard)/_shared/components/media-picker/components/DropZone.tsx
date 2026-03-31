@@ -7,7 +7,7 @@
  */
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { IconUpload } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
 interface DropZoneProps {
@@ -72,7 +72,7 @@ export function DropZone({
       onDrop={handleDrop}
       onClick={handleClick}
     >
-      <Upload className="mb-2 h-12 w-12 text-muted-foreground" />
+      <IconUpload className="mb-2 h-12 w-12 text-muted-foreground" />
       <p className="text-muted-foreground">
         ドラッグ&ドロップ または クリックして選択
       </p>

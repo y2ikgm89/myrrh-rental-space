@@ -1,5 +1,6 @@
 import { Button } from "../../../_shared/components/design-system/button";
 import { Heading } from "../../../_shared/components/design-system/heading";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { Stack } from "../../../_shared/components/design-system/stack";
 
 interface ReservationWidgetProps {
@@ -12,6 +13,7 @@ export function ReservationWidget({
   hourlyPrice,
   dailyPrice,
 }: ReservationWidgetProps) {
+  const { formatUnit } = useFormatPrice();
   return (
     <div className="rounded-lg border border-border bg-card p-6 shadow-card">
       <Stack gap="lg">
@@ -21,14 +23,14 @@ export function ReservationWidget({
           <div className="flex items-baseline justify-between">
             <span className="text-muted-foreground">1時間</span>
             <span className="text-xl font-bold text-accent">
-              &yen;{hourlyPrice.toLocaleString()}
+              {formatUnit(hourlyPrice, "/h")}
             </span>
           </div>
           {dailyPrice != null ? (
             <div className="flex items-baseline justify-between">
               <span className="text-muted-foreground">1日</span>
               <span className="text-xl font-bold text-accent">
-                &yen;{dailyPrice.toLocaleString()}
+                {formatUnit(dailyPrice, "/day")}
               </span>
             </div>
           ) : null}

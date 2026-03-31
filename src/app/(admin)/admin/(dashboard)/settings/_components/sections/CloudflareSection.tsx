@@ -30,7 +30,7 @@ import { cloudflareFormSchema } from "@/admin/actions/settings/schemas/form-sche
 import { StatusBanner } from "../shared";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { CloudIcon } from "lucide-react";
+import { IconCloud } from "@tabler/icons-react";
 
 interface Props {
   config: CloudflareConfig;
@@ -132,7 +132,7 @@ export function CloudflareSection({ config }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CloudIcon className="h-5 w-5 text-warning" />
+              <IconCloud className="h-5 w-5 text-warning" />
               Cloudflare CDN
             </CardTitle>
             <CardDescription>

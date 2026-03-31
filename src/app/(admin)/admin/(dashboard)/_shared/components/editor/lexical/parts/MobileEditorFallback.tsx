@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, Monitor } from "lucide-react";
+import { IconAlertCircle, IconDeviceDesktop } from "@tabler/icons-react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { renderEditorStateJsonToHtmlClient } from "../preview/render-editor-state-to-html-client";
@@ -25,7 +25,7 @@ export function MobileEditorFallback({
   return (
     <div className="flex flex-col" style={{ height }}>
       <div className="flex flex-col items-center justify-center gap-3 border-b border-border p-6">
-        <Monitor className="h-10 w-10 text-muted-foreground" />
+        <IconDeviceDesktop className="h-10 w-10 text-muted-foreground" />
         <div className="space-y-1 text-center">
           <p className="text-sm font-medium text-foreground">
             デスクトップ環境でご利用ください
@@ -41,7 +41,7 @@ export function MobileEditorFallback({
           role="alert"
           className="flex gap-3 border-b border-border p-4 text-sm text-foreground"
         >
-          <CircleAlert
+          <IconAlertCircle
             className="h-5 w-5 shrink-0 text-muted-foreground"
             aria-hidden
           />

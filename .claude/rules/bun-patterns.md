@@ -456,7 +456,7 @@ bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
 
 ## Gotchas
 
-- **`mock.module()` のグローバルスコープ干渉** — 複数テストファイルを同時実行すると、ファイル A の `mock.module("@/shared/lib/foo", ...)` がファイル B の実 import を上書きし、`Export named 'X' not found` エラーやハングを引き起こす。対策: モック対象モジュールの**全 export をモックに含める**（使わない関数もスタブで返す）。単独実行（`bun test <file>`）では問題なし
+- **`mock.module()` のグローバルスコープ干渉** — 複数テストファイルを同時実行すると、ファイル A の `mock.module("@/shared/lib/foo", ...)` がファイル B の実 import を上書きし、`Export named 'X' not found` エラーやハングを引き起こす。対策: (1) モック対象モジュールの**全 export をモックに含める**（使わない関数もスタブで返す）。(2) `package.json` の `test` スクリプトでディレクトリ別に分離実行（`bun test __tests__/unit/lib && bun test __tests__/unit/api && ...`）。特に `@/shared/db/enums`, `@/shared/lib/errors/server`, `@/shared/lib/crypto`, `@/shared/lib/route-responses`, `@/shared/lib/constants` は複数テストでモックされるため全 export 必須。単独実行（`bun test <file>`）では問題なし
 - **`Promise.reject()` が `fireAndForget` テストで "Unhandled error between tests"** — `Promise.reject()` は即座に rejected になり、`fireAndForget` の `.catch()` 登録前に Bun が未処理として検出する場合がある。`queueMicrotask(() => reject(error))` で遅延拒否し、`.catch()` が先に登録されるようにする
 
 ## 参考

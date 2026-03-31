@@ -246,12 +246,19 @@ export async function getPostLayoutSettings(
 
   const [siteSettings, postSettings] = await Promise.all([
     getSiteLayoutSettings(),
-    prisma.post.findUnique({
-      where: { id: postId },
-      select: {
-        contentWidth: true,
-        contentWidthCustom: true,
-      },
+    safeFetch({
+      fetch: () =>
+        prisma.post.findUnique({
+          where: { id: postId },
+          select: {
+            contentWidth: true,
+            contentWidthCustom: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getPostLayoutSettings",
     }),
   ]);
 
@@ -281,12 +288,19 @@ export async function getNewsLayoutSettings(
 
   const [siteSettings, newsSettings] = await Promise.all([
     getSiteLayoutSettings(),
-    prisma.news.findUnique({
-      where: { id: newsId },
-      select: {
-        contentWidth: true,
-        contentWidthCustom: true,
-      },
+    safeFetch({
+      fetch: () =>
+        prisma.news.findUnique({
+          where: { id: newsId },
+          select: {
+            contentWidth: true,
+            contentWidthCustom: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getNewsLayoutSettings",
     }),
   ]);
 
@@ -316,12 +330,19 @@ export async function getPageLayoutSettings(
 
   const [siteSettings, pageSettings] = await Promise.all([
     getSiteLayoutSettings(),
-    prisma.page.findUnique({
-      where: { slug },
-      select: {
-        contentWidth: true,
-        contentWidthCustom: true,
-      },
+    safeFetch({
+      fetch: () =>
+        prisma.page.findUnique({
+          where: { slug },
+          select: {
+            contentWidth: true,
+            contentWidthCustom: true,
+          },
+        }),
+      fallback: null,
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getPageLayoutSettings",
     }),
   ]);
 

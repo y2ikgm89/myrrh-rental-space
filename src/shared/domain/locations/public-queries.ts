@@ -3,6 +3,11 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { toPlainArray } from "@/shared/lib/serialize";
 
 export type SpaceOption = {
@@ -36,31 +41,38 @@ export async function getPublishedLocationsWithSpaces(): Promise<
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  const locations = await prisma.location.findMany({
-    where: { isPublished: true, isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      name: true,
-      address: true,
-      imageUrl: true,
-      spaces: {
+  const locations = await safeFetch({
+    fetch: () =>
+      prisma.location.findMany({
         where: { isPublished: true, isActive: true },
-        orderBy: { name: "asc" },
+        orderBy: { sortOrder: "asc" },
         select: {
           id: true,
           name: true,
-          description: true,
-          capacity: true,
-          area: true,
-          hourlyPrice: true,
-          dailyPrice: true,
-          mainImageUrl: true,
-          imageUrls: true,
-          facilities: true,
+          address: true,
+          imageUrl: true,
+          spaces: {
+            where: { isPublished: true, isActive: true },
+            orderBy: { name: "asc" },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              capacity: true,
+              area: true,
+              hourlyPrice: true,
+              dailyPrice: true,
+              mainImageUrl: true,
+              imageUrls: true,
+              facilities: true,
+            },
+          },
         },
-      },
-    },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedLocationsWithSpaces",
   });
 
   return toPlainArray(

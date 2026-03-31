@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
   Button,
 } from "@/admin/components/ui";
-import { Layout, Sparkles } from "lucide-react";
+import { IconLayout, IconSparkles } from "@tabler/icons-react";
 import {
   updateSectionOrder,
   toggleHomepageSection,
@@ -361,14 +361,14 @@ export function HomepageTab({
         // No sections - show initialize button
         <div className="text-center py-12">
           <div className="p-4 rounded-full bg-muted/50 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Layout className="h-8 w-8 text-muted-foreground" />
+            <IconLayout className="h-8 w-8 text-muted-foreground" />
           </div>
           <h3 className="text-lg font-medium mb-2">セクションがありません</h3>
           <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
             ホームページのセクションを初期化するか、新しいセクションを追加してください
           </p>
           <Button onClick={handleInitializeDefaults} disabled={isPending}>
-            <Sparkles className="h-4 w-4 mr-2" />
+            <IconSparkles className="h-4 w-4 mr-2" />
             デフォルトセクションを作成
           </Button>
         </div>

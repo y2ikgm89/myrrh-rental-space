@@ -55,7 +55,7 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
   );
 
   return (
-    <form onSubmit={onSubmit} className="max-w-md space-y-4">
+    <form onSubmit={onSubmit} className="max-w-md space-y-6">
       {errorMessage != null && (
         <div
           className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
@@ -74,7 +74,7 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="姓"
           required

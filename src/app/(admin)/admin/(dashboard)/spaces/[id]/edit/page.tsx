@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { deleteSpace } from "@/admin/actions/space";
 import { getSpaceById } from "@/admin/queries/space";
 import { getActiveTermsForSelect } from "@/admin/queries/terms";
@@ -63,7 +63,7 @@ export default async function EditSpacePage({ params }: PageProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
+              <IconExternalLink className="mr-2 h-4 w-4" />
               公開ページを見る
             </Link>
           </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 import type {
   Control,
   FieldArrayWithId,
@@ -143,7 +143,7 @@ export function SpaceEditDetailsTabPanel({
                       className="ml-1 text-muted-foreground hover:text-foreground"
                       aria-label={`${field.value}を削除`}
                     >
-                      <X className="h-3 w-3" />
+                      <IconX className="h-3 w-3" />
                     </button>
                   </span>
                 ))}

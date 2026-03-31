@@ -11,8 +11,9 @@ import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import { cn } from "@/shared/lib/cn";
 import type { Serialized } from "@/shared/lib/serialize";
+import { IconExternalLink } from "@tabler/icons-react";
 import type { NavigationItemData, SocialLinkData } from "./types";
-import { getProjectedDepth, platformLabels } from "./types";
+import { getProjectedDepth, platformLabels, platformIcons } from "./types";
 
 // =============================================================================
 // Sortable Navigation Row (Card-based)
@@ -184,6 +185,7 @@ export function SortableSocialRow({
   };
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const PlatformIcon = platformIcons[link.platform] ?? IconExternalLink;
 
   return (
     <>
@@ -207,6 +209,7 @@ export function SortableSocialRow({
           <DragHandle />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
+          <PlatformIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="truncate text-sm font-medium">
             {platformLabels[link.platform]}
           </span>

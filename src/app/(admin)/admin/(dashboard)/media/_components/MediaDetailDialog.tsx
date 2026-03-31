@@ -6,15 +6,15 @@
 
 import { useState, useTransition, useRef, useId } from "react";
 import {
-  Copy,
-  ExternalLink,
-  Trash2,
-  Save,
-  LoaderCircle,
-  FileText,
-  Film,
-  File,
-} from "lucide-react";
+  IconCopy,
+  IconExternalLink,
+  IconTrash,
+  IconDeviceFloppy,
+  IconLoader2,
+  IconFileText,
+  IconMovie,
+  IconFile,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -167,7 +167,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                       className="flex-1"
                       onClick={handleCopyUrl}
                     >
-                      <Copy className="h-4 w-4 mr-1" />
+                      <IconCopy className="h-4 w-4 mr-1" />
                       URLをコピー
                     </Button>
                     <Button
@@ -181,14 +181,14 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <ExternalLink className="h-4 w-4 mr-1" />
+                        <IconExternalLink className="h-4 w-4 mr-1" />
                         開く
                       </a>
                     </Button>
                   </div>
                 </div>
 
-                {/* Info & Edit Form */}
+                {/* Info & IconEdit Form */}
                 <div className="space-y-4">
                   {/* File Info */}
                   <div className="space-y-2 text-sm">
@@ -308,7 +308,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                 onClick={handleDelete}
                 disabled={isPending}
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <IconTrash className="h-4 w-4 mr-1" />
                 削除
               </Button>
               <div className="flex gap-2">
@@ -320,9 +320,9 @@ export function MediaDetailDialog({ item, onClose }: Props) {
                   disabled={!hasChanges || isPending}
                 >
                   {isPending && (
-                    <LoaderCircle className="h-4 w-4 mr-1 animate-spin" />
+                    <IconLoader2 className="h-4 w-4 mr-1 animate-spin" />
                   )}
-                  <Save className="h-4 w-4 mr-1" />
+                  <IconDeviceFloppy className="h-4 w-4 mr-1" />
                   保存
                 </Button>
               </div>
@@ -353,11 +353,11 @@ function MediaPreview({ item }: { item: MediaData }) {
           className="w-full h-full object-contain"
         />
       ) : item.type === "VIDEO" ? (
-        <Film className="h-24 w-24 text-muted-foreground" />
+        <IconMovie className="h-24 w-24 text-muted-foreground" />
       ) : item.type === "DOCUMENT" ? (
-        <FileText className="h-24 w-24 text-muted-foreground" />
+        <IconFileText className="h-24 w-24 text-muted-foreground" />
       ) : (
-        <File className="h-24 w-24 text-muted-foreground" />
+        <IconFile className="h-24 w-24 text-muted-foreground" />
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useId } from "react";
 import { useFieldArray } from "react-hook-form";
-import { ImagePlus } from "lucide-react";
+import { IconPhotoPlus } from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -389,7 +389,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                         </div>
                       ) : (
                         <div className="flex h-24 w-24 items-center justify-center rounded-lg border border-dashed bg-muted">
-                          <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                          <IconPhotoPlus className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
                       <div className="flex-1 space-y-2">
@@ -399,7 +399,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                           onClick={() => mainImagePicker.openPicker()}
                           disabled={isPending}
                         >
-                          <ImagePlus className="mr-2 h-4 w-4" />
+                          <IconPhotoPlus className="mr-2 h-4 w-4" />
                           画像を選択
                         </Button>
                         {field.value && (
@@ -426,7 +426,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                 onClick={() => additionalImagesPicker.openPicker()}
                 disabled={isPending || fields.length >= 10}
               >
-                <ImagePlus className="mr-2 h-4 w-4" />
+                <IconPhotoPlus className="mr-2 h-4 w-4" />
                 画像を追加
               </Button>
               {fields.length > 0 && (

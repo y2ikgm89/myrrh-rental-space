@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { List } from "lucide-react";
+import { IconList } from "@tabler/icons-react";
 import {
   getReservationsForCalendar,
   getSpacesForCalendar,
@@ -76,7 +76,7 @@ export default async function ReservationCalendarPage({
         </div>
         <Button variant="outline" asChild>
           <Link href="/admin/reservations">
-            <List className="mr-2 h-4 w-4" />
+            <IconList className="mr-2 h-4 w-4" />
             リスト表示
           </Link>
         </Button>

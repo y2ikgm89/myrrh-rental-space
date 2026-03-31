@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
+import { IconLoader2 } from "@tabler/icons-react";
 
 import { Button, type ButtonProps } from "./button";
 
@@ -42,7 +42,7 @@ function SubmitButton({
     >
       {isPending ? (
         <>
-          <LoaderCircle className="animate-spin" />
+          <IconLoader2 className="animate-spin" />
           {pending}
         </>
       ) : (

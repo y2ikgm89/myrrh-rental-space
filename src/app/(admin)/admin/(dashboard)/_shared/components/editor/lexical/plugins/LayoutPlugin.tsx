@@ -1,5 +1,5 @@
 /**
- * Layout Plugin
+ * IconLayout Plugin
  *
  * @description カラムレイアウトの挿入コマンドとキーボードナビ。
  * 子ノード数と `templateColumnsState` の整合は `registerLayoutNodeTransforms` のみが行う。

@@ -11,7 +11,7 @@
  */
 
 import type { ReactNode } from "react";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 import { useFilterParams } from "@/admin/hooks";
 import {
   Select,
@@ -86,7 +86,7 @@ export function BaseFilters({
 
       {/* 検索 */}
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           placeholder={searchPlaceholder}

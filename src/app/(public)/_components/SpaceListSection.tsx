@@ -1,4 +1,5 @@
 "use client";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 /**
  * SpaceListSection — Space listing with grid/list/carousel layout
@@ -57,6 +58,7 @@ export function SpaceListSection({
   design,
 }: SpaceListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
+  const { formatUnit } = useFormatPrice();
 
   useGSAP(
     () => {
@@ -162,7 +164,7 @@ export function SpaceListSection({
                   </span>
                   {space.hourlyPrice != null && (
                     <span className="text-sm font-medium text-primary-dark">
-                      &yen;{space.hourlyPrice.toLocaleString()}/h
+                      {formatUnit(space.hourlyPrice, "/h")}
                     </span>
                   )}
                 </div>

@@ -7,12 +7,18 @@
  */
 
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
 import { Container } from "@/public/components/design-system/container";
 import { MypageNav } from "./_components/mypage-nav";
+
+export const metadata: Metadata = {
+  title: "マイページ",
+  robots: { index: false, follow: false },
+};
 
 export default async function MypageLayout({
   children,
@@ -21,6 +27,11 @@ export default async function MypageLayout({
 }) {
   const { user } = await verifyCustomerSession();
   const customer = await ensureCustomerLinked(user);
+
+  // 停止・ブラックリスト顧客はマイページアクセス不可
+  if (!customer.isActive) {
+    redirect("/login?error=account_suspended");
+  }
 
   // LINE メール未登録時: settings 以外のページなら settings にリダイレクト（循環防止）
   if (!customer.email) {

@@ -1,5 +1,5 @@
 /**
- * Find & Replace Plugin
+ * Find & IconReplace Plugin
  *
  * @description 検索・置換機能を提供するプラグイン
  */
@@ -19,13 +19,13 @@ import {
 } from "lexical";
 import { createPortal } from "react-dom";
 import {
-  Search,
-  Replace,
-  ChevronUp,
-  ChevronDown,
-  X,
-  CaseSensitive,
-} from "lucide-react";
+  IconSearch,
+  IconReplace,
+  IconChevronUp,
+  IconChevronDown,
+  IconX,
+  IconLetterCase,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { Input } from "@/admin/components/ui";
 
@@ -99,7 +99,7 @@ function findMatches(
 // Find Replace Panel
 // =============================================================================
 
-function FindReplacePanel({
+function FindIconReplacePanel({
   onClose,
   anchorElem,
 }: {
@@ -108,9 +108,9 @@ function FindReplacePanel({
 }) {
   const [editor] = useLexicalComposerContext();
   const [searchText, setSearchText] = useState("");
-  const [replaceText, setReplaceText] = useState("");
+  const [replaceText, setIconReplaceText] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
-  const [showReplace, setShowReplace] = useState(false);
+  const [showIconReplace, setShowIconReplace] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -161,7 +161,7 @@ function FindReplacePanel({
     setCurrentMatchIndex((prev) => (prev - 1 + matchCount) % matchCount);
   };
 
-  const handleReplace = () => {
+  const handleIconReplace = () => {
     if (matchCount === 0 || !searchText) return;
 
     editor.update(() => {
@@ -183,7 +183,7 @@ function FindReplacePanel({
     });
   };
 
-  const handleReplaceAll = () => {
+  const handleIconReplaceAll = () => {
     if (matchCount === 0 || !searchText) return;
 
     editor.update(() => {
@@ -226,7 +226,7 @@ function FindReplacePanel({
     <div className="absolute top-0 right-0 z-50 m-2 rounded-lg border border-border bg-background shadow-lg">
       <div className="flex items-center gap-1.5 p-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <IconSearch className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             ref={searchInputRef}
             value={searchText}
@@ -256,7 +256,7 @@ function FindReplacePanel({
           onClick={() => setCaseSensitive(!caseSensitive)}
           title="大文字小文字を区別"
         >
-          <CaseSensitive
+          <IconLetterCase
             className={`h-3.5 w-3.5 ${caseSensitive ? "text-primary" : "text-muted-foreground"}`}
           />
         </Button>
@@ -269,7 +269,7 @@ function FindReplacePanel({
           onClick={goToPrevious}
           disabled={matchCount === 0}
         >
-          <ChevronUp className="h-3.5 w-3.5" />
+          <IconChevronUp className="h-3.5 w-3.5" />
         </Button>
         <Button
           type="button"
@@ -279,7 +279,7 @@ function FindReplacePanel({
           onClick={goToNext}
           disabled={matchCount === 0}
         >
-          <ChevronDown className="h-3.5 w-3.5" />
+          <IconChevronDown className="h-3.5 w-3.5" />
         </Button>
 
         <Button
@@ -287,10 +287,10 @@ function FindReplacePanel({
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          onClick={() => setShowReplace(!showReplace)}
+          onClick={() => setShowIconReplace(!showIconReplace)}
           title="置換"
         >
-          <Replace className="h-3.5 w-3.5" />
+          <IconReplace className="h-3.5 w-3.5" />
         </Button>
 
         <Button
@@ -300,15 +300,15 @@ function FindReplacePanel({
           className="h-6 w-6"
           onClick={onClose}
         >
-          <X className="h-3.5 w-3.5" />
+          <IconX className="h-3.5 w-3.5" />
         </Button>
       </div>
 
-      {showReplace && (
+      {showIconReplace && (
         <div className="flex items-center gap-1.5 px-2 pb-2">
           <Input
             value={replaceText}
-            onChange={(e) => setReplaceText(e.target.value)}
+            onChange={(e) => setIconReplaceText(e.target.value)}
             placeholder="置換..."
             className="h-7 text-xs flex-1"
           />
@@ -317,7 +317,7 @@ function FindReplacePanel({
             variant="outline"
             size="sm"
             className="h-7 text-xs px-2"
-            onClick={handleReplace}
+            onClick={handleIconReplace}
             disabled={matchCount === 0}
           >
             置換
@@ -327,7 +327,7 @@ function FindReplacePanel({
             variant="outline"
             size="sm"
             className="h-7 text-xs px-2"
-            onClick={handleReplaceAll}
+            onClick={handleIconReplaceAll}
             disabled={matchCount === 0}
           >
             全置換
@@ -376,7 +376,7 @@ export function FindReplacePlugin({
   if (!isOpen || !anchorElem) return null;
 
   return (
-    <FindReplacePanel
+    <FindIconReplacePanel
       onClose={() => setIsOpen(false)}
       anchorElem={anchorElem}
     />

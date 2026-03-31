@@ -39,7 +39,6 @@ const VALID_NAVIGATION_ITEM_INPUT = {
 const VALID_SOCIAL_LINK_INPUT = {
   platform: "INSTAGRAM" as const,
   url: "https://www.instagram.com/example/",
-  iconUrl: null,
   order: 0,
   isActive: true,
   showOnDesktop: true,
@@ -319,24 +318,6 @@ describe("Navigation Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("iconUrlはnull許可", () => {
-        const result = socialLinkSchema.safeParse({
-          ...VALID_SOCIAL_LINK_INPUT,
-          iconUrl: null,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("iconUrlはオプション（省略可能）", () => {
-        const input = {
-          platform: "TWITTER" as const,
-          url: "https://twitter.com/example",
-          order: 0,
-        };
-        const result = socialLinkSchema.safeParse(input);
-        expect(result.success).toBe(true);
-      });
-
       test("showOnDesktop/showOnMobileはデフォルトでtrue", () => {
         const input = {
           platform: "INSTAGRAM" as const,
@@ -529,7 +510,6 @@ describe("Navigation Admin Action Integration", () => {
         id: VALID_UUID,
         platform: SocialPlatform.INSTAGRAM,
         url: "https://www.instagram.com/example/",
-        iconUrl: null,
         order: 0,
         isActive: true,
         showOnDesktop: true,
@@ -540,7 +520,6 @@ describe("Navigation Admin Action Integration", () => {
 
       expect(link.platform).toBe("INSTAGRAM");
       expect(link.url).toBe("https://www.instagram.com/example/");
-      expect(link.iconUrl).toBeNull();
       expect(link.showOnDesktop).toBe(true);
       expect(link.showOnMobile).toBe(true);
     });

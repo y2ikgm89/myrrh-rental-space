@@ -49,7 +49,7 @@ import {
   TableInspectorPanel,
   TableCellInspectorPanel,
 } from "./panels";
-import { ChevronLeft, ChevronRight, SlidersVertical } from "lucide-react";
+import { IconChevronLeft, IconChevronRight, IconAdjustments } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 const INSPECTOR_PANEL_ID = "lexical-block-inspector-panel";
@@ -221,7 +221,7 @@ export function InspectorSidebar() {
               onClick={collapse}
               title="ブロック設定を閉じる（本文ブロック用）"
             >
-              <ChevronRight className="h-4 w-4" aria-hidden />
+              <IconChevronRight className="h-4 w-4" aria-hidden />
               <span className="sr-only">ブロック設定パネルを閉じる</span>
             </Button>
           </div>
@@ -231,7 +231,7 @@ export function InspectorSidebar() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-4 min-h-0">
-              <SlidersVertical
+              <IconAdjustments
                 className="h-8 w-8 mb-2 opacity-50"
                 aria-hidden
               />
@@ -259,10 +259,10 @@ export function InspectorSidebar() {
             onClick={expand}
             title="ブロック設定を開く（本文ブロック用）Ctrl+Shift+0"
           >
-            <ChevronLeft className="h-4 w-4" aria-hidden />
+            <IconChevronLeft className="h-4 w-4" aria-hidden />
             <span className="sr-only">ブロック設定パネルを開く</span>
           </Button>
-          <SlidersVertical
+          <IconAdjustments
             className="h-4 w-4 mt-3 text-muted-foreground opacity-60"
             aria-hidden
           />

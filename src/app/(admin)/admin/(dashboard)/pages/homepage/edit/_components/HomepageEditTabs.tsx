@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import { Plus } from "lucide-react";
+import { IconPlus } from "@tabler/icons-react";
 import {
   Tabs,
   TabsList,
@@ -66,7 +66,7 @@ export function HomepageEditTabs({
         </TabsList>
         {activeTab === "sections" && (
           <Button size="sm" onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <IconPlus className="h-4 w-4 mr-2" />
             セクションを追加
           </Button>
         )}

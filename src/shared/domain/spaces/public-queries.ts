@@ -8,7 +8,13 @@ import {
   PAGINATION_DEFAULTS,
   getCacheTag,
 } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
+import { parseStringArray } from "@/shared/lib/json-validators";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 const spaceListSelect = {
@@ -37,9 +43,7 @@ function mapSpaceListItem(s: SpaceListRow) {
     hourlyPrice: Number(s.hourlyPrice),
     dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
     area: s.area ? Number(s.area) : null,
-    facilities: Array.isArray(s.facilities)
-      ? s.facilities.filter((f): f is string => typeof f === "string")
-      : [],
+    facilities: parseStringArray(s.facilities),
     lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
   };
 }
@@ -52,18 +56,24 @@ export async function getPublishedSpaces(categoryId?: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  const spaces = await prisma.space.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-      ...(categoryId ? { categoryId } : {}),
-    },
-    select: spaceListSelect,
-    orderBy: { name: "asc" },
+  const spaces = await safeFetch({
+    fetch: () =>
+      prisma.space.findMany({
+        where: {
+          isPublished: true,
+          isActive: true,
+          ...(categoryId ? { categoryId } : {}),
+        },
+        select: spaceListSelect,
+        orderBy: { name: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedSpaces",
   });
 
-  const mapped = spaces.map(mapSpaceListItem);
-  return toPlainArray(mapped);
+  return toPlainArray(spaces.map(mapSpaceListItem));
 }
 
 /**
@@ -86,22 +96,32 @@ export async function getPublishedSpacesPaginated(
 
   const skip = (page - 1) * perPage;
 
-  const [rawItems, totalCount] = await Promise.all([
-    prisma.space.findMany({
-      where,
-      select: spaceListSelect,
-      orderBy: { name: "asc" },
-      skip,
-      take: perPage,
-    }),
-    prisma.space.count({ where }),
-  ]);
+  const result = await safeFetch({
+    fetch: async () => {
+      const [rawItems, totalCount] = await Promise.all([
+        prisma.space.findMany({
+          where,
+          select: spaceListSelect,
+          orderBy: { name: "asc" },
+          skip,
+          take: perPage,
+        }),
+        prisma.space.count({ where }),
+      ]);
 
-  return {
-    items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
-    totalPages: Math.ceil(totalCount / perPage),
-    currentPage: page,
-  };
+      return {
+        items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
+        totalPages: Math.ceil(totalCount / perPage),
+        currentPage: page,
+      };
+    },
+    fallback: { items: [], totalPages: 0, currentPage: page },
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedSpacesPaginated",
+  });
+
+  return result;
 }
 
 /**
@@ -112,34 +132,43 @@ export async function getSpaceBySlug(slug: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES, getCacheTag.spaces.detail(slug));
 
-  const space = await prisma.space.findFirst({
-    where: { slug, isPublished: true, isActive: true },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      capacity: true,
-      area: true,
-      hourlyPrice: true,
-      dailyPrice: true,
-      mainImageUrl: true,
-      imageUrls: true,
-      facilities: true,
-      addressDetail: true,
-      metaDescription: true,
-      ogpTitle: true,
-      ogpDescription: true,
-      ogpImageUrl: true,
-      category: { select: { id: true, name: true } },
-      location: { select: { id: true, name: true, address: true } },
-    },
+  const space = await safeFetch({
+    fetch: () =>
+      prisma.space.findFirst({
+        where: { slug, isPublished: true, isActive: true },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          capacity: true,
+          area: true,
+          hourlyPrice: true,
+          dailyPrice: true,
+          mainImageUrl: true,
+          imageUrls: true,
+          facilities: true,
+          addressDetail: true,
+          metaDescription: true,
+          ogpTitle: true,
+          ogpDescription: true,
+          ogpImageUrl: true,
+          category: { select: { id: true, name: true } },
+          location: { select: { id: true, name: true, address: true } },
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getSpaceBySlug",
   });
 
   if (!space) return null;
 
   return toPlainObject({
     ...space,
+    imageUrls: parseStringArray(space.imageUrls),
+    facilities: parseStringArray(space.facilities),
     lineAddress: formatSpaceLineAddress(
       space.location.address,
       space.addressDetail,
@@ -161,23 +190,30 @@ export async function getRelatedSpaces(
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
 
-  const spaces = await prisma.space.findMany({
-    where: {
-      isPublished: true,
-      isActive: true,
-      id: { not: currentId },
-      ...(categoryId ? { categoryId } : {}),
-    },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      capacity: true,
-      hourlyPrice: true,
-      mainImageUrl: true,
-    },
-    take: limit,
-    orderBy: { name: "asc" },
+  const spaces = await safeFetch({
+    fetch: () =>
+      prisma.space.findMany({
+        where: {
+          isPublished: true,
+          isActive: true,
+          id: { not: currentId },
+          ...(categoryId ? { categoryId } : {}),
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          capacity: true,
+          hourlyPrice: true,
+          mainImageUrl: true,
+        },
+        take: limit,
+        orderBy: { name: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getRelatedSpaces",
   });
 
   return toPlainArray(
@@ -211,10 +247,17 @@ export async function getActiveCategories() {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACE_CATEGORIES);
 
-  const categories = await prisma.spaceCategory.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, icon: true },
-    orderBy: { sortOrder: "asc" },
+  const categories = await safeFetch({
+    fetch: () =>
+      prisma.spaceCategory.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, icon: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getActiveCategories",
   });
 
   return toPlainArray(categories);

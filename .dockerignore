@@ -8,7 +8,7 @@ build
 dist
 
 # Prisma generated (deps stage で再生成するため除外)
-src/shared/generated
+generated
 
 # Source control
 .git

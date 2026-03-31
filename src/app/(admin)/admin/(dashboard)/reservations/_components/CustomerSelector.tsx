@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, User, Mail, Phone, Plus, X } from "lucide-react";
+import { IconSearch, IconUser, IconMail, IconPhone, IconPlus, IconX } from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
@@ -160,7 +160,7 @@ export function CustomerSelector({
             size="sm"
             onClick={handleClearSelection}
           >
-            <X className="mr-1 h-4 w-4" />
+            <IconX className="mr-1 h-4 w-4" />
             変更
           </Button>
         </div>
@@ -168,11 +168,11 @@ export function CustomerSelector({
           <CardContent className="pt-6">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <IconUser className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{selectedCustomer.name}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <IconMail className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
                   {selectedCustomer.email}
                 </span>
@@ -198,12 +198,12 @@ export function CustomerSelector({
           >
             {isNewCustomer ? (
               <>
-                <Search className="mr-1 h-4 w-4" />
+                <IconSearch className="mr-1 h-4 w-4" />
                 既存顧客を検索
               </>
             ) : (
               <>
-                <Plus className="mr-1 h-4 w-4" />
+                <IconPlus className="mr-1 h-4 w-4" />
                 新規顧客として入力
               </>
             )}
@@ -215,7 +215,7 @@ export function CustomerSelector({
       {(!allowNewCustomer || !isNewCustomer) && (
         <div className="space-y-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="名前、メール、電話番号で検索..."
@@ -248,12 +248,12 @@ export function CustomerSelector({
                         </div>
                         <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
-                            <Mail className="h-3 w-3" />
+                            <IconMail className="h-3 w-3" />
                             {customer.email}
                           </div>
                           {customer.phoneNumber && (
                             <div className="flex items-center gap-2">
-                              <Phone className="h-3 w-3" />
+                              <IconPhone className="h-3 w-3" />
                               {customer.phoneNumber}
                             </div>
                           )}

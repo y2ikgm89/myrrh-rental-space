@@ -4,7 +4,7 @@
  * コメント統計カード
  */
 
-import { MessageCircle, Clock, Trash2 } from "lucide-react";
+import { IconMessageCircle, IconClock, IconTrash } from "@tabler/icons-react";
 import type { CommentStats as Stats } from "@/shared/domain/post-comments/types";
 
 type Props = {
@@ -17,7 +17,7 @@ export function CommentStats({ stats }: Props) {
       {/* 総コメント数 */}
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <MessageCircle className="w-4 h-4" />
+          <IconMessageCircle className="w-4 h-4" />
           <span className="text-sm font-medium">総コメント数</span>
         </div>
         <p className="text-2xl font-bold">{stats.total.toLocaleString()}</p>
@@ -26,7 +26,7 @@ export function CommentStats({ stats }: Props) {
       {/* 今日のコメント */}
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <Clock className="w-4 h-4" />
+          <IconClock className="w-4 h-4" />
           <span className="text-sm font-medium">今日のコメント</span>
         </div>
         <p className="text-2xl font-bold text-primary">
@@ -37,7 +37,7 @@ export function CommentStats({ stats }: Props) {
       {/* 削除済み */}
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          <Trash2 className="w-4 h-4" />
+          <IconTrash className="w-4 h-4" />
           <span className="text-sm font-medium">削除済み</span>
         </div>
         <p className="text-2xl font-bold text-destructive">

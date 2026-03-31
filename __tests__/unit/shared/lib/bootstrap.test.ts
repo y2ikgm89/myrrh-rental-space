@@ -15,32 +15,6 @@ import { describe, test, expect, mock, beforeEach } from "bun:test";
 // server-only 依存を回避
 mock.module("server-only", () => ({}));
 
-// logError をモック（logger-core は server-only ではないが念のため）
-const mockLogError = mock(
-  (_error: unknown, _context?: unknown): void => undefined,
-);
-
-mock.module("@/shared/lib/errors/logger-core", () => ({
-  logError: mockLogError,
-}));
-
-mock.module("@/shared/lib/errors/types", () => ({
-  ErrorCategory: {
-    DATABASE: "DATABASE",
-    EXTERNAL_API: "EXTERNAL_API",
-    VALIDATION: "VALIDATION",
-    AUTHORIZATION: "AUTHORIZATION",
-    CACHE: "CACHE",
-    UNKNOWN: "UNKNOWN",
-  },
-  ErrorSeverity: {
-    CRITICAL: "CRITICAL",
-    HIGH: "HIGH",
-    MEDIUM: "MEDIUM",
-    LOW: "LOW",
-  },
-}));
-
 // bootstrapSystemPagesCommand のモック
 const mockBootstrapSystemPagesCommand = mock(
   (_db: unknown): Promise<void> => Promise.resolve(),
@@ -82,7 +56,6 @@ import { bootstrapSystemPages } from "@/shared/lib/bootstrap";
 describe("bootstrapSystemPages", () => {
   beforeEach(() => {
     mockBootstrapSystemPagesCommand.mockClear();
-    mockLogError.mockClear();
     mockBootstrapSystemPagesCommand.mockImplementation(
       (_db: unknown): Promise<void> => Promise.resolve(),
     );
@@ -113,10 +86,6 @@ describe("bootstrapSystemPages", () => {
           Promise.reject(new Error("DB connection failed")),
       );
 
-      // bootstrapSystemPages 自体はエラーを再スローしない（サーバー起動をブロックしない）
-      // bootstrap.ts の実装は内部で await しているが try/catch はコマンド側にある
-      // bootstrap.ts 自体は thin wrapper なので例外をスローする可能性がある
-      // ここでは呼び出しが完了することのみ検証する
       let threw = false;
       try {
         await bootstrapSystemPages();
@@ -124,9 +93,6 @@ describe("bootstrapSystemPages", () => {
         threw = true;
       }
 
-      // bootstrap.ts は直接 await しているため、コマンドが throw すると
-      // 呼び出し元にバブルアップする（system-pages-commands 側で catch）
-      // このテストは実装のエラー伝播挙動を文書化する
       expect(typeof threw).toBe("boolean");
     });
   });

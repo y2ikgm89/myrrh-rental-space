@@ -6,7 +6,7 @@ import { Stack } from "@/public/components/design-system/stack";
 
 export function SocialLoginButtons() {
   return (
-    <Stack gap="md">
+    <Stack gap="lg">
       <Button
         variant="secondary"
         size="lg"

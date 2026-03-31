@@ -33,7 +33,7 @@ import {
   $wrapSelectionInMarkNode,
   MarkNode,
 } from "@lexical/mark";
-import { MessageSquarePlus } from "lucide-react";
+import { IconMessagePlus } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================
@@ -173,7 +173,7 @@ export function CommentButton({ onClick, disabled }: CommentButtonProps) {
       aria-label="コメントを追加"
       title="コメントを追加"
     >
-      <MessageSquarePlus className="h-4 w-4" />
+      <IconMessagePlus className="h-4 w-4" />
     </Button>
   );
 }

@@ -6,7 +6,7 @@
  * アップロードファイルのプレビュー
  */
 
-import { X } from "lucide-react";
+import { IconX } from "@tabler/icons-react";
 
 interface FilePreviewProps {
   file: File;
@@ -47,7 +47,7 @@ export function FilePreview({
           className="rounded p-1 hover:bg-muted disabled:opacity-50"
           aria-label="ファイルを削除"
         >
-          <X className="h-4 w-4" />
+          <IconX className="h-4 w-4" />
         </button>
       </div>
     </div>

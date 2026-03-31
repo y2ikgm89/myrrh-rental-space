@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/public/components/design-system/button";
+import { Textarea } from "@/public/components/design-system/textarea";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +22,17 @@ interface CancelButtonProps {
 export function CancelButton({ reservationId }: CancelButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
     setError(null);
     startTransition(async () => {
-      const result = await cancelReservationAction(reservationId);
+      const result = await cancelReservationAction(
+        reservationId,
+        reason || null,
+      );
       if (isMutationError(result)) {
         setError(result.error);
         return;
@@ -44,6 +49,7 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
         size="sm"
         onClick={() => {
           setError(null);
+          setReason("");
           setOpen(true);
         }}
       >
@@ -59,10 +65,23 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
             </DialogDescription>
           </DialogHeader>
 
+          <Textarea
+            label="キャンセル理由（任意）"
+            rows={3}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="キャンセルの理由をお聞かせください"
+            maxLength={500}
+            disabled={isPending}
+          />
+
           {error != null && (
-            <p className="text-sm text-destructive" role="alert">
+            <div
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+              role="alert"
+            >
               {error}
-            </p>
+            </div>
           )}
 
           <DialogFooter className="mt-2 gap-2">

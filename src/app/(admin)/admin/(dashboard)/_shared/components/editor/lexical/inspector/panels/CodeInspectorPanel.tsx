@@ -1,5 +1,5 @@
 /**
- * Code Inspector Panel
+ * IconCode Inspector Panel
  *
  * @description CodeNode の言語セレクタパネル
  */

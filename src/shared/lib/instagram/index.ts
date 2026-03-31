@@ -403,7 +403,7 @@ export async function fetchInstagramUserInfo(
       ? errorResult.data.error?.message
       : undefined;
     throw new Error(
-      errorMessage || `User info fetch failed: ${response.status}`,
+      errorMessage || `IconUser info fetch failed: ${response.status}`,
     );
   }
 

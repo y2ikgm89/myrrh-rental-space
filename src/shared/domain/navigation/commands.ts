@@ -32,7 +32,6 @@ export const socialLinkInputSchema = z.object({
     .string()
     .min(1, { error: "URLは必須です" })
     .url({ error: "有効なURLを入力してください" }),
-  iconUrl: z.string().nullable().optional(),
   order: z.number().int().min(0),
   isActive: z.boolean().default(true),
   showOnDesktop: z.boolean().default(true),
@@ -128,10 +127,7 @@ export async function updateNavigationOrder(
 }
 
 function normalizeSocialLinkInput(data: SocialLinkInput) {
-  return {
-    ...data,
-    iconUrl: data.iconUrl ?? null,
-  };
+  return { ...data };
 }
 
 export async function createSocialLink(

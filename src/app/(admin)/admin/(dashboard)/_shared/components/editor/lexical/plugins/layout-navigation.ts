@@ -1,5 +1,5 @@
 /**
- * カラムレイアウト内のキャレット移動（Lexical Playground の Layout と同様の境界脱出）
+ * カラムレイアウト内のキャレット移動（Lexical Playground の IconLayout と同様の境界脱出）
  *
  * @see https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/nodes/LayoutContainerNode.ts
  */

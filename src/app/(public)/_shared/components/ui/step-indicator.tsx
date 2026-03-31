@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Check } from "lucide-react";
+import { IconCheck } from "@tabler/icons-react";
 
 interface Step {
   readonly number: number;
@@ -42,7 +42,7 @@ export function StepIndicator({
                 }`}
               >
                 {isCompleted ? (
-                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <IconCheck className="h-4 w-4" aria-hidden="true" />
                 ) : (
                   step.number
                 )}

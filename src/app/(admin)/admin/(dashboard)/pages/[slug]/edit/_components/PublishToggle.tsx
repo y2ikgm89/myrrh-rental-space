@@ -7,7 +7,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { IconEye, IconEyeOff, IconLoader2 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { Badge } from "@/admin/components/ui/badge";
 import { togglePagePublished } from "@/admin/actions/page";
@@ -51,11 +51,11 @@ export function PublishToggle({ slug, isPublished }: PublishToggleProps) {
         disabled={isPending}
       >
         {isPending ? (
-          <LoaderCircle className="h-4 w-4 animate-spin mr-1" />
+          <IconLoader2 className="h-4 w-4 animate-spin mr-1" />
         ) : isPublished ? (
-          <EyeOff className="h-4 w-4 mr-1" />
+          <IconEyeOff className="h-4 w-4 mr-1" />
         ) : (
-          <Eye className="h-4 w-4 mr-1" />
+          <IconEye className="h-4 w-4 mr-1" />
         )}
         {isPublished ? "非公開にする" : "公開する"}
       </Button>

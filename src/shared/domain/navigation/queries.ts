@@ -38,7 +38,6 @@ export type SocialLinkData = {
   id: string;
   platform: SocialPlatform;
   url: string;
-  iconUrl: string | null;
   order: number;
   isActive: boolean;
   showOnDesktop: boolean;
@@ -179,7 +178,6 @@ export async function getSocialLinks(
             id: true,
             platform: true,
             url: true,
-            iconUrl: true,
             order: true,
             isActive: true,
             showOnDesktop: true,

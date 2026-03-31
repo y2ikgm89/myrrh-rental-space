@@ -401,3 +401,19 @@ export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {
   [PaymentStatus.REFUNDED]: "outline",
   [PaymentStatus.FAILED]: "destructive",
 };
+
+// ---------------------------------------------------------------------------
+// Cancellation tracking (non-Prisma enum — DB stores as VARCHAR)
+// ---------------------------------------------------------------------------
+
+export const CANCELLED_BY = {
+  CUSTOMER: "CUSTOMER",
+  ADMIN: "ADMIN",
+} as const;
+
+export type CancelledByType = (typeof CANCELLED_BY)[keyof typeof CANCELLED_BY];
+
+export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
+  [CANCELLED_BY.CUSTOMER]: "顧客",
+  [CANCELLED_BY.ADMIN]: "管理者",
+};

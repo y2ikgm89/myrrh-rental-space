@@ -59,7 +59,7 @@ src/shared/          — Shared utilities (no CSS variable dependency)
 - **Cache constants**: `src/shared/lib/constants/cache.ts`
 - **`safeFetch` pattern**: All public data fetching uses `safeFetch` from `@/shared/lib/errors` with `fallback`, `category`, `severity`
 - **Proxy (not middleware)**: Next.js 16 renamed `middleware.ts` → `proxy.ts`. Located at `src/proxy.ts`
-- **Prisma generated client**: `src/shared/generated/prisma/` (custom output, not `node_modules/.prisma/`)
+- **Prisma generated client**: `generated/prisma/` (custom output, not `node_modules/.prisma/`)
 
 ### Path aliases
 

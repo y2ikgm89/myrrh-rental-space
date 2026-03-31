@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/admin/components/ui/dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { addCustomApiKey, deleteCustomApiKey } from "@/admin/actions/api-keys";
 import type { CustomApiKeyData } from "@/admin/types/api-keys";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -119,7 +119,7 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
+                <IconPlus className="mr-2 h-4 w-4" />
                 追加
               </Button>
             </DialogTrigger>
@@ -242,7 +242,7 @@ export function CustomApiKeysSection({ keys }: CustomApiKeysSectionProps) {
                   disabled={isPending}
                   className="ml-4"
                 >
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                  <IconTrash className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
             ))}

@@ -93,6 +93,8 @@ ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 
 ### runner ステージ
 
+ビルド・実行とも **Bun**。`standalone` の `server.js` を `bun server.js` で起動する。
+
 ```dockerfile
 FROM base AS runner
 RUN apk add --no-cache libc6-compat && \
@@ -115,6 +117,8 @@ CMD ["bun", "server.js"]
 ```
 
 **注意**: `node_modules/@prisma` は WASM ランタイムエンジン。standalone output には含まれないためコピー必須。
+
+**Cloud Run スタートアップ**: [公式ドキュメント](https://cloud.google.com/run/docs/configuring/healthchecks) の **TCP プローブ**（`tcpSocket.port=8080`）でリッスン確認。DB 疎通は `GET /api/health` を監視・手動確認に使う。
 
 ## Cloud Build パターン
 
@@ -196,12 +200,12 @@ substitutions:
 
 ### .dockerignore
 
-Docker ビルドコンテキストから除外。**`src/shared/generated` を含める**（deps ステージで再生成するため）:
+Docker ビルドコンテキストから除外。**`generated` を含める**（deps ステージで再生成するため）:
 
 ```
 node_modules
 .next
-src/shared/generated    # deps ステージで再生成
+generated    # deps ステージで再生成
 .git
 .env
 .env.*
@@ -299,18 +303,18 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 6. **Docker ビルド内での `bun install` 二重実行禁止**
    - deps ステージでのみ `bun install`。builder は `COPY --from=deps` で取得
 
-7. **`src/shared/generated` の builder COPY 漏れ禁止**
+7. **`generated` の builder COPY 漏れ禁止**
    - `.gitignore` で除外されているため Cloud Build に含まれない
-   - `COPY --from=deps /app/src/shared/generated ./src/shared/generated` が必須
+   - `COPY --from=deps /app/generated ./generated` が必須
 
    ```dockerfile
    # NG: .gitignore で除外されているため Cloud Build に含まれない → ビルドエラー
    COPY --from=deps /app/node_modules ./node_modules
-   COPY . .  # ← src/shared/generated/ が存在しない
+   COPY . .  # ← generated/ が存在しない
 
    # OK: deps ステージから明示的にコピー
    COPY --from=deps /app/node_modules ./node_modules
-   COPY --from=deps /app/src/shared/generated ./src/shared/generated
+   COPY --from=deps /app/generated ./generated
    COPY . .
    ```
 
@@ -321,7 +325,7 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 
 | パス                            | 内容                                       |
 | ------------------------------- | ------------------------------------------ |
-| `Dockerfile`                    | 3-stage multi-stage build                  |
+| `Dockerfile`                    | multi-stage（deps / builder-base / builder / runner） |
 | `cloudbuild.yaml`               | Cloud Build + Cloud Run deploy             |
 | `.dockerignore`                 | Docker ビルドコンテキスト除外              |
 | `.gcloudignore`                 | Cloud Build ソースアップロード除外         |

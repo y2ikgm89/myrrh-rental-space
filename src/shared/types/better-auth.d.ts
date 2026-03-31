@@ -10,7 +10,7 @@
 import type { Role } from "@/shared/db/enums";
 
 declare module "better-auth" {
-  interface User {
+  interface IconUser {
     role: Role;
   }
 }

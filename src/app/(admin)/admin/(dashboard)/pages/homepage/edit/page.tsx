@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { IconArrowLeft, IconExternalLink } from "@tabler/icons-react";
 import { getInstagramConfig } from "@/admin/queries/instagram";
 import { getPageBySlug } from "@/admin/queries/page";
 import { Button, Badge, Breadcrumb } from "@/admin/components/ui";
@@ -52,7 +52,7 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
         <div className="flex items-center gap-4">
           <Button asChild variant="ghost" size="icon">
             <Link href="/admin/pages">
-              <ArrowLeft className="h-4 w-4" />
+              <IconArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
@@ -69,7 +69,7 @@ export default async function HomepageEditPage(): Promise<ReactElement> {
         </div>
         <Button asChild variant="outline" size="sm">
           <a href="/" target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="h-4 w-4 mr-1" />
+            <IconExternalLink className="h-4 w-4 mr-1" />
             プレビュー
           </a>
         </Button>

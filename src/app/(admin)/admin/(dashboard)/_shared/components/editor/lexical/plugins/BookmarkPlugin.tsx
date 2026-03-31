@@ -12,7 +12,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import { COMMAND_PRIORITY_LOW, createCommand } from "lexical";
-import { LoaderCircle, ExternalLink, CircleAlert } from "lucide-react";
+import { IconLoader2, IconExternalLink, IconAlertCircle } from "@tabler/icons-react";
 import { logger } from "@/shared/lib/logger";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
@@ -177,7 +177,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                 disabled={!url.trim() || isPending}
               >
                 {isPending ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   "取得"
                 )}
@@ -188,7 +188,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
           {/* エラー表示 */}
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive">
-              <CircleAlert className="h-4 w-4" />
+              <IconAlertCircle className="h-4 w-4" />
               <span>{error}</span>
             </div>
           )}
@@ -211,7 +211,7 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                         }}
                       />
                     ) : (
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                      <IconExternalLink className="w-4 h-4 text-muted-foreground" />
                     )}
                     <span className="text-xs text-muted-foreground truncate">
                       {preview.siteName || new URL(preview.url).hostname}

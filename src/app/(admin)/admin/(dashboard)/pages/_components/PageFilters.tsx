@@ -8,7 +8,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryStates } from "nuqs";
-import { Search } from "lucide-react";
+import { IconSearch } from "@tabler/icons-react";
 import {
   Input,
   Select,
@@ -51,7 +51,7 @@ export function PageFilters() {
     <div className="flex flex-wrap gap-2 items-center">
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           placeholder="タイトル・スラッグで検索..."

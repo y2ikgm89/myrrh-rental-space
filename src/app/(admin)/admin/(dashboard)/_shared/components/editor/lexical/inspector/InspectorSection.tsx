@@ -7,7 +7,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
 type InspectorSectionProps = {
@@ -35,7 +35,7 @@ export function InspectorSection({
         className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/50 transition-colors"
       >
         <span>{title}</span>
-        <ChevronDown
+        <IconChevronDown
           className={cn(
             "h-4 w-4 text-muted-foreground transition-transform",
             isOpen && "rotate-180",

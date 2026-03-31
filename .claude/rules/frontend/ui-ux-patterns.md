@@ -132,7 +132,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "modern clean" --domain s
 - Next.js 16 + React 19
 - Tailwind CSS 4（CSS-first設定）
 - shadcn/ui（Radix UI + Tailwind Variants）
-- Lucide React（アイコン）
+- Tabler Icons React（アイコン — `@tabler/icons-react`）
 
 ### CSSアーキテクチャ（Multiple Root Layouts）
 
@@ -177,7 +177,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
 
 ### Visual Quality
 
-- [ ] 絵文字をアイコンとして使用していない（SVG: Lucide使用）
+- [ ] 絵文字をアイコンとして使用していない（SVG: Tabler Icons使用）
 - [ ] アイコンサイズが統一されている（w-5 h-5 or w-6 h-6）
 - [ ] ホバー状態でレイアウトシフトが発生しない
 - [ ] テーマカラーを直接使用（bg-primary, text-foreground）
@@ -254,7 +254,7 @@ python3 .agents/skills/ui-ux-pro-max/scripts/search.py "<keyword>" --stack nextj
    ```
 
 5. **絵文字アイコン禁止**
-   - Lucide React のSVGアイコンを使用
+   - Tabler Icons React のSVGアイコンを使用
 
 ## 関連ルール・スキル
 

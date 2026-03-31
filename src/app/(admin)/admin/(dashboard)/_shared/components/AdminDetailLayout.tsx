@@ -1,5 +1,5 @@
 // Server Component — 'use client' なし
-import { ArrowLeft } from "lucide-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Button } from "@/admin/components/ui/button";
@@ -27,7 +27,7 @@ export function AdminDetailLayout({
       <div className="flex flex-col gap-1">
         <Button variant="ghost" size="sm" className="-ml-2 w-fit" asChild>
           <Link href={backHref}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <IconArrowLeft className="mr-2 h-4 w-4" />
             {backLabel}
           </Link>
         </Button>

@@ -22,7 +22,7 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from "@lexical/selection";
-import { Check, ChevronDown, Highlighter, X } from "lucide-react";
+import { IconCheck, IconChevronDown, IconHighlight, IconX } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -180,7 +180,7 @@ export function HighlightPlugin() {
           title="ハイライト"
         >
           <div className="relative">
-            <Highlighter className="h-4 w-4" />
+            <IconHighlight className="h-4 w-4" />
             {hasHighlight && (
               <div
                 className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
@@ -190,7 +190,7 @@ export function HighlightPlugin() {
               />
             )}
           </div>
-          <ChevronDown className="h-3 w-3" />
+          <IconChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <HighlightColorMenu
@@ -237,7 +237,7 @@ function HighlightColorMenu({
               <span>{config.label}</span>
             </span>
             {highlightColor === color && (
-              <Check className="h-4 w-4 text-primary" />
+              <IconCheck className="h-4 w-4 text-primary" />
             )}
           </DropdownMenuItem>
         );
@@ -248,7 +248,7 @@ function HighlightColorMenu({
         className="flex items-center gap-2"
         disabled={!hasHighlight}
       >
-        <X className="h-4 w-4" />
+        <IconX className="h-4 w-4" />
         <span>{compactRemoveLabel ? "解除" : "ハイライト解除"}</span>
       </DropdownMenuItem>
     </DropdownMenuContent>
@@ -281,7 +281,7 @@ export function HighlightCompact({
           title="ハイライト"
         >
           <div className="relative">
-            <Highlighter className="h-4 w-4" />
+            <IconHighlight className="h-4 w-4" />
             {hasHighlight && (
               <div
                 className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full"
