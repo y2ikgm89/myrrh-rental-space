@@ -3,11 +3,11 @@
 /**
  * 右パネル — コンテンツ/デザインのタブ切替
  *
- * コンテンツタブ: タイトル入力 + configFormRegistry[type]
+ * コンテンツタブ: タイトル入力 + AutoSectionForm（スキーマ駆動）
  * デザインタブ: 汎化版 DesignPanel
  */
 
-import { Suspense, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Input,
@@ -25,10 +25,8 @@ import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
-import {
-  configFormRegistry,
-  type ConfigFormSavePayload,
-} from "../../_sections/_components/config-forms";
+import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms";
+import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
 import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
 
 interface SectionDetailPanelProps {
@@ -72,8 +70,6 @@ export function SectionDetailPanel({
       />
     );
   }
-
-  const ConfigForm = configFormRegistry[section.type];
 
   const handleConfigSave = (payload: ConfigFormSavePayload) => {
     startTransition(async () => {
@@ -140,25 +136,13 @@ export function SectionDetailPanel({
             isPending={isPending}
           />
 
-          {/* Config Form */}
-          {ConfigForm ? (
-            <Suspense
-              fallback={
-                <div className="h-40 animate-pulse rounded-lg bg-muted" />
-              }
-            >
-              <ConfigForm
-                section={section}
-                onSave={handleConfigSave}
-                isPending={isPending}
-                onDirtyChange={setConfigDirty}
-              />
-            </Suspense>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              このセクションタイプにはコンテンツ設定がありません
-            </p>
-          )}
+          {/* Config Form — AutoSectionForm がスキーマ駆動で UI を生成 */}
+          <AutoSectionForm
+            section={section}
+            onSave={handleConfigSave}
+            isPending={isPending}
+            onDirtyChange={setConfigDirty}
+          />
         </TabsContent>
 
         <TabsContent value="design" className="mt-4">
