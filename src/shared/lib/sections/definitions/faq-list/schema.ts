@@ -1,0 +1,50 @@
+import { z } from "zod";
+
+import { field } from "../../field-helpers";
+
+const variants = ["default", "bordered", "minimal"] as const;
+const containerWidths = ["sm", "md", "lg", "full"] as const;
+const initialOpenOptions = ["first", "none", "all"] as const;
+
+export const faqListConfigSchema = z.object({
+  sectionLabel: field
+    .text("セクションラベル", { default: "FAQ" })
+    .pipe(z.string().max(50)),
+  title: field
+    .text("タイトル", { default: "よくあるご質問" })
+    .pipe(z.string().max(100)),
+  categoryId: z
+    .string()
+    .uuid({ error: "有効なUUIDを入力してください" })
+    .optional(),
+  maxItems: field.number("最大表示件数", { min: 1, max: 50, default: 10 }),
+  showViewAllLink: field.boolean("全件リンクを表示", { default: true }),
+  viewAllText: field
+    .text("全件リンクテキスト", { default: "全てのFAQ" })
+    .pipe(z.string().max(50)),
+  viewAllUrl: field
+    .text("全件リンクURL", { default: "/faq" })
+    .pipe(z.string().max(200)),
+  items: field
+    .array("カスタム項目", {
+      fields: {
+        question: field.text("質問"),
+        answer: field.textarea("回答"),
+      },
+    })
+    .optional(),
+  variant: field.select("バリエーション", {
+    options: variants,
+    default: "default",
+  }),
+  containerWidth: field.select("コンテナ幅", {
+    options: containerWidths,
+    default: "md",
+  }),
+  initialOpen: field.select("初期展開", {
+    options: initialOpenOptions,
+    default: "first",
+  }),
+});
+
+export type FaqListConfig = z.infer<typeof faqListConfigSchema>;
