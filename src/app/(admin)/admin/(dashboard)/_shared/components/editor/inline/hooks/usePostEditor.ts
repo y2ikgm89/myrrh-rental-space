@@ -23,7 +23,7 @@ import {
   deletePost,
   publishPost,
   unpublishPost,
-} from "@/admin/actions/post";
+} from "@/admin/actions/post/mutations";
 import { createPreviewHandlers } from "@/admin/hooks";
 import { renderEditorStateJsonToHtmlClient } from "@/admin/components/editor/lexical/preview/render-editor-state-to-html-client";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";

@@ -7,7 +7,7 @@ import {
   ActionDropdownItem,
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
-import { publishPost, unpublishPost } from "@/admin/actions/post";
+import { publishPost, unpublishPost } from "@/admin/actions/post/mutations";
 import { PostStatus } from "@/shared/db/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

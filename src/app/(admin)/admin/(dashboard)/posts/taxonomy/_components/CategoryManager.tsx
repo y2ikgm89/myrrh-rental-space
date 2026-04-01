@@ -56,7 +56,7 @@ import {
   updatePostCategory,
   deletePostCategory,
   updatePostCategoryOrder,
-} from "@/admin/actions/post";
+} from "@/admin/actions/post/taxonomy";
 import type { PostCategoryData } from "@/shared/domain/posts/types";
 import type { PostCategoryInput } from "@/admin/lib/validations/post";
 import { cn } from "@/shared/lib/cn";

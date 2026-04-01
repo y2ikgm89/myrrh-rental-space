@@ -12,7 +12,13 @@ import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
-import { IconArrowLeft, IconExternalLink, IconPhoto, IconDeviceFloppy, IconTrash } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconExternalLink,
+  IconPhoto,
+  IconDeviceFloppy,
+  IconTrash,
+} from "@tabler/icons-react";
 import {
   Button,
   Card,
@@ -36,7 +42,7 @@ import {
   updatePostTag,
   deletePostCategory,
   deletePostTag,
-} from "@/admin/actions/post";
+} from "@/admin/actions/post/taxonomy";
 import type {
   PostCategoryData,
   PostTagData,

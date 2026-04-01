@@ -18,7 +18,7 @@ import {
   deletePost,
   publishPost,
   unpublishPost,
-} from "@/admin/actions/post";
+} from "@/admin/actions/post/mutations";
 import type { PostData } from "@/shared/domain/posts/types";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { PostPreviewData } from "@/shared/types";

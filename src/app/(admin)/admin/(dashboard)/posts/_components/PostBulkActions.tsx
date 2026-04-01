@@ -17,7 +17,10 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
-import { bulkTogglePostPublished, bulkDeletePosts } from "@/admin/actions/post";
+import {
+  bulkTogglePostPublished,
+  bulkDeletePosts,
+} from "@/admin/actions/post/bulk";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 interface PostBulkActionsProps {

@@ -42,7 +42,7 @@ import {
   createPostTag,
   updatePostTag,
   deletePostTag,
-} from "@/admin/actions/post";
+} from "@/admin/actions/post/taxonomy";
 import type { PostTagData } from "@/shared/domain/posts/types";
 import type { PostTagInput } from "@/admin/lib/validations/post";
 import { isMutationError } from "@/shared/lib/mutation-result";

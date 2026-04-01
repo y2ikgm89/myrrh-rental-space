@@ -30,7 +30,10 @@ import {
   postConfig,
   type PostSidePanelExtra,
 } from "@/admin/components/editor/inline";
-import { createPostCategory, createPostTag } from "@/admin/actions/post";
+import {
+  createPostCategory,
+  createPostTag,
+} from "@/admin/actions/post/taxonomy";
 import type {
   PostCategoryData,
   PostData,
