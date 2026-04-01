@@ -144,6 +144,7 @@ paths:
 - **`prisma migrate reset` は AI エージェント保護が発動** — `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="<ユーザーの同意メッセージ>"` 環境変数が必要。ユーザーに確認し、明示的な同意を得てから実行する
 - **DB ドリフト時**: `migrate reset --force`（同意環境変数付き） → seed 再実行が標準フロー
 - **マイグレーションに余分な ALTER TABLE が混入** — Prisma の内部差分検出に起因。`@default(cuid())` 等の表現変更で全テーブルの `ALTER COLUMN DROP DEFAULT` が生成されることがある。機能的に問題なし
+- **`cuid()` の VarChar 長は 30 以上** — `@default(cuid())` は 24-30 文字を生成。`@db.VarChar(21)` では切り詰めエラー。新規モデルは `@db.VarChar(30)` を使用。既存モデル（Reservation 等）は `@db.Uuid` のため影響なし
 
 ## デプロイ
 
