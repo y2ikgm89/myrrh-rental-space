@@ -256,6 +256,8 @@ export function Header({
   const motionOk = useMotionPreference();
   const mobileMenuId = useId();
 
+  const [scrolled, setScrolled] = useState(false);
+
   // Bridge React state → ref for reading inside ScrollTrigger callback
   const menuOpenRef = useRef(false);
   useEffect(() => {
@@ -295,7 +297,7 @@ export function Header({
         let lastDirection: -1 | 0 | 1 = 0;
         let lastScroll = 0;
         let hidden = false;
-        let scrolled = false;
+        let isScrolled = false;
 
         const show = () => {
           if (!hidden) return;
@@ -309,9 +311,10 @@ export function Header({
           header.style.translate = "0 -100%";
         };
 
-        const setScrolled = (next: boolean) => {
-          if (scrolled === next) return;
-          scrolled = next;
+        const updateScrolled = (next: boolean) => {
+          if (isScrolled === next) return;
+          isScrolled = next;
+          setScrolled(next);
           // solid モードでは背景はCSSクラスで固定、style操作不要
           if (backgroundMode === HeaderBackgroundMode.solid) return;
           // transparent モードのみ style で制御
@@ -333,7 +336,7 @@ export function Header({
             const direction: -1 | 1 = self.direction >= 0 ? 1 : -1;
 
             // Background opacity (applies to all modes)
-            setScrolled(scroll > SCROLL_THRESHOLD);
+            updateScrolled(scroll > SCROLL_THRESHOLD);
 
             // always_visible: background change only, no hide/show
             if (scrollBehavior === HeaderScrollBehavior.always_visible) return;
@@ -498,6 +501,15 @@ export function Header({
             <Button variant="primary" size="sm" href="/reservation">
               予約する
             </Button>
+            <Link
+              href="/reservation"
+              className={cn(
+                "border border-accent text-accent rounded-full px-4 py-1.5 text-sm tracking-wide transition-opacity duration-300",
+                scrolled ? "opacity-100" : "pointer-events-none opacity-0",
+              )}
+            >
+              ご予約
+            </Link>
           </div>
 
           {/* Hamburger (mobile) */}
