@@ -19,7 +19,12 @@
 
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, Prisma, Role } from "../generated/prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  Role,
+  EventStatus,
+} from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
@@ -70,6 +75,9 @@ async function clearAllData() {
     // 顧客・問い合わせ
     prisma.inquiry.deleteMany(),
     prisma.customer.deleteMany(),
+
+    // イベント
+    prisma.event.deleteMany(),
 
     // スペース関連
     prisma.iCalToken.deleteMany(),
@@ -2515,29 +2523,41 @@ async function seedSocialLinks() {
 // =============================================================================
 
 async function seedSystemPageSections() {
-  // Seed homepage sections (pageId: null)
-  const existingHomepageCount = await prisma.section.count({
-    where: { pageId: null },
+  // Seed homepage sections (linked to Page record with slug "home")
+  const homePage = await prisma.page.findUnique({
+    where: { slug: "home" },
+    select: { id: true },
   });
-  if (existingHomepageCount > 0) {
-    console.log("⏭️ Homepage sections already exist");
+
+  if (!homePage) {
+    console.log(
+      "⚠️ Homepage Page record not found, skipping homepage sections",
+    );
   } else {
-    const homeSections = DEFAULT_PAGE_SECTIONS["home"];
-    if (homeSections) {
-      for (const section of homeSections) {
-        await prisma.section.create({
-          data: {
-            type: section.type,
-            title: section.title,
-            config: section.config,
-            design: section.design ?? {},
-            contentHtml: section.content,
-            order: section.order,
-            isActive: section.isActive,
-          },
-        });
+    const existingHomepageCount = await prisma.section.count({
+      where: { pageId: homePage.id },
+    });
+    if (existingHomepageCount > 0) {
+      console.log("⏭️ Homepage sections already exist");
+    } else {
+      const homeSections = DEFAULT_PAGE_SECTIONS["home"];
+      if (homeSections) {
+        for (const section of homeSections) {
+          await prisma.section.create({
+            data: {
+              pageId: homePage.id,
+              type: section.type,
+              title: section.title,
+              config: section.config,
+              design: section.design ?? {},
+              contentHtml: section.content,
+              order: section.order,
+              isActive: section.isActive,
+            },
+          });
+        }
+        console.log("✅ Created homepage sections");
       }
-      console.log("✅ Created homepage sections");
     }
   }
 
@@ -2592,6 +2612,78 @@ async function seedSystemPageSections() {
 }
 
 // =============================================================================
+// Seed: Events
+// =============================================================================
+
+async function seedEvents() {
+  const events = [
+    {
+      title: "ヨガ＆マインドフルネス体験会",
+      slug: "yoga-mindfulness-workshop",
+      description:
+        "初心者歓迎のヨガ体験会です。心身のリラクゼーションを体験しましょう。",
+      startTime: new Date("2026-05-15T10:00:00+09:00"),
+      endTime: new Date("2026-05-15T12:00:00+09:00"),
+      capacity: 15,
+      price: 2000,
+      location: "スタジオA",
+      status: EventStatus.PUBLISHED,
+      registrationOpen: true,
+      publishedAt: new Date(),
+    },
+    {
+      title: "写真撮影ワークショップ",
+      slug: "photography-workshop",
+      description:
+        "プロカメラマンによる撮影テクニック講座。カメラをお持ちください。",
+      startTime: new Date("2026-05-20T14:00:00+09:00"),
+      endTime: new Date("2026-05-20T17:00:00+09:00"),
+      capacity: 10,
+      price: 5000,
+      location: "ギャラリールーム",
+      status: EventStatus.PUBLISHED,
+      registrationOpen: true,
+      publishedAt: new Date(),
+    },
+    {
+      title: "ビジネスネットワーキングイベント",
+      slug: "business-networking",
+      description: "地域のビジネスオーナーが集まる交流会。軽食付き。",
+      startTime: new Date("2026-06-01T18:00:00+09:00"),
+      endTime: new Date("2026-06-01T20:00:00+09:00"),
+      capacity: 30,
+      price: 0,
+      location: "メインホール",
+      status: EventStatus.DRAFT,
+      registrationOpen: false,
+    },
+    {
+      title: "キッズアートスクール",
+      slug: "kids-art-school",
+      description: "お子様向けのアート教室。絵の具や材料は全てご用意します。",
+      startTime: new Date("2026-04-10T10:00:00+09:00"),
+      endTime: new Date("2026-04-10T12:00:00+09:00"),
+      capacity: 8,
+      price: 1500,
+      status: EventStatus.CANCELLED,
+      registrationOpen: false,
+    },
+  ];
+
+  let createdCount = 0;
+  for (const eventData of events) {
+    await prisma.event.upsert({
+      where: { slug: eventData.slug },
+      update: {},
+      create: eventData,
+    });
+    createdCount++;
+  }
+
+  console.log(`✅ Upserted ${createdCount.toString()} events`);
+}
+
+// =============================================================================
 // Main
 // =============================================================================
 
@@ -2635,6 +2727,9 @@ async function seedAll(email: string, password: string, name: string) {
   await seedAnnouncementBar();
   await seedSocialLinks();
   await seedSystemPageSections();
+
+  // Phase 8: イベント
+  await seedEvents();
 }
 
 async function seedDemo() {
@@ -2684,6 +2779,9 @@ async function seedDemo() {
 
   // 予約
   await seedReservations();
+
+  // イベント
+  await seedEvents();
 }
 
 async function main() {

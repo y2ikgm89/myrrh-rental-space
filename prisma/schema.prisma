@@ -1669,7 +1669,7 @@ model SpaceReview {
 // ==============================================
 
 model Event {
-  id                    String      @id @default(cuid()) @db.VarChar(21)
+  id                    String      @id @default(cuid()) @db.VarChar(30)
   title                 String      @db.VarChar(200)
   slug                  String      @unique @db.VarChar(100)
   description           String?     @db.Text
