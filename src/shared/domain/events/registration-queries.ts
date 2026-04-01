@@ -29,6 +29,25 @@ export async function getRegistrationCount(eventId: string) {
   return result._sum.numberOfPeople ?? 0;
 }
 
+export async function getEventDetailsForEmail(eventId: string) {
+  return prisma.event.findFirst({
+    where: { id: eventId, deletedAt: null },
+    select: {
+      startTime: true,
+      endTime: true,
+      location: true,
+      capacity: true,
+      _count: {
+        select: {
+          registrations: {
+            where: { status: RegistrationStatus.CONFIRMED },
+          },
+        },
+      },
+    },
+  });
+}
+
 export async function getCustomerEventRegistrations(customerId: string) {
   return prisma.eventRegistration.findMany({
     where: { customerId },
