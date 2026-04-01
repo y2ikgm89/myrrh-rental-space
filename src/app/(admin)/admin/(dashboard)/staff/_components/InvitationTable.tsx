@@ -37,24 +37,34 @@ export function InvitationTable({ invitations }: InvitationTableProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invitations.map((invitation) => (
-                <TableRow key={invitation.id}>
-                  <TableCell>{invitation.email}</TableCell>
-                  <TableCell>{invitation.name ?? "(未設定)"}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <RoleBadge role={invitation.role} />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDateTimeShort(invitation.expiresAt)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDateShort(invitation.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <InvitationActions invitation={invitation} />
+              {invitations.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <p className="text-muted-foreground">
+                      招待中のスタッフはいません
+                    </p>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                invitations.map((invitation) => (
+                  <TableRow key={invitation.id}>
+                    <TableCell>{invitation.email}</TableCell>
+                    <TableCell>{invitation.name ?? "(未設定)"}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <RoleBadge role={invitation.role} />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {formatDateTimeShort(invitation.expiresAt)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {formatDateShort(invitation.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <InvitationActions invitation={invitation} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
