@@ -24,6 +24,9 @@ import { createEvent, updateEvent } from "@/admin/actions/event";
 import { eventFormSchema } from "@/shared/lib/validations/event";
 import { EventStatus } from "@/shared/db/enums";
 import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
+import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import Link from "next/link";
 import type {
   getEventById,
@@ -45,6 +48,20 @@ type EventFormProps = {
 // =============================================================================
 // Helpers
 // =============================================================================
+
+function serializeContentJson(contentJson: unknown): string {
+  if (contentJson == null) return EMPTY_LEXICAL_EDITOR_STATE_JSON;
+  if (typeof contentJson === "string") return contentJson;
+  return JSON.stringify(contentJson);
+}
+
+function parseContentJsonSafe(json: string): unknown {
+  try {
+    return JSON.parse(json) as unknown;
+  } catch {
+    return null;
+  }
+}
 
 function formatDateTimeForInput(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
@@ -92,6 +109,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
             title: event.title,
             slug: event.slug,
             description: event.description ?? "",
+            contentJson: event.contentJson ?? null,
             startTime: formatDateTimeForInput(event.startTime),
             endTime: formatDateTimeForInput(event.endTime),
             capacity: event.capacity ?? undefined,
@@ -105,6 +123,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
             title: "",
             slug: "",
             description: "",
+            contentJson: null,
             startTime: "",
             endTime: "",
             capacity: undefined,
@@ -123,6 +142,19 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
     control: form.control,
     name: "registrationOpen",
   });
+  const watchedContentJson = useWatch({
+    control: form.control,
+    name: "contentJson",
+  });
+
+  // Lexical エディタ用: DB の JSON オブジェクトを文字列に変換
+  const contentJsonString = serializeContentJson(watchedContentJson);
+
+  const handleContentJsonChange = (json: string) => {
+    form.setValue("contentJson", parseContentJsonSafe(json), {
+      shouldDirty: true,
+    });
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -315,6 +347,23 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
           </Card>
         </div>
       </div>
+
+      {/* 本文コンテンツ（Lexical エディタ） */}
+      <Card>
+        <CardHeader>
+          <CardTitle>本文コンテンツ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LazyLexicalEditor
+            contentJson={contentJsonString}
+            onChange={handleContentJsonChange}
+            disabled={isPending}
+            className={EDITOR_PROSE_CLASSES}
+            placeholder="イベントの詳細な説明を入力..."
+            showInspector={false}
+          />
+        </CardContent>
+      </Card>
 
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
