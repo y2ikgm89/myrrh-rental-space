@@ -23,7 +23,7 @@ import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { createTypeGuard, omitUndefined } from "@/shared/lib/serialize";
 import { loadAdminPostSearchParams } from "@/shared/lib/nuqs";
-import type { CommentFilters as CommentFiltersType } from "@/shared/domain/post-comments/types";
+import type * as PostCommentTypes from "@/shared/domain/post-comments/types";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "投稿管理 | Myrrh Rental Space",
@@ -58,7 +58,12 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
       categoryId: params.categoryId || undefined,
       search: params.search || undefined,
     }),
-    { page: params.page, limit: params.perPage },
+    {
+      page: params.page,
+      limit: params.perPage,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    },
   );
 
   return (
@@ -106,7 +111,7 @@ async function CommentList({ searchParams }: { searchParams: SearchParams }) {
     ? params.status
     : undefined;
 
-  const filters: CommentFiltersType = {
+  const filters: PostCommentTypes.CommentFilters = {
     status: status ?? "ALL",
     postId: params.postId || undefined,
     search: params.search || undefined,

@@ -109,7 +109,7 @@ export type PostFilters = {
 export type PostPagination = {
   page?: number;
   limit?: number;
-  sortBy?: "createdAt" | "publishedAt" | "viewCount";
+  sortBy?: "createdAt" | "publishedAt" | "title" | "viewCount";
   sortOrder?: "asc" | "desc";
 };
 

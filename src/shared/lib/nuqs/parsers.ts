@@ -417,6 +417,8 @@ export async function loadAdminTermsSearchParams(
 
 const adminPostTabs = ["posts", "categories", "tags", "comments"] as const;
 
+const postSortByValues = ["createdAt", "publishedAt", "title"] as const;
+
 /** 投稿管理ページ（タブ・一覧・コメント）で共有する URL パーサー */
 export const adminPostSearchParamsParsers = {
   tab: parseAsStringLiteral(adminPostTabs).withDefault("posts"),
@@ -426,6 +428,8 @@ export const adminPostSearchParamsParsers = {
   page: parseAsPage,
   perPage: parseAsPerPage,
   postId: parseAsString.withDefault(""),
+  sortBy: parseAsStringLiteral(postSortByValues).withDefault("createdAt"),
+  sortOrder: parseAsSortOrder,
 };
 
 const adminPostSearchParamsCache = createSearchParamsCache(
