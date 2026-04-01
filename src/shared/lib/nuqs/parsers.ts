@@ -532,3 +532,31 @@ export async function loadAdminReviewSearchParams(
   await adminReviewSearchParamsCache.parse(searchParams);
   return adminReviewSearchParamsCache.all();
 }
+
+// ============================================================
+// 管理画面: イベント
+// ============================================================
+
+const eventSortByValues = ["startTime", "createdAt", "title"] as const;
+
+export const adminEventSearchParamsParsers = {
+  search: parseAsQuery,
+  status: parseAsString.withDefault(""),
+  page: parseAsPage,
+  perPage: parseAsPerPage,
+  sortBy: parseAsStringLiteral(eventSortByValues).withDefault("startTime"),
+  sortOrder: parseAsSortOrder,
+  dateFrom: parseAsString.withDefault(""),
+  dateTo: parseAsString.withDefault(""),
+};
+
+const adminEventSearchParamsCache = createSearchParamsCache(
+  adminEventSearchParamsParsers,
+);
+
+export async function loadAdminEventSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminEventSearchParamsCache.parse(searchParams);
+  return adminEventSearchParamsCache.all();
+}

@@ -152,6 +152,10 @@ export const CACHE_TAGS = {
   PERMISSIONS: "permissions",
   /** スペースレビュー */
   REVIEWS: "reviews",
+  /** イベント */
+  EVENTS: "events",
+  /** イベント参加登録 */
+  EVENT_REGISTRATIONS: "event-registrations",
 } as const;
 
 /**
@@ -230,6 +234,14 @@ export const getCacheTag = {
   reviews: {
     space: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-space-${spaceId}`,
     stats: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-stats-${spaceId}`,
+  },
+  events: {
+    list: () => CACHE_TAGS.EVENTS,
+    detail: (id: string) => `${CACHE_TAGS.EVENTS}-${id}`,
+    slug: (slug: string) => `${CACHE_TAGS.EVENTS}-slug-${slug}`,
+  },
+  eventRegistrations: {
+    list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
   },
 } as const;
 

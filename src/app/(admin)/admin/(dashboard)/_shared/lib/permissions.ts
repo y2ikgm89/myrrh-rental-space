@@ -40,7 +40,8 @@ export type Resource =
   | "media"
   | "coupon"
   | "blockTemplate"
-  | "review";
+  | "review"
+  | "event";
 
 /** アクション種別 */
 export type Action =
@@ -164,6 +165,11 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "review:read",
     "review:update",
     "review:delete",
+    "event:create",
+    "event:read",
+    "event:update",
+    "event:delete",
+    "event:publish",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -251,6 +257,11 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "review:read",
     "review:update",
     "review:delete",
+    "event:create",
+    "event:read",
+    "event:update",
+    "event:delete",
+    "event:publish",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -268,6 +279,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "blockTemplate:create",
     "blockTemplate:read",
     "blockTemplate:delete", // テンプレート管理
+    "event:read",
+    "event:update",
   ],
   VIEWER: [
     // 閲覧のみ
@@ -287,6 +300,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "announcementBar:read",
     "media:read",
     "review:read",
+    "event:read",
   ],
   USER: [],
   CUSTOMER: [],
@@ -326,6 +340,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   coupon: "クーポン",
   blockTemplate: "ブロックテンプレート",
   review: "レビュー",
+  event: "イベント",
 };
 
 /**
