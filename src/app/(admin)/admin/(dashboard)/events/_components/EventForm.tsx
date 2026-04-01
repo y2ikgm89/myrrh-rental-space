@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
@@ -115,6 +116,13 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
           },
     },
   );
+
+  const watchedSpaceId = useWatch({ control: form.control, name: "spaceId" });
+  const watchedStatus = useWatch({ control: form.control, name: "status" });
+  const watchedRegistrationOpen = useWatch({
+    control: form.control,
+    name: "registrationOpen",
+  });
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -248,7 +256,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
               <div>
                 <Label htmlFor="spaceId">スペース</Label>
                 <Select
-                  value={form.getValues("spaceId") ?? ""}
+                  value={watchedSpaceId ?? ""}
                   onValueChange={(value) =>
                     form.setValue("spaceId", value || null)
                   }
@@ -271,7 +279,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
               <div>
                 <Label htmlFor="status">ステータス</Label>
                 <Select
-                  value={form.getValues("status")}
+                  value={watchedStatus}
                   onValueChange={(value) => {
                     if (isValidEventStatus(value)) {
                       form.setValue("status", value);
@@ -295,7 +303,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
               <div className="flex items-center gap-2">
                 <Switch
                   id="registrationOpen"
-                  checked={form.getValues("registrationOpen") ?? true}
+                  checked={watchedRegistrationOpen ?? true}
                   onCheckedChange={(checked) =>
                     form.setValue("registrationOpen", checked)
                   }

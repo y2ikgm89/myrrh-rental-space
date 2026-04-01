@@ -7,6 +7,7 @@ import { Stack } from "@/public/components/design-system/stack";
 import { Badge } from "@/public/components/design-system/badge";
 import { cancelEventRegistration } from "@/public/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,30 +49,6 @@ const REGISTRATION_STATUS_VARIANTS: Record<string, BadgeVariant> = {
   CONFIRMED: "success",
   CANCELLED: "default",
 };
-
-// ---------------------------------------------------------------------------
-// Date formatting
-// ---------------------------------------------------------------------------
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatEventDateTime(startTime: string, endTime: string): string {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  return `${dateFormatter.format(start)} ${timeFormatter.format(start)} - ${timeFormatter.format(end)}`;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -148,7 +125,7 @@ function EventRegistrationCard({
         <div>
           <dt className="sr-only">日時</dt>
           <dd>
-            {formatEventDateTime(
+            {formatEventDateTimeRange(
               registration.event.startTime,
               registration.event.endTime,
             )}

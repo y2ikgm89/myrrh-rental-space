@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/public/components/design-system/dialog";
+import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 
 interface EventModalProps {
   readonly open: boolean;
@@ -22,29 +23,6 @@ interface EventModalProps {
     readonly startTime: string;
     readonly endTime: string;
   } | null;
-}
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatDateTimeRange(startTime: string, endTime: string): string {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  const datePart = dateFormatter.format(start);
-  const startTimePart = timeFormatter.format(start);
-  const endTimePart = timeFormatter.format(end);
-  return `${datePart} ${startTimePart} - ${endTimePart}`;
 }
 
 export function EventModal({ open, onOpenChange, event }: EventModalProps) {
@@ -66,7 +44,9 @@ export function EventModal({ open, onOpenChange, event }: EventModalProps) {
               className="mt-0.5 h-4 w-4 shrink-0"
               aria-hidden="true"
             />
-            <span>{formatDateTimeRange(event.startTime, event.endTime)}</span>
+            <span>
+              {formatEventDateTimeRange(event.startTime, event.endTime)}
+            </span>
           </div>
 
           {event.location ? (

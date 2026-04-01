@@ -10,6 +10,7 @@ import {
   publishEventCommand,
   updateEventCommand,
 } from "@/shared/domain/events/commands";
+import { getEventById } from "@/shared/domain/events/admin-queries";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
@@ -74,7 +75,9 @@ export async function updateEvent(
   });
 }
 
-export async function deleteEvent(id: string): Promise<MutationResult<null>> {
+export async function deleteEvent(
+  id: string,
+): Promise<MutationResult<string | null>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -83,12 +86,14 @@ export async function deleteEvent(id: string): Promise<MutationResult<null>> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
+      const event = await getEventById(validated.data);
       await deleteEventCommand(validated.data);
-      return null;
+      return event?.slug ?? null;
     },
-    afterSuccess: () => {
+    afterSuccess: (slug) => {
       updateTag(CACHE_TAGS.EVENTS);
       updateTag(getCacheTag.events.detail(validated.data));
+      if (slug) updateTag(getCacheTag.events.slug(slug));
     },
   });
 }

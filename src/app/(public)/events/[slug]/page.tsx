@@ -12,6 +12,7 @@ import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { Badge } from "@/public/components/design-system/badge";
+import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
@@ -19,29 +20,6 @@ import { EventRegistrationForm } from "./_components/EventRegistrationForm";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-}
-
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  timeZone: "Asia/Tokyo",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatDateTimeRange(startTime: string, endTime: string): string {
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  const datePart = dateFormatter.format(start);
-  const startTimePart = timeFormatter.format(start);
-  const endTimePart = timeFormatter.format(end);
-  return `${datePart} ${startTimePart} - ${endTimePart}`;
 }
 
 export async function generateMetadata({
@@ -118,7 +96,7 @@ export default async function EventDetailPage({
               <div>
                 <p className="text-sm font-medium text-foreground">日時</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDateTimeRange(event.startTime, event.endTime)}
+                  {formatEventDateTimeRange(event.startTime, event.endTime)}
                 </p>
               </div>
             </div>

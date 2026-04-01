@@ -51,7 +51,7 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
     data.status === EventStatus.PUBLISHED;
 
   await prisma.event.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: {
       title: data.title,
       slug,
@@ -79,7 +79,7 @@ export async function deleteEventCommand(id: string) {
   if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
   await prisma.event.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: { deletedAt: new Date() },
   });
 }
@@ -93,7 +93,7 @@ export async function publishEventCommand(id: string) {
   if (!event.title) throw new DomainError("タイトルが必要です", "VALIDATION");
 
   await prisma.event.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: { status: EventStatus.PUBLISHED, publishedAt: new Date() },
   });
 }
@@ -106,7 +106,7 @@ export async function cancelEventCommand(id: string) {
   if (!event) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
   await prisma.event.update({
-    where: { id },
+    where: { id, deletedAt: null },
     data: { status: EventStatus.CANCELLED },
   });
 

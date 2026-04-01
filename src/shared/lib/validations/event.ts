@@ -1,11 +1,5 @@
 import { z } from "zod";
-
-const EVENT_STATUS_VALUES = [
-  "DRAFT",
-  "PUBLISHED",
-  "CANCELLED",
-  "ARCHIVED",
-] as const;
+import { EventStatus } from "@/shared/db/enums";
 
 export const eventFormSchema = z
   .object({
@@ -36,7 +30,7 @@ export const eventFormSchema = z
       .optional(),
     location: z.string().max(200).nullable().optional(),
     spaceId: z.string().nullable().optional(),
-    status: z.enum(EVENT_STATUS_VALUES, { error: "無効なステータスです" }),
+    status: z.enum(EventStatus, { error: "無効なステータスです" }),
     registrationOpen: z.boolean().optional(),
   })
   .refine((data) => new Date(data.endTime) > new Date(data.startTime), {
