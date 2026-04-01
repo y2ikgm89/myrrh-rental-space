@@ -4,6 +4,9 @@ import { Prisma, prisma } from "@/shared/db/prisma";
 import { EventStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { EventFormInput } from "@/shared/lib/validations/event";
+import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 
 export async function createEventCommand(data: EventFormInput) {
   const slug = await ensureUniqueSlug(data.slug);
@@ -105,6 +108,11 @@ export async function cancelEventCommand(id: string) {
   await prisma.event.update({
     where: { id },
     data: { status: EventStatus.CANCELLED },
+  });
+
+  fireAndForget(sendEventCancelledToAllParticipants(id), {
+    operation: "sendEventCancelledToAllParticipants",
+    category: ErrorCategory.EXTERNAL_API,
   });
 }
 
