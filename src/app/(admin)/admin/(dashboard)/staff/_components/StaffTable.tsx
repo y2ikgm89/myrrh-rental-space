@@ -1,15 +1,9 @@
 import Link from "next/link";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/admin/components/ui";
+import { Table, TableBody, TableCell, TableRow } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { RoleBadge } from "@/admin/components/status-badges";
 import { UserActions } from "./UserActions";
+import { StaffTableHeader } from "./StaffTableHeader";
 import type { UserData } from "@/shared/domain/users/types";
 import { formatDateShort } from "@/shared/lib/utils";
 
@@ -26,17 +20,7 @@ export function StaffTable({ users }: StaffTableProps) {
     <div className="overflow-hidden rounded-lg border bg-card">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>名前</TableHead>
-              <TableHead>メールアドレス</TableHead>
-              <TableHead className="whitespace-nowrap">ロール</TableHead>
-              <TableHead className="hidden md:table-cell">予約数</TableHead>
-              <TableHead className="hidden md:table-cell">記事数</TableHead>
-              <TableHead className="hidden lg:table-cell">登録日</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
+          <StaffTableHeader />
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
