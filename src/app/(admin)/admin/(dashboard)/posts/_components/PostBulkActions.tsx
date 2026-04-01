@@ -47,7 +47,6 @@ export function PostBulkActions({
           ? `${result.count}件の投稿を公開しました`
           : `${result.count}件の投稿を非公開にしました`,
       );
-
       onClear();
       router.refresh();
     });
