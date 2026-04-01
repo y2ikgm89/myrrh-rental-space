@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/mypage", label: "予約一覧" },
+  { href: "/mypage/events", label: "イベント申込" },
   { href: "/mypage/inquiries", label: "お問い合わせ" },
   { href: "/mypage/settings", label: "アカウント設定" },
 ];
