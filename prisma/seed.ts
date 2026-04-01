@@ -24,6 +24,7 @@ import {
   Prisma,
   Role,
   EventStatus,
+  RegistrationStatus,
 } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
@@ -76,6 +77,8 @@ async function clearAllData() {
     prisma.inquiry.deleteMany(),
     prisma.customer.deleteMany(),
 
+    // イベント申込（FK: EventRegistration → Event）
+    prisma.eventRegistration.deleteMany(),
     // イベント
     prisma.event.deleteMany(),
 
@@ -2680,7 +2683,55 @@ async function seedEvents() {
     createdCount++;
   }
 
+  // PUBLISHED イベントにサンプル申込を追加
+  const publishedEvents = await prisma.event.findMany({
+    where: { status: EventStatus.PUBLISHED },
+    select: { id: true, slug: true },
+  });
+
+  const sampleRegistrations = [
+    {
+      name: "田中太郎",
+      email: "tanaka@example.com",
+      phone: null,
+      numberOfPeople: 2,
+      status: RegistrationStatus.CONFIRMED,
+    },
+    {
+      name: "佐藤花子",
+      email: "sato@example.com",
+      phone: "090-1234-5678",
+      numberOfPeople: 1,
+      status: RegistrationStatus.CONFIRMED,
+    },
+    {
+      name: "鈴木一郎",
+      email: "suzuki@example.com",
+      phone: "080-9876-5432",
+      numberOfPeople: 3,
+      status: RegistrationStatus.CANCELLED,
+    },
+  ];
+
+  let registrationCount = 0;
+  for (const event of publishedEvents) {
+    for (const reg of sampleRegistrations) {
+      await prisma.eventRegistration.create({
+        data: {
+          eventId: event.id,
+          name: reg.name,
+          email: reg.email,
+          phone: reg.phone,
+          numberOfPeople: reg.numberOfPeople,
+          status: reg.status,
+        },
+      });
+      registrationCount++;
+    }
+  }
+
   console.log(`✅ Upserted ${createdCount.toString()} events`);
+  console.log(`✅ Created ${registrationCount.toString()} event registrations`);
 }
 
 // =============================================================================
