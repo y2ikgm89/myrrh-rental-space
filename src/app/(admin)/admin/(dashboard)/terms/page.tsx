@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 async function TermsListContent() {
+  // WARN: 全件取得 — 50件超の運用が見込まれる場合はページネーション + 検索を追加
   const terms = await getTermsList();
   return <TermsTable terms={terms} />;
 }
