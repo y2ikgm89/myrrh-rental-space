@@ -215,6 +215,11 @@ enum EventStatus {
   ARCHIVED
 }
 
+enum RegistrationStatus {
+  CONFIRMED
+  CANCELLED
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -572,7 +577,8 @@ model Customer {
   // Relations
   reservations Reservation[]
   inquiries    Inquiry[]
-  reviews      SpaceReview[]
+  reviews              SpaceReview[]
+  eventRegistrations   EventRegistration[]
 
   @@index([lastName])
   @@index([firstName])
@@ -1689,11 +1695,39 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  space         Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
 
   @@index([startTime, endTime])
   @@index([status])
   @@index([spaceId])
   @@index([deletedAt])
   @@map("events")
+}
+
+// ==============================================
+// Event Registration Model (イベント申込)
+// ==============================================
+
+model EventRegistration {
+  id              String             @id @default(cuid()) @db.VarChar(30)
+  eventId         String             @db.VarChar(30)
+  name            String             @db.VarChar(100)
+  email           String             @db.VarChar(255)
+  phone           String?            @db.VarChar(20)
+  note            String?            @db.Text
+  numberOfPeople  Int                @default(1)
+  status          RegistrationStatus @default(CONFIRMED)
+  customerId      String?            @db.Uuid
+  cancelledAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+  @@index([customerId])
+  @@index([status])
+  @@map("event_registrations")
 }
