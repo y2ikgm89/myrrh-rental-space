@@ -7,6 +7,7 @@ import type { EventFormInput } from "@/shared/lib/validations/event";
 import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
+import { generateSlug } from "@/shared/lib/utils";
 
 export async function createEventCommand(data: EventFormInput) {
   const slug = await ensureUniqueSlug(data.slug);
@@ -114,6 +115,50 @@ export async function cancelEventCommand(id: string) {
     operation: "sendEventCancelledToAllParticipants",
     category: ErrorCategory.EXTERNAL_API,
   });
+}
+
+export async function upsertEventFromCalendar(data: {
+  googleCalendarEventId: string;
+  title: string;
+  description?: string | null;
+  startTime: Date;
+  endTime: Date;
+  location?: string | null;
+}) {
+  const existing = await prisma.event.findFirst({
+    where: { googleCalendarEventId: data.googleCalendarEventId },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.event.update({
+      where: { id: existing.id, deletedAt: null },
+      data: {
+        title: data.title,
+        description: data.description ?? null,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        location: data.location ?? null,
+      },
+    });
+    return { id: existing.id, action: "updated" as const };
+  }
+
+  const slug = await ensureUniqueSlug(generateSlug(data.title, "event"));
+  const event = await prisma.event.create({
+    data: {
+      title: data.title,
+      slug,
+      description: data.description ?? null,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      location: data.location ?? null,
+      status: EventStatus.DRAFT,
+      googleCalendarEventId: data.googleCalendarEventId,
+    },
+    select: { id: true },
+  });
+  return { id: event.id, action: "created" as const };
 }
 
 async function ensureUniqueSlug(
