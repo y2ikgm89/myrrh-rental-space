@@ -102,6 +102,7 @@ export {
   setupCalendarWebhook,
   stopCalendarWebhook,
   triggerManualSync,
+  toggleEventImport,
 } from "./google-calendar";
 
 // =============================================================================
@@ -139,7 +140,6 @@ export {
 export { updateDiscountSettings } from "./discount";
 
 export type { DiscountSettingsData } from "@/shared/domain/settings/types";
-export type { DurationDiscountRuleInput as DurationDiscountRule } from "./schemas";
 
 // =============================================================================
 // Tax Actions

@@ -33,6 +33,7 @@ import {
   updateGoogleCalendarSettings,
   testGoogleCalendarConnectionAction,
   clearGoogleCalendarServiceAccount,
+  toggleEventImport,
   type SettingsData,
 } from "@/admin/actions/settings";
 import { googleCalendarFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
@@ -384,6 +385,35 @@ export function GoogleCalendarSection({
                 )}
               />
             </div>
+
+            {/* イベント取り込み設定（接続済みの場合のみ表示） */}
+            {settings.googleCalendarConnectionStatus === "connected" && (
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="text-sm font-medium">イベント取り込み</h4>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">イベント取り込み</p>
+                    <p className="text-sm text-muted-foreground">
+                      Google Calendar
+                      のイベントを自動的にイベント管理に取り込みます（下書き状態で作成されます）
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.eventImportEnabled}
+                    onCheckedChange={(checked) => {
+                      startTestTransition(async () => {
+                        const result = await toggleEventImport(checked);
+                        if (!isMutationError(result)) {
+                          router.refresh();
+                        }
+                      });
+                    }}
+                    disabled={isPending || testPending}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* アクションボタン */}
             <div className="flex flex-wrap items-center justify-end gap-2">

@@ -7,7 +7,7 @@ import { Button } from "@/admin/components/ui/button";
 type AdminDetailLayoutProps = {
   backHref: string;
   backLabel?: string;
-  title: string;
+  title: ReactNode;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;

@@ -9,7 +9,7 @@ import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { EventStatusBadge } from "@/admin/components/status-badges";
-import { Button } from "@/admin/components/ui";
+import { Badge, Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
@@ -62,7 +62,16 @@ export default async function EventDetailPage({ params }: PageProps) {
   return (
     <AdminDetailLayout
       backHref="/admin/events"
-      title={event.title}
+      title={
+        <>
+          {event.title}
+          {event.googleCalendarEventId && (
+            <Badge variant="outline" className="ml-2 align-middle">
+              GCal 連携
+            </Badge>
+          )}
+        </>
+      }
       subtitle={`/${event.slug}`}
       actions={
         <>

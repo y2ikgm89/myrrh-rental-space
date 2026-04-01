@@ -160,6 +160,7 @@ export type SettingsData = {
   footerContactLabel: string;
   footerHoursLabel: string;
   footerShowSocialLinks: boolean;
+  eventImportEnabled: boolean;
   themeColor: string;
   createdAt: Date;
   updatedAt: Date;

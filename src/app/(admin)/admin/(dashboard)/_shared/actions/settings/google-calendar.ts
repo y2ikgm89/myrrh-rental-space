@@ -10,6 +10,7 @@ import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { prisma } from "@/shared/db/prisma";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
@@ -49,12 +50,8 @@ import {
   type TwoWaySyncSettingsInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 function invalidateCalendarSyncCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
   updateTag(CACHE_TAGS.RESERVATIONS);
 }
 
@@ -73,7 +70,9 @@ export async function updateGoogleCalendarSettings(
       await updateGoogleCalendarSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -124,7 +123,9 @@ export async function testGoogleCalendarConnectionAction(
         accountEmail: result.accountEmail ?? "",
       };
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -149,7 +150,9 @@ export async function testGoogleCalendarOAuthAction(): Promise<
         calendarName: result.calendarName ?? "",
       };
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -161,7 +164,9 @@ export async function clearGoogleCalendarServiceAccount(): Promise<MutationResul
       await clearGoogleCalendarServiceAccountCommand();
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -173,7 +178,9 @@ export async function disconnectGoogleCalendarOAuth(): Promise<MutationResult> {
       await disconnectGoogleCalendarOAuthCommand(user.id);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -192,7 +199,9 @@ export async function updateTwoWaySyncSettings(
       await updateTwoWaySyncSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -230,7 +239,9 @@ export async function setupCalendarWebhook(): Promise<
 
       return { expiration: result.expiration };
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
@@ -258,7 +269,27 @@ export async function stopCalendarWebhook(): Promise<MutationResult> {
       await clearGoogleCalendarWebhook();
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
+  });
+}
+
+export async function toggleEventImport(
+  enabled: boolean,
+): Promise<MutationResult<null>> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await prisma.settings.updateMany({
+        data: { eventImportEnabled: enabled },
+      });
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
+    },
   });
 }
 
