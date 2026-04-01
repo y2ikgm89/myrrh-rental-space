@@ -21,7 +21,12 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
-import { DURATION, EASE, SCROLL_TRIGGER } from "@/public/lib/animations";
+import {
+  DURATION,
+  EASE,
+  REVEAL,
+  SCROLL_TRIGGER,
+} from "@/public/lib/animations";
 import type { HeroConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 import {
@@ -104,7 +109,7 @@ export function StandardHeroSection({
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         gsap.fromTo(
           content,
-          { opacity: 0, y: 40 },
+          { opacity: REVEAL.fadeUp.opacity, y: REVEAL.fadeUp.y },
           {
             opacity: 1,
             y: 0,

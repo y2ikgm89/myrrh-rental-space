@@ -20,7 +20,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
@@ -79,7 +79,7 @@ export function TestimonialSection({
 
         gsap.fromTo(
           cards,
-          { y: 40, opacity: 0 },
+          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
           {
             y: 0,
             opacity: 1,

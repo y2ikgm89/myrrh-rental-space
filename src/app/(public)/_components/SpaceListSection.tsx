@@ -22,7 +22,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import {
   CARD_STYLE_MAP,
   IMAGE_ASPECT_MAP,
@@ -72,7 +72,7 @@ export function SpaceListSection({
 
         gsap.fromTo(
           cards,
-          { y: 40, opacity: 0 },
+          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
           {
             y: 0,
             opacity: 1,
