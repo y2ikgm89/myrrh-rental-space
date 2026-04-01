@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 import {
   ActionDropdown,
@@ -18,27 +18,29 @@ type PostActionCellProps = {
 
 export function PostActionCell({ postId, status }: PostActionCellProps) {
   const [isPending, startTransition] = useTransition();
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
+  const isPublished = optimisticStatus === PostStatus.PUBLISHED;
 
   const handlePublish = () => {
     startTransition(async () => {
+      setOptimisticStatus(PostStatus.PUBLISHED);
       const result = await publishPost(postId);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
-
       toast.success(`公開しました（バージョン ${result.version}）`);
     });
   };
 
   const handleUnpublish = () => {
     startTransition(async () => {
+      setOptimisticStatus(PostStatus.DRAFT);
       const result = await unpublishPost(postId);
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
-
       toast.success("下書きに戻しました");
     });
   };
@@ -49,7 +51,7 @@ export function PostActionCell({ postId, status }: PostActionCellProps) {
         編集
       </ActionDropdownItem>
       <ActionDropdownSeparator />
-      {status === PostStatus.PUBLISHED ? (
+      {isPublished ? (
         <ActionDropdownItem onClick={handleUnpublish}>
           下書きに戻す
         </ActionDropdownItem>
