@@ -105,6 +105,9 @@ paths:
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — `schema.ts` + `metadata.ts` + `registry.ts` への import 追加。Prisma マイグレーション不要。`/create-section-type` スキルで自動生成可能
 - **AutoSectionForm は field メタデータなしのフィールドをスキップ** — `extractFieldMeta()` が `undefined` を返すフィールド（`categoryId` 等の plain Zod）は管理画面フォームに表示されない
 - **新規公開ページ追加は `/create-page-content` スキル** — `DEFAULT_PAGE_SECTIONS` にエントリ追加 + `page.tsx` 作成。`PageContent` は使わない
+- **ホームページセクションの `pageId: null` は廃止済み** — 全セクション（ホームページ含む）が Page レコードの `pageId` に紐づく。`pageId: null` でホームページ判定するコードは禁止。ホームページは slug `"home"` の Page レコードで管理
+- **`/admin/pages/homepage/edit` は廃止済み** — ホームページ編集は `/admin/pages/home/edit`（`[slug]/edit` に統合）。`HomepageSectionCommand` 系コマンドも廃止、page-scoped コマンドに統一
+- **`DesignPanel` は `pages/[slug]/edit/_components/` に移動済み** — 旧 `settings/_components/homepage/DesignPanel.tsx` は削除。汎用コンポーネントとして全ページの Design タブで使用
 - **アニメーションファイルは kebab-case のみ** — `scroll-reveal.tsx`, `split-text.tsx`, `magnetic-button.tsx`, `parallax-image.tsx`。旧 PascalCase re-export ラッパーは削除済み。レガシーセクションコンポーネント（`_components/*.tsx`）も kebab-case で直接 import
 - **公開ページのマルチステップフォームでは視覚パターンを全ステップで統一** — `bg-surface` ラッパー・見出しスタイル・ナビゲーション配置をステップ間で揃える。フロー全体の一貫性を優先
 - **Prisma `Decimal` と `createAppPrismaClient`** — アプリ標準の **`prisma`**（`src/shared/db/prisma.ts`）は **`createAppPrismaClient`** により対象モデルの金額等が **読み取り結果で `number`**。**集計**（`_sum` / `_avg`）や拡張前クライアント経由では `Number()` が必要なことがある。`as number` 禁止 → `prisma-patterns.md` の Decimal 節を参照
