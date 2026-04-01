@@ -6,6 +6,7 @@ import type {
   EventStatus,
   InquiryStatus,
   PaymentStatus,
+  RegistrationStatus,
   ReservationStatus,
   PostStatus,
   Role,
@@ -71,6 +72,11 @@ const eventStatusConfig: StatusConfig<EventStatus> = {
   ARCHIVED: { label: "アーカイブ", variant: "outline" },
 };
 
+const registrationStatusConfig: StatusConfig<RegistrationStatus> = {
+  CONFIRMED: { label: "確認済み", variant: "default" },
+  CANCELLED: { label: "キャンセル", variant: "destructive" },
+};
+
 // News はisPublished (boolean) 方式に移行
 const newsPublishConfig = {
   published: { label: "公開中", variant: "success" },
@@ -112,6 +118,15 @@ export function PostStatusBadge({ status }: { status: PostStatus }) {
 
 export function EventStatusBadge({ status }: { status: EventStatus }) {
   const config = eventStatusConfig[status];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+export function RegistrationStatusBadge({
+  status,
+}: {
+  status: RegistrationStatus;
+}) {
+  const config = registrationStatusConfig[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

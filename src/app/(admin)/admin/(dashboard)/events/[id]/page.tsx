@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { IconPencil } from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
+import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { deleteEvent } from "@/admin/actions/event";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailSection } from "@/admin/components/DetailSection";
@@ -11,6 +12,7 @@ import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -38,11 +40,24 @@ export async function generateMetadata({
 
 export default async function EventDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const event = await getEventById(id);
+  const [event, registrations] = await Promise.all([
+    getEventById(id),
+    getEventRegistrations(id),
+  ]);
 
   if (!event) {
     notFound();
   }
+
+  const serializedRegistrations = registrations.map((r) => ({
+    ...r,
+    cancelledAt: r.cancelledAt?.toISOString() ?? null,
+    createdAt: r.createdAt.toISOString(),
+  }));
+
+  const confirmedCount = registrations.filter(
+    (r) => r.status === "CONFIRMED",
+  ).length;
 
   return (
     <AdminDetailLayout
@@ -120,6 +135,10 @@ export default async function EventDetailPage({ params }: PageProps) {
             value={formatDateTimeShort(event.updatedAt)}
           />
         </div>
+      </DetailSection>
+
+      <DetailSection title={`参加者一覧（${String(confirmedCount)}名）`}>
+        <EventRegistrationTable registrations={serializedRegistrations} />
       </DetailSection>
     </AdminDetailLayout>
   );
