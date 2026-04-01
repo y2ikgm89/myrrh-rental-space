@@ -208,6 +208,13 @@ enum InstagramMediaType {
   CAROUSEL_ALBUM
 }
 
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
 // ==============================================
 // Better Auth Models
 // ==============================================
@@ -451,6 +458,7 @@ model Space {
   reservations Reservation[]
   icalTokens   ICalToken[]
   reviews      SpaceReview[]
+  events       Event[]
   terms        Terms?         @relation(fields: [termsId], references: [id], onDelete: SetNull)
   location     Location       @relation(fields: [locationId], references: [id], onDelete: Restrict)
   category     SpaceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -1653,4 +1661,39 @@ model SpaceReview {
   @@index([spaceId, isPublished, createdAt(sort: Desc)])
   @@index([customerId])
   @@map("space_reviews")
+}
+
+
+// ==============================================
+// Event Model (イベント)
+// ==============================================
+
+model Event {
+  id                    String      @id @default(cuid()) @db.VarChar(21)
+  title                 String      @db.VarChar(200)
+  slug                  String      @unique @db.VarChar(100)
+  description           String?     @db.Text
+  contentJson           Json?
+  thumbnailUrl          String?
+  startTime             DateTime
+  endTime               DateTime
+  capacity              Int?
+  price                 Int?
+  location              String?     @db.VarChar(200)
+  spaceId               String?     @db.Uuid
+  status                EventStatus @default(DRAFT)
+  registrationOpen      Boolean     @default(true)
+  googleCalendarEventId String?     @unique
+  publishedAt           DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  space         Space?  @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  @@index([startTime, endTime])
+  @@index([status])
+  @@index([spaceId])
+  @@index([deletedAt])
+  @@map("events")
 }
