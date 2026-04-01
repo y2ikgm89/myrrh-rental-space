@@ -38,6 +38,8 @@ import { spaceShowcaseConfigSchema } from "./definitions/space-showcase/schema";
 import { spaceShowcaseMetadata } from "./definitions/space-showcase/metadata";
 import { testimonialConfigSchema } from "./definitions/testimonial/schema";
 import { testimonialMetadata } from "./definitions/testimonial/metadata";
+import { eventCalendarConfigSchema } from "./definitions/event-calendar/schema";
+import { eventCalendarMetadata } from "./definitions/event-calendar/metadata";
 
 // ─────────────────────────────────────────────────────────────
 // 定義レコード
@@ -129,6 +131,11 @@ const definitions: Record<string, SectionDefinition> = {
     type: "instagram",
     configSchema: instagramConfigSchema,
     metadata: instagramMetadata,
+  },
+  "event-calendar": {
+    type: "event-calendar",
+    configSchema: eventCalendarConfigSchema,
+    metadata: eventCalendarMetadata,
   },
 };
 
