@@ -1288,6 +1288,10 @@ model Settings {
   googleCalendarSyncToken    String?   @db.Text // 増分同期用トークン
   googleCalendarLastSyncedAt DateTime? // 最終同期日時
 
+  // イベントインポート設定
+  eventImportEnabled   Boolean @default(false)
+  eventImportSyncToken String? @db.Text
+
   // Webhook設定（Push Notifications）
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID
   googleCalendarWebhookResourceId String? // Webhook リソースID
