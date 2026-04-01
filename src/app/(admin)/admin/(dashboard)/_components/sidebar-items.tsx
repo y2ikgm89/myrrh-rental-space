@@ -5,6 +5,7 @@
 import {
   IconHome,
   IconCalendar,
+  IconCalendarEvent,
   IconBuilding,
   IconMail,
   IconNews,
@@ -42,6 +43,11 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "スペース管理",
     href: "/admin/spaces",
     icon: <IconBuilding className="h-5 w-5" />,
+  },
+  {
+    label: "イベント",
+    href: "/admin/events",
+    icon: <IconCalendarEvent className="h-5 w-5" />,
   },
   {
     label: "お知らせ",

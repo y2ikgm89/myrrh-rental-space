@@ -3,6 +3,7 @@
 import { Badge, type BadgeProps } from "@/admin/components/ui";
 import type {
   CustomerStatus,
+  EventStatus,
   InquiryStatus,
   PaymentStatus,
   ReservationStatus,
@@ -63,6 +64,13 @@ const postStatusConfig: StatusConfig<PostStatus> = {
   ARCHIVED: { label: "アーカイブ", variant: "outline" },
 };
 
+const eventStatusConfig: StatusConfig<EventStatus> = {
+  DRAFT: { label: "下書き", variant: "secondary" },
+  PUBLISHED: { label: "公開中", variant: "default" },
+  CANCELLED: { label: "キャンセル", variant: "destructive" },
+  ARCHIVED: { label: "アーカイブ", variant: "outline" },
+};
+
 // News はisPublished (boolean) 方式に移行
 const newsPublishConfig = {
   published: { label: "公開中", variant: "success" },
@@ -99,6 +107,11 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
 
 export function PostStatusBadge({ status }: { status: PostStatus }) {
   const config = postStatusConfig[status];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+export function EventStatusBadge({ status }: { status: EventStatus }) {
+  const config = eventStatusConfig[status];
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

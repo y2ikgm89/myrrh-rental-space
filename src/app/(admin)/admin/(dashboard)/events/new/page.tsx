@@ -1,0 +1,22 @@
+import { getSpacesForEvent } from "@/shared/domain/events/admin-queries";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
+import { EventForm } from "../_components/EventForm";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "イベント新規作成 | Myrrh Rental Space",
+};
+
+export default async function NewEventPage() {
+  const spaces = await getSpacesForEvent();
+
+  return (
+    <AdminDetailLayout
+      backHref="/admin/events"
+      title="イベント新規作成"
+      subtitle="新しいイベントを作成します"
+    >
+      <EventForm spaces={spaces} />
+    </AdminDetailLayout>
+  );
+}
