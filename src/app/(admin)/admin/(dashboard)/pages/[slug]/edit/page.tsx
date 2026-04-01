@@ -8,14 +8,14 @@
  * Pageモデルが存在しなければ自動作成します。
  */
 
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { IconArrowLeft, IconExternalLink } from "@tabler/icons-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import {
   getPageForEdit,
   getPageWithSections,
 } from "@/admin/queries/page-section";
-import { Button, Badge, Breadcrumb } from "@/admin/components/ui";
+import { Button, Badge } from "@/admin/components/ui";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SectionMasterDetail } from "./_components/SectionMasterDetail";
 import { PublishToggle } from "./_components/PublishToggle";
 import type { Metadata } from "next";
@@ -50,47 +50,32 @@ export default async function EditPagePage({
   }
 
   return (
-    <div className="space-y-4">
-      <Breadcrumb
-        items={[
-          { label: "ページ管理", href: "/admin/pages" },
-          { label: page.title },
-        ]}
-      />
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon">
-            <Link href="/admin/pages">
-              <IconArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {page.title}
-              </h1>
-              <Badge variant={page.isSystem ? "secondary" : "outline"}>
-                {page.isSystem ? "システム" : "カスタム"}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground">/{slug}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
+    <AdminDetailLayout
+      backHref="/admin/pages"
+      title={page.title}
+      subtitle={`/${slug}`}
+      actions={
+        <>
+          <Badge variant={page.isSystem ? "secondary" : "outline"}>
+            {page.isSystem ? "システム" : "カスタム"}
+          </Badge>
           {!page.isSystem && (
             <PublishToggle slug={slug} isPublished={page.isPublished} />
           )}
           <Button asChild variant="outline" size="sm">
-            <a href={`/${slug}`} target="_blank" rel="noopener noreferrer">
+            <a
+              href={slug === "home" ? "/" : `/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <IconExternalLink className="h-4 w-4 mr-1" />
               プレビュー
             </a>
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <SectionMasterDetail page={page} />
-    </div>
+    </AdminDetailLayout>
   );
 }

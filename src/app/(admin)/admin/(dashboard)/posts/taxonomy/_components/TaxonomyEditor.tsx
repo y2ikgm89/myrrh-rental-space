@@ -4,6 +4,7 @@
  * TaxonomyEditor - カテゴリ・タグ共通エディター
  *
  * 通常の管理画面内で表示されるシンプルなフォーム
+ * ヘッダー（戻るボタン・タイトル）は AdminDetailLayout に委譲済み
  */
 
 import { useState, useTransition } from "react";
@@ -13,7 +14,6 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
-  IconArrowLeft,
   IconExternalLink,
   IconPhoto,
   IconDeviceFloppy,
@@ -203,10 +203,6 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
     }
   };
 
-  const handleBack = () => {
-    router.push(config.backUrl);
-  };
-
   const onSubmit = (formData: CategoryFormData) => {
     startTransition(async () => {
       const result = await updatePostCategory(data.id, {
@@ -247,34 +243,20 @@ function CategoryEditorImpl({ data }: { data: PostCategoryData }) {
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
+      {/* アクションバー */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            戻る
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {data.name}
-              </h1>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {postCount}件の投稿
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{archiveUrl}</span>
-              <a
-                href={archiveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground"
-              >
-                <IconExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{postCount}件の投稿</span>
+          <span>·</span>
+          <span>{archiveUrl}</span>
+          <a
+            href={archiveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            <IconExternalLink className="h-3 w-3" />
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <Dialog
@@ -582,10 +564,6 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
     }
   };
 
-  const handleBack = () => {
-    router.push(config.backUrl);
-  };
-
   const onSubmit = (formData: TagFormData) => {
     startTransition(async () => {
       const result = await updatePostTag(data.id, {
@@ -625,34 +603,20 @@ function TagEditorImpl({ data }: { data: PostTagData }) {
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
+      {/* アクションバー */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button type="button" variant="ghost" size="sm" onClick={handleBack}>
-            <IconArrowLeft className="mr-2 h-4 w-4" />
-            戻る
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                {data.name}
-              </h1>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                {postCount}件の投稿
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{archiveUrl}</span>
-              <a
-                href={archiveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-foreground"
-              >
-                <IconExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{postCount}件の投稿</span>
+          <span>·</span>
+          <span>{archiveUrl}</span>
+          <a
+            href={archiveUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground"
+          >
+            <IconExternalLink className="h-3 w-3" />
+          </a>
         </div>
         <div className="flex items-center gap-2">
           <Dialog

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPostCategoryById } from "@/admin/queries/post";
+import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { CategoryEditor } from "../_components/CategoryEditor";
 
 export async function generateMetadata({
@@ -29,5 +30,12 @@ export default async function EditCategoryPage({ params }: PageProps) {
     notFound();
   }
 
-  return <CategoryEditor category={category} />;
+  return (
+    <AdminDetailLayout
+      backHref="/admin/posts?tab=categories"
+      title={category.name}
+    >
+      <CategoryEditor category={category} />
+    </AdminDetailLayout>
+  );
 }
