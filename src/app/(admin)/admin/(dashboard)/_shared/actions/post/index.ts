@@ -17,3 +17,4 @@ export {
   updatePostTag,
   deletePostTag,
 } from "./taxonomy";
+export { bulkTogglePostPublished, bulkDeletePosts } from "./bulk";
