@@ -13,6 +13,9 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { Badge } from "@/public/components/design-system/badge";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
+import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { EventRegistrationForm } from "./_components/EventRegistrationForm";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -71,6 +74,17 @@ export default async function EventDetailPage({
     notFound();
   }
 
+  const [registrationCount, turnstileSiteKey] = await Promise.all([
+    getRegistrationCount(event.id),
+    getTurnstileSiteKey(),
+  ]);
+
+  const remainingCapacity =
+    event.capacity != null ? event.capacity - registrationCount : null;
+  const isFull = remainingCapacity !== null && remainingCapacity <= 0;
+  const canRegister =
+    event.registrationOpen && event.status === "PUBLISHED" && !isFull;
+
   return (
     <main id="main-content">
       <Container variant="narrow">
@@ -85,7 +99,9 @@ export default async function EventDetailPage({
               {event.capacity != null ? (
                 <Badge variant="default">定員 {event.capacity}名</Badge>
               ) : null}
-              {event.registrationOpen ? (
+              {isFull ? (
+                <Badge variant="warning">満員</Badge>
+              ) : event.registrationOpen ? (
                 <Badge variant="success">申込受付中</Badge>
               ) : (
                 <Badge variant="warning">申込受付終了</Badge>
@@ -166,11 +182,26 @@ export default async function EventDetailPage({
             </div>
           ) : null}
 
-          <div className="rounded-lg border border-border bg-surface/50 p-4 sm:p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              申込機能は近日公開予定です
-            </p>
-          </div>
+          {canRegister ? (
+            <EventRegistrationForm
+              eventId={event.id}
+              turnstileSiteKey={turnstileSiteKey}
+              remainingCapacity={remainingCapacity}
+            />
+          ) : isFull ? (
+            <div className="rounded-lg border border-border bg-surface/50 p-4 text-center sm:p-6">
+              <Badge variant="warning">満員です</Badge>
+              <p className="mt-2 text-sm text-muted-foreground">
+                現在、定員に達しているためお申し込みいただけません
+              </p>
+            </div>
+          ) : !event.registrationOpen ? (
+            <div className="rounded-lg border border-border bg-surface/50 p-4 text-center sm:p-6">
+              <p className="text-sm text-muted-foreground">
+                このイベントの申込受付は終了しました
+              </p>
+            </div>
+          ) : null}
         </Stack>
       </Container>
     </main>

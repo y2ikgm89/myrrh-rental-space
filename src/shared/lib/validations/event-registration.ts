@@ -13,8 +13,7 @@ export const publicEventRegistrationSchema = z.object({
     .number()
     .int()
     .min(1, { error: "参加人数は1以上です" })
-    .max(10, { error: "参加人数は10名以下です" })
-    .default(1),
+    .max(10, { error: "参加人数は10名以下です" }),
   turnstileToken: z.string().min(1, { error: "セキュリティ検証が必要です" }),
 });
 
@@ -31,11 +30,7 @@ export const adminEventRegistrationSchema = z.object({
   email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
   phone: z.string().max(20).nullable().optional(),
   note: z.string().max(500).nullable().optional(),
-  numberOfPeople: z
-    .number()
-    .int()
-    .min(1, { error: "参加人数は1以上です" })
-    .default(1),
+  numberOfPeople: z.number().int().min(1, { error: "参加人数は1以上です" }),
 });
 
 export type AdminEventRegistrationInput = z.infer<
