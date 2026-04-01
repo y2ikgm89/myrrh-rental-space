@@ -50,7 +50,7 @@ export async function getEventDetailsForEmail(eventId: string) {
 
 export async function getCustomerEventRegistrations(customerId: string) {
   return prisma.eventRegistration.findMany({
-    where: { customerId },
+    where: { customerId, event: { deletedAt: null } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

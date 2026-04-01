@@ -94,6 +94,7 @@ export async function deleteEvent(
       updateTag(CACHE_TAGS.EVENTS);
       updateTag(getCacheTag.events.detail(validated.data));
       if (slug) updateTag(getCacheTag.events.slug(slug));
+      updateTag(getCacheTag.eventRegistrations.list(validated.data));
     },
   });
 }
@@ -130,6 +131,7 @@ export async function cancelEvent(id: string): Promise<MutationResult<null>> {
     },
     afterSuccess: () => {
       invalidateEventCaches(validated.data);
+      updateTag(getCacheTag.eventRegistrations.list(validated.data));
     },
   });
 }

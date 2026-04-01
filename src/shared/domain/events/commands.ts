@@ -47,6 +47,7 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
       status: true,
       startTime: true,
       endTime: true,
+      location: true,
     },
   });
   if (!existing) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
@@ -86,8 +87,12 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
   const dateTimeChanged =
     existing.startTime.getTime() !== newStartTime.getTime() ||
     existing.endTime.getTime() !== newEndTime.getTime();
+  const locationChanged = (existing.location ?? "") !== (data.location ?? "");
 
-  if (dateTimeChanged && data.status === EventStatus.PUBLISHED) {
+  if (
+    (dateTimeChanged || locationChanged) &&
+    data.status === EventStatus.PUBLISHED
+  ) {
     fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
       operation: "sendEventUpdatedToAllParticipants",
       category: ErrorCategory.EXTERNAL_API,
@@ -149,7 +154,10 @@ export async function upsertEventFromCalendar(data: {
   location?: string | null;
 }) {
   const existing = await prisma.event.findFirst({
-    where: { googleCalendarEventId: data.googleCalendarEventId },
+    where: {
+      googleCalendarEventId: data.googleCalendarEventId,
+      deletedAt: null,
+    },
     select: { id: true },
   });
 

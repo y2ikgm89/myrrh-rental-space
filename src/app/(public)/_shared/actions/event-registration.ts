@@ -28,7 +28,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getCurrentUser, getSession } from "@/shared/lib/auth";
+import { getSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
 
@@ -51,8 +51,9 @@ export async function registerForEvent(
     return createMutationError(turnstile.error);
   }
 
-  // 4. Get current user (non-blocking — undefined if not logged in)
-  const user = await getCurrentUser();
+  // 4. Get current user (non-blocking — null if not logged in)
+  const session = await getSession();
+  const user = session?.user;
   let customerId: string | null = null;
   if (user) {
     const customer = await getCustomerByUserId(user.id);
