@@ -205,6 +205,22 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     },
   ],
 
+  journal: [
+    {
+      type: "hero",
+      title: null,
+      config: {
+        title: "Journal",
+        subtitle: "ニュースやコラムなど、最新の情報をお届けします。",
+        variant: "minimal",
+      },
+      design: { titleSize: "3xl" },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+  ],
+
   news: [
     {
       type: "hero",

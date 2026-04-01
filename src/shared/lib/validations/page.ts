@@ -49,6 +49,11 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
     title: "お問い合わせ",
     description: "お問い合わせフォーム",
   },
+  {
+    slug: "journal",
+    title: "ジャーナル",
+    description: "ニュース・コラム統合一覧",
+  },
   { slug: "posts", title: "ブログ", description: "ブログ記事一覧" },
   { slug: "news", title: "お知らせ", description: "ニュース・お知らせ一覧" },
   { slug: "terms", title: "利用規約", description: "ご利用にあたっての規約" },
