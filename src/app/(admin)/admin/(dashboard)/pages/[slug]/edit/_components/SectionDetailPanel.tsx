@@ -27,7 +27,7 @@ import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
 import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms";
 import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
-import { DesignPanel } from "../../../../settings/_components/homepage/DesignPanel";
+import { DesignPanel } from "./DesignPanel";
 
 interface SectionDetailPanelProps {
   section: PageSectionData | null;

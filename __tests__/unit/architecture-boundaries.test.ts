@@ -413,16 +413,6 @@ const THIN_ADMIN_ACTION_FILES = [
     "(dashboard)",
     "_shared",
     "actions",
-    "homepage-settings.ts",
-  ),
-  join(
-    SRC_ROOT,
-    "app",
-    "(admin)",
-    "admin",
-    "(dashboard)",
-    "_shared",
-    "actions",
     "media.ts",
   ),
   join(
@@ -964,18 +954,8 @@ describe("architecture boundaries", () => {
     }
   });
 
-  test("homepage-settings と navigation mutation action は legacy success wrapper を使わない", () => {
+  test("navigation mutation action は legacy success wrapper を使わない", () => {
     const files = [
-      join(
-        SRC_ROOT,
-        "app",
-        "(admin)",
-        "admin",
-        "(dashboard)",
-        "_shared",
-        "actions",
-        "homepage-settings.ts",
-      ),
       join(
         SRC_ROOT,
         "app",

@@ -7,9 +7,7 @@
  * 余白、背景、テキストスタイリング、レイアウト、アニメーションを管理。
  */
 
-import { useEffect, useTransition } from "react";
-import type { Serialized } from "@/shared/lib/serialize";
-import { toast } from "sonner";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
@@ -24,11 +22,6 @@ import {
 } from "@/admin/components/ui";
 
 import {
-  updateHomepageSection,
-  type HomepageSectionData,
-} from "@/admin/actions/homepage-settings";
-import { isMutationError } from "@/shared/lib/mutation-result";
-import {
   sectionDesignSchema,
   parseSectionDesign,
   titleSizeValues,
@@ -40,7 +33,7 @@ import {
 } from "@/shared/lib/validations/section";
 
 // =============================================================================
-// 汎用型 — PageSection / HomepageSection 両対応
+// 汎用型 — PageSection 用
 // =============================================================================
 
 export interface SectionDesignTarget {
@@ -110,26 +103,17 @@ const animationOptions = [
 // Component
 // =============================================================================
 
-// ホームページセクション用（既存互換）
-interface HomepageDesignPanelProps {
-  readonly section: Serialized<HomepageSectionData>;
-  readonly onSave: () => void;
-  readonly onDesignSave?: never;
-}
-
-// 汎用（Page セクション等）
-interface GenericDesignPanelProps {
+interface DesignPanelProps {
   readonly section: SectionDesignTarget;
   readonly onDesignSave: (design: SectionDesign) => void;
-  readonly onSave?: never;
   readonly onDirtyChange?: (dirty: boolean) => void;
 }
 
-type DesignPanelProps = HomepageDesignPanelProps | GenericDesignPanelProps;
-
-export function DesignPanel(props: DesignPanelProps) {
-  const { section } = props;
-  const [isPending, startTransition] = useTransition();
+export function DesignPanel({
+  section,
+  onDesignSave,
+  onDirtyChange,
+}: DesignPanelProps) {
   const currentDesign = parseSectionDesign(section.design);
 
   const {
@@ -143,12 +127,10 @@ export function DesignPanel(props: DesignPanelProps) {
     defaultValues: currentDesign,
   });
 
-  // Generic mode: dirty状態をバブルアップ
+  // dirty状態をバブルアップ
   useEffect(() => {
-    if ("onDirtyChange" in props && props.onDirtyChange) {
-      props.onDirtyChange(isDirty);
-    }
-  }, [isDirty, props]);
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const background = useWatch({ control, name: "background" });
   const titleSize = useWatch({ control, name: "titleSize" });
@@ -156,30 +138,8 @@ export function DesignPanel(props: DesignPanelProps) {
   const textColor = useWatch({ control, name: "textColor" });
   const animation = useWatch({ control, name: "animation" });
 
-  const handleDesignSave = (data: SectionDesign) => {
-    // 汎用モード: onDesignSave コールバックに委譲
-    if (props.onDesignSave) {
-      props.onDesignSave(data);
-      return;
-    }
-
-    // ホームページモード: 直接保存
-    startTransition(async () => {
-      const result = await updateHomepageSection(section.id, {
-        design: data,
-      });
-      if (isMutationError(result)) {
-        toast.error(result.error);
-        return;
-      }
-
-      toast.success("デザインを保存しました");
-      props.onSave();
-    });
-  };
-
   return (
-    <form onSubmit={handleSubmit(handleDesignSave)} className="space-y-8">
+    <form onSubmit={handleSubmit(onDesignSave)} className="space-y-8">
       {/* 余白 */}
       <fieldset className="space-y-4">
         <legend className="text-sm font-medium">余白</legend>
@@ -193,7 +153,6 @@ export function DesignPanel(props: DesignPanelProps) {
                     type="radio"
                     value={opt.value}
                     {...register("paddingTop")}
-                    disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
                 </label>
@@ -209,7 +168,6 @@ export function DesignPanel(props: DesignPanelProps) {
                     type="radio"
                     value={opt.value}
                     {...register("paddingBottom")}
-                    disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
                 </label>
@@ -231,7 +189,6 @@ export function DesignPanel(props: DesignPanelProps) {
                   type="radio"
                   value={opt.value}
                   {...register("background")}
-                  disabled={isPending}
                 />
                 <span className="text-xs">{opt.label}</span>
               </label>
@@ -247,7 +204,6 @@ export function DesignPanel(props: DesignPanelProps) {
                 id="design-bg-image"
                 {...register("backgroundImageUrl")}
                 placeholder="https://..."
-                disabled={isPending}
               />
             </div>
             <div className="space-y-2">
@@ -260,7 +216,6 @@ export function DesignPanel(props: DesignPanelProps) {
                 {...register("backgroundOverlayOpacity", {
                   valueAsNumber: true,
                 })}
-                disabled={isPending}
               />
             </div>
           </>
@@ -278,7 +233,6 @@ export function DesignPanel(props: DesignPanelProps) {
                 id="design-title-color"
                 {...register("titleColor")}
                 placeholder="#000000"
-                disabled={isPending}
                 className="flex-1"
               />
               {titleColor && (
@@ -298,7 +252,6 @@ export function DesignPanel(props: DesignPanelProps) {
               onValueChange={(val) => {
                 if (isTitleSize(val)) setValue("titleSize", val);
               }}
-              disabled={isPending}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -320,7 +273,6 @@ export function DesignPanel(props: DesignPanelProps) {
                 id="design-text-color"
                 {...register("textColor")}
                 placeholder="#666666"
-                disabled={isPending}
                 className="flex-1"
               />
               {textColor && (
@@ -342,7 +294,6 @@ export function DesignPanel(props: DesignPanelProps) {
                     type="radio"
                     value={opt.value}
                     {...register("textAlign")}
-                    disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
                 </label>
@@ -365,7 +316,6 @@ export function DesignPanel(props: DesignPanelProps) {
                     type="radio"
                     value={opt.value}
                     {...register("maxWidth")}
-                    disabled={isPending}
                   />
                   <span className="text-xs">{opt.label}</span>
                 </label>
@@ -380,7 +330,6 @@ export function DesignPanel(props: DesignPanelProps) {
               onValueChange={(val) => {
                 if (isSectionAnimation(val)) setValue("animation", val);
               }}
-              disabled={isPending}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -404,13 +353,12 @@ export function DesignPanel(props: DesignPanelProps) {
           id="design-custom-class"
           {...register("customClass")}
           placeholder="追加のTailwindクラス"
-          disabled={isPending}
         />
       </div>
 
       <div className="flex justify-end pt-2">
         <SubmitButton
-          isPending={isPending}
+          isPending={false}
           label="デザインを保存"
           pendingLabel="保存中..."
         />

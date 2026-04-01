@@ -1,8 +1,7 @@
 /**
- * ホームページ設定 Server Action 統合テスト
+ * セクションスキーマ・バリデーション統合テスト
  *
- * src/app/(admin)/admin/(dashboard)/_shared/actions/homepage-settings.ts のテスト
- * ※ createSectionSchema 等は @/shared/lib/validations/section から import
+ * @/shared/lib/validations/section のスキーマと validateSectionConfig のテスト
  */
 
 import { describe, test, expect } from "bun:test";

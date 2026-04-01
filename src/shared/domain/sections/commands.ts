@@ -4,18 +4,14 @@ import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
 import { Prisma, prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { ensureHomepageSections } from "@/shared/lib/section-defaults";
 import {
   SectionType,
-  defaultHomepageSectionOrder,
-  isSectionType,
   validateSectionConfig,
   type CreateSectionInput,
   type SectionConfig,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
 } from "@/shared/lib/validations/section";
-import { getDefaultConfig } from "@/shared/lib/sections/registry";
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 
 function parseSectionConfig(type: string, config: unknown): SectionConfig {
@@ -58,22 +54,6 @@ async function ensurePageExists(pageId: string): Promise<void> {
   }
 }
 
-async function ensureHomepageSectionExists(id: string) {
-  const section = await prisma.section.findUnique({
-    where: { id },
-    select: { id: true, pageId: true, type: true },
-  });
-
-  if (!section || section.pageId !== null) {
-    throw new DomainError("セクションが見つかりません", "NOT_FOUND");
-  }
-
-  return {
-    ...section,
-    pageId: null,
-  };
-}
-
 async function ensurePageSectionExists(id: string) {
   const section = await prisma.section.findUnique({
     where: { id },
@@ -97,130 +77,6 @@ function validateConfig(type: string, config: unknown): SectionConfig {
   }
 
   return result.data;
-}
-
-export async function createHomepageSectionCommand(
-  input: CreateSectionInput,
-  contentHtml: string | null,
-): Promise<{ id: string }> {
-  const config = validateConfig(input.type, input.config);
-  const maxOrder = await prisma.section.aggregate({
-    where: { pageId: null },
-    _max: { order: true },
-  });
-
-  const section = await prisma.section.create({
-    data: omitUndefined({
-      pageId: null,
-      type: input.type,
-      title: input.title,
-      config: cloneJsonValue(config),
-      design: cloneJsonValue(input.design ?? {}),
-      contentJson: parseJsonValue(input.contentJson),
-      contentHtml,
-      order: input.order ?? (maxOrder._max.order ?? -1) + 1,
-      isActive: input.isActive,
-    }),
-    select: { id: true },
-  });
-
-  return section;
-}
-
-export async function updateHomepageSectionCommand(
-  id: string,
-  input: UpdateSectionInput,
-  contentHtml?: string | null,
-): Promise<void> {
-  const existing = await ensureHomepageSectionExists(id);
-
-  const config =
-    input.config === undefined
-      ? undefined
-      : validateConfig(existing.type, input.config);
-
-  await prisma.section.update({
-    where: { id },
-    data: omitUndefined({
-      title: input.title,
-      config: config === undefined ? undefined : cloneJsonValue(config),
-      design:
-        input.design === undefined ? undefined : cloneJsonValue(input.design),
-      ...(input.contentJson !== undefined
-        ? {
-            contentJson: parseJsonValue(input.contentJson),
-            contentHtml: contentHtml ?? null,
-          }
-        : {}),
-      isActive: input.isActive,
-    }),
-  });
-}
-
-export async function toggleHomepageSectionCommand(
-  id: string,
-  isActive: boolean,
-): Promise<void> {
-  await ensureHomepageSectionExists(id);
-
-  await prisma.section.update({
-    where: { id },
-    data: { isActive },
-  });
-}
-
-export async function updateHomepageSectionOrderCommand(
-  input: UpdateSectionOrderInput,
-): Promise<void> {
-  await prisma.$transaction(
-    input.sections.map((item) =>
-      prisma.section.update({
-        where: { id: item.id },
-        data: { order: item.order },
-      }),
-    ),
-  );
-}
-
-export async function deleteHomepageSectionCommand(id: string): Promise<void> {
-  await ensureHomepageSectionExists(id);
-
-  await prisma.section.delete({
-    where: { id },
-  });
-}
-
-export async function initializeDefaultHomepageSectionsCommand(): Promise<boolean> {
-  const createdCount = await ensureHomepageSections();
-
-  if (createdCount > 0) {
-    return true;
-  }
-
-  const existingCount = await prisma.section.count({
-    where: { pageId: null },
-  });
-
-  if (existingCount > 0) {
-    return false;
-  }
-
-  await prisma.$transaction(
-    defaultHomepageSectionOrder.map((type, index) =>
-      prisma.section.create({
-        data: {
-          pageId: null,
-          type,
-          config: cloneJsonValue(getDefaultConfig(type)),
-          design: {},
-          order: index,
-          isActive: true,
-        },
-      }),
-    ),
-  );
-
-  return true;
 }
 
 export async function createPageSectionCommand(
