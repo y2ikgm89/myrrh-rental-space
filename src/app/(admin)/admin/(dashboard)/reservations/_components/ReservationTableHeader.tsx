@@ -7,7 +7,15 @@ import { TableHeader, TableHead, TableRow } from "@/admin/components/ui";
 
 type ReservationSortBy = "startTime" | "createdAt";
 
-export function ReservationTableHeader() {
+type ReservationTableHeaderProps = {
+  allSelected: boolean;
+  onToggleAll: () => void;
+};
+
+export function ReservationTableHeader({
+  allSelected,
+  onToggleAll,
+}: ReservationTableHeaderProps) {
   const [params, setParams] = useQueryStates(
     adminReservationSearchParamsParsers,
     {
@@ -28,6 +36,15 @@ export function ReservationTableHeader() {
   return (
     <TableHeader>
       <TableRow>
+        <TableHead className="w-10">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={onToggleAll}
+            className="rounded border-border"
+            aria-label="全選択"
+          />
+        </TableHead>
         <SortableColumnHeader
           column="startTime"
           currentSortBy={params.sortBy}
