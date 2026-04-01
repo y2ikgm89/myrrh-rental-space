@@ -42,7 +42,7 @@
    * Typography
    * -------------------------------------------------------------------------- */
   --font-sans: "Noto Sans JP", sans-serif;
-  --font-serif: "Noto Serif JP", serif;
+  --font-serif: "Cormorant Garamond", "Noto Sans JP", serif;
 
   --text-hero: clamp(2.5rem, 5vw + 1rem, 4.5rem);
   --text-hero--line-height: 1.3;
@@ -190,52 +190,6 @@
     header.sticky {
       translate: none !important;
     }
-  }
-}
-
-/* ==========================================================================
- * Compat Layer — backward compatibility for custom pages & existing components
- *
- * 旧テーマトークンを新テーマにマッピング。
- * [...segments] カスタムページや既存コンポーネントが旧トークンを参照するため必要。
- * ========================================================================== */
-
-@layer compat {
-  :root {
-    /* Brand → Accent */
-    --color-brand-primary: var(--color-accent);
-    --color-brand-secondary: var(--color-accent);
-
-    /* Primary → Accent */
-    --color-primary: var(--color-accent);
-    --color-primary-dark: var(--color-accent);
-    --color-primary-foreground: var(--color-accent-foreground);
-
-    /* Secondary → Surface */
-    --color-secondary: var(--color-surface);
-    --color-secondary-foreground: var(--color-foreground);
-
-    /* Muted → Surface */
-    --color-muted: var(--color-surface);
-
-    /* Accent (old style — was a light tint) → accent-light */
-    /* Note: new --color-accent is the dark accent; old was light tint */
-
-    /* Semantic foregrounds */
-    --color-destructive-foreground: var(--color-accent-foreground);
-    --color-success-foreground: var(--color-accent-foreground);
-    --color-warning-foreground: oklch(0.2 0.02 70);
-    --color-info-foreground: var(--color-accent-foreground);
-
-    /* Rating */
-    --color-rating: oklch(0.82 0.17 90);
-
-    /* Input & Ring */
-    --color-input: var(--color-border);
-    --color-ring: var(--color-accent);
-
-    /* Radius */
-    --radius-xl: 0.75rem;
   }
 }
 

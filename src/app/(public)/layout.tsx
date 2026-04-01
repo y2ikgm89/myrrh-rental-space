@@ -19,7 +19,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
-import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
+import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
 import { Header } from "@/public/components/layouts/site-header";
 import { Footer } from "@/public/components/layouts/site-footer";
 import {
@@ -60,13 +60,13 @@ import "./_styles/public.css";
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "700"],
 });
 
-const notoSerifJP = Noto_Serif_JP({
-  variable: "--font-noto-serif-jp",
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-cormorant-garamond",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -203,7 +203,7 @@ export default async function PublicRootLayout({
     return (
       <html lang="ja">
         <body
-          className={`${notoSansJP.variable} ${notoSerifJP.variable} font-sans antialiased`}
+          className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
         >
           <MaintenancePage message={maintenanceSettings.maintenanceMessage} />
         </body>
@@ -231,7 +231,7 @@ export default async function PublicRootLayout({
         </Suspense>
       </head>
       <body
-        className={`${notoSansJP.variable} ${notoSerifJP.variable} font-sans antialiased`}
+        className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
       >
         {/* 全公開ページ共通の構造化データ */}
         <Suspense fallback={null}>
