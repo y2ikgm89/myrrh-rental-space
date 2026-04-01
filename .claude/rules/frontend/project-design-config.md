@@ -68,7 +68,7 @@ OKLCH形式。Warm Dark × Bronze。
 | ヒント | `ScrollIndicator`                    | Hero 下部                          |
 
 - **Easing**: `animations.ts` の `EASE` / `DURATION` / `STAGGER` 定数を使用（マジックナンバー禁止）
-- **Duration**: fast=0.3, normal=0.6, slow=0.8, hero=1.5
+- **Duration**: fast=0.3, normal=0.6, slow=0.8, hero=1.2
 - **入場順序**: SplitText → ScrollReveal → ParallaxImage
 - **制約**: 1セクションで動く要素は最大3箇所
 

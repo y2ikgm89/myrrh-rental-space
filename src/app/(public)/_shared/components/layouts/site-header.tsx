@@ -447,11 +447,16 @@ export function Header({
       <header
         ref={headerRef}
         className={cn(
-          "sticky top-[var(--announcement-bar-height,0px)] z-40 transition-[background-color,backdrop-filter,box-shadow,translate] duration-300",
+          "sticky top-[var(--announcement-bar-height,0px)] z-40 transition-[background-color,backdrop-filter,box-shadow,border-color,translate] duration-300",
           backgroundMode === HeaderBackgroundMode.transparent
             ? "bg-transparent"
             : "bg-background",
         )}
+        style={
+          scrolled
+            ? { borderBottom: "1px solid oklch(0.30 0.02 60)" }
+            : undefined
+        }
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
           <Link
@@ -501,15 +506,6 @@ export function Header({
             <Button variant="primary" size="sm" href="/reservation">
               予約する
             </Button>
-            <Link
-              href="/reservation"
-              className={cn(
-                "border border-accent text-accent rounded-full px-4 py-1.5 text-sm tracking-wide transition-opacity duration-300",
-                scrolled ? "opacity-100" : "pointer-events-none opacity-0",
-              )}
-            >
-              ご予約
-            </Link>
           </div>
 
           {/* Hamburger (mobile) */}

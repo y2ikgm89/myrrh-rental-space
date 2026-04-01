@@ -16,7 +16,7 @@ import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
 import { Container } from "@/public/components/design-system/container";
-import { Pagination } from "@/public/components/pagination";
+import { Pagination } from "@/public/components/Pagination";
 import { journalSearchParams } from "@/public/lib/search-params";
 import { SearchBar } from "@/public/components/ui/search-bar";
 import { JournalContent } from "./_components/JournalContent";
