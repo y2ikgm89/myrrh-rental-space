@@ -46,7 +46,7 @@ function FeatureIcon({
       }`}
     >
       <svg
-        className={`${isHero ? "h-7 w-7" : "h-4 w-4"} text-primary-dark`}
+        className={`${isHero ? "h-7 w-7" : "h-4 w-4"} text-accent`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

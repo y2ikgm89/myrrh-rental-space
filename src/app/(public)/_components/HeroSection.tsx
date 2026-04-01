@@ -134,7 +134,7 @@ export function HeroSection({
       {/* Content */}
       <div ref={contentRef} className="relative z-10 px-5 md:px-8">
         {config.tagline && (
-          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-primary-dark md:tracking-[0.4em]">
+          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-accent md:tracking-[0.4em]">
             {config.tagline}
           </p>
         )}

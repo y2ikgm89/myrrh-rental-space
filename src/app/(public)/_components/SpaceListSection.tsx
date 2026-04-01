@@ -163,7 +163,7 @@ export function SpaceListSection({
                     {space.area != null && <>{space.area}m&sup2;</>}
                   </span>
                   {space.hourlyPrice != null && (
-                    <span className="text-sm font-medium text-primary-dark">
+                    <span className="text-sm font-medium text-accent">
                       {formatUnit(space.hourlyPrice, "/h")}
                     </span>
                   )}
@@ -179,10 +179,10 @@ export function SpaceListSection({
           <div className="mt-10 text-center">
             <Link
               href={config.viewAllUrl}
-              className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+              className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
             >
               {config.viewAllText} &rarr;
-              <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
+              <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
             </Link>
           </div>
         </ScrollReveal>

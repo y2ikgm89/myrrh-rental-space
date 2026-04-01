@@ -34,7 +34,7 @@ const backgroundMap = {
   default: "",
   surface: "bg-surface",
   accent: "bg-accent",
-  primary: "bg-primary text-primary-foreground",
+  primary: "bg-accent text-accent-foreground",
   dark: "bg-foreground text-background",
   image: "bg-cover bg-center bg-no-repeat",
   gradient: "bg-gradient-to-b from-surface to-background",

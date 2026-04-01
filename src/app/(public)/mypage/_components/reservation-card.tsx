@@ -143,7 +143,7 @@ export function ReservationCard({
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 border-t border-border">
         <Link
           href={`/mypage/reservations/${id}`}
-          className="inline-block rounded-md px-3 py-1.5 text-sm text-primary hover:bg-accent/5 transition-colors"
+          className="inline-block rounded-md px-3 py-1.5 text-sm text-accent hover:bg-accent/5 transition-colors"
         >
           詳細を見る
         </Link>
@@ -151,7 +151,7 @@ export function ReservationCard({
         {canModify && (
           <Link
             href={`/mypage/reservations/${id}/edit`}
-            className="inline-block rounded-md px-3 py-1.5 text-sm text-primary hover:bg-accent/5 transition-colors"
+            className="inline-block rounded-md px-3 py-1.5 text-sm text-accent hover:bg-accent/5 transition-colors"
           >
             変更
           </Link>

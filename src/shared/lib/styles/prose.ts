@@ -36,12 +36,12 @@ export const ENHANCED_PROSE_CLASSES = cn(
   "prose-p:leading-relaxed prose-p:text-foreground prose-p:mb-5",
 
   // リンク（アンダーラインのアニメーション）
-  "prose-a:text-primary prose-a:underline prose-a:underline-offset-4",
-  "prose-a:decoration-primary/40 hover:prose-a:decoration-primary",
+  "prose-a:text-accent prose-a:underline prose-a:underline-offset-4",
+  "prose-a:decoration-accent/40 hover:prose-a:decoration-accent",
   "prose-a:transition-colors",
 
   // 引用（目立つデザイン）
-  "prose-blockquote:border-l-4 prose-blockquote:border-primary/40",
+  "prose-blockquote:border-l-4 prose-blockquote:border-accent/40",
   "prose-blockquote:pl-6 prose-blockquote:py-1 prose-blockquote:italic",
   "prose-blockquote:text-muted-foreground prose-blockquote:not-italic",
   "prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-lg",

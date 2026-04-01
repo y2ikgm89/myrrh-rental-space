@@ -18,12 +18,12 @@
  *
  * ブロック単位のアクセントカラーを [data-color] アトリビュートで設定する。
  * ブロック内で var(--accent) / var(--accent-fg) を使用し、
- * フォールバックとして var(--color-primary) / var(--color-primary-foreground) を参照する。
+ * フォールバックとして var(--color-accent) / var(--color-accent-foreground) を参照する。
  * -------------------------------------------------------------------------- */
 
 [data-color="default"] {
-  --accent: var(--color-primary);
-  --accent-fg: var(--color-primary-foreground);
+  --accent: var(--color-accent);
+  --accent-fg: var(--color-accent-foreground);
 }
 [data-color="blue"] {
   --accent: oklch(0.55 0.2 260);
@@ -81,7 +81,7 @@
   --step-gap: 0.75rem;
   --step-line-color: color-mix(
     in oklch,
-    var(--accent, var(--color-primary)) 20%,
+    var(--accent, var(--color-accent)) 20%,
     transparent
   );
   margin-top: 1.5rem;
@@ -200,8 +200,8 @@
   content: var(--step-label, "STEP") "\A" attr(data-step);
   white-space: pre-line;
   text-align: center;
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
   font-size: 0.625rem;
   font-weight: 700;
   line-height: 1.2;
@@ -214,10 +214,10 @@
   content: "\2713";
   background-color: color-mix(
     in oklch,
-    var(--accent, var(--color-primary)) 10%,
+    var(--accent, var(--color-accent)) 10%,
     transparent
   );
-  color: var(--accent, var(--color-primary));
+  color: var(--accent, var(--color-accent));
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -238,9 +238,9 @@
 }
 
 [data-steps-style="timeline"] > [data-step]::before {
-  background-color: var(--accent, var(--color-primary));
+  background-color: var(--accent, var(--color-accent));
   box-shadow: 0 0 0 3px
-    color-mix(in oklch, var(--accent, var(--color-primary)) 15%, transparent);
+    color-mix(in oklch, var(--accent, var(--color-accent)) 15%, transparent);
   margin-top: var(--step-dot-offset);
 }
 
@@ -279,8 +279,8 @@
   width: auto;
   height: auto;
   border-radius: 0;
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -302,7 +302,7 @@
   padding: 0.625rem 1rem;
   background-color: color-mix(
     in oklch,
-    var(--accent, var(--color-primary)) 8%,
+    var(--accent, var(--color-accent)) 8%,
     transparent
   );
   font-weight: 600;
@@ -322,8 +322,8 @@
 
 [data-steps-style="small"] > [data-step]::before {
   content: attr(data-step);
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
   font-size: 0.625rem;
   font-weight: 500;
 }
@@ -342,8 +342,8 @@
 
 [data-steps-fill="outline"][data-steps-style="small"] > [data-step]::before {
   background-color: transparent;
-  border: 2px solid var(--accent, var(--color-primary));
-  color: var(--accent, var(--color-primary));
+  border: 2px solid var(--accent, var(--color-accent));
+  color: var(--accent, var(--color-accent));
 }
 
 /* --------------------------------------------------------------------------
@@ -485,8 +485,8 @@ details[data-collapsible-item]
 
 /* Filled: accent title bar */
 [data-collapsible-style="filled"] [data-collapsible-title] {
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
 }
 
 [data-collapsible-style="filled"] [data-collapsible-title] p,
@@ -558,7 +558,7 @@ details[data-collapsible-item]
 /* ---- Underline Style (default) ---- */
 
 [data-tabs-style="underline"] [role="tab"][aria-selected="true"] {
-  border-bottom-color: var(--accent, var(--color-primary));
+  border-bottom-color: var(--accent, var(--color-accent));
   color: var(--color-foreground);
   background-color: var(--color-background);
 }
@@ -591,10 +591,10 @@ details[data-collapsible-item]
 }
 
 [data-tabs-style="pills"] [role="tab"][aria-selected="true"] {
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
   box-shadow: 0 1px 3px
-    color-mix(in oklch, var(--accent, var(--color-primary)) 35%, transparent);
+    color-mix(in oklch, var(--accent, var(--color-accent)) 35%, transparent);
   border-color: transparent;
 }
 
@@ -636,7 +636,7 @@ details[data-collapsible-item]
   color: var(--color-foreground);
   border-color: var(--color-border);
   border-bottom-color: var(--color-background);
-  box-shadow: inset 0 2px 0 var(--accent, var(--color-primary));
+  box-shadow: inset 0 2px 0 var(--accent, var(--color-accent));
 }
 
 [data-tabs-style="boxed"] [role="tab"][aria-selected="false"] {
@@ -676,7 +676,7 @@ details[data-collapsible-item]
   color: var(--color-foreground);
   font-weight: 600;
   background: transparent;
-  border-bottom-color: var(--accent, var(--color-primary));
+  border-bottom-color: var(--accent, var(--color-accent));
 }
 
 [data-tabs-style="minimal"] [role="tab"][aria-selected="false"] {
@@ -742,7 +742,7 @@ details[data-collapsible-item]
  * -------------------------------------------------------------------------- */
 
 [data-callout-type] {
-  --callout-color: var(--color-primary);
+  --callout-color: var(--color-accent);
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
@@ -785,7 +785,7 @@ details[data-collapsible-item]
 /* ---- Classic Style ---- */
 
 [data-pull-quote-style="classic"] {
-  border-left: 4px solid var(--accent, var(--color-primary));
+  border-left: 4px solid var(--accent, var(--color-accent));
   background-color: color-mix(in oklch, var(--color-muted) 30%, transparent);
   padding: 1.5rem 2rem;
 }
@@ -794,12 +794,12 @@ details[data-collapsible-item]
 
 [data-pull-quote-style="modern"] {
   border-top: 2px solid
-    color-mix(in oklch, var(--accent, var(--color-primary)) 50%, transparent);
+    color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
   border-bottom: 2px solid
-    color-mix(in oklch, var(--accent, var(--color-primary)) 50%, transparent);
+    color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
   background: linear-gradient(
     to right,
-    color-mix(in oklch, var(--accent, var(--color-primary)) 5%, transparent),
+    color-mix(in oklch, var(--accent, var(--color-accent)) 5%, transparent),
     transparent
   );
   padding: 2rem;
@@ -912,8 +912,8 @@ details[data-collapsible-item]
 /* Variants */
 
 [data-button-variant="primary"] > a {
-  background-color: var(--color-primary);
-  color: var(--color-primary-foreground);
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
 [data-button-variant="primary"] > a:hover {
   opacity: 0.9;
@@ -1247,7 +1247,7 @@ details[data-collapsible-item]
 
 [data-toc] a {
   font-size: 0.875rem;
-  color: var(--color-primary);
+  color: var(--color-accent);
   text-decoration: none;
   transition: color 0.15s;
 }

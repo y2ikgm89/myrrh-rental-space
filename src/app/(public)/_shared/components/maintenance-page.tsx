@@ -23,11 +23,11 @@ export function MaintenancePage({
 
         {/* MAINTENANCE ラベル */}
         <div className="mt-10 flex items-center justify-center gap-3">
-          <span className="h-px w-8 bg-primary" aria-hidden="true" />
+          <span className="h-px w-8 bg-accent" aria-hidden="true" />
           <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
             Maintenance
           </span>
-          <span className="h-px w-8 bg-primary" aria-hidden="true" />
+          <span className="h-px w-8 bg-accent" aria-hidden="true" />
         </div>
 
         {/* 見出し */}
