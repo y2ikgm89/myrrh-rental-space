@@ -13,7 +13,6 @@ import {
   NavigationType,
   SocialPlatform,
   LayoutWidth,
-  SectionType,
   PostStatus,
   AuditAction,
   MediaType,
@@ -38,7 +37,9 @@ import {
   EditorCommentStatus,
   PostPermalinkStructure,
   PaymentStatus,
+  EventStatus,
 } from "@/shared/db/enums";
+import { SectionType, isSectionType } from "@/shared/lib/validations/section";
 
 // =============================================================================
 // Valid Value Sets (for O(1) lookup performance)
@@ -53,7 +54,6 @@ const VALID_CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus));
 const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType));
 const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform));
 const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth));
-const VALID_SECTION_TYPES = new Set<string>(Object.values(SectionType));
 const VALID_POST_STATUSES = new Set<string>(Object.values(PostStatus));
 const VALID_NEWS_STATUS_FILTERS = new Set(["ALL", "PUBLISHED", "DRAFT"]);
 const VALID_AUDIT_ACTIONS = new Set<string>(Object.values(AuditAction));
@@ -101,6 +101,7 @@ const VALID_POST_PERMALINK_STRUCTURES = new Set<string>(
   Object.values(PostPermalinkStructure),
 );
 const VALID_PAYMENT_STATUSES = new Set<string>(Object.values(PaymentStatus));
+const VALID_EVENT_STATUSES = new Set<string>(Object.values(EventStatus));
 
 // =============================================================================
 // Type Guards
@@ -136,9 +137,8 @@ export function isValidLayoutWidth(value: unknown): value is LayoutWidth {
   return typeof value === "string" && VALID_LAYOUT_WIDTHS.has(value);
 }
 
-export function isValidSectionType(value: unknown): value is SectionType {
-  return typeof value === "string" && VALID_SECTION_TYPES.has(value);
-}
+export { isSectionType as isValidSectionType };
+export type { SectionType };
 
 export function isValidPostStatus(value: unknown): value is PostStatus {
   return typeof value === "string" && VALID_POST_STATUSES.has(value);
@@ -275,4 +275,8 @@ export function isValidPostPermalinkStructure(
 
 export function isValidPaymentStatus(value: unknown): value is PaymentStatus {
   return typeof value === "string" && VALID_PAYMENT_STATUSES.has(value);
+}
+
+export function isValidEventStatus(value: unknown): value is EventStatus {
+  return typeof value === "string" && VALID_EVENT_STATUSES.has(value);
 }
