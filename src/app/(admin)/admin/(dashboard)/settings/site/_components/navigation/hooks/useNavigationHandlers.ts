@@ -31,7 +31,6 @@ import type {
   SocialLinkData,
   NavFormData,
   SocialFormData,
-  FlatNavigationItem,
 } from "../types";
 import { rebuildHierarchy } from "../types";
 import { flattenNavItems } from "./use-navigation-form";
