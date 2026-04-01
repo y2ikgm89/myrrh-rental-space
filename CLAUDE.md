@@ -33,6 +33,16 @@
 
 スキル（`.claude/skills/`）・エージェント（`.claude/agents/`）・MCP（`.mcp.json`）は自動検出。
 
+主要スキル（新機能追加時）:
+
+- `/create-admin-page <resource>` — 管理画面 CRUD ページ一式スキャフォールド
+- `/create-server-action <resource>` — Server Action ファイル生成
+- `/create-section-type <name>` — セクションタイプ追加
+- `/create-page-content <key>` — 公開ページ追加
+- `/prisma-migration [name]` — スキーマ変更後のマイグレーション
+- `/add-settings-field <section> <fields>` — Settings フィールド追加
+- `/cache-audit` — Server Action のキャッシュ無効化チェック
+
 ---
 
 ## 🟢 プロジェクト情報
@@ -46,6 +56,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 src/app/(admin)/admin/(dashboard)/   管理画面（admin.css, Better Auth）
 src/app/(public)/                    公開ページ（Page + Section で管理、Page-First Architecture）
 src/shared/lib/sections/             セクションレジストリ・定義・field ヘルパー
+src/shared/domain/                   ドメイン層（commands + admin-queries + public-queries）
 src/shared/                          共有（CSS変数非依存）
 generated/prisma/                    Prisma Client（.gitignore対象、deps stageで再生成）
 __tests__/unit/                      単体テスト（lib/hooks/components/shared/api/queries/architecture/db/domain）
@@ -66,6 +77,7 @@ __tests__/integration/               統合テスト（actions/admin, actions/pu
 | Better Auth  | 1.5.6  | RBAC, Google/LINE OAuth, accountLinking, CUSTOMER ロール                    |
 | Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）                  |
 | Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                   |
+| FullCalendar | 6.1    | `@fullcalendar/react`, 月/週/リスト切替、`'use client'` 必須                |
 
 ### コマンド
 
@@ -104,6 +116,10 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 | `error-handling.md`  | `logError`・`safeFetch`・`MutationResult`・DomainError                            |
 | `zod-patterns.md`    | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                       |
 | `test-quality.md`    | テスト分類・ドメインコマンドテストパターン・Playwright E2E                        |
+| `react-patterns.md`  | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                         |
+| `resend-patterns.md` | React Email テンプレート・`fireAndForget` メール送信パターン                      |
+| `nuqs-patterns.md`   | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー                |
+| `api-routes.md`      | Route Handler 認証順序・`unstable_rethrow`・CRON 認証                             |
 
 ### キーファイル
 

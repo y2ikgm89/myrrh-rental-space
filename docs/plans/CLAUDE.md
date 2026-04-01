@@ -60,6 +60,12 @@ ls -t docs/plans/*.md | head -10
 2. `superpowers:subagent-driven-development` — 同一セッション内でサブエージェント実行（推奨）
 3. `superpowers:executing-plans` — 別セッションでバッチ実行・チェックポイントでレビュー
 
-## superpowers による計画
+## 計画ファイルの配置
 
-`brainstorming` → `writing-plans` スキルは `docs/superpowers/plans/` に計画、`docs/superpowers/specs/` にスペックを作成する。
+| パス                      | 用途                                     |
+| ------------------------- | ---------------------------------------- |
+| `docs/plans/`             | 手動で書いた計画・レガシー計画           |
+| `docs/superpowers/plans/` | `writing-plans` スキルが自動生成する計画 |
+| `docs/superpowers/specs/` | `brainstorming` スキルが生成する設計書   |
+
+`brainstorming` → `writing-plans` → `subagent-driven-development` のスキルチェーンで使用。
