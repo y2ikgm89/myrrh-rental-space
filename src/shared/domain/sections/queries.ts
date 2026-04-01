@@ -2,7 +2,6 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { SectionType } from "@/shared/db/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
@@ -20,7 +19,7 @@ import { getPublicPage } from "@/shared/domain/pages/queries";
 
 export type PublicSection = {
   readonly id: string;
-  readonly type: SectionType;
+  readonly type: string;
   readonly title: string | null;
   readonly contentHtml: string | null;
   readonly contentJson: unknown | null;
@@ -52,11 +51,27 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.HOMEPAGE_SECTIONS);
 
+  const homePage = await safeFetch({
+    fetch: () =>
+      prisma.page.findUnique({
+        where: { slug: "home" },
+        select: { id: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getHomepageSections.findPage",
+  });
+
+  if (!homePage) {
+    return getDefaultSections("home");
+  }
+
   const sections = await safeFetch({
     fetch: () =>
       prisma.section.findMany({
         where: {
-          pageId: null,
+          pageId: homePage.id,
           isActive: true,
         },
         select: {

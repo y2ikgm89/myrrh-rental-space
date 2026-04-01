@@ -36,33 +36,35 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 md:gap-8">
-      {spaces.map((space) => {
-        const stats = reviewStats?.[space.id];
-        return (
-          <SpaceCard
-            key={space.id}
-            slug={space.slug}
-            name={space.name}
-            description={space.description}
-            capacity={space.capacity}
-            area={space.area}
-            hourlyPrice={space.hourlyPrice}
-            dailyPrice={space.dailyPrice}
-            locationName={space.location.name}
-            lineAddress={space.lineAddress}
-            facilities={space.facilities}
-            mainImageUrl={space.mainImageUrl}
-            categoryName={space.category?.name}
-            {...(stats && stats.totalCount > 0
-              ? {
-                  averageRating: stats.averageRating,
-                  reviewCount: stats.totalCount,
-                }
-              : {})}
-          />
-        );
-      })}
+    <div className="@container">
+      <div className="grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3 @md:gap-8">
+        {spaces.map((space) => {
+          const stats = reviewStats?.[space.id];
+          return (
+            <SpaceCard
+              key={space.id}
+              slug={space.slug}
+              name={space.name}
+              description={space.description}
+              capacity={space.capacity}
+              area={space.area}
+              hourlyPrice={space.hourlyPrice}
+              dailyPrice={space.dailyPrice}
+              locationName={space.location.name}
+              lineAddress={space.lineAddress}
+              facilities={space.facilities}
+              mainImageUrl={space.mainImageUrl}
+              categoryName={space.category?.name}
+              {...(stats && stats.totalCount > 0
+                ? {
+                    averageRating: stats.averageRating,
+                    reviewCount: stats.totalCount,
+                  }
+                : {})}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

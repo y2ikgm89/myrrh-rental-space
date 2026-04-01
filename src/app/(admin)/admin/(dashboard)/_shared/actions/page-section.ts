@@ -15,7 +15,6 @@ import {
   updatePageSectionOrderCommand,
 } from "@/shared/domain/sections/commands";
 import {
-  type SectionType,
   createSectionSchema,
   updateSectionSchema,
   updateSectionOrderSchema,
@@ -28,7 +27,7 @@ import {
 export type PageSectionData = {
   id: string;
   pageId: string;
-  type: SectionType;
+  type: string;
   title: string | null;
   config: SectionConfig;
   design: unknown;

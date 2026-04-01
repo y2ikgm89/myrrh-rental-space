@@ -57,7 +57,7 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
 export async function getCookieConsentSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.COOKIE_CONSENT, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.COOKIE_CONSENT);
 
   const result = await safeFetch({
     fetch: () =>
@@ -83,7 +83,7 @@ export async function getCookieConsentSettings() {
 export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ANALYTICS_CONFIG);
 
   const settings = await safeFetch({
     fetch: () =>
@@ -121,7 +121,7 @@ export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
 export async function getSeoSettings(): Promise<SeoSettings | null> {
   "use cache";
   cacheLife(CACHE_LIFE.METADATA);
-  cacheTag(CACHE_TAGS.SEO_SETTINGS, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.SEO_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -149,7 +149,7 @@ export async function getSeoSettings(): Promise<SeoSettings | null> {
 export async function getMaintenanceSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.DYNAMIC_DATA);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
     fetch: async () => {
@@ -174,7 +174,7 @@ export async function getMaintenanceSettings() {
 export async function getPublicRobotsTxtSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ROBOTS_TXT, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ROBOTS_TXT);
 
   const result = await safeFetch({
     fetch: () =>
@@ -197,7 +197,7 @@ export async function getPublicRobotsTxtSettings() {
 export async function getSiteLayoutSettings(): Promise<LayoutConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -235,7 +235,6 @@ export async function getPostLayoutSettings(
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
-    CACHE_TAGS.SETTINGS,
     getCacheTag.layoutSettings.site(),
     getCacheTag.layoutSettings.post(postId),
   );
@@ -277,7 +276,6 @@ export async function getNewsLayoutSettings(
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
-    CACHE_TAGS.SETTINGS,
     getCacheTag.layoutSettings.site(),
     getCacheTag.layoutSettings.news(newsId),
   );
@@ -319,7 +317,6 @@ export async function getPageLayoutSettings(
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(
-    CACHE_TAGS.SETTINGS,
     getCacheTag.layoutSettings.site(),
     getCacheTag.layoutSettings.page(slug),
   );

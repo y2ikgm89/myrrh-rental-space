@@ -4,7 +4,7 @@ import { prisma, type Prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { PageData, PageListResult } from "./types";
 
-const PAGES_MANAGED_ELSEWHERE = ["home", "posts", "news", "terms"];
+const PAGES_MANAGED_ELSEWHERE = ["posts", "news", "terms"];
 
 export type PageListQueryParams = {
   query?: string | undefined;
@@ -15,16 +15,6 @@ export type PageListQueryParams = {
   sortBy?: "updatedAt" | "title" | "slug" | undefined;
   sortOrder?: "asc" | "desc" | undefined;
 };
-
-export async function getHomepageLastUpdatedQuery(): Promise<Date | null> {
-  const latest = await prisma.section.findFirst({
-    where: { pageId: null },
-    orderBy: { updatedAt: "desc" },
-    select: { updatedAt: true },
-  });
-
-  return latest?.updatedAt ?? null;
-}
 
 export async function getPagesListQuery(
   params: PageListQueryParams = {},
@@ -78,11 +68,19 @@ export async function getPagesListQuery(
       orderBy: { [sortBy]: sortOrder },
       skip: (page - 1) * perPage,
       take: perPage,
+      include: {
+        _count: { select: { sections: true } },
+      },
     }),
     prisma.page.count({ where }),
   ]);
 
-  return { pages: toPlainArray(pages), total, page, perPage };
+  const pagesWithCount = pages.map(({ _count, ...rest }) => ({
+    ...rest,
+    sectionCount: _count.sections,
+  }));
+
+  return { pages: toPlainArray(pagesWithCount), total, page, perPage };
 }
 
 export async function getPageBySlugQuery(

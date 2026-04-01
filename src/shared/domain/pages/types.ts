@@ -19,6 +19,7 @@ export type PageData = {
   contentWidth: LayoutWidth | null;
   contentWidthCustom: number | null;
   showSidebar: boolean | null;
+  sectionCount?: number | undefined;
   createdAt: DateLike;
   updatedAt: DateLike;
 };

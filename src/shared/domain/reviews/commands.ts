@@ -14,7 +14,7 @@ type CreateReviewInput = {
 
 export async function createReviewCommand(input: CreateReviewInput) {
   const reservation = await prisma.reservation.findUnique({
-    where: { id: input.reservationId },
+    where: { id: input.reservationId, deletedAt: null },
     select: {
       id: true,
       customerId: true,

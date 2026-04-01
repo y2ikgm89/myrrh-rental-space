@@ -18,10 +18,6 @@ import * as settingsCommands from "@/shared/domain/settings/commands";
 
 import { taxSettingsSchema, type TaxSettingsInput } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 export async function updateTaxSettings(
   input: TaxSettingsInput,
 ): Promise<MutationResult> {
@@ -37,6 +33,8 @@ export async function updateTaxSettings(
       await settingsCommands.updateTaxSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+    },
   });
 }

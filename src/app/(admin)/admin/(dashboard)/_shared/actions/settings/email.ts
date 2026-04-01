@@ -23,10 +23,6 @@ import {
   type NotificationSettingsInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 export async function updateEmailSettings(
   data: EmailSettingsInput,
 ): Promise<MutationResult> {
@@ -42,7 +38,9 @@ export async function updateEmailSettings(
       await updateEmailSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
+    },
   });
 }
 
@@ -61,6 +59,8 @@ export async function updateNotificationSettings(
       await updateNotificationSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
+    },
   });
 }

@@ -7,15 +7,12 @@ import {
   getPublicHomepageSectionsQuery,
 } from "@/shared/domain/sections/admin-queries";
 import type { Serialized } from "@/shared/lib/serialize";
-import {
-  SectionType,
-  type SectionConfig,
-} from "@/shared/lib/validations/section";
+import type { SectionConfig } from "@/shared/lib/validations/section";
 import { requireAdminPermission } from "./_helpers";
 
 export type HomepageSectionData = {
   id: string;
-  type: SectionType;
+  type: string;
   title: string | null;
   config: SectionConfig;
   design: unknown;
@@ -48,7 +45,7 @@ export async function getHomepageSection(
 }
 
 export async function getHomepageSectionByType(
-  type: SectionType,
+  type: string,
 ): Promise<Serialized<HomepageSectionData> | null> {
   await requireAdminPermission("settings", "read");
   return getHomepageSectionByTypeQuery(type);

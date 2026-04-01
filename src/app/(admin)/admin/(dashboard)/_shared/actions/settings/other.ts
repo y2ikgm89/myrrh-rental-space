@@ -41,30 +41,6 @@ import {
   type SidebarSettingsInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
-function invalidateReservationSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.RESERVATIONS);
-}
-
-function invalidateSidebarSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.POSTS);
-}
-
-function invalidatePermalinkCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.POSTS);
-}
-
-function invalidateLayoutCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
-}
-
 export async function updateMaintenanceSettings(
   data: MaintenanceSettingsInput,
 ): Promise<MutationResult> {
@@ -80,7 +56,9 @@ export async function updateMaintenanceSettings(
       await settingsCommands.updateMaintenanceSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+    },
   });
 }
 
@@ -99,7 +77,9 @@ export async function updateCookieConsentSettings(
       await settingsCommands.updateCookieConsentSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.COOKIE_CONSENT);
+    },
   });
 }
 
@@ -118,7 +98,9 @@ export async function updateTermsAgreementSettings(
       await settingsCommands.updateTermsAgreementSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateReservationSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+    },
   });
 }
 
@@ -138,7 +120,7 @@ export async function updateReservationSettings(
       return null;
     },
     afterSuccess: () => {
-      invalidateSettingsCache();
+      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
       updateTag(CACHE_TAGS.TERMS);
     },
   });
@@ -159,7 +141,10 @@ export async function updateSidebarSettings(
       await settingsCommands.updateSidebarSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSidebarSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SIDEBAR_SETTINGS);
+      updateTag(CACHE_TAGS.POSTS);
+    },
   });
 }
 
@@ -180,7 +165,9 @@ export async function updateAnnouncementBarCarouselSettings(
       );
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
+    },
   });
 }
 
@@ -199,7 +186,10 @@ export async function updatePermalinkSettings(
       await settingsCommands.updatePermalinkSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidatePermalinkCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.PERMALINK);
+      updateTag(CACHE_TAGS.POSTS);
+    },
   });
 }
 
@@ -218,7 +208,9 @@ export async function updateHeaderSettings(
       await settingsCommands.updateHeaderSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateLayoutCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+    },
   });
 }
 
@@ -237,6 +229,9 @@ export async function updateFooterSettings(
       await settingsCommands.updateFooterSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateLayoutCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+      updateTag(CACHE_TAGS.SOCIAL_LINKS);
+    },
   });
 }

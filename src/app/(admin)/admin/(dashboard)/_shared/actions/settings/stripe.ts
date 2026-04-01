@@ -49,7 +49,7 @@ export async function updateStripeSettings(
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SETTINGS);
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
     },
   });
 }
@@ -88,7 +88,7 @@ export async function testStripeConnectionAction(
       };
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SETTINGS);
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
     },
   });
 }
@@ -105,7 +105,7 @@ export async function clearStripeKeys(): Promise<MutationResult> {
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.SETTINGS);
+      updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
     },
   });
 }

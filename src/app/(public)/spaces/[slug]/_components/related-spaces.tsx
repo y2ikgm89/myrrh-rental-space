@@ -21,19 +21,21 @@ export async function RelatedSpaces({
         <Heading level={2} className="mb-8 text-center">
           関連スペース
         </Heading>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {spaces.map((space) => (
-            <SpaceCard
-              key={space.id}
-              slug={space.slug}
-              name={space.name}
-              description={null}
-              capacity={space.capacity}
-              area={null}
-              hourlyPrice={Number(space.hourlyPrice)}
-              mainImageUrl={space.mainImageUrl}
-            />
-          ))}
+        <div className="@container">
+          <div className="grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3">
+            {spaces.map((space) => (
+              <SpaceCard
+                key={space.id}
+                slug={space.slug}
+                name={space.name}
+                description={null}
+                capacity={space.capacity}
+                area={null}
+                hourlyPrice={Number(space.hourlyPrice)}
+                mainImageUrl={space.mainImageUrl}
+              />
+            ))}
+          </div>
         </div>
       </Container>
     </section>

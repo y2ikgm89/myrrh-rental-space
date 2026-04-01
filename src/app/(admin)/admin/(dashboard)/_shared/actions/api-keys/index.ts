@@ -46,7 +46,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 const apiKeyIdSchema = z.string().min(1, { error: "APIキーIDが不正です" });
 
 function refreshSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 }
 
 export async function updateResendSettings(

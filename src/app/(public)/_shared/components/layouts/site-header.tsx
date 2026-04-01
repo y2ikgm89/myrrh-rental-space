@@ -46,6 +46,13 @@ interface HeaderProps {
 const FALLBACK_NAV: readonly PublicNavItem[] = [
   { id: "home", label: "IconHome", url: "/", isExternal: false, children: [] },
   {
+    id: "events",
+    label: "イベント",
+    url: "/events",
+    isExternal: false,
+    children: [],
+  },
+  {
     id: "reservation",
     label: "Reservation",
     url: "/reservation",

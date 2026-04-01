@@ -13,6 +13,28 @@ paths:
 - **`error.message` をレスポンスボディ・URL パラメータに露出禁止** — DB ホスト名・スキーマ名等の内部情報漏洩リスク。`logError()` でサーバー記録のみ、外部には固定メッセージ
 - **OAuth コールバックの URL クエリに生エラー禁止** — `?error=${error.message}` はブラウザ履歴に永続。固定の安全メッセージのみ
 
+## API Route の処理順序（必須）
+
+全 Route Handler は以下の順序を厳守する:
+
+1. **認証チェック** (`checkPermission`) — 未認証リクエストを DB アクセス・バリデーション前に弾く
+2. **入力バリデーション** (`safeParse`) — 認証済みリクエストのみバリデーションエラーを返す
+3. **ビジネスロジック** — DB 操作・レスポンス生成
+
+```typescript
+// NG: バリデーション → 認証（未認証者にパラメータ情報が漏洩）
+const parsed = schema.safeParse(input);
+if (!parsed.success) return jsonValidationError(parsed.error);
+const auth = await checkPermission("media", "read", request.headers);
+
+// OK: 認証 → バリデーション
+const auth = await checkPermission("media", "read", request.headers);
+if (!auth.success)
+  return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
+const parsed = schema.safeParse(input);
+if (!parsed.success) return jsonValidationError(parsed.error);
+```
+
 ## Rate Limiting
 
 - **`checkRateLimit(pathname, clientIp)` に一元化**（`proxy.ts` で呼び出し）

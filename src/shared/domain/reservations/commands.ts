@@ -835,6 +835,7 @@ export async function createPublicReservationCommand(
 
   return {
     id: reservation.id,
+    customerId: reservation.customerId,
     payload: buildPayload({
       reservationId: reservation.id,
       customer: reservation.customer,

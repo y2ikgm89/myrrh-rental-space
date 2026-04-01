@@ -424,6 +424,17 @@ export function CategoryActionCell({ id, name }: { id: string; name: string }) {
 <ItemActionCell id={id} />
 ```
 
+## AdminDetailLayout vs InlineEditorShell の使い分け
+
+| パターン                             | 適用場面                                         | ページ例                                                    |
+| ------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------- |
+| `AdminDetailLayout`                  | 標準の詳細・編集・新規作成ページ                 | customers/[id], spaces/[id]/edit, staff/new                 |
+| `InlineEditorShell` + `EditorHeader` | フルスクリーンエディタ（Lexical/コンテンツ編集） | posts/[id], news/[id], terms/[id]/edit, faq/items/[id]/edit |
+
+**禁止**: InlineEditorShell を使うページに AdminDetailLayout をラップすること（二重ヘッダーになる）
+
+---
+
 ## 詳細・編集・新規作成ページ標準構造
 
 ### 詳細ページ（Server Component + AdminDetailLayout）
@@ -797,6 +808,51 @@ const [testPending, startTestTransition] = useTransition();
 17. **管理画面のサブページディレクトリにルーティング対象名を使用禁止** — `[slug]/sections/` や `[slug]/seo/` 等のサブページコンポーネントディレクトリは Next.js がルートとして解釈する可能性がある。`_` プレフィックスでプライベートフォルダにする（`[slug]/_sections/`、`[slug]/_seo/`）
 18. **新規作成フォームに `disabled={!isDirty}` 禁止** — 新規作成は初期状態で全フィールドが空のため isDirty は常に false。isDirty 無効化は**編集モードのみ**。create/edit 共用コンポーネントでは `{...(isEdit && { disabled: !form.formState.isDirty })}` 条件スプレッド
 19. **設定セクションの SubmitButton を CardContent 内に直置き禁止** — `<div className="flex justify-end pt-2">` でラップして右寄せ。CRUD フォームの `flex justify-end gap-4` と統一
+
+---
+
+## 一括操作（BulkActions）パターン
+
+一覧テーブルにチェックボックス選択 + フローティングアクションバーを追加するパターン。
+
+**参照実装**: `pages/_components/BulkActions.tsx`, `posts/_components/PostBulkActions.tsx`, `reservations/_components/ReservationBulkActions.tsx`
+
+### 必須要素
+
+1. **テーブルを Client Component 化** — `useState<string[]>([])` で selectedIds 管理
+2. **ヘッダーチェックボックス** — `allSelected` + `onToggleAll` props を TableHeader に追加
+3. **行チェックボックス** — `<input type="checkbox" aria-label={`${item.name}を選択`} />`
+4. **BulkActions バー** — `fixed bottom-6 left-1/2 -translate-x-1/2 z-50` + `rounded-lg border bg-card px-4 py-3 shadow-lg`
+5. **`useTransition`** で isPending、`isMutationError()` でエラーチェック、`router.refresh()` + `onClear()`
+
+### ステータス遷移制約がある場合（予約等）
+
+- `updateMany` ではなく個別にドメインコマンドを呼び出す
+- 非対象ステータスの行はチェックボックスを `disabled` にする
+- 結果を `{ succeeded, skipped, failed }` で返し、toast に表示
+
+---
+
+## カラムソートパターン
+
+**共有コンポーネント**: `@/admin/components/table/SortableColumnHeader`
+
+### 実装手順
+
+1. `src/shared/lib/nuqs/parsers.ts` に `sortBy` + `sortOrder` を追加:
+   ```tsx
+   sortBy: parseAsStringLiteral(["createdAt", "fieldA", "fieldB"] as const).withDefault("createdAt"),
+   sortOrder: parseAsSortOrder,
+   ```
+2. クエリ関数に `orderBy: { [sortBy]: sortOrder }` を追加
+3. `*TableHeader.tsx`（Client Component）を作成:
+   - `useQueryStates(parsers)` で sortBy/sortOrder を読み書き
+   - `SortableColumnHeader` でソート可能カラムを定義
+4. テーブルの `<TableHeader>` を `<*TableHeader />` に置換
+
+**参照実装**: `ReservationTableHeader.tsx`, `PostTableHeader.tsx`, `StaffTableHeader.tsx`
+
+---
 
 ## Gotchas
 

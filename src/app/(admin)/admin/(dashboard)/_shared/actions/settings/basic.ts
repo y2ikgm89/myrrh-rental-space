@@ -32,10 +32,6 @@ import {
   type SearchVerificationInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 export async function updateBasicInfo(
   data: BasicInfoInput,
 ): Promise<MutationResult> {
@@ -51,7 +47,9 @@ export async function updateBasicInfo(
       await updateBasicInfoCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+    },
   });
 }
 
@@ -70,7 +68,9 @@ export async function updateLayoutSettings(
       await updateLayoutSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+    },
   });
 }
 
@@ -89,7 +89,9 @@ export async function updateMetaSettings(
       await updateMetaSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SEO_SETTINGS);
+    },
   });
 }
 
@@ -108,7 +110,9 @@ export async function updateAnalyticsSettings(
       await updateAnalyticsSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ANALYTICS_CONFIG);
+    },
   });
 }
 
@@ -127,6 +131,8 @@ export async function updateSearchVerification(
       await updateSearchVerificationCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.SEO_SETTINGS);
+    },
   });
 }

@@ -27,5 +27,8 @@ export async function fetchAvailableSlots(
 }
 
 export async function fetchBusinessHours(): Promise<BusinessHours | null> {
+  const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
+  if (!rateLimit.success) return null;
+
   return getBusinessHoursSettingsQuery();
 }

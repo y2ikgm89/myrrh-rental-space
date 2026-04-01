@@ -15,6 +15,7 @@
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`/`Stack gap="lg"`、エラー `<div role="alert">` + border スタイル
 - **ソフトデリート `where` 漏れ禁止** → Reservation の全 `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restoreReservationCommand` 除く）→ `gotchas.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
+- **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
 
 ---
 
@@ -39,6 +40,7 @@
 ### アーキテクチャ
 
 Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離。遷移はフルページリロード。
+レスポンシブ: Fluid-first（`clamp()`）+ Container Queries（カードグリッド）。Viewport breakpoints はマクロレイアウト切替のみ。
 
 ```
 src/app/(admin)/admin/(dashboard)/   管理画面（admin.css, Better Auth）
@@ -52,18 +54,18 @@ __tests__/integration/               統合テスト（actions/admin, actions/pu
 
 ### 技術スタック
 
-| 技術         | Ver    | 注意点                                                                  |
-| ------------ | ------ | ----------------------------------------------------------------------- |
-| Next.js      | 16.2.1 | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)               |
-| React        | 19.2.4 | Compiler 1.0 (`react-compiler-runtime` 必須), `use()`, `useEffectEvent` |
-| TypeScript   | 6.0.2  | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`          |
-| Prisma       | 7.6.0  | WASM, `createAppPrismaClient` で `$extends` 集約                        |
-| Tailwind CSS | 4.2.2  | CSS-first, `@theme`, セマンティックトークン必須                         |
-| Tabler Icons | 3.41   | `@tabler/icons-react`, `Icon` プレフィックス, 型: `TablerIcon`          |
-| Zod          | 4.3.6  | `{ error: }` パラメータ                                                 |
-| Better Auth  | 1.5.6  | RBAC, Google/LINE OAuth, accountLinking, CUSTOMER ロール                |
-| Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）              |
-| Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                               |
+| 技術         | Ver    | 注意点                                                                      |
+| ------------ | ------ | --------------------------------------------------------------------------- |
+| Next.js      | 16.2.1 | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                   |
+| React        | 19.2.4 | Compiler 1.0 (`react-compiler-runtime` 必須), `use()`, `useEffectEvent`     |
+| TypeScript   | 6.0.2  | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`              |
+| Prisma       | 7.6.0  | WASM, `createAppPrismaClient` で `$extends` 集約                            |
+| Tailwind CSS | 4.2.2  | CSS-first, `@theme`, セマンティックトークン必須, Container Queries コア統合 |
+| Tabler Icons | 3.41   | `@tabler/icons-react`, `Icon` プレフィックス, 型: `TablerIcon`              |
+| Zod          | 4.3.6  | `{ error: }` パラメータ                                                     |
+| Better Auth  | 1.5.6  | RBAC, Google/LINE OAuth, accountLinking, CUSTOMER ロール                    |
+| Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）                  |
+| Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                   |
 
 ### コマンド
 
@@ -91,28 +93,31 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 `.claude/rules/` に `paths:` フロントマターで条件付き自動ロード:
 
-| ルール               | 内容                                                                    |
-| -------------------- | ----------------------------------------------------------------------- |
-| `gotchas.md`         | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック等）       |
-| `server-actions.md`  | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限 |
-| `type-safety.md`     | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`            |
-| `bun-patterns.md`    | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止 |
-| `prisma-patterns.md` | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary    |
-| `auth-patterns.md`   | Better Auth・`executeAdminMutationResult`・セッション取得パターン       |
-| `error-handling.md`  | `logError`・`safeFetch`・`MutationResult`・DomainError                  |
-| `zod-patterns.md`    | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止             |
-| `test-quality.md`    | テスト分類・ドメインコマンドテストパターン・Playwright E2E              |
+| ルール               | 内容                                                                              |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `gotchas.md`         | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック・レスポンシブ標準） |
+| `server-actions.md`  | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限           |
+| `type-safety.md`     | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                      |
+| `bun-patterns.md`    | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止           |
+| `prisma-patterns.md` | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary              |
+| `auth-patterns.md`   | Better Auth・`executeAdminMutationResult`・セッション取得パターン                 |
+| `error-handling.md`  | `logError`・`safeFetch`・`MutationResult`・DomainError                            |
+| `zod-patterns.md`    | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                       |
+| `test-quality.md`    | テスト分類・ドメインコマンドテストパターン・Playwright E2E                        |
 
 ### キーファイル
 
-| パス                                              | 内容                                                |
-| ------------------------------------------------- | --------------------------------------------------- |
-| `src/shared/db/prisma.ts`                         | `createAppPrismaClient`（`$extends` 集約）          |
-| `src/shared/lib/auth.ts`                          | Better Auth 設定・セッション検証                    |
-| `src/shared/lib/constants/cache.ts`               | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag` |
-| `src/shared/lib/sections/registry.ts`             | セクションレジストリ（17定義、field ヘルパー）      |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts` | `executeAdminMutationResult`                        |
-| `src/proxy.ts`                                    | Admin Gate + Rate Limit（Next.js 16 proxy）         |
+| パス                                                   | 内容                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------ |
+| `src/shared/db/prisma.ts`                              | `createAppPrismaClient`（`$extends` 集約）                         |
+| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                   |
+| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                |
+| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（17定義、field ヘルパー）                     |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                       |
+| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                        |
+| `src/app/(public)/_shared/components/design-system/`   | Primitives 11（SC: Container/Stack/Heading 等, CC: Button/Dialog） |
+| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                      |
+| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                       |
 
 ### セキュリティ多層防御
 
@@ -120,4 +125,5 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 - **公開クエリ**: Rate Limit (`publicQueryRateLimiter`) + Zod
 - **マイページ**: Rate Limit (`formSubmitRateLimiter`) + `getSession` + `getCustomerByUserId` + Zod
 - **管理 Actions**: `executeAdminMutationResult`（認証・権限・監査ログ一括） + Zod
-- **API Routes**: `checkPermission` + Zod、管理ログインは `proxy.ts`（Admin Gate）
+- **API Routes**: `checkPermission`（**認証を最初に実行**）→ Zod、管理ログインは `proxy.ts`（Admin Gate）
+- **CSV エクスポート**: `escapeCsvField` で数式インジェクション対策（`=+\-@\t\r` 先頭ガード）

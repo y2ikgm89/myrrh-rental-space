@@ -29,15 +29,6 @@ import {
   type MeoSettingsInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
-function invalidateBusinessHoursCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-  updateTag(CACHE_TAGS.RESERVATIONS);
-}
-
 export async function updateBusinessInfo(
   data: BusinessInfoInput,
 ): Promise<MutationResult> {
@@ -53,7 +44,9 @@ export async function updateBusinessInfo(
       await updateBusinessInfoCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+    },
   });
 }
 
@@ -72,7 +65,9 @@ export async function updateContactInfo(
       await updateContactInfoCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+    },
   });
 }
 
@@ -91,7 +86,10 @@ export async function updateBusinessHoursSettings(
       await updateBusinessHoursSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateBusinessHoursCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+      updateTag(CACHE_TAGS.RESERVATIONS);
+    },
   });
 }
 
@@ -110,6 +108,8 @@ export async function updateMeoSettings(
       await updateMeoSettingsCommand(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+    },
   });
 }

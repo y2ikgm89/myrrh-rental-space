@@ -72,6 +72,35 @@ export async function replyToInquiryCommand(
   };
 }
 
+export async function updateInquiryCustomer(
+  inquiryId: string,
+  customerId: string | null,
+): Promise<void> {
+  const inquiry = await prisma.inquiry.findUnique({
+    where: { id: inquiryId },
+    select: { id: true },
+  });
+
+  if (!inquiry) {
+    throw new DomainError("お問い合わせが見つかりません", "NOT_FOUND");
+  }
+
+  if (customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { id: true },
+    });
+    if (!customer) {
+      throw new DomainError("顧客が見つかりません", "NOT_FOUND");
+    }
+  }
+
+  await prisma.inquiry.update({
+    where: { id: inquiryId },
+    data: { customerId },
+  });
+}
+
 export async function deleteInquiry(id: string): Promise<void> {
   const inquiry = await prisma.inquiry.findUnique({
     where: { id },

@@ -291,10 +291,8 @@ export const permalinkSettingsSchema = z.object({
 export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;
 
 // Re-export from validations for sidebar
-export {
-  sidebarSettingsSchema,
-  type SidebarSettings as SidebarSettingsInput,
-} from "@/shared/lib/validations/sidebar";
+export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
+export type { SidebarSettings as SidebarSettingsInput } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
 // MEO Schemas (ローカル検索最適化)

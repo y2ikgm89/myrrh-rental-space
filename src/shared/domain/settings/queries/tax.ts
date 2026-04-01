@@ -21,7 +21,7 @@ function parseTaxDisplayMode(value: string): TaxDisplayMode {
 export async function getPublicTaxSettings(): Promise<TaxSettings> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>

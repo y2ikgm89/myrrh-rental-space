@@ -5,10 +5,10 @@
  */
 
 import { IconMessageCircle, IconClock, IconTrash } from "@tabler/icons-react";
-import type { CommentStats as Stats } from "@/shared/domain/post-comments/types";
+import type * as PostCommentTypes from "@/shared/domain/post-comments/types";
 
 type Props = {
-  stats: Stats;
+  stats: PostCommentTypes.CommentStats;
 };
 
 export function CommentStats({ stats }: Props) {

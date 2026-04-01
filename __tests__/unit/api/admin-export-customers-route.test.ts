@@ -1,0 +1,314 @@
+import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { NextResponse } from "next/server";
+
+const mockCheckPermission = mock();
+const mockGetCustomersForExport = mock();
+const mockGenerateCsv = mock();
+
+mock.module("next/server", () => ({
+  NextResponse,
+}));
+
+mock.module("@/admin/lib/action-auth", () => ({
+  checkPermission: (...args: Parameters<typeof mockCheckPermission>) =>
+    mockCheckPermission(...args),
+}));
+
+mock.module("@/shared/domain/customers/export-queries", () => ({
+  getCustomersForExport: (
+    ...args: Parameters<typeof mockGetCustomersForExport>
+  ) => mockGetCustomersForExport(...args),
+}));
+
+mock.module("@/shared/lib/csv", () => ({
+  generateCsv: (...args: Parameters<typeof mockGenerateCsv>) =>
+    mockGenerateCsv(...args),
+}));
+
+const { GET } = await import("@/app/api/admin/export/customers/route");
+
+describe("GET /api/admin/export/customers", () => {
+  beforeEach(() => {
+    mockCheckPermission.mockReset();
+    mockGetCustomersForExport.mockReset();
+    mockGenerateCsv.mockReset();
+  });
+
+  describe("正常系", () => {
+    test("CSV レスポンスを返す（Content-Type と Content-Disposition ヘッダー付き）", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([]);
+      mockGenerateCsv.mockReturnValue("顧客ID,姓,名\r\n");
+
+      const response = await GET(
+        new Request("http://localhost/api/admin/export/customers"),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toBe(
+        "text/csv; charset=utf-8",
+      );
+      const contentDisposition = response.headers.get("Content-Disposition");
+      expect(contentDisposition).toMatch(
+        /^attachment; filename="customers-\d{8}\.csv"$/,
+      );
+    });
+
+    test("checkPermission に customer:read を渡す", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([]);
+      mockGenerateCsv.mockReturnValue("顧客ID\r\n");
+
+      const request = new Request(
+        "http://localhost/api/admin/export/customers",
+      );
+      await GET(request);
+
+      expect(mockCheckPermission).toHaveBeenCalledWith(
+        "customer",
+        "read",
+        expect.any(Headers),
+      );
+    });
+
+    test("generateCsv が顧客データと 16 列のカラム定義を受け取る", async () => {
+      const testCustomer = {
+        id: "abc12345-0000-0000-0000-000000000000",
+        lastName: "田中",
+        firstName: "太郎",
+        lastNameKana: "タナカ",
+        firstNameKana: "タロウ",
+        companyName: "株式会社テスト",
+        email: "tanaka@example.com",
+        phoneNumber: "090-1234-5678",
+        address: "東京都渋谷区",
+        status: "REGULAR",
+        totalReservations: 5,
+        totalSpent: 50000,
+        lastReservationAt: new Date("2024-01-15T12:00:00Z"),
+        firstReservationAt: new Date("2023-06-01T12:00:00Z"),
+        isActive: true,
+        createdAt: new Date("2023-05-01T12:00:00Z"),
+      };
+
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([testCustomer]);
+      mockGenerateCsv.mockReturnValue("顧客ID,姓,名\r\nABC12345,田中,太郎\r\n");
+
+      await GET(new Request("http://localhost/api/admin/export/customers"));
+
+      expect(mockGenerateCsv).toHaveBeenCalledTimes(1);
+
+      const [rows, columns] = mockGenerateCsv.mock.calls[0] as [
+        unknown[],
+        Array<{ header: string }>,
+      ];
+
+      expect(rows).toEqual([testCustomer]);
+      expect(columns).toHaveLength(16);
+
+      const headers = columns.map((c) => c.header);
+      expect(headers).toEqual([
+        "顧客ID",
+        "姓",
+        "名",
+        "姓カナ",
+        "名カナ",
+        "会社名",
+        "メール",
+        "電話番号",
+        "住所",
+        "ステータス",
+        "予約回数",
+        "利用総額",
+        "最終予約日",
+        "初回予約日",
+        "有効",
+        "登録日",
+      ]);
+    });
+
+    test("顧客ID は先頭8文字を大文字で出力する", async () => {
+      const testCustomer = {
+        id: "abcdefgh-0000-0000-0000-000000000000",
+        lastName: "山田",
+        firstName: "花子",
+        lastNameKana: "ヤマダ",
+        firstNameKana: "ハナコ",
+        companyName: null,
+        email: "yamada@example.com",
+        phoneNumber: null,
+        address: null,
+        status: "NEW",
+        totalReservations: 1,
+        totalSpent: 10000,
+        lastReservationAt: null,
+        firstReservationAt: null,
+        isActive: true,
+        createdAt: new Date("2024-01-01T12:00:00Z"),
+      };
+
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([testCustomer]);
+      mockGenerateCsv.mockImplementation(
+        (
+          rows: (typeof testCustomer)[],
+          columns: Array<{
+            header: string;
+            accessor: (c: typeof testCustomer) => unknown;
+          }>,
+        ) => {
+          const idColumn = columns[0];
+          const idValue = idColumn?.accessor(testCustomer);
+          return `${idValue}\r\n`;
+        },
+      );
+
+      await GET(new Request("http://localhost/api/admin/export/customers"));
+
+      const csvBody = await (
+        await GET(new Request("http://localhost/api/admin/export/customers"))
+      ).text();
+      expect(csvBody).toBe("ABCDEFGH\r\n");
+    });
+
+    test("isActive が true の場合は「はい」、false の場合は「いいえ」を出力する", async () => {
+      const activeCustomer = {
+        id: "customer-active-00000000000000000000",
+        lastName: "有効",
+        firstName: "太郎",
+        lastNameKana: "ユウコウ",
+        firstNameKana: "タロウ",
+        companyName: null,
+        email: "active@example.com",
+        phoneNumber: null,
+        address: null,
+        status: "NEW",
+        totalReservations: 0,
+        totalSpent: 0,
+        lastReservationAt: null,
+        firstReservationAt: null,
+        isActive: true,
+        createdAt: new Date("2024-01-01T12:00:00Z"),
+      };
+
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([activeCustomer]);
+
+      let capturedColumns: Array<{
+        header: string;
+        accessor: (c: typeof activeCustomer) => unknown;
+      }> = [];
+      mockGenerateCsv.mockImplementation(
+        (_rows: unknown, columns: typeof capturedColumns) => {
+          capturedColumns = columns;
+          return "";
+        },
+      );
+
+      await GET(new Request("http://localhost/api/admin/export/customers"));
+
+      const isActiveColumn = capturedColumns.find((c) => c.header === "有効");
+      expect(
+        isActiveColumn?.accessor({ ...activeCustomer, isActive: true }),
+      ).toBe("はい");
+      expect(
+        isActiveColumn?.accessor({ ...activeCustomer, isActive: false }),
+      ).toBe("いいえ");
+    });
+
+    test("lastReservationAt が null の場合は空文字を出力する", async () => {
+      const customerNoReservation = {
+        id: "customer-nores-000000000000000000000",
+        lastName: "未予約",
+        firstName: "次郎",
+        lastNameKana: "ミヨヤク",
+        firstNameKana: "ジロウ",
+        companyName: null,
+        email: "nores@example.com",
+        phoneNumber: null,
+        address: null,
+        status: "NEW",
+        totalReservations: 0,
+        totalSpent: 0,
+        lastReservationAt: null,
+        firstReservationAt: null,
+        isActive: true,
+        createdAt: new Date("2024-01-01T12:00:00Z"),
+      };
+
+      mockCheckPermission.mockResolvedValue({
+        success: true,
+        user: { id: "user-1", role: "ADMIN" },
+      });
+      mockGetCustomersForExport.mockResolvedValue([customerNoReservation]);
+
+      let capturedColumns: Array<{
+        header: string;
+        accessor: (c: typeof customerNoReservation) => unknown;
+      }> = [];
+      mockGenerateCsv.mockImplementation(
+        (_rows: unknown, columns: typeof capturedColumns) => {
+          capturedColumns = columns;
+          return "";
+        },
+      );
+
+      await GET(new Request("http://localhost/api/admin/export/customers"));
+
+      const lastReservationColumn = capturedColumns.find(
+        (c) => c.header === "最終予約日",
+      );
+      expect(
+        lastReservationColumn?.accessor({
+          ...customerNoReservation,
+          lastReservationAt: null,
+        }),
+      ).toBe("");
+
+      const firstReservationColumn = capturedColumns.find(
+        (c) => c.header === "初回予約日",
+      );
+      expect(
+        firstReservationColumn?.accessor({
+          ...customerNoReservation,
+          firstReservationAt: null,
+        }),
+      ).toBe("");
+    });
+  });
+
+  describe("異常系", () => {
+    test("権限なしの場合は 403 を返す", async () => {
+      mockCheckPermission.mockResolvedValue({
+        success: false,
+        error: { error: "権限がありません" },
+      });
+
+      const response = await GET(
+        new Request("http://localhost/api/admin/export/customers"),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(403);
+      expect(body).toEqual({ error: "権限がありません" });
+      expect(mockGetCustomersForExport).not.toHaveBeenCalled();
+      expect(mockGenerateCsv).not.toHaveBeenCalled();
+    });
+  });
+});

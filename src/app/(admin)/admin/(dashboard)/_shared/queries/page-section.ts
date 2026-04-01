@@ -7,10 +7,7 @@ import {
   getPageWithSectionsQuery,
   getPublicPageSectionsQuery,
 } from "@/shared/domain/sections/admin-queries";
-import {
-  SectionType,
-  type SectionConfig,
-} from "@/shared/lib/validations/section";
+import type { SectionConfig } from "@/shared/lib/validations/section";
 import {
   requireAdminPermission,
   requireAdminResourcePermission,
@@ -19,7 +16,7 @@ import {
 export type PageSectionData = {
   id: string;
   pageId: string;
-  type: SectionType;
+  type: string;
   title: string | null;
   config: SectionConfig;
   design: unknown;

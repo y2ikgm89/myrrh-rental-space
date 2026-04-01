@@ -36,7 +36,7 @@ export default async function MypageLayout({
   // LINE メール未登録時: settings 以外のページなら settings にリダイレクト（循環防止）
   if (!customer.email) {
     const headerList = await headers();
-    const pathname = headerList.get("x-next-pathname") ?? "";
+    const pathname = headerList.get("x-pathname") ?? "";
     if (!pathname.startsWith("/mypage/settings")) {
       redirect("/mypage/settings?require_email=true");
     }

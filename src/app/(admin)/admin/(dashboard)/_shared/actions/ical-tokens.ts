@@ -36,7 +36,7 @@ const deleteTokenSchema = z.object({
 });
 
 function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 }
 
 export async function createICalToken(

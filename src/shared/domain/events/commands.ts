@@ -4,7 +4,10 @@ import { Prisma, prisma } from "@/shared/db/prisma";
 import { EventStatus } from "@/shared/db/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { EventFormInput } from "@/shared/lib/validations/event";
-import { sendEventCancelledToAllParticipants } from "@/shared/lib/email/event-emails";
+import {
+  sendEventCancelledToAllParticipants,
+  sendEventUpdatedToAllParticipants,
+} from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { generateSlug } from "@/shared/lib/utils";
@@ -38,7 +41,13 @@ export async function createEventCommand(data: EventFormInput) {
 export async function updateEventCommand(id: string, data: EventFormInput) {
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
-    select: { id: true, slug: true, status: true },
+    select: {
+      id: true,
+      slug: true,
+      status: true,
+      startTime: true,
+      endTime: true,
+    },
   });
   if (!existing) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
 
@@ -51,6 +60,9 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
     existing.status !== EventStatus.PUBLISHED &&
     data.status === EventStatus.PUBLISHED;
 
+  const newStartTime = new Date(data.startTime);
+  const newEndTime = new Date(data.endTime);
+
   await prisma.event.update({
     where: { id, deletedAt: null },
     data: {
@@ -59,8 +71,8 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
       description: data.description ?? null,
       contentJson: data.contentJson ?? Prisma.JsonNull,
       thumbnailUrl: data.thumbnailUrl ?? null,
-      startTime: new Date(data.startTime),
-      endTime: new Date(data.endTime),
+      startTime: newStartTime,
+      endTime: newEndTime,
       capacity: data.capacity ?? null,
       price: data.price ?? null,
       location: data.location ?? null,
@@ -70,6 +82,17 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
       ...(wasPublished && { publishedAt: new Date() }),
     },
   });
+
+  const dateTimeChanged =
+    existing.startTime.getTime() !== newStartTime.getTime() ||
+    existing.endTime.getTime() !== newEndTime.getTime();
+
+  if (dateTimeChanged && data.status === EventStatus.PUBLISHED) {
+    fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
+      operation: "sendEventUpdatedToAllParticipants",
+      category: ErrorCategory.EXTERNAL_API,
+    });
+  }
 }
 
 export async function deleteEventCommand(id: string) {

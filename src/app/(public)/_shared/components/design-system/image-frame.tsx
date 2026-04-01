@@ -1,6 +1,5 @@
-"use client";
-
 import Image from "next/image";
+import { cn } from "@/shared/lib/cn";
 
 type AspectRatio = "video" | "square" | "portrait" | "wide";
 
@@ -30,11 +29,15 @@ export function ImageFrame({
   aspect,
   sizes,
   priority = false,
-  className = "",
+  className,
 }: ImageFrameProps) {
   return (
     <div
-      className={`relative overflow-hidden rounded-lg bg-surface ${aspect ? aspectClasses[aspect] : ""} ${className}`.trim()}
+      className={cn(
+        "relative overflow-hidden rounded-lg bg-surface",
+        aspect && aspectClasses[aspect],
+        className,
+      )}
     >
       <Image
         src={src}

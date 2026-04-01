@@ -65,12 +65,14 @@ export async function submitReservation(
       userId: user?.id,
     });
 
-    // 6. Invalidate cache: reservations (list + calendar) + customers
+    // 6. Invalidate cache: reservations (detail + calendar) + customers
     updateTag(CACHE_TAGS.RESERVATIONS);
-    updateTag(getCacheTag.reservations.list());
+    updateTag(getCacheTag.reservations.detail(result.id));
     updateTag(getCacheTag.reservations.calendar());
     updateTag(CACHE_TAGS.CUSTOMERS);
-    updateTag(getCacheTag.customers.list());
+    if (result.customerId) {
+      updateTag(getCacheTag.customers.detail(result.customerId));
+    }
 
     // 7. Send admin notification email (fire-and-forget)
     fireAndForget(

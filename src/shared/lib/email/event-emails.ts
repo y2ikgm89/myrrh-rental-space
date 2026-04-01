@@ -1,7 +1,7 @@
 /**
  * イベント関連メール
  *
- * イベント申込確認、キャンセル通知、管理者通知、イベント中止通知メールの送信。
+ * イベント申込確認、キャンセル通知、管理者通知、イベント中止通知、イベント変更通知メールの送信。
  *
  * @module shared/lib/email/event-emails
  */
@@ -11,6 +11,7 @@ import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-regist
 import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registration-cancelled";
 import { EventAdminNotificationEmail } from "@/shared/emails/event-admin-notification";
 import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled-notification";
+import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@/shared/db/enums";
@@ -217,6 +218,76 @@ export async function sendEventCancelledToAllParticipants(
         severity: ErrorSeverity.MEDIUM,
         context: {
           operation: "sendEventCancelledToAllParticipants",
+          eventId,
+          participantEmail: registration.email,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * イベント内容変更時に全参加者へ通知メールを送信
+ */
+export async function sendEventUpdatedToAllParticipants(
+  eventId: string,
+  oldStartTime: Date,
+): Promise<void> {
+  const event = await prisma.event.findFirst({
+    where: { id: eventId, deletedAt: null },
+    select: {
+      title: true,
+      startTime: true,
+      endTime: true,
+      location: true,
+      registrations: {
+        where: { status: RegistrationStatus.CONFIRMED },
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!event) return;
+
+  const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
+    locale: ja,
+  });
+  const newEventDate = format(event.startTime, "yyyy年M月d日 (EEEE) HH:mm", {
+    locale: ja,
+  });
+  const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
+
+  for (const registration of event.registrations) {
+    try {
+      await sendEmail(
+        (resend, from) =>
+          resend.emails.send({
+            from,
+            to: registration.email,
+            subject: `【イベント内容変更のお知らせ】${event.title}`,
+            react: EventUpdatedNotificationEmail({
+              customerName: registration.name,
+              eventTitle: event.title,
+              eventDate: oldEventDate,
+              newEventDate: `${newEventDate}〜${newEndTime}`,
+              location: event.location ?? undefined,
+            }),
+          }),
+        {
+          operation: "sendEventUpdatedToAllParticipants",
+          eventId,
+          participantEmail: registration.email,
+        },
+      );
+    } catch (error) {
+      logError(normalizeError(error), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "sendEventUpdatedToAllParticipants",
           eventId,
           participantEmail: registration.email,
         },

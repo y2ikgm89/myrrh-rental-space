@@ -1,6 +1,5 @@
-"use client";
-
 import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 
 type ContainerVariant = "default" | "narrow" | "wide";
 
@@ -20,12 +19,16 @@ interface ContainerProps {
 export function Container({
   children,
   variant = "default",
-  className = "",
+  className,
   as: Tag = "div",
 }: ContainerProps) {
   return (
     <Tag
-      className={`mx-auto px-[var(--container-padding)] ${variantClasses[variant]} ${className}`.trim()}
+      className={cn(
+        "mx-auto px-[var(--container-padding)]",
+        variantClasses[variant],
+        className,
+      )}
     >
       {children}
     </Tag>

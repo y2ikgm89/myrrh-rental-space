@@ -1,6 +1,5 @@
-"use client";
-
 import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 
 type StackDirection = "vertical" | "horizontal";
 type StackGap = "none" | "sm" | "md" | "lg" | "xl" | "section";
@@ -26,12 +25,17 @@ export function Stack({
   children,
   direction = "vertical",
   gap = "md",
-  className = "",
+  className,
   as: Tag = "div",
 }: StackProps) {
-  const dirClass = direction === "vertical" ? "flex flex-col" : "flex flex-row";
   return (
-    <Tag className={`${dirClass} ${gapClasses[gap]} ${className}`.trim()}>
+    <Tag
+      className={cn(
+        direction === "vertical" ? "flex flex-col" : "flex flex-row",
+        gapClasses[gap],
+        className,
+      )}
+    >
       {children}
     </Tag>
   );

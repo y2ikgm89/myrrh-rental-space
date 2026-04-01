@@ -105,6 +105,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-disable-audit.sh",
             "timeout": 5,
             "statusMessage": "ESLint disable 監査中..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/soft-delete-guard.sh",
+            "timeout": 10,
+            "statusMessage": "ソフトデリート検査中..."
           }
         ]
       },

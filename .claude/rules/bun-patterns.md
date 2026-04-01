@@ -427,6 +427,37 @@ bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
 
 ---
 
+## 副作用なし純粋モジュールはモック不要
+
+`@/shared/lib/constants`（CACHE_TAGS, getCacheTag, CACHE_LIFE）と `@/shared/lib/route-responses` は DB 依存も `server-only` 依存もない。`mock.module` すると不完全なモックがグローバル干渉して他テストファイルを壊す。実モジュールをそのまま import して使用する。
+
+## mock.calls 直接アクセス禁止
+
+```typescript
+// NG: noUncheckedIndexedAccess + as 禁止に違反
+const arg = mockFn.mock.calls[0]?.[0];
+const data = (arg as Record<string, unknown>)["data"];
+
+// OK: expect.objectContaining パターン
+expect(mockFn).toHaveBeenCalledWith(
+  expect.objectContaining({
+    data: expect.objectContaining({ field: value }),
+  }),
+);
+```
+
+## exactOptionalPropertyTypes 対応
+
+```typescript
+// NG: optional プロパティに undefined を明示渡し
+createCommand({ customerId: undefined, name: "test" });
+
+// OK: キーを省略
+createCommand({ name: "test" });
+```
+
+---
+
 ## 禁止事項
 
 1. **`vi.*` API の使用禁止**

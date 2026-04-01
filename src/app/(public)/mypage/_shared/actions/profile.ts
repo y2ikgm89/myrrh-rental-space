@@ -8,7 +8,11 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import {
+  createValidationMutationError,
+  checkActionRateLimit,
+} from "@/shared/lib/action-helpers";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
   logError,
   ErrorCategory,
@@ -22,6 +26,9 @@ import {
 export async function updateProfileAction(
   input: CustomerProfileInput,
 ): Promise<MutationResult<null>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 

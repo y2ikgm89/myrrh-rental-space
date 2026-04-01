@@ -145,9 +145,7 @@ export async function fetchInstagramFeed(
   url.searchParams.set("limit", String(clampedLimit));
   url.searchParams.set("access_token", accessToken);
 
-  const response = await fetch(url.toString(), {
-    next: { revalidate: 3600 }, // 1時間キャッシュ
-  });
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     const errorResult = InstagramApiErrorSchema.safeParse(

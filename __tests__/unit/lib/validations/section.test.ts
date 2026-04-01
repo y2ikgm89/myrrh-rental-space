@@ -590,7 +590,7 @@ describe("createSectionSchema", () => {
   test("有効なデータでバリデーション成功", () => {
     const data = {
       pageId: "550e8400-e29b-41d4-a716-446655440000",
-      type: "HERO",
+      type: "hero",
       title: "ヒーローセクション",
       config: { title: "Test" },
       design: {},
@@ -602,7 +602,7 @@ describe("createSectionSchema", () => {
 
   test("デフォルト値の適用", () => {
     const data = {
-      type: "CUSTOM",
+      type: "custom",
     };
     const result = createSectionSchema.safeParse(data);
     expect(result.success).toBe(true);
@@ -615,7 +615,7 @@ describe("createSectionSchema", () => {
 
   test("contentJsonの文字数制限", () => {
     const data = {
-      type: "CUSTOM",
+      type: "custom",
       contentJson: "a".repeat(500001),
     };
     const result = createSectionSchema.safeParse(data);
@@ -675,7 +675,7 @@ describe("updateSectionOrderSchema", () => {
 
 describe("validateSectionConfig", () => {
   test("HEROタイプで有効なconfig", () => {
-    const result = validateSectionConfig("HERO", {
+    const result = validateSectionConfig("hero", {
       title: "Test Hero",
       height: "lg",
     });
@@ -683,14 +683,14 @@ describe("validateSectionConfig", () => {
   });
 
   test("HEROタイプで無効なconfig", () => {
-    const result = validateSectionConfig("HERO", {
+    const result = validateSectionConfig("hero", {
       title: "a".repeat(101),
     });
     expect(result.success).toBe(false);
   });
 
   test("CTAタイプで有効なconfig", () => {
-    const result = validateSectionConfig("CTA", {
+    const result = validateSectionConfig("cta", {
       title: "CTA Title",
       buttons: [],
     });
@@ -792,7 +792,7 @@ describe("getDefaultConfig (registry)", () => {
 
   test("CTAデフォルト設定", () => {
     const defaultCta = getDefaultConfig(SectionType.CTA);
-    expect(defaultCta["title"]).toBe("ご予約・お問い合わせ");
-    expect(defaultCta["buttons"]).toHaveLength(2);
+    expect(defaultCta["sectionLabel"]).toBe("Ready to Begin?");
+    expect(defaultCta["variant"]).toBe("default");
   });
 });

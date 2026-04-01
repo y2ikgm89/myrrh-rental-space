@@ -87,12 +87,17 @@ paths:
 
 ## 公開ページ レスポンシブ標準
 
+- **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。SpaceGrid, PostGrid, RelatedSpaces, TestimonialSection, FeaturesSection で採用済み
+- **ページレベルのレイアウト切替は viewport breakpoints を維持** — 2カラム text+image（ConceptSection）、フォームグリッド（ContactFormSection）等のマクロレイアウトは `md:grid-cols-2` のまま。Container Queries はコンポーネント内部の適応に使う
+- **Heading サイズは `text-h1`/`text-h2`/`text-h3`/`text-h4`/`text-hero` クラスを使う** — `@theme` で `--text-*--line-height/letter-spacing/font-weight` が自動適用される。`text-[length:var(--text-h1)]` + `font-bold` + `leading-[...]` の冗長パターンは廃止
+- **Design System Primitives (Container, Stack, Heading, Badge, Prose, ImageFrame) は Server Component** — `"use client"` は不要。Tailwind クラスは CSS にコンパイルされるため JS バンドル不要。Button と Dialog のみ `"use client"` 維持
 - **`grid-cols-2` には必ず `grid-cols-1 sm:grid-cols-2` を使う** — 375px未満でクラムドになる。名前フィールド（姓/名）、時間選択（開始/終了）等
 - **ヘッダー（タイトル + Badge）は `flex-col sm:flex-row` でモバイル縦積み** — `flex justify-between` のみだとバッジが押しつぶされる
 - **カード・セクションパディングは `p-4 sm:p-6`** — `p-6` 固定はモバイルで過剰。空状態は `p-6 md:p-12`
 - **見出しマージンは `mb-4 md:mb-8`** — `mb-8` 固定はモバイルで過剰
 - **アクションボタン群は `flex-col sm:flex-row gap-2 sm:gap-3`** — モバイルで横並びだとはみ出す
 - **テキストリンクのタッチターゲットは `px-3 py-1.5` 以上** — 素の `<a>` テキストは44px未満。`rounded-md` + padding で確保
+- **CSS media queries は modern syntax を使う** — `@media (width < 48rem)` を使用。`@media (max-width: 767px)` のハードコードは禁止
 - **DB VARCHAR で管理する非 Prisma enum は `enums/helpers.ts` に `as const` 定数を定義** — `CANCELLED_BY.CUSTOMER` / `CANCELLED_BY.ADMIN` のパターン。文字列リテラル `"CUSTOMER"` の直接使用禁止
 
 ## Page-First Architecture（公開ページ）
@@ -150,6 +155,7 @@ paths:
 ## ビルド・検証
 
 - **ローカル barrel の tree-shaking は信頼できない** — Next.js の `optimizePackageImports` は npm パッケージのみ対象。`index.ts` で re-export すると未使用コンポーネントもバンドルに含まれる可能性がある。バンドルサイズが問題になる場合は barrel 経由ではなく直接 import する（例: `section-parsers.ts` から直接 import して Zod をクライアントバンドルから除去）
+- **Turbopack `"use server"` barrel re-export はクライアントから解決できない** — `"use server"` ファイルの関数を `index.ts`（barrel）経由で re-export し、`"use client"` コンポーネントから import すると `Export doesn't exist in target module` ビルドエラー。クライアントコンポーネントからは `@/admin/actions/post/mutations` のようにサブモジュールを直接 import する。Server Component / Server Action 間の barrel re-export は問題ない
 - **`global-error.tsx` は Root Layout を完全に置換する** — `<html>` `<body>` を自身で定義するため、admin.css / public.css の CSS 変数・`@theme` トークン・`next/font` が一切利用不可。全スタイルをインラインで記述すること（Tailwind クラス禁止）
 - **`global-error.tsx` に `@/shared/lib/logger` を import しない** — Client-only バンドルで server-only 依存が混入するリスク。`console.error` を直接使用する
 - **layout.tsx 内の `<Suspense fallback={null}>` で children をラップしない** — `loading.tsx` の Suspense boundary を無効化する。children は layout が直接レンダリングし、ページ遷移の loading 表示は `loading.tsx` に委ねる
@@ -211,3 +217,10 @@ paths:
 - **RHF 7.72 で `Control<T>` が invariant** — 異なるフォーム型で共有するコンポーネントの公式パターンは存在しない。Pure Component（RHF 非依存の値+callback props）+ Connected ラッパー（`as Path<T>` で型ブリッジ）が最善。`as Control<any>` / `as never` 禁止。参照実装: `LayoutFields.tsx` + `LayoutFieldsConnected`
 - **`exactOptionalPropertyTypes` で optional prop に `T | undefined` を渡せない** — `prop?: string` に `string | undefined` を渡すとエラー。コンポーネント props では `prop: string | undefined`（required + union）で宣言する。`prop?: string` は「省略可能だが渡すなら `string`」の意味
 - **認証・プライベートページには `robots: { index: false, follow: false }` 必須** — `/login`, `/forgot-password`, `/reset-password`, `/mypage/*` 等。layout.tsx に設定すれば全サブページに継承。未設定だとクロールバジェット浪費＋低品質ページ評価リスク
+
+## セキュリティ
+
+- **API Route の処理順序: 認証 → バリデーション → ビジネスロジック** — バリデーションを認証前に実行すると未認証者にパラメータ名・型情報が漏洩する。`checkPermission` を最初に呼ぶ
+- **`proxy.ts` のヘッダー名は `x-pathname`** — `x-next-pathname` ではない。`headers().get()` で参照する側が不一致だと常に `""` が返りリダイレクトロジックが壊れる
+- **`next.config.ts` に seed/開発専用ドメインを残さない** — `placehold.co` 等の開発用 `remotePatterns` / CSP `img-src` は本番で不要。`dangerouslyAllowSVG` も seed 画像のためだけに有効化しない
+- **監査ログの provider 判定は全 OAuth プロバイダーを列挙** — `ctx.path.includes("social")` だけでは LINE が "google" として記録される。`/line` → `"line"`、`/google` → `"google"` と個別判定する

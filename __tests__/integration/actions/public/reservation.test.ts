@@ -216,8 +216,8 @@ describe("submitReservation", () => {
 
       await submitReservation(VALID_INPUT);
 
-      // RESERVATIONS + reservations.list + reservations.calendar + CUSTOMERS + customers.list = 5回以上
-      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(5);
+      // RESERVATIONS + reservations.calendar + CUSTOMERS + customers.detail = 4回以上
+      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(4);
     });
 
     test("phoneNumber が省略されても成功する", async () => {

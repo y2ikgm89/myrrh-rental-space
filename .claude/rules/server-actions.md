@@ -461,11 +461,15 @@ updateTag(CACHE_TAGS.POSTS);
 
 1. **マジックストリングのタグ名禁止**
    - `cacheTag('posts')` → `cacheTag(CACHE_TAGS.POSTS)`
-   - `updateTag('settings')` → `updateTag(CACHE_TAGS.SETTINGS)`
+   - `updateTag('layout-settings')` → `updateTag(CACHE_TAGS.LAYOUT_SETTINGS)`
    - `revalidateTag('posts', 'hours')` → `revalidateTag(CACHE_TAGS.POSTS, CACHE_LIFE.PUBLIC_CONTENT)`
    - `cacheLife('hours')` → `cacheLife(CACHE_LIFE.PUBLIC_CONTENT)`
+   - `CACHE_TAGS.SETTINGS` は廃止済み — 粒度別タグを使用（`gotchas.md` 参照）
 
-2. **認証チェック漏れ禁止**
+2. **`getCacheTag.*.list()` と `CACHE_TAGS.*` の二重呼び出し禁止**
+   - `getCacheTag.reservations.list()` は `CACHE_TAGS.RESERVATIONS` と同一値。ベースタグのみ使用し `.list()` は呼ばない
+
+3. **認証チェック漏れ禁止**
    - 管理画面の変更系 Server Actions は必ず `executeAdminMutationResult` を使用
    - API Routes のみ `checkPermission()` を直接使用
    - 読み取りアクションはレイアウトの認証ガード（`verifySession()`）に依存
@@ -490,11 +494,11 @@ updateTag(CACHE_TAGS.POSTS);
    }
    ```
 
-3. **エラー握りつぶし禁止**
+4. **エラー握りつぶし禁止**
    - `try { ... } catch {}` — 必ずエラーを `logError` で記録する
    - エラーは `logger.error` で記録する（`safeFetch` は自動記録）
 
-4. **updateTag を Route Handlers で使用禁止**
+5. **updateTag を Route Handlers で使用禁止**
    - Route Handlers では `revalidateTag` を使用
    - `updateTag` は Server Actions 内のみ有効
 
@@ -513,7 +517,7 @@ updateTag(CACHE_TAGS.POSTS);
    }
    ```
 
-5. **'use cache' 関数内での認証禁止**
+6. **'use cache' 関数内での認証禁止**
    - キャッシュ関数はリクエストをまたいで共有される（全ユーザー共通のキャッシュ）
    - 認証が必要なデータは `'use cache'` なしで取得し、認証チェック後にキャッシュ関数を呼ぶ
 
@@ -534,10 +538,10 @@ updateTag(CACHE_TAGS.POSTS);
    }
    ```
 
-6. **Prisma オブジェクトを Client Component に直接渡すことを禁止**
+7. **Prisma オブジェクトを Client Component に直接渡すことを禁止**
    - `toPlainObject()` / `toPlainArray()` でシリアライズ（React 19 Symbol プロパティ除去）
 
-7. **`'use cache'` 関数内で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
+8. **`'use cache'` 関数内で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
    - `return safeFetch({...})` はサイレントバグ（`Promise<PrismaResult>` がシリアライゼーション境界を越える）
    - 必ず `const result = await safeFetch({...}); return toPlainObject(result)` の形式で記述
 
@@ -562,7 +566,7 @@ updateTag(CACHE_TAGS.POSTS);
    }
    ```
 
-8. **公開フォーム送信 Server Action のレート制限チェック省略禁止**
+9. **公開フォーム送信 Server Action のレート制限チェック省略禁止**
    - `submitInquiry` / `submitReservation` 等の公開フォームは `checkActionRateLimit(formSubmitRateLimiter)` を最初のステップに配置
    - `fetchAvailableSlots` 等の公開クエリは `checkActionRateLimit(publicQueryRateLimiter)` を使用
    - Turnstile と併用（Turnstile bypass 攻撃への二重防御）

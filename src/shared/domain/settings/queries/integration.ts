@@ -13,7 +13,7 @@ import { toPlainObject } from "@/shared/lib/serialize";
 export async function getStripeSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.INTEGRATION_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>

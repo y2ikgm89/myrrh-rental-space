@@ -4,11 +4,10 @@
  * ページ一覧テーブル
  *
  * チェックボックス付きのインタラクティブテーブル
- * ホームページ仮想行 + ページデータ行を表示
+ * ホームページは Page レコードとして通常表示
  */
 
 import { useState } from "react";
-import { IconHome } from "@tabler/icons-react";
 import {
   Table,
   TableBody,
@@ -29,7 +28,6 @@ interface PageListTableProps {
   total: number;
   currentPage: number;
   perPage: number;
-  homepageLastUpdated: string | null;
 }
 
 export function PageListTable({
@@ -37,7 +35,6 @@ export function PageListTable({
   total,
   currentPage,
   perPage,
-  homepageLastUpdated,
 }: PageListTableProps) {
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
 
@@ -85,101 +82,74 @@ export function PageListTable({
                 <TableHead>タイトル</TableHead>
                 <TableHead className="hidden md:table-cell">種別</TableHead>
                 <TableHead className="whitespace-nowrap">ステータス</TableHead>
+                <TableHead className="hidden md:table-cell">
+                  セクション数
+                </TableHead>
                 <TableHead className="hidden md:table-cell">更新日時</TableHead>
                 <TableHead className="w-40 text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* ホームページ（仮想行） */}
-              <TableRow className="bg-muted/30">
-                <TableCell />
-                <TableCell className="hidden font-mono text-sm sm:table-cell">
-                  <div className="flex items-center gap-2">
-                    <IconHome className="h-4 w-4 text-primary" />/
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">ホームページ</TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant="outline" className="text-xs">
-                    セクション管理
-                  </Badge>
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  <Badge variant="success">公開中</Badge>
-                </TableCell>
-                <TableCell className="hidden text-muted-foreground md:table-cell">
-                  {homepageLastUpdated
-                    ? formatDateTimeShort(homepageLastUpdated)
-                    : "-"}
-                </TableCell>
-                <TableCell className="text-right">
-                  <PageActions
-                    slug=""
-                    title="ホームページ"
-                    isPublished
-                    isHomepage
-                    editHref="/admin/pages/homepage/edit"
-                  />
-                </TableCell>
-              </TableRow>
+              {pages.map((page) => {
+                const isHomepage = page.slug === "home";
 
-              {/* ページ一覧 */}
-              {pages.map((page) => (
-                <TableRow
-                  key={page.id}
-                  className={page.isSystemPage ? "bg-muted/30" : ""}
-                >
-                  <TableCell>
-                    {!page.isSystemPage && (
-                      <input
-                        type="checkbox"
-                        checked={selectedSlugs.includes(page.slug)}
-                        onChange={() => toggleOne(page.slug)}
-                        className="rounded border-border"
-                        aria-label={`${page.title}を選択`}
+                return (
+                  <TableRow
+                    key={page.id}
+                    className={page.isSystemPage ? "bg-muted/30" : ""}
+                  >
+                    <TableCell>
+                      {!page.isSystemPage && (
+                        <input
+                          type="checkbox"
+                          checked={selectedSlugs.includes(page.slug)}
+                          onChange={() => toggleOne(page.slug)}
+                          className="rounded border-border"
+                          aria-label={`${page.title}を選択`}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden font-mono text-sm sm:table-cell">
+                      {isHomepage ? "/" : `/${page.slug}`}
+                    </TableCell>
+                    <TableCell className="font-medium">{page.title}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {page.isSystemPage ? (
+                        <Badge variant="outline" className="text-xs">
+                          システム
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="text-xs">
+                          カスタム
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {page.isPublished ? (
+                        <Badge variant="success">公開中</Badge>
+                      ) : (
+                        <Badge variant="secondary">非公開</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {page.sectionCount ?? 0}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {formatDateTimeShort(page.updatedAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <PageActions
+                        slug={page.slug}
+                        title={page.title}
+                        isPublished={page.isPublished}
+                        isSystemPage={page.isSystemPage}
+                        isHomepage={isHomepage}
+                        editHref={`/admin/pages/${page.slug}/edit`}
                       />
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden font-mono text-sm sm:table-cell">
-                    /{page.slug}
-                  </TableCell>
-                  <TableCell className="font-medium">{page.title}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {page.isSystemPage ? (
-                      <Badge variant="outline" className="text-xs">
-                        システム
-                      </Badge>
-                    ) : (
-                      <Badge variant="default" className="text-xs">
-                        カスタム
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {page.isPublished ? (
-                      <Badge variant="success">公開中</Badge>
-                    ) : (
-                      <Badge variant="secondary">非公開</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatDateTimeShort(page.updatedAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <PageActions
-                      slug={page.slug}
-                      title={page.title}
-                      isPublished={page.isPublished}
-                      isSystemPage={page.isSystemPage}
-                      editHref={
-                        page.isSystemPage
-                          ? undefined
-                          : `/admin/pages/${page.slug}/edit`
-                      }
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

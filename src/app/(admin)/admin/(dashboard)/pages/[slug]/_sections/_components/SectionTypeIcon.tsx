@@ -28,7 +28,7 @@ import { SectionType } from "@/shared/lib/validations/section";
 /**
  * セクションタイプからアイコンコンポーネントを取得
  */
-export const sectionTypeIconComponents: Record<SectionType, TablerIcon> = {
+export const sectionTypeIconComponents: Partial<Record<string, TablerIcon>> = {
   [SectionType.HERO]: IconPhoto,
   [SectionType.HERO_PARALLAX]: IconStack2,
   [SectionType.CUSTOM]: IconFileText,
@@ -49,7 +49,7 @@ export const sectionTypeIconComponents: Record<SectionType, TablerIcon> = {
 };
 
 interface SectionTypeIconProps {
-  type: SectionType;
+  type: string;
   className?: string;
 }
 
@@ -57,6 +57,6 @@ export function SectionTypeIcon({
   type,
   className = "h-5 w-5",
 }: SectionTypeIconProps) {
-  const IconComponent = sectionTypeIconComponents[type];
+  const IconComponent = sectionTypeIconComponents[type] ?? IconFileText;
   return <IconComponent className={className} />;
 }

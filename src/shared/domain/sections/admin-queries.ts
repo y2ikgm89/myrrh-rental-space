@@ -4,7 +4,6 @@ import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import {
   SectionType,
-  isSectionType,
   type SectionConfig,
   validateSectionConfig,
 } from "@/shared/lib/validations/section";
@@ -41,9 +40,20 @@ function toSectionData(section: {
   };
 }
 
+async function getHomePageId(): Promise<string | null> {
+  const homePage = await prisma.page.findUnique({
+    where: { slug: "home" },
+    select: { id: true },
+  });
+  return homePage?.id ?? null;
+}
+
 export async function getHomepageSectionsQuery() {
+  const homePageId = await getHomePageId();
+  if (!homePageId) return [];
+
   const sections = await prisma.section.findMany({
-    where: { pageId: null },
+    where: { pageId: homePageId },
     select: {
       id: true,
       pageId: true,
@@ -61,17 +71,15 @@ export async function getHomepageSectionsQuery() {
     orderBy: { order: "asc" },
   });
 
-  return toPlainArray(
-    sections.map((section) => ({
-      ...toSectionData(section),
-      pageId: undefined,
-    })),
-  );
+  return toPlainArray(sections.map((section) => toSectionData(section)));
 }
 
 export async function getPublicHomepageSectionsQuery() {
+  const homePageId = await getHomePageId();
+  if (!homePageId) return [];
+
   const sections = await prisma.section.findMany({
-    where: { pageId: null, isActive: true },
+    where: { pageId: homePageId, isActive: true },
     select: {
       id: true,
       pageId: true,
@@ -89,32 +97,30 @@ export async function getPublicHomepageSectionsQuery() {
     orderBy: { order: "asc" },
   });
 
-  return toPlainArray(
-    sections.map((section) => ({
-      ...toSectionData(section),
-      pageId: undefined,
-    })),
-  );
+  return toPlainArray(sections.map((section) => toSectionData(section)));
 }
 
 export async function getHomepageSectionQuery(id: string) {
+  const homePageId = await getHomePageId();
+  if (!homePageId) return null;
+
   const section = await prisma.section.findUnique({
     where: { id },
   });
 
-  if (!section || section.pageId !== null) {
+  if (!section || section.pageId !== homePageId) {
     return null;
   }
 
-  return toPlainObject({
-    ...toSectionData(section),
-    pageId: undefined,
-  });
+  return toPlainObject(toSectionData(section));
 }
 
 export async function getHomepageSectionByTypeQuery(type: string) {
+  const homePageId = await getHomePageId();
+  if (!homePageId) return null;
+
   const section = await prisma.section.findFirst({
-    where: { type, pageId: null },
+    where: { type, pageId: homePageId },
     orderBy: { order: "asc" },
   });
 
@@ -122,10 +128,7 @@ export async function getHomepageSectionByTypeQuery(type: string) {
     return null;
   }
 
-  return toPlainObject({
-    ...toSectionData(section),
-    pageId: undefined,
-  });
+  return toPlainObject(toSectionData(section));
 }
 
 export async function getPageSectionsQuery(pageId: string) {

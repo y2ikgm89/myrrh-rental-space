@@ -1,6 +1,5 @@
-"use client";
-
 import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 
 type BadgeVariant = "default" | "success" | "warning" | "info";
 
@@ -20,11 +19,15 @@ interface BadgeProps {
 export function Badge({
   children,
   variant = "default",
-  className = "",
+  className,
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${variantClasses[variant]} ${className}`.trim()}
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+        variantClasses[variant],
+        className,
+      )}
     >
       {children}
     </span>

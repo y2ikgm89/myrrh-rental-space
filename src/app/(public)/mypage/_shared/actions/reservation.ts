@@ -17,22 +17,34 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import {
+  createValidationMutationError,
+  checkActionRateLimit,
+} from "@/shared/lib/action-helpers";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { DomainError } from "@/shared/domain/domain-error";
 import { z } from "zod";
 
 const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
 
-function invalidateReservationCache(reservationId: string): void {
+function invalidateReservationCache(
+  reservationId: string,
+  customerId: string,
+): void {
   updateTag(CACHE_TAGS.RESERVATIONS);
   updateTag(getCacheTag.reservations.detail(reservationId));
   updateTag(getCacheTag.reservations.calendar());
+  updateTag(CACHE_TAGS.CUSTOMERS);
+  updateTag(getCacheTag.customers.detail(customerId));
 }
 
 export async function cancelReservationAction(
   reservationId: string,
   cancellationReason: string | null = null,
 ): Promise<MutationResult<null>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
   const parsedId = reservationIdSchema.safeParse(reservationId);
   if (!parsedId.success) return createMutationError("予約IDが不正です");
 
@@ -57,7 +69,7 @@ export async function cancelReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache(parsedId.data);
+    invalidateReservationCache(parsedId.data, customer.id);
     return null;
   } catch (error) {
     if (error instanceof DomainError) {
@@ -70,6 +82,9 @@ export async function cancelReservationAction(
 export async function updateReservationAction(
   input: CustomerReservationEditInput,
 ): Promise<MutationResult<null>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 
@@ -90,7 +105,7 @@ export async function updateReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache(parsed.data.reservationId);
+    invalidateReservationCache(parsed.data.reservationId, customer.id);
     return null;
   } catch (error) {
     if (error instanceof DomainError) {

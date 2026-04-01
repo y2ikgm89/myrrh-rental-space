@@ -47,11 +47,13 @@ function StarRating({ rating }: { readonly rating: number }): ReactElement {
 }
 
 const LAYOUT_CLASS = {
-  grid: "grid gap-6 md:grid-cols-2 lg:grid-cols-3",
+  grid: "@container",
   list: "flex flex-col gap-6 max-w-3xl mx-auto",
   carousel:
     "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8",
 } as const;
+
+const GRID_INNER_CLASS = "grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3";
 
 const CARD_CLASS = {
   grid: "",
@@ -115,88 +117,92 @@ export function TestimonialSection({
       </div>
 
       <div ref={gridRef} className={LAYOUT_CLASS[config.layout]}>
-        {config.items.map((item, index) => {
-          const variant = config.variant;
+        <div
+          className={config.layout === "grid" ? GRID_INNER_CLASS : undefined}
+        >
+          {config.items.map((item, index) => {
+            const variant = config.variant;
 
-          // variant-specific card styles
-          const cardClasses =
-            variant === "card"
-              ? "rounded-lg bg-card p-8 border border-border border-l-4 border-l-primary hover:shadow-lg transition-shadow"
-              : variant === "minimal"
-                ? "py-6"
-                : "rounded-lg border border-border bg-card p-6";
+            // variant-specific card styles
+            const cardClasses =
+              variant === "card"
+                ? "rounded-lg bg-card p-8 border border-border border-l-4 border-l-primary hover:shadow-lg transition-shadow"
+                : variant === "minimal"
+                  ? "py-6"
+                  : "rounded-lg border border-border bg-card p-6";
 
-          return (
-            <div
-              /* eslint-disable-next-line @eslint-react/no-array-index-key */
-              key={index}
-              data-testimonial-card=""
-              className={`${cardClasses} ${CARD_CLASS[config.layout]}`}
-            >
-              {/* IconQuote decoration (not shown in minimal) */}
-              {variant !== "minimal" && (
-                <span
-                  className="block font-serif text-4xl leading-none text-primary/20"
-                  aria-hidden="true"
-                >
-                  &ldquo;
-                </span>
-              )}
-
-              <p
-                className={`${variant === "minimal" ? "" : "mt-2"} text-sm leading-relaxed text-foreground`}
-                style={getTextStyle(design)}
+            return (
+              <div
+                /* eslint-disable-next-line @eslint-react/no-array-index-key */
+                key={index}
+                data-testimonial-card=""
+                className={`${cardClasses} ${CARD_CLASS[config.layout]}`}
               >
-                {variant === "minimal" && (
+                {/* IconQuote decoration (not shown in minimal) */}
+                {variant !== "minimal" && (
                   <span
-                    className="mr-1 font-serif text-lg text-primary/30"
+                    className="block font-serif text-4xl leading-none text-primary/20"
                     aria-hidden="true"
                   >
                     &ldquo;
                   </span>
                 )}
-                {item.content}
-                {variant === "minimal" && (
-                  <span
-                    className="ml-1 font-serif text-lg text-primary/30"
-                    aria-hidden="true"
-                  >
-                    &rdquo;
-                  </span>
-                )}
-              </p>
 
-              {config.showRating && item.rating != null && (
-                <div className="mt-4">
-                  <StarRating rating={item.rating} />
-                </div>
-              )}
-
-              {/* Author */}
-              <div
-                className={`mt-4 flex items-center gap-3 ${variant === "minimal" ? "border-t border-border/50" : "border-t border-border"} pt-4`}
-              >
-                {item.authorImageUrl && (
-                  <Image
-                    src={item.authorImageUrl}
-                    alt={item.authorName}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                )}
-                <div>
-                  <p className="text-sm font-medium">{item.authorName}</p>
-                  {item.authorTitle && (
-                    <p className="text-xs text-muted-foreground">
-                      {item.authorTitle}
-                    </p>
+                <p
+                  className={`${variant === "minimal" ? "" : "mt-2"} text-sm leading-relaxed text-foreground`}
+                  style={getTextStyle(design)}
+                >
+                  {variant === "minimal" && (
+                    <span
+                      className="mr-1 font-serif text-lg text-primary/30"
+                      aria-hidden="true"
+                    >
+                      &ldquo;
+                    </span>
                   )}
+                  {item.content}
+                  {variant === "minimal" && (
+                    <span
+                      className="ml-1 font-serif text-lg text-primary/30"
+                      aria-hidden="true"
+                    >
+                      &rdquo;
+                    </span>
+                  )}
+                </p>
+
+                {config.showRating && item.rating != null && (
+                  <div className="mt-4">
+                    <StarRating rating={item.rating} />
+                  </div>
+                )}
+
+                {/* Author */}
+                <div
+                  className={`mt-4 flex items-center gap-3 ${variant === "minimal" ? "border-t border-border/50" : "border-t border-border"} pt-4`}
+                >
+                  {item.authorImageUrl && (
+                    <Image
+                      src={item.authorImageUrl}
+                      alt={item.authorName}
+                      width={48}
+                      height={48}
+                      className="h-12 w-12 rounded-full object-cover"
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">{item.authorName}</p>
+                    {item.authorTitle && (
+                      <p className="text-xs text-muted-foreground">
+                        {item.authorTitle}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </SectionWrapper>
   );

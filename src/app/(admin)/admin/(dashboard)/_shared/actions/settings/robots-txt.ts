@@ -15,10 +15,6 @@ import {
   type RobotsTxtSettingsInput,
 } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 export async function updateRobotsTxtSettings(
   data: RobotsTxtSettingsInput,
 ): Promise<MutationResult<{ warnings: string[] }>> {
@@ -31,7 +27,9 @@ export async function updateRobotsTxtSettings(
     resource: "settings",
     action: "update",
     execute: async () => updateRobotsTxtSettingsCommand(parsed.data),
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ROBOTS_TXT);
+    },
   });
 }
 
@@ -43,6 +41,8 @@ export async function resetRobotsTxtToDefault(): Promise<MutationResult> {
       await resetRobotsTxtToDefaultCommand();
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.ROBOTS_TXT);
+    },
   });
 }

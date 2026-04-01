@@ -12,7 +12,7 @@ import {
 export async function getNotificationEmailAddresses(): Promise<string[]> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
 
   const settings = await safeFetch({
     fetch: () =>
@@ -44,7 +44,7 @@ export async function getCalendarEmailSettings(): Promise<{
 }> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.NOTIFICATION_SETTINGS);
 
   const settings = await safeFetch({
     fetch: () =>

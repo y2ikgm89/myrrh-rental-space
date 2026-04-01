@@ -37,7 +37,7 @@ export interface OrganizationSettings {
 export async function getPublicBusinessSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -86,7 +86,7 @@ export async function getAdminBrandingSettings(): Promise<{
 }> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
 
   const settings = await safeFetch({
     fetch: () =>
@@ -113,7 +113,7 @@ export async function getAdminBrandingSettings(): Promise<{
 export async function getOrganizationSettings(): Promise<Serialized<OrganizationSettings> | null> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -161,7 +161,7 @@ export interface SocialLinkForFooter {
 export async function getSocialLinkUrls(): Promise<string[]> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SOCIAL_LINKS, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.SOCIAL_LINKS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -184,7 +184,7 @@ export async function getSocialLinksForFooter(): Promise<
 > {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SOCIAL_LINKS, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.SOCIAL_LINKS);
 
   const result = await safeFetch({
     fetch: () =>

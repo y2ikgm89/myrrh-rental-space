@@ -1,11 +1,8 @@
 import type { AppPrismaClient } from "@/shared/db/create-app-prisma-client";
 
 export type SystemPagesDbClient = AppPrismaClient;
-import { clonePrismaInputJson } from "@/shared/db/prisma-input-json";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
-import { defaultHomepageSectionOrder } from "@/shared/lib/validations/section";
-import { getDefaultConfig } from "@/shared/lib/sections/registry";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 
@@ -82,63 +79,22 @@ export async function ensurePageSectionsCommand(
 export async function ensureHomepageSectionsCommand(
   db: SystemPagesDbClient,
 ): Promise<number> {
-  const existingCount = await db.section.count({
-    where: { pageId: null },
+  const homePage = await db.page.findUnique({
+    where: { slug: "home" },
+    select: { id: true },
   });
-  if (existingCount > 0) {
+
+  if (!homePage) {
     return 0;
   }
 
-  try {
-    return await db.$transaction(
-      async (tx) => {
-        const count = await tx.section.count({
-          where: { pageId: null },
-        });
-        if (count > 0) {
-          return 0;
-        }
-
-        const created = await tx.section.createMany({
-          data: defaultHomepageSectionOrder.map((type, index) => ({
-            type,
-            config: clonePrismaInputJson(
-              getDefaultConfig(type),
-              "セクション設定が不正です",
-            ),
-            design: {},
-            order: index,
-            isActive: true,
-          })),
-        });
-
-        return created.count;
-      },
-      { isolationLevel: "Serializable" },
-    );
-  } catch {
-    return 0;
-  }
+  return ensurePageSectionsCommand(db, homePage.id, "home");
 }
 
 export async function bootstrapSystemPagesCommand(
   db: SystemPagesDbClient,
 ): Promise<void> {
-  try {
-    await ensureHomepageSectionsCommand(db);
-  } catch (error) {
-    logError(error, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.MEDIUM,
-      context: { operation: "bootstrapSystemPages", slug: "home" },
-    });
-  }
-
   for (const definition of SYSTEM_PAGES) {
-    if (definition.slug === "home") {
-      continue;
-    }
-
     try {
       const existingPage = await db.page.findUnique({
         where: { slug: definition.slug },
@@ -151,6 +107,10 @@ export async function bootstrapSystemPagesCommand(
             where: { id: existingPage.id },
             data: { isSystemPage: true },
           });
+        }
+
+        if (definition.slug === "home") {
+          await migrateHomepageSectionsToPageId(db, existingPage.id);
         }
 
         await ensurePageSectionsCommand(db, existingPage.id, definition.slug);
@@ -168,6 +128,10 @@ export async function bootstrapSystemPagesCommand(
         },
       });
 
+      if (definition.slug === "home") {
+        await migrateHomepageSectionsToPageId(db, page.id);
+      }
+
       await ensurePageSectionsCommand(db, page.id, definition.slug);
     } catch (error) {
       logError(error, {
@@ -177,4 +141,27 @@ export async function bootstrapSystemPagesCommand(
       });
     }
   }
+}
+
+/**
+ * pageId: null のホームページセクションを実際の Page レコードに紐づける
+ *
+ * 冪等: pageId: null のセクションがなければ何もしない
+ */
+async function migrateHomepageSectionsToPageId(
+  db: SystemPagesDbClient,
+  homePageId: string,
+): Promise<void> {
+  const orphanedCount = await db.section.count({
+    where: { pageId: null },
+  });
+
+  if (orphanedCount === 0) {
+    return;
+  }
+
+  await db.section.updateMany({
+    where: { pageId: null },
+    data: { pageId: homePageId },
+  });
 }

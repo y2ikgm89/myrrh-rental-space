@@ -383,10 +383,36 @@ PWDEBUG=1 bun run e2e                 # ブレークポイントで一時停止
    - `vi.mock()` → `mock.module()`
    - `vi.fn()` → `mock()`
 
+## ドメインコマンドテスト（`__tests__/unit/domain/<domain>/commands.test.ts`）
+
+全27ドメインのコマンドテストが `__tests__/unit/domain/` に存在。新規ドメイン追加時は同パターンでテスト作成必須。
+
+```typescript
+// 標準構造
+mock.module("server-only", () => ({}));
+mock.module("@/shared/db/prisma", () => ({
+  prisma: { model: { method: mockFn } },
+}));
+// @/shared/lib/constants はモック不要
+import { command } from "@/shared/domain/<domain>/commands";
+
+describe("commandName", () => {
+  describe("正常系", () => {
+    /* ... */
+  });
+  describe("異常系", () => {
+    /* DomainError テスト */
+  });
+});
+```
+
+**新規テスト追加後は `package.json` の `test` スクリプトにバッチ追加を確認**
+
 ## 必須事項
 
 1. **新機能にはテストを追加**
    - Server Actions のテスト
+   - ドメインコマンドのテスト
    - バリデーションのテスト
    - エッジケースのテスト
 

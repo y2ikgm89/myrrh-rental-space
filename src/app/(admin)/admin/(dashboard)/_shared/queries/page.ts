@@ -2,7 +2,6 @@ import "server-only";
 
 import {
   getDeletedPagesListQuery,
-  getHomepageLastUpdatedQuery,
   getPageBySlugQuery,
   getPageForPublicQuery,
   getPagesListQuery,
@@ -21,11 +20,6 @@ export type PagesListParams = PageListQueryParams;
 
 async function getAllowedPageIds(userId: string): Promise<string[]> {
   return getAssignedPageIdsForUser(userId);
-}
-
-export async function getHomepageLastUpdated(): Promise<Date | null> {
-  await requireAdminPermission("page", "read");
-  return getHomepageLastUpdatedQuery();
 }
 
 export async function getPagesList(

@@ -616,7 +616,9 @@ export function validateSectionConfig(
 /** セクション作成スキーマ */
 export const createSectionSchema = z.object({
   pageId: z.string().uuid().optional(), // null = ホームページ
-  type: z.string().min(1).max(64),
+  type: z.enum(SECTION_TYPE_VALUES, {
+    error: "有効なセクションタイプを選択してください",
+  }),
   title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
   design: z.record(z.string(), z.unknown()).default({}),

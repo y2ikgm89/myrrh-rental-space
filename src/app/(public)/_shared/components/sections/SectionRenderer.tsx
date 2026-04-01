@@ -6,7 +6,7 @@
  */
 
 import type { ReactElement } from "react";
-import { SectionType } from "@/shared/db/enums";
+import { SectionType } from "@/shared/lib/validations/section";
 import { parseSectionDesign } from "@/shared/lib/validations/section";
 import {
   getHeroConfig,

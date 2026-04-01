@@ -8,7 +8,6 @@
 
 import {
   getAllSectionDefinitions,
-  getSectionDefinition,
   getSectionDefinitionsByCategory,
 } from "@/shared/lib/sections/registry";
 import type { SectionCategory } from "@/shared/lib/sections/types";

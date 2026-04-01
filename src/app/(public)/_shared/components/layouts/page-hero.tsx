@@ -50,7 +50,7 @@ export function PageHero(props: PageHeroProps) {
         <div className="absolute inset-0 bg-overlay" />
         <Container className="relative z-10 text-center">
           <Stack gap="lg" className="items-center">
-            <h1 className="font-heading text-[length:var(--text-hero)] font-bold leading-[var(--leading-tight)] tracking-[var(--tracking-tight)] text-overlay-foreground">
+            <h1 className="font-heading text-hero text-overlay-foreground">
               {props.title}
             </h1>
             {props.subtitle ? (

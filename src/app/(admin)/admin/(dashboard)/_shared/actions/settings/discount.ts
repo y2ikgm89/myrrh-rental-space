@@ -19,10 +19,6 @@ import * as settingsCommands from "@/shared/domain/settings/commands";
 
 import { discountSettingsSchema, type DiscountSettingsInput } from "./schemas";
 
-function invalidateSettingsCache(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
-}
-
 export async function updateDiscountSettings(
   input: DiscountSettingsInput,
 ): Promise<MutationResult> {
@@ -38,6 +34,8 @@ export async function updateDiscountSettings(
       await settingsCommands.updateDiscountSettings(parsed.data);
       return null;
     },
-    afterSuccess: invalidateSettingsCache,
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
+    },
   });
 }

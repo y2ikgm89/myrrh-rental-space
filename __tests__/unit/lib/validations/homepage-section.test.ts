@@ -100,7 +100,7 @@ describe("homepage-section re-export", () => {
 
   test("createSectionSchemaが機能する", () => {
     const data = {
-      type: "HERO",
+      type: "hero",
       title: "ヒーローセクション",
       config: {},
       design: {},

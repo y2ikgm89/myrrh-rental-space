@@ -7,6 +7,7 @@ import {
   updateInquiryStatus as updateInquiryStatusCommand,
   deleteInquiry as deleteInquiryCommand,
   replyToInquiryCommand,
+  updateInquiryCustomer as updateInquiryCustomerCommand,
 } from "@/shared/domain/inquiries/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -116,5 +117,41 @@ export async function replyToInquiry(
       updateTag(getCacheTag.inquiries.detail(parsed.data.id));
     },
     resolveAuditResourceId: (data) => data.id,
+  });
+}
+
+const updateCustomerSchema = z.object({
+  inquiryId: z.string().uuid({ error: "お問い合わせIDが不正です" }),
+  customerId: z.string().uuid({ error: "顧客IDが不正です" }).nullable(),
+});
+
+export async function updateInquiryCustomer(
+  inquiryId: string,
+  customerId: string | null,
+): Promise<MutationResult> {
+  const parsed = updateCustomerSchema.safeParse({ inquiryId, customerId });
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "inquiry",
+    action: "update",
+    resourceId: parsed.data.inquiryId,
+    execute: async () => {
+      await updateInquiryCustomerCommand(
+        parsed.data.inquiryId,
+        parsed.data.customerId,
+      );
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(getCacheTag.inquiries.detail(parsed.data.inquiryId));
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      if (parsed.data.customerId) {
+        updateTag(getCacheTag.customers.detail(parsed.data.customerId));
+      }
+    },
   });
 }

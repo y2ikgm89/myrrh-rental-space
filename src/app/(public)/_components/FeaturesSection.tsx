@@ -148,13 +148,13 @@ export function FeaturesSection({
         </ScrollReveal>
       </div>
 
-      <div ref={gridRef}>
+      <div ref={gridRef} className="@container">
         {layout === "hero-first" && heroFeature && (
-          <div className="space-y-8 md:space-y-12">
+          <div className="space-y-8 @md:space-y-12">
             {/* Hero feature — horizontal layout on md+ */}
             <div
               data-feature=""
-              className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start md:gap-8"
+              className="grid gap-5 @md:grid-cols-[auto_1fr] @md:items-start @md:gap-8"
             >
               <FeatureIcon icon={heroFeature.icon} size="hero" />
               <div>
@@ -172,7 +172,7 @@ export function FeaturesSection({
 
             {/* Remaining features — 2 columns */}
             {restFeatures.length > 0 && (
-              <div className="grid gap-8 md:grid-cols-2 md:gap-10">
+              <div className="grid gap-8 @md:grid-cols-2 @md:gap-10">
                 {restFeatures.map((feature) => (
                   <div
                     key={feature.title}

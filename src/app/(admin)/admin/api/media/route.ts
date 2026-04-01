@@ -34,6 +34,11 @@ import { omitUndefined } from "@/shared/lib/serialize";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
+    const auth = await checkPermission("media", "read", request.headers);
+    if (!auth.success) {
+      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
+    }
+
     const url = new URL(request.url);
 
     const filtersResult = mediaFiltersSchema.safeParse({
@@ -53,11 +58,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
     if (!paginationResult.success) {
       return jsonValidationError(paginationResult.error);
-    }
-
-    const auth = await checkPermission("media", "read", request.headers);
-    if (!auth.success) {
-      return jsonError(auth.error.error, getRouteErrorStatus(auth.error.error));
     }
 
     const result = await getMediaListQuery(

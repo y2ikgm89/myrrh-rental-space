@@ -31,6 +31,7 @@ import type {
   PageSectionData,
 } from "@/admin/queries/page-section";
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
+import { isSectionType } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
@@ -202,6 +203,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
 
   function handleAddSection(type: string) {
     startTransition(async () => {
+      if (!isSectionType(type)) return;
       const result = await createPageSection({
         pageId: page.id,
         type,

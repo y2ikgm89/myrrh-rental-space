@@ -28,25 +28,28 @@ paths:
 
 ## タイポグラフィ
 
-| 要素    | フォント      | クラス                                    | 備考                          |
-| ------- | ------------- | ----------------------------------------- | ----------------------------- |
-| Heading | Noto Serif JP | `font-heading`                            | `font-bold`, `tracking-tight` |
-| Body    | Noto Sans JP  | `font-sans`                               | normal weight                 |
-| Label   | —             | `text-[11px] uppercase tracking-[0.25em]` | `gold-line` 装飾付き          |
+| 要素    | フォント      | クラス                                    | 備考                                                                     |
+| ------- | ------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
+| Heading | Noto Serif JP | `font-heading`                            | `@theme` で `--text-h*--font-weight/line-height/letter-spacing` 自動適用 |
+| Body    | Noto Sans JP  | `font-sans`                               | normal weight                                                            |
+| Label   | —             | `text-[11px] uppercase tracking-[0.25em]` | `gold-line` 装飾付き                                                     |
 
 - **スケール比**: 1:4.5（body 16px → h1 72px）
-- **Heading サイズ**: `text-2xl md:text-3xl lg:text-4xl`（通常）/ `text-3xl sm:text-4xl md:text-5xl lg:text-7xl`（Hero）
+- **Heading サイズ**: Fluid `clamp()` — `text-h1`/`text-h2`/`text-h3`/`text-hero`（breakpoint 不要）
+- **正本**: `public.css` の `@theme` ブロック（`--text-hero`, `--text-h1`, `--text-h2`, `--text-h3`）
 
 ## セクション設計
 
-| 要素            | 値                                                                   |
-| --------------- | -------------------------------------------------------------------- |
-| Section padding | `py-24 md:py-32 lg:py-40`                                            |
-| Hero            | `h-screen`                                                           |
-| Container       | `mx-auto max-w-6xl px-5 md:px-8`                                     |
-| セクション分離  | 背景色交互切替（white ↔ surface）、区切り線なし                      |
-| Grid 傾向       | 非対称 2カラム（Concept）/ 3カラム均等（SpaceShowcase）              |
-| border-radius   | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
+| 要素              | 値                                                                   |
+| ----------------- | -------------------------------------------------------------------- |
+| Section padding   | Fluid: `py-[var(--spacing-section)]` = `clamp(5rem, 8vw, 7.5rem)`    |
+| Hero              | `min-h-[80vh]`                                                       |
+| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]` |
+| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                    |
+| Container max     | `80rem` (1280px)                                                     |
+| セクション分離    | 背景色交互切替（white ↔ surface）、区切り線なし                      |
+| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3` |
+| border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
 
 ## コンポーネント規約
 

@@ -23,10 +23,7 @@ import {
   sendReservationCancelledEmail,
   sendReservationConfirmationEmail,
 } from "@/shared/lib/email/reservation-emails";
-import {
-  ACTIVE_RESERVATION_STATUSES,
-  RESERVATION_STATUS_LABELS,
-} from "@/shared/lib/validations/enums/helpers";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Types

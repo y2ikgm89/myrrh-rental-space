@@ -89,6 +89,7 @@ export const createAdminReservation = async (
       }
 
       updateTag(CACHE_TAGS.RESERVATIONS);
+      updateTag(getCacheTag.reservations.detail(result.id));
       updateTag(getCacheTag.reservations.calendar());
       updateTag(CACHE_TAGS.CUSTOMERS);
     },

@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  IconLink,
+  IconLinkOff,
+  IconMail,
+  IconPhone,
+  IconSearch,
+  IconUser,
+} from "@tabler/icons-react";
 import { formatDate } from "@/shared/lib/utils";
 import { toast } from "sonner";
 import {
@@ -11,6 +19,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -20,11 +29,19 @@ import {
 } from "@/admin/components/ui";
 import { SubmitButton } from "@/admin/components/ui";
 import { InquiryStatusBadge } from "@/admin/components/status-badges";
-import { updateInquiryStatus, replyToInquiry } from "@/admin/actions/inquiry";
+import {
+  updateInquiryStatus,
+  replyToInquiry,
+  updateInquiryCustomer,
+} from "@/admin/actions/inquiry";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { getErrorMessage } from "@/shared/lib/errors";
+import { logger } from "@/shared/lib/logger";
 import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
 import type { InquiryStatus } from "@/shared/db/enums";
+import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { isValidInquiryStatus } from "@/shared/lib/validations/enums/guards";
 import { DetailSection } from "@/admin/components/DetailSection";
 import { DetailField } from "@/admin/components/DetailField";
@@ -33,17 +50,96 @@ type InquiryDetailProps = {
   inquiry: Serialized<InquiryWithCustomer>;
 };
 
+async function fetchCustomerSearchResults(
+  query: string,
+): Promise<CustomerSearchResult[]> {
+  const params = new URLSearchParams({ q: query });
+  return fetchAdminJson(`/admin/api/customers/search?${params.toString()}`);
+}
+
 export function InquiryDetail({ inquiry }: InquiryDetailProps) {
   const [isPending, startTransition] = useTransition();
   const [replyText, setReplyText] = useState("");
   const [isReplying, startReplyTransition] = useTransition();
+  const [isLinking, startLinkTransition] = useTransition();
+  const [showCustomerSearch, setShowCustomerSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CustomerSearchResult[]>(
+    [],
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
-  const handleStatusChange = async (status: InquiryStatus) => {
+  // アンマウント時にタイムアウトをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // 顧客検索（デバウンス付き）
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await fetchCustomerSearchResults(searchQuery);
+        setSearchResults(results);
+      } catch (error) {
+        logger.error("顧客検索エラー", {
+          error: getErrorMessage(error),
+        });
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+  }, [searchQuery]);
+
+  const handleStatusChange = (status: InquiryStatus) => {
     startTransition(async () => {
       const result = await updateInquiryStatus(inquiry.id, status);
       if (isMutationError(result)) {
         toast.error(result.error);
+      }
+    });
+  };
+
+  const handleLinkCustomer = (customerId: string) => {
+    startLinkTransition(async () => {
+      const result = await updateInquiryCustomer(inquiry.id, customerId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("顧客を紐づけました");
+        setShowCustomerSearch(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        router.refresh();
+      }
+    });
+  };
+
+  const handleUnlinkCustomer = () => {
+    startLinkTransition(async () => {
+      const result = await updateInquiryCustomer(inquiry.id, null);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("顧客の紐づけを解除しました");
+        router.refresh();
       }
     });
   };
@@ -188,23 +284,147 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                 </a>
               }
             />
-            <DetailField
-              label="紐づけ顧客"
-              value={
-                inquiry.customer ? (
-                  <Link
-                    href={`/admin/customers/${inquiry.customer.id}`}
-                    className="text-primary hover:underline"
-                  >
-                    {inquiry.customer.lastName} {inquiry.customer.firstName}
-                  </Link>
-                ) : (
-                  "なし"
-                )
-              }
-            />
           </div>
         </DetailSection>
+
+        {/* 顧客紐づけ */}
+        <Card>
+          <CardHeader>
+            <CardTitle>顧客紐づけ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {inquiry.customer ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <IconUser className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <Link
+                      href={`/admin/customers/${inquiry.customer.id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {inquiry.customer.lastName} {inquiry.customer.firstName}
+                    </Link>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <IconMail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {inquiry.customer.email}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={isLinking}
+                  onClick={handleUnlinkCustomer}
+                >
+                  <IconLinkOff className="mr-1 h-4 w-4" />
+                  解除
+                </Button>
+              </div>
+            ) : showCustomerSearch ? (
+              <div className="space-y-3">
+                <div className="relative">
+                  <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="名前、メール、電話番号で検索..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+
+                {isSearching && (
+                  <div className="text-sm text-muted-foreground">検索中...</div>
+                )}
+
+                {searchResults.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto rounded-md border">
+                    {searchResults.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        disabled={isLinking}
+                        onClick={() => handleLinkCustomer(customer.id)}
+                        className="w-full border-b p-3 text-left transition-colors last:border-b-0 hover:bg-accent"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <IconUser className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {customer.lastName} {customer.firstName}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 pl-5.5">
+                            <IconMail className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">
+                              {customer.email}
+                            </span>
+                          </div>
+                          {customer.phoneNumber && (
+                            <div className="flex items-center gap-2 pl-5.5">
+                              <IconPhone className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {customer.phoneNumber}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {searchQuery.length >= 2 &&
+                  !isSearching &&
+                  searchResults.length === 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      該当する顧客が見つかりませんでした
+                    </div>
+                  )}
+
+                {!searchQuery && (
+                  <div className="text-sm text-muted-foreground">
+                    2文字以上入力して顧客を検索してください
+                  </div>
+                )}
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setShowCustomerSearch(false);
+                    setSearchQuery("");
+                    setSearchResults([]);
+                  }}
+                >
+                  キャンセル
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  紐づけされていません
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setShowCustomerSearch(true)}
+                >
+                  <IconLink className="mr-1 h-4 w-4" />
+                  顧客を検索して紐づけ
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 外部メールアクション */}
         <Card>

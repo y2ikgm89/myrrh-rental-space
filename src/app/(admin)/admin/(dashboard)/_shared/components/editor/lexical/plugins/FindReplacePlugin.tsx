@@ -108,7 +108,7 @@ function FindIconReplacePanel({
 }) {
   const [editor] = useLexicalComposerContext();
   const [searchText, setSearchText] = useState("");
-  const [replaceText, setIconReplaceText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [showIconReplace, setShowIconReplace] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
@@ -308,7 +308,7 @@ function FindIconReplacePanel({
         <div className="flex items-center gap-1.5 px-2 pb-2">
           <Input
             value={replaceText}
-            onChange={(e) => setIconReplaceText(e.target.value)}
+            onChange={(e) => setReplaceText(e.target.value)}
             placeholder="置換..."
             className="h-7 text-xs flex-1"
           />

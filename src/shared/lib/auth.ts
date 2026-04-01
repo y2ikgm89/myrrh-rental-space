@@ -147,7 +147,11 @@ function createAuth() {
           const { user } = ctx.context.newSession;
           void logAuthEvent(AuditAction.LOGIN_SUCCESS, user.id, {
             email: user.email,
-            provider: ctx.path.includes("social") ? "google" : "email",
+            provider: ctx.path.includes("/line")
+              ? "line"
+              : ctx.path.includes("social")
+                ? "google"
+                : "email",
           });
         }
       }),

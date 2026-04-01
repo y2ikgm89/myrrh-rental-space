@@ -6,7 +6,7 @@
  * 検索・フィルター・ページネーション・一括操作・ゴミ箱復元対応
  */
 
-import { getPagesList, getHomepageLastUpdated } from "@/admin/queries/page";
+import { getPagesList } from "@/admin/queries/page";
 import { loadAdminPageSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
@@ -31,19 +31,16 @@ export default async function PagesManagementPage({
 }: PageProps): Promise<ReactElement> {
   const params = await loadAdminPageSearchParams(searchParams);
 
-  const [result, homepageLastUpdated] = await Promise.all([
-    getPagesList(
-      omitUndefined({
-        query: params.q || undefined,
-        status: params.status === "all" ? undefined : params.status,
-        type: params.type === "all" ? undefined : params.type,
-        page: params.page,
-        perPage: params.perPage,
-        sortOrder: params.sort,
-      }),
-    ),
-    getHomepageLastUpdated(),
-  ]);
+  const result = await getPagesList(
+    omitUndefined({
+      query: params.q || undefined,
+      status: params.status === "all" ? undefined : params.status,
+      type: params.type === "all" ? undefined : params.type,
+      page: params.page,
+      perPage: params.perPage,
+      sortOrder: params.sort,
+    }),
+  );
 
   return (
     <div className="space-y-6">
@@ -72,7 +69,6 @@ export default async function PagesManagementPage({
         total={result.total}
         currentPage={result.page}
         perPage={result.perPage}
-        homepageLastUpdated={homepageLastUpdated?.toISOString() ?? null}
       />
     </div>
   );

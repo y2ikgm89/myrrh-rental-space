@@ -69,8 +69,10 @@ export async function submitInquiry(
 
     // 6. Invalidate admin cache
     updateTag(CACHE_TAGS.INQUIRIES);
-    updateTag(getCacheTag.inquiries.list());
     updateTag(CACHE_TAGS.CUSTOMERS);
+    if (customerId) {
+      updateTag(getCacheTag.customers.detail(customerId));
+    }
 
     // 7. Send emails (fire-and-forget)
     fireAndForget(sendContactConfirmationEmail(result.payload), {

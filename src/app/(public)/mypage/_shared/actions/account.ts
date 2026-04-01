@@ -12,10 +12,15 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
+import { checkActionRateLimit } from "@/shared/lib/action-helpers";
+import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 
 export async function getAccountLinksAction(): Promise<
   MutationResult<{ accounts: string[] }>
 > {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 
@@ -24,6 +29,9 @@ export async function getAccountLinksAction(): Promise<
 }
 
 export async function deleteAccountAction(): Promise<MutationResult<null>> {
+  const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
+  if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 

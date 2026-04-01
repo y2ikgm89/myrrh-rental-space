@@ -36,10 +36,11 @@ export async function ensurePageSections(
 }
 
 /**
- * ホームページにセクションが存在しない場合、デフォルトセクションを作成
+ * ホームページにデフォルトセクションが不足している場合、追加作成
  *
  * admin のホームページ編集ページから呼ばれる（ensureSystemPage と同パターン）。
  * 公開ページからは呼ばない（読み取り専用）。
+ * 内部で home Page レコードを検索し、ensurePageSectionsCommand に委譲する。
  *
  * @returns 作成されたセクション数
  */

@@ -7,7 +7,6 @@ import {
   NavigationType,
   SocialPlatform,
   LayoutWidth,
-  SectionType,
   PostStatus,
   AuditAction,
   MediaType,
@@ -174,9 +173,9 @@ describe("isValidLayoutWidth", () => {
 
 describe("isValidSectionType", () => {
   test("有効なセクションタイプの場合 true を返す", () => {
-    expect(isValidSectionType(SectionType.HERO)).toBe(true);
-    expect(isValidSectionType(SectionType.CUSTOM)).toBe(true);
-    expect(isValidSectionType(SectionType.CTA)).toBe(true);
+    expect(isValidSectionType("hero")).toBe(true);
+    expect(isValidSectionType("custom")).toBe(true);
+    expect(isValidSectionType("cta")).toBe(true);
   });
 
   test("無効なセクションタイプの場合 false を返す", () => {

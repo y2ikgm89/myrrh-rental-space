@@ -33,7 +33,7 @@ const idSchema = z.string().uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
 
 function invalidateInstagramCaches(): void {
-  updateTag(CACHE_TAGS.SETTINGS);
+  updateTag(CACHE_TAGS.INSTAGRAM_FEED);
 }
 
 export async function updateInstagramSettings(

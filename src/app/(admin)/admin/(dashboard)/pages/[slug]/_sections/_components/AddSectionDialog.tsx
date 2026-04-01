@@ -21,12 +21,11 @@ import {
   sectionTypesByCategory,
 } from "@/shared/lib/validations/section";
 import { SectionTypeIcon } from "./SectionTypeIcon";
-import type { SectionType } from "@/shared/lib/validations/section";
 
 interface AddSectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (type: SectionType) => void;
+  onAdd: (type: string) => void;
   disabled: boolean;
 }
 

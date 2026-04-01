@@ -38,12 +38,12 @@ function getDefaultAnalyticsConfig(): AnalyticsConfig {
  *
  * Next.js 16 'use cache' パターン:
  * - cacheLife(CACHE_LIFE.STATIC_SETTINGS): 1時間キャッシュ
- * - cacheTag: `CACHE_TAGS.ANALYTICS_CONFIG` / `CACHE_TAGS.SETTINGS`（無効化は `revalidateTag` + 定数経由）
+ * - cacheTag: `CACHE_TAGS.ANALYTICS_CONFIG`（無効化は `updateTag` + 定数経由）
  */
 export async function getAnalyticsConfig(): Promise<AnalyticsConfig> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ANALYTICS_CONFIG, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ANALYTICS_CONFIG);
 
   try {
     return await siteQueries.getAnalyticsConfig();

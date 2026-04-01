@@ -13,11 +13,12 @@ export const publicEventRegistrationSchema = z.object({
     .number()
     .int()
     .min(1, { error: "参加人数は1以上です" })
-    .max(10, { error: "参加人数は10名以下です" }),
+    .max(10, { error: "参加人数は10名以下です" })
+    .default(1),
   turnstileToken: z.string().min(1, { error: "セキュリティ検証が必要です" }),
 });
 
-export type PublicEventRegistrationInput = z.infer<
+export type PublicEventRegistrationInput = z.input<
   typeof publicEventRegistrationSchema
 >;
 

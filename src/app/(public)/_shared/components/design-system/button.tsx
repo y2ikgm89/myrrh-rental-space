@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "link";
 type ButtonSize = "sm" | "md" | "lg";
@@ -42,11 +43,13 @@ interface ButtonAsLink extends ButtonBaseProps {
 type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 export function Button(props: ButtonProps) {
-  const { variant = "primary", size = "md", children, className = "" } = props;
-  const base =
-    "inline-flex items-center justify-center font-medium transition-colors duration-200";
-  const classes =
-    `${base} ${variantClasses[variant]} ${variant !== "link" ? sizeClasses[size] : ""} ${className}`.trim();
+  const { variant = "primary", size = "md", children, className } = props;
+  const classes = cn(
+    "inline-flex items-center justify-center font-medium transition-colors duration-200",
+    variantClasses[variant],
+    variant !== "link" && sizeClasses[size],
+    className,
+  );
 
   if ("href" in props && typeof props.href === "string") {
     return (
@@ -61,7 +64,10 @@ export function Button(props: ButtonProps) {
       type={props.type ?? "button"}
       disabled={props.disabled}
       onClick={props.onClick}
-      className={`${classes} disabled:opacity-50 disabled:pointer-events-none`}
+      className={cn(
+        classes,
+        "disabled:opacity-50 disabled:pointer-events-none",
+      )}
     >
       {children}
     </button>

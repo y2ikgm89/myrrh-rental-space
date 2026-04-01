@@ -36,7 +36,7 @@ export interface FooterSettings {
 export async function getHeaderSettings(): Promise<HeaderSettings> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -66,7 +66,7 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
 export async function getFooterSettings(): Promise<FooterSettings> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.SETTINGS, CACHE_TAGS.LAYOUT_SETTINGS);
+  cacheTag(CACHE_TAGS.LAYOUT_SETTINGS);
 
   const result = await safeFetch({
     fetch: () =>
@@ -100,7 +100,7 @@ export async function getFooterSettings(): Promise<FooterSettings> {
 export async function getPermalinkSettings() {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.PERMALINK, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.PERMALINK);
 
   const result = await safeFetch({
     fetch: () =>

@@ -238,7 +238,7 @@ export async function getActiveAnnouncementBars(): Promise<
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettings> {
   "use cache";
   cacheLife(CACHE_LIFE.STATIC_SETTINGS);
-  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR, CACHE_TAGS.SETTINGS);
+  cacheTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
 
   const settings = await safeFetch({
     fetch: () =>
