@@ -12,7 +12,11 @@ import { useEffect, useState, useTransition } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $insertNodeToNearestRoot } from "@lexical/utils";
 import { COMMAND_PRIORITY_LOW, createCommand } from "lexical";
-import { IconLoader2, IconExternalLink, IconAlertCircle } from "@tabler/icons-react";
+import {
+  IconLoader2,
+  IconExternalLink,
+  IconAlertCircle,
+} from "@tabler/icons-react";
 import { logger } from "@/shared/lib/logger";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
@@ -47,11 +51,11 @@ type BookmarkPluginProps = {
 
 type OgpPreview = {
   url: string;
-  title: string;
-  description: string;
-  imageUrl: string;
+  title: string | null;
+  description: string | null;
+  imageUrl: string | null;
   faviconUrl: string;
-  siteName: string;
+  siteName: string | null;
 } | null;
 
 // =============================================================================
@@ -80,11 +84,13 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
             editor.update(() => {
               const bookmarkNode = $createBookmarkNode({
                 url: result.url,
-                title: result.title,
-                description: result.description,
-                imageUrl: result.imageUrl,
+                ...(result.title != null && { title: result.title }),
+                ...(result.description != null && {
+                  description: result.description,
+                }),
+                ...(result.imageUrl != null && { imageUrl: result.imageUrl }),
                 faviconUrl: result.faviconUrl,
-                siteName: result.siteName,
+                ...(result.siteName != null && { siteName: result.siteName }),
               });
               $insertNodeToNearestRoot(bookmarkNode);
             });
@@ -126,11 +132,13 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
     editor.update(() => {
       const bookmarkNode = $createBookmarkNode({
         url: preview.url,
-        title: preview.title,
-        description: preview.description,
-        imageUrl: preview.imageUrl,
+        ...(preview.title != null && { title: preview.title }),
+        ...(preview.description != null && {
+          description: preview.description,
+        }),
+        ...(preview.imageUrl != null && { imageUrl: preview.imageUrl }),
         faviconUrl: preview.faviconUrl,
-        siteName: preview.siteName,
+        ...(preview.siteName != null && { siteName: preview.siteName }),
       });
 
       $insertNodeToNearestRoot(bookmarkNode);
