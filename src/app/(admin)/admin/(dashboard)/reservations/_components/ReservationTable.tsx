@@ -1,11 +1,5 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/admin/components/ui";
+import { Table, TableBody, TableCell, TableRow } from "@/admin/components/ui";
+import { ReservationTableHeader } from "./ReservationTableHeader";
 import {
   PaymentStatusBadge,
   ReservationStatusBadge,
@@ -62,21 +56,7 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
     <div className="overflow-hidden rounded-lg border bg-card">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>予約日時</TableHead>
-              <TableHead>スペース</TableHead>
-              <TableHead className="hidden lg:table-cell">顧客</TableHead>
-              <TableHead className="hidden text-right md:table-cell">
-                料金
-              </TableHead>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
-              <TableHead className="hidden whitespace-nowrap md:table-cell">
-                決済
-              </TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
+          <ReservationTableHeader />
           <TableBody>
             {reservations.map((reservation) => (
               <TableRow
@@ -120,6 +100,9 @@ export function ReservationTable({ reservations }: ReservationTableProps) {
                 </TableCell>
                 <TableCell className="hidden whitespace-nowrap md:table-cell">
                   <PaymentStatusBadge status={reservation.paymentStatus} />
+                </TableCell>
+                <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
+                  {formatDate(reservation.createdAt)}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">

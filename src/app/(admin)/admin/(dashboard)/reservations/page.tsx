@@ -30,8 +30,18 @@ async function ReservationList({
   const status = parseReservationStatusFilter(params.status);
 
   const result = await getReservations(
-    omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: params.perPage },
+    omitUndefined({
+      status,
+      search: params.search || undefined,
+      startDate: params.dateFrom || undefined,
+      endDate: params.dateTo || undefined,
+    }),
+    {
+      page: params.page,
+      limit: params.perPage,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    },
   );
 
   return (

@@ -370,11 +370,19 @@ export async function loadAdminInquirySearchParams(
   return adminInquirySearchParamsCache.all();
 }
 
-const adminReservationSearchParamsParsers = {
+const reservationSortByValues = ["startTime", "createdAt"] as const;
+
+export const adminReservationSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
   page: parseAsPage,
   perPage: parseAsPerPage,
+  sortBy: parseAsStringLiteral(reservationSortByValues).withDefault(
+    "startTime",
+  ),
+  sortOrder: parseAsSortOrder,
+  dateFrom: parseAsString.withDefault(""),
+  dateTo: parseAsString.withDefault(""),
 };
 
 const adminReservationSearchParamsCache = createSearchParamsCache(
