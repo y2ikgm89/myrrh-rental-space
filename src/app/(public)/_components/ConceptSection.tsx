@@ -64,7 +64,7 @@ export function ConceptSection({
       </ScrollReveal>
 
       <h2
-        className={`mt-6 font-heading ${getTitleClasses(design)} font-bold leading-[1.2] tracking-tight`}
+        className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.2] tracking-tight`}
         style={getTitleStyle(design)}
       >
         <SplitText>{heading}</SplitText>
@@ -110,11 +110,30 @@ export function ConceptSection({
 
   return (
     <SectionWrapper design={design}>
-      <div
-        className={`grid items-center gap-12 md:grid-cols-2 md:gap-16 lg:gap-20${imagePosition === "left" ? " md:[direction:rtl] [&>*]:[direction:ltr]" : ""}`}
-      >
-        {textBlock}
-        {imageBlock}
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-0">
+        {/* Image — spans 7 columns */}
+        <div
+          className={`md:row-start-1 ${
+            imagePosition === "left"
+              ? "md:col-span-7 md:col-start-1"
+              : "md:col-span-7 md:col-start-6"
+          }`}
+        >
+          {imageBlock}
+        </div>
+
+        {/* Text — spans 6 columns, overlaps image by 1 column */}
+        <div
+          className={`md:row-start-1 md:self-center ${
+            imagePosition === "left"
+              ? "md:col-span-6 md:col-start-6"
+              : "md:col-span-6 md:col-start-1"
+          }`}
+        >
+          <div className="relative z-10 bg-background py-8 md:px-10 md:py-12">
+            {textBlock}
+          </div>
+        </div>
       </div>
     </SectionWrapper>
   );
