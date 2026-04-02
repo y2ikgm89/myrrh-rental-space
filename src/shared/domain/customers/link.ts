@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@/shared/db/prisma";
 import { sendWelcomeEmail } from "@/shared/lib/email/welcome-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";

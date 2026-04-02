@@ -20,7 +20,7 @@ import {
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import { spaceSearchParams } from "@/public/lib/search-params";
 import { Container } from "@/public/components/design-system/container";
-import { Pagination } from "@/public/components/Pagination";
+import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import { SpaceGrid } from "./_components/space-grid";
 

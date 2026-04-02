@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@generated/prisma/client";
+import { Prisma } from "@/shared/db/prisma";
 import { prisma } from "@/shared/db/prisma";
 import { InquiryStatus, ReservationStatus } from "@/shared/db/enums";
 import { toDateString } from "@/shared/lib/serialize";
