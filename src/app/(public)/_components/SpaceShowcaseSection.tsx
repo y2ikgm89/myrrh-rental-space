@@ -44,15 +44,18 @@ export function SpaceShowcaseSection({
   spaces,
   design,
 }: SpaceShowcaseSectionProps): ReactElement {
+  const featured = spaces[0];
+  const remaining = spaces.slice(1);
+
   return (
     <SectionWrapper design={design}>
-      <div className="mb-8 text-center md:mb-12">
+      <div className="mb-10 md:mb-14">
         <ScrollReveal>
           {config.sectionLabel ? (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           ) : null}
           <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
             style={getTitleStyle(design)}
           >
             {config.title}
@@ -60,28 +63,51 @@ export function SpaceShowcaseSection({
         </ScrollReveal>
       </div>
 
-      <div
-        className={`grid gap-6 ${getCardGridColsClass(config.columns)} md:gap-8`}
-      >
-        {spaces.map((space, i) => (
-          <ScrollReveal key={space.id} delay={i * 0.1}>
+      {featured && (
+        <ScrollReveal>
+          <div className="mb-8 md:mb-12">
             <SpaceCard
-              slug={space.slug}
-              name={space.name}
-              description={space.description}
-              capacity={space.capacity}
-              area={space.area}
-              hourlyPrice={space.hourlyPrice}
-              dailyPrice={space.dailyPrice}
-              mainImageUrl={space.mainImageUrl}
-              categoryName={space.categoryName}
-              locationName={space.locationName ?? undefined}
-              lineAddress={space.lineAddress ?? undefined}
-              facilities={space.facilities}
+              slug={featured.slug}
+              name={featured.name}
+              description={featured.description}
+              capacity={featured.capacity}
+              area={featured.area}
+              hourlyPrice={featured.hourlyPrice}
+              dailyPrice={featured.dailyPrice}
+              mainImageUrl={featured.mainImageUrl}
+              categoryName={featured.categoryName}
+              locationName={featured.locationName ?? undefined}
+              lineAddress={featured.lineAddress ?? undefined}
+              facilities={featured.facilities}
             />
-          </ScrollReveal>
-        ))}
-      </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {remaining.length > 0 && (
+        <div
+          className={`grid gap-6 ${getCardGridColsClass(config.columns)} md:gap-8`}
+        >
+          {remaining.map((space, i) => (
+            <ScrollReveal key={space.id} delay={(i + 1) * 0.1}>
+              <SpaceCard
+                slug={space.slug}
+                name={space.name}
+                description={space.description}
+                capacity={space.capacity}
+                area={space.area}
+                hourlyPrice={space.hourlyPrice}
+                dailyPrice={space.dailyPrice}
+                mainImageUrl={space.mainImageUrl}
+                categoryName={space.categoryName}
+                locationName={space.locationName ?? undefined}
+                lineAddress={space.lineAddress ?? undefined}
+                facilities={space.facilities}
+              />
+            </ScrollReveal>
+          ))}
+        </div>
+      )}
     </SectionWrapper>
   );
 }
