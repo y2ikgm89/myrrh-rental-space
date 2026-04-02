@@ -49,23 +49,31 @@ export function SpaceShowcaseSection({
 
   return (
     <SectionWrapper design={design}>
-      <div className="mb-10 md:mb-14">
-        <ScrollReveal>
-          {config.sectionLabel ? (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
-          ) : null}
-          <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-            style={getTitleStyle(design)}
-          >
-            {config.title}
-          </h2>
-        </ScrollReveal>
+      {/* Section heading — left aligned, editorial */}
+      <div className="mb-12 flex items-end justify-between md:mb-20">
+        <div>
+          <ScrollReveal>
+            {config.sectionLabel ? (
+              <SectionLabel>{config.sectionLabel}</SectionLabel>
+            ) : null}
+            <h2
+              className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
+              style={getTitleStyle(design)}
+            >
+              {config.title}
+            </h2>
+          </ScrollReveal>
+        </div>
+        {/* Decorative line extending to right */}
+        <div className="mb-3 hidden flex-1 md:block">
+          <div className="ml-12 h-px bg-border" aria-hidden="true" />
+        </div>
       </div>
 
+      {/* Featured first card — large */}
       {featured && (
         <ScrollReveal>
-          <div className="mb-8 md:mb-12">
+          <div className="mb-10 md:mb-16">
             <SpaceCard
               slug={featured.slug}
               name={featured.name}
@@ -84,12 +92,13 @@ export function SpaceShowcaseSection({
         </ScrollReveal>
       )}
 
+      {/* Remaining cards — smaller grid */}
       {remaining.length > 0 && (
         <div
           className={`grid gap-6 ${getCardGridColsClass(config.columns)} md:gap-8`}
         >
           {remaining.map((space, i) => (
-            <ScrollReveal key={space.id} delay={(i + 1) * 0.1}>
+            <ScrollReveal key={space.id} delay={(i + 1) * 0.08}>
               <SpaceCard
                 slug={space.slug}
                 name={space.name}
