@@ -62,8 +62,8 @@ function FeatureIndicator({
   if (IconComponent) {
     return (
       <IconComponent
-        className="h-5 w-5 text-accent/60"
-        strokeWidth={1.5}
+        className="h-6 w-6 text-accent/40"
+        strokeWidth={1.2}
         aria-hidden="true"
       />
     );
@@ -71,7 +71,7 @@ function FeatureIndicator({
 
   return (
     <span
-      className="font-heading text-3xl font-light text-accent/25"
+      className="font-heading text-5xl font-light leading-none text-accent/15 md:text-6xl"
       aria-hidden="true"
     >
       {String(index + 1).padStart(2, "0")}
@@ -154,7 +154,7 @@ export function FeaturesSection({
             {/* Hero feature — horizontal layout on md+ */}
             <div
               data-feature=""
-              className="grid gap-5 @md:grid-cols-[auto_1fr] @md:items-start @md:gap-8"
+              className="grid gap-5 border-b border-border pb-8 @md:grid-cols-[auto_1fr] @md:items-start @md:gap-8 @md:pb-12"
             >
               <div className="flex h-12 w-12 items-center justify-center">
                 <FeatureIndicator icon={heroFeature.icon} index={0} />
@@ -164,7 +164,7 @@ export function FeaturesSection({
                   {heroFeature.title}
                 </h3>
                 <p
-                  className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground md:text-base"
+                  className="mt-3 max-w-lg text-sm leading-[1.9] text-muted-foreground md:text-base"
                   style={getTextStyle(design)}
                 >
                   {heroFeature.description}
@@ -174,7 +174,7 @@ export function FeaturesSection({
 
             {/* Remaining features — 2 columns */}
             {restFeatures.length > 0 && (
-              <div className="grid gap-8 @md:grid-cols-2 @md:gap-10">
+              <div className="grid gap-8 @md:mt-12 @md:grid-cols-2 @md:gap-x-16 @md:gap-y-10">
                 {restFeatures.map((feature, restIndex) => (
                   <div
                     key={feature.title}
@@ -192,7 +192,7 @@ export function FeaturesSection({
                         {feature.title}
                       </h3>
                       <p
-                        className="mt-2 text-sm leading-relaxed text-muted-foreground"
+                        className="mt-2 text-sm leading-[1.9] text-muted-foreground"
                         style={getTextStyle(design)}
                       >
                         {feature.description}
@@ -206,19 +206,21 @@ export function FeaturesSection({
         )}
 
         {layout === "equal-grid" && (
-          <div className={`grid gap-8 ${getGridColsClass(config.columns)}`}>
+          <div
+            className={`grid gap-10 @md:gap-x-16 ${getGridColsClass(config.columns)}`}
+          >
             {items.map((feature, index) => (
               <div
                 key={feature.title}
                 data-feature=""
-                className={`flex flex-col items-start gap-3${index % 2 === 1 ? " @md:mt-6" : ""}`}
+                className={`flex flex-col items-start gap-3${index % 2 === 1 ? " @md:mt-12" : ""}`}
               >
                 <FeatureIndicator icon={feature.icon} index={index} />
                 <h3 className="font-heading text-lg tracking-tight">
                   {feature.title}
                 </h3>
                 <p
-                  className="text-sm leading-relaxed text-muted-foreground"
+                  className="text-sm leading-[1.9] text-muted-foreground"
                   style={getTextStyle(design)}
                 >
                   {feature.description}
@@ -244,7 +246,7 @@ export function FeaturesSection({
                     {feature.title}
                   </h3>
                   <p
-                    className="mt-2 text-sm leading-relaxed text-muted-foreground"
+                    className="mt-2 text-sm leading-[1.9] text-muted-foreground"
                     style={getTextStyle(design)}
                   >
                     {feature.description}
