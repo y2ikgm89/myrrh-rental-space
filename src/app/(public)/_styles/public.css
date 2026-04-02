@@ -14,14 +14,14 @@
    * Colors
    * -------------------------------------------------------------------------- */
   --color-background: oklch(0.985 0.005 60);
-  --color-surface: oklch(0.96 0.008 60);
-  --color-surface-light: oklch(0.975 0.006 60);
+  --color-surface: oklch(0.94 0.012 60);
+  --color-surface-light: oklch(0.97 0.008 60);
   --color-foreground: oklch(0.18 0.015 60);
   --color-muted-foreground: oklch(0.45 0.02 60);
-  --color-border: oklch(0.88 0.01 60);
+  --color-border: oklch(0.85 0.015 60);
 
-  --color-accent: oklch(0.55 0.09 60);
-  --color-accent-light: oklch(0.62 0.08 60);
+  --color-accent: oklch(0.52 0.1 60);
+  --color-accent-light: oklch(0.6 0.09 60);
   --color-accent-foreground: oklch(0.985 0 0);
 
   --color-card: oklch(0.96 0.008 60);
@@ -44,30 +44,30 @@
   --font-sans: "Noto Sans JP", sans-serif;
   --font-serif: "Cormorant Garamond", "Noto Sans JP", serif;
 
-  --text-hero: clamp(2.5rem, 5vw + 1rem, 4.5rem);
-  --text-hero--line-height: 1.15;
-  --text-hero--letter-spacing: -0.01em;
+  --text-hero: clamp(3rem, 7vw + 1rem, 6rem);
+  --text-hero--line-height: 1.05;
+  --text-hero--letter-spacing: -0.03em;
   --text-hero--font-weight: 300;
 
-  --text-h1: clamp(2rem, 3vw + 0.5rem, 3rem);
-  --text-h1--line-height: 1.2;
-  --text-h1--letter-spacing: -0.01em;
+  --text-h1: clamp(2.25rem, 4vw + 0.5rem, 3.75rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.02em;
   --text-h1--font-weight: 300;
 
-  --text-h2: clamp(1.5rem, 2vw + 0.5rem, 2.25rem);
-  --text-h2--line-height: 1.25;
-  --text-h2--letter-spacing: -0.01em;
-  --text-h2--font-weight: 400;
+  --text-h2: clamp(1.75rem, 3vw + 0.5rem, 2.75rem);
+  --text-h2--line-height: 1.15;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 300;
 
-  --text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.5rem);
-  --text-h3--line-height: 1.3;
-  --text-h3--letter-spacing: 0em;
-  --text-h3--font-weight: 500;
+  --text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 400;
 
   --text-h4: 1.125rem;
   --text-h4--line-height: 1.3;
-  --text-h4--letter-spacing: -0.02em;
-  --text-h4--font-weight: 600;
+  --text-h4--letter-spacing: 0em;
+  --text-h4--font-weight: 500;
 
   --text-body: 1rem;
   --text-small: 0.875rem;
@@ -84,8 +84,8 @@
   /* --------------------------------------------------------------------------
    * Spacing
    * -------------------------------------------------------------------------- */
-  --spacing-section: clamp(6rem, 10vw, 9rem);
-  --spacing-block: clamp(2rem, 4vw, 3rem);
+  --spacing-section: clamp(7rem, 12vw, 11rem);
+  --spacing-block: clamp(2.5rem, 5vw, 4rem);
   --spacing-element: 1.5rem;
   --spacing-inline: 1rem;
 
@@ -527,11 +527,35 @@
     content: "";
     position: absolute;
     top: 50%;
-    left: -2rem;
+    left: -2.5rem;
     transform: translateY(-50%);
-    width: 1.5rem;
+    width: 2rem;
     height: 1px;
-    background-color: var(--color-accent);
+    background: linear-gradient(90deg, transparent, var(--color-accent));
+  }
+
+  .grain-texture {
+    position: relative;
+  }
+
+  .grain-texture::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  .drop-cap > p:first-of-type::first-letter {
+    font-family: var(--font-serif);
+    font-size: 3.5em;
+    float: left;
+    line-height: 0.8;
+    margin-right: 0.12em;
+    margin-top: 0.08em;
+    color: var(--color-accent);
   }
 }
 
