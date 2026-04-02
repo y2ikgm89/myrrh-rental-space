@@ -18,11 +18,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { IMAGE_ASPECT_MAP } from "@/public/lib/section-style-maps";
-import {
-  parseConceptLayout,
-  parseImageAspect,
-} from "@/shared/lib/validations/section-parsers";
+import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
@@ -47,13 +43,7 @@ export function ConceptSection({
   const imagePosition = config.imagePosition;
   const alignClass = TEXT_ALIGN_CLASS[config.textAlign];
   const layout = parseConceptLayout(config.layout);
-  const imageAspect = parseImageAspect(config.imageAspect);
-  const aspectClass = IMAGE_ASPECT_MAP[imageAspect];
   const isStacked = layout === "stacked";
-
-  const imageClassName = aspectClass
-    ? `relative ${aspectClass} rounded-lg`
-    : "relative rounded-lg";
 
   const textBlock = (
     <div className={`${alignClass ?? ""}${isStacked ? " text-center" : ""}`}>
@@ -64,7 +54,7 @@ export function ConceptSection({
       </ScrollReveal>
 
       <h2
-        className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.2] tracking-tight`}
+        className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.1] tracking-tight`}
         style={getTitleStyle(design)}
       >
         <SplitText>{heading}</SplitText>
@@ -87,21 +77,21 @@ export function ConceptSection({
     </div>
   );
 
-  const imageBlock = imageUrl ? (
-    <ScrollReveal delay={0.1}>
-      <ParallaxImage
-        src={imageUrl}
-        alt={config.heading ?? "コンセプト"}
-        className={imageClassName}
-      />
-    </ScrollReveal>
-  ) : null;
-
   if (isStacked) {
     return (
       <SectionWrapper design={design}>
-        <div className="flex flex-col items-center gap-8">
-          {imageBlock}
+        <div className="mx-auto max-w-3xl text-center">
+          {imageUrl && (
+            <div className="mb-12">
+              <ScrollReveal delay={0.1}>
+                <ParallaxImage
+                  src={imageUrl}
+                  alt={config.heading ?? "コンセプト"}
+                  className="relative rounded-lg"
+                />
+              </ScrollReveal>
+            </div>
+          )}
           {textBlock}
         </div>
       </SectionWrapper>
@@ -109,28 +99,34 @@ export function ConceptSection({
   }
 
   return (
-    <SectionWrapper design={design}>
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-0">
-        {/* Image — spans 7 columns */}
+    <SectionWrapper design={design} skipContainer>
+      <div className="grid grid-cols-1 md:grid-cols-2">
+        {/* Image — full bleed, no container padding */}
         <div
-          className={`md:row-start-1 ${
-            imagePosition === "left"
-              ? "md:col-span-7 md:col-start-1"
-              : "md:col-span-7 md:col-start-6"
+          className={`relative min-h-[50vh] md:min-h-[70vh] ${
+            imagePosition === "left" ? "md:order-1" : "md:order-2"
           }`}
         >
-          {imageBlock}
+          {imageUrl ? (
+            <ScrollReveal delay={0.1}>
+              <ParallaxImage
+                src={imageUrl}
+                alt={config.heading ?? "コンセプト"}
+                className="relative h-full min-h-[50vh] md:min-h-[70vh]"
+              />
+            </ScrollReveal>
+          ) : (
+            <div className="h-full bg-surface" />
+          )}
         </div>
 
-        {/* Text — spans 6 columns, overlaps image by 1 column */}
+        {/* Text — centered vertically with generous padding */}
         <div
-          className={`md:row-start-1 md:self-center ${
-            imagePosition === "left"
-              ? "md:col-span-6 md:col-start-6"
-              : "md:col-span-6 md:col-start-1"
+          className={`flex items-center ${
+            imagePosition === "left" ? "md:order-2" : "md:order-1"
           }`}
         >
-          <div className="relative z-10 bg-background py-8 md:px-10 md:py-12">
+          <div className="px-6 py-16 md:px-12 md:py-24 lg:px-20">
             {textBlock}
           </div>
         </div>
