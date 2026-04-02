@@ -9,6 +9,7 @@
 
 import { useRef, type ReactElement } from "react";
 import Image from "next/image";
+import { IconStar, IconStarFilled } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
@@ -32,16 +33,22 @@ interface TestimonialSectionProps {
 function StarRating({ rating }: { readonly rating: number }): ReactElement {
   return (
     <div className="flex gap-0.5" aria-label={`${rating}つ星`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <svg
-          key={i}
-          className={`h-4 w-4 ${i < rating ? "text-accent" : "text-muted"}`}
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
+      {Array.from({ length: 5 }, (_, i) =>
+        i < rating ? (
+          <IconStarFilled
+            key={i}
+            className="h-3.5 w-3.5 text-accent"
+            aria-hidden="true"
+          />
+        ) : (
+          <IconStar
+            key={i}
+            className="h-3.5 w-3.5 text-border"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
+        ),
+      )}
     </div>
   );
 }
@@ -126,10 +133,10 @@ export function TestimonialSection({
             // variant-specific card styles
             const cardClasses =
               variant === "card"
-                ? "rounded-lg bg-card p-8 border border-border border-l-4 border-l-primary hover:shadow-lg transition-shadow"
+                ? "rounded-lg bg-card p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 hover:shadow-lg transition-shadow"
                 : variant === "minimal"
                   ? "py-6"
-                  : "rounded-lg border border-border bg-card p-6";
+                  : "py-8";
 
             return (
               <div
@@ -141,7 +148,7 @@ export function TestimonialSection({
                 {/* IconQuote decoration (not shown in minimal) */}
                 {variant !== "minimal" && (
                   <span
-                    className="block font-serif text-4xl leading-none text-accent/20"
+                    className="block font-heading text-[4rem] leading-[0.8] text-accent/10"
                     aria-hidden="true"
                   >
                     &ldquo;
@@ -149,7 +156,7 @@ export function TestimonialSection({
                 )}
 
                 <p
-                  className={`${variant === "minimal" ? "" : "mt-2"} text-sm leading-relaxed text-foreground`}
+                  className={`${variant === "minimal" ? "" : "mt-3"} ${variant === "default" ? "text-base leading-[1.9] italic" : "text-sm leading-relaxed"} text-foreground`}
                   style={getTextStyle(design)}
                 >
                   {variant === "minimal" && (
@@ -179,7 +186,13 @@ export function TestimonialSection({
 
                 {/* Author */}
                 <div
-                  className={`mt-4 flex items-center gap-3 ${variant === "minimal" ? "border-t border-border/50" : "border-t border-border"} pt-4`}
+                  className={`mt-6 flex items-center gap-3 ${
+                    variant === "default"
+                      ? ""
+                      : variant === "card"
+                        ? "border-t border-border pt-4"
+                        : "border-t border-border/50 pt-4"
+                  }`}
                 >
                   {item.authorImageUrl && (
                     <Image
