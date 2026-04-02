@@ -12,7 +12,7 @@
 import {
   DurationDiscountOverride,
   DiscountCombinationMode,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import type {
   DurationDiscountRule,
   PriceCalculation,

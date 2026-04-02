@@ -15,7 +15,7 @@ import {
   TermsStatus,
   CouponType,
   PaymentStatus,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import {
   isValidRole,
   isValidReservationStatus,

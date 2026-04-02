@@ -36,7 +36,7 @@ import {
   type DiscountSettingsData,
 } from "@/admin/actions/settings";
 import { discountFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { DiscountCombinationMode } from "@/shared/db/enums";
+import { DiscountCombinationMode } from "@generated/prisma/enums";
 
 interface DiscountSectionProps {
   settings: DiscountSettingsData;

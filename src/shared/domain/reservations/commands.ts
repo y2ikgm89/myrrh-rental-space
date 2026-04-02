@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { CouponType, ReservationStatus } from "@/shared/db/enums";
+import { CouponType, ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";

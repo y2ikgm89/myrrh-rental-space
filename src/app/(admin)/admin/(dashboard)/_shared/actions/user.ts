@@ -11,7 +11,7 @@ import {
   type CreateUserInput,
   type UpdateUserInput,
 } from "@/shared/lib/validations/user";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 import {
   createUser as createUserCommand,
   deleteUser as deleteUserCommand,

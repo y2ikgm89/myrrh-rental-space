@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma, type Prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import { buildPostCanonicalPath } from "@/shared/domain/posts/routing";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
 import type {

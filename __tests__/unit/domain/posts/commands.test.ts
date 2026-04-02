@@ -116,7 +116,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   PostStatus: {
     DRAFT: "DRAFT",
     PUBLISHED: "PUBLISHED",

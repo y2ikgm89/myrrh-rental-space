@@ -2,7 +2,7 @@
  * 税額計算関数
  */
 
-import { TaxRateType, TaxDisplayMode, TaxInputMode } from "@/shared/db/enums";
+import { TaxRateType, TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
 import type { TaxSettings } from "./types";
 
 /**

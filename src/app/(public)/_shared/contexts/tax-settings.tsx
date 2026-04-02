@@ -2,7 +2,7 @@
 
 import { createContext, use } from "react";
 import type { ReactNode } from "react";
-import type { TaxDisplayMode } from "@/shared/db/enums";
+import type { TaxDisplayMode } from "@generated/prisma/enums";
 
 export interface PublicTaxDisplay {
   readonly standardRate: number;

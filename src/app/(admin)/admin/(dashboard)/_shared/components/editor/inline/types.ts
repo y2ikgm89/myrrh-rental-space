@@ -14,7 +14,7 @@ import type {
   Path,
   FieldPathByValue,
 } from "react-hook-form";
-import type { PostStatus } from "@/shared/db/enums";
+import type { PostStatus } from "@generated/prisma/enums";
 
 // =============================================================================
 // 共有フィールド型（複数エディターで共通のフィールド）

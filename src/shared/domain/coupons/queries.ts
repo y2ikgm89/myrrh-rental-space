@@ -1,11 +1,10 @@
 import "server-only";
 
+import { prisma, type Coupon } from "@/shared/db/prisma";
 import {
-  prisma,
   Prisma as PrismaNamespace,
-  type Coupon,
   type Prisma,
-} from "@/shared/db/prisma";
+} from "@generated/prisma/client";
 import type {
   CouponData,
   CouponDetailData,
@@ -14,7 +13,7 @@ import type {
   CouponStatusFilter,
   GetCouponsResult,
 } from "@/shared/domain/coupons/types";
-import type { CouponType } from "@/shared/db/enums";
+import type { CouponType } from "@generated/prisma/enums";
 import { toPlainObject } from "@/shared/lib/serialize";
 
 const SORT_COLUMN_MAP = {

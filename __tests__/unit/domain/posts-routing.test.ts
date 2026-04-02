@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PostPermalinkStructure } from "@/shared/db/enums";
+import { PostPermalinkStructure } from "@generated/prisma/enums";
 import {
   buildPostCanonicalPath,
   resolvePostDetailRoute,

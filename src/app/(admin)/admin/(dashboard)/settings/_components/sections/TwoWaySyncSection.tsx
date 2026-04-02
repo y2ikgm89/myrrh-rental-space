@@ -45,7 +45,7 @@ import {
 } from "@/admin/actions/settings";
 import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { IconRefresh, IconClock, IconWebhook, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
-import { CalendarSyncMethod } from "@/shared/db/enums";
+import { CalendarSyncMethod } from "@generated/prisma/enums";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

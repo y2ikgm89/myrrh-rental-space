@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma, Prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import type { LocationFormData } from "@/shared/lib/validations/location";

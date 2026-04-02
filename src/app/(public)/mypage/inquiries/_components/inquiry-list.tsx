@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { InquiryStatus } from "@/shared/db/enums";
+import type { InquiryStatus } from "@generated/prisma/enums";
 import { Badge } from "@/public/components/design-system/badge";
 import { INQUIRY_STATUS_CONFIG } from "./inquiry-status";
 

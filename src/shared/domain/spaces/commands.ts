@@ -5,7 +5,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {

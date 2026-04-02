@@ -36,7 +36,7 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // enum モック
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   DiscountType: {
     none: "none",
     percentage: "percentage",

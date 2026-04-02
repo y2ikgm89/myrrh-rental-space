@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { InstagramMediaType } from "@/shared/db/enums";
+import { InstagramMediaType } from "@generated/prisma/enums";
 import { encrypt } from "@/shared/lib/crypto";
 import {
   extractInstagramShortcode,

@@ -4,7 +4,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import {
   SPACE_FORM_META_CLIENT_NONCE,
   SPACE_FORM_META_INTENT,

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { AuditAction } from "@/shared/db/enums";
+import { AuditAction } from "@generated/prisma/enums";
 import { isRecord, toPlainObject } from "@/shared/lib/serialize";
 
 export type AuditLogItem = {

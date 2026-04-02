@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { AuditAction } from "@/shared/db/enums";
+import { AuditAction } from "@generated/prisma/enums";
 import {
   getAuditLogResources as getAuditLogResourcesQuery,
   getAuditLogs as getAuditLogsQuery,

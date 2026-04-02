@@ -10,7 +10,7 @@ import type {
   PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import type {
   BusinessHours,
   BusinessHoursDay,

@@ -7,7 +7,7 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   AnnouncementBarType,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {

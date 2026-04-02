@@ -33,7 +33,7 @@ import {
   PaymentStatus,
   RegistrationStatus,
   EventStatus,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import {
   isValidRole,
   isValidReservationStatus,

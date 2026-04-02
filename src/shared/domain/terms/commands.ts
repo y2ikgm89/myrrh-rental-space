@@ -1,6 +1,6 @@
 import "server-only";
 
-import { TermsStatus } from "@/shared/db/enums";
+import { TermsStatus } from "@generated/prisma/enums";
 import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";

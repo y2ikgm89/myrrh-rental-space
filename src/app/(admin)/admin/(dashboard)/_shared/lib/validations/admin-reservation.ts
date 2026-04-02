@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import { CREATABLE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 
 /**

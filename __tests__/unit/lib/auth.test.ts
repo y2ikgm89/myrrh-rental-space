@@ -13,7 +13,7 @@ import {
   getSessionUser,
   getRoleFromSession,
 } from "@/shared/lib/auth";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 // モックセッション型
 type MockSessionUser = {

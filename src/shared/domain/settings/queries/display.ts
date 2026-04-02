@@ -6,7 +6,7 @@ import {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
   PostPermalinkStructure,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,

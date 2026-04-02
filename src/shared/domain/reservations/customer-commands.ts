@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { isWithinDeadline } from "./deadline";
 import { reservationDeadlineNow } from "./server-deadline-instant";

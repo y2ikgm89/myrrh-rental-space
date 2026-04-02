@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 
 type CreateReviewInput = {
   customerId: string;

@@ -7,7 +7,7 @@
  */
 
 import { format } from "date-fns";
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import {
   postFormSchema,
   type PostFormData,

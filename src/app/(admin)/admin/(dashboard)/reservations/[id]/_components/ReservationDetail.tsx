@@ -29,8 +29,8 @@ import {
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { ReservationStatus } from "@/shared/db/enums";
-import { PaymentStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
+import { PaymentStatus } from "@generated/prisma/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   PAYMENT_STATUS_LABELS,

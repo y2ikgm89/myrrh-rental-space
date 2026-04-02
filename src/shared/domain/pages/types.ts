@@ -1,4 +1,4 @@
-import type { LayoutWidth } from "@/shared/db/enums";
+import type { LayoutWidth } from "@generated/prisma/enums";
 
 type DateLike = Date | string;
 

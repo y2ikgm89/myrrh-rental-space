@@ -40,7 +40,7 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { logger } from "@/shared/lib/logger";
 import type { InquiryWithCustomer } from "@/shared/domain/inquiries/types";
 import type { Serialized } from "@/shared/lib/serialize";
-import type { InquiryStatus } from "@/shared/db/enums";
+import type { InquiryStatus } from "@generated/prisma/enums";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";
 import { isValidInquiryStatus } from "@/shared/lib/validations/enums/guards";
 import { DetailSection } from "@/admin/components/DetailSection";

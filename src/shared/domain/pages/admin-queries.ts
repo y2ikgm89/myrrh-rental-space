@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma, type Prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { PageData, PageListResult } from "./types";
 

@@ -22,7 +22,7 @@
 import type Stripe from "stripe";
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { PaymentStatus } from "@/shared/db/enums";
+import { PaymentStatus } from "@generated/prisma/enums";
 import {
   getReservationPaymentStatus,
   updateReservationPaymentCompleted,

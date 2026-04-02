@@ -1,7 +1,7 @@
 import "server-only";
 
-import type { PaymentStatus } from "@/shared/db/enums";
-import { ReservationStatus } from "@/shared/db/enums";
+import type { PaymentStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import {
   getReservationByIdQuery,
   getReservationsForCalendarQuery,

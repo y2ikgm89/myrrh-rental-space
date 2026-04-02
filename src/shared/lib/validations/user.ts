@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 // =============================================================================
 // User Schemas

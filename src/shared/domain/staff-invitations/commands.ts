@@ -2,8 +2,9 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import type { Role } from "@/shared/db/enums";
-import { Prisma, prisma } from "@/shared/db/prisma";
+import type { Role } from "@generated/prisma/enums";
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";

@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { AnnouncementBarType } from "@/shared/db/enums";
+import { AnnouncementBarType } from "@generated/prisma/enums";
 import {
   announcementBarInputSchema as announcementBarSchema,
   type AnnouncementBarData,

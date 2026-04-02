@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import { LayoutWidth } from "@/shared/types/prisma";
 
 // post.ts 内で定義されているスキーマを再現

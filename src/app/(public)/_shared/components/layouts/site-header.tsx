@@ -26,7 +26,7 @@ import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
-import { HeaderScrollBehavior, HeaderBackgroundMode } from "@/shared/db/enums";
+import { HeaderScrollBehavior, HeaderBackgroundMode } from "@generated/prisma/enums";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "../design-system/button";
 

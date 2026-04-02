@@ -1,4 +1,4 @@
-import type { Role } from "@/shared/db/enums";
+import type { Role } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type StaffInvitationRecord = {

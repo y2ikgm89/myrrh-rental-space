@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import type { Role } from "@/shared/db/enums";
+import type { Role } from "@generated/prisma/enums";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 
 function toInvitationData(invitation: {

@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 // page assignment query のモック
 const mockFindMany = mock<() => Promise<{ pageId: string }[]>>(() =>

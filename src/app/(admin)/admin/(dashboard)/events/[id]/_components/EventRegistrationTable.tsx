@@ -16,7 +16,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import type { RegistrationStatus } from "@/shared/db/enums";
+import type { RegistrationStatus } from "@generated/prisma/enums";
 
 type Registration = {
   id: string;

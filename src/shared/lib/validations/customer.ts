@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CustomerStatus } from "@/shared/db/enums";
+import { CustomerStatus } from "@generated/prisma/enums";
 
 // =============================================================================
 // Customer Schemas

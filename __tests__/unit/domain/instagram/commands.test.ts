@@ -57,7 +57,7 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // enums モック
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   InstagramMediaType: {
     IMAGE: "IMAGE",
     VIDEO: "VIDEO",

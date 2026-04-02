@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { validateStatusTransition } from "@/shared/domain/reservations/commands";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 
 describe("validateStatusTransition", () => {
   const allowedTransitions: [ReservationStatus, ReservationStatus][] = [

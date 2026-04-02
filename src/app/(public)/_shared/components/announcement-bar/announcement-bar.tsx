@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import { AnnouncementBarDesignStyle } from "@generated/prisma/enums";
 import { useCarousel } from "./use-carousel";
 import { useDismissedBars, dismissBar } from "./use-dismissed-bars";
 import { computeBarStyles, getTransitionAnimation } from "./styles";

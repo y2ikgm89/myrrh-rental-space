@@ -8,7 +8,7 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { publishPost, unpublishPost } from "@/admin/actions/post/mutations";
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 type PostActionCellProps = {

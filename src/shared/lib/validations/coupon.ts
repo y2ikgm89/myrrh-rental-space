@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { CouponType } from "@/shared/db/enums";
+import { CouponType } from "@generated/prisma/enums";
 
 // =============================================================================
 // Base Schemas

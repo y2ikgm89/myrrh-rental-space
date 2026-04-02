@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { RegistrationStatus } from "@/shared/db/enums";
+import { RegistrationStatus } from "@generated/prisma/enums";
 
 export async function getEventRegistrations(eventId: string) {
   return prisma.eventRegistration.findMany({

@@ -58,7 +58,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   NavigationType: {
     HEADER_DESKTOP: "HEADER_DESKTOP",
     HEADER_MOBILE: "HEADER_MOBILE",

@@ -38,7 +38,7 @@ import {
   PostPermalinkStructure,
   PaymentStatus,
   EventStatus,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { SectionType, isSectionType } from "@/shared/lib/validations/section";
 
 // =============================================================================

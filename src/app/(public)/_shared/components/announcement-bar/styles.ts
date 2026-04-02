@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import { AnnouncementBarDesignStyle } from "@generated/prisma/enums";
 import { cn } from "@/shared/lib/cn";
 import type { CarouselSettings, AnnouncementBarItem } from "./types";
 

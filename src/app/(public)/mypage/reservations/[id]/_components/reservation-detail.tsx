@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
-import type { PaymentStatus } from "@/shared/db/enums";
+import type { PaymentStatus } from "@generated/prisma/enums";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import {
   getValidPaymentStatus,

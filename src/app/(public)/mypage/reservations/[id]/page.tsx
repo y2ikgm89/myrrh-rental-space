@@ -13,7 +13,7 @@ import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-
 import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import { toPlainObject } from "@/shared/lib/serialize";
 import { getReviewForReservation } from "@/shared/domain/reviews/public-queries";
 import { Heading } from "@/public/components/design-system/heading";

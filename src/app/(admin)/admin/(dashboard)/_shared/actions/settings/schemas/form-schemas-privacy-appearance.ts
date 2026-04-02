@@ -6,7 +6,7 @@ import {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
   LayoutWidth,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // =============================================================================
 // Site > Privacy > Cookie同意設定

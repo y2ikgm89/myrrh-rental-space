@@ -1,6 +1,6 @@
 import "server-only";
 
-import { TermsStatus } from "@/shared/db/enums";
+import { TermsStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 import type { Serialized } from "@/shared/lib/serialize";

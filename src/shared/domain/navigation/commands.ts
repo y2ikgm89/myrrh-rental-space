@@ -2,7 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { prisma } from "@/shared/db/prisma";
-import { NavigationType, SocialPlatform } from "@/shared/db/enums";
+import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 
 export const navigationItemInputSchema = z.object({

@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { EditorCommentStatus } from "@/shared/db/enums";
+import { EditorCommentStatus } from "@generated/prisma/enums";
 import type { EditorCommentThread, MarkInfo, ThreadListItem } from "./types";
 
 export async function getCommentThreadsQuery(input: {

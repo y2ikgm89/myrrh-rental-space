@@ -6,7 +6,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { AuditAction } from "@/shared/db/enums";
+import { AuditAction } from "@generated/prisma/enums";
 
 // audit-log.ts 内の filtersSchema を再現
 const filtersSchema = z.object({

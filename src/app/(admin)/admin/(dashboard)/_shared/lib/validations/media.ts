@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { MediaType, MediaUsage } from "@/shared/db/enums";
+import { MediaType, MediaUsage } from "@generated/prisma/enums";
 import {
   isValidMediaType,
   isValidMediaUsage,

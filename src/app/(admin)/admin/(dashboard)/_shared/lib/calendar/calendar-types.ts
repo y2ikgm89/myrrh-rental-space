@@ -1,4 +1,4 @@
-import type { ReservationStatus } from "@/shared/db/enums";
+import type { ReservationStatus } from "@generated/prisma/enums";
 
 /**
  * カレンダービュータイプ

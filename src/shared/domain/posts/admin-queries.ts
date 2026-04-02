@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type { PostWhereInput } from "@/shared/types/prisma";
 import type {

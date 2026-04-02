@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { CalendarSyncMethod } from "@/shared/db/enums";
+import type { CalendarSyncMethod } from "@generated/prisma/enums";
 
 // =============================================================================
 // Calendar Event Types

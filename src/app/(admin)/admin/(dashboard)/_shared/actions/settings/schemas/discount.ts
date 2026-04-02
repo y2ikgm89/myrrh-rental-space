@@ -7,7 +7,7 @@ import {
   DiscountCombinationMode,
   TaxDisplayMode,
   TaxInputMode,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // =============================================================================
 // Discount Schemas

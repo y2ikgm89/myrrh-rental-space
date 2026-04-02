@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import type { AuditAction } from "@/shared/db/enums";
+import type { AuditAction } from "@generated/prisma/enums";
 
 const ACTION_OPTIONS: { value: AuditAction | "ALL"; label: string }[] = [
   { value: "ALL", label: "すべて" },

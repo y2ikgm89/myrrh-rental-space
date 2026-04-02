@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
-import { InquiryStatus, ReservationStatus } from "@/shared/db/enums";
+import { InquiryStatus, ReservationStatus } from "@generated/prisma/enums";
 import { toDateString } from "@/shared/lib/serialize";
 
 export type DashboardStats = {

@@ -2,7 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus } from "@/shared/db/enums";
+import { EventStatus } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   safeFetch,

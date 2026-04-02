@@ -1,6 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-// TermsStatus 定数（@/shared/db/enums から Prisma enum を再現）
+// TermsStatus 定数（@generated/prisma/enums から Prisma enum を再現）
 const TermsStatus = {
   DRAFT: "DRAFT",
   PUBLISHED: "PUBLISHED",

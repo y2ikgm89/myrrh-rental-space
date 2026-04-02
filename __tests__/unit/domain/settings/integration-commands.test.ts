@@ -56,7 +56,7 @@ mock.module("@/shared/lib/google-calendar/service-account", () => ({
 }));
 
 // CalendarSyncMethod enum モック
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   CalendarSyncMethod: {
     polling: "polling",
     webhook: "webhook",

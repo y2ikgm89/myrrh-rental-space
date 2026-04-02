@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 
 // 管理画面のステータス更新は Prisma ReservationStatus と z.enum(ReservationStatus) に準拠
 const updateStatusSchema = z.object({

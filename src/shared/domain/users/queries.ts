@@ -1,7 +1,8 @@
 import "server-only";
 
-import { Role } from "@/shared/db/enums";
-import { prisma, type Prisma } from "@/shared/db/prisma";
+import { Role } from "@generated/prisma/enums";
+import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import type {
   UserData,
   UserListParams,

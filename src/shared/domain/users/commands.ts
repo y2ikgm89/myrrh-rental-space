@@ -1,7 +1,7 @@
 import "server-only";
 
 import { hashPassword } from "better-auth/crypto";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type {

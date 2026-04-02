@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {

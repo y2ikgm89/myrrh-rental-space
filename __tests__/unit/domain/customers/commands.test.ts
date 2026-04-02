@@ -1,6 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-// CustomerStatus 定数（@/shared/db/enums から Prisma enum を再現）
+// CustomerStatus 定数（@generated/prisma/enums から Prisma enum を再現）
 const CustomerStatus = {
   NEW: "NEW",
   REGULAR: "REGULAR",
@@ -46,7 +46,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   CustomerStatus,
 }));
 

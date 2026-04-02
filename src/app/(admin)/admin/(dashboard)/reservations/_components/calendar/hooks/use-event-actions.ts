@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { updateReservationStatus } from "@/admin/actions/reservation";
 import type { CalendarEvent } from "@/admin/lib/calendar";
-import type { ReservationStatus } from "@/shared/db/enums";
+import type { ReservationStatus } from "@generated/prisma/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 type OptimisticAction = {

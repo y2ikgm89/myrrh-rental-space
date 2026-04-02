@@ -9,7 +9,7 @@ import {
   TaxInputMode,
   TermsStatus,
   TermsType,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import type {
   CancellationPolicyOption,
   DiscountSettingsData,

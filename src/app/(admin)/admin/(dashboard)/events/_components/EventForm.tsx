@@ -22,7 +22,7 @@ import {
 import { useFormAction } from "@/admin/hooks";
 import { createEvent, updateEvent } from "@/admin/actions/event";
 import { eventFormSchema } from "@/shared/lib/validations/event";
-import { EventStatus } from "@/shared/db/enums";
+import { EventStatus } from "@generated/prisma/enums";
 import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";

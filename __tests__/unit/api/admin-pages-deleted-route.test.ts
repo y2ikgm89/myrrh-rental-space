@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { NextResponse } from "next/server";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 const mockCheckPermission = mock();
 const mockGetDeletedPagesListQuery = mock();

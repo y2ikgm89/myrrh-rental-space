@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import type { Prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 
 const stringArraySchema = z.array(z.string());
 

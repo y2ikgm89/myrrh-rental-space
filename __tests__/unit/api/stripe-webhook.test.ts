@@ -180,7 +180,7 @@ mock.module("@/shared/lib/serialize", () => ({
 
 // 実際のPrisma enumsを使用（ハードコード enum はモック汚染で他テストを壊す）
 const actualEnums = await import("@generated/prisma/enums");
-mock.module("@/shared/db/enums", () => actualEnums);
+mock.module("@generated/prisma/enums", () => actualEnums);
 
 // =============================================================================
 // 3. テスト対象を import

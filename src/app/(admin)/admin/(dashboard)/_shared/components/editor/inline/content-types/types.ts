@@ -15,7 +15,7 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import type { PostStatus } from "@/shared/db/enums";
+import type { PostStatus } from "@generated/prisma/enums";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 // =============================================================================

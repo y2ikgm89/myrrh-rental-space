@@ -7,7 +7,7 @@
  * @module shared/lib/url/post-url
  */
 
-import { PostPermalinkStructure } from "@/shared/db/enums";
+import { PostPermalinkStructure } from "@generated/prisma/enums";
 
 // =============================================================================
 // Types

@@ -20,7 +20,7 @@ import {
   updateUserSchema,
 } from "@/shared/lib/validations/user";
 import type { UserData } from "@/shared/domain/users/types";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 import { keysOf } from "@/shared/lib/serialize";
 
 // ロールラベル（クライアント用ローカル定義）

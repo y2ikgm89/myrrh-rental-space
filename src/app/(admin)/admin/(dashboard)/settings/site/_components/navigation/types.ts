@@ -9,7 +9,7 @@ import {
   IconBrandTiktok,
   IconExternalLink,
 } from "@tabler/icons-react";
-import type { NavigationType, SocialPlatform } from "@/shared/db/enums";
+import type { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import type {
   NavigationItemData,
   SocialLinkData,

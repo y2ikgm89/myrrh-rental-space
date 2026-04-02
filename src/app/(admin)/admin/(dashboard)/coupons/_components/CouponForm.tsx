@@ -20,7 +20,7 @@ import {
   SelectValue,
   SubmitButton,
 } from "@/admin/components/ui";
-import { CouponType } from "@/shared/db/enums";
+import { CouponType } from "@generated/prisma/enums";
 import { isValidCouponType } from "@/shared/lib/validations/enums/guards";
 import { useFormAction } from "@/admin/hooks";
 

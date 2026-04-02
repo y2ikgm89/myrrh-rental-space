@@ -20,7 +20,7 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   PostPermalinkStructure,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // =============================================================================
 // スキーマ再現（schemas.ts / sidebar.ts から）

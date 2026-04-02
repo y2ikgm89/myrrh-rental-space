@@ -1,4 +1,4 @@
-import type { InstagramFeedLayout } from "@/shared/db/enums";
+import type { InstagramFeedLayout } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type InstagramPostRecord = {

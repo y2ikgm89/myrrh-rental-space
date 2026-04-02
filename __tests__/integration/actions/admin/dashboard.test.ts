@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { ReservationStatus, InquiryStatus } from "@/shared/db/enums";
+import { ReservationStatus, InquiryStatus } from "@generated/prisma/enums";
 
 // calcChangePercent ロジックを再現
 function calcChangePercent(current: number, previous: number): number {

@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { adminEventSearchParamsParsers } from "@/shared/lib/nuqs";
-import { EventStatus } from "@/shared/db/enums";
+import { EventStatus } from "@generated/prisma/enums";
 
 const EVENT_STATUS_OPTIONS = [
   { value: "ALL", label: "すべてのステータス" },

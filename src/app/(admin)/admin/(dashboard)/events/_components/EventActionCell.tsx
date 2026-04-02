@@ -8,7 +8,7 @@ import {
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
 import { publishEvent, cancelEvent } from "@/admin/actions/event";
-import { EventStatus } from "@/shared/db/enums";
+import { EventStatus } from "@generated/prisma/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 type EventActionCellProps = {

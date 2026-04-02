@@ -2,13 +2,13 @@
  * 料金計算の型定義
  */
 
-import type { CouponType } from "@/shared/db/enums";
+import type { CouponType } from "@generated/prisma/enums";
 import type {
   DiscountType,
   DurationDiscountOverride,
   TaxDisplayMode,
   TaxInputMode,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // Coupon型の簡易定義（Prismaのモデルに依存しない）
 // Prisma拡張でDecimal→number自動変換済みのため、number型で統一
@@ -72,7 +72,7 @@ export type PriceCalculationParams = {
   durationDiscountEnabled: boolean;
   spaceDiscount?: SpaceDiscountSettings | null;
   coupon?: CouponLike | null;
-  combinationMode: import("@/shared/db/enums").DiscountCombinationMode;
+  combinationMode: import("@generated/prisma/enums").DiscountCombinationMode;
   showWarning?: boolean;
 };
 

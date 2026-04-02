@@ -1,4 +1,4 @@
-import type { InquiryStatus } from "@/shared/db/enums";
+import type { InquiryStatus } from "@generated/prisma/enums";
 
 export type InquiryData = {
   id: string;

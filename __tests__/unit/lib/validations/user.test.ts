@@ -3,7 +3,7 @@ import {
   createUserSchema,
   updateUserSchema,
 } from "@/shared/lib/validations/user";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 describe("createUserSchema", () => {
   const validUserData = {

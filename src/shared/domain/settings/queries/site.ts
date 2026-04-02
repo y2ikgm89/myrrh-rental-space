@@ -2,8 +2,8 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import type { AnalyticsType } from "@/shared/db/enums";
-import { LayoutWidth } from "@/shared/db/enums";
+import type { AnalyticsType } from "@generated/prisma/enums";
+import { LayoutWidth } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   ErrorCategory,

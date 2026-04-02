@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EventStatus } from "@/shared/db/enums";
+import { EventStatus } from "@generated/prisma/enums";
 
 export const eventFormSchema = z
   .object({

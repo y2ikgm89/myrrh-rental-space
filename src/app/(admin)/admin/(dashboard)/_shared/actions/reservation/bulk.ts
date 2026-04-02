@@ -7,7 +7,7 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { updateReservationStatusCommand } from "@/shared/domain/reservations/commands";

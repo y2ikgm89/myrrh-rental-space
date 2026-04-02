@@ -5,7 +5,7 @@ import {
   getTermsAgreements,
 } from "@/admin/queries/terms";
 import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
-import { TermsStatus } from "@/shared/db/enums";
+import { TermsStatus } from "@generated/prisma/enums";
 
 interface PageProps {
   params: Promise<{ id: string }>;

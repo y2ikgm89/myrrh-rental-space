@@ -16,7 +16,7 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
-import { AnnouncementBarDesignStyle } from "@/shared/db/enums";
+import { AnnouncementBarDesignStyle } from "@generated/prisma/enums";
 import {
   isValidAnnouncementBarAnimation,
   isValidAnnouncementBarDesignStyle,

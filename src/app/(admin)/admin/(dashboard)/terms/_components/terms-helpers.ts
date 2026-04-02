@@ -5,8 +5,8 @@
  */
 
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import { TermsStatus } from "@/shared/db/enums";
-import type { TermsType } from "@/shared/db/enums";
+import { TermsStatus } from "@generated/prisma/enums";
+import type { TermsType } from "@generated/prisma/enums";
 import type { TermsVersionDetail } from "@/shared/lib/validations/terms";
 import type { Serialized } from "@/shared/lib/serialize";
 

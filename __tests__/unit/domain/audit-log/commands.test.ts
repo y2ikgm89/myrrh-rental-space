@@ -19,7 +19,7 @@ mock.module("@/shared/db/prisma", () => ({
 }));
 
 // AuditAction enum モック
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   AuditAction: {
     CREATE: "CREATE",
     UPDATE: "UPDATE",

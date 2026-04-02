@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { TermsType, TermsStatus } from "@/shared/db/enums";
+import { TermsType, TermsStatus } from "@generated/prisma/enums";
 
 // terms.ts 内で使用されているスキーマを再現
 const createTermsSchema = z.object({

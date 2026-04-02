@@ -128,7 +128,7 @@ mock.module("@/shared/lib/validations/section", () => ({
   }),
 }));
 
-mock.module("@/shared/db/enums", () => ({
+mock.module("@generated/prisma/enums", () => ({
   SectionType: {
     HERO: "HERO",
     HERO_PARALLAX: "HERO_PARALLAX",

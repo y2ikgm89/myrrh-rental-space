@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import type { LayoutWidth } from "@/shared/db/enums";
+import type { LayoutWidth } from "@generated/prisma/enums";
 import type { NewsWhereInput } from "@/shared/types/prisma";
 import type {
   GetNewsListResult,

@@ -2,7 +2,7 @@
  * 設定セクション用フォームスキーマ — サイト一般（基本・連絡先・パーマリンク・メンテ・事業者）
  */
 import { z } from "zod";
-import { PostPermalinkStructure } from "@/shared/db/enums";
+import { PostPermalinkStructure } from "@generated/prisma/enums";
 
 // =============================================================================
 // Site > General > 基本情報

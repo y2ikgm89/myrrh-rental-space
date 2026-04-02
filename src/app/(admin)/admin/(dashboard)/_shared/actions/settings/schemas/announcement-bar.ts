@@ -6,7 +6,7 @@ import { z } from "zod";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // =============================================================================
 // Announcement Bar Schemas

@@ -33,7 +33,7 @@ import {
   type TaxSettingsData,
 } from "@/admin/actions/settings";
 import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
-import { TaxDisplayMode, TaxInputMode } from "@/shared/db/enums";
+import { TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
 
 interface TaxSectionProps {
   settings: TaxSettingsData;

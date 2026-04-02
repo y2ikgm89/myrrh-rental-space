@@ -2,7 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import type { NavigationType, SocialPlatform } from "@/shared/db/enums";
+import type { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {
   ErrorCategory,

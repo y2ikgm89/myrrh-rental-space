@@ -1,6 +1,7 @@
 import "server-only";
 
-import { prisma, type Prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
 
 const eventListSelect = {

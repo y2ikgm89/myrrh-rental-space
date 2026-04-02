@@ -14,7 +14,7 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { sendInquiryReplyEmail } from "@/shared/lib/email/inquiry-emails";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { InquiryStatus } from "@/shared/db/enums";
+import { InquiryStatus } from "@generated/prisma/enums";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const updateStatusSchema = z.object({

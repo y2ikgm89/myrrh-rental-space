@@ -21,7 +21,7 @@ import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
-import { AuditAction, Role } from "@/shared/db/enums";
+import { AuditAction, Role } from "@generated/prisma/enums";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord, omitUndefined } from "./serialize";

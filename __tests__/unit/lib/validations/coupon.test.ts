@@ -4,7 +4,7 @@ import {
   couponFormSchema,
   couponCodeInputSchema,
 } from "@/shared/lib/validations/coupon";
-import { CouponType } from "@/shared/db/enums";
+import { CouponType } from "@generated/prisma/enums";
 
 describe("couponCodeSchema", () => {
   test("正常なクーポンコードが検証を通過する", () => {

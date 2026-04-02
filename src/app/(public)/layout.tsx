@@ -38,13 +38,13 @@ import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
 import { getBusinessInfo } from "@/public/data/business";
 import { getCurrentUser } from "@/shared/lib/auth";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 import {
   getHeaderSettings,
   getFooterSettings,
   type HeaderSettings,
 } from "@/shared/domain/settings/queries/display";
-import { HeaderBackgroundMode } from "@/shared/db/enums";
+import { HeaderBackgroundMode } from "@generated/prisma/enums";
 import {
   getCookieConsentSettings,
   getMaintenanceSettings,

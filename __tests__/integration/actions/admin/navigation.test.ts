@@ -10,7 +10,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { NavigationType, SocialPlatform } from "@/shared/db/enums";
+import { NavigationType, SocialPlatform } from "@generated/prisma/enums";
 import {
   navigationItemInputSchema as navigationItemSchema,
   socialLinkInputSchema as socialLinkSchema,

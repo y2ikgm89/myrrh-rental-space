@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { InstagramFeedLayout } from "@/shared/db/enums";
+import { InstagramFeedLayout } from "@generated/prisma/enums";
 import { safeDecrypt } from "@/shared/lib/crypto";
 import { getValidInstagramFeedLayout } from "@/shared/lib/validations/enums/helpers";
 import { getTokenExpiryDays, shouldRefreshToken } from "@/shared/lib/instagram";

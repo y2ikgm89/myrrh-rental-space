@@ -1,7 +1,7 @@
 import type {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 export interface AnnouncementBarItem {
   id: string;

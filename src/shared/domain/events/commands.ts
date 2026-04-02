@@ -1,7 +1,8 @@
 import "server-only";
 
-import { Prisma, prisma } from "@/shared/db/prisma";
-import { EventStatus } from "@/shared/db/enums";
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
+import { EventStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { EventFormInput } from "@/shared/lib/validations/event";
 import {

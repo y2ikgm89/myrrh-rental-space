@@ -1,8 +1,9 @@
 import "server-only";
 
-import { prisma, Prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import type { Prisma } from "@generated/prisma/client";
 import { parseStringArray } from "@/shared/lib/json-validators";
-import type { MediaType, MediaUsage } from "@/shared/db/enums";
+import type { MediaType, MediaUsage } from "@generated/prisma/enums";
 
 function transformMedia(media: {
   id: string;

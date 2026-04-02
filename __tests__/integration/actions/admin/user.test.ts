@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 
 // user.ts 内で定義されているスキーマを再現
 type RoleValue =

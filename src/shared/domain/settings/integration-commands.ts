@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { prisma } from "@/shared/db/prisma";
-import type { CalendarSyncMethod } from "@/shared/db/enums";
+import type { CalendarSyncMethod } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { encrypt } from "@/shared/lib/crypto";

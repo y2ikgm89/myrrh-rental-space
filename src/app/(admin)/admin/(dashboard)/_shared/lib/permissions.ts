@@ -9,7 +9,7 @@
 
 import "server-only";
 
-import { Role } from "@/shared/db/enums";
+import { Role } from "@generated/prisma/enums";
 import { getSession, getRoleFromSession, type User } from "@/shared/lib/auth";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { logPermissionDenied } from "@/admin/lib/audit";

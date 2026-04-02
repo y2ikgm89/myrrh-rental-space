@@ -4,7 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { STORAGE_BUCKETS } from "@/shared/lib/supabase";
 import { deleteFile, deleteFiles, uploadFile } from "@/shared/lib/storage";
-import type { MediaType, MediaUsage } from "@/shared/db/enums";
+import type { MediaType, MediaUsage } from "@generated/prisma/enums";
 
 export async function uploadMediaCommand(input: {
   file: File;

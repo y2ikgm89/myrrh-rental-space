@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
-import { TermsStatus } from "@/shared/db/enums";
+import { TermsStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import {

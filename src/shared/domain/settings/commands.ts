@@ -1,6 +1,7 @@
 import "server-only";
 
-import { Prisma, prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import type {
   AnalyticsType,
   DiscountCombinationMode,
@@ -10,8 +11,8 @@ import type {
   PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
-} from "@/shared/db/enums";
-import { TermsStatus, TermsType } from "@/shared/db/enums";
+} from "@generated/prisma/enums";
+import { TermsStatus, TermsType } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";

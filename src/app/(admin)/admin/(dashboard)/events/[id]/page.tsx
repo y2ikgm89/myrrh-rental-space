@@ -12,7 +12,7 @@ import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Badge, Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { RegistrationStatus } from "@/shared/db/enums";
+import { RegistrationStatus } from "@generated/prisma/enums";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import type { Metadata } from "next";
 

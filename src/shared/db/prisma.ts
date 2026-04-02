@@ -11,8 +11,6 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   PrismaClient,
-  Role,
-  Prisma,
   type Space as PrismaSpace,
   type Reservation as PrismaReservation,
   type Customer as PrismaCustomer,
@@ -23,7 +21,6 @@ import type { Decimal } from "@prisma/client/runtime/client";
 
 import { createAppPrismaClient } from "./create-app-prisma-client";
 
-export { Role, Prisma, PrismaClient };
 export type { AppPrismaClient } from "./create-app-prisma-client";
 
 /**

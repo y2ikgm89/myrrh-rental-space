@@ -563,9 +563,10 @@ await prisma.$transaction(async (tx) => {
 | ----------------------------------------- | -------------------------------------------------------------------------- |
 | `@/shared/generated/prisma/client`        | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
 | `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                         |
-| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`createAppPrismaClient` 適用                   |
+| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`prisma` インスタンス・Decimal 変換型          |
 | `@/shared/db/prisma-input-json.ts`        | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし） |
-| `@/shared/db/enums.ts`                    | Prisma enum の公開窓口                                                     |
+| `@generated/prisma/enums`                 | Prisma enum 定数（直接 import）                                            |
+| `@generated/prisma/client`                | `Prisma` 名前空間・`PrismaClient`（直接 import）                           |
 | `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |
 | `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
 | `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
@@ -576,5 +577,5 @@ await prisma.$transaction(async (tx) => {
 ## Gotchas
 
 - **`PrismaPg` adapter 必須** — `scripts/` は Next.js ランタイム外のため `new PrismaClient()` 単独で WASM エンジンが初期化できず `PrismaClientInitializationError`。`new PrismaPg({ connectionString: databaseUrl })` → `new PrismaClient({ adapter })` の順で初期化
-- **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.InputJsonValue` 等の実値を使う場合は `import { PrismaClient, Prisma }` （`type` キーワードなし）
+- **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.InputJsonValue` 等の実値を使う場合は `import { Prisma } from "@generated/prisma/client"` （`type` キーワードなし）
 - **nullable JSON update は `Prisma.InputJsonValue`（`JsonValue` 禁止）** — `data: { field: content as Prisma.JsonValue }` は型エラー。`content as Prisma.InputJsonValue` を使う

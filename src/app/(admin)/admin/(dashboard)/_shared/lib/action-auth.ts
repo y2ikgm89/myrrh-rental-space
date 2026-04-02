@@ -10,7 +10,7 @@
 import "server-only";
 
 import { getSession, getSessionUser, type User } from "@/shared/lib/auth";
-import { Role, AuditAction } from "@/shared/db/enums";
+import { Role, AuditAction } from "@generated/prisma/enums";
 import {
   hasPermission,
   userHasResourceAccess,

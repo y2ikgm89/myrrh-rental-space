@@ -9,7 +9,7 @@
 
 import { describe, test, expect } from "bun:test";
 import { z } from "zod";
-import { InstagramFeedLayout } from "@/shared/db/enums";
+import { InstagramFeedLayout } from "@generated/prisma/enums";
 
 // instagram.ts 内で使用されている各スキーマを再現
 

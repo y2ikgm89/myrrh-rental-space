@@ -1,6 +1,6 @@
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 
-// CouponType 定数（@/shared/db/enums から Prisma enum を再現）
+// CouponType 定数（@generated/prisma/enums から Prisma enum を再現）
 const CouponType = {
   PERCENTAGE: "PERCENTAGE",
   FIXED_AMOUNT: "FIXED_AMOUNT",

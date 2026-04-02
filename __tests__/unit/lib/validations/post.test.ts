@@ -7,7 +7,7 @@ import {
   postTagSchema,
 } from "@/admin/lib/validations/post";
 import { LayoutWidth } from "@/shared/types/prisma";
-import { PostStatus } from "@/shared/db/enums";
+import { PostStatus } from "@generated/prisma/enums";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const VALID_LEXICAL_JSON = EMPTY_LEXICAL_EDITOR_STATE_JSON;

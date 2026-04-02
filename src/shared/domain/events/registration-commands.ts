@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { EventStatus, RegistrationStatus } from "@/shared/db/enums";
+import { EventStatus, RegistrationStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 
 export async function createEventRegistrationCommand(data: {

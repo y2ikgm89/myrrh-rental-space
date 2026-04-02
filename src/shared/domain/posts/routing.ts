@@ -1,4 +1,4 @@
-import { PostPermalinkStructure } from "@/shared/db/enums";
+import { PostPermalinkStructure } from "@generated/prisma/enums";
 import {
   generatePostUrl,
   type PermalinkConfig,

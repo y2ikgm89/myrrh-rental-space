@@ -50,7 +50,7 @@ import {
   jsonValidationError,
 } from "@/shared/lib/route-responses";
 import { googleCalendarWebhookHeadersSchema } from "@/shared/lib/validations/google-calendar-webhook";
-import { CalendarSyncMethod } from "@/shared/db/enums";
+import { CalendarSyncMethod } from "@generated/prisma/enums";
 
 /**
  * Google Calendar Push Notification Webhook

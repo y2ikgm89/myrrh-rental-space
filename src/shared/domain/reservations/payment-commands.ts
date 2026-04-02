@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@/shared/db/enums";
+import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getStripeClient } from "@/app/(admin)/admin/(dashboard)/_shared/lib/stripe";

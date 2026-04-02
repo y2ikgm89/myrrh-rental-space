@@ -1,6 +1,6 @@
 import { NewsEditor } from "../_components/NewsEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
-import { LayoutWidth } from "@/shared/db/enums";
+import { LayoutWidth } from "@generated/prisma/enums";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
 import type { Metadata } from "next";

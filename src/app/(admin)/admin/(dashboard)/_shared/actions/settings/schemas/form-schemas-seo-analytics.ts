@@ -2,7 +2,7 @@
  * 設定セクション用フォームスキーマ — SEO・分析・MEO
  */
 import { z } from "zod";
-import { AnalyticsType } from "@/shared/db/enums";
+import { AnalyticsType } from "@generated/prisma/enums";
 
 // =============================================================================
 // Site > SEO > メタ情報

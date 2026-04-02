@@ -12,7 +12,7 @@ import {
 } from "@/admin/components/ui";
 import { updateReservationStatus } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { ReservationStatus } from "@/shared/db/enums";
+import { ReservationStatus } from "@generated/prisma/enums";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   TERMINAL_RESERVATION_STATUSES,

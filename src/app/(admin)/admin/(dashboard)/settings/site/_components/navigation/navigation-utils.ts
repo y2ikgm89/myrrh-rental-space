@@ -1,5 +1,5 @@
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
-import type { NavigationType } from "@/shared/db/enums";
+import type { NavigationType } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 import type {
   FlatNavigationItem,

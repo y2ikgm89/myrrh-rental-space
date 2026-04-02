@@ -48,7 +48,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
 import {
   spaceEditFormSchema,

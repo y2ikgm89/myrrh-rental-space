@@ -1,4 +1,4 @@
-import type { LayoutWidth, PostStatus } from "@/shared/db/enums";
+import type { LayoutWidth, PostStatus } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type PostTagSummaryRecord = {

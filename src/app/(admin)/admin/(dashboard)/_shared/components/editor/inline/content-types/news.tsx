@@ -19,7 +19,7 @@ import {
   unpublishNews,
 } from "@/admin/actions/news";
 import type { NewsData } from "@/shared/domain/news/types";
-import type { LayoutWidth } from "@/shared/db/enums";
+import type { LayoutWidth } from "@generated/prisma/enums";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import type { NewsPreviewData } from "@/shared/types";
 import {

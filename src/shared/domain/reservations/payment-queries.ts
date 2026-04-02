@@ -1,6 +1,6 @@
 import "server-only";
 
-import { PaymentStatus } from "@/shared/db/enums";
+import { PaymentStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 
 const PAYMENT_EMAIL_SELECT = {

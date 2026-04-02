@@ -11,7 +11,7 @@ import type {
   PostStatus,
   Role,
   AuditAction,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================

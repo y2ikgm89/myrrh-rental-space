@@ -1,7 +1,8 @@
 import "server-only";
 
 import { clonePrismaInputJson, parsePrismaInputJson } from "@/shared/db/json";
-import { Prisma, prisma } from "@/shared/db/prisma";
+import { prisma } from "@/shared/db/prisma";
+import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {

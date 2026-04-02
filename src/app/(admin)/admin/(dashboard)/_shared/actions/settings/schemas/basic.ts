@@ -9,7 +9,7 @@ import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
   PostPermalinkStructure,
-} from "@/shared/db/enums";
+} from "@generated/prisma/enums";
 
 // =============================================================================
 // Basic Schemas

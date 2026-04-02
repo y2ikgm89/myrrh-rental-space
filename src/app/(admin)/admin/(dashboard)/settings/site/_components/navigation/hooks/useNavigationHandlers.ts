@@ -24,7 +24,7 @@ import type {
   NavigationItemInput,
   SocialLinkInput,
 } from "@/shared/domain/navigation/commands";
-import type { NavigationType } from "@/shared/db/enums";
+import type { NavigationType } from "@generated/prisma/enums";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type {
   NavigationItemData,
