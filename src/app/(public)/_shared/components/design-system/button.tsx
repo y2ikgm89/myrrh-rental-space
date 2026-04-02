@@ -9,7 +9,7 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses = {
   primary:
-    "bg-accent text-white rounded-lg shadow-sm relative overflow-hidden hover:bg-[image:linear-gradient(110deg,transparent_25%,oklch(1_0_0/0.2)_50%,transparent_75%)] hover:bg-[length:200%_100%] hover:animate-[bronze-shimmer_1.5s_ease-in-out]",
+    "bg-accent text-white rounded-lg shadow-sm relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[image:linear-gradient(110deg,transparent_33%,oklch(1_0_0/0.12)_50%,transparent_67%)] hover:bg-[length:250%_100%] hover:animate-[bronze-shimmer_2s_ease-in-out]",
   secondary: "border border-border text-foreground hover:bg-surface rounded-lg",
   ghost: "bg-transparent text-foreground hover:bg-surface rounded-lg",
   link: "text-accent hover:text-accent-light underline-offset-4 hover:underline p-0",
