@@ -10,19 +10,19 @@ paths:
 
 ## ブランド
 
-Myrrh Rental Space — luxury-warm + premium dark
+Myrrh Rental Space — luxury-warm + premium white
 
-没薬（Myrrh）の温もり・希少性を体現する、ウォームダークのラグジュアリーデザイン。
+没薬（Myrrh）の温もり・希少性を体現する、ホワイトベース + ブロンズアクセントのラグジュアリーデザイン。
 
 ## カラーパレット
 
-OKLCH形式。Warm Dark × Bronze。
+OKLCH形式。Luxury White × Bronze。
 
-| ロール   | 配分 | 値                                  | メモ                            |
-| -------- | ---- | ----------------------------------- | ------------------------------- |
-| Dominant | 70 % | `oklch(0.15 0.01 60)` Dark Brown    | ページ背景                      |
-| Support  | 20 % | `oklch(0.20 0.015 60)` Dark Surface | カード・セクション背景          |
-| Accent   | 10 % | `oklch(0.65 0.09 60)` Bronze        | ラベル・CTA・価格のみ（≤ 15 %） |
+| ロール   | 配分 | 値                                   | メモ                            |
+| -------- | ---- | ------------------------------------ | ------------------------------- |
+| Dominant | 70 % | `oklch(0.985 0.005 60)` Warm White   | ページ背景                      |
+| Support  | 20 % | `oklch(0.96 0.008 60)` Light Surface | カード・セクション背景          |
+| Accent   | 10 % | `oklch(0.55 0.09 60)` Bronze         | ラベル・CTA・価格のみ（≤ 15 %） |
 
 ## タイポグラフィ
 

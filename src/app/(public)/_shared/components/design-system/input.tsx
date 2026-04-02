@@ -39,7 +39,7 @@ export function Input({
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
         {...props}
-        className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-surface transition-colors
+        className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           placeholder:text-muted-foreground
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent
           disabled:opacity-50 disabled:cursor-not-allowed

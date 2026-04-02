@@ -320,7 +320,7 @@ export function Header({
           // transparent モードのみ style で制御
           if (next) {
             header.style.backgroundColor =
-              "color-mix(in oklch, var(--color-background) 90%, transparent)";
+              "color-mix(in oklch, var(--color-background) 92%, transparent)";
             header.style.backdropFilter = "blur(24px)";
             header.style.boxShadow = "var(--shadow-sm)";
           } else {
@@ -454,7 +454,7 @@ export function Header({
         )}
         style={
           scrolled
-            ? { borderBottom: "1px solid oklch(0.30 0.02 60)" }
+            ? { borderBottom: "1px solid oklch(0.88 0.01 60)" }
             : undefined
         }
       >

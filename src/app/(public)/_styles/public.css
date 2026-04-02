@@ -3,9 +3,9 @@
 @plugin "@tailwindcss/typography";
 
 /* ==========================================================================
- * Public V4 Theme — Warm Dark × Bronze
+ * Public V4 Theme — Luxury White × Bronze
  *
- * デザイン方針: ウォームダーク基調 + ブロンズアクセント（高級感・重厚感）
+ * デザイン方針: ラグジュアリーホワイト基調 + ブロンズアクセント（上品・可読性重視）
  * カラー形式: OKLCH（Tailwind CSS 4推奨）
  * ========================================================================== */
 
@@ -13,29 +13,29 @@
   /* --------------------------------------------------------------------------
    * Colors
    * -------------------------------------------------------------------------- */
-  --color-background: oklch(0.15 0.01 60);
-  --color-surface: oklch(0.2 0.015 60);
-  --color-surface-light: oklch(0.25 0.02 60);
-  --color-foreground: oklch(0.9 0.02 70);
-  --color-muted-foreground: oklch(0.6 0.02 60);
-  --color-border: oklch(0.3 0.02 60);
+  --color-background: oklch(0.985 0.005 60);
+  --color-surface: oklch(0.96 0.008 60);
+  --color-surface-light: oklch(0.975 0.006 60);
+  --color-foreground: oklch(0.18 0.015 60);
+  --color-muted-foreground: oklch(0.45 0.02 60);
+  --color-border: oklch(0.88 0.01 60);
 
-  --color-accent: oklch(0.65 0.09 60);
-  --color-accent-light: oklch(0.72 0.08 60);
+  --color-accent: oklch(0.55 0.09 60);
+  --color-accent-light: oklch(0.62 0.08 60);
   --color-accent-foreground: oklch(0.985 0 0);
 
-  --color-card: oklch(0.2 0.015 60);
-  --color-card-foreground: oklch(0.9 0.02 70);
-  --color-overlay: oklch(0.08 0.01 60 / 0.7);
+  --color-card: oklch(0.96 0.008 60);
+  --color-card-foreground: oklch(0.18 0.015 60);
+  --color-overlay: oklch(0.18 0.015 60 / 0.5);
   --color-overlay-foreground: oklch(0.985 0 0);
 
-  --color-success: oklch(0.72 0.15 145);
-  --color-warning: oklch(0.78 0.12 85);
-  --color-destructive: oklch(0.7 0.18 25);
+  --color-success: oklch(0.52 0.15 145);
+  --color-warning: oklch(0.58 0.12 85);
+  --color-destructive: oklch(0.5 0.18 25);
   --color-success-foreground: oklch(0.985 0 0);
-  --color-warning-foreground: oklch(0.2 0.02 70);
+  --color-warning-foreground: oklch(0.18 0.015 60);
   --color-destructive-foreground: oklch(0.985 0 0);
-  --color-info: oklch(0.72 0.12 250);
+  --color-info: oklch(0.52 0.12 250);
   --color-info-foreground: oklch(0.985 0 0);
 
   /* --------------------------------------------------------------------------
@@ -103,10 +103,10 @@
   /* --------------------------------------------------------------------------
    * Shadows
    * -------------------------------------------------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.05);
 
   /* --------------------------------------------------------------------------
    * Layout

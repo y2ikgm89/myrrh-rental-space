@@ -1,10 +1,10 @@
 # 公開ページデザイン大幅刷新 — デザインスペック
 
-> Warm Dark × Bronze / Cormorant Garamond + Noto Sans JP / リッチモーション
+> Luxury White × Bronze / Cormorant Garamond + Noto Sans JP / リッチモーション
 
 ## 概要
 
-Myrrh Rental Space の公開ページを「Deep Neutral + Warm Accent（ライトテーマ）」から「Warm Dark × Bronze（ダークテーマ）」へ全面刷新する。ブランド名「Myrrh（没薬）」の温もり・希少性を視覚的に体現するラグジュアリー・プレミアム路線。
+Myrrh Rental Space の公開ページを「Luxury White × Bronze（ホワイトベース + ブロンズアクセント）」テーマで運用する。可読性を重視したホワイト基調に、ブランド名「Myrrh（没薬）」の温もり・希少性をブロンズアクセントで表現するラグジュアリー・プレミアム路線。
 
 ### 実装アプローチ
 
@@ -20,17 +20,17 @@ OKLCH形式。全トークン名は維持し、値のみ差し替え。
 
 ### メインカラー
 
-| トークン                   | 現行値                | 新値                      | 用途                             |
-| -------------------------- | --------------------- | ------------------------- | -------------------------------- |
-| `--color-background`       | oklch(0.985 0 0)      | oklch(0.15 0.01 60)       | ページ背景（ダークブラウン）     |
-| `--color-surface`          | oklch(0.96 0.005 80)  | oklch(0.20 0.015 60)      | カード・セクション背景           |
-| `--color-surface-light`    | oklch(0.98 0.003 80)  | oklch(0.25 0.02 60)       | ホバー・サブ背景                 |
-| `--color-foreground`       | oklch(0.15 0.01 250)  | oklch(0.90 0.02 70)       | メインテキスト（ウォームライト） |
-| `--color-muted-foreground` | oklch(0.55 0.01 250)  | oklch(0.60 0.02 60)       | 補助テキスト                     |
-| `--color-accent`           | oklch(0.45 0.03 60)   | oklch(0.65 0.09 60)       | CTA・ラベル・リンク（ブロンズ）  |
-| `--color-accent-light`     | oklch(0.55 0.04 60)   | oklch(0.72 0.08 60)       | ホバー時アクセント               |
-| `--color-border`           | oklch(0.88 0.005 250) | oklch(0.30 0.02 60)       | ボーダー・ディバイダー           |
-| `--color-overlay`          | oklch(0.15 0 0 / 0.5) | oklch(0.08 0.01 60 / 0.7) | モーダル・オーバーレイ           |
+| トークン                   | 値                         | 用途                             |
+| -------------------------- | -------------------------- | -------------------------------- |
+| `--color-background`       | oklch(0.985 0.005 60)      | ページ背景（ウォームホワイト）   |
+| `--color-surface`          | oklch(0.96 0.008 60)       | カード・セクション背景           |
+| `--color-surface-light`    | oklch(0.975 0.006 60)      | ホバー・サブ背景                 |
+| `--color-foreground`       | oklch(0.18 0.015 60)       | メインテキスト（ダークブラウン） |
+| `--color-muted-foreground` | oklch(0.45 0.02 60)        | 補助テキスト                     |
+| `--color-accent`           | oklch(0.55 0.09 60)        | CTA・ラベル・リンク（ブロンズ）  |
+| `--color-accent-light`     | oklch(0.62 0.08 60)        | ホバー時アクセント               |
+| `--color-border`           | oklch(0.88 0.01 60)        | ボーダー・ディバイダー           |
+| `--color-overlay`          | oklch(0.18 0.015 60 / 0.5) | モーダル・オーバーレイ           |
 
 ### ステータスカラー（ダーク背景最適化）
 
@@ -38,13 +38,13 @@ success / warning / destructive / info の各色は明度を引き上げてダ�
 
 ### カラー比率
 
-- Dominant 70%: ダークブラウン（background）
-- Support 20%: ダークサーフェス（surface）
+- Dominant 70%: ウォームホワイト（background）
+- Support 20%: ライトサーフェス（surface）
 - Accent 10%: ブロンズ（accent）— 15%以下ルール維持
 
 ### シャドウ
 
-ダーク背景ではシャドウの不透明度を上げる: rgba(0,0,0, 0.04-0.08) → rgba(0,0,0, 0.3-0.5)
+ホワイトベースのためシャドウは控えめ: rgba(0,0,0, 0.04-0.08)
 
 ### 削除
 

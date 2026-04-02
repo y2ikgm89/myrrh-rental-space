@@ -39,7 +39,7 @@ export function Select({
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
         {...props}
-        className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-surface transition-colors
+        className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-destructive" : "border-border"}`}
