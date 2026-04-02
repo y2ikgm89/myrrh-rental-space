@@ -129,10 +129,12 @@ export function TestimonialSection({
         >
           {config.items.map((item, index) => {
             const variant = config.variant;
+            const isFeatured = index === 0 && config.layout !== "carousel";
 
             // variant-specific card styles
-            const cardClasses =
-              variant === "card"
+            const cardClasses = isFeatured
+              ? "py-10 md:py-14"
+              : variant === "card"
                 ? "rounded-lg bg-card p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 hover:shadow-lg transition-shadow"
                 : variant === "minimal"
                   ? "py-6"
@@ -143,12 +145,12 @@ export function TestimonialSection({
                 /* eslint-disable-next-line @eslint-react/no-array-index-key */
                 key={index}
                 data-testimonial-card=""
-                className={`${cardClasses} ${CARD_CLASS[config.layout]}`}
+                className={`${cardClasses} ${CARD_CLASS[config.layout]} ${isFeatured && config.layout === "grid" ? "@3xl:col-span-full" : ""}`}
               >
                 {/* IconQuote decoration (not shown in minimal) */}
                 {variant !== "minimal" && (
                   <span
-                    className="block font-heading text-[4rem] leading-[0.8] text-accent/10"
+                    className={`block font-heading leading-[0.8] text-accent/10 ${isFeatured ? "text-[6rem] md:text-[8rem]" : "text-[4rem]"}`}
                     aria-hidden="true"
                   >
                     &ldquo;
@@ -156,7 +158,13 @@ export function TestimonialSection({
                 )}
 
                 <p
-                  className={`${variant === "minimal" ? "" : "mt-3"} ${variant === "default" ? "text-base leading-[1.9] italic" : "text-sm leading-relaxed"} text-foreground`}
+                  className={`${variant === "minimal" ? "" : "mt-3"} ${
+                    isFeatured
+                      ? "font-heading text-xl font-light leading-[1.8] italic md:text-2xl"
+                      : variant === "default"
+                        ? "text-base leading-[1.9] italic"
+                        : "text-sm leading-relaxed"
+                  } text-foreground`}
                   style={getTextStyle(design)}
                 >
                   {variant === "minimal" && (
