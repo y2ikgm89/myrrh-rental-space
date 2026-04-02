@@ -137,15 +137,18 @@ export function HeroSection({
       )}
 
       {/* Content */}
-      <div ref={contentRef} className="relative z-10 px-5 md:px-8">
+      <div
+        ref={contentRef}
+        className="relative z-10 w-full max-w-3xl px-5 md:px-8"
+      >
         {config.tagline && (
-          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-accent md:tracking-[0.4em]">
+          <p className="mb-8 text-[10px] font-medium uppercase tracking-[0.4em] text-accent md:text-[11px]">
             {config.tagline}
           </p>
         )}
 
         <h1
-          className={`font-heading ${getTitleClasses(design)} font-bold leading-[1.15] tracking-tight`}
+          className={`font-heading ${getTitleClasses(design)} font-light leading-[1.05] tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText trigger={false} delay={0.5}>
@@ -153,16 +156,18 @@ export function HeroSection({
           </SplitText>
         </h1>
 
-        <p
-          className={`mt-6 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base${config.contentPosition === "center" ? " mx-auto" : ""}`}
-          style={getTextStyle(design)}
-        >
-          {config.subtitle}
-        </p>
+        {config.subtitle && (
+          <p
+            className={`mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base${config.contentPosition === "center" ? " mx-auto" : ""}`}
+            style={getTextStyle(design)}
+          >
+            {config.subtitle}
+          </p>
+        )}
 
         {config.buttons.length > 0 && (
           <div
-            className={`mt-8 flex flex-col gap-4 md:mt-12${config.contentPosition === "center" ? " items-center" : " items-start"}`}
+            className={`mt-10 flex flex-col gap-4 md:mt-14${config.contentPosition === "center" ? " items-center" : " items-start"}`}
           >
             {config.buttons.map((btn) => (
               <MagneticButton key={btn.url} href={btn.url}>
@@ -171,6 +176,12 @@ export function HeroSection({
             ))}
           </div>
         )}
+
+        {/* Decorative accent line */}
+        <div
+          className="mt-12 h-px w-16 bg-accent/30 md:mt-16"
+          aria-hidden="true"
+        />
       </div>
 
       {/* Scroll hint */}
