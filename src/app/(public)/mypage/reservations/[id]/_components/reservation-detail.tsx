@@ -295,7 +295,7 @@ export function ReservationDetail({
 
       {/* Footer */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-t border-border">
-        <Link href="/mypage" className="text-sm text-primary hover:underline">
+        <Link href="/mypage" className="text-sm text-accent hover:underline">
           ← 予約一覧に戻る
         </Link>
         <Link

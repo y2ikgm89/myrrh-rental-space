@@ -114,7 +114,7 @@ function EventRegistrationCard({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
         <Link
           href={`/events/${registration.event.slug}`}
-          className="text-foreground hover:text-primary transition-colors font-medium"
+          className="text-foreground hover:text-accent transition-colors font-medium"
         >
           {registration.event.title}
         </Link>

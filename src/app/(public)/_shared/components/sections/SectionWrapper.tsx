@@ -33,9 +33,9 @@ const paddingBottomMap = {
 const backgroundMap = {
   default: "",
   surface: "bg-surface",
-  accent: "bg-accent",
-  primary: "bg-primary text-primary-foreground",
-  dark: "bg-foreground text-background",
+  accent: "bg-accent/10",
+  primary: "bg-accent/5",
+  dark: "bg-[oklch(0.10_0.01_60)]",
   image: "bg-cover bg-center bg-no-repeat",
   gradient: "bg-gradient-to-b from-surface to-background",
 } satisfies Record<NonNullable<SectionDesign["background"]>, string>;

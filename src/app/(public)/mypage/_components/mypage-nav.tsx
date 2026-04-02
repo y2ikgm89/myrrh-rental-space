@@ -30,7 +30,7 @@ export function MypageNav() {
             href={item.href}
             className={`py-2 px-3 text-sm sm:text-base transition-colors ${
               isActive
-                ? "text-primary font-medium border-b-2 border-primary"
+                ? "text-accent font-medium border-b-2 border-accent"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >

@@ -20,7 +20,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
@@ -35,7 +35,7 @@ function StarRating({ rating }: { readonly rating: number }): ReactElement {
       {Array.from({ length: 5 }, (_, i) => (
         <svg
           key={i}
-          className={`h-4 w-4 ${i < rating ? "text-primary-dark" : "text-muted"}`}
+          className={`h-4 w-4 ${i < rating ? "text-accent" : "text-muted"}`}
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -79,7 +79,7 @@ export function TestimonialSection({
 
         gsap.fromTo(
           cards,
-          { y: 40, opacity: 0 },
+          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
           {
             y: 0,
             opacity: 1,
@@ -141,7 +141,7 @@ export function TestimonialSection({
                 {/* IconQuote decoration (not shown in minimal) */}
                 {variant !== "minimal" && (
                   <span
-                    className="block font-serif text-4xl leading-none text-primary/20"
+                    className="block font-serif text-4xl leading-none text-accent/20"
                     aria-hidden="true"
                   >
                     &ldquo;
@@ -154,7 +154,7 @@ export function TestimonialSection({
                 >
                   {variant === "minimal" && (
                     <span
-                      className="mr-1 font-serif text-lg text-primary/30"
+                      className="mr-1 font-serif text-lg text-accent/30"
                       aria-hidden="true"
                     >
                       &ldquo;
@@ -163,7 +163,7 @@ export function TestimonialSection({
                   {item.content}
                   {variant === "minimal" && (
                     <span
-                      className="ml-1 font-serif text-lg text-primary/30"
+                      className="ml-1 font-serif text-lg text-accent/30"
                       aria-hidden="true"
                     >
                       &rdquo;

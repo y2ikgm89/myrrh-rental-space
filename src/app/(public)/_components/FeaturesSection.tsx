@@ -22,7 +22,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
 import { parseFeaturesLayout } from "@/shared/lib/validations/section-parsers";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
@@ -46,7 +46,7 @@ function FeatureIcon({
       }`}
     >
       <svg
-        className={`${isHero ? "h-7 w-7" : "h-4 w-4"} text-primary-dark`}
+        className={`${isHero ? "h-7 w-7" : "h-4 w-4"} text-accent`}
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -102,7 +102,7 @@ export function FeaturesSection({
 
         gsap.fromTo(
           items,
-          { y: 40, opacity: 0 },
+          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
           {
             y: 0,
             opacity: 1,

@@ -14,7 +14,12 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { ScrollIndicator } from "@/public/components/layouts/scroll-indicator";
-import { DURATION, EASE, SCROLL_TRIGGER } from "@/public/lib/animations";
+import {
+  DURATION,
+  EASE,
+  REVEAL,
+  SCROLL_TRIGGER,
+} from "@/public/lib/animations";
 import {
   CONTENT_POSITION_MAP,
   OVERLAY_STYLE_MAP,
@@ -61,7 +66,7 @@ export function HeroSection({
         // Content entrance
         gsap.fromTo(
           content,
-          { opacity: 0, y: 50 },
+          { opacity: REVEAL.fadeUp.opacity, y: REVEAL.fadeUp.y },
           {
             opacity: 1,
             y: 0,
@@ -134,7 +139,7 @@ export function HeroSection({
       {/* Content */}
       <div ref={contentRef} className="relative z-10 px-5 md:px-8">
         {config.tagline && (
-          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-primary-dark md:tracking-[0.4em]">
+          <p className="mb-6 text-[11px] uppercase tracking-[0.3em] text-accent md:tracking-[0.4em]">
             {config.tagline}
           </p>
         )}

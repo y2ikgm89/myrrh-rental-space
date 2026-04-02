@@ -10,33 +10,26 @@ paths:
 
 ## ブランド
 
-- **名前**: Myrrh Rental Space
-- **ムード**: warm-minimal + elegant
-- **性格**: 上質、洗練、安心、控えめな華やかさ
+Myrrh Rental Space — luxury-warm + premium dark
+
+没薬（Myrrh）の温もり・希少性を体現する、ウォームダークのラグジュアリーデザイン。
 
 ## カラーパレット
 
-| 役割        | 配分 | 値                                   | トークン                |
-| ----------- | ---- | ------------------------------------ | ----------------------- |
-| Dominant    | 70%  | `oklch(0.995 0.002 250)` White       | `bg-background`         |
-| Support     | 20%  | `oklch(0.97 0.003 250)` Surface      | `bg-surface`            |
-| Accent      | 10%  | `oklch(0.75 0.06 65)` Champagne Gold | `text-primary-dark`     |
-| Accent dark | —    | `oklch(0.55 0.08 65)` Darker Gold    | `gold-line`, CTA border |
-| Muted text  | —    | `oklch(0.45 0.01 250)`               | `text-muted-foreground` |
+OKLCH形式。Warm Dark × Bronze。
 
-**使用ルール**: Gold は `SectionLabel`、`MagneticButton`（CTA）、英語名、価格表示のみ。15%以下に抑える。
+| ロール   | 配分 | 値                                  | メモ                            |
+| -------- | ---- | ----------------------------------- | ------------------------------- |
+| Dominant | 70 % | `oklch(0.15 0.01 60)` Dark Brown    | ページ背景                      |
+| Support  | 20 % | `oklch(0.20 0.015 60)` Dark Surface | カード・セクション背景          |
+| Accent   | 10 % | `oklch(0.65 0.09 60)` Bronze        | ラベル・CTA・価格のみ（≤ 15 %） |
 
 ## タイポグラフィ
 
-| 要素    | フォント      | クラス                                    | 備考                                                                     |
-| ------- | ------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
-| Heading | Noto Serif JP | `font-heading`                            | `@theme` で `--text-h*--font-weight/line-height/letter-spacing` 自動適用 |
-| Body    | Noto Sans JP  | `font-sans`                               | normal weight                                                            |
-| Label   | —             | `text-[11px] uppercase tracking-[0.25em]` | `gold-line` 装飾付き                                                     |
-
-- **スケール比**: 1:4.5（body 16px → h1 72px）
-- **Heading サイズ**: Fluid `clamp()` — `text-h1`/`text-h2`/`text-h3`/`text-hero`（breakpoint 不要）
-- **正本**: `public.css` の `@theme` ブロック（`--text-hero`, `--text-h1`, `--text-h2`, `--text-h3`）
+- Serif heading: Cormorant Garamond（欧文 Hero/H1/H2）
+- Sans body: Noto Sans JP（日本語全般、H3以下、UI）
+- Fallback: Cormorant Garamond → Noto Sans JP → serif（日本語グリフ自動フォールバック）
+- スケール比: 1:4.5（Fluid clamp()）
 
 ## セクション設計
 
@@ -47,7 +40,7 @@ paths:
 | Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]` |
 | Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                    |
 | Container max     | `80rem` (1280px)                                                     |
-| セクション分離    | 背景色交互切替（white ↔ surface）、区切り線なし                      |
+| セクション分離    | 背景色交互切替（dark-brown ↔ dark-surface）、区切り線なし            |
 | Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3` |
 | border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
 
@@ -75,7 +68,7 @@ paths:
 | ヒント | `ScrollIndicator`                    | Hero 下部                          |
 
 - **Easing**: `animations.ts` の `EASE` / `DURATION` / `STAGGER` 定数を使用（マジックナンバー禁止）
-- **Duration**: fast=0.3, normal=0.6, slow=0.8, hero=1.5
+- **Duration**: fast=0.3, normal=0.6, slow=0.8, hero=1.2
 - **入場順序**: SplitText → ScrollReveal → ParallaxImage
 - **制約**: 1セクションで動く要素は最大3箇所
 

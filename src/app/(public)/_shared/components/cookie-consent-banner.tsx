@@ -135,7 +135,7 @@ export function CookieConsentBanner({
               {message || DEFAULT_MESSAGE}{" "}
               <Link
                 href={policyUrl || DEFAULT_POLICY_URL}
-                className="text-primary-dark underline underline-offset-4 hover:text-primary-dark/80"
+                className="text-accent underline underline-offset-4 hover:text-accent/80"
               >
                 詳細
               </Link>
@@ -152,7 +152,7 @@ export function CookieConsentBanner({
             <button
               type="button"
               onClick={handleAccept}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {acceptText || DEFAULT_ACCEPT_TEXT}
             </button>

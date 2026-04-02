@@ -55,7 +55,7 @@ export default async function MypagePage(): Promise<ReactElement> {
       {isNameIncomplete && (
         <div className="mb-6 rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
           お名前が未登録です。
-          <Link href="/mypage/settings" className="ml-1 underline text-primary">
+          <Link href="/mypage/settings" className="ml-1 underline text-accent">
             アカウント設定
           </Link>
           から姓名を入力してください。

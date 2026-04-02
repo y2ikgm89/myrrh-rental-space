@@ -21,7 +21,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
-import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
+import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import {
   IMAGE_ASPECT_MAP,
   getCardGridColsClass,
@@ -66,7 +66,7 @@ export function PostListSection({
 
         gsap.fromTo(
           cards,
-          { y: 40, opacity: 0 },
+          { y: REVEAL.fadeUp.y, opacity: REVEAL.fadeUp.opacity },
           {
             y: 0,
             opacity: 1,
@@ -141,11 +141,11 @@ export function PostListSection({
             </div>
             <div className={`p-4 md:p-5 ${isList ? "flex-1" : ""}`}>
               {post.categoryName && (
-                <span className="text-[10px] uppercase tracking-widest text-primary-dark">
+                <span className="text-[10px] uppercase tracking-widest text-accent">
                   {post.categoryName}
                 </span>
               )}
-              <h3 className="mt-1 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-primary-dark md:text-lg">
+              <h3 className="mt-1 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-accent md:text-lg">
                 {post.title}
               </h3>
               <p
@@ -164,10 +164,10 @@ export function PostListSection({
           <div className="mt-10 text-center">
             <Link
               href={config.viewAllUrl}
-              className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary-dark"
+              className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
             >
               {config.viewAllText} &rarr;
-              <span className="absolute bottom-0 left-0 h-px w-0 bg-primary-dark/60 transition-all duration-300 group-hover:w-full" />
+              <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
             </Link>
           </div>
         </ScrollReveal>

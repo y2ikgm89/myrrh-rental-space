@@ -45,3 +45,13 @@ const postsSearchParamsParsers = {
 export const postsSearchParams = createSearchParamsCache(
   postsSearchParamsParsers,
 );
+
+const journalSearchParamsParsers = {
+  page: parseAsInteger.withDefault(1),
+  q: parseAsString.withDefault(""),
+  tab: parseAsString.withDefault("all"),
+};
+
+export const journalSearchParams = createSearchParamsCache(
+  journalSearchParamsParsers,
+);
