@@ -82,7 +82,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
               )}
             </ScrollReveal>
             <h2
-              className={`mt-6 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+              className={`mt-6 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
               style={getTitleStyle(design)}
             >
               <SplitText>{config.title}</SplitText>
@@ -90,7 +90,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
             {config.description && (
               <ScrollReveal delay={0.2}>
                 <p
-                  className="mt-6 max-w-md text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base"
+                  className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base"
                   style={getTextStyle(design)}
                 >
                   {config.description}
@@ -114,7 +114,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
   // default: standard center-aligned with vertical buttons
   return (
     <SectionWrapper design={design} {...styleProps}>
-      <div className="text-center">
+      <div className="grain-texture text-center">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
@@ -122,7 +122,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
         </ScrollReveal>
 
         <h2
-          className={`mt-6 font-heading ${getTitleClasses(design)} font-bold tracking-tight ${variant === "centered" ? "text-3xl md:text-4xl lg:text-5xl" : ""}`}
+          className={`mt-6 font-heading ${getTitleClasses(design)} font-light tracking-tight ${variant === "centered" ? "text-3xl md:text-4xl lg:text-5xl" : ""}`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -131,7 +131,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
         {config.description && (
           <ScrollReveal delay={0.2}>
             <p
-              className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-muted-foreground md:mt-8 md:text-base"
+              className="mx-auto mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base"
               style={getTextStyle(design)}
             >
               {config.description}
