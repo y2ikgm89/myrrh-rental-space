@@ -19,7 +19,9 @@ interface HeadingProps {
 export function Heading({ level, children, className }: HeadingProps) {
   const Tag = `h${level}` as const;
   return (
-    <Tag className={cn("font-heading", levelClasses[level], className)}>
+    <Tag
+      className={cn("font-heading font-light", levelClasses[level], className)}
+    >
       {children}
     </Tag>
   );

@@ -17,7 +17,7 @@ export function SectionLabel({
 }: SectionLabelProps): ReactElement {
   return (
     <span
-      className={`gold-line pl-1 text-[11px] uppercase tracking-[0.25em] text-accent ${className}`}
+      className={`gold-line pl-1 text-[11px] uppercase tracking-[0.3em] text-accent ${className}`}
     >
       {children}
     </span>
