@@ -20,16 +20,8 @@ import {
   REVEAL,
   SCROLL_TRIGGER,
 } from "@/public/lib/animations";
-import {
-  CONTENT_POSITION_MAP,
-  OVERLAY_STYLE_MAP,
-  HERO_PARALLAX_HEIGHT_MAP,
-} from "@/public/lib/section-style-maps";
-import {
-  parseContentPosition,
-  parseOverlayStyle,
-  parseHeroParallaxHeight,
-} from "@/shared/lib/validations/section-parsers";
+import { HERO_PARALLAX_HEIGHT_MAP } from "@/public/lib/section-style-maps";
+import { parseHeroParallaxHeight } from "@/shared/lib/validations/section-parsers";
 import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 import {
@@ -98,95 +90,85 @@ export function HeroSection({
 
   const heightClass =
     HERO_PARALLAX_HEIGHT_MAP[parseHeroParallaxHeight(config.height)];
-  const positionClasses =
-    CONTENT_POSITION_MAP[parseContentPosition(config.contentPosition)];
-  // When overlayGradient is disabled, fall back from 'gradient' to 'solid'
-  const effectiveOverlayStyle =
-    !config.overlayGradient && config.overlayStyle === "gradient"
-      ? "solid"
-      : config.overlayStyle;
-  const overlayStyle = parseOverlayStyle(effectiveOverlayStyle);
-  const overlayClass = OVERLAY_STYLE_MAP[overlayStyle];
 
   return (
     <section
       ref={sectionRef}
       data-hero=""
-      className={`relative flex ${heightClass} ${positionClasses} overflow-hidden pt-[var(--header-height)]`}
+      className={`relative ${heightClass} overflow-hidden pt-[var(--header-height)]`}
     >
-      {/* Background image with parallax */}
-      <div className="absolute inset-0">
-        <div ref={imageRef} className="relative h-full w-full">
-          <Image
-            src={config.backgroundImageUrl || DEFAULT_BG_IMAGE}
-            alt="洗練されたレンタルスペースのインテリア"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
+      <div className="mx-auto flex h-full max-w-[var(--container-max)] flex-col md:flex-row">
+        {/* Left: Image panel */}
+        <div className="relative h-[50vh] w-full md:h-full md:w-1/2">
+          <div ref={imageRef} className="absolute inset-0">
+            <Image
+              src={config.backgroundImageUrl || DEFAULT_BG_IMAGE}
+              alt="洗練されたレンタルスペースのインテリア"
+              fill
+              priority
+              sizes="(min-width: 768px) 50vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+          {/* Subtle gradient fade into content side */}
+          <div
+            className="absolute inset-y-0 right-0 hidden w-32 bg-gradient-to-r from-transparent to-background md:block"
+            aria-hidden="true"
+          />
+          {/* Bottom gradient for mobile */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent md:hidden"
+            aria-hidden="true"
           />
         </div>
-      </div>
 
-      {/* Overlay */}
-      {overlayStyle !== "none" && (
+        {/* Right: Content panel */}
         <div
-          className={`absolute inset-0 ${overlayClass}`}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Content */}
-      <div
-        ref={contentRef}
-        className="relative z-10 w-full max-w-3xl px-5 md:px-8"
-      >
-        {config.tagline && (
-          <p className="mb-8 text-[10px] font-medium uppercase tracking-[0.4em] text-accent md:text-[11px]">
-            {config.tagline}
-          </p>
-        )}
-
-        <h1
-          className={`font-heading ${getTitleClasses(design)} font-light leading-[1.05] tracking-tight`}
-          style={getTitleStyle(design)}
+          ref={contentRef}
+          className="flex w-full flex-col justify-center px-6 py-12 md:w-1/2 md:px-12 md:py-0 lg:px-20"
         >
-          <SplitText trigger={false} delay={0.5}>
-            {config.title}
-          </SplitText>
-        </h1>
+          {config.tagline && (
+            <p className="text-[10px] font-medium uppercase tracking-[0.4em] text-accent">
+              {config.tagline}
+            </p>
+          )}
 
-        {config.subtitle && (
-          <p
-            className={`mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base${config.contentPosition === "center" ? " mx-auto" : ""}`}
-            style={getTextStyle(design)}
+          <h1
+            className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.05]`}
+            style={getTitleStyle(design)}
           >
-            {config.subtitle}
-          </p>
-        )}
+            <SplitText trigger={false} delay={0.5}>
+              {config.title}
+            </SplitText>
+          </h1>
 
-        {config.buttons.length > 0 && (
-          <div
-            className={`mt-10 flex flex-col gap-4 md:mt-14${config.contentPosition === "center" ? " items-center" : " items-start"}`}
-          >
-            {config.buttons.map((btn) => (
-              <MagneticButton key={btn.url} href={btn.url}>
-                {btn.text}
-              </MagneticButton>
-            ))}
-          </div>
-        )}
+          {/* Decorative divider */}
+          <div className="mt-8 h-px w-12 bg-accent/40" aria-hidden="true" />
 
-        {/* Decorative accent line */}
-        <div
-          className="mt-12 h-px w-16 bg-accent/30 md:mt-16"
-          aria-hidden="true"
-        />
+          {config.subtitle && (
+            <p
+              className="mt-6 max-w-sm text-sm leading-[2] text-muted-foreground"
+              style={getTextStyle(design)}
+            >
+              {config.subtitle}
+            </p>
+          )}
+
+          {config.buttons.length > 0 && (
+            <div className="mt-10 flex flex-col items-start gap-4">
+              {config.buttons.map((btn) => (
+                <MagneticButton key={btn.url} href={btn.url}>
+                  {btn.text}
+                </MagneticButton>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Scroll hint */}
       {config.scrollIndicator !== false && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
           <ScrollIndicator />
         </div>
       )}
