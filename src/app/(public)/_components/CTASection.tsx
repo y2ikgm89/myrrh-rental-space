@@ -51,7 +51,7 @@ function CTAButtons({
         {secondaryButton && (
           <Link
             href={secondaryButton.url}
-            className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
+            className="group relative inline-block text-xs uppercase tracking-[0.2em] text-background/60 transition-colors hover:text-accent"
           >
             {secondaryButton.text}
             <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />
@@ -110,30 +110,37 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
     );
   }
 
-  // centered: larger typography + horizontal buttons
-  // default: standard center-aligned with vertical buttons
+  // centered / default — dark contrast CTA
   return (
-    <SectionWrapper design={design} {...styleProps}>
-      <div className="grain-texture text-center">
+    <SectionWrapper
+      design={design}
+      className="!bg-foreground !text-background"
+      {...styleProps}
+    >
+      <div className="text-center">
+        {/* Decorative top line */}
+        <div
+          className="mx-auto mb-12 h-px w-16 bg-accent/50 md:mb-16"
+          aria-hidden="true"
+        />
+
         <ScrollReveal>
           {config.sectionLabel && (
-            <SectionLabel>{config.sectionLabel}</SectionLabel>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-accent">
+              {config.sectionLabel}
+            </p>
           )}
         </ScrollReveal>
 
         <h2
-          className={`mt-6 font-heading ${getTitleClasses(design)} font-light tracking-tight ${variant === "centered" ? "text-3xl md:text-4xl lg:text-5xl" : ""}`}
-          style={getTitleStyle(design)}
+          className={`mt-6 font-heading text-3xl font-light tracking-tight text-background md:text-4xl lg:text-5xl`}
         >
           <SplitText>{config.title}</SplitText>
         </h2>
 
         {config.description && (
           <ScrollReveal delay={0.2}>
-            <p
-              className="mx-auto mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base"
-              style={getTextStyle(design)}
-            >
+            <p className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-background/60 md:text-base">
               {config.description}
             </p>
           </ScrollReveal>
