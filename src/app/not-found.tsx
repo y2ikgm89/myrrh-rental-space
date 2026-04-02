@@ -14,19 +14,19 @@
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
-import { Noto_Sans_JP, Noto_Serif_JP } from "next/font/google";
+import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
 import "./(public)/_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "700"],
 });
 
-const notoSerifJP = Noto_Serif_JP({
-  variable: "--font-noto-serif-jp",
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-cormorant-garamond",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export default function NotFound(): ReactElement {
   return (
     <html lang="ja">
       <body
-        className={`${notoSansJP.variable} ${notoSerifJP.variable} font-sans antialiased`}
+        className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
       >
         <div className="flex min-h-screen flex-col items-center justify-center px-5 md:px-8">
           <div className="w-full max-w-md text-center">
