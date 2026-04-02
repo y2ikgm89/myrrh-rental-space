@@ -40,7 +40,10 @@ import { HeroSection } from "../../../_components/HeroSection";
 import { StandardHeroSection } from "../../../_components/StandardHeroSection";
 import { ConceptSection } from "../../../_components/ConceptSection";
 import { CustomSection } from "../../../_components/CustomSection";
-import { SpaceShowcase } from "../../../_components/SpaceShowcase";
+import {
+  SpaceShowcaseSection,
+  type ShowcaseSpaceData,
+} from "../../../_components/SpaceShowcaseSection";
 import { SpaceListSection } from "../../../_components/SpaceListSection";
 import { FeaturesSection } from "../../../_components/FeaturesSection";
 import { CTASection } from "../../../_components/CTASection";
@@ -53,7 +56,6 @@ import { PostListSection } from "../../../_components/PostListSection";
 import { FaqListSection } from "../../../_components/FaqListSection";
 import { ContactFormSection } from "../../../_components/ContactFormSection";
 import { InstagramSection } from "../../../_components/InstagramSection";
-import type { SpaceData } from "../../../_components/SpaceShowcase";
 import type { SpaceListData } from "../../../_components/SpaceListSection";
 import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
@@ -135,19 +137,24 @@ export async function SectionRenderer({
         config.maxItems,
         config.showOnlyPublished,
       );
-      const spaces: SpaceData[] = rawSpaces.map((s) => ({
+      const spaces: ShowcaseSpaceData[] = rawSpaces.map((s) => ({
         id: s.id,
+        slug: s.slug,
         name: s.name,
-        nameJa: s.name,
-        tagline: s.description,
+        description: s.description,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
+        dailyPrice: s.dailyPrice,
         area: s.area,
-        imageUrl: s.mainImageUrl,
-        imageAlt: s.name,
-        slug: s.slug,
+        mainImageUrl: s.mainImageUrl,
+        facilities: s.facilities,
+        categoryName: s.category?.name ?? null,
+        locationName: s.location?.name ?? null,
+        lineAddress: s.lineAddress,
       }));
-      return <SpaceShowcase config={config} spaces={spaces} design={design} />;
+      return (
+        <SpaceShowcaseSection config={config} spaces={spaces} design={design} />
+      );
     }
 
     case SectionType.NEWS_LIST: {

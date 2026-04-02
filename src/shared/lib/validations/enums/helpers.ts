@@ -31,6 +31,8 @@ import {
   EditorCommentStatus,
   PostPermalinkStructure,
   PaymentStatus,
+  RegistrationStatus,
+  EventStatus,
 } from "@/shared/db/enums";
 import {
   isValidRole,
@@ -392,6 +394,26 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   [PaymentStatus.PAID]: "支払い済み",
   [PaymentStatus.REFUNDED]: "返金済み",
   [PaymentStatus.FAILED]: "決済失敗",
+};
+
+// =============================================================================
+// EventStatus Labels
+// =============================================================================
+
+export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  [EventStatus.DRAFT]: "下書き",
+  [EventStatus.PUBLISHED]: "公開中",
+  [EventStatus.CANCELLED]: "キャンセル",
+  [EventStatus.ARCHIVED]: "アーカイブ",
+};
+
+// =============================================================================
+// RegistrationStatus Labels
+// =============================================================================
+
+export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
+  [RegistrationStatus.CONFIRMED]: "確認済み",
+  [RegistrationStatus.CANCELLED]: "キャンセル",
 };
 
 export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {

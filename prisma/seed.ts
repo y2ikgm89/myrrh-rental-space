@@ -340,7 +340,7 @@ async function seedLocations() {
       description: "表参道駅から徒歩5分の好立地。全フロアにWi-Fi完備。",
       address: "東京都渋谷区神宮前1-1-1 サンプルビル",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
-      imageUrl: "https://placehold.co/800x600/e2e8f0/64748b?text=Main+Building",
+      imageUrl: "/images/seed/location-main.svg",
       sortOrder: 0,
       isPublished: true,
     },
@@ -349,7 +349,7 @@ async function seedLocations() {
       description: "落ち着いた雰囲気の別館。少人数のミーティングに最適。",
       address: "東京都渋谷区神宮前1-2-3 別館ビル",
       access: "本館より徒歩2分",
-      imageUrl: "https://placehold.co/800x600/dbeafe/3b82f6?text=Annex",
+      imageUrl: "/images/seed/location-annex.svg",
       sortOrder: 1,
       isPublished: true,
     },
@@ -358,7 +358,7 @@ async function seedLocations() {
       description: "新宿駅直結でアクセス抜群。大人数のセミナーにも対応。",
       address: "東京都新宿区西新宿1-1-1 新宿タワー",
       access: "JR「新宿駅」西口直結",
-      imageUrl: "https://placehold.co/800x600/dcfce7/22c55e?text=Shinjuku",
+      imageUrl: "/images/seed/location-shinjuku.svg",
       sortOrder: 2,
       isPublished: false,
     },
@@ -456,14 +456,13 @@ async function seedSpaces() {
       area: new Prisma.Decimal(25.5),
       hourlyPrice: new Prisma.Decimal(3000),
       dailyPrice: new Prisma.Decimal(20000),
-      mainImageUrl:
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room",
+      mainImageUrl: "/images/seed/meeting-room.svg",
       imageUrls: [
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+1",
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+2",
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+3",
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+4",
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room+5",
+        "/images/seed/meeting-room.svg",
+        "/images/seed/meeting-room.svg",
+        "/images/seed/meeting-room.svg",
+        "/images/seed/meeting-room.svg",
+        "/images/seed/meeting-room.svg",
       ],
       facilities: [
         "Wi-Fi",
@@ -497,13 +496,12 @@ async function seedSpaces() {
       area: new Prisma.Decimal(60.0),
       hourlyPrice: new Prisma.Decimal(8000),
       dailyPrice: new Prisma.Decimal(50000),
-      mainImageUrl:
-        "https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room",
+      mainImageUrl: "/images/seed/seminar-room.svg",
       imageUrls: [
-        "https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+1",
-        "https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+2",
-        "https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+3",
-        "https://placehold.co/800x600/dbeafe/3b82f6?text=Seminar+Room+4",
+        "/images/seed/seminar-room.svg",
+        "/images/seed/seminar-room.svg",
+        "/images/seed/seminar-room.svg",
+        "/images/seed/seminar-room.svg",
       ],
       facilities: [
         "Wi-Fi",
@@ -538,14 +536,14 @@ async function seedSpaces() {
       area: new Prisma.Decimal(80.0),
       hourlyPrice: new Prisma.Decimal(500),
       dailyPrice: new Prisma.Decimal(3000),
-      mainImageUrl: "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking",
+      mainImageUrl: "/images/seed/coworking.svg",
       imageUrls: [
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+1",
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+2",
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+3",
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+4",
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+5",
-        "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking+6",
+        "/images/seed/coworking.svg",
+        "/images/seed/coworking.svg",
+        "/images/seed/coworking.svg",
+        "/images/seed/coworking.svg",
+        "/images/seed/coworking.svg",
+        "/images/seed/coworking.svg",
       ],
       facilities: [
         "Wi-Fi",
@@ -2195,7 +2193,7 @@ async function seedBlog() {
 
 ## 3. アクセスの良さ
 駅から徒歩5分以内がおすすめです。`,
-      thumbnailUrl: "https://placehold.co/800x600/fef3c7/f59e0b?text=Blog+1",
+      thumbnailUrl: "/images/seed/blog.svg",
       categoryId: tipsCategory.id,
       authorId: author.id,
       tagNames: ["セミナー", "会場選び", "ビジネス"],
@@ -2215,8 +2213,7 @@ async function seedBlog() {
 ## 3. タイムキーパーを設ける
 ## 4. スタンディングミーティングを取り入れる
 ## 5. 会議後の片付けまで時間に含める`,
-      thumbnailUrl:
-        "https://placehold.co/800x600/e2e8f0/64748b?text=Meeting+Room",
+      thumbnailUrl: "/images/seed/meeting-room.svg",
       categoryId: tipsCategory.id,
       authorId: author.id,
       tagNames: ["会議", "生産性", "ビジネス"],
@@ -2239,7 +2236,7 @@ async function seedBlog() {
 - 駅から近くアクセス抜群
 - 30名収容可能な広さ
 - プロジェクター・マイク完備`,
-      thumbnailUrl: "https://placehold.co/800x600/fce7f3/ec4899?text=Blog+3",
+      thumbnailUrl: "/images/seed/blog-case-study.svg",
       categoryId: caseStudyCategory.id,
       authorId: author.id,
       tagNames: ["活用事例", "研修", "IT企業"],
@@ -2258,7 +2255,7 @@ async function seedBlog() {
 2. 設備が整っている
 3. 気分転換になる
 4. 人との出会い`,
-      thumbnailUrl: "https://placehold.co/800x600/dcfce7/22c55e?text=Coworking",
+      thumbnailUrl: "/images/seed/coworking.svg",
       categoryId: tipsCategory.id,
       authorId: author.id,
       tagNames: ["リモートワーク", "コワーキング", "働き方"],
@@ -2275,7 +2272,7 @@ async function seedBlog() {
 ## トレンド1: ハイブリッドワークの定着
 ## トレンド2: フレキシブルオフィスの増加
 ## トレンド3: コラボレーションスペースの重視`,
-      thumbnailUrl: "https://placehold.co/800x600/fef3c7/f59e0b?text=Trends",
+      thumbnailUrl: "/images/seed/blog.svg",
       categoryId: tipsCategory.id,
       authorId: author.id,
       tagNames: ["トレンド", "オフィス", "働き方改革"],

@@ -25,9 +25,21 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 
+type CreateRegistrationResult = {
+  id: string;
+  registration: {
+    id: string;
+    eventId: string;
+    name: string;
+    email: string;
+    numberOfPeople: number;
+  };
+  event: { title: string };
+};
+
 export async function adminCreateRegistration(
   input: AdminEventRegistrationInput,
-): Promise<MutationResult<{ id: string }>> {
+): Promise<MutationResult<CreateRegistrationResult>> {
   const parsed = adminEventRegistrationSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
@@ -96,18 +108,18 @@ export async function adminCreateRegistration(
   });
 }
 
+type CancelRegistrationData = {
+  eventId: string;
+  name: string;
+  email: string;
+  eventTitle: string;
+};
+
 export async function adminCancelRegistration(
   registrationId: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult<CancelRegistrationData>> {
   const validated = idSchema.safeParse(registrationId);
   if (!validated.success) return createValidationMutationError(validated.error);
-
-  let cancelledData: {
-    eventId: string;
-    name: string;
-    email: string;
-    eventTitle: string;
-  } | null = null;
 
   return executeAdminMutationResult({
     resource: "event",
@@ -116,19 +128,14 @@ export async function adminCancelRegistration(
     execute: async () => {
       const registration = await cancelEventRegistrationCommand(validated.data);
 
-      cancelledData = {
+      return {
         eventId: registration.eventId,
         name: registration.name,
         email: registration.email,
         eventTitle: registration.event.title,
       };
-
-      return null;
     },
-    afterSuccess: () => {
-      if (!cancelledData) return;
-      const data = cancelledData;
-
+    afterSuccess: (data) => {
       updateTag(CACHE_TAGS.EVENTS);
       updateTag(getCacheTag.events.detail(data.eventId));
       updateTag(getCacheTag.eventRegistrations.list(data.eventId));

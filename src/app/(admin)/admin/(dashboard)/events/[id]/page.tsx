@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { IconPencil } from "@tabler/icons-react";
+import { IconDownload, IconPencil } from "@tabler/icons-react";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { getEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { deleteEvent } from "@/admin/actions/event";
@@ -12,6 +12,7 @@ import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Badge, Button } from "@/admin/components/ui";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { RegistrationStatus } from "@/shared/db/enums";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";
 import type { Metadata } from "next";
 
@@ -56,7 +57,7 @@ export default async function EventDetailPage({ params }: PageProps) {
   }));
 
   const confirmedCount = registrations.filter(
-    (r) => r.status === "CONFIRMED",
+    (r) => r.status === RegistrationStatus.CONFIRMED,
   ).length;
 
   return (
@@ -81,6 +82,15 @@ export default async function EventDetailPage({ params }: PageProps) {
             redirectTo="/admin/events"
             successMessage="イベントを削除しました"
           />
+          <Button asChild size="sm" variant="outline">
+            <a
+              href={`/api/admin/export/event-registrations?eventId=${event.id}`}
+              download
+            >
+              <IconDownload className="mr-2 h-4 w-4" />
+              CSV
+            </a>
+          </Button>
           <Button asChild size="sm">
             <Link href={`/admin/events/${event.id}/edit`}>
               <IconPencil className="mr-2 h-4 w-4" />

@@ -13,7 +13,7 @@
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
 - **ハードコードカラー禁止** → テーマ変数使用 → `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`/`Stack gap="lg"`、エラー `<div role="alert">` + border スタイル
-- **ソフトデリート `where` 漏れ禁止** → `deletedAt` を持つ全モデル（Reservation, Event 等）の `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restore*Command` 除く）→ `gotchas.md`
+- **ソフトデリート `where` 漏れ禁止** → `deletedAt` を持つ全モデル（Reservation, Event 等）の `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restore*Command` 除く）。リレーション経由のクエリも親モデルの `deletedAt: null` フィルタ必須（例: `where: { eventId, event: { deletedAt: null } }`）→ `gotchas.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
 
@@ -33,15 +33,15 @@
 
 スキル（`.claude/skills/`）・エージェント（`.claude/agents/`）・MCP（`.mcp.json`）は自動検出。
 
-主要スキル（新機能追加時）:
+スキル使い分け（`.claude/skills/` 自動検出、一覧は `/help` 参照）:
 
-- `/create-admin-page <resource>` — 管理画面 CRUD ページ一式スキャフォールド
-- `/create-server-action <resource>` — Server Action ファイル生成
-- `/create-section-type <name>` — セクションタイプ追加
-- `/create-page-content <key>` — 公開ページ追加
-- `/prisma-migration [name]` — スキーマ変更後のマイグレーション
-- `/add-settings-field <section> <fields>` — Settings フィールド追加
-- `/cache-audit` — Server Action のキャッシュ無効化チェック
+- **新リソース追加**: `/create-admin-page` → `/create-server-action` → `/prisma-migration`
+- **公開ページ追加**: `/create-page-content` → `/create-section-type`（新セクション時）
+- **設定拡張**: `/add-settings-field`
+- **Lexical 拡張**: `/lexical-node` / `/lexical-plugin` / `/lexical-toolbar`
+- **品質監査**: `/cache-audit` / `/integration-audit` / `/audit-settings-sections`
+- **UI デザイン**: `/frontend-design`（公開ページ）/ `/parallax-section`（スクロール演出）
+- **トラブルシューティング**: `/stripe-debug` / `/google-calendar-debug` / `/turbopack-hmr`
 
 ---
 
@@ -86,7 +86,7 @@ bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証
 bun run build:skip-env                        # env未設定時ビルド（SKIP_ENV_VALIDATION=true）
-bun run test                                  # 全テスト（34バッチ分離実行: mock.module 干渉回避）
+bun run test                                  # 全テスト（35バッチ分離実行: mock.module 干渉回避）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
 bun test __tests__/unit/domain/reviews        # 特定ドメインのみ
@@ -105,21 +105,45 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 `.claude/rules/` に `paths:` フロントマターで条件付き自動ロード:
 
-| ルール               | 内容                                                                              |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `gotchas.md`         | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック・レスポンシブ標準） |
-| `server-actions.md`  | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限           |
-| `type-safety.md`     | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                      |
-| `bun-patterns.md`    | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止           |
-| `prisma-patterns.md` | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary              |
-| `auth-patterns.md`   | Better Auth・`executeAdminMutationResult`・セッション取得パターン                 |
-| `error-handling.md`  | `logError`・`safeFetch`・`MutationResult`・DomainError                            |
-| `zod-patterns.md`    | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                       |
-| `test-quality.md`    | テスト分類・ドメインコマンドテストパターン・Playwright E2E                        |
-| `react-patterns.md`  | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                         |
-| `resend-patterns.md` | React Email テンプレート・`fireAndForget` メール送信パターン                      |
-| `nuqs-patterns.md`   | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー                |
-| `api-routes.md`      | Route Handler 認証順序・`unstable_rethrow`・CRON 認証                             |
+| ルール                      | 内容                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `gotchas.md`                | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック・レスポンシブ標準） |
+| `server-actions.md`         | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限           |
+| `type-safety.md`            | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                      |
+| `bun-patterns.md`           | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止           |
+| `prisma-patterns.md`        | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary              |
+| `auth-patterns.md`          | Better Auth・`executeAdminMutationResult`・セッション取得パターン                 |
+| `error-handling.md`         | `logError`・`safeFetch`・`MutationResult`・DomainError                            |
+| `zod-patterns.md`           | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                       |
+| `test-quality.md`           | テスト分類・ドメインコマンドテストパターン・Playwright E2E                        |
+| `react-patterns.md`         | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                         |
+| `resend-patterns.md`        | React Email テンプレート・`fireAndForget` メール送信パターン                      |
+| `nuqs-patterns.md`          | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー                |
+| `api-routes.md`             | Route Handler 認証順序・`unstable_rethrow`・CRON 認証・CSV Export 参照実装        |
+| `implementation-quality.md` | 形骸化実装禁止・過剰抽象化禁止・デッドコード禁止                                  |
+| `project-structure.md`      | ディレクトリ構成・インポートエイリアス・アーキテクチャ境界                        |
+| `server-only-patterns.md`   | Data Access Layer・`server-only` 必須ファイル一覧・追加不要ファイル               |
+
+**`ops/` サブディレクトリ**（デプロイ関連ファイル編集時に自動ロード）:
+
+| ルール                   | 内容                                            |
+| ------------------------ | ----------------------------------------------- |
+| `deployment-patterns.md` | Dockerfile・cloudbuild.yaml・Cloud Run デプロイ |
+
+**`frontend/` サブディレクトリ**（公開ページ・管理画面 UI 編集時に自動ロード）:
+
+| ルール                            | 内容                                                          |
+| --------------------------------- | ------------------------------------------------------------- |
+| `accessibility.md`                | WCAG 2.2 AA・セマンティック HTML・`prefers-reduced-motion`    |
+| `admin-ui-patterns.md`            | タブ UI・テーブルレスポンシブ・ActionDropdown・設定セクション |
+| `admin-inline-editor-patterns.md` | Lexical インラインエディタ・PostEditor・コンテンツタイプ      |
+| `anti-ai-design.md`               | 汎用 AI デザイン禁止・セルフレビュー質問6問                   |
+| `design-system-memory.md`         | Serena memory デザイン記憶プロトコル                          |
+| `gsap-patterns.md`                | GSAP + ScrollTrigger・`useGSAP`・matchMedia reduced-motion    |
+| `lexical-patterns.md`             | Lexical 0.41 / NodeState・カスタムノード・プラグイン          |
+| `project-design-config.md`        | ブランド固有デザイン値・カラートークン・タイポグラフィ        |
+| `seo-patterns.md`                 | メタデータ・JSON-LD・OGP・robots・sitemap                     |
+| `ui-ux-patterns.md`               | ui-ux-pro-max / frontend-design スキル使用ガイド              |
 
 ### キーファイル
 
@@ -145,3 +169,14 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 - **管理 Actions**: `executeAdminMutationResult`（認証・権限・監査ログ一括） + Zod
 - **API Routes**: `checkPermission`（**認証を最初に実行**）→ Zod、管理ログインは `proxy.ts`（Admin Gate）
 - **CSV エクスポート**: `escapeCsvField` で数式インジェクション対策（`=+\-@\t\r` 先頭ガード）
+
+### エージェント（`.claude/agents/` 自動検出、19種）
+
+**使い方パターン**:
+
+- **コード変更後**: `project-reviewer`（総合）、変更内容に応じて `security-reviewer` / `react-compiler-reviewer` / `accessibility-reviewer` を追加
+- **ドメイン整合性**: `event-flow-reviewer` / `reservation-flow-reviewer` / `cache-strategy-reviewer` を並列起動
+- **構造検証**: `route-structure-reviewer`（ルーティング）/ `db-migration-reviewer`（マイグレーション）
+- **検証・ビルド**: `verification`（type-check / lint / build を隔離実行）
+- **テスト生成**: `test-writer`（bun:test）/ `e2e-test-writer`（Playwright）/ `test-runner`（失敗診断）
+- **プロジェクト全体監査**: 上記を8つ並列起動して一貫性チェック（実証済み）

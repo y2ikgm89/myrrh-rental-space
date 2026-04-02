@@ -18,7 +18,7 @@ paths:
 全 Route Handler は以下の順序を厳守する:
 
 1. **認証チェック** (`checkPermission`) — 未認証リクエストを DB アクセス・バリデーション前に弾く
-2. **入力バリデーション** (`safeParse`) — 認証済みリクエストのみバリデーションエラーを返す
+2. **入力バリデーション** (`safeParse`) — 認証済みリクエストのみバリデーションエラーを返す。クエリパラメータの UUID は `z.string().uuid()` で形式チェック（Prisma エラーに頼らない）
 3. **ビジネスロジック** — DB 操作・レスポンス生成
 
 ```typescript
@@ -115,6 +115,10 @@ export async function GET(request: Request) {
 5. **Route Handler の catch ブロックで `unstable_rethrow(error)` 省略禁止** — PPR bail out エラーを握り潰すとビルド時 ERROR ログ。catch 先頭に `unstable_rethrow(error)` を必ず配置
 6. **`export const dynamic` は PPR 環境で使用禁止** — `cacheComponents: true` と非互換（ビルドエラー）
 7. **Stripe Webhook で `session.payment_status` チェック省略禁止** — `checkout.session.completed` では `"paid"` を確認してから fulfill。非同期決済（`"unpaid"`）は `async_payment_succeeded` を待つ
+
+## CSV Export Route Handler（参照実装）
+
+`src/app/api/admin/export/event-registrations/route.ts` が最新の正本。予約・顧客の既存 Route は `unstable_rethrow` / `logError` が欠落しているため参照しない
 
 ## Gotchas
 

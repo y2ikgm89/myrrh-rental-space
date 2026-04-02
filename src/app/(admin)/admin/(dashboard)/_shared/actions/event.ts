@@ -99,7 +99,9 @@ export async function deleteEvent(
   });
 }
 
-export async function publishEvent(id: string): Promise<MutationResult<null>> {
+export async function publishEvent(
+  id: string,
+): Promise<MutationResult<string | null>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -108,16 +110,19 @@ export async function publishEvent(id: string): Promise<MutationResult<null>> {
     action: "publish",
     resourceId: validated.data,
     execute: async () => {
+      const event = await getEventById(validated.data);
       await publishEventCommand(validated.data);
-      return null;
+      return event?.slug ?? null;
     },
-    afterSuccess: () => {
-      invalidateEventCaches(validated.data);
+    afterSuccess: (slug) => {
+      invalidateEventCaches(validated.data, slug ?? undefined);
     },
   });
 }
 
-export async function cancelEvent(id: string): Promise<MutationResult<null>> {
+export async function cancelEvent(
+  id: string,
+): Promise<MutationResult<string | null>> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -126,11 +131,12 @@ export async function cancelEvent(id: string): Promise<MutationResult<null>> {
     action: "update",
     resourceId: validated.data,
     execute: async () => {
+      const event = await getEventById(validated.data);
       await cancelEventCommand(validated.data);
-      return null;
+      return event?.slug ?? null;
     },
-    afterSuccess: () => {
-      invalidateEventCaches(validated.data);
+    afterSuccess: (slug) => {
+      invalidateEventCaches(validated.data, slug ?? undefined);
       updateTag(getCacheTag.eventRegistrations.list(validated.data));
     },
   });

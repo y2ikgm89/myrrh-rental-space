@@ -12,6 +12,7 @@ import type {
   Role,
   AuditAction,
 } from "@/shared/db/enums";
+import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Types
@@ -72,9 +73,9 @@ const eventStatusConfig: StatusConfig<EventStatus> = {
   ARCHIVED: { label: "アーカイブ", variant: "outline" },
 };
 
-const registrationStatusConfig: StatusConfig<RegistrationStatus> = {
-  CONFIRMED: { label: "確認済み", variant: "default" },
-  CANCELLED: { label: "キャンセル", variant: "destructive" },
+const REGISTRATION_BADGE_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
+  CONFIRMED: "default",
+  CANCELLED: "destructive",
 };
 
 // News はisPublished (boolean) 方式に移行
@@ -126,8 +127,11 @@ export function RegistrationStatusBadge({
 }: {
   status: RegistrationStatus;
 }) {
-  const config = registrationStatusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return (
+    <Badge variant={REGISTRATION_BADGE_VARIANTS[status]}>
+      {REGISTRATION_STATUS_LABELS[status]}
+    </Badge>
+  );
 }
 
 export function NewsStatusBadge({ isPublished }: { isPublished: boolean }) {
