@@ -147,36 +147,34 @@ OKLCH の利点:
 | `text-blue-600`            | `text-primary`                   |
 | `shadow-[..rgb(0_0_0/..)]` | `shadow-xs` または `shadow-sm`   |
 
-### 公開ページ（public.css） — Champagne Gold + White テーマ
+### 公開ページ（public.css） — Luxury White × Bronze テーマ
 
 **よく間違えるハードコードカラー → セマンティックトークン（公開ページ）**:
 
-| 禁止                | 代替                        |
-| ------------------- | --------------------------- |
-| `bg-black/10`       | `bg-foreground/10`          |
-| `hover:bg-black/10` | `hover:bg-foreground/10`    |
-| `text-white`        | `text-card`（純白が必要時） |
-| `bg-white/10`       | `bg-card/10`                |
-| `border-white/20`   | `border-card/20`            |
-| `bg-black/50`       | `bg-foreground/50`          |
+| 禁止                | 代替                                                      |
+| ------------------- | --------------------------------------------------------- |
+| `bg-black/10`       | `bg-foreground/10`                                        |
+| `hover:bg-black/10` | `hover:bg-foreground/10`                                  |
+| `bg-white`          | `bg-background`                                           |
+| `text-white`        | Hero オーバーレイ上のみ許可、それ以外は `text-background` |
+| `bg-black/50`       | `bg-foreground/50`                                        |
 
 **完全なトークン一覧**: `src/app/(public)/_styles/public.css` を参照。
 
 **公開ページ固有トークン**（管理画面に存在しないもの）:
 
-| トークン                | Tailwind クラス                           | 用途               |
-| ----------------------- | ----------------------------------------- | ------------------ |
-| `--color-brand-primary` | `bg-brand-primary` / `text-brand-primary` | Champagne Gold     |
-| `--color-surface`       | `bg-surface`                              | カードより薄い背景 |
-| `--color-primary-dark`  | `text-primary-dark`                       | ゴールド濃いめ     |
-| `--color-rating`        | `text-rating`                             | 星評価（星色）     |
+| トークン               | Tailwind クラス     | 用途                          |
+| ---------------------- | ------------------- | ----------------------------- |
+| `--color-surface`      | `bg-surface`        | カードより薄い背景            |
+| `--color-accent`       | `text-accent`       | ブロンズ（CTA・ラベル・価格） |
+| `--color-accent-light` | `text-accent-light` | ホバー時ブロンズ              |
 
 **公開ページ固有のユーティリティクラス**（`@layer utilities` に定義）:
 
-| クラス          | 用途                                             |
-| --------------- | ------------------------------------------------ |
-| `.font-heading` | `font-family: var(--font-serif)` — Noto Serif JP |
-| `.gold-line`    | セクションラベル装飾（ゴールドライン付き）       |
+| クラス          | 用途                                                  |
+| --------------- | ----------------------------------------------------- |
+| `.font-heading` | `font-family: var(--font-serif)` — Cormorant Garamond |
+| `.gold-line`    | セクションラベル装飾（ブロンズライン付き）            |
 
 ---
 

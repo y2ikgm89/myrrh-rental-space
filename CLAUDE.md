@@ -65,19 +65,19 @@ __tests__/integration/               統合テスト（actions/admin, actions/pu
 
 ### 技術スタック
 
-| 技術         | Ver    | 注意点                                                                      |
-| ------------ | ------ | --------------------------------------------------------------------------- |
-| Next.js      | 16.2.1 | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                   |
-| React        | 19.2.4 | Compiler 1.0 (`react-compiler-runtime` 必須), `use()`, `useEffectEvent`     |
-| TypeScript   | 6.0.2  | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`              |
-| Prisma       | 7.6.0  | WASM, `createAppPrismaClient` で `$extends` 集約                            |
-| Tailwind CSS | 4.2.2  | CSS-first, `@theme`, セマンティックトークン必須, Container Queries コア統合 |
-| Tabler Icons | 3.41   | `@tabler/icons-react`, `Icon` プレフィックス, 型: `TablerIcon`              |
-| Zod          | 4.3.6  | `{ error: }` パラメータ                                                     |
-| Better Auth  | 1.5.6  | RBAC, Google/LINE OAuth, accountLinking, CUSTOMER ロール                    |
-| Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）                  |
-| Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                   |
-| FullCalendar | 6.1    | `@fullcalendar/react`, 月/週/リスト切替、`'use client'` 必須                |
+| 技術         | Ver    | 注意点                                                                                        |
+| ------------ | ------ | --------------------------------------------------------------------------------------------- |
+| Next.js      | 16.2.1 | `'use cache'`, `updateTag`, PPR (`cacheComponents: true`)                                     |
+| React        | 19.2.4 | Compiler 1.0 (`react-compiler-runtime` 必須), `use()`, `useEffectEvent`                       |
+| TypeScript   | 6.0.2  | `target: es2025`, `erasableSyntaxOnly`, `verbatimModuleSyntax`                                |
+| Prisma       | 7.6.0  | WASM, `createAppPrismaClient` で `$extends` 集約、enum/型は `@generated/prisma/*` 直接 import |
+| Tailwind CSS | 4.2.2  | CSS-first, `@theme`, セマンティックトークン必須, Container Queries コア統合                   |
+| Tabler Icons | 3.41   | `@tabler/icons-react`, `Icon` プレフィックス, 型: `TablerIcon`                                |
+| Zod          | 4.3.6  | `{ error: }` パラメータ                                                                       |
+| Better Auth  | 1.5.6  | RBAC, Google/LINE OAuth, accountLinking, CUSTOMER ロール                                      |
+| Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）                                    |
+| Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                                     |
+| FullCalendar | 6.1    | `@fullcalendar/react`, 月/週/リスト切替、`'use client'` 必須                                  |
 
 ### コマンド
 
@@ -147,19 +147,19 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 ### キーファイル
 
-| パス                                                   | 内容                                                               |
-| ------------------------------------------------------ | ------------------------------------------------------------------ |
-| `src/shared/db/prisma.ts`                              | `createAppPrismaClient`（`$extends` 集約）                         |
-| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                   |
-| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                |
-| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（18定義、field ヘルパー）                     |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                       |
-| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                        |
-| `src/app/(public)/_shared/components/design-system/`   | Primitives 11（SC: Container/Stack/Heading 等, CC: Button/Dialog） |
-| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                      |
-| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                       |
-| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration） |
-| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）             |
+| パス                                                   | 内容                                                                           |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*` |
+| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                               |
+| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                            |
+| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（18定義、field ヘルパー）                                 |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                   |
+| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                    |
+| `src/app/(public)/_shared/components/design-system/`   | Primitives 11（SC: Container/Stack/Heading 等, CC: Button/Dialog）             |
+| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                  |
+| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                   |
+| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）             |
+| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                         |
 
 ### セキュリティ多層防御
 
