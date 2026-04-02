@@ -18,7 +18,7 @@ export const postListConfigSchema = z.object({
     .text("全件リンクテキスト", { default: "全ての記事" })
     .pipe(z.string().max(50)),
   viewAllUrl: field
-    .text("全件リンクURL", { default: "/posts" })
+    .text("全件リンクURL", { default: "/journal?tab=posts" })
     .pipe(z.string().max(200)),
   categoryId: z
     .string()

@@ -106,22 +106,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // /news, /posts リスト → /journal に統合リダイレクト（詳細ページはそのまま）
-  async redirects() {
-    return [
-      {
-        source: "/news",
-        destination: "/journal?tab=news",
-        permanent: true,
-      },
-      {
-        source: "/posts",
-        destination: "/journal?tab=posts",
-        permanent: true,
-      },
-    ];
-  },
-
   // Cache-Control + セキュリティヘッダー
   async headers() {
     const securityHeaders = [
