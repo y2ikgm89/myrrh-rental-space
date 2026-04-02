@@ -103,10 +103,17 @@ paths:
 - **CSS media queries は modern syntax を使う** — `@media (width < 48rem)` を使用。`@media (max-width: 767px)` のハードコードは禁止
 - **DB VARCHAR で管理する非 Prisma enum は `enums/helpers.ts` に `as const` 定数を定義** — `CANCELLED_BY.CUSTOMER` / `CANCELLED_BY.ADMIN` のパターン。文字列リテラル `"CUSTOMER"` の直接使用禁止
 
+## GSAP アニメーション
+
+- **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持され、GSAP がクライアントで上書きする
+- **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
+- **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
+
 ## Page-First Architecture（公開ページ）
 
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **`@layer compat` と旧カラートークンは削除済み** — `--color-primary` / `--color-brand-primary` 等の旧トークンは存在しない。全コンポーネントが `@theme` のセマンティックトークン（`accent`/`foreground`/`surface` 等）を直接使用
+- **`/news` `/posts` 一覧ページは `/journal` に統合済み** — 詳細ページ（`/news/[slug]`、`/posts/[...segments]`）は維持。パンくずリンクは `/journal?tab=news` / `/journal?tab=posts`
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。`getPageContent()` / `simplePageContentSchema` / `defaultXxxContent` は全て削除済み。公開ページは `getPageSectionsWithFallback(slug)` + `SectionRenderer` を使用
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`。`"hero-parallax"` 等。`SectionType` Prisma enum は廃止済み（`section.ts` の `as const` オブジェクトとして再定義）
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — `schema.ts` + `metadata.ts` + `registry.ts` への import 追加。Prisma マイグレーション不要。`/create-section-type` スキルで自動生成可能

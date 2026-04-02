@@ -105,24 +105,24 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 `.claude/rules/` に `paths:` フロントマターで条件付き自動ロード:
 
-| ルール                      | 内容                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| `gotchas.md`                | 落とし穴集（最重要 — ソフトデリート・キャッシュ・テストモック・レスポンシブ標準） |
-| `server-actions.md`         | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限           |
-| `type-safety.md`            | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                      |
-| `bun-patterns.md`           | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止           |
-| `prisma-patterns.md`        | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary              |
-| `auth-patterns.md`          | Better Auth・`executeAdminMutationResult`・セッション取得パターン                 |
-| `error-handling.md`         | `logError`・`safeFetch`・`MutationResult`・DomainError                            |
-| `zod-patterns.md`           | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                       |
-| `test-quality.md`           | テスト分類・ドメインコマンドテストパターン・Playwright E2E                        |
-| `react-patterns.md`         | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                         |
-| `resend-patterns.md`        | React Email テンプレート・`fireAndForget` メール送信パターン                      |
-| `nuqs-patterns.md`          | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー                |
-| `api-routes.md`             | Route Handler 認証順序・`unstable_rethrow`・CRON 認証・CSV Export 参照実装        |
-| `implementation-quality.md` | 形骸化実装禁止・過剰抽象化禁止・デッドコード禁止                                  |
-| `project-structure.md`      | ディレクトリ構成・インポートエイリアス・アーキテクチャ境界                        |
-| `server-only-patterns.md`   | Data Access Layer・`server-only` 必須ファイル一覧・追加不要ファイル               |
+| ルール                      | 内容                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `gotchas.md`                | 落とし穴集（最重要 — ソフトデリート・キャッシュ・GSAP opacity:0・テストモック） |
+| `server-actions.md`         | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限         |
+| `type-safety.md`            | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                    |
+| `bun-patterns.md`           | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止         |
+| `prisma-patterns.md`        | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary            |
+| `auth-patterns.md`          | Better Auth・`executeAdminMutationResult`・セッション取得パターン               |
+| `error-handling.md`         | `logError`・`safeFetch`・`MutationResult`・DomainError                          |
+| `zod-patterns.md`           | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                     |
+| `test-quality.md`           | テスト分類・ドメインコマンドテストパターン・Playwright E2E                      |
+| `react-patterns.md`         | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                       |
+| `resend-patterns.md`        | React Email テンプレート・`fireAndForget` メール送信パターン                    |
+| `nuqs-patterns.md`          | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー              |
+| `api-routes.md`             | Route Handler 認証順序・`unstable_rethrow`・CRON 認証・CSV Export 参照実装      |
+| `implementation-quality.md` | 形骸化実装禁止・過剰抽象化禁止・デッドコード禁止                                |
+| `project-structure.md`      | ディレクトリ構成・インポートエイリアス・アーキテクチャ境界                      |
+| `server-only-patterns.md`   | Data Access Layer・`server-only` 必須ファイル一覧・追加不要ファイル             |
 
 **`ops/` サブディレクトリ**（デプロイ関連ファイル編集時に自動ロード）:
 
@@ -160,6 +160,7 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 | `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                   |
 | `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）             |
 | `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                         |
+| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                            |
 
 ### セキュリティ多層防御
 
