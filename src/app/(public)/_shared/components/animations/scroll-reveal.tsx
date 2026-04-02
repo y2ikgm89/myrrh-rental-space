@@ -26,17 +26,21 @@ export function ScrollReveal({
 
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.from(el, {
-          y: 24,
-          opacity: 0,
-          duration: DURATION.normal,
-          ease: EASE.out,
-          delay,
-          scrollTrigger: {
-            trigger: el,
-            ...SCROLL_TRIGGER.reveal,
+        gsap.fromTo(
+          el,
+          { y: 24, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: DURATION.normal,
+            ease: EASE.out,
+            delay,
+            scrollTrigger: {
+              trigger: el,
+              ...SCROLL_TRIGGER.reveal,
+            },
           },
-        });
+        );
       });
     },
     { scope: ref },
