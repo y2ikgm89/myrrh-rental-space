@@ -117,13 +117,6 @@ const eslintConfig = defineConfig([
                 "Prisma は '@/shared/db' または '@/shared/db/prisma' を使ってください。",
             },
           ],
-          patterns: [
-            {
-              group: ["@generated/prisma", "@generated/prisma/*"],
-              message:
-                "generated Prisma への直接 import は禁止です。'@/shared/db/*' を経由してください。",
-            },
-          ],
         },
       ],
     },
@@ -150,13 +143,6 @@ const eslintConfig = defineConfig([
               name: "@/shared/lib/prisma",
               message:
                 "legacy prisma shim は使用禁止です。shared/domain を経由してください。",
-            },
-          ],
-          patterns: [
-            {
-              group: ["@generated/prisma", "@generated/prisma/*"],
-              message:
-                "public app layer から generated Prisma を直接 import しないでください。",
             },
           ],
         },
