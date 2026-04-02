@@ -169,7 +169,7 @@ export function StandardHeroSection({
               className={`font-heading ${getTitleClasses(design)} font-bold uppercase tracking-tight`}
               style={getTitleStyle(design)}
             >
-              <SplitText variant="chars" trigger={false} delay={0.3}>
+              <SplitText trigger={false} delay={0.3}>
                 {config.title}
               </SplitText>
             </h1>
@@ -218,7 +218,7 @@ export function StandardHeroSection({
                 className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
                 style={getTitleStyle(design)}
               >
-                <SplitText variant="words" trigger={false} delay={0.3}>
+                <SplitText trigger={false} delay={0.3}>
                   {config.title}
                 </SplitText>
               </h1>
@@ -315,7 +315,7 @@ export function StandardHeroSection({
             className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
             style={getTitleStyle(design)}
           >
-            <SplitText variant="words" trigger={false} delay={0.3}>
+            <SplitText trigger={false} delay={0.3}>
               {config.title}
             </SplitText>
           </h1>

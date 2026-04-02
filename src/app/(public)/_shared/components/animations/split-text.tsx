@@ -18,8 +18,6 @@ import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 interface SplitTextProps {
   readonly children: ReactNode;
   readonly className?: string;
-  /** @deprecated variant is no longer used — kept for API compat */
-  readonly variant?: "chars" | "words" | "lines";
   readonly delay?: number;
   /** Whether to use ScrollTrigger. When false, animates immediately. */
   readonly trigger?: boolean;

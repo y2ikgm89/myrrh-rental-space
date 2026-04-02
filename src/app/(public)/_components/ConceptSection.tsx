@@ -67,7 +67,7 @@ export function ConceptSection({
         className={`mt-6 font-heading ${getTitleClasses(design)} font-bold leading-[1.2] tracking-tight`}
         style={getTitleStyle(design)}
       >
-        <SplitText variant="lines">{heading}</SplitText>
+        <SplitText>{heading}</SplitText>
       </h2>
 
       <ScrollReveal delay={0.2}>

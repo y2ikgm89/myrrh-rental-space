@@ -104,7 +104,7 @@ export function NewsListSection({
           className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
           style={getTitleStyle(design)}
         >
-          <SplitText variant="words">{config.title}</SplitText>
+          <SplitText>{config.title}</SplitText>
         </h2>
       </div>
 

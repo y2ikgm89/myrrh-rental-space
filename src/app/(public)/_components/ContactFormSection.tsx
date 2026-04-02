@@ -138,7 +138,7 @@ export function ContactFormSection({
                 className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
                 style={getTitleStyle(design)}
               >
-                <SplitText variant="words">{config.title}</SplitText>
+                <SplitText>{config.title}</SplitText>
               </h2>
               {config.description && (
                 <ScrollReveal delay={0.2}>
@@ -177,7 +177,7 @@ export function ContactFormSection({
             className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
             style={getTitleStyle(design)}
           >
-            <SplitText variant="words">{config.title}</SplitText>
+            <SplitText>{config.title}</SplitText>
           </h2>
           {config.description && (
             <ScrollReveal delay={0.2}>

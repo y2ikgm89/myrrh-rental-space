@@ -42,7 +42,7 @@ export function ArticleDetailHero({
         <h1
           className={`${categoryName ? "mt-4 " : ""}font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl`}
         >
-          <SplitText variant="words" trigger={false} delay={0.3}>
+          <SplitText trigger={false} delay={0.3}>
             {title}
           </SplitText>
         </h1>

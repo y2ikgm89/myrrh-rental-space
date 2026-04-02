@@ -148,7 +148,7 @@ export function HeroSection({
           className={`font-heading ${getTitleClasses(design)} font-bold leading-[1.15] tracking-tight`}
           style={getTitleStyle(design)}
         >
-          <SplitText variant="words" trigger={false} delay={0.5}>
+          <SplitText trigger={false} delay={0.5}>
             {config.title}
           </SplitText>
         </h1>

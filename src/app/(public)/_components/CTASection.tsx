@@ -85,7 +85,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
               className={`mt-6 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
               style={getTitleStyle(design)}
             >
-              <SplitText variant="words">{config.title}</SplitText>
+              <SplitText>{config.title}</SplitText>
             </h2>
             {config.description && (
               <ScrollReveal delay={0.2}>
@@ -125,7 +125,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
           className={`mt-6 font-heading ${getTitleClasses(design)} font-bold tracking-tight ${variant === "centered" ? "text-3xl md:text-4xl lg:text-5xl" : ""}`}
           style={getTitleStyle(design)}
         >
-          <SplitText variant="words">{config.title}</SplitText>
+          <SplitText>{config.title}</SplitText>
         </h2>
 
         {config.description && (
