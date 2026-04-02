@@ -136,17 +136,21 @@ export async function Footer(): Promise<ReactElement> {
 
   return (
     <footer className="border-t border-border bg-surface">
+      <div
+        className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
+        aria-hidden="true"
+      />
       <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
         <div className="grid gap-10 md:grid-cols-3 md:gap-12">
           {/* Brand */}
           <div>
             <Link
               href="/"
-              className="font-heading text-xl tracking-[0.15em] text-foreground"
+              className="font-heading text-2xl font-light tracking-[0.15em] text-foreground"
             >
               {brandShort}
             </Link>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-4 text-sm leading-[2] text-muted-foreground">
               {(
                 footerSettings.tagline ??
                 "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
