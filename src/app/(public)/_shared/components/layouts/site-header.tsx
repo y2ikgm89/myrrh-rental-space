@@ -20,13 +20,16 @@
 import { useState, useRef, useEffect, useId, type ReactElement } from "react";
 import Link from "next/link";
 import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu";
-import { IconChevronDown } from "@tabler/icons-react";
+import { IconChevronDown, IconX } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import { useMotionPreference } from "@/public/hooks/use-motion-preference";
 import { EASE } from "@/public/lib/animations";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
-import { HeaderScrollBehavior, HeaderBackgroundMode } from "@generated/prisma/enums";
+import {
+  HeaderScrollBehavior,
+  HeaderBackgroundMode,
+} from "@generated/prisma/enums";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "../design-system/button";
 
@@ -320,7 +323,7 @@ export function Header({
           // transparent モードのみ style で制御
           if (next) {
             header.style.backgroundColor =
-              "color-mix(in oklch, var(--color-background) 92%, transparent)";
+              "color-mix(in oklch, var(--color-background) 85%, transparent)";
             header.style.backdropFilter = "blur(24px)";
             header.style.boxShadow = "var(--shadow-sm)";
           } else {
@@ -454,14 +457,14 @@ export function Header({
         )}
         style={
           scrolled
-            ? { borderBottom: "1px solid oklch(0.88 0.01 60)" }
+            ? { borderBottom: "1px solid oklch(0.85 0.015 60 / 0.5)" }
             : undefined
         }
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
           <Link
             href="/"
-            className="font-heading text-lg tracking-[0.15em] text-foreground"
+            className="font-heading text-xl font-light tracking-[0.2em] text-foreground"
           >
             {brandName}
           </Link>
@@ -535,7 +538,7 @@ export function Header({
           <div className="flex items-center justify-between px-5 py-4">
             <Link
               href="/"
-              className="font-heading text-lg tracking-[0.15em] text-foreground"
+              className="font-heading text-xl font-light tracking-[0.2em] text-foreground"
               onClick={closeMenu}
             >
               {brandName}
@@ -546,19 +549,7 @@ export function Header({
               className="flex h-10 w-10 items-center justify-center"
               aria-label="メニューを閉じる"
             >
-              <svg
-                className="h-5 w-5 text-foreground"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <IconX className="h-5 w-5 text-foreground" strokeWidth={1.5} />
             </button>
           </div>
 
