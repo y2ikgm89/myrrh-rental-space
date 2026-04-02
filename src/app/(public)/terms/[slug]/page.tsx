@@ -89,7 +89,7 @@ export default async function TermsDetailPage({ params }: PageProps) {
 
           <SanitizedHtml
             html={terms.currentVersion.contentHtml}
-            className="prose prose-neutral max-w-none"
+            className="prose prose-invert max-w-none"
           />
         </Container>
       </article>

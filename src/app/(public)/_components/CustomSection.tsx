@@ -74,7 +74,7 @@ export function CustomSection({
               <div style={getTextStyle(design)}>
                 <SanitizedHtml
                   html={content}
-                  className="prose prose-neutral max-w-none"
+                  className="prose prose-invert max-w-none"
                 />
               </div>
             </ScrollReveal>

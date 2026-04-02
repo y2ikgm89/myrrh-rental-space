@@ -79,7 +79,10 @@ export async function PostDetailPageContent({
         title={post.title}
         breadcrumb={
           <Breadcrumb
-            items={[{ label: "ブログ", href: "/posts" }, { label: post.title }]}
+            items={[
+              { label: "ブログ", href: "/journal?tab=posts" },
+              { label: post.title },
+            ]}
           />
         }
       />
