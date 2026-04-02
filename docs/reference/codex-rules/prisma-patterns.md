@@ -45,7 +45,7 @@ Prisma 7 の `@map` enum は TypeScript 側で `as const` オブジェクトと�
 **文字列リテラルではなく enum 定数を使用すること**:
 
 ```typescript
-import { DiscountType, CalendarSyncMethod } from '@/shared/db/enums'
+import { DiscountType, CalendarSyncMethod } from '@generated/prisma/enums'
 
 // NG: 文字列リテラル比較
 if (space.discountType === 'none') { ... }
@@ -103,7 +103,7 @@ export function isValidDiscountType(value: unknown): value is DiscountType {
 export type SpaceDiscountType = DiscountType;
 
 // OK: Prisma enum を直接使用
-import { DiscountType } from "@/shared/db/enums";
+import { DiscountType } from "@generated/prisma/enums";
 type Foo = { discountType: DiscountType };
 ```
 
@@ -423,7 +423,7 @@ await prisma.$transaction(async (tx) => {
 | `@/shared/db/create-app-prisma-client.ts` | `$extends`（Decimal→number 等）の単一実装・`AppPrismaClient` 型            |
 | `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`createAppPrismaClient` 適用・型 re-export     |
 | `@/shared/db/prisma-input-json.ts`        | Prisma JSON 入力ヘルパー（`server-only` を付けない。seed から import 可）  |
-| `@/shared/db/enums.ts`                    | Prisma enum の公開窓口                                                     |
+| `@generated/prisma/enums.ts`                    | Prisma enum の公開窓口                                                     |
 | `@/shared/lib/errors/logger-core.ts`      | 構造化 `logError`（スクリプト・非 Next モジュール用）                      |
 | `@/shared/lib/errors/logger.ts`           | `server-only` エントリ（Next Server 向け、`logger-core` を re-export）     |
 | `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |

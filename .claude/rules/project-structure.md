@@ -42,7 +42,7 @@ prisma/                          # schema.prisma, migrations/, seed.ts
 | パス                                                 | 用途                                                 |
 | ---------------------------------------------------- | ---------------------------------------------------- |
 | `src/app/(admin)/_styles/admin.css`                  | 管理画面専用テーマ                                   |
-| `src/app/(public)/_styles/public.css`                | 公開ページテーマ（Deep Neutral + Warm Accent）       |
+| `src/app/(public)/_styles/public.css`                | 公開ページテーマ（Luxury White × Bronze）            |
 | `src/shared/db/create-app-prisma-client.ts`          | Prisma `$extends` の単一実装・`AppPrismaClient` 型   |
 | `src/shared/lib/errors/logger-core.ts`               | 構造化ログ（seed / `server-only` 外モジュール用）    |
 | `src/shared/lib/email/`                              | メール送信                                           |

@@ -437,12 +437,12 @@ CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制�
 
 /* 子要素で --accent を参照（フォールバック必須） */
 [data-steps-style="numbered"] .step-number {
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-background));
 }
 ```
 
-`data-color="default"` または属性なし → フォールバック `var(--color-primary)` / `var(--color-primary-foreground)` が適用される。
+`data-color="default"` または属性なし → フォールバック `var(--color-accent)` / `var(--color-background)` が適用される。
 
 #### 新しいブロックに AccentColor を追加する手順
 
@@ -470,7 +470,7 @@ exportDOM(): DOMExportOutput {
 }
 ```
 
-3. **`lexical-content.css`** — `[data-color]` トークンはグローバル定義済み。子要素セレクタに `var(--accent, var(--color-primary))` を参照するだけでよい
+3. **`lexical-content.css`** — `[data-color]` トークンはグローバル定義済み。子要素セレクタに `var(--accent, var(--color-accent))` を参照するだけでよい
 
 4. **InspectorPanel に `ColorSwatchPicker` を追加**
 
