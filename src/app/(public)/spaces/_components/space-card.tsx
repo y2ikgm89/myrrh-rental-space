@@ -71,7 +71,7 @@ export function SpaceCard({
   return (
     <Link
       href={`/spaces/${slug}`}
-      className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+      className="group block"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={() => {
@@ -134,8 +134,8 @@ export function SpaceCard({
         ) : null}
       </div>
 
-      {/* Content */}
-      <div className="p-4 sm:p-5">
+      {/* Content — separated by thin top border, no padding box */}
+      <div className="mt-3 border-t border-border pt-3">
         {categoryName ? (
           <p className="text-[0.55rem] uppercase tracking-[0.18em] text-accent">
             {categoryName}
@@ -162,13 +162,13 @@ export function SpaceCard({
             <span className="text-muted-foreground">({reviewCount}件)</span>
           </div>
         ) : null}
-        <p className="mt-1 text-[0.75rem] text-muted-foreground">
+        <p className="mt-2 text-[0.75rem] text-muted-foreground">
           {area != null ? `${area}m² · ` : ""}
           {capacity != null ? `Max ${capacity}` : ""}
           {hourlyPrice != null ? (
             <>
               {(area != null || capacity != null) && " · "}
-              <span className="text-accent">
+              <span className="font-heading text-[0.95rem] text-accent">
                 {formatUnit(hourlyPrice, "/h")}
               </span>
             </>
