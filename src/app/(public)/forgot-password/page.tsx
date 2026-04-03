@@ -21,7 +21,7 @@ export default async function ForgotPasswordPage() {
       <PageHero variant="minimal" title="パスワードをお忘れの方" />
 
       <Container variant="narrow">
-        <Stack gap="lg" className="pb-[var(--spacing-section)]">
+        <Stack gap="lg" className="pb-[var(--spacing-block)]">
           <p className="text-center text-muted-foreground">
             ご登録のメールアドレスを入力してください。
             パスワードリセットのリンクをお送りします。

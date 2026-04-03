@@ -31,7 +31,7 @@ export function PageLayout({
     return (
       <>
         {hero}
-        <Container className={cn("py-[var(--spacing-section)]", className)}>
+        <Container className={cn("py-[var(--spacing-block)]", className)}>
           {children}
         </Container>
       </>

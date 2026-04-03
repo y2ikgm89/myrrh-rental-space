@@ -29,7 +29,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
         <PageHero variant="minimal" title="無効なリンク" />
 
         <Container variant="narrow">
-          <Stack gap="lg" className="pb-[var(--spacing-section)]">
+          <Stack gap="lg" className="pb-[var(--spacing-block)]">
             <p className="text-center text-muted-foreground">
               パスワードリセットのリンクが無効です。
               有効期限が切れている可能性があります。
@@ -53,7 +53,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
       <PageHero variant="minimal" title="新しいパスワードを設定" />
 
       <Container variant="narrow">
-        <Stack gap="lg" className="pb-[var(--spacing-section)]">
+        <Stack gap="lg" className="pb-[var(--spacing-block)]">
           <p className="text-center text-muted-foreground">
             新しいパスワードを入力してください。
           </p>

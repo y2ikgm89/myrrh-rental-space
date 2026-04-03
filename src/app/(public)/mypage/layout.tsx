@@ -43,7 +43,7 @@ export default async function MypageLayout({
   }
 
   return (
-    <section className="py-[var(--spacing-section)]">
+    <section className="py-[var(--spacing-block)]">
       <Container>
         <MypageNav />
         {children}

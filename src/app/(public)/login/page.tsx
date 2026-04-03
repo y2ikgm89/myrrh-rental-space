@@ -36,7 +36,7 @@ export default async function LoginPage({
       <PageHero variant="minimal" title="ログイン" />
 
       <Container variant="narrow">
-        <Stack gap="lg" className="pb-[var(--spacing-section)]">
+        <Stack gap="lg" className="pb-[var(--spacing-block)]">
           {errorMessage != null && (
             <div
               className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive text-center"
