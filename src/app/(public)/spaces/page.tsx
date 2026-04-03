@@ -1,8 +1,8 @@
 /**
- * /spaces — スペース一覧ページ（Editorial Magazine）
+ * /spaces — スペース一覧（Editorial Magazine カタログ）
  *
- * Featured spread（先頭1件）+ Kinfolk 風ずらし2カラムグリッド
- * ホームページ SpacesSection と同一のデザイン言語
+ * Kinfolk 風ずらし2カラムグリッド。全カード等価表示。
+ * フィルタ + ページネーション対応。
  */
 
 import type { Metadata } from "next";
@@ -32,7 +32,6 @@ interface SpacesPageProps {
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
-
   return generatePageMetadata("spaces");
 }
 
@@ -74,31 +73,35 @@ export default async function SpacesPage({
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
-      {/* Filter */}
-      <Container className="pt-[var(--spacing-section)] pb-6">
-        <Suspense fallback={null}>
-          <FilterBar categories={categories} />
-        </Suspense>
-      </Container>
+      <section className="py-[var(--spacing-section)]">
+        <Container>
+          {/* Filter */}
+          <Suspense fallback={null}>
+            <div className="mb-10 md:mb-14">
+              <FilterBar categories={categories} />
+            </div>
+          </Suspense>
 
-      {/* Space grid — featured spread + staggered 2-col */}
-      <Suspense fallback={null}>
-        <SpaceGrid spaces={items} reviewStats={reviewStats} />
-      </Suspense>
+          {/* Catalog grid — Kinfolk staggered 2-col, all cards equal */}
+          <Suspense fallback={null}>
+            <SpaceGrid spaces={items} reviewStats={reviewStats} />
+          </Suspense>
 
-      {/* Pagination */}
-      <Container className="py-[var(--spacing-block)]">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          basePath="/spaces"
-          {...(categoryId !== undefined &&
-          categoryId !== null &&
-          categoryId !== ""
-            ? { preservedQuery: { category: categoryId } }
-            : {})}
-        />
-      </Container>
+          {/* Pagination */}
+          <div className="mt-10 md:mt-14">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              basePath="/spaces"
+              {...(categoryId !== undefined &&
+              categoryId !== null &&
+              categoryId !== ""
+                ? { preservedQuery: { category: categoryId } }
+                : {})}
+            />
+          </div>
+        </Container>
+      </section>
 
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
