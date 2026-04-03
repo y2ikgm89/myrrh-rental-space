@@ -35,7 +35,7 @@ function TypeBadge({ type }: { readonly type: "news" | "post" }): ReactElement {
   const label = type === "news" ? "ニュース" : "コラム";
 
   return (
-    <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+    <span className="inline-flex shrink-0 items-center rounded-full border border-border px-2.5 py-0.5 text-[10px] uppercase tracking-[0.18em]r text-muted-foreground">
       {label}
     </span>
   );
@@ -68,7 +68,7 @@ export function JournalContent({
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => handleTabChange(tab.value)}
-                  className={`px-5 py-3 text-sm tracking-wide transition-colors ${
+                  className={`px-5 py-3 text-sm tracking-[0.18em] transition-colors ${
                     isActive
                       ? "border-b-2 border-accent text-accent"
                       : "text-muted-foreground hover:text-foreground"
@@ -107,7 +107,7 @@ export function JournalContent({
 
                   <Heading
                     level={2}
-                    className="!text-sm font-medium transition-colors group-hover:text-accent md:!text-base"
+                    className="!text-sm font-medium transition-colors group-hover:text-foreground md:!text-base"
                   >
                     {item.title}
                   </Heading>

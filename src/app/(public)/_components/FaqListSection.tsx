@@ -52,7 +52,7 @@ const VARIANT_STYLES = {
   },
   bordered: {
     container: "space-y-3",
-    item: "rounded-lg border border-border bg-card p-4 hover:shadow-md transition-shadow",
+    item: "border border-border bg-card p-4 transition-shadow",
     summary:
       "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,

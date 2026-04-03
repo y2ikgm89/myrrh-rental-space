@@ -17,14 +17,14 @@ export function MaintenancePage({
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 md:px-8">
       <div className="animate-maintenance-in w-full max-w-sm text-center">
         {/* ブランドロゴ */}
-        <p className="font-heading text-xl tracking-[0.15em] text-foreground">
+        <p className="font-heading text-xl tracking-[0.18em] text-foreground">
           {SITE_DEFAULTS.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
         </p>
 
         {/* MAINTENANCE ラベル */}
         <div className="mt-10 flex items-center justify-center gap-3">
           <span className="h-px w-8 bg-accent" aria-hidden="true" />
-          <span className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Maintenance
           </span>
           <span className="h-px w-8 bg-accent" aria-hidden="true" />

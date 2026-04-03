@@ -78,7 +78,7 @@ export default async function ReservationPage(): Promise<ReactElement> {
         <Section
           spacing="default"
           border="top"
-          className="mt-[var(--spacing-section)]"
+          className="mt-[var(--spacing-block)]"
         >
           {trailingSections.map((section) => (
             <SectionRenderer key={section.id} section={section} />

@@ -42,7 +42,7 @@ export function PostGrid({ posts }: PostGridProps): ReactElement {
           <ScrollReveal key={post.id} delay={0.1 * Math.min(index, 5)}>
             <Link
               href={post.url}
-              className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow hover:shadow-lg"
+              className="group block overflow-hidden border border-border bg-card transition-shadow"
             >
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image

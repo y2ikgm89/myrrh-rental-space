@@ -42,7 +42,7 @@ export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
 
       {/* Average rating bar */}
       <div className="mb-8 flex items-center gap-4">
-        <span className="font-heading text-3xl font-bold">
+        <span className="font-heading text-3xl font-light">
           {stats.averageRating.toFixed(1)}
         </span>
         <div>

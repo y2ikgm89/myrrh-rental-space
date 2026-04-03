@@ -26,7 +26,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
       <button
         type="button"
         onClick={copyLink}
-        className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:text-accent"
+        className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:text-foreground"
         aria-label={copied ? "コピーしました" : "リンクをコピー"}
       >
         <IconLink className="h-4 w-4" />
@@ -35,7 +35,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
         href={xShareUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:text-accent"
+        className="rounded-full border border-border p-2 text-muted-foreground transition-colors hover:text-foreground"
         aria-label="X (Twitter) でシェア"
       >
         <IconBrandX className="h-4 w-4" />

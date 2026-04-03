@@ -122,15 +122,15 @@ export function NewsListSection({
               key={item.id}
               href={item.url}
               data-news-item=""
-              className="group rounded-lg border border-border bg-card p-5 transition-shadow duration-300 hover:shadow-lg"
+              className="group border border-border bg-card p-5 transition-shadow duration-300"
             >
               <time
-                className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground"
+                className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
                 style={getTextStyle(design)}
               >
                 {formatDate(item.publishedAt)}
               </time>
-              <h3 className="mt-2 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-accent md:text-lg">
+              <h3 className="mt-2 font-heading text-base font-light tracking-tight transition-colors group-hover:text-foreground md:text-lg">
                 {item.title}
               </h3>
             </Link>
@@ -147,7 +147,7 @@ export function NewsListSection({
               >
                 {formatDate(item.publishedAt)}
               </time>
-              <h3 className="text-sm font-medium transition-colors group-hover:text-accent md:text-base">
+              <h3 className="text-sm font-medium transition-colors group-hover:text-foreground md:text-base">
                 {item.title}
               </h3>
             </Link>

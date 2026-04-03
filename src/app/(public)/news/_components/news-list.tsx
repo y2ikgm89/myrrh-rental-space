@@ -45,7 +45,7 @@ export function NewsList({ items }: NewsListProps): ReactElement {
 
               <Heading
                 level={2}
-                className="!text-sm font-medium transition-colors group-hover:text-accent md:!text-base"
+                className="!text-sm font-medium transition-colors group-hover:text-foreground md:!text-base"
               >
                 {item.title}
               </Heading>

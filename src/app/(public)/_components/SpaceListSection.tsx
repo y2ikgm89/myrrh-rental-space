@@ -123,7 +123,7 @@ export function SpaceListSection({
             key={space.id}
             href={`/spaces/${space.slug}`}
             data-space-list-card=""
-            className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 hover:shadow-lg ${
+            className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 ${
               isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
             } ${isList ? "flex" : ""}`}
           >
@@ -144,7 +144,7 @@ export function SpaceListSection({
               />
             </div>
             <div className={`p-4 md:p-5 ${isList ? "flex-1" : ""}`}>
-              <h3 className="font-heading text-base font-medium tracking-tight md:text-lg">
+              <h3 className="font-heading text-base font-light tracking-tight md:text-lg">
                 {space.name}
               </h3>
               {space.description && (

@@ -119,7 +119,7 @@ export function PostListSection({
             key={post.id}
             href={post.url}
             data-post-card=""
-            className={`group overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg ${
+            className={`group overflow-hidden border border-border bg-card transition-shadow duration-300 ${
               isList ? "flex" : ""
             }`}
           >
@@ -141,11 +141,11 @@ export function PostListSection({
             </div>
             <div className={`p-4 md:p-5 ${isList ? "flex-1" : ""}`}>
               {post.categoryName && (
-                <span className="text-[10px] uppercase tracking-widest text-accent">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-accent">
                   {post.categoryName}
                 </span>
               )}
-              <h3 className="mt-1 font-heading text-base font-medium tracking-tight transition-colors group-hover:text-accent md:text-lg">
+              <h3 className="mt-1 font-heading text-base font-light tracking-tight transition-colors group-hover:text-foreground md:text-lg">
                 {post.title}
               </h3>
               <p
