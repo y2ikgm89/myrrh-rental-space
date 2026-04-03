@@ -1,30 +1,22 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-
-import { Button } from "../design-system/button";
-
-interface ButtonItem {
-  readonly label: string;
-  readonly href: string;
-  readonly variant: "primary" | "secondary" | "ghost";
-}
+import { Container } from "../design-system/container";
+import { Heading } from "../design-system/heading";
+import { Stack } from "../design-system/stack";
+import { SectionLabel } from "../ui/SectionLabel";
 
 interface ImageRef {
   readonly src: string;
   readonly alt: string;
-  readonly width: number;
-  readonly height: number;
 }
-import { Container } from "../design-system/container";
-import { Heading } from "../design-system/heading";
-import { Stack } from "../design-system/stack";
 
-interface PageHeroFullProps {
-  readonly variant: "full";
+interface PageHeroEditorialProps {
+  readonly variant: "editorial";
   readonly title: string;
   readonly subtitle?: string;
+  readonly label?: string;
   readonly image: ImageRef;
-  readonly cta?: ButtonItem;
+  readonly breadcrumb?: ReactNode;
 }
 
 interface PageHeroCompactProps {
@@ -33,55 +25,65 @@ interface PageHeroCompactProps {
   readonly breadcrumb?: ReactNode;
 }
 
-type PageHeroProps = PageHeroFullProps | PageHeroCompactProps;
+interface PageHeroMinimalProps {
+  readonly variant: "minimal";
+  readonly title: string;
+}
+
+type PageHeroProps =
+  | PageHeroEditorialProps
+  | PageHeroCompactProps
+  | PageHeroMinimalProps;
 
 export function PageHero(props: PageHeroProps) {
-  if (props.variant === "full") {
+  if (props.variant === "editorial") {
     return (
-      <section className="relative flex min-h-[80vh] items-center justify-center">
-        <Image
-          src={props.image.src}
-          alt={props.image.alt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-overlay" />
-        <Container className="relative z-10 text-center">
-          <Stack gap="lg" className="items-center">
-            <h1 className="font-heading text-hero text-overlay-foreground">
-              {props.title}
-            </h1>
-            {props.subtitle ? (
-              <p className="max-w-[50ch] text-lg text-overlay-foreground/80">
-                {props.subtitle}
-              </p>
-            ) : null}
-            {props.cta ? (
-              <Button
-                variant={props.cta.variant}
-                size="lg"
-                href={props.cta.href}
-              >
-                {props.cta.label}
-              </Button>
-            ) : null}
+      <section data-hero="" className="relative min-h-[60vh] bg-surface">
+        <div className="grid min-h-[60vh] grid-cols-1 md:grid-cols-[5fr_4fr]">
+          <div className="relative aspect-[4/3] md:aspect-auto">
+            <Image
+              src={props.image.src}
+              alt={props.image.alt}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 55vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="flex flex-col justify-center px-[var(--container-padding)] py-12 md:py-0">
+            <Stack gap="md">
+              {props.breadcrumb}
+              {props.label ? <SectionLabel>{props.label}</SectionLabel> : null}
+              <Heading level={1}>{props.title}</Heading>
+              {props.subtitle ? (
+                <p className="max-w-[40ch] text-lg leading-relaxed text-muted-foreground">
+                  {props.subtitle}
+                </p>
+              ) : null}
+            </Stack>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (props.variant === "compact") {
+    return (
+      <section className="bg-surface py-[var(--spacing-block)]">
+        <Container>
+          <Stack gap="sm">
+            {props.breadcrumb}
+            <Heading level={1}>{props.title}</Heading>
           </Stack>
         </Container>
       </section>
     );
   }
 
-  // Compact variant
+  // minimal
   return (
-    <section className="bg-surface py-[var(--spacing-block)]">
-      <Container>
-        <Stack gap="sm">
-          {props.breadcrumb}
-          <Heading level={1}>{props.title}</Heading>
-        </Stack>
-      </Container>
-    </section>
+    <Container className="py-8 md:py-12">
+      <Heading level={1}>{props.title}</Heading>
+    </Container>
   );
 }
