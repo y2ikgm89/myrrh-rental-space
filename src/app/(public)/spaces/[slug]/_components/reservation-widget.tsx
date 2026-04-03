@@ -15,7 +15,7 @@ export function ReservationWidget({
 }: ReservationWidgetProps) {
   const { formatUnit } = useFormatPrice();
   return (
-    <div className="rounded-lg border border-border bg-card p-6 shadow-card">
+    <div className="border border-border p-6">
       <Stack gap="lg">
         <Heading level={3}>料金</Heading>
 

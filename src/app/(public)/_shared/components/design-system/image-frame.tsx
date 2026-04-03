@@ -34,7 +34,7 @@ export function ImageFrame({
   sizes,
   priority = false,
   className,
-  rounded = true,
+  rounded = false,
 }: ImageFrameProps) {
   return (
     <div

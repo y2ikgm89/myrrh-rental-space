@@ -58,7 +58,7 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
     <form onSubmit={onSubmit} className="max-w-md space-y-6">
       {errorMessage != null && (
         <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
           {errorMessage}
@@ -67,7 +67,7 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
 
       {showSuccess && (
         <div
-          className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
+          className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
           role="status"
         >
           プロフィールを更新しました

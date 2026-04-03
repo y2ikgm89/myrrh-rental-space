@@ -10,15 +10,15 @@ export function CalendarSkeleton() {
       {/* ツールバー */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          <div className="h-9 w-20 rounded-md bg-surface" />
-          <div className="h-9 w-20 rounded-md bg-surface" />
-          <div className="h-9 w-16 rounded-md bg-surface" />
+          <div className="h-9 w-20 bg-surface" />
+          <div className="h-9 w-20 bg-surface" />
+          <div className="h-9 w-16 bg-surface" />
         </div>
-        <div className="h-8 w-48 rounded-md bg-surface" />
+        <div className="h-8 w-48 bg-surface" />
         <div className="flex gap-2">
-          <div className="h-9 w-16 rounded-md bg-surface" />
-          <div className="h-9 w-16 rounded-md bg-surface" />
-          <div className="h-9 w-16 rounded-md bg-surface" />
+          <div className="h-9 w-16 bg-surface" />
+          <div className="h-9 w-16 bg-surface" />
+          <div className="h-9 w-16 bg-surface" />
         </div>
       </div>
 

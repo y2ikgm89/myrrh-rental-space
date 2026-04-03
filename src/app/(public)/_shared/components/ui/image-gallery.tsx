@@ -48,7 +48,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             key={src}
             type="button"
             onClick={() => openLightbox(i)}
-            className={`relative overflow-hidden rounded-lg ${i === 0 ? "aspect-[16/10] md:row-span-2" : "hidden aspect-[4/3] md:block"}`}
+            className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10] md:row-span-2" : "hidden aspect-[4/3] md:block"}`}
           >
             <Image
               src={src}
@@ -152,7 +152,7 @@ function LightboxOverlay({
           alt={alt}
           width={1200}
           height={800}
-          className="max-h-[90vh] w-auto rounded-lg object-contain"
+          className="max-h-[90vh] w-auto object-contain"
         />
       </div>
       <button

@@ -50,7 +50,7 @@ export function ResetPasswordForm({ token }: Props) {
   if (success) {
     return (
       <Stack gap="lg">
-        <div className="rounded-lg border border-border bg-surface p-6 text-center">
+        <div className="border border-border bg-surface p-6 text-center">
           <p className="text-lg font-medium text-foreground">
             パスワードを変更しました
           </p>
@@ -91,7 +91,7 @@ export function ResetPasswordForm({ token }: Props) {
 
         {error ? (
           <div
-            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             role="alert"
           >
             {error}

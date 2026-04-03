@@ -75,7 +75,7 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
             {facilities.map((facility) => (
               <div
                 key={facility}
-                className="rounded-md border border-border px-3 py-2 text-sm"
+                className="border border-border px-3 py-2 text-sm"
               >
                 {facility}
               </div>

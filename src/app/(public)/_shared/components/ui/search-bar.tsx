@@ -36,7 +36,7 @@ export function SearchBar({
         value={params.q}
         onChange={(e) => handleChange(e.target.value)}
         placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-border bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="h-11 w-full border border-border bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label={placeholder}
       />
     </div>
