@@ -58,7 +58,7 @@ export function EmbedSection({
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
               <h2
-                className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+                className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
                 style={getTitleStyle(design)}
               >
                 {config.title}

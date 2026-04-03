@@ -51,7 +51,7 @@ export function SpaceShowcase({
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           ) : null}
           <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
             style={getTitleStyle(design)}
           >
             {config.title}
@@ -66,7 +66,7 @@ export function SpaceShowcase({
           <ScrollReveal key={space.id} delay={i * 0.1}>
             <Link
               href={`/spaces/${space.slug}`}
-              className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+              className="group block overflow-hidden border border-border transition-colors duration-200"
             >
               <div className="aspect-[4/3] overflow-hidden">
                 <Image
@@ -79,7 +79,7 @@ export function SpaceShowcase({
                 />
               </div>
               <div className="p-4 md:p-5">
-                <h3 className="font-heading text-base font-medium tracking-tight md:text-lg">
+                <h3 className="font-heading text-base font-light tracking-tight md:text-lg">
                   {space.name}
                 </h3>
                 {space.tagline && (

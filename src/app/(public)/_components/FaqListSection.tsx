@@ -47,21 +47,21 @@ const VARIANT_STYLES = {
     container: "divide-y divide-border",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   bordered: {
     container: "space-y-3",
-    item: "border border-border bg-card p-4 transition-shadow",
+    item: "border border-border bg-card p-4 transition-colors duration-200",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,
   },
   minimal: {
     container: "divide-y divide-border/50",
     item: "py-4 first:pt-0 last:pb-0",
     summary:
-      "flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-medium md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
+      "flex w-full cursor-pointer items-center justify-between gap-4 text-left text-sm font-light md:text-base [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: false,
   },
 } as const;
@@ -122,7 +122,7 @@ export function FaqListSection({
               )}
             </ScrollReveal>
             <h2
-              className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+              className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
               style={getTitleStyle(design)}
             >
               <SplitText>{config.title}</SplitText>

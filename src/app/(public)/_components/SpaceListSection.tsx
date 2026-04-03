@@ -24,14 +24,10 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import {
-  CARD_STYLE_MAP,
   IMAGE_ASPECT_MAP,
   getCardGridColsClass,
 } from "@/public/lib/section-style-maps";
-import {
-  parseCardStyle,
-  parseSpaceImageAspect,
-} from "@/shared/lib/validations/section-parsers";
+import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
@@ -110,7 +106,7 @@ export function SpaceListSection({
           )}
         </ScrollReveal>
         <h2
-          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -123,7 +119,7 @@ export function SpaceListSection({
             key={space.id}
             href={`/spaces/${space.slug}`}
             data-space-list-card=""
-            className={`group overflow-hidden ${CARD_STYLE_MAP[parseCardStyle(config.cardStyle)]} transition-shadow duration-300 ${
+            className={`group overflow-hidden border border-border bg-card transition-colors duration-200 ${
               isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
             } ${isList ? "flex" : ""}`}
           >

@@ -99,7 +99,7 @@ export function PostListSection({
           )}
         </ScrollReveal>
         <h2
-          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -119,7 +119,7 @@ export function PostListSection({
             key={post.id}
             href={post.url}
             data-post-card=""
-            className={`group overflow-hidden border border-border bg-card transition-shadow duration-300 ${
+            className={`group overflow-hidden border border-border bg-card transition-colors duration-200 ${
               isList ? "flex" : ""
             }`}
           >

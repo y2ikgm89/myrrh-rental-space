@@ -134,7 +134,7 @@ export function GallerySection({
             )}
           </ScrollReveal>
           <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
             style={getTitleStyle(design)}
           >
             <SplitText>{config.title}</SplitText>
@@ -147,7 +147,7 @@ export function GallerySection({
           <div
             key={image.url}
             data-gallery-item=""
-            className={`rounded-lg ${hoverClasses.wrapper} ${
+            className={`${hoverClasses.wrapper} ${
               isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
             } ${isMasonry ? "mb-4 break-inside-avoid" : ""}`}
           >
@@ -198,7 +198,7 @@ export function GallerySection({
               <button
                 type="button"
                 onClick={closeLightbox}
-                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface/80 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+                className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
                 aria-label="閉じる"
               >
                 <IconX className="h-5 w-5" strokeWidth={1.5} />
@@ -208,7 +208,7 @@ export function GallerySection({
                 <button
                   type="button"
                   onClick={() => navigateLightbox(-1)}
-                  className="absolute -left-14 flex h-10 w-10 items-center justify-center rounded-full bg-surface/80 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+                  className="absolute -left-14 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
                   aria-label="前の画像"
                 >
                   <IconChevronLeft className="h-5 w-5" strokeWidth={1.5} />
@@ -219,13 +219,13 @@ export function GallerySection({
                   alt={lightboxImage.alt ?? ""}
                   width={1200}
                   height={800}
-                  className="max-h-[80vh] w-auto rounded-lg object-contain"
+                  className="max-h-[80vh] w-auto object-contain"
                 />
 
                 <button
                   type="button"
                   onClick={() => navigateLightbox(1)}
-                  className="absolute -right-14 flex h-10 w-10 items-center justify-center rounded-full bg-surface/80 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+                  className="absolute -right-14 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface/80 text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
                   aria-label="次の画像"
                 >
                   <IconChevronRight className="h-5 w-5" strokeWidth={1.5} />

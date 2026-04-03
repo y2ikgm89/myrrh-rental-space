@@ -116,7 +116,7 @@ export function TestimonialSection({
           )}
         </ScrollReveal>
         <h2
-          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -135,7 +135,7 @@ export function TestimonialSection({
             const cardClasses = isFeatured
               ? "py-10 md:py-14"
               : variant === "card"
-                ? "bg-card p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 transition-shadow"
+                ? "bg-card p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 transition-colors duration-200"
                 : variant === "minimal"
                   ? "py-6"
                   : "py-8";

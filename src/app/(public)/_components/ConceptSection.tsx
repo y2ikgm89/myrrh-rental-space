@@ -87,7 +87,7 @@ export function ConceptSection({
                 <ParallaxImage
                   src={imageUrl}
                   alt={config.heading ?? "コンセプト"}
-                  className="relative rounded-lg"
+                  className="relative"
                 />
               </ScrollReveal>
             </div>

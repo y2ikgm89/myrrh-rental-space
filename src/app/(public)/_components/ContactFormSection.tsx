@@ -27,7 +27,7 @@ interface ContactFormSectionProps {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
+  "w-full border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
 
 function ContactForm({
   config,
@@ -135,7 +135,7 @@ export function ContactFormSection({
                 )}
               </ScrollReveal>
               <h2
-                className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+                className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
                 style={getTitleStyle(design)}
               >
                 <SplitText>{config.title}</SplitText>
@@ -174,7 +174,7 @@ export function ContactFormSection({
             )}
           </ScrollReveal>
           <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
             style={getTitleStyle(design)}
           >
             <SplitText>{config.title}</SplitText>

@@ -101,7 +101,7 @@ export function NewsListSection({
           )}
         </ScrollReveal>
         <h2
-          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -122,7 +122,7 @@ export function NewsListSection({
               key={item.id}
               href={item.url}
               data-news-item=""
-              className="group border border-border bg-card p-5 transition-shadow duration-300"
+              className="group border border-border p-5 transition-colors duration-200"
             >
               <time
                 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
@@ -142,12 +142,12 @@ export function NewsListSection({
               className="group flex items-baseline gap-4 py-4 transition-colors first:pt-0 last:pb-0"
             >
               <time
-                className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.1em] text-muted-foreground"
+                className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.18em] text-muted-foreground"
                 style={getTextStyle(design)}
               >
                 {formatDate(item.publishedAt)}
               </time>
-              <h3 className="text-sm font-medium transition-colors group-hover:text-foreground md:text-base">
+              <h3 className="text-sm transition-colors duration-200 group-hover:text-foreground md:text-base">
                 {item.title}
               </h3>
             </Link>

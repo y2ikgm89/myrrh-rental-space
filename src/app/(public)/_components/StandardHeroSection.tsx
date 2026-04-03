@@ -166,7 +166,7 @@ export function StandardHeroSection({
         <div className="relative mx-auto w-full max-w-6xl px-5 md:px-8">
           {config.title && (
             <h1
-              className={`font-heading ${getTitleClasses(design)} font-bold uppercase tracking-tight`}
+              className={`font-heading ${getTitleClasses(design)} font-light uppercase tracking-tight`}
               style={getTitleStyle(design)}
             >
               <SplitText trigger={false} delay={0.3}>
@@ -215,7 +215,7 @@ export function StandardHeroSection({
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {config.title && (
               <h1
-                className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
+                className={`font-heading ${getTitleClasses(design)} font-light leading-tight tracking-tight`}
                 style={getTitleStyle(design)}
               >
                 <SplitText trigger={false} delay={0.3}>
@@ -245,7 +245,7 @@ export function StandardHeroSection({
           </div>
           {config.backgroundImageUrl && (
             <div className="relative flex-1">
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-lg">
+              <div className="relative aspect-[4/5] w-full overflow-hidden">
                 <Image
                   src={config.backgroundImageUrl}
                   alt=""
@@ -312,7 +312,7 @@ export function StandardHeroSection({
       <div ref={contentRef} className="relative z-10 px-5 text-center md:px-8">
         {config.title && (
           <h1
-            className={`font-heading ${getTitleClasses(design)} font-bold leading-tight tracking-tight`}
+            className={`font-heading ${getTitleClasses(design)} font-light leading-tight tracking-tight`}
             style={getTitleStyle(design)}
           >
             <SplitText trigger={false} delay={0.3}>

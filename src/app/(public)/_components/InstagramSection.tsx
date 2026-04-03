@@ -76,7 +76,7 @@ export function InstagramSection({
           )}
         </ScrollReveal>
         <h2
-          className={`mt-4 font-heading ${getTitleClasses(design)} font-bold tracking-tight`}
+          className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
           style={getTitleStyle(design)}
         >
           <SplitText>{config.title}</SplitText>
@@ -91,7 +91,7 @@ export function InstagramSection({
           <div
             key={i}
             data-ig-placeholder=""
-            className="flex aspect-square items-center justify-center rounded-lg bg-muted"
+            className="flex aspect-square items-center justify-center bg-muted"
           >
             <svg
               className="h-8 w-8 text-muted-foreground/40"
