@@ -6,10 +6,24 @@
  */
 
 import type { ReactElement } from "react";
-import { IconExternalLink, IconWifi, IconCar, IconAccessible, IconArrowUp, IconSmoking, IconToolsKitchen2, IconAperture, IconMusic, IconMapPin, IconPhone, IconMail, IconClock, IconCalendarOff } from "@tabler/icons-react";
+import {
+  IconExternalLink,
+  IconWifi,
+  IconCar,
+  IconAccessible,
+  IconArrowUp,
+  IconSmoking,
+  IconToolsKitchen2,
+  IconAperture,
+  IconMusic,
+  IconMapPin,
+  IconPhone,
+  IconMail,
+  IconClock,
+  IconCalendarOff,
+} from "@tabler/icons-react";
 import { getBusinessInfo } from "@/public/data/business";
 import { DAY_LABELS, ATTR_LABELS } from "@/public/lib/seo/json-ld-config";
-import { Heading } from "@/public/components/design-system/heading";
 import { isRecord } from "@/shared/lib/serialize";
 
 // =============================================================================
@@ -146,7 +160,7 @@ function InfoSection({
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <dt className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <dt className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </dt>
         <dd className="mt-1 text-sm text-foreground">{children}</dd>
@@ -165,13 +179,13 @@ export async function BusinessInfo(): Promise<ReactElement> {
 
   return (
     <div
-      className="rounded-lg border border-border bg-surface p-6"
+      className="border border-border p-6"
       itemScope
       itemType="https://schema.org/LocalBusiness"
     >
-      <Heading level={3} className="!text-base">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
         アクセス・営業情報
-      </Heading>
+      </p>
       <meta itemProp="name" content={info.name} />
 
       <dl className="mt-5 space-y-4">
@@ -204,7 +218,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
             <a
               itemProp="telephone"
               href={`tel:${info.phone}`}
-              className="transition-colors hover:text-accent"
+              className="transition-colors hover:text-foreground"
             >
               {info.phone}
             </a>
@@ -216,7 +230,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
             <a
               itemProp="email"
               href={`mailto:${info.email}`}
-              className="break-all transition-colors hover:text-accent"
+              className="break-all transition-colors hover:text-foreground"
             >
               {info.email}
             </a>
@@ -254,7 +268,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
       {info.businessAttributes &&
         Object.values(info.businessAttributes).some(Boolean) && (
           <div className="mt-5 border-t border-border pt-5">
-            <p className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               設備・サービス
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -266,7 +280,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
                   return (
                     <span
                       key={key}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground"
+                      className="inline-flex items-center gap-1.5 border border-border px-2.5 py-0.5 text-xs tracking-[0.18em] text-muted-foreground"
                     >
                       {Icon && <Icon className="h-3 w-3" />}
                       {label}
@@ -285,7 +299,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               href={info.googleMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
+              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-foreground"
             >
               Google Maps で見る
               <IconExternalLink className="h-3.5 w-3.5" />
@@ -296,7 +310,7 @@ export async function BusinessInfo(): Promise<ReactElement> {
               href={info.googleReviewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-accent"
+              className="inline-flex items-center gap-1.5 text-foreground transition-colors hover:text-foreground"
             >
               Google で口コミを書く
               <IconExternalLink className="h-3.5 w-3.5" />
