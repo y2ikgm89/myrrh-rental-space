@@ -111,8 +111,12 @@ paths:
 
 ## Page-First Architecture（公開ページ）
 
+- **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **`@layer compat` と旧カラートークンは削除済み** — `--color-primary` / `--color-brand-primary` 等の旧トークンは存在しない。全コンポーネントが `@theme` のセマンティックトークン（`accent`/`foreground`/`surface` 等）を直接使用
+- **公開ページの `hover:text-accent` は原則禁止** — `hover:text-foreground` に統一（Editorial Magazine トーン）。accent はラベル・価格・CTA テキストの静的表示のみに使用
+- **`tracking` は `tracking-[0.18em]` を標準値とする** — SectionLabel, ナビリンク, MagneticButton, ScrollIndicator 等で統一。`tracking-[0.2em]` / `tracking-[0.3em]` は旧値
+- **Button primary の bronze shimmer アニメーション廃止** — `hover:bg-accent/90 hover:shadow-md` のシンプルな遷移に変更。`hover:animate-[bronze-shimmer]` / `hover:bg-[image:linear-gradient(...)]` は使用しない
 - **`/news` `/posts` 一覧ページは `/journal` に統合済み** — 詳細ページ（`/news/[slug]`、`/posts/[...segments]`）は維持。パンくずリンクは `/journal?tab=news` / `/journal?tab=posts`
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。`getPageContent()` / `simplePageContentSchema` / `defaultXxxContent` は全て削除済み。公開ページは `getPageSectionsWithFallback(slug)` + `SectionRenderer` を使用
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`。`"hero-parallax"` 等。`SectionType` Prisma enum は廃止済み（`section.ts` の `as const` オブジェクトとして再定義）
@@ -241,3 +245,10 @@ paths:
 - **`proxy.ts` のヘッダー名は `x-pathname`** — `x-next-pathname` ではない。`headers().get()` で参照する側が不一致だと常に `""` が返りリダイレクトロジックが壊れる
 - **`next.config.ts` に seed/開発専用ドメインを残さない** — `placehold.co` 等の開発用 `remotePatterns` / CSP `img-src` は本番で不要。`dangerouslyAllowSVG` も seed 画像のためだけに有効化しない
 - **監査ログの provider 判定は全 OAuth プロバイダーを列挙** — `ctx.path.includes("social")` だけでは LINE が "google" として記録される。`/line` → `"line"`、`/google` → `"google"` と個別判定する
+
+## Puck Editor
+
+- **puck-config は `.tsx` 必須** — Puck の `render:` 関数内でコンポーネントを `Component({props})` と関数呼び出しするとフック境界違反。必ず `<Component {...props} />` の JSX 構文を使用するため `.tsx` ファイルにする
+- **Puck エディタは `"use client"` 必須** — `<Puck>` / `<Render>` はクライアントコンポーネント。公開ページでは `<Render>` を使わず、puckData JSON を Server Component で読み取って手動レンダリングする（SSR/SEO 優先）
+- **SpacesSection の Puck プレビューは空配列** — spaces データは DB から取得するため Puck エディタ内では `spaces: []` でプレビュー。公開ページでは `getShowcaseSpaces()` で実データを注入
+- **`Page.puckData` は Json? カラム** — Puck JSON を Page レコードに保存。既存の Section テーブルとは分離（Section は `[...segments]` カスタムページ用）

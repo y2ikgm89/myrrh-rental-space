@@ -22,9 +22,10 @@ paths:
 | **Layout**     | 等幅 3 カラム `grid-cols-3` 全カード同高さ | 非対称グリッド（テキスト + ParallaxImage）、カード grid は `gap-6 md:gap-8` で呼吸                         |
 | **Typography** | Sans 単一フォント、16/20/24px 均等ステップ | Serif heading (`font-heading`) + Sans body、4x+ スケール差（→ `project-design-config.md` §タイポグラフィ） |
 | **Color**      | 3 色均等配分、全面グラデーション           | Dominant/Support/Accent 比率を遵守（→ `project-design-config.md` §カラーパレット）。Accent は限定箇所のみ  |
+| **Hover**      | `hover:text-accent` 全要素                 | `hover:text-foreground`（控えめ遷移）。accent は CTA ラベル・価格の静的表示のみ                            |
 | **Motion**     | 全要素 `fade-in-up`、同一 duration/easing  | 主役/脇役/背景の役割分担（→ `project-design-config.md` §モーション設計）。`animations.ts` 定数使用         |
-| **Corners**    | 全要素 `rounded-lg` 統一                   | コンテナ/画像: `rounded-lg`。CTA: `rounded-full`。セクション境界: sharp                                    |
-| **Buttons**    | 全ボタン pill gradient、同一スタイル       | CTA/Secondary/Form の3段階ヒエラルキー（→ `project-design-config.md` §コンポーネント規約）                 |
+| **Corners**    | 全要素 `rounded-lg` 統一                   | CTA: `rounded-full`。カタログカード: sharp（角丸なし）。セクション境界: sharp                              |
+| **Buttons**    | 全ボタン pill gradient、shimmer アニメ     | CTA: ボーダー反転。Primary: `hover:bg-accent/90`（shimmer 廃止）。Secondary: テキスト+下線                 |
 
 ---
 
@@ -38,10 +39,10 @@ paths:
 
 ## コンポーネント禁止パターン
 
-- **均一シャドウカード** — `shadow-md` 統一禁止。`border border-border bg-card` + `hover:shadow-lg` 遷移
+- **均一シャドウカード** — `shadow-md`/`hover:shadow-lg` 禁止。カタログカードは `border border-border` + `hover:opacity-85`（画像のみ）
 - **絵文字装飾** — Tabler Icons React SVG を使用（`ui-ux-patterns.md` と同一）
 - **ストックフォト等間隔グリッド** — 画像アスペクト比に変化をつける。hover で `scale-105`
-- **汎用 hero: 中央タイトル + 2 ボタン** — パララックス背景 + gradient overlay + SplitText + 単一 CTA + ScrollIndicator
+- **汎用 hero: 中央タイトル + 2 ボタン** — 雑誌カバー風スプリット（左画像 + 右セリフイタリックテキスト）+ 単一 explore リンク
 
 ---
 
