@@ -89,7 +89,7 @@ export function CustomerStep({
         />
       </div>
 
-      <Heading level={2} className="mb-6">
+      <Heading level={2} className="mb-8">
         お客様情報
       </Heading>
 
@@ -198,7 +198,7 @@ export function CustomerStep({
               href="/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent underline"
+              className="text-accent underline transition-colors hover:text-foreground"
             >
               利用規約
             </a>

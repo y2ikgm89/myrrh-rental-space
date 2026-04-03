@@ -18,9 +18,12 @@ export function TimeSlotGrid({
 }: TimeSlotGridProps): ReactElement {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-busy="true">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="min-h-11 animate-pulse bg-surface" />
+      <div
+        className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6"
+        aria-busy="true"
+      >
+        {Array.from({ length: 12 }, (_, i) => (
+          <div key={i} className="min-h-10 animate-pulse bg-border/30" />
         ))}
       </div>
     );
@@ -38,7 +41,7 @@ export function TimeSlotGrid({
     <div
       role="listbox"
       aria-label="開始時間を選択"
-      className="grid grid-cols-3 gap-2 md:grid-cols-4"
+      className="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6"
     >
       {slots.map((slot) => {
         const isSelected = slot.time === selectedTime;
@@ -53,13 +56,13 @@ export function TimeSlotGrid({
             aria-disabled={isUnavailable}
             disabled={isUnavailable}
             onClick={() => onSelect(slot.time)}
-            className={`min-h-11 border text-sm font-medium transition-all
+            className={`min-h-10 border text-sm transition-colors duration-200
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
               ${
                 isSelected
                   ? "border-accent bg-accent/5 text-accent"
                   : isUnavailable
-                    ? "border-border/50 bg-transparent text-muted-foreground/40 line-through cursor-not-allowed"
+                    ? "border-border/40 text-muted-foreground/30 line-through cursor-not-allowed"
                     : "border-border text-foreground hover:border-foreground/30 cursor-pointer"
               }`}
           >

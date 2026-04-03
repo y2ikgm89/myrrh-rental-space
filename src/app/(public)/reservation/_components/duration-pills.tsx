@@ -48,7 +48,7 @@ export function DurationPills({
             role="option"
             aria-selected={isSelected}
             onClick={() => onSelect(minutes)}
-            className={`flex-shrink-0 border px-4 py-2 text-sm font-medium transition-colors
+            className={`flex-shrink-0 border px-5 py-2 text-sm transition-colors duration-200
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
               ${
                 isSelected

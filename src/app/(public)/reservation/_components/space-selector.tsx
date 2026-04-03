@@ -28,8 +28,8 @@ export function SpaceSelector({
         aria-label="スペースを選択"
         className={
           spaces.length <= 3
-            ? "grid gap-4 md:grid-cols-3"
-            : "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 md:grid md:grid-cols-3 md:overflow-visible md:snap-none md:pb-0"
+            ? "grid gap-6 md:grid-cols-3"
+            : "flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2 md:grid md:grid-cols-3 md:overflow-visible md:snap-none md:pb-0"
         }
       >
         {spaces.map((space) => {
@@ -80,7 +80,7 @@ export function SpaceSelector({
                   <button
                     type="button"
                     aria-label={`${space.name}の詳細を見る`}
-                    className="inline-flex items-center gap-1 border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                    className="inline-flex items-center gap-1 border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground hover:border-foreground/30"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDetailSpace(space);

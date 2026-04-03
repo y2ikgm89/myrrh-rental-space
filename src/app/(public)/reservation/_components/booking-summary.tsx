@@ -58,7 +58,7 @@ function SummaryRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/5 text-accent">
         {icon}
       </span>
       <div className="min-w-0">
@@ -134,7 +134,7 @@ export function BookingSummary({
           <button
             type="button"
             onClick={onEdit}
-            className="flex w-full items-center justify-center gap-2 border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-foreground/30"
+            className="flex w-full items-center justify-center gap-2 border border-border py-2.5 text-sm text-foreground transition-colors duration-200 hover:border-foreground/30"
           >
             <IconPencil size={14} />
             予約内容を変更する

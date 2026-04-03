@@ -49,7 +49,7 @@ export function SpaceDetailDialog({
 
             {/* Image Gallery */}
             {allImages.length === 1 ? (
-              <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+              <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={allImages[0] ?? ""}
                   alt={space.name}
@@ -66,7 +66,7 @@ export function SpaceDetailDialog({
                 {allImages.map((url, i) => (
                   <div
                     key={url}
-                    className="relative aspect-[4/3] w-[80%] shrink-0 snap-start overflow-hidden rounded-lg sm:w-[60%]"
+                    className="relative aspect-[4/3] w-[80%] shrink-0 snap-start overflow-hidden sm:w-[60%]"
                   >
                     <Image
                       src={url}
@@ -105,14 +105,14 @@ export function SpaceDetailDialog({
             {/* Facilities */}
             {space.facilities.length > 0 ? (
               <div className="space-y-2 border-t border-border pt-4">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   設備
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {space.facilities.map((f) => (
                     <span
                       key={f}
-                      className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-muted-foreground"
+                      className="border border-border px-2 py-1 text-xs text-muted-foreground"
                     >
                       {f}
                     </span>

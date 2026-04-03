@@ -414,14 +414,14 @@ export function ReservationForm({
 
   // --- Step 1: Location + Space ---
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {renderStepIndicator()}
 
       {/* Location section */}
       <section>
-        <Heading level={3} className="mb-1 !text-base">
+        <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           場所を選択
-        </Heading>
+        </p>
         <p className="mb-4 text-sm text-muted-foreground">
           ご利用になる場所をお選びください
         </p>
@@ -432,7 +432,7 @@ export function ReservationForm({
             onSelect={handleLocationSelect}
           />
         ) : currentLocation ? (
-          <div className="flex items-center gap-4 border border-accent bg-accent/5 p-3">
+          <div className="flex items-center gap-4 border border-accent bg-accent/5 p-4">
             <ImageFrame
               src={currentLocation.imageUrl}
               alt={currentLocation.name}
@@ -458,9 +458,9 @@ export function ReservationForm({
       {/* Space section */}
       {state.locationId != null && currentSpaces.length > 1 ? (
         <section ref={spaceSectionRef} className="animate-section-enter">
-          <Heading level={3} className="mb-1 !text-base">
+          <p className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             スペースを選択
-          </Heading>
+          </p>
           <p className="mb-4 text-sm text-muted-foreground">
             ご利用になるスペースをお選びください
           </p>
