@@ -12,6 +12,7 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { ParallaxImage } from "@/public/components/animations/parallax-image";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -53,12 +54,14 @@ export function ConceptSection({
         )}
       </ScrollReveal>
 
-      <h2
-        className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.1] tracking-tight`}
-        style={getTitleStyle(design)}
-      >
-        <SplitText>{heading}</SplitText>
-      </h2>
+      <div className="mt-6" style={getTitleStyle(design)}>
+        <Heading
+          level={2}
+          className={`${getTitleClasses(design)} leading-[1.1] tracking-tight`}
+        >
+          <SplitText>{heading}</SplitText>
+        </Heading>
+      </div>
 
       <ScrollReveal delay={0.2}>
         <p

@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -50,12 +51,14 @@ export function SpaceShowcase({
           {config.sectionLabel ? (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           ) : null}
-          <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-            style={getTitleStyle(design)}
-          >
-            {config.title}
-          </h2>
+          <div className="mt-4" style={getTitleStyle(design)}>
+            <Heading
+              level={2}
+              className={`${getTitleClasses(design)} tracking-tight`}
+            >
+              {config.title}
+            </Heading>
+          </div>
         </ScrollReveal>
       </div>
 

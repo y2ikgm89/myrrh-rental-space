@@ -21,6 +21,8 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { Container } from "@/public/components/design-system/container";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   DURATION,
   EASE,
@@ -163,16 +165,18 @@ export function StandardHeroSection({
           aria-hidden="true"
         />
 
-        <div className="relative mx-auto w-full max-w-6xl px-5 md:px-8">
+        <Container className="relative w-full !max-w-6xl">
           {config.title && (
-            <h1
-              className={`font-heading ${getTitleClasses(design)} font-light uppercase tracking-tight`}
-              style={getTitleStyle(design)}
-            >
-              <SplitText trigger={false} delay={0.3}>
-                {config.title}
-              </SplitText>
-            </h1>
+            <div style={getTitleStyle(design)}>
+              <Heading
+                level={1}
+                className={`${getTitleClasses(design)} uppercase tracking-tight`}
+              >
+                <SplitText trigger={false} delay={0.3}>
+                  {config.title}
+                </SplitText>
+              </Heading>
+            </div>
           )}
           {config.subtitle && (
             <ScrollReveal delay={0.5}>
@@ -193,7 +197,7 @@ export function StandardHeroSection({
               />
             </ScrollReveal>
           )}
-        </div>
+        </Container>
       </section>
     );
   }
@@ -210,18 +214,20 @@ export function StandardHeroSection({
       >
         <div
           ref={contentRef}
-          className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center px-5 md:flex-row md:px-8"
+          className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center px-[var(--container-padding)] md:flex-row"
         >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {config.title && (
-              <h1
-                className={`font-heading ${getTitleClasses(design)} font-light leading-tight tracking-tight`}
-                style={getTitleStyle(design)}
-              >
-                <SplitText trigger={false} delay={0.3}>
-                  {config.title}
-                </SplitText>
-              </h1>
+              <div style={getTitleStyle(design)}>
+                <Heading
+                  level={1}
+                  className={`${getTitleClasses(design)} leading-tight tracking-tight`}
+                >
+                  <SplitText trigger={false} delay={0.3}>
+                    {config.title}
+                  </SplitText>
+                </Heading>
+              </div>
             )}
             {config.subtitle && (
               <ScrollReveal delay={0.2}>
@@ -309,16 +315,21 @@ export function StandardHeroSection({
       )}
 
       {/* Content */}
-      <div ref={contentRef} className="relative z-10 px-5 text-center md:px-8">
+      <div
+        ref={contentRef}
+        className="relative z-10 px-[var(--container-padding)] text-center"
+      >
         {config.title && (
-          <h1
-            className={`font-heading ${getTitleClasses(design)} font-light leading-tight tracking-tight`}
-            style={getTitleStyle(design)}
-          >
-            <SplitText trigger={false} delay={0.3}>
-              {config.title}
-            </SplitText>
-          </h1>
+          <div style={getTitleStyle(design)}>
+            <Heading
+              level={1}
+              className={`${getTitleClasses(design)} leading-tight tracking-tight`}
+            >
+              <SplitText trigger={false} delay={0.3}>
+                {config.title}
+              </SplitText>
+            </Heading>
+          </div>
         )}
 
         {config.subtitle && (
