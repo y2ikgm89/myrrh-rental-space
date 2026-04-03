@@ -1,7 +1,6 @@
 /**
- * /reservation — ご予約ページ（セクションベース）
+ * /reservation — ご予約ページ（Editorial Magazine）
  *
- * SEO: generatePageMetadata
  * Hero はセクションシステムから描画、3ステップ予約フォームは中間に配置
  */
 
@@ -12,6 +11,8 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { Container } from "@/public/components/design-system/container";
+import { Section } from "@/public/components/design-system/section";
+import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
 import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
@@ -21,7 +22,6 @@ import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
-
   return generatePageMetadata("reservation");
 }
 
@@ -57,26 +57,31 @@ export default async function ReservationPage(): Promise<ReactElement> {
   );
 
   return (
-    <>
-      {heroSection ? <SectionRenderer section={heroSection} /> : null}
+    <PageLayout
+      variant="form"
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+    >
+      <div className="mx-auto max-w-4xl">
+        <ReservationForm
+          locations={locations}
+          businessHours={businessHours}
+          turnstileSiteKey={turnstileSiteKey}
+          prefillData={prefillData}
+          isLoggedIn={user != null}
+        />
+      </div>
 
-      <section className="py-[var(--spacing-section)]">
-        <Container>
-          <div className="mx-auto max-w-4xl">
-            <ReservationForm
-              locations={locations}
-              businessHours={businessHours}
-              turnstileSiteKey={turnstileSiteKey}
-              prefillData={prefillData}
-              isLoggedIn={user != null}
-            />
-          </div>
-        </Container>
-      </section>
-
-      {trailingSections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
-    </>
+      {trailingSections.length > 0 ? (
+        <Section
+          spacing="default"
+          border="top"
+          className="mt-[var(--spacing-section)]"
+        >
+          {trailingSections.map((section) => (
+            <SectionRenderer key={section.id} section={section} />
+          ))}
+        </Section>
+      ) : null}
+    </PageLayout>
   );
 }
