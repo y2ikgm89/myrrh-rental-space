@@ -6,7 +6,6 @@ import type { TimeSlot } from "@/shared/lib/reservation/types";
 import { CalendarPicker } from "./calendar-picker";
 import { TimeSlotGrid } from "./time-slot-grid";
 import { DurationPills } from "./duration-pills";
-import { Heading } from "@/public/components/design-system/heading";
 import { GuestStepper } from "./guest-stepper";
 
 function calcMaxDuration(
@@ -60,9 +59,9 @@ export function DateTimeSection({
     <div role="group" aria-label="日時選択" className="space-y-8">
       {/* Calendar */}
       <section id="reservation-calendar">
-        <Heading level={3} className="mb-3 !text-base">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
           日付を選択
-        </Heading>
+        </p>
         <CalendarPicker
           selectedDate={selectedDate}
           onSelect={onDateChange}
@@ -73,9 +72,9 @@ export function DateTimeSection({
       {/* Time slots */}
       {selectedDate ? (
         <section id="reservation-time-slots">
-          <Heading level={3} className="mb-3 !text-base">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             時間帯を選択
-          </Heading>
+          </p>
           <TimeSlotGrid
             slots={slots}
             selectedTime={selectedStartTime}
@@ -88,9 +87,9 @@ export function DateTimeSection({
       {/* Row 2: Duration pills */}
       {selectedStartTime ? (
         <section id="reservation-duration">
-          <Heading level={3} className="mb-3 !text-base">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             利用時間
-          </Heading>
+          </p>
           <DurationPills
             selectedMinutes={selectedDuration}
             maxMinutes={maxDuration}
@@ -102,9 +101,9 @@ export function DateTimeSection({
       {/* Row 3: Guest count */}
       {selectedDuration ? (
         <section id="reservation-guests">
-          <Heading level={3} className="mb-3 !text-base">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             利用人数
-          </Heading>
+          </p>
           <GuestStepper
             value={numberOfGuests}
             max={spaceCapacity}

@@ -55,8 +55,8 @@ export function GuestStepper({
         aria-label="利用人数を減らす"
         disabled={value <= min}
         onClick={() => handleStep(value - 1)}
-        className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border bg-background
-          text-lg font-medium transition-colors hover:bg-surface
+        className="flex min-h-11 min-w-11 items-center justify-center border border-border
+          text-lg font-medium transition-colors hover:border-foreground/30
           disabled:opacity-40 disabled:pointer-events-none"
       >
         −
@@ -75,16 +75,16 @@ export function GuestStepper({
             commitInput();
           }
         }}
-        className="min-h-11 w-14 rounded-lg border border-border bg-background text-center font-heading text-lg
-          focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+        className="min-h-11 w-14 border border-border bg-transparent text-center font-heading text-lg
+          focus:border-accent focus:outline-none"
       />
       <button
         type="button"
         aria-label="利用人数を増やす"
         disabled={value >= max}
         onClick={() => handleStep(value + 1)}
-        className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border bg-background
-          text-lg font-medium transition-colors hover:bg-surface
+        className="flex min-h-11 min-w-11 items-center justify-center border border-border
+          text-lg font-medium transition-colors hover:border-foreground/30
           disabled:opacity-40 disabled:pointer-events-none"
       >
         +

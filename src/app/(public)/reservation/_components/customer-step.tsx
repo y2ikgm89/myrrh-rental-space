@@ -89,7 +89,7 @@ export function CustomerStep({
         />
       </div>
 
-      <Heading level={2} className="mb-6 text-xl md:text-2xl">
+      <Heading level={2} className="mb-6">
         お客様情報
       </Heading>
 
@@ -190,7 +190,7 @@ export function CustomerStep({
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
-            className="mt-1 h-4 w-4 rounded border-border accent-primary"
+            className="mt-1 h-4 w-4 border-border accent-primary"
             {...form.register("agreeToTerms")}
           />
           <span className="text-sm text-muted-foreground">
@@ -223,7 +223,12 @@ export function CustomerStep({
 
       {/* Error message */}
       {errorMessage ? (
-        <p className="mt-4 text-sm text-destructive">{errorMessage}</p>
+        <div
+          role="alert"
+          className="mt-4 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+        >
+          {errorMessage}
+        </div>
       ) : null}
 
       {/* Desktop: buttons matching step 2 layout (back=left, submit=right) */}

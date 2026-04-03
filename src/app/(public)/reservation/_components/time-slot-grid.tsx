@@ -20,10 +20,7 @@ export function TimeSlotGrid({
     return (
       <div className="grid grid-cols-3 gap-2 md:grid-cols-4" aria-busy="true">
         {Array.from({ length: 8 }, (_, i) => (
-          <div
-            key={i}
-            className="min-h-11 animate-pulse rounded-lg bg-surface"
-          />
+          <div key={i} className="min-h-11 animate-pulse bg-surface" />
         ))}
       </div>
     );
@@ -56,14 +53,14 @@ export function TimeSlotGrid({
             aria-disabled={isUnavailable}
             disabled={isUnavailable}
             onClick={() => onSelect(slot.time)}
-            className={`min-h-11 rounded-lg border text-sm font-medium transition-all
+            className={`min-h-11 border text-sm font-medium transition-all
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
               ${
                 isSelected
-                  ? "border-accent bg-accent/10 text-accent ring-1 ring-accent/30"
+                  ? "border-accent bg-accent/5 text-accent"
                   : isUnavailable
-                    ? "border-border/50 bg-surface/50 text-muted-foreground/40 line-through cursor-not-allowed"
-                    : "border-border bg-card text-foreground hover:border-accent/40 hover:bg-surface cursor-pointer"
+                    ? "border-border/50 bg-transparent text-muted-foreground/40 line-through cursor-not-allowed"
+                    : "border-border text-foreground hover:border-foreground/30 cursor-pointer"
               }`}
           >
             {slot.time}

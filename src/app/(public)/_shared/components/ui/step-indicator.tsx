@@ -37,8 +37,8 @@ export function StepIndicator({
                   isActive
                     ? "border-accent bg-accent text-accent-foreground"
                     : isCompleted
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-border bg-surface text-muted-foreground"
+                      ? "border-accent bg-accent/5 text-accent"
+                      : "border-border text-muted-foreground"
                 }`}
               >
                 {isCompleted ? (
@@ -48,7 +48,7 @@ export function StepIndicator({
                 )}
               </div>
               <span
-                className={`text-[11px] tracking-wide transition-colors duration-300 ${
+                className={`text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ${
                   isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
               >

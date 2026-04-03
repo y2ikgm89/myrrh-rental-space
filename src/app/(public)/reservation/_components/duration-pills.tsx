@@ -53,7 +53,7 @@ export function DurationPills({
               ${
                 isSelected
                   ? "border-accent bg-accent text-accent-foreground"
-                  : "border-border bg-card text-foreground hover:border-accent/40"
+                  : "border-border text-foreground hover:border-foreground/30"
               }`}
           >
             {formatDuration(minutes)}
