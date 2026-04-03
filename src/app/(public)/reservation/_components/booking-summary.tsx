@@ -65,9 +65,7 @@ function SummaryRow({
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </p>
-        <p className="font-heading text-sm font-light tracking-tight">
-          {value}
-        </p>
+        <p className="text-sm text-foreground">{value}</p>
       </div>
     </div>
   );
