@@ -71,7 +71,7 @@ export function SpaceCard({
   return (
     <Link
       href={`/spaces/${slug}`}
-      className="group block"
+      className="group block overflow-hidden border border-border"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={() => {
@@ -134,8 +134,8 @@ export function SpaceCard({
         ) : null}
       </div>
 
-      {/* Content — separated by thin top border, no padding box */}
-      <div className="mt-3 border-t border-border pt-3">
+      {/* Content */}
+      <div className="p-4 sm:p-5">
         {categoryName ? (
           <p className="text-[0.55rem] uppercase tracking-[0.18em] text-accent">
             {categoryName}
