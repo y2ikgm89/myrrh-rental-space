@@ -74,7 +74,7 @@ export function SpaceSelector({
                   {space.area != null ? ` / ${String(space.area)}㎡` : ""}
                 </span>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="font-heading text-sm text-accent">
+                  <span className="text-sm font-light text-accent">
                     {formatUnit(space.hourlyPrice, "/h")}
                   </span>
                   <button

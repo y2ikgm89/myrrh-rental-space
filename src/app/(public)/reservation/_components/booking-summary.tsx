@@ -92,9 +92,7 @@ export function BookingSummary({
           予約内容
         </Heading>
         {price !== null ? (
-          <p className="text-xl font-medium text-accent">
-            {formatTotal(price)}
-          </p>
+          <p className="text-xl font-light text-accent">{formatTotal(price)}</p>
         ) : null}
       </div>
 

@@ -92,7 +92,7 @@ export function SpaceDetailDialog({
                   <span>{space.area}㎡</span>
                 </div>
               ) : null}
-              <div className="font-heading text-base text-accent">
+              <div className="text-base font-light text-accent">
                 {formatUnit(space.hourlyPrice, "/h")}
                 {space.dailyPrice != null ? (
                   <span className="ml-2 text-sm text-muted-foreground">

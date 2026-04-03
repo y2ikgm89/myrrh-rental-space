@@ -48,7 +48,7 @@ export function StepIndicator({
                 )}
               </div>
               <span
-                className={`text-[11px] uppercase tracking-[0.18em] transition-colors duration-300 ${
+                className={`text-[11px] uppercase tracking-[0.18em] transition-colors duration-200 ${
                   isActive ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
@@ -58,7 +58,7 @@ export function StepIndicator({
 
             {i < steps.length - 1 && (
               <div
-                className={`mx-3 mb-5 h-px w-12 transition-colors duration-300 md:mx-4 md:w-16 ${
+                className={`mx-3 mb-5 h-px w-12 transition-colors duration-200 md:mx-4 md:w-16 ${
                   isCompleted ? "bg-accent" : "bg-border"
                 }`}
                 aria-hidden="true"

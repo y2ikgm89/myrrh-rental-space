@@ -309,7 +309,7 @@ export function ReservationForm({
             )}
             <div className="flex items-center gap-3">
               {config.price != null ? (
-                <span className="font-heading text-lg text-accent">
+                <span className="text-lg font-light text-accent">
                   {formatPrice(config.price)}
                 </span>
               ) : null}
