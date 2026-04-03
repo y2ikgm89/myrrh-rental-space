@@ -285,7 +285,7 @@ export function ReservationForm({
             <div />
           )}
           {config.onNext ? (
-            <Button type="button" variant="editorial" onClick={config.onNext}>
+            <Button type="button" variant="primary" onClick={config.onNext}>
               次へ
             </Button>
           ) : null}
