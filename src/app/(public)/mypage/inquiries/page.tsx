@@ -10,6 +10,7 @@ import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";
+import { Stack } from "@/public/components/design-system/stack";
 import { InquiryList } from "./_components/inquiry-list";
 
 export default async function MypageInquiriesPage(): Promise<ReactElement> {
@@ -23,19 +24,19 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
   const inquiries = await getCustomerInquiries(customer.id);
 
   return (
-    <div>
-      <Heading level={2}>お問い合わせ履歴</Heading>
-      <div className="mt-6">
-        {inquiries.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-6 md:p-12 text-center">
-            <p className="text-muted-foreground">
-              お問い合わせ履歴がありません。
-            </p>
-          </div>
-        ) : (
-          <InquiryList inquiries={inquiries} />
-        )}
-      </div>
-    </div>
+    <Stack gap="lg">
+      <Heading level={1} accent>
+        お問い合わせ履歴
+      </Heading>
+      {inquiries.length === 0 ? (
+        <div className="rounded-lg border border-border bg-surface p-6 md:p-12 text-center">
+          <p className="text-muted-foreground">
+            お問い合わせ履歴がありません。
+          </p>
+        </div>
+      ) : (
+        <InquiryList inquiries={inquiries} />
+      )}
+    </Stack>
   );
 }

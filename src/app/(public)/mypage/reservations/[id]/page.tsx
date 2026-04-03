@@ -18,6 +18,8 @@ import { toPlainObject } from "@/shared/lib/serialize";
 import { getReviewForReservation } from "@/shared/domain/reviews/public-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
+import { Stack } from "@/public/components/design-system/stack";
+import { Divider } from "@/public/components/design-system/divider";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
 import { ReviewForm } from "./_components/review-form";
@@ -105,8 +107,8 @@ export default async function ReservationDetailPage({
   });
 
   return (
-    <div className="max-w-2xl">
-      <Heading level={1} className="mb-4 md:mb-8">
+    <Stack gap="lg" className="max-w-2xl">
+      <Heading level={1} accent>
         予約詳細
       </Heading>
 
@@ -116,7 +118,7 @@ export default async function ReservationDetailPage({
       />
 
       {(canEdit || canCancel) && (
-        <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {canEdit && (
             <Button
               size="sm"
@@ -130,20 +132,26 @@ export default async function ReservationDetailPage({
       )}
 
       {isCompleted && existingReview ? (
-        <ReviewDisplay
-          review={{
-            ...existingReview,
-            createdAt: existingReview.createdAt.toISOString(),
-          }}
-        />
+        <>
+          <Divider variant="subtle" />
+          <ReviewDisplay
+            review={{
+              ...existingReview,
+              createdAt: existingReview.createdAt.toISOString(),
+            }}
+          />
+        </>
       ) : null}
 
       {isCompleted && !existingReview ? (
-        <ReviewForm
-          reservationId={reservation.id}
-          spaceName={reservation.space.name}
-        />
+        <>
+          <Divider variant="subtle" />
+          <ReviewForm
+            reservationId={reservation.id}
+            spaceName={reservation.space.name}
+          />
+        </>
       ) : null}
-    </div>
+    </Stack>
   );
 }

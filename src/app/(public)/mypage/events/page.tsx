@@ -11,6 +11,7 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { toPlainArray } from "@/shared/lib/serialize";
 import { Heading } from "@/public/components/design-system/heading";
+import { Stack } from "@/public/components/design-system/stack";
 import { EventRegistrationList } from "./_components/EventRegistrationList";
 
 export default async function MypageEventsPage(): Promise<ReactElement> {
@@ -37,11 +38,11 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
   );
 
   return (
-    <div>
-      <Heading level={1} className="mb-4 md:mb-8">
+    <Stack gap="lg">
+      <Heading level={1} accent>
         イベント申込一覧
       </Heading>
       <EventRegistrationList registrations={serializedRegistrations} />
-    </div>
+    </Stack>
   );
 }

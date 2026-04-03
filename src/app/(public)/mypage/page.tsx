@@ -14,6 +14,7 @@ import { buildReservationListItems } from "./_lib/build-reservation-list-items";
 import { toPlainArray } from "@/shared/lib/serialize";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
+import { Stack } from "@/public/components/design-system/stack";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
 import { ReservationList } from "./_components/reservation-list";
 
@@ -48,12 +49,12 @@ export default async function MypagePage(): Promise<ReactElement> {
     customer.firstName === "";
 
   return (
-    <div>
-      <Heading level={1} className="mb-4 md:mb-8">
+    <Stack gap="lg">
+      <Heading level={1} accent>
         予約一覧
       </Heading>
       {isNameIncomplete && (
-        <div className="mb-6 rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
+        <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
           お名前が未登録です。
           <Link href="/mypage/settings" className="ml-1 underline text-accent">
             アカウント設定
@@ -62,6 +63,6 @@ export default async function MypagePage(): Promise<ReactElement> {
         </div>
       )}
       <ReservationList items={reservationListItems} />
-    </div>
+    </Stack>
   );
 }

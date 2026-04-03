@@ -13,6 +13,8 @@ import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getAccountLinksAction } from "../_shared/actions/account";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { Heading } from "@/public/components/design-system/heading";
+import { Stack } from "@/public/components/design-system/stack";
+import { Divider } from "@/public/components/design-system/divider";
 import { ProfileForm } from "./_components/profile-form";
 import { AccountLinking } from "./_components/account-linking";
 
@@ -37,8 +39,10 @@ export default async function SettingsPage({
     : accountResult.accounts;
 
   return (
-    <div className="space-y-6 md:space-y-10">
-      <Heading level={1}>アカウント設定</Heading>
+    <Stack gap="xl">
+      <Heading level={1} accent>
+        アカウント設定
+      </Heading>
 
       {requireEmail && (
         <div
@@ -61,12 +65,12 @@ export default async function SettingsPage({
         />
       </section>
 
-      <hr className="border-border" />
+      <Divider variant="subtle" />
 
       <section className="space-y-6">
         <Heading level={2}>アカウント連携</Heading>
         <AccountLinking providers={providers} />
       </section>
-    </div>
+    </Stack>
   );
 }
