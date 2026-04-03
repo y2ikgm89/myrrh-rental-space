@@ -276,7 +276,7 @@ export function CommentPlugin({ onMarkClick }: CommentPluginProps) {
                   }
                 });
               };
-              // eslint-disable-next-line @eslint-react/web-api/no-leaked-event-listener -- cleanup is handled via clickListeners Map (lines below)
+              // eslint-disable-next-line @eslint-react/web-api-no-leaked-event-listener -- cleanup is handled via clickListeners Map (lines below)
               element.addEventListener("click", listener);
               clickListeners.set(nodeKey, listener);
             }

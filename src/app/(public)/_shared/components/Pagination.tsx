@@ -66,7 +66,7 @@ export function Pagination({
       {currentPage > 1 && (
         <Link
           href={getHref(currentPage - 1)}
-          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           前へ
         </Link>
@@ -76,7 +76,7 @@ export function Pagination({
         <>
           <Link
             href={getHref(1)}
-            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             1
           </Link>
@@ -92,10 +92,10 @@ export function Pagination({
         <Link
           key={page}
           href={getHref(page)}
-          className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+          className={`border px-3 py-2 text-sm transition-colors ${
             page === currentPage
               ? "border-accent bg-accent text-accent-foreground"
-              : "border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
           }`}
           aria-current={page === currentPage ? "page" : undefined}
         >
@@ -112,7 +112,7 @@ export function Pagination({
           )}
           <Link
             href={getHref(totalPages)}
-            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             {totalPages}
           </Link>
@@ -122,7 +122,7 @@ export function Pagination({
       {currentPage < totalPages && (
         <Link
           href={getHref(currentPage + 1)}
-          className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          className="border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           次へ
         </Link>

@@ -1,0 +1,225 @@
+<h2>モーション + ページ構成設計</h2>
+<p class="subtitle">リッチ・印象的レベル / news+posts→journal統合</p>
+
+<div class="section">
+  <h3>モーション設計</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">アニメーション階層（主役 / 脇役 / 背景）</div>
+  <div class="mockup-body" style="background: #1a1512; padding: 24px;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+      <thead>
+        <tr style="border-bottom: 1px solid rgba(180,155,120,0.2);">
+          <th style="text-align: left; padding: 10px; color: #b49b78;">役割</th>
+          <th style="text-align: left; padding: 10px; color: #b49b78;">演出</th>
+          <th style="text-align: left; padding: 10px; color: #b49b78;">適用箇所</th>
+          <th style="text-align: left; padding: 10px; color: #b49b78;">パラメータ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid rgba(180,155,120,0.08);">
+          <td style="padding: 10px; color: #e8dcc8;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: oklch(0.65 0.09 60); border-radius: 50; margin-right: 6px;"></span>
+            主役
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.8);">
+            SplitText（文字分割 → stagger入場）<br>
+            Image Reveal（クリッピングマスク展開）
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6);">
+            Hero見出し、セクションH2
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6); font-family: monospace; font-size: 0.85em;">
+            duration: 1.2s<br>stagger: 0.03<br>ease: power3.out
+          </td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(180,155,120,0.08);">
+          <td style="padding: 10px; color: #e8dcc8;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #8a7a6a; border-radius: 50; margin-right: 6px;"></span>
+            脇役
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.8);">
+            ScrollReveal（y:40 + opacity フェードイン）<br>
+            Card Stagger（カード群の順次出現）
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6);">
+            本文ブロック、カード、画像
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6); font-family: monospace; font-size: 0.85em;">
+            duration: 0.8s<br>stagger: 0.12<br>ease: power2.out
+          </td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(180,155,120,0.08);">
+          <td style="padding: 10px; color: #e8dcc8;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #4a4a4a; border-radius: 50; margin-right: 6px;"></span>
+            背景
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.8);">
+            ParallaxImage（スクロール連動微移動）<br>
+            Ambient Glow（ブロンズ光の微発光）
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6);">
+            Hero背景画像、セクション装飾
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6); font-family: monospace; font-size: 0.85em;">
+            speed: 0.3<br>scrub: true<br>opacity: subtle
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; color: #e8dcc8;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: oklch(0.65 0.09 60); border-radius: 50; margin-right: 6px;"></span>
+            CTA
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.8);">
+            MagneticButton（カーソル追従）<br>
+            Bronze Shimmer（ホバー時光沢走査）
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6);">
+            予約ボタン、主要CTA
+          </td>
+          <td style="padding: 10px; color: rgba(232,220,200,0.6); font-family: monospace; font-size: 0.85em;">
+            magnetic: 0.3<br>shimmer: 0.6s<br>ease: elastic
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top: 24px;">
+  <div class="mockup-header">新規演出: Bronze Shimmer + Image Reveal</div>
+  <div class="mockup-body" style="background: #1a1512; padding: 24px;">
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px; padding: 20px; background: rgba(180,155,120,0.08); border: 1px solid rgba(180,155,120,0.15); border-radius: 12px;">
+        <div style="font-size: 0.75rem; color: #b49b78; letter-spacing: 0.15em; margin-bottom: 12px;">BRONZE SHIMMER</div>
+        <p style="font-size: 0.85em; color: rgba(232,220,200,0.7); line-height: 1.6;">
+          ボタンホバー時にブロンズのグラデーション光が左→右に走る。<br>
+          background-position アニメーション。CSS のみで実装可能。<br>
+          <code style="font-size: 0.85em; color: #8a7a6a;">linear-gradient(105deg, transparent 40%, oklch(0.65 0.09 60 / 0.15) 50%, transparent 60%)</code>
+        </p>
+      </div>
+      <div style="flex: 1; min-width: 200px; padding: 20px; background: rgba(180,155,120,0.08); border: 1px solid rgba(180,155,120,0.15); border-radius: 12px;">
+        <div style="font-size: 0.75rem; color: #b49b78; letter-spacing: 0.15em; margin-bottom: 12px;">IMAGE REVEAL</div>
+        <p style="font-size: 0.85em; color: rgba(232,220,200,0.7); line-height: 1.6;">
+          画像がスクロール位置に連動してクリップパスで露出。<br>
+          GSAP ScrollTrigger + clip-path: inset() アニメーション。<br>
+          <code style="font-size: 0.85em; color: #8a7a6a;">clip-path: inset(0 100% 0 0) → inset(0 0% 0 0)</code>
+        </p>
+      </div>
+    </div>
+    <p style="font-size: 0.8em; color: #8a7a6a; margin-top: 16px;">
+      ※ すべて prefers-reduced-motion: reduce 時はアニメーション無効化（GSAP matchMedia）
+    </p>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 40px;">
+  <h3>ページ構成（確定）</h3>
+</div>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+  <thead>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+      <th style="text-align: left; padding: 10px;">ページ</th>
+      <th style="text-align: left; padding: 10px;">URL</th>
+      <th style="text-align: left; padding: 10px;">刷新レベル</th>
+      <th style="text-align: left; padding: 10px;">主な変更</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(180,155,120,0.05);">
+      <td style="padding: 10px; color: #b49b78;">ホーム</td>
+      <td style="padding: 10px; font-family: monospace;">/</td>
+      <td style="padding: 10px;">🔥 フル刷新</td>
+      <td style="padding: 10px;">フルスクリーンHero + Image Reveal + 全セクション刷新</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(180,155,120,0.05);">
+      <td style="padding: 10px; color: #b49b78;">スペース一覧</td>
+      <td style="padding: 10px; font-family: monospace;">/spaces</td>
+      <td style="padding: 10px;">🔥 フル刷新</td>
+      <td style="padding: 10px;">ダークカードグリッド + ホバーエフェクト</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(180,155,120,0.05);">
+      <td style="padding: 10px; color: #b49b78;">スペース詳細</td>
+      <td style="padding: 10px; font-family: monospace;">/spaces/[slug]</td>
+      <td style="padding: 10px;">🔥 フル刷新</td>
+      <td style="padding: 10px;">フルブリード画像 + ストーリー型レイアウト</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(180,155,120,0.05);">
+      <td style="padding: 10px; color: #b49b78;">予約</td>
+      <td style="padding: 10px; font-family: monospace;">/reservation</td>
+      <td style="padding: 10px;">🔥 フル刷新</td>
+      <td style="padding: 10px;">ダークフォームUI + ステッパー洗練</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">About</td>
+      <td style="padding: 10px; font-family: monospace;">/about</td>
+      <td style="padding: 10px;">🔄 大幅刷新</td>
+      <td style="padding: 10px;">ブランドストーリー型スクロール演出</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">お問い合わせ</td>
+      <td style="padding: 10px; font-family: monospace;">/contact</td>
+      <td style="padding: 10px;">🔄 大幅刷新</td>
+      <td style="padding: 10px;">ミニマルフォーム + マップ</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">イベント</td>
+      <td style="padding: 10px; font-family: monospace;">/events</td>
+      <td style="padding: 10px;">🔄 大幅刷新</td>
+      <td style="padding: 10px;">ダークカレンダーUI + カードリスト</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(100,180,100,0.05);">
+      <td style="padding: 10px; color: #90c090;">Journal（新）</td>
+      <td style="padding: 10px; font-family: monospace;">/journal</td>
+      <td style="padding: 10px;">✨ 新設（統合）</td>
+      <td style="padding: 10px;">news+posts統合フィード。/news, /posts → /journal リダイレクト</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">マイページ</td>
+      <td style="padding: 10px; font-family: monospace;">/mypage/*</td>
+      <td style="padding: 10px;">🔄 テーマ適用</td>
+      <td style="padding: 10px;">ダークテーマ統一 + UI磨き上げ</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">FAQ</td>
+      <td style="padding: 10px; font-family: monospace;">/faq</td>
+      <td style="padding: 10px;">🎨 テーマ適用</td>
+      <td style="padding: 10px;">アコーディオンUI刷新</td>
+    </tr>
+    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <td style="padding: 10px;">認証系</td>
+      <td style="padding: 10px; font-family: monospace;">/login等</td>
+      <td style="padding: 10px;">🎨 テーマ適用</td>
+      <td style="padding: 10px;">ダークテーマのみ</td>
+    </tr>
+    <tr>
+      <td style="padding: 10px;">法的ページ</td>
+      <td style="padding: 10px; font-family: monospace;">/terms, /privacy</td>
+      <td style="padding: 10px;">🎨 テーマ適用</td>
+      <td style="padding: 10px;">ダークテーマのみ</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>news/posts → journal 統合方針</h3>
+  <p style="font-size: 0.85em; color: #888; line-height: 1.8;">
+    • <strong>DBモデル変更なし</strong> — News, Post モデルはそのまま維持<br>
+    • <strong>表示統合のみ</strong> — /journal ページで両モデルを日付順に混合表示。タブ切替（すべて/ニュース/コラム）<br>
+    • <strong>既存URLリダイレクト</strong> — /news → /journal?tab=news, /posts → /journal?tab=posts（301）<br>
+    • <strong>詳細ページ</strong> — /news/[slug], /posts/[...segments] は維持（SEO既存URL保全）<br>
+    • <strong>管理画面</strong> — 変更なし（引き続き News, Post を別管理）
+  </p>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <h3>削除対象（クリーン実装）</h3>
+  <p style="font-size: 0.85em; color: #c87070; line-height: 1.8;">
+    • <code>@layer compat</code> — 旧トークン互換レイヤー完全削除<br>
+    • <code>Noto Serif JP</code> — フォント読み込み削除（Cormorant Garamond に置換）<br>
+    • <code>--color-primary / --color-brand-primary</code> — 旧トークン名完全削除<br>
+    • 旧 news ページ / posts ページ — journal 統合後に削除（リダイレクト設定のみ残す）
+  </p>
+</div>

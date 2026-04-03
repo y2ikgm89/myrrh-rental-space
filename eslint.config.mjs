@@ -191,7 +191,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/ban-ts-comment": "off",
       "react-hooks/refs": "off",
       "@eslint-react/use-state": "off",
-      "@eslint-react/web-api/no-leaked-event-listener": "off",
+      "@eslint-react/web-api-no-leaked-event-listener": "off",
     },
   },
 

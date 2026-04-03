@@ -1,7 +1,8 @@
 /**
  * 公開ページ用 searchParams キャッシュ定義
  *
- * nuqs createSearchParamsCache でページネーション等のクエリパラメータを型安全に管理
+ * nuqs createSearchParamsCache でページネーション等のクエリパラメータを型安全に管理。
+ * 全パーサーマップを export し、Client Component（useQueryStates）でも共有する。
  */
 
 import {
@@ -10,7 +11,7 @@ import {
   parseAsString,
 } from "nuqs/server";
 
-const paginationSearchParamsParsers = {
+export const paginationSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
 };
 
@@ -18,7 +19,7 @@ export const paginationSearchParams = createSearchParamsCache(
   paginationSearchParamsParsers,
 );
 
-const spaceSearchParamsParsers = {
+export const spaceSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   category: parseAsString,
 };
@@ -27,7 +28,12 @@ export const spaceSearchParams = createSearchParamsCache(
   spaceSearchParamsParsers,
 );
 
-const newsSearchParamsParsers = {
+export const searchFilterParsers = {
+  q: parseAsString.withDefault(""),
+  page: parseAsInteger.withDefault(1),
+};
+
+export const newsSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   q: parseAsString.withDefault(""),
 };
@@ -36,7 +42,7 @@ export const newsSearchParams = createSearchParamsCache(
   newsSearchParamsParsers,
 );
 
-const postsSearchParamsParsers = {
+export const postsSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   q: parseAsString.withDefault(""),
   category: parseAsString.withDefault(""),
@@ -46,7 +52,7 @@ export const postsSearchParams = createSearchParamsCache(
   postsSearchParamsParsers,
 );
 
-const journalSearchParamsParsers = {
+export const journalSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   q: parseAsString.withDefault(""),
   tab: parseAsString.withDefault("all"),

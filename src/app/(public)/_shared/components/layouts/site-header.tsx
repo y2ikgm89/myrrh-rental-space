@@ -31,7 +31,6 @@ import {
   HeaderBackgroundMode,
 } from "@generated/prisma/enums";
 import { cn } from "@/shared/lib/cn";
-import { Button } from "../design-system/button";
 
 interface AuthLink {
   readonly href: string;
@@ -83,7 +82,7 @@ const HIDE_THRESHOLD = 150;
 /** Desktop nav link for items WITHOUT children */
 function NavLink({ item }: { readonly item: PublicNavItem }): ReactElement {
   const linkClass =
-    "text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent";
+    "text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground";
 
   if (item.isExternal) {
     return (
@@ -160,7 +159,7 @@ function MobileNavItem({
   const contentId = useId();
 
   const parentClass =
-    "font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-accent";
+    "font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground";
 
   if (item.children.length === 0) {
     if (item.isExternal) {
@@ -219,7 +218,7 @@ function MobileNavItem({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={onClose}
-                className="text-xl text-muted-foreground transition-colors hover:text-accent"
+                className="text-base text-muted-foreground transition-colors hover:text-foreground"
               >
                 {child.label}
                 <span className="sr-only"> (新しいタブで開く)</span>
@@ -229,7 +228,7 @@ function MobileNavItem({
                 key={child.id}
                 href={child.url}
                 onClick={onClose}
-                className="text-xl text-muted-foreground transition-colors hover:text-accent"
+                className="text-base text-muted-foreground transition-colors hover:text-foreground"
               >
                 {child.label}
               </Link>
@@ -464,7 +463,7 @@ export function Header({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
           <Link
             href="/"
-            className="font-heading text-xl font-light tracking-[0.2em] text-foreground"
+            className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground"
           >
             {brandName}
           </Link>
@@ -480,7 +479,7 @@ export function Header({
                   <NavigationMenuPrimitive.Item key={item.id}>
                     {item.children.length > 0 ? (
                       <>
-                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent">
+                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
                           {item.label}
                           <IconChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </NavigationMenuPrimitive.Trigger>
@@ -501,14 +500,17 @@ export function Header({
             {authLink && (
               <Link
                 href={authLink.href}
-                className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
+                className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
               >
                 {authLink.label}
               </Link>
             )}
-            <Button variant="primary" size="sm" href="/reservation">
-              予約する
-            </Button>
+            <Link
+              href="/reservation"
+              className="border border-foreground px-5 py-2 text-[0.6rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-foreground hover:text-background"
+            >
+              Reserve
+            </Link>
           </div>
 
           {/* Hamburger (mobile) */}
@@ -538,7 +540,7 @@ export function Header({
           <div className="flex items-center justify-between px-5 py-4">
             <Link
               href="/"
-              className="font-heading text-xl font-light tracking-[0.2em] text-foreground"
+              className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground"
               onClick={closeMenu}
             >
               {brandName}
@@ -554,17 +556,20 @@ export function Header({
           </div>
 
           <nav className="flex flex-1 flex-col items-center justify-center gap-8">
-            <div data-menu-link="">
-              <Button variant="primary" size="md" href="/reservation">
-                予約する
-              </Button>
-            </div>
+            <Link
+              href="/reservation"
+              data-menu-link=""
+              onClick={closeMenu}
+              className="border border-foreground px-8 py-3 text-[0.65rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-foreground hover:text-background"
+            >
+              Reserve
+            </Link>
             {authLink && (
               <Link
                 href={authLink.href}
                 data-menu-link=""
                 onClick={closeMenu}
-                className="font-heading text-2xl uppercase tracking-[0.2em] text-foreground transition-colors hover:text-accent"
+                className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground transition-colors hover:text-muted-foreground"
               >
                 {authLink.label}
               </Link>

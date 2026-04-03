@@ -370,6 +370,10 @@ const { params, setCategory } = useFilterParamsWithCategory({
 4. **パーサーの重複定義禁止**
    - `@/shared/lib/nuqs/parsers.ts` に集約。各ドメインファイルにはパーサーを定義しない
 
+4.5. **パーサーマップは `export` 必須**
+
+- Client Component（`useQueryStates`）と Server（`createSearchParamsCache`）で同一パーサーマップを共有するため、全パーサーマップを `export const` で定義する。`const` のまま非 export にしない
+
 5. **Promise未処理の放置禁止**
 
    ```typescript

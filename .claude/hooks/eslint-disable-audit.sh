@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse (Edit/Write): 編集されたファイル内の eslint-disable コメントが
 # 廃止されたルール名を参照していないか検出する
-# eslint-react v3 でルール名が変更されたため
+# eslint-react v4 でルール名プレフィックスがフラット化（/ → -）
 
 set -euo pipefail
 
@@ -19,17 +19,22 @@ case "$FILE_PATH" in
   *) exit 0 ;;
 esac
 
-# 廃止されたルール名パターン（eslint-react v3 で変更）
+# 廃止されたルール名パターン（eslint-react v4 で変更）
 STALE_PATTERNS=(
   "@eslint-react/hooks-extra/"
   "@eslint-react/debug/"
+  "@eslint-react/dom/"
+  "@eslint-react/web-api/"
+  "@eslint-react/rsc/"
+  "@eslint-react/naming-convention/"
 )
 
 for pattern in "${STALE_PATTERNS[@]}"; do
   if grep -q "eslint-disable.*${pattern}" "$FILE_PATH" 2>/dev/null; then
     echo "⚠️ 廃止された eslint ルール名を検出: ${pattern}* in $(basename "$FILE_PATH")"
-    echo "   eslint-react v3 では以下に変更されています:"
-    echo "   hooks-extra/no-direct-set-state-in-use-effect → @eslint-react/set-state-in-effect"
+    echo "   eslint-react v4 ではプレフィックスがフラット化されています:"
+    echo "   @eslint-react/dom/no-xxx → @eslint-react/dom-no-xxx"
+    echo "   @eslint-react/web-api/no-xxx → @eslint-react/web-api-no-xxx"
     exit 0
   fi
 done

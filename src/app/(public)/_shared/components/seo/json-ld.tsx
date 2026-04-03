@@ -8,7 +8,7 @@
  * @see https://developers.google.com/search/docs/appearance/structured-data
  */
 
-/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
+/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify-encoded, no raw HTML */
 import type { ReactElement } from "react";
 import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 

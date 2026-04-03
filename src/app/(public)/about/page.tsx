@@ -11,6 +11,8 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageLayout } from "@/public/components/design-system/page-layout";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -24,10 +26,10 @@ export default async function AboutPage(): Promise<ReactElement> {
   const sections = await getPageSectionsWithFallback("about");
 
   return (
-    <>
+    <PageLayout variant="content" cta={<SiteCTA />}>
       {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
-    </>
+    </PageLayout>
   );
 }

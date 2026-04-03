@@ -19,6 +19,8 @@ import { Container } from "@/public/components/design-system/container";
 import { Pagination } from "@/public/components/pagination";
 import { journalSearchParams } from "@/public/lib/search-params";
 import { SearchBar } from "@/public/components/ui/search-bar";
+import { PageLayout } from "@/public/components/design-system/page-layout";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { JournalContent } from "./_components/JournalContent";
 
 interface PageProps {
@@ -120,10 +122,12 @@ export default async function JournalPage({
   if (tab && tab !== "all") preservedQuery["tab"] = tab;
 
   return (
-    <>
-      {heroSection ? <SectionRenderer section={heroSection} /> : null}
-
-      <section className="py-[var(--spacing-section)]">
+    <PageLayout
+      variant="content"
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      cta={<SiteCTA />}
+    >
+      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container>
           <Suspense fallback={null}>
             <div className="mb-8 max-w-md">
@@ -147,6 +151,6 @@ export default async function JournalPage({
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
-    </>
+    </PageLayout>
   );
 }

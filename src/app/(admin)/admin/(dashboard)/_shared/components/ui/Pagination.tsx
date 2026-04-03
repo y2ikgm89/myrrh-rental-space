@@ -62,12 +62,14 @@ export function Pagination({
 }: PaginationProps) {
   const [isPending, startTransition] = useTransition();
 
-  const [, setPage] = useQueryState(pageUrlKey, {
-    ...parseAsPage,
-    shallow: false,
-    history: "push",
-    startTransition,
-  });
+  const [, setPage] = useQueryState(
+    pageUrlKey,
+    parseAsPage.withOptions({
+      shallow: false,
+      history: "push",
+      startTransition,
+    }),
+  );
 
   const goToPage = (page: number) => {
     void setPage(page === 1 ? null : page);

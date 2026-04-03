@@ -16,6 +16,8 @@ import {
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { Container } from "@/public/components/design-system/container";
 import { FAQPageJsonLd } from "@/public/components/seo/json-ld";
+import { PageLayout } from "@/public/components/design-system/page-layout";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { FaqAccordion } from "./_components/faq-accordion";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -46,14 +48,16 @@ export default async function FaqPage(): Promise<ReactElement> {
   );
 
   return (
-    <>
+    <PageLayout
+      variant="content"
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      cta={<SiteCTA />}
+    >
       {faqJsonLdItems.length > 0 ? (
         <FAQPageJsonLd items={faqJsonLdItems} />
       ) : null}
 
-      {heroSection ? <SectionRenderer section={heroSection} /> : null}
-
-      <section className="py-[var(--spacing-section)]">
+      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container variant="narrow">
           <FaqAccordion items={items} />
         </Container>
@@ -62,6 +66,6 @@ export default async function FaqPage(): Promise<ReactElement> {
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
-    </>
+    </PageLayout>
   );
 }

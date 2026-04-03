@@ -1,0 +1,88 @@
+<h2>ページ構成の提案</h2>
+<p class="subtitle">ラグジュアリー路線に最適化した構成。現行15ページ → 統合・強化案</p>
+
+<div class="section">
+  <h3>提案のポイント</h3>
+  <p style="color: #999; line-height: 1.8;">
+    ラグジュアリーサイトは「少数精鋭のページ × 深い没入体験」が鉄則。<br>
+    情報を詰め込むより、1ページの中で世界観に浸らせる構成が効果的です。
+  </p>
+</div>
+
+<div class="options">
+  <!-- Tier 1: Core -->
+  <div class="option" style="border-left: 3px solid #b49b78; cursor: default;">
+    <div class="letter" style="background: #b49b78; color: #1a1512;">核</div>
+    <div class="content">
+      <h3>コアページ（変更なし・デザイン刷新）</h3>
+      <p>
+        <strong>ホーム /</strong> — フルスクリーンHero + 世界観の入口。最も大胆に刷新<br>
+        <strong>スペース一覧 /spaces</strong> — カード型 → 没入型ギャラリーグリッドへ<br>
+        <strong>スペース詳細 /spaces/[id]</strong> — フルブリードイメージ + ストーリー型レイアウト<br>
+        <strong>予約 /reservation</strong> — ステッパーUIを洗練。フォームも高級感<br>
+        <strong>お問い合わせ /contact</strong> — ミニマルフォーム + マップ
+      </p>
+    </div>
+  </div>
+
+  <!-- Tier 2: Merge -->
+  <div class="option" style="border-left: 3px solid #8a7a6a; cursor: default;">
+    <div class="letter" style="background: #8a7a6a; color: #1a1512;">統</div>
+    <div class="content">
+      <h3>統合するページ</h3>
+      <p>
+        <strong>about + concept → /about</strong> — ブランドストーリーとして1ページに。スクロール演出で「Myrrhの世界観」を語る<br>
+        <strong>news + posts → /journal</strong> — 「Journal」として統合。お知らせ・コラムを1つのフィードに。ラグジュアリーブランドでは「ニュース」より「ジャーナル」が自然<br>
+      </p>
+    </div>
+  </div>
+
+  <!-- Tier 3: Enhance -->
+  <div class="option" style="border-left: 3px solid #6a5a4a; cursor: default;">
+    <div class="letter" style="background: #6a5a4a; color: #e8dcc8;">強</div>
+    <div class="content">
+      <h3>強化するページ</h3>
+      <p>
+        <strong>イベント /events</strong> — カレンダー + カード型リスト。ダーク基調ならカレンダーUIが映える<br>
+        <strong>マイページ /mypage</strong> — 予約履歴・レビュー投稿。ダッシュボード的UIをダークテーマで統一<br>
+        <strong>ギャラリー /gallery（新設検討）</strong> — スペースの写真をフルスクリーンで魅せる専用ページ。Lightbox演出
+      </p>
+    </div>
+  </div>
+
+  <!-- Tier 4: Keep minimal -->
+  <div class="option" style="border-left: 3px solid #4a4a4a; cursor: default;">
+    <div class="letter" style="background: #4a4a4a; color: #999;">維</div>
+    <div class="content">
+      <h3>最小限で維持（法的/機能的要件）</h3>
+      <p>
+        <strong>FAQ /faq</strong> — アコーディオンUI刷新のみ。JSON-LD維持<br>
+        <strong>利用規約 /terms</strong> — デザイントーン合わせのみ<br>
+        <strong>プライバシー /privacy</strong> — デザイントーン合わせのみ<br>
+        <strong>ログイン /login</strong> — ダークテーマ適用のみ
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>結果: 15ページ → 12〜13ページ（統合2、新設0〜1）</h3>
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>メリット</h4>
+      <ul>
+        <li>ページ数減で没入感UP</li>
+        <li>news/postsの統合でコンテンツが充実して見える</li>
+        <li>about統合でブランドストーリーが一気通貫</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>注意点</h4>
+      <ul>
+        <li>news/posts統合はDB構造は変えず、表示のみ統合</li>
+        <li>ギャラリー新設は工数増。既存spaceページで代替可能</li>
+        <li>既存URLのリダイレクト対応が必要</li>
+      </ul>
+    </div>
+  </div>
+</div>

@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Container } from "@/public/components/design-system/container";
-import { Heading } from "@/public/components/design-system/heading";
-import { Stack } from "@/public/components/design-system/stack";
+import { Section } from "@/public/components/design-system/section";
+import { PageLayout } from "@/public/components/design-system/page-layout";
+import { PageHero } from "@/public/components/layouts/page-hero";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { CalendarSkeleton } from "@/public/components/event-calendar/CalendarSkeleton";
 import { EventCalendar } from "@/public/components/event-calendar/EventCalendar";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
@@ -22,15 +24,18 @@ async function EventCalendarLoader() {
 
 export default function EventsPage() {
   return (
-    <main id="main-content">
-      <Container>
-        <Stack gap="lg">
-          <Heading level={1}>イベントカレンダー</Heading>
+    <PageLayout
+      variant="content"
+      hero={<PageHero variant="compact" title="イベントカレンダー" />}
+      cta={<SiteCTA />}
+    >
+      <Section background="surface">
+        <Container>
           <Suspense fallback={<CalendarSkeleton />}>
             <EventCalendarLoader />
           </Suspense>
-        </Stack>
-      </Container>
-    </main>
+        </Container>
+      </Section>
+    </PageLayout>
   );
 }

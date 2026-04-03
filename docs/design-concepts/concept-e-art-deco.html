@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept E — Neo Art Deco</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0c0f14;
+    --bg-card: #12151c;
+    --bg-elevated: #181c25;
+    --text: #e8e4d8;
+    --text-muted: #7a7568;
+    --gold: #c9a84c;
+    --gold-dim: rgba(201, 168, 76, 0.12);
+    --gold-shine: linear-gradient(135deg, #b8942e, #dfc064, #c9a84c);
+    --border: rgba(201, 168, 76, 0.1);
+    --font-display: 'Italiana', serif;
+    --font-body: 'Outfit', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-weight: 300;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ========== HEADER ========== */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 1.5rem 3rem;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--gold);
+    text-decoration: none;
+    letter-spacing: 0.15em;
+  }
+  nav a {
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-left: 2rem;
+    transition: color 0.3s;
+  }
+  nav a:hover { color: var(--gold); }
+
+  /* ========== HERO ========== */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Deco pattern background */
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 80px,
+        var(--border) 80px,
+        var(--border) 81px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 80px,
+        var(--border) 80px,
+        var(--border) 81px
+      );
+    opacity: 0.3;
+  }
+  /* Radial glow */
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40vw; height: 40vw;
+    background: radial-gradient(ellipse, var(--gold-dim), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-deco-top {
+    position: relative; z-index: 2;
+    width: 6rem; height: 1px;
+    background: var(--gold-shine);
+    margin-bottom: 2rem;
+  }
+  .hero-tagline {
+    position: relative; z-index: 2;
+    font-size: 0.6rem;
+    font-weight: 400;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 2rem;
+  }
+  .hero-title {
+    position: relative; z-index: 2;
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 7vw, 7rem);
+    line-height: 1.05;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    margin-bottom: 2rem;
+  }
+  .hero-title .gold { color: var(--gold); }
+  .hero-subtitle {
+    position: relative; z-index: 2;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    max-width: 30rem;
+    line-height: 2;
+    margin-bottom: 3rem;
+  }
+  .hero-btn {
+    position: relative; z-index: 2;
+    display: inline-block;
+    padding: 1rem 3rem;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    transition: all 0.4s;
+  }
+  .hero-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+  }
+  .hero-deco-bottom {
+    position: relative; z-index: 2;
+    margin-top: 4rem;
+  }
+  .hero-deco-bottom svg {
+    width: 3rem; height: 3rem;
+    opacity: 0.2;
+  }
+
+  /* ========== SECTION COMMONS ========== */
+  section { padding: clamp(5rem, 10vw, 8rem) 0; }
+  .container { max-width: 72rem; margin: 0 auto; padding: 0 3rem; }
+
+  /* ========== DIVIDER ========== */
+  .deco-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem 0;
+  }
+  .deco-divider .line {
+    width: 6rem; height: 1px;
+    background: var(--gold-shine);
+  }
+  .deco-divider .diamond {
+    width: 0.5rem; height: 0.5rem;
+    border: 1px solid var(--gold);
+    transform: rotate(45deg);
+  }
+
+  /* ========== ABOUT ========== */
+  .about .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6rem;
+    align-items: center;
+  }
+  .about-image {
+    aspect-ratio: 3/4;
+    background: linear-gradient(160deg, #2a2418 0%, #1a1812 100%);
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .about-image::before {
+    content: '';
+    position: absolute;
+    top: -1rem; left: -1rem;
+    width: 100%; height: 100%;
+    border: 1px solid var(--gold);
+    opacity: 0.15;
+  }
+  .about-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+  }
+  .about-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    line-height: 1.3;
+    letter-spacing: 0.04em;
+    margin-bottom: 1.5rem;
+  }
+  .about-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 2.2;
+  }
+
+  /* ========== SPACES ========== */
+  .spaces {
+    background: var(--bg-card);
+  }
+  .spaces-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+  .spaces-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+  .spaces-title {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 3vw, 2.75rem);
+    letter-spacing: 0.04em;
+  }
+  .spaces-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+  .space-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.4s, transform 0.4s;
+  }
+  .space-card:hover {
+    border-color: var(--gold);
+    transform: translateY(-4px);
+  }
+  .space-card-img {
+    aspect-ratio: 4/3;
+    background: linear-gradient(160deg, #242018, #1a1610);
+    position: relative;
+  }
+  .space-card-img::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, var(--bg-elevated) 0%, transparent 40%);
+  }
+  .space-card-body { padding: 1.5rem; }
+  .space-card-cat {
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+  .space-card-name {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .space-card-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .space-card-price {
+    font-size: 0.9rem;
+    color: var(--gold);
+  }
+  .space-card-price small {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+  .space-card-line {
+    width: 100%; height: 1px;
+    background: var(--border);
+    margin-top: 1rem;
+  }
+
+  /* ========== STATS ========== */
+  .stats .container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    text-align: center;
+    gap: 2rem;
+  }
+  .stat-item {
+    padding: 2rem;
+    border: 1px solid var(--border);
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 0.75rem;
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* ========== CTA ========== */
+  .cta {
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-conic-gradient(var(--border) 0 0.5deg, transparent 0 90deg) 50% / 40px 40px;
+    opacity: 0.2;
+  }
+  .cta-title {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    letter-spacing: 0.06em;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+  }
+  .cta-desc {
+    position: relative;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 26rem;
+    margin: 0 auto 2.5rem;
+    line-height: 2;
+  }
+  .cta-btn {
+    position: relative;
+    display: inline-block;
+    padding: 1rem 3rem;
+    background: var(--gold-shine);
+    color: var(--bg);
+    text-decoration: none;
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    transition: opacity 0.3s;
+  }
+  .cta-btn:hover { opacity: 0.85; }
+
+  /* ========== FOOTER ========== */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem;
+  }
+  .footer-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-brand {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+  }
+  .footer-links { display: flex; gap: 2rem; }
+  .footer-links a {
+    font-size: 0.65rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--text-muted);
+    text-decoration: none; transition: color 0.3s;
+  }
+  .footer-links a:hover { color: var(--gold); }
+  .footer-copy { font-size: 0.6rem; color: var(--text-muted); }
+
+  @media (max-width: 768px) {
+    header { padding: 1rem 1.5rem; }
+    nav { display: none; }
+    .hero { padding: 4rem 1.5rem; }
+    .container { padding: 0 1.5rem; }
+    .about .container { grid-template-columns: 1fr; gap: 3rem; }
+    .spaces-grid { grid-template-columns: 1fr; }
+    .stats .container { grid-template-columns: repeat(2, 1fr); }
+    .footer-inner { flex-direction: column; gap: 1.5rem; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#" class="logo">MYRRH</a>
+  <nav>
+    <a href="#">Spaces</a>
+    <a href="#">About</a>
+    <a href="#">Access</a>
+    <a href="#">Reserve</a>
+  </nav>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-deco-top"></div>
+  <p class="hero-tagline">Premium Rental Space</p>
+  <h1 class="hero-title">
+    THE <span class="gold">ART</span><br>
+    OF SPACE
+  </h1>
+  <p class="hero-subtitle">
+    洗練された空間で、あなたのビジョンを形に。<br>
+    Myrrh は、特別な時間を過ごすためのレンタルスペースです。
+  </p>
+  <a href="#" class="hero-btn">Discover</a>
+  <div class="hero-deco-bottom">
+    <svg viewBox="0 0 40 40" fill="none">
+      <path d="M20 2 L38 20 L20 38 L2 20 Z" stroke="currentColor" stroke-width="0.5" fill="none" style="color:var(--gold)"/>
+      <path d="M20 10 L30 20 L20 30 L10 20 Z" stroke="currentColor" stroke-width="0.5" fill="none" style="color:var(--gold)"/>
+    </svg>
+  </div>
+</section>
+
+<div class="deco-divider">
+  <span class="line"></span>
+  <span class="diamond"></span>
+  <span class="line"></span>
+</div>
+
+<!-- ABOUT -->
+<section class="about">
+  <div class="container">
+    <div class="about-image"></div>
+    <div>
+      <p class="about-label">Our Philosophy</p>
+      <h2 class="about-title">
+        空間そのものが、<br>
+        体験になる。
+      </h2>
+      <p class="about-text">
+        Myrrh は「場の力」を信じています。
+        光、素材、音 —— すべてが調和した空間が、
+        そこに集う人々の思考を研ぎ澄まし、
+        アイデアを生み出す触媒となる。
+      </p>
+      <br>
+      <p class="about-text">
+        私たちのレンタルスペースは、
+        単なる場所貸しではありません。
+        体験をデザインするための舞台です。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- SPACES -->
+<section class="spaces">
+  <div class="container">
+    <div class="spaces-header">
+      <p class="spaces-label">Our Spaces</p>
+      <h2 class="spaces-title">厳選されたコレクション</h2>
+    </div>
+    <div class="spaces-grid">
+      <div class="space-card">
+        <div class="space-card-img"></div>
+        <div class="space-card-body">
+          <p class="space-card-cat">Meeting</p>
+          <h3 class="space-card-name">Conference A</h3>
+          <p class="space-card-meta">20m² · 最大8名</p>
+          <p class="space-card-price">¥3,000 <small>/h</small></p>
+          <div class="space-card-line"></div>
+        </div>
+      </div>
+      <div class="space-card">
+        <div class="space-card-img" style="background:linear-gradient(160deg, #1a2018, #101810);"></div>
+        <div class="space-card-body">
+          <p class="space-card-cat">Coworking</p>
+          <h3 class="space-card-name">Open Lounge</h3>
+          <p class="space-card-meta">80m² · 最大30名</p>
+          <p class="space-card-price">¥1,500 <small>/h</small></p>
+          <div class="space-card-line"></div>
+        </div>
+      </div>
+      <div class="space-card">
+        <div class="space-card-img" style="background:linear-gradient(160deg, #201a24, #141018);"></div>
+        <div class="space-card-body">
+          <p class="space-card-cat">Seminar</p>
+          <h3 class="space-card-name">Hall B</h3>
+          <p class="space-card-meta">120m² · 最大50名</p>
+          <p class="space-card-price">¥8,000 <small>/h</small></p>
+          <div class="space-card-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="deco-divider">
+  <span class="line"></span>
+  <span class="diamond"></span>
+  <span class="line"></span>
+</div>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="container">
+    <div class="stat-item">
+      <div class="stat-value">12</div>
+      <div class="stat-label">Spaces</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">2,400+</div>
+      <div class="stat-label">Bookings</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">98%</div>
+      <div class="stat-label">Satisfaction</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">4.8</div>
+      <div class="stat-label">Rating</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <div class="container">
+    <h2 class="cta-title">RESERVE<br>YOUR SPACE</h2>
+    <p class="cta-desc">
+      オンラインで空き状況確認から予約まで完結。<br>
+      あなたの次のプロジェクトに、最適な空間を。
+    </p>
+    <a href="#" class="cta-btn">Book Now</a>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <span class="footer-brand">MYRRH</span>
+    <div class="footer-links">
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="#">Contact</a>
+    </div>
+    <span class="footer-copy">&copy; 2026 Myrrh Rental Space</span>
+  </div>
+</footer>
+
+</body>
+</html>

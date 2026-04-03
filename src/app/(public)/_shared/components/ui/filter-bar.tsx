@@ -1,7 +1,9 @@
 "use client";
 
-import { parseAsString, useQueryState } from "nuqs";
+import type { ReactElement } from "react";
+import { useQueryStates } from "nuqs";
 import { useTransition } from "react";
+import { spaceSearchParamsParsers } from "@/public/lib/search-params";
 
 interface FilterOption {
   readonly id: string;
@@ -12,53 +14,58 @@ interface FilterBarProps {
   readonly categories: readonly FilterOption[];
 }
 
-export function FilterBar({ categories }: FilterBarProps) {
-  const [activeCategory, setActiveCategory] = useQueryState(
-    "category",
-    parseAsString.withOptions({ history: "push", shallow: false }),
-  );
+export function FilterBar({ categories }: FilterBarProps): ReactElement {
+  const [params, setParams] = useQueryStates(spaceSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
   const [isPending, startTransition] = useTransition();
+
+  const activeCategory = params.category;
 
   function handleFilter(categoryId: string | null) {
     startTransition(() => {
-      void setActiveCategory(categoryId);
+      void setParams({ category: categoryId, page: 1 });
     });
   }
 
   return (
-    <div
-      className="flex flex-wrap gap-2"
-      role="group"
+    <nav
       aria-label="カテゴリフィルタ"
+      className={`transition-opacity duration-300 ${isPending ? "opacity-60" : ""}`}
     >
-      <button
-        type="button"
-        onClick={() => handleFilter(null)}
-        className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-          !activeCategory
-            ? "bg-accent text-accent-foreground"
-            : "bg-surface text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        すべて
-      </button>
-      {categories.map((cat) => (
-        <button
-          key={cat.id}
-          type="button"
-          onClick={() => handleFilter(cat.id)}
-          className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-            activeCategory === cat.id
-              ? "bg-accent text-accent-foreground"
-              : "bg-surface text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {cat.name}
-        </button>
-      ))}
-      {isPending ? (
-        <span className="text-sm text-muted-foreground">読み込み中...</span>
-      ) : null}
-    </div>
+      <ul className="flex flex-wrap gap-3" role="list">
+        <li>
+          <button
+            type="button"
+            onClick={() => handleFilter(null)}
+            aria-pressed={!activeCategory}
+            className={`rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300 ${
+              !activeCategory
+                ? "bg-accent text-accent-foreground"
+                : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            }`}
+          >
+            All
+          </button>
+        </li>
+        {categories.map((cat) => (
+          <li key={cat.id}>
+            <button
+              type="button"
+              onClick={() => handleFilter(cat.id)}
+              aria-pressed={activeCategory === cat.id}
+              className={`rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300 ${
+                activeCategory === cat.id
+                  ? "bg-accent text-accent-foreground"
+                  : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
+              }`}
+            >
+              {cat.name}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

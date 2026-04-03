@@ -73,7 +73,7 @@ export default async function SpacesPage({
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
-      <section className="py-[var(--spacing-section)]">
+      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container>
           {/* Filter */}
           <Suspense fallback={null}>

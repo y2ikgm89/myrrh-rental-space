@@ -1,22 +1,18 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { parseAsString, parseAsInteger, useQueryStates } from "nuqs";
+import { useQueryStates } from "nuqs";
 import { IconSearch } from "@tabler/icons-react";
+import { searchFilterParsers } from "@/public/lib/search-params";
 
 interface SearchBarProps {
   readonly placeholder?: string;
 }
 
-const searchParsers = {
-  q: parseAsString.withDefault(""),
-  page: parseAsInteger.withDefault(1),
-};
-
 export function SearchBar({
   placeholder = "検索...",
 }: SearchBarProps): ReactElement {
-  const [params, setParams] = useQueryStates(searchParsers, {
+  const [params, setParams] = useQueryStates(searchFilterParsers, {
     history: "push",
     shallow: false,
   });

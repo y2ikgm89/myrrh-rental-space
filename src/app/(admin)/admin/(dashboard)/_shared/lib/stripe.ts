@@ -48,7 +48,7 @@ function getEnvSecretKey(): string | null {
  */
 export function createStripeClient(secretKey: string): Stripe {
   return new Stripe(secretKey, {
-    // stripe@21 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
+    // stripe@22 ピン留め — SDK 更新時は型エラーで次の LatestApiVersion が分かる
     apiVersion: "2026-03-25.dahlia",
     typescript: true,
   });
@@ -94,7 +94,7 @@ export async function testStripeConnection(
     }
 
     const stripe = createStripeClient(secretKey);
-    const account = await stripe.accounts.retrieve();
+    const account = await stripe.accounts.retrieve(null);
 
     return {
       success: true,

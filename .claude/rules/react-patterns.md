@@ -588,7 +588,7 @@ import { unstable_Activity as Activity } from 'react'
 
 ## フックから UI 要素を返すパターン（headless UI）
 
-フックから `ComponentType` を返すと React Compiler / eslint-react v3 でエラー（`component-hook-factories`）。`ReactNode` を返す:
+フックから `ComponentType` を返すと React Compiler / eslint-react v4 でエラー（`component-hook-factories`）。`ReactNode` を返す:
 
 ```typescript
 // NG: フック内コンポーネント定義（component-hook-factories エラー）
@@ -635,7 +635,7 @@ function useDialog() {
 - **管理者入力 HTML は `SanitizedHtml` 必須** — 生の HTML 直接レンダリング禁止。`import { SanitizedHtml } from "@/shared/components/SanitizedHtml"` を使う（isomorphic-dompurify, ADD_TAGS: ['iframe']）。例外: JSON-LD の `<script type="application/ld+json">` は JSON.stringify() 経由のため安全で変更不要
 - **`useFormStatus` は react-hook-form の `onSubmit` パターンと非互換** — `useFormStatus` は `<form action={}>` でのみ動作する。`useFormAction`（react-hook-form + `useTransition`）や **`useActionState` + RHF ハイブリッド**（例: `SpaceEditForm`）では、待機状態は **`SubmitButton` に `isPending` を prop で渡す**（`useActionState` の第3戻り値や `useTransition` の pending）。`useFormStatus` への移行は不要
 - **`DndContext`（@dnd-kit）には必ず `id` prop を付与** — 未指定だと内部カウンター（`DndDescribedBy-N`）が SSR/クライアントでずれ hydration mismatch が発生する。固定コンポーネントは文字列リテラル（`id="xxx-sortable"`）、汎用コンポーネントは `useId()` を使用
-- **`@eslint-react/eslint-plugin` v3 でルール名変更** — `@eslint-react/hooks-extra/no-direct-set-state-in-use-effect` → `@eslint-react/set-state-in-effect`。アップグレード時に全 eslint-disable コメントを一括置換する。`@eslint-react/purity` の `new Date()` 警告は Server Component で false positive（warn レベルのため放置可）
+- **`@eslint-react/eslint-plugin` v4 でルール名プレフィックスフラット化** — `@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`、`@eslint-react/web-api/no-xxx` → `@eslint-react/web-api-no-xxx`。eslint-disable コメントと `eslint.config.mjs` のルール名を一括置換。v4 で `@eslint-react/purity` の `new Date()` false positive が大幅改善（大半の disable コメントを削除可能）
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` パターンは React Compiler が最適化できないため error。JSX 前に変数抽出する
 - **`useSyncExternalStore` の `getServerSnapshot` で配列・オブジェクトを毎回新規生成しない** — `return []` / `return {}` は NG。モジュール定数や固定参照を返す。プリミティブ（`null`, `false` 等）は OK
 

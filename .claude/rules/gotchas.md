@@ -116,6 +116,8 @@ paths:
 - **`SectionWrapper` と `Section` Primitive を混同しない** — `SectionWrapper`（`sections/SectionWrapper.tsx`）は管理画面 SectionDesign JSON → CSS 変換（padding/background/maxWidth を DB から動的制御）。`Section` Primitive（`design-system/section.tsx`）は静的ページレイアウト用。SectionWrapper を Section に置き換えると管理画面のデザイン制御が効かなくなる
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
+- **hero 直下の一覧セクションは上余白を縮小** — `py-[var(--spacing-section)]`（112-176px）は hero 後に過剰。`pt-10 pb-[var(--spacing-section)] md:pt-14` で上余白のみ 40-56px に抑える。適用済み: `/spaces`, `/journal`, `/faq`。記事詳細・ホームページセクションは独立コンテンツのためフル余白維持
+- **同種の公開 UI コンポーネント重複禁止** — 新規作成前に `_shared/components/ui/` を確認。`FilterBar`（nuqs + useTransition + Editorial スタイル）が唯一のカテゴリフィルタ
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **`@layer compat` と旧カラートークンは削除済み** — `--color-primary` / `--color-brand-primary` 等の旧トークンは存在しない。全コンポーネントが `@theme` のセマンティックトークン（`accent`/`foreground`/`surface` 等）を直接使用
 - **公開ページの `hover:text-accent` は原則禁止** — `hover:text-foreground` に統一（Editorial Magazine トーン）。accent はラベル・価格・CTA テキストの静的表示のみに使用

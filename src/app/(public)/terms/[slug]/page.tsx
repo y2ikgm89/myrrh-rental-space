@@ -77,7 +77,6 @@ export default async function TermsDetailPage({ params }: PageProps) {
             <p className="mb-8 text-sm text-muted-foreground">
               最終更新:{" "}
               <time dateTime={publishedAt}>
-                {/* eslint-disable-next-line @eslint-react/purity -- Server Component: new Date() is safe here */}
                 {new Date(publishedAt).toLocaleDateString("ja-JP", {
                   year: "numeric",
                   month: "long",

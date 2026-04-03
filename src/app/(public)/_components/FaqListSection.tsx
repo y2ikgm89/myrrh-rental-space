@@ -191,7 +191,7 @@ export function FaqListSection({
       </SectionWrapper>
 
       {/* FAQ JSON-LD — Unicode-escape < > & to prevent script injection (same pattern as JsonLd.tsx) */}
-      {/* eslint-disable @eslint-react/dom/no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */}
+      {/* eslint-disable @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD: JSON.stringify + Unicode-escaped, safe for structured data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -212,7 +212,7 @@ export function FaqListSection({
             .replace(/&/g, "\\u0026"),
         }}
       />
-      {/* eslint-enable @eslint-react/dom/no-dangerously-set-innerhtml */}
+      {/* eslint-enable @eslint-react/dom-no-dangerously-set-innerhtml */}
     </>
   );
 }

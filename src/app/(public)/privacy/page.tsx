@@ -11,6 +11,7 @@ import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { PageLayout } from "@/public/components/design-system/page-layout";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -24,10 +25,10 @@ export default async function PrivacyPage(): Promise<ReactElement> {
   const sections = await getPageSectionsWithFallback("privacy");
 
   return (
-    <>
+    <PageLayout variant="content">
       {sections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
-    </>
+    </PageLayout>
   );
 }

@@ -23,7 +23,6 @@ export function CommentItem({
   onDelete,
   canDelete = true,
 }: CommentItemProps) {
-  // eslint-disable-next-line @eslint-react/purity -- Client Component: new Date() is safe here
   const timeAgo = formatDistanceToNow(new Date(comment.createdAt), {
     addSuffix: true,
     locale: ja,

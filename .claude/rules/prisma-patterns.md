@@ -152,7 +152,9 @@ type Foo = { discountType: DiscountType };
 
 - `types.ts`（型定義）
 - `queries.ts`（全 `select` 句）
+- `customer-queries.ts`（顧客マイページ用 `select` 句 — 一覧用 `LIST_SELECT` と詳細用 `DETAIL_SELECT` の両方）
 - 管理画面 Form / Detail / Table コンポーネント
+- マイページ詳細・一覧コンポーネント（props 型の同期）
 - メール `types` / テンプレート
 - `prisma/seed.ts`
 - テスト

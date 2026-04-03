@@ -1,0 +1,134 @@
+<h2>タイポグラフィ + レイアウト設計</h2>
+<p class="subtitle">Cormorant Garamond × Noto Sans JP / ダークテーマ最適化</p>
+
+<div class="section">
+  <h3>タイポグラフィシステム</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">フォント構成</div>
+  <div class="mockup-body" style="background: #1a1512; padding: 32px;">
+    <!-- Hero -->
+    <div style="margin-bottom: 40px; border-bottom: 1px solid rgba(180,155,120,0.15); padding-bottom: 32px;">
+      <div style="font-size: 0.65rem; letter-spacing: 0.3em; color: #8a7a6a; text-transform: uppercase; margin-bottom: 8px;">Hero / H1 — Cormorant Garamond Light</div>
+      <div style="font-family: 'Cormorant Garamond', Garamond, serif; font-size: 3rem; color: #e8dcc8; letter-spacing: 0.08em; font-weight: 300; line-height: 1.2;">Exceptional Space</div>
+      <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.1rem; color: rgba(232,220,200,0.7); letter-spacing: 0.04em; font-weight: 300; margin-top: 8px;">上質な空間を、あなたに</div>
+    </div>
+    <!-- H2 -->
+    <div style="margin-bottom: 32px; border-bottom: 1px solid rgba(180,155,120,0.1); padding-bottom: 24px;">
+      <div style="font-size: 0.65rem; letter-spacing: 0.3em; color: #8a7a6a; text-transform: uppercase; margin-bottom: 8px;">H2 — Cormorant Garamond Regular</div>
+      <div style="font-family: 'Cormorant Garamond', Garamond, serif; font-size: 2rem; color: #e8dcc8; letter-spacing: 0.06em; font-weight: 400;">Our Spaces</div>
+      <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 0.95rem; color: rgba(232,220,200,0.7); font-weight: 300; margin-top: 4px;">スペース一覧</div>
+    </div>
+    <!-- H3 -->
+    <div style="margin-bottom: 32px; border-bottom: 1px solid rgba(180,155,120,0.1); padding-bottom: 24px;">
+      <div style="font-size: 0.65rem; letter-spacing: 0.3em; color: #8a7a6a; text-transform: uppercase; margin-bottom: 8px;">H3 — Noto Sans JP Medium</div>
+      <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 1.25rem; color: #e8dcc8; letter-spacing: 0.02em; font-weight: 500;">料金・アクセス</div>
+    </div>
+    <!-- Label -->
+    <div style="margin-bottom: 32px; border-bottom: 1px solid rgba(180,155,120,0.1); padding-bottom: 24px;">
+      <div style="font-size: 0.65rem; letter-spacing: 0.3em; color: #8a7a6a; text-transform: uppercase; margin-bottom: 8px;">Section Label — Noto Sans JP + 装飾ライン</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 24px; height: 1px; background: oklch(0.65 0.09 60);"></div>
+        <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 0.75rem; color: oklch(0.65 0.09 60); letter-spacing: 0.2em; text-transform: uppercase;">Space</div>
+      </div>
+    </div>
+    <!-- Body -->
+    <div>
+      <div style="font-size: 0.65rem; letter-spacing: 0.3em; color: #8a7a6a; text-transform: uppercase; margin-bottom: 8px;">Body — Noto Sans JP Light</div>
+      <div style="font-family: 'Noto Sans JP', sans-serif; font-size: 0.95rem; color: rgba(232,220,200,0.75); line-height: 2; font-weight: 300; max-width: 560px;">
+        洗練された空間で、特別なひとときをお過ごしください。ワークショップ、撮影、プライベートパーティーなど、あらゆるシーンに対応いたします。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>フォント変更サマリー</h3>
+  <table style="width: 100%; border-collapse: collapse; font-size: 0.85em;">
+    <thead>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+        <th style="text-align: left; padding: 8px;">用途</th>
+        <th style="text-align: left; padding: 8px;">現行</th>
+        <th style="text-align: left; padding: 8px;">新</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">--font-serif（Hero/H1/H2）</td>
+        <td style="padding: 8px;">Noto Serif JP</td>
+        <td style="padding: 8px; color: #b49b78;">Cormorant Garamond</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">--font-sans（H3/Body/Label/UI）</td>
+        <td style="padding: 8px;">Noto Sans JP</td>
+        <td style="padding: 8px; color: #b49b78;">Noto Sans JP（維持）</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px;">和文見出し補助</td>
+        <td style="padding: 8px;">Noto Serif JP</td>
+        <td style="padding: 8px; color: #b49b78;">Noto Sans JP Light</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size: 0.8em; color: #888; margin-top: 12px;">
+    ※ Noto Serif JP は完全削除。Cormorant Garamond（Latin subset ≈ 80KB）+ 既存 Noto Sans JP のみでフォント読み込み最適化。
+  </p>
+</div>
+
+<div class="section" style="margin-top: 40px;">
+  <h3>レイアウト変更</h3>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Header: 透明→ダーク遷移</div>
+  <div class="mockup-body" style="padding: 0;">
+    <!-- Transparent state -->
+    <div style="background: linear-gradient(180deg, rgba(26,21,18,0.6) 0%, transparent 100%); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; color: #e8dcc8; letter-spacing: 0.12em; font-weight: 300;">MYRRH</div>
+      <div style="display: flex; gap: 28px; font-family: 'Noto Sans JP', sans-serif; font-size: 0.8rem; color: rgba(232,220,200,0.8); letter-spacing: 0.08em;">
+        <span>スペース</span><span>イベント</span><span>ジャーナル</span><span>ご予約</span>
+      </div>
+    </div>
+    <div style="text-align: center; font-size: 0.7em; color: #8a7a6a; padding: 4px;">↑ Top（透明グラデーション）</div>
+    <!-- Scrolled state -->
+    <div style="background: rgba(26,21,18,0.95); backdrop-filter: blur(12px); padding: 12px 32px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(180,155,120,0.1);">
+      <div style="font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #e8dcc8; letter-spacing: 0.12em; font-weight: 300;">MYRRH</div>
+      <div style="display: flex; gap: 28px; font-family: 'Noto Sans JP', sans-serif; font-size: 0.75rem; color: rgba(232,220,200,0.7); letter-spacing: 0.08em;">
+        <span>スペース</span><span>イベント</span><span>ジャーナル</span><span style="color: oklch(0.65 0.09 60); border: 1px solid oklch(0.65 0.09 60); padding: 4px 16px; border-radius: 999px; font-size: 0.9em;">ご予約</span>
+      </div>
+    </div>
+    <div style="text-align: center; font-size: 0.7em; color: #8a7a6a; padding: 4px;">↑ Scrolled（blur背景 + 予約CTA出現）</div>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top: 24px;">
+  <div class="mockup-header">セクション背景パターン（交互切替）</div>
+  <div class="mockup-body" style="padding: 0;">
+    <div style="background: #1a1512; padding: 20px 32px; text-align: center;">
+      <div style="font-size: 0.7em; color: #8a7a6a;">Hero — フルブリード画像 + オーバーレイ</div>
+    </div>
+    <div style="background: #1a1512; padding: 20px 32px; text-align: center;">
+      <div style="font-size: 0.7em; color: #8a7a6a;">Section — background（ダークブラウン）</div>
+    </div>
+    <div style="background: #231e18; padding: 20px 32px; text-align: center;">
+      <div style="font-size: 0.7em; color: #8a7a6a;">Section — surface（少し明るいダーク）</div>
+    </div>
+    <div style="background: #1a1512; padding: 20px 32px; text-align: center;">
+      <div style="font-size: 0.7em; color: #8a7a6a;">Section — background</div>
+    </div>
+    <div style="background: linear-gradient(135deg, #231e18, #1a1512); padding: 20px 32px; text-align: center;">
+      <div style="font-size: 0.7em; color: #b49b78;">CTA — グラデーション + ブロンズアクセント</div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 24px;">
+  <p style="font-size: 0.85em; color: #888; line-height: 1.8;">
+    <strong>レイアウト変更点:</strong><br>
+    • Container最大幅: 80rem(1280px) → 維持（ラグジュアリーでも1280pxは標準）<br>
+    • セクション間padding: clamp(5rem, 8vw, 7.5rem) → clamp(6rem, 10vw, 9rem) に拡大（より贅沢な余白）<br>
+    • カードのborder-radius: rounded-lg → rounded-xl（よりソフトに）<br>
+    • Footerナビ構成: news/posts → journal に統合反映
+  </p>
+</div>

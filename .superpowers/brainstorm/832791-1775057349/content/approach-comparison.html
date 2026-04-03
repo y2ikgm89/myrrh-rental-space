@@ -1,0 +1,106 @@
+<h2>実装アプローチの比較</h2>
+<p class="subtitle">ウォームダーク × ブロンズ / Cormorant Garamond + Noto Sans JP / リッチモーション</p>
+
+<div class="options">
+  <!-- Approach A -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>トークン・ファースト（推奨）</h3>
+      <p><strong>戦略:</strong> @theme トークンを一括差し替え → Primitives 調整 → セクション個別磨き上げ</p>
+      <p style="margin-top: 12px; font-size: 0.9em; color: #888; line-height: 1.7;">
+        <strong>Phase 1</strong> — public.css の @theme ブロック全面書き換え（カラー・タイポ・スペーシング）+ project-design-config.md 更新<br>
+        <strong>Phase 2</strong> — Header/Footer ダークテーマ対応 + 10 Primitives のスタイル刷新<br>
+        <strong>Phase 3</strong> — 17セクション個別刷新（Hero→CTA→リスト系→詳細系の順）<br>
+        <strong>Phase 4</strong> — モーション強化（GSAP ScrollTrigger演出追加）<br>
+        <strong>Phase 5</strong> — ページ統合（news+posts→journal）+ 全体磨き上げ
+      </p>
+      <div style="margin-top: 16px; padding: 12px; background: rgba(180,155,120,0.08); border-radius: 8px; font-size: 0.85em;">
+        <strong style="color: #b49b78;">✦ 推奨理由:</strong> トークン差し替えだけで全コンポーネントが一斉にダーク化。段階的に品質を上げていける。既存アーキテクチャと完全整合。互換レイヤー(@layer compat)は削除してクリーンに。
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach B -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>コンポーネント・リビルド</h3>
+      <p><strong>戦略:</strong> デザインシステムを先にゼロから再構築 → セクションを新コンポーネントで組み直す</p>
+      <p style="margin-top: 12px; font-size: 0.9em; color: #888; line-height: 1.7;">
+        <strong>Phase 1</strong> — 新デザインシステム設計（トークン＋新 Primitives 定義）<br>
+        <strong>Phase 2</strong> — 新 Primitives 実装（既存を破棄して書き直し）<br>
+        <strong>Phase 3</strong> — セクションを新コンポーネントで再実装<br>
+        <strong>Phase 4</strong> — Header/Footer/レイアウト再実装<br>
+        <strong>Phase 5</strong> — モーション・ページ統合
+      </p>
+      <div style="margin-top: 16px; padding: 12px; background: rgba(255,100,100,0.05); border-radius: 8px; font-size: 0.85em;">
+        <strong style="color: #c87070;">✦ リスク:</strong> 工数が2-3倍。既存の SectionRenderer/SectionWrapper アーキテクチャは優秀なので壊す理由がない。Primitives も構造は良い（Server Component、型安全）。見た目だけ変えれば良いものをゼロから書き直すのは過剰。
+      </div>
+    </div>
+  </div>
+
+  <!-- Approach C -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>ページ・ファースト</h3>
+      <p><strong>戦略:</strong> ホームページを先に完成形まで作り込み → そのデザインを他ページに展開</p>
+      <p style="margin-top: 12px; font-size: 0.9em; color: #888; line-height: 1.7;">
+        <strong>Phase 1</strong> — ホームページのみ完全刷新（トークン＋Hero＋全セクション＋モーション）<br>
+        <strong>Phase 2</strong> — ホームで確立したデザインをトークン化・抽象化<br>
+        <strong>Phase 3</strong> — 他ページに順次展開<br>
+        <strong>Phase 4</strong> — ページ統合・調整
+      </p>
+      <div style="margin-top: 16px; padding: 12px; background: rgba(255,200,100,0.05); border-radius: 8px; font-size: 0.85em;">
+        <strong style="color: #c8a040;">✦ 注意:</strong> 1ページの完成度は高くなるが、他ページ展開時にトークンの後付け抽象化が必要。A と比べてトークン設計の手戻りリスクがある。ただし「完成形を先に見たい」場合には有効。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 32px;">
+  <h3>比較サマリー</h3>
+  <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+    <thead>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <th style="text-align: left; padding: 8px;">観点</th>
+        <th style="text-align: center; padding: 8px;">A. トークン・ファースト</th>
+        <th style="text-align: center; padding: 8px;">B. リビルド</th>
+        <th style="text-align: center; padding: 8px;">C. ページ・ファースト</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">工数</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">中</td>
+        <td style="text-align: center; padding: 8px; color: #c08080;">大</td>
+        <td style="text-align: center; padding: 8px; color: #c0c080;">中〜大</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">手戻りリスク</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">低</td>
+        <td style="text-align: center; padding: 8px; color: #c0c080;">中</td>
+        <td style="text-align: center; padding: 8px; color: #c08080;">高</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">既存アーキ活用</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">最大</td>
+        <td style="text-align: center; padding: 8px; color: #c08080;">破棄</td>
+        <td style="text-align: center; padding: 8px; color: #c0c080;">部分</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 8px;">段階的デプロイ</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">可能</td>
+        <td style="text-align: center; padding: 8px; color: #c08080;">困難</td>
+        <td style="text-align: center; padding: 8px; color: #c0c080;">可能</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px;">デザイン自由度</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">高</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">最大</td>
+        <td style="text-align: center; padding: 8px; color: #90c090;">高</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -53,7 +53,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **`useSyncExternalStore` の `getServerSnapshot`**: 配列・オブジェクトを返すときは**参照固定**（モジュール定数の `[]` 等）。インラインの `return []` / `return {}` はランタイム警告の原因
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
 - **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
-- **eslint-disable コメントのルール名が最新か確認** — `@eslint-react/hooks-extra/*` は v3 で廃止。`@eslint-react/set-state-in-effect` 等の新名に置換済みか検証
+- **eslint-disable コメントのルール名が最新か確認** — v4 でプレフィックスフラット化（`@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`）。旧 `hooks-extra/*` / `dom/*` / `web-api/*` 形式が残っていないか検証
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):
 

@@ -2,8 +2,9 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { parseAsString, parseAsInteger, useQueryStates } from "nuqs";
+import { useQueryStates } from "nuqs";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { journalSearchParamsParsers } from "@/public/lib/search-params";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 
@@ -26,11 +27,6 @@ const TABS = [
   { value: "posts", label: "コラム" },
 ] as const;
 
-const tabParsers = {
-  tab: parseAsString.withDefault("all"),
-  page: parseAsInteger.withDefault(1),
-};
-
 function TypeBadge({ type }: { readonly type: "news" | "post" }): ReactElement {
   const label = type === "news" ? "ニュース" : "コラム";
 
@@ -45,7 +41,7 @@ export function JournalContent({
   items,
   activeTab,
 }: JournalContentProps): ReactElement {
-  const [, setParams] = useQueryStates(tabParsers, {
+  const [, setParams] = useQueryStates(journalSearchParamsParsers, {
     history: "push",
     shallow: false,
   });
