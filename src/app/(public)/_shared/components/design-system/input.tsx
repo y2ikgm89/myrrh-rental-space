@@ -24,7 +24,7 @@ export function Input({
     <div className={wrapperClassName}>
       <label
         htmlFor={inputId}
-        className="mb-1.5 block text-sm font-medium text-foreground"
+        className="mb-2 block text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground"
       >
         {label}
         {props.required ? (
@@ -39,9 +39,9 @@ export function Input({
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
         {...props}
-        className={`w-full min-h-11 rounded-lg border px-3 py-2 text-foreground bg-background transition-colors
-          placeholder:text-muted-foreground
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:border-accent
+        className={`w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors
+          placeholder:text-muted-foreground/60
+          focus-visible:outline-none focus-visible:border-accent
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-destructive" : "border-border"}`}
       />

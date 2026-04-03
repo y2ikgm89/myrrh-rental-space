@@ -1,20 +1,22 @@
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
-type AspectRatio = "video" | "square" | "portrait" | "wide";
+type AspectRatio = "video" | "square" | "portrait" | "wide" | "landscape";
 
 const aspectClasses = {
   video: "aspect-video",
   square: "aspect-square",
   portrait: "aspect-[3/4]",
   wide: "aspect-[2/1]",
+  landscape: "aspect-[4/3]",
 } as const satisfies Record<AspectRatio, string>;
 
 interface ImageFrameProps {
   readonly src: string;
   readonly alt: string;
-  readonly width: number;
-  readonly height: number;
+  readonly width?: number;
+  readonly height?: number;
+  readonly fill?: boolean;
   readonly aspect?: AspectRatio;
   readonly sizes: string;
   readonly priority?: boolean;
@@ -26,6 +28,7 @@ export function ImageFrame({
   alt,
   width,
   height,
+  fill,
   aspect,
   sizes,
   priority = false,
@@ -34,20 +37,31 @@ export function ImageFrame({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg bg-surface",
+        "group relative overflow-hidden rounded-lg bg-surface",
         aspect && aspectClasses[aspect],
         className,
       )}
     >
-      <Image
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        sizes={sizes}
-        priority={priority}
-        className="h-full w-full object-cover"
-      />
+      {fill ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes={sizes}
+          priority={priority}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <Image
+          src={src}
+          alt={alt}
+          {...(width !== undefined && { width })}
+          {...(height !== undefined && { height })}
+          sizes={sizes}
+          priority={priority}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      )}
     </div>
   );
 }
