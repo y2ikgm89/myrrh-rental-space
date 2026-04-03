@@ -33,16 +33,17 @@ OKLCH形式。Luxury White × Bronze。
 
 ## セクション設計
 
-| 要素              | 値                                                                   |
-| ----------------- | -------------------------------------------------------------------- |
-| Section padding   | Fluid: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`    |
-| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                   |
-| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]` |
-| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                    |
-| Container max     | `80rem` (1280px)                                                     |
-| セクション分離    | 薄いボーダー + 背景色切替（background ↔ surface）                    |
-| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3` |
-| border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
+| 要素              | 値                                                                            |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`    |
+| Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)` |
+| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                            |
+| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`          |
+| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                             |
+| Container max     | `80rem` (1280px)                                                              |
+| セクション分離    | 薄いボーダー + 背景色切替（background ↔ surface）                             |
+| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`          |
+| border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp          |
 
 ## コンポーネント規約
 
