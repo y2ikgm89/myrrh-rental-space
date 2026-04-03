@@ -88,21 +88,21 @@ export function SpacesSection({
                 <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-border pt-4">
                   {featured.area != null && (
                     <div>
-                      <dt className="text-[0.55rem] uppercase tracking-[0.15em] text-muted-foreground">
+                      <dt className="text-[0.625rem] uppercase tracking-[0.15em] text-muted-foreground">
                         Area
                       </dt>
                       <dd className="text-[0.85rem]">{featured.area}m²</dd>
                     </div>
                   )}
                   <div>
-                    <dt className="text-[0.55rem] uppercase tracking-[0.15em] text-muted-foreground">
+                    <dt className="text-[0.625rem] uppercase tracking-[0.15em] text-muted-foreground">
                       Capacity
                     </dt>
                     <dd className="text-[0.85rem]">Max {featured.capacity}</dd>
                   </div>
                   {featured.categoryName && (
                     <div>
-                      <dt className="text-[0.55rem] uppercase tracking-[0.15em] text-muted-foreground">
+                      <dt className="text-[0.625rem] uppercase tracking-[0.15em] text-muted-foreground">
                         Type
                       </dt>
                       <dd className="text-[0.85rem]">
@@ -147,7 +147,7 @@ export function SpacesSection({
                     )}
                   </div>
                   {space.categoryName && (
-                    <p className="mt-3 text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+                    <p className="mt-3 text-[0.625rem] uppercase tracking-[0.18em] text-accent">
                       {space.categoryName}
                     </p>
                   )}

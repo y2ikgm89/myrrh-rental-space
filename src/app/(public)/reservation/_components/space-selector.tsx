@@ -28,7 +28,7 @@ export function SpaceSelector({
         aria-label="スペースを選択"
         className={
           spaces.length <= 3
-            ? "grid gap-6 md:grid-cols-3"
+            ? "grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3"
             : "flex gap-6 overflow-x-auto snap-x snap-mandatory pb-2 md:grid md:grid-cols-3 md:overflow-visible md:snap-none md:pb-0"
         }
       >

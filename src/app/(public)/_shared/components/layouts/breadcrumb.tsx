@@ -30,7 +30,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
           <li>
             <Link
               href="/"
-              className="hover:text-foreground"
+              className="px-1 py-1 hover:text-foreground"
               aria-label="ホーム"
             >
               <IconHome className="h-4 w-4" />
@@ -42,7 +42,10 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
                 /
               </span>
               {item.href && i < items.length - 1 ? (
-                <Link href={item.href} className="hover:text-foreground">
+                <Link
+                  href={item.href}
+                  className="px-1 py-1 hover:text-foreground"
+                >
                   {item.label}
                 </Link>
               ) : (

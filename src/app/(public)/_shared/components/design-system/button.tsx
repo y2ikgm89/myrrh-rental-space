@@ -20,7 +20,7 @@ const variantClasses = {
 } as const satisfies Record<ButtonVariant, string>;
 
 const sizeClasses = {
-  sm: "px-3 py-1.5 text-sm min-h-9",
+  sm: "px-3 py-2 text-sm min-h-10",
   md: "px-5 py-2.5 text-base min-h-11",
   lg: "px-7 py-3 text-lg min-h-12",
 } as const satisfies Record<ButtonSize, string>;

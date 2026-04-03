@@ -17,7 +17,7 @@ export function LocationSelector({
     <div
       role="radiogroup"
       aria-label="場所を選択"
-      className="grid gap-6 md:grid-cols-2"
+      className="grid grid-cols-1 gap-6 md:grid-cols-2"
     >
       {locations.map((location) => {
         const isSelected = location.id === selectedId;

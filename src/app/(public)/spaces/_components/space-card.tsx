@@ -132,7 +132,7 @@ export function SpaceCard({
       {/* Content */}
       <div className="p-4 sm:p-5">
         {categoryName ? (
-          <p className="text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+          <p className="text-[0.625rem] uppercase tracking-[0.18em] text-accent">
             {categoryName}
           </p>
         ) : null}
