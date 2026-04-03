@@ -42,7 +42,7 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
         const stats = reviewStats?.[space.id];
         return (
           <ScrollReveal key={space.id} delay={i * 0.08}>
-            <div className={i % 2 === 1 ? "md:mt-16" : ""}>
+            <div>
               <SpaceCard
                 slug={space.slug}
                 name={space.name}
