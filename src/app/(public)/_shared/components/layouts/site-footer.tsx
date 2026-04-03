@@ -140,17 +140,17 @@ export async function Footer(): Promise<ReactElement> {
         className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
         aria-hidden="true"
       />
-      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-16">
-        <div className="grid gap-10 md:grid-cols-3 md:gap-12">
+      <div className="mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-20">
+        <div className="grid gap-10 md:grid-cols-3 md:gap-16">
           {/* Brand */}
           <div>
             <Link
               href="/"
-              className="font-heading text-2xl font-light tracking-[0.15em] text-foreground"
+              className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground"
             >
               {brandShort}
             </Link>
-            <p className="mt-4 text-sm leading-[2] text-muted-foreground">
+            <p className="mt-5 text-[0.8rem] leading-[2.2] text-muted-foreground">
               {(
                 footerSettings.tagline ??
                 "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
@@ -172,7 +172,7 @@ export async function Footer(): Promise<ReactElement> {
 
           {/* Navigation */}
           <div>
-            <h3 className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <h3 className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
               {footerSettings.navigationLabel}
             </h3>
             <ul className="mt-4 space-y-3">
@@ -184,7 +184,7 @@ export async function Footer(): Promise<ReactElement> {
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-foreground transition-colors hover:text-accent"
+                        className="text-sm text-foreground transition-colors hover:text-foreground"
                       >
                         {item.label}
                         <span className="sr-only"> (新しいタブで開く)</span>
@@ -192,7 +192,7 @@ export async function Footer(): Promise<ReactElement> {
                     ) : (
                       <Link
                         href={item.url}
-                        className="text-sm text-foreground transition-colors hover:text-accent"
+                        className="text-sm text-foreground transition-colors hover:text-foreground"
                       >
                         {item.label}
                       </Link>
@@ -204,7 +204,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/"
-                      className="text-sm text-foreground transition-colors hover:text-accent"
+                      className="text-sm text-foreground transition-colors hover:text-foreground"
                     >
                       IconHome
                     </Link>
@@ -212,7 +212,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/reservation"
-                      className="text-sm text-foreground transition-colors hover:text-accent"
+                      className="text-sm text-foreground transition-colors hover:text-foreground"
                     >
                       Reservation
                     </Link>
@@ -220,7 +220,7 @@ export async function Footer(): Promise<ReactElement> {
                   <li>
                     <Link
                       href="/contact"
-                      className="text-sm text-foreground transition-colors hover:text-accent"
+                      className="text-sm text-foreground transition-colors hover:text-foreground"
                     >
                       Contact
                     </Link>
@@ -236,7 +236,7 @@ export async function Footer(): Promise<ReactElement> {
             itemType="https://schema.org/LocalBusiness"
             className="not-italic"
           >
-            <h3 className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <h3 className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
               {footerSettings.contactLabel}
             </h3>
             <meta itemProp="name" content={info.name} />
@@ -246,7 +246,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="email"
                     href={`mailto:${info.email}`}
-                    className="transition-colors hover:text-accent"
+                    className="transition-colors hover:text-foreground"
                   >
                     {info.email}
                   </a>
@@ -257,7 +257,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="telephone"
                     href={`tel:${info.phone}`}
-                    className="transition-colors hover:text-accent"
+                    className="transition-colors hover:text-foreground"
                   >
                     {info.phone}
                   </a>
@@ -296,7 +296,7 @@ export async function Footer(): Promise<ReactElement> {
               {/* 営業時間（microdata付き） */}
               {hoursDisplay.length > 0 && (
                 <li className="pt-1">
-                  <span className="block text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span className="block text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
                     {footerSettings.hoursLabel}
                   </span>
                   <div className="mt-2 space-y-1">
@@ -326,7 +326,7 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
+                      className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
                     >
                       Google Maps で見る
                       <IconExternalLink className="h-3.5 w-3.5" />
@@ -337,7 +337,7 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleReviewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-accent"
+                      className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
                     >
                       Google で口コミを書く
                       <IconExternalLink className="h-3.5 w-3.5" />
@@ -349,8 +349,8 @@ export async function Footer(): Promise<ReactElement> {
           </address>
         </div>
 
-        <div className="mt-12 border-t border-border pt-8">
-          <p className="text-center text-xs text-muted-foreground">
+        <div className="mt-14 border-t border-border pt-8">
+          <p className="text-center text-[0.6rem] tracking-[0.1em] text-muted-foreground">
             &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
         </div>

@@ -51,7 +51,7 @@ function CTAButtons({
         {secondaryButton && (
           <Link
             href={secondaryButton.url}
-            className="group relative inline-block text-xs uppercase tracking-[0.2em] text-background/60 transition-colors hover:text-accent"
+            className="group relative inline-block text-xs uppercase tracking-[0.18em] text-background/60 transition-colors hover:text-foreground"
           >
             {secondaryButton.text}
             <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />

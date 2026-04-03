@@ -57,7 +57,7 @@ function HeroButtons({
       {secondary && (
         <Link
           href={secondary.url}
-          className="group relative inline-block text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-accent"
+          className="group relative inline-block text-xs uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
         >
           {secondary.text}
           <span className="absolute bottom-0 left-0 h-px w-0 bg-accent/60 transition-all duration-300 group-hover:w-full" />

@@ -12,7 +12,7 @@ const variantClasses = {
     "bg-accent text-white rounded-lg shadow-sm transition-colors duration-200 hover:bg-accent/90 hover:shadow-md",
   secondary: "border border-border text-foreground hover:bg-surface rounded-lg",
   ghost: "bg-transparent text-foreground hover:bg-surface rounded-lg",
-  link: "text-accent hover:text-accent-light underline-offset-4 hover:underline p-0",
+  link: "text-accent hover:text-foreground underline-offset-4 hover:underline p-0",
   editorial:
     "border border-foreground text-foreground rounded-full transition-colors duration-300 hover:bg-foreground hover:text-background",
 } as const satisfies Record<ButtonVariant, string>;
