@@ -30,6 +30,8 @@ interface SpaceCardProps {
   // Review stats (optional — only renders when totalCount > 0)
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
+  // Featured layout (horizontal split for first card in grid)
+  readonly featured?: boolean | undefined;
 }
 
 export function SpaceCard({
@@ -47,6 +49,7 @@ export function SpaceCard({
   dailyPrice,
   averageRating,
   reviewCount,
+  featured,
 }: SpaceCardProps) {
   const { formatUnit } = useFormatPrice();
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
@@ -75,7 +78,9 @@ export function SpaceCard({
   return (
     <Link
       href={`/spaces/${slug}`}
-      className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
+      className={`group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg ${
+        featured ? "grid grid-cols-1 md:grid-cols-[5fr_4fr]" : ""
+      }`}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={() => {
@@ -84,12 +89,22 @@ export function SpaceCard({
       onBlur={() => setShowOverlay(false)}
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div
+        className={`relative overflow-hidden ${
+          featured
+            ? "aspect-[4/3] md:aspect-auto md:min-h-[320px]"
+            : "aspect-[4/3]"
+        }`}
+      >
         <Image
           src={mainImageUrl}
           alt={name}
           fill
-          sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+          sizes={
+            featured
+              ? "(min-width: 768px) 56vw, 100vw"
+              : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+          }
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
@@ -137,25 +152,47 @@ export function SpaceCard({
           </div>
         ) : null}
 
+        {/* Category label — editorial uppercase tracking for featured, Badge for standard */}
         {categoryName ? (
           <div className="absolute left-3 top-3">
-            <Badge>{categoryName}</Badge>
+            {featured ? (
+              <span className="rounded bg-background/90 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-accent backdrop-blur-sm">
+                {categoryName}
+              </span>
+            ) : (
+              <Badge>{categoryName}</Badge>
+            )}
           </div>
         ) : null}
       </div>
 
       {/* Content */}
-      <div className="p-4 md:p-5">
-        <Heading level={3} className="!text-base font-medium md:!text-lg">
+      <div
+        className={
+          featured ? "flex flex-col justify-center p-4 sm:p-8" : "p-4 sm:p-6"
+        }
+      >
+        {/* Featured: editorial category label above heading */}
+        {featured && categoryName ? (
+          <span className="mb-3 text-[11px] uppercase tracking-[0.18em] text-accent md:hidden">
+            {categoryName}
+          </span>
+        ) : null}
+
+        <Heading level={3} className={featured ? "!text-h3" : "!text-base"}>
           {name}
         </Heading>
         {description ? (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+          <p
+            className={`mt-2 text-sm text-muted-foreground ${
+              featured ? "line-clamp-3" : "line-clamp-2"
+            }`}
+          >
             {description}
           </p>
         ) : null}
         {reviewCount != null && reviewCount > 0 && averageRating != null ? (
-          <div className="mt-2 flex items-center gap-1 text-sm">
+          <div className="mt-3 flex items-center gap-1 text-sm">
             <IconStar
               className="h-3.5 w-3.5 text-rating"
               fill="currentColor"
@@ -168,7 +205,7 @@ export function SpaceCard({
           </div>
         ) : null}
         {capacity != null || hourlyPrice != null ? (
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-3">
               {capacity != null ? (
                 <span className="flex items-center gap-1">

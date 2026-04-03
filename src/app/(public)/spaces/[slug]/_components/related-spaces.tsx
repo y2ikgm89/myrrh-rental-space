@@ -1,6 +1,8 @@
 import { getRelatedSpaces } from "@/shared/domain/spaces/public-queries";
-import { Container } from "../../../_shared/components/design-system/container";
-import { Heading } from "../../../_shared/components/design-system/heading";
+import { Container } from "@/public/components/design-system/container";
+import { Heading } from "@/public/components/design-system/heading";
+import { Section } from "@/public/components/design-system/section";
+import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { SpaceCard } from "../../_components/space-card";
 
 interface RelatedSpacesProps {
@@ -16,9 +18,10 @@ export async function RelatedSpaces({
   if (spaces.length === 0) return null;
 
   return (
-    <section className="bg-surface py-[var(--spacing-section)]">
+    <Section background="surface">
       <Container>
-        <Heading level={2} className="mb-8 text-center">
+        <SectionLabel>Related</SectionLabel>
+        <Heading level={2} className="mt-4 mb-8">
           関連スペース
         </Heading>
         <div className="@container">
@@ -38,6 +41,6 @@ export async function RelatedSpaces({
           </div>
         </div>
       </Container>
-    </section>
+    </Section>
   );
 }

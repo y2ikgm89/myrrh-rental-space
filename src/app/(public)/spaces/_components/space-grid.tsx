@@ -35,36 +35,71 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
     );
   }
 
+  const firstSpace = spaces[0];
+  const remainingSpaces = spaces.slice(1);
+  const firstStats = firstSpace ? reviewStats?.[firstSpace.id] : undefined;
+
   return (
-    <div className="@container">
-      <div className="grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3 @md:gap-8">
-        {spaces.map((space) => {
-          const stats = reviewStats?.[space.id];
-          return (
-            <SpaceCard
-              key={space.id}
-              slug={space.slug}
-              name={space.name}
-              description={space.description}
-              capacity={space.capacity}
-              area={space.area}
-              hourlyPrice={space.hourlyPrice}
-              dailyPrice={space.dailyPrice}
-              locationName={space.location.name}
-              lineAddress={space.lineAddress}
-              facilities={space.facilities}
-              mainImageUrl={space.mainImageUrl}
-              categoryName={space.category?.name}
-              {...(stats && stats.totalCount > 0
-                ? {
-                    averageRating: stats.averageRating,
-                    reviewCount: stats.totalCount,
-                  }
-                : {})}
-            />
-          );
-        })}
-      </div>
+    <div className="space-y-12">
+      {/* Featured space */}
+      {firstSpace ? (
+        <SpaceCard
+          key={firstSpace.id}
+          featured
+          slug={firstSpace.slug}
+          name={firstSpace.name}
+          description={firstSpace.description}
+          capacity={firstSpace.capacity}
+          area={firstSpace.area}
+          hourlyPrice={firstSpace.hourlyPrice}
+          dailyPrice={firstSpace.dailyPrice}
+          locationName={firstSpace.location.name}
+          lineAddress={firstSpace.lineAddress}
+          facilities={firstSpace.facilities}
+          mainImageUrl={firstSpace.mainImageUrl}
+          categoryName={firstSpace.category?.name}
+          {...(firstStats && firstStats.totalCount > 0
+            ? {
+                averageRating: firstStats.averageRating,
+                reviewCount: firstStats.totalCount,
+              }
+            : {})}
+        />
+      ) : null}
+
+      {/* Remaining spaces grid */}
+      {remainingSpaces.length > 0 ? (
+        <div className="@container">
+          <div className="grid gap-6 @md:grid-cols-2 @3xl:grid-cols-3 @md:gap-8">
+            {remainingSpaces.map((space) => {
+              const stats = reviewStats?.[space.id];
+              return (
+                <SpaceCard
+                  key={space.id}
+                  slug={space.slug}
+                  name={space.name}
+                  description={space.description}
+                  capacity={space.capacity}
+                  area={space.area}
+                  hourlyPrice={space.hourlyPrice}
+                  dailyPrice={space.dailyPrice}
+                  locationName={space.location.name}
+                  lineAddress={space.lineAddress}
+                  facilities={space.facilities}
+                  mainImageUrl={space.mainImageUrl}
+                  categoryName={space.category?.name}
+                  {...(stats && stats.totalCount > 0
+                    ? {
+                        averageRating: stats.averageRating,
+                        reviewCount: stats.totalCount,
+                      }
+                    : {})}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -22,6 +22,9 @@ import { spaceSearchParams } from "@/public/lib/search-params";
 import { Container } from "@/public/components/design-system/container";
 import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
+import { PageLayout } from "@/public/components/design-system/page-layout";
+import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SpaceGrid } from "./_components/space-grid";
 
 interface SpacesPageProps {
@@ -63,19 +66,23 @@ export default async function SpacesPage({
   );
 
   return (
-    <>
-      {heroSection ? <SectionRenderer section={heroSection} /> : null}
-
+    <PageLayout
+      variant="content"
+      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      cta={<SiteCTA />}
+    >
       <section className="py-[var(--spacing-section)]">
         <Container>
           <Suspense fallback={null}>
-            <div className="mb-8">
+            <div className="mb-10">
               <FilterBar categories={categories} />
             </div>
           </Suspense>
-          <Suspense fallback={null}>
-            <SpaceGrid spaces={items} reviewStats={reviewStats} />
-          </Suspense>
+          <ScrollReveal>
+            <Suspense fallback={null}>
+              <SpaceGrid spaces={items} reviewStats={reviewStats} />
+            </Suspense>
+          </ScrollReveal>
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -92,6 +99,6 @@ export default async function SpacesPage({
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
       ))}
-    </>
+    </PageLayout>
   );
 }
