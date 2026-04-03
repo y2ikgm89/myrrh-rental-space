@@ -4,15 +4,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "link";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "link" | "editorial";
 type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses = {
   primary:
-    "bg-accent text-white rounded-lg shadow-sm relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:bg-[image:linear-gradient(110deg,transparent_33%,oklch(1_0_0/0.12)_50%,transparent_67%)] hover:bg-[length:250%_100%] hover:animate-[bronze-shimmer_2s_ease-in-out]",
+    "bg-accent text-white rounded-lg shadow-sm transition-colors duration-200 hover:bg-accent/90 hover:shadow-md",
   secondary: "border border-border text-foreground hover:bg-surface rounded-lg",
   ghost: "bg-transparent text-foreground hover:bg-surface rounded-lg",
   link: "text-accent hover:text-accent-light underline-offset-4 hover:underline p-0",
+  editorial:
+    "border border-foreground text-foreground rounded-full transition-colors duration-300 hover:bg-foreground hover:text-background",
 } as const satisfies Record<ButtonVariant, string>;
 
 const sizeClasses = {

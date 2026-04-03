@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
-type ContainerVariant = "default" | "narrow" | "wide";
+type ContainerVariant = "default" | "narrow" | "wide" | "editorial";
 
 const variantClasses = {
   default: "max-w-[var(--container-max)]",
   narrow: "max-w-3xl",
   wide: "max-w-screen-2xl",
+  editorial: "max-w-[65ch]",
 } as const satisfies Record<ContainerVariant, string>;
 
 interface ContainerProps {
