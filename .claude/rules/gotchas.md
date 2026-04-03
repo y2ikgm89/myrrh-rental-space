@@ -112,6 +112,7 @@ paths:
 ## Page-First Architecture（公開ページ）
 
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
+- **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
 - **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
 - **`@layer compat` と旧カラートークンは削除済み** — `--color-primary` / `--color-brand-primary` 等の旧トークンは存在しない。全コンポーネントが `@theme` のセマンティックトークン（`accent`/`foreground`/`surface` 等）を直接使用
 - **公開ページの `hover:text-accent` は原則禁止** — `hover:text-foreground` に統一（Editorial Magazine トーン）。accent はラベル・価格・CTA テキストの静的表示のみに使用
