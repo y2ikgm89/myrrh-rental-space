@@ -46,26 +46,28 @@ OKLCH形式。Luxury White × Bronze。
 
 ## コンポーネント規約
 
-| コンポーネント         | スタイル                                                                    | 備考                       |
-| ---------------------- | --------------------------------------------------------------------------- | -------------------------- |
-| カード（カタログ）     | `border border-border` シャープエッジ（rounded-lg/shadow 禁止）             | hover: image opacity       |
-| カード（ショーケース） | 枠なし、ずらしグリッド + `group-hover:opacity-85`                           | トップページのみ           |
-| カード画像             | カタログ: `aspect-[3/2]`、ショーケース: `aspect-[3/2]` or auto              | —                          |
-| カード情報             | Label(11px Gold) → Heading(serif light) → Body(muted) → Metadata(inline)    | —                          |
-| カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                               | 3列禁止、件数増=ページ分割 |
-| CTA ボタン             | ボーダーボタン（`border border-foreground` + hover 反転）                   | 1-2個/ページ               |
-| Secondary ボタン       | テキスト + 下線 reveal                                                      | —                          |
-| Form ボタン            | `bg-accent text-accent-foreground rounded-lg hover:bg-accent/90`            | shimmer 廃止               |
-| セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                 | —                          |
-| 画像                   | `object-cover`, hover で `opacity-85` 遷移                                  | —                          |
-| ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                          | セリフイタリック           |
-| ナビリンク             | `text-[0.65rem] uppercase tracking-[0.18em]`                                | hover:text-foreground      |
-| PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container     | —                          |
-| PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ | —                          |
-| SiteCTA                | bg-foreground ダークセクション、editorial ボタン                            | content ペー��末尾         |
-| Section                | 背景交互（default↔surface）、border-top/accent 装飾                         | セクション間の分離         |
-| EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                 | hover:shadow-lg            |
-| Divider                | subtle: border / accent: 中央4rem / fade: gradient                          | ��クション内の区切り       |
+| コンポーネント         | スタイル                                                                                            | 備考                       |
+| ---------------------- | --------------------------------------------------------------------------------------------------- | -------------------------- |
+| カード（カタログ）     | `border border-border` シャープエッジ（rounded-lg/shadow 禁止）                                     | hover: image opacity       |
+| カード（ショーケース） | 枠なし、ずらしグリッド + `group-hover:opacity-85`                                                   | トップページのみ           |
+| カード画像             | カタログ: `aspect-[3/2]`、ショーケース: `aspect-[3/2]` or auto                                      | —                          |
+| カード情報             | Label(11px Gold) → Heading(serif light) → Body(muted) → Metadata(inline)                            | —                          |
+| カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                       | 3列禁止、件数増=ページ分割 |
+| CTA ボタン             | ボーダーボタン（`border border-foreground` + hover 反転）                                           | 1-2個/ページ               |
+| Secondary ボタン       | テキスト + 下線 reveal                                                                              | —                          |
+| Form ボタン            | `bg-accent text-accent-foreground rounded-lg hover:bg-accent/90`                                    | shimmer 廃止               |
+| セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                                         | —                          |
+| 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                          | —                          |
+| ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                                                  | セリフイタリック           |
+| ナビリンク             | `text-[0.65rem] uppercase tracking-[0.18em]`                                                        | hover:text-foreground      |
+| PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                             | —                          |
+| PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                         | —                          |
+| SiteCTA                | bg-foreground ダークセクション、editorial ボタン                                                    | content ペー��末尾         |
+| Section                | 背景交互（default↔surface）、border-top/accent 装飾                                                 | セクション間の分離         |
+| EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                                         | hover:shadow-lg            |
+| Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                  | セクション内の区切り       |
+| ImageFrame             | デフォルト `rounded-lg`。editorial カード内では `rounded={false}`                                   | sharp edge 統一            |
+| 選択カード（radio）    | `border-accent bg-accent/5`（ring/shadow なし）。未選択: `border-border hover:border-foreground/30` | 予約フォーム               |
 
 ## ホームページ構成（Editorial Magazine）
 
