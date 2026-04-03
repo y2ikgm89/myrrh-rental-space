@@ -55,7 +55,8 @@ OKLCH形式。Luxury White × Bronze。
 | カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                       | 3列禁止、件数増=ページ分割 |
 | CTA ボタン             | ボーダーボタン（`border border-foreground` + hover 反転）                                           | 1-2個/ページ               |
 | Secondary ボタン       | テキスト + 下線 reveal                                                                              | —                          |
-| Form ボタン            | `bg-accent text-accent-foreground rounded-lg hover:bg-accent/90`                                    | shimmer 廃止               |
+| Form ボタン            | `bg-accent text-accent-foreground rounded-full hover:bg-accent/90`                                  | フォーム内 CTA（primary）  |
+| Button editorial       | `border border-foreground rounded-full hover:bg-foreground hover:text-background`                   | content ページ CTA のみ    |
 | セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                                         | —                          |
 | 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                          | —                          |
 | ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                                                  | セリフイタリック           |
@@ -68,6 +69,9 @@ OKLCH形式。Luxury White × Bronze。
 | Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                  | セクション内の区切り       |
 | ImageFrame             | デフォルト `rounded-lg`。editorial カード内では `rounded={false}`                                   | sharp edge 統一            |
 | 選択カード（radio）    | `border-accent bg-accent/5`（ring/shadow なし）。未選択: `border-border hover:border-foreground/30` | 予約フォーム               |
+| 選択コントロール（小） | `bg-accent text-accent-foreground`（塗りつぶし）。時間/日付/利用時間                                | 明確なフィードバック       |
+| フォーム枠             | `border border-border p-6 sm:p-8`（1枠で全フィールド囲む。個別枠・区切り線禁止）                    | space-y-6 で間隔統一       |
+| StepIndicator          | active: outline（`border-accent text-accent`）/ completed: fill（`bg-accent`）/ pending: muted      | 現在地 vs 完了の区別       |
 
 ## ホームページ構成（Editorial Magazine）
 
