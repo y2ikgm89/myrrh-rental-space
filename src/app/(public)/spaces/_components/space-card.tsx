@@ -71,7 +71,7 @@ export function SpaceCard({
   return (
     <Link
       href={`/spaces/${slug}`}
-      className="group block"
+      className="group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={() => {
@@ -135,42 +135,46 @@ export function SpaceCard({
       </div>
 
       {/* Content */}
-      {categoryName ? (
-        <p className="mt-3 text-[0.55rem] uppercase tracking-[0.18em] text-accent">
-          {categoryName}
-        </p>
-      ) : null}
-      <h3 className="mt-1 font-heading text-[1.25rem] font-light tracking-tight">
-        {name}
-      </h3>
-      {description ? (
-        <p className="mt-1 line-clamp-2 text-[0.85rem] leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      ) : null}
-      {reviewCount != null && reviewCount > 0 && averageRating != null ? (
-        <div className="mt-2 flex items-center gap-1 text-sm">
-          <IconStar
-            className="h-3.5 w-3.5 text-rating"
-            fill="currentColor"
-            aria-hidden="true"
-          />
-          <span className="font-medium text-rating">
-            {averageRating.toFixed(1)}
-          </span>
-          <span className="text-muted-foreground">({reviewCount}件)</span>
-        </div>
-      ) : null}
-      <p className="mt-1 text-[0.75rem] text-muted-foreground">
-        {area != null ? `${area}m² · ` : ""}
-        {capacity != null ? `Max ${capacity}` : ""}
-        {hourlyPrice != null ? (
-          <>
-            {(area != null || capacity != null) && " · "}
-            <span className="text-accent">{formatUnit(hourlyPrice, "/h")}</span>
-          </>
+      <div className="p-4 sm:p-5">
+        {categoryName ? (
+          <p className="text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+            {categoryName}
+          </p>
         ) : null}
-      </p>
+        <h3 className="mt-1 font-heading text-[1.25rem] font-light tracking-tight">
+          {name}
+        </h3>
+        {description ? (
+          <p className="mt-1 line-clamp-2 text-[0.85rem] leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+        {reviewCount != null && reviewCount > 0 && averageRating != null ? (
+          <div className="mt-2 flex items-center gap-1 text-sm">
+            <IconStar
+              className="h-3.5 w-3.5 text-rating"
+              fill="currentColor"
+              aria-hidden="true"
+            />
+            <span className="font-medium text-rating">
+              {averageRating.toFixed(1)}
+            </span>
+            <span className="text-muted-foreground">({reviewCount}件)</span>
+          </div>
+        ) : null}
+        <p className="mt-1 text-[0.75rem] text-muted-foreground">
+          {area != null ? `${area}m² · ` : ""}
+          {capacity != null ? `Max ${capacity}` : ""}
+          {hourlyPrice != null ? (
+            <>
+              {(area != null || capacity != null) && " · "}
+              <span className="text-accent">
+                {formatUnit(hourlyPrice, "/h")}
+              </span>
+            </>
+          ) : null}
+        </p>
+      </div>
     </Link>
   );
 }
