@@ -262,7 +262,7 @@ export function ReservationForm({
   // --- Render helpers ---
   function renderStepIndicator() {
     return (
-      <div className="mb-8">
+      <div className="mb-10">
         <StepIndicator currentStep={displayStep} steps={visibleSteps} />
       </div>
     );
@@ -339,13 +339,16 @@ export function ReservationForm({
 
   if (state.submitted) {
     return (
-      <div className="py-12 text-center">
+      <div className="py-16 text-center">
+        <p className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+          Confirmed
+        </p>
         <Heading level={2}>ご予約を受け付けました</Heading>
-        <p className="mt-4 text-muted-foreground">
+        <p className="mt-6 max-w-[40ch] mx-auto leading-relaxed text-muted-foreground">
           確認メールをお送りしましたのでご確認ください。
         </p>
         {!isLoggedIn ? (
-          <p className="mt-6 text-sm text-muted-foreground">
+          <p className="mt-8 text-sm text-muted-foreground">
             次回から入力を省略するにはアカウント連携がおすすめです。{" "}
             <Link
               href="/login"
@@ -362,7 +365,7 @@ export function ReservationForm({
   // --- Step 3: Customer info ---
   if (state.step === 3) {
     return (
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} className="space-y-10">
         {renderStepIndicator()}
         <CustomerStep
           form={form}
@@ -387,7 +390,7 @@ export function ReservationForm({
   // --- Step 2: Date & Time ---
   if (state.step === 2 && state.spaceId) {
     return (
-      <div>
+      <div className="space-y-10">
         {renderStepIndicator()}
         <DateTimeSection
           businessHours={businessHours}
