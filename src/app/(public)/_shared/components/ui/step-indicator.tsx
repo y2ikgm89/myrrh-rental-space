@@ -33,9 +33,9 @@ export function StepIndicator({
           >
             <div className="flex flex-col items-center gap-2">
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-medium transition-all duration-300 md:h-10 md:w-10 ${
+                className={`flex h-9 w-9 items-center justify-center border text-xs transition-all duration-300 md:h-10 md:w-10 ${
                   isActive
-                    ? "border-accent bg-accent text-accent-foreground"
+                    ? "border-accent bg-accent/5 text-accent font-heading font-light"
                     : isCompleted
                       ? "border-accent bg-accent/5 text-accent"
                       : "border-border text-muted-foreground"
