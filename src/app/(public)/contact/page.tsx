@@ -54,7 +54,7 @@ export default async function ContactPage({
     <>
       {heroSection ? <SectionRenderer section={heroSection} /> : null}
 
-      <section className="py-[var(--spacing-section)]">
+      <section className="py-[var(--spacing-block)]">
         <Container>
           <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
             <ContactForm
