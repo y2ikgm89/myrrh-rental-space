@@ -56,7 +56,7 @@ export default async function ContactPage({
 
       <section className="py-[var(--spacing-section)]">
         <Container>
-          <div className="grid gap-12 lg:grid-cols-[1fr_360px] lg:gap-16">
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
             <ContactForm
               turnstileSiteKey={turnstileSiteKey}
               defaultSubject={defaultSubject}
