@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -57,12 +58,14 @@ export function EmbedSection({
               {config.sectionLabel && (
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
-              <h2
-                className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-                style={getTitleStyle(design)}
-              >
-                {config.title}
-              </h2>
+              <div style={getTitleStyle(design)}>
+                <Heading
+                  level={2}
+                  className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+                >
+                  {config.title}
+                </Heading>
+              </div>
             </ScrollReveal>
           </div>
         )}

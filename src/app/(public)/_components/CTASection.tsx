@@ -11,6 +11,7 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -81,12 +82,14 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
             </ScrollReveal>
-            <h2
-              className={`mt-6 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-              style={getTitleStyle(design)}
-            >
-              <SplitText>{config.title}</SplitText>
-            </h2>
+            <div style={getTitleStyle(design)}>
+              <Heading
+                level={2}
+                className={`mt-6 ${getTitleClasses(design)} tracking-tight`}
+              >
+                <SplitText>{config.title}</SplitText>
+              </Heading>
+            </div>
             {config.description && (
               <ScrollReveal delay={0.2}>
                 <p
@@ -132,11 +135,12 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
           )}
         </ScrollReveal>
 
-        <h2
-          className={`mt-6 font-heading text-3xl font-light tracking-tight text-background md:text-4xl lg:text-5xl`}
+        <Heading
+          level={2}
+          className="mt-6 text-3xl tracking-tight text-background md:text-4xl lg:text-5xl"
         >
           <SplitText>{config.title}</SplitText>
-        </h2>
+        </Heading>
 
         {config.description && (
           <ScrollReveal delay={0.2}>

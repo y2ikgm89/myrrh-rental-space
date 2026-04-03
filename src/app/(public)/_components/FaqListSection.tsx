@@ -22,6 +22,7 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
+import { Heading } from "@/public/components/design-system/heading";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import {
   parseContainerWidth,
@@ -121,12 +122,14 @@ export function FaqListSection({
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
             </ScrollReveal>
-            <h2
-              className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-              style={getTitleStyle(design)}
-            >
-              <SplitText>{config.title}</SplitText>
-            </h2>
+            <div style={getTitleStyle(design)}>
+              <Heading
+                level={2}
+                className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+              >
+                <SplitText>{config.title}</SplitText>
+              </Heading>
+            </div>
           </div>
 
           <div ref={listRef} className={styles.container}>

@@ -13,6 +13,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { Heading } from "@/public/components/design-system/heading";
 import { ScrollIndicator } from "@/public/components/layouts/scroll-indicator";
 import {
   DURATION,
@@ -133,14 +134,16 @@ export function HeroSection({
             </p>
           )}
 
-          <h1
-            className={`mt-6 font-heading ${getTitleClasses(design)} font-light leading-[1.05]`}
-            style={getTitleStyle(design)}
-          >
-            <SplitText trigger={false} delay={0.5}>
-              {config.title}
-            </SplitText>
-          </h1>
+          <div style={getTitleStyle(design)}>
+            <Heading
+              level={1}
+              className={`mt-6 ${getTitleClasses(design)} leading-[1.05]`}
+            >
+              <SplitText trigger={false} delay={0.5}>
+                {config.title}
+              </SplitText>
+            </Heading>
+          </div>
 
           {/* Decorative divider */}
           <div className="mt-8 h-px w-12 bg-accent/40" aria-hidden="true" />

@@ -11,6 +11,7 @@ import type { ReactElement } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { Heading } from "@/public/components/design-system/heading";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -134,12 +135,14 @@ export function ContactFormSection({
                   <SectionLabel>{config.sectionLabel}</SectionLabel>
                 )}
               </ScrollReveal>
-              <h2
-                className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-                style={getTitleStyle(design)}
-              >
-                <SplitText>{config.title}</SplitText>
-              </h2>
+              <div style={getTitleStyle(design)}>
+                <Heading
+                  level={2}
+                  className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+                >
+                  <SplitText>{config.title}</SplitText>
+                </Heading>
+              </div>
               {config.description && (
                 <ScrollReveal delay={0.2}>
                   <p
@@ -173,12 +176,14 @@ export function ContactFormSection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
           </ScrollReveal>
-          <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-            style={getTitleStyle(design)}
-          >
-            <SplitText>{config.title}</SplitText>
-          </h2>
+          <div style={getTitleStyle(design)}>
+            <Heading
+              level={2}
+              className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+            >
+              <SplitText>{config.title}</SplitText>
+            </Heading>
+          </div>
           {config.description && (
             <ScrollReveal delay={0.2}>
               <p

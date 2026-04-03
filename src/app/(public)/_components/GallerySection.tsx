@@ -21,6 +21,7 @@ import {
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { Heading } from "@/public/components/design-system/heading";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import {
   IMAGE_ASPECT_MAP,
@@ -133,12 +134,14 @@ export function GallerySection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
           </ScrollReveal>
-          <h2
-            className={`mt-4 font-heading ${getTitleClasses(design)} font-light tracking-tight`}
-            style={getTitleStyle(design)}
-          >
-            <SplitText>{config.title}</SplitText>
-          </h2>
+          <div style={getTitleStyle(design)}>
+            <Heading
+              level={2}
+              className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+            >
+              <SplitText>{config.title}</SplitText>
+            </Heading>
+          </div>
         </div>
       )}
 
