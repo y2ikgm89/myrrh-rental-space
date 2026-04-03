@@ -76,7 +76,7 @@ export function GuestStepper({
           }
         }}
         className="h-10 w-14 border border-border bg-transparent text-center text-sm
-          focus:border-accent focus:outline-none"
+          focus-visible:border-accent focus-visible:outline-none"
       />
       <button
         type="button"

@@ -112,7 +112,7 @@ export function SpaceDetailDialog({
                   {space.facilities.map((f) => (
                     <span
                       key={f}
-                      className="border border-border px-2 py-1 text-xs text-muted-foreground"
+                      className="border border-border px-2 py-1 text-xs tracking-[0.18em] text-muted-foreground"
                     >
                       {f}
                     </span>
