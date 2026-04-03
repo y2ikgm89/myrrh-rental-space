@@ -325,8 +325,8 @@
   justify-content: center;
   height: 2.75rem;
   font-family: var(--font-serif);
-  font-weight: bold;
-  font-size: 1rem;
+  font-weight: 300;
+  font-size: 1.125rem;
   letter-spacing: var(--tracking-tight);
 }
 
@@ -387,15 +387,14 @@
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   transition:
-    background-color 0.15s,
-    color 0.15s;
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .rdp-theme .rdp-button_previous:hover,
 .rdp-theme .rdp-button_next:hover {
-  background-color: var(--color-surface);
   color: var(--color-foreground);
 }
 
@@ -422,8 +421,10 @@
   padding: 0.5rem 0;
   text-align: center;
   color: var(--color-muted-foreground);
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
 }
 
 /* Day cells */
@@ -438,14 +439,15 @@
 /* Day buttons */
 .rdp-theme .rdp-day_button {
   background: none;
-  border: 2px solid transparent;
-  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  border-radius: 0;
   padding: 0;
   margin: 0 auto;
   cursor: pointer;
   font: inherit;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 300;
+  font-family: var(--font-serif);
   color: inherit;
   display: flex;
   align-items: center;
@@ -453,12 +455,12 @@
   width: 2.5rem;
   height: 2.5rem;
   transition:
-    background-color 0.15s,
-    color 0.15s;
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .rdp-theme .rdp-day_button:hover:not(:disabled) {
-  background-color: var(--color-surface);
+  border-color: var(--color-foreground);
 }
 
 .rdp-theme .rdp-day_button:disabled {
@@ -473,12 +475,12 @@
 /* Modifiers */
 .rdp-theme .rdp-today:not(.rdp-outside) {
   color: var(--color-accent);
-  font-weight: bold;
+  font-weight: 400;
 }
 
 .rdp-theme .rdp-selected .rdp-day_button {
-  background-color: var(--color-accent);
-  color: var(--color-accent-foreground);
+  background-color: transparent;
+  color: var(--color-accent);
   border-color: var(--color-accent);
 }
 
