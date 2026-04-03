@@ -32,6 +32,11 @@ export function Select({
         className="mb-2 block text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground"
       >
         {label}
+        {props.required ? (
+          <span className="ml-1 text-base text-destructive" aria-hidden="true">
+            *
+          </span>
+        ) : null}
       </label>
       <select
         id={selectId}
@@ -40,7 +45,7 @@ export function Select({
         aria-describedby={errorId}
         {...props}
         className={`w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors
-          focus-visible:outline-none focus-visible:border-accent
+          focus-visible:border-accent
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-destructive" : "border-border"}`}
       >
@@ -51,7 +56,7 @@ export function Select({
         ))}
       </select>
       {error ? (
-        <p id={errorId} className="mt-1 text-sm text-destructive">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {error}
         </p>
       ) : null}

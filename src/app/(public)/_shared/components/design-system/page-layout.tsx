@@ -21,7 +21,7 @@ export function PageLayout({
 }: PageLayoutProps) {
   if (variant === "dashboard") {
     return (
-      <Container className={cn("py-8 md:py-12", className)}>
+      <Container className={cn("py-[var(--spacing-block)]", className)}>
         {children}
       </Container>
     );

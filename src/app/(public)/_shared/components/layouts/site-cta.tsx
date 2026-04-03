@@ -1,4 +1,5 @@
 import { Container } from "../design-system/container";
+import { Heading } from "../design-system/heading";
 import { Stack } from "../design-system/stack";
 import { Button } from "../design-system/button";
 import { ScrollReveal } from "../animations/scroll-reveal";
@@ -29,9 +30,9 @@ export function SiteCTA({
                   {label}
                 </span>
               ) : null}
-              <h2 className="font-heading text-h2 font-light italic text-background">
+              <Heading level={2} className="italic text-background">
                 {title}
-              </h2>
+              </Heading>
               {description ? (
                 <p className="max-w-[45ch] leading-relaxed text-background/70">
                   {description}

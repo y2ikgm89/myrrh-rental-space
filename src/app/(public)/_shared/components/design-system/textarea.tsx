@@ -41,12 +41,12 @@ export function Textarea({
         {...props}
         className={`w-full min-h-[120px] border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors
           placeholder:text-muted-foreground/60 resize-y
-          focus-visible:outline-none focus-visible:border-accent
+          focus-visible:border-accent
           disabled:opacity-50 disabled:cursor-not-allowed
           ${error ? "border-destructive" : "border-border"}`}
       />
       {error ? (
-        <p id={errorId} className="mt-1 text-sm text-destructive">
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">
           {error}
         </p>
       ) : null}

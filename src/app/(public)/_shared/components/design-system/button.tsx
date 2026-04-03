@@ -9,7 +9,7 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const variantClasses = {
   primary:
-    "bg-accent text-white rounded-lg shadow-sm transition-colors duration-200 hover:bg-accent/90 hover:shadow-md",
+    "bg-accent text-accent-foreground rounded-lg shadow-sm transition-colors duration-200 hover:bg-accent/90 hover:shadow-md",
   secondary: "border border-border text-foreground hover:bg-surface rounded-lg",
   ghost: "bg-transparent text-foreground hover:bg-surface rounded-lg",
   link: "text-accent hover:text-foreground underline-offset-4 hover:underline p-0",
