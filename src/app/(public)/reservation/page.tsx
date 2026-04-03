@@ -53,7 +53,11 @@ export default async function ReservationPage(): Promise<ReactElement> {
     (s) => s.type === "hero" || s.type === "hero-parallax",
   );
   const trailingSections = sections.filter(
-    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+    (s) =>
+      s !== heroSection &&
+      s.type !== "hero" &&
+      s.type !== "hero-parallax" &&
+      s.type !== "space-list",
   );
 
   return (
