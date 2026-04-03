@@ -118,7 +118,9 @@ export function SectionWrapper({
       {skipContainer ? (
         children
       ) : (
-        <div className={`mx-auto px-5 md:px-8 ${maxWidthClass}`}>
+        <div
+          className={`mx-auto px-[var(--container-padding)] ${maxWidthClass}`}
+        >
           {children}
         </div>
       )}
