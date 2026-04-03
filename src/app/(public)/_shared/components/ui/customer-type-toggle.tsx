@@ -17,7 +17,9 @@ export function CustomerTypeToggle({
 }: CustomerTypeToggleProps): ReactElement {
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-medium">ご利用区分</legend>
+      <legend className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        ご利用区分
+      </legend>
       <div
         role="radiogroup"
         aria-label="ご利用区分"
@@ -29,10 +31,10 @@ export function CustomerTypeToggle({
           role="radio"
           aria-checked={value === "personal"}
           onClick={() => onChange("personal")}
-          className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
+          className={`flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 ${
             value === "personal"
               ? "border-accent bg-accent/5 text-foreground"
-              : "border-border text-muted-foreground hover:border-accent/40"
+              : "border-border text-muted-foreground hover:border-foreground/30"
           }`}
         >
           <IconUser className="h-4 w-4" />
@@ -44,10 +46,10 @@ export function CustomerTypeToggle({
           role="radio"
           aria-checked={value === "corporate"}
           onClick={() => onChange("corporate")}
-          className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-2.5 text-sm transition-colors ${
+          className={`flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 ${
             value === "corporate"
               ? "border-accent bg-accent/5 text-foreground"
-              : "border-border text-muted-foreground hover:border-accent/40"
+              : "border-border text-muted-foreground hover:border-foreground/30"
           }`}
         >
           <IconBuilding className="h-4 w-4" />

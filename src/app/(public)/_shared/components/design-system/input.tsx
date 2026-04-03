@@ -24,7 +24,7 @@ export function Input({
     <div className={wrapperClassName}>
       <label
         htmlFor={inputId}
-        className="mb-2 block text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground"
+        className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
       >
         {label}
         {props.required ? (

@@ -62,10 +62,10 @@ function SummaryRow({
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           {label}
         </p>
-        <p className="font-heading text-sm font-medium tracking-tight">
+        <p className="font-heading text-sm font-light tracking-tight">
           {value}
         </p>
       </div>
@@ -90,7 +90,7 @@ export function BookingSummary({
     <div className="border border-border px-6 py-6 sm:px-8 sm:py-7">
       {/* Header: title + price */}
       <div className="flex items-baseline justify-between gap-4">
-        <Heading level={3} className="!text-base font-medium">
+        <Heading level={3} className="!text-base">
           予約内容
         </Heading>
         {price !== null ? (

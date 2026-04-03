@@ -347,7 +347,10 @@ export function ReservationForm({
         {!isLoggedIn ? (
           <p className="mt-6 text-sm text-muted-foreground">
             次回から入力を省略するにはアカウント連携がおすすめです。{" "}
-            <Link href="/login" className="text-accent underline">
+            <Link
+              href="/login"
+              className="text-accent underline transition-colors hover:text-foreground"
+            >
               アカウント連携はこちら
             </Link>
           </p>

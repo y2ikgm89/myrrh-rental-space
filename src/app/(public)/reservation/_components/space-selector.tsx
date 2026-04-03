@@ -47,7 +47,7 @@ export function SpaceSelector({
                   onSelect(space.id);
                 }
               }}
-              className={`flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors
+              className={`flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors duration-200
                 ${
                   isSelected
                     ? "border-accent bg-accent/5"

@@ -28,7 +28,7 @@ export function LocationSelector({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onSelect(location.id)}
-            className={`group flex flex-col overflow-hidden border text-left transition-colors
+            className={`group flex flex-col overflow-hidden border text-left transition-colors duration-200
               ${
                 isSelected
                   ? "border-accent bg-accent/5"
