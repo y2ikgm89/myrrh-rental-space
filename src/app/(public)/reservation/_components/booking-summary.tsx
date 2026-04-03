@@ -132,7 +132,7 @@ export function BookingSummary({
           <button
             type="button"
             onClick={onEdit}
-            className="flex w-full items-center justify-center gap-2 border border-border py-2.5 text-sm text-foreground transition-colors duration-200 hover:border-foreground/30"
+            className="flex w-full items-center justify-center gap-2 border border-border py-2.5 text-sm text-muted-foreground transition-colors duration-200 hover:border-foreground/30 hover:text-foreground"
           >
             <IconPencil size={14} />
             予約内容を変更する
