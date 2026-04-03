@@ -5,7 +5,6 @@ import { useWatch } from "react-hook-form";
 import { IconCircleCheck } from "@tabler/icons-react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Button } from "@/public/components/design-system/button";
-import { Heading } from "@/public/components/design-system/heading";
 import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
 import {
@@ -41,8 +40,6 @@ export function ContactForm({
       const result = await submitInquiry(data);
       if (isMutationError(result)) {
         setErrorMessage(result.error);
-        // トークンは1回限り — エラー時もリセットして再取得
-        // reset() → onVerify コールバックで新トークンが自動セットされる
         turnstileRef.current?.reset();
       } else {
         setSubmitted(true);
@@ -76,12 +73,15 @@ export function ContactForm({
   if (submitted) {
     return (
       <ScrollReveal>
-        <div className="rounded-lg border border-accent/20 bg-surface px-8 py-12 text-center">
+        <div className="border border-border px-8 py-16 text-center">
           <IconCircleCheck className="mx-auto h-10 w-10 text-accent" />
-          <Heading level={2} className="mt-4">
+          <p className="mt-6 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+            Sent
+          </p>
+          <p className="mt-4 font-heading text-h3 font-light">
             お問い合わせを受け付けました
-          </Heading>
-          <p className="mt-3 text-muted-foreground">
+          </p>
+          <p className="mx-auto mt-4 max-w-[40ch] leading-relaxed text-muted-foreground">
             確認メールをお送りしましたのでご確認ください。
             <br />
             通常1営業日以内に担当者よりご連絡いたします。
@@ -94,114 +94,136 @@ export function ContactForm({
   return (
     <ScrollReveal>
       <div>
-        <Heading level={2}>フォームからお問い合わせ</Heading>
-        <p className="mt-2 text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          Contact
+        </p>
+        <p className="mt-3 font-heading text-h3 font-light">
+          フォームからお問い合わせ
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
           ご質問・ご相談がございましたら、下記フォームよりお気軽にお問い合わせください。
         </p>
 
-        <form onSubmit={onSubmit} className="mt-8 space-y-6">
+        {/* Customer type — outside frame */}
+        <div className="mt-8">
           <CustomerTypeToggle
             id="contact-type"
             value={customerType ?? "personal"}
             onChange={handleCustomerTypeChange}
           />
+        </div>
 
-          {customerType === "corporate" ? (
-            <Input
-              id="contact-company"
-              label="会社名・団体名"
-              type="text"
-              required
-              placeholder="株式会社〇〇"
-              autoComplete="organization"
-              {...(form.formState.errors.companyName?.message !== undefined && {
-                error: form.formState.errors.companyName.message,
-              })}
-              {...form.register("companyName")}
-            />
-          ) : null}
+        {/* Form fields — editorial frame */}
+        <form onSubmit={onSubmit} className="mt-8">
+          <div className="border border-border p-6 sm:p-8">
+            <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              {customerType === "corporate" ? "ご担当者情報" : "お客様情報"}
+            </p>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <Input
-              id="contact-lastname"
-              label={customerType === "corporate" ? "担当者 姓" : "姓"}
-              type="text"
-              required
-              placeholder="山田"
-              autoComplete="family-name"
-              {...(form.formState.errors.lastName?.message !== undefined && {
-                error: form.formState.errors.lastName.message,
-              })}
-              {...form.register("lastName")}
-            />
-            <Input
-              id="contact-firstname"
-              label={customerType === "corporate" ? "担当者 名" : "名"}
-              type="text"
-              required
-              placeholder="太郎"
-              autoComplete="given-name"
-              {...(form.formState.errors.firstName?.message !== undefined && {
-                error: form.formState.errors.firstName.message,
-              })}
-              {...form.register("firstName")}
-            />
+            <div className="space-y-6">
+              {customerType === "corporate" ? (
+                <Input
+                  id="contact-company"
+                  label="会社名・団体名"
+                  type="text"
+                  required
+                  placeholder="株式会社〇〇"
+                  autoComplete="organization"
+                  {...(form.formState.errors.companyName?.message !==
+                    undefined && {
+                    error: form.formState.errors.companyName.message,
+                  })}
+                  {...form.register("companyName")}
+                />
+              ) : null}
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <Input
+                  id="contact-lastname"
+                  label={customerType === "corporate" ? "担当者 姓" : "姓"}
+                  type="text"
+                  required
+                  placeholder="山田"
+                  autoComplete="family-name"
+                  {...(form.formState.errors.lastName?.message !==
+                    undefined && {
+                    error: form.formState.errors.lastName.message,
+                  })}
+                  {...form.register("lastName")}
+                />
+                <Input
+                  id="contact-firstname"
+                  label={customerType === "corporate" ? "担当者 名" : "名"}
+                  type="text"
+                  required
+                  placeholder="太郎"
+                  autoComplete="given-name"
+                  {...(form.formState.errors.firstName?.message !==
+                    undefined && {
+                    error: form.formState.errors.firstName.message,
+                  })}
+                  {...form.register("firstName")}
+                />
+              </div>
+
+              <Input
+                id="contact-email"
+                label="メールアドレス"
+                type="email"
+                required
+                placeholder="mail@example.com"
+                autoComplete="email"
+                {...(form.formState.errors.email?.message !== undefined && {
+                  error: form.formState.errors.email.message,
+                })}
+                {...form.register("email")}
+              />
+
+              <Input
+                id="contact-subject"
+                label="件名"
+                type="text"
+                required
+                placeholder="お問い合わせの件名"
+                {...(form.formState.errors.subject?.message !== undefined && {
+                  error: form.formState.errors.subject.message,
+                })}
+                {...form.register("subject")}
+              />
+
+              <Textarea
+                id="contact-message"
+                label="お問い合わせ内容"
+                rows={8}
+                required
+                placeholder="お問い合わせ内容をご記入ください"
+                {...(form.formState.errors.message?.message !== undefined && {
+                  error: form.formState.errors.message.message,
+                })}
+                {...form.register("message")}
+              />
+
+              <TurnstileWidget
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                onVerify={handleTurnstileVerify}
+                onExpire={handleTurnstileExpire}
+              />
+            </div>
           </div>
 
-          <Input
-            id="contact-email"
-            label="メールアドレス"
-            type="email"
-            required
-            placeholder="mail@example.com"
-            autoComplete="email"
-            {...(form.formState.errors.email?.message !== undefined && {
-              error: form.formState.errors.email.message,
-            })}
-            {...form.register("email")}
-          />
-
-          <Input
-            id="contact-subject"
-            label="件名"
-            type="text"
-            required
-            placeholder="お問い合わせの件名"
-            {...(form.formState.errors.subject?.message !== undefined && {
-              error: form.formState.errors.subject.message,
-            })}
-            {...form.register("subject")}
-          />
-
-          <Textarea
-            id="contact-message"
-            label="お問い合わせ内容"
-            rows={8}
-            required
-            placeholder="お問い合わせ内容をご記入ください"
-            {...(form.formState.errors.message?.message !== undefined && {
-              error: form.formState.errors.message.message,
-            })}
-            {...form.register("message")}
-          />
-
-          <TurnstileWidget
-            ref={turnstileRef}
-            siteKey={turnstileSiteKey}
-            onVerify={handleTurnstileVerify}
-            onExpire={handleTurnstileExpire}
-          />
-
+          {/* Error — outside frame */}
           {errorMessage !== null && (
             <div
-              className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+              className="mt-6 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
               role="alert"
             >
               {errorMessage}
             </div>
           )}
 
-          <div className="flex items-center gap-6 pt-2">
+          {/* Submit — outside frame */}
+          <div className="mt-10 flex items-center gap-6">
             <Button type="submit" disabled={isPending}>
               {isPending ? "送信中..." : "送信する"}
             </Button>
