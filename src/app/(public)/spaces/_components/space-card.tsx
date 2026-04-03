@@ -3,12 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  IconMapPin,
-  IconUsers,
-  IconRuler2,
-  IconStar,
-} from "@tabler/icons-react";
+import { IconMapPin, IconStar } from "@tabler/icons-react";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 interface SpaceCardProps {
