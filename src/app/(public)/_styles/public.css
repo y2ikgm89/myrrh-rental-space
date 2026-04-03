@@ -479,8 +479,8 @@
 }
 
 .rdp-theme .rdp-selected .rdp-day_button {
-  background-color: transparent;
-  color: var(--color-accent);
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
   border-color: var(--color-accent);
 }
 

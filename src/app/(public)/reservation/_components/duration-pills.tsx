@@ -52,7 +52,7 @@ export function DurationPills({
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
               ${
                 isSelected
-                  ? "border-accent bg-accent/5 text-accent"
+                  ? "border-accent bg-accent text-accent-foreground"
                   : "border-border text-foreground hover:border-foreground/30"
               }`}
           >

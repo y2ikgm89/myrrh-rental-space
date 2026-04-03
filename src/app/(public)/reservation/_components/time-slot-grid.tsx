@@ -60,7 +60,7 @@ export function TimeSlotGrid({
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
               ${
                 isSelected
-                  ? "border-accent bg-accent/5 text-accent"
+                  ? "border-accent bg-accent text-accent-foreground"
                   : isUnavailable
                     ? "border-border/40 text-muted-foreground/30 line-through cursor-not-allowed"
                     : "border-border text-foreground hover:border-foreground/30 cursor-pointer"
