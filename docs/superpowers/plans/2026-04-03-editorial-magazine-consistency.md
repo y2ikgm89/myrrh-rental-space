@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** ホームページで確立した Editorial Magazine デザイン言語を全28公開ルートに構造的に適用し、Design System v2 として統一する。
+**Goal:** ホームページで確立した Editorial Magazine デザイン言語を全28公開ルートに構造的に適用し、��一す��。
 
 **Architecture:** Primitives レベルから再設計（既存10改修 + 新規4追加）し、ページカテゴリ別テンプレート（content/form/dashboard）で全ページに適用。破壊的変更を許容し、後方互換性ハックなしのクリーンな実装。
 
@@ -1277,5 +1277,5 @@ Expected: PASS
 - [ ] **Step 4: 最終 commit**
 
 ```bash
-git commit -m "docs: update design system docs for v2 primitives"
+git commit -m "docs: update design system docs for refreshed primitives"
 ```
