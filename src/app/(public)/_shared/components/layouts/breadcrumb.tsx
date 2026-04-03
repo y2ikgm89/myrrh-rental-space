@@ -24,11 +24,15 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
       />
       <nav
         aria-label="パンくずリスト"
-        className="text-sm text-muted-foreground"
+        className="text-xs uppercase tracking-[0.1em] text-muted-foreground"
       >
         <ol className="flex items-center gap-1.5">
           <li>
-            <Link href="/" className="hover:text-accent" aria-label="ホーム">
+            <Link
+              href="/"
+              className="hover:text-foreground"
+              aria-label="ホーム"
+            >
               <IconHome className="h-4 w-4" />
             </Link>
           </li>
@@ -38,7 +42,7 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
                 /
               </span>
               {item.href && i < items.length - 1 ? (
-                <Link href={item.href} className="hover:text-accent">
+                <Link href={item.href} className="hover:text-foreground">
                   {item.label}
                 </Link>
               ) : (
