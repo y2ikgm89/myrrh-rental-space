@@ -178,8 +178,8 @@ export function CustomerStep({
           />
         </div>
 
-        {/* Terms + Turnstile — inside frame, separated by border */}
-        <div className="mt-8 border-t border-border pt-6">
+        {/* Terms + Turnstile */}
+        <div className="mt-6">
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
