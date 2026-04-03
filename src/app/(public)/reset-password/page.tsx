@@ -37,7 +37,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
             <p className="text-center">
               <Link
                 href="/forgot-password"
-                className="text-accent underline underline-offset-4 hover:text-accent/80"
+                className="text-accent underline underline-offset-4 hover:text-foreground"
               >
                 パスワードリセットを再リクエスト
               </Link>
@@ -61,7 +61,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
           <p className="text-center text-sm text-muted-foreground">
             <Link
               href="/login"
-              className="text-accent underline underline-offset-4 hover:text-accent/80"
+              className="text-accent underline underline-offset-4 hover:text-foreground"
             >
               ログインページに戻る
             </Link>

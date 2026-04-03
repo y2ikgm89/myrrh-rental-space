@@ -40,7 +40,7 @@ export function ArticleDetailHero({
         {categoryName && <SectionLabel>{categoryName}</SectionLabel>}
 
         <h1
-          className={`${categoryName ? "mt-4 " : ""}font-heading text-2xl font-bold tracking-tight md:text-3xl lg:text-4xl`}
+          className={`${categoryName ? "mt-4 " : ""}font-heading text-2xl font-light tracking-tight md:text-3xl lg:text-4xl`}
         >
           <SplitText trigger={false} delay={0.3}>
             {title}

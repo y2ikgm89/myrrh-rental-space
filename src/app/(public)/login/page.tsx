@@ -39,7 +39,7 @@ export default async function LoginPage({
         <Stack gap="lg" className="pb-[var(--spacing-block)]">
           {errorMessage != null && (
             <div
-              className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive text-center"
+              className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive text-center"
               role="alert"
             >
               {errorMessage}

@@ -30,7 +30,7 @@ export default async function ForgotPasswordPage() {
           <p className="text-center text-sm text-muted-foreground">
             <Link
               href="/login"
-              className="text-accent underline underline-offset-4 hover:text-accent/80"
+              className="text-accent underline underline-offset-4 hover:text-foreground"
             >
               ログインページに戻る
             </Link>

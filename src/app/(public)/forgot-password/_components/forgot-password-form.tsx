@@ -36,7 +36,7 @@ export function ForgotPasswordForm() {
   if (submitted) {
     return (
       <Stack gap="lg">
-        <div className="rounded-lg border border-border bg-surface p-6 text-center">
+        <div className="border border-border bg-surface p-6 text-center">
           <p className="text-lg font-medium text-foreground">
             メールを送信しました
           </p>
@@ -78,7 +78,7 @@ export function ForgotPasswordForm() {
 
         {error ? (
           <div
-            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             role="alert"
           >
             {error}

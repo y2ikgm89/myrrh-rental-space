@@ -111,7 +111,7 @@ export function ReservationCard({
   const paymentStatusEnum = getValidPaymentStatus(reservation.paymentStatus);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 sm:p-6 transition-shadow hover:shadow-lg">
+    <div className="border border-border p-4 sm:p-6 transition-colors">
       {/* Header: space name + status */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
         <Heading level={3} className="!text-lg">

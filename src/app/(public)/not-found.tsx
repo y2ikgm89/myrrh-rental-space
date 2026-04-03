@@ -22,12 +22,12 @@ export default function NotFound() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 md:px-8">
       <div className="w-full max-w-md text-center">
         <div className="mb-8">
-          <span className="font-heading text-8xl font-bold text-border">
+          <span className="font-heading text-8xl font-light text-border">
             404
           </span>
         </div>
 
-        <h1 className="mb-3 font-heading text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="mb-3 font-heading text-2xl font-light tracking-tight text-foreground">
           ページが見つかりません
         </h1>
 
@@ -46,7 +46,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/spaces"
-            className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="rounded-full border border-border px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             スペース一覧を見る
           </Link>

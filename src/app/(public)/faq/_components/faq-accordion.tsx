@@ -68,7 +68,7 @@ export function FaqAccordion({ items }: FaqAccordionProps): ReactElement {
           className="group py-4 first:pt-0 last:pb-0"
           open={index === 0}
         >
-          <summary className="flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-medium md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden">
+          <summary className="flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden">
             <span>{item.question}</span>
             <span
               className="shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-45"

@@ -31,7 +31,7 @@ export function MaintenancePage({
         </div>
 
         {/* 見出し */}
-        <h1 className="mt-6 font-heading text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="mt-6 font-heading text-2xl font-light tracking-tight text-foreground sm:text-3xl">
           只今メンテナンス中です
         </h1>
 

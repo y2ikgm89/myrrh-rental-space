@@ -37,7 +37,7 @@ export function EditorialCard({
         )}
       >
         {image ? (
-          <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-surface">
+          <div className="relative aspect-[4/3] overflow-hidden bg-surface">
             <Image
               src={image.src}
               alt={image.alt}
@@ -70,7 +70,7 @@ export function EditorialCard({
     <Link
       href={href}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg",
+        "group flex flex-col overflow-hidden border border-border transition-colors duration-200",
         className,
       )}
     >

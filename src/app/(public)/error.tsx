@@ -42,7 +42,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
           </svg>
         </div>
 
-        <h1 className="mb-3 font-heading text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="mb-3 font-heading text-2xl font-light tracking-tight text-foreground">
           エラーが発生しました
         </h1>
 
@@ -53,7 +53,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
         </p>
 
         {digest && (
-          <p className="mb-6 rounded-lg bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
+          <p className="mb-6 bg-surface px-3 py-2 font-mono text-xs text-muted-foreground">
             Error ID: {digest}
           </p>
         )}
@@ -63,7 +63,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
             <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
               エラー詳細（開発環境のみ）
             </summary>
-            <pre className="mt-2 overflow-auto rounded-lg bg-foreground p-3 text-xs text-background">
+            <pre className="mt-2 overflow-auto bg-foreground p-3 text-xs text-background">
               {error.message}
               {error.stack && `\n\n${error.stack}`}
             </pre>
@@ -80,7 +80,7 @@ export default function PublicError({ error, unstable_retry }: ErrorInfo) {
           </button>
           <Link
             href="/"
-            className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="rounded-full border border-border px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             ホームに戻る
           </Link>

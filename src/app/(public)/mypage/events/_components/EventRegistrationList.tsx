@@ -59,7 +59,7 @@ export function EventRegistrationList({
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-surface p-6 md:p-12 text-center">
+      <div className="border border-border bg-surface p-6 md:p-12 text-center">
         <p className="text-muted-foreground">イベント申込がありません</p>
       </div>
     );
@@ -110,11 +110,11 @@ function EventRegistrationCard({
     REGISTRATION_STATUS_VARIANTS[registration.status] ?? "default";
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
+    <div className="border border-border p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
         <Link
           href={`/events/${registration.event.slug}`}
-          className="text-foreground hover:text-accent transition-colors font-medium"
+          className="text-foreground hover:text-foreground transition-colors font-medium"
         >
           {registration.event.title}
         </Link>

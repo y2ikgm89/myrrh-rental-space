@@ -122,7 +122,7 @@ export function CookieConsentBanner({
       aria-describedby="cookie-consent-description"
       className="fixed inset-x-0 bottom-0 z-50 p-4"
     >
-      <div className="mx-auto max-w-4xl rounded-lg border bg-background p-4 shadow-lg sm:p-6">
+      <div className="mx-auto max-w-4xl border bg-background p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1 space-y-2">
             <h2 id="cookie-consent-title" className="sr-only">
@@ -135,7 +135,7 @@ export function CookieConsentBanner({
               {message || DEFAULT_MESSAGE}{" "}
               <Link
                 href={policyUrl || DEFAULT_POLICY_URL}
-                className="text-accent underline underline-offset-4 hover:text-accent/80"
+                className="text-accent underline underline-offset-4 hover:text-foreground"
               >
                 詳細
               </Link>
@@ -145,14 +145,14 @@ export function CookieConsentBanner({
             <button
               type="button"
               onClick={handleReject}
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {rejectText || DEFAULT_REJECT_TEXT}
             </button>
             <button
               type="button"
               onClick={handleAccept}
-              className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex items-center justify-center bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {acceptText || DEFAULT_ACCEPT_TEXT}
             </button>

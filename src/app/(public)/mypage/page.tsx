@@ -54,7 +54,7 @@ export default async function MypagePage(): Promise<ReactElement> {
         予約一覧
       </Heading>
       {isNameIncomplete && (
-        <div className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
+        <div className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
           お名前が未登録です。
           <Link href="/mypage/settings" className="ml-1 underline text-accent">
             アカウント設定

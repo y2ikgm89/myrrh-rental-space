@@ -96,11 +96,36 @@ export default async function MypageInquiryDetailPage({
             <dt className="text-sm font-medium text-muted-foreground">
               メッセージ
             </dt>
-            <dd className="mt-1 whitespace-pre-wrap rounded-lg bg-surface p-4">
+            <dd className="mt-1 whitespace-pre-wrap bg-surface p-4">
               {inquiry.message}
             </dd>
           </div>
         </dl>
+
+        {inquiry.replyMessage !== null && (
+          <div className="mt-8 border-t border-border pt-8">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
+              Reply
+            </p>
+            <Heading level={3} className="mt-2">
+              スタッフからの回答
+            </Heading>
+            {inquiry.repliedAt !== null && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {formatSerializedDate(inquiry.repliedAt, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
+            <div className="mt-4 whitespace-pre-wrap border border-accent/20 bg-accent/5 p-4">
+              {inquiry.replyMessage}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
