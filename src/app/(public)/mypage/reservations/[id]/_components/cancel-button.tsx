@@ -77,7 +77,7 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
 
           {error != null && (
             <div
-              className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+              className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
               role="alert"
             >
               {error}

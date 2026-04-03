@@ -6,7 +6,7 @@ import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Select } from "@/public/components/design-system/select";
 import { usePublicForm } from "@/public/hooks/use-public-form";
-import { formatCurrency } from '@/shared/lib/pricing/format';
+import { formatCurrency } from "@/shared/lib/pricing/format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   customerReservationEditSchema,
@@ -104,7 +104,7 @@ export function EditReservationForm({
     <form onSubmit={onSubmit} className="space-y-6">
       {errorMessage != null && (
         <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
           {errorMessage}

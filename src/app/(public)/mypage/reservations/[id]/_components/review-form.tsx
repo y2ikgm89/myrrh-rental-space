@@ -56,7 +56,7 @@ export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
 
   if (submitted) {
     return (
-      <div className="mt-4 md:mt-8 rounded-lg border border-border bg-surface p-4 sm:p-6">
+      <div className="mt-4 md:mt-8 border border-border bg-surface p-4 sm:p-6">
         <div className="flex items-center gap-2">
           <Badge variant="success">送信完了</Badge>
           <p className="text-sm text-muted-foreground">
@@ -70,7 +70,7 @@ export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
   const ratingError = form.formState.errors.rating?.message;
 
   return (
-    <section className="mt-4 md:mt-8 rounded-lg border border-border bg-surface p-4 sm:p-6">
+    <section className="mt-4 md:mt-8 border border-border bg-surface p-4 sm:p-6">
       <Heading level={2} className="mb-4 !text-lg">
         「{spaceName}」のレビューを投稿
       </Heading>

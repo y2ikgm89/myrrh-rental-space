@@ -103,7 +103,7 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
     <div className="space-y-6">
       {error != null && (
         <div
-          className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
           role="alert"
         >
           {error}
@@ -118,11 +118,14 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
           return (
             <div
               key={provider.id}
-              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border p-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-border p-4"
             >
               <div className="flex items-center gap-3">
                 {isLinked ? (
-                  <IconCheck className="h-4 w-4 text-accent" aria-hidden="true" />
+                  <IconCheck
+                    className="h-4 w-4 text-accent"
+                    aria-hidden="true"
+                  />
                 ) : (
                   <IconLink
                     className="h-4 w-4 text-muted-foreground"

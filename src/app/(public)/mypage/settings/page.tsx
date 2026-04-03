@@ -46,7 +46,7 @@ export default async function SettingsPage({
 
       {requireEmail && (
         <div
-          className="rounded-lg border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
+          className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground"
           role="alert"
         >
           サービスをご利用いただくには、メールアドレスの登録が必要です。

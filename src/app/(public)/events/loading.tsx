@@ -6,7 +6,7 @@ export default function EventsLoading() {
     <main id="main-content">
       <Container>
         <div className="space-y-6 py-4">
-          <div className="h-10 w-64 animate-pulse rounded-md bg-surface" />
+          <div className="h-10 w-64 animate-pulse bg-surface" />
           <CalendarSkeleton />
         </div>
       </Container>

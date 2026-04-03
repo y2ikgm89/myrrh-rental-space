@@ -183,7 +183,7 @@ export function ReservationDetail({
   const isActive = status === "PENDING" || status === "CONFIRMED";
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="border border-border">
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 border-b border-border">
         <Heading level={2} className="!text-xl">
