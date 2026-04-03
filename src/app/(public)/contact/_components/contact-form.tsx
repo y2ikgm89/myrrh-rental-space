@@ -94,18 +94,8 @@ export function ContactForm({
   return (
     <ScrollReveal>
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Contact
-        </p>
-        <p className="mt-3 font-heading text-h3 font-light">
-          フォームからお問い合わせ
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          ご質問・ご相談がございましたら、下記フォームよりお気軽にお問い合わせください。
-        </p>
-
         {/* Customer type — outside frame */}
-        <div className="mt-8">
+        <div>
           <CustomerTypeToggle
             id="contact-type"
             value={customerType ?? "personal"}
