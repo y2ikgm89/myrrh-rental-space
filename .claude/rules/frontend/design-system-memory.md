@@ -89,20 +89,24 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 ## Page-First Design System
 
 公開ページは `src/app/(public)/_shared/components/design-system/` の Primitives を使用。
-直接 import のみ（barrel 禁止 — tree-shaking 不安定）。Primitives 10:
+直接 import のみ（barrel 禁止 — tree-shaking 不安定）。Primitives 14:
 
-| Primitive    | 用途                                                       |
-| ------------ | ---------------------------------------------------------- |
-| `Badge`      | ステータス表示（variant: default/success/warning/info）    |
-| `Button`     | CTA、フォーム送信（variant: primary/secondary/ghost/link） |
-| `Container`  | max-w + padding（variant: default/narrow/wide）            |
-| `Heading`    | h1-h4 自動スタイリング（font-heading + tracking-tight）    |
-| `ImageFrame` | next/image wrapper（aspect-ratio + skeleton）              |
-| `Input`      | テキスト入力（label + error + min-h-11）                   |
-| `Prose`      | 本文コンテンツ（max-w-[65ch]）                             |
-| `Select`     | セレクトボックス                                           |
-| `Stack`      | flex layout（direction + gap）                             |
-| `Textarea`   | テキストエリア                                             |
+| Primitive       | 用途                                                                     |
+| --------------- | ------------------------------------------------------------------------ |
+| `Badge`         | ステータス表示（variant: default/success/warning/info）                  |
+| `Button`        | CTA・フォーム送信（variant: primary/secondary/ghost/link/editorial）     |
+| `Container`     | max-w + padding（variant: default/narrow/wide/editorial）                |
+| `Divider`       | 装飾区切り線（variant: subtle/accent/fade）                              |
+| `EditorialCard` | Magazine-style カード（variant: default/featured）                       |
+| `Heading`       | h1-h2 serif light / h3-h4 sans。`accent` prop で装飾ライン               |
+| `ImageFrame`    | next/image wrapper（aspect: video/square/portrait/landscape/wide、fill） |
+| `Input`         | テキスト入力（editorial border-bottom style）                            |
+| `PageLayout`    | ページテンプレート（variant: content/form/dashboard）                    |
+| `Prose`         | 本文コンテンツ（variant: default/editorial — drop-cap）                  |
+| `Section`       | セクションラッパー（background/border/spacing variants）                 |
+| `Select`        | セレクトボックス（editorial border-bottom style）                        |
+| `Stack`         | flex layout（direction + gap: xs/sm/md/lg/xl/2xl/section）               |
+| `Textarea`      | テキストエリア（editorial border-bottom style）                          |
 
 ## 参照
 

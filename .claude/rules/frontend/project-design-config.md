@@ -10,9 +10,9 @@ paths:
 
 ## ブランド
 
-Myrrh Rental Space — luxury-warm + premium white
+Myrrh Rental Space — Editorial Magazine
 
-没薬（Myrrh）の温もり・希少性を体現する、ホワイトベース + ブロンズアクセントのラグジュアリーデザイン。
+Kinfolk / Cereal 誌を参考にした雑誌的レイアウト。大量の余白、セリフイタリック見出し、控えめなインタラクション。ブロンズアクセントは継続使用するが装飾は最小限。
 
 ## カラーパレット
 
@@ -35,27 +35,44 @@ OKLCH形式。Luxury White × Bronze。
 
 | 要素              | 値                                                                   |
 | ----------------- | -------------------------------------------------------------------- |
-| Section padding   | Fluid: `py-[var(--spacing-section)]` = `clamp(5rem, 8vw, 7.5rem)`    |
-| Hero              | `min-h-[80vh]`                                                       |
+| Section padding   | Fluid: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`    |
+| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                   |
 | Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]` |
 | Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                    |
 | Container max     | `80rem` (1280px)                                                     |
-| セクション分離    | 背景色交互切替（dark-brown ↔ dark-surface）、区切り線なし            |
+| セクション分離    | 薄いボーダー + 背景色切替（background ↔ surface）                    |
 | Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3` |
 | border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp |
 
 ## コンポーネント規約
 
-| コンポーネント     | スタイル                                                        | 備考                    |
-| ------------------ | --------------------------------------------------------------- | ----------------------- |
-| カード             | `border border-border bg-card` + `hover:shadow-lg`              | shadow 常時表示禁止     |
-| カード画像         | `aspect-[4/3]` + `group-hover:scale-105 duration-500`           | —                       |
-| カード情報         | Label(11px Gold) → Heading → Body(muted) → Metadata(`border-t`) | —                       |
-| CTA ボタン         | `MagneticButton`（`rounded-full border border-primary-dark`）   | 1-2個/ページ            |
-| Secondary ボタン   | テキスト + 下線 reveal                                          | —                       |
-| Form ボタン        | `bg-primary text-primary-foreground rounded-lg`                 | —                       |
-| セクションタイトル | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)     | —                       |
-| 画像               | `object-cover`, ParallaxImage or `hover:scale-105`              | Concept: `aspect-[4/5]` |
+| コンポーネント     | スタイル                                                                    | 備考                  |
+| ------------------ | --------------------------------------------------------------------------- | --------------------- |
+| カード             | `border border-border bg-card` + `hover:shadow-lg`                          | shadow 常時表示禁止   |
+| カード画像         | `aspect-[4/3]` + `group-hover:scale-105 duration-500`                       | —                     |
+| カード情報         | Label(11px Gold) → Heading → Body(muted) → Metadata(`border-t`)             | —                     |
+| CTA ボタン         | ボーダーボタン（`border border-foreground` + hover 反転）                   | 1-2個/ページ          |
+| Secondary ボタン   | テキスト + 下線 reveal                                                      | —                     |
+| Form ボタン        | `bg-accent text-accent-foreground rounded-lg hover:bg-accent/90`            | shimmer 廃止          |
+| セクションタイトル | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                 | —                     |
+| 画像               | `object-cover`, hover で `opacity-85` 遷移                                  | —                     |
+| ヘッダーブランド   | `font-heading font-light italic tracking-[0.08em]`                          | セリフイタリック      |
+| ナビリンク         | `text-[0.65rem] uppercase tracking-[0.18em]`                                | hover:text-foreground |
+| PageLayout         | content: hero+sections+CTA / form: hero+centered / dashboard: container     | —                     |
+| PageHero           | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ | —                     |
+| SiteCTA            | bg-foreground ダークセクション、editorial ボタン                            | content ペー��末尾    |
+| Section            | 背景交互（default↔surface）、border-top/accent 装飾                         | セクション間の分離    |
+| EditorialCard      | featured: 横��割5:4 / default: 縦積みカード                                 | hover:shadow-lg       |
+| Divider            | subtle: border / accent: 中央4rem / fade: gradient                          | ��クション内の区切り  |
+
+## ホームページ構成（Editorial Magazine）
+
+1. **Hero** — 雑誌カバー風スプリット（左画像 + 右セリフイタリック見出し）
+2. **PullQuote** — 中央寄せセリフイタリック引用
+3. **Spaces** — フィーチャードスプレッド + Kinfolk 風ずらし2カラムグリッド
+4. **Features** — 番号付き editorial リスト（01, 02, ...）
+5. **Stats** — インラインセリフ数字
+6. **CTA** — イタリック見出し + ボーダーボタン
 
 ## モーション設計
 

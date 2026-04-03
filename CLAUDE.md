@@ -78,6 +78,7 @@ __tests__/integration/               統合テスト（actions/admin, actions/pu
 | Stripe       | 21     | Checkout Session, Webhook（`payment_status` チェック必須）                                    |
 | Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                                     |
 | FullCalendar | 6.1    | `@fullcalendar/react`, 月/週/リスト切替、`'use client'` 必須                                  |
+| Puck         | 0.20   | `@measured/puck`, ビジュアルページエディタ、`'use client'` 必須、MIT ライセンス               |
 
 ### コマンド
 
@@ -103,64 +104,35 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 ### コーディング規約
 
-`.claude/rules/` に `paths:` フロントマターで条件付き自動ロード:
+`.claude/rules/` に `paths:` フロントマターで条件付き自動ロード。各ルールの詳細はファイル内に記載。
 
-| ルール                      | 内容                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| `gotchas.md`                | 落とし穴集（最重要 — ソフトデリート・キャッシュ・GSAP opacity:0・テストモック） |
-| `server-actions.md`         | `'use cache'` / `updateTag` / `executeAdminMutationResult` / レート制限         |
-| `type-safety.md`            | `as` 禁止・`satisfies`・型ガード・`noUncheckedIndexedAccess`                    |
-| `bun-patterns.md`           | テスト: `mock.module` 順序・純粋モジュールモック禁止・`mock.calls` 禁止         |
-| `prisma-patterns.md`        | Decimal 自動変換・JSON パース・`toPlainObject`・Lexical JSON Primary            |
-| `auth-patterns.md`          | Better Auth・`executeAdminMutationResult`・セッション取得パターン               |
-| `error-handling.md`         | `logError`・`safeFetch`・`MutationResult`・DomainError                          |
-| `zod-patterns.md`           | Zod 4 `{ error: }`・`z.enum(PrismaEnum)`・`nativeEnum` 禁止                     |
-| `test-quality.md`           | テスト分類・ドメインコマンドテストパターン・Playwright E2E                      |
-| `react-patterns.md`         | `useWatch` 推奨・IIFE in JSX 禁止・component-in-hook 禁止                       |
-| `resend-patterns.md`        | React Email テンプレート・`fireAndForget` メール送信パターン                    |
-| `nuqs-patterns.md`          | URL state 管理・`parseAsStringLiteral`・Server/Client 共有パーサー              |
-| `api-routes.md`             | Route Handler 認証順序・`unstable_rethrow`・CRON 認証・CSV Export 参照実装      |
-| `implementation-quality.md` | 形骸化実装禁止・過剰抽象化禁止・デッドコード禁止                                |
-| `project-structure.md`      | ディレクトリ構成・インポートエイリアス・アーキテクチャ境界                      |
-| `server-only-patterns.md`   | Data Access Layer・`server-only` 必須ファイル一覧・追加不要ファイル             |
+**ルート**（`src/**` 編集時）: `gotchas.md`(最重要), `server-actions.md`, `type-safety.md`, `bun-patterns.md`, `prisma-patterns.md`, `auth-patterns.md`, `error-handling.md`, `zod-patterns.md`, `test-quality.md`, `react-patterns.md`, `resend-patterns.md`, `nuqs-patterns.md`, `api-routes.md`, `implementation-quality.md`, `project-structure.md`, `server-only-patterns.md`, `tailwind-patterns.md`
 
-**`ops/` サブディレクトリ**（デプロイ関連ファイル編集時に自動ロード）:
+**`frontend/`**（公開・管理 UI 編集時）: `accessibility.md`, `admin-ui-patterns.md`, `admin-inline-editor-patterns.md`, `anti-ai-design.md`, `design-system-memory.md`, `gsap-patterns.md`, `lexical-patterns.md`, `project-design-config.md`, `seo-patterns.md`, `ui-ux-patterns.md`
 
-| ルール                   | 内容                                            |
-| ------------------------ | ----------------------------------------------- |
-| `deployment-patterns.md` | Dockerfile・cloudbuild.yaml・Cloud Run デプロイ |
-
-**`frontend/` サブディレクトリ**（公開ページ・管理画面 UI 編集時に自動ロード）:
-
-| ルール                            | 内容                                                          |
-| --------------------------------- | ------------------------------------------------------------- |
-| `accessibility.md`                | WCAG 2.2 AA・セマンティック HTML・`prefers-reduced-motion`    |
-| `admin-ui-patterns.md`            | タブ UI・テーブルレスポンシブ・ActionDropdown・設定セクション |
-| `admin-inline-editor-patterns.md` | Lexical インラインエディタ・PostEditor・コンテンツタイプ      |
-| `anti-ai-design.md`               | 汎用 AI デザイン禁止・セルフレビュー質問6問                   |
-| `design-system-memory.md`         | Serena memory デザイン記憶プロトコル                          |
-| `gsap-patterns.md`                | GSAP + ScrollTrigger・`useGSAP`・matchMedia reduced-motion    |
-| `lexical-patterns.md`             | Lexical 0.41 / NodeState・カスタムノード・プラグイン          |
-| `project-design-config.md`        | ブランド固有デザイン値・カラートークン・タイポグラフィ        |
-| `seo-patterns.md`                 | メタデータ・JSON-LD・OGP・robots・sitemap                     |
-| `ui-ux-patterns.md`               | ui-ux-pro-max / frontend-design スキル使用ガイド              |
+**`ops/`**（デプロイ関連編集時）: `deployment-patterns.md`
 
 ### キーファイル
 
-| パス                                                   | 内容                                                                           |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*` |
-| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                               |
-| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                            |
-| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（18定義、field ヘルパー）                                 |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                   |
-| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                    |
-| `src/app/(public)/_shared/components/design-system/`   | Primitives 11（SC: Container/Stack/Heading 等, CC: Button/Dialog）             |
-| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                  |
-| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                   |
-| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）             |
-| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                         |
-| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                            |
+| パス                                                        | 内容                                                                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `src/shared/db/prisma.ts`                                   | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                              |
+| `src/shared/lib/auth.ts`                                    | Better Auth 設定・セッション検証                                                                            |
+| `src/shared/lib/constants/cache.ts`                         | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                         |
+| `src/shared/lib/sections/registry.ts`                       | セクションレジストリ（18定義、field ヘルパー）                                                              |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`           | `executeAdminMutationResult`                                                                                |
+| `src/proxy.ts`                                              | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                 |
+| `src/app/(public)/_shared/components/design-system/`        | Primitives 14（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout 等, CC: Button/Dialog） |
+| `src/app/(admin)/.../_shared/components/table/`             | BaseFilters, SortableColumnHeader, Pagination                                                               |
+| `src/app/(admin)/.../_shared/components/DetailLoading`      | 詳細/編集サブルート用 loading.tsx スケルトン                                                                |
+| `src/shared/domain/events/`                                 | イベント管理（commands/admin-queries/public-queries/registration）                                          |
+| `src/shared/lib/calendar-sync/event-inbound.ts`             | Google Calendar → Event 取り込み（syncToken 差分同期）                                                      |
+| `src/app/(public)/journal/`                                 | news+posts 統合フィード（タブ切替）                                                                         |
+| `src/app/(public)/_components/homepage/`                    | ホームページ6セクション（Editorial Magazine: hero/pullquote/spaces/features/stats/cta）                     |
+| `src/app/(public)/_components/homepage/puck-config.tsx`     | Puck コンポーネント登録（6セクション、フィールド定義、defaultProps）                                        |
+| `src/app/(admin)/.../pages/[slug]/visual-edit/`             | Puck ビジュアルエディタ管理画面                                                                             |
+| `src/app/(public)/_shared/components/layouts/site-cta.tsx`  | 共通 CTA セクション（ダークコントラスト、editorial ボタン）                                                 |
+| `src/app/(public)/_shared/components/layouts/page-hero.tsx` | PageHero（editorial/compact/minimal 3バリアント）                                                           |
 
 ### セキュリティ多層防御
 
@@ -171,11 +143,12 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 - **API Routes**: `checkPermission`（**認証を最初に実行**）→ Zod、管理ログインは `proxy.ts`（Admin Gate）
 - **CSV エクスポート**: `escapeCsvField` で数式インジェクション対策（`=+\-@\t\r` 先頭ガード）
 
-### エージェント（`.claude/agents/` 自動検出、19種）
+### エージェント（`.claude/agents/` 自動検出、20種）
 
 **使い方パターン**:
 
 - **コード変更後**: `project-reviewer`（総合）、変更内容に応じて `security-reviewer` / `react-compiler-reviewer` / `accessibility-reviewer` を追加
+- **デザイン変更後**: `editorial-consistency-reviewer`（hover/tracking/font-weight/Button の editorial トーン統一チェック）
 - **ドメイン整合性**: `event-flow-reviewer` / `reservation-flow-reviewer` / `cache-strategy-reviewer` を並列起動
 - **構造検証**: `route-structure-reviewer`（ルーティング）/ `db-migration-reviewer`（マイグレーション）
 - **検証・ビルド**: `verification`（type-check / lint / build を隔離実行）
