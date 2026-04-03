@@ -62,6 +62,7 @@ export function SpaceSelector({
                 width={400}
                 height={300}
                 sizes="(max-width: 768px) 75vw, 280px"
+                rounded={false}
                 className="aspect-[4/3] w-full"
               />
               <div className="p-3">

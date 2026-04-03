@@ -41,6 +41,7 @@ export function LocationSelector({
               width={400}
               height={225}
               sizes="(max-width: 768px) 100vw, 400px"
+              rounded={false}
               className="aspect-video w-full transition-opacity duration-400 group-hover:opacity-85"
             />
             <div className="p-4">

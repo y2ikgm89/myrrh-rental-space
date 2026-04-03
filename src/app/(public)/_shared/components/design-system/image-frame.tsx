@@ -21,6 +21,7 @@ interface ImageFrameProps {
   readonly sizes: string;
   readonly priority?: boolean;
   readonly className?: string;
+  readonly rounded?: boolean;
 }
 
 export function ImageFrame({
@@ -33,11 +34,13 @@ export function ImageFrame({
   sizes,
   priority = false,
   className,
+  rounded = true,
 }: ImageFrameProps) {
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-lg bg-surface",
+        "group relative overflow-hidden bg-surface",
+        rounded && "rounded-lg",
         aspect && aspectClasses[aspect],
         className,
       )}

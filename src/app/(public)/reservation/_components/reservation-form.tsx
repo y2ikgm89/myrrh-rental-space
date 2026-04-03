@@ -437,6 +437,7 @@ export function ReservationForm({
               height={90}
               aspect="video"
               sizes="160px"
+              rounded={false}
               className="w-40 shrink-0"
             />
             <div>
