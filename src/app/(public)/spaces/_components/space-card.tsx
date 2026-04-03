@@ -9,8 +9,6 @@ import {
   IconRuler2,
   IconStar,
 } from "@tabler/icons-react";
-import { Badge } from "@/public/components/design-system/badge";
-import { Heading } from "@/public/components/design-system/heading";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 interface SpaceCardProps {
@@ -22,16 +20,12 @@ interface SpaceCardProps {
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
   readonly categoryName?: string | null | undefined;
-  // Hover preview data (optional — overlay only renders when provided)
   readonly locationName?: string | undefined;
   readonly lineAddress?: string | undefined;
   readonly facilities?: readonly string[] | undefined;
   readonly dailyPrice?: number | null | undefined;
-  // Review stats (optional — only renders when totalCount > 0)
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
-  // Featured layout (horizontal split for first card in grid)
-  readonly featured?: boolean | undefined;
 }
 
 export function SpaceCard({
@@ -49,7 +43,6 @@ export function SpaceCard({
   dailyPrice,
   averageRating,
   reviewCount,
-  featured,
 }: SpaceCardProps) {
   const { formatUnit } = useFormatPrice();
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
@@ -78,9 +71,7 @@ export function SpaceCard({
   return (
     <Link
       href={`/spaces/${slug}`}
-      className={`group block overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300 hover:shadow-lg ${
-        featured ? "grid grid-cols-1 md:grid-cols-[5fr_4fr]" : ""
-      }`}
+      className="group block"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onFocus={() => {
@@ -89,23 +80,13 @@ export function SpaceCard({
       onBlur={() => setShowOverlay(false)}
     >
       {/* Image */}
-      <div
-        className={`relative overflow-hidden ${
-          featured
-            ? "aspect-[4/3] md:aspect-auto md:min-h-[320px]"
-            : "aspect-[4/3]"
-        }`}
-      >
+      <div className="relative aspect-[3/2] overflow-hidden">
         <Image
           src={mainImageUrl}
           alt={name}
           fill
-          sizes={
-            featured
-              ? "(min-width: 768px) 56vw, 100vw"
-              : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-          }
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          className="object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
 
         {/* Hover Preview Overlay */}
@@ -151,83 +132,45 @@ export function SpaceCard({
             </div>
           </div>
         ) : null}
-
-        {/* Category label — editorial uppercase tracking for featured, Badge for standard */}
-        {categoryName ? (
-          <div className="absolute left-3 top-3">
-            {featured ? (
-              <span className="rounded bg-background/90 px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-accent backdrop-blur-sm">
-                {categoryName}
-              </span>
-            ) : (
-              <Badge>{categoryName}</Badge>
-            )}
-          </div>
-        ) : null}
       </div>
 
       {/* Content */}
-      <div
-        className={
-          featured ? "flex flex-col justify-center p-4 sm:p-8" : "p-4 sm:p-6"
-        }
-      >
-        {/* Featured: editorial category label above heading */}
-        {featured && categoryName ? (
-          <span className="mb-3 text-[11px] uppercase tracking-[0.18em] text-accent md:hidden">
-            {categoryName}
+      {categoryName ? (
+        <p className="mt-3 text-[0.55rem] uppercase tracking-[0.18em] text-accent">
+          {categoryName}
+        </p>
+      ) : null}
+      <h3 className="mt-1 font-heading text-[1.25rem] font-light tracking-tight">
+        {name}
+      </h3>
+      {description ? (
+        <p className="mt-1 line-clamp-2 text-[0.85rem] leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      ) : null}
+      {reviewCount != null && reviewCount > 0 && averageRating != null ? (
+        <div className="mt-2 flex items-center gap-1 text-sm">
+          <IconStar
+            className="h-3.5 w-3.5 text-rating"
+            fill="currentColor"
+            aria-hidden="true"
+          />
+          <span className="font-medium text-rating">
+            {averageRating.toFixed(1)}
           </span>
+          <span className="text-muted-foreground">({reviewCount}件)</span>
+        </div>
+      ) : null}
+      <p className="mt-1 text-[0.75rem] text-muted-foreground">
+        {area != null ? `${area}m² · ` : ""}
+        {capacity != null ? `Max ${capacity}` : ""}
+        {hourlyPrice != null ? (
+          <>
+            {(area != null || capacity != null) && " · "}
+            <span className="text-accent">{formatUnit(hourlyPrice, "/h")}</span>
+          </>
         ) : null}
-
-        <Heading level={3} className={featured ? "!text-h3" : "!text-base"}>
-          {name}
-        </Heading>
-        {description ? (
-          <p
-            className={`mt-2 text-sm text-muted-foreground ${
-              featured ? "line-clamp-3" : "line-clamp-2"
-            }`}
-          >
-            {description}
-          </p>
-        ) : null}
-        {reviewCount != null && reviewCount > 0 && averageRating != null ? (
-          <div className="mt-3 flex items-center gap-1 text-sm">
-            <IconStar
-              className="h-3.5 w-3.5 text-rating"
-              fill="currentColor"
-              aria-hidden="true"
-            />
-            <span className="font-medium text-rating">
-              {averageRating.toFixed(1)}
-            </span>
-            <span className="text-muted-foreground">({reviewCount}件)</span>
-          </div>
-        ) : null}
-        {capacity != null || hourlyPrice != null ? (
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-3">
-              {capacity != null ? (
-                <span className="flex items-center gap-1">
-                  <IconUsers className="h-4 w-4" />
-                  {capacity}名
-                </span>
-              ) : null}
-              {area != null ? (
-                <span className="flex items-center gap-1">
-                  <IconRuler2 className="h-4 w-4" />
-                  {area}㎡
-                </span>
-              ) : null}
-            </div>
-            {hourlyPrice != null ? (
-              <span className="font-medium text-accent">
-                {formatUnit(hourlyPrice, "/h")}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+      </p>
     </Link>
   );
 }

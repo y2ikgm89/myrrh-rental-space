@@ -1,8 +1,8 @@
 /**
- * /spaces — スペース一覧ページ（セクションベース）
+ * /spaces — スペース一覧ページ（Editorial Magazine）
  *
- * SEO: generatePageMetadata
- * Hero はセクションシステムから描画、スペース一覧は中間に配置
+ * Featured spread（先頭1件）+ Kinfolk 風ずらし2カラムグリッド
+ * ホームページ SpacesSection と同一のデザイン言語
  */
 
 import type { Metadata } from "next";
@@ -24,7 +24,6 @@ import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SpaceGrid } from "./_components/space-grid";
 
 interface SpacesPageProps {
@@ -71,30 +70,31 @@ export default async function SpacesPage({
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
-      <section className="py-[var(--spacing-section)]">
-        <Container>
-          <Suspense fallback={null}>
-            <div className="mb-10">
-              <FilterBar categories={categories} />
-            </div>
-          </Suspense>
-          <ScrollReveal>
-            <Suspense fallback={null}>
-              <SpaceGrid spaces={items} reviewStats={reviewStats} />
-            </Suspense>
-          </ScrollReveal>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            basePath="/spaces"
-            {...(categoryId !== undefined &&
-            categoryId !== null &&
-            categoryId !== ""
-              ? { preservedQuery: { category: categoryId } }
-              : {})}
-          />
-        </Container>
-      </section>
+      {/* Filter */}
+      <Container className="pt-[var(--spacing-section)] pb-6">
+        <Suspense fallback={null}>
+          <FilterBar categories={categories} />
+        </Suspense>
+      </Container>
+
+      {/* Space grid — featured spread + staggered 2-col */}
+      <Suspense fallback={null}>
+        <SpaceGrid spaces={items} reviewStats={reviewStats} />
+      </Suspense>
+
+      {/* Pagination */}
+      <Container className="py-[var(--spacing-block)]">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath="/spaces"
+          {...(categoryId !== undefined &&
+          categoryId !== null &&
+          categoryId !== ""
+            ? { preservedQuery: { category: categoryId } }
+            : {})}
+        />
+      </Container>
 
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />
