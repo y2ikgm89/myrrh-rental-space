@@ -89,136 +89,138 @@ export function CustomerStep({
         />
       </div>
 
-      <Heading level={2} className="mb-8">
-        お客様情報
-      </Heading>
+      <div className="border border-border p-6 sm:p-8">
+        <p className="mb-6 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          お客様情報
+        </p>
 
-      <div className="mb-5">
-        <CustomerTypeToggle
-          id="reservation-type"
-          value={customerType ?? "personal"}
-          onChange={handleCustomerTypeChange}
-        />
-      </div>
-
-      {customerType === "corporate" ? (
         <div className="mb-5">
-          <Input
-            id="reservation-company"
-            label="会社名・団体名"
-            type="text"
-            required
-            placeholder="株式会社〇〇"
-            autoComplete="organization"
-            {...(form.formState.errors.companyName?.message && {
-              error: form.formState.errors.companyName.message,
-            })}
-            {...form.register("companyName")}
+          <CustomerTypeToggle
+            id="reservation-type"
+            value={customerType ?? "personal"}
+            onChange={handleCustomerTypeChange}
           />
         </div>
-      ) : null}
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <Input
-          id="reservation-lastname"
-          label={customerType === "corporate" ? "担当者 姓" : "姓"}
-          type="text"
-          required
-          placeholder="山田"
-          autoComplete="family-name"
-          {...(form.formState.errors.lastName?.message && {
-            error: form.formState.errors.lastName.message,
-          })}
-          {...form.register("lastName")}
-        />
-        <Input
-          id="reservation-firstname"
-          label={customerType === "corporate" ? "担当者 名" : "名"}
-          type="text"
-          required
-          placeholder="太郎"
-          autoComplete="given-name"
-          {...(form.formState.errors.firstName?.message && {
-            error: form.formState.errors.firstName.message,
-          })}
-          {...form.register("firstName")}
-        />
-      </div>
-
-      <div className="mt-5">
-        <Input
-          id="reservation-email"
-          label="メールアドレス"
-          type="email"
-          required
-          placeholder="mail@example.com"
-          {...(form.formState.errors.email?.message && {
-            error: form.formState.errors.email.message,
-          })}
-          {...form.register("email")}
-        />
-      </div>
-
-      <div className="mt-5">
-        <Input
-          id="reservation-phone"
-          label="電話番号（任意）"
-          type="tel"
-          placeholder="03-1234-5678"
-          {...(form.formState.errors.phoneNumber?.message && {
-            error: form.formState.errors.phoneNumber.message,
-          })}
-          {...form.register("phoneNumber")}
-        />
-      </div>
-
-      <div className="mt-5">
-        <Textarea
-          id="reservation-notes"
-          label="備考（任意）"
-          rows={3}
-          placeholder="ご要望などございましたらお書きください"
-          {...(form.formState.errors.notes?.message && {
-            error: form.formState.errors.notes.message,
-          })}
-          {...form.register("notes")}
-        />
-      </div>
-
-      {/* Terms checkbox */}
-      <div className="mt-6">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 border-border accent-primary"
-            {...form.register("agreeToTerms")}
-          />
-          <span className="text-sm text-muted-foreground">
-            <a
-              href="/terms"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent underline transition-colors hover:text-foreground"
-            >
-              利用規約
-            </a>
-            に同意します
-          </span>
-        </label>
-        {form.formState.errors.agreeToTerms?.message ? (
-          <p className="mt-1 text-sm text-destructive">
-            {form.formState.errors.agreeToTerms.message}
-          </p>
+        {customerType === "corporate" ? (
+          <div className="mb-5">
+            <Input
+              id="reservation-company"
+              label="会社名・団体名"
+              type="text"
+              required
+              placeholder="株式会社〇〇"
+              autoComplete="organization"
+              {...(form.formState.errors.companyName?.message && {
+                error: form.formState.errors.companyName.message,
+              })}
+              {...form.register("companyName")}
+            />
+          </div>
         ) : null}
-      </div>
 
-      {/* Turnstile bot protection */}
-      <div className="mt-6">
-        <TurnstileWidget
-          siteKey={turnstileSiteKey}
-          onVerify={handleTurnstileVerify}
-          onExpire={handleTurnstileExpire}
-        />
+        <div className="grid gap-5 md:grid-cols-2">
+          <Input
+            id="reservation-lastname"
+            label={customerType === "corporate" ? "担当者 姓" : "姓"}
+            type="text"
+            required
+            placeholder="山田"
+            autoComplete="family-name"
+            {...(form.formState.errors.lastName?.message && {
+              error: form.formState.errors.lastName.message,
+            })}
+            {...form.register("lastName")}
+          />
+          <Input
+            id="reservation-firstname"
+            label={customerType === "corporate" ? "担当者 名" : "名"}
+            type="text"
+            required
+            placeholder="太郎"
+            autoComplete="given-name"
+            {...(form.formState.errors.firstName?.message && {
+              error: form.formState.errors.firstName.message,
+            })}
+            {...form.register("firstName")}
+          />
+        </div>
+
+        <div className="mt-5">
+          <Input
+            id="reservation-email"
+            label="メールアドレス"
+            type="email"
+            required
+            placeholder="mail@example.com"
+            {...(form.formState.errors.email?.message && {
+              error: form.formState.errors.email.message,
+            })}
+            {...form.register("email")}
+          />
+        </div>
+
+        <div className="mt-5">
+          <Input
+            id="reservation-phone"
+            label="電話番号（任意）"
+            type="tel"
+            placeholder="03-1234-5678"
+            {...(form.formState.errors.phoneNumber?.message && {
+              error: form.formState.errors.phoneNumber.message,
+            })}
+            {...form.register("phoneNumber")}
+          />
+        </div>
+
+        <div className="mt-5">
+          <Textarea
+            id="reservation-notes"
+            label="備考（任意）"
+            rows={3}
+            placeholder="ご要望などございましたらお書きください"
+            {...(form.formState.errors.notes?.message && {
+              error: form.formState.errors.notes.message,
+            })}
+            {...form.register("notes")}
+          />
+        </div>
+
+        {/* Terms checkbox */}
+        <div className="mt-6">
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 border-border accent-primary"
+              {...form.register("agreeToTerms")}
+            />
+            <span className="text-sm text-muted-foreground">
+              <a
+                href="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent underline transition-colors hover:text-foreground"
+              >
+                利用規約
+              </a>
+              に同意します
+            </span>
+          </label>
+          {form.formState.errors.agreeToTerms?.message ? (
+            <p className="mt-1 text-sm text-destructive">
+              {form.formState.errors.agreeToTerms.message}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Turnstile bot protection */}
+        <div className="mt-6">
+          <TurnstileWidget
+            siteKey={turnstileSiteKey}
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileExpire}
+          />
+        </div>
       </div>
 
       {/* Error message */}
