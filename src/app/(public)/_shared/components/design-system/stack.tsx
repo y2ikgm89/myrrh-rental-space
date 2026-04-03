@@ -2,14 +2,16 @@ import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
 type StackDirection = "vertical" | "horizontal";
-type StackGap = "none" | "sm" | "md" | "lg" | "xl" | "section";
+type StackGap = "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "section";
 
 const gapClasses = {
   none: "gap-0",
-  sm: "gap-2",
-  md: "gap-4",
-  lg: "gap-6",
-  xl: "gap-8",
+  xs: "gap-1.5",
+  sm: "gap-3",
+  md: "gap-5",
+  lg: "gap-8",
+  xl: "gap-12",
+  "2xl": "gap-16",
   section: "gap-[var(--spacing-section)]",
 } as const satisfies Record<StackGap, string>;
 
