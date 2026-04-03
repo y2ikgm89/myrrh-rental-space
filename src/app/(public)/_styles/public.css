@@ -446,8 +446,8 @@
   cursor: pointer;
   font: inherit;
   font-size: 0.875rem;
-  font-weight: 300;
-  font-family: var(--font-serif);
+  font-weight: 400;
+  font-family: var(--font-sans);
   color: inherit;
   display: flex;
   align-items: center;

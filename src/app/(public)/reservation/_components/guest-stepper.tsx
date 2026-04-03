@@ -75,7 +75,7 @@ export function GuestStepper({
             commitInput();
           }
         }}
-        className="h-10 w-14 border border-border bg-transparent text-center font-heading text-lg
+        className="h-10 w-14 border border-border bg-transparent text-center text-sm
           focus:border-accent focus:outline-none"
       />
       <button
