@@ -28,11 +28,11 @@ export function LocationSelector({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onSelect(location.id)}
-            className={`group flex flex-col overflow-hidden rounded-xl border text-left transition-all
+            className={`group flex flex-col overflow-hidden border text-left transition-colors
               ${
                 isSelected
-                  ? "border-accent ring-2 ring-accent/20 bg-accent/5"
-                  : "border-border bg-card hover:border-accent/40 hover:shadow-lg"
+                  ? "border-accent bg-accent/5"
+                  : "border-border hover:border-foreground/30"
               }`}
           >
             <ImageFrame
@@ -41,10 +41,10 @@ export function LocationSelector({
               width={400}
               height={225}
               sizes="(max-width: 768px) 100vw, 400px"
-              className="aspect-video w-full transition-transform duration-500 group-hover:scale-105"
+              className="aspect-video w-full transition-opacity duration-400 group-hover:opacity-85"
             />
             <div className="p-4">
-              <span className="font-heading text-base font-medium tracking-tight">
+              <span className="font-heading text-base font-light tracking-tight">
                 {location.name}
               </span>
               <span className="mt-1 block text-sm text-muted-foreground">

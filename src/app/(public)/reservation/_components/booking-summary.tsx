@@ -87,7 +87,7 @@ export function BookingSummary({
   const durationLabel = formatDurationLabel(startTime, endTime);
 
   return (
-    <div className="rounded-xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
+    <div className="border border-border px-6 py-6 sm:px-8 sm:py-7">
       {/* Header: title + price */}
       <div className="flex items-baseline justify-between gap-4">
         <Heading level={3} className="!text-base font-medium">
@@ -134,7 +134,7 @@ export function BookingSummary({
           <button
             type="button"
             onClick={onEdit}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent/5"
+            className="flex w-full items-center justify-center gap-2 border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-foreground/30"
           >
             <IconPencil size={14} />
             予約内容を変更する

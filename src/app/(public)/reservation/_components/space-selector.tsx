@@ -47,11 +47,11 @@ export function SpaceSelector({
                   onSelect(space.id);
                 }
               }}
-              className={`flex min-w-[75vw] snap-start flex-col overflow-hidden rounded-xl border text-left transition-all
+              className={`flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors
                 ${
                   isSelected
-                    ? "border-accent ring-2 ring-accent/20 bg-accent/5"
-                    : "border-border bg-card hover:border-accent/40"
+                    ? "border-accent bg-accent/5"
+                    : "border-border hover:border-foreground/30"
                 }
                 ${isSingle ? "cursor-default" : "cursor-pointer"}
                 md:min-w-0`}
@@ -65,7 +65,7 @@ export function SpaceSelector({
                 className="aspect-[4/3] w-full"
               />
               <div className="p-3">
-                <span className="font-heading text-sm font-medium tracking-tight">
+                <span className="font-heading text-sm font-light tracking-tight">
                   {space.name}
                 </span>
                 <span className="mt-1 block text-xs text-muted-foreground">
@@ -79,7 +79,7 @@ export function SpaceSelector({
                   <button
                     type="button"
                     aria-label={`${space.name}の詳細を見る`}
-                    className="inline-flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/15"
+                    className="inline-flex items-center gap-1 border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDetailSpace(space);

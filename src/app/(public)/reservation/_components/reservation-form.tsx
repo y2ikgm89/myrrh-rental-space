@@ -429,7 +429,7 @@ export function ReservationForm({
             onSelect={handleLocationSelect}
           />
         ) : currentLocation ? (
-          <div className="flex items-center gap-4 rounded-xl border border-accent bg-accent/5 p-3 ring-2 ring-accent/20">
+          <div className="flex items-center gap-4 border border-accent bg-accent/5 p-3">
             <ImageFrame
               src={currentLocation.imageUrl}
               alt={currentLocation.name}
@@ -440,7 +440,7 @@ export function ReservationForm({
               className="w-40 shrink-0"
             />
             <div>
-              <span className="font-heading text-base font-medium tracking-tight">
+              <span className="font-heading text-base font-light tracking-tight">
                 {currentLocation.name}
               </span>
               <span className="mt-1 block truncate text-sm text-muted-foreground">
