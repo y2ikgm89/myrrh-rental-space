@@ -28,7 +28,7 @@ interface ContactFormSectionProps {
 }
 
 const INPUT_CLASS =
-  "w-full border border-border bg-card px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
+  "w-full border border-border px-4 py-3 text-sm text-foreground focus-visible:border-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
 
 function ContactForm({
   config,

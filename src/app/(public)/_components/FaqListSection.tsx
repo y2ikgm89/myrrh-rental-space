@@ -53,7 +53,7 @@ const VARIANT_STYLES = {
   },
   bordered: {
     container: "space-y-3",
-    item: "border border-border bg-card p-4 transition-colors duration-200",
+    item: "border border-border p-4 transition-colors duration-200",
     summary:
       "flex w-full cursor-pointer items-center justify-between gap-4 text-left font-heading text-base font-light md:text-lg [&::marker]:content-none [&::-webkit-details-marker]:hidden",
     marker: true,

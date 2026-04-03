@@ -122,7 +122,7 @@ export function SpaceListSection({
             key={space.id}
             href={`/spaces/${space.slug}`}
             data-space-list-card=""
-            className={`group overflow-hidden border border-border bg-card transition-colors duration-200 ${
+            className={`group overflow-hidden border border-border transition-colors duration-200 ${
               isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
             } ${isList ? "flex" : ""}`}
           >

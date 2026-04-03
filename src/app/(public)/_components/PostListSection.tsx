@@ -122,7 +122,7 @@ export function PostListSection({
             key={post.id}
             href={post.url}
             data-post-card=""
-            className={`group overflow-hidden border border-border bg-card transition-colors duration-200 ${
+            className={`group overflow-hidden border border-border transition-colors duration-200 ${
               isList ? "flex" : ""
             }`}
           >

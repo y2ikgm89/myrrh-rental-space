@@ -138,7 +138,7 @@ export function TestimonialSection({
             const cardClasses = isFeatured
               ? "py-10 md:py-14"
               : variant === "card"
-                ? "bg-card p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 transition-colors duration-200"
+                ? "p-8 border-t-2 border-t-accent/30 border-x-0 border-b-0 transition-colors duration-200"
                 : variant === "minimal"
                   ? "py-6"
                   : "py-8";
