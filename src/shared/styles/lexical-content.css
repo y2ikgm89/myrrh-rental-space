@@ -870,7 +870,6 @@ details[data-collapsible-item]
   display: inline-flex;
   align-items: center;
   font-weight: 500;
-  border-radius: 0.375rem;
   transition:
     color 0.15s,
     background-color 0.15s,
@@ -883,6 +882,7 @@ details[data-collapsible-item]
 [data-button-variant="primary"] > a {
   background-color: var(--color-accent);
   color: var(--color-accent-foreground);
+  border-radius: 9999px;
 }
 [data-button-variant="primary"] > a:hover {
   opacity: 0.9;
@@ -891,18 +891,22 @@ details[data-collapsible-item]
 [data-button-variant="secondary"] > a {
   background-color: var(--color-secondary, var(--color-muted));
   color: var(--color-secondary-foreground, var(--color-foreground));
+  border-radius: 9999px;
 }
 [data-button-variant="secondary"] > a:hover {
   opacity: 0.8;
 }
 
 [data-button-variant="outline"] > a {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-foreground);
   background-color: var(--color-background);
   color: var(--color-foreground);
+  border-radius: 0;
 }
 [data-button-variant="outline"] > a:hover {
-  background-color: var(--color-muted);
+  background-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
 }
 
 /* Sizes */
