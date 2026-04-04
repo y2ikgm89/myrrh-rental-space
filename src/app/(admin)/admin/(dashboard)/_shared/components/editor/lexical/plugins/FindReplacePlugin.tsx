@@ -179,8 +179,7 @@ function FindIconReplacePanel({
       const newText = before + replaceText + after;
 
       // テキストノードの内容を更新
-      const writableNode = targetNode.getWritable();
-      writableNode.setTextContent(newText);
+      targetNode.setTextContent(newText);
     });
   };
 
@@ -214,8 +213,7 @@ function FindIconReplacePanel({
           }
           result += text.slice(lastIndex);
 
-          const writableNode = node.getWritable();
-          writableNode.setTextContent(result);
+          node.setTextContent(result);
         }
       }
     });
