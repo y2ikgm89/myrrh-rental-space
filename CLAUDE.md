@@ -11,12 +11,13 @@
 - **後方互換性ハック禁止** → 不要コード完全削除
 - **検証なしの完了報告禁止** → 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
-- **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象（`style={{ color: "oklch(...)" }}` も違反）→ `tailwind-patterns.md`
+- **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象（`style={{ color: "oklch(...)" }}` も違反）。例外: `global-error.tsx`（CSS変数不使用制約）→ `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`、エラー `<div role="alert">` + border スタイル
 - **ソフトデリート `where` 漏れ禁止** → `deletedAt` を持つ全モデル（Reservation, Event 等）の `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restore*Command` 除く）。リレーション経由のクエリも親モデルの `deletedAt: null` フィルタ必須（例: `where: { eventId, event: { deletedAt: null } }`）→ `gotchas.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
+- **公開 Server Action の ID 引数バリデーション省略禁止** → `z.string().uuid()` で検証してから command に渡す
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
-- **条件付き className のテンプレートリテラル禁止** → `cn()` ユーティリティを使用（例: `cn("base-class", condition && "conditional-class")`）
+- **className テンプレートリテラル禁止** → 条件分岐・変数結合・関数呼び出し含む全パターンで `cn()` 使用必須。import は `@/shared/lib/cn`（全ファイル共通）。例外: layout.tsx のフォント変数のみ（`${font.variable}`）
 
 ---
 
@@ -142,7 +143,14 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 - **API Routes**: `checkPermission`（**認証を最初に実行**）→ Zod、管理ログインは `proxy.ts`（Admin Gate）
 - **CSV エクスポート**: `escapeCsvField` で数式インジェクション対策（`=+\-@\t\r` 先頭ガード）
 
+### キャッシュ無効化の統一
+
+- イベント状態変更（publish/cancel）: `invalidateEventCaches` + `eventRegistrations.list` の両方を無効化
+- 予約状態変更: 3点セット必須（`RESERVATIONS` + `detail(id)` + `calendar()`）→ `gotchas.md`
+
 ### エージェント（`.claude/agents/` 自動検出、20種）
+
+> **注意**: レビューエージェントの指摘は `gotchas.md` と照合して検証する。特に `revalidateTag` 第2引数（Next.js 16 で必須）や Turbopack チャンク重複（既知制約）は誤報されやすい
 
 **使い方パターン**:
 
