@@ -144,7 +144,7 @@ function LightboxOverlay({
       tabIndex={-1}
     >
       <div
-        className="relative max-h-[90vh] max-w-[90vw]"
+        className="relative max-h-[90svh] max-w-[90vw]"
         onClick={(e) => e.stopPropagation()}
       >
         <Image
@@ -152,7 +152,7 @@ function LightboxOverlay({
           alt={alt}
           width={1200}
           height={800}
-          className="max-h-[90vh] w-auto object-contain"
+          className="max-h-[90svh] w-auto object-contain"
         />
       </div>
       <button

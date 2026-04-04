@@ -140,13 +140,20 @@ export async function getPublishedNews(maxItems: number) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.NEWS);
 
-  const news = await prisma.news.findMany({
-    where: {
-      isPublished: true,
-    },
-    select: newsListSelect,
-    orderBy: { publishedAt: "desc" },
-    take: maxItems,
+  const news = await safeFetch({
+    fetch: () =>
+      prisma.news.findMany({
+        where: {
+          isPublished: true,
+        },
+        select: newsListSelect,
+        orderBy: { publishedAt: "desc" },
+        take: maxItems,
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedNews",
   });
 
   return toPlainArray(

@@ -116,6 +116,7 @@ export async function publishEvent(
     },
     afterSuccess: (slug) => {
       invalidateEventCaches(validated.data, slug ?? undefined);
+      updateTag(getCacheTag.eventRegistrations.list(validated.data));
     },
   });
 }

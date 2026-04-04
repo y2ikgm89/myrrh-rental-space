@@ -31,6 +31,7 @@ import {
   HeaderBackgroundMode,
 } from "@generated/prisma/enums";
 import { cn } from "@/shared/lib/cn";
+import { Button } from "@/public/components/design-system/button";
 
 interface AuthLink {
   readonly href: string;
@@ -82,7 +83,7 @@ const HIDE_THRESHOLD = 150;
 /** Desktop nav link for items WITHOUT children */
 function NavLink({ item }: { readonly item: PublicNavItem }): ReactElement {
   const linkClass =
-    "text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground";
+    "text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground";
 
   if (item.isExternal) {
     return (
@@ -255,6 +256,7 @@ export function Header({
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   const motionOk = useMotionPreference();
   const mobileMenuId = useId();
 
@@ -402,6 +404,17 @@ export function Header({
     { scope: headerRef },
   );
 
+  // Kill any in-flight menu animations on unmount
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    return () => {
+      if (overlay) {
+        gsap.killTweensOf(overlay);
+        gsap.killTweensOf(overlay.querySelectorAll("[data-menu-link]"));
+      }
+    };
+  }, []);
+
   const openMenu = () => {
     setMenuOpen(true);
     const reduced = !motionOk.current;
@@ -433,6 +446,7 @@ export function Header({
     const overlay = overlayRef.current;
     if (!overlay) {
       setMenuOpen(false);
+      hamburgerRef.current?.focus();
       return;
     }
     const reduced = !motionOk.current;
@@ -440,7 +454,10 @@ export function Header({
       opacity: 0,
       duration: reduced ? 0.1 : 0.25,
       ease: EASE.inQuad,
-      onComplete: () => setMenuOpen(false),
+      onComplete: () => {
+        setMenuOpen(false);
+        hamburgerRef.current?.focus();
+      },
     });
   };
 
@@ -448,17 +465,14 @@ export function Header({
     <>
       <header
         ref={headerRef}
+        role="banner"
         className={cn(
           "sticky top-[var(--announcement-bar-height,0px)] z-40 transition-[background-color,backdrop-filter,box-shadow,border-color,translate] duration-300",
           backgroundMode === HeaderBackgroundMode.transparent
             ? "bg-transparent"
             : "bg-background",
+          scrolled && "border-b border-border/50",
         )}
-        style={
-          scrolled
-            ? { borderBottom: "1px solid oklch(0.85 0.015 60 / 0.5)" }
-            : undefined
-        }
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
           <Link
@@ -479,7 +493,7 @@ export function Header({
                   <NavigationMenuPrimitive.Item key={item.id}>
                     {item.children.length > 0 ? (
                       <>
-                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
                           {item.label}
                           <IconChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </NavigationMenuPrimitive.Trigger>
@@ -500,21 +514,24 @@ export function Header({
             {authLink && (
               <Link
                 href={authLink.href}
-                className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
+                className="text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground"
               >
                 {authLink.label}
               </Link>
             )}
-            <Link
+            <Button
+              variant="editorial"
+              size="sm"
               href="/reservation"
-              className="border border-foreground px-5 py-2 text-[0.6rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-foreground hover:text-background"
+              className="text-[0.6rem] uppercase tracking-[0.18em]"
             >
               Reserve
-            </Link>
+            </Button>
           </div>
 
           {/* Hamburger (mobile) */}
           <button
+            ref={hamburgerRef}
             type="button"
             onClick={openMenu}
             className="flex h-10 w-10 items-center justify-center md:hidden"
@@ -560,7 +577,7 @@ export function Header({
               href="/reservation"
               data-menu-link=""
               onClick={closeMenu}
-              className="border border-foreground px-8 py-3 text-[0.65rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-foreground hover:text-background"
+              className="inline-flex items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
             >
               Reserve
             </Link>

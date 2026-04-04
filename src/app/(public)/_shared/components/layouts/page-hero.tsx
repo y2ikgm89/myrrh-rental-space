@@ -38,8 +38,8 @@ type PageHeroProps =
 export function PageHero(props: PageHeroProps) {
   if (props.variant === "editorial") {
     return (
-      <section data-hero="" className="relative min-h-[60vh] bg-surface">
-        <div className="grid min-h-[60vh] grid-cols-1 md:grid-cols-[5fr_4fr]">
+      <section data-hero="" className="relative min-h-[60svh] bg-surface">
+        <div className="grid min-h-[60svh] grid-cols-1 md:grid-cols-[5fr_4fr]">
           <div className="relative aspect-[4/3] md:aspect-auto">
             <Image
               src={props.image.src}

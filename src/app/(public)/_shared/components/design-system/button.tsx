@@ -16,7 +16,7 @@ const variantClasses = {
     "bg-transparent text-foreground rounded-full transition-colors duration-200 hover:bg-surface",
   link: "text-accent hover:text-foreground underline-offset-4 hover:underline p-0",
   editorial:
-    "border border-foreground text-foreground rounded-full transition-colors duration-300 hover:bg-foreground hover:text-background",
+    "border border-foreground text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
 } as const satisfies Record<ButtonVariant, string>;
 
 const sizeClasses = {
@@ -41,6 +41,7 @@ interface ButtonAsButton extends ButtonBaseProps {
 
 interface ButtonAsLink extends ButtonBaseProps {
   readonly href: string;
+  readonly onClick?: () => void;
 }
 
 type ButtonProps = ButtonAsButton | ButtonAsLink;
@@ -48,7 +49,7 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 export function Button(props: ButtonProps) {
   const { variant = "primary", size = "md", children, className } = props;
   const classes = cn(
-    "inline-flex items-center justify-center font-medium transition-colors duration-200",
+    "inline-flex items-center justify-center transition-colors duration-200",
     variantClasses[variant],
     variant !== "link" && sizeClasses[size],
     className,
@@ -56,7 +57,11 @@ export function Button(props: ButtonProps) {
 
   if ("href" in props && typeof props.href === "string") {
     return (
-      <Link href={props.href} className={classes}>
+      <Link
+        href={props.href}
+        className={classes}
+        {...(props.onClick && { onClick: props.onClick })}
+      >
         {children}
       </Link>
     );

@@ -45,7 +45,13 @@ export const overlayStyleValues = ["gradient", "solid", "none"] as const;
 export type OverlayStyle = (typeof overlayStyleValues)[number];
 
 /** セクション高さ (HeroParallax) */
-export const heroParallaxHeightValues = ["full", "80vh", "60vh"] as const;
+export const heroParallaxHeightValues = [
+  "sm",
+  "md",
+  "lg",
+  "full",
+  "custom",
+] as const;
 export type HeroParallaxHeight = (typeof heroParallaxHeightValues)[number];
 
 /** Features レイアウト */
@@ -69,7 +75,7 @@ export const conceptLayoutValues = ["side-by-side", "stacked"] as const;
 export type ConceptLayout = (typeof conceptLayoutValues)[number];
 
 /** ヒーロー高さ */
-export const heroHeightValues = ["sm", "md", "lg", "full"] as const;
+export const heroHeightValues = ["sm", "md", "lg", "full", "custom"] as const;
 export type HeroHeight = (typeof heroHeightValues)[number];
 
 /** ヒーローバリエーション */
@@ -222,9 +228,11 @@ export const overlayStyleLabels: Record<OverlayStyle, string> = {
 };
 
 export const heroParallaxHeightLabels: Record<HeroParallaxHeight, string> = {
+  sm: "コンパクト",
+  md: "標準",
+  lg: "大",
   full: "全画面",
-  "80vh": "80%",
-  "60vh": "60%",
+  custom: "カスタム",
 };
 
 export const featuresLayoutLabels: Record<FeaturesLayout, string> = {
@@ -251,10 +259,11 @@ export const conceptLayoutLabels: Record<ConceptLayout, string> = {
 };
 
 export const heroHeightLabels: Record<HeroHeight, string> = {
-  sm: "小",
-  md: "中",
+  sm: "コンパクト",
+  md: "標準",
   lg: "大",
   full: "全画面",
+  custom: "カスタム",
 };
 
 export const heroVariantLabels: Record<HeroVariant, string> = {

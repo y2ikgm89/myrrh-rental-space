@@ -5,7 +5,7 @@ import { field } from "../../field-helpers";
 const buttonVariants = ["primary", "secondary", "outline"] as const;
 const buttonSizes = ["sm", "md", "lg"] as const;
 const contentPositions = ["center", "left", "bottom-left"] as const;
-const heightOptions = ["full", "80vh", "60vh"] as const;
+const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 const overlayStyles = ["gradient", "solid", "none"] as const;
 
 export const heroParallaxConfigSchema = z.object({
@@ -52,7 +52,13 @@ export const heroParallaxConfigSchema = z.object({
   }),
   height: field.select("高さ", {
     options: heightOptions,
-    default: "full",
+    default: "lg",
+  }),
+  heightCustom: field.number("カスタム高さ (svh)", {
+    min: 20,
+    max: 100,
+    default: 80,
+    helpText: "高さが「カスタム」の場合に使用（svh 単位）",
   }),
   overlayStyle: field.select("オーバーレイスタイル", {
     options: overlayStyles,

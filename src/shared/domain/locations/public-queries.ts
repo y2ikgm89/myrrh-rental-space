@@ -39,7 +39,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
 > {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SPACES);
+  cacheTag(CACHE_TAGS.SPACES, CACHE_TAGS.LOCATIONS);
 
   const locations = await safeFetch({
     fetch: () =>

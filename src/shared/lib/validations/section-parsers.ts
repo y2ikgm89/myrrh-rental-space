@@ -185,7 +185,7 @@ export const parseOverlayStyle: (value: string) => OverlayStyle = createParser(
 );
 
 export const parseHeroParallaxHeight: (value: string) => HeroParallaxHeight =
-  createParser(heroParallaxHeightValues, "full");
+  createParser(heroParallaxHeightValues, "lg");
 
 export const parseFeaturesLayout: (value: string) => FeaturesLayout =
   createParser(featuresLayoutValues, "hero-first");

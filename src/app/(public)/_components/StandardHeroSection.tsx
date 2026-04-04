@@ -21,6 +21,7 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { cn } from "@/shared/lib/cn";
 import { Container } from "@/public/components/design-system/container";
 import { Heading } from "@/public/components/design-system/heading";
 import {
@@ -69,12 +70,12 @@ function HeroButtons({
   );
 }
 
-const HEIGHT_MAP = {
-  sm: "h-[40vh]",
-  md: "h-[60vh]",
-  lg: "h-[80vh]",
-  full: "h-svh",
-} as const;
+const HEIGHT_MAP: Record<string, string> = {
+  sm: "min-h-[40svh]",
+  md: "min-h-[60svh]",
+  lg: "min-h-[80svh]",
+  full: "min-h-svh",
+};
 
 interface StandardHeroSectionProps {
   readonly config: HeroConfig;
@@ -145,7 +146,13 @@ export function StandardHeroSection({
     { scope: sectionRef },
   );
 
-  const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
+  const isCustomHeight = config.height === "custom";
+  const heightClass = isCustomHeight
+    ? undefined
+    : (HEIGHT_MAP[config.height] ?? HEIGHT_MAP["md"]);
+  const customHeightStyle = isCustomHeight
+    ? { minHeight: `${String(config.heightCustom ?? 60)}svh` }
+    : undefined;
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
 
@@ -158,7 +165,7 @@ export function StandardHeroSection({
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex h-[40vh] min-h-[280px] items-end overflow-hidden pb-10 pt-[var(--header-height)] md:pb-16"
+        className="relative flex items-end overflow-hidden pb-10 pt-[calc(var(--header-height)+3rem)] md:pb-14 md:pt-[calc(var(--header-height)+5rem)]"
       >
         <div
           className="absolute inset-0 bg-gradient-to-b from-surface via-background to-background"
@@ -210,11 +217,15 @@ export function StandardHeroSection({
       <section
         ref={sectionRef}
         data-hero=""
-        className={`relative overflow-hidden pt-[var(--header-height)] ${heightClass}`}
+        className={cn(
+          "relative overflow-hidden pt-[var(--header-height)]",
+          heightClass,
+        )}
+        style={customHeightStyle}
       >
         <div
           ref={contentRef}
-          className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center px-[var(--container-padding)] md:flex-row"
+          className="relative z-10 mx-auto flex min-h-full max-w-6xl flex-col items-center px-[var(--container-padding)] md:flex-row"
         >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {config.title && (
@@ -277,7 +288,11 @@ export function StandardHeroSection({
     <section
       ref={sectionRef}
       data-hero=""
-      className={`relative flex items-center justify-center overflow-hidden pt-[var(--header-height)] ${heightClass}`}
+      className={cn(
+        "relative flex items-center justify-center overflow-hidden pt-[var(--header-height)]",
+        heightClass,
+      )}
+      style={customHeightStyle}
     >
       {/* Background image or video */}
       {useVideo ? (

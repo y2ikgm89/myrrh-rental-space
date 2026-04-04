@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/public/components/design-system/button";
 import { Container } from "@/public/components/design-system/container";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 
@@ -18,17 +19,20 @@ export interface ShowcaseSpace {
 
 export interface SpacesSectionProps {
   readonly spaces: readonly ShowcaseSpace[];
+  readonly label: string;
   readonly title: string;
   readonly count: number;
 }
 
 export const spacesDefaultProps = {
-  title: "Selected Spaces",
+  label: "Selected Spaces",
+  title: "厳選スペース",
   count: 6,
 } as const;
 
 export function SpacesSection({
   spaces,
+  label = spacesDefaultProps.label,
   title = spacesDefaultProps.title,
   count = spacesDefaultProps.count,
 }: SpacesSectionProps): ReactElement {
@@ -37,16 +41,21 @@ export function SpacesSection({
   const remaining = limited.slice(1);
 
   return (
-    <section className="py-[var(--spacing-section)]">
+    <section className="py-[var(--spacing-section-compact)]">
       {/* Section header */}
       <Container>
-        <div className="mb-10 flex items-baseline justify-between border-b border-border pb-3 md:mb-14">
-          <span className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="mb-10 md:mb-14">
+          <div className="flex items-baseline justify-between border-b border-border pb-3">
+            <span className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+              {label}
+            </span>
+            <span className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
+              {String(spaces.length).padStart(2, "0")} Selected
+            </span>
+          </div>
+          <h2 className="mt-4 font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light tracking-tight">
             {title}
-          </span>
-          <span className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
-            {String(spaces.length).padStart(2, "0")} Selected
-          </span>
+          </h2>
         </div>
       </Container>
 
@@ -165,17 +174,17 @@ export function SpacesSection({
         </Container>
       )}
 
-      {/* View all link */}
+      {/* View all button */}
       <Container className="mt-10 md:mt-14">
         <ScrollReveal>
-          <div className="border-t border-border pt-6 text-right">
-            <Link
+          <div className="border-t border-border pt-6 text-center">
+            <Button
+              variant="editorial"
               href="/spaces"
-              className="group inline-flex items-center gap-3 text-[0.65rem] uppercase tracking-[0.15em] text-foreground transition-[gap] duration-300 hover:gap-5"
+              className="text-[0.65rem] uppercase tracking-[0.18em]"
             >
-              View all spaces
-              <span className="h-px w-8 bg-foreground transition-[width] duration-300 group-hover:w-12" />
-            </Link>
+              View All Spaces
+            </Button>
           </div>
         </ScrollReveal>
       </Container>

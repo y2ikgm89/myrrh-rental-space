@@ -78,6 +78,7 @@ export default function GlobalError({ error, unstable_retry }: ErrorInfo) {
               予期しないエラーが発生しました
             </h1>
 
+            {/* global-error.tsx は CSS 変数・Tailwind 不使用（Root Layout 外のため） */}
             <p style={{ marginBottom: "2rem", color: "oklch(0.55 0.01 250)" }}>
               申し訳ございません。システムエラーが発生しました。
               <br />

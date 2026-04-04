@@ -1,17 +1,16 @@
 /**
- * Homepage — Editorial Magazine layout
+ * Homepage — Editorial Magazine layout (DB-driven)
  *
- * Supports Puck visual editor: if puckData exists in DB, sections are rendered
- * in the order and with the props defined by the editor. Otherwise, falls back
- * to the default 6-section layout.
+ * Reads section configs from DB via getHomepageSections().
+ * Each homepage-* section type maps to an editorial component.
+ * Falls back to DEFAULT_PAGE_SECTIONS["home"] when DB is empty.
  *
- * Default composition:
- * 1. Hero — magazine cover split (image + text)
- * 2. PullQuote — centered serif italic quote
- * 3. Spaces — featured spread + staggered grid
- * 4. Features — numbered editorial list
- * 5. Stats — inline serif numbers
- * 6. CTA — italic heading + bordered button
+ * Section types:
+ * 1. homepage-hero — magazine cover split (image + text)
+ * 2. homepage-how-it-works — 3-step reservation flow + value props strip
+ * 3. homepage-spaces — featured spread + staggered grid (DB data injected)
+ * 4. homepage-features — numbered editorial list
+ * 5. homepage-cta — italic heading + bordered button
  */
 
 import type { Metadata } from "next";
@@ -21,17 +20,22 @@ import { connection } from "next/server";
 import { WebSiteJsonLd } from "@/public/components/seo/json-ld";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getShowcaseSpaces } from "@/shared/domain/sections/queries";
-import { getHomepagePuckData } from "@/shared/domain/pages/public-queries";
+import {
+  getHomepageSections,
+  getShowcaseSpaces,
+  type PublicSection,
+} from "@/shared/domain/sections/queries";
 
 import {
   HomepageHero,
-  heroDefaultProps as heroDefaults,
+  heroDefaultProps,
+  type HeroSectionProps,
 } from "./_components/homepage/hero-section";
 import {
-  PullQuoteSection,
-  pullQuoteDefaultProps as pullQuoteDefaults,
-} from "./_components/homepage/pullquote-section";
+  HowItWorksSection,
+  howItWorksDefaultProps,
+  type HowItWorksSectionProps,
+} from "./_components/homepage/how-it-works-section";
 import {
   SpacesSection,
   spacesDefaultProps,
@@ -39,12 +43,13 @@ import {
 } from "./_components/homepage/spaces-section";
 import {
   FeaturesSection,
-  featuresDefaultProps as featuresDefaults,
+  featuresDefaultProps,
+  type FeaturesSectionProps,
 } from "./_components/homepage/features-section";
-import { StatsSection } from "./_components/homepage/stats-section";
 import {
   CtaSection,
-  ctaDefaultProps as ctaDefaults,
+  ctaDefaultProps,
+  type CtaSectionProps,
 } from "./_components/homepage/cta-section";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,139 +58,141 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("home");
 }
 
-/**
- * Puck content item shape (subset we care about for rendering).
- */
-interface PuckContentItem {
-  readonly type: string;
-  readonly props: Record<string, unknown>;
+/* -------------------------------------------------------------------------- */
+/*  Config → Props mappers (type-safe extraction from DB JSON)                */
+/* -------------------------------------------------------------------------- */
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
-interface PuckData {
-  readonly content: readonly PuckContentItem[];
-}
-
-function isPuckData(value: unknown): value is PuckData {
-  if (typeof value !== "object" || value === null) return false;
-  return "content" in value && Array.isArray(value.content);
-}
-
-function isPuckContentItem(value: unknown): value is PuckContentItem {
-  if (typeof value !== "object" || value === null) return false;
-  return (
-    "type" in value &&
-    typeof value.type === "string" &&
-    "props" in value &&
-    typeof value.props === "object"
-  );
-}
-
-/** Safely extract a string prop with fallback. */
-function str(
-  props: Record<string, unknown>,
-  key: string,
-  fallback: string,
-): string {
-  const v = props[key];
+function str(config: unknown, key: string, fallback: string): string {
+  if (!isRecord(config)) return fallback;
+  const v = config[key];
   return typeof v === "string" ? v : fallback;
 }
 
-/** Safely extract a number prop with fallback. */
-function num(
-  props: Record<string, unknown>,
-  key: string,
-  fallback: number,
-): number {
-  const v = props[key];
+function num(config: unknown, key: string, fallback: number): number {
+  if (!isRecord(config)) return fallback;
+  const v = config[key];
   return typeof v === "number" ? v : fallback;
 }
 
-/**
- * Render a single Puck content item as a React element.
- * SpacesSection receives actual spaces data from DB.
- */
-function renderPuckSection(
-  item: PuckContentItem,
+function arr(config: unknown, key: string): unknown[] | undefined {
+  if (!isRecord(config)) return undefined;
+  const v = config[key];
+  return Array.isArray(v) ? v : undefined;
+}
+
+function isStringPair(v: unknown): v is { title: string; description: string } {
+  return (
+    isRecord(v) &&
+    typeof v["title"] === "string" &&
+    typeof v["description"] === "string"
+  );
+}
+
+function isTitled(v: unknown): v is { title: string } {
+  return isRecord(v) && typeof v["title"] === "string";
+}
+
+function mapHeroConfig(config: unknown): HeroSectionProps {
+  return {
+    label: str(config, "label", heroDefaultProps.label),
+    title: str(config, "title", heroDefaultProps.title),
+    description: str(config, "description", heroDefaultProps.description),
+    imageUrl: str(config, "imageUrl", heroDefaultProps.imageUrl),
+    imageAlt: str(config, "imageAlt", heroDefaultProps.imageAlt),
+    buttonText: str(config, "buttonText", heroDefaultProps.buttonText),
+    buttonUrl: str(config, "buttonUrl", heroDefaultProps.buttonUrl),
+  };
+}
+
+function mapHowItWorksConfig(config: unknown): Partial<HowItWorksSectionProps> {
+  const rawSteps = arr(config, "steps");
+  const rawValueProps = arr(config, "valueProps");
+  return {
+    label: str(config, "label", howItWorksDefaultProps.label),
+    title: str(config, "title", howItWorksDefaultProps.title),
+    ...(rawSteps && { steps: rawSteps.filter(isStringPair) }),
+    ...(rawValueProps && { valueProps: rawValueProps.filter(isTitled) }),
+  };
+}
+
+function mapSpacesConfig(config: unknown) {
+  return {
+    label: str(config, "label", spacesDefaultProps.label),
+    title: str(config, "title", spacesDefaultProps.title),
+    count: num(config, "count", spacesDefaultProps.count),
+  };
+}
+
+function mapFeaturesConfig(config: unknown): Partial<FeaturesSectionProps> {
+  const rawItems = arr(config, "items");
+  return {
+    label: str(config, "label", featuresDefaultProps.label),
+    title: str(config, "title", featuresDefaultProps.title),
+    ...(rawItems && { items: rawItems.filter(isStringPair) }),
+  };
+}
+
+function mapCtaConfig(config: unknown): CtaSectionProps {
+  return {
+    label: str(config, "label", ctaDefaultProps.label),
+    title: str(config, "title", ctaDefaultProps.title),
+    description: str(config, "description", ctaDefaultProps.description),
+    buttonText: str(config, "buttonText", ctaDefaultProps.buttonText),
+    buttonUrl: str(config, "buttonUrl", ctaDefaultProps.buttonUrl),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section renderer                                                          */
+/* -------------------------------------------------------------------------- */
+
+function renderHomepageSection(
+  section: PublicSection,
   spaces: readonly ShowcaseSpace[],
-  index: number,
 ): ReactElement | null {
-  const { type, props } = item;
-  const key = `puck-${type}-${String(index)}`;
+  const { type, config } = section;
 
   switch (type) {
-    case "HeroSection":
+    case "homepage-hero":
+      return <HomepageHero key={section.id} {...mapHeroConfig(config)} />;
+    case "homepage-how-it-works":
       return (
-        <HomepageHero
-          key={key}
-          label={str(props, "label", heroDefaults.label)}
-          title={str(props, "title", heroDefaults.title)}
-          description={str(props, "description", heroDefaults.description)}
-          imageUrl={str(props, "imageUrl", heroDefaults.imageUrl)}
-          imageAlt={str(props, "imageAlt", heroDefaults.imageAlt)}
-          buttonText={str(props, "buttonText", heroDefaults.buttonText)}
-          buttonUrl={str(props, "buttonUrl", heroDefaults.buttonUrl)}
-        />
+        <HowItWorksSection key={section.id} {...mapHowItWorksConfig(config)} />
       );
-    case "PullQuoteSection":
-      return (
-        <PullQuoteSection
-          key={key}
-          quote={str(props, "quote", pullQuoteDefaults.quote)}
-          attribution={str(props, "attribution", pullQuoteDefaults.attribution)}
-        />
-      );
-    case "SpacesSection":
+    case "homepage-spaces":
       return (
         <SpacesSection
-          key={key}
+          key={section.id}
           spaces={spaces}
-          title={str(props, "title", spacesDefaultProps.title)}
-          count={num(props, "count", spacesDefaultProps.count)}
+          {...mapSpacesConfig(config)}
         />
       );
-    case "FeaturesSection": {
-      const title = str(props, "title", featuresDefaults.title);
-      const rawItems = props["items"];
+    case "homepage-features":
       return (
-        <FeaturesSection
-          key={key}
-          title={title}
-          {...(Array.isArray(rawItems) && { items: rawItems })}
-        />
+        <FeaturesSection key={section.id} {...mapFeaturesConfig(config)} />
       );
-    }
-    case "StatsSection": {
-      const rawItems = props["items"];
-      return (
-        <StatsSection
-          key={key}
-          {...(Array.isArray(rawItems) && { items: rawItems })}
-        />
-      );
-    }
-    case "CtaSection":
-      return (
-        <CtaSection
-          key={key}
-          label={str(props, "label", ctaDefaults.label)}
-          title={str(props, "title", ctaDefaults.title)}
-          description={str(props, "description", ctaDefaults.description)}
-          buttonText={str(props, "buttonText", ctaDefaults.buttonText)}
-          buttonUrl={str(props, "buttonUrl", ctaDefaults.buttonUrl)}
-        />
-      );
+    case "homepage-cta":
+      return <CtaSection key={section.id} {...mapCtaConfig(config)} />;
     default:
       return null;
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Page component                                                            */
+/* -------------------------------------------------------------------------- */
+
 export default async function HomePage(): Promise<ReactElement> {
   await connection();
 
-  const [webSiteData, rawSpaces, puckData] = await Promise.all([
+  const [webSiteData, rawSpaces, sections] = await Promise.all([
     getWebSiteJsonLdData(),
     getShowcaseSpaces(6, true),
-    getHomepagePuckData(),
+    getHomepageSections(),
   ]);
 
   const spaces: ShowcaseSpace[] = rawSpaces.map((s) => ({
@@ -200,22 +207,12 @@ export default async function HomePage(): Promise<ReactElement> {
     categoryName: s.category?.name ?? null,
   }));
 
-  // If puckData exists in DB, render sections based on the editor data
-  if (isPuckData(puckData)) {
-    const validItems = puckData.content.filter(isPuckContentItem);
-    return (
-      <>
-        <WebSiteJsonLd
-          name={webSiteData.name}
-          description={webSiteData.description}
-          url={webSiteData.url}
-        />
-        {validItems.map((item, i) => renderPuckSection(item, spaces, i))}
-      </>
-    );
-  }
+  // Filter for homepage-* sections only; fall back to defaults if none match
+  const homepageSections = sections.filter((s) =>
+    s.type.startsWith("homepage-"),
+  );
+  const useDefaults = homepageSections.length === 0;
 
-  // Fallback: default layout when no puckData has been saved
   return (
     <>
       <WebSiteJsonLd
@@ -223,16 +220,24 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
-      <HomepageHero />
-      <PullQuoteSection />
-      <SpacesSection
-        spaces={spaces}
-        title={spacesDefaultProps.title}
-        count={spacesDefaultProps.count}
-      />
-      <FeaturesSection />
-      <StatsSection />
-      <CtaSection />
+      {useDefaults ? (
+        <>
+          <HomepageHero />
+          <HowItWorksSection />
+          <SpacesSection
+            spaces={spaces}
+            label={spacesDefaultProps.label}
+            title={spacesDefaultProps.title}
+            count={spacesDefaultProps.count}
+          />
+          <FeaturesSection />
+          <CtaSection />
+        </>
+      ) : (
+        homepageSections.map((section) =>
+          renderHomepageSection(section, spaces),
+        )
+      )}
     </>
   );
 }

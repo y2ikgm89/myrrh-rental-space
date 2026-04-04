@@ -12,7 +12,6 @@ import type {
   GapSize,
   ContentPosition,
   OverlayStyle,
-  HeroParallaxHeight,
   GalleryHoverEffect,
   GalleryGap,
 } from "@/shared/lib/validations/section-options";
@@ -84,11 +83,12 @@ export const OVERLAY_STYLE_MAP: Record<OverlayStyle, string> = {
   none: "",
 };
 
-/** HeroParallax 高さ → Tailwind/CSS クラス */
-export const HERO_PARALLAX_HEIGHT_MAP: Record<HeroParallaxHeight, string> = {
-  full: "h-screen",
-  "80vh": "h-[80vh]",
-  "60vh": "h-[60vh]",
+/** HeroParallax 高さ → Tailwind/CSS クラス（min-height + svh ベース） */
+export const HERO_PARALLAX_HEIGHT_MAP: Record<string, string> = {
+  sm: "min-h-[40svh]",
+  md: "min-h-[60svh]",
+  lg: "min-h-[80svh]",
+  full: "min-h-svh",
 };
 
 /** ギャラリー ホバーエフェクト → Tailwind クラス */

@@ -96,6 +96,7 @@
    * Spacing
    * -------------------------------------------------------------------------- */
   --spacing-section: clamp(7rem, 12vw, 11rem);
+  --spacing-section-compact: clamp(5rem, 8vw, 7rem);
   --spacing-block: clamp(2.5rem, 5vw, 4rem);
   --spacing-element: 1.5rem;
   --spacing-inline: 1rem;

@@ -36,6 +36,8 @@ OKLCH形式。Luxury White × Bronze。
 | 要素              | 値                                                                            |
 | ----------------- | ----------------------------------------------------------------------------- |
 | Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`    |
+| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`              |
+| Homepage 背景     | `bg-surface`（薄茶）と白を交互配置。surface → 白 → surface → 白               |
 | Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)` |
 | Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                            |
 | Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`          |
@@ -54,14 +56,15 @@ OKLCH形式。Luxury White × Bronze。
 | カード画像             | カタログ: `aspect-[3/2]`、ショーケース: `aspect-[3/2]` or auto                                      | —                          |
 | カード情報             | Label(11px Gold) → Heading(serif light) → Body(muted) → Metadata(inline)                            | —                          |
 | カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                       | 3列禁止、件数増=ページ分割 |
-| CTA ボタン             | ボーダーボタン（`border border-foreground` + hover 反転）                                           | 1-2個/ページ               |
+| CTA ボタン             | `Button variant="editorial"`: シャープエッジ + bronze hover（`hover:bg-accent`）                    | 全ページ統一               |
 | Secondary ボタン       | テキスト + 下線 reveal                                                                              | —                          |
 | Form ボタン            | `bg-accent text-accent-foreground rounded-full hover:bg-accent/90`                                  | フォーム内 CTA（primary）  |
-| Button editorial       | `border border-foreground rounded-full hover:bg-foreground hover:text-background`                   | content ページ CTA のみ    |
+| Button editorial       | `border border-foreground hover:bg-accent hover:text-accent-foreground`（シャープエッジ）           | 全ページ CTA 統一          |
 | セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                                         | —                          |
 | 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                          | —                          |
 | ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                                                  | セリフイタリック           |
-| ナビリンク             | `text-[0.65rem] uppercase tracking-[0.18em]`                                                        | hover:text-foreground      |
+| ナビリンク             | `text-[0.75rem] uppercase tracking-[0.18em]`                                                        | hover:text-foreground      |
+| 番号付きリスト         | `font-heading font-light italic text-accent/50`（HowItWorks: 2.5rem / Features: 2rem）              | 01, 02, 03 形式            |
 | PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                             | —                          |
 | PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                         | —                          |
 | SiteCTA                | bg-foreground ダークセクション、editorial ボタン                                                    | content ペー��末尾         |
@@ -77,11 +80,10 @@ OKLCH形式。Luxury White × Bronze。
 ## ホームページ構成（Editorial Magazine）
 
 1. **Hero** — 雑誌カバー風スプリット（左画像 + 右セリフイタリック見出し）
-2. **PullQuote** — 中央寄せセリフイタリック引用
+2. **HowItWorks** — ご利用の流れ3ステップ + バリュープロップ帯（1セクションに統合）
 3. **Spaces** — フィーチャードスプレッド + Kinfolk 風ずらし2カラムグリッド
 4. **Features** — 番号付き editorial リスト（01, 02, ...）
-5. **Stats** — インラインセリフ数字
-6. **CTA** — イタリック見出し + ボーダーボタン
+5. **CTA** — 日本語見出し + ボーダーボタン
 
 ## モーション設計
 

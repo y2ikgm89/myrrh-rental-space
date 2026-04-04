@@ -45,7 +45,7 @@ export function SiteCTA({
               variant="editorial"
               size="lg"
               href={buttonHref}
-              className="border-background text-background hover:bg-background hover:text-foreground"
+              className="border-background text-background hover:bg-background hover:text-accent"
             >
               {buttonText}
             </Button>

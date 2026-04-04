@@ -207,7 +207,7 @@ export function GallerySection({
                 <IconX className="h-5 w-5" strokeWidth={1.5} />
               </button>
 
-              <div className="relative flex max-h-[80vh] max-w-[90vw] items-center">
+              <div className="relative flex max-h-[80svh] max-w-[90vw] items-center">
                 <button
                   type="button"
                   onClick={() => navigateLightbox(-1)}
@@ -222,7 +222,7 @@ export function GallerySection({
                   alt={lightboxImage.alt ?? ""}
                   width={1200}
                   height={800}
-                  className="max-h-[80vh] w-auto object-contain"
+                  className="max-h-[80svh] w-auto object-contain"
                 />
 
                 <button

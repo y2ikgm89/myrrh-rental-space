@@ -153,6 +153,7 @@ const heroConfigRawSchema = z.object({
   ctaPrimary: ctaButtonSchema.optional(),
   ctaSecondary: optionalCtaButtonSchema,
   height: z.enum(heroHeightValues).default("md"),
+  heightCustom: z.number().min(20).max(100).default(60).optional(),
   overlay: z.boolean().default(true),
   overlayOpacity: z.number().min(0).max(100).default(40),
   variant: z.enum(heroVariantValues).default("default"),
@@ -202,7 +203,8 @@ export const heroParallaxConfigSchema = z.object({
   overlayGradient: z.boolean().default(true),
   scrollIndicator: z.boolean().default(true),
   contentPosition: z.enum(contentPositionValues).default("center"),
-  height: z.enum(heroParallaxHeightValues).default("full"),
+  height: z.enum(heroParallaxHeightValues).default("lg"),
+  heightCustom: z.number().min(20).max(100).default(80).optional(),
   overlayStyle: z.enum(overlayStyleValues).default("gradient"),
 });
 

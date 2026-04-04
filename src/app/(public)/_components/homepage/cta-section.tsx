@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import Link from "next/link";
+import { Button } from "@/public/components/design-system/button";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 
@@ -13,7 +13,7 @@ export interface CtaSectionProps {
 
 export const ctaDefaultProps: CtaSectionProps = {
   label: "Reservation",
-  title: "Find your perfect room",
+  title: "あなたに最適な空間を",
   description:
     "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
   buttonText: "View All Spaces",
@@ -28,12 +28,12 @@ export function CtaSection({
   buttonUrl = ctaDefaultProps.buttonUrl,
 }: Partial<CtaSectionProps> = {}): ReactElement {
   return (
-    <section className="px-4 py-[var(--spacing-section)] text-center">
-      <p className="mb-5 text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
+    <section className="px-4 py-[var(--spacing-section-compact)] text-center">
+      <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
 
-      <h2 className="font-heading text-[clamp(2rem,3.5vw,3rem)] font-light italic leading-[1.25] tracking-tight">
+      <h2 className="mt-4 font-heading text-[clamp(1.8rem,3vw,2.5rem)] font-light tracking-tight">
         <SplitText>{title}</SplitText>
       </h2>
 
@@ -44,12 +44,13 @@ export function CtaSection({
       </ScrollReveal>
 
       <ScrollReveal delay={0.3}>
-        <Link
+        <Button
+          variant="editorial"
           href={buttonUrl}
-          className="mt-8 inline-block border border-foreground px-8 py-3 text-[0.65rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-foreground hover:text-background"
+          className="mt-8 text-[0.65rem] uppercase tracking-[0.18em]"
         >
           {buttonText}
-        </Link>
+        </Button>
       </ScrollReveal>
     </section>
   );

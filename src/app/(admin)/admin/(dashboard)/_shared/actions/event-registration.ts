@@ -113,6 +113,7 @@ type CancelRegistrationData = {
   name: string;
   email: string;
   eventTitle: string;
+  numberOfPeople: number;
 };
 
 export async function adminCancelRegistration(
@@ -133,6 +134,7 @@ export async function adminCancelRegistration(
         name: registration.name,
         email: registration.email,
         eventTitle: registration.event.title,
+        numberOfPeople: registration.numberOfPeople,
       };
     },
     afterSuccess: (data) => {
@@ -158,7 +160,7 @@ export async function adminCancelRegistration(
                 participantEmail: data.email,
                 eventTitle: data.eventTitle,
                 eventStartTime: event.startTime,
-                numberOfPeople: 0,
+                numberOfPeople: data.numberOfPeople,
                 currentRegistrations: event._count.registrations,
                 capacity: event.capacity,
               },

@@ -90,6 +90,7 @@ export async function cancelEventRegistrationCommand(
       eventId: true,
       name: true,
       email: true,
+      numberOfPeople: true,
       event: { select: { title: true } },
     },
   });

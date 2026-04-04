@@ -135,7 +135,7 @@ export async function Footer(): Promise<ReactElement> {
   const hoursDisplay = parseFooterHours(info.businessHours);
 
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer role="contentinfo" className="border-t border-border bg-surface">
       <div
         className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent"
         aria-hidden="true"

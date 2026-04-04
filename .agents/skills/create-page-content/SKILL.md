@@ -176,7 +176,7 @@ post-list, faq-list, features, testimonial, gallery, cta, contact-form, map, emb
 ## 参照
 
 - `src/shared/lib/constants/default-page-sections.ts` — デフォルトセクション構成
-- `src/shared/lib/sections/registry.ts` — セクションレジストリ（17定義）
+- `src/shared/lib/sections/registry.ts` — セクションレジストリ（22定義）
 - `src/shared/lib/sections/definitions/` — 各セクションの schema + metadata
 - `src/app/(public)/about/page.tsx` — セクションのみページの実装例
 - `src/app/(public)/contact/page.tsx` — ページ固有コンテンツ + セクションの実装例

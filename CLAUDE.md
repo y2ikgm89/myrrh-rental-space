@@ -11,11 +11,12 @@
 - **後方互換性ハック禁止** → 不要コード完全削除
 - **検証なしの完了報告禁止** → 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
-- **ハードコードカラー禁止** → テーマ変数使用 → `tailwind-patterns.md`
+- **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象（`style={{ color: "oklch(...)" }}` も違反）→ `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`、エラー `<div role="alert">` + border スタイル
 - **ソフトデリート `where` 漏れ禁止** → `deletedAt` を持つ全モデル（Reservation, Event 等）の `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restore*Command` 除く）。リレーション経由のクエリも親モデルの `deletedAt: null` フィルタ必須（例: `where: { eventId, event: { deletedAt: null } }`）→ `gotchas.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
+- **条件付き className のテンプレートリテラル禁止** → `cn()` ユーティリティを使用（例: `cn("base-class", condition && "conditional-class")`）
 
 ---
 
@@ -50,7 +51,7 @@
 ### アーキテクチャ
 
 Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離。遷移はフルページリロード。
-公開ページ: Editorial Magazine（Kinfolk/Cereal）— シャープエッジ、serif/sans 対比、bronze accent ≤15%、`rounded-full` ボタン → `project-design-config.md`
+公開ページ: Editorial Magazine（Kinfolk/Cereal）— シャープエッジ、serif/sans 対比、bronze accent ≤15%、editorial ボタン（シャープエッジ + bronze hover） → `project-design-config.md`
 レスポンシブ: Fluid-first（`clamp()`）+ Container Queries（カードグリッド）。Viewport breakpoints はマクロレイアウト切替のみ。
 
 ```
@@ -79,7 +80,6 @@ __tests__/integration/               統合テスト（actions/admin, actions/pu
 | Stripe       | 22     | Checkout Session, Webhook（`payment_status` チェック必須）、`accounts.retrieve(null)`         |
 | Bun          | 1.3.11 | テストランナー (`bun:test`), `bunx --bun`                                                     |
 | FullCalendar | 6.1    | `@fullcalendar/react`, 月/週/リスト切替、`'use client'` 必須                                  |
-| Puck         | 0.20   | `@measured/puck`, ビジュアルページエディタ、`'use client'` 必須、MIT ライセンス               |
 | nuqs         | 2.8.9  | URL 状態管理、パーサーマップ Server/Client 共有必須、`shallow: false` で RSC 再実行           |
 
 ### コマンド
@@ -116,24 +116,22 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 ### キーファイル
 
-| パス                                                    | 内容                                                                                                                                                  |
-| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/shared/db/prisma.ts`                               | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                        |
-| `src/shared/lib/auth.ts`                                | Better Auth 設定・セッション検証                                                                                                                      |
-| `src/shared/lib/constants/cache.ts`                     | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                   |
-| `src/shared/lib/sections/registry.ts`                   | セクションレジストリ（18定義、field ヘルパー）                                                                                                        |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts`       | `executeAdminMutationResult`                                                                                                                          |
-| `src/proxy.ts`                                          | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                           |
-| `src/app/(public)/_shared/components/design-system/`    | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog） |
-| `src/app/(admin)/.../_shared/components/table/`         | BaseFilters, SortableColumnHeader, Pagination                                                                                                         |
-| `src/app/(admin)/.../_shared/components/DetailLoading`  | 詳細/編集サブルート用 loading.tsx スケルトン                                                                                                          |
-| `src/shared/domain/events/`                             | イベント管理（commands/admin-queries/public-queries/registration）                                                                                    |
-| `src/shared/lib/calendar-sync/event-inbound.ts`         | Google Calendar → Event 取り込み（syncToken 差分同期）                                                                                                |
-| `src/app/(public)/_shared/lib/search-params.ts`         | 公開ページ nuqs パーサーマップ（Server/Client 共有、全パーサー export 必須）                                                                          |
-| `src/app/(public)/journal/`                             | news+posts 統合フィード（タブ切替）                                                                                                                   |
-| `src/app/(public)/_components/homepage/`                | ホームページ6セクション（Editorial Magazine: hero/pullquote/spaces/features/stats/cta）                                                               |
-| `src/app/(public)/_components/homepage/puck-config.tsx` | Puck コンポーネント登録（6セクション、フィールド定義、defaultProps）                                                                                  |
-| `src/app/(admin)/.../pages/[slug]/visual-edit/`         | Puck ビジュアルエディタ管理画面                                                                                                                       |
+| パス                                                   | 内容                                                                                                                                                  |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                        |
+| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                                                                                                      |
+| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                   |
+| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（22定義: 標準17 + homepage-\*5、field ヘルパー）                                                                                 |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                                                                                          |
+| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                           |
+| `src/app/(public)/_shared/components/design-system/`   | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog） |
+| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                                                                                         |
+| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                                                                                          |
+| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）                                                                                    |
+| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                                                                                                |
+| `src/app/(public)/_shared/lib/search-params.ts`        | 公開ページ nuqs パーサーマップ（Server/Client 共有、全パーサー export 必須）                                                                          |
+| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                                                                                                   |
+| `src/app/(public)/_components/homepage/`               | ホームページ5セクション DB 駆動（`getHomepageSections()` → `homepage-*` 型マッピング、DB 未登録時は defaultProps fallback）                           |
 
 ### セキュリティ多層防御
 

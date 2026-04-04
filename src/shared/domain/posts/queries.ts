@@ -200,27 +200,34 @@ export async function getPublishedPosts(maxItems: number, categoryId?: string) {
   cacheTag(CACHE_TAGS.POSTS, CACHE_TAGS.PERMALINK);
 
   const [posts, settings] = await Promise.all([
-    prisma.post.findMany({
-      where: {
-        status: PostStatus.PUBLISHED,
-        ...(categoryId ? { categoryId } : {}),
-      },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        excerpt: true,
-        thumbnailUrl: true,
-        publishedAt: true,
-        category: {
-          select: {
-            name: true,
-            slug: true,
+    safeFetch({
+      fetch: () =>
+        prisma.post.findMany({
+          where: {
+            status: PostStatus.PUBLISHED,
+            ...(categoryId ? { categoryId } : {}),
           },
-        },
-      },
-      orderBy: { publishedAt: "desc" },
-      take: maxItems,
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            excerpt: true,
+            thumbnailUrl: true,
+            publishedAt: true,
+            category: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
+          },
+          orderBy: { publishedAt: "desc" },
+          take: maxItems,
+        }),
+      fallback: [],
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.LOW,
+      operationName: "getPublishedPosts",
     }),
     getPermalinkSettings(),
   ]);

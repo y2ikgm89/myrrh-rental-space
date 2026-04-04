@@ -13,6 +13,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
+import { cn } from "@/shared/lib/cn";
 import { Heading } from "@/public/components/design-system/heading";
 import { ScrollIndicator } from "@/public/components/layouts/scroll-indicator";
 import {
@@ -89,18 +90,28 @@ export function HeroSection({
     { scope: sectionRef },
   );
 
-  const heightClass =
-    HERO_PARALLAX_HEIGHT_MAP[parseHeroParallaxHeight(config.height)];
+  const parsedHeight = parseHeroParallaxHeight(config.height);
+  const isCustomHeight = parsedHeight === "custom";
+  const heightClass = isCustomHeight
+    ? undefined
+    : HERO_PARALLAX_HEIGHT_MAP[parsedHeight];
+  const customHeightStyle = isCustomHeight
+    ? { minHeight: `${String(config.heightCustom ?? 80)}svh` }
+    : undefined;
 
   return (
     <section
       ref={sectionRef}
       data-hero=""
-      className={`relative ${heightClass} overflow-hidden pt-[var(--header-height)]`}
+      className={cn(
+        "relative overflow-hidden pt-[var(--header-height)]",
+        heightClass,
+      )}
+      style={customHeightStyle}
     >
-      <div className="mx-auto flex h-full max-w-[var(--container-max)] flex-col md:flex-row">
+      <div className="mx-auto flex min-h-full max-w-[var(--container-max)] flex-col md:flex-row">
         {/* Left: Image panel */}
-        <div className="relative h-[50vh] w-full md:h-full md:w-1/2">
+        <div className="relative min-h-[50svh] w-full md:h-full md:w-1/2">
           <div ref={imageRef} className="absolute inset-0">
             <Image
               src={config.backgroundImageUrl || DEFAULT_BG_IMAGE}

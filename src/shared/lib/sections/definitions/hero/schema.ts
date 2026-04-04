@@ -4,7 +4,7 @@ import { field } from "../../field-helpers";
 
 const buttonVariants = ["primary", "secondary", "outline"] as const;
 
-const heightOptions = ["sm", "md", "lg", "full"] as const;
+const heightOptions = ["sm", "md", "lg", "full", "custom"] as const;
 
 const variantOptions = [
   "default",
@@ -32,6 +32,12 @@ export const heroConfigSchema = z.object({
   height: field.select("高さ", {
     options: heightOptions,
     default: "md",
+  }),
+  heightCustom: field.number("カスタム高さ (svh)", {
+    min: 20,
+    max: 100,
+    default: 60,
+    helpText: "高さが「カスタム」の場合に使用（svh 単位）",
   }),
   variant: field.select("バリエーション", {
     options: variantOptions,

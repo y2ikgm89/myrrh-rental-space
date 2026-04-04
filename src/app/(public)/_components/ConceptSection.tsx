@@ -11,6 +11,7 @@ import type { ReactElement } from "react";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { ParallaxImage } from "@/public/components/animations/parallax-image";
+import { cn } from "@/shared/lib/cn";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import {
@@ -47,7 +48,7 @@ export function ConceptSection({
   const isStacked = layout === "stacked";
 
   const textBlock = (
-    <div className={`${alignClass ?? ""}${isStacked ? " text-center" : ""}`}>
+    <div className={cn(alignClass, isStacked && "text-center")}>
       <ScrollReveal>
         {config.sectionLabel && (
           <SectionLabel>{config.sectionLabel}</SectionLabel>
@@ -57,7 +58,10 @@ export function ConceptSection({
       <div className="mt-6" style={getTitleStyle(design)}>
         <Heading
           level={2}
-          className={`${getTitleClasses(design)} leading-[1.1] tracking-tight`}
+          className={cn(
+            getTitleClasses(design),
+            "leading-[1.1] tracking-tight",
+          )}
         >
           <SplitText>{heading}</SplitText>
         </Heading>
@@ -65,7 +69,10 @@ export function ConceptSection({
 
       <ScrollReveal delay={0.2}>
         <p
-          className={`mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base${isStacked ? " mx-auto max-w-2xl" : ""}`}
+          className={cn(
+            "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base",
+            isStacked && "mx-auto max-w-2xl",
+          )}
           style={getTextStyle(design)}
         >
           {body.split("\n").map((line, i, arr) => (
@@ -106,16 +113,17 @@ export function ConceptSection({
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Image — full bleed, no container padding */}
         <div
-          className={`relative min-h-[50vh] md:min-h-[70vh] ${
-            imagePosition === "left" ? "md:order-1" : "md:order-2"
-          }`}
+          className={cn(
+            "relative min-h-[50svh] md:min-h-[70svh]",
+            imagePosition === "left" ? "md:order-1" : "md:order-2",
+          )}
         >
           {imageUrl ? (
             <ScrollReveal delay={0.1}>
               <ParallaxImage
                 src={imageUrl}
                 alt={config.heading ?? "コンセプト"}
-                className="relative h-full min-h-[50vh] md:min-h-[70vh]"
+                className="relative h-full min-h-[50svh] md:min-h-[70svh]"
               />
             </ScrollReveal>
           ) : (
@@ -125,9 +133,10 @@ export function ConceptSection({
 
         {/* Text — centered vertically with generous padding */}
         <div
-          className={`flex items-center ${
-            imagePosition === "left" ? "md:order-2" : "md:order-1"
-          }`}
+          className={cn(
+            "flex items-center",
+            imagePosition === "left" ? "md:order-2" : "md:order-1",
+          )}
         >
           <div className="px-6 py-16 md:px-12 md:py-24 lg:px-20">
             {textBlock}

@@ -5,6 +5,7 @@ import {
   publicEventRegistrationSchema,
   type PublicEventRegistrationInput,
 } from "@/shared/lib/validations/event-registration";
+import { z } from "zod";
 import {
   checkActionRateLimit,
   createValidationMutationError,
@@ -135,6 +136,13 @@ export async function cancelEventRegistration(
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 
+  // 1.5 UUID validation
+  const idValidation = z
+    .string()
+    .uuid({ error: "申込IDが不正です" })
+    .safeParse(registrationId);
+  if (!idValidation.success) return createMutationError("申込IDが不正です");
+
   // 2. Require authenticated session
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
@@ -174,7 +182,7 @@ export async function cancelEventRegistration(
               participantEmail: registration.email,
               eventTitle: registration.event.title,
               eventStartTime: event.startTime,
-              numberOfPeople: 0,
+              numberOfPeople: registration.numberOfPeople,
               currentRegistrations: event._count.registrations,
               capacity: event.capacity,
             },

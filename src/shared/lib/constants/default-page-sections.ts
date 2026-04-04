@@ -23,85 +23,109 @@ export type DefaultSectionDef = {
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
     {
-      type: "hero-parallax",
+      type: "homepage-hero",
       title: null,
       config: {
-        title: "Myrrh Rental Space",
-        subtitle: "特別な空間で、特別な時間を",
-        backgroundImageUrl: "/images/hero-default.jpg",
-        parallaxSpeed: 0.3,
-        overlayGradient: true,
-        scrollIndicator: true,
+        label: "Volume One — Spring 2026",
+        title: "Where silence works.",
+        description:
+          "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
+        imageUrl:
+          "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
+        imageAlt: "自然光が差し込む開放的なレンタルスペース",
+        buttonText: "Explore spaces",
+        buttonUrl: "/spaces",
       },
-      design: {},
       content: null,
       order: 0,
       isActive: true,
     },
     {
-      type: "concept",
+      type: "homepage-how-it-works",
       title: null,
       config: {
-        heading: "私たちの想い",
-        body: "Myrrh Rental Space は、撮影、会議、イベント、ワークショップなど、あらゆるシーンに対応する上質なレンタルスペースです。洗練された空間と柔軟なプランで、特別な瞬間をサポートします。",
-        imageUrl: "/images/concept-default.jpg",
-        imagePosition: "right",
+        label: "How to Reserve",
+        title: "ご利用の流れ",
+        steps: [
+          {
+            title: "スペースを選ぶ",
+            description: "用途や人数に合った空間を見つける",
+          },
+          {
+            title: "日時を決める",
+            description: "カレンダーから空き状況を確認",
+          },
+          {
+            title: "オンラインで予約",
+            description: "最短1分で予約完了",
+          },
+        ],
+        valueProps: [
+          { title: "最短1時間から" },
+          { title: "当日予約OK" },
+          { title: "Wi-Fi完備" },
+          { title: "オンライン決済" },
+        ],
       },
       content: null,
       order: 1,
       isActive: true,
     },
     {
-      type: "space-showcase",
+      type: "homepage-spaces",
       title: null,
       config: {
-        title: "厳選されたスペース",
-        maxItems: 3,
-        showOnlyPublished: true,
+        label: "Selected Spaces",
+        title: "厳選スペース",
+        count: 6,
       },
       content: null,
       order: 2,
       isActive: true,
     },
     {
-      type: "features",
+      type: "homepage-features",
       title: null,
       config: {
+        label: "Why Myrrh",
         title: "選ばれる理由",
         items: [
           {
-            icon: "clock",
-            title: "柔軟な利用プラン",
+            title: "自然光設計",
             description:
-              "1時間単位でご利用いただけます。当日予約にも対応し、急なご要望にもお応えします。",
+              "全室に大きな窓を配置。時間帯で変化する光が、空間に深みを与えます。",
           },
           {
-            icon: "shield",
-            title: "安心のサポート体制",
+            title: "遮音性能",
             description:
-              "専任スタッフが常駐し、設備の使い方からレイアウト変更まで丁寧にサポートいたします。",
+              "プロフェッショナル水準の遮音設計。外部の喧騒を遮断し、深い集中を可能にします。",
           },
           {
-            icon: "sparkles",
-            title: "上質な空間デザイン",
+            title: "即日予約",
             description:
-              "プロのデザイナーが手がけた内装で、どの角度から撮影しても美しい空間をご提供します。",
+              "オンラインで空き状況確認から決済まで完結。当日予約にも対応しています。",
+          },
+          {
+            title: "柔軟なレイアウト",
+            description:
+              "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
           },
         ],
-        columns: 3,
       },
       content: null,
       order: 3,
       isActive: true,
     },
     {
-      type: "cta",
+      type: "homepage-cta",
       title: null,
       config: {
-        title: "ご予約・お問い合わせ",
-        description: "お気軽にご相談ください。見学のご予約も承っております。",
-        ctaPrimary: { text: "予約する", url: "/reservation" },
-        ctaSecondary: { text: "お問い合わせ", url: "/contact" },
+        label: "Reservation",
+        title: "あなたに最適な空間を",
+        description:
+          "空き状況の確認から予約まで、オンラインで完結。まずは空間をご覧ください。",
+        buttonText: "View All Spaces",
+        buttonUrl: "/spaces",
       },
       content: null,
       order: 4,

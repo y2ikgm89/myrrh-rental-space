@@ -2,7 +2,7 @@
 
 import { useRef, type ReactElement } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { Button } from "@/public/components/design-system/button";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { SplitText } from "@/public/components/animations/split-text";
@@ -64,10 +64,10 @@ export function HomepageHero({
 
   return (
     <section
-      className="grid min-h-[85vh] grid-cols-1 md:grid-cols-2"
+      className="grid min-h-[85svh] grid-cols-1 md:grid-cols-2"
       data-hero=""
     >
-      <div className="relative min-h-[50vh] overflow-hidden bg-surface md:min-h-0">
+      <div className="relative min-h-[50svh] overflow-hidden bg-surface md:min-h-0">
         <Image
           src={imageUrl}
           alt={imageAlt}
@@ -104,13 +104,13 @@ export function HomepageHero({
         </ScrollReveal>
 
         <ScrollReveal delay={0.4}>
-          <Link
+          <Button
+            variant="editorial"
             href={buttonUrl}
-            className="group mt-8 inline-flex items-center gap-3 text-[0.65rem] uppercase tracking-[0.15em] text-foreground transition-[gap] duration-300 hover:gap-5 md:mt-10"
+            className="mt-8 text-[0.65rem] uppercase tracking-[0.18em] md:mt-10"
           >
             {buttonText}
-            <span className="h-px w-8 bg-foreground transition-[width] duration-300 group-hover:w-12" />
-          </Link>
+          </Button>
         </ScrollReveal>
       </div>
     </section>

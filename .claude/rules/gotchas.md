@@ -104,12 +104,19 @@ paths:
 - **テキストリンクのタッチターゲットは `px-3 py-1.5` 以上** — 素の `<a>` テキストは44px未満。`rounded-md` + padding で確保
 - **CSS media queries は modern syntax を使う** — `@media (width < 48rem)` を使用。`@media (max-width: 767px)` のハードコードは禁止
 - **DB VARCHAR で管理する非 Prisma enum は `enums/helpers.ts` に `as const` 定数を定義** — `CANCELLED_BY.CUSTOMER` / `CANCELLED_BY.ADMIN` のパターン。文字列リテラル `"CUSTOMER"` の直接使用禁止
+- **`inline-block` + `uppercase` + `tracking-[0.18em]` のテキスト折り返し** — `letter-spacing` が広い uppercase テキストは `inline-block` だとボタン枠内で折り返される。`inline-flex items-center justify-center whitespace-nowrap` を使用する
+- **ホームページセクション見出しは日英併記** — 英語 uppercase ラベル（`text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground`）+ 日本語見出し（`font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light`）。英語のみの見出しは禁止。HowItWorks / Spaces / Features / CTA で統一済み
+- **`exactOptionalPropertyTypes` 下で Next.js `Link` に optional `onClick` を渡す場合は条件スプレッド** — `onClick={props.onClick}` は `(() => void) | undefined` が `MouseEventHandler` と非互換。`{...(props.onClick && { onClick: props.onClick })}` を使用
+- **ホームページセクションは背景色を交互配置** — `bg-surface`（薄茶）と白を交互に。HowItWorks=surface → Spaces=白 → Features=surface → CTA=白。新セクション追加時も交互パターンを維持する
+- **`<header>` に `role="banner"`、`<footer>` に `role="contentinfo"` を明示** — HTML5 暗黙 role は一部 AT で認識されない。公開ページ `site-header.tsx` / `site-footer.tsx` で設定済み
+- **モバイルメニュー閉じ後はトリガー要素にフォーカス復帰** — `closeMenu` の `onComplete` コールバックで `hamburgerRef.current?.focus()` を呼ぶ。WCAG 2.1 AA §2.4.3（フォーカス順序）準拠
 
 ## GSAP アニメーション
 
 - **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持され、GSAP がクライアントで上書きする
 - **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
 - **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
+- **`useGSAP` 外の GSAP アニメーションには `useEffect` cleanup 必須** — イベントハンドラで `gsap.fromTo`/`gsap.to` を直接呼ぶ場合、`useEffect` の cleanup で `gsap.killTweensOf(element)` を呼ぶ。ref をクリーンアップ関数内で使う場合はローカル変数にキャプチャする（`exhaustive-deps` 警告回避）
 
 ## Page-First Architecture（公開ページ）
 
@@ -252,9 +259,14 @@ paths:
 - **`next.config.ts` に seed/開発専用ドメインを残さない** — `placehold.co` 等の開発用 `remotePatterns` / CSP `img-src` は本番で不要。`dangerouslyAllowSVG` も seed 画像のためだけに有効化しない
 - **監査ログの provider 判定は全 OAuth プロバイダーを列挙** — `ctx.path.includes("social")` だけでは LINE が "google" として記録される。`/line` → `"line"`、`/google` → `"google"` と個別判定する
 
-## Puck Editor
+## Editorial ボタン
 
-- **puck-config は `.tsx` 必須** — Puck の `render:` 関数内でコンポーネントを `Component({props})` と関数呼び出しするとフック境界違反。必ず `<Component {...props} />` の JSX 構文を使用するため `.tsx` ファイルにする
-- **Puck エディタは `"use client"` 必須** — `<Puck>` / `<Render>` はクライアントコンポーネント。公開ページでは `<Render>` を使わず、puckData JSON を Server Component で読み取って手動レンダリングする（SSR/SEO 優先）
-- **SpacesSection の Puck プレビューは空配列** — spaces データは DB から取得するため Puck エディタ内では `spaces: []` でプレビュー。公開ページでは `getShowcaseSpaces()` で実データを注入
-- **`Page.puckData` は Json? カラム** — Puck JSON を Page レコードに保存。既存の Section テーブルとは分離（Section は `[...segments]` カスタムページ用）
+- **editorial ボタンは全箇所 `Button variant="editorial"` で統一** — raw `<Link>` + インラインスタイルで editorial ボタンを実装しない。`button.tsx` の editorial variant（`rounded-full` + bronze hover）が Single Source of Truth。site-header / cta-section / site-cta すべてで Button コンポーネントを使用
+
+## ホームページ Section 管理
+
+- **seed 再実行時のホームページセクション重複** — seed は既存セクションを削除せず追加する。旧型（`hero-parallax`, `concept` 等）と新型（`homepage-*`）が重複し、管理画面に二重表示される。seed 後に旧型を手動削除するか、seed スクリプトに既存セクション削除ロジックを追加すること
+- **`homepage-*` セクション型はホームページ専用** — 他ページの `hero`/`cta`/`features` 等は標準セクション型（SectionRenderer 描画）。`homepage-*` に置き換えない
+- **ホームページは DB 未登録でも表示される** — `page.tsx` が `homepage-*` セクションをフィルタし、0件なら editorial コンポーネントの defaultProps で直接レンダリング
+- **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
+- **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の5段階。custom 時は `heightCustom` (svh 数値) をインラインスタイルで適用。ユーザーに px/vh を直接入力させない（Squarespace/Payload CMS 方式）

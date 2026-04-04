@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/utils";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 
 export interface FeatureItem {
@@ -7,12 +8,14 @@ export interface FeatureItem {
 }
 
 export interface FeaturesSectionProps {
+  readonly label: string;
   readonly title: string;
   readonly items: readonly FeatureItem[];
 }
 
 export const featuresDefaultProps: FeaturesSectionProps = {
-  title: "Why Myrrh",
+  label: "Why Myrrh",
+  title: "選ばれる理由",
   items: [
     {
       title: "自然光設計",
@@ -38,15 +41,19 @@ export const featuresDefaultProps: FeaturesSectionProps = {
 };
 
 export function FeaturesSection({
+  label = featuresDefaultProps.label,
   title = featuresDefaultProps.title,
   items = featuresDefaultProps.items,
 }: Partial<FeaturesSectionProps> = {}): ReactElement {
   return (
-    <section className="bg-background py-[var(--spacing-section)]">
+    <section className="bg-surface py-[var(--spacing-section-compact)]">
       <div className="mx-auto max-w-[40rem] px-4 md:px-6">
         <ScrollReveal>
           <div className="mb-10 text-center md:mb-14">
-            <h2 className="text-h2 font-heading font-light tracking-tight">
+            <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+              {label}
+            </p>
+            <h2 className="mt-4 font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light tracking-tight">
               {title}
             </h2>
           </div>
@@ -56,11 +63,12 @@ export function FeaturesSection({
           {items.map((feature, i) => (
             <ScrollReveal key={`feature-${String(i)}`} delay={i * 0.08}>
               <div
-                className={`grid grid-cols-[3rem_1fr] gap-4 py-6 md:gap-6 md:py-8${
-                  i === 0 ? " border-t border-border" : ""
-                } border-b border-border`}
+                className={cn(
+                  "grid grid-cols-[3rem_1fr] gap-4 border-b border-border py-6 md:gap-6 md:py-8",
+                  i === 0 && "border-t",
+                )}
               >
-                <span className="text-right font-heading text-[1.5rem] font-light leading-[1.3] text-border">
+                <span className="text-right font-heading text-[2rem] font-light italic leading-[1.3] text-accent/50">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div>
