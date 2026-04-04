@@ -24,8 +24,8 @@ export const editorTheme: EditorThemeClasses = {
 
   // 見出し（上:下 = 2:1 以上 — USWDS / Pimp my Type 推奨比率）
   heading: {
-    h1: "text-4xl font-bold mt-8 mb-4 leading-tight",
-    h2: "text-3xl font-bold mt-8 mb-3 leading-tight",
+    h1: "font-heading text-4xl font-bold mt-8 mb-4 leading-tight",
+    h2: "font-heading text-3xl font-bold mt-8 mb-3 leading-tight",
     h3: "text-2xl font-bold mt-6 mb-2 leading-snug",
     h4: "text-xl font-bold mt-6 mb-2 leading-snug",
     h5: "text-lg font-bold mt-4 mb-1",

@@ -156,6 +156,7 @@
    * Font
    * -------------------------------------------------------------------------- */
   --font-sans: var(--font-noto-sans-jp), "Helvetica Neue", Arial, sans-serif;
+  --font-serif: var(--font-cormorant-garamond), "Noto Sans JP", serif;
 }
 
 /* ==========================================================================
@@ -225,4 +226,14 @@
     var(--color-muted-foreground) 20%,
     transparent
   );
+}
+
+/* ==========================================================================
+ * Utilities — Lexical エディタ WYSIWYG 用
+ * ========================================================================== */
+
+@layer utilities {
+  .font-heading {
+    font-family: var(--font-serif);
+  }
 }
