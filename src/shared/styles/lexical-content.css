@@ -239,7 +239,7 @@
 
 [data-steps-style="timeline"] > [data-step]::before {
   background-color: var(--accent, var(--color-accent));
-  box-shadow: 0 0 0 3px
+  border: 3px solid
     color-mix(in oklch, var(--accent, var(--color-accent)) 15%, transparent);
   margin-top: var(--step-dot-offset);
 }
