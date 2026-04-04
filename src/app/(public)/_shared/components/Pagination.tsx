@@ -6,6 +6,7 @@
  */
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 
 function buildPageHref(
   basePath: string,
@@ -92,11 +93,12 @@ export function Pagination({
         <Link
           key={page}
           href={getHref(page)}
-          className={`border px-3 py-2 text-sm transition-colors ${
+          className={cn(
+            "border px-3 py-2 text-sm transition-colors",
             page === currentPage
               ? "border-accent bg-accent text-accent-foreground"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-          }`}
+              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+          )}
           aria-current={page === currentPage ? "page" : undefined}
         >
           {page}

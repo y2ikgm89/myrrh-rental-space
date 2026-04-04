@@ -20,6 +20,7 @@ import {
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
+import { cn } from "@/shared/lib/cn";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass, GAP_MAP } from "@/public/lib/section-style-maps";
 import type { InstagramConfig } from "@/shared/lib/validations/section";
@@ -79,7 +80,7 @@ export function InstagramSection({
         <div style={getTitleStyle(design)}>
           <Heading
             level={2}
-            className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+            className={cn("mt-4", getTitleClasses(design), "tracking-tight")}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -88,7 +89,11 @@ export function InstagramSection({
 
       <div
         ref={gridRef}
-        className={`grid grid-cols-2 ${getGridColsClass(config.columns)} ${GAP_MAP[parseGapSize(config.gap)]}`}
+        className={cn(
+          "grid grid-cols-2",
+          getGridColsClass(config.columns),
+          GAP_MAP[parseGapSize(config.gap)],
+        )}
       >
         {Array.from({ length: config.count }, (_, i) => (
           <div

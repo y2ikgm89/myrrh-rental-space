@@ -6,6 +6,7 @@
  * DnDで順序変更可能なセクション一覧 + SEOリンク + セクション追加ボタン
  */
 
+import { cn } from "@/shared/lib/cn";
 import {
   DndContext,
   closestCenter,
@@ -127,11 +128,12 @@ export function SectionSidebar({
         <button
           type="button"
           onClick={() => onSelect(SEO_SELECTION_ID)}
-          className={`flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm transition-colors ${
+          className={cn(
+            "flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm transition-colors",
             selectedId === SEO_SELECTION_ID
               ? "bg-accent/10 text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
-          }`}
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
+          )}
         >
           <IconWorld className="h-4 w-4" />
           SEO設定

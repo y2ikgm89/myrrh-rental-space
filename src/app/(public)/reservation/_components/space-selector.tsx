@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import type { SpaceOption } from "@/shared/domain/locations/public-queries";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { SpaceDetailDialog } from "./space-detail-dialog";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
@@ -47,14 +48,13 @@ export function SpaceSelector({
                   onSelect(space.id);
                 }
               }}
-              className={`flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors duration-200
-                ${
-                  isSelected
-                    ? "border-accent bg-accent/5"
-                    : "border-border hover:border-foreground/30"
-                }
-                ${isSingle ? "cursor-default" : "cursor-pointer"}
-                md:min-w-0`}
+              className={cn(
+                "flex min-w-[75vw] snap-start flex-col overflow-hidden border text-left transition-colors duration-200 md:min-w-0",
+                isSelected
+                  ? "border-accent bg-accent/5"
+                  : "border-border hover:border-foreground/30",
+                isSingle ? "cursor-default" : "cursor-pointer",
+              )}
             >
               <ImageFrame
                 src={space.mainImageUrl}

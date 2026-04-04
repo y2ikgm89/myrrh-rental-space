@@ -4,6 +4,7 @@ import { useRef } from "react";
 import type { ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { cn } from "@/shared/lib/cn";
 
 interface ParallaxLayerProps {
   readonly children: ReactNode;
@@ -42,7 +43,7 @@ export function ParallaxLayer({
   );
 
   return (
-    <div ref={ref} className={`will-change-transform ${className}`.trim()}>
+    <div ref={ref} className={cn("will-change-transform", className)}>
       {children}
     </div>
   );

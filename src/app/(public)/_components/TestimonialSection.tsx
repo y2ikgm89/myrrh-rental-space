@@ -10,6 +10,7 @@
 import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { IconStar, IconStarFilled } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
@@ -119,7 +120,7 @@ export function TestimonialSection({
         <div style={getTitleStyle(design)}>
           <Heading
             level={2}
-            className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+            className={cn("mt-4 tracking-tight", getTitleClasses(design))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -148,12 +149,21 @@ export function TestimonialSection({
                 /* eslint-disable-next-line @eslint-react/no-array-index-key */
                 key={index}
                 data-testimonial-card=""
-                className={`${cardClasses} ${CARD_CLASS[config.layout]} ${isFeatured && config.layout === "grid" ? "@3xl:col-span-full" : ""}`}
+                className={cn(
+                  cardClasses,
+                  CARD_CLASS[config.layout],
+                  isFeatured &&
+                    config.layout === "grid" &&
+                    "@3xl:col-span-full",
+                )}
               >
                 {/* IconQuote decoration (not shown in minimal) */}
                 {variant !== "minimal" && (
                   <span
-                    className={`block font-heading leading-[0.8] text-accent/10 ${isFeatured ? "text-[6rem] md:text-[8rem]" : "text-[4rem]"}`}
+                    className={cn(
+                      "block font-heading leading-[0.8] text-accent/10",
+                      isFeatured ? "text-[6rem] md:text-[8rem]" : "text-[4rem]",
+                    )}
                     aria-hidden="true"
                   >
                     &ldquo;
@@ -161,13 +171,15 @@ export function TestimonialSection({
                 )}
 
                 <p
-                  className={`${variant === "minimal" ? "" : "mt-3"} ${
+                  className={cn(
+                    variant !== "minimal" && "mt-3",
                     isFeatured
                       ? "font-heading text-xl font-light leading-[1.8] italic md:text-2xl"
                       : variant === "default"
                         ? "text-base leading-[1.9] italic"
-                        : "text-sm leading-relaxed"
-                  } text-foreground`}
+                        : "text-sm leading-relaxed",
+                    "text-foreground",
+                  )}
                   style={getTextStyle(design)}
                 >
                   {variant === "minimal" && (
@@ -197,13 +209,13 @@ export function TestimonialSection({
 
                 {/* Author */}
                 <div
-                  className={`mt-6 flex items-center gap-3 ${
-                    variant === "default"
-                      ? ""
-                      : variant === "card"
-                        ? "border-t border-border pt-4"
-                        : "border-t border-border/50 pt-4"
-                  }`}
+                  className={cn(
+                    "mt-6 flex items-center gap-3",
+                    variant === "card"
+                      ? "border-t border-border pt-4"
+                      : variant !== "default" &&
+                          "border-t border-border/50 pt-4",
+                  )}
                 >
                   {item.authorImageUrl && (
                     <Image

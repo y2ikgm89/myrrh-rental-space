@@ -7,6 +7,7 @@
  */
 
 import { useWatch } from "react-hook-form";
+import { cn } from "@/shared/lib/cn";
 import {
   Card,
   CardContent,
@@ -74,9 +75,10 @@ export function MaintenanceSection({ settings }: MaintenanceSectionProps) {
               render={({ field }) => (
                 <FormItem>
                   <div
-                    className={`flex items-center justify-between rounded-lg border p-4 ${
-                      field.value ? "border-destructive bg-destructive/5" : ""
-                    }`}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg border p-4",
+                      field.value && "border-destructive bg-destructive/5",
+                    )}
                   >
                     <div className="space-y-0.5">
                       <FormLabel className="font-medium">

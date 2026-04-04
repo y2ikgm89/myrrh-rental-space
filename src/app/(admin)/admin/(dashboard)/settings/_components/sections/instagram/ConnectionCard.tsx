@@ -9,6 +9,7 @@ import {
   IconUnlink,
   IconExternalLink,
 } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import {
   Button,
   Card,
@@ -281,7 +282,10 @@ export function ConnectionCard({
             {testResult && (
               <StatusBanner success={testResult.success}>
                 <p
-                  className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
+                  className={cn(
+                    "text-sm",
+                    testResult.success ? "text-success" : "text-destructive",
+                  )}
                 >
                   {testResult.message}
                 </p>

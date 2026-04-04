@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import { IconBuilding, IconUser } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import type { CustomerType } from "@/shared/lib/validations/inquiry";
 
 interface CustomerTypeToggleProps {
@@ -31,11 +32,12 @@ export function CustomerTypeToggle({
           role="radio"
           aria-checked={value === "personal"}
           onClick={() => onChange("personal")}
-          className={`flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 ${
+          className={cn(
+            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
             value === "personal"
               ? "border-accent bg-accent/5 text-foreground"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-          }`}
+              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+          )}
         >
           <IconUser className="h-4 w-4" />
           個人
@@ -46,11 +48,12 @@ export function CustomerTypeToggle({
           role="radio"
           aria-checked={value === "corporate"}
           onClick={() => onChange("corporate")}
-          className={`flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 ${
+          className={cn(
+            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
             value === "corporate"
               ? "border-accent bg-accent/5 text-foreground"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-          }`}
+              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+          )}
         >
           <IconBuilding className="h-4 w-4" />
           法人・団体

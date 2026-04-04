@@ -9,6 +9,8 @@
 
 "use client";
 
+import { cn } from "@/shared/lib/cn";
+
 import type { ReactElement } from "react";
 import type {
   DOMConversionMap,
@@ -138,13 +140,17 @@ function ButtonComponent({
     <div
       data-lexical-node-key={nodeKey}
       data-button-alignment={alignment}
-      className={`my-6 flex ${ALIGNMENT_STYLES[alignment]}`}
+      className={cn("my-6 flex", ALIGNMENT_STYLES[alignment])}
     >
       <a
         href={href}
         target={openInNewTab ? "_blank" : undefined}
         rel={openInNewTab ? "noopener noreferrer" : undefined}
-        className={`${BUTTON_BASE_CLASS} ${VARIANT_STYLES[variant]} ${SIZE_STYLES[size]}`}
+        className={cn(
+          BUTTON_BASE_CLASS,
+          VARIANT_STYLES[variant],
+          SIZE_STYLES[size],
+        )}
         draggable={false}
         onClick={(e) => e.preventDefault()} // エディタ内ではナビゲーション無効
       >

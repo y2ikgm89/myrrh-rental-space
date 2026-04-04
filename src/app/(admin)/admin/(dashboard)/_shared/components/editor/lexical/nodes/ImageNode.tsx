@@ -7,6 +7,7 @@
 "use client";
 
 import { type ReactElement, useRef, useState } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -151,7 +152,7 @@ function ImageComponent({
   return (
     <div
       data-lexical-node-key={nodeKey}
-      className={`relative my-6 flex ${alignClass}`}
+      className={cn("relative my-6 flex", alignClass)}
     >
       <div className="relative inline-block">
         <img
@@ -160,7 +161,10 @@ function ImageComponent({
           alt={alt}
           width={width}
           height={height}
-          className={`max-w-full h-auto rounded-lg ${isSelected ? "ring-2 ring-primary" : ""}`}
+          className={cn(
+            "max-w-full h-auto rounded-lg",
+            isSelected && "ring-2 ring-primary",
+          )}
           draggable={false}
         />
         {isSelected && (

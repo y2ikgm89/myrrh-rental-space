@@ -7,6 +7,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
@@ -106,9 +107,10 @@ function FileComponent({
         e.preventDefault();
         setSelected(true);
       }}
-      className={`flex items-center gap-3 rounded-lg border border-border bg-card p-3 my-2 no-underline hover:bg-accent transition-colors ${
-        isSelected ? "ring-2 ring-ring" : ""
-      }`}
+      className={cn(
+        "flex items-center gap-3 rounded-lg border border-border bg-card p-3 my-2 no-underline hover:bg-accent transition-colors",
+        isSelected && "ring-2 ring-ring",
+      )}
     >
       <span className="text-2xl flex-shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">

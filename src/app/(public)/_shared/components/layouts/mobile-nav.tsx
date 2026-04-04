@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconHome, IconLayoutGrid, IconCalendarCheck, IconUser } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
+import {
+  IconHome,
+  IconLayoutGrid,
+  IconCalendarCheck,
+  IconUser,
+} from "@tabler/icons-react";
 import { useSession } from "@/shared/lib/auth-client";
 
 const staticNavItems = [
@@ -36,9 +42,10 @@ export function MobileNav() {
             <li key={href}>
               <Link
                 href={href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
-                  isActive ? "text-accent" : "text-muted-foreground"
-                }`}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors",
+                  isActive ? "text-accent" : "text-muted-foreground",
+                )}
               >
                 <Icon className="h-5 w-5" />
                 <span>{label}</span>
@@ -50,11 +57,12 @@ export function MobileNav() {
           <li>
             <Link
               href={authItem.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors ${
+              className={cn(
+                "flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors",
                 pathname.startsWith(authItem.href)
                   ? "text-accent"
-                  : "text-muted-foreground"
-              }`}
+                  : "text-muted-foreground",
+              )}
             >
               <authItem.icon className="h-5 w-5" />
               <span>{authItem.label}</span>

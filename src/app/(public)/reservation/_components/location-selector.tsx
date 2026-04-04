@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
+import { cn } from "@/shared/lib/cn";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
 
 export function LocationSelector({
@@ -28,12 +29,12 @@ export function LocationSelector({
             role="radio"
             aria-checked={isSelected}
             onClick={() => onSelect(location.id)}
-            className={`group flex flex-col overflow-hidden border text-left transition-colors duration-200
-              ${
-                isSelected
-                  ? "border-accent bg-accent/5"
-                  : "border-border hover:border-foreground/30"
-              }`}
+            className={cn(
+              "group flex flex-col overflow-hidden border text-left transition-colors duration-200",
+              isSelected
+                ? "border-accent bg-accent/5"
+                : "border-border hover:border-foreground/30",
+            )}
           >
             <ImageFrame
               src={location.imageUrl}

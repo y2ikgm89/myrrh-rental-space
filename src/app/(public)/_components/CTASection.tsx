@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { MagneticButton } from "@/public/components/animations/magnetic-button";
@@ -42,7 +43,12 @@ function CTAButtons({
   return (
     <ScrollReveal delay={0.3}>
       <div
-        className={`mt-8 flex ${isHorizontal ? "flex-row flex-wrap justify-center" : "flex-col items-center"} gap-6 md:mt-12`}
+        className={cn(
+          "mt-8 flex gap-6 md:mt-12",
+          isHorizontal
+            ? "flex-row flex-wrap justify-center"
+            : "flex-col items-center",
+        )}
       >
         {primaryButton && (
           <MagneticButton href={primaryButton.url} strength={0.35}>
@@ -85,7 +91,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
             <div style={getTitleStyle(design)}>
               <Heading
                 level={2}
-                className={`mt-6 ${getTitleClasses(design)} tracking-tight`}
+                className={cn("mt-6 tracking-tight", getTitleClasses(design))}
               >
                 <SplitText>{config.title}</SplitText>
               </Heading>

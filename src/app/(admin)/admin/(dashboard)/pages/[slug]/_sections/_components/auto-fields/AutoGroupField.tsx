@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { z } from "zod";
+import { cn } from "@/shared/lib/cn";
 import { Card, CardContent } from "@/admin/components/ui";
 import { IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
@@ -59,7 +60,10 @@ export function AutoGroupField({
       >
         {label}
         <IconChevronDown
-          className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform",
+            isOpen && "rotate-180",
+          )}
         />
       </button>
       {isOpen && (

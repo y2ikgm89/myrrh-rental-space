@@ -177,7 +177,10 @@ export function StandardHeroSection({
             <div style={getTitleStyle(design)}>
               <Heading
                 level={1}
-                className={`${getTitleClasses(design)} uppercase tracking-tight`}
+                className={cn(
+                  getTitleClasses(design),
+                  "uppercase tracking-tight",
+                )}
               >
                 <SplitText trigger={false} delay={0.3}>
                   {config.title}
@@ -232,7 +235,10 @@ export function StandardHeroSection({
               <div style={getTitleStyle(design)}>
                 <Heading
                   level={1}
-                  className={`${getTitleClasses(design)} leading-tight tracking-tight`}
+                  className={cn(
+                    getTitleClasses(design),
+                    "leading-tight tracking-tight",
+                  )}
                 >
                   <SplitText trigger={false} delay={0.3}>
                     {config.title}
@@ -338,7 +344,10 @@ export function StandardHeroSection({
           <div style={getTitleStyle(design)}>
             <Heading
               level={1}
-              className={`${getTitleClasses(design)} leading-tight tracking-tight`}
+              className={cn(
+                getTitleClasses(design),
+                "leading-tight tracking-tight",
+              )}
             >
               <SplitText trigger={false} delay={0.3}>
                 {config.title}

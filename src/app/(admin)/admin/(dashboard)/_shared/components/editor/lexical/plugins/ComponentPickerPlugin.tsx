@@ -15,6 +15,7 @@
 import { useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { cn } from "@/shared/lib/cn";
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
@@ -111,9 +112,10 @@ function ComponentPickerMenuItem({
       id={`typeahead-item-${index}`}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
-        isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-      }`}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 cursor-pointer",
+        isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted",
+      )}
     >
       <span className="flex h-5 w-5 items-center justify-center text-muted-foreground">
         {option.icon}

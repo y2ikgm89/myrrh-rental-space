@@ -21,6 +21,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
+import { cn } from "@/shared/lib/cn";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
 import type { NewsListConfig } from "@/shared/lib/validations/section";
@@ -104,7 +105,7 @@ export function NewsListSection({
         <div className="mt-4" style={getTitleStyle(design)}>
           <Heading
             level={2}
-            className={`${getTitleClasses(design)} tracking-tight`}
+            className={cn(getTitleClasses(design), "tracking-tight")}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -115,7 +116,7 @@ export function NewsListSection({
         ref={listRef}
         className={
           isCard
-            ? `grid gap-6 ${getGridColsClass(config.columns)}`
+            ? cn("grid gap-6", getGridColsClass(config.columns))
             : "divide-y divide-border"
         }
       >

@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { cn } from "@/shared/lib/cn";
 import {
   $getRoot,
   $isTextNode,
@@ -257,7 +258,10 @@ function FindIconReplacePanel({
           title="大文字小文字を区別"
         >
           <IconLetterCase
-            className={`h-3.5 w-3.5 ${caseSensitive ? "text-primary" : "text-muted-foreground"}`}
+            className={cn(
+              "h-3.5 w-3.5",
+              caseSensitive ? "text-primary" : "text-muted-foreground",
+            )}
           />
         </Button>
 

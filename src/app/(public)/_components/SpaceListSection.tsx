@@ -13,6 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -96,7 +97,7 @@ export function SpaceListSection({
     ? "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
     : isList
       ? "flex flex-col gap-4"
-      : `grid gap-6 ${getCardGridColsClass(colKey)}`;
+      : cn("grid gap-6", getCardGridColsClass(colKey));
 
   return (
     <SectionWrapper design={design}>
@@ -109,7 +110,7 @@ export function SpaceListSection({
         <div className="mt-4" style={getTitleStyle(design)}>
           <Heading
             level={2}
-            className={`${getTitleClasses(design)} tracking-tight`}
+            className={cn("tracking-tight", getTitleClasses(design))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -122,12 +123,19 @@ export function SpaceListSection({
             key={space.id}
             href={`/spaces/${space.slug}`}
             data-space-list-card=""
-            className={`group overflow-hidden border border-border transition-colors duration-200 ${
-              isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
-            } ${isList ? "flex" : ""}`}
+            className={cn(
+              "group overflow-hidden border border-border transition-colors duration-200",
+              isCarousel && "min-w-[280px] snap-center md:min-w-[320px]",
+              isList && "flex",
+            )}
           >
             <div
-              className={`overflow-hidden ${isList ? "w-1/3 min-w-[120px]" : IMAGE_ASPECT_MAP[parseSpaceImageAspect(config.imageAspect)]}`}
+              className={cn(
+                "overflow-hidden",
+                isList
+                  ? "w-1/3 min-w-[120px]"
+                  : IMAGE_ASPECT_MAP[parseSpaceImageAspect(config.imageAspect)],
+              )}
             >
               <Image
                 src={space.mainImageUrl}
@@ -142,7 +150,7 @@ export function SpaceListSection({
                 }
               />
             </div>
-            <div className={`p-4 md:p-5 ${isList ? "flex-1" : ""}`}>
+            <div className={cn("p-4 md:p-5", isList && "flex-1")}>
               <h3 className="font-heading text-base font-light tracking-tight md:text-lg">
                 {space.name}
               </h3>

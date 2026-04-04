@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { cn } from "@/shared/lib/cn";
 import { IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import type { KeyboardEvent } from "react";
 
@@ -48,7 +49,12 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
             key={src}
             type="button"
             onClick={() => openLightbox(i)}
-            className={`relative overflow-hidden ${i === 0 ? "aspect-[16/10] md:row-span-2" : "hidden aspect-[4/3] md:block"}`}
+            className={cn(
+              "relative overflow-hidden",
+              i === 0
+                ? "aspect-[16/10] md:row-span-2"
+                : "hidden aspect-[4/3] md:block",
+            )}
           >
             <Image
               src={src}

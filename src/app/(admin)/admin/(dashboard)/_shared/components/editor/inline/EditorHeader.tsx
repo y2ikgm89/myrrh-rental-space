@@ -7,9 +7,19 @@
  * 保存、プレビュー、設定パネル切り替えなどのアクションを提供
  */
 
-import { IconArrowLeft, IconSettings, IconEye, IconDeviceFloppy, IconLoader2, IconWorld, IconLock, IconMessage } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconSettings,
+  IconEye,
+  IconDeviceFloppy,
+  IconLoader2,
+  IconWorld,
+  IconLock,
+  IconMessage,
+} from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { Button } from "@/admin/components/ui";
+import { cn } from "@/shared/lib/cn";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { EditorHeaderProps } from "./types";
 
@@ -102,7 +112,7 @@ export function EditorHeader({
               variant="outline"
               size="sm"
               onClick={onToggleSidePanel}
-              className={`gap-1.5 ${isSidePanelOpen ? "bg-accent" : ""}`}
+              className={cn("gap-1.5", isSidePanelOpen && "bg-accent")}
               aria-expanded={isSidePanelOpen}
               title={
                 metadataPanelLabel

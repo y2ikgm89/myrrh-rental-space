@@ -6,6 +6,7 @@
  */
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import {
@@ -57,7 +58,7 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
             <div style={getTitleStyle(design)}>
               <Heading
                 level={2}
-                className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+                className={cn("mt-4 tracking-tight", getTitleClasses(design))}
               >
                 {config.title}
               </Heading>
@@ -68,7 +69,11 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
 
       <ScrollReveal>
         <div
-          className={`overflow-hidden ${BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)]} ${heightClass}`}
+          className={cn(
+            "overflow-hidden",
+            BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)],
+            heightClass,
+          )}
         >
           {embedUrl ? (
             <iframe

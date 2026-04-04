@@ -199,7 +199,10 @@ function EditorInner({
                         {placeholder}
                       </div>
                     }
-                    className={`outline-none pl-10 pr-6 py-6 min-h-full ${className ?? ""}`}
+                    className={cn(
+                      "outline-none pl-10 pr-6 py-6 min-h-full",
+                      className,
+                    )}
                   />
                 }
                 ErrorBoundary={LexicalErrorBoundary}

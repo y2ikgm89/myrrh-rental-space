@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { tv } from "tailwind-variants";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/shared/lib/cn";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
@@ -158,14 +159,20 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`${classes.navItem()} ${isActive ? classes.navItemActive() : ""}`}
+                    className={cn(
+                      classes.navItem(),
+                      isActive && classes.navItemActive(),
+                    )}
                     onClick={() => effectiveIsMobile && closeSidebar()}
                   >
                     <span className={isActive ? "text-sidebar-text" : ""}>
                       {item.icon}
                     </span>
                     <span
-                      className={`text-sm font-medium ${isActive ? "text-sidebar-text" : ""}`}
+                      className={cn(
+                        "text-sm font-medium",
+                        isActive && "text-sidebar-text",
+                      )}
                     >
                       {item.label}
                     </span>

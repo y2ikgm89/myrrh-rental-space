@@ -15,6 +15,7 @@ import { gsap } from "@/public/lib/gsap-config";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
+import { cn } from "@/shared/lib/cn";
 import {
   SectionWrapper,
   getTitleClasses,
@@ -81,7 +82,7 @@ export function FeaturesSection({
           <div style={getTitleStyle(design)}>
             <Heading
               level={2}
-              className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+              className={cn("mt-4", getTitleClasses(design), "tracking-tight")}
             >
               {config.title}
             </Heading>

@@ -7,6 +7,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
@@ -59,7 +60,10 @@ function AudioComponent({
 
   return (
     <div
-      className={`rounded-lg border bg-card p-4 my-2 ${isSelected ? "ring-2 ring-ring" : ""}`}
+      className={cn(
+        "rounded-lg border bg-card p-4 my-2",
+        isSelected && "ring-2 ring-ring",
+      )}
       onClick={(e) => {
         if (e.target instanceof HTMLAudioElement) return;
         setSelected(true);

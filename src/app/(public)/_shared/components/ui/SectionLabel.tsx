@@ -5,6 +5,7 @@
  */
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 
 interface SectionLabelProps {
   readonly children: string;
@@ -17,7 +18,10 @@ export function SectionLabel({
 }: SectionLabelProps): ReactElement {
   return (
     <span
-      className={`gold-line pl-1 text-[11px] uppercase tracking-[0.18em] text-accent ${className}`}
+      className={cn(
+        "gold-line pl-1 text-[11px] uppercase tracking-[0.18em] text-accent",
+        className,
+      )}
     >
       {children}
     </span>

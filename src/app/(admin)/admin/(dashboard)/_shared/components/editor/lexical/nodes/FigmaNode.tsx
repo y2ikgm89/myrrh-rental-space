@@ -7,6 +7,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
@@ -68,7 +69,10 @@ function FigmaComponent({
 
   return (
     <div
-      className={`rounded-lg border border-border overflow-hidden my-2 ${isSelected ? "ring-2 ring-ring" : ""}`}
+      className={cn(
+        "rounded-lg border border-border overflow-hidden my-2",
+        isSelected && "ring-2 ring-ring",
+      )}
       onClick={() => setSelected(true)}
     >
       {label && (

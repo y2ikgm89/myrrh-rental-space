@@ -13,6 +13,7 @@ import {
 } from "@/admin/components/ui/card";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { formatChange, getChangeColor } from "@/admin/lib/utils";
+import { cn } from "@/shared/lib/cn";
 
 export async function DashboardStatsSection() {
   const stats = await getDashboardStats();
@@ -28,7 +29,10 @@ export async function DashboardStatsSection() {
             {stats.reservations.thisMonth}件
           </div>
           <p
-            className={`text-xs ${getChangeColor(stats.reservations.changePercent)}`}
+            className={cn(
+              "text-xs",
+              getChangeColor(stats.reservations.changePercent),
+            )}
           >
             {formatChange(stats.reservations.changePercent)} 前月比
           </p>
@@ -43,7 +47,10 @@ export async function DashboardStatsSection() {
             {formatCurrency(stats.revenue.thisMonth)}
           </div>
           <p
-            className={`text-xs ${getChangeColor(stats.revenue.changePercent)}`}
+            className={cn(
+              "text-xs",
+              getChangeColor(stats.revenue.changePercent),
+            )}
           >
             {formatChange(stats.revenue.changePercent)} 前月比
           </p>

@@ -8,6 +8,8 @@
 
 import type { ReactNode, ReactElement } from "react";
 
+import { cn } from "@/shared/lib/cn";
+
 interface StatusBannerProps {
   success: boolean;
   children: ReactNode;
@@ -21,5 +23,5 @@ export function StatusBanner({
     ? "border-success/20 bg-success/10"
     : "border-destructive/50 bg-destructive/10";
 
-  return <div className={`rounded-lg border p-4 ${styles}`}>{children}</div>;
+  return <div className={cn("rounded-lg border p-4", styles)}>{children}</div>;
 }

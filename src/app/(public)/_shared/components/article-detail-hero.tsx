@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -40,7 +41,10 @@ export function ArticleDetailHero({
         {categoryName && <SectionLabel>{categoryName}</SectionLabel>}
 
         <h1
-          className={`${categoryName ? "mt-4 " : ""}font-heading text-2xl font-light tracking-tight md:text-3xl lg:text-4xl`}
+          className={cn(
+            "font-heading text-2xl font-light tracking-tight md:text-3xl lg:text-4xl",
+            categoryName && "mt-4",
+          )}
         >
           <SplitText trigger={false} delay={0.3}>
             {title}

@@ -23,6 +23,7 @@ import {
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
 import { Heading } from "@/public/components/design-system/heading";
+import { cn } from "@/shared/lib/cn";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import {
   parseContainerWidth,
@@ -115,7 +116,7 @@ export function FaqListSection({
   return (
     <>
       <SectionWrapper design={design}>
-        <div className={`mx-auto ${containerWidth}`}>
+        <div className={cn("mx-auto", containerWidth)}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>
               {config.sectionLabel && (
@@ -125,7 +126,11 @@ export function FaqListSection({
             <div style={getTitleStyle(design)}>
               <Heading
                 level={2}
-                className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+                className={cn(
+                  "mt-4",
+                  getTitleClasses(design),
+                  "tracking-tight",
+                )}
               >
                 <SplitText>{config.title}</SplitText>
               </Heading>
@@ -137,7 +142,7 @@ export function FaqListSection({
               <details
                 key={item.id}
                 data-faq-item=""
-                className={`group ${styles.item}`}
+                className={cn("group", styles.item)}
                 open={
                   initialOpen === "all" ||
                   (initialOpen === "first" && index === 0)

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 
 const DURATION_OPTIONS = [30, 60, 90, 120, 180, 240, 300, 360] as const;
 
@@ -48,13 +49,12 @@ export function DurationPills({
             role="option"
             aria-selected={isSelected}
             onClick={() => onSelect(minutes)}
-            className={`flex-shrink-0 border px-5 py-2 text-sm transition-colors duration-200
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
-              ${
-                isSelected
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : "border-border text-foreground hover:border-foreground/30"
-              }`}
+            className={cn(
+              "flex-shrink-0 border px-5 py-2 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              isSelected
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-border text-foreground hover:border-foreground/30",
+            )}
           >
             {formatDuration(minutes)}
           </button>

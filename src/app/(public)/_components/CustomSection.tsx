@@ -15,6 +15,7 @@ import {
   getTitleStyle,
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
+import { cn } from "@/shared/lib/cn";
 import type { CustomConfig } from "@/shared/lib/validations/section";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
@@ -53,7 +54,7 @@ export function CustomSection({
   return (
     <SectionWrapper design={design} skipPadding skipContainer>
       <div className={paddingClass}>
-        <div className={`mx-auto px-5 md:px-8 ${maxWidthClass}`}>
+        <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
           {title && (
             <div className="mb-8 md:mb-12">
               <ScrollReveal>
@@ -63,7 +64,7 @@ export function CustomSection({
                 <div className="mt-4" style={getTitleStyle(design)}>
                   <Heading
                     level={2}
-                    className={`${getTitleClasses(design)} tracking-tight`}
+                    className={cn(getTitleClasses(design), "tracking-tight")}
                   >
                     {title}
                   </Heading>

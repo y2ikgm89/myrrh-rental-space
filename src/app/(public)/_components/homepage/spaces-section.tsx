@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 import { Button } from "@/public/components/design-system/button";
 import { Container } from "@/public/components/design-system/container";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
@@ -140,7 +141,7 @@ export function SpacesSection({
               <ScrollReveal key={space.id} delay={(i + 1) * 0.1}>
                 <Link
                   href={`/spaces/${space.slug}`}
-                  className={`group block${i % 2 === 1 ? " md:mt-16" : ""}`}
+                  className={cn("group block", i % 2 === 1 && "md:mt-16")}
                 >
                   <div className="relative aspect-[3/2] overflow-hidden">
                     {space.mainImageUrl ? (

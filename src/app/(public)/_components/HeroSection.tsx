@@ -148,7 +148,7 @@ export function HeroSection({
           <div style={getTitleStyle(design)}>
             <Heading
               level={1}
-              className={`mt-6 ${getTitleClasses(design)} leading-[1.05]`}
+              className={cn("mt-6", getTitleClasses(design), "leading-[1.05]")}
             >
               <SplitText trigger={false} delay={0.5}>
                 {config.title}

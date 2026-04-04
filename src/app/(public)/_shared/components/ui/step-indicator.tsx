@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { IconCheck } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 
 interface Step {
   readonly number: number;
@@ -33,13 +34,14 @@ export function StepIndicator({
           >
             <div className="flex flex-col items-center gap-2">
               <div
-                className={`flex h-10 w-10 items-center justify-center border text-sm transition-colors duration-200 ${
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center border text-sm transition-colors duration-200",
                   isActive
                     ? "border-accent text-accent"
                     : isCompleted
                       ? "border-accent bg-accent text-accent-foreground"
-                      : "border-border text-muted-foreground"
-                }`}
+                      : "border-border text-muted-foreground",
+                )}
               >
                 {isCompleted ? (
                   <IconCheck className="h-4 w-4" aria-hidden="true" />
@@ -48,9 +50,10 @@ export function StepIndicator({
                 )}
               </div>
               <span
-                className={`text-[11px] uppercase tracking-[0.18em] transition-colors duration-200 ${
-                  isActive ? "text-foreground" : "text-muted-foreground"
-                }`}
+                className={cn(
+                  "text-[11px] uppercase tracking-[0.18em] transition-colors duration-200",
+                  isActive ? "text-foreground" : "text-muted-foreground",
+                )}
               >
                 {step.label}
               </span>
@@ -58,9 +61,10 @@ export function StepIndicator({
 
             {i < steps.length - 1 && (
               <div
-                className={`mx-3 mb-5 h-px w-12 transition-colors duration-200 md:mx-4 md:w-16 ${
-                  isCompleted ? "bg-accent" : "bg-border"
-                }`}
+                className={cn(
+                  "mx-3 mb-5 h-px w-12 transition-colors duration-200 md:mx-4 md:w-16",
+                  isCompleted ? "bg-accent" : "bg-border",
+                )}
                 aria-hidden="true"
               />
             )}

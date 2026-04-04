@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { cn } from "@/shared/lib/cn";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -154,9 +155,10 @@ export function RobotsTxtSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div
-          className={`flex items-center justify-between rounded-lg border p-4 ${
-            formData.robotsTxtEnabled ? "border-primary bg-primary/5" : ""
-          }`}
+          className={cn(
+            "flex items-center justify-between rounded-lg border p-4",
+            formData.robotsTxtEnabled && "border-primary bg-primary/5",
+          )}
         >
           <div className="space-y-0.5">
             <Label htmlFor="robotsTxtEnabled" className="font-medium">
@@ -238,8 +240,10 @@ export function RobotsTxtSection() {
             <AccordionContent>
               <ul className="space-y-1 text-xs text-muted-foreground list-disc pl-4">
                 <li>
-                  <code className="bg-muted px-1 rounded">IconUser-agent: *</code> -
-                  すべてのクローラーに適用
+                  <code className="bg-muted px-1 rounded">
+                    IconUser-agent: *
+                  </code>{" "}
+                  - すべてのクローラーに適用
                 </li>
                 <li>
                   <code className="bg-muted px-1 rounded">

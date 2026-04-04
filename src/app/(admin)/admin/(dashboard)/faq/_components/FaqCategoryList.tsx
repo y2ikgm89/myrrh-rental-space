@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { tv } from "tailwind-variants";
+import { cn } from "@/shared/lib/cn";
 import {
   Card,
   CardContent,
@@ -149,7 +150,10 @@ export function FaqCategoryList({ categories }: FaqCategoryListProps) {
                 <div className="flex items-center justify-between">
                   <CardTitle className={styles.categoryTitle()}>
                     <svg
-                      className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                      className={cn(
+                        "h-4 w-4 transition-transform",
+                        isExpanded && "rotate-90",
+                      )}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"

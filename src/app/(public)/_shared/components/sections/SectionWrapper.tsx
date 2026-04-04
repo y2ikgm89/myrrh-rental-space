@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement, ReactNode } from "react";
+import { cn } from "@/shared/lib/cn";
 import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 // =============================================================================
@@ -80,7 +81,10 @@ export function SectionWrapper({
 }: SectionWrapperProps): ReactElement {
   const paddingClass = skipPadding
     ? ""
-    : `${paddingTopMap[design.paddingTop]} ${paddingBottomMap[design.paddingBottom]}`;
+    : cn(
+        paddingTopMap[design.paddingTop],
+        paddingBottomMap[design.paddingBottom],
+      );
   const bgClass = backgroundMap[design.background];
   const maxWidthClass = maxWidthMap[design.maxWidth];
   const alignClass =
@@ -119,7 +123,7 @@ export function SectionWrapper({
         children
       ) : (
         <div
-          className={`mx-auto px-[var(--container-padding)] ${maxWidthClass}`}
+          className={cn("mx-auto px-[var(--container-padding)]", maxWidthClass)}
         >
           {children}
         </div>

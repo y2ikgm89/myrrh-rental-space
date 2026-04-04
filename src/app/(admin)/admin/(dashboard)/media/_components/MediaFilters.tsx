@@ -7,7 +7,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryStates } from "nuqs";
 import { adminMediaSearchParamsParsers } from "@/shared/lib/nuqs";
-import { IconSearch, IconLayoutGrid, IconList, IconUpload } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
+import {
+  IconSearch,
+  IconLayoutGrid,
+  IconList,
+  IconUpload,
+} from "@tabler/icons-react";
 import {
   Button,
   Input,
@@ -116,11 +122,12 @@ export function MediaFilters() {
             <button
               type="button"
               onClick={() => void setParams({ view: "grid" })}
-              className={`p-2 ${
+              className={cn(
+                "p-2",
                 params.view === "grid"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-background hover:bg-muted"
-              }`}
+                  : "bg-background hover:bg-muted",
+              )}
               aria-label="グリッド表示"
             >
               <IconLayoutGrid className="h-4 w-4" />
@@ -128,11 +135,12 @@ export function MediaFilters() {
             <button
               type="button"
               onClick={() => void setParams({ view: "list" })}
-              className={`p-2 ${
+              className={cn(
+                "p-2",
                 params.view === "list"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-background hover:bg-muted"
-              }`}
+                  : "bg-background hover:bg-muted",
+              )}
               aria-label="リスト表示"
             >
               <IconList className="h-4 w-4" />

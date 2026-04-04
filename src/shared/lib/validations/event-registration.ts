@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const publicEventRegistrationSchema = z.object({
-  eventId: z.string().min(1, { error: "イベントIDは必須です" }),
+  eventId: z.string().uuid({ error: "イベントIDは必須です" }),
   name: z
     .string()
     .min(1, { error: "お名前は必須です" })
@@ -23,7 +23,7 @@ export type PublicEventRegistrationInput = z.input<
 >;
 
 export const adminEventRegistrationSchema = z.object({
-  eventId: z.string().min(1, { error: "イベントIDは必須です" }),
+  eventId: z.string().uuid({ error: "イベントIDは必須です" }),
   name: z
     .string()
     .min(1, { error: "お名前は必須です" })

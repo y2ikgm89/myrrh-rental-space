@@ -8,6 +8,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMConversionOutput,
@@ -86,11 +87,12 @@ function PageBreakComponent({ nodeKey }: { nodeKey: NodeKey }) {
   return (
     <div
       data-lexical-page-break={nodeKey}
-      className={`relative my-8 py-4 cursor-pointer border-y-2 border-dashed flex items-center justify-center text-xs select-none ${
+      className={cn(
+        "relative my-8 py-4 cursor-pointer border-y-2 border-dashed flex items-center justify-center text-xs select-none",
         isSelected
           ? "border-primary text-primary"
-          : "border-muted-foreground/30 text-muted-foreground"
-      }`}
+          : "border-muted-foreground/30 text-muted-foreground",
+      )}
     >
       <div className="flex items-center gap-2 bg-background px-3 py-1 rounded-full">
         <IconScissors className="h-3 w-3" />

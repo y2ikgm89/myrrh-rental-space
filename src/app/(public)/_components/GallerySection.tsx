@@ -10,6 +10,7 @@
 import { useRef, useState, type ReactElement } from "react";
 import Image from "next/image";
 import { IconChevronLeft, IconChevronRight, IconX } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
@@ -115,10 +116,10 @@ export function GallerySection({
   const hoverClasses = GALLERY_HOVER_EFFECT_MAP[hoverEffect];
 
   const layoutClass = isCarousel
-    ? `flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8`
+    ? "flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
     : isMasonry
-      ? `${getMasonryColsClass(colKey)} ${gapClass}`
-      : `grid ${getGalleryGridColsClass(colKey)} ${gapClass}`;
+      ? cn(getMasonryColsClass(colKey), gapClass)
+      : cn("grid", getGalleryGridColsClass(colKey), gapClass);
 
   const lightboxImage =
     lightboxIndex >= 0 && lightboxIndex < config.images.length
@@ -137,7 +138,7 @@ export function GallerySection({
           <div style={getTitleStyle(design)}>
             <Heading
               level={2}
-              className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+              className={cn("mt-4 tracking-tight", getTitleClasses(design))}
             >
               <SplitText>{config.title}</SplitText>
             </Heading>
@@ -150,14 +151,19 @@ export function GallerySection({
           <div
             key={image.url}
             data-gallery-item=""
-            className={`${hoverClasses.wrapper} ${
-              isCarousel ? "min-w-[280px] snap-center md:min-w-[320px]" : ""
-            } ${isMasonry ? "mb-4 break-inside-avoid" : ""}`}
+            className={cn(
+              hoverClasses.wrapper,
+              isCarousel && "min-w-[280px] snap-center md:min-w-[320px]",
+              isMasonry && "mb-4 break-inside-avoid",
+            )}
           >
             <button
               type="button"
               onClick={() => openLightbox(index)}
-              className={`relative block w-full overflow-hidden ${aspectClass}`}
+              className={cn(
+                "relative block w-full overflow-hidden",
+                aspectClass,
+              )}
               disabled={!config.enableLightbox}
               aria-label={image.alt ?? `ギャラリー画像 ${index + 1} を拡大表示`}
             >
@@ -166,12 +172,18 @@ export function GallerySection({
                 alt={image.alt ?? ""}
                 width={600}
                 height={400}
-                className={`h-full w-full object-cover transition-transform duration-500 ${hoverEffect === "zoom" ? "group-hover:scale-105" : ""}`}
+                className={cn(
+                  "h-full w-full object-cover transition-transform duration-500",
+                  hoverEffect === "zoom" && "group-hover:scale-105",
+                )}
                 sizes={`(max-width: 768px) 100vw, ${Math.round(100 / colKey)}vw`}
               />
               {hoverClasses.overlay && (
                 <div
-                  className={`absolute inset-0 bg-foreground/20 ${hoverClasses.overlay}`}
+                  className={cn(
+                    "absolute inset-0 bg-foreground/20",
+                    hoverClasses.overlay,
+                  )}
                 />
               )}
             </button>

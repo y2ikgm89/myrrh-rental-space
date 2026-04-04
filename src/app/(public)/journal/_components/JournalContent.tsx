@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import Link from "next/link";
 import { useQueryStates } from "nuqs";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { journalSearchParamsParsers } from "@/public/lib/search-params";
 import { Heading } from "@/public/components/design-system/heading";
@@ -64,11 +65,12 @@ export function JournalContent({
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => handleTabChange(tab.value)}
-                  className={`px-5 py-3 text-sm tracking-[0.18em] transition-colors ${
+                  className={cn(
+                    "px-5 py-3 text-sm tracking-[0.18em] transition-colors",
                     isActive
                       ? "border-b-2 border-accent text-accent"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
                 >
                   {tab.label}
                 </button>

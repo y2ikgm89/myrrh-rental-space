@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { cn } from "@/shared/lib/cn";
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
@@ -548,11 +549,12 @@ export function EmojiPickerPlugin() {
                         setHighlightedIndex(index);
                         selectOptionAndCleanUp(option);
                       }}
-                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 cursor-pointer",
                         selectedIndex === index
                           ? "bg-accent text-accent-foreground"
-                          : "hover:bg-muted"
-                      }`}
+                          : "hover:bg-muted",
+                      )}
                     >
                       <span className="text-xl">{option.emoji}</span>
                       <span className="text-xs text-muted-foreground">

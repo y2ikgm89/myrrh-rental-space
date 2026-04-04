@@ -12,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SplitText } from "@/public/components/animations/split-text";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
@@ -102,7 +103,7 @@ export function PostListSection({
         <div className="mt-4" style={getTitleStyle(design)}>
           <Heading
             level={2}
-            className={`${getTitleClasses(design)} tracking-tight`}
+            className={cn("tracking-tight", getTitleClasses(design))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -122,12 +123,18 @@ export function PostListSection({
             key={post.id}
             href={post.url}
             data-post-card=""
-            className={`group overflow-hidden border border-border transition-colors duration-200 ${
-              isList ? "flex" : ""
-            }`}
+            className={cn(
+              "group overflow-hidden border border-border transition-colors duration-200",
+              isList && "flex",
+            )}
           >
             <div
-              className={`overflow-hidden ${isList ? "w-1/3 min-w-[120px]" : IMAGE_ASPECT_MAP[parsePostImageAspect(config.imageAspect)]}`}
+              className={cn(
+                "overflow-hidden",
+                isList
+                  ? "w-1/3 min-w-[120px]"
+                  : IMAGE_ASPECT_MAP[parsePostImageAspect(config.imageAspect)],
+              )}
             >
               <Image
                 src={post.thumbnailUrl}
@@ -142,7 +149,7 @@ export function PostListSection({
                 }
               />
             </div>
-            <div className={`p-4 md:p-5 ${isList ? "flex-1" : ""}`}>
+            <div className={cn("p-4 md:p-5", isList && "flex-1")}>
               {post.categoryName && (
                 <span className="text-[10px] uppercase tracking-[0.18em] text-accent">
                   {post.categoryName}

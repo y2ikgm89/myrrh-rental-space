@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
 import { IconPlus, IconX, IconCopy } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -436,7 +437,10 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                                   e.target.value,
                                 )
                               }
-                              className={`w-32 ${openError ? "border-destructive" : ""}`}
+                              className={cn(
+                                "w-32",
+                                openError && "border-destructive",
+                              )}
                               disabled={isPending}
                             />
                             <span>〜</span>
@@ -451,7 +455,10 @@ export function BusinessHoursSection({ settings }: BusinessHoursSectionProps) {
                                   e.target.value,
                                 )
                               }
-                              className={`w-32 ${closeError ? "border-destructive" : ""}`}
+                              className={cn(
+                                "w-32",
+                                closeError && "border-destructive",
+                              )}
                               disabled={isPending}
                             />
                             {businessHours[key].slots.length > 1 && (

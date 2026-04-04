@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { IconMapPin, IconStar } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 interface SpaceCardProps {
@@ -88,9 +89,10 @@ export function SpaceCard({
         {hasHoverData ? (
           <div
             aria-hidden="true"
-            className={`absolute inset-0 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0 ${
-              showOverlay ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
+            className={cn(
+              "absolute inset-0 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0",
+              showOverlay ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
           >
             <div className="space-y-2 text-sm text-overlay-foreground">
               <div className="flex items-center gap-1.5">

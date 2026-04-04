@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/shared/lib/cn";
 
 const NAV_ITEMS = [
   { href: "/mypage", label: "予約一覧" },
@@ -28,11 +29,12 @@ export function MypageNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`py-2 px-3 text-sm sm:text-base transition-colors ${
+            className={cn(
+              "py-2 px-3 text-sm sm:text-base transition-colors",
               isActive
                 ? "text-accent font-medium border-b-2 border-accent"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
             {item.label}
           </Link>

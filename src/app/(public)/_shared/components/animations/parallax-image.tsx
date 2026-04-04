@@ -12,6 +12,7 @@ import { useRef, type ReactElement } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
+import { cn } from "@/shared/lib/cn";
 import { EASE, PARALLAX, SCROLL_TRIGGER } from "@/public/lib/animations";
 
 interface ParallaxImageProps {
@@ -61,7 +62,7 @@ export function ParallaxImage({
   );
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
+    <div ref={containerRef} className={cn("overflow-hidden", className)}>
       <div ref={imageRef} className="h-full w-full">
         <Image
           src={src}

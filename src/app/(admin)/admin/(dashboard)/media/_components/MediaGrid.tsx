@@ -5,10 +5,19 @@
  */
 
 import { useState } from "react";
-import { IconCheck, IconCopy, IconTrash, IconEye, IconFileText, IconMovie, IconFile } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconTrash,
+  IconEye,
+  IconFileText,
+  IconMovie,
+  IconFile,
+} from "@tabler/icons-react";
 import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
 import { formatBytes } from "@/admin/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import { TYPE_CONFIG } from "./constants";
 import { createCopyUrlHandler, useDeleteMedia } from "./hooks";
 import { isValidMediaType, MediaType } from "@/admin/lib/validations/media";
@@ -155,7 +164,10 @@ function TypeBadge({ type }: { type: string }) {
 
   return (
     <span
-      className={`absolute bottom-2 right-2 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground rounded ${config.color}`}
+      className={cn(
+        "absolute bottom-2 right-2 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground rounded",
+        config.color,
+      )}
     >
       {config.label}
     </span>

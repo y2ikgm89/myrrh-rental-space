@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { cn } from "@/shared/lib/cn";
 import {
   $createParagraphNode,
   $createTextNode,
@@ -581,7 +582,10 @@ export function TabsPlugin({ isOpen, onClose }: TabsPluginProps) {
                   key={i}
                   role="tab"
                   aria-selected={i === 0}
-                  className={`${TAB_BASE_CLASS} ${i === 0 ? TAB_ACTIVE_CLASS : TAB_INACTIVE_CLASS}`}
+                  className={cn(
+                    TAB_BASE_CLASS,
+                    i === 0 ? TAB_ACTIVE_CLASS : TAB_INACTIVE_CLASS,
+                  )}
                 >
                   タブ{i + 1}
                 </div>

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import type { TablerIcon } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import {
   IconBrandX,
   IconBrandFacebook,
@@ -68,7 +69,10 @@ export function SocialLinks({ links }: SocialLinksProps): ReactElement | null {
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`text-muted-foreground transition-colors hover:text-foreground${visibility ? ` ${visibility}` : ""}`}
+            className={cn(
+              "text-muted-foreground transition-colors hover:text-foreground",
+              visibility,
+            )}
             aria-label={label}
           >
             {Icon ? (

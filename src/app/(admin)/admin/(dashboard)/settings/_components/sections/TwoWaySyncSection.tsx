@@ -12,6 +12,7 @@ import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
+import { cn } from "@/shared/lib/cn";
 import { toast } from "sonner";
 import { useWatch } from "react-hook-form";
 import {
@@ -44,7 +45,13 @@ import {
   type SettingsData,
 } from "@/admin/actions/settings";
 import { twoWaySyncFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { IconRefresh, IconClock, IconWebhook, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
+import {
+  IconRefresh,
+  IconClock,
+  IconWebhook,
+  IconAlertCircle,
+  IconCircleCheck,
+} from "@tabler/icons-react";
 import { CalendarSyncMethod } from "@generated/prisma/enums";
 import { formatDateTimeShort } from "@/shared/lib/utils";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -357,18 +364,22 @@ export function TwoWaySyncSection({ settings }: TwoWaySyncSectionProps) {
                       disabled={isSyncing || isPending || actionPending}
                     >
                       <IconRefresh
-                        className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          isSyncing && "animate-spin",
+                        )}
                       />
                       {isSyncing ? "同期中..." : "手動同期"}
                     </Button>
                   </div>
                   {syncResult && (
                     <div
-                      className={`rounded p-2 text-sm ${
+                      className={cn(
+                        "rounded p-2 text-sm",
                         syncResult.success
                           ? "bg-success/10 text-success"
-                          : "bg-destructive/10 text-destructive"
-                      }`}
+                          : "bg-destructive/10 text-destructive",
+                      )}
                     >
                       {syncResult.message}
                     </div>

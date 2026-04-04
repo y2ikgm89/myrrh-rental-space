@@ -13,6 +13,7 @@ import {
   getTitleClasses,
   getTitleStyle,
 } from "@/public/components/sections/SectionWrapper";
+import { cn } from "@/shared/lib/cn";
 import { SpaceCard } from "../spaces/_components/space-card";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
@@ -60,7 +61,7 @@ export function SpaceShowcaseSection({
             <div className="mt-4" style={getTitleStyle(design)}>
               <Heading
                 level={2}
-                className={`${getTitleClasses(design)} tracking-tight`}
+                className={cn(getTitleClasses(design), "tracking-tight")}
               >
                 {config.title}
               </Heading>
@@ -98,7 +99,11 @@ export function SpaceShowcaseSection({
       {/* Remaining cards — smaller grid */}
       {remaining.length > 0 && (
         <div
-          className={`grid gap-6 ${getCardGridColsClass(config.columns)} md:gap-8`}
+          className={cn(
+            "grid gap-6",
+            getCardGridColsClass(config.columns),
+            "md:gap-8",
+          )}
         >
           {remaining.map((space, i) => (
             <ScrollReveal key={space.id} delay={(i + 1) * 0.08}>

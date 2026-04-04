@@ -7,6 +7,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type {
   DOMConversionMap,
   DOMExportOutput,
@@ -111,7 +112,7 @@ function SpotifyComponent({
 
   return (
     <div
-      className={`my-2 ${isSelected ? "ring-2 ring-ring rounded-xl" : ""}`}
+      className={cn("my-2", isSelected && "ring-2 ring-ring rounded-xl")}
       onClick={() => setSelected(true)}
     >
       <iframe

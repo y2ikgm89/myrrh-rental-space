@@ -7,6 +7,7 @@
  */
 
 import { useSortable } from "@dnd-kit/sortable";
+import { cn } from "@/shared/lib/cn";
 import { toTranslate3d } from "@/admin/components/ui/sortable";
 import {
   Button,
@@ -16,7 +17,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/admin/components/ui";
-import { IconGripVertical, IconDots, IconEye, IconEyeOff, IconCopy, IconTrash } from "@tabler/icons-react";
+import {
+  IconGripVertical,
+  IconDots,
+  IconEye,
+  IconEyeOff,
+  IconCopy,
+  IconTrash,
+} from "@tabler/icons-react";
 import { sectionTypeLabels } from "@/shared/lib/validations/section";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
@@ -60,11 +68,14 @@ export function SectionSidebarItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors ${
+      className={cn(
+        "group flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors",
         isSelected
           ? "bg-accent/10 border-l-2 border-l-primary"
-          : "hover:bg-accent/5 border-l-2 border-l-transparent"
-      } ${!section.isActive ? "opacity-50" : ""} ${isDragging ? "z-50 shadow-lg ring-2 ring-primary/20" : ""}`}
+          : "hover:bg-accent/5 border-l-2 border-l-transparent",
+        !section.isActive && "opacity-50",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
+      )}
       onClick={() => onSelect(section.id)}
     >
       {/* Drag Handle */}

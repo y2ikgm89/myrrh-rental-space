@@ -29,6 +29,7 @@ import {
   createCommentThread,
 } from "@/admin/actions/editor-comment";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { cn } from "@/shared/lib/cn";
 import type {
   EditorCommentThread,
   CommentableContentType,
@@ -298,13 +299,21 @@ export function CommentPanel({
     <>
       {/* モバイル用オーバーレイ - isOpen に連動 */}
       <div
-        className={`fixed inset-0 z-40 bg-overlay lg:hidden transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={cn(
+          "fixed inset-0 z-40 bg-overlay lg:hidden transition-opacity duration-300",
+          isOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none",
+        )}
         onClick={isOpen ? onClose : undefined}
         aria-hidden="true"
       />
       {/* サイドパネル - translate-x で表示/非表示のアニメーション */}
       <aside
-        className={`fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={cn(
+          "fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full bg-background border-l shadow-xl sm:w-80 flex flex-col transition-transform duration-200",
+          isOpen ? "translate-x-0" : "translate-x-full",
+        )}
         aria-label="コメントパネル"
         aria-hidden={!isOpen}
       >

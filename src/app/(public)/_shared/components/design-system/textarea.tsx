@@ -1,4 +1,5 @@
 import type { Ref, TextareaHTMLAttributes } from "react";
+import { cn } from "@/shared/lib/cn";
 
 interface TextareaProps extends Omit<
   TextareaHTMLAttributes<HTMLTextAreaElement>,
@@ -39,11 +40,10 @@ export function Textarea({
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
         {...props}
-        className={`w-full min-h-[120px] border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors
-          placeholder:text-muted-foreground/60 resize-y
-          focus-visible:border-accent
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${error ? "border-destructive" : "border-border"}`}
+        className={cn(
+          "w-full min-h-[120px] border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors placeholder:text-muted-foreground/60 resize-y focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
+          error ? "border-destructive" : "border-border",
+        )}
       />
       {error ? (
         <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">

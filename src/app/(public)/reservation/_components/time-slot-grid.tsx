@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import type { TimeSlot } from "@/shared/lib/reservation/types";
 
 interface TimeSlotGridProps {
@@ -56,15 +57,14 @@ export function TimeSlotGrid({
             aria-disabled={isUnavailable}
             disabled={isUnavailable}
             onClick={() => onSelect(slot.time)}
-            className={`min-h-10 border text-sm transition-colors duration-200
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent
-              ${
-                isSelected
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : isUnavailable
-                    ? "border-border/40 text-muted-foreground/30 line-through cursor-not-allowed"
-                    : "border-border text-foreground hover:border-foreground/30 cursor-pointer"
-              }`}
+            className={cn(
+              "min-h-10 border text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+              isSelected
+                ? "border-accent bg-accent text-accent-foreground"
+                : isUnavailable
+                  ? "cursor-not-allowed border-border/40 text-muted-foreground/30 line-through"
+                  : "cursor-pointer border-border text-foreground hover:border-foreground/30",
+            )}
           >
             {slot.time}
           </button>

@@ -1,4 +1,5 @@
 import type { Ref, SelectHTMLAttributes } from "react";
+import { cn } from "@/shared/lib/cn";
 
 interface SelectProps extends Omit<
   SelectHTMLAttributes<HTMLSelectElement>,
@@ -44,10 +45,10 @@ export function Select({
         aria-invalid={error ? true : undefined}
         aria-describedby={errorId}
         {...props}
-        className={`w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors
-          focus-visible:border-accent
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${error ? "border-destructive" : "border-border"}`}
+        className={cn(
+          "w-full min-h-11 border-0 border-b bg-transparent px-0 py-3 text-foreground transition-colors focus-visible:border-accent disabled:opacity-50 disabled:cursor-not-allowed",
+          error ? "border-destructive" : "border-border",
+        )}
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

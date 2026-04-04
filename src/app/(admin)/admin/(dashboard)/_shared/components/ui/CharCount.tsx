@@ -5,6 +5,8 @@
  * ratio に応じて色を変更: 超過=destructive、80%以上=warning、それ以下=muted。
  */
 
+import { cn } from "@/shared/lib/cn";
+
 interface CharCountProps {
   /** 現在の文字数 */
   current: number;
@@ -23,7 +25,7 @@ export function CharCount({ current, max }: CharCountProps) {
   }
 
   return (
-    <span className={`text-xs tabular-nums ${colorClass}`}>
+    <span className={cn("text-xs tabular-nums", colorClass)}>
       {current}/{max}
     </span>
   );

@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { useQueryStates } from "nuqs";
 import { useTransition } from "react";
+import { cn } from "@/shared/lib/cn";
 import { spaceSearchParamsParsers } from "@/public/lib/search-params";
 
 interface FilterOption {
@@ -32,7 +33,10 @@ export function FilterBar({ categories }: FilterBarProps): ReactElement {
   return (
     <nav
       aria-label="カテゴリフィルタ"
-      className={`transition-opacity duration-300 ${isPending ? "opacity-60" : ""}`}
+      className={cn(
+        "transition-opacity duration-300",
+        isPending && "opacity-60",
+      )}
     >
       <ul className="flex flex-wrap gap-3" role="list">
         <li>
@@ -40,11 +44,12 @@ export function FilterBar({ categories }: FilterBarProps): ReactElement {
             type="button"
             onClick={() => handleFilter(null)}
             aria-pressed={!activeCategory}
-            className={`rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300 ${
+            className={cn(
+              "rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
               !activeCategory
                 ? "bg-accent text-accent-foreground"
-                : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
-            }`}
+                : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
+            )}
           >
             All
           </button>
@@ -55,11 +60,12 @@ export function FilterBar({ categories }: FilterBarProps): ReactElement {
               type="button"
               onClick={() => handleFilter(cat.id)}
               aria-pressed={activeCategory === cat.id}
-              className={`rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300 ${
+              className={cn(
+                "rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
                 activeCategory === cat.id
                   ? "bg-accent text-accent-foreground"
-                  : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
-              }`}
+                  : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
+              )}
             >
               {cat.name}
             </button>

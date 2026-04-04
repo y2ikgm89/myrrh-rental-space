@@ -8,6 +8,7 @@
  */
 
 import { useState, useTransition } from "react";
+import { cn } from "@/shared/lib/cn";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { useForm, useWatch } from "react-hook-form";
@@ -675,7 +676,10 @@ export function TermsInlineEditor({
             className="w-full"
           >
             <TabsList
-              className={`grid w-full ${mode === "edit" ? "grid-cols-3" : "grid-cols-1"}`}
+              className={cn(
+                "grid w-full",
+                mode === "edit" ? "grid-cols-3" : "grid-cols-1",
+              )}
             >
               {mode === "edit" && (
                 <TabsTrigger value="version">バージョン</TabsTrigger>

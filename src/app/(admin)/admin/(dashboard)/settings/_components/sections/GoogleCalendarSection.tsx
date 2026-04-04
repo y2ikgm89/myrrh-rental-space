@@ -10,6 +10,7 @@ import { useState, useTransition } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
+import { cn } from "@/shared/lib/cn";
 import {
   Button,
   Card,
@@ -318,7 +319,10 @@ export function GoogleCalendarSection({
               {testResult && (
                 <StatusBanner success={testResult.success}>
                   <p
-                    className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
+                    className={cn(
+                      "text-sm",
+                      testResult.success ? "text-success" : "text-destructive",
+                    )}
                   >
                     {testResult.message}
                   </p>

@@ -6,6 +6,7 @@
  */
 
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import {
@@ -51,7 +52,7 @@ export function EmbedSection({
 
   return (
     <SectionWrapper design={design} skipContainer>
-      <div className={`mx-auto px-5 md:px-8 ${maxWidthClass}`}>
+      <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
         {config.title && (
           <div className="mb-8 text-center md:mb-12">
             <ScrollReveal>
@@ -61,7 +62,7 @@ export function EmbedSection({
               <div style={getTitleStyle(design)}>
                 <Heading
                   level={2}
-                  className={`mt-4 ${getTitleClasses(design)} tracking-tight`}
+                  className={cn("mt-4 tracking-tight", getTitleClasses(design))}
                 >
                   {config.title}
                 </Heading>
@@ -72,7 +73,7 @@ export function EmbedSection({
 
         <ScrollReveal>
           {config.embedUrl ? (
-            <div className={`overflow-hidden ${radiusClass} ${aspectClass}`}>
+            <div className={cn("overflow-hidden", radiusClass, aspectClass)}>
               <iframe
                 src={config.embedUrl}
                 className="h-full w-full border-0"
@@ -84,11 +85,14 @@ export function EmbedSection({
           ) : config.embedCode ? (
             <SanitizedHtml
               html={config.embedCode}
-              className={`overflow-hidden ${radiusClass} ${aspectClass}`}
+              className={cn("overflow-hidden", radiusClass, aspectClass)}
             />
           ) : (
             <div
-              className={`flex h-48 items-center justify-center ${radiusClass} bg-muted`}
+              className={cn(
+                "flex h-48 items-center justify-center bg-muted",
+                radiusClass,
+              )}
             >
               <p className="text-sm text-muted-foreground">
                 埋め込みURLまたはコードを設定してください。

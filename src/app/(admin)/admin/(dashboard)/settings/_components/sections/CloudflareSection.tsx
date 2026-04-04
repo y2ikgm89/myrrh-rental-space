@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
+import { cn } from "@/shared/lib/cn";
 import {
   Button,
   Card,
@@ -229,18 +230,20 @@ export function CloudflareSection({ config }: Props) {
               <StatusBanner success={config.connectionStatus === "connected"}>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`h-2 w-2 rounded-full ${
+                    className={cn(
+                      "h-2 w-2 rounded-full",
                       config.connectionStatus === "connected"
                         ? "bg-success"
-                        : "bg-destructive"
-                    }`}
+                        : "bg-destructive",
+                    )}
                   />
                   <span
-                    className={`text-sm font-medium ${
+                    className={cn(
+                      "text-sm font-medium",
                       config.connectionStatus === "connected"
                         ? "text-success"
-                        : "text-destructive"
-                    }`}
+                        : "text-destructive",
+                    )}
                   >
                     {config.connectionStatus === "connected"
                       ? "接続済み"
@@ -258,7 +261,10 @@ export function CloudflareSection({ config }: Props) {
             {testResult && (
               <StatusBanner success={testResult.success}>
                 <p
-                  className={`text-sm ${testResult.success ? "text-success" : "text-destructive"}`}
+                  className={cn(
+                    "text-sm",
+                    testResult.success ? "text-success" : "text-destructive",
+                  )}
                 >
                   {testResult.message}
                 </p>

@@ -8,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { cn } from "@/shared/lib/cn";
 import {
   Button,
   Card,
@@ -23,7 +24,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/admin/components/ui/accordion";
-import { IconShield, IconSettings, IconEdit, IconEye, IconCheck, IconX, IconChevronRight } from "@tabler/icons-react";
+import {
+  IconShield,
+  IconSettings,
+  IconEdit,
+  IconEye,
+  IconCheck,
+  IconX,
+  IconChevronRight,
+} from "@tabler/icons-react";
 
 // =============================================================================
 // Types & Constants
@@ -129,11 +138,11 @@ function RoleCard({ config }: { config: RoleConfig }) {
   const Icon = config.icon;
 
   return (
-    <Card className={`${config.borderColor} border-l-4`}>
+    <Card className={cn(config.borderColor, "border-l-4")}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${config.bgColor}`}>
-            <Icon className={`h-5 w-5 ${config.color}`} />
+          <div className={cn("p-2 rounded-lg", config.bgColor)}>
+            <Icon className={cn("h-5 w-5", config.color)} />
           </div>
           <div>
             <CardTitle className="text-lg">{config.label}</CardTitle>
