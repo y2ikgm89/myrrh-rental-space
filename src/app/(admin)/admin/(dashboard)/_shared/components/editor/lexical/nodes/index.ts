@@ -74,16 +74,10 @@ export {
   $createCollapsibleContainerNode,
   $isCollapsibleContainerNode,
   COLLAPSIBLE_STYLES,
-  COLLAPSIBLE_RADII,
   collapsibleStyleState,
-  borderRadiusState,
   isCollapsibleStyle,
-  isCollapsibleRadius,
 } from "./CollapsibleContainerNode";
-export type {
-  CollapsibleStyle,
-  CollapsibleRadius,
-} from "./CollapsibleContainerNode";
+export type { CollapsibleStyle } from "./CollapsibleContainerNode";
 
 export {
   CollapsibleItemNode,

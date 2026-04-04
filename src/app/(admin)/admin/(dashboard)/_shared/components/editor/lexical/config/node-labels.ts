@@ -11,10 +11,7 @@ import type {
   ButtonSize,
   ButtonAlignment,
 } from "../nodes/ButtonNode";
-import type {
-  CollapsibleStyle,
-  CollapsibleRadius,
-} from "../nodes/CollapsibleContainerNode";
+import type { CollapsibleStyle } from "../nodes/CollapsibleContainerNode";
 import type { PullQuoteStyle } from "../nodes/PullQuoteNode";
 import type {
   StepsStyle,
@@ -47,13 +44,6 @@ export const COLLAPSIBLE_STYLE_LABELS: Record<CollapsibleStyle, string> = {
   minimal: "ミニマル",
   card: "カード",
   filled: "塗りつぶし",
-};
-
-export const COLLAPSIBLE_RADIUS_LABELS: Record<CollapsibleRadius, string> = {
-  none: "なし",
-  sm: "小（0.25rem）",
-  md: "中（0.5rem）",
-  lg: "大（0.75rem）",
 };
 
 // =============================================================================

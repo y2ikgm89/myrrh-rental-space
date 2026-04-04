@@ -43,23 +43,12 @@ export const COLLAPSIBLE_STYLES: readonly CollapsibleStyle[] = [
   "filled",
 ] as const;
 
-export type CollapsibleRadius = "none" | "sm" | "md" | "lg";
-
-export const COLLAPSIBLE_RADII: readonly CollapsibleRadius[] = [
-  "none",
-  "sm",
-  "md",
-  "lg",
-] as const;
-
 // =============================================================================
 // Type Guards
 // =============================================================================
 
 export const isCollapsibleStyle =
   createEnumGuard<CollapsibleStyle>(COLLAPSIBLE_STYLES);
-export const isCollapsibleRadius =
-  createEnumGuard<CollapsibleRadius>(COLLAPSIBLE_RADII);
 
 // =============================================================================
 // State
@@ -68,11 +57,6 @@ export const isCollapsibleRadius =
 export const collapsibleStyleState = createState("collapsibleStyle", {
   parse: (v: unknown): CollapsibleStyle =>
     typeof v === "string" && isCollapsibleStyle(v) ? v : "default",
-});
-
-export const borderRadiusState = createState("borderRadius", {
-  parse: (v: unknown): CollapsibleRadius =>
-    typeof v === "string" && isCollapsibleRadius(v) ? v : "md",
 });
 
 export const collapsibleColorState = createState("collapsibleColor", {
@@ -89,13 +73,11 @@ function $convertCollapsibleContainerElement(
 ): null | DOMConversionOutput {
   const rawStyle = element.getAttribute("data-collapsible-style");
   const style = rawStyle && isCollapsibleStyle(rawStyle) ? rawStyle : "default";
-  const rawRadius = element.getAttribute("data-collapsible-radius");
-  const radius = rawRadius && isCollapsibleRadius(rawRadius) ? rawRadius : "md";
   const colorAttr = element.getAttribute("data-color");
   const color: AccentColor =
     colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
 
-  const node = $createCollapsibleContainerNode(style, radius, color);
+  const node = $createCollapsibleContainerNode(style, color);
   return { node };
 }
 
@@ -109,7 +91,6 @@ export class CollapsibleContainerNode extends ElementNode {
       extends: ElementNode,
       stateConfigs: [
         { flat: true, stateConfig: collapsibleStyleState },
-        { flat: true, stateConfig: borderRadiusState },
         { flat: true, stateConfig: collapsibleColorState },
       ],
     });
@@ -131,24 +112,20 @@ export class CollapsibleContainerNode extends ElementNode {
 
   override exportDOM(): DOMExportOutput {
     const style = $getState(this, collapsibleStyleState);
-    const radius = $getState(this, borderRadiusState);
     const color = $getState(this, collapsibleColorState);
     const element = document.createElement("div");
     element.setAttribute("data-collapsible-container", "true");
     element.setAttribute("data-collapsible-style", style);
-    element.setAttribute("data-collapsible-radius", radius);
     element.setAttribute("data-color", color);
     return { element };
   }
 
   override createDOM(_config: EditorConfig): HTMLElement {
     const style = $getState(this, collapsibleStyleState);
-    const radius = $getState(this, borderRadiusState);
     const color = $getState(this, collapsibleColorState);
     const element = document.createElement("div");
     element.setAttribute("data-collapsible-container", "true");
     element.setAttribute("data-collapsible-style", style);
-    element.setAttribute("data-collapsible-radius", radius);
     element.setAttribute("data-color", color);
     return element;
   }
@@ -161,11 +138,6 @@ export class CollapsibleContainerNode extends ElementNode {
     if (styleChange !== null) {
       const [newStyle] = styleChange;
       dom.setAttribute("data-collapsible-style", newStyle);
-    }
-    const radiusChange = $getStateChange(this, prevNode, borderRadiusState);
-    if (radiusChange !== null) {
-      const [newRadius] = radiusChange;
-      dom.setAttribute("data-collapsible-radius", newRadius);
     }
     const colorChange = $getStateChange(this, prevNode, collapsibleColorState);
     if (colorChange !== null) {
@@ -223,12 +195,10 @@ export class CollapsibleContainerNode extends ElementNode {
 
 export function $createCollapsibleContainerNode(
   style: CollapsibleStyle = "default",
-  radius: CollapsibleRadius = "md",
   color: AccentColor = "default",
 ): CollapsibleContainerNode {
   const node = $create(CollapsibleContainerNode);
   $setState(node, collapsibleStyleState, style);
-  $setState(node, borderRadiusState, radius);
   $setState(node, collapsibleColorState, color);
   return node;
 }

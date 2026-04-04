@@ -17,12 +17,9 @@ import {
   $isCollapsibleContainerNode,
   type CollapsibleContainerNode,
   COLLAPSIBLE_STYLES,
-  COLLAPSIBLE_RADII,
   collapsibleStyleState,
-  borderRadiusState,
   collapsibleColorState,
   isCollapsibleStyle,
-  isCollapsibleRadius,
 } from "../../nodes/CollapsibleContainerNode";
 import { type AccentColor } from "../../config/accent-colors";
 import { $isCollapsibleItemNode } from "../../nodes/CollapsibleItemNode";
@@ -32,10 +29,7 @@ import {
   $removeCollapsibleItem,
   $reorderCollapsibleItem,
 } from "../../plugins/CollapsiblePlugin";
-import {
-  COLLAPSIBLE_STYLE_LABELS,
-  COLLAPSIBLE_RADIUS_LABELS,
-} from "../../config/node-labels";
+import { COLLAPSIBLE_STYLE_LABELS } from "../../config/node-labels";
 import { InspectorHeader } from "../InspectorHeader";
 import { InspectorSection } from "../InspectorSection";
 import { ColorSwatchPicker } from "../ColorSwatchPicker";
@@ -69,11 +63,10 @@ export function CollapsibleInspectorPanel({
   const [editor] = useLexicalComposerContext();
   const updateNode = useNodeUpdater(nodeKey, $isCollapsibleContainerNode);
 
-  const { currentStyle, currentRadius, currentColor, collapsibleItems } = editor
+  const { currentStyle, currentColor, collapsibleItems } = editor
     .getEditorState()
     .read(() => {
       const style = $getState(node, collapsibleStyleState);
-      const radius = $getState(node, borderRadiusState);
       const color = $getState(node, collapsibleColorState);
       const items: CollapsibleItemInfo[] = [];
       const children = node.getChildren();
@@ -90,7 +83,6 @@ export function CollapsibleInspectorPanel({
 
       return {
         currentStyle: style,
-        currentRadius: radius,
         currentColor: color,
         collapsibleItems: items,
       };
@@ -103,14 +95,6 @@ export function CollapsibleInspectorPanel({
     if (isCollapsibleStyle(value)) {
       updateNode((n) => {
         $setState(n, collapsibleStyleState, value);
-      });
-    }
-  };
-
-  const handleRadiusChange = (value: string) => {
-    if (isCollapsibleRadius(value)) {
-      updateNode((n) => {
-        $setState(n, borderRadiusState, value);
       });
     }
   };
@@ -170,21 +154,6 @@ export function CollapsibleInspectorPanel({
                 {COLLAPSIBLE_STYLES.map((style) => (
                   <SelectItem key={style} value={style}>
                     {COLLAPSIBLE_STYLE_LABELS[style]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">角丸</Label>
-            <Select value={currentRadius} onValueChange={handleRadiusChange}>
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COLLAPSIBLE_RADII.map((radius) => (
-                  <SelectItem key={radius} value={radius}>
-                    {COLLAPSIBLE_RADIUS_LABELS[radius]}
                   </SelectItem>
                 ))}
               </SelectContent>
