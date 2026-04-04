@@ -10,10 +10,11 @@
 - **`'use cache'` 関数での直接 prisma 呼び出し禁止** → `safeFetch` + `toPlainObject`/`toPlainArray` 必須 → `server-actions.md`
 - **後方互換性ハック禁止** → 不要コード完全削除
 - **検証なしの完了報告禁止** → 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
+- **一括修正後の残存チェック省略禁止** → grep/Grep で違反パターンの残存ゼロを確認してから完了報告（並列エージェントは修正漏れが発生する）
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認
 - **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象（`style={{ color: "oklch(...)" }}` も違反）。例外: `global-error.tsx`（CSS変数不使用制約）→ `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`、エラー `<div role="alert">` + border スタイル
-- **ソフトデリート `where` 漏れ禁止** → `deletedAt` を持つ全モデル（Reservation, Event 等）の `findUnique`/`findFirst`/`findMany`/`update` に `deletedAt: null`（`restore*Command` 除く）。リレーション経由のクエリも親モデルの `deletedAt: null` フィルタ必須（例: `where: { eventId, event: { deletedAt: null } }`）→ `gotchas.md`
+- **ソフトデリート `where` 漏れ禁止** → 全クエリに `deletedAt: null`、リレーション経由も親ガード必須 → `gotchas.md` §ドメイン・予約
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)`、公開 query に `publicQueryRateLimiter` → `server-actions.md`
 - **公開 Server Action の ID 引数バリデーション省略禁止** → `z.string().uuid()` で検証してから command に渡す
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
@@ -44,6 +45,7 @@
 - **品質監査**: `/cache-audit` / `/integration-audit` / `/audit-settings-sections`
 - **UI デザイン**: `/frontend-design`（公開ページ）/ `/parallax-section`（スクロール演出）
 - **トラブルシューティング**: `/stripe-debug` / `/google-calendar-debug` / `/turbopack-hmr`
+- **依存関係更新**: `/upgrade-deps`（`bun outdated` → semver 範囲内更新 → メジャー/マイナー → validate → build）
 
 ---
 
