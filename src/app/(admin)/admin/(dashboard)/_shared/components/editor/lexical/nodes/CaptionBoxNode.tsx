@@ -28,6 +28,7 @@ import {
   $createParagraphNode,
 } from "lexical";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
+import { createEnumGuard } from "../config/type-guards";
 
 // =============================================================================
 // State
@@ -36,6 +37,24 @@ import { isAccentColor, type AccentColor } from "../config/accent-colors";
 export const captionBoxColorState = createState("color", {
   parse: (v: unknown): AccentColor =>
     typeof v === "string" && isAccentColor(v) ? v : "default",
+});
+
+export type CaptionBoxStyle = "filled" | "compact" | "band" | "inner" | "plain";
+
+export const CAPTION_BOX_STYLES: readonly CaptionBoxStyle[] = [
+  "filled",
+  "compact",
+  "band",
+  "inner",
+  "plain",
+] as const;
+
+export const isCaptionBoxStyle =
+  createEnumGuard<CaptionBoxStyle>(CAPTION_BOX_STYLES);
+
+export const captionBoxStyleState = createState("captionBoxStyle", {
+  parse: (v: unknown): CaptionBoxStyle =>
+    typeof v === "string" && isCaptionBoxStyle(v) ? v : "filled",
 });
 
 // =============================================================================
@@ -48,7 +67,10 @@ function $convertCaptionBoxElement(
   const colorAttr = element.getAttribute("data-color");
   const color: AccentColor =
     colorAttr && isAccentColor(colorAttr) ? colorAttr : "default";
-  const node = $createCaptionBoxNode(color);
+  const styleAttr = element.getAttribute("data-caption-box-style");
+  const style: CaptionBoxStyle =
+    styleAttr && isCaptionBoxStyle(styleAttr) ? styleAttr : "filled";
+  const node = $createCaptionBoxNode(color, style);
   return { node };
 }
 
@@ -74,7 +96,10 @@ export class CaptionBoxNode extends ElementNode {
   override $config() {
     return this.config("caption-box", {
       extends: ElementNode,
-      stateConfigs: [{ flat: true, stateConfig: captionBoxColorState }],
+      stateConfigs: [
+        { flat: true, stateConfig: captionBoxColorState },
+        { flat: true, stateConfig: captionBoxStyleState },
+      ],
     });
   }
 
@@ -97,6 +122,9 @@ export class CaptionBoxNode extends ElementNode {
     element.setAttribute("data-caption-box", "true");
     const color = $getState(this, captionBoxColorState);
     if (color !== "default") element.setAttribute("data-color", color);
+    const style = $getState(this, captionBoxStyleState);
+    if (style !== "filled")
+      element.setAttribute("data-caption-box-style", style);
     return { element };
   }
 
@@ -105,6 +133,9 @@ export class CaptionBoxNode extends ElementNode {
     element.setAttribute("data-caption-box", "true");
     const color = $getState(this, captionBoxColorState);
     if (color !== "default") element.setAttribute("data-color", color);
+    const style = $getState(this, captionBoxStyleState);
+    if (style !== "filled")
+      element.setAttribute("data-caption-box-style", style);
     return element;
   }
 
@@ -116,6 +147,15 @@ export class CaptionBoxNode extends ElementNode {
         dom.removeAttribute("data-color");
       } else {
         dom.setAttribute("data-color", newColor);
+      }
+    }
+    const styleChange = $getStateChange(this, prevNode, captionBoxStyleState);
+    if (styleChange !== null) {
+      const [newStyle] = styleChange;
+      if (newStyle === "filled") {
+        dom.removeAttribute("data-caption-box-style");
+      } else {
+        dom.setAttribute("data-caption-box-style", newStyle);
       }
     }
     return false;
@@ -287,8 +327,11 @@ export class CaptionBoxContentNode extends ElementNode {
 
 export function $createCaptionBoxNode(
   color: AccentColor = "default",
+  style: CaptionBoxStyle = "filled",
 ): CaptionBoxNode {
-  return $setState($create(CaptionBoxNode), captionBoxColorState, color);
+  const node = $setState($create(CaptionBoxNode), captionBoxColorState, color);
+  $setState(node, captionBoxStyleState, style);
+  return node;
 }
 
 export function $createCaptionBoxTitleNode(): CaptionBoxTitleNode {

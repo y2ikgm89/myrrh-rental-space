@@ -11,6 +11,7 @@ import type {
   ButtonSize,
   ButtonAlignment,
 } from "../nodes/ButtonNode";
+import type { CaptionBoxStyle } from "../nodes/CaptionBoxNode";
 import type { CollapsibleStyle } from "../nodes/CollapsibleContainerNode";
 import type { PullQuoteStyle } from "../nodes/PullQuoteNode";
 import type {
@@ -23,6 +24,18 @@ import type {
   TabsSize,
   TabsFixedWidth,
 } from "../nodes/TabsContainerNode";
+
+// =============================================================================
+// CaptionBox
+// =============================================================================
+
+export const CAPTION_BOX_STYLE_LABELS: Record<CaptionBoxStyle, string> = {
+  filled: "塗り",
+  compact: "コンパクト",
+  band: "ラベル",
+  inner: "枠内",
+  plain: "シンプル",
+};
 
 // =============================================================================
 // Callout

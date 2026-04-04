@@ -444,6 +444,9 @@ export {
   $createCaptionBoxNode,
   $isCaptionBoxNode,
   captionBoxColorState,
+  captionBoxStyleState,
+  CAPTION_BOX_STYLES,
+  isCaptionBoxStyle,
   CaptionBoxTitleNode,
   $createCaptionBoxTitleNode,
   $isCaptionBoxTitleNode,
@@ -451,3 +454,4 @@ export {
   $createCaptionBoxContentNode,
   $isCaptionBoxContentNode,
 } from "./CaptionBoxNode";
+export type { CaptionBoxStyle } from "./CaptionBoxNode";

@@ -769,10 +769,13 @@ details[data-collapsible-item]
  * 1c-2. CaptionBox Block
  *
  * data-caption-box: コンテナ
+ * data-caption-box-style: filled(default) | compact | band | inner | plain
  * data-caption-box-title: タイトル（ユーザー編集可能）
  * data-caption-box-content: コンテンツ
  * data-color: AccentColor（省略時は default）
  * -------------------------------------------------------------------------- */
+
+/* ---- Base (filled = default) ---- */
 
 [data-caption-box] {
   margin-top: 1.5rem;
@@ -796,7 +799,7 @@ details[data-collapsible-item]
   color: inherit;
 }
 
-/* Placeholder */
+/* Title placeholder */
 [data-caption-box-title] > p:only-child:has(> br:only-child) {
   position: relative;
 }
@@ -834,6 +837,97 @@ details[data-collapsible-item]
   color: var(--color-muted-foreground);
   pointer-events: none;
   opacity: 0.6;
+}
+
+/* ---- Compact Style ----
+ * filled の小型版。タイトルが inline-block で内容幅に合わせる。
+ */
+
+[data-caption-box-style="compact"] [data-caption-box-title] {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.6875rem;
+}
+
+/* ---- Band Style ----
+ * タイトルがボーダー上端に重なるラベル。position で浮かせる。
+ */
+
+[data-caption-box-style="band"] {
+  position: relative;
+  margin-top: 2rem;
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+}
+
+[data-caption-box-style="band"] [data-caption-box-title] {
+  position: absolute;
+  top: 0;
+  left: 1rem;
+  transform: translateY(-50%);
+  padding: 0.125rem 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+[data-caption-box-style="band"] [data-caption-box-content] {
+  padding-top: 1.25rem;
+  background-color: transparent;
+}
+
+/* Band placeholder override (white text on accent is hard to read when small) */
+[data-caption-box-style="band"]
+  [data-caption-box-title]
+  > p:only-child:has(> br:only-child)::before {
+  content: "ラベル...";
+}
+
+/* ---- Inner Style ----
+ * 全辺ボーダー囲み。タイトルは accent テキスト（背景なし）。
+ */
+
+[data-caption-box-style="inner"] {
+  border-color: var(--color-border);
+}
+
+[data-caption-box-style="inner"] [data-caption-box-title] {
+  background-color: transparent;
+  color: var(--accent, var(--color-accent));
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+
+[data-caption-box-style="inner"] [data-caption-box-content] {
+  background-color: transparent;
+}
+
+/* Inner placeholder override */
+[data-caption-box-style="inner"]
+  [data-caption-box-title]
+  > p:only-child:has(> br:only-child)::before {
+  color: var(--accent, var(--color-accent));
+}
+
+/* ---- Plain Style ----
+ * タイトル非表示。accent 左ボーダー + 薄い背景。
+ */
+
+[data-caption-box-style="plain"] {
+  border: none;
+  border-left: 4px solid var(--accent, var(--color-accent));
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 5%,
+    transparent
+  );
+}
+
+[data-caption-box-style="plain"] [data-caption-box-title] {
+  display: none;
+}
+
+[data-caption-box-style="plain"] [data-caption-box-content] {
+  background-color: transparent;
 }
 
 /* --------------------------------------------------------------------------
