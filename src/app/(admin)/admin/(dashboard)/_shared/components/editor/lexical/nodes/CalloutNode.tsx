@@ -1,8 +1,8 @@
-﻿/**
+/**
  * Callout Node
  *
  * @description 注意書き・アラートを表示するElementNode
- * 4種類（info/warning/error/success）に対応
+ * 4種類（info/warning/error/success）に対応。アイコンは CSS ::before で自動表示。
  */
 
 "use client";
@@ -149,24 +149,12 @@ export class CalloutNode extends ElementNode {
 // Factory Functions
 // =============================================================================
 
-/**
- * Calloutノードを作成する
- *
- * @param calloutType - コールアウトの種類
- * @returns CalloutNode インスタンス
- */
 export function $createCalloutNode(
   calloutType: CalloutType = "info",
 ): CalloutNode {
   return $setState($create(CalloutNode), calloutTypeState, calloutType);
 }
 
-/**
- * ノードがCalloutNodeかどうかを判定する
- *
- * @param node - 判定対象のノード
- * @returns CalloutNodeの場合true
- */
 export function $isCalloutNode(
   node: LexicalNode | null | undefined,
 ): node is CalloutNode {
