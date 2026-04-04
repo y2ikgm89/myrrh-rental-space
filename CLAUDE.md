@@ -42,7 +42,7 @@
 - **公開ページ追加**: `/create-page-content` → `/create-section-type`（新セクション時）
 - **設定拡張**: `/add-settings-field`
 - **Lexical 拡張**: `/lexical-node` / `/lexical-plugin` / `/lexical-toolbar`
-- **品質監査**: `/cache-audit` / `/integration-audit` / `/audit-settings-sections`
+- **品質監査**: `/cache-audit` / `/integration-audit` / `/audit-settings-sections` / `/lexical-audit`
 - **UI デザイン**: `/frontend-design`（公開ページ）/ `/parallax-section`（スクロール演出）
 - **トラブルシューティング**: `/stripe-debug` / `/google-calendar-debug` / `/turbopack-hmr`
 - **依存関係更新**: `/upgrade-deps`（`bun outdated` → semver 範囲内更新 → メジャー/マイナー → validate → build）
@@ -109,57 +109,34 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 ### コーディング規約
 
-`.claude/rules/` に `paths:` フロントマターで条件付き自動ロード。各ルールの詳細はファイル内に記載。
-
-**ルート**（`src/**` 編集時）: `gotchas.md`(最重要), `server-actions.md`, `type-safety.md`, `bun-patterns.md`, `prisma-patterns.md`, `auth-patterns.md`, `error-handling.md`, `zod-patterns.md`, `test-quality.md`, `react-patterns.md`, `resend-patterns.md`, `nuqs-patterns.md`, `api-routes.md`, `implementation-quality.md`, `project-structure.md`, `server-only-patterns.md`, `tailwind-patterns.md`
-
-**`frontend/`**（公開・管理 UI 編集時）: `accessibility.md`, `admin-ui-patterns.md`, `admin-inline-editor-patterns.md`, `anti-ai-design.md`, `design-system-memory.md`, `gsap-patterns.md`, `lexical-patterns.md`, `project-design-config.md`, `seo-patterns.md`, `ui-ux-patterns.md`
-
-**`ops/`**（デプロイ関連編集時）: `deployment-patterns.md`
+`.claude/rules/`（28ファイル）が `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`。
 
 ### キーファイル
 
-| パス                                                   | 内容                                                                                                                                                  |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                        |
-| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                                                                                                      |
-| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                   |
-| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（22定義: 標準17 + homepage-\*5、field ヘルパー）                                                                                 |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                                                                                          |
-| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                           |
-| `src/app/(public)/_shared/components/design-system/`   | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog） |
-| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                                                                                         |
-| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                                                                                          |
-| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）                                                                                    |
-| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                                                                                                |
-| `src/app/(public)/_shared/lib/search-params.ts`        | 公開ページ nuqs パーサーマップ（Server/Client 共有、全パーサー export 必須）                                                                          |
-| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                                                                                                   |
-| `src/app/(public)/_components/homepage/`               | ホームページ5セクション DB 駆動（`getHomepageSections()` → `homepage-*` 型マッピング、DB 未登録時は defaultProps fallback）                           |
+| パス                                                   | 内容                                                                                                                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                                                          |
+| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                                                                                                                                        |
+| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                                                     |
+| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（22定義: 標準17 + homepage-\*5、field ヘルパー）                                                                                                                   |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                                                                                                                            |
+| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                                                             |
+| `src/app/(public)/_shared/components/design-system/`   | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog）                                   |
+| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                                                                                                                           |
+| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                                                                                                                            |
+| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）                                                                                                                      |
+| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                                                                                                                                  |
+| `src/app/(public)/_shared/lib/search-params.ts`        | 公開ページ nuqs パーサーマップ（Server/Client 共有、全パーサー export 必須）                                                                                                            |
+| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                                                                                                                                     |
+| `src/app/(public)/_components/homepage/`               | ホームページ5セクション DB 駆動（`getHomepageSections()` → `homepage-*` 型マッピング、DB 未登録時は defaultProps fallback）。spaces-carousel.tsx = CSS scroll-snap 無限ループカルーセル |
+| `src/shared/styles/lexical-content.css`                | Lexical ブロック出力 CSS（admin.css/public.css 両方から @import、Editorial Magazine 準拠）                                                                                              |
 
-### セキュリティ多層防御
+### セキュリティ・キャッシュ
 
-- **公開フォーム**: Rate Limit (`formSubmitRateLimiter`) + Turnstile + Zod
-- **公開クエリ**: Rate Limit (`publicQueryRateLimiter`) + Zod
-- **マイページ**: Rate Limit (`formSubmitRateLimiter`) + `getSession` + `getCustomerByUserId` + Zod
-- **管理 Actions**: `executeAdminMutationResult`（認証・権限・監査ログ一括） + Zod
-- **API Routes**: `checkPermission`（**認証を最初に実行**）→ Zod、管理ログインは `proxy.ts`（Admin Gate）
-- **CSV エクスポート**: `escapeCsvField` で数式インジェクション対策（`=+\-@\t\r` 先頭ガード）
-
-### キャッシュ無効化の統一
-
-- イベント状態変更（publish/cancel）: `invalidateEventCaches` + `eventRegistrations.list` の両方を無効化
-- 予約状態変更: 3点セット必須（`RESERVATIONS` + `detail(id)` + `calendar()`）→ `gotchas.md`
+セキュリティ多層防御 → `auth-patterns.md`, `server-actions.md`。キャッシュ無効化 → `gotchas.md` §ドメイン・予約。
 
 ### エージェント（`.claude/agents/` 自動検出、20種）
 
-> **注意**: レビューエージェントの指摘は `gotchas.md` と照合して検証する。特に `revalidateTag` 第2引数（Next.js 16 で必須）や Turbopack チャンク重複（既知制約）は誤報されやすい
+> **注意**: レビューエージェントの指摘は `gotchas.md` と照合して検証する。`revalidateTag` 第2引数（Next.js 16 必須）や Turbopack チャンク重複（既知制約）は誤報されやすい
 
-**使い方パターン**:
-
-- **コード変更後**: `project-reviewer`（総合）、変更内容に応じて `security-reviewer` / `react-compiler-reviewer` / `accessibility-reviewer` を追加
-- **デザイン変更後**: `editorial-consistency-reviewer`（hover/tracking/font-weight/Button の editorial トーン統一チェック）
-- **ドメイン整合性**: `event-flow-reviewer` / `reservation-flow-reviewer` / `cache-strategy-reviewer` を並列起動
-- **構造検証**: `route-structure-reviewer`（ルーティング）/ `db-migration-reviewer`（マイグレーション）
-- **検証・ビルド**: `verification`（type-check / lint / build を隔離実行）
-- **テスト生成**: `test-writer`（bun:test）/ `e2e-test-writer`（Playwright）/ `test-runner`（失敗診断）
-- **プロジェクト全体監査**: 上記を8つ並列起動して一貫性チェック（実証済み）
+コード変更後は `project-reviewer`、ドメイン整合性は `event-flow-reviewer` / `reservation-flow-reviewer` / `cache-strategy-reviewer` を並列起動。全体監査は8種並列で実証済み。

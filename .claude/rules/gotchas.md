@@ -89,6 +89,7 @@ paths:
 - **サーバーエラー表示は `<div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">` に統一** — 素の `<p className="text-sm text-destructive">` は a11y 不足（`role="alert"` 欠落）かつ視認性不足
 - **管理画面ページタイトルは `text-2xl font-bold tracking-tight text-foreground` に統一** — ログインページのモバイル表示含む。`text-xl font-semibold` は禁止
 - **公開 Badge と管理 Badge の variant 型は異なる** — 公開 `"default"|"success"|"warning"|"info"`、管理 shadcn/ui `"secondary"|"outline"|"destructive"` 等。共有 `enums/helpers.ts` の `*_BADGE_VARIANTS` は管理用。公開ページでは `Record<Enum, BadgeVariant>` をコンポーネント内に定義する
+- **RHF `defaultValues` は Zod スキーマの全フィールドを宣言必須** — 省略すると `useWatch` の初期値が `undefined` になり条件分岐が壊れる。`z.literal(true)` フィールド（`agreeToTerms` 等）は `defaultValues` に含めない（型が `true` のため `false` を渡せない）
 
 ## 公開ページ レスポンシブ標準
 
@@ -117,6 +118,10 @@ paths:
 - **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
 - **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
 - **`useGSAP` 外の GSAP アニメーションには `useEffect` cleanup 必須** — イベントハンドラで `gsap.fromTo`/`gsap.to` を直接呼ぶ場合、`useEffect` の cleanup で `gsap.killTweensOf(element)` を呼ぶ。ref をクリーンアップ関数内で使う場合はローカル変数にキャプチャする（`exhaustive-deps` 警告回避）
+
+## Lexical WYSIWYG
+
+- **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
 
 ## Page-First Architecture（公開ページ）
 
@@ -164,6 +169,7 @@ paths:
 - **root `app/loading.tsx` を削除する場合、各 route group 内に `loading.tsx` が必要** — root `loading.tsx` は `app/layout.tsx` がなくても Suspense boundary として機能している。削除すると `(dashboard)/layout.tsx` 等の動的レイアウトで「Uncached data was accessed outside of \<Suspense\>」ビルドエラー。対処: `(admin)/admin/loading.tsx`（admin 全体）と `(admin)/admin/(auth)/loading.tsx`（認証画面）を個別に追加
 - **root `not-found.tsx` は CSS import + `next/font/google` が使える（`global-error.tsx` とは異なる）** — `not-found.tsx` は Server Component のため `public.css` をインポートして Tailwind クラスを使用可能。`global-error.tsx` は `"use client"` 必須のためインラインスタイル。両者を混同しない
 - **ルーティング移行後の空ディレクトリ残骸に注意** — `[slug]` → `[...segments]` 等の移行で空ディレクトリが残る。`page.tsx` がなくても Next.js のルート解決に影響する可能性がある
+- **動的 layout を持つサブルートに `loading.tsx` 必須** — `mypage/layout.tsx`（認証チェーン）や `(dashboard)/layout.tsx` 配下のサブルートには個別の `loading.tsx` を追加。親の `loading.tsx` だけではページ固有のデータ取得待ちと認証待ちが同じスケルトンに合流する
 
 ## Prisma Migrate
 
@@ -207,6 +213,7 @@ paths:
 
 - **`rm -rf` は deny ルール** — 追跡ファイルは `git rm -r <path>`、未追跡ファイルは `python3 -c "import shutil; shutil.rmtree('path')"` で削除（Windows は `py -3 -c "..."`）
 - **PostToolUse フック後は再 Read が必要** — Edit/Write 後に Prettier/ESLint フックがファイルを変更する。続けて同ファイルを Edit する場合は事前に再 Read しないと "file modified since read" エラー
+- **`Edit` ツールの `replace_all` は部分一致に注意** — `isJumping` → `isJumpingRef` の rename で `replace_all` を使うと、既存の `isJumpingRef` が `isJumpingRefRef` に二重変換される。rename 対象が別の識別子の部分文字列になる場合は `replace_all` を避け、個別の `old_string` で置換する
 - **`git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）
 - **選択的コミット** — 多数のファイルがステージ済みの状態で特定ファイルのみコミットするには `git restore --staged . && git add <target-files>` で再ステージする
 
@@ -270,3 +277,4 @@ paths:
 - **ホームページは DB 未登録でも表示される** — `page.tsx` が `homepage-*` セクションをフィルタし、0件なら editorial コンポーネントの defaultProps で直接レンダリング
 - **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
 - **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の5段階。custom 時は `heightCustom` (svh 数値) をインラインスタイルで適用。ユーザーに px/vh を直接入力させない（Squarespace/Payload CMS 方式）
+- **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（Server Component: ヘッダー+CTA）が `spaces-carousel.tsx`（Client Component: CSS scroll-snap カルーセル）を呼び出す。カルーセルは `[clone-last] [real slides] [clone-first]` のクローン方式で無限ループ。`IntersectionObserver` でアクティブスライド追跡、クローン到達時に `scrollBehavior: "auto"` で瞬時ジャンプ
