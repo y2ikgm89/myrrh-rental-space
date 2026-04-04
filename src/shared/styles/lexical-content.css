@@ -719,7 +719,7 @@ details[data-collapsible-item]
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border-radius: 0.5rem;
+  border-radius: 0;
   border-left: 4px solid var(--callout-color);
   background-color: color-mix(in oklch, var(--callout-color) 10%, transparent);
   color: var(--color-foreground);
@@ -770,11 +770,6 @@ details[data-collapsible-item]
     color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
   border-bottom: 2px solid
     color-mix(in oklch, var(--accent, var(--color-accent)) 50%, transparent);
-  background: linear-gradient(
-    to right,
-    color-mix(in oklch, var(--accent, var(--color-accent)) 5%, transparent),
-    transparent
-  );
   padding: 2rem;
 }
 
@@ -789,8 +784,9 @@ details[data-collapsible-item]
 /* ---- Text ---- */
 
 [data-pull-quote-text] {
+  font-family: var(--font-serif);
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: 400;
   font-style: italic;
   color: var(--color-foreground);
   line-height: 1.625;
