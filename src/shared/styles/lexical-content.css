@@ -367,20 +367,6 @@
   overflow: hidden;
 }
 
-/* ---- Border Radius Presets ---- */
-
-[data-collapsible-radius="sm"] {
-  border-radius: 0.25rem;
-}
-
-[data-collapsible-radius="md"] {
-  border-radius: 0.5rem;
-}
-
-[data-collapsible-radius="lg"] {
-  border-radius: 0.75rem;
-}
-
 /* ---- Item ---- */
 
 [data-collapsible-item] + [data-collapsible-item] {
@@ -458,24 +444,13 @@ details[data-collapsible-item]
   border-top: none;
 }
 
-/* Card: elevated card with shadow */
+/* Card: bordered card */
 [data-collapsible-style="card"] {
-  border: none;
-  box-shadow:
-    0 1px 3px 0 rgb(0 0 0 / 0.1),
-    0 1px 2px -1px rgb(0 0 0 / 0.1);
+  border: 1px solid var(--color-border);
 }
 
 [data-collapsible-style="card"] [data-collapsible-title] {
   background-color: color-mix(in oklch, var(--color-muted) 70%, transparent);
-}
-
-[data-collapsible-style="card"]
-  [data-collapsible-item]:first-child
-  [data-collapsible-title] {
-  border-radius: inherit;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 [data-collapsible-style="card"] [data-collapsible-content] {
