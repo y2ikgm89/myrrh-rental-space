@@ -437,3 +437,17 @@ export type {
   CoverOverlayOpacity,
   CreateCoverNodeOptions,
 } from "./CoverNode";
+
+// CaptionBox
+export {
+  CaptionBoxNode,
+  $createCaptionBoxNode,
+  $isCaptionBoxNode,
+  captionBoxColorState,
+  CaptionBoxTitleNode,
+  $createCaptionBoxTitleNode,
+  $isCaptionBoxTitleNode,
+  CaptionBoxContentNode,
+  $createCaptionBoxContentNode,
+  $isCaptionBoxContentNode,
+} from "./CaptionBoxNode";

@@ -54,6 +54,7 @@ import type {
   FeatureIconItemNode,
 } from "../../nodes/FeatureIconListNode";
 import type { CoverNode } from "../../nodes/CoverNode";
+import type { CaptionBoxNode } from "../../nodes/CaptionBoxNode";
 import type { CustomTableNode } from "../../nodes/CustomTableNode";
 import type { CustomTableCellNode } from "../../nodes/CustomTableCellNode";
 import type { RubyNode } from "../../nodes/RubyNode";
@@ -98,6 +99,7 @@ export type InspectableNodeType =
   | "featureIconListContainer"
   | "featureIconItem"
   | "cover"
+  | "captionBox"
   | "table"
   | "tableCell";
 
@@ -162,6 +164,7 @@ export type SelectedNodeInfo =
     }
   | { nodeType: "featureIconItem"; node: FeatureIconItemNode; nodeKey: NodeKey }
   | { nodeType: "cover"; node: CoverNode; nodeKey: NodeKey }
+  | { nodeType: "captionBox"; node: CaptionBoxNode; nodeKey: NodeKey }
   | { nodeType: "table"; node: CustomTableNode; nodeKey: NodeKey }
   | { nodeType: "tableCell"; node: CustomTableCellNode; nodeKey: NodeKey }
   | null;

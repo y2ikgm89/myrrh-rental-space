@@ -72,6 +72,9 @@ import {
   FeatureIconItemNode,
 } from "../nodes/FeatureIconListNode";
 import { CoverNode } from "../nodes/CoverNode";
+import { CaptionBoxNode } from "../nodes/CaptionBoxNode";
+import { CaptionBoxTitleNode } from "../nodes/CaptionBoxNode";
+import { CaptionBoxContentNode } from "../nodes/CaptionBoxNode";
 
 /**
  * エディタに登録する全ノード一覧
@@ -159,4 +162,7 @@ export const EDITOR_NODES: ReadonlyArray<
   FeatureIconListContainerNode,
   FeatureIconItemNode,
   CoverNode,
+  CaptionBoxNode,
+  CaptionBoxTitleNode,
+  CaptionBoxContentNode,
 ];

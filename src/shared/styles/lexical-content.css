@@ -712,18 +712,45 @@ details[data-collapsible-item]
  * 1c. Callout Block
  *
  * data-callout-type: info | warning | error | success
+ * アイコンは ::before で自動表示（WCAG 1.4.1: 色だけで情報を伝えない）
  * -------------------------------------------------------------------------- */
 
 [data-callout-type] {
   --callout-color: var(--color-accent);
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
-  padding: 1rem;
+  padding: 1rem 1rem 1rem 2.75rem;
   border-radius: 0;
   border-left: 4px solid var(--callout-color);
   background-color: color-mix(in oklch, var(--callout-color) 10%, transparent);
   color: var(--color-foreground);
+  position: relative;
 }
+
+/* ---- Icon (::before) ---- */
+
+[data-callout-type]::before {
+  position: absolute;
+  left: 0.75rem;
+  top: 1rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+[data-callout-type="info"]::before {
+  content: "\2139";
+}
+[data-callout-type="warning"]::before {
+  content: "\26A0";
+}
+[data-callout-type="error"]::before {
+  content: "\2715";
+}
+[data-callout-type="success"]::before {
+  content: "\2713";
+}
+
+/* ---- Type Colors ---- */
 
 [data-callout-type="info"] {
   --callout-color: var(--color-info, oklch(0.62 0.17 250));
@@ -736,6 +763,77 @@ details[data-collapsible-item]
 }
 [data-callout-type="success"] {
   --callout-color: var(--color-success, oklch(0.62 0.17 155));
+}
+
+/* --------------------------------------------------------------------------
+ * 1c-2. CaptionBox Block
+ *
+ * data-caption-box: コンテナ
+ * data-caption-box-title: タイトル（ユーザー編集可能）
+ * data-caption-box-content: コンテンツ
+ * data-color: AccentColor（省略時は default）
+ * -------------------------------------------------------------------------- */
+
+[data-caption-box] {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid
+    color-mix(in oklch, var(--accent, var(--color-accent)) 30%, transparent);
+  overflow: hidden;
+}
+
+[data-caption-box-title] {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-accent-foreground));
+}
+
+[data-caption-box-title] > * {
+  margin: 0;
+  color: inherit;
+}
+
+/* Placeholder */
+[data-caption-box-title] > p:only-child:has(> br:only-child) {
+  position: relative;
+}
+[data-caption-box-title] > p:only-child:has(> br:only-child)::before {
+  content: "タイトルを入力...";
+  position: absolute;
+  color: var(--accent-fg, var(--color-accent-foreground));
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+[data-caption-box-content] {
+  padding: 0.75rem 1rem;
+  background-color: color-mix(
+    in oklch,
+    var(--accent, var(--color-accent)) 5%,
+    transparent
+  );
+}
+
+[data-caption-box-content] > :first-child {
+  margin-top: 0;
+}
+[data-caption-box-content] > :last-child {
+  margin-bottom: 0;
+}
+
+/* Content placeholder */
+[data-caption-box-content] > p:only-child:has(> br:only-child) {
+  position: relative;
+}
+[data-caption-box-content] > p:only-child:has(> br:only-child)::before {
+  content: "内容を入力...";
+  position: absolute;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 /* --------------------------------------------------------------------------

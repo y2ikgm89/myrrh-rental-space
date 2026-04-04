@@ -46,10 +46,15 @@ import {
   FeatureIconListContainerInspectorPanel,
   FeatureIconListItemInspectorPanel,
   CoverInspectorPanel,
+  CaptionBoxInspectorPanel,
   TableInspectorPanel,
   TableCellInspectorPanel,
 } from "./panels";
-import { IconChevronLeft, IconChevronRight, IconAdjustments } from "@tabler/icons-react";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconAdjustments,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 const INSPECTOR_PANEL_ID = "lexical-block-inspector-panel";
@@ -179,6 +184,10 @@ function renderPanel(info: SelectedNodeInfo) {
       );
     case "cover":
       return <CoverInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "captionBox":
+      return (
+        <CaptionBoxInspectorPanel nodeKey={info.nodeKey} node={info.node} />
+      );
     case "table":
       return <TableInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "tableCell":

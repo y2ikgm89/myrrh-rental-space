@@ -58,6 +58,7 @@ import {
   $isFeatureIconItemNode,
 } from "../nodes/FeatureIconListNode";
 import { $isCoverNode } from "../nodes/CoverNode";
+import { $isCaptionBoxNode } from "../nodes/CaptionBoxNode";
 import { $isCustomTableNode } from "../nodes/CustomTableNode";
 import { $isCustomTableCellNode } from "../nodes/CustomTableCellNode";
 import type {
@@ -126,6 +127,7 @@ export function getInspectableInfoFromRegistry(
   if ($isFeatureIconItemNode(node))
     return { nodeType: "featureIconItem", node, nodeKey };
   if ($isCoverNode(node)) return { nodeType: "cover", node, nodeKey };
+  if ($isCaptionBoxNode(node)) return { nodeType: "captionBox", node, nodeKey };
   // TableCellNode を先に判定（TableNode の子なので先にマッチさせる）
   if ($isCustomTableCellNode(node))
     return { nodeType: "tableCell", node, nodeKey };
@@ -172,6 +174,7 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
     "featureIconListContainer",
     "featureIconItem",
     "cover",
+    "captionBox",
     "table",
     "tableCell",
   ];

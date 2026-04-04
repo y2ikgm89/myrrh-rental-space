@@ -38,3 +38,4 @@ export { FeatureIconListItemInspectorPanel } from "./FeatureIconListItemInspecto
 export { CoverInspectorPanel } from "./CoverInspectorPanel";
 export { TableInspectorPanel } from "./TableInspectorPanel";
 export { TableCellInspectorPanel } from "./TableCellInspectorPanel";
+export { CaptionBoxInspectorPanel } from "./CaptionBoxInspectorPanel";

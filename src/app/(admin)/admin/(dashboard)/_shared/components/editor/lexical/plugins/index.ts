@@ -145,3 +145,8 @@ export { TestimonialPlugin } from "./TestimonialPlugin";
 export { FeatureIconListPlugin } from "./FeatureIconListPlugin";
 
 export { CoverPlugin } from "./CoverPlugin";
+
+export {
+  CaptionBoxPlugin,
+  INSERT_CAPTION_BOX_COMMAND,
+} from "./CaptionBoxPlugin";

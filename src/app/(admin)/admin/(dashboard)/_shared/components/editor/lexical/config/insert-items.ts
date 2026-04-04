@@ -65,6 +65,7 @@ import {
   IconMessageChatbot,
   IconRowInsertBottom,
   IconExternalLink,
+  IconLayoutBottombar,
 } from "@tabler/icons-react";
 import {
   IconBrandX,
@@ -75,6 +76,7 @@ import {
 import { applyTextCaseToSelection } from "../plugins/TextCasePlugin";
 import { INSERT_PAGE_BREAK_COMMAND } from "../plugins/PageBreakPlugin";
 import { INSERT_COLLAPSIBLE_COMMAND } from "../plugins/CollapsiblePlugin";
+import { INSERT_CAPTION_BOX_COMMAND } from "../plugins/CaptionBoxPlugin";
 import { INSERT_TOC_COMMAND } from "../plugins/TableOfContentsPlugin";
 import type { DialogId } from "../dialogs/dialog-types";
 
@@ -591,6 +593,25 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInPicker: true,
     dispatch: (editor) =>
       editor.dispatchCommand(INSERT_COLLAPSIBLE_COMMAND, undefined),
+  },
+  {
+    id: "caption-box",
+    type: "command",
+    label: "キャプションボックス",
+    icon: IconLayoutBottombar,
+    keywords: [
+      "caption",
+      "box",
+      "キャプション",
+      "ボックス",
+      "highlight",
+      "titled",
+    ],
+    category: "layout",
+    showInToolbar: true,
+    showInPicker: true,
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_CAPTION_BOX_COMMAND, undefined),
   },
   {
     id: "steps",
