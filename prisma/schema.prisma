@@ -92,10 +92,11 @@ enum PostStatus {
 }
 
 enum TermsType {
-  TERMS_OF_USE // 利用規約
+  TERMS_OF_USE // サイト利用規約
   PRIVACY_POLICY // プライバシーポリシー
   CANCELLATION // キャンセルポリシー
   PAYMENT // 支払い規約
+  RENTAL_TERMS // 施設利用規約（スペース別）
   CUSTOM // カスタム規約
 }
 
@@ -1146,8 +1147,6 @@ model Settings {
   defaultTimeSlot                  Int     @default(60)
   minReservationDuration           Int     @default(60)
   maxReservationDuration           Int     @default(480)
-  cancellationTermsId String? @db.Uuid
-  cancellationTerms                Terms?  @relation("CancellationPolicy", fields: [cancellationTermsId], references: [id], onDelete: SetNull)
   sendReservationConfirmationEmail Boolean @default(true)
   sendAdminNotificationEmail       Boolean @default(true)
 
@@ -1164,12 +1163,6 @@ model Settings {
   taxDisplayModeAdmin  TaxDisplayMode @default(both)
   taxDisplayModePublic TaxDisplayMode @default(tax_included)
   taxInputMode         TaxInputMode   @default(tax_excluded)
-
-  // Terms Agreement Settings
-  termsAgreementEnabled   Boolean @default(true) // 規約同意チェック有効
-  termsAgreementText      String? // カスタム同意文言（null=デフォルト）
-  requireTermsAgreement   Boolean @default(true) // 利用規約への同意必須
-  requirePrivacyAgreement Boolean @default(true) // プライバシーポリシーへの同意必須
 
   // Notification Settings
   notifyNewReservation       Boolean @default(true)
@@ -1505,15 +1498,15 @@ model Terms {
   type       TermsType
   title      String // 表示タイトル（例: "利用規約"）
   slug       String    @unique // URL用スラッグ（例: "terms-of-use"）
-  isActive   Boolean   @default(true) // 現在有効な規約か
-  createdAt  DateTime  @default(now())
+  isActive              Boolean @default(true) // 現在有効な規約か
+  requiredAtReservation Boolean @default(false) // 予約フォームで同意必須
+  showInFooter          Boolean @default(false) // フッターにリンク表示
+  createdAt             DateTime @default(now())
   updatedAt  DateTime  @updatedAt
   // Relations
   versions   TermsVersion[]
   spaces     Space[] // この規約を使用するスペース
   agreements TermsAgreement[] // 同意記録
-  settingsAsCancellation Settings[] @relation("CancellationPolicy") // キャンセルポリシーとして設定
-
   @@index([type, isActive])
   // @unique が自動的にインデックスを作成するため @@index([slug]) は不要
   @@map("terms")
