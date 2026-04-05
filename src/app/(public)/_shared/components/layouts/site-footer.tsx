@@ -13,6 +13,7 @@ import { getBusinessInfo } from "@/public/data/business";
 import { getFooterNavigation } from "@/shared/domain/navigation/queries";
 import { getFooterSettings } from "@/shared/domain/settings/queries/display";
 import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organization";
+import { getFooterTerms } from "@/shared/domain/terms/public-queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { CopyrightYear } from "./copyright-year";
@@ -125,12 +126,14 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
 // =============================================================================
 
 export async function Footer(): Promise<ReactElement> {
-  const [info, footerNav, footerSettings, socialLinks] = await Promise.all([
-    getBusinessInfo(),
-    getFooterNavigation(),
-    getFooterSettings(),
-    getSocialLinksForFooter(),
-  ]);
+  const [info, footerNav, footerSettings, socialLinks, footerTerms] =
+    await Promise.all([
+      getBusinessInfo(),
+      getFooterNavigation(),
+      getFooterSettings(),
+      getSocialLinksForFooter(),
+      getFooterTerms(),
+    ]);
   const brandShort = (info.name.split(" ")[0] ?? "MYRRH").toUpperCase();
   const hoursDisplay = parseFooterHours(info.businessHours);
 
@@ -350,6 +353,19 @@ export async function Footer(): Promise<ReactElement> {
         </div>
 
         <div className="mt-14 border-t border-border pt-8">
+          {footerTerms.length > 0 ? (
+            <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {footerTerms.map((terms) => (
+                <Link
+                  key={terms.slug}
+                  href={`/terms/${terms.slug}`}
+                  className="transition-colors hover:text-foreground"
+                >
+                  {terms.title}
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <p className="text-center text-[0.6rem] tracking-[0.1em] text-muted-foreground">
             &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
