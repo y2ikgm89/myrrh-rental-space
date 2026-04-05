@@ -72,7 +72,6 @@ export type SettingsData = {
   defaultTimeSlot: number;
   minReservationDuration: number;
   maxReservationDuration: number;
-  cancellationTermsId: string | null;
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
   sendReservationConfirmationEmail: boolean;
@@ -87,10 +86,6 @@ export type SettingsData = {
   taxDisplayModeAdmin: TaxDisplayMode;
   taxDisplayModePublic: TaxDisplayMode;
   taxInputMode: TaxInputMode;
-  termsAgreementEnabled: boolean;
-  termsAgreementText: string | null;
-  requireTermsAgreement: boolean;
-  requirePrivacyAgreement: boolean;
   timezone: string | null;
   language: string | null;
   maintenanceMode: boolean;
@@ -163,19 +158,6 @@ export type SettingsData = {
   eventImportEnabled: boolean;
   themeColor: string;
   createdAt: Date;
-  updatedAt: Date;
-};
-
-export type TermsAgreementSettingsData = {
-  enabled: boolean;
-  text: string | null;
-  requireTerms: boolean;
-  requirePrivacy: boolean;
-};
-
-export type CancellationPolicyOption = {
-  id: string;
-  title: string;
   updatedAt: Date;
 };
 

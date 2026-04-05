@@ -6,13 +6,11 @@ import type {
   BusinessHours,
   BusinessHoursDay,
   BusinessTimeSlot,
-  CancellationPolicyOption,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
   RobotsTxtData,
   SettingsData,
   TaxSettingsData,
-  TermsAgreementSettingsData,
 } from "@/shared/domain/settings/types";
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -50,18 +48,6 @@ export async function getTaxSettings(): Promise<TaxSettingsData> {
 
 export async function getPublicTaxSettings(): Promise<TaxSettingsData> {
   return adminQueries.getPublicTaxSettings();
-}
-
-export async function getTermsAgreementSettings(): Promise<TermsAgreementSettingsData | null> {
-  await requireAdminPermission("settings", "read");
-  return adminQueries.getTermsAgreementSettings();
-}
-
-export async function getCancellationPolicies(): Promise<
-  Serialized<CancellationPolicyOption>[]
-> {
-  await requireAdminPermission("settings", "read");
-  return adminQueries.getCancellationPolicies();
 }
 
 export async function getAnnouncementBarCarouselSettings(): Promise<AnnouncementBarCarouselSettingsInput> {

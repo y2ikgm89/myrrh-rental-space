@@ -4,7 +4,6 @@
  * その他の設定 Server Actions
  * - メンテナンス設定
  * - Cookie同意設定
- * - 規約同意設定
  * - 予約設定
  * - サイドバー設定
  * - お知らせバーカルーセル設定
@@ -24,7 +23,6 @@ import { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
 import {
   maintenanceSettingsSchema,
   cookieConsentSettingsSchema,
-  termsAgreementSettingsSchema,
   reservationSettingsSchema,
   announcementBarCarouselSettingsSchema,
   permalinkSettingsSchema,
@@ -32,7 +30,6 @@ import {
   footerSettingsSchema,
   type MaintenanceSettingsInput,
   type CookieConsentSettingsInput,
-  type TermsAgreementSettingsInput,
   type ReservationSettingsInput,
   type AnnouncementBarCarouselSettingsInput,
   type PermalinkSettingsInput,
@@ -79,27 +76,6 @@ export async function updateCookieConsentSettings(
     },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.COOKIE_CONSENT);
-    },
-  });
-}
-
-export async function updateTermsAgreementSettings(
-  data: TermsAgreementSettingsInput,
-): Promise<MutationResult> {
-  const parsed = termsAgreementSettingsSchema.safeParse(data);
-  if (!parsed.success) {
-    return createValidationMutationError(parsed.error);
-  }
-
-  return executeAdminMutationResult({
-    resource: "settings",
-    action: "update",
-    execute: async () => {
-      await settingsCommands.updateTermsAgreementSettings(parsed.data);
-      return null;
-    },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
     },
   });
 }

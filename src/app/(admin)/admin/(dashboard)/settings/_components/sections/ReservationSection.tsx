@@ -3,13 +3,10 @@
 /**
  * 予約設定セクション
  *
- * 予約時間単位、最小/最大予約時間、キャンセルポリシーの設定
- * キャンセルポリシーは利用規約管理（Terms）から選択
+ * 予約時間単位、最小/最大予約時間、キャンセル/変更期限の設定
  */
 
-import { useState, useEffect } from "react";
 import type { Serialized } from "@/shared/lib/serialize";
-import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -33,20 +30,10 @@ import {
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateReservationSettings } from "@/admin/actions/settings";
 import { reservationFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
-import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { SettingsData } from "@/shared/domain/settings/types";
-import { IconExternalLink, IconAlertCircle } from "@tabler/icons-react";
-import { logger } from "@/shared/lib/logger";
-import { getErrorMessage } from "@/shared/lib/errors";
 
 interface ReservationSectionProps {
   settings: Serialized<SettingsData>;
-}
-
-interface CancellationPolicy {
-  id: string;
-  title: string;
-  updatedAt: string;
 }
 
 const DEADLINE_OPTIONS = [
@@ -59,16 +46,7 @@ const DEADLINE_OPTIONS = [
   { value: "72", label: "72時間前" },
 ];
 
-async function fetchCancellationPolicies(): Promise<CancellationPolicy[]> {
-  return fetchAdminJson("/admin/api/settings/cancellation-policies");
-}
-
 export function ReservationSection({ settings }: ReservationSectionProps) {
-  const [cancellationPolicies, setCancellationPolicies] = useState<
-    CancellationPolicy[]
-  >([]);
-  const [isLoadingPolicies, setIsLoadingPolicies] = useState(true);
-
   const { form, isPending, onSubmit } = useFormAction(
     reservationFormSchema,
     (data) =>
@@ -76,7 +54,6 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         defaultTimeSlot: data.defaultTimeSlot,
         minReservationDuration: data.minReservationDuration,
         maxReservationDuration: data.maxReservationDuration,
-        cancellationTermsId: data.cancellationTermsId || null,
         cancellationDeadlineHours: data.cancellationDeadlineHours,
         modificationDeadlineHours: data.modificationDeadlineHours,
       }),
@@ -85,7 +62,6 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
         defaultTimeSlot: settings.defaultTimeSlot,
         minReservationDuration: settings.minReservationDuration,
         maxReservationDuration: settings.maxReservationDuration,
-        cancellationTermsId: settings.cancellationTermsId || "",
         cancellationDeadlineHours: settings.cancellationDeadlineHours,
         modificationDeadlineHours: settings.modificationDeadlineHours,
       },
@@ -94,30 +70,15 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
     },
   );
 
-  // キャンセルポリシー一覧を取得
-  useEffect(() => {
-    async function fetchPolicies() {
-      try {
-        const policies = await fetchCancellationPolicies();
-        setCancellationPolicies(policies);
-      } catch (error) {
-        logger.error("Failed to fetch cancellation policies", {
-          error: getErrorMessage(error),
-        });
-      } finally {
-        setIsLoadingPolicies(false);
-      }
-    }
-    fetchPolicies();
-  }, []);
-
   return (
     <Form {...form}>
       <form onSubmit={onSubmit}>
         <Card>
           <CardHeader>
             <CardTitle>予約設定</CardTitle>
-            <CardDescription>予約に関する基本設定を行います</CardDescription>
+            <CardDescription>
+              予約に関する基本設定を行います。規約の必須設定は利用規約管理で行えます
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
@@ -198,68 +159,6 @@ export function ReservationSection({ settings }: ReservationSectionProps) {
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="cancellationTermsId"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>キャンセルポリシー</FormLabel>
-
-                  <Select
-                    value={field.value}
-                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                    disabled={isPending || isLoadingPolicies}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full max-w-md">
-                        <SelectValue
-                          placeholder={
-                            isLoadingPolicies
-                              ? "読み込み中..."
-                              : "キャンセルポリシーを選択"
-                          }
-                        />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">
-                        <span className="text-muted-foreground">
-                          設定しない
-                        </span>
-                      </SelectItem>
-                      {cancellationPolicies.map((policy) => (
-                        <SelectItem key={policy.id} value={policy.id}>
-                          {policy.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {cancellationPolicies.length === 0 && !isLoadingPolicies && (
-                    <div className="flex items-center gap-2 rounded-md border border-warning/20 bg-warning/10 p-3 text-sm text-warning-foreground">
-                      <IconAlertCircle className="h-4 w-4 flex-shrink-0" />
-                      <span>
-                        キャンセルポリシーが登録されていません。先に利用規約管理で作成してください。
-                      </span>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-muted-foreground">
-                    キャンセルポリシーは
-                    <Link
-                      href="/admin/terms"
-                      className="mx-1 inline-flex items-center gap-1 text-primary hover:underline"
-                    >
-                      利用規約管理
-                      <IconExternalLink className="h-3 w-3" />
-                    </Link>
-                    で作成・編集できます。予約フォームや確認メールに表示されます。
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField

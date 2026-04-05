@@ -12,7 +12,6 @@ import type {
   TaxDisplayMode,
   TaxInputMode,
 } from "@generated/prisma/enums";
-import { TermsStatus, TermsType } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { SidebarSettings } from "@/shared/lib/validations/sidebar";
 import type { BusinessHours } from "@/shared/lib/json-validators";
@@ -127,18 +126,10 @@ export type CookieConsentSettingsInput = {
   cookieConsentPolicyUrl: string | null;
 };
 
-export type TermsAgreementSettingsInput = {
-  termsAgreementEnabled: boolean;
-  termsAgreementText: string | null;
-  requireTermsAgreement: boolean;
-  requirePrivacyAgreement: boolean;
-};
-
 export type ReservationSettingsInput = {
   defaultTimeSlot: number;
   minReservationDuration: number;
   maxReservationDuration: number;
-  cancellationTermsId: string | null;
   cancellationDeadlineHours: number;
   modificationDeadlineHours: number;
 };
@@ -361,42 +352,9 @@ export async function updateCookieConsentSettings(
   });
 }
 
-export async function updateTermsAgreementSettings(
-  data: TermsAgreementSettingsInput,
-): Promise<void> {
-  await prisma.settings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton", ...data },
-    update: data,
-  });
-}
-
 export async function updateReservationSettings(
   data: ReservationSettingsInput,
 ): Promise<void> {
-  if (data.cancellationTermsId) {
-    const terms = await prisma.terms.findFirst({
-      where: {
-        id: data.cancellationTermsId,
-        type: TermsType.CANCELLATION,
-        isActive: true,
-        versions: {
-          some: {
-            status: TermsStatus.PUBLISHED,
-          },
-        },
-      },
-      select: { id: true },
-    });
-
-    if (!terms) {
-      throw new DomainError(
-        "指定されたキャンセルポリシーが見つかりません。有効な公開済みポリシーを選択してください。",
-        "VALIDATION",
-      );
-    }
-  }
-
   await prisma.settings.upsert({
     where: { id: "singleton" },
     create: { id: "singleton", ...data },

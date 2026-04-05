@@ -33,8 +33,6 @@ export {
   type MaintenanceSettingsInput,
   cookieConsentSettingsSchema,
   type CookieConsentSettingsInput,
-  termsAgreementSettingsSchema,
-  type TermsAgreementSettingsInput,
   reservationSettingsSchema,
   type ReservationSettingsInput,
   permalinkSettingsSchema,

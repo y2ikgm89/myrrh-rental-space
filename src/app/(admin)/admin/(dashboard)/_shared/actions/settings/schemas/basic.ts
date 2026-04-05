@@ -255,22 +255,10 @@ export type CookieConsentSettingsInput = z.infer<
   typeof cookieConsentSettingsSchema
 >;
 
-export const termsAgreementSettingsSchema = z.object({
-  termsAgreementEnabled: z.boolean(),
-  termsAgreementText: z.string().max(500).nullable(),
-  requireTermsAgreement: z.boolean(),
-  requirePrivacyAgreement: z.boolean(),
-});
-
-export type TermsAgreementSettingsInput = z.infer<
-  typeof termsAgreementSettingsSchema
->;
-
 export const reservationSettingsSchema = z.object({
   defaultTimeSlot: z.number().int().min(15).max(240),
   minReservationDuration: z.number().int().min(15).max(480),
   maxReservationDuration: z.number().int().min(60).max(1440),
-  cancellationTermsId: z.string().uuid().nullable(),
   cancellationDeadlineHours: z.number().int().min(1).max(720),
   modificationDeadlineHours: z.number().int().min(1).max(720),
 });

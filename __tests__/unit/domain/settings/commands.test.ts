@@ -118,7 +118,6 @@ const RESERVATION_SETTINGS_INPUT = {
   defaultTimeSlot: 60,
   minReservationDuration: 60,
   maxReservationDuration: 480,
-  cancellationTermsId: null,
   cancellationDeadlineHours: 24,
   modificationDeadlineHours: 24,
 };
@@ -262,34 +261,10 @@ describe("updateBusinessInfo", () => {
 describe("updateReservationSettings", () => {
   beforeEach(() => {
     mockSettingsUpsert.mockReset();
-    mockTermsFindFirst.mockReset();
     mockSettingsUpsert.mockResolvedValue({ id: "singleton" });
-    mockTermsFindFirst.mockResolvedValue(null);
   });
 
   describe("正常系", () => {
-    test("cancellationTermsId が null の場合、利用規約チェックをスキップしてアップサート", async () => {
-      await updateReservationSettings({
-        ...RESERVATION_SETTINGS_INPUT,
-        cancellationTermsId: null,
-      });
-
-      expect(mockTermsFindFirst).not.toHaveBeenCalled();
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-    });
-
-    test("有効な cancellationTermsId の場合、利用規約チェックの後にアップサート", async () => {
-      mockTermsFindFirst.mockResolvedValue({ id: "terms-1" });
-
-      await updateReservationSettings({
-        ...RESERVATION_SETTINGS_INPUT,
-        cancellationTermsId: "terms-1",
-      });
-
-      expect(mockTermsFindFirst).toHaveBeenCalledTimes(1);
-      expect(mockSettingsUpsert).toHaveBeenCalledTimes(1);
-    });
-
     test("予約設定データが upsert の update フィールドに渡される", async () => {
       await updateReservationSettings(RESERVATION_SETTINGS_INPUT);
 
@@ -302,36 +277,6 @@ describe("updateReservationSettings", () => {
           }),
         }),
       );
-    });
-  });
-
-  describe("異常系", () => {
-    test("存在しない cancellationTermsId を指定すると VALIDATION エラーをスローする", async () => {
-      mockTermsFindFirst.mockResolvedValue(null);
-
-      await expect(
-        updateReservationSettings({
-          ...RESERVATION_SETTINGS_INPUT,
-          cancellationTermsId: "non-existent-terms",
-        }),
-      ).rejects.toMatchObject({
-        code: "VALIDATION",
-        message:
-          "指定されたキャンセルポリシーが見つかりません。有効な公開済みポリシーを選択してください。",
-      });
-    });
-
-    test("キャンセルポリシーが存在しない場合は upsert が呼ばれない", async () => {
-      mockTermsFindFirst.mockResolvedValue(null);
-
-      await expect(
-        updateReservationSettings({
-          ...RESERVATION_SETTINGS_INPUT,
-          cancellationTermsId: "non-existent-terms",
-        }),
-      ).rejects.toThrow(DomainError);
-
-      expect(mockSettingsUpsert).not.toHaveBeenCalled();
     });
   });
 });

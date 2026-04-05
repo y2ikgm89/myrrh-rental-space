@@ -7,11 +7,8 @@ import {
   PostPermalinkStructure,
   TaxDisplayMode,
   TaxInputMode,
-  TermsStatus,
-  TermsType,
 } from "@generated/prisma/enums";
 import type {
-  CancellationPolicyOption,
   DiscountSettingsData,
   GoogleCalendarSettingsData,
   GoogleCalendarWebhookState,
@@ -20,7 +17,6 @@ import type {
   RobotsTxtData,
   SettingsData,
   TaxSettingsData,
-  TermsAgreementSettingsData,
   TwoWaySyncSettingsData,
 } from "@/shared/domain/settings/types";
 import { safeDecrypt } from "@/shared/lib/crypto";
@@ -325,58 +321,6 @@ export async function getICalFeedSettings(): Promise<ICalFeedSettingsData> {
     icalFeedEnabled: settings?.icalFeedEnabled ?? false,
     icalFeedIncludeCustomerInfo: settings?.icalFeedIncludeCustomerInfo ?? false,
   };
-}
-
-export async function getTermsAgreementSettings(): Promise<TermsAgreementSettingsData> {
-  const settings = await prisma.settings.findUnique({
-    where: { id: "singleton" },
-    select: {
-      termsAgreementEnabled: true,
-      termsAgreementText: true,
-      requireTermsAgreement: true,
-      requirePrivacyAgreement: true,
-    },
-  });
-
-  if (!settings) {
-    return {
-      enabled: true,
-      text: null,
-      requireTerms: true,
-      requirePrivacy: true,
-    };
-  }
-
-  return {
-    enabled: settings.termsAgreementEnabled,
-    text: settings.termsAgreementText,
-    requireTerms: settings.requireTermsAgreement,
-    requirePrivacy: settings.requirePrivacyAgreement,
-  };
-}
-
-export async function getCancellationPolicies(): Promise<
-  Serialized<CancellationPolicyOption>[]
-> {
-  const policies = await prisma.terms.findMany({
-    where: {
-      type: TermsType.CANCELLATION,
-      isActive: true,
-      versions: {
-        some: {
-          status: TermsStatus.PUBLISHED,
-        },
-      },
-    },
-    select: {
-      id: true,
-      title: true,
-      updatedAt: true,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return toPlainArray(policies);
 }
 
 export async function getDiscountSettings(): Promise<DiscountSettingsData> {

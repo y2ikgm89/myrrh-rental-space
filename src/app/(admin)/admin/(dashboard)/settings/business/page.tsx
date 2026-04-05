@@ -23,7 +23,6 @@ import {
   ReservationSection,
   DiscountSection,
   TaxSection,
-  TermsAgreementSection,
   MeoSection,
 } from "../_components/sections";
 import type { ReactElement } from "react";
@@ -67,12 +66,7 @@ async function BusinessSettingsContent(): Promise<ReactElement> {
     {
       value: "reservation",
       label: "予約",
-      content: (
-        <div className="space-y-6">
-          <ReservationSection settings={settings} />
-          <TermsAgreementSection settings={settings} />
-        </div>
-      ),
+      content: <ReservationSection settings={settings} />,
     },
     {
       value: "discount",

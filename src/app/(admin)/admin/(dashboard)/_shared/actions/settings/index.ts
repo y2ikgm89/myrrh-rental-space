@@ -11,7 +11,7 @@
  * - SEO・Analytics設定
  * - Stripe決済設定
  * - Google Calendar連携設定
- * - Cookie同意・規約同意設定
+ * - Cookie同意設定
  * - レイアウト・サイドバー設定
  *
  * @module admin/actions/settings
@@ -48,7 +48,6 @@ export type {
   TwoWaySyncSettingsInput,
   MaintenanceSettingsInput,
   CookieConsentSettingsInput,
-  TermsAgreementSettingsInput,
   ReservationSettingsInput,
   AnnouncementBarCarouselSettingsInput,
   SidebarSettingsInput,
@@ -124,7 +123,6 @@ export type { StripeSettingsInput } from "@/admin/lib/validations/stripe";
 export {
   updateMaintenanceSettings,
   updateCookieConsentSettings,
-  updateTermsAgreementSettings,
   updateReservationSettings,
   updateSidebarSettings,
   updateAnnouncementBarCarouselSettings,
