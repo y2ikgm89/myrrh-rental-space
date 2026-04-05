@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
+import { prisma } from "@/shared/db/prisma";
 import { ReservationDetail } from "./_components/ReservationDetail";
+import { TermsAgreements } from "./_components/TermsAgreements";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteReservation } from "@/admin/actions/reservation";
 import { Button } from "@/admin/components/ui";
@@ -32,7 +34,20 @@ export async function generateMetadata({
 
 export default async function ReservationDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const reservation = await getReservationById(id);
+  const [reservation, agreements] = await Promise.all([
+    getReservationById(id),
+    prisma.termsAgreement.findMany({
+      where: { reservationId: id },
+      select: {
+        id: true,
+        agreedAt: true,
+        ipAddress: true,
+        terms: { select: { title: true, type: true } },
+        version: { select: { version: true } },
+      },
+      orderBy: { agreedAt: "asc" },
+    }),
+  ]);
 
   if (!reservation) {
     notFound();
@@ -61,6 +76,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
       }
     >
       <ReservationDetail reservation={reservation} />
+      <TermsAgreements agreements={agreements} />
     </AdminDetailLayout>
   );
 }
