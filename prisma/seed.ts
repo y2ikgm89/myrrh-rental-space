@@ -25,6 +25,7 @@ import {
   Role,
   EventStatus,
   RegistrationStatus,
+  TermsType,
 } from "../generated/prisma/client";
 import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
@@ -1948,7 +1949,7 @@ async function seedTerms() {
   }
 
   const termsConfig: {
-    type: string;
+    type: TermsType;
     slug: string;
     title: string;
     requiredAtReservation: boolean;
@@ -1956,7 +1957,7 @@ async function seedTerms() {
     content: string;
   }[] = [
     {
-      type: "TERMS_OF_USE",
+      type: TermsType.TERMS_OF_USE,
       slug: "terms-of-use",
       title: "利用規約",
       requiredAtReservation: false,
@@ -1965,7 +1966,7 @@ async function seedTerms() {
         "<p>この利用規約は、レンタルスペース予約サービス「Myrrh Rental Space」の利用条件を定めるものです。</p><h2>第1条（適用）</h2><p>本規約は、当サービスの利用に関わる一切の関係に適用されます。</p><h2>第2条（禁止事項）</h2><p>利用者は、以下の行為をしてはなりません。</p><ul><li>法令または公序良俗に違反する行為</li><li>当社または第三者の権利を侵害する行為</li><li>その他、当社が不適切と判断する行為</li></ul>",
     },
     {
-      type: "PRIVACY_POLICY",
+      type: TermsType.PRIVACY_POLICY,
       slug: "privacy-policy",
       title: "プライバシーポリシー",
       requiredAtReservation: true,
@@ -1974,7 +1975,7 @@ async function seedTerms() {
         "<h2>1. 個人情報の収集</h2><p>当施設は、サービスの提供にあたり、氏名、メールアドレス、電話番号等の個人情報を収集することがあります。</p><h2>2. 個人情報の利用目的</h2><p>収集した個人情報は、予約の受付・管理、サービスに関するご連絡、お問い合わせへの対応に利用します。</p><h2>3. 個人情報の第三者提供</h2><p>当施設は、法令に基づく場合を除き、個人情報を第三者に提供しません。</p>",
     },
     {
-      type: "CANCELLATION",
+      type: TermsType.CANCELLATION,
       slug: "cancellation-policy",
       title: "キャンセルポリシー",
       requiredAtReservation: true,
@@ -1983,7 +1984,7 @@ async function seedTerms() {
         "<h2>キャンセル料金について</h2><p>ご予約のキャンセルには、以下のキャンセル料金が発生します。</p><ul><li>ご利用日の7日前まで：無料</li><li>ご利用日の3日前〜6日前：利用料金の30%</li><li>ご利用日の前日〜2日前：利用料金の50%</li><li>ご利用日当日：利用料金の100%</li></ul>",
     },
     {
-      type: "PAYMENT",
+      type: TermsType.PAYMENT,
       slug: "payment-terms",
       title: "支払い規約",
       requiredAtReservation: false,
@@ -1992,7 +1993,7 @@ async function seedTerms() {
         "<h2>1. 料金体系</h2><p>利用料金は、スペースごとに設定された時間単価に利用時間を乗じて算出されます。料金には消費税が含まれています。</p><h2>2. 支払方法</h2><p>クレジットカード（VISA、Mastercard、JCB、American Express）をご利用いただけます。</p>",
     },
     {
-      type: "RENTAL_TERMS",
+      type: TermsType.RENTAL_TERMS,
       slug: "rental-terms",
       title: "施設利用規約",
       requiredAtReservation: false,
@@ -2011,7 +2012,7 @@ async function seedTerms() {
 
     if (existing) {
       console.log(`⏭️ Terms already exists: ${tc.title}`);
-      if (tc.type === "RENTAL_TERMS") {
+      if (tc.type === TermsType.RENTAL_TERMS) {
         rentalTermsId = existing.id;
       }
       continue;
@@ -2038,7 +2039,7 @@ async function seedTerms() {
     });
 
     console.log(`✅ Created terms: ${tc.title}`);
-    if (tc.type === "RENTAL_TERMS") {
+    if (tc.type === TermsType.RENTAL_TERMS) {
       rentalTermsId = created.id;
     }
   }
