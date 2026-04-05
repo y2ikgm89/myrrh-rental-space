@@ -1,34 +1,36 @@
 /**
- * /terms — 利用規約ページ（セクションベース）
+ * /terms — 最初の有効な規約ページにリダイレクト
  *
- * SEO: generatePageMetadata
- * コンテンツ: DB セクション（フォールバック: DEFAULT_PAGE_SECTIONS）を SectionRenderer で描画
+ * 優先順位: TERMS_OF_USE → 任意のアクティブ規約 → 404
  */
 
-import type { Metadata } from "next";
-import type { ReactElement } from "react";
+import { redirect, notFound } from "next/navigation";
 import { connection } from "next/server";
-import { generatePageMetadata } from "@/public/lib/page-metadata";
-import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
-import { PageLayout } from "@/public/components/design-system/page-layout";
+import { prisma } from "@/shared/db/prisma";
+import { TermsType } from "@generated/prisma/enums";
 
-export async function generateMetadata(): Promise<Metadata> {
+export default async function TermsPage() {
   await connection();
 
-  return generatePageMetadata("terms");
-}
+  const firstTerms = await prisma.terms.findFirst({
+    where: { isActive: true, type: TermsType.TERMS_OF_USE },
+    select: { slug: true },
+    orderBy: { createdAt: "asc" },
+  });
 
-export default async function TermsPage(): Promise<ReactElement> {
-  await connection();
+  if (firstTerms) {
+    redirect(`/terms/${firstTerms.slug}`);
+  }
 
-  const sections = await getPageSectionsWithFallback("terms");
+  const anyTerms = await prisma.terms.findFirst({
+    where: { isActive: true },
+    select: { slug: true },
+    orderBy: { createdAt: "asc" },
+  });
 
-  return (
-    <PageLayout variant="content">
-      {sections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
-      ))}
-    </PageLayout>
-  );
+  if (anyTerms) {
+    redirect(`/terms/${anyTerms.slug}`);
+  }
+
+  notFound();
 }

@@ -302,30 +302,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     },
   ],
 
-  terms: [
-    {
-      type: "hero",
-      title: null,
-      config: {
-        title: "Terms",
-        subtitle: "ご利用にあたっての規約をご確認ください。",
-        variant: "minimal",
-      },
-      design: { titleSize: "3xl" },
-      content: null,
-      order: 0,
-      isActive: true,
-    },
-    {
-      type: "custom",
-      title: "利用規約",
-      config: {},
-      content: "<p>利用規約の内容は管理画面から編集してください。</p>",
-      order: 1,
-      isActive: true,
-    },
-  ],
-
   reservation: [
     {
       type: "hero",

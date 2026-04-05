@@ -61,14 +61,7 @@ export default async function TermsDetailPage({ params }: PageProps) {
       <PageHero
         variant="compact"
         title={terms.title}
-        breadcrumb={
-          <Breadcrumb
-            items={[
-              { label: "利用規約", href: "/terms" },
-              { label: terms.title },
-            ]}
-          />
-        }
+        breadcrumb={<Breadcrumb items={[{ label: terms.title }]} />}
       />
 
       <article className="py-[var(--spacing-section)]">
