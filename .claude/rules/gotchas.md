@@ -26,6 +26,7 @@ paths:
 - **許容される alias**: 第三者ライブラリの primitive リネームのみ（`Command as CommandPrimitive`、`Toaster as SonnerToaster`）
 - **パススルーラッパー関数禁止** — 何も追加しない `async function X() { return XQuery(); }` は削除。直接 import して使う
 - **barrel export の不要な型リネーム禁止** — `export type { FooInput as Foo }` は消費者がいない場合は削除。元の名前でそのまま export する
+- **`utils.ts` は FormData ヘルパー + `generateSlug` のみ** — `cn` は `@/shared/lib/cn`、日付フォーマットは `@/shared/lib/date-format`、`withRetry` は `@/shared/lib/action-helpers` が正本。`utils.ts` に新関数を追加せず専用モジュールを作る
 
 ## shadcn/ui コンポーネント
 
@@ -82,6 +83,8 @@ paths:
 - **JSON フィールドのインラインパース禁止** — `Array.isArray(x) ? x.filter(...) : []` のようなインラインフィルタは禁止。`parseStringArray(x)` / `parseBusinessHours(x)` / `parseBusinessAttributes(x)`（`json-validators.ts`）を使用。admin-queries と public-queries の両方で統一すること
 - **`exactOptionalPropertyTypes` で pricing 関数の `null` と `undefined` を混同しない** — `calculateReservationPrice` の `spaceDiscount` は `SpaceDiscountSettings | null`。`undefined` を渡すと型エラー
 - **`proxy.ts` のレート制限は Server Actions をカバーしない** — Server Actions はページURLへのPOST（`/contact` 等）で、proxy の `/api` 判定をバイパスする。公開フォーム送信には `checkActionRateLimit(formSubmitRateLimiter)` を Server Action 冒頭で呼ぶ。`getClientIpFromHeaders()` で `headers()` 経由のIP取得
+- **規約の予約時必須/フッター表示は `Terms.requiredAtReservation` / `Terms.showInFooter` で管理** — Settings テーブルに規約関連フラグ（`termsAgreementEnabled` 等）を追加しない。Terms モデルが規約設定の Single Source of Truth
+- **Settings フィールド削除は7箇所同時更新** — ① `schema.prisma` ② `domain/settings/types.ts` ③ `domain/settings/commands.ts` ④ `domain/settings/admin-queries.ts`（select 句） ⑤ `actions/settings/schemas/*.ts`（Zod + フォーム用） ⑥ `actions/settings/other.ts` or `index.ts` ⑦ `settings/_components/sections/*.tsx`（UI）。テスト・seed も確認
 
 ## 公開フォーム UI 統一
 
@@ -135,6 +138,8 @@ paths:
 - **公開ページの `hover:text-accent` は原則禁止** — `hover:text-foreground` に統一（Editorial Magazine トーン）。accent はラベル・価格・CTA テキストの静的表示のみに使用
 - **`tracking` は `tracking-[0.18em]` を標準値とする** — SectionLabel, ナビリンク, MagneticButton, ScrollIndicator 等で統一。`tracking-[0.2em]` / `tracking-[0.3em]` は旧値
 - **Button primary の bronze shimmer アニメーション廃止** — `hover:bg-accent/90 hover:shadow-md` のシンプルな遷移に変更。`hover:animate-[bronze-shimmer]` / `hover:bg-[image:linear-gradient(...)]` は使用しない
+- **ImageFrame の hover は `opacity-85`（`scale-105` 廃止）** — Editorial Magazine の控えめなインタラクション。全公開ページ画像で統一。`image-gallery.tsx` の Lightbox 用サムネイルも同様
+- **公開詳細ページは `PageLayout variant="content"` + `PageHero variant="compact"` + `Section` を使用** — `events/[slug]`, `terms/[slug]`, `spaces/[slug]` で統一。手動 `<section>` + `<>...</>` ラッパーは禁止。hero/cta は `PageLayout` の props に渡す
 - **`/news` `/posts` 一覧ページは `/journal` に統合済み** — 詳細ページ（`/news/[slug]`、`/posts/[...segments]`）は維持。パンくずリンクは `/journal?tab=news` / `/journal?tab=posts`
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。`getPageContent()` / `simplePageContentSchema` / `defaultXxxContent` は全て削除済み。公開ページは `getPageSectionsWithFallback(slug)` + `SectionRenderer` を使用
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`。`"hero-parallax"` 等。`SectionType` Prisma enum は廃止済み（`section.ts` の `as const` オブジェクトとして再定義）
@@ -177,6 +182,7 @@ paths:
 - **DB ドリフト時**: `migrate reset --force`（同意環境変数付き） → seed 再実行が標準フロー
 - **マイグレーションに余分な ALTER TABLE が混入** — Prisma の内部差分検出に起因。`@default(cuid())` 等の表現変更で全テーブルの `ALTER COLUMN DROP DEFAULT` が生成されることがある。機能的に問題なし
 - **`cuid()` の VarChar 長は 30 以上** — `@default(cuid())` は 24-30 文字を生成。`@db.VarChar(21)` では切り詰めエラー。新規モデルは `@db.VarChar(30)` を使用。既存モデル（Reservation 等）は `@db.Uuid` のため影響なし
+- **`prisma migrate diff` の `--from-schema-datasource` は Prisma 7 で削除済み** — `--from-config-datasource` を使用。非対話環境でのマイグレーション手順: `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > migration.sql` → `prisma db execute --file migration.sql` → `prisma migrate resolve --applied <name>`
 
 ## デプロイ
 
