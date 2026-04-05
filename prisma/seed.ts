@@ -1941,53 +1941,122 @@ async function seedPages() {
 // =============================================================================
 
 async function seedTerms() {
-  const existing = await prisma.terms.findFirst({
-    where: { type: "TERMS_OF_USE", slug: "terms-of-use" },
-  });
-
-  if (existing) {
-    console.log("⏭️ Default terms of use already exists");
-    return;
-  }
-
   const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
   if (!admin) {
     console.log("⚠️ No admin user found. Skipping terms seed.");
     return;
   }
 
-  const termsContent = `<p>この利用規約は、レンタルスペース予約サービス「Myrrh Rental Space」の利用条件を定めるものです。</p>
-
-<h2>第1条（適用）</h2>
-<p>本規約は、当サービスの利用に関わる一切の関係に適用されます。</p>
-
-<h2>第2条（禁止事項）</h2>
-<p>利用者は、以下の行為をしてはなりません。</p>
-<ul>
-<li>法令または公序良俗に違反する行為</li>
-<li>当社または第三者の権利を侵害する行為</li>
-<li>その他、当社が不適切と判断する行為</li>
-</ul>`;
-
-  await prisma.terms.create({
-    data: {
+  const termsConfig: {
+    type: string;
+    slug: string;
+    title: string;
+    requiredAtReservation: boolean;
+    showInFooter: boolean;
+    content: string;
+  }[] = [
+    {
       type: "TERMS_OF_USE",
-      title: "サイト利用規約",
       slug: "terms-of-use",
-      versions: {
-        create: {
-          version: 1,
-          contentHtml: termsContent,
-          status: "PUBLISHED",
-          publishedAt: new Date(),
-          isCurrentVersion: true,
-          createdBy: admin.id,
+      title: "利用規約",
+      requiredAtReservation: false,
+      showInFooter: true,
+      content:
+        "<p>この利用規約は、レンタルスペース予約サービス「Myrrh Rental Space」の利用条件を定めるものです。</p><h2>第1条（適用）</h2><p>本規約は、当サービスの利用に関わる一切の関係に適用されます。</p><h2>第2条（禁止事項）</h2><p>利用者は、以下の行為をしてはなりません。</p><ul><li>法令または公序良俗に違反する行為</li><li>当社または第三者の権利を侵害する行為</li><li>その他、当社が不適切と判断する行為</li></ul>",
+    },
+    {
+      type: "PRIVACY_POLICY",
+      slug: "privacy-policy",
+      title: "プライバシーポリシー",
+      requiredAtReservation: true,
+      showInFooter: true,
+      content:
+        "<h2>1. 個人情報の収集</h2><p>当施設は、サービスの提供にあたり、氏名、メールアドレス、電話番号等の個人情報を収集することがあります。</p><h2>2. 個人情報の利用目的</h2><p>収集した個人情報は、予約の受付・管理、サービスに関するご連絡、お問い合わせへの対応に利用します。</p><h2>3. 個人情報の第三者提供</h2><p>当施設は、法令に基づく場合を除き、個人情報を第三者に提供しません。</p>",
+    },
+    {
+      type: "CANCELLATION",
+      slug: "cancellation-policy",
+      title: "キャンセルポリシー",
+      requiredAtReservation: true,
+      showInFooter: false,
+      content:
+        "<h2>キャンセル料金について</h2><p>ご予約のキャンセルには、以下のキャンセル料金が発生します。</p><ul><li>ご利用日の7日前まで：無料</li><li>ご利用日の3日前〜6日前：利用料金の30%</li><li>ご利用日の前日〜2日前：利用料金の50%</li><li>ご利用日当日：利用料金の100%</li></ul>",
+    },
+    {
+      type: "PAYMENT",
+      slug: "payment-terms",
+      title: "支払い規約",
+      requiredAtReservation: false,
+      showInFooter: false,
+      content:
+        "<h2>1. 料金体系</h2><p>利用料金は、スペースごとに設定された時間単価に利用時間を乗じて算出されます。料金には消費税が含まれています。</p><h2>2. 支払方法</h2><p>クレジットカード（VISA、Mastercard、JCB、American Express）をご利用いただけます。</p>",
+    },
+    {
+      type: "RENTAL_TERMS",
+      slug: "rental-terms",
+      title: "施設利用規約",
+      requiredAtReservation: false,
+      showInFooter: false,
+      content:
+        "<h2>1. 施設利用について</h2><p>本施設をご利用いただくにあたり、以下のルールをお守りください。</p><h2>2. 利用時間</h2><p>予約時間内でのご利用をお願いいたします。</p><h2>3. 原状回復</h2><p>ご利用後は、テーブル・椅子等の配置を元に戻し、ゴミの分別・処理をお願いいたします。</p><h2>4. 禁止事項</h2><ul><li>喫煙（電子タバコを含む）</li><li>危険物・火気の持ち込み</li><li>騒音を発する行為</li></ul>",
+    },
+  ];
+
+  let rentalTermsId: string | null = null;
+
+  for (const tc of termsConfig) {
+    const existing = await prisma.terms.findFirst({
+      where: { type: tc.type, slug: tc.slug },
+    });
+
+    if (existing) {
+      console.log(`⏭️ Terms already exists: ${tc.title}`);
+      if (tc.type === "RENTAL_TERMS") {
+        rentalTermsId = existing.id;
+      }
+      continue;
+    }
+
+    const created = await prisma.terms.create({
+      data: {
+        type: tc.type,
+        title: tc.title,
+        slug: tc.slug,
+        requiredAtReservation: tc.requiredAtReservation,
+        showInFooter: tc.showInFooter,
+        versions: {
+          create: {
+            version: 1,
+            contentHtml: tc.content,
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+            isCurrentVersion: true,
+            createdBy: admin.id,
+          },
         },
       },
-    },
-  });
+    });
 
-  console.log("✅ Created default terms of use");
+    console.log(`✅ Created terms: ${tc.title}`);
+    if (tc.type === "RENTAL_TERMS") {
+      rentalTermsId = created.id;
+    }
+  }
+
+  // Link rental terms to the first space
+  if (rentalTermsId) {
+    const firstSpace = await prisma.space.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, slug: true, termsId: true },
+    });
+    if (firstSpace && !firstSpace.termsId) {
+      await prisma.space.update({
+        where: { id: firstSpace.id },
+        data: { termsId: rentalTermsId },
+      });
+      console.log(`✅ Linked rental terms to space: ${firstSpace.slug}`);
+    }
+  }
 }
 
 // =============================================================================

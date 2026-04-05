@@ -333,6 +333,67 @@ const PAYMENT_TERMS_TEMPLATE: TermsTemplate = {
 };
 
 /**
+ * 施設利用規約テンプレート
+ */
+const RENTAL_TERMS_TEMPLATE: TermsTemplate = {
+  id: "rental-terms",
+  label: "施設利用規約",
+  description: "個別施設の利用ルール・注意事項テンプレート",
+  content: `<h2>事業者情報</h2>
+<p>【事業者名を入力してください】<br>
+所在地：【住所を入力してください】<br>
+連絡先：【メールアドレス/電話番号を入力してください】</p>
+
+<h2>1. 施設利用について</h2>
+<p>本施設をご利用いただくにあたり、以下のルールをお守りください。快適な空間を維持するため、ご協力をお願いいたします。</p>
+
+<h2>2. 利用時間</h2>
+<ul>
+<li>予約時間内でのご利用をお願いいたします。</li>
+<li>入室は予約開始時刻から、退室は予約終了時刻までにお願いいたします。</li>
+<li>延長をご希望の場合は、後続の予約状況により承れない場合がございます。</li>
+</ul>
+
+<h2>3. 設備・備品の利用</h2>
+<ul>
+<li>設備・備品は丁寧にお取り扱いください。</li>
+<li>備品の持ち出しはご遠慮ください。</li>
+<li>設備の故障・不具合がございましたら、速やかにスタッフまでご連絡ください。</li>
+</ul>
+
+<h2>4. 原状回復</h2>
+<p>ご利用後は、以下の原状回復をお願いいたします。</p>
+<ul>
+<li>テーブル・椅子等の配置を元に戻す</li>
+<li>ゴミの分別・処理</li>
+<li>使用した備品の返却</li>
+<li>照明・空調の消灯</li>
+</ul>
+
+<h2>5. 禁止事項</h2>
+<ul>
+<li>喫煙（電子タバコを含む）</li>
+<li>危険物・火気の持ち込み</li>
+<li>騒音を発する行為</li>
+<li>壁・床・天井への貼り付け・加工</li>
+<li>ペットの持ち込み（盲導犬等を除く）</li>
+<li>無断での撮影・録画（商業目的）</li>
+</ul>
+
+<h2>6. 損害賠償</h2>
+<p>設備・備品の破損・紛失が生じた場合、修理費または同等品の購入費を請求させていただくことがございます。</p>
+
+<h2>7. 免責事項</h2>
+<ul>
+<li>利用者の私物の盗難・紛失について、当施設は責任を負いません。</li>
+<li>天災・停電等の不可抗力による施設利用の中断について、当施設は責任を負いません。</li>
+</ul>
+
+<h2>8. お問い合わせ</h2>
+<p>施設利用に関するお問い合わせは、上記連絡先までご連絡ください。</p>`,
+};
+
+/**
  * 規約タイプごとのテンプレート定義
  */
 export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
@@ -340,7 +401,7 @@ export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
   [TermsType.PRIVACY_POLICY]: [PRIVACY_POLICY_TEMPLATE],
   [TermsType.CANCELLATION]: [CANCELLATION_POLICY_TEMPLATE],
   [TermsType.PAYMENT]: [PAYMENT_TERMS_TEMPLATE],
-  [TermsType.RENTAL_TERMS]: [], // 施設利用規約はテンプレート未定（Task 9 で追加）
+  [TermsType.RENTAL_TERMS]: [RENTAL_TERMS_TEMPLATE],
   [TermsType.CUSTOM]: [], // カスタム規約はテンプレートなし
 };
 
