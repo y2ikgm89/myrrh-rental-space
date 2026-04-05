@@ -473,6 +473,12 @@ describe("TERMS_TYPES", () => {
         defaultSlug: "payment-terms",
       },
       {
+        value: "RENTAL_TERMS",
+        label: "施設利用規約",
+        defaultTitle: "施設利用規約",
+        defaultSlug: "rental-terms",
+      },
+      {
         value: "CUSTOM",
         label: "カスタム規約",
         defaultTitle: "カスタム規約",
@@ -493,6 +499,7 @@ describe("isValidTermsType", () => {
       "PRIVACY_POLICY",
       "CANCELLATION",
       "PAYMENT",
+      "RENTAL_TERMS",
       "CUSTOM",
     ];
     for (const type of validTypes) {
@@ -595,6 +602,8 @@ describe("serializeTermsWithVersion", () => {
       title: "利用規約",
       slug: "terms-of-use",
       isActive: true,
+      requiredAtReservation: false,
+      showInFooter: false,
       currentVersion: null,
       _count: { spaces: 0 },
     };
@@ -618,6 +627,8 @@ describe("serializeTermsWithVersion", () => {
       title: "プライバシーポリシー",
       slug: "privacy-policy",
       isActive: true,
+      requiredAtReservation: false,
+      showInFooter: false,
       currentVersion: {
         id: "version-1",
         version: 1,
@@ -651,6 +662,8 @@ describe("serializeTermsWithVersion", () => {
       title: "カスタム規約",
       slug: "custom",
       isActive: false,
+      requiredAtReservation: false,
+      showInFooter: false,
       currentVersion: null,
       _count: { spaces: 0 },
     };

@@ -43,6 +43,12 @@ export const TERMS_TYPES = [
     defaultSlug: "payment-terms",
   },
   {
+    value: "RENTAL_TERMS",
+    label: "施設利用規約",
+    defaultTitle: "施設利用規約",
+    defaultSlug: "rental-terms",
+  },
+  {
     value: "CUSTOM",
     label: "カスタム規約",
     defaultTitle: "カスタム規約",
@@ -82,6 +88,8 @@ export const createTermsSchema = z.object({
       error: "スラッグは小文字英数字とハイフンのみ使用可能です",
     }),
   isActive: z.boolean().default(true),
+  requiredAtReservation: z.boolean().default(false),
+  showInFooter: z.boolean().default(false),
 });
 
 /**
@@ -185,6 +193,8 @@ export interface TermsWithVersion {
   title: string;
   slug: string;
   isActive: boolean;
+  requiredAtReservation: boolean;
+  showInFooter: boolean;
   currentVersion: {
     id: string;
     version: number;
@@ -250,6 +260,8 @@ export interface TermsDetail {
   title: string;
   slug: string;
   isActive: boolean;
+  requiredAtReservation: boolean;
+  showInFooter: boolean;
   createdAt: Date;
   updatedAt: Date;
   versions: {

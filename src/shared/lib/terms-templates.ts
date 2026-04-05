@@ -340,6 +340,7 @@ export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
   [TermsType.PRIVACY_POLICY]: [PRIVACY_POLICY_TEMPLATE],
   [TermsType.CANCELLATION]: [CANCELLATION_POLICY_TEMPLATE],
   [TermsType.PAYMENT]: [PAYMENT_TERMS_TEMPLATE],
+  [TermsType.RENTAL_TERMS]: [], // 施設利用規約はテンプレート未定（Task 9 で追加）
   [TermsType.CUSTOM]: [], // カスタム規約はテンプレートなし
 };
 

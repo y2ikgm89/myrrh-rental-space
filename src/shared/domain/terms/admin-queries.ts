@@ -66,6 +66,8 @@ export async function getAdminTermsList(): Promise<TermsWithVersion[]> {
       title: term.title,
       slug: term.slug,
       isActive: term.isActive,
+      requiredAtReservation: term.requiredAtReservation,
+      showInFooter: term.showInFooter,
       currentVersion: currentVersion
         ? {
             id: currentVersion.id,
