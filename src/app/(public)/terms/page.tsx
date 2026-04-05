@@ -6,30 +6,15 @@
 
 import { redirect, notFound } from "next/navigation";
 import { connection } from "next/server";
-import { prisma } from "@/shared/db/prisma";
-import { TermsType } from "@generated/prisma/enums";
+import { getFirstActiveTermsSlug } from "@/shared/domain/terms/public-queries";
 
 export default async function TermsPage() {
   await connection();
 
-  const firstTerms = await prisma.terms.findFirst({
-    where: { isActive: true, type: TermsType.TERMS_OF_USE },
-    select: { slug: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const slug = await getFirstActiveTermsSlug();
 
-  if (firstTerms) {
-    redirect(`/terms/${firstTerms.slug}`);
-  }
-
-  const anyTerms = await prisma.terms.findFirst({
-    where: { isActive: true },
-    select: { slug: true },
-    orderBy: { createdAt: "asc" },
-  });
-
-  if (anyTerms) {
-    redirect(`/terms/${anyTerms.slug}`);
+  if (slug) {
+    redirect(`/terms/${slug}`);
   }
 
   notFound();

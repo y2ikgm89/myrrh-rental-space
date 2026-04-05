@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
-import { TermsStatus } from "@generated/prisma/enums";
+import { TermsStatus, TermsType } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
@@ -166,4 +166,43 @@ export async function getFooterTerms(): Promise<Serialized<FooterTermsLink[]>> {
   });
 
   return toPlainArray(result);
+}
+
+// ---------------------------------------------------------------------------
+// getFirstActiveTermsSlug
+// ---------------------------------------------------------------------------
+
+/**
+ * 最初の有効な規約の slug を返す（/terms リダイレクト用）
+ *
+ * 優先: TERMS_OF_USE → 任意のアクティブ規約 → null
+ */
+export async function getFirstActiveTermsSlug(): Promise<string | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.TERMS);
+
+  const result = await safeFetch({
+    fetch: async () => {
+      const termsOfUse = await prisma.terms.findFirst({
+        where: { isActive: true, type: TermsType.TERMS_OF_USE },
+        select: { slug: true },
+        orderBy: { createdAt: "asc" },
+      });
+      if (termsOfUse) return termsOfUse.slug;
+
+      const any = await prisma.terms.findFirst({
+        where: { isActive: true },
+        select: { slug: true },
+        orderBy: { createdAt: "asc" },
+      });
+      return any?.slug ?? null;
+    },
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getFirstActiveTermsSlug",
+  });
+
+  return result;
 }
