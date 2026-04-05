@@ -19,6 +19,8 @@ export interface TermsFormData {
   slug: string;
   type: string;
   contentJson: string;
+  requiredAtReservation: boolean;
+  showInFooter: boolean;
   selectedTemplate?: string | undefined;
 }
 
@@ -37,6 +39,8 @@ export interface TermsData {
   slug: string;
   type: TermsType;
   isActive: boolean;
+  requiredAtReservation: boolean;
+  showInFooter: boolean;
   versions: TermsVersionSummary[];
 }
 

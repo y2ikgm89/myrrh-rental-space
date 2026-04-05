@@ -22,6 +22,7 @@ import {
   SelectValue,
   TabsContent,
 } from "@/admin/components/ui";
+import { TermsType } from "@generated/prisma/enums";
 import type { SpaceEditFormData } from "../schema";
 import {
   SELECT_NONE_VALUE,
@@ -56,6 +57,10 @@ export function SpaceEditDetailsTabPanel({
 }: SpaceEditDetailsTabPanelProps) {
   const categoryId = useWatch({ control, name: "categoryId" });
   const termsId = useWatch({ control, name: "termsId" });
+
+  const rentalTerms = availableTerms.filter(
+    (term) => term.type === TermsType.RENTAL_TERMS,
+  );
 
   return (
     <TabsContent
@@ -152,13 +157,13 @@ export function SpaceEditDetailsTabPanel({
           </CardContent>
         </Card>
 
-        {availableTerms.length > 0 && (
+        {rentalTerms.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>利用規約</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Label htmlFor="termsId">適用する利用規約</Label>
+              <Label htmlFor="termsId">施設利用規約</Label>
               <Select
                 value={termsId ?? SELECT_NONE_VALUE}
                 onValueChange={(value) =>
@@ -177,9 +182,9 @@ export function SpaceEditDetailsTabPanel({
                   <SelectItem value={SELECT_NONE_VALUE}>
                     なし（規約同意不要）
                   </SelectItem>
-                  {availableTerms.map((term) => (
+                  {rentalTerms.map((term) => (
                     <SelectItem key={term.id} value={term.id}>
-                      {term.title}（{term.type}）
+                      {term.title}
                     </SelectItem>
                   ))}
                 </SelectContent>

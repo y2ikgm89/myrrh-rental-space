@@ -37,6 +37,12 @@ export function TermsTable({ terms }: TermsTableProps) {
               <TableHead className="hidden md:table-cell">スラッグ</TableHead>
               <TableHead className="hidden md:table-cell">バージョン</TableHead>
               <TableHead className="text-center">有効/無効</TableHead>
+              <TableHead className="hidden whitespace-nowrap md:table-cell">
+                予約時必須
+              </TableHead>
+              <TableHead className="hidden whitespace-nowrap md:table-cell">
+                フッター
+              </TableHead>
               <TableHead className="hidden text-right md:table-cell">
                 スペース数
               </TableHead>
@@ -72,6 +78,14 @@ export function TermsTable({ terms }: TermsTableProps) {
                   </TableCell>
                   <TableCell className="text-center">
                     <TermsActiveSwitch id={term.id} isActive={term.isActive} />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {term.requiredAtReservation && (
+                      <Badge variant="success">必須</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {term.showInFooter && <Badge variant="default">表示</Badge>}
                   </TableCell>
                   <TableCell className="hidden text-right md:table-cell">
                     <Badge variant="secondary">{term._count.spaces}件</Badge>

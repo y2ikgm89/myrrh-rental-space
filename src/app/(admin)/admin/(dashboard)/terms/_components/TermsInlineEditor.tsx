@@ -84,6 +84,8 @@ const termsFormSchema = z.object({
     .regex(/^[a-z0-9-]+$/, { error: "小文字英数字とハイフンのみ" }),
   type: z.string().min(1, { error: "規約タイプを選択してください" }),
   contentJson: z.string().min(1, { error: "コンテンツを入力してください" }),
+  requiredAtReservation: z.boolean(),
+  showInFooter: z.boolean(),
   selectedTemplate: z.string().optional(),
 });
 
@@ -151,6 +153,8 @@ export function TermsInlineEditor({
           contentJson: initialVersion?.contentJson
             ? JSON.stringify(initialVersion.contentJson)
             : EMPTY_LEXICAL_EDITOR_STATE_JSON,
+          requiredAtReservation: terms.requiredAtReservation,
+          showInFooter: terms.showInFooter,
           selectedTemplate: "",
         }
       : {
@@ -158,6 +162,8 @@ export function TermsInlineEditor({
           slug: "",
           type: "",
           contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+          requiredAtReservation: false,
+          showInFooter: false,
           selectedTemplate: "",
         },
   });
@@ -448,6 +454,8 @@ export function TermsInlineEditor({
             slug: data.slug,
             type: termsType,
             isActive: true,
+            requiredAtReservation: data.requiredAtReservation,
+            showInFooter: data.showInFooter,
             contentJson: data.contentJson,
           });
           if (isMutationError(result)) {
@@ -467,6 +475,8 @@ export function TermsInlineEditor({
           const updateResult = await updateTerms(terms.id, {
             title: data.title,
             slug: data.slug,
+            requiredAtReservation: data.requiredAtReservation,
+            showInFooter: data.showInFooter,
           });
           if (isMutationError(updateResult)) {
             toast.error(updateResult.error);

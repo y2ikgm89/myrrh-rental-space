@@ -9,6 +9,7 @@
 import type { Control, FieldErrors, UseFormRegister } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import {
+  Checkbox,
   Input,
   Label,
   Select,
@@ -117,6 +118,28 @@ export function TermsSettingsTab({
           {errors.type && (
             <p className="text-xs text-destructive">{errors.type.message}</p>
           )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="requiredAtReservation"
+            {...formRegister("requiredAtReservation")}
+            disabled={isPending}
+          />
+          <Label htmlFor="requiredAtReservation" className="font-normal">
+            予約フォームで同意必須
+          </Label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="showInFooter"
+            {...formRegister("showInFooter")}
+            disabled={isPending}
+          />
+          <Label htmlFor="showInFooter" className="font-normal">
+            フッターにリンク表示
+          </Label>
         </div>
       </div>
 

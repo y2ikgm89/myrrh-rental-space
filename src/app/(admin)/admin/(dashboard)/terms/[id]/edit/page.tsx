@@ -41,6 +41,8 @@ export default async function TermsEditPage({ params }: PageProps) {
         slug: terms.slug,
         type: terms.type,
         isActive: terms.isActive,
+        requiredAtReservation: terms.requiredAtReservation,
+        showInFooter: terms.showInFooter,
         versions: terms.versions.map((v) => ({
           ...v,
           createdAt: v.createdAt,
