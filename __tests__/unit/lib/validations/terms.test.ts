@@ -12,8 +12,6 @@ import {
   publishTermsVersionSchema,
   updateTermsVersionSchema,
   recordTermsAgreementSchema,
-  getTermsForSpaceSchema,
-  agreeToTermsSchema,
   parseTermsType,
   getTermsTypeDefaults,
   serializeTermsWithVersion,
@@ -394,54 +392,6 @@ describe("recordTermsAgreementSchema", () => {
       });
       expect(result.success).toBe(false);
     });
-  });
-});
-
-describe("getTermsForSpaceSchema", () => {
-  test("有効なUUIDは許可", () => {
-    const result = getTermsForSpaceSchema.safeParse({
-      spaceId: "123e4567-e89b-12d3-a456-426614174000",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  test("無効なUUIDはエラー", () => {
-    const result = getTermsForSpaceSchema.safeParse({
-      spaceId: "invalid",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("スペースIDが無効");
-    }
-  });
-});
-
-describe("agreeToTermsSchema", () => {
-  test("有効なUUID配列は許可", () => {
-    const result = agreeToTermsSchema.safeParse({
-      versionIds: [
-        "123e4567-e89b-12d3-a456-426614174000",
-        "123e4567-e89b-12d3-a456-426614174001",
-      ],
-    });
-    expect(result.success).toBe(true);
-  });
-
-  test("空配列はエラー", () => {
-    const result = agreeToTermsSchema.safeParse({
-      versionIds: [],
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain("規約に同意");
-    }
-  });
-
-  test("無効なUUIDを含むとエラー", () => {
-    const result = agreeToTermsSchema.safeParse({
-      versionIds: ["123e4567-e89b-12d3-a456-426614174000", "invalid"],
-    });
-    expect(result.success).toBe(false);
   });
 });
 

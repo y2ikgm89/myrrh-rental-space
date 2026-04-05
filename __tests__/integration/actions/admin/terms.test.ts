@@ -57,12 +57,6 @@ const recordTermsAgreementSchema = z.object({
   userAgent: z.string().optional(),
 });
 
-const agreeToTermsSchema = z.object({
-  versionIds: z
-    .array(z.string().uuid({ error: "バージョンIDが無効です" }))
-    .min(1, { error: "規約に同意してください" }),
-});
-
 // 有効なUUID
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_UUID_2 = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
@@ -438,43 +432,18 @@ describe("Terms Admin Action Integration", () => {
     });
   });
 
-  describe("agreeToTermsSchema バリデーション", () => {
-    test("有効なバージョンID配列は通過", () => {
-      const result = agreeToTermsSchema.safeParse({
-        versionIds: [VALID_UUID, VALID_UUID_2],
-      });
-      expect(result.success).toBe(true);
-    });
-
-    test("空の配列はエラー", () => {
-      const result = agreeToTermsSchema.safeParse({
-        versionIds: [],
-      });
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error.issues[0].message).toContain("規約に同意");
-      }
-    });
-
-    test("無効なUUIDを含む配列はエラー", () => {
-      const result = agreeToTermsSchema.safeParse({
-        versionIds: [VALID_UUID, "invalid"],
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe("TermsType enum テスト", () => {
     test("TermsType enumの値が存在", () => {
       expect(TermsType.TERMS_OF_USE).toBeDefined();
       expect(TermsType.PRIVACY_POLICY).toBeDefined();
       expect(TermsType.CANCELLATION).toBeDefined();
       expect(TermsType.PAYMENT).toBeDefined();
+      expect(TermsType.RENTAL_TERMS).toBeDefined();
       expect(TermsType.CUSTOM).toBeDefined();
     });
 
-    test("TermsType enumは5つの値を持つ", () => {
-      expect(Object.values(TermsType)).toHaveLength(5);
+    test("TermsType enumは6つの値を持つ", () => {
+      expect(Object.values(TermsType)).toHaveLength(6);
     });
   });
 

@@ -158,29 +158,6 @@ export type RecordTermsAgreementInput = z.input<
 >;
 
 // ==============================================
-// Public API Schemas（予約フォーム用）
-// ==============================================
-
-/**
- * スペースの規約取得スキーマ
- */
-export const getTermsForSpaceSchema = z.object({
-  spaceId: z.string().uuid({ error: "スペースIDが無効です" }),
-});
-
-/**
- * 規約同意スキーマ（複数規約対応）
- */
-export const agreeToTermsSchema = z.object({
-  versionIds: z
-    .array(z.string().uuid({ error: "バージョンIDが無効です" }))
-    .min(1, { error: "規約に同意してください" }),
-});
-
-export type GetTermsForSpaceInput = z.input<typeof getTermsForSpaceSchema>;
-export type AgreeToTermsInput = z.input<typeof agreeToTermsSchema>;
-
-// ==============================================
 // Response Types
 // ==============================================
 
