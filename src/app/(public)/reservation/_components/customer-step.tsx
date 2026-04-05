@@ -18,6 +18,12 @@ interface CustomerStepProps {
   readonly isPending: boolean;
   readonly errorMessage: string | null;
   readonly turnstileSiteKey: string | null;
+  readonly requiredTerms: ReadonlyArray<{
+    id: string;
+    title: string;
+    slug: string;
+    currentVersionId: string;
+  }>;
   readonly summary: {
     locationName: string;
     spaceName: string;
@@ -35,12 +41,18 @@ export function CustomerStep({
   isPending,
   errorMessage,
   turnstileSiteKey,
+  requiredTerms,
   summary,
   onBack,
 }: CustomerStepProps): ReactElement {
   const customerType = useWatch({
     control: form.control,
     name: "customerType",
+  });
+
+  const agreedTermsIds = useWatch({
+    control: form.control,
+    name: "agreedTermsIds",
   });
 
   function handleCustomerTypeChange(type: CustomerType) {
@@ -179,28 +191,42 @@ export function CustomerStep({
         </div>
 
         {/* Terms + Turnstile */}
-        <div className="mt-6">
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              className="mt-0.5 h-4 w-4 border-border accent-accent"
-              {...form.register("agreeToTerms")}
-            />
-            <span className="text-sm text-muted-foreground">
-              <a
-                href="/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent underline transition-colors hover:text-foreground"
-              >
-                利用規約
-              </a>
-              に同意します
-            </span>
-          </label>
-          {form.formState.errors.agreeToTerms?.message ? (
+        <div className="mt-6 space-y-3">
+          {requiredTerms.map((term) => {
+            const isChecked = agreedTermsIds?.includes(term.id) ?? false;
+            return (
+              <label key={term.id} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 border-border accent-accent"
+                  checked={isChecked}
+                  onChange={() => {
+                    const current = form.getValues("agreedTermsIds") ?? [];
+                    const next = isChecked
+                      ? current.filter((id) => id !== term.id)
+                      : [...current, term.id];
+                    form.setValue("agreedTermsIds", next, {
+                      shouldValidate: true,
+                    });
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  <a
+                    href={`/terms/${term.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent underline transition-colors hover:text-foreground"
+                  >
+                    {term.title}
+                  </a>
+                  に同意します
+                </span>
+              </label>
+            );
+          })}
+          {form.formState.errors.agreedTermsIds?.message ? (
             <p role="alert" className="mt-2 text-sm text-destructive">
-              {form.formState.errors.agreeToTerms.message}
+              {form.formState.errors.agreedTermsIds.message}
             </p>
           ) : null}
 

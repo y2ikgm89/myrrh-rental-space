@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import {
   publicReservationSchema,
@@ -10,7 +11,10 @@ import {
   createValidationMutationError,
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
-import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import {
+  formSubmitRateLimiter,
+  publicQueryRateLimiter,
+} from "@/shared/lib/rate-limit";
 import {
   createMutationError,
   type MutationResult,
@@ -24,6 +28,23 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentUser } from "@/shared/lib/auth";
+import {
+  getReservationRequiredTerms,
+  type ReservationTermsSummary,
+} from "@/shared/domain/terms/public-queries";
+import type { Serialized } from "@/shared/lib/serialize";
+
+export async function fetchRequiredTerms(
+  spaceId: string,
+): Promise<Serialized<ReservationTermsSummary[]>> {
+  const rateLimit = await checkActionRateLimit(publicQueryRateLimiter);
+  if (!rateLimit.success) return [];
+
+  const parsed = z.string().uuid().safeParse(spaceId);
+  if (!parsed.success) return [];
+
+  return getReservationRequiredTerms(parsed.data);
+}
 
 export async function submitReservation(
   input: PublicReservationInput,

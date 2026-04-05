@@ -49,9 +49,7 @@ export const publicReservationSchema = z
       .max(2000, { error: "備考は2000文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
-    agreeToTerms: z.literal(true, {
-      error: "利用規約への同意が必要です",
-    }),
+    agreedTermsIds: z.array(z.string().uuid({ error: "規約IDが不正です" })),
     turnstileToken: z.string().optional(),
   })
   .refine(

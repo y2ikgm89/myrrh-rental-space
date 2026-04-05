@@ -71,6 +71,7 @@ export default async function ReservationPage(): Promise<ReactElement> {
           turnstileSiteKey={turnstileSiteKey}
           prefillData={prefillData}
           isLoggedIn={user != null}
+          requiredTerms={[]}
         />
       </div>
 

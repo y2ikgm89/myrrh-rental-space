@@ -1,7 +1,11 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { CouponType, ReservationStatus } from "@generated/prisma/enums";
+import {
+  CouponType,
+  ReservationStatus,
+  TermsStatus,
+} from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
@@ -765,6 +769,7 @@ type PublicReservationInput = {
   companyName?: string | null | undefined;
   notes?: string | null | undefined;
   userId?: string | null | undefined;
+  agreedTermsIds?: string[] | undefined;
 };
 
 export async function createPublicReservationCommand(
@@ -829,6 +834,49 @@ export async function createPublicReservationCommand(
     });
 
     await incrementCustomerReservationStats(tx, customerId);
+
+    // Create TermsAgreement records for agreed terms
+    const agreedTermsIds = input.agreedTermsIds;
+    if (agreedTermsIds && agreedTermsIds.length > 0) {
+      const termsWithVersions = await tx.terms.findMany({
+        where: {
+          id: { in: agreedTermsIds },
+          isActive: true,
+        },
+        select: {
+          id: true,
+          versions: {
+            where: {
+              isCurrentVersion: true,
+              status: TermsStatus.PUBLISHED,
+            },
+            take: 1,
+            select: { id: true },
+          },
+        },
+      });
+
+      const agreementData: Array<{
+        termsId: string;
+        versionId: string;
+        reservationId: string;
+        userId: string | null;
+      }> = [];
+      for (const t of termsWithVersions) {
+        const version = t.versions[0];
+        if (!version) continue;
+        agreementData.push({
+          termsId: t.id,
+          versionId: version.id,
+          reservationId: created.id,
+          userId: input.userId || null,
+        });
+      }
+
+      if (agreementData.length > 0) {
+        await tx.termsAgreement.createMany({ data: agreementData });
+      }
+    }
 
     return created;
   });

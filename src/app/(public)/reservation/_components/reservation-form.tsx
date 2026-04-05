@@ -1,7 +1,13 @@
 "use client";
 
 import { formatPrice } from "@/shared/lib/pricing/format";
-import { useReducer, useRef, useTransition, type ReactElement } from "react";
+import {
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+  type ReactElement,
+} from "react";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
@@ -16,7 +22,10 @@ import {
 import type { LocationWithSpaces } from "@/shared/domain/locations/public-queries";
 import type { BusinessHours } from "@/shared/lib/json-validators";
 import { addMinutesToTime } from "@/shared/lib/reservation/time-slots-utils";
-import { submitReservation } from "@/public/actions/reservation";
+import {
+  submitReservation,
+  fetchRequiredTerms,
+} from "@/public/actions/reservation";
 import { fetchAvailableSlots } from "@/public/actions/availability";
 import { LocationSelector } from "./location-selector";
 import { SpaceSelector } from "./space-selector";
@@ -75,12 +84,20 @@ interface PrefillData {
   readonly companyName: string | null;
 }
 
+interface RequiredTerm {
+  readonly id: string;
+  readonly title: string;
+  readonly slug: string;
+  readonly currentVersionId: string;
+}
+
 interface ReservationFormProps {
   readonly locations: readonly LocationWithSpaces[];
   readonly businessHours: BusinessHours | null;
   readonly turnstileSiteKey: string | null;
   readonly prefillData?: PrefillData | undefined;
   readonly isLoggedIn?: boolean | undefined;
+  readonly requiredTerms: readonly RequiredTerm[];
 }
 
 export function ReservationForm({
@@ -89,6 +106,7 @@ export function ReservationForm({
   turnstileSiteKey,
   prefillData,
   isLoggedIn = false,
+  requiredTerms,
 }: ReservationFormProps): ReactElement {
   const auto = resolveAutoIds(locations);
   const skipStep1 = auto.locationId != null && auto.spaceId != null;
@@ -107,6 +125,7 @@ export function ReservationForm({
   });
 
   const [isFetchingSlots, startSlotTransition] = useTransition();
+  const [loadedTerms, setLoadedTerms] = useState(requiredTerms);
   const spaceSectionRef = useRef<HTMLElement>(null);
 
   // --- Derived ---
@@ -157,6 +176,7 @@ export function ReservationForm({
         email: prefillData?.email ?? "",
         phoneNumber: prefillData?.phoneNumber ?? "",
         notes: "",
+        agreedTermsIds: [],
         turnstileToken: "",
       },
     },
@@ -260,7 +280,17 @@ export function ReservationForm({
       "endTime",
       "numberOfGuests",
     ]);
-    if (valid && isStep2Complete) goToStep(3);
+    if (!valid || !isStep2Complete) return;
+
+    // Fetch required terms for the selected space before showing step 3
+    if (state.spaceId) {
+      const terms = await fetchRequiredTerms(state.spaceId);
+      setLoadedTerms(terms);
+      // Reset agreed terms when fetching new terms
+      form.setValue("agreedTermsIds", []);
+    }
+
+    goToStep(3);
   }
 
   // --- Render helpers ---
@@ -376,6 +406,7 @@ export function ReservationForm({
           isPending={isPending}
           errorMessage={state.errorMessage}
           turnstileSiteKey={turnstileSiteKey}
+          requiredTerms={loadedTerms}
           summary={{
             locationName: currentLocation?.name ?? "",
             spaceName: currentSpace?.name ?? "",
