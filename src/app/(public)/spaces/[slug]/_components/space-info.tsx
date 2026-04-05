@@ -1,5 +1,11 @@
 import type { JsonValue } from "@prisma/client/runtime/client";
-import { IconUsers, IconRuler2, IconMapPin } from "@tabler/icons-react";
+import Link from "next/link";
+import {
+  IconUsers,
+  IconRuler2,
+  IconMapPin,
+  IconFileText,
+} from "@tabler/icons-react";
 
 import { Heading } from "../../../_shared/components/design-system/heading";
 import { Prose } from "../../../_shared/components/design-system/prose";
@@ -17,6 +23,11 @@ interface SpaceInfoProps {
     readonly facilities: JsonValue;
     readonly category: { readonly name: string } | null;
     readonly location: { readonly name: string } | null;
+    readonly terms: {
+      readonly title: string;
+      readonly slug: string;
+      readonly isActive: boolean;
+    } | null;
   };
 }
 
@@ -81,6 +92,19 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
               </div>
             ))}
           </div>
+        </div>
+      ) : null}
+
+      {/* Terms */}
+      {space.terms?.isActive ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <IconFileText className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <Link
+            href={`/terms/${space.terms.slug}`}
+            className="text-accent underline transition-colors hover:text-foreground"
+          >
+            {space.terms.title}
+          </Link>
         </div>
       ) : null}
     </Stack>

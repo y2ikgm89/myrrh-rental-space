@@ -155,6 +155,13 @@ export async function getSpaceBySlug(slug: string) {
           ogpImageUrl: true,
           category: { select: { id: true, name: true } },
           location: { select: { id: true, name: true, address: true } },
+          terms: {
+            select: {
+              title: true,
+              slug: true,
+              isActive: true,
+            },
+          },
         },
       }),
     fallback: null,
