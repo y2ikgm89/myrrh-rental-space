@@ -6,6 +6,7 @@ import {
   publicReservationSchema,
   type PublicReservationInput,
 } from "@/shared/lib/validations/public-reservation";
+import { headers } from "next/headers";
 import {
   checkActionRateLimit,
   createValidationMutationError,
@@ -13,6 +14,7 @@ import {
 } from "@/shared/lib/action-helpers";
 import {
   formSubmitRateLimiter,
+  getClientIpFromHeaders,
   publicQueryRateLimiter,
 } from "@/shared/lib/rate-limit";
 import {
@@ -79,11 +81,18 @@ export async function submitReservation(
   // 4. Get current user (non-blocking — undefined if not logged in)
   const user = await getCurrentUser();
 
+  // 4.5. Extract client IP and user agent for terms audit trail
+  const clientIp = await getClientIpFromHeaders();
+  const headersList = await headers();
+  const userAgent = headersList.get("user-agent");
+
   // 5. Create reservation
   try {
     const result = await createPublicReservationCommand({
       ...parsed.data,
       userId: user?.id,
+      clientIp,
+      userAgent,
     });
 
     // 6. Invalidate cache: reservations (detail + calendar) + customers

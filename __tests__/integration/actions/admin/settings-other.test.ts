@@ -6,7 +6,6 @@
  * 対象スキーマ:
  * - maintenanceSettingsSchema（メンテナンス設定）
  * - cookieConsentSettingsSchema（Cookie同意設定）
- * - termsAgreementSettingsSchema（規約同意設定）
  * - reservationSettingsSchema（予約設定）
  * - announcementBarCarouselSettingsSchema（お知らせバーカルーセル設定）
  * - permalinkSettingsSchema（パーマリンク設定）
@@ -39,20 +38,12 @@ const cookieConsentSettingsSchema = z.object({
   cookieConsentPolicyUrl: z.string().max(200).nullable(),
 });
 
-const termsAgreementSettingsSchema = z.object({
-  termsAgreementEnabled: z.boolean(),
-  termsAgreementText: z.string().max(500).nullable(),
-  requireTermsAgreement: z.boolean(),
-  requirePrivacyAgreement: z.boolean(),
-});
-
-const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
-
 const reservationSettingsSchema = z.object({
   defaultTimeSlot: z.number().int().min(15).max(240),
   minReservationDuration: z.number().int().min(15).max(480),
   maxReservationDuration: z.number().int().min(60).max(1440),
-  cancellationTermsId: z.string().uuid().nullable(),
+  cancellationDeadlineHours: z.number().int().min(1).max(720),
+  modificationDeadlineHours: z.number().int().min(1).max(720),
 });
 
 const announcementBarCarouselSettingsSchema = z.object({
@@ -126,18 +117,12 @@ const VALID_COOKIE_CONSENT_INPUT = {
   cookieConsentPolicyUrl: "/privacy",
 };
 
-const VALID_TERMS_AGREEMENT_INPUT = {
-  termsAgreementEnabled: true,
-  termsAgreementText: "利用規約およびプライバシーポリシーに同意してください。",
-  requireTermsAgreement: true,
-  requirePrivacyAgreement: true,
-};
-
 const VALID_RESERVATION_INPUT = {
   defaultTimeSlot: 60,
   minReservationDuration: 30,
   maxReservationDuration: 480,
-  cancellationTermsId: VALID_UUID,
+  cancellationDeadlineHours: 24,
+  modificationDeadlineHours: 24,
 };
 
 const VALID_ANNOUNCEMENT_BAR_INPUT = {
@@ -328,67 +313,6 @@ describe("Settings Other Admin Action Integration", () => {
   });
 
   // ===========================================================================
-  // termsAgreementSettingsSchema
-  // ===========================================================================
-
-  describe("termsAgreementSettingsSchema バリデーション", () => {
-    describe("正常系", () => {
-      test("有効なデータはバリデーション通過", () => {
-        const result = termsAgreementSettingsSchema.safeParse(
-          VALID_TERMS_AGREEMENT_INPUT,
-        );
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("termsAgreementText", () => {
-      test("500文字はOK", () => {
-        const result = termsAgreementSettingsSchema.safeParse({
-          ...VALID_TERMS_AGREEMENT_INPUT,
-          termsAgreementText: "あ".repeat(500),
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("501文字はエラー", () => {
-        const result = termsAgreementSettingsSchema.safeParse({
-          ...VALID_TERMS_AGREEMENT_INPUT,
-          termsAgreementText: "あ".repeat(501),
-        });
-        expect(result.success).toBe(false);
-      });
-
-      test("nullは許可", () => {
-        const result = termsAgreementSettingsSchema.safeParse({
-          ...VALID_TERMS_AGREEMENT_INPUT,
-          termsAgreementText: null,
-        });
-        expect(result.success).toBe(true);
-      });
-    });
-
-    describe("boolean フィールド", () => {
-      test("全てfalseでもOK", () => {
-        const result = termsAgreementSettingsSchema.safeParse({
-          termsAgreementEnabled: false,
-          termsAgreementText: null,
-          requireTermsAgreement: false,
-          requirePrivacyAgreement: false,
-        });
-        expect(result.success).toBe(true);
-      });
-
-      test("文字列はエラー", () => {
-        const result = termsAgreementSettingsSchema.safeParse({
-          ...VALID_TERMS_AGREEMENT_INPUT,
-          requireTermsAgreement: "true",
-        });
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  // ===========================================================================
   // reservationSettingsSchema
   // ===========================================================================
 
@@ -401,12 +325,13 @@ describe("Settings Other Admin Action Integration", () => {
         expect(result.success).toBe(true);
       });
 
-      test("予約時間フィールドは null 不可（キャンセル規約のみ null 可）", () => {
+      test("予約時間フィールドは null 不可", () => {
         const result = reservationSettingsSchema.safeParse({
           defaultTimeSlot: null,
           minReservationDuration: null,
           maxReservationDuration: null,
-          cancellationTermsId: null,
+          cancellationDeadlineHours: null,
+          modificationDeadlineHours: null,
         });
         expect(result.success).toBe(false);
       });
@@ -514,32 +439,63 @@ describe("Settings Other Admin Action Integration", () => {
       });
     });
 
-    describe("cancellationTermsId", () => {
-      test("有効なUUIDはOK", () => {
+    describe("cancellationDeadlineHours", () => {
+      test("1（最小値）はOK", () => {
         const result = reservationSettingsSchema.safeParse({
           ...VALID_RESERVATION_INPUT,
-          cancellationTermsId: "550e8400-e29b-41d4-a716-446655440000",
+          cancellationDeadlineHours: 1,
         });
         expect(result.success).toBe(true);
       });
 
-      test("無効なUUIDはエラー", () => {
-        const invalidIds = ["invalid", "12345", "not-a-uuid"];
-        for (const id of invalidIds) {
-          const result = reservationSettingsSchema.safeParse({
-            ...VALID_RESERVATION_INPUT,
-            cancellationTermsId: id,
-          });
-          expect(result.success).toBe(false);
-        }
-      });
-
-      test("nullは許可", () => {
+      test("0はエラー", () => {
         const result = reservationSettingsSchema.safeParse({
           ...VALID_RESERVATION_INPUT,
-          cancellationTermsId: null,
+          cancellationDeadlineHours: 0,
+        });
+        expect(result.success).toBe(false);
+      });
+
+      test("720（最大値）はOK", () => {
+        const result = reservationSettingsSchema.safeParse({
+          ...VALID_RESERVATION_INPUT,
+          cancellationDeadlineHours: 720,
         });
         expect(result.success).toBe(true);
+      });
+
+      test("721はエラー", () => {
+        const result = reservationSettingsSchema.safeParse({
+          ...VALID_RESERVATION_INPUT,
+          cancellationDeadlineHours: 721,
+        });
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe("modificationDeadlineHours", () => {
+      test("1（最小値）はOK", () => {
+        const result = reservationSettingsSchema.safeParse({
+          ...VALID_RESERVATION_INPUT,
+          modificationDeadlineHours: 1,
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("720（最大値）はOK", () => {
+        const result = reservationSettingsSchema.safeParse({
+          ...VALID_RESERVATION_INPUT,
+          modificationDeadlineHours: 720,
+        });
+        expect(result.success).toBe(true);
+      });
+
+      test("721はエラー", () => {
+        const result = reservationSettingsSchema.safeParse({
+          ...VALID_RESERVATION_INPUT,
+          modificationDeadlineHours: 721,
+        });
+        expect(result.success).toBe(false);
       });
     });
   });

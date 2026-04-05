@@ -14,11 +14,19 @@ describe("publicReservationSchema", () => {
     email: "test@example.com",
     phoneNumber: "03-1234-5678",
     notes: "",
-    agreeToTerms: true,
+    agreedTermsIds: [],
   };
 
   test("valid input passes", () => {
     const result = publicReservationSchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+  });
+
+  test("valid input with agreedTermsIds passes", () => {
+    const result = publicReservationSchema.safeParse({
+      ...validInput,
+      agreedTermsIds: ["550e8400-e29b-41d4-a716-446655440000"],
+    });
     expect(result.success).toBe(true);
   });
 
@@ -38,10 +46,10 @@ describe("publicReservationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("rejects agreeToTerms=false", () => {
+  test("rejects invalid UUID in agreedTermsIds", () => {
     const result = publicReservationSchema.safeParse({
       ...validInput,
-      agreeToTerms: false,
+      agreedTermsIds: ["not-a-valid-uuid"],
     });
     expect(result.success).toBe(false);
   });
