@@ -7,6 +7,7 @@ import {
   HeaderScrollBehavior,
   LayoutWidth,
 } from "@generated/prisma/enums";
+import { sidebarWidgetsSchema } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
 // Site > Privacy > Cookie同意設定
@@ -72,13 +73,7 @@ export type FooterFormInput = z.infer<typeof footerFormSchema>;
 
 export const sidebarFormSchema = z.object({
   sidebarEnabled: z.boolean(),
-  sidebarWidgets: z.object({
-    search: z.boolean(),
-    recent: z.boolean(),
-    popular: z.boolean(),
-    categories: z.boolean(),
-    tags: z.boolean(),
-  }),
+  sidebarWidgets: sidebarWidgetsSchema,
   sidebarRecentCount: z.number().int().min(1).max(20),
   sidebarPopularCount: z.number().int().min(1).max(20),
 });

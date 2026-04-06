@@ -36,8 +36,8 @@ import { sidebarFormSchema } from "@/admin/actions/settings/schemas/form-schemas
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
-  sidebarWidgetsSchema,
-  type SidebarWidgets,
+  DEFAULT_SIDEBAR_WIDGETS,
+  parseSidebarWidgets,
 } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
@@ -53,21 +53,6 @@ interface SidebarSectionProps {
 // =============================================================================
 
 export function SidebarSection({ settings }: SidebarSectionProps) {
-  // デフォルト値の設定
-  const defaultWidgets: SidebarWidgets = {
-    search: true,
-    recent: true,
-    popular: true,
-    categories: true,
-    tags: true,
-  };
-
-  // JSONパースの安全な処理（Zodバリデーション）
-  const parseWidgets = (widgetsData: unknown): SidebarWidgets => {
-    const result = sidebarWidgetsSchema.safeParse(widgetsData);
-    return result.success ? result.data : defaultWidgets;
-  };
-
   const { form, isPending, onSubmit } = useFormAction(
     sidebarFormSchema,
     (data) =>
@@ -80,7 +65,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     {
       defaultValues: {
         sidebarEnabled: settings.sidebarEnabled ?? true,
-        sidebarWidgets: parseWidgets(settings.sidebarWidgets),
+        sidebarWidgets: parseSidebarWidgets(settings.sidebarWidgets),
         sidebarRecentCount: settings.sidebarRecentCount ?? 5,
         sidebarPopularCount: settings.sidebarPopularCount ?? 5,
       },
@@ -93,14 +78,14 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     control: form.control,
     name: "sidebarEnabled",
   });
-  const widgetRecent = useWatch({
+
+  const widgets = useWatch({
     control: form.control,
-    name: "sidebarWidgets.recent",
+    name: "sidebarWidgets",
   });
-  const widgetPopular = useWatch({
-    control: form.control,
-    name: "sidebarWidgets.popular",
-  });
+
+  const isWidgetEnabled = (type: string) =>
+    widgets?.find((w) => w.type === type)?.enabled ?? false;
 
   return (
     <Form {...form}>
@@ -142,122 +127,72 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium">ウィジェット設定</h4>
 
-                  <FormField
-                    control={form.control}
-                    name="sidebarWidgets.search"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>検索ウィジェット</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            記事検索フォームを表示します
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {DEFAULT_SIDEBAR_WIDGETS.map((widget, index) => {
+                    const labels: Record<
+                      string,
+                      { label: string; desc: string }
+                    > = {
+                      search: {
+                        label: "検索ウィジェット",
+                        desc: "記事検索フォームを表示します",
+                      },
+                      recent: {
+                        label: "新着記事ウィジェット",
+                        desc: "最新の記事一覧を表示します",
+                      },
+                      popular: {
+                        label: "人気記事ウィジェット",
+                        desc: "閲覧数の多い記事一覧を表示します",
+                      },
+                      categories: {
+                        label: "カテゴリーウィジェット",
+                        desc: "カテゴリー一覧を表示します",
+                      },
+                      tags: {
+                        label: "タグウィジェット",
+                        desc: "タグクラウドを表示します",
+                      },
+                    };
+                    const meta = labels[widget.type];
+                    if (!meta) return null;
 
-                  <FormField
-                    control={form.control}
-                    name="sidebarWidgets.recent"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>新着記事ウィジェット</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            最新の記事一覧を表示します
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                    const fieldIndex = form
+                      .getValues("sidebarWidgets")
+                      .findIndex((w) => w.type === widget.type);
+                    const idx = fieldIndex >= 0 ? fieldIndex : index;
 
-                  <FormField
-                    control={form.control}
-                    name="sidebarWidgets.popular"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>人気記事ウィジェット</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            閲覧数の多い記事一覧を表示します
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="sidebarWidgets.categories"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>カテゴリーウィジェット</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            カテゴリー一覧を表示します
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="sidebarWidgets.tags"
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel>タグウィジェット</FormLabel>
-                          <p className="text-sm text-muted-foreground">
-                            タグクラウドを表示します
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                    return (
+                      <FormField
+                        key={widget.type}
+                        control={form.control}
+                        name={`sidebarWidgets.${idx}.enabled`}
+                        render={({ field }) => (
+                          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel>{meta.label}</FormLabel>
+                              <p className="text-sm text-muted-foreground">
+                                {meta.desc}
+                              </p>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={isPending}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* 表示件数設定 */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-medium">表示件数設定</h4>
 
-                  {widgetRecent && (
+                  {isWidgetEnabled("recent") && (
                     <FormField
                       control={form.control}
                       name="sidebarRecentCount"
@@ -287,7 +222,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                     />
                   )}
 
-                  {widgetPopular && (
+                  {isWidgetEnabled("popular") && (
                     <FormField
                       control={form.control}
                       name="sidebarPopularCount"

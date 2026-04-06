@@ -170,42 +170,50 @@ describe("Sidebar Public Action Integration", () => {
 
   describe("SidebarWidgets settings", () => {
     test("デフォルトウィジェット設定", () => {
-      const defaultWidgets: SidebarWidgets = {
-        search: true,
-        recent: true,
-        popular: true,
-        categories: true,
-        tags: true,
-      };
+      const defaultWidgets: SidebarWidgets = [
+        { type: "search", enabled: true },
+        { type: "recent", enabled: true },
+        { type: "popular", enabled: true },
+        { type: "categories", enabled: true },
+        { type: "tags", enabled: true },
+      ];
 
-      expect(defaultWidgets.search).toBe(true);
-      expect(defaultWidgets.recent).toBe(true);
-      expect(defaultWidgets.popular).toBe(true);
-      expect(defaultWidgets.categories).toBe(true);
-      expect(defaultWidgets.tags).toBe(true);
+      expect(defaultWidgets.find((w) => w.type === "search")?.enabled).toBe(
+        true,
+      );
+      expect(defaultWidgets.find((w) => w.type === "recent")?.enabled).toBe(
+        true,
+      );
+      expect(defaultWidgets.find((w) => w.type === "popular")?.enabled).toBe(
+        true,
+      );
+      expect(defaultWidgets.find((w) => w.type === "categories")?.enabled).toBe(
+        true,
+      );
+      expect(defaultWidgets.find((w) => w.type === "tags")?.enabled).toBe(true);
     });
 
-    test("部分的な設定のマージ", () => {
-      const defaultWidgets: SidebarWidgets = {
-        search: true,
-        recent: true,
-        popular: true,
-        categories: true,
-        tags: true,
-      };
+    test("部分的な設定のマージ（特定ウィジェットを無効化）", () => {
+      const defaultWidgets: SidebarWidgets = [
+        { type: "search", enabled: true },
+        { type: "recent", enabled: true },
+        { type: "popular", enabled: true },
+        { type: "categories", enabled: true },
+        { type: "tags", enabled: true },
+      ];
 
-      const customWidgets = {
-        search: false,
-        tags: false,
-      };
+      const merged = defaultWidgets.map((w) => {
+        if (w.type === "search" || w.type === "tags") {
+          return { ...w, enabled: false };
+        }
+        return w;
+      });
 
-      const merged = { ...defaultWidgets, ...customWidgets };
-
-      expect(merged.search).toBe(false);
-      expect(merged.recent).toBe(true);
-      expect(merged.popular).toBe(true);
-      expect(merged.categories).toBe(true);
-      expect(merged.tags).toBe(false);
+      expect(merged.find((w) => w.type === "search")?.enabled).toBe(false);
+      expect(merged.find((w) => w.type === "recent")?.enabled).toBe(true);
+      expect(merged.find((w) => w.type === "popular")?.enabled).toBe(true);
+      expect(merged.find((w) => w.type === "categories")?.enabled).toBe(true);
+      expect(merged.find((w) => w.type === "tags")?.enabled).toBe(false);
     });
 
     test("sidebarEnabled のデフォルト値", () => {
