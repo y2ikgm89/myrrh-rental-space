@@ -170,9 +170,7 @@ export function LayoutFieldsConnected<T extends FieldValues>({
   return (
     <LayoutFields
       contentWidth={String(contentWidth)}
-      contentWidthCustomProps={
-        register(contentWidthCustomPath) as Record<string, unknown>
-      }
+      contentWidthCustomProps={{ ...register(contentWidthCustomPath) }}
       contentWidthCustomError={getErrorMessage(errors, "contentWidthCustom")}
       onContentWidthChange={(width) => {
         (setValue as UseFormSetValue<FieldValues> | undefined)?.(

@@ -21,9 +21,13 @@ function parseSectionConfig(type: string, config: unknown): SectionConfig {
     return result.data;
   }
 
-  return (getDefaultSectionConfig(type) ??
-    getDefaultSectionConfig(SectionType.CUSTOM) ??
-    {}) as SectionConfig;
+  const fallback =
+    getDefaultSectionConfig(type) ??
+    getDefaultSectionConfig(SectionType.CUSTOM);
+  if (!fallback) {
+    throw new DomainError("セクション設定の初期化に失敗しました", "VALIDATION");
+  }
+  return fallback;
 }
 
 function parseJsonValue(
