@@ -9,7 +9,7 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { CustomerStatusBadge } from "@/admin/components/status-badges";
 import type { CustomerData } from "@/shared/domain/customers/types";
-import { formatDateShort } from "@/shared/lib/utils";
+import { formatDateShort } from "@/shared/lib/date-format";
 import { CustomerActionCell } from "./CustomerActionCell";
 
 // =============================================================================

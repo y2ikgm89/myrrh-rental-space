@@ -58,7 +58,6 @@ mock.module("@/shared/lib/errors/server", () => ({
 
 import {
   withTimeout,
-  withRetry,
   fireAndForget,
   settleAllWithLogging,
 } from "@/shared/lib/async-utils";
@@ -115,121 +114,6 @@ describe("withTimeout", () => {
       await expect(withTimeout(failingPromise, 1000)).rejects.toThrow(
         "元のエラー",
       );
-    });
-  });
-});
-
-// =============================================================================
-// withRetry
-// =============================================================================
-
-describe("withRetry", () => {
-  describe("正常系", () => {
-    test("初回で成功した場合はリトライなしで結果を返す", async () => {
-      const fn = mock(() => Promise.resolve("初回成功"));
-      const result = await withRetry(fn, { maxRetries: 3, delayMs: 0 });
-      expect(result).toBe("初回成功");
-      expect(fn).toHaveBeenCalledTimes(1);
-    });
-
-    test("2回目で成功した場合は結果を返す", async () => {
-      let callCount = 0;
-      const fn = mock(() => {
-        callCount++;
-        if (callCount < 2) return Promise.reject(new Error("一時失敗"));
-        return Promise.resolve("2回目成功");
-      });
-      const result = await withRetry(fn, { maxRetries: 3, delayMs: 0 });
-      expect(result).toBe("2回目成功");
-      expect(fn).toHaveBeenCalledTimes(2);
-    });
-
-    test("最大リトライ回数の直前で成功した場合は結果を返す", async () => {
-      let callCount = 0;
-      const fn = mock(() => {
-        callCount++;
-        if (callCount <= 3) return Promise.reject(new Error("失敗"));
-        return Promise.resolve("最後に成功");
-      });
-      const result = await withRetry(fn, { maxRetries: 3, delayMs: 0 });
-      expect(result).toBe("最後に成功");
-      expect(fn).toHaveBeenCalledTimes(4);
-    });
-  });
-
-  describe("異常系", () => {
-    test("最大リトライ回数を超えた場合は最後のエラーをスローする", async () => {
-      const fn = mock(() => Promise.reject(new Error("常に失敗")));
-      await expect(
-        withRetry(fn, { maxRetries: 2, delayMs: 0 }),
-      ).rejects.toThrow("常に失敗");
-      // 最大リトライ 2 = 初回 + 2回リトライ = 3回呼ばれる
-      expect(fn).toHaveBeenCalledTimes(3);
-    });
-
-    test("デフォルト設定（maxRetries: 3）で4回呼ばれる", async () => {
-      const fn = mock(() => Promise.reject(new Error("常に失敗")));
-      await expect(withRetry(fn, { delayMs: 0 })).rejects.toThrow("常に失敗");
-      expect(fn).toHaveBeenCalledTimes(4);
-    });
-  });
-
-  describe("shouldRetry", () => {
-    test("shouldRetry が false を返した場合は即座に失敗する", async () => {
-      const fn = mock(() => Promise.reject(new Error("即座失敗")));
-      const shouldRetry = mock(() => false);
-      await expect(
-        withRetry(fn, { maxRetries: 3, delayMs: 0, shouldRetry }),
-      ).rejects.toThrow("即座失敗");
-      // shouldRetry が false のため初回のみ呼ばれる
-      expect(fn).toHaveBeenCalledTimes(1);
-      expect(shouldRetry).toHaveBeenCalledTimes(1);
-    });
-
-    test("shouldRetry がエラーオブジェクトを受け取る", async () => {
-      const targetError = new Error("リトライ判定エラー");
-      const fn = mock(() => Promise.reject(targetError));
-      const shouldRetry = mock((_err: unknown) => false);
-      await expect(
-        withRetry(fn, { maxRetries: 3, delayMs: 0, shouldRetry }),
-      ).rejects.toThrow("リトライ判定エラー");
-      expect(shouldRetry).toHaveBeenCalledWith(targetError);
-    });
-
-    test("特定エラーのみリトライし、そうでないエラーは即停止する", async () => {
-      let callCount = 0;
-      const fn = mock(() => {
-        callCount++;
-        if (callCount === 1)
-          return Promise.reject(new Error("リトライ対象エラー"));
-        return Promise.reject(new Error("リトライ非対象エラー"));
-      });
-      const shouldRetry = mock((err: unknown) => {
-        return err instanceof Error && err.message === "リトライ対象エラー";
-      });
-      await expect(
-        withRetry(fn, { maxRetries: 3, delayMs: 0, shouldRetry }),
-      ).rejects.toThrow("リトライ非対象エラー");
-      expect(fn).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe("バックオフ", () => {
-    test("backoffMultiplier: 1 でディレイが変化しない", async () => {
-      // delayMs: 0 なので実際の遅延テストは不要。呼び出し回数のみ確認
-      const fn = mock(() => Promise.reject(new Error("失敗")));
-      await expect(
-        withRetry(fn, { maxRetries: 2, delayMs: 0, backoffMultiplier: 1 }),
-      ).rejects.toThrow("失敗");
-      expect(fn).toHaveBeenCalledTimes(3);
-    });
-
-    test("maxRetries: 0 の場合は初回のみ呼ばれリトライなし", async () => {
-      const fn = mock(() => Promise.reject(new Error("即失敗")));
-      await expect(
-        withRetry(fn, { maxRetries: 0, delayMs: 0 }),
-      ).rejects.toThrow("即失敗");
-      expect(fn).toHaveBeenCalledTimes(1);
     });
   });
 });

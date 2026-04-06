@@ -8,7 +8,7 @@ import {
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
 import { AuditActionBadge } from "@/admin/components/status-badges";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isRecord } from "@/shared/lib/serialize";
 import type { AuditLogItem } from "@/shared/domain/audit-log/queries";
 

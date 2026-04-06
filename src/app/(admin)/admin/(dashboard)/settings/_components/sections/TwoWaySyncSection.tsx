@@ -53,7 +53,7 @@ import {
   IconCircleCheck,
 } from "@tabler/icons-react";
 import { CalendarSyncMethod } from "@generated/prisma/enums";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================

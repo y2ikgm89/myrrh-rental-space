@@ -13,6 +13,8 @@ import {
 import { PageHero } from "../../_shared/components/layouts/page-hero";
 import { Breadcrumb } from "../../_shared/components/layouts/breadcrumb";
 import { SiteCTA } from "../../_shared/components/layouts/site-cta";
+import { PageLayout } from "../../_shared/components/design-system/page-layout";
+import { Section } from "../../_shared/components/design-system/section";
 import { Container } from "../../_shared/components/design-system/container";
 import { SpaceGallery } from "./_components/space-gallery";
 import { SpaceInfo } from "./_components/space-info";
@@ -60,7 +62,24 @@ export default async function SpaceDetailPage({
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
 
   return (
-    <>
+    <PageLayout
+      variant="content"
+      hero={
+        <PageHero
+          variant="compact"
+          title={space.name}
+          breadcrumb={
+            <Breadcrumb
+              items={[
+                { label: "スペース一覧", href: "/spaces" },
+                { label: space.name },
+              ]}
+            />
+          }
+        />
+      }
+      cta={<SiteCTA />}
+    >
       <BreadcrumbJsonLd
         items={[
           { name: "ホーム", url: "/" },
@@ -84,36 +103,25 @@ export default async function SpaceDetailPage({
           },
         })}
       />
-      <PageHero
-        variant="compact"
-        title={space.name}
-        breadcrumb={
-          <Breadcrumb
-            items={[
-              { label: "スペース一覧", href: "/spaces" },
-              { label: space.name },
-            ]}
-          />
-        }
-      />
 
-      <section className="py-[var(--spacing-section)]">
+      <Section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container>
-          <SpaceGallery
-            mainImage={space.mainImageUrl}
-            images={space.imageUrls}
-            name={space.name}
-          />
-
-          <div className="mt-12 grid gap-12 lg:grid-cols-[1fr_380px]">
-            <div>
+          <div className="grid gap-10 lg:grid-cols-[1fr_320px] lg:gap-12">
+            <div className="space-y-12">
+              <SpaceGallery
+                mainImage={space.mainImageUrl}
+                images={space.imageUrls}
+                name={space.name}
+              />
               <SpaceInfo space={space} />
               <Suspense fallback={null}>
                 <SpaceReviews spaceId={space.id} />
               </Suspense>
             </div>
+
             <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
               <ReservationWidget
+                spaceId={space.id}
                 spaceName={space.name}
                 hourlyPrice={Number(space.hourlyPrice)}
                 dailyPrice={space.dailyPrice ? Number(space.dailyPrice) : null}
@@ -121,7 +129,7 @@ export default async function SpaceDetailPage({
             </div>
           </div>
         </Container>
-      </section>
+      </Section>
 
       <Suspense fallback={null}>
         <RelatedSpaces
@@ -129,8 +137,6 @@ export default async function SpaceDetailPage({
           categoryId={space.category?.id ?? null}
         />
       </Suspense>
-
-      <SiteCTA />
-    </>
+    </PageLayout>
   );
 }

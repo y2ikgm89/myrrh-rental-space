@@ -10,7 +10,7 @@ import {
 import { RoleBadge } from "@/admin/components/status-badges";
 import { InvitationActions } from "./InvitationActions";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
-import { formatDateTimeShort, formatDateShort } from "@/shared/lib/utils";
+import { formatDateTimeShort, formatDateShort } from "@/shared/lib/date-format";
 
 type InvitationTableProps = {
   invitations: InvitationData[];

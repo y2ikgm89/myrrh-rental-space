@@ -44,14 +44,27 @@ export default async function FaqPage(): Promise<ReactElement> {
     (s) => s.type === "hero" || s.type === "hero-parallax",
   );
   const trailingSections = sections.filter(
-    (s) => s !== heroSection && s.type !== "hero" && s.type !== "hero-parallax",
+    (s) =>
+      s !== heroSection &&
+      s.type !== "hero" &&
+      s.type !== "hero-parallax" &&
+      s.type !== "faq-list" &&
+      s.type !== "cta",
   );
 
   return (
     <PageLayout
       variant="content"
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
-      cta={<SiteCTA />}
+      cta={
+        <SiteCTA
+          label="Contact"
+          title="お探しの答えが見つかりませんか？"
+          description="ご不明点がございましたら、お気軽にお問い合わせください。"
+          buttonText="お問い合わせ"
+          buttonHref="/contact"
+        />
+      }
     >
       {faqJsonLdItems.length > 0 ? (
         <FAQPageJsonLd items={faqJsonLdItems} />

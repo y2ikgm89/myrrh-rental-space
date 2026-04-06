@@ -18,7 +18,7 @@ import {
 } from "@/admin/components/ui/table";
 import { Badge } from "@/admin/components/ui/badge";
 import { Pagination } from "@/admin/components/ui/Pagination";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";
 import { BulkActions } from "./BulkActions";

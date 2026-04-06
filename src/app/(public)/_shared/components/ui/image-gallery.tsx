@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { cn } from "@/shared/lib/cn";
 import { IconX, IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { ImageFrame } from "../design-system/image-frame";
 import type { KeyboardEvent } from "react";
 
 interface ImageGalleryProps {
@@ -16,16 +16,21 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
 
   if (images.length === 0) return null;
 
+  const thumbnails = images.slice(1, 5);
+
   function openLightbox(index: number) {
     setLightboxIndex(index);
   }
+
   function closeLightbox() {
     setLightboxIndex(null);
   }
+
   function goNext() {
     if (lightboxIndex === null) return;
     setLightboxIndex((lightboxIndex + 1) % images.length);
   }
+
   function goPrev() {
     if (lightboxIndex === null) return;
     setLightboxIndex((lightboxIndex - 1 + images.length) % images.length);
@@ -41,32 +46,44 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
     lightboxIndex !== null ? images[lightboxIndex] : undefined;
 
   return (
-    <>
-      {/* Grid */}
-      <div className="grid gap-2 md:grid-cols-[2fr_1fr] md:grid-rows-2">
-        {images.slice(0, 5).map((src, i) => (
-          <button
-            key={src}
-            type="button"
-            onClick={() => openLightbox(i)}
-            className={cn(
-              "relative overflow-hidden",
-              i === 0
-                ? "aspect-[16/10] md:row-span-2"
-                : "hidden aspect-[4/3] md:block",
-            )}
-          >
-            <Image
-              src={src}
-              alt={`${alt} ${String(i + 1)}`}
-              fill
-              sizes={i === 0 ? "(min-width: 768px) 66vw, 100vw" : "33vw"}
-              className="object-cover transition-transform duration-300 hover:scale-105"
-              priority={i === 0}
-            />
-          </button>
-        ))}
-      </div>
+    <div>
+      {/* Main image — ImageFrame Primitive */}
+      <button
+        type="button"
+        onClick={() => openLightbox(0)}
+        className="block w-full"
+      >
+        <ImageFrame
+          src={images[0] ?? ""}
+          alt={`${alt} 1`}
+          fill
+          aspect="photo"
+          sizes="(min-width: 1280px) 860px, (min-width: 1024px) 60vw, 100vw"
+          priority
+        />
+      </button>
+
+      {/* Thumbnail strip */}
+      {thumbnails.length > 0 ? (
+        <div className="mt-3 flex gap-2">
+          {thumbnails.map((src, i) => (
+            <button
+              key={`${src}-${String(i)}`}
+              type="button"
+              onClick={() => openLightbox(i + 1)}
+              className="block shrink-0"
+            >
+              <ImageFrame
+                src={src}
+                alt={`${alt} ${String(i + 2)}`}
+                fill
+                className="h-16 w-24 sm:h-20 sm:w-28"
+                sizes="112px"
+              />
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {/* Lightbox */}
       {lightboxIndex !== null && currentImage ? (
@@ -80,7 +97,7 @@ export function ImageGallery({ images, alt }: ImageGalleryProps) {
           onKeyDown={handleKeyDown}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 

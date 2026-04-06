@@ -13,7 +13,7 @@ import {
 import { RegistrationStatusBadge } from "@/admin/components/status-badges";
 import { adminCancelRegistration } from "@/admin/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { RegistrationStatus } from "@generated/prisma/enums";

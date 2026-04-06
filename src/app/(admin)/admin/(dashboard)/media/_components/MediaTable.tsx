@@ -13,7 +13,7 @@ import {
 } from "@tabler/icons-react";
 import type { MediaData } from "@/admin/types/media-picker";
 import { MediaDetailDialog } from "./MediaDetailDialog";
-import { formatDate } from "@/shared/lib/utils";
+import { formatDate } from "@/shared/lib/date-format";
 import { formatBytes } from "@/admin/lib/utils";
 import { USAGE_LABELS } from "./constants";
 import { createCopyUrlHandler, useDeleteMedia } from "./hooks";

@@ -20,6 +20,7 @@
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API のないコンポーネントは Server Component（Tailwind はビルド時 CSS 生成）→ `gotchas.md` §レスポンシブ標準
 - **className テンプレートリテラル禁止** → 条件分岐・変数結合・関数呼び出し含む全パターンで `cn()` 使用必須。import は `@/shared/lib/cn`（全ファイル共通）。例外: layout.tsx のフォント変数のみ（`${font.variable}`）
 - **公開ページで Design System Primitive 迂回禁止** → `next/image` 直接使用は `ImageFrame` に置換、手動 `<section>` は `Section` に、ページ構造は `PageLayout` + `PageHero` を使用
+- **公開ページのセクション背景色交互配置禁止** → 全コンテンツセクション `bg-background`（白）統一。`bg-surface` はフッターのみ。セクション分離は余白 + `border-t`。画像プレースホルダは `bg-card` → `project-design-config.md`
 
 ---
 
@@ -55,7 +56,8 @@
 ### アーキテクチャ
 
 Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイアウトを完全分離。遷移はフルページリロード。
-公開ページ: Editorial Magazine（Kinfolk/Cereal）— シャープエッジ、serif/sans 対比、bronze accent ≤15%、editorial ボタン（シャープエッジ + bronze hover） → `project-design-config.md`
+公開ページ: Editorial Magazine（Kinfolk/Cereal）— シャープエッジ、serif/sans 対比、bronze accent ≤10%、editorial ボタン（シャープエッジ + bronze hover） → `project-design-config.md`
+公開ページ: ページ固有 UI と同種の DB セクション（`faq-list`, `cta` 等）は `trailingSections` から除外必須 → `gotchas.md` §Page-First Architecture
 レスポンシブ: Fluid-first（`clamp()`）+ Container Queries（カードグリッド）。Viewport breakpoints はマクロレイアウト切替のみ。
 
 ```
@@ -93,7 +95,7 @@ bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証
 bun run build:skip-env                        # env未設定時ビルド（SKIP_ENV_VALIDATION=true）
-bun run test                                  # 全テスト（35バッチ分離実行: mock.module 干渉回避）
+bun run test                                  # 全テスト（39バッチ分離実行: mock.module 干渉回避）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
 bun test __tests__/unit/domain/reviews        # 特定ドメインのみ
@@ -110,30 +112,22 @@ bun scripts/generate-login-url.ts             # Admin Gate ログインURL生成
 
 ### コーディング規約
 
-`.claude/rules/`（27ファイル）が `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`。
+`.claude/rules/`（28ファイル）が `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`。
 
 ### キーファイル
 
-| パス                                                   | 内容                                                                                                                                                                                                                 |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/shared/db/prisma.ts`                              | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                                                                                       |
-| `src/shared/lib/auth.ts`                               | Better Auth 設定・セッション検証                                                                                                                                                                                     |
-| `src/shared/lib/constants/cache.ts`                    | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                                                                                  |
-| `src/shared/lib/sections/registry.ts`                  | セクションレジストリ（22定義: 標準17 + homepage-\*5、field ヘルパー）                                                                                                                                                |
-| `src/app/(admin)/.../_shared/lib/admin-action.ts`      | `executeAdminMutationResult`                                                                                                                                                                                         |
-| `src/proxy.ts`                                         | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                                                                                          |
-| `src/app/(public)/_shared/components/design-system/`   | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog）。ImageFrame aspect: video/square/portrait/wide/landscape/photo |
-| `src/app/(admin)/.../_shared/components/table/`        | BaseFilters, SortableColumnHeader, Pagination                                                                                                                                                                        |
-| `src/app/(admin)/.../_shared/components/DetailLoading` | 詳細/編集サブルート用 loading.tsx スケルトン                                                                                                                                                                         |
-| `src/shared/domain/events/`                            | イベント管理（commands/admin-queries/public-queries/registration）                                                                                                                                                   |
-| `src/shared/domain/terms/public-queries.ts`            | 規約公開クエリ（`getReservationRequiredTerms`, `getFooterTerms`, `getFirstActiveTermsSlug`）                                                                                                                         |
-| `src/shared/lib/calendar-sync/event-inbound.ts`        | Google Calendar → Event 取り込み（syncToken 差分同期）                                                                                                                                                               |
-| `src/app/(public)/_shared/lib/search-params.ts`        | 公開ページ nuqs パーサーマップ（Server/Client 共有、全パーサー export 必須）                                                                                                                                         |
-| `src/app/(public)/journal/`                            | news+posts 統合フィード（タブ切替）                                                                                                                                                                                  |
-| `src/app/(public)/_components/homepage/`               | ホームページ5セクション DB 駆動（`getHomepageSections()` → `homepage-*` 型マッピング、DB 未登録時は defaultProps fallback）。spaces-carousel.tsx = CSS scroll-snap 無限ループカルーセル                              |
-| `src/shared/styles/lexical-content.css`                | Lexical ブロック出力 CSS（admin.css/public.css 両方から @import、Editorial Magazine 準拠）                                                                                                                           |
-| `src/shared/lib/utils.ts`                              | FormData ヘルパー（`getFormString` 等）+ `generateSlug` のみ。`cn` は `cn.ts`、日付は `date-format.ts`、`withRetry` は `action-helpers.ts` が正本                                                                    |
-| `src/shared/lib/date-format.ts`                        | 日付フォーマット正本（`formatDate`/`formatDateShort`/`formatDateTimeShort`/`formatDateTimeFull`）                                                                                                                    |
+| パス                                                     | 内容                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/shared/db/prisma.ts`                                | `prisma` インスタンス（`$extends` 適用済み）。型/enum は `@generated/prisma/*`                                                                                                                                       |
+| `src/shared/lib/auth.ts`                                 | Better Auth 設定・セッション検証                                                                                                                                                                                     |
+| `src/shared/lib/constants/cache.ts`                      | `CACHE_TAGS`（粒度別）, `CACHE_LIFE`, `getCacheTag`                                                                                                                                                                  |
+| `src/shared/lib/sections/registry.ts`                    | セクションレジストリ（22定義: 標準17 + homepage-\*5、field ヘルパー）                                                                                                                                                |
+| `src/app/(admin)/.../_shared/lib/admin-action.ts`        | `executeAdminMutationResult`                                                                                                                                                                                         |
+| `src/proxy.ts`                                           | Admin Gate + Rate Limit（Next.js 16 proxy）                                                                                                                                                                          |
+| `src/app/(public)/_shared/components/design-system/`     | Primitives 15（SC: Container/Stack/Heading/Section/Divider/EditorialCard/PageLayout/Badge/Prose/ImageFrame/Input/Select/Textarea, CC: Button/Dialog）。ImageFrame aspect: video/square/portrait/wide/landscape/photo |
+| `src/app/(public)/spaces/_components/image-carousel.tsx` | スペースカード内画像カルーセル（ホバー時左右ナビ、モバイルスワイプ、ドットインジケーター）。`SpaceCard` が `imageUrls` 2枚以上で自動使用                                                                             |
+| `src/shared/lib/utils.ts`                                | FormData ヘルパー（`getFormString` 等）+ `generateSlug` のみ。`cn` は `cn.ts`、日付は `date-format.ts`、`withRetry` は `action-helpers.ts` が正本                                                                    |
+| `src/shared/lib/date-format.ts`                          | 日付フォーマット正本（`formatDate`/`formatDateShort`/`formatDateTimeShort`/`formatDateTimeFull`）                                                                                                                    |
 
 ### セキュリティ・キャッシュ
 

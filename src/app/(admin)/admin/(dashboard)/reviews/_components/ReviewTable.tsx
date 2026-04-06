@@ -9,7 +9,7 @@ import {
   Badge,
 } from "@/admin/components/ui";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { ReviewActionCell } from "./ReviewActionCell";
 
 // =============================================================================

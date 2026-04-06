@@ -24,8 +24,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("reservation");
 }
 
-export default async function ReservationPage(): Promise<ReactElement> {
+interface ReservationPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function ReservationPage({
+  searchParams,
+}: ReservationPageProps): Promise<ReactElement> {
   await connection();
+  const params = await searchParams;
+  const rawSpaceId =
+    typeof params["spaceId"] === "string" ? params["spaceId"] : undefined;
 
   const [sections, locations, businessHours, turnstileSiteKey, user] =
     await Promise.all([
@@ -46,6 +55,13 @@ export default async function ReservationPage(): Promise<ReactElement> {
         phoneNumber: customer.phoneNumber,
         companyName: customer.companyName,
       }
+    : undefined;
+
+  // Validate spaceId against fetched locations
+  const initialSpaceId = rawSpaceId
+    ? locations.some((loc) => loc.spaces.some((s) => s.id === rawSpaceId))
+      ? rawSpaceId
+      : undefined
     : undefined;
 
   const heroSection = sections.find(
@@ -70,6 +86,7 @@ export default async function ReservationPage(): Promise<ReactElement> {
           businessHours={businessHours}
           turnstileSiteKey={turnstileSiteKey}
           prefillData={prefillData}
+          initialSpaceId={initialSpaceId}
           isLoggedIn={user != null}
           requiredTerms={[]}
         />

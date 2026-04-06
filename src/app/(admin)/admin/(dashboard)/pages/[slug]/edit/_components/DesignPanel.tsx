@@ -61,7 +61,6 @@ const backgroundOptions = [
   { value: "primary", label: "プライマリ" },
   { value: "dark", label: "ダーク" },
   { value: "image", label: "画像" },
-  { value: "gradient", label: "グラデーション" },
 ] as const;
 
 const maxWidthOptions = [

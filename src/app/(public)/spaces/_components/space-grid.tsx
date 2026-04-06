@@ -13,6 +13,7 @@ interface Space {
   readonly facilities: readonly string[];
   readonly lineAddress: string;
   readonly mainImageUrl: string;
+  readonly imageUrls: readonly string[];
   readonly category: { readonly name: string } | null;
   readonly location: { readonly name: string };
 }
@@ -55,6 +56,7 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
                 lineAddress={space.lineAddress}
                 facilities={space.facilities}
                 mainImageUrl={space.mainImageUrl}
+                imageUrls={space.imageUrls}
                 categoryName={space.category?.name}
                 {...(stats && stats.totalCount > 0
                   ? {

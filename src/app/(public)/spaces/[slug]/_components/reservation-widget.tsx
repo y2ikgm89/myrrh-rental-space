@@ -1,15 +1,19 @@
+"use client";
+
 import { Button } from "../../../_shared/components/design-system/button";
 import { Heading } from "../../../_shared/components/design-system/heading";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 import { Stack } from "../../../_shared/components/design-system/stack";
 
 interface ReservationWidgetProps {
+  readonly spaceId: string;
   readonly spaceName: string;
   readonly hourlyPrice: number;
   readonly dailyPrice: number | null;
 }
 
 export function ReservationWidget({
+  spaceId,
   hourlyPrice,
   dailyPrice,
 }: ReservationWidgetProps) {
@@ -39,16 +43,16 @@ export function ReservationWidget({
         <hr className="border-border" />
 
         <Button
-          variant="primary"
+          variant="editorial"
           size="lg"
-          href="/reservation"
+          href={`/reservation?spaceId=${spaceId}`}
           className="w-full"
         >
           このスペースを予約する
         </Button>
 
         <Button
-          variant="secondary"
+          variant="editorial"
           size="md"
           href="/contact"
           className="w-full"

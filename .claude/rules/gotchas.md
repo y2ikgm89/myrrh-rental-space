@@ -133,6 +133,7 @@ paths:
 - **`ImageCarousel` は `next/image` 直接使用の許容例外** — per-image の `opacity` + `aria-hidden` 制御が必要で `ImageFrame` では対応不可。単一画像は `ImageFrame` を使用
 - **`SectionWrapper` と `Section` Primitive を混同しない** — `SectionWrapper`（`sections/SectionWrapper.tsx`）は管理画面 SectionDesign JSON → CSS 変換（padding/background/maxWidth を DB から動的制御）。`Section` Primitive（`design-system/section.tsx`）は静的ページレイアウト用。SectionWrapper を Section に置き換えると管理画面のデザイン制御が効かなくなる
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
+- **ページ固有 CTA（SiteCTA）を持つページは `cta` セクションも除外** — `/faq`（SiteCTA でお問い合わせ誘導）、`/contact`（フォーム自体が CTA）では DB の `cta` セクションが重複。`trailingSections` フィルタに `s.type !== "cta"` を追加
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
 - **hero 直下の一覧セクションは上余白を縮小** — `py-[var(--spacing-section)]`（112-176px）は hero 後に過剰。`pt-10 pb-[var(--spacing-section)] md:pt-14` で上余白のみ 40-56px に抑える。適用済み: `/spaces`, `/journal`, `/faq`。記事詳細・ホームページセクションは独立コンテンツのためフル余白維持
 - **同種の公開 UI コンポーネント重複禁止** — 新規作成前に `_shared/components/ui/` を確認。`FilterBar`（nuqs + useTransition + Editorial スタイル）が唯一のカテゴリフィルタ
@@ -279,9 +280,11 @@ paths:
 ## Editorial デザイン
 
 - **editorial ボタンは全箇所 `Button variant="editorial"` で統一** — raw `<Link>` + インラインスタイルで editorial ボタンを実装しない。`button.tsx` の editorial variant（シャープエッジ + bronze hover）が Single Source of Truth。site-header / cta-section / site-cta すべてで Button コンポーネントを使用
-- **公開ページで `bg-foreground`（ダーク反転セクション）禁止** — Editorial Magazine（Kinfolk/Cereal）は白 ↔ 薄茶の交互配置が基本。ダーク全幅セクションは Accent 10% 制約を超え、トーンが崩れる。SiteCTA は `bg-surface`（装飾線なし、余白で分離）
+- **公開ページで `bg-foreground`（ダーク反転セクション）禁止** — Editorial Magazine（Kinfolk/Cereal）は全コンテンツセクション白背景が基本。ダーク全幅セクションは Accent 10% 制約を超え、トーンが崩れる。SiteCTA は `bg-background` + `border-t border-border`（余白で分離）
 - **`editorial-border-accent` CSS クラスは Divider 専用** — `width: 4rem` を持つ短い装飾線。`Section border="accent"` 等の全幅要素に使うとレイアウトが 4rem 幅に潰れる。Section の accent border は `border-t-2 border-accent`（Tailwind ユーティリティ）を使用
-- **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-surface` 等のライトトーンに変更し、editorial variant をそのまま使う
+- **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-background`（白）にし、editorial variant をそのまま使う
+
+- **`section-design.ts` の `sectionBgValues` 変更時は DesignPanel も同期必須** — `pages/[slug]/edit/_components/DesignPanel.tsx` の `backgroundOptions` 配列が `sectionBgValues` と 1:1 対応。値を追加・削除したら DesignPanel の選択肢も更新する
 
 ## ホームページ Section 管理
 

@@ -119,6 +119,7 @@ export async function updateSidebarSettings(
     },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.SIDEBAR_SETTINGS);
+      updateTag(CACHE_TAGS.SIDEBAR_DATA);
       updateTag(CACHE_TAGS.POSTS);
     },
   });
@@ -165,6 +166,7 @@ export async function updatePermalinkSettings(
     afterSuccess: () => {
       updateTag(CACHE_TAGS.PERMALINK);
       updateTag(CACHE_TAGS.POSTS);
+      updateTag(CACHE_TAGS.SIDEBAR_DATA);
     },
   });
 }

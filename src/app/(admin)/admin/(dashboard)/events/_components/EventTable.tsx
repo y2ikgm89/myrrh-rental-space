@@ -5,7 +5,7 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { EventStatusBadge } from "@/admin/components/status-badges";
 import { EventActionCell } from "./EventActionCell";
 import { EventTableHeader } from "./EventTableHeader";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { getEvents } from "@/shared/domain/events/admin-queries";
 
 type EventListItem = Awaited<ReturnType<typeof getEvents>>["events"][number];

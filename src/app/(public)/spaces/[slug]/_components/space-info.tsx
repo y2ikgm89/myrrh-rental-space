@@ -5,6 +5,7 @@ import {
   IconRuler2,
   IconMapPin,
   IconFileText,
+  IconWalk,
 } from "@tabler/icons-react";
 
 import { Heading } from "../../../_shared/components/design-system/heading";
@@ -20,6 +21,7 @@ interface SpaceInfoProps {
     readonly area: number | null;
     /** 拠点住所 + 所在地補足の1行 */
     readonly lineAddress: string;
+    readonly access: string | null;
     readonly facilities: JsonValue;
     readonly category: { readonly name: string } | null;
     readonly location: { readonly name: string } | null;
@@ -91,6 +93,21 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
                 {facility}
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Access */}
+      {space.access ? (
+        <div>
+          <Heading level={2} className="mb-4">
+            アクセス
+          </Heading>
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <IconWalk className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <Prose>
+              <p>{space.access}</p>
+            </Prose>
           </div>
         </div>
       ) : null}

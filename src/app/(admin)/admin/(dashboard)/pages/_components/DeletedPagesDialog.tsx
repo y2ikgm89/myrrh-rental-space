@@ -9,7 +9,12 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { IconTrash, IconRotate, IconLoader2, IconAlertTriangle } from "@tabler/icons-react";
+import {
+  IconTrash,
+  IconRotate,
+  IconLoader2,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import {
   Dialog,
@@ -38,7 +43,7 @@ import {
 } from "@/admin/components/ui/table";
 import { restorePage, deletePagePermanently } from "@/admin/actions/page";
 import type { PageData } from "@/shared/domain/pages/types";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 async function fetchDeletedPages(): Promise<PageData[]> {

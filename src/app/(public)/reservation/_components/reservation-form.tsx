@@ -62,7 +62,21 @@ function formatDateString(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-function resolveAutoIds(locations: readonly LocationWithSpaces[]) {
+function resolveAutoIds(
+  locations: readonly LocationWithSpaces[],
+  initialSpaceId: string | undefined,
+) {
+  // URL param pre-selection: find location containing the specified space
+  if (initialSpaceId) {
+    for (const loc of locations) {
+      const space = loc.spaces.find((s) => s.id === initialSpaceId);
+      if (space) {
+        return { locationId: loc.id, spaceId: space.id };
+      }
+    }
+  }
+
+  // Auto-selection: single location → single space
   const locationId = locations.length === 1 ? (locations[0]?.id ?? null) : null;
   const location = locationId
     ? locations.find((l) => l.id === locationId)
@@ -98,6 +112,7 @@ interface ReservationFormProps {
   readonly prefillData?: PrefillData | undefined;
   readonly isLoggedIn?: boolean | undefined;
   readonly requiredTerms: readonly RequiredTerm[];
+  readonly initialSpaceId?: string | undefined;
 }
 
 export function ReservationForm({
@@ -107,9 +122,13 @@ export function ReservationForm({
   prefillData,
   isLoggedIn = false,
   requiredTerms,
+  initialSpaceId,
 }: ReservationFormProps): ReactElement {
-  const auto = resolveAutoIds(locations);
-  const skipStep1 = auto.locationId != null && auto.spaceId != null;
+  const auto = resolveAutoIds(locations, initialSpaceId);
+  const preSelected = auto.locationId != null && auto.spaceId != null;
+  // Hide step 1 only when there's genuinely no choice (single location + single space)
+  // URL pre-selection shows all 3 steps so the user can go back and change
+  const hideStep1 = preSelected && !initialSpaceId;
 
   const [state, dispatch] = useReducer(selectionReducer, {
     locationId: auto.locationId,
@@ -119,7 +138,7 @@ export function ReservationForm({
     duration: null,
     guests: 1,
     slots: EMPTY_SLOTS,
-    step: skipStep1 ? 2 : 1,
+    step: preSelected ? 2 : 1,
     submitted: false,
     errorMessage: null,
   });
@@ -149,8 +168,8 @@ export function ReservationForm({
     state.duration != null &&
     endTime != null;
 
-  const visibleSteps = skipStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
-  const displayStep = skipStep1 ? state.step - 1 : state.step;
+  const visibleSteps = hideStep1 ? STEPS_WITHOUT_SPACE : ALL_STEPS;
+  const displayStep = hideStep1 ? state.step - 1 : state.step;
 
   // --- Form ---
   const { form, isPending, onSubmit } = usePublicForm(
@@ -442,7 +461,7 @@ export function ReservationForm({
           onGuestsChange={handleGuestsChange}
         />
         {renderStepNavigation({
-          onBack: skipStep1 ? undefined : () => goToStep(1),
+          onBack: hideStep1 ? undefined : () => goToStep(1),
           onNext: isStep2Complete ? advanceToStep3 : undefined,
           price,
         })}

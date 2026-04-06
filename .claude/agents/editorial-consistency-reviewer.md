@@ -82,7 +82,7 @@ grep -rn "font-heading.*tracking" src/app/'(public)'/_shared/components/layouts/
 grep -rn "bg-foreground" src/app/'(public)'/_components/
 ```
 
-**ルール:** ホームページでは `bg-background` / `bg-surface` の切替 + `border-border` で区切り。旧パターン `bg-foreground`（ダーク反転セクション）は editorial トーンに合わない。他ページ（site-cta.tsx 等）では許容。
+**ルール:** 全コンテンツセクションは `bg-background`（白）に統一。セクション間は余白で分離。`bg-foreground`（ダーク反転セクション）は Editorial Magazine トーンに合わないため全面禁止。SiteCTA は `bg-background` + `border-t border-border`（余白で分離）。フッターのみ `bg-surface`。
 
 ## Output Format
 

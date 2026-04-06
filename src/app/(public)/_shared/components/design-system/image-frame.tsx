@@ -1,7 +1,13 @@
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
-type AspectRatio = "video" | "square" | "portrait" | "wide" | "landscape";
+type AspectRatio =
+  | "video"
+  | "square"
+  | "portrait"
+  | "wide"
+  | "landscape"
+  | "photo";
 
 const aspectClasses = {
   video: "aspect-video",
@@ -9,6 +15,7 @@ const aspectClasses = {
   portrait: "aspect-[3/4]",
   wide: "aspect-[2/1]",
   landscape: "aspect-[4/3]",
+  photo: "aspect-[3/2]",
 } as const satisfies Record<AspectRatio, string>;
 
 interface ImageFrameProps {
@@ -52,7 +59,7 @@ export function ImageFrame({
           fill
           sizes={sizes}
           priority={priority}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       ) : (
         <Image
@@ -62,7 +69,7 @@ export function ImageFrame({
           {...(height !== undefined && { height })}
           sizes={sizes}
           priority={priority}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"
         />
       )}
     </div>

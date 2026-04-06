@@ -19,7 +19,7 @@ import { PostStatusBadge } from "@/admin/components/status-badges";
 import { PostActionCell } from "./PostActionCell";
 import { PostTableHeader } from "./PostTableHeader";
 import { PostBulkActions } from "./PostBulkActions";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PostListData } from "@/shared/domain/posts/types";
 
 // =============================================================================

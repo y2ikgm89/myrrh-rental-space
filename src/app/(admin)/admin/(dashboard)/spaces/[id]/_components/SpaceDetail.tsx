@@ -22,7 +22,7 @@ import { DetailField } from "@/admin/components/DetailField";
 import { updateSpacePublish } from "@/admin/actions/space";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 
 type SpaceDetailProps = {

@@ -21,7 +21,7 @@ import { useConfirm } from "@/admin/contexts/confirm-context";
 import { updateMedia, deleteMedia } from "@/admin/actions/media";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { MediaData } from "@/admin/types/media-picker";
-import { formatDate } from "@/shared/lib/utils";
+import { formatDate } from "@/shared/lib/date-format";
 import { formatBytes } from "@/admin/lib/utils";
 import {
   Dialog,

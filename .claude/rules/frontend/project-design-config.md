@@ -67,8 +67,8 @@ OKLCH形式。Luxury White × Bronze。
 | 番号付きリスト         | `font-heading font-light italic text-accent/50`（HowItWorks: 2.5rem / Features: 2rem）              | 01, 02, 03 形式            |
 | PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                             | —                          |
 | PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                         | —                          |
-| SiteCTA                | bg-surface、editorial ボタン（余白で分離、装飾線なし）                                              | content ページ末尾         |
-| Section                | 背景交互（default↔surface）、border-top/accent 装飾                                                 | セクション間の分離         |
+| SiteCTA                | bg-background + border-t、editorial ボタン（余白で分離）                                            | content ページ末尾         |
+| Section                | 全セクション白背景統一、border-top/accent 装飾で分離                                                | セクション間の分離         |
 | EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                                         | hover:shadow-lg            |
 | Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                  | セクション内の区切り       |
 | ImageFrame             | デフォルト `rounded-lg`。editorial カード内では `rounded={false}`                                   | sharp edge 統一            |

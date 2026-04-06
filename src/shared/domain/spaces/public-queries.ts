@@ -27,6 +27,7 @@ const spaceListSelect = {
   hourlyPrice: true,
   dailyPrice: true,
   mainImageUrl: true,
+  imageUrls: true,
   facilities: true,
   addressDetail: true,
   category: { select: { id: true, name: true } },
@@ -43,6 +44,7 @@ function mapSpaceListItem(s: SpaceListRow) {
     hourlyPrice: Number(s.hourlyPrice),
     dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
     area: s.area ? Number(s.area) : null,
+    imageUrls: parseStringArray(s.imageUrls),
     facilities: parseStringArray(s.facilities),
     lineAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
   };
@@ -149,6 +151,7 @@ export async function getSpaceBySlug(slug: string) {
           imageUrls: true,
           facilities: true,
           addressDetail: true,
+          access: true,
           metaDescription: true,
           ogpTitle: true,
           ogpDescription: true,
@@ -213,6 +216,7 @@ export async function getRelatedSpaces(
           capacity: true,
           hourlyPrice: true,
           mainImageUrl: true,
+          imageUrls: true,
         },
         take: limit,
         orderBy: { name: "asc" },
@@ -227,6 +231,7 @@ export async function getRelatedSpaces(
     spaces.map((s) => ({
       ...s,
       hourlyPrice: Number(s.hourlyPrice),
+      imageUrls: parseStringArray(s.imageUrls),
     })),
   );
 }

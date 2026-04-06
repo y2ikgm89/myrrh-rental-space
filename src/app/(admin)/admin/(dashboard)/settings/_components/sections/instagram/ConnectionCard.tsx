@@ -26,7 +26,7 @@ import {
   type InstagramConfig,
 } from "@/admin/actions/instagram";
 import { StatusBanner } from "../../shared";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================

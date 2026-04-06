@@ -37,7 +37,7 @@ import {
   CANCELLED_BY,
   CANCELLED_BY_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
-import { formatDateTimeFull } from "@/shared/lib/utils";
+import { formatDateTimeFull } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 
 const PAYMENT_BADGE_VARIANTS: Record<

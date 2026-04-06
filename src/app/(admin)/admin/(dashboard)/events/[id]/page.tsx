@@ -10,7 +10,7 @@ import { DetailField } from "@/admin/components/DetailField";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { EventStatusBadge } from "@/admin/components/status-badges";
 import { Badge, Button } from "@/admin/components/ui";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RegistrationStatus } from "@generated/prisma/enums";
 import { EventRegistrationTable } from "./_components/EventRegistrationTable";

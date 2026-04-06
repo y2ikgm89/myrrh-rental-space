@@ -1,5 +1,6 @@
 import { Container } from "../design-system/container";
 import { Heading } from "../design-system/heading";
+import { Section } from "../design-system/section";
 import { Stack } from "../design-system/stack";
 import { Button } from "../design-system/button";
 import { ScrollReveal } from "../animations/scroll-reveal";
@@ -10,6 +11,8 @@ interface SiteCTAProps {
   readonly description?: string;
   readonly buttonText?: string;
   readonly buttonHref?: string;
+  readonly background?: "default" | "surface";
+  readonly border?: "none" | "top";
 }
 
 export function SiteCTA({
@@ -18,40 +21,37 @@ export function SiteCTA({
   description,
   buttonText = "予約する",
   buttonHref = "/reservation",
+  background = "default",
+  border = "top",
 }: SiteCTAProps) {
   return (
-    <section className="bg-foreground py-[var(--spacing-section)]">
+    <Section background={background} border={border}>
       <Container className="text-center">
         <Stack gap="lg" className="items-center">
           <ScrollReveal>
             <Stack gap="md" className="items-center">
               {label ? (
-                <span className="text-xs uppercase tracking-[0.18em] text-background/60">
+                <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                   {label}
                 </span>
               ) : null}
-              <Heading level={2} className="italic text-background">
+              <Heading level={2} className="italic">
                 {title}
               </Heading>
               {description ? (
-                <p className="max-w-[45ch] leading-relaxed text-background/70">
+                <p className="max-w-[45ch] leading-relaxed text-muted-foreground">
                   {description}
                 </p>
               ) : null}
             </Stack>
           </ScrollReveal>
           <ScrollReveal delay={0.15}>
-            <Button
-              variant="editorial"
-              size="lg"
-              href={buttonHref}
-              className="border-background text-background hover:bg-background hover:text-accent"
-            >
+            <Button variant="editorial" size="lg" href={buttonHref}>
               {buttonText}
             </Button>
           </ScrollReveal>
         </Stack>
       </Container>
-    </section>
+    </Section>
   );
 }

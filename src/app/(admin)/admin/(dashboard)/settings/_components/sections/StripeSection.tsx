@@ -46,7 +46,7 @@ import {
 import { createTypeGuard } from "@/shared/lib/serialize";
 import { stripeFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { StatusBanner } from "../shared/StatusBanner";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================

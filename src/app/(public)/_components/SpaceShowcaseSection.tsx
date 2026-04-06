@@ -29,6 +29,7 @@ export interface ShowcaseSpaceData {
   readonly dailyPrice: number | null;
   readonly area: number | null;
   readonly mainImageUrl: string;
+  readonly imageUrls: readonly string[];
   readonly facilities: readonly string[];
   readonly categoryName: string | null;
   readonly locationName: string | null;
@@ -87,6 +88,7 @@ export function SpaceShowcaseSection({
               hourlyPrice={featured.hourlyPrice}
               dailyPrice={featured.dailyPrice}
               mainImageUrl={featured.mainImageUrl}
+              imageUrls={featured.imageUrls}
               categoryName={featured.categoryName}
               locationName={featured.locationName ?? undefined}
               lineAddress={featured.lineAddress ?? undefined}
@@ -116,6 +118,7 @@ export function SpaceShowcaseSection({
                 hourlyPrice={space.hourlyPrice}
                 dailyPrice={space.dailyPrice}
                 mainImageUrl={space.mainImageUrl}
+                imageUrls={space.imageUrls}
                 categoryName={space.categoryName}
                 locationName={space.locationName ?? undefined}
                 lineAddress={space.lineAddress ?? undefined}

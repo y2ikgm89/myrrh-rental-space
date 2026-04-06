@@ -11,7 +11,7 @@ import {
   IconSearch,
   IconUser,
 } from "@tabler/icons-react";
-import { formatDate } from "@/shared/lib/utils";
+import { formatDate } from "@/shared/lib/date-format";
 import { toast } from "sonner";
 import {
   Button,

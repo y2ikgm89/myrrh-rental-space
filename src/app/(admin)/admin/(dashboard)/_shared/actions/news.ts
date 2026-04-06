@@ -61,6 +61,7 @@ function purgeNewsCaches(...slugs: Array<string | undefined>): void {
 
 function invalidateNewsCollectionCaches(): void {
   updateTag(CACHE_TAGS.NEWS);
+  updateTag(CACHE_TAGS.SIDEBAR_DATA);
 }
 
 export async function createNews(

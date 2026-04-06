@@ -34,8 +34,9 @@ export async function RelatedSpaces({
                 description={null}
                 capacity={space.capacity}
                 area={null}
-                hourlyPrice={Number(space.hourlyPrice)}
+                hourlyPrice={space.hourlyPrice}
                 mainImageUrl={space.mainImageUrl}
+                imageUrls={space.imageUrls}
               />
             ))}
           </div>

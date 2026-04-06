@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { IconMapPin, IconStar } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
+import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { ImageCarousel } from "./image-carousel";
 
 interface SpaceCardProps {
   readonly slug: string;
@@ -15,6 +16,7 @@ interface SpaceCardProps {
   readonly area: number | null;
   readonly hourlyPrice: number | null;
   readonly mainImageUrl: string;
+  readonly imageUrls?: readonly string[] | undefined;
   readonly categoryName?: string | null | undefined;
   readonly locationName?: string | undefined;
   readonly lineAddress?: string | undefined;
@@ -32,6 +34,7 @@ export function SpaceCard({
   area,
   hourlyPrice,
   mainImageUrl,
+  imageUrls,
   categoryName,
   locationName,
   lineAddress,
@@ -42,6 +45,11 @@ export function SpaceCard({
 }: SpaceCardProps) {
   const { formatUnit } = useFormatPrice();
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
+
+  // Build deduplicated image list: mainImageUrl first, then remaining from imageUrls
+  const allImages = imageUrls
+    ? [mainImageUrl, ...imageUrls.filter((url) => url !== mainImageUrl)]
+    : [mainImageUrl];
   const [showOverlay, setShowOverlay] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,23 +83,31 @@ export function SpaceCard({
       }}
       onBlur={() => setShowOverlay(false)}
     >
-      {/* Image */}
-      <div className="relative aspect-[3/2] overflow-hidden">
-        <Image
-          src={mainImageUrl}
-          alt={name}
-          fill
-          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition-opacity duration-400 group-hover:opacity-85"
-        />
+      {/* Image area */}
+      <div className="relative">
+        {allImages.length > 1 ? (
+          <ImageCarousel
+            images={allImages}
+            alt={name}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          />
+        ) : (
+          <ImageFrame
+            src={mainImageUrl}
+            alt={name}
+            fill
+            aspect="photo"
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          />
+        )}
 
         {/* Hover Preview Overlay */}
         {hasHoverData ? (
           <div
             aria-hidden="true"
             className={cn(
-              "absolute inset-0 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0",
-              showOverlay ? "opacity-100" : "pointer-events-none opacity-0",
+              "pointer-events-none absolute inset-0 z-20 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0",
+              showOverlay ? "opacity-100" : "opacity-0",
             )}
           >
             <div className="space-y-2 text-sm text-overlay-foreground">

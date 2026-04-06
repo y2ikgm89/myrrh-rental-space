@@ -5,7 +5,7 @@ import { RoleBadge } from "@/admin/components/status-badges";
 import { UserActions } from "./UserActions";
 import { StaffTableHeader } from "./StaffTableHeader";
 import type { UserData } from "@/shared/domain/users/types";
-import { formatDateShort } from "@/shared/lib/utils";
+import { formatDateShort } from "@/shared/lib/date-format";
 
 type StaffTableProps = {
   users: UserData[];

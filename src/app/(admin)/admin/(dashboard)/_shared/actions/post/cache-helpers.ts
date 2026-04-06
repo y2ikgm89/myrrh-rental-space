@@ -32,14 +32,17 @@ export async function purgePostArchive(): Promise<void> {
 
 export async function invalidatePostCollectionCaches(): Promise<void> {
   updateTag(CACHE_TAGS.POSTS);
+  updateTag(CACHE_TAGS.SIDEBAR_DATA);
 }
 
 export async function invalidatePostCategoryCaches(): Promise<void> {
   updateTag(CACHE_TAGS.POSTS);
   updateTag(CACHE_TAGS.POST_CATEGORIES);
+  updateTag(CACHE_TAGS.SIDEBAR_DATA);
 }
 
 export async function invalidatePostTagCaches(): Promise<void> {
   updateTag(CACHE_TAGS.POSTS);
   updateTag(CACHE_TAGS.POST_TAGS);
+  updateTag(CACHE_TAGS.SIDEBAR_DATA);
 }

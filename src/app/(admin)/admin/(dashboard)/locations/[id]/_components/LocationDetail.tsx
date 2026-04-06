@@ -17,7 +17,7 @@ import { DetailField } from "@/admin/components/DetailField";
 import { toggleLocationPublish } from "@/admin/actions/location";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
-import { formatDateTimeShort } from "@/shared/lib/utils";
+import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 type LocationDetailProps = {
   location: LocationWithStats;

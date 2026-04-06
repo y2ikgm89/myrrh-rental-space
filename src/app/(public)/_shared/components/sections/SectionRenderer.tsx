@@ -147,6 +147,7 @@ export async function SectionRenderer({
         dailyPrice: s.dailyPrice,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
+        imageUrls: s.imageUrls,
         facilities: s.facilities,
         categoryName: s.category?.name ?? null,
         locationName: s.location?.name ?? null,
