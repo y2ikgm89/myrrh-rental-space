@@ -9,6 +9,7 @@
 
 import { useState, useTransition } from "react";
 import type { ReactElement } from "react";
+import { useRouter } from "next/navigation";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
@@ -25,6 +26,7 @@ import {
   ActionDropdownItem,
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import {
   Button,
   Card,
@@ -142,7 +144,7 @@ interface SortableWidgetItemProps {
   widget: SidebarWidget;
   onToggle: (id: string, enabled: boolean) => void;
   onEdit: (widget: CustomWidget) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, name: string) => void;
   disabled: boolean;
 }
 
@@ -178,7 +180,7 @@ function SortableWidgetItem({
       className={cn(
         "group flex items-center gap-3 rounded-md border p-3 transition-colors",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
-        !widget.enabled && "opacity-50",
+        !widget.enabled && "opacity-60 bg-muted/30",
       )}
     >
       {/* Drag Handle */}
@@ -198,6 +200,11 @@ function SortableWidgetItem({
       {/* Label */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{label}</p>
+        {custom && widget.description && (
+          <p className="text-xs text-muted-foreground truncate">
+            {widget.description}
+          </p>
+        )}
       </div>
 
       {/* Enabled switch */}
@@ -214,7 +221,10 @@ function SortableWidgetItem({
             編集
           </ActionDropdownItem>
           <ActionDropdownSeparator />
-          <ActionDropdownItem destructive onClick={() => onDelete(widgetId)}>
+          <ActionDropdownItem
+            destructive
+            onClick={() => onDelete(widgetId, label)}
+          >
             削除
           </ActionDropdownItem>
         </ActionDropdown>
@@ -240,22 +250,16 @@ function CustomWidgetDialog({
   editingWidget,
   onSubmit,
 }: CustomWidgetDialogProps) {
-  const [form, setForm] = useState<CustomWidgetFormData>(EMPTY_FORM);
-
-  // Sync form when dialog opens with editing widget
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen && editingWidget) {
-      setForm({
-        title: editingWidget.title,
-        description: editingWidget.description ?? "",
-        linkUrl: editingWidget.linkUrl ?? "",
-        linkLabel: editingWidget.linkLabel ?? "",
-      });
-    } else if (nextOpen) {
-      setForm(EMPTY_FORM);
-    }
-    onOpenChange(nextOpen);
-  };
+  const [form, setForm] = useState<CustomWidgetFormData>(() =>
+    editingWidget
+      ? {
+          title: editingWidget.title,
+          description: editingWidget.description ?? "",
+          linkUrl: editingWidget.linkUrl ?? "",
+          linkLabel: editingWidget.linkLabel ?? "",
+        }
+      : EMPTY_FORM,
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -265,7 +269,7 @@ function CustomWidgetDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -356,6 +360,8 @@ function CustomWidgetDialog({
 // =============================================================================
 
 export function SidebarSection({ settings }: SidebarSectionProps) {
+  const router = useRouter();
+
   // --- State ---
   const [sidebarEnabled, setSidebarEnabled] = useState(
     settings.sidebarEnabled ?? true,
@@ -374,6 +380,12 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
   // --- Custom widget dialog ---
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWidget, setEditingWidget] = useState<CustomWidget | null>(null);
+
+  // --- Delete confirmation dialog ---
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // --- Dirty check ---
   const isDirty = (() => {
@@ -450,13 +462,21 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     setDialogOpen(true);
   };
 
-  const handleDeleteWidget = (id: string) => {
-    setWidgets((prev) => prev.filter((w) => getWidgetId(w) !== id));
-  };
-
   const handleOpenAddDialog = () => {
     setEditingWidget(null);
     setDialogOpen(true);
+  };
+
+  const handleDeleteRequest = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteTarget) return;
+    setWidgets((prev) =>
+      prev.filter((w) => getWidgetId(w) !== deleteTarget.id),
+    );
+    setDeleteTarget(null);
   };
 
   // --- Save ---
@@ -472,6 +492,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         toast.error(result.error);
       } else {
         toast.success("サイドバー設定を保存しました");
+        router.refresh();
       }
     });
   };
@@ -534,7 +555,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                         widget={widget}
                         onToggle={handleToggleWidget}
                         onEdit={handleEditWidget}
-                        onDelete={handleDeleteWidget}
+                        onDelete={handleDeleteRequest}
                         disabled={isPending}
                       />
                     ))}
@@ -634,10 +655,21 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
 
       {/* Custom widget dialog */}
       <CustomWidgetDialog
+        key={editingWidget?.id ?? "new"}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         editingWidget={editingWidget}
         onSubmit={handleAddCustomWidget}
+      />
+
+      {/* Delete confirmation dialog */}
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        itemName={deleteTarget?.name ?? ""}
+        onConfirm={handleDeleteConfirm}
       />
     </Card>
   );
