@@ -5,10 +5,6 @@
  * 旧 API との互換を維持しつつ、定義の正本はファイルベースレジストリに一元化する。
  */
 
-import {
-  getSectionDefinition,
-  getDefaultConfig,
-} from "@/shared/lib/sections/registry";
 import type {
   HeroConfig,
   HeroParallaxConfig,
@@ -29,6 +25,7 @@ import type {
   InstagramConfig,
   SectionConfig,
 } from "./section";
+import { validateSectionConfig } from "./section";
 
 // =============================================================================
 // デフォルト設定取得（レジストリ委譲）
@@ -38,55 +35,91 @@ import type {
 export function getDefaultSectionConfig(
   type: string,
 ): SectionConfig | undefined {
-  const def = getSectionDefinition(type);
-  if (!def) return undefined;
-  const result = def.configSchema.safeParse({});
-  if (result.success) return result.data as SectionConfig;
+  const result = validateSectionConfig(type, {});
+  if (result.success) return result.data;
   return undefined;
 }
 
 // =============================================================================
-// 型特化 config ゲッター（レジストリ委譲）
+// 型特化 config ゲッター（スキーマ直接参照で as T 不要）
 // =============================================================================
 
-function createTypedConfigGetter<T>(type: string) {
-  return (config: unknown): T => {
-    const def = getSectionDefinition(type);
-    if (!def) return getDefaultConfig(type) as T;
-    const result = def.configSchema.safeParse(config);
-    return result.success ? (result.data as T) : (getDefaultConfig(type) as T);
+import type { z } from "zod";
+import {
+  heroConfigSchema,
+  heroParallaxConfigSchema,
+  customConfigSchema,
+  conceptConfigSchema,
+  spaceListConfigSchema,
+  spaceShowcaseConfigSchema,
+  newsListConfigSchema,
+  postListConfigSchema,
+  faqListConfigSchema,
+  featuresConfigSchema,
+  testimonialConfigSchema,
+  galleryConfigSchema,
+  ctaConfigSchema,
+  contactFormConfigSchema,
+  mapConfigSchema,
+  embedConfigSchema,
+  instagramConfigSchema,
+} from "./section";
+
+/**
+ * 具体スキーマを直接 safeParse することで、戻り値型が z.output<Schema> に推論される。
+ * as T キャスト不要。
+ */
+function createTypedConfigGetterFromSchema<S extends z.ZodType>(schema: S) {
+  return (config: unknown): z.output<S> => {
+    const result = schema.safeParse(config);
+    if (result.success) return result.data;
+    // フォールバック: 空オブジェクトをパースしてデフォルト値を取得
+    // 全セクションスキーマはフィールドにデフォルト値を持つため safeParse({}) は必ず成功する
+    const fallback = schema.safeParse({});
+    if (fallback.success) return fallback.data;
+    // 到達不能: 全スキーマが {} からデフォルト値を生成可能
+    throw new Error(`Failed to parse default config for section schema`);
   };
 }
 
-export const getHeroConfig = createTypedConfigGetter<HeroConfig>("hero");
-export const getHeroParallaxConfig =
-  createTypedConfigGetter<HeroParallaxConfig>("hero-parallax");
-export const getCustomConfig = createTypedConfigGetter<CustomConfig>("custom");
+export const getHeroConfig =
+  createTypedConfigGetterFromSchema(heroConfigSchema);
+export const getHeroParallaxConfig = createTypedConfigGetterFromSchema(
+  heroParallaxConfigSchema,
+);
+export const getCustomConfig =
+  createTypedConfigGetterFromSchema(customConfigSchema);
 export const getConceptConfig =
-  createTypedConfigGetter<ConceptConfig>("concept");
-export const getSpaceListConfig =
-  createTypedConfigGetter<SpaceListConfig>("space-list");
-export const getSpaceShowcaseConfig =
-  createTypedConfigGetter<SpaceShowcaseConfig>("space-showcase");
+  createTypedConfigGetterFromSchema(conceptConfigSchema);
+export const getSpaceListConfig = createTypedConfigGetterFromSchema(
+  spaceListConfigSchema,
+);
+export const getSpaceShowcaseConfig = createTypedConfigGetterFromSchema(
+  spaceShowcaseConfigSchema,
+);
 export const getNewsListConfig =
-  createTypedConfigGetter<NewsListConfig>("news-list");
+  createTypedConfigGetterFromSchema(newsListConfigSchema);
 export const getPostListConfig =
-  createTypedConfigGetter<PostListConfig>("post-list");
+  createTypedConfigGetterFromSchema(postListConfigSchema);
 export const getFaqListConfig =
-  createTypedConfigGetter<FaqListConfig>("faq-list");
+  createTypedConfigGetterFromSchema(faqListConfigSchema);
 export const getFeaturesConfig =
-  createTypedConfigGetter<FeaturesConfig>("features");
-export const getTestimonialConfig =
-  createTypedConfigGetter<TestimonialConfig>("testimonial");
+  createTypedConfigGetterFromSchema(featuresConfigSchema);
+export const getTestimonialConfig = createTypedConfigGetterFromSchema(
+  testimonialConfigSchema,
+);
 export const getGalleryConfig =
-  createTypedConfigGetter<GalleryConfig>("gallery");
-export const getCtaConfig = createTypedConfigGetter<CtaConfig>("cta");
-export const getContactFormConfig =
-  createTypedConfigGetter<ContactFormConfig>("contact-form");
-export const getMapConfig = createTypedConfigGetter<MapConfig>("map");
-export const getEmbedConfig = createTypedConfigGetter<EmbedConfig>("embed");
-export const getInstagramConfig =
-  createTypedConfigGetter<InstagramConfig>("instagram");
+  createTypedConfigGetterFromSchema(galleryConfigSchema);
+export const getCtaConfig = createTypedConfigGetterFromSchema(ctaConfigSchema);
+export const getContactFormConfig = createTypedConfigGetterFromSchema(
+  contactFormConfigSchema,
+);
+export const getMapConfig = createTypedConfigGetterFromSchema(mapConfigSchema);
+export const getEmbedConfig =
+  createTypedConfigGetterFromSchema(embedConfigSchema);
+export const getInstagramConfig = createTypedConfigGetterFromSchema(
+  instagramConfigSchema,
+);
 
 // =============================================================================
 // getSafeConfig — 汎用: セクションタイプに応じた config 取得（レジストリ委譲）
@@ -137,10 +170,12 @@ export function getSafeConfig(
   config: unknown,
 ): InstagramConfig;
 export function getSafeConfig(type: string, config: unknown): SectionConfig {
-  const def = getSectionDefinition(type);
-  if (!def) return getDefaultConfig(type) as SectionConfig;
-  const result = def.configSchema.safeParse(config);
-  return result.success
-    ? (result.data as SectionConfig)
-    : (getDefaultConfig(type) as SectionConfig);
+  // config をパース試行
+  const result = validateSectionConfig(type, config);
+  if (result.success) return result.data;
+  // フォールバック: デフォルト値を取得
+  const fallback = validateSectionConfig(type, {});
+  if (fallback.success) return fallback.data;
+  // 到達不能: 全セクションスキーマが {} からデフォルト値を生成可能
+  throw new Error(`Unknown section type: ${type}`);
 }
