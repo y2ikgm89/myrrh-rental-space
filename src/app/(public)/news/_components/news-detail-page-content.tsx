@@ -17,6 +17,7 @@ import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString } from "@/shared/lib/serialize";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { BlogLayout } from "@/public/components/layouts/blog-layout";
 
 type PublishedNewsItem = NonNullable<
   Awaited<ReturnType<typeof getPublishedNewsItem>>
@@ -92,23 +93,25 @@ export async function NewsDetailPageContent({
 
       <article className="py-[var(--spacing-section)]">
         <Container>
-          <div className={contentClassName} style={contentStyle}>
-            <div className="mb-6 text-sm text-muted-foreground">
-              <time dateTime={newsItem.publishedAt ?? undefined}>
-                {formatSerializedDate(newsItem.publishedAt)}
-              </time>
-            </div>
-            <SanitizedHtml
-              html={newsItem.contentHtml}
-              className="prose prose-lg max-w-none"
-            />
-            <div className="mt-12 border-t border-border pt-6">
-              <ShareButtons
-                url={`${baseUrl}${newsItem.url}`}
-                title={newsItem.title}
+          <BlogLayout>
+            <div className={contentClassName} style={contentStyle}>
+              <div className="mb-6 text-sm text-muted-foreground">
+                <time dateTime={newsItem.publishedAt ?? undefined}>
+                  {formatSerializedDate(newsItem.publishedAt)}
+                </time>
+              </div>
+              <SanitizedHtml
+                html={newsItem.contentHtml}
+                className="prose prose-lg max-w-none"
               />
+              <div className="mt-12 border-t border-border pt-6">
+                <ShareButtons
+                  url={`${baseUrl}${newsItem.url}`}
+                  title={newsItem.title}
+                />
+              </div>
             </div>
-          </div>
+          </BlogLayout>
         </Container>
       </article>
 

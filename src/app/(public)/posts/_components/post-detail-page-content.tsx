@@ -17,6 +17,7 @@ import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { getPostLayoutSettings } from "@/shared/domain/settings/queries/site";
 import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString, formatSerializedDate } from "@/shared/lib/serialize";
+import { BlogLayout } from "@/public/components/layouts/blog-layout";
 
 type PublishedPost = NonNullable<Awaited<ReturnType<typeof getPublishedPost>>>;
 
@@ -89,47 +90,54 @@ export async function PostDetailPageContent({
 
       <article className="py-[var(--spacing-section)]">
         <Container>
-          <div className={contentClassName} style={contentStyle}>
-            <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              {post.category?.name ? <Badge>{post.category.name}</Badge> : null}
-              <time
-                dateTime={
-                  post.publishedAt ? String(post.publishedAt) : undefined
-                }
-              >
-                {formatSerializedDate(toISOString(post.publishedAt))}
-              </time>
-              {post.author?.name ? (
-                <>
-                  <span aria-hidden="true">/</span>
-                  <span>{post.author.name}</span>
-                </>
-              ) : null}
-            </div>
-
-            <SanitizedHtml
-              html={post.contentHtml}
-              className="prose prose-lg max-w-none"
-            />
-
-            {post.postTags.length > 0 ? (
-              <div className="mt-12 border-t border-border pt-6">
-                <div className="flex flex-wrap gap-2">
-                  {post.postTags.map((postTag) => (
-                    <span
-                      key={postTag.tag.slug}
-                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
-                    >
-                      {postTag.tag.name}
-                    </span>
-                  ))}
-                </div>
+          <BlogLayout>
+            <div className={contentClassName} style={contentStyle}>
+              <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                {post.category?.name ? (
+                  <Badge>{post.category.name}</Badge>
+                ) : null}
+                <time
+                  dateTime={
+                    post.publishedAt ? String(post.publishedAt) : undefined
+                  }
+                >
+                  {formatSerializedDate(toISOString(post.publishedAt))}
+                </time>
+                {post.author?.name ? (
+                  <>
+                    <span aria-hidden="true">/</span>
+                    <span>{post.author.name}</span>
+                  </>
+                ) : null}
               </div>
-            ) : null}
-            <div className="mt-12 border-t border-border pt-6">
-              <ShareButtons url={`${baseUrl}${post.url}`} title={post.title} />
+
+              <SanitizedHtml
+                html={post.contentHtml}
+                className="prose prose-lg max-w-none"
+              />
+
+              {post.postTags.length > 0 ? (
+                <div className="mt-12 border-t border-border pt-6">
+                  <div className="flex flex-wrap gap-2">
+                    {post.postTags.map((postTag) => (
+                      <span
+                        key={postTag.tag.slug}
+                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                      >
+                        {postTag.tag.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-12 border-t border-border pt-6">
+                <ShareButtons
+                  url={`${baseUrl}${post.url}`}
+                  title={post.title}
+                />
+              </div>
             </div>
-          </div>
+          </BlogLayout>
         </Container>
       </article>
 

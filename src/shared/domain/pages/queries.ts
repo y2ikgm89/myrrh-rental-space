@@ -95,3 +95,25 @@ export async function getPageSeo(slug: string): Promise<PageSeoData | null> {
     ogpImageUrl: result.ogpImageUrl ?? null,
   };
 }
+
+export async function getPageShowSidebar(
+  slug: string,
+): Promise<boolean | null> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.PAGES);
+
+  const result = await safeFetch({
+    fetch: () =>
+      prisma.page.findFirst({
+        where: { slug },
+        select: { showSidebar: true },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPageShowSidebar",
+  });
+
+  return result?.showSidebar ?? null;
+}

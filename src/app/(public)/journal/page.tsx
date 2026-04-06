@@ -15,12 +15,14 @@ import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
 import { getPublishedPostsList } from "@/shared/domain/posts/queries";
+import { getPageShowSidebar } from "@/shared/domain/pages/queries";
 import { Container } from "@/public/components/design-system/container";
 import { Pagination } from "@/public/components/Pagination";
 import { journalSearchParams } from "@/public/lib/search-params";
 import { SearchBar } from "@/public/components/ui/search-bar";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { BlogLayout } from "@/public/components/layouts/blog-layout";
 import { JournalContent } from "./_components/JournalContent";
 
 interface PageProps {
@@ -57,7 +59,7 @@ export default async function JournalPage({
   const showNews = tab === "all" || tab === "news";
   const showPosts = tab === "all" || tab === "posts";
 
-  const [sections, newsResult, postsResult] = await Promise.all([
+  const [sections, newsResult, postsResult, showSidebar] = await Promise.all([
     getPageSectionsWithFallback("journal"),
     showNews
       ? getPublishedNewsList(currentPage, ITEMS_PER_TAB, q)
@@ -75,6 +77,7 @@ export default async function JournalPage({
           totalPages: 0,
           currentPage,
         }),
+    getPageShowSidebar("journal"),
   ]);
 
   const heroSection = sections.find(
@@ -129,22 +132,24 @@ export default async function JournalPage({
     >
       <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container>
-          <Suspense fallback={null}>
-            <div className="mb-8 max-w-md">
-              <SearchBar placeholder="記事を検索..." />
-            </div>
-          </Suspense>
-          <Suspense fallback={null}>
-            <JournalContent items={allItems} activeTab={tab} />
-          </Suspense>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            basePath="/journal"
-            {...(Object.keys(preservedQuery).length > 0
-              ? { preservedQuery }
-              : {})}
-          />
+          <BlogLayout showSidebar={showSidebar}>
+            <Suspense fallback={null}>
+              <div className="mb-8 max-w-md">
+                <SearchBar placeholder="記事を検索..." />
+              </div>
+            </Suspense>
+            <Suspense fallback={null}>
+              <JournalContent items={allItems} activeTab={tab} />
+            </Suspense>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              basePath="/journal"
+              {...(Object.keys(preservedQuery).length > 0
+                ? { preservedQuery }
+                : {})}
+            />
+          </BlogLayout>
         </Container>
       </section>
 
