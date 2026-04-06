@@ -8,6 +8,7 @@
  */
 
 import { useState, useTransition } from "react";
+import type { ReactElement } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import type { DragEndEvent } from "@dnd-kit/core";
 import {
@@ -123,9 +124,10 @@ function getWidgetLabel(w: SidebarWidget): string {
   return WIDGET_LABELS[w.type] ?? w.type;
 }
 
-function getWidgetIcon(w: SidebarWidget): TablerIcon {
-  if (w.type === "custom") return IconApps;
-  return WIDGET_ICONS[w.type] ?? IconApps;
+function renderWidgetIcon(w: SidebarWidget): ReactElement {
+  const Icon =
+    w.type === "custom" ? IconApps : (WIDGET_ICONS[w.type] ?? IconApps);
+  return <Icon className="h-4 w-4 text-muted-foreground shrink-0" />;
 }
 
 function isCustomWidget(w: SidebarWidget): w is CustomWidget {
@@ -165,7 +167,6 @@ function SortableWidgetItem({
     transition,
   };
 
-  const WidgetIcon = getWidgetIcon(widget);
   const label = getWidgetLabel(widget);
   const widgetId = getWidgetId(widget);
   const custom = isCustomWidget(widget);
@@ -192,7 +193,7 @@ function SortableWidgetItem({
       </button>
 
       {/* Icon */}
-      <WidgetIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+      {renderWidgetIcon(widget)}
 
       {/* Label */}
       <div className="flex-1 min-w-0">
