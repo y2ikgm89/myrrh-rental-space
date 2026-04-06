@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/utils";
+import { cn } from "@/shared/lib/cn";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 
 export interface FeatureItem {
@@ -46,7 +46,7 @@ export function FeaturesSection({
   items = featuresDefaultProps.items,
 }: Partial<FeaturesSectionProps> = {}): ReactElement {
   return (
-    <section className="bg-surface py-[var(--spacing-section-compact)]">
+    <section className="py-[var(--spacing-section-compact)]">
       <div className="mx-auto max-w-[40rem] px-4 md:px-6">
         <ScrollReveal>
           <div className="mb-10 text-center md:mb-14">

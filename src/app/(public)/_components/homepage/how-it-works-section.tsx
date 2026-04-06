@@ -66,7 +66,7 @@ export function HowItWorksSection({
   valueProps = howItWorksDefaultProps.valueProps,
 }: Partial<HowItWorksSectionProps> = {}): ReactElement {
   return (
-    <section className="bg-surface px-4 py-[var(--spacing-section-compact)]">
+    <section className="px-4 py-[var(--spacing-section-compact)]">
       <div className="mx-auto max-w-[var(--container-max)]">
         <ScrollReveal>
           <div className="mb-10 text-center md:mb-14">

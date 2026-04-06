@@ -127,7 +127,7 @@ export function ConceptSection({
               />
             </ScrollReveal>
           ) : (
-            <div className="h-full bg-surface" />
+            <div className="h-full bg-card" />
           )}
         </div>
 

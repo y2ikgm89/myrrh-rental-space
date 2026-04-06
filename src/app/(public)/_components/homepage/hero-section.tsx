@@ -67,7 +67,7 @@ export function HomepageHero({
       className="grid min-h-[85svh] grid-cols-1 md:grid-cols-2"
       data-hero=""
     >
-      <div className="relative min-h-[50svh] overflow-hidden bg-surface md:min-h-0">
+      <div className="relative min-h-[50svh] overflow-hidden bg-card md:min-h-0">
         <Image
           src={imageUrl}
           alt={imageAlt}

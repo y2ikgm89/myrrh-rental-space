@@ -29,7 +29,7 @@ export default function EventsPage() {
       hero={<PageHero variant="compact" title="イベントカレンダー" />}
       cta={<SiteCTA />}
     >
-      <Section background="surface">
+      <Section>
         <Container>
           <Suspense fallback={<CalendarSkeleton />}>
             <EventCalendarLoader />
