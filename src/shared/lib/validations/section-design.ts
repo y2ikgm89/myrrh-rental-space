@@ -204,7 +204,6 @@ const sectionBgValues = [
   "primary",
   "dark",
   "image",
-  "gradient",
 ] as const;
 export type SectionBg = (typeof sectionBgValues)[number];
 

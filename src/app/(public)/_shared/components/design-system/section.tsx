@@ -1,20 +1,19 @@
 import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
-type SectionBackground = "default" | "surface" | "surface-alt";
+type SectionBackground = "default" | "surface";
 type SectionBorder = "none" | "top" | "accent";
 type SectionSpacing = "default" | "compact" | "none";
 
 const bgClasses = {
   default: "bg-background",
   surface: "bg-surface",
-  "surface-alt": "bg-surface-alt",
 } as const satisfies Record<SectionBackground, string>;
 
 const borderClasses = {
   none: "",
   top: "border-t border-border",
-  accent: "editorial-border-accent",
+  accent: "border-t-2 border-accent",
 } as const satisfies Record<SectionBorder, string>;
 
 const spacingClasses = {

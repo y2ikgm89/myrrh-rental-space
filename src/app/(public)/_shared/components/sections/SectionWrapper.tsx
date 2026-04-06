@@ -38,7 +38,6 @@ const backgroundMap = {
   primary: "bg-accent/10",
   dark: "bg-foreground text-background",
   image: "bg-cover bg-center bg-no-repeat",
-  gradient: "bg-gradient-to-b from-surface to-background",
 } satisfies Record<NonNullable<SectionDesign["background"]>, string>;
 
 const maxWidthMap = {
