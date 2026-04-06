@@ -45,7 +45,7 @@ export function FilterBar({ categories }: FilterBarProps): ReactElement {
             onClick={() => handleFilter(null)}
             aria-pressed={!activeCategory}
             className={cn(
-              "rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
+              "px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
               !activeCategory
                 ? "bg-accent text-accent-foreground"
                 : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
@@ -61,7 +61,7 @@ export function FilterBar({ categories }: FilterBarProps): ReactElement {
               onClick={() => handleFilter(cat.id)}
               aria-pressed={activeCategory === cat.id}
               className={cn(
-                "rounded-full px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
+                "px-5 py-2 text-[0.65rem] uppercase tracking-[0.18em] transition-all duration-300",
                 activeCategory === cat.id
                   ? "bg-accent text-accent-foreground"
                   : "border border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
