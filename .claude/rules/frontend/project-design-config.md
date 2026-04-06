@@ -33,19 +33,19 @@ OKLCH形式。Luxury White × Bronze。
 
 ## セクション設計
 
-| 要素              | 値                                                                            |
-| ----------------- | ----------------------------------------------------------------------------- |
-| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`    |
-| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`              |
-| Homepage 背景     | `bg-surface`（薄茶）と白を交互配置。surface → 白 → surface → 白               |
-| Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)` |
-| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                            |
-| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`          |
-| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                             |
-| Container max     | `80rem` (1280px)                                                              |
-| セクション分離    | 薄いボーダー + 背景色切替（background ↔ surface）                             |
-| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`          |
-| border-radius     | コンテナ/画像=`rounded-lg`, CTA=`rounded-full`, セクション境界=sharp          |
+| 要素              | 値                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`                        |
+| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`                                  |
+| Homepage 背景     | 全セクション `bg-background`（白）統一。視覚変化は余白・タイポグラフィ・画像で確保                |
+| Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)`                     |
+| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                                                |
+| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`                              |
+| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                                                 |
+| Container max     | `80rem` (1280px)                                                                                  |
+| セクション分離    | 余白 `--spacing-section` + 必要時 `border-t border-border`。背景色切替は使わない                  |
+| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`                              |
+| border-radius     | コンテナ/画像=`rounded-lg`, CTA=sharp（editorial）, Form送信=`rounded-full`, セクション境界=sharp |
 
 ## コンポーネント規約
 
@@ -67,7 +67,7 @@ OKLCH形式。Luxury White × Bronze。
 | 番号付きリスト         | `font-heading font-light italic text-accent/50`（HowItWorks: 2.5rem / Features: 2rem）              | 01, 02, 03 形式            |
 | PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                             | —                          |
 | PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                         | —                          |
-| SiteCTA                | bg-foreground ダークセクション、editorial ボタン                                                    | content ペー��末尾         |
+| SiteCTA                | bg-surface、editorial ボタン（余白で分離、装飾線なし）                                              | content ページ末尾         |
 | Section                | 背景交互（default↔surface）、border-top/accent 装飾                                                 | セクション間の分離         |
 | EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                                         | hover:shadow-lg            |
 | Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                  | セクション内の区切り       |
@@ -81,7 +81,7 @@ OKLCH形式。Luxury White × Bronze。
 
 1. **Hero** — 雑誌カバー風スプリット（左画像 + 右セリフイタリック見出し）
 2. **HowItWorks** — ご利用の流れ3ステップ + バリュープロップ帯（1セクションに統合）
-3. **Spaces** — フィーチャードスプレッド + Kinfolk 風ずらし2カラムグリッド
+3. **Spaces** — CSS scroll-snap 横スクロールカルーセル（クローンスライド無限ループ、矢印+ドットナビ）
 4. **Features** — 番号付き editorial リスト（01, 02, ...）
 5. **CTA** — 日本語見出し + ボーダーボタン
 

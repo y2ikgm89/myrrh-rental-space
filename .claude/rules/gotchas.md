@@ -50,6 +50,7 @@ paths:
 
 ## ドメイン・予約
 
+- **予約フォームの `?spaceId=` 事前選択** — スペース詳細の「予約する」ボタンは `/reservation?spaceId={id}` にリンク。`reservation/page.tsx` が locations 内の存在を検証し `initialSpaceId` として渡す。`resolveAutoIds` が locationId を逆引きし、既存の `skipStep1` でステップ2から開始。不正な spaceId は無視してフォールバック
 - **`executeAdminMutationResult` で `afterSuccess` にデータを渡すには `execute` 戻り値を使用** — `let data = null` を外部クロージャに定義して `execute` 内で代入するパターン禁止（脆弱）。`execute` の戻り値型を適切に定義し `afterSuccess: (data) => { ... }` で受け取る
 - **`invalidateEventCaches` に slug 引数を省略しない** — `publishEvent`/`cancelEvent` 等で slug を渡さないと `getCacheTag.events.slug(slug)` が無効化されず公開ページに古いデータが残る。`execute` 内で `getEventById` から slug を取得して渡す
 - **予約アクションのキャッシュ無効化は3点セット必須** — `updateTag(CACHE_TAGS.RESERVATIONS)` + `updateTag(getCacheTag.reservations.detail(id))` + `updateTag(getCacheTag.reservations.calendar())`。ステータス変更・削除・顧客キャンセル/変更すべてに適用。顧客統計（`totalReservations` 等）が変わる操作は `updateTag(CACHE_TAGS.CUSTOMERS)` + `updateTag(getCacheTag.customers.detail(customerId))` も追加
@@ -111,7 +112,7 @@ paths:
 - **`inline-block` + `uppercase` + `tracking-[0.18em]` のテキスト折り返し** — `letter-spacing` が広い uppercase テキストは `inline-block` だとボタン枠内で折り返される。`inline-flex items-center justify-center whitespace-nowrap` を使用する
 - **ホームページセクション見出しは日英併記** — 英語 uppercase ラベル（`text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground`）+ 日本語見出し（`font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light`）。英語のみの見出しは禁止。HowItWorks / Spaces / Features / CTA で統一済み
 - **`exactOptionalPropertyTypes` 下で Next.js `Link` に optional `onClick` を渡す場合は条件スプレッド** — `onClick={props.onClick}` は `(() => void) | undefined` が `MouseEventHandler` と非互換。`{...(props.onClick && { onClick: props.onClick })}` を使用
-- **ホームページセクションは背景色を交互配置** — `bg-surface`（薄茶）と白を交互に。HowItWorks=surface → Spaces=白 → Features=surface → CTA=白。新セクション追加時も交互パターンを維持する
+
 - **`<header>` に `role="banner"`、`<footer>` に `role="contentinfo"` を明示** — HTML5 暗黙 role は一部 AT で認識されない。公開ページ `site-header.tsx` / `site-footer.tsx` で設定済み
 - **モバイルメニュー閉じ後はトリガー要素にフォーカス復帰** — `closeMenu` の `onComplete` コールバックで `hamburgerRef.current?.focus()` を呼ぶ。WCAG 2.1 AA §2.4.3（フォーカス順序）準拠
 
@@ -128,6 +129,8 @@ paths:
 
 ## Page-First Architecture（公開ページ）
 
+- **`SpaceCard` の `imageUrls` prop は optional** — 未指定または1枚のみの場合は `ImageFrame` で単一画像表示。2枚以上で `ImageCarousel`（ホバー左右ナビ + モバイルスワイプ + ドット）が有効化。消費者（`RelatedSpaces`, `SpaceShowcaseSection`, `SpaceGrid`）は全て対応済み
+- **`ImageCarousel` は `next/image` 直接使用の許容例外** — per-image の `opacity` + `aria-hidden` 制御が必要で `ImageFrame` では対応不可。単一画像は `ImageFrame` を使用
 - **`SectionWrapper` と `Section` Primitive を混同しない** — `SectionWrapper`（`sections/SectionWrapper.tsx`）は管理画面 SectionDesign JSON → CSS 変換（padding/background/maxWidth を DB から動的制御）。`Section` Primitive（`design-system/section.tsx`）は静的ページレイアウト用。SectionWrapper を Section に置き換えると管理画面のデザイン制御が効かなくなる
 - **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
@@ -193,6 +196,7 @@ paths:
 
 ## ビルド・検証
 
+- **`useRef` 変数名は `Ref` サフィックス必須** — `@eslint-react/naming-convention-ref-name` が `useRef` の戻り値に `ref` または `*Ref` 命名を要求。`touchStartX` → `touchStartXRef`
 - **ローカル barrel の tree-shaking は信頼できない** — Next.js の `optimizePackageImports` は npm パッケージのみ対象。`index.ts` で re-export すると未使用コンポーネントもバンドルに含まれる可能性がある。バンドルサイズが問題になる場合は barrel 経由ではなく直接 import する（例: `section-parsers.ts` から直接 import して Zod をクライアントバンドルから除去）
 - **Turbopack `"use server"` barrel re-export はクライアントから解決できない** — `"use server"` ファイルの関数を `index.ts`（barrel）経由で re-export し、`"use client"` コンポーネントから import すると `Export doesn't exist in target module` ビルドエラー。クライアントコンポーネントからは `@/admin/actions/post/mutations` のようにサブモジュールを直接 import する。Server Component / Server Action 間の barrel re-export は問題ない
 - **`global-error.tsx` は Root Layout を完全に置換する** — `<html>` `<body>` を自身で定義するため、admin.css / public.css の CSS 変数・`@theme` トークン・`next/font` が一切利用不可。全スタイルをインラインで記述すること（Tailwind クラス禁止）
@@ -272,9 +276,12 @@ paths:
 - **`next.config.ts` に seed/開発専用ドメインを残さない** — `placehold.co` 等の開発用 `remotePatterns` / CSP `img-src` は本番で不要。`dangerouslyAllowSVG` も seed 画像のためだけに有効化しない
 - **監査ログの provider 判定は全 OAuth プロバイダーを列挙** — `ctx.path.includes("social")` だけでは LINE が "google" として記録される。`/line` → `"line"`、`/google` → `"google"` と個別判定する
 
-## Editorial ボタン
+## Editorial デザイン
 
-- **editorial ボタンは全箇所 `Button variant="editorial"` で統一** — raw `<Link>` + インラインスタイルで editorial ボタンを実装しない。`button.tsx` の editorial variant（`rounded-full` + bronze hover）が Single Source of Truth。site-header / cta-section / site-cta すべてで Button コンポーネントを使用
+- **editorial ボタンは全箇所 `Button variant="editorial"` で統一** — raw `<Link>` + インラインスタイルで editorial ボタンを実装しない。`button.tsx` の editorial variant（シャープエッジ + bronze hover）が Single Source of Truth。site-header / cta-section / site-cta すべてで Button コンポーネントを使用
+- **公開ページで `bg-foreground`（ダーク反転セクション）禁止** — Editorial Magazine（Kinfolk/Cereal）は白 ↔ 薄茶の交互配置が基本。ダーク全幅セクションは Accent 10% 制約を超え、トーンが崩れる。SiteCTA は `bg-surface`（装飾線なし、余白で分離）
+- **`editorial-border-accent` CSS クラスは Divider 専用** — `width: 4rem` を持つ短い装飾線。`Section border="accent"` 等の全幅要素に使うとレイアウトが 4rem 幅に潰れる。Section の accent border は `border-t-2 border-accent`（Tailwind ユーティリティ）を使用
+- **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-surface` 等のライトトーンに変更し、editorial variant をそのまま使う
 
 ## ホームページ Section 管理
 
