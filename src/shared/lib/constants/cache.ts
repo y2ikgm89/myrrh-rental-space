@@ -90,8 +90,6 @@ export const CACHE_TAGS = {
   INTEGRATION_SETTINGS: "integration-settings",
   /** FAQ */
   FAQ: "faq",
-  /** FAQカテゴリ */
-  FAQ_CATEGORIES: "faq-categories",
   /** 予約 */
   RESERVATIONS: "reservations",
   /** 顧客 */
@@ -124,8 +122,6 @@ export const CACHE_TAGS = {
   PERMALINK: "permalink",
   /** robots.txt設定 */
   ROBOTS_TXT: "robots-txt",
-  /** レイアウト全般設定 */
-  LAYOUT: "layout",
   /** レイアウト詳細設定（コンテンツ幅等） */
   LAYOUT_SETTINGS: "layout-settings",
   /** アナリティクス設定 */
@@ -144,12 +140,8 @@ export const CACHE_TAGS = {
   SIDEBAR_SETTINGS: "sidebar-settings",
   /** Instagramフィード */
   INSTAGRAM_FEED: "instagram-feed",
-  /** キャンセルポリシー */
-  CANCELLATION_POLICY: "cancellation-policy",
   /** ブロックテンプレート */
   BLOCK_TEMPLATES: "block-templates",
-  /** 権限 */
-  PERMISSIONS: "permissions",
   /** スペースレビュー */
   REVIEWS: "reviews",
   /** イベント */
