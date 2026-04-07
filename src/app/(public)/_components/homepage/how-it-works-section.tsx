@@ -107,7 +107,7 @@ export function HowItWorksSection({
         </div>
 
         {/* Value props strip */}
-        <div className="mt-14 flex flex-wrap justify-center gap-x-10 gap-y-6 border-t border-border pt-8 md:mt-16 md:gap-x-16 md:pt-10">
+        <div className="mt-14 flex flex-wrap justify-center gap-x-10 gap-y-6 md:mt-16 md:gap-x-16">
           {valueProps.map((prop, i) => {
             const Icon = VALUE_PROP_ICONS[i] ?? IconClock;
             return (
@@ -115,11 +115,11 @@ export function HowItWorksSection({
                 <div className="flex items-center gap-3">
                   <Icon
                     className="text-accent"
-                    size={24}
+                    size={28}
                     strokeWidth={1.2}
                     aria-hidden="true"
                   />
-                  <span className="text-[0.9rem] tracking-[0.02em] text-foreground/70">
+                  <span className="text-[0.95rem] tracking-[0.02em] text-foreground/70">
                     {prop.title}
                   </span>
                 </div>

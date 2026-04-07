@@ -17,7 +17,8 @@ interface BlogSidebarProps {
 }
 
 function getWidgetKey(widget: SidebarWidget): string {
-  return widget.type === "custom" ? (widget as CustomWidget).id : widget.type;
+  if (widget.type === "custom") return widget.id;
+  return widget.type;
 }
 
 export function BlogSidebar({ widgets, data }: BlogSidebarProps): ReactElement {
@@ -46,10 +47,10 @@ export function BlogSidebar({ widgets, data }: BlogSidebarProps): ReactElement {
                 );
               case "tags":
                 return <SidebarTags key={key} tags={data.tags} />;
-              case "custom":
-                return (
-                  <SidebarCustom key={key} widget={widget as CustomWidget} />
-                );
+              case "custom": {
+                const customWidget: CustomWidget = widget;
+                return <SidebarCustom key={key} widget={customWidget} />;
+              }
               default:
                 return null;
             }
