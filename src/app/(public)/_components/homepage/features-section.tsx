@@ -64,18 +64,18 @@ export function FeaturesSection({
             <ScrollReveal key={`feature-${String(i)}`} delay={i * 0.08}>
               <div
                 className={cn(
-                  "grid grid-cols-[3rem_1fr] gap-4 border-b border-border py-6 md:gap-6 md:py-8",
+                  "grid grid-cols-[3rem_1fr] items-start gap-4 border-b border-border py-6 md:gap-6 md:py-8",
                   i === 0 && "border-t",
                 )}
               >
-                <span className="text-right font-heading text-[2rem] font-light italic leading-[1.3] text-accent/50">
+                <span className="text-right font-heading text-[2rem] font-light italic leading-none text-accent/50">
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <div>
-                  <h3 className="text-[0.9rem] font-normal tracking-[0.02em]">
+                  <h3 className="text-base font-normal tracking-[0.02em]">
                     {feature.title}
                   </h3>
-                  <p className="mt-1 text-[0.8rem] leading-[1.9] text-muted-foreground">
+                  <p className="mt-1 text-[0.9rem] leading-[1.9] text-muted-foreground">
                     {feature.description}
                   </p>
                 </div>
