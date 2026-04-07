@@ -78,6 +78,7 @@ export const SectionType = {
   MAP: "map",
   EMBED: "embed",
   INSTAGRAM: "instagram",
+  EVENT_CALENDAR: "event-calendar",
 } as const;
 
 export type SectionType = (typeof SectionType)[keyof typeof SectionType];
@@ -101,6 +102,7 @@ const SECTION_TYPE_VALUES = [
   SectionType.MAP,
   SectionType.EMBED,
   SectionType.INSTAGRAM,
+  SectionType.EVENT_CALENDAR,
 ] as const;
 
 export type {

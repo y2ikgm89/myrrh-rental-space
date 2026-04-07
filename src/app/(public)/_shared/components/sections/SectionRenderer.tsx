@@ -259,6 +259,12 @@ export async function SectionRenderer({
       return <InstagramSection config={config} design={design} />;
     }
 
+    case SectionType.EVENT_CALENDAR: {
+      // event-calendar は /events ページで FullCalendar として直接実装済み
+      // SectionRenderer 経由では null を返す
+      return null;
+    }
+
     default:
       return null;
   }
