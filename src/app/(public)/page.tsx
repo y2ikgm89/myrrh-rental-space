@@ -202,6 +202,7 @@ export default async function HomePage(): Promise<ReactElement> {
     description: s.description,
     capacity: s.capacity,
     hourlyPrice: s.hourlyPrice,
+    dailyPrice: s.dailyPrice,
     area: s.area,
     mainImageUrl: s.mainImageUrl,
     categoryName: s.category?.name ?? null,

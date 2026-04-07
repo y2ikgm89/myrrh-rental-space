@@ -1,358 +1,431 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import type { ReactElement } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { Button } from "@/public/components/design-system/button";
+import {
+  IconArrowRight,
+  IconChevronLeft,
+  IconChevronRight,
+} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
+import { useAriaLiveOptional } from "@/shared/contexts";
+import { useFormatPrice } from "@/public/hooks/use-format-price";
 import type { ShowcaseSpace } from "./spaces-section";
+
+// Breakpoints matching Tailwind sm/lg
+const SM = 640;
+const LG = 1024;
+
+const TRANSITION_MS = 500;
+const REPEATS = 51;
+const VISIBLE_COUNT = 5;
+const SWIPE_THRESHOLD = 40;
+
+interface CardDims {
+  width: number;
+  gap: number;
+  sizes: string;
+}
+
+const DIMS_MOBILE: CardDims = { width: 260, gap: -50, sizes: "260px" };
+const DIMS_TABLET: CardDims = { width: 380, gap: -130, sizes: "380px" };
+const DIMS_DESKTOP: CardDims = { width: 500, gap: -220, sizes: "500px" };
+
+function getDims(vw: number): CardDims {
+  if (vw < SM) return DIMS_MOBILE;
+  if (vw < LG) return DIMS_TABLET;
+  return DIMS_DESKTOP;
+}
+
+function getCardStyle(distance: number) {
+  if (distance === 0) return { zIndex: 30, scale: 1, opacity: 1 };
+  if (distance === 1) return { zIndex: 20, scale: 0.9, opacity: 0.7 };
+  if (distance === 2) return { zIndex: 10, scale: 0.82, opacity: 0.4 };
+  return { zIndex: 5, scale: 0.75, opacity: 0.2 };
+}
 
 interface SpacesCarouselProps {
   readonly spaces: readonly ShowcaseSpace[];
 }
 
-/**
- * Infinite-loop horizontal carousel using CSS scroll-snap.
- *
- * Layout: [clone-last] [real-0] [real-1] … [real-N] [clone-first]
- * When the user scrolls onto a clone, we instantly jump to the real slide.
- */
-export function SpacesCarousel({ spaces }: SpacesCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const isJumpingRef = useRef(false);
+export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
   const count = spaces.length;
-
-  // Build slides array: clone-last + real slides + clone-first
-  const slides = buildSlides(spaces);
-
-  // On mount, scroll to the first real slide (index 1) without animation
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container || count <= 1) return;
-    const firstReal = container.children[1] as HTMLElement | undefined;
-    if (firstReal) {
-      container.scrollLeft = firstReal.offsetLeft;
-    }
-  }, [count]);
-
-  // Detect when scrolling settles on a clone and jump to the real slide
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container || count <= 1) return;
-
-    let timer: ReturnType<typeof setTimeout>;
-
-    const handleScroll = () => {
-      clearTimeout(timer);
-      if (isJumpingRef.current) return;
-
-      timer = setTimeout(() => {
-        const slideWidth = container.scrollWidth / slides.length;
-        const rawIndex = Math.round(container.scrollLeft / slideWidth);
-
-        if (rawIndex <= 0) {
-          // On clone-last → jump to real last
-          isJumpingRef.current = true;
-          const realLast = container.children[count] as HTMLElement | undefined;
-          if (realLast) {
-            container.style.scrollBehavior = "auto";
-            container.scrollLeft = realLast.offsetLeft;
-            container.style.scrollBehavior = "";
-          }
-          setActiveIndex(count - 1);
-          requestAnimationFrame(() => {
-            isJumpingRef.current = false;
-          });
-        } else if (rawIndex >= slides.length - 1) {
-          // On clone-first → jump to real first
-          isJumpingRef.current = true;
-          const realFirst = container.children[1] as HTMLElement | undefined;
-          if (realFirst) {
-            container.style.scrollBehavior = "auto";
-            container.scrollLeft = realFirst.offsetLeft;
-            container.style.scrollBehavior = "";
-          }
-          setActiveIndex(0);
-          requestAnimationFrame(() => {
-            isJumpingRef.current = false;
-          });
-        } else {
-          // On a real slide
-          setActiveIndex(rawIndex - 1);
-        }
-      }, 60);
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => {
-      clearTimeout(timer);
-      container.removeEventListener("scroll", handleScroll);
-    };
-  }, [count, slides.length]);
-
-  const scrollToSlide = useCallback((realIndex: number) => {
-    const container = scrollRef.current;
-    if (!container) return;
-    // +1 because index 0 in DOM is the clone-last
-    const child = container.children[realIndex + 1] as HTMLElement | undefined;
-    if (child) {
-      child.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "start",
-      });
-    }
-  }, []);
-
-  const handlePrev = () => {
-    if (count <= 1) return;
-    const container = scrollRef.current;
-    if (!container) return;
-
-    if (activeIndex === 0) {
-      // Scroll to clone-last (index 0 in DOM), then jump will handle the rest
-      const cloneLast = container.children[0] as HTMLElement | undefined;
-      if (cloneLast) {
-        cloneLast.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "start",
-        });
-      }
-    } else {
-      scrollToSlide(activeIndex - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (count <= 1) return;
-    const container = scrollRef.current;
-    if (!container) return;
-
-    if (activeIndex === count - 1) {
-      // Scroll to clone-first (last child in DOM), then jump will handle the rest
-      const cloneFirst = container.children[slides.length - 1] as
-        | HTMLElement
-        | undefined;
-      if (cloneFirst) {
-        cloneFirst.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "start",
-        });
-      }
-    } else {
-      scrollToSlide(activeIndex + 1);
-    }
-  };
-
-  return (
-    <div
-      role="region"
-      aria-label="厳選スペース"
-      aria-roledescription="carousel"
-      className="relative"
-    >
-      {/* Scroll container */}
-      <div
-        ref={scrollRef}
-        className="flex snap-x snap-mandatory overflow-x-auto"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {slides.map((slide, i) => (
-          <CarouselSlide
-            key={slide.key}
-            space={slide.space}
-            index={slide.realIndex}
-            total={count}
-            isClone={slide.isClone}
-            priority={i === 1}
-          />
-        ))}
-      </div>
-
-      {/* Navigation arrows */}
-      {count > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label="前のスペース"
-            onClick={handlePrev}
-            className="absolute left-3 top-1/2 z-10 -translate-y-1/2 border border-accent-foreground/20 bg-foreground/30 p-2 backdrop-blur-sm transition-colors duration-200 hover:bg-foreground/50 sm:left-5 md:left-8 md:p-3"
-          >
-            <IconChevronLeft
-              className="h-4 w-4 text-accent-foreground md:h-5 md:w-5"
-              aria-hidden="true"
-            />
-          </button>
-          <button
-            type="button"
-            aria-label="次のスペース"
-            onClick={handleNext}
-            className="absolute right-3 top-1/2 z-10 -translate-y-1/2 border border-accent-foreground/20 bg-foreground/30 p-2 backdrop-blur-sm transition-colors duration-200 hover:bg-foreground/50 sm:right-5 md:right-8 md:p-3"
-          >
-            <IconChevronRight
-              className="h-4 w-4 text-accent-foreground md:h-5 md:w-5"
-              aria-hidden="true"
-            />
-          </button>
-        </>
-      )}
-
-      {/* Dot indicators */}
-      {count > 1 && (
-        <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2 sm:bottom-6">
-          {spaces.map((space, i) => (
-            <button
-              key={space.id}
-              type="button"
-              aria-label={`${space.name}へ移動`}
-              onClick={() => scrollToSlide(i)}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                i === activeIndex
-                  ? "w-6 bg-accent-foreground"
-                  : "w-1.5 bg-accent-foreground/40 hover:bg-accent-foreground/60",
-              )}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Slide component                                                           */
-/* -------------------------------------------------------------------------- */
-
-interface CarouselSlideProps {
-  readonly space: ShowcaseSpace;
-  readonly index: number;
-  readonly total: number;
-  readonly isClone: boolean;
-  readonly priority: boolean;
-}
-
-function CarouselSlide({
-  space,
-  index,
-  total,
-  isClone,
-  priority,
-}: CarouselSlideProps) {
-  const content = (
-    <div className="relative aspect-[4/3] sm:aspect-[16/9] md:aspect-[2/1]">
-      {space.mainImageUrl ? (
-        <Image
-          src={space.mainImageUrl}
-          alt={isClone ? "" : space.name}
-          fill
-          className="object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-          sizes="100vw"
-          priority={priority}
-        />
-      ) : (
-        <div className="h-full w-full bg-card" />
-      )}
-
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
-
-      {/* Content overlay */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-6 sm:p-8 md:p-12">
-        <div className="max-w-xl">
-          {space.categoryName && (
-            <span className="text-[0.625rem] uppercase tracking-[0.18em] text-accent-foreground/70">
-              {space.categoryName}
-            </span>
-          )}
-          <h3 className="mt-1 font-heading text-h3 font-light text-accent-foreground">
-            {space.name}
-          </h3>
-          {space.description && (
-            <p className="mt-2 line-clamp-2 text-[0.85rem] leading-relaxed text-accent-foreground/80">
-              {space.description}
-            </p>
-          )}
-          <div className="mt-3 flex items-baseline gap-4 text-[0.75rem] text-accent-foreground/60">
-            {space.area != null && <span>{space.area}m²</span>}
-            <span>Max {space.capacity}</span>
-          </div>
-        </div>
-
-        <div className="flex-none text-right">
-          <p className="font-heading text-[1.5rem] font-light text-accent-foreground md:text-[2rem]">
-            ¥{space.hourlyPrice.toLocaleString()}
-            <span className="ml-1 font-sans text-[0.7rem] text-accent-foreground/60">
-              /h
-            </span>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <Link
-      href={`/spaces/${space.slug}`}
-      className="group relative w-full flex-none snap-start"
-      {...(isClone && { "aria-hidden": true, tabIndex: -1 })}
-      {...(!isClone && {
-        role: "group" as const,
-        "aria-roledescription": "slide",
-        "aria-label": `${index + 1} / ${total}: ${space.name}`,
-      })}
-    >
-      {content}
-    </Link>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Helpers                                                                   */
-/* -------------------------------------------------------------------------- */
-
-interface SlideEntry {
-  key: string;
-  space: ShowcaseSpace;
-  realIndex: number;
-  isClone: boolean;
-}
-
-function buildSlides(spaces: readonly ShowcaseSpace[]): SlideEntry[] {
-  if (spaces.length <= 1) {
-    const first = spaces[0];
-    if (!first) return [];
-    return [{ key: first.id, space: first, realIndex: 0, isClone: false }];
-  }
-
-  const last = spaces[spaces.length - 1];
-  const first = spaces[0];
-  if (!last || !first) return [];
-
-  const result: SlideEntry[] = [
-    {
-      key: `clone-last-${last.id}`,
-      space: last,
-      realIndex: spaces.length - 1,
-      isClone: true,
-    },
-  ];
-
-  for (let i = 0; i < spaces.length; i++) {
-    const space = spaces[i];
-    if (!space) continue;
-    result.push({ key: space.id, space, realIndex: i, isClone: false });
-  }
-
-  result.push({
-    key: `clone-first-${first.id}`,
-    space: first,
-    realIndex: 0,
-    isClone: true,
+  const safeCount = Math.max(count, 1);
+  const totalCards = safeCount * REPEATS;
+  const centerStart = Math.floor(REPEATS / 2) * safeCount;
+  const isTransitioningRef = useRef(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const touchRef = useRef({
+    startX: 0,
+    startY: 0,
+    delta: 0,
+    isHorizontal: false,
   });
 
-  return result;
+  const { formatUnit } = useFormatPrice();
+
+  // --- Responsive dimensions (SSR-safe: mobile as default) ---
+  const [dims, setDims] = useState<CardDims>(DIMS_MOBILE);
+
+  useEffect(() => {
+    let rafId: number;
+    const update = () => setDims(getDims(window.innerWidth));
+    // Schedule initial measurement after mount (avoids sync setState in effect)
+    rafId = requestAnimationFrame(update);
+    const handleResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(update);
+    };
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const cardWidth = dims.width;
+  const cardStep = dims.width + dims.gap;
+  // aspect 3/2 → height multiplier = 2/3
+  const trackHeight = cardWidth * (2 / 3) + 20;
+
+  // --- Navigation state ---
+  const [scrollIndex, setScrollIndex] = useState(centerStart);
+  const activeIndex = ((scrollIndex % safeCount) + safeCount) % safeCount;
+  const activeSpace = spaces[activeIndex];
+
+  const navigate = (direction: 1 | -1) => {
+    if (isTransitioningRef.current) return;
+    isTransitioningRef.current = true;
+    setScrollIndex((prev) => prev + direction);
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, TRANSITION_MS);
+  };
+
+  const jumpTo = (i: number) => {
+    if (isTransitioningRef.current || i === scrollIndex) return;
+    isTransitioningRef.current = true;
+    setScrollIndex(i);
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, TRANSITION_MS);
+  };
+
+  const jumpToDot = (targetReal: number) => {
+    if (isTransitioningRef.current) return;
+    const diff = targetReal - activeIndex;
+    if (diff === 0) return;
+    let step = diff;
+    if (Math.abs(diff) > safeCount / 2) {
+      step = diff > 0 ? diff - safeCount : diff + safeCount;
+    }
+    isTransitioningRef.current = true;
+    setScrollIndex((prev) => prev + step);
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, TRANSITION_MS);
+  };
+
+  // Scoped keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      navigate(-1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      navigate(1);
+    }
+  };
+
+  // Non-passive touch handler for proper preventDefault
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      touchRef.current = {
+        startX: touch.clientX,
+        startY: touch.clientY,
+        delta: 0,
+        isHorizontal: false,
+      };
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      const t = touchRef.current;
+      const dx = touch.clientX - t.startX;
+      const dy = touch.clientY - t.startY;
+
+      if (!t.isHorizontal && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        t.isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+
+      if (t.isHorizontal) {
+        e.preventDefault();
+        t.delta = dx;
+      }
+    };
+
+    const handleTouchEnd = () => {
+      const t = touchRef.current;
+      if (!t.isHorizontal) return;
+      if (t.delta > SWIPE_THRESHOLD) {
+        navigate(-1);
+      } else if (t.delta < -SWIPE_THRESHOLD) {
+        navigate(1);
+      }
+      t.delta = 0;
+    };
+
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
+  // Aria-live announcement on slide change
+  const ariaLive = useAriaLiveOptional();
+  useEffect(() => {
+    if (activeSpace && ariaLive) {
+      ariaLive.announce(activeSpace.name, "polite");
+    }
+  }, [activeIndex, activeSpace, ariaLive]);
+
+  // Prefers reduced motion
+  const [reduceMotion, setReduceMotion] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const transitionClass = reduceMotion
+    ? ""
+    : "transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]";
+
+  // Empty spaces guard — after all hooks
+  if (count === 0) {
+    return <div />;
+  }
+
+  // --- Visible cards (only render ±VISIBLE_COUNT) ---
+  const visibleCards: Array<{ i: number; offset: number; distance: number }> =
+    [];
+  for (let d = -VISIBLE_COUNT; d <= VISIBLE_COUNT; d++) {
+    const i = scrollIndex + d;
+    if (i >= 0 && i < totalCards) {
+      visibleCards.push({ i, offset: d, distance: Math.abs(d) });
+    }
+  }
+
+  return (
+    <div>
+      {/* Carousel viewport — focusable for scoped keyboard nav */}
+      <div
+        ref={carouselRef}
+        className="relative overflow-hidden px-5 outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 md:px-10"
+        role="region"
+        aria-label="厳選スペース"
+        aria-roledescription="carousel"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      >
+        {/* Track */}
+        <div
+          className="relative flex items-center justify-center"
+          style={{ height: `${trackHeight}px` }}
+        >
+          {visibleCards.map(({ i, offset, distance }) => {
+            const realIdx = i % count;
+            const space = spaces[realIdx];
+            if (!space) return null;
+
+            const { zIndex, scale, opacity } = getCardStyle(distance);
+            const isActive = distance === 0;
+            const translateX = offset * cardStep;
+
+            return (
+              <div
+                key={`card-${i}`}
+                className={cn("absolute", transitionClass)}
+                style={{
+                  width: `${cardWidth}px`,
+                  zIndex,
+                  transform: `translateX(${translateX}px) scale(${scale})`,
+                  opacity,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => jumpTo(i)}
+                  className="group block w-full text-left"
+                  aria-label={`${space.name}を表示`}
+                >
+                  <div className="relative aspect-[3/2] overflow-hidden">
+                    {distance <= VISIBLE_COUNT && space.mainImageUrl ? (
+                      <Image
+                        src={space.mainImageUrl}
+                        alt={isActive ? space.name : ""}
+                        fill
+                        className={cn(
+                          "object-cover",
+                          !reduceMotion && "transition-transform duration-700",
+                          isActive &&
+                            !reduceMotion &&
+                            "group-hover:scale-[1.08]",
+                        )}
+                        sizes={dims.sizes}
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-card" />
+                    )}
+
+                    {/* Hover overlay — desktop only */}
+                    {isActive && (
+                      <div
+                        className={cn(
+                          "pointer-events-none absolute inset-0 hidden flex-col justify-end bg-foreground/70 p-4 opacity-0 md:flex md:p-5",
+                          !reduceMotion &&
+                            "transition-opacity duration-700 group-hover:opacity-100",
+                        )}
+                      >
+                        {space.categoryName && (
+                          <span className="text-[0.6rem] uppercase tracking-[0.18em] text-accent-foreground/70">
+                            {space.categoryName}
+                          </span>
+                        )}
+                        <p className="mt-1 font-heading text-h3 font-light text-accent-foreground">
+                          {space.name}
+                        </p>
+                        <div className="mt-3 flex items-baseline gap-4 text-[0.8rem] text-accent-foreground/80">
+                          {space.area != null && (
+                            <span>広さ {space.area}m²</span>
+                          )}
+                          <span>定員 {space.capacity}名</span>
+                        </div>
+                        <p className="mt-2 text-base font-light text-accent-foreground">
+                          {formatUnit(space.hourlyPrice, "/h")}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Nav arrows — desktop only */}
+        <button
+          type="button"
+          aria-label="前のスペース"
+          onClick={() => navigate(-1)}
+          className="absolute left-4 top-1/2 z-40 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:left-8"
+        >
+          <IconChevronLeft
+            className="h-5 w-5 text-foreground"
+            aria-hidden="true"
+          />
+        </button>
+        <button
+          type="button"
+          aria-label="次のスペース"
+          onClick={() => navigate(1)}
+          className="absolute right-4 top-1/2 z-40 hidden -translate-y-1/2 border border-border bg-background/80 p-3 backdrop-blur-sm transition-colors duration-200 hover:border-foreground/30 md:flex lg:right-8"
+        >
+          <IconChevronRight
+            className="h-5 w-5 text-foreground"
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+
+      {/* Detail panel */}
+      {activeSpace && (
+        <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
+          <div className="mx-auto mt-8 max-w-2xl text-center md:mt-14">
+            {activeSpace.categoryName && (
+              <span className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground md:text-[0.7rem]">
+                {activeSpace.categoryName}
+              </span>
+            )}
+            <h3 className="mt-2 font-heading text-h3 font-light md:text-h2">
+              {activeSpace.name}
+            </h3>
+            <div className="mt-3 flex items-baseline justify-center gap-4 text-base font-light md:gap-6 md:text-lg">
+              <p>{formatUnit(activeSpace.hourlyPrice, "/h")}</p>
+              {activeSpace.dailyPrice != null && (
+                <p>{formatUnit(activeSpace.dailyPrice, "/day")}</p>
+              )}
+            </div>
+            <div className="mt-2 flex items-center justify-center gap-4 text-sm text-muted-foreground md:gap-6">
+              {activeSpace.area != null && (
+                <span>広さ {activeSpace.area}m²</span>
+              )}
+              <span>定員 {activeSpace.capacity}名</span>
+            </div>
+            {activeSpace.description && (
+              <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground md:text-base">
+                {activeSpace.description}
+              </p>
+            )}
+            <div className="mt-5">
+              <Button
+                variant="editorial"
+                href={`/spaces/${activeSpace.slug}`}
+                className="text-[0.65rem] uppercase tracking-[0.18em]"
+              >
+                View Details
+              </Button>
+            </div>
+            <Link
+              href="/spaces"
+              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
+            >
+              すべてのスペースを見る
+              <IconArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Link>
+          </div>
+
+          {/* Dot indicators */}
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {spaces.map((space, i) => (
+              <button
+                key={space.id}
+                type="button"
+                aria-label={`${space.name}へ移動`}
+                aria-current={i === activeIndex ? "true" : undefined}
+                onClick={() => jumpToDot(i)}
+                className="relative flex items-center justify-center py-3 md:py-2"
+              >
+                <span
+                  className={cn(
+                    "block h-2 rounded-full transition-all duration-300 md:h-1.5",
+                    i === activeIndex
+                      ? "w-8 bg-accent md:w-6"
+                      : "w-2 bg-foreground/20 md:w-1.5",
+                  )}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

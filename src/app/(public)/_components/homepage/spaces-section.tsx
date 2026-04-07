@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { Button } from "@/public/components/design-system/button";
 import { Container } from "@/public/components/design-system/container";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SpacesCarousel } from "./spaces-carousel";
@@ -11,6 +10,7 @@ export interface ShowcaseSpace {
   readonly description: string | null;
   readonly capacity: number;
   readonly hourlyPrice: number;
+  readonly dailyPrice: number | null;
   readonly area: number | null;
   readonly mainImageUrl: string | null;
   readonly categoryName: string | null;
@@ -42,39 +42,20 @@ export function SpacesSection({
       {/* Section header */}
       <Container>
         <ScrollReveal>
-          <div className="mb-10 md:mb-14">
-            <div className="flex items-baseline justify-between border-b border-border pb-3">
-              <span className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
-                {label}
-              </span>
-              <span className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
-                {String(spaces.length).padStart(2, "0")} Selected
-              </span>
-            </div>
-            <h2 className="mt-4 font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light tracking-tight">
+          <div className="mb-8 md:mb-16">
+            <span className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+              {label}
+            </span>
+            <h2 className="mt-3 font-heading text-h2 font-light italic tracking-tight md:text-h1">
               {title}
             </h2>
+            <div className="mt-4 h-px w-12 bg-accent" />
           </div>
         </ScrollReveal>
       </Container>
 
-      {/* Horizontal lookbook carousel */}
+      {/* Center Stage Carousel */}
       {limited.length > 0 && <SpacesCarousel spaces={limited} />}
-
-      {/* View all button */}
-      <Container className="mt-10 md:mt-14">
-        <ScrollReveal>
-          <div className="border-t border-border pt-6 text-center">
-            <Button
-              variant="editorial"
-              href="/spaces"
-              className="text-[0.65rem] uppercase tracking-[0.18em]"
-            >
-              View All Spaces
-            </Button>
-          </div>
-        </ScrollReveal>
-      </Container>
     </section>
   );
 }
