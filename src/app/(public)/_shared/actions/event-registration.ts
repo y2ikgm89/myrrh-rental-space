@@ -163,6 +163,12 @@ export async function cancelEventRegistration(
     updateTag(getCacheTag.events.detail(registration.eventId));
     updateTag(getCacheTag.eventRegistrations.list(registration.eventId));
 
+    // 顧客統計が変わる場合は CUSTOMERS も無効化
+    if (customer) {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(customer.id));
+    }
+
     // 6. Send cancellation email (fire-and-forget)
     fireAndForget(
       (async () => {
