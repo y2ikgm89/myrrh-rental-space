@@ -2,8 +2,9 @@
 
 import { getSession } from "@/shared/lib/auth";
 import { updateCustomerProfileByUserId } from "@/shared/domain/customers/commands";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { updateTag } from "next/cache";
-import { CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import {
   createMutationError,
   type MutationResult,
@@ -42,7 +43,11 @@ export async function updateProfileAction(
       phoneNumber: parsed.data.phoneNumber || null,
     });
 
+    const customer = await getCustomerByUserId(session.user.id);
     updateTag(CACHE_TAGS.CUSTOMERS);
+    if (customer) {
+      updateTag(getCacheTag.customers.detail(customer.id));
+    }
 
     return null;
   } catch (error) {
