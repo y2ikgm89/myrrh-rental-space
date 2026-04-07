@@ -346,6 +346,7 @@ export async function findReservationsForReminderWindow(
     },
     select: {
       id: true,
+      status: true,
       startTime: true,
       endTime: true,
       notes: true,

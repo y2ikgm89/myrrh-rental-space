@@ -1,6 +1,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { findReservationsForReminderWindow } from "@/shared/domain/reservations/admin-queries";
 import { sendReservationReminderEmail } from "@/shared/lib/email/reminder-emails";
+import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import {
   logError,
   ErrorCategory,
@@ -48,6 +49,12 @@ export async function GET(request: Request) {
     for (const reservation of reservations) {
       const email = reservation.customer?.email;
       if (!email) {
+        skipped++;
+        continue;
+      }
+
+      // Cron 実行中にキャンセルされた予約をスキップ
+      if (!ACTIVE_RESERVATION_STATUSES.includes(reservation.status)) {
         skipped++;
         continue;
       }
