@@ -1,8 +1,10 @@
 "use server";
 
 import { headers } from "next/headers";
+import { updateTag } from "next/cache";
 import { getSession, auth } from "@/shared/lib/auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
+import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   createMutationError,
   type MutationResult,
@@ -14,6 +16,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { checkActionRateLimit } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 export async function getAccountLinksAction(): Promise<
   MutationResult<{ accounts: string[] }>
@@ -35,11 +38,23 @@ export async function deleteAccountAction(): Promise<MutationResult<null>> {
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 
+  const customer = await getCustomerByUserId(session.user.id);
+
   try {
     await auth.api.deleteUser({
       headers: await headers(),
       body: {},
     });
+
+    updateTag(CACHE_TAGS.CUSTOMERS);
+    updateTag(CACHE_TAGS.RESERVATIONS);
+    updateTag(CACHE_TAGS.REVIEWS);
+    updateTag(CACHE_TAGS.INQUIRIES);
+    updateTag(CACHE_TAGS.EVENTS);
+    if (customer) {
+      updateTag(getCacheTag.customers.detail(customer.id));
+    }
+
     return null;
   } catch (error) {
     logError(error, {
