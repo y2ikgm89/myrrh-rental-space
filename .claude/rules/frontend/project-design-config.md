@@ -22,7 +22,7 @@ OKLCH形式。Luxury White × Bronze。
 | -------- | ---- | ------------------------------------ | ------------------------------- |
 | Dominant | 70 % | `oklch(0.985 0.005 60)` Warm White   | ページ背景                      |
 | Support  | 20 % | `oklch(0.96 0.008 60)` Light Surface | カード・セクション背景          |
-| Accent   | 10 % | `oklch(0.55 0.09 60)` Bronze         | ラベル・CTA・価格のみ（≤ 15 %） |
+| Accent   | 10 % | `oklch(0.62 0.07 60)` Soft Bronze    | ラベル・CTA・価格のみ（≤ 15 %） |
 
 ## タイポグラフィ
 
@@ -33,19 +33,19 @@ OKLCH形式。Luxury White × Bronze。
 
 ## セクション設計
 
-| 要素              | 値                                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`                        |
-| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`                                  |
-| Homepage 背景     | 全セクション `bg-background`（白）統一。視覚変化は余白・タイポグラフィ・画像で確保                |
-| Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)`                     |
-| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                                                |
-| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`                              |
-| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                                                 |
-| Container max     | `80rem` (1280px)                                                                                  |
-| セクション分離    | 余白 `--spacing-section` + 必要時 `border-t border-border`。背景色切替は使わない                  |
-| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`                              |
-| border-radius     | コンテナ/画像=`rounded-lg`, CTA=sharp（editorial）, Form送信=`rounded-full`, セクション境界=sharp |
+| 要素              | 値                                                                                                                                              |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`                                                                      |
+| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`                                                                                |
+| Homepage 背景     | 全セクション `bg-background`（白）統一。視覚変化は余白・タイポグラフィ・画像で確保                                                              |
+| Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)`                                                                   |
+| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                                                                                              |
+| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`                                                                            |
+| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                                                                                               |
+| Container max     | `80rem` (1280px)                                                                                                                                |
+| セクション分離    | 余白 `--spacing-section` + 必要時 `border-t border-border`。背景色切替は使わない                                                                |
+| Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`                                                                            |
+| border-radius     | コンテナ/画像=`rounded-lg`, 全ボタン=sharp（editorial 統一）, セクション境界=sharp。`rounded-full` はバッジ・タグ・アイコンボタン・スピナーのみ |
 
 ## コンポーネント規約
 
@@ -58,7 +58,7 @@ OKLCH形式。Luxury White × Bronze。
 | カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                       | 3列禁止、件数増=ページ分割 |
 | CTA ボタン             | `Button variant="editorial"`: シャープエッジ + bronze hover（`hover:bg-accent`）                    | 全ページ統一               |
 | Secondary ボタン       | テキスト + 下線 reveal                                                                              | —                          |
-| Form ボタン            | `bg-accent text-accent-foreground rounded-full hover:bg-accent/90`                                  | フォーム内 CTA（primary）  |
+| Form ボタン            | `bg-accent text-accent-foreground hover:bg-accent/90`（シャープエッジ — `rounded-full` 禁止）       | フォーム内 CTA（primary）  |
 | Button editorial       | `border border-foreground hover:bg-accent hover:text-accent-foreground`（シャープエッジ）           | 全ページ CTA 統一          |
 | セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                                         | —                          |
 | 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                          | —                          |
@@ -81,7 +81,7 @@ OKLCH形式。Luxury White × Bronze。
 
 1. **Hero** — 雑誌カバー風スプリット（左画像 + 右セリフイタリック見出し）
 2. **HowItWorks** — ご利用の流れ3ステップ + バリュープロップ帯（1セクションに統合）
-3. **Spaces** — CSS scroll-snap 横スクロールカルーセル（クローンスライド無限ループ、矢印+ドットナビ）
+3. **Spaces** — Center Stage Carousel（重なりカードスタック、無限スクロール、detail パネル + ドットナビ）
 4. **Features** — 番号付き editorial リスト（01, 02, ...）
 5. **CTA** — 日本語見出し + ボーダーボタン
 

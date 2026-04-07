@@ -293,4 +293,15 @@ paths:
 - **ホームページは DB 未登録でも表示される** — `page.tsx` が `homepage-*` セクションをフィルタし、0件なら editorial コンポーネントの defaultProps で直接レンダリング
 - **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
 - **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の5段階。custom 時は `heightCustom` (svh 数値) をインラインスタイルで適用。ユーザーに px/vh を直接入力させない（Squarespace/Payload CMS 方式）
-- **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（Server Component: ヘッダー+CTA）が `spaces-carousel.tsx`（Client Component: CSS scroll-snap カルーセル）を呼び出す。カルーセルは `[clone-last] [real slides] [clone-first]` のクローン方式で無限ループ。`IntersectionObserver` でアクティブスライド追跡、クローン到達時に `scrollBehavior: "auto"` で瞬時ジャンプ
+- **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（Server Component: ヘッダー+CTA）が `spaces-carousel.tsx`（Client Component: Center Stage Carousel）を呼び出す。中央カード z-30/scale 1、隣 z-20/scale 0.9 の重なりカードスタック。51回繰り返しで無限スクロール。detail パネル（カテゴリ→名前→料金→広さ/定員→説明→View Details）+ ドットインジケーター。モバイルはタッチスワイプ、デスクトップは矢印ナビ + ホバーオーバーレイ
+
+## ブログサ���ドバー
+
+- **`sidebarWidgets` JSON は順序付き配列** — `[{ type: "search", enabled: true }, ...]` 形式。旧 object 形式（`{ search: true, ... }`）は `parseSidebarWidgets()` がデフォルト配列にフォールバック
+- **`BlogLayout` は Container の中に配置** — Container → BlogLayout → children の順。BlogLayout を Container の外に置くとサイドバーが全幅になる
+- **サイドバー有効時に `Container variant="narrow"` 禁止** — 2カラム（メイン + 320px + gap-12）で幅不足。default Container (1280px) を使用
+- **`Page.showSidebar` オーバーライド**: `null`=グローバル設定に従う、`true/false`=明示的。journal ページは Page レコードの `showSidebar` を参照、記事詳細はグローバルのみ
+- **サイドバーデータ変更時は `SIDEBAR_DATA` キャッシュ無効化が必要** — Post/News の CRUD アクションの `afterSuccess` に `updateTag(CACHE_TAGS.SIDEBAR_DATA)` を追加済み。新しいコンテンツ系アクション追加時も忘れずに
+- **Zod `z.union` の discriminated union narrowing は `switch` の `case` で効く** — `SidebarWidget = BuiltinWidget | CustomWidget` で `switch (widget.type) { case "custom": ... }` 内では `widget` が `CustomWidget` に narrowing される。`as CustomWidget` は不要（プロジェクト禁止ルール）
+
+- **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本。`Button` Primitive の primary/secondary/ghost/editorial は全てシャープ。`rounded-full` はバッジ・タグ・アイコンボタン（シェア・ギャラリーナビ）・スピナー・カルーセルドットのみ許容
