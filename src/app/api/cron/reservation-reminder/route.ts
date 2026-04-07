@@ -22,14 +22,20 @@ export async function GET(request: Request) {
       return authorizationResult;
     }
 
+    // JST で翌日の日付を計算（Cloud Run は UTC 環境）
+    const jstFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowJstStr = jstFormatter.format(tomorrow); // "YYYY-MM-DD"
 
-    const startOfWindow = new Date(tomorrow);
-    startOfWindow.setHours(0, 0, 0, 0);
-    const endOfWindow = new Date(tomorrow);
-    endOfWindow.setHours(23, 59, 59, 999);
+    // JST の翌日 00:00:00 〜 23:59:59 を UTC に変換
+    const startOfWindow = new Date(`${tomorrowJstStr}T00:00:00+09:00`);
+    const endOfWindow = new Date(`${tomorrowJstStr}T23:59:59.999+09:00`);
 
     const reservations = await findReservationsForReminderWindow(
       startOfWindow,
