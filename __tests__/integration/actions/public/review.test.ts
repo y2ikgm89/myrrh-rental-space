@@ -99,6 +99,7 @@ const VALID_INPUT = {
   rating: 4,
   title: "素晴らしいスペースでした",
   comment: "清潔感があり、スタッフも親切でした。また利用したいです。",
+  turnstileToken: "test-turnstile-token",
 };
 
 // =============================================================================
@@ -164,8 +165,8 @@ describe("submitReview", () => {
 
       await submitReview(VALID_INPUT);
 
-      // REVIEWS + reviews.space(spaceId) + reviews.stats(spaceId) = 3回
-      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(3);
+      // REVIEWS + reviews.space(spaceId) + reviews.stats(spaceId) + CUSTOMERS + customers.detail(customerId) = 5回
+      expect(mockUpdateTag.mock.calls.length).toBeGreaterThanOrEqual(5);
     });
 
     test("title と comment が省略されても成功する", async () => {
@@ -175,6 +176,7 @@ describe("submitReview", () => {
       const inputWithoutOptional = {
         reservationId: VALID_RESERVATION_ID,
         rating: 5,
+        turnstileToken: "test-turnstile-token",
       };
       const result = await submitReview(inputWithoutOptional);
 
@@ -482,6 +484,7 @@ describe("submitReview", () => {
       const result = spaceReviewSchema.safeParse({
         reservationId: VALID_RESERVATION_ID,
         rating: 3,
+        turnstileToken: "test-token",
       });
 
       expect(result.success).toBe(true);
@@ -494,6 +497,7 @@ describe("submitReview", () => {
       const result = spaceReviewSchema.safeParse({
         reservationId: VALID_RESERVATION_ID,
         rating: 5,
+        turnstileToken: "test-token",
       });
 
       expect(result.success).toBe(true);

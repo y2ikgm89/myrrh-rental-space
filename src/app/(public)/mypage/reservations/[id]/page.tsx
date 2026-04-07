@@ -20,6 +20,7 @@ import { Heading } from "@/public/components/design-system/heading";
 import { Button } from "@/public/components/design-system/button";
 import { Stack } from "@/public/components/design-system/stack";
 import { Divider } from "@/public/components/design-system/divider";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { ReservationDetail } from "./_components/reservation-detail";
 import { CancelButton } from "./_components/cancel-button";
 import { ReviewForm } from "./_components/review-form";
@@ -91,9 +92,12 @@ export default async function ReservationDetailPage({
 
   const isCompleted = reservation.status === ReservationStatus.COMPLETED;
 
-  const existingReview = isCompleted
-    ? await getReviewForReservation(reservation.id, customer.id)
-    : null;
+  const [existingReview, turnstileSiteKey] = await Promise.all([
+    isCompleted
+      ? getReviewForReservation(reservation.id, customer.id)
+      : Promise.resolve(null),
+    isCompleted ? getTurnstileSiteKey() : Promise.resolve(null),
+  ]);
 
   const serializedReservation = toPlainObject({
     ...reservation,
@@ -149,6 +153,7 @@ export default async function ReservationDetailPage({
           <ReviewForm
             reservationId={reservation.id}
             spaceName={reservation.space.name}
+            turnstileSiteKey={turnstileSiteKey}
           />
         </>
       ) : null}

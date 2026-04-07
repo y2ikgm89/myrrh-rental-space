@@ -5,6 +5,7 @@ import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import {
   checkActionRateLimit,
   createValidationMutationError,
+  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
@@ -30,6 +31,12 @@ export async function submitReview(
     return createValidationMutationError(parsed.error);
   }
 
+  // 2.5. Turnstile verification
+  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  if (!turnstile.success) {
+    return createMutationError(turnstile.error);
+  }
+
   // 3. Auth - must be logged in customer
   const session = await getSession();
   if (!session) return createMutationError("ログインが必要です");
@@ -51,6 +58,8 @@ export async function submitReview(
     updateTag(CACHE_TAGS.REVIEWS);
     updateTag(getCacheTag.reviews.space(result.spaceId));
     updateTag(getCacheTag.reviews.stats(result.spaceId));
+    updateTag(CACHE_TAGS.CUSTOMERS);
+    updateTag(getCacheTag.customers.detail(customer.id));
 
     return { id: result.id };
   } catch (error) {

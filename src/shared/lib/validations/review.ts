@@ -17,6 +17,7 @@ export const spaceReviewSchema = z.object({
     .max(1000, { error: "コメントは1000文字以内" })
     .optional()
     .or(z.literal("")),
+  turnstileToken: z.string().min(1, { error: "認証トークンが必要です" }),
 });
 
 export type SpaceReviewInput = z.infer<typeof spaceReviewSchema>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useWatch } from "react-hook-form";
 import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import { submitReview } from "@/public/actions/review";
@@ -12,6 +12,10 @@ import { Textarea } from "@/public/components/design-system/textarea";
 import { Button } from "@/public/components/design-system/button";
 import { Badge } from "@/public/components/design-system/badge";
 import { StarRating } from "@/public/components/ui/star-rating";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 import type { SpaceReviewInput } from "@/shared/lib/validations/review";
 
 // ---------------------------------------------------------------------------
@@ -21,14 +25,20 @@ import type { SpaceReviewInput } from "@/shared/lib/validations/review";
 interface ReviewFormProps {
   readonly reservationId: string;
   readonly spaceName: string;
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
+export function ReviewForm({
+  reservationId,
+  spaceName,
+  turnstileSiteKey,
+}: ReviewFormProps) {
   const [submitted, setSubmitted] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const { form, isPending, onSubmit } = usePublicForm<
     SpaceReviewInput,
@@ -37,7 +47,9 @@ export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
     spaceReviewSchema,
     async (data) => {
       const result = await submitReview(data);
-      if (!isMutationError(result)) {
+      if (isMutationError(result)) {
+        turnstileRef.current?.reset();
+      } else {
         setSubmitted(true);
       }
       return result;
@@ -51,6 +63,14 @@ export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
       },
     },
   );
+
+  function handleTurnstileVerify(token: string) {
+    form.setValue("turnstileToken", token);
+  }
+
+  function handleTurnstileExpire() {
+    form.setValue("turnstileToken", "");
+  }
 
   const rating = useWatch({ control: form.control, name: "rating" });
 
@@ -122,6 +142,13 @@ export function ReviewForm({ reservationId, spaceName }: ReviewFormProps) {
           {...(form.formState.errors.comment?.message
             ? { error: form.formState.errors.comment.message }
             : {})}
+        />
+
+        <TurnstileWidget
+          ref={turnstileRef}
+          siteKey={turnstileSiteKey}
+          onVerify={handleTurnstileVerify}
+          onExpire={handleTurnstileExpire}
         />
 
         <Button type="submit" disabled={isPending}>
