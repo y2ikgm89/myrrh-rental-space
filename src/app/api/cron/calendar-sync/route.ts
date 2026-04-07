@@ -15,6 +15,7 @@
 import { unstable_rethrow } from "next/navigation";
 import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE, getCacheTag } from "@/shared/lib/constants";
+import { prisma } from "@/shared/db/prisma";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import {
   isTwoWaySyncEnabled,
@@ -73,92 +74,112 @@ export async function GET(request: Request) {
       });
     }
 
-    // Webhook自動更新チェック（有効期限2日前に更新）
-    let webhookRenewed = false;
+    // 並行実行ロック（Cloud Run 複数インスタンス対策）
+    const CALENDAR_SYNC_LOCK_ID = 728349;
+    const lockResult = await prisma.$queryRaw<
+      { pg_try_advisory_lock: boolean }[]
+    >`SELECT pg_try_advisory_lock(${CALENDAR_SYNC_LOCK_ID})`;
+    const acquired = lockResult[0]?.pg_try_advisory_lock === true;
+    if (!acquired) {
+      return jsonSuccess({
+        skipped: true,
+        reason: "Another sync is already running",
+      });
+    }
+
     try {
-      const renewalResult = await renewWebhookIfNeeded();
-      if (renewalResult.renewed) {
-        webhookRenewed = true;
-        // 成功メール通知（バックグラウンド）
-        fireAndForget(
-          sendWebhookRenewalNotification({
-            success: true,
-            ...(renewalResult.newExpiration != null
-              ? { newExpiration: renewalResult.newExpiration }
-              : {}),
-          }),
-          {
-            operation: "sendWebhookRenewalNotificationSuccess",
+      // Webhook自動更新チェック（有効期限2日前に更新）
+      let webhookRenewed = false;
+      try {
+        const renewalResult = await renewWebhookIfNeeded();
+        if (renewalResult.renewed) {
+          webhookRenewed = true;
+          // 成功メール通知（バックグラウンド）
+          fireAndForget(
+            sendWebhookRenewalNotification({
+              success: true,
+              ...(renewalResult.newExpiration != null
+                ? { newExpiration: renewalResult.newExpiration }
+                : {}),
+            }),
+            {
+              operation: "sendWebhookRenewalNotificationSuccess",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+            },
+          );
+        } else if (!renewalResult.success) {
+          // 更新失敗時のメール通知
+          logError(new Error(renewalResult.error || "Webhook renewal failed"), {
             category: ErrorCategory.EXTERNAL_API,
-            severity: ErrorSeverity.LOW,
-          },
-        );
-      } else if (!renewalResult.success) {
-        // 更新失敗時のメール通知
-        logError(new Error(renewalResult.error || "Webhook renewal failed"), {
+            severity: ErrorSeverity.MEDIUM,
+            context: { operation: "renewWebhookIfNeeded" },
+          });
+          fireAndForget(
+            sendWebhookRenewalNotification({
+              success: false,
+              ...(renewalResult.error != null
+                ? { error: renewalResult.error }
+                : {}),
+            }),
+            {
+              operation: "sendWebhookRenewalNotificationFailure",
+              category: ErrorCategory.EXTERNAL_API,
+              severity: ErrorSeverity.LOW,
+            },
+          );
+        }
+      } catch (renewalError) {
+        // Webhook更新エラーはログ記録のみ（同期処理は継続）
+        logError(normalizeError(renewalError), {
           category: ErrorCategory.EXTERNAL_API,
           severity: ErrorSeverity.MEDIUM,
-          context: { operation: "renewWebhookIfNeeded" },
+          context: { operation: "renewWebhookIfNeeded", phase: "catch" },
         });
         fireAndForget(
           sendWebhookRenewalNotification({
             success: false,
-            ...(renewalResult.error != null
-              ? { error: renewalResult.error }
-              : {}),
+            error:
+              "Webhook更新処理でエラーが発生しました。詳細はサーバーログを確認してください。",
           }),
           {
-            operation: "sendWebhookRenewalNotificationFailure",
+            operation: "sendWebhookRenewalNotificationError",
             category: ErrorCategory.EXTERNAL_API,
             severity: ErrorSeverity.LOW,
           },
         );
       }
-    } catch (renewalError) {
-      // Webhook更新エラーはログ記録のみ（同期処理は継続）
-      logError(normalizeError(renewalError), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: { operation: "renewWebhookIfNeeded", phase: "catch" },
-      });
-      fireAndForget(
-        sendWebhookRenewalNotification({
-          success: false,
-          error:
-            "Webhook更新処理でエラーが発生しました。詳細はサーバーログを確認してください。",
-        }),
-        {
-          operation: "sendWebhookRenewalNotificationError",
+
+      // 同期実行
+      const result = await syncFromCalendar();
+
+      if (!result.success) {
+        logError(new Error("Calendar sync failed"), {
           category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.LOW,
-        },
+          severity: ErrorSeverity.MEDIUM,
+          context: { operation: "syncFromCalendar", errors: result.errors },
+        });
+        return jsonError("Calendar sync failed", 503);
+      }
+
+      // キャッシュ無効化: カレンダー同期後に予約データを最新化
+      revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
+      revalidateTag(
+        getCacheTag.reservations.calendar(),
+        CACHE_LIFE.DYNAMIC_DATA,
       );
-    }
 
-    // 同期実行
-    const result = await syncFromCalendar();
-
-    if (!result.success) {
-      logError(new Error("Calendar sync failed"), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: { operation: "syncFromCalendar", errors: result.errors },
+      return jsonSuccess({
+        processed: result.processed,
+        deleted: result.deleted,
+        updated: result.updated,
+        errors: result.errors,
+        webhookRenewed,
+        timestamp: new Date().toISOString(),
       });
-      return jsonError("Calendar sync failed", 503);
+    } finally {
+      await prisma.$queryRaw`SELECT pg_advisory_unlock(${CALENDAR_SYNC_LOCK_ID})`;
     }
-
-    // キャッシュ無効化: カレンダー同期後に予約データを最新化
-    revalidateTag(CACHE_TAGS.RESERVATIONS, CACHE_LIFE.DYNAMIC_DATA);
-    revalidateTag(getCacheTag.reservations.calendar(), CACHE_LIFE.DYNAMIC_DATA);
-
-    return jsonSuccess({
-      processed: result.processed,
-      deleted: result.deleted,
-      updated: result.updated,
-      errors: result.errors,
-      webhookRenewed,
-      timestamp: new Date().toISOString(),
-    });
   } catch (error) {
     unstable_rethrow(error);
     logError(normalizeError(error), {
