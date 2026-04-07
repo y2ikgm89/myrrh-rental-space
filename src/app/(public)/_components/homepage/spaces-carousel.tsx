@@ -360,7 +360,7 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
         <div className="mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]">
           <div className="mx-auto mt-8 max-w-2xl text-center md:mt-14">
             {activeSpace.categoryName && (
-              <span className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground md:text-[0.7rem]">
+              <span className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
                 {activeSpace.categoryName}
               </span>
             )}

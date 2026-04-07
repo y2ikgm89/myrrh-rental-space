@@ -29,11 +29,11 @@ export function CtaSection({
 }: Partial<CtaSectionProps> = {}): ReactElement {
   return (
     <section className="px-4 py-[var(--spacing-section-compact)] text-center">
-      <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+      <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
 
-      <h2 className="mt-4 font-heading text-[clamp(1.8rem,3vw,2.5rem)] font-light tracking-tight">
+      <h2 className="mt-4 font-heading text-[clamp(2rem,4vw,3rem)] font-light tracking-tight">
         <SplitText>{title}</SplitText>
       </h2>
 

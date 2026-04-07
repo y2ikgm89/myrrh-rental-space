@@ -49,33 +49,33 @@ OKLCH形式。Luxury White × Bronze。
 
 ## コンポーネント規約
 
-| コンポーネント         | スタイル                                                                                            | 備考                       |
-| ---------------------- | --------------------------------------------------------------------------------------------------- | -------------------------- |
-| カード（カタログ）     | `border border-border` シャープエッジ（rounded-lg/shadow 禁止）                                     | hover: image opacity       |
-| カード（ショーケース） | 枠なし、ずらしグリッド + `group-hover:opacity-85`                                                   | トップページのみ           |
-| カード画像             | カタログ: `aspect-[3/2]`、ショーケース: `aspect-[3/2]` or auto                                      | —                          |
-| カード情報             | Label(11px Gold) → Heading(serif light) → Body(muted) → Metadata(inline)                            | —                          |
-| カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                       | 3列禁止、件数増=ページ分割 |
-| CTA ボタン             | `Button variant="editorial"`: シャープエッジ + bronze hover（`hover:bg-accent`）                    | 全ページ統一               |
-| Secondary ボタン       | テキスト + 下線 reveal                                                                              | —                          |
-| Form ボタン            | `bg-accent text-accent-foreground hover:bg-accent/90`（シャープエッジ — `rounded-full` 禁止）       | フォーム内 CTA（primary）  |
-| Button editorial       | `border border-foreground hover:bg-accent hover:text-accent-foreground`（シャープエッジ）           | 全ページ CTA 統一          |
-| セクションタイトル     | `SectionLabel` → `mt-4` heading → `mt-4` description(muted)                                         | —                          |
-| 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                          | —                          |
-| ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                                                  | セリフイタリック           |
-| ナビリンク             | `text-[0.75rem] uppercase tracking-[0.18em]`                                                        | hover:text-foreground      |
-| 番号付きリスト         | `font-heading font-light italic text-accent/50`（HowItWorks: 2.5rem / Features: 2rem）              | 01, 02, 03 形式            |
-| PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                             | —                          |
-| PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                         | —                          |
-| SiteCTA                | bg-background + border-t、editorial ボタン（余白で分離）                                            | content ページ末尾         |
-| Section                | 全セクション白背景統一、border-top/accent 装飾で分離                                                | セクション間の分離         |
-| EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                                         | hover:shadow-lg            |
-| Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                  | セクション内の区切り       |
-| ImageFrame             | デフォルト `rounded-lg`。editorial カード内では `rounded={false}`                                   | sharp edge 統一            |
-| 選択カード（radio）    | `border-accent bg-accent/5`（ring/shadow なし）。未選択: `border-border hover:border-foreground/30` | 予約フォーム               |
-| 選択コントロール（小） | `bg-accent text-accent-foreground`（塗りつぶし）。時間/日付/利用時間                                | 明確なフィードバック       |
-| フォーム枠             | `border border-border p-6 sm:p-8`（1枠で全フィールド囲む。個別枠・区切り線禁止）                    | space-y-6 で間隔統一       |
-| StepIndicator          | active: outline（`border-accent text-accent`）/ completed: fill（`bg-accent`）/ pending: muted      | 現在地 vs 完了の区別       |
+| コンポーネント         | スタイル                                                                                                                                                      | 備考                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| カード（カタログ）     | `border border-border` シャープエッジ（rounded-lg/shadow 禁止）                                                                                               | hover: image opacity         |
+| カード（ショーケース） | 枠なし、ずらしグリッド + `group-hover:opacity-85`                                                                                                             | トップページのみ             |
+| カード画像             | カタログ: `aspect-[3/2]`、ショーケース: `aspect-[3/2]` or auto                                                                                                | —                            |
+| カード情報             | Label(11px Gold) → Heading(serif light) → Body(muted) → Metadata(inline)                                                                                      | —                            |
+| カタロググリッド       | 2列固定（`sm:grid-cols-2`）+ ページネーション                                                                                                                 | 3列禁止、件数増=ページ分割   |
+| CTA ボタン             | `Button variant="editorial"`: シャープエッジ + bronze hover（`hover:bg-accent`）                                                                              | 全ページ統一                 |
+| Secondary ボタン       | テキスト + 下線 reveal                                                                                                                                        | —                            |
+| Form ボタン            | `bg-accent text-accent-foreground hover:bg-accent/90`（シャープエッジ — `rounded-full` 禁止）                                                                 | フォーム内 CTA（primary）    |
+| Button editorial       | `border border-foreground hover:bg-accent hover:text-accent-foreground`（シャープエッジ）                                                                     | 全ページ CTA 統一            |
+| セクションタイトル     | `text-center`、label(`0.8rem` uppercase tracking-[0.18em]) → `mt-4` heading(`clamp(2rem,4vw,3rem) font-light`) → description(muted)。accent line は Hero のみ | ホームページ全セクション統一 |
+| 画像                   | `object-cover`, hover で `opacity-85` 遷移                                                                                                                    | —                            |
+| ヘッダーブランド       | `font-heading font-light italic tracking-[0.08em]`                                                                                                            | セリフイタリック             |
+| ナビリンク             | `text-[0.75rem] uppercase tracking-[0.18em]`                                                                                                                  | hover:text-foreground        |
+| 番号付きリスト         | `font-heading font-light italic text-accent/50`（HowItWorks: 2.5rem / Features: 2rem）                                                                        | 01, 02, 03 形式              |
+| PageLayout             | content: hero+sections+CTA / form: hero+centered / dashboard: container                                                                                       | —                            |
+| PageHero               | editorial: スプリット / compact: bg-surface+heading / minimal: heading のみ                                                                                   | —                            |
+| SiteCTA                | bg-background + border-t、editorial ボタン（余白で分離）                                                                                                      | content ページ末尾           |
+| Section                | 全セクション白背景統一、border-top/accent 装飾で分離                                                                                                          | セクション間の分離           |
+| EditorialCard          | featured: 横��割5:4 / default: 縦積みカード                                                                                                                   | hover:shadow-lg              |
+| Divider                | subtle: border / accent: 中央4rem / fade: gradient                                                                                                            | セクション内の区切り         |
+| ImageFrame             | デフォルト `rounded-lg`。editorial カード内では `rounded={false}`                                                                                             | sharp edge 統一              |
+| 選択カード（radio）    | `border-accent bg-accent/5`（ring/shadow なし）。未選択: `border-border hover:border-foreground/30`                                                           | 予約フォーム                 |
+| 選択コントロール（小） | `bg-accent text-accent-foreground`（塗りつぶし）。時間/日付/利用時間                                                                                          | 明確なフィードバック         |
+| フォーム枠             | `border border-border p-6 sm:p-8`（1枠で全フィールド囲む。個別枠・区切り線禁止）                                                                              | space-y-6 で間隔統一         |
+| StepIndicator          | active: outline（`border-accent text-accent`）/ completed: fill（`bg-accent`）/ pending: muted                                                                | 現在地 vs 完了の区別         |
 
 ## ホームページ構成（Editorial Magazine）
 

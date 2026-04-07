@@ -42,14 +42,13 @@ export function SpacesSection({
       {/* Section header */}
       <Container>
         <ScrollReveal>
-          <div className="mb-8 md:mb-16">
-            <span className="text-[0.65rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="mb-10 text-center md:mb-14">
+            <span className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
               {label}
             </span>
-            <h2 className="mt-3 font-heading text-h2 font-light italic tracking-tight md:text-h1">
+            <h2 className="mt-4 font-heading text-[clamp(2rem,4vw,3rem)] font-light tracking-tight">
               {title}
             </h2>
-            <div className="mt-4 h-px w-12 bg-accent" />
           </div>
         </ScrollReveal>
       </Container>

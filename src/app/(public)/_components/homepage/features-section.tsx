@@ -50,10 +50,10 @@ export function FeaturesSection({
       <div className="mx-auto max-w-[40rem] px-4 md:px-6">
         <ScrollReveal>
           <div className="mb-10 text-center md:mb-14">
-            <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
               {label}
             </p>
-            <h2 className="mt-4 font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light tracking-tight">
+            <h2 className="mt-4 font-heading text-[clamp(2rem,4vw,3rem)] font-light tracking-tight">
               {title}
             </h2>
           </div>
