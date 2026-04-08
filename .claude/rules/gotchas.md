@@ -62,6 +62,8 @@ paths:
 
 - **予約ステータス遷移は `RESERVATION_STATUS_TRANSITIONS`（`helpers.ts`）で一元管理** — UI Select / ドメイン commands 両方で参照。ローカルに遷移マップを定義しない
 
+- **`RESERVATION_STATUS_LABELS` に `string` キーで直接アクセス禁止** — `Record<ReservationStatus, string>` のため TS7053。`isValidReservationStatus(status)` で narrowing してからアクセスするか、公開 Badge 用に `Record<string, BadgeVariant>` のローカルマッピングを定義
+
 - **予約ステータスのアクティブ判定は `ACTIVE_RESERVATION_STATUSES`（`enums/helpers.ts`）を使用** — `new Set(["PENDING", "CONFIRMED"])` のローカル定義禁止
 
 - **カレンダー inbound 同期は `ACTIVE_RESERVATION_STATUSES` で判定** — `reservation.status !== "CANCELLED"` のようなハードコード条件禁止。`ACTIVE_RESERVATION_STATUSES.includes(status)` を使い、終端ステータス（COMPLETED, NO_SHOW）への不正遷移を防ぐ
@@ -180,6 +182,7 @@ paths:
 - **root `not-found.tsx` は CSS import + `next/font/google` が使える（`global-error.tsx` とは異なる）** — `not-found.tsx` は Server Component のため `public.css` をインポートして Tailwind クラスを使用可能。`global-error.tsx` は `"use client"` 必須のためインラインスタイル。両者を混同しない
 - **ルーティング移行後の空ディレクトリ残骸に注意** — `[slug]` → `[...segments]` 等の移行で空ディレクトリが残る。`page.tsx` がなくても Next.js のルート解決に影響する可能性がある
 - **動的 layout を持つサブルートに `loading.tsx` 必須** — `mypage/layout.tsx`（認証チェーン）や `(dashboard)/layout.tsx` 配下のサブルートには個別の `loading.tsx` を追加。親の `loading.tsx` だけではページ固有のデータ取得待ちと認証待ちが同じスケルトンに合流する
+- **マイページ開発確認は dev login ボタンを使用** — `/login` ページに `NODE_ENV !== "production"` でのみ表示される「テスト顧客でログイン」ボタンあり（`dev-login-action.ts`）。Better Auth の `signUpEmail`/`signInEmail` で `dev-customer@example.com` セッションを作成し、`ensureCustomerLinked` が Customer を自動生成
 
 ## Prisma Migrate
 
@@ -311,3 +314,13 @@ paths:
 - **Zod `z.union` の discriminated union narrowing は `switch` の `case` で効く** — `SidebarWidget = BuiltinWidget | CustomWidget` で `switch (widget.type) { case "custom": ... }` 内では `widget` が `CustomWidget` に narrowing される。`as CustomWidget` は不要（プロジェクト禁止ルール）
 
 - **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本。`Button` Primitive の primary/secondary/ghost/editorial は全てシャープ。`rounded-full` はバッジ・タグ・アイコンボタン（シェア・ギャラリーナビ）・スピナー・カルーセルドットのみ許容
+
+## レートリミッター
+
+- **`/api/auth/get-session` は `apiRateLimiter`（100/分）で制限** — `authMutationRateLimiter`（20/15分）に含めると、ページ遷移のたびにカウントが消費され sign-in が 429 で拒否される。`checkRateLimit()` で `get-session` を分岐済み
+- **`authMutationRateLimiter` は sign-in/sign-up/sign-out 等の mutation 専用** — 旧 `authRateLimiter`（read/write 一括 10/15分）は廃止済み
+
+## Better Auth クライアント
+
+- **`signIn.social()` のエラーハンドリングは `fetchOptions.onError` が公式推奨** — `result.error` だけでは 429 等の HTTP エラー時に Promise がサイレントに処理され UI にフィードバックが出ない。`fetchOptions: { onError(ctx) { ctx.response.status } }` で HTTP ステータスを検査する
+- **Google/LINE ソーシャルログインボタンはブランド SVG ロゴ必須** — テキストのみのボタンは UX 品質不足。Google は公式4色「G」ロゴ + 白背景、LINE は `#06C755` 背景 + 白アイコン。実装: `login/_components/social-login-buttons.tsx`
