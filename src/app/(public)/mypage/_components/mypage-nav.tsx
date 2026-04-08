@@ -34,7 +34,7 @@ export function MypageNav() {
           value={activeItem?.href ?? "/mypage"}
           onChange={(e) => router.push(e.target.value)}
           aria-label="マイページメニュー"
-          className="w-full border-b border-border bg-transparent py-3 text-[0.7rem] uppercase tracking-[0.18em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-full border-b border-border bg-transparent py-3 text-sm tracking-[0.18em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {NAV_ITEMS.map((item) => (
             <option key={item.href} value={item.href}>
@@ -56,7 +56,7 @@ export function MypageNav() {
               role="tab"
               aria-selected={isActive}
               className={cn(
-                "shrink-0 px-4 py-3 text-[0.7rem] uppercase tracking-[0.18em] transition-colors whitespace-nowrap",
+                "shrink-0 px-5 py-3 text-sm tracking-[0.18em] transition-colors whitespace-nowrap",
                 isActive
                   ? "border-b-2 border-accent text-accent"
                   : "text-muted-foreground hover:text-foreground",
