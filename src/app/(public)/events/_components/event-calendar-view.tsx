@@ -158,9 +158,9 @@ interface EventCalendarViewProps {
 }
 
 export function EventCalendarView({ events }: EventCalendarViewProps) {
-  const today = getJSTDateParts(new Date());
-  const [currentYear, setCurrentYear] = useState(today.year);
-  const [currentMonth, setCurrentMonth] = useState(today.month);
+  const [today] = useState(() => getJSTDateParts(new Date()));
+  const [currentYear, setCurrentYear] = useState(() => today.year);
+  const [currentMonth, setCurrentMonth] = useState(() => today.month);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const days = getCalendarDays(currentYear, currentMonth);

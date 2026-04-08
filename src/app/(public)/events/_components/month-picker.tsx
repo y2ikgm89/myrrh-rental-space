@@ -34,10 +34,6 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setPickerYear(year);
-  }, [year]);
-
-  useEffect(() => {
     if (isEditingYear) {
       inputRef.current?.select();
     }
