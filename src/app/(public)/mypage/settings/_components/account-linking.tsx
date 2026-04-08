@@ -199,8 +199,12 @@ export function AccountLinking({
           }}
         >
           <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-destructive">
-              アカウントを削除
+            <Button
+              variant="secondary"
+              size="sm"
+              className="border-destructive/40 text-destructive hover:bg-destructive/5"
+            >
+              アカウントを削除する
             </Button>
           </DialogTrigger>
           <DialogContent>
