@@ -50,6 +50,7 @@ paths:
 
 ## ドメイン・予約
 
+- **予約フォームはプロフィール完全性チェック必須** — ログイン済み顧客の姓名が仮名（`CUSTOMER_PLACEHOLDER_NAME`）または空の場合、`isCustomerProfileComplete()`（`@/shared/domain/customers/profile-check.ts`）で判定しフォーム表示をブロック。設定ページへの導線を表示する
 - **予約フォームの `?spaceId=` 事前選択** — スペース詳細の「予約する」ボタンは `/reservation?spaceId={id}` にリンク。`reservation/page.tsx` が locations 内の存在を検証し `initialSpaceId` として渡す。`resolveAutoIds` が locationId を逆引きし、既存の `skipStep1` でステップ2から開始。不正な spaceId は無視してフォールバック
 - **`executeAdminMutationResult` で `afterSuccess` にデータを渡すには `execute` 戻り値を使用** — `let data = null` を外部クロージャに定義して `execute` 内で代入するパターン禁止（脆弱）。`execute` の戻り値型を適切に定義し `afterSuccess: (data) => { ... }` で受け取る
 - **`invalidateEventCaches` に slug 引数を省略しない** — `publishEvent`/`cancelEvent` 等で slug を渡さないと `getCacheTag.events.slug(slug)` が無効化されず公開ページに古いデータが残る。`execute` 内で `getEventById` から slug を取得して渡す
@@ -100,6 +101,8 @@ paths:
 
 ## 公開ページ レスポンシブ標準
 
+- **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け
+- **空状態の CTA は `Button variant="editorial" size="sm"` を使用** — テキストリンクは余白の中で埋もれる。メッセージテキストは `text-muted-foreground`（base サイズ）、ボタンは `space-y-4` で配置
 - **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。SpaceGrid, PostGrid, RelatedSpaces, TestimonialSection, FeaturesSection で採用済み
 - **ページレベルのレイアウト切替は viewport breakpoints を維持** — 2カラム text+image（ConceptSection）、フォームグリッド（ContactFormSection）等のマクロレイアウトは `md:grid-cols-2` のまま。Container Queries はコンポーネント内部の適応に使う
 - **Heading サイズは `text-h1`/`text-h2`/`text-h3`/`text-h4`/`text-hero` クラスを使う** — `@theme` で `--text-*--line-height/letter-spacing/font-weight` が自動適用される。`text-[length:var(--text-h1)]` + `font-bold` + `leading-[...]` の冗長パターンは廃止
