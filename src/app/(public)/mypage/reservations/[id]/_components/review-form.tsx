@@ -95,7 +95,7 @@ export function ReviewForm({
         「{spaceName}」のレビューを投稿
       </Heading>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-6">
         {/* Hidden reservation ID */}
         <input type="hidden" {...form.register("reservationId")} />
 
