@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/public/components/design-system/button";
 import { Textarea } from "@/public/components/design-system/textarea";
@@ -13,18 +13,28 @@ import {
   DialogDescription,
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 import { cancelReservationAction } from "../../../_shared/actions/reservation";
 
 interface CancelButtonProps {
   readonly reservationId: string;
+  readonly turnstileSiteKey: string | null;
 }
 
-export function CancelButton({ reservationId }: CancelButtonProps) {
+export function CancelButton({
+  reservationId,
+  turnstileSiteKey,
+}: CancelButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const handleConfirm = () => {
     setError(null);
@@ -32,9 +42,11 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
       const result = await cancelReservationAction(
         reservationId,
         reason || null,
+        turnstileToken || undefined,
       );
       if (isMutationError(result)) {
         setError(result.error);
+        turnstileRef.current?.reset();
         return;
       }
       setOpen(false);
@@ -50,6 +62,7 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
         onClick={() => {
           setError(null);
           setReason("");
+          setTurnstileToken("");
           setOpen(true);
         }}
       >
@@ -73,6 +86,13 @@ export function CancelButton({ reservationId }: CancelButtonProps) {
             placeholder="キャンセルの理由をお聞かせください"
             maxLength={500}
             disabled={isPending}
+          />
+
+          <TurnstileWidget
+            ref={turnstileRef}
+            siteKey={turnstileSiteKey}
+            onVerify={setTurnstileToken}
+            onExpire={() => setTurnstileToken("")}
           />
 
           {error != null && (

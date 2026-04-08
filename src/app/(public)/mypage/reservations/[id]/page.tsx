@@ -96,7 +96,7 @@ export default async function ReservationDetailPage({
     isCompleted
       ? getReviewForReservation(reservation.id, customer.id)
       : Promise.resolve(null),
-    isCompleted ? getTurnstileSiteKey() : Promise.resolve(null),
+    getTurnstileSiteKey(),
   ]);
 
   const serializedReservation = toPlainObject({
@@ -131,7 +131,12 @@ export default async function ReservationDetailPage({
               予約を変更する
             </Button>
           )}
-          {canCancel && <CancelButton reservationId={reservation.id} />}
+          {canCancel && (
+            <CancelButton
+              reservationId={reservation.id}
+              turnstileSiteKey={turnstileSiteKey}
+            />
+          )}
         </div>
       )}
 
