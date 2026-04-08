@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { InquiryStatus } from "@generated/prisma/enums";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { Badge } from "@/public/components/design-system/badge";
+import { Stack } from "@/public/components/design-system/stack";
 import { INQUIRY_STATUS_CONFIG } from "./inquiry-status";
 
 interface InquiryItem {
@@ -21,7 +22,7 @@ export function InquiryList({
   readonly inquiries: readonly InquiryItem[];
 }) {
   return (
-    <div className="space-y-4">
+    <Stack gap="md">
       {inquiries.map((inquiry) => {
         const config =
           INQUIRY_STATUS_CONFIG[inquiry.status] ?? INQUIRY_STATUS_CONFIG["NEW"];
@@ -48,6 +49,6 @@ export function InquiryList({
           </Link>
         );
       })}
-    </div>
+    </Stack>
   );
 }

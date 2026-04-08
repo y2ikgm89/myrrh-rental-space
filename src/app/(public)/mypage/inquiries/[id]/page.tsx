@@ -65,7 +65,7 @@ export default async function MypageInquiryDetailPage({
           )}
         </div>
 
-        <dl className="mt-6 space-y-4">
+        <dl className="mt-6 space-y-6">
           <div>
             <dt className="text-sm font-medium text-muted-foreground">
               お問い合わせ日

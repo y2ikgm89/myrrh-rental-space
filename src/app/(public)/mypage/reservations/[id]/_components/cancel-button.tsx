@@ -118,7 +118,7 @@ export function CancelButton({
               size="sm"
               onClick={handleConfirm}
               disabled={isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
             >
               {isPending ? "キャンセル中..." : "キャンセルを確定する"}
             </Button>

@@ -239,7 +239,7 @@ export function AccountLinking({
                 size="sm"
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
               >
                 {isDeleting ? "削除中..." : "削除する"}
               </Button>
