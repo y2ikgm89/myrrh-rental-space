@@ -330,6 +330,30 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     },
   ],
 
+  events: [
+    {
+      type: "hero",
+      title: null,
+      config: {
+        title: "Events",
+        subtitle: "開催予定のイベント・ワークショップ情報",
+        variant: "minimal",
+      },
+      design: { titleSize: "3xl" },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+    {
+      type: "event-calendar",
+      title: "イベントカレンダー",
+      config: {},
+      content: null,
+      order: 1,
+      isActive: true,
+    },
+  ],
+
   spaces: [
     {
       type: "hero",

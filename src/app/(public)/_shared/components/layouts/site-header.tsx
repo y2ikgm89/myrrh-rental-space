@@ -56,13 +56,6 @@ const FALLBACK_NAV: readonly PublicNavItem[] = [
     children: [],
   },
   {
-    id: "reservation",
-    label: "Reservation",
-    url: "/reservation",
-    isExternal: false,
-    children: [],
-  },
-  {
     id: "contact",
     label: "Contact",
     url: "/contact",
@@ -83,7 +76,7 @@ const HIDE_THRESHOLD = 150;
 /** Desktop nav link for items WITHOUT children */
 function NavLink({ item }: { readonly item: PublicNavItem }): ReactElement {
   const linkClass =
-    "text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground";
+    "whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground";
 
   if (item.isExternal) {
     return (
@@ -252,7 +245,10 @@ export function Header({
   backgroundMode = HeaderBackgroundMode.solid,
   authLink,
 }: HeaderProps): ReactElement {
-  const items = navItems ?? FALLBACK_NAV;
+  // /reservation は CTA ボタンで導線があるためナビから除外
+  const items = (navItems ?? FALLBACK_NAV).filter(
+    (item) => item.url !== "/reservation",
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -483,17 +479,17 @@ export function Header({
           </Link>
 
           {/* Desktop navigation */}
-          <div className="hidden items-center gap-8 md:flex">
+          <div className="hidden items-center gap-4 lg:gap-8 md:flex">
             <NavigationMenuPrimitive.Root
               className="relative"
               aria-label="メインナビゲーション"
             >
-              <NavigationMenuPrimitive.List className="flex items-center gap-8">
+              <NavigationMenuPrimitive.List className="flex items-center gap-4 lg:gap-8">
                 {items.map((item) => (
                   <NavigationMenuPrimitive.Item key={item.id}>
                     {item.children.length > 0 ? (
                       <>
-                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
+                        <NavigationMenuPrimitive.Trigger className="group inline-flex items-center gap-1 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground">
                           {item.label}
                           <IconChevronDown className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                         </NavigationMenuPrimitive.Trigger>

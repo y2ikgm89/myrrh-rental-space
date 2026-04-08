@@ -111,6 +111,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/soft-delete-guard.sh",
             "timeout": 10,
             "statusMessage": "ソフトデリート検査中..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auth-client-check.sh",
+            "timeout": 5,
+            "statusMessage": "Auth クライアント検査中..."
           }
         ]
       },

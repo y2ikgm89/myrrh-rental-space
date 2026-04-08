@@ -111,10 +111,10 @@ export const apiRateLimiter = createRateLimiter({
   maxRequests: 100,
 });
 
-// 認証エンドポイント用（10リクエスト/15分/IP）— ブルートフォース対策
-export const authRateLimiter = createRateLimiter({
+// 認証 mutation 用（sign-in/sign-up/sign-out 等）— ブルートフォース対策（20リクエスト/15分/IP）
+export const authMutationRateLimiter = createRateLimiter({
   interval: 15 * 60 * 1000, // 15分
-  maxRequests: 10,
+  maxRequests: 20,
 });
 
 // ログイントークン用（30リクエスト/分/IP）
@@ -143,7 +143,12 @@ export function checkRateLimit(
   clientIp: string,
 ): RateLimitResult {
   if (pathname.startsWith("/api/auth")) {
-    return authRateLimiter.check(clientIp);
+    // get-session は読み取り専用 — apiRateLimiter（100/分）で十分
+    if (pathname === "/api/auth/get-session") {
+      return apiRateLimiter.check(clientIp);
+    }
+    // sign-in/sign-up/sign-out 等の mutation — ブルートフォース対策
+    return authMutationRateLimiter.check(clientIp);
   }
   if (pathname.startsWith("/api/admin/login-tokens")) {
     return tokenRateLimiter.check(clientIp);

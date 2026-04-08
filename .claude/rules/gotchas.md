@@ -50,7 +50,7 @@ paths:
 
 ## ドメイン・予約
 
-- **予約フォームはプロフィール完全性チェック必須** — ログイン済み顧客の姓名が仮名（`CUSTOMER_PLACEHOLDER_NAME`）または空の場合、`isCustomerProfileComplete()`（`@/shared/domain/customers/profile-check.ts`）で判定しフォーム表示をブロック。設定ページへの導線を表示する
+- **予約フォームはプロフィール未完了でも表示する** — ログイン済み顧客のプロフィールが未完了でもフォームをブロックしない（業界標準: インライン収集）。仮名（`CUSTOMER_PLACEHOLDER_NAME`）はプリフィルから除外し空文字にする。`isCustomerProfileComplete()` はマイページのダッシュボード表示にのみ使用
 - **予約フォームの `?spaceId=` 事前選択** — スペース詳細の「予約する」ボタンは `/reservation?spaceId={id}` にリンク。`reservation/page.tsx` が locations 内の存在を検証し `initialSpaceId` として渡す。`resolveAutoIds` が locationId を逆引きし、既存の `skipStep1` でステップ2から開始。不正な spaceId は無視してフォールバック
 - **`executeAdminMutationResult` で `afterSuccess` にデータを渡すには `execute` 戻り値を使用** — `let data = null` を外部クロージャに定義して `execute` 内で代入するパターン禁止（脆弱）。`execute` の戻り値型を適切に定義し `afterSuccess: (data) => { ... }` で受け取る
 - **`invalidateEventCaches` に slug 引数を省略しない** — `publishEvent`/`cancelEvent` 等で slug を渡さないと `getCacheTag.events.slug(slug)` が無効化されず公開ページに古いデータが残る。`execute` 内で `getEventById` から slug を取得して渡す
@@ -298,6 +298,12 @@ paths:
 - **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-background`（白）にし、editorial variant をそのまま使う
 
 - **`section-design.ts` の `sectionBgValues` 変更時は DesignPanel も同期必須** — `pages/[slug]/edit/_components/DesignPanel.tsx` の `backgroundOptions` 配列が `sectionBgValues` と 1:1 対応。値を追加・削除したら DesignPanel の選択肢も更新する
+
+## ナビゲーション
+
+- **ヘッダーナビは DB（`NavigationItem` テーブル）が正、`FALLBACK_NAV` はフォールバック** — ナビ変更は seed.ts + DB 両方を更新。コードだけ変えても DB にレコードがあればそちらが使われる
+- **CTA ボタンと同じ URL をナビリンクに含めない** — `site-header.tsx` が `/reservation` をフィルタ除外済み。新しい CTA 導線を追加する場合も同パターンで重複を防ぐ
+- **seed の `navigationItem` は "create if not exists"** — 既存レコードの削除・更新はしない。ナビ項目を削除するには DB 直接操作または管理画面が必要
 
 ## ホームページ Section 管理
 

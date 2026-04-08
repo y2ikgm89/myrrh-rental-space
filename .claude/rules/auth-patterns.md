@@ -457,6 +457,41 @@ export async function getReservationDeadlineSettings() {
 }
 ```
 
+### signIn.social のエラーハンドリング（公式推奨パターン）
+
+`fetchOptions.onSuccess` / `onError` を使用。`result.error` のみでは HTTP エラー（429 等）を捕捉できない:
+
+```typescript
+void signIn.social({
+  provider,
+  callbackURL: "/mypage",
+  fetchOptions: {
+    onSuccess() {
+      // Better Auth がリダイレクトを処理する — 追加操作不要
+    },
+    onError(ctx) {
+      if (ctx.response.status === 429) {
+        const retryAfter = ctx.response.headers.get("retry-after");
+        // レート制限エラー表示
+      } else {
+        // ctx.error.message でエラー内容取得（"Provider not found" 等）
+      }
+    },
+  },
+});
+```
+
+**禁止パターン:**
+
+```typescript
+// NG: fetchOptions なし — HTTP エラー時にサイレント失敗
+const result = await signIn.social({ provider: "google", callbackURL: "/mypage" });
+if (result.error) { /* 429 はここに到達しない */ }
+
+// NG: try/catch のみ — Better Auth クライアントは例外をスローしない
+try { await signIn.social({ ... }); } catch (err) { /* 到達しない */ }
+```
+
 ---
 
 ## Gotchas

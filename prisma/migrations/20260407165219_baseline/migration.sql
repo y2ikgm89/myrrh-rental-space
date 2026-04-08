@@ -1,21 +1,17 @@
--- Baseline: 既存マイグレーション履歴を捨てた単一初期スキーマ（破壊的リセット前提）
--- 主キー UUID: Prisma @default(uuid()) ↔ PostgreSQL gen_random_uuid()
--- 新規環境: prisma migrate deploy（空 DB） / 開発のやり直し: prisma migrate reset
-
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER', 'CUSTOMER');
 
 -- CreateEnum
-CREATE TYPE "Role" AS ENUM ('SUPER_ADMIN', 'ADMIN', 'EDITOR', 'VIEWER', 'USER');
-
--- CreateEnum
-CREATE TYPE "ReservationStatus" AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED');
+CREATE TYPE "ReservationStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW');
 
 -- CreateEnum
 CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'IN_PROGRESS', 'RESOLVED', 'CLOSED');
 
 -- CreateEnum
 CREATE TYPE "CustomerStatus" AS ENUM ('NEW', 'REGULAR', 'VIP', 'INACTIVE', 'BLACKLIST');
+
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('UNPAID', 'PENDING', 'PAID', 'REFUNDED', 'FAILED');
 
 -- CreateEnum
 CREATE TYPE "NavigationType" AS ENUM ('HEADER_DESKTOP', 'HEADER_MOBILE', 'FOOTER');
@@ -27,13 +23,10 @@ CREATE TYPE "SocialPlatform" AS ENUM ('TWITTER', 'FACEBOOK', 'INSTAGRAM', 'YOUTU
 CREATE TYPE "LayoutWidth" AS ENUM ('XS', 'SM', 'MD', 'LG', 'XL', 'FULL', 'CUSTOM');
 
 -- CreateEnum
-CREATE TYPE "SectionType" AS ENUM ('HERO', 'HERO_PARALLAX', 'CUSTOM', 'CONCEPT', 'SPACE_LIST', 'SPACE_SHOWCASE', 'NEWS_LIST', 'POST_LIST', 'FAQ_LIST', 'FEATURES', 'TESTIMONIAL', 'GALLERY', 'CTA', 'CONTACT_FORM', 'MAP', 'EMBED', 'INSTAGRAM');
-
--- CreateEnum
 CREATE TYPE "PostStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "TermsType" AS ENUM ('TERMS_OF_USE', 'PRIVACY_POLICY', 'CANCELLATION', 'PAYMENT', 'CUSTOM');
+CREATE TYPE "TermsType" AS ENUM ('TERMS_OF_USE', 'PRIVACY_POLICY', 'CANCELLATION', 'PAYMENT', 'RENTAL_TERMS', 'CUSTOM');
 
 -- CreateEnum
 CREATE TYPE "TermsStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'ARCHIVED');
@@ -88,6 +81,12 @@ CREATE TYPE "InstagramFeedLayout" AS ENUM ('grid', 'masonry', 'slider');
 
 -- CreateEnum
 CREATE TYPE "InstagramMediaType" AS ENUM ('IMAGE', 'VIDEO', 'CAROUSEL_ALBUM');
+
+-- CreateEnum
+CREATE TYPE "EventStatus" AS ENUM ('DRAFT', 'PUBLISHED', 'CANCELLED', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "RegistrationStatus" AS ENUM ('CONFIRMED', 'CANCELLED');
 
 -- CreateEnum
 CREATE TYPE "AuditAction" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'PUBLISH', 'UNPUBLISH', 'LOGIN_SUCCESS', 'LOGIN_FAILED', 'PERMISSION_DENIED', 'PASSWORD_CHANGE', 'ROLE_CHANGE');
@@ -235,7 +234,7 @@ CREATE TABLE "spaces" (
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "address" TEXT NOT NULL,
+    "addressDetail" TEXT,
     "access" TEXT,
     "capacity" INTEGER NOT NULL,
     "area" DECIMAL(10,2),
@@ -260,7 +259,7 @@ CREATE TABLE "spaces" (
     "discountValue" DECIMAL(10,2),
     "durationDiscountOverride" "DurationDiscountOverride" NOT NULL DEFAULT 'inherit',
     "taxRateType" "TaxRateType" NOT NULL DEFAULT 'standard',
-    "locationId" UUID,
+    "locationId" UUID NOT NULL,
     "categoryId" UUID,
 
     CONSTRAINT "spaces_pkey" PRIMARY KEY ("id")
@@ -292,6 +291,15 @@ CREATE TABLE "reservations" (
     "googleCalendarOAuthEventId" TEXT,
     "calendarSyncedAt" TIMESTAMP(3),
     "calendarSyncError" TEXT,
+    "deletedAt" TIMESTAMP(3),
+    "deletedById" UUID,
+    "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'UNPAID',
+    "stripeCheckoutSessionId" TEXT,
+    "stripePaymentIntentId" TEXT,
+    "paidAt" TIMESTAMP(3),
+    "cancellationReason" TEXT,
+    "cancelledAt" TIMESTAMP(3),
+    "cancelledByType" VARCHAR(20),
 
     CONSTRAINT "reservations_pkey" PRIMARY KEY ("id")
 );
@@ -303,6 +311,7 @@ CREATE TABLE "customers" (
     "firstName" TEXT NOT NULL,
     "lastNameKana" TEXT,
     "firstNameKana" TEXT,
+    "companyName" TEXT,
     "email" TEXT NOT NULL,
     "phoneNumber" TEXT,
     "address" TEXT,
@@ -315,6 +324,7 @@ CREATE TABLE "customers" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" UUID,
 
     CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
 );
@@ -345,12 +355,17 @@ CREATE TABLE "coupons" (
 CREATE TABLE "inquiries" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
+    "companyName" TEXT,
     "email" TEXT NOT NULL,
     "subject" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "status" "InquiryStatus" NOT NULL DEFAULT 'NEW',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "replyMessage" TEXT,
+    "repliedAt" TIMESTAMP(3),
+    "repliedById" UUID,
+    "customerId" UUID,
 
     CONSTRAINT "inquiries_pkey" PRIMARY KEY ("id")
 );
@@ -536,7 +551,7 @@ CREATE TABLE "pages" (
 CREATE TABLE "sections" (
     "id" UUID NOT NULL,
     "pageId" UUID,
-    "type" "SectionType" NOT NULL,
+    "type" VARCHAR(64) NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "title" TEXT,
@@ -571,7 +586,6 @@ CREATE TABLE "social_links" (
     "id" UUID NOT NULL,
     "platform" "SocialPlatform" NOT NULL,
     "url" TEXT NOT NULL,
-    "iconUrl" TEXT,
     "order" INTEGER NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "showOnDesktop" BOOLEAN NOT NULL DEFAULT true,
@@ -698,7 +712,6 @@ CREATE TABLE "settings" (
     "defaultTimeSlot" INTEGER NOT NULL DEFAULT 60,
     "minReservationDuration" INTEGER NOT NULL DEFAULT 60,
     "maxReservationDuration" INTEGER NOT NULL DEFAULT 480,
-    "cancellationTermsId" UUID,
     "sendReservationConfirmationEmail" BOOLEAN NOT NULL DEFAULT true,
     "sendAdminNotificationEmail" BOOLEAN NOT NULL DEFAULT true,
     "durationDiscountEnabled" BOOLEAN NOT NULL DEFAULT false,
@@ -711,10 +724,6 @@ CREATE TABLE "settings" (
     "taxDisplayModeAdmin" "TaxDisplayMode" NOT NULL DEFAULT 'both',
     "taxDisplayModePublic" "TaxDisplayMode" NOT NULL DEFAULT 'tax_included',
     "taxInputMode" "TaxInputMode" NOT NULL DEFAULT 'tax_excluded',
-    "termsAgreementEnabled" BOOLEAN NOT NULL DEFAULT true,
-    "termsAgreementText" TEXT,
-    "requireTermsAgreement" BOOLEAN NOT NULL DEFAULT true,
-    "requirePrivacyAgreement" BOOLEAN NOT NULL DEFAULT true,
     "notifyNewReservation" BOOLEAN NOT NULL DEFAULT true,
     "notifyReservationChange" BOOLEAN NOT NULL DEFAULT true,
     "notifyReservationCancel" BOOLEAN NOT NULL DEFAULT true,
@@ -782,6 +791,8 @@ CREATE TABLE "settings" (
     "googleCalendarPollingIntervalMin" INTEGER NOT NULL DEFAULT 5,
     "googleCalendarSyncToken" TEXT,
     "googleCalendarLastSyncedAt" TIMESTAMP(3),
+    "eventImportEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "eventImportSyncToken" TEXT,
     "googleCalendarWebhookChannelId" TEXT,
     "googleCalendarWebhookResourceId" TEXT,
     "googleCalendarWebhookExpiration" TIMESTAMP(3),
@@ -799,6 +810,8 @@ CREATE TABLE "settings" (
     "instagramShowViewAll" BOOLEAN NOT NULL DEFAULT true,
     "robotsTxtEnabled" BOOLEAN NOT NULL DEFAULT false,
     "robotsTxtCustom" TEXT,
+    "cancellationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
+    "modificationDeadlineHours" INTEGER NOT NULL DEFAULT 24,
 
     CONSTRAINT "settings_pkey" PRIMARY KEY ("id")
 );
@@ -892,6 +905,8 @@ CREATE TABLE "terms" (
     "title" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "requiredAtReservation" BOOLEAN NOT NULL DEFAULT false,
+    "showInFooter" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -977,18 +992,62 @@ CREATE TABLE "block_templates" (
 );
 
 -- CreateTable
-CREATE TABLE "page_contents" (
+CREATE TABLE "space_reviews" (
     "id" UUID NOT NULL,
-    "pageKey" TEXT NOT NULL,
-    "content" JSONB NOT NULL,
-    "metaTitle" TEXT,
-    "metaDescription" TEXT,
-    "ogpTitle" TEXT,
-    "ogpDescription" TEXT,
-    "ogpImage" TEXT,
+    "spaceId" UUID NOT NULL,
+    "customerId" UUID NOT NULL,
+    "reservationId" UUID NOT NULL,
+    "rating" INTEGER NOT NULL,
+    "title" VARCHAR(100),
+    "comment" VARCHAR(1000),
+    "isPublished" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "page_contents_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "space_reviews_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "events" (
+    "id" VARCHAR(30) NOT NULL,
+    "title" VARCHAR(200) NOT NULL,
+    "slug" VARCHAR(100) NOT NULL,
+    "description" TEXT,
+    "contentJson" JSONB,
+    "thumbnailUrl" TEXT,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3) NOT NULL,
+    "capacity" INTEGER,
+    "price" INTEGER,
+    "location" VARCHAR(200),
+    "spaceId" UUID,
+    "status" "EventStatus" NOT NULL DEFAULT 'DRAFT',
+    "registrationOpen" BOOLEAN NOT NULL DEFAULT true,
+    "googleCalendarEventId" TEXT,
+    "publishedAt" TIMESTAMP(3),
+    "deletedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "event_registrations" (
+    "id" VARCHAR(30) NOT NULL,
+    "eventId" VARCHAR(30) NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "phone" VARCHAR(20),
+    "note" TEXT,
+    "numberOfPeople" INTEGER NOT NULL DEFAULT 1,
+    "status" "RegistrationStatus" NOT NULL DEFAULT 'CONFIRMED',
+    "customerId" UUID,
+    "cancelledAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "event_registrations_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -1046,7 +1105,7 @@ CREATE UNIQUE INDEX "spaces_slug_key" ON "spaces"("slug");
 CREATE INDEX "spaces_name_idx" ON "spaces"("name");
 
 -- CreateIndex
-CREATE INDEX "spaces_address_idx" ON "spaces"("address");
+CREATE INDEX "spaces_addressDetail_idx" ON "spaces"("addressDetail");
 
 -- CreateIndex
 CREATE INDEX "spaces_isPublished_isActive_idx" ON "spaces"("isPublished", "isActive");
@@ -1091,7 +1150,19 @@ CREATE INDEX "reservations_customerId_startTime_idx" ON "reservations"("customer
 CREATE INDEX "reservations_couponId_idx" ON "reservations"("couponId");
 
 -- CreateIndex
+CREATE INDEX "reservations_deletedAt_idx" ON "reservations"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "reservations_paymentStatus_idx" ON "reservations"("paymentStatus");
+
+-- CreateIndex
+CREATE INDEX "reservations_stripePaymentIntentId_idx" ON "reservations"("stripePaymentIntentId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "customers_email_key" ON "customers"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "customers_userId_key" ON "customers"("userId");
 
 -- CreateIndex
 CREATE INDEX "customers_lastName_idx" ON "customers"("lastName");
@@ -1115,6 +1186,9 @@ CREATE INDEX "customers_lastReservationAt_idx" ON "customers"("lastReservationAt
 CREATE INDEX "customers_lastName_firstName_idx" ON "customers"("lastName", "firstName");
 
 -- CreateIndex
+CREATE INDEX "customers_userId_idx" ON "customers"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "coupons_code_key" ON "coupons"("code");
 
 -- CreateIndex
@@ -1131,6 +1205,9 @@ CREATE INDEX "inquiries_status_idx" ON "inquiries"("status");
 
 -- CreateIndex
 CREATE INDEX "inquiries_createdAt_idx" ON "inquiries"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "inquiries_customerId_idx" ON "inquiries"("customerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "news_slug_key" ON "news"("slug");
@@ -1367,48 +1444,40 @@ CREATE INDEX "block_templates_createdBy_idx" ON "block_templates"("createdBy");
 CREATE INDEX "block_templates_createdAt_idx" ON "block_templates"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "page_contents_pageKey_key" ON "page_contents"("pageKey");
+CREATE UNIQUE INDEX "space_reviews_reservationId_key" ON "space_reviews"("reservationId");
 
--- 主キー UUID 既定: PostgreSQL 組み込み gen_random_uuid()（Prisma @default(uuid()) / RFC 9562 でいうランダム UUID 生成の標準利用）
-ALTER TABLE "account" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "announcement_bars" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "audit_logs" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "block_templates" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "coupons" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "customers" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "editor_comment_threads" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "editor_comments" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "faq_categories" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "faq_items" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "ical_tokens" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "inquiries" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "instagram_posts" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "login_attempts" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "login_tokens" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "locations" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "media" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "navigation_items" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "news" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "news_versions" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "page_contents" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "pages" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "post_categories" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "post_comments" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "post_tags" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "post_versions" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "posts" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "reservations" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "sections" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "session" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "social_links" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "space_categories" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "spaces" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "staff_invitations" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "terms" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "terms_agreements" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "terms_versions" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "user" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
-ALTER TABLE "verification" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
+-- CreateIndex
+CREATE INDEX "space_reviews_spaceId_isPublished_createdAt_idx" ON "space_reviews"("spaceId", "isPublished", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "space_reviews_customerId_idx" ON "space_reviews"("customerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "events_slug_key" ON "events"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "events_googleCalendarEventId_key" ON "events"("googleCalendarEventId");
+
+-- CreateIndex
+CREATE INDEX "events_startTime_endTime_idx" ON "events"("startTime", "endTime");
+
+-- CreateIndex
+CREATE INDEX "events_status_idx" ON "events"("status");
+
+-- CreateIndex
+CREATE INDEX "events_spaceId_idx" ON "events"("spaceId");
+
+-- CreateIndex
+CREATE INDEX "events_deletedAt_idx" ON "events"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_eventId_idx" ON "event_registrations"("eventId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_customerId_idx" ON "event_registrations"("customerId");
+
+-- CreateIndex
+CREATE INDEX "event_registrations_status_idx" ON "event_registrations"("status");
 
 -- AddForeignKey
 ALTER TABLE "user_page_assignments" ADD CONSTRAINT "user_page_assignments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1432,10 +1501,10 @@ ALTER TABLE "staff_invitations" ADD CONSTRAINT "staff_invitations_createdBy_fkey
 ALTER TABLE "spaces" ADD CONSTRAINT "spaces_termsId_fkey" FOREIGN KEY ("termsId") REFERENCES "terms"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "locations"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "spaces" ADD CONSTRAINT "spaces_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "space_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "spaces" ADD CONSTRAINT "spaces_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "space_categories"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1448,6 +1517,18 @@ ALTER TABLE "reservations" ADD CONSTRAINT "reservations_customerId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "reservations" ADD CONSTRAINT "reservations_couponId_fkey" FOREIGN KEY ("couponId") REFERENCES "coupons"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "reservations" ADD CONSTRAINT "reservations_deletedById_fkey" FOREIGN KEY ("deletedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "customers" ADD CONSTRAINT "customers_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_repliedById_fkey" FOREIGN KEY ("repliedById") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inquiries" ADD CONSTRAINT "inquiries_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "news_versions" ADD CONSTRAINT "news_versions_newsId_fkey" FOREIGN KEY ("newsId") REFERENCES "news"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1493,9 +1574,6 @@ ALTER TABLE "navigation_items" ADD CONSTRAINT "navigation_items_parentId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "faq_items" ADD CONSTRAINT "faq_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "faq_categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "settings" ADD CONSTRAINT "settings_cancellationTermsId_fkey" FOREIGN KEY ("cancellationTermsId") REFERENCES "terms"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ical_tokens" ADD CONSTRAINT "ical_tokens_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1547,3 +1625,21 @@ ALTER TABLE "editor_comments" ADD CONSTRAINT "editor_comments_deletedBy_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "block_templates" ADD CONSTRAINT "block_templates_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "space_reviews" ADD CONSTRAINT "space_reviews_reservationId_fkey" FOREIGN KEY ("reservationId") REFERENCES "reservations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "events" ADD CONSTRAINT "events_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "spaces"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "event_registrations" ADD CONSTRAINT "event_registrations_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;

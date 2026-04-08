@@ -47,7 +47,7 @@ export function FeaturesSection({
 }: Partial<FeaturesSectionProps> = {}): ReactElement {
   return (
     <section className="py-[var(--spacing-section-compact)]">
-      <div className="mx-auto max-w-[40rem] px-4 md:px-6">
+      <div className="mx-auto max-w-[50rem] px-4 md:px-6">
         <ScrollReveal>
           <div className="mb-10 text-center md:mb-14">
             <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">

@@ -2452,7 +2452,7 @@ async function seedNavigation() {
   const headerItems = [
     { label: "ホーム", url: "/", order: 0 },
     { label: "スペース", url: "/spaces", order: 1 },
-    { label: "予約", url: "/reservation", order: 2 },
+    { label: "イベント", url: "/events", order: 2 },
     { label: "ブログ", url: "/posts", order: 3 },
     { label: "お知らせ", url: "/news", order: 4 },
     { label: "よくある質問", url: "/faq", order: 5 },
