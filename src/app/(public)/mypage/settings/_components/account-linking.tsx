@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, startTransition } from "react";
+import { useState, startTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { IconCheck, IconLink, IconUnlink } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
@@ -18,6 +18,10 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { Heading } from "@/public/components/design-system/heading";
 import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 
 // ---------------------------------------------------------------------------
 // Provider config
@@ -34,13 +38,17 @@ const PROVIDERS = [
 
 interface AccountLinkingProps {
   readonly providers: readonly string[];
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function AccountLinking({ providers }: AccountLinkingProps) {
+export function AccountLinking({
+  providers,
+  turnstileSiteKey,
+}: AccountLinkingProps) {
   const router = useRouter();
   const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(
     null,
@@ -48,6 +56,8 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTurnstileToken, setDeleteTurnstileToken] = useState("");
+  const deleteTurnstileRef = useRef<TurnstileInstance>(null);
 
   const linkedCount = providers.length;
 
@@ -82,10 +92,13 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
 
     startTransition(async () => {
       try {
-        const result = await deleteAccountAction();
+        const result = await deleteAccountAction(
+          deleteTurnstileToken || undefined,
+        );
         if (isMutationError(result)) {
           setError(result.error);
           setIsDeleting(false);
+          deleteTurnstileRef.current?.reset();
           return;
         }
         // Server-side user deleted, now sign out client
@@ -95,6 +108,7 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
         console.error("Failed to delete account", getErrorMessage(error));
         setError("アカウントの削除に失敗しました");
         setIsDeleting(false);
+        deleteTurnstileRef.current?.reset();
       }
     });
   };
@@ -187,7 +201,13 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
         <p className="text-xs text-muted-foreground mb-4">
           アカウントを削除すると、ログインできなくなります。予約履歴は管理上保持されます。
         </p>
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <Dialog
+          open={deleteDialogOpen}
+          onOpenChange={(open) => {
+            setDeleteDialogOpen(open);
+            if (!open) setDeleteTurnstileToken("");
+          }}
+        >
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="text-destructive">
               アカウントを削除する
@@ -200,6 +220,12 @@ export function AccountLinking({ providers }: AccountLinkingProps) {
                 この操作は取り消せません。アカウントを削除すると、ソーシャルログインによるアクセスが無効になります。
               </DialogDescription>
             </DialogHeader>
+            <TurnstileWidget
+              ref={deleteTurnstileRef}
+              siteKey={turnstileSiteKey}
+              onVerify={setDeleteTurnstileToken}
+              onExpire={() => setDeleteTurnstileToken("")}
+            />
             <DialogFooter>
               <Button
                 variant="secondary"

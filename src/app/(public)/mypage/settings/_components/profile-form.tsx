@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { usePublicForm } from "@/public/hooks/use-public-form";
@@ -10,6 +10,10 @@ import {
   type CustomerProfileInput,
 } from "@/shared/lib/validations/customer-profile";
 import { updateProfileAction } from "../../_shared/actions/profile";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,15 +26,20 @@ interface ProfileFormProps {
     readonly email: string;
     readonly phoneNumber: string;
   };
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ProfileForm({ defaultValues }: ProfileFormProps) {
+export function ProfileForm({
+  defaultValues,
+  turnstileSiteKey,
+}: ProfileFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const { form, isPending, onSubmit } = usePublicForm<CustomerProfileInput>(
     customerProfileSchema,
@@ -40,8 +49,10 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
       const result = await updateProfileAction(data);
       if (isMutationError(result)) {
         setErrorMessage(result.error);
+        turnstileRef.current?.reset();
       } else {
         setShowSuccess(true);
+        turnstileRef.current?.reset();
       }
       return result;
     },
@@ -53,6 +64,13 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
       },
     },
   );
+
+  function handleTurnstileVerify(token: string) {
+    form.setValue("turnstileToken", token);
+  }
+  function handleTurnstileExpire() {
+    form.setValue("turnstileToken", "");
+  }
 
   return (
     <form onSubmit={onSubmit} className="max-w-md space-y-6">
@@ -114,6 +132,13 @@ export function ProfileForm({ defaultValues }: ProfileFormProps) {
         {...(form.formState.errors.phoneNumber?.message && {
           error: form.formState.errors.phoneNumber.message,
         })}
+      />
+
+      <TurnstileWidget
+        ref={turnstileRef}
+        siteKey={turnstileSiteKey}
+        onVerify={handleTurnstileVerify}
+        onExpire={handleTurnstileExpire}
       />
 
       <Button type="submit" disabled={isPending}>

@@ -11,6 +11,7 @@ import type { SearchParams } from "nuqs/server";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getAccountLinksAction } from "../_shared/actions/account";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
@@ -33,7 +34,10 @@ export default async function SettingsPage({
     redirect("/login");
   }
 
-  const accountResult = await getAccountLinksAction();
+  const [accountResult, turnstileSiteKey] = await Promise.all([
+    getAccountLinksAction(),
+    getTurnstileSiteKey(),
+  ]);
   const providers = isMutationError(accountResult)
     ? []
     : accountResult.accounts;
@@ -62,6 +66,7 @@ export default async function SettingsPage({
             email: customer.email,
             phoneNumber: customer.phoneNumber ?? "",
           }}
+          turnstileSiteKey={turnstileSiteKey}
         />
       </section>
 
@@ -69,7 +74,10 @@ export default async function SettingsPage({
 
       <section className="space-y-6">
         <Heading level={2}>アカウント連携</Heading>
-        <AccountLinking providers={providers} />
+        <AccountLinking
+          providers={providers}
+          turnstileSiteKey={turnstileSiteKey}
+        />
       </section>
     </Stack>
   );
