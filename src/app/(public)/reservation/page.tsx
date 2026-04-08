@@ -17,6 +17,8 @@ import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/avai
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { getCurrentUser } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { isCustomerProfileComplete } from "@/shared/domain/customers/profile-check";
+import { Button } from "@/public/components/design-system/button";
 import { ReservationForm } from "./_components/reservation-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -81,15 +83,29 @@ export default async function ReservationPage({
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
     >
       <div className="mx-auto max-w-4xl">
-        <ReservationForm
-          locations={locations}
-          businessHours={businessHours}
-          turnstileSiteKey={turnstileSiteKey}
-          prefillData={prefillData}
-          initialSpaceId={initialSpaceId}
-          isLoggedIn={user != null}
-          requiredTerms={[]}
-        />
+        {customer && !isCustomerProfileComplete(customer) ? (
+          <div className="border border-accent/30 bg-accent/5 p-6 sm:p-8 text-center space-y-4">
+            <p className="text-foreground">
+              ご予約にはプロフィールの入力が必要です。
+            </p>
+            <p className="text-sm text-muted-foreground">
+              姓名とメールアドレスを登録してから予約にお進みください。
+            </p>
+            <Button variant="editorial" href="/mypage/settings">
+              プロフィールを設定する
+            </Button>
+          </div>
+        ) : (
+          <ReservationForm
+            locations={locations}
+            businessHours={businessHours}
+            turnstileSiteKey={turnstileSiteKey}
+            prefillData={prefillData}
+            initialSpaceId={initialSpaceId}
+            isLoggedIn={user != null}
+            requiredTerms={[]}
+          />
+        )}
       </div>
 
       {trailingSections.length > 0 ? (

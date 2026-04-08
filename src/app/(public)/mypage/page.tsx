@@ -15,7 +15,7 @@ import { toPlainArray } from "@/shared/lib/serialize";
 import Link from "next/link";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
-import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
+import { isCustomerProfileComplete } from "@/shared/domain/customers/profile-check";
 import { ReservationList } from "./_components/reservation-list";
 
 export default async function MypagePage(): Promise<ReactElement> {
@@ -44,9 +44,7 @@ export default async function MypagePage(): Promise<ReactElement> {
     })),
   );
 
-  const isNameIncomplete =
-    customer.lastName === CUSTOMER_PLACEHOLDER_NAME ||
-    customer.firstName === "";
+  const isNameIncomplete = !isCustomerProfileComplete(customer);
 
   return (
     <Stack gap="lg">
