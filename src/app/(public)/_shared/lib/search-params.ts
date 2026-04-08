@@ -9,6 +9,7 @@ import {
   createSearchParamsCache,
   parseAsInteger,
   parseAsString,
+  parseAsStringLiteral,
 } from "nuqs/server";
 
 export const paginationSearchParamsParsers = {
@@ -60,4 +61,14 @@ export const journalSearchParamsParsers = {
 
 export const journalSearchParams = createSearchParamsCache(
   journalSearchParamsParsers,
+);
+
+const EVENT_VIEWS = ["list", "calendar"] as const;
+
+export const eventsSearchParamsParsers = {
+  view: parseAsStringLiteral(EVENT_VIEWS).withDefault("list"),
+};
+
+export const eventsSearchParams = createSearchParamsCache(
+  eventsSearchParamsParsers,
 );

@@ -23,3 +23,78 @@ export function formatEventDateTimeRange(
   const endTimePart = timeFormatter.format(end);
   return `${datePart} ${startTimePart} - ${endTimePart}`;
 }
+
+const monthYearFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "long",
+});
+
+const dayOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  day: "numeric",
+});
+
+const weekdayOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  weekday: "short",
+});
+
+const timeOnlyFormatter = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const jstDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Tokyo",
+});
+
+export function formatMonthYear(date: Date): string {
+  return monthYearFormatter.format(date);
+}
+
+export function formatDay(date: Date): string {
+  return dayOnlyFormatter.format(date);
+}
+
+export function formatWeekday(date: Date): string {
+  return weekdayOnlyFormatter.format(date);
+}
+
+export function formatTime(date: Date): string {
+  return timeOnlyFormatter.format(date);
+}
+
+/** JST の年・月(0-indexed)・日を返す */
+export function getJSTDateParts(date: Date): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const s = jstDateFormatter.format(date);
+  const [y, m, d] = s.split("-").map(Number);
+  return { year: y ?? 0, month: (m ?? 1) - 1, day: d ?? 1 };
+}
+
+/** JST ベースの月キー (例: "2026-03") */
+export function getJSTMonthKey(dateStr: string): string {
+  const { year, month } = getJSTDateParts(new Date(dateStr));
+  return `${String(year)}-${String(month).padStart(2, "0")}`;
+}
+
+/** ISO 文字列が指定 JST 日と同日か判定 */
+export function isSameJSTDay(
+  isoStr: string,
+  year: number,
+  month: number,
+  day: number,
+): boolean {
+  const jst = getJSTDateParts(new Date(isoStr));
+  return jst.year === year && jst.month === month && jst.day === day;
+}
+
+export function formatEventPrice(price: number): string {
+  if (price === 0) return "無料";
+  return `\u00A5${price.toLocaleString("ja-JP")}`;
+}
