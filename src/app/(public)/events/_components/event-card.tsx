@@ -1,0 +1,143 @@
+import Link from "next/link";
+import { IconCalendar, IconMapPin, IconArrowRight } from "@tabler/icons-react";
+import { Heading } from "@/public/components/design-system/heading";
+import { Badge } from "@/public/components/design-system/badge";
+import {
+  formatDay,
+  formatWeekday,
+  formatTime,
+  formatEventPrice,
+} from "@/public/lib/format-event-date";
+
+export interface EventCardData {
+  readonly id: string;
+  readonly title: string;
+  readonly slug: string;
+  readonly description: string | null;
+  readonly location: string | null;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly price: number | null;
+  readonly registrationOpen: boolean;
+  readonly spaceName: string | null;
+}
+
+interface EventCardListProps {
+  readonly variant: "list";
+  readonly event: EventCardData;
+}
+
+interface EventCardCompactProps {
+  readonly variant: "compact";
+  readonly event: EventCardData;
+}
+
+type EventCardProps = EventCardListProps | EventCardCompactProps;
+
+function EventBadges({ event }: { readonly event: EventCardData }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {event.price !== null ? (
+        <Badge variant={event.price === 0 ? "success" : "default"}>
+          {formatEventPrice(event.price)}
+        </Badge>
+      ) : null}
+      {!event.registrationOpen ? (
+        <Badge variant="warning">受付終了</Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function EventMeta({
+  event,
+  iconSize,
+}: {
+  readonly event: EventCardData;
+  readonly iconSize: string;
+}) {
+  const start = new Date(event.startTime);
+  const end = new Date(event.endTime);
+  return (
+    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <IconCalendar className={`${iconSize} shrink-0`} aria-hidden="true" />
+        {formatTime(start)} – {formatTime(end)}
+      </span>
+      {event.location ? (
+        <span className="inline-flex items-center gap-1.5">
+          <IconMapPin className={`${iconSize} shrink-0`} aria-hidden="true" />
+          {event.location}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+export function EventCard({ variant, event }: EventCardProps) {
+  if (variant === "compact") {
+    return (
+      <Link
+        href={`/events/${event.slug}`}
+        className="group block px-4 py-4 transition-colors hover:bg-surface/50"
+      >
+        <EventBadges event={event} />
+        <h3 className="mt-1.5 text-sm font-medium text-foreground">
+          {event.title}
+        </h3>
+        {event.description ? (
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            {event.description}
+          </p>
+        ) : null}
+        <div className="mt-2">
+          <EventMeta event={event} iconSize="h-3 w-3" />
+        </div>
+      </Link>
+    );
+  }
+
+  // variant === "list"
+  const start = new Date(event.startTime);
+  const day = formatDay(start);
+  const weekday = formatWeekday(start);
+
+  return (
+    <Link
+      href={`/events/${event.slug}`}
+      className="group grid grid-cols-[4.5rem_1fr] gap-6 border-b border-border py-6 transition-colors last:border-b-0 md:grid-cols-[5.5rem_1fr_auto] md:gap-8 md:py-8"
+    >
+      <div className="flex flex-col items-center pt-1">
+        <span className="font-heading text-[2.5rem] font-light leading-none text-foreground md:text-[3rem]">
+          {day}
+        </span>
+        <span className="mt-1 text-xs tracking-[0.18em] text-muted-foreground">
+          {weekday}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <EventBadges event={event} />
+        <Heading
+          level={3}
+          className="mt-2 !text-base transition-colors group-hover:text-foreground md:!text-lg"
+        >
+          {event.title}
+        </Heading>
+        {event.description ? (
+          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+            {event.description}
+          </p>
+        ) : null}
+        <div className="mt-3">
+          <EventMeta event={event} iconSize="h-3.5 w-3.5" />
+        </div>
+      </div>
+      <div className="hidden items-center md:flex">
+        <IconArrowRight
+          className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-accent"
+          aria-hidden="true"
+        />
+      </div>
+    </Link>
+  );
+}
