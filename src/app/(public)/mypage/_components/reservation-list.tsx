@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Stack } from "@/public/components/design-system/stack";
 import { ReservationCard } from "./reservation-card";
 
@@ -33,8 +34,14 @@ interface ReservationListProps {
 export function ReservationList({ items }: ReservationListProps) {
   if (items.length === 0) {
     return (
-      <div className="py-16 md:py-24 text-center">
+      <div className="py-16 md:py-24 text-center space-y-3">
         <p className="text-sm text-muted-foreground">予約がありません</p>
+        <Link
+          href="/spaces"
+          className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          スペースを探す
+        </Link>
       </div>
     );
   }

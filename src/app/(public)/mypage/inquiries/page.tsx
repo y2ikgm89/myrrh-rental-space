@@ -6,6 +6,7 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
@@ -29,10 +30,16 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
         お問い合わせ履歴
       </Heading>
       {inquiries.length === 0 ? (
-        <div className="py-16 md:py-24 text-center">
+        <div className="py-16 md:py-24 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
             お問い合わせ履歴がありません
           </p>
+          <Link
+            href="/contact"
+            className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            お問い合わせする
+          </Link>
         </div>
       ) : (
         <InquiryList inquiries={inquiries} />
