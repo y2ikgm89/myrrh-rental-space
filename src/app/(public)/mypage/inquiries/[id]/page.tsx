@@ -96,7 +96,7 @@ export default async function MypageInquiryDetailPage({
             <dt className="text-sm font-medium text-muted-foreground">
               メッセージ
             </dt>
-            <dd className="mt-1 whitespace-pre-wrap bg-surface p-4">
+            <dd className="mt-1 whitespace-pre-wrap border border-border p-4">
               {inquiry.message}
             </dd>
           </div>
