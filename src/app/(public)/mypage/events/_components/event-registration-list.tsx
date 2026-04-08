@@ -1,10 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stack } from "@/public/components/design-system/stack";
 import { Badge } from "@/public/components/design-system/badge";
+import { Button } from "@/public/components/design-system/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/public/components/design-system/dialog";
 import { cancelEventRegistration } from "@/public/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
@@ -87,18 +96,20 @@ function EventRegistrationCard({
   readonly registration: EventRegistration;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const canCancel = registration.status === "CONFIRMED";
 
-  const handleCancel = () => {
-    if (!confirm("この申込をキャンセルしますか？")) return;
-
+  const handleConfirmCancel = () => {
+    setError(null);
     startTransition(async () => {
       const result = await cancelEventRegistration(registration.id);
       if (isMutationError(result)) {
-        alert(result.error);
+        setError(result.error);
       } else {
+        setCancelDialogOpen(false);
         router.refresh();
       }
     });
@@ -143,16 +154,58 @@ function EventRegistrationCard({
         </div>
       </dl>
 
+      {error != null && (
+        <div
+          className="mt-3 border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+
       {canCancel && (
         <div className="mt-4 border-t border-border pt-3">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isPending}
-            className="text-sm text-destructive hover:text-destructive/80 transition-colors disabled:opacity-50"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() => {
+              setError(null);
+              setCancelDialogOpen(true);
+            }}
           >
-            {isPending ? "キャンセル中..." : "申込をキャンセル"}
-          </button>
+            申込をキャンセル
+          </Button>
+
+          <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>申込キャンセルの確認</DialogTitle>
+                <DialogDescription>
+                  「{registration.event.title}」の申込をキャンセルしますか？
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCancelDialogOpen(false)}
+                  disabled={isPending}
+                >
+                  閉じる
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleConfirmCancel}
+                  disabled={isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isPending ? "キャンセル中..." : "キャンセルする"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>

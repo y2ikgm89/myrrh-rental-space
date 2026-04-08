@@ -12,7 +12,7 @@ import { getCustomerEventRegistrations } from "@/shared/domain/events/registrati
 import { toPlainArray } from "@/shared/lib/serialize";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
-import { EventRegistrationList } from "./_components/EventRegistrationList";
+import { EventRegistrationList } from "./_components/event-registration-list";
 
 export default async function MypageEventsPage(): Promise<ReactElement> {
   const { user } = await verifyCustomerSession();
