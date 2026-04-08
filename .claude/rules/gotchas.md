@@ -326,4 +326,5 @@ paths:
 ## Better Auth クライアント
 
 - **`signIn.social()` のエラーハンドリングは `fetchOptions.onError` が公式推奨** — `result.error` だけでは 429 等の HTTP エラー時に Promise がサイレントに処理され UI にフィードバックが出ない。`fetchOptions: { onError(ctx) { ctx.response.status } }` で HTTP ステータスを検査する
-- **Google/LINE ソーシャルログインボタンはブランド SVG ロゴ必須** — テキストのみのボタンは UX 品質不足。Google は公式4色「G」ロゴ + 白背景、LINE は `#06C755` 背景 + 白アイコン。実装: `login/_components/social-login-buttons.tsx`
+- **Google/LINE ソーシャルログインボタンはブランド SVG ロゴ必須** — テキストのみのボタンは UX 品質不足。Google は公式4色「G」ロゴ + 白背景、LINE は `#06C755` 背景 + 白アイコン
+- **ソーシャルプロバイダーロゴは `@/public/components/ui/social-provider-logos.tsx` の共有コンポーネントを使用** — `GoogleLogo`/`LineLogo`/`PROVIDER_LOGOS` をエクスポート。ログインページ・アカウント連携の両方で使用。ローカル定義禁止
