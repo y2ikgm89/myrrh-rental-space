@@ -6,12 +6,12 @@
 
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerInquiries } from "../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
+import { Button } from "@/public/components/design-system/button";
 import { InquiryList } from "./_components/inquiry-list";
 
 export default async function MypageInquiriesPage(): Promise<ReactElement> {
@@ -30,16 +30,13 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
         お問い合わせ履歴
       </Heading>
       {inquiries.length === 0 ? (
-        <div className="py-16 md:py-24 text-center space-y-3">
+        <div className="py-16 md:py-24 text-center space-y-4">
           <p className="text-sm text-muted-foreground">
             お問い合わせ履歴がありません
           </p>
-          <Link
-            href="/contact"
-            className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <Button variant="editorial" size="sm" href="/contact">
             お問い合わせする
-          </Link>
+          </Button>
         </div>
       ) : (
         <InquiryList inquiries={inquiries} />

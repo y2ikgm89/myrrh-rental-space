@@ -74,16 +74,13 @@ export function EventRegistrationList({
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
-      <div className="py-16 md:py-24 text-center space-y-3">
+      <div className="py-16 md:py-24 text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           イベント申込がありません
         </p>
-        <Link
-          href="/events"
-          className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
+        <Button variant="editorial" size="sm" href="/events">
           イベントを探す
-        </Link>
+        </Button>
       </div>
     );
   }
