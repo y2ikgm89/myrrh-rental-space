@@ -35,7 +35,7 @@ export function ReservationList({ items }: ReservationListProps) {
   if (items.length === 0) {
     return (
       <div className="py-16 md:py-24 text-center space-y-4">
-        <p className="text-sm text-muted-foreground">予約がありません</p>
+        <p className="text-muted-foreground">予約がありません</p>
         <Button variant="editorial" size="sm" href="/spaces">
           スペースを探す
         </Button>

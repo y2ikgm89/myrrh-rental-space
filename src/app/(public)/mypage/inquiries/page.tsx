@@ -31,9 +31,7 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
       </Heading>
       {inquiries.length === 0 ? (
         <div className="py-16 md:py-24 text-center space-y-4">
-          <p className="text-sm text-muted-foreground">
-            お問い合わせ履歴がありません
-          </p>
+          <p className="text-muted-foreground">お問い合わせ履歴がありません</p>
           <Button variant="editorial" size="sm" href="/contact">
             お問い合わせする
           </Button>
