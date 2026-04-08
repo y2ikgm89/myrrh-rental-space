@@ -15,7 +15,6 @@ import {
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { Heading } from "@/public/components/design-system/heading";
 import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
 import {
@@ -195,10 +194,7 @@ export function AccountLinking({
 
       {/* Account deletion */}
       <div className="pt-6 border-t border-border">
-        <Heading level={3} className="!text-sm text-destructive mb-2">
-          アカウント削除
-        </Heading>
-        <p className="text-xs text-muted-foreground mb-4">
+        <p className="text-xs text-muted-foreground mb-3">
           アカウントを削除すると、ログインできなくなります。予約履歴は管理上保持されます。
         </p>
         <Dialog
@@ -210,7 +206,7 @@ export function AccountLinking({
         >
           <DialogTrigger asChild>
             <Button variant="ghost" size="sm" className="text-destructive">
-              アカウントを削除する
+              アカウントを削除
             </Button>
           </DialogTrigger>
           <DialogContent>
