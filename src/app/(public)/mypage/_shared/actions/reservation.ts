@@ -20,6 +20,7 @@ import {
 import {
   createValidationMutationError,
   checkActionRateLimit,
+  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -41,9 +42,13 @@ function invalidateReservationCache(
 export async function cancelReservationAction(
   reservationId: string,
   cancellationReason: string | null = null,
+  turnstileToken?: string,
 ): Promise<MutationResult<null>> {
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
+  const turnstile = await validateTurnstile(turnstileToken);
+  if (!turnstile.success) return createMutationError(turnstile.error);
 
   const parsedId = reservationIdSchema.safeParse(reservationId);
   if (!parsedId.success) return createMutationError("予約IDが不正です");
@@ -93,6 +98,9 @@ export async function updateReservationAction(
 
   const parsed = customerReservationEditSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  if (!turnstile.success) return createMutationError(turnstile.error);
 
   try {
     const settings = await getReservationDeadlineSettings();

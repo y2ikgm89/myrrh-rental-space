@@ -12,6 +12,7 @@ import {
 import {
   createValidationMutationError,
   checkActionRateLimit,
+  validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import {
@@ -35,6 +36,9 @@ export async function updateProfileAction(
 
   const parsed = customerProfileSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
+
+  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  if (!turnstile.success) return createMutationError(turnstile.error);
 
   try {
     await updateCustomerProfileByUserId(session.user.id, {

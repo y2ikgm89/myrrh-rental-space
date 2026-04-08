@@ -14,7 +14,10 @@ import {
   ErrorCategory,
   ErrorSeverity,
 } from "@/shared/lib/errors/server";
-import { checkActionRateLimit } from "@/shared/lib/action-helpers";
+import {
+  checkActionRateLimit,
+  validateTurnstile,
+} from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
@@ -31,9 +34,14 @@ export async function getAccountLinksAction(): Promise<
   return { accounts: providers };
 }
 
-export async function deleteAccountAction(): Promise<MutationResult<null>> {
+export async function deleteAccountAction(
+  turnstileToken?: string,
+): Promise<MutationResult<null>> {
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
+
+  const turnstile = await validateTurnstile(turnstileToken);
+  if (!turnstile.success) return createMutationError(turnstile.error);
 
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
