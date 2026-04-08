@@ -14,6 +14,7 @@ export const customerReservationEditSchema = z
       error: "時間の形式が正しくありません（HH:MM）",
     }),
     numberOfGuests: z.number().int().min(1, { error: "利用人数は1名以上です" }),
+    turnstileToken: z.string().optional(),
   })
   .refine(
     (data) => {
