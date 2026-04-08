@@ -74,8 +74,10 @@ export function EventRegistrationList({
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
-      <div className="border border-border bg-surface p-6 md:p-12 text-center">
-        <p className="text-muted-foreground">イベント申込がありません</p>
+      <div className="py-16 md:py-24 text-center">
+        <p className="text-sm text-muted-foreground">
+          イベント申込がありません
+        </p>
       </div>
     );
   }

@@ -73,7 +73,7 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-md space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       {errorMessage != null && (
         <div
           className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
@@ -120,7 +120,7 @@ export function ProfileForm({
         disabled
         autoComplete="email"
       />
-      <p className="text-xs text-muted-foreground -mt-2">
+      <p className="text-xs text-muted-foreground -mt-4">
         メールアドレスはソーシャルアカウントから取得されます
       </p>
 

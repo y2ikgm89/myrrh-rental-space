@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { verifyCustomerSession } from "@/shared/lib/auth";
 import { ensureCustomerLinked } from "@/shared/domain/customers/link";
-import { Container } from "@/public/components/design-system/container";
+import { PageLayout } from "@/public/components/design-system/page-layout";
 import { MypageNav } from "./_components/mypage-nav";
 
 export const metadata: Metadata = {
@@ -43,11 +43,9 @@ export default async function MypageLayout({
   }
 
   return (
-    <section className="py-[var(--spacing-block)]">
-      <Container>
-        <MypageNav />
-        {children}
-      </Container>
-    </section>
+    <PageLayout variant="dashboard">
+      <MypageNav />
+      {children}
+    </PageLayout>
   );
 }

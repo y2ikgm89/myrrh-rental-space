@@ -7,7 +7,10 @@ import type { PaymentStatus } from "@generated/prisma/enums";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
+  RESERVATION_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 import { useFormatPrice } from "@/public/hooks/use-format-price";
 
 // ---------------------------------------------------------------------------
@@ -41,31 +44,15 @@ interface ReservationCardProps {
 // Status helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "保留",
-  CONFIRMED: "確定",
-  COMPLETED: "完了",
-  CANCELLED: "キャンセル済み",
-  NO_SHOW: "無断キャンセル",
-};
-
 type BadgeVariant = "default" | "success" | "warning" | "info";
 
-const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+const RESERVATION_BADGE_VARIANTS: Record<string, BadgeVariant> = {
   PENDING: "warning",
   CONFIRMED: "success",
   COMPLETED: "info",
   CANCELLED: "default",
   NO_SHOW: "default",
 };
-
-function getStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
-}
-
-function getStatusVariant(status: string): BadgeVariant {
-  return STATUS_VARIANTS[status] ?? "default";
-}
 
 const PAYMENT_BADGE_VARIANTS: Record<PaymentStatus, BadgeVariant> = {
   UNPAID: "warning",
@@ -74,27 +61,6 @@ const PAYMENT_BADGE_VARIANTS: Record<PaymentStatus, BadgeVariant> = {
   REFUNDED: "info",
   FAILED: "default",
 };
-
-// ---------------------------------------------------------------------------
-// Date formatting
-// ---------------------------------------------------------------------------
-
-function formatDateTime(date: string): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${year}年${month}月${day}日 ${hours}:${minutes}`;
-}
-
-function formatTimeOnly(date: string): string {
-  const d = new Date(date);
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -107,25 +73,39 @@ export function ReservationCard({
   showPastDeadlineMessage,
 }: ReservationCardProps) {
   const { formatTotal } = useFormatPrice();
-  const { status, space, totalPrice, startTime, endTime, id } = reservation;
+  const { space, totalPrice, startTime, endTime, id } = reservation;
+  const statusLabel = isValidReservationStatus(reservation.status)
+    ? RESERVATION_STATUS_LABELS[reservation.status]
+    : reservation.status;
   const paymentStatusEnum = getValidPaymentStatus(reservation.paymentStatus);
 
   return (
     <div className="border border-border p-4 sm:p-6 transition-colors">
       {/* Header: space name + status */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <Heading level={3} className="!text-lg">
-          {space.name}
-        </Heading>
-        <Badge variant={getStatusVariant(status)}>
-          {getStatusLabel(status)}
+        <Heading level={3}>{space.name}</Heading>
+        <Badge
+          variant={RESERVATION_BADGE_VARIANTS[reservation.status] ?? "default"}
+        >
+          {statusLabel}
         </Badge>
       </div>
 
       {/* Date/time + price */}
       <div className="flex flex-col gap-2 text-sm text-muted-foreground mb-4">
         <p>
-          {formatDateTime(startTime)} 〜 {formatTimeOnly(endTime)}
+          {formatSerializedDate(startTime, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}{" "}
+          〜{" "}
+          {formatSerializedDate(endTime, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </p>
         <div className="flex items-center gap-2">
           <p className="text-foreground font-medium">
@@ -143,7 +123,7 @@ export function ReservationCard({
       <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 border-t border-border">
         <Link
           href={`/mypage/reservations/${id}`}
-          className="inline-block px-3 py-1.5 text-sm text-accent hover:bg-accent/5 transition-colors"
+          className="inline-block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           詳細を見る
         </Link>
@@ -151,7 +131,7 @@ export function ReservationCard({
         {canModify && (
           <Link
             href={`/mypage/reservations/${id}/edit`}
-            className="inline-block px-3 py-1.5 text-sm text-accent hover:bg-accent/5 transition-colors"
+            className="inline-block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             変更
           </Link>
@@ -160,7 +140,7 @@ export function ReservationCard({
         {canCancel && (
           <Link
             href={`/mypage/reservations/${id}`}
-            className="inline-block px-3 py-1.5 text-sm text-destructive hover:bg-destructive/5 transition-colors"
+            className="inline-block px-3 py-1.5 text-sm text-destructive hover:text-destructive/80 transition-colors"
           >
             キャンセル
           </Link>

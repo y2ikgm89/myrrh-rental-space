@@ -52,9 +52,9 @@ export default async function MypageInquiryDetailPage({
     <div className="max-w-2xl">
       <Link
         href="/mypage/inquiries"
-        className="text-sm text-muted-foreground hover:text-foreground"
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        &larr; お問い合わせ一覧に戻る
+        お問い合わせ一覧に戻る
       </Link>
 
       <div className="mt-4">

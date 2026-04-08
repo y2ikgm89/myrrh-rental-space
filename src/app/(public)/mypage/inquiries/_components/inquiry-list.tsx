@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { InquiryStatus } from "@generated/prisma/enums";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 import { Badge } from "@/public/components/design-system/badge";
 import { INQUIRY_STATUS_CONFIG } from "./inquiry-status";
 
@@ -36,13 +37,7 @@ export function InquiryList({
                   {inquiry.subject}
                 </p>
                 <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>
-                    {new Date(inquiry.createdAt).toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </span>
+                  <span>{formatSerializedDate(inquiry.createdAt)}</span>
                   {inquiry.replyMessage !== null && (
                     <span className="text-accent">返信あり</span>
                   )}

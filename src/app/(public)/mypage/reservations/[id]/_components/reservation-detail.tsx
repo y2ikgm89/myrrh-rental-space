@@ -7,8 +7,11 @@ import { formatPrice } from "@/shared/lib/pricing/format";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,
+  RESERVATION_STATUS_LABELS,
   CANCELLED_BY,
 } from "@/shared/lib/validations/enums/helpers";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,31 +65,15 @@ interface ReservationDetailProps {
 // Status helpers
 // ---------------------------------------------------------------------------
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "保留中",
-  CONFIRMED: "確定",
-  COMPLETED: "完了",
-  CANCELLED: "キャンセル済み",
-  NO_SHOW: "不参加",
-};
-
 type BadgeVariant = "default" | "success" | "warning" | "info";
 
-const STATUS_VARIANTS: Record<string, BadgeVariant> = {
+const RESERVATION_BADGE_VARIANTS: Record<string, BadgeVariant> = {
   PENDING: "warning",
   CONFIRMED: "success",
   COMPLETED: "info",
   CANCELLED: "default",
   NO_SHOW: "default",
 };
-
-function getStatusLabel(status: string): string {
-  return STATUS_LABELS[status] ?? status;
-}
-
-function getStatusVariant(status: string): BadgeVariant {
-  return STATUS_VARIANTS[status] ?? "default";
-}
 
 const TAX_RATE_LABELS: Record<string, string> = {
   standard: "標準税率",
@@ -100,35 +87,6 @@ const PAYMENT_BADGE_VARIANTS: Record<PaymentStatus, BadgeVariant> = {
   REFUNDED: "info",
   FAILED: "default",
 };
-
-// ---------------------------------------------------------------------------
-// Date formatting
-// ---------------------------------------------------------------------------
-
-function formatDate(date: string): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const weekdays = ["日", "月", "火", "水", "木", "金", "土"] as const;
-  const weekday = weekdays[d.getDay()];
-  return `${year}年${month}月${day}日（${weekday ?? ""}）`;
-}
-
-function formatTime(date: string): string {
-  const d = new Date(date);
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-
-function formatCreatedAt(date: string): string {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  return `${year}年${month}月${day}日`;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -179,6 +137,9 @@ export function ReservationDetail({
   const durationDiscount = durationDiscountAmount ?? 0;
   const hasDiscount = couponDiscount > 0 || durationDiscount > 0;
   const hasTax = taxAmount != null && taxAmount > 0;
+  const statusLabel = isValidReservationStatus(reservation.status)
+    ? RESERVATION_STATUS_LABELS[reservation.status]
+    : reservation.status;
   const paymentStatusEnum = getValidPaymentStatus(reservation.paymentStatus);
   const isActive = status === "PENDING" || status === "CONFIRMED";
 
@@ -190,8 +151,8 @@ export function ReservationDetail({
           {space.name}
         </Heading>
         <div className="flex items-center gap-2">
-          <Badge variant={getStatusVariant(status)}>
-            {getStatusLabel(status)}
+          <Badge variant={RESERVATION_BADGE_VARIANTS[status] ?? "default"}>
+            {statusLabel}
           </Badge>
           <Badge variant={PAYMENT_BADGE_VARIANTS[paymentStatusEnum]}>
             {PAYMENT_STATUS_LABELS[paymentStatusEnum]}
@@ -201,10 +162,25 @@ export function ReservationDetail({
 
       {/* Detail rows */}
       <dl className="px-4 sm:px-6">
-        <DetailRow label="利用日">{formatDate(startTime)}</DetailRow>
+        <DetailRow label="利用日">
+          {formatSerializedDate(startTime, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            weekday: "short",
+          })}
+        </DetailRow>
 
         <DetailRow label="利用時間">
-          {formatTime(startTime)} 〜 {formatTime(endTime)}
+          {formatSerializedDate(startTime, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}{" "}
+          〜{" "}
+          {formatSerializedDate(endTime, {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </DetailRow>
 
         {hasDiscount && basePrice != null && (
@@ -254,11 +230,11 @@ export function ReservationDetail({
           </DetailRow>
         )}
 
-        <DetailRow label="予約日">{formatCreatedAt(createdAt)}</DetailRow>
+        <DetailRow label="予約日">{formatSerializedDate(createdAt)}</DetailRow>
 
         {status === "CANCELLED" && cancelledAt && (
           <DetailRow label="キャンセル日">
-            {formatCreatedAt(cancelledAt)}
+            {formatSerializedDate(cancelledAt)}
             {cancelledByType === CANCELLED_BY.CUSTOMER && (
               <span className="ml-2 text-xs text-muted-foreground">
                 （お客様によるキャンセル）
@@ -295,8 +271,11 @@ export function ReservationDetail({
 
       {/* Footer */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-t border-border">
-        <Link href="/mypage" className="text-sm text-accent hover:underline">
-          ← 予約一覧に戻る
+        <Link
+          href="/mypage"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          予約一覧に戻る
         </Link>
         <Link
           href={`/contact?subject=${encodeURIComponent(`予約 #${id.slice(0, 8)} について`)}`}
