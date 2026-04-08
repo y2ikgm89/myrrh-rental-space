@@ -14,6 +14,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { isMutationError } from "@/shared/lib/mutation-result";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -260,13 +261,12 @@ describe("submitReview", () => {
         reservationId: "not-a-uuid",
       });
 
-      expect(result).toHaveProperty("error");
-      expect(result).toHaveProperty("fieldErrors");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("reservationId");
+      expect(result).toMatchObject({
+        error: expect.any(String),
+        fieldErrors: expect.objectContaining({
+          reservationId: expect.any(Array),
+        }),
+      });
     });
 
     test("rating が 0 のとき fieldErrors を含むエラーを返す", async () => {
@@ -275,12 +275,12 @@ describe("submitReview", () => {
 
       const result = await submitReview({ ...VALID_INPUT, rating: 0 });
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("rating");
+      expect(result).toMatchObject({
+        error: expect.any(String),
+        fieldErrors: expect.objectContaining({
+          rating: expect.any(Array),
+        }),
+      });
     });
 
     test("rating が 6 のとき fieldErrors を含むエラーを返す", async () => {
@@ -289,12 +289,12 @@ describe("submitReview", () => {
 
       const result = await submitReview({ ...VALID_INPUT, rating: 6 });
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("rating");
+      expect(result).toMatchObject({
+        error: expect.any(String),
+        fieldErrors: expect.objectContaining({
+          rating: expect.any(Array),
+        }),
+      });
     });
 
     test("title が 101 文字のとき fieldErrors を含むエラーを返す", async () => {
@@ -306,12 +306,12 @@ describe("submitReview", () => {
         title: "あ".repeat(101),
       });
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("title");
+      expect(result).toMatchObject({
+        error: expect.any(String),
+        fieldErrors: expect.objectContaining({
+          title: expect.any(Array),
+        }),
+      });
     });
 
     test("comment が 1001 文字のとき fieldErrors を含むエラーを返す", async () => {
@@ -323,12 +323,12 @@ describe("submitReview", () => {
         comment: "あ".repeat(1001),
       });
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as {
-        error: string;
-        fieldErrors: Record<string, string[]>;
-      };
-      expect(errorResult.fieldErrors).toHaveProperty("comment");
+      expect(result).toMatchObject({
+        error: expect.any(String),
+        fieldErrors: expect.objectContaining({
+          comment: expect.any(Array),
+        }),
+      });
     });
 
     test("バリデーション失敗時は createReviewCommand が呼ばれない", async () => {
@@ -350,9 +350,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("ログインが必要です");
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("ログインが必要です");
     });
 
     test("未ログイン時は createReviewCommand が呼ばれない", async () => {
@@ -374,9 +374,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("顧客情報が見つかりません");
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("顧客情報が見つかりません");
     });
   });
 
@@ -391,9 +391,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe("予約が見つかりません");
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("予約が見つかりません");
     });
 
     test("DomainError（UNAUTHORIZED）をスローしたとき MutationError を返す", async () => {
@@ -411,11 +411,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe(
-        "この予約にレビューを投稿する権限がありません",
-      );
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("この予約にレビューを投稿する権限がありません");
     });
 
     test("DomainError（VALIDATION）をスローしたとき MutationError を返す", async () => {
@@ -433,11 +431,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe(
-        "完了済みの予約のみレビューを投稿できます",
-      );
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("完了済みの予約のみレビューを投稿できます");
     });
 
     test("DomainError（CONFLICT）をスローしたとき MutationError を返す", async () => {
@@ -455,11 +451,9 @@ describe("submitReview", () => {
 
       const result = await submitReview(VALID_INPUT);
 
-      expect(result).toHaveProperty("error");
-      const errorResult = result as { error: string };
-      expect(errorResult.error).toBe(
-        "この予約には既にレビューが投稿されています",
-      );
+      expect(isMutationError(result)).toBe(true);
+      if (!isMutationError(result)) throw new Error("Expected MutationError");
+      expect(result.error).toBe("この予約には既にレビューが投稿されています");
     });
 
     test("DomainError 以外の Error をスローしたとき再スローされる", async () => {
