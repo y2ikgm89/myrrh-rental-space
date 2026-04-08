@@ -13,7 +13,9 @@
 - **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象。例外: `global-error.tsx` → `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`、エラー `<div role="alert">` + border スタイル
 - **ソフトデリート `where` 漏れ禁止** → 全クエリに `deletedAt: null`、リレーション経由も親ガード必須 → `gotchas.md`
+- **キャッシュ無効化漏れ禁止** → 顧客統計が変わる操作は `CUSTOMERS` + `customers.detail(id)` 必須。アカウント削除は関連全タグ無効化 → `gotchas.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)` → `server-actions.md`
+- **公開 Server Action の Turnstile 省略禁止** → 全公開 write mutation に `validateTurnstile` 必須（認証済みユーザー含む）
 - **公開 Server Action の ID 引数バリデーション省略禁止** → `z.string().uuid()` で検証
 - **純 CSS コンポーネントへの `"use client"` 禁止** → state/effect/browser API がなければ Server Component
 - **className テンプレートリテラル禁止** → `cn()` 使用必須（`@/shared/lib/cn`）。例外: layout.tsx のフォント変数
@@ -44,7 +46,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 src/app/(admin)/admin/(dashboard)/   管理画面（admin.css, Better Auth）
 src/app/(public)/                    公開ページ（Page-First Architecture, Editorial Magazine）
 src/shared/domain/                   ドメイン層（commands + admin/public/customer-queries）
-src/shared/lib/sections/             セクションレジストリ・定義（22種）
+src/shared/lib/sections/             セクションレジストリ・定義（23種）
 generated/prisma/                    Prisma Client（.gitignore対象）
 __tests__/                           unit/ + integration/（39バッチ分離実行）
 ```

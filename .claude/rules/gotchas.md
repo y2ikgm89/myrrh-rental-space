@@ -77,6 +77,7 @@ paths:
 - **コミットメッセージ**: `<type>(<scope>): <subject>`
 
 - **SC 内の `Date.getHours()` / `getDate()` 等はローカルタイム依存** — Cloud Run は UTC 環境。JST の日付・時刻文字列が必要な場合は `Intl.DateTimeFormat` + `timeZone: "Asia/Tokyo"` を使用。`toISOString()` は UTC のため `input[type="date"]` の初期値には不適切
+- **Cron の「翌日」「当日」計算は JST 基準** — `new Date(); d.setDate(d.getDate()+1); d.setHours(0,0,0,0)` は UTC の翌日。JST の翌日を求めるには `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo" })` で "YYYY-MM-DD" を取得し `new Date(\`${str}T00:00:00+09:00\`)`で UTC 変換。実装例:`src/app/api/cron/reservation-reminder/route.ts`
 - **Client Component の catch ブロックで `logError` は使えない（server-only）** — `getErrorMessage(error)` + `console.error` でログを残す。空 catch（エラー握り潰し）は禁止
 - **ソフトデリート追加時は全クエリの `select` に `deletedAt: true` を追加** — 型定義に `deletedAt` を加えても、Prisma の `select` に含めないと型不一致エラー。list/detail/calendar/stats の全クエリを更新すること
 - **ソフトデリートモデルの全 `findUnique`/`findFirst`/`findMany`/`update` に `where: { deletedAt: null }` 必須** — `restoreReservationCommand` のみ例外（削除済みを復元する関数）。`update` の `where` も対象（削除済み予約への返金操作等を防止）。新規クエリ追加時・レビュー時に必ず確認
@@ -187,6 +188,11 @@ paths:
 - **マイグレーションに余分な ALTER TABLE が混入** — Prisma の内部差分検出に起因。`@default(cuid())` 等の表現変更で全テーブルの `ALTER COLUMN DROP DEFAULT` が生成されることがある。機能的に問題なし
 - **`cuid()` の VarChar 長は 30 以上** — `@default(cuid())` は 24-30 文字を生成。`@db.VarChar(21)` では切り詰めエラー。新規モデルは `@db.VarChar(30)` を使用。既存モデル（Reservation 等）は `@db.Uuid` のため影響なし
 - **`prisma migrate diff` の `--from-schema-datasource` は Prisma 7 で削除済み** — `--from-config-datasource` を使用。非対話環境でのマイグレーション手順: `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > migration.sql` → `prisma db execute --file migration.sql` → `prisma migrate resolve --applied <name>`
+
+## Cron / Webhook
+
+- **Cron の排他実行には `pg_try_advisory_lock` を使用** — Cloud Run 複数インスタンスで同時実行されるとトランザクション競合が発生する。`pg_try_advisory_lock(固定ID)` で非ブロッキングロック取得 → 失敗時は `{ skipped: true }` で即時リターン。`finally` で `pg_advisory_unlock` 必須。実装例: `src/app/api/cron/calendar-sync/route.ts`
+- **`deleteAccountAction` は削除前に customerId 取得 + 全関連タグ無効化必須** — `auth.api.deleteUser()` は Cascade で Customer/Reservation/Review を削除するため、削除後は customerId を取得不可。削除前に `getCustomerByUserId` で取得し、削除後に `CUSTOMERS`/`RESERVATIONS`/`REVIEWS`/`INQUIRIES`/`EVENTS` + `customers.detail(id)` を全て無効化
 
 ## デプロイ
 
