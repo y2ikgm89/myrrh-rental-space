@@ -90,7 +90,7 @@ export default async function EventDetailPage({
               )}
             </div>
 
-            <div className="space-y-4 border border-border bg-surface p-4 sm:p-6">
+            <div className="space-y-4 border border-border p-4 sm:p-6">
               <div className="flex items-start gap-3">
                 <IconCalendar
                   className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
@@ -170,14 +170,14 @@ export default async function EventDetailPage({
                 remainingCapacity={remainingCapacity}
               />
             ) : isFull ? (
-              <div className="border border-border bg-surface/50 p-4 text-center sm:p-6">
+              <div className="border border-border bg-background p-4 text-center sm:p-6">
                 <Badge variant="warning">満員です</Badge>
                 <p className="mt-2 text-sm text-muted-foreground">
                   現在、定員に達しているためお申し込みいただけません
                 </p>
               </div>
             ) : !event.registrationOpen ? (
-              <div className="border border-border bg-surface/50 p-4 text-center sm:p-6">
+              <div className="border border-border bg-background p-4 text-center sm:p-6">
                 <p className="text-sm text-muted-foreground">
                   このイベントの申込受付は終了しました
                 </p>

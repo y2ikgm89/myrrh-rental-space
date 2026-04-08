@@ -61,7 +61,7 @@ export function EventRegistrationForm({
 
   if (submitted) {
     return (
-      <div className="border border-accent/20 bg-surface px-8 py-12 text-center">
+      <div className="border border-accent/20 px-8 py-12 text-center">
         <IconCircleCheck className="mx-auto h-10 w-10 text-accent" />
         <Heading level={3} className="mt-4">
           お申し込みを受け付けました

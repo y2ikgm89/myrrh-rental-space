@@ -4,6 +4,7 @@ import {
 } from "@/shared/domain/reviews/public-queries";
 import { Heading } from "../../../_shared/components/design-system/heading";
 import { StarRating } from "../../../_shared/components/ui/star-rating";
+import { formatSerializedDate } from "@/shared/lib/serialize";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,7 +67,7 @@ export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
                 className="text-xs text-muted-foreground"
                 dateTime={review.createdAt}
               >
-                {new Date(review.createdAt).toLocaleDateString("ja-JP")}
+                {formatSerializedDate(review.createdAt)}
               </time>
             </div>
             {review.title ? (

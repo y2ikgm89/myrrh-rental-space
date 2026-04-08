@@ -50,7 +50,7 @@ export function ResetPasswordForm({ token }: Props) {
   if (success) {
     return (
       <Stack gap="lg">
-        <div className="border border-border bg-surface p-6 text-center">
+        <div className="border border-border p-6 text-center">
           <p className="text-lg font-medium text-foreground">
             パスワードを変更しました
           </p>

@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { generateArticleMetadata } from "@/public/lib/seo/metadata-factory";
 import { getBaseUrl } from "@/shared/lib/constants";
-import { toISOString } from "@/shared/lib/serialize";
+import { toISOString, formatSerializedDate } from "@/shared/lib/serialize";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { getPublicTermsBySlug } from "@/shared/domain/terms/queries";
 import { PageHero } from "@/public/components/layouts/page-hero";
@@ -70,11 +70,7 @@ export default async function TermsDetailPage({ params }: PageProps) {
             <p className="mb-8 text-sm text-muted-foreground">
               最終更新:{" "}
               <time dateTime={publishedAt}>
-                {new Date(publishedAt).toLocaleDateString("ja-JP", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
+                {formatSerializedDate(publishedAt)}
               </time>
             </p>
           ) : null}
