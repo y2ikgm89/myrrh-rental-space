@@ -2,8 +2,9 @@
 
 import { useState, startTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { IconCheck, IconLink, IconUnlink } from "@tabler/icons-react";
+import { IconCheck, IconUnlink } from "@tabler/icons-react";
 import { Button } from "@/public/components/design-system/button";
+import { PROVIDER_LOGOS } from "@/public/components/ui/social-provider-logos";
 import {
   Dialog,
   DialogContent,
@@ -27,8 +28,8 @@ import {
 // ---------------------------------------------------------------------------
 
 const PROVIDERS = [
-  { id: "google", label: "Google" },
-  { id: "line", label: "LINE" },
+  { id: "google", label: "Google", logoClass: "" },
+  { id: "line", label: "LINE", logoClass: "text-[#06C755]" },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -134,22 +135,15 @@ export function AccountLinking({
               className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-border p-4"
             >
               <div className="flex items-center gap-3">
-                {isLinked ? (
-                  <IconCheck
-                    className="h-4 w-4 text-accent"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <IconLink
-                    className="h-4 w-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                )}
+                <span className={provider.logoClass}>
+                  {PROVIDER_LOGOS[provider.id]?.()}
+                </span>
                 <span className="text-sm font-medium">{provider.label}</span>
                 {isLinked && (
-                  <span className="text-xs text-muted-foreground">
-                    連携済み
-                  </span>
+                  <IconCheck
+                    className="ml-1 h-4 w-4 text-accent"
+                    aria-hidden="true"
+                  />
                 )}
               </div>
 
