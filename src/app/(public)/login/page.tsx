@@ -6,6 +6,7 @@ import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { SocialLoginButtons } from "./_components/social-login-buttons";
+import { DevLoginButton } from "./_components/dev-login-button";
 
 export const metadata: Metadata = {
   title: "ログイン",
@@ -36,7 +37,7 @@ export default async function LoginPage({
       <PageHero variant="minimal" title="ログイン" />
 
       <Container variant="narrow">
-        <Stack gap="lg" className="pb-[var(--spacing-block)]">
+        <Stack gap="lg" className="mx-auto max-w-sm pb-[var(--spacing-block)]">
           {errorMessage != null && (
             <div
               className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive text-center"
@@ -50,6 +51,7 @@ export default async function LoginPage({
             アカウントに連携して、予約の確認や変更が簡単にできます。
           </p>
           <SocialLoginButtons />
+          {process.env["NODE_ENV"] !== "production" && <DevLoginButton />}
         </Stack>
       </Container>
     </>
