@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import { IconCalendar, IconMapPin, IconArrowRight } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import { Heading } from "@/public/components/design-system/heading";
 import { Badge } from "@/public/components/design-system/badge";
 import {
@@ -20,6 +22,7 @@ export interface EventCardData {
   readonly price: number | null;
   readonly registrationOpen: boolean;
   readonly spaceName: string | null;
+  readonly thumbnailUrl: string | null;
 }
 
 interface EventCardListProps {
@@ -105,16 +108,37 @@ export function EventCard({ variant, event }: EventCardProps) {
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group grid grid-cols-[4.5rem_1fr] gap-6 border-b border-border py-6 transition-colors last:border-b-0 md:grid-cols-[5.5rem_1fr_auto] md:gap-8 md:py-8"
+      className={cn(
+        "group grid gap-6 border-b border-border py-6 transition-colors last:border-b-0 hover:bg-accent/5 md:gap-8 md:py-8",
+        event.thumbnailUrl
+          ? "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_10rem_1fr_auto]"
+          : "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_1fr_auto]",
+      )}
     >
+      {/* Date block */}
       <div className="flex flex-col items-center pt-1">
-        <span className="font-heading text-[2.5rem] font-light leading-none text-foreground md:text-[3rem]">
+        <span className="text-[2rem] font-light leading-none text-foreground md:text-[2.5rem]">
           {day}
         </span>
-        <span className="mt-1 text-xs tracking-[0.18em] text-muted-foreground">
+        <span className="mt-1.5 text-base tracking-[0.18em] text-muted-foreground">
           {weekday}
         </span>
       </div>
+
+      {/* Thumbnail — desktop only */}
+      {event.thumbnailUrl ? (
+        <div className="relative hidden aspect-[3/2] overflow-hidden md:block">
+          <Image
+            src={event.thumbnailUrl}
+            alt=""
+            fill
+            sizes="10rem"
+            className="object-cover transition-opacity group-hover:opacity-85"
+          />
+        </div>
+      ) : null}
+
+      {/* Content */}
       <div className="min-w-0">
         <EventBadges event={event} />
         <Heading

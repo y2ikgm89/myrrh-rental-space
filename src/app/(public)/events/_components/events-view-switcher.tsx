@@ -48,7 +48,7 @@ export function EventsViewSwitcher({
                   aria-controls={`events-panel-${tab.value}`}
                   onClick={() => handleViewChange(tab.value)}
                   className={cn(
-                    "px-5 py-3 text-sm tracking-[0.18em] transition-colors",
+                    "px-5 py-3 text-sm tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     isActive
                       ? "border-b-2 border-accent text-accent"
                       : "text-muted-foreground hover:text-foreground",
