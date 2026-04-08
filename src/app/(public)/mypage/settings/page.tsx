@@ -44,9 +44,7 @@ export default async function SettingsPage({
 
   return (
     <Stack gap="xl">
-      <Heading level={1} accent>
-        アカウント設定
-      </Heading>
+      <Heading level={1}>アカウント設定</Heading>
 
       {requireEmail && (
         <div

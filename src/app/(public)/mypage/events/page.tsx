@@ -43,9 +43,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
 
   return (
     <Stack gap="lg">
-      <Heading level={1} accent>
-        イベント申込一覧
-      </Heading>
+      <Heading level={1}>イベント申込一覧</Heading>
       <EventRegistrationList
         registrations={serializedRegistrations}
         turnstileSiteKey={turnstileSiteKey}

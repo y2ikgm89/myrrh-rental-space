@@ -112,9 +112,7 @@ export default async function ReservationDetailPage({
 
   return (
     <Stack gap="lg" className="max-w-2xl">
-      <Heading level={1} accent>
-        予約詳細
-      </Heading>
+      <Heading level={1}>予約詳細</Heading>
 
       <ReservationDetail
         reservation={serializedReservation}

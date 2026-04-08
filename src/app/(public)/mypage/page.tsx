@@ -48,9 +48,7 @@ export default async function MypagePage(): Promise<ReactElement> {
 
   return (
     <Stack gap="lg">
-      <Heading level={1} accent>
-        予約一覧
-      </Heading>
+      <Heading level={1}>予約一覧</Heading>
       {isNameIncomplete && (
         <div className="border border-accent/30 bg-accent/5 p-4 text-sm text-foreground">
           お名前が未登録です。

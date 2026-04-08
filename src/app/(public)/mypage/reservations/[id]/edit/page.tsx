@@ -113,9 +113,7 @@ export default async function ReservationEditPage({
 
   return (
     <div className="max-w-2xl">
-      <Heading level={1} accent>
-        予約内容の変更
-      </Heading>
+      <Heading level={1}>予約内容の変更</Heading>
 
       <EditReservationForm
         reservationId={reservation.id}

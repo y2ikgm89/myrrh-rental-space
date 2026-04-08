@@ -26,9 +26,7 @@ export default async function MypageInquiriesPage(): Promise<ReactElement> {
 
   return (
     <Stack gap="lg">
-      <Heading level={1} accent>
-        お問い合わせ履歴
-      </Heading>
+      <Heading level={1}>お問い合わせ履歴</Heading>
       {inquiries.length === 0 ? (
         <div className="py-16 md:py-24 text-center space-y-4">
           <p className="text-muted-foreground">お問い合わせ履歴がありません</p>
