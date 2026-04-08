@@ -142,8 +142,9 @@ paths:
 - **ページ固有 CTA（SiteCTA）を持つページは `cta` セクションも除外** — `/faq`（SiteCTA でお問い合わせ誘導）、`/contact`（フォーム自体が CTA）では DB の `cta` セクションが重複。`trailingSections` フィルタに `s.type !== "cta"` を追加
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
 - **hero 直下の一覧セクションは上余白を縮小** — `py-[var(--spacing-section)]`（112-176px）は hero 後に過剰。`pt-10 pb-[var(--spacing-section)] md:pt-14` で上余白のみ 40-56px に抑える。適用済み: `/spaces`, `/journal`, `/faq`。記事詳細・ホームページセクションは独立コンテンツのためフル余白維持
+- **`public-queries.ts` の全関数に `'use cache'` + `safeFetch` + `toPlainObject` 必須** — `settings/public-queries.ts` で欠落していた前例あり。新規 public-queries 作成時は `'use cache'` + `cacheTag` + `cacheLife` を忘れずに
 - **同種の公開 UI コンポーネント重複禁止** — 新規作成前に `_shared/components/ui/` を確認。`FilterBar`（nuqs + useTransition + Editorial スタイル）が唯一のカテゴリフィルタ
-- **公開ページの `_shared/components/layouts/` は kebab-case** — `site-header.tsx`, `site-footer.tsx` 等。PascalCase のレガシーセクションコンポーネント（`_components/*.tsx`）は `[...segments]` カスタムページ用に維持
+- **`_shared/components/` は kebab-case 必須、`_components/` レガシーセクションは PascalCase 維持** — `SectionWrapper.tsx`/`SectionLabel.tsx` はレガシー用の固有コンポーネントで PascalCase 維持。それ以外の `_shared/` 配下は全て kebab-case
 - **`@layer compat` と旧カラートークンは削除済み** — `--color-primary` / `--color-brand-primary` 等の旧トークンは存在しない。全コンポーネントが `@theme` のセマンティックトークン（`accent`/`foreground`/`surface` 等）を直接使用
 - **公開ページの `hover:text-accent` は原則禁止** — `hover:text-foreground` に統一（Editorial Magazine トーン）。accent はラベル・価格・CTA テキストの静的表示のみに使用
 - **`tracking` は `tracking-[0.18em]` を標準値とする** — SectionLabel, ナビリンク, MagneticButton, ScrollIndicator 等で統一。`tracking-[0.2em]` / `tracking-[0.3em]` は旧値

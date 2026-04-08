@@ -70,7 +70,7 @@ __tests__/                           unit/ + integration/（39バッチ分離実
 
 ### 公開ページ UI
 
-- **公開ページのカード背景に `bg-surface` 禁止** → `border border-border` のみ（Editorial: 背景色なし + ボーダーで分離）
+- **公開ページのカード背景に `bg-surface` 禁止** → `border border-border` のみ。例外: Design System Primitive 内部、Hero/Footer/SectionWrapper のレイアウト要素、Lightbox オーバーレイコントロール、loading スケルトン
 - **ブラウザネイティブ `confirm()`/`alert()` 禁止** → Radix Dialog + インライン `role="alert"` エラー表示を使用
 - **ハードコードカラー禁止** → Tailwind クラス・インラインスタイル両方対象。例外: `global-error.tsx` → `tailwind-patterns.md`
 - **公開フォームの不統一禁止** → 間隔 `space-y-6`、エラー `<div role="alert">` + border スタイル
