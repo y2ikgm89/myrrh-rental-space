@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
@@ -13,6 +13,10 @@ import {
   type CustomerReservationEditInput,
 } from "@/shared/lib/validations/customer-reservation";
 import { updateReservationAction } from "../../../../_shared/actions/reservation";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -37,6 +41,7 @@ interface EditReservationFormProps {
   readonly numberOfGuests: number;
   readonly spaces: readonly SpaceOption[];
   readonly initialValues: InitialValues;
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,9 +71,11 @@ export function EditReservationForm({
   numberOfGuests,
   spaces,
   initialValues,
+  turnstileSiteKey,
 }: EditReservationFormProps) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const spaceOptions = spaces.map((s) => ({
     value: s.id,
@@ -83,6 +90,7 @@ export function EditReservationForm({
         const result = await updateReservationAction(data);
         if (isMutationError(result)) {
           setErrorMessage(result.error);
+          turnstileRef.current?.reset();
         } else {
           router.push(`/mypage/reservations/${reservationId}`);
         }
@@ -99,6 +107,13 @@ export function EditReservationForm({
         },
       },
     );
+
+  function handleTurnstileVerify(token: string) {
+    form.setValue("turnstileToken", token);
+  }
+  function handleTurnstileExpire() {
+    form.setValue("turnstileToken", "");
+  }
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -152,6 +167,13 @@ export function EditReservationForm({
           })}
         />
       </div>
+
+      <TurnstileWidget
+        ref={turnstileRef}
+        siteKey={turnstileSiteKey}
+        onVerify={handleTurnstileVerify}
+        onExpire={handleTurnstileExpire}
+      />
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2">
         <Button type="submit" disabled={isPending}>

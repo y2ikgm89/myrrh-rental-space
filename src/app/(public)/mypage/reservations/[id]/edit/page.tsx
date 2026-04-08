@@ -15,6 +15,7 @@ import { isWithinDeadline } from "@/shared/domain/reservations/deadline";
 import { reservationDeadlineNow } from "@/shared/domain/reservations/server-deadline-instant";
 import { ACTIVE_RESERVATION_STATUSES } from "@/shared/lib/validations/enums/helpers";
 import { getActiveSpacesByLocationId } from "@/shared/domain/spaces/public-queries";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
 import { EditReservationForm } from "./_components/edit-reservation-form";
 
@@ -83,9 +84,10 @@ export default async function ReservationEditPage({
   }
 
   // 同じロケーションのスペース一覧を取得
-  const spaces = await getActiveSpacesByLocationId(
-    reservation.space.locationId,
-  );
+  const [spaces, turnstileSiteKey] = await Promise.all([
+    getActiveSpacesByLocationId(reservation.space.locationId),
+    getTurnstileSiteKey(),
+  ]);
 
   // タイムゾーンを明示して JST で日付・時刻文字列を生成（Cloud Run は UTC）
   const TZ = "Asia/Tokyo";
@@ -125,6 +127,7 @@ export default async function ReservationEditPage({
           startTime: startTimeStr,
           endTime: endTimeStr,
         }}
+        turnstileSiteKey={turnstileSiteKey}
       />
     </div>
   );
