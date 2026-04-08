@@ -131,27 +131,32 @@ export async function registerForEvent(
 
 export async function cancelEventRegistration(
   registrationId: string,
+  turnstileToken?: string,
 ): Promise<MutationResult<null>> {
   // 1. Rate limit check
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
 
-  // 1.5 UUID validation
+  // 1.5 Turnstile verification
+  const turnstile = await validateTurnstile(turnstileToken);
+  if (!turnstile.success) return createMutationError(turnstile.error);
+
+  // 2. UUID validation
   const idValidation = z
     .string()
     .uuid({ error: "申込IDが不正です" })
     .safeParse(registrationId);
   if (!idValidation.success) return createMutationError("申込IDが不正です");
 
-  // 2. Require authenticated session
+  // 3. Require authenticated session
   const session = await getSession();
   if (!session) return createMutationError("認証が必要です");
 
-  // 3. Require customer
+  // 4. Require customer
   const customer = await getCustomerByUserId(session.user.id);
   if (!customer) return createMutationError("顧客情報が見つかりません");
 
-  // 4. Cancel registration
+  // 5. Cancel registration
   try {
     const registration = await cancelEventRegistrationCommand(
       registrationId,

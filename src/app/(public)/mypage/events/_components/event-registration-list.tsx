@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stack } from "@/public/components/design-system/stack";
@@ -17,6 +17,10 @@ import {
 import { cancelEventRegistration } from "@/public/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,6 +45,7 @@ interface EventRegistration {
 
 interface EventRegistrationListProps {
   readonly registrations: readonly EventRegistration[];
+  readonly turnstileSiteKey: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +70,7 @@ const REGISTRATION_STATUS_VARIANTS: Record<string, BadgeVariant> = {
 
 export function EventRegistrationList({
   registrations,
+  turnstileSiteKey,
 }: EventRegistrationListProps) {
   if (registrations.length === 0) {
     return (
@@ -80,6 +86,7 @@ export function EventRegistrationList({
         <EventRegistrationCard
           key={registration.id}
           registration={registration}
+          turnstileSiteKey={turnstileSiteKey}
         />
       ))}
     </Stack>
@@ -92,12 +99,16 @@ export function EventRegistrationList({
 
 function EventRegistrationCard({
   registration,
+  turnstileSiteKey,
 }: {
   readonly registration: EventRegistration;
+  readonly turnstileSiteKey: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef<TurnstileInstance>(null);
   const router = useRouter();
 
   const canCancel = registration.status === "CONFIRMED";
@@ -105,9 +116,13 @@ function EventRegistrationCard({
   const handleConfirmCancel = () => {
     setError(null);
     startTransition(async () => {
-      const result = await cancelEventRegistration(registration.id);
+      const result = await cancelEventRegistration(
+        registration.id,
+        turnstileToken || undefined,
+      );
       if (isMutationError(result)) {
         setError(result.error);
+        turnstileRef.current?.reset();
       } else {
         setCancelDialogOpen(false);
         router.refresh();
@@ -171,6 +186,7 @@ function EventRegistrationCard({
             className="text-destructive"
             onClick={() => {
               setError(null);
+              setTurnstileToken("");
               setCancelDialogOpen(true);
             }}
           >
@@ -185,6 +201,12 @@ function EventRegistrationCard({
                   「{registration.event.title}」の申込をキャンセルしますか？
                 </DialogDescription>
               </DialogHeader>
+              <TurnstileWidget
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken("")}
+              />
               <DialogFooter className="gap-2">
                 <Button
                   variant="ghost"
