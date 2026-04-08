@@ -2,5 +2,5 @@
  * アクセシビリティコンポーネント
  */
 
-export { SkipLink } from "./SkipLink";
-export { AriaLiveRegion } from "./AriaLiveRegion";
+export { SkipLink } from "./skip-link";
+export { AriaLiveRegion } from "./aria-live-region";

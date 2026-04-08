@@ -12,7 +12,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import {
   getPublishedSpacesPaginated,
   getActiveCategories,
@@ -20,7 +20,7 @@ import {
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import { spaceSearchParams } from "@/public/lib/search-params";
 import { Container } from "@/public/components/design-system/container";
-import { Pagination } from "@/public/components/Pagination";
+import { Pagination } from "@/public/components/pagination";
 import { FilterBar } from "@/public/components/ui/filter-bar";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";

@@ -13,7 +13,7 @@ import { Suspense } from "react";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { ContactForm } from "./_components/contact-form";

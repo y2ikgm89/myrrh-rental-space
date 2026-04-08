@@ -19,7 +19,7 @@ import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
-import { EventRegistrationForm } from "./_components/EventRegistrationForm";
+import { EventRegistrationForm } from "./_components/event-registration-form";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

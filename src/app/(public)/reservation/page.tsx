@@ -9,7 +9,7 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Section } from "@/public/components/design-system/section";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";

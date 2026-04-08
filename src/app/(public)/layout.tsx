@@ -31,7 +31,7 @@ import { AnnouncementBarWrapper } from "@/public/components/announcement-bar-wra
 import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
-import { LenisProvider } from "@/public/components/providers/LenisProvider";
+import { LenisProvider } from "@/public/components/providers/lenis-provider";
 import { MobileNav } from "@/public/components/layouts/mobile-nav";
 import { GraphJsonLd } from "@/public/components/seo/json-ld";
 import { getGraphJsonLdData } from "@/public/lib/seo";

@@ -13,7 +13,7 @@ import {
   getPublishedFaqItems,
   getPageSectionsWithFallback,
 } from "@/shared/domain/sections/queries";
-import { SectionRenderer } from "@/public/components/sections/SectionRenderer";
+import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
 import { FAQPageJsonLd } from "@/public/components/seo/json-ld";
 import { PageLayout } from "@/public/components/design-system/page-layout";

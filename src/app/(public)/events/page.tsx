@@ -6,8 +6,8 @@ import { Section } from "@/public/components/design-system/section";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { PageHero } from "@/public/components/layouts/page-hero";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { CalendarSkeleton } from "@/public/components/event-calendar/CalendarSkeleton";
-import { EventCalendar } from "@/public/components/event-calendar/EventCalendar";
+import { CalendarSkeleton } from "@/public/components/event-calendar/calendar-skeleton";
+import { EventCalendar } from "@/public/components/event-calendar/event-calendar";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
 
 export const metadata: Metadata = {

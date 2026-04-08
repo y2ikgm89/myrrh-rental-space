@@ -9,7 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import jaLocale from "@fullcalendar/core/locales/ja";
 import type { EventClickArg } from "@fullcalendar/core";
 import type { getPublishedEvents } from "@/shared/domain/events/public-queries";
-import { EventModal } from "./EventModal";
+import { EventModal } from "./event-modal";
 
 type PublishedEvent = Awaited<ReturnType<typeof getPublishedEvents>>[number];
 

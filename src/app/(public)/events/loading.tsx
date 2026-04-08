@@ -1,5 +1,5 @@
 import { Container } from "@/public/components/design-system/container";
-import { CalendarSkeleton } from "@/public/components/event-calendar/CalendarSkeleton";
+import { CalendarSkeleton } from "@/public/components/event-calendar/calendar-skeleton";
 
 export default function EventsLoading() {
   return (

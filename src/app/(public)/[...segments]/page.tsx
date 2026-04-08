@@ -12,7 +12,7 @@ import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
 import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
-import { SectionRenderer } from "../_shared/components/sections/SectionRenderer";
+import { SectionRenderer } from "../_shared/components/sections/section-renderer";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
