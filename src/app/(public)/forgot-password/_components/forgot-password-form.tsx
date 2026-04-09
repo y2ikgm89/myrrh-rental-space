@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { authClient } from "@/shared/lib/auth-client";
+import { adminAuthClient } from "@/shared/lib/admin-auth-client";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Stack } from "@/public/components/design-system/stack";
@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
     setError(undefined);
 
     startTransition(async () => {
-      const { error: fetchError } = await authClient.$fetch(
+      const { error: fetchError } = await adminAuthClient.$fetch(
         "/request-password-reset",
         {
           method: "POST",

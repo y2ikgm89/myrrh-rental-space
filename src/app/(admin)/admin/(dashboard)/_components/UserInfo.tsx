@@ -5,11 +5,11 @@
  * Server Component
  */
 
-import { getSession } from "@/shared/lib/auth";
+import { getAdminSession } from "@/shared/lib/admin-auth";
 import type { ReactElement } from "react";
 
 export async function UserInfo(): Promise<ReactElement | null> {
-  const session = await getSession();
+  const session = await getAdminSession();
 
   if (!session?.user) return null;
 

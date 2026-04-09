@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
-import { getSession, getRoleFromSession } from "@/shared/lib/auth";
+import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
 
 const INSTAGRAM_OAUTH_URL = "https://www.instagram.com/oauth/authorize";
@@ -29,13 +29,9 @@ const STATE_COOKIE_MAX_AGE = 600; // 10分
  */
 export async function GET(request: Request) {
   // 認証チェック
-  const session = await getSession(request.headers);
-  const role = getRoleFromSession(session);
-  if (
-    !session?.user ||
-    !role ||
-    (!isAdminRole(role) && !isSuperAdminRole(role))
-  ) {
+  const session = await getAdminSession(request.headers);
+  const user = getAdminSessionUser(session);
+  if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

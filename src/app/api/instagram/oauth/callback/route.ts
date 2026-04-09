@@ -14,7 +14,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
-import { getSession, getRoleFromSession } from "@/shared/lib/auth";
+import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
 import { connectInstagramOAuthAccount } from "@/shared/domain/instagram/commands";
 import {
@@ -52,13 +52,9 @@ const instagramOAuthCallbackQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   // 認証チェック
-  const session = await getSession(request.headers);
-  const role = getRoleFromSession(session);
-  if (
-    !session?.user ||
-    !role ||
-    (!isAdminRole(role) && !isSuperAdminRole(role))
-  ) {
+  const session = await getAdminSession(request.headers);
+  const user = getAdminSessionUser(session);
+  if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

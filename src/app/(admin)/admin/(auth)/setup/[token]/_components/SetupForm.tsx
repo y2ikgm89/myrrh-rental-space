@@ -9,7 +9,7 @@
 import { useState, type FormEvent, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { setupPassword } from "@/admin/actions/staff-invitation";
-import { signIn } from "@/shared/lib/auth-client";
+import { signIn } from "@/shared/lib/admin-auth-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { SubmitButton } from "@/admin/components/ui";

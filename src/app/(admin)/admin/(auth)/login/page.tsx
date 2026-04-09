@@ -6,12 +6,16 @@
  * - Trust Blue アクセント
  *
  * Admin Gate は proxy.ts が処理するため、このページに到達した時点で
- * gate cookie またはセッションが確認済み。
+ * gate cookie が確認済み。
  */
 
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getSession } from "@/shared/lib/auth";
+import {
+  DASHBOARD_ROLES,
+  getAdminSession,
+  getAdminSessionUser,
+} from "@/shared/lib/admin-auth";
 import { LoginForm } from "./LoginForm";
 import { CopyrightYear } from "./CopyrightYear";
 import type { ReactElement } from "react";
@@ -21,11 +25,17 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage(): Promise<ReactElement> {
-  const session = await getSession();
+  const session = await getAdminSession();
+  const user = getAdminSessionUser(session);
 
-  // 既にログイン済みならダッシュボードへ
   if (session?.user) {
-    redirect("/admin");
+    if (user && DASHBOARD_ROLES.includes(user.role)) {
+      // 管理者ロールでログイン済み → ダッシュボードへ
+      redirect("/admin");
+    }
+    // 非管理者ロール（CUSTOMER/USER）→ 公開サイトへ
+    // ログインフォームを見せず、ダッシュボードとの無限リダイレクトも防止
+    redirect("/");
   }
 
   return (

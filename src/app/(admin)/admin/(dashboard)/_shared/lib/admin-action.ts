@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { User } from "@/shared/lib/auth";
+import type { AdminUser } from "@/shared/lib/admin-auth";
 import type { Resource, Action } from "@/admin/lib/permissions";
 import {
   checkPermission,
@@ -15,7 +15,7 @@ type ExecuteAdminMutationResultOptions<TData> = {
   action: Action;
   resourceId?: string;
   checkResourceAccess?: boolean;
-  execute: (user: User) => Promise<TData>;
+  execute: (user: AdminUser) => Promise<TData>;
   afterSuccess?: (data: TData) => Promise<void> | void;
   resolveAuditResourceId?: (data: TData) => string | undefined;
 };

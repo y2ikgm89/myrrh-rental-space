@@ -8,7 +8,7 @@
  */
 
 import { useRouter } from "next/navigation";
-import { signOut } from "@/shared/lib/auth-client";
+import { signOut } from "@/shared/lib/admin-auth-client";
 import type { ReactElement } from "react";
 
 export function LogoutButton(): ReactElement {

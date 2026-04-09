@@ -9,7 +9,11 @@
 
 import "server-only";
 
-import { getSession, getSessionUser, type User } from "@/shared/lib/auth";
+import {
+  getAdminSession,
+  getAdminSessionUser,
+  type AdminUser,
+} from "@/shared/lib/admin-auth";
 import { Role, AuditAction } from "@generated/prisma/enums";
 import {
   hasPermission,
@@ -27,11 +31,11 @@ import type { MutationError } from "@/shared/lib/mutation-result";
 // =============================================================================
 
 export type AuthResult =
-  | { success: true; user: User }
+  | { success: true; user: AdminUser }
   | { success: false; error: MutationError };
 
 export type PermissionResult =
-  | { success: true; user: User }
+  | { success: true; user: AdminUser }
   | { success: false; error: MutationError };
 
 // =============================================================================
@@ -54,8 +58,8 @@ export type PermissionResult =
 export async function checkAdminAuth(
   requestHeaders?: Headers,
 ): Promise<AuthResult> {
-  const session = await getSession(requestHeaders);
-  const user = getSessionUser(session);
+  const session = await getAdminSession(requestHeaders);
+  const user = getAdminSessionUser(session);
 
   if (!user) {
     return { success: false, error: { error: "ログインが必要です" } };

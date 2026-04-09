@@ -12,10 +12,10 @@ import "server-only";
 import { Role } from "@generated/prisma/enums";
 import {
   DASHBOARD_ROLES,
-  getSession,
-  getRoleFromSession,
-  type User,
-} from "@/shared/lib/auth";
+  getAdminSession,
+  getAdminSessionUser,
+  type AdminUser,
+} from "@/shared/lib/admin-auth";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { logPermissionDenied } from "@/admin/lib/audit";
 import { isEditorRole } from "./role-guards";
@@ -404,7 +404,7 @@ export function hasPermission(
  * @returns 権限があればtrue
  */
 export function userHasPermission(
-  user: User,
+  user: AdminUser,
   resource: Resource,
   action: Action,
 ): boolean {
@@ -423,7 +423,7 @@ export function userHasPermission(
  * @returns 権限があればtrue
  */
 export async function userHasResourceAccess(
-  user: User,
+  user: AdminUser,
   resource: Resource,
   action: Action,
   resourceId?: string,
@@ -485,13 +485,13 @@ export function checkReadPermissionFor(
   resource: Resource,
 ): () => Promise<boolean> {
   return async (): Promise<boolean> => {
-    const session = await getSession();
+    const session = await getAdminSession();
     if (!session?.user) return false;
-    const role = getRoleFromSession(session);
-    if (!role) return false;
-    if (!canAccessAdmin(role)) return false;
-    if (!hasPermission(role, resource, "read")) {
-      void logPermissionDenied(session.user.id, resource, "read");
+    const user = getAdminSessionUser(session);
+    if (!user) return false;
+    if (!canAccessAdmin(user.role)) return false;
+    if (!hasPermission(user.role, resource, "read")) {
+      void logPermissionDenied(user.id, resource, "read");
       return false;
     }
     return true;

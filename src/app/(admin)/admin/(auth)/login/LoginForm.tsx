@@ -7,8 +7,9 @@
  */
 
 import { useState, useEffect, type FormEvent, type ReactElement } from "react";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { signIn } from "@/shared/lib/auth-client";
+import { signIn } from "@/shared/lib/admin-auth-client";
 import { credentialsSchema } from "@/admin/lib/validations/auth";
 import { SubmitButton } from "@/admin/components/ui";
 
@@ -19,6 +20,7 @@ export function LoginForm(): ReactElement {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -110,16 +112,30 @@ export function LoginForm(): ReactElement {
         >
           パスワード
         </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-          className="w-full h-10 px-3 py-2 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
-          placeholder="••••••••"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            className="w-full h-10 px-3 py-2 pr-10 bg-card border border-input rounded-md shadow-sm text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50 focus:ring-offset-1 focus:border-primary"
+            placeholder="••••••••"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showPassword ? "パスワードを隠す" : "パスワードを表示"}
+          >
+            {showPassword ? (
+              <IconEyeOff className="h-4 w-4" />
+            ) : (
+              <IconEye className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center">

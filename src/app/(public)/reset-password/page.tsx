@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
@@ -17,7 +17,7 @@ type PageProps = {
 };
 
 export default async function ResetPasswordPage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentAdminUser();
   if (user) redirect("/mypage");
 
   const params = await searchParams;

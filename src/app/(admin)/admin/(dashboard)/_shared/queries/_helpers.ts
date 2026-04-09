@@ -10,13 +10,13 @@ import {
   type Action,
   type Resource,
 } from "@/admin/lib/permissions";
-import { verifyAdminSession, type User } from "@/shared/lib/auth";
+import { verifyAdminSession, type AdminUser } from "@/shared/lib/admin-auth";
 
 function redirectToAdminHome(): never {
   redirect("/admin");
 }
 
-export async function requireAdminDashboardAccess(): Promise<User> {
+export async function requireAdminDashboardAccess(): Promise<AdminUser> {
   await headers();
   return verifyAdminSession();
 }
@@ -24,7 +24,7 @@ export async function requireAdminDashboardAccess(): Promise<User> {
 export async function requireAdminPermission(
   resource: Resource,
   action: Action,
-): Promise<User> {
+): Promise<AdminUser> {
   await headers();
   const user = await verifyAdminSession();
 
@@ -40,7 +40,7 @@ export async function requireAdminResourcePermission(
   resource: Resource,
   action: Action,
   resourceId?: string,
-): Promise<User> {
+): Promise<AdminUser> {
   await headers();
   const user = await requireAdminPermission(resource, action);
 

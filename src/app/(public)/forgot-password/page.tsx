@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ForgotPasswordPage() {
-  const user = await getCurrentUser();
+  const user = await getCurrentAdminUser();
   if (user) redirect("/mypage");
 
   return (

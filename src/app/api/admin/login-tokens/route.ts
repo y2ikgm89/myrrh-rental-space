@@ -13,7 +13,7 @@
 
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
-import { getSession, getRoleFromSession } from "@/shared/lib/auth";
+import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { createAdminLoginTokenRecord } from "@/shared/domain/admin-login-tokens/commands";
 import { getActiveAdminLoginTokens } from "@/shared/domain/admin-login-tokens/queries";
 import { getAppUrl } from "@/shared/lib/constants";
@@ -32,13 +32,9 @@ import { isAdminRole, isSuperAdminRole } from "@/admin/lib/role-guards";
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await getSession(request.headers);
-    const role = getRoleFromSession(session);
-    if (
-      !session?.user ||
-      !role ||
-      (!isAdminRole(role) && !isSuperAdminRole(role))
-    ) {
+    const session = await getAdminSession(request.headers);
+    const user = getAdminSessionUser(session);
+    if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -46,7 +42,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const loginToken = await createAdminLoginTokenRecord({
       token,
-      createdBy: session.user.id,
+      createdBy: user.id,
       expiresAt,
     });
 
@@ -78,13 +74,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     // 認証チェック
-    const session = await getSession(request.headers);
-    const role = getRoleFromSession(session);
-    if (
-      !session?.user ||
-      !role ||
-      (!isAdminRole(role) && !isSuperAdminRole(role))
-    ) {
+    const session = await getAdminSession(request.headers);
+    const user = getAdminSessionUser(session);
+    if (!user || (!isAdminRole(user.role) && !isSuperAdminRole(user.role))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
