@@ -511,6 +511,12 @@ model Reservation {
   calendarSyncedAt           DateTime? // 最終同期日時
   calendarSyncError          String?   @db.Text // 同期エラーメッセージ
 
+  // Guest contact info (予約時に入力された連絡先 — Customer レコードとは独立に保存)
+  guestLastName    String?
+  guestFirstName   String?
+  guestPhone       String?
+  guestCompanyName String?
+
   // Relations
   space           Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1727,4 +1733,24 @@ model EventRegistration {
   @@index([customerId])
   @@index([status])
   @@map("event_registrations")
+}
+
+// ==============================================
+// Admin Notification
+// ==============================================
+
+model AdminNotification {
+  id           String   @id @default(uuid()) @db.Uuid
+  type         String   @db.VarChar(50)
+  title        String   @db.VarChar(200)
+  message      String   @db.VarChar(500)
+  resourceType String?  @db.VarChar(50)
+  resourceId   String?  @db.Uuid
+  isRead       Boolean  @default(false)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([isRead, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+  @@map("admin_notification")
 }
