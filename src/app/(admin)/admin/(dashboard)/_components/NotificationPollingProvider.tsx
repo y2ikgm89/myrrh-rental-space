@@ -25,11 +25,6 @@ export function NotificationPollingProvider({
   const [unreadCount, setUnreadCount] = useState(initialCount);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
-  // Sync initialCount prop changes (e.g. after router.refresh())
-  useEffect(() => {
-    setUnreadCount(initialCount);
-  }, [initialCount]);
-
   const refresh = () => {
     void fetchUnreadCount().then(setUnreadCount);
   };
@@ -52,6 +47,9 @@ export function NotificationPollingProvider({
     const baseTitle = document.title.replace(/^\(\d+\)\s*/, "");
     document.title =
       unreadCount > 0 ? `(${String(unreadCount)}) ${baseTitle}` : baseTitle;
+    return () => {
+      document.title = document.title.replace(/^\(\d+\)\s*/, "");
+    };
   }, [unreadCount]);
 
   return (

@@ -6,9 +6,11 @@ import { IconChecks } from "@tabler/icons-react";
 import { markAllNotificationsAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { Button } from "@/admin/components/ui";
+import { useNotificationPolling } from "../../_components/NotificationPollingProvider";
 
 export function MarkAllReadButton() {
   const router = useRouter();
+  const { refresh } = useNotificationPolling();
   const [isPending, startTransition] = useTransition();
 
   const handleMarkAllRead = () => {
@@ -16,6 +18,7 @@ export function MarkAllReadButton() {
       const result = await markAllNotificationsAsRead();
       if (!isMutationError(result)) {
         router.refresh();
+        refresh();
       }
     });
   };
