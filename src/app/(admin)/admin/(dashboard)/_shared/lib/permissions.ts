@@ -10,7 +10,12 @@
 import "server-only";
 
 import { Role } from "@generated/prisma/enums";
-import { getSession, getRoleFromSession, type User } from "@/shared/lib/auth";
+import {
+  DASHBOARD_ROLES,
+  getSession,
+  getRoleFromSession,
+  type User,
+} from "@/shared/lib/auth";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { logPermissionDenied } from "@/admin/lib/audit";
 import { isEditorRole } from "./role-guards";
@@ -41,7 +46,8 @@ export type Resource =
   | "coupon"
   | "blockTemplate"
   | "review"
-  | "event";
+  | "event"
+  | "notification";
 
 /** アクション種別 */
 export type Action =
@@ -170,6 +176,9 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "event:delete",
     "event:publish",
+    "notification:read",
+    "notification:update",
+    "notification:delete",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -262,6 +271,9 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "event:delete",
     "event:publish",
+    "notification:read",
+    "notification:update",
+    "notification:delete",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -281,6 +293,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "blockTemplate:delete", // テンプレート管理
     "event:read",
     "event:update",
+    "notification:read",
+    "notification:update",
   ],
   VIEWER: [
     // 閲覧のみ
@@ -301,20 +315,11 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "media:read",
     "review:read",
     "event:read",
+    "notification:read",
   ],
   USER: [],
   CUSTOMER: [],
 };
-
-/**
- * 管理画面アクセス可能なロール
- */
-export const ADMIN_ROLES: Role[] = [
-  Role.SUPER_ADMIN,
-  Role.ADMIN,
-  Role.EDITOR,
-  Role.VIEWER,
-];
 
 /**
  * リソース説明（UI表示用）
@@ -341,6 +346,7 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
   blockTemplate: "ブロックテンプレート",
   review: "レビュー",
   event: "イベント",
+  notification: "通知",
 };
 
 /**
@@ -451,7 +457,7 @@ export async function userHasResourceAccess(
  * @returns 管理画面アクセス可能ならtrue
  */
 export function canAccessAdmin(role: Role): boolean {
-  return ADMIN_ROLES.includes(role);
+  return DASHBOARD_ROLES.includes(role);
 }
 
 // =============================================================================
