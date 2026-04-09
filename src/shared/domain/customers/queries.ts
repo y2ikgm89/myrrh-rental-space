@@ -78,31 +78,46 @@ export async function getCustomers(
         userId: true,
         createdAt: true,
         updatedAt: true,
+        reservations: {
+          select: { guestLastName: true, guestFirstName: true },
+          where: { deletedAt: null, guestLastName: { not: null } },
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+        },
       },
     }),
   ]);
 
-  const formattedCustomers: CustomerData[] = customers.map((customer) => ({
-    id: customer.id,
-    lastName: customer.lastName,
-    firstName: customer.firstName,
-    lastNameKana: customer.lastNameKana,
-    firstNameKana: customer.firstNameKana,
-    companyName: customer.companyName,
-    email: customer.email,
-    phoneNumber: customer.phoneNumber,
-    address: customer.address,
-    status: customer.status,
-    notes: customer.notes,
-    totalReservations: customer.totalReservations,
-    totalSpent: customer.totalSpent,
-    lastReservationAt: customer.lastReservationAt?.toISOString() ?? null,
-    firstReservationAt: customer.firstReservationAt?.toISOString() ?? null,
-    isActive: customer.isActive,
-    userId: customer.userId,
-    createdAt: customer.createdAt.toISOString(),
-    updatedAt: customer.updatedAt.toISOString(),
-  }));
+  const formattedCustomers: CustomerData[] = customers.map((customer) => {
+    const latestReservation = customer.reservations[0];
+    return {
+      id: customer.id,
+      lastName: customer.lastName,
+      firstName: customer.firstName,
+      lastNameKana: customer.lastNameKana,
+      firstNameKana: customer.firstNameKana,
+      companyName: customer.companyName,
+      email: customer.email,
+      phoneNumber: customer.phoneNumber,
+      address: customer.address,
+      status: customer.status,
+      notes: customer.notes,
+      totalReservations: customer.totalReservations,
+      totalSpent: customer.totalSpent,
+      lastReservationAt: customer.lastReservationAt?.toISOString() ?? null,
+      firstReservationAt: customer.firstReservationAt?.toISOString() ?? null,
+      isActive: customer.isActive,
+      userId: customer.userId,
+      createdAt: customer.createdAt.toISOString(),
+      updatedAt: customer.updatedAt.toISOString(),
+      latestGuestName: latestReservation
+        ? {
+            lastName: latestReservation.guestLastName ?? "",
+            firstName: latestReservation.guestFirstName,
+          }
+        : null,
+    };
+  });
 
   return {
     customers: formattedCustomers,

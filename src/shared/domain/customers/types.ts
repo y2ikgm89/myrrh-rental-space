@@ -1,4 +1,7 @@
-import type { CustomerStatus, ReservationStatus } from "@generated/prisma/enums";
+import type {
+  CustomerStatus,
+  ReservationStatus,
+} from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
 
 type CustomerRecord = {
@@ -35,7 +38,12 @@ type CustomerReservationRecord = {
   };
 };
 
-export type CustomerData = Serialized<CustomerRecord>;
+export type CustomerData = Serialized<CustomerRecord> & {
+  latestGuestName: {
+    lastName: string;
+    firstName: string | null;
+  } | null;
+};
 
 export type CustomerWithReservations = Serialized<
   CustomerRecord & {
