@@ -27,6 +27,7 @@ import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";
 import { AutoGroupField } from "./auto-fields/AutoGroupField";
 import { AutoImageField } from "./auto-fields/AutoImageField";
+import { isRecord } from "@/shared/lib/serialize";
 
 const LexicalEditor = dynamic(
   () =>
@@ -442,18 +443,16 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
             const nestedKey = `${namePrefix}.${subField.key}`;
             const nestedId = `auto-${nestedKey}`;
             // Resolve nested error: errors.groupKey.subFieldKey.message
-            const groupErrors = errors[fieldKey];
-            const nestedError =
-              typeof groupErrors === "object" &&
-              groupErrors !== null &&
-              subField.key in groupErrors
-                ? (
-                    groupErrors as Record<
-                      string,
-                      { message?: string } | undefined
-                    >
-                  )[subField.key]?.message
-                : undefined;
+            // isRecord でランタイム型ガード（as 不使用）
+            const groupErrors: unknown = errors[fieldKey];
+            let nestedError: string | undefined;
+            if (isRecord(groupErrors)) {
+              const subError: unknown = groupErrors[subField.key];
+              if (isRecord(subError)) {
+                const msg: unknown = subError["message"];
+                nestedError = typeof msg === "string" ? msg : undefined;
+              }
+            }
             return (
               <AutoFieldByType
                 key={subField.key}
