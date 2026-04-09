@@ -79,14 +79,24 @@ mock.module("@/shared/lib/prisma", () => ({
 }));
 
 // auth モック（executeAdminMutationResult をバイパス）
-mock.module("@/shared/lib/auth", () => ({
-  auth: {
+mock.module("@/shared/lib/admin-auth", () => ({
+  adminAuth: {
     api: {
       getSession: mock(() => ({
         user: { id: "user-1", role: "ADMIN", name: "Test User" },
       })),
     },
   },
+  getAdminSession: mock(() => ({
+    user: { id: "user-1", role: "ADMIN", name: "Test User" },
+  })),
+  getAdminSessionUser: mock(() => ({
+    id: "user-1",
+    role: "ADMIN",
+    name: "Test User",
+    email: "admin@example.com",
+  })),
+  DASHBOARD_ROLES: ["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"],
 }));
 
 // next/cache モック
