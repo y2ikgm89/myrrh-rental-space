@@ -23,6 +23,10 @@ import { UserInfo, UserInfoSkeleton } from "./_components/UserInfo";
 import { getAdminBrandingSettings } from "@/shared/domain/settings/queries/organization";
 import type { ReactElement, ReactNode } from "react";
 import { requireAdminDashboardAccess } from "@/admin/queries/_helpers";
+import {
+  getUnreadNotificationCount,
+  getRecentNotifications,
+} from "@/admin/queries/notification";
 
 export default async function DashboardLayout({
   children,
@@ -31,7 +35,12 @@ export default async function DashboardLayout({
 }): Promise<ReactElement> {
   await headers();
   await requireAdminDashboardAccess();
-  const brandingSettings = await getAdminBrandingSettings();
+  const [brandingSettings, unreadCount, recentNotifications] =
+    await Promise.all([
+      getAdminBrandingSettings(),
+      getUnreadNotificationCount(),
+      getRecentNotifications(),
+    ]);
 
   return (
     <AdminLayoutProvider>
@@ -54,6 +63,11 @@ export default async function DashboardLayout({
                   siteName={brandingSettings.siteName}
                   headerLogoUrl={brandingSettings.headerLogoUrl}
                   useHeaderLogo={brandingSettings.useHeaderLogo}
+                  unreadCount={unreadCount}
+                  recentNotifications={recentNotifications.map((n) => ({
+                    ...n,
+                    createdAt: n.createdAt.toISOString(),
+                  }))}
                 />
               }
             >

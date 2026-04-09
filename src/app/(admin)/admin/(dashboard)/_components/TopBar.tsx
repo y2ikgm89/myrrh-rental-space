@@ -15,17 +15,33 @@ import Link from "next/link";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { LogoutButton } from "./LogoutButton";
+import { NotificationBell } from "./NotificationBell";
+
+type NotificationItem = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
 
 type TopBarProps = {
   siteName: string | null;
   headerLogoUrl: string | null;
   useHeaderLogo: boolean;
+  unreadCount: number;
+  recentNotifications: NotificationItem[];
 };
 
 export function TopBar({
   siteName,
   headerLogoUrl,
   useHeaderLogo,
+  unreadCount,
+  recentNotifications,
 }: TopBarProps) {
   const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
@@ -87,6 +103,10 @@ export function TopBar({
 
       {/* 右: アクション */}
       <div className="flex items-center gap-4">
+        <NotificationBell
+          unreadCount={unreadCount}
+          recentNotifications={recentNotifications}
+        />
         <Link
           href="/"
           target="_blank"
