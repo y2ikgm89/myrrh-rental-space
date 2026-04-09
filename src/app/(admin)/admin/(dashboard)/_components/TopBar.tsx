@@ -22,7 +22,6 @@ type TopBarProps = {
   siteName: string | null;
   headerLogoUrl: string | null;
   useHeaderLogo: boolean;
-  unreadCount: number;
   recentNotifications: SerializedAdminNotificationData[];
 };
 
@@ -30,7 +29,6 @@ export function TopBar({
   siteName,
   headerLogoUrl,
   useHeaderLogo,
-  unreadCount,
   recentNotifications,
 }: TopBarProps) {
   const { toggleSidebar, isMobile, isFullscreen, hasMounted } =
@@ -93,10 +91,7 @@ export function TopBar({
 
       {/* 右: アクション */}
       <div className="flex items-center gap-4">
-        <NotificationBell
-          unreadCount={unreadCount}
-          recentNotifications={recentNotifications}
-        />
+        <NotificationBell recentNotifications={recentNotifications} />
         <Link
           href="/"
           target="_blank"

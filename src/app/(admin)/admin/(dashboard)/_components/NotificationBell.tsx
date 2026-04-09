@@ -12,26 +12,27 @@ import {
 import { Button } from "@/admin/components/ui";
 import { markAllNotificationsAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { useNotificationPolling } from "./NotificationPollingProvider";
 import { NotificationList } from "./NotificationList";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 
 type NotificationBellProps = {
-  unreadCount: number;
   recentNotifications: SerializedAdminNotificationData[];
 };
 
 export function NotificationBell({
-  unreadCount,
   recentNotifications,
 }: NotificationBellProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { unreadCount, refresh } = useNotificationPolling();
 
   const handleMarkAllAsRead = () => {
     startTransition(async () => {
       const result = await markAllNotificationsAsRead();
       if (!isMutationError(result)) {
         router.refresh();
+        refresh();
       }
     });
   };

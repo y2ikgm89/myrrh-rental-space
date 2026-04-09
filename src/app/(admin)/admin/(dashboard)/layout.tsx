@@ -16,6 +16,7 @@ import { headers } from "next/headers";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AdminLayoutProvider } from "@/admin/contexts/admin-layout-context";
 import { ConfirmProvider } from "@/admin/contexts/confirm-context";
+import { NotificationPollingProvider } from "./_components/NotificationPollingProvider";
 import { ResponsiveSidebar } from "./_components/ResponsiveSidebar";
 import { MainContent } from "./_components/MainContent";
 import { TopBar } from "./_components/TopBar";
@@ -44,38 +45,39 @@ export default async function DashboardLayout({
 
   return (
     <AdminLayoutProvider>
-      <ConfirmProvider>
-        <NuqsAdapter>
-          <div className="min-h-screen bg-background">
-            {/* レスポンシブサイドバー */}
-            <ResponsiveSidebar
-              userInfo={
-                <Suspense fallback={<UserInfoSkeleton />}>
-                  <UserInfo />
-                </Suspense>
-              }
-            />
+      <NotificationPollingProvider initialCount={unreadCount}>
+        <ConfirmProvider>
+          <NuqsAdapter>
+            <div className="min-h-screen bg-background">
+              {/* レスポンシブサイドバー */}
+              <ResponsiveSidebar
+                userInfo={
+                  <Suspense fallback={<UserInfoSkeleton />}>
+                    <UserInfo />
+                  </Suspense>
+                }
+              />
 
-            {/* メインコンテンツエリア */}
-            <MainContent
-              topBar={
-                <TopBar
-                  siteName={brandingSettings.siteName}
-                  headerLogoUrl={brandingSettings.headerLogoUrl}
-                  useHeaderLogo={brandingSettings.useHeaderLogo}
-                  unreadCount={unreadCount}
-                  recentNotifications={recentNotifications.map((n) => ({
-                    ...n,
-                    createdAt: n.createdAt.toISOString(),
-                  }))}
-                />
-              }
-            >
-              {children}
-            </MainContent>
-          </div>
-        </NuqsAdapter>
-      </ConfirmProvider>
+              {/* メインコンテンツエリア */}
+              <MainContent
+                topBar={
+                  <TopBar
+                    siteName={brandingSettings.siteName}
+                    headerLogoUrl={brandingSettings.headerLogoUrl}
+                    useHeaderLogo={brandingSettings.useHeaderLogo}
+                    recentNotifications={recentNotifications.map((n) => ({
+                      ...n,
+                      createdAt: n.createdAt.toISOString(),
+                    }))}
+                  />
+                }
+              >
+                {children}
+              </MainContent>
+            </div>
+          </NuqsAdapter>
+        </ConfirmProvider>
+      </NotificationPollingProvider>
     </AdminLayoutProvider>
   );
 }
