@@ -16,6 +16,7 @@ type ReservationNotificationProps = {
   action: "new" | "update" | "cancel";
   customerName: string;
   customerEmail: string;
+  guestName?: string;
   spaceName: string;
   reservationDate: string;
   startTime: string;
@@ -48,6 +49,7 @@ function ReservationNotification({
   action,
   customerName,
   customerEmail,
+  guestName,
   spaceName,
   reservationDate,
   startTime,
@@ -89,6 +91,11 @@ function ReservationNotification({
             <Text style={detailItem}>
               <strong>お客様:</strong> {customerName} ({customerEmail})
             </Text>
+            {guestName && (
+              <Text style={guestNameDiffStyle}>
+                ※ 予約時入力名: {guestName}
+              </Text>
+            )}
             <Text style={detailItem}>
               <strong>スペース:</strong> {spaceName}
             </Text>
@@ -208,6 +215,14 @@ const detailItem = {
   lineHeight: "24px",
   color: "#484848",
   margin: "8px 0",
+};
+
+const guestNameDiffStyle = {
+  fontSize: "13px",
+  lineHeight: "20px",
+  color: "#b45309",
+  margin: "2px 0 8px 0",
+  paddingLeft: "4px",
 };
 
 const messageText: React.CSSProperties = {

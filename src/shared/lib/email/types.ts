@@ -9,6 +9,7 @@ export type ReservationEmailData = {
   customerEmail: string;
   customerName: string;
   companyName?: string | null;
+  guestName?: string;
   spaceName: string;
   startTime: Date;
   endTime: Date;

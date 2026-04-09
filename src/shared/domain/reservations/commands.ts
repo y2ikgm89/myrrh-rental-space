@@ -17,6 +17,10 @@ import {
   RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
+import {
+  resolveOrCreateCustomer,
+  type CustomerData,
+} from "@/shared/domain/reservations/resolve-customer";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,20 +38,12 @@ type ValidatedCoupon = {
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
-type CustomerData = {
-  lastName: string;
-  firstName: string;
-  email: string;
-  phoneNumber?: string | null | undefined;
-  companyName?: string | null | undefined;
-  userId?: string | null | undefined;
-};
-
 export type ReservationPayload = {
   reservationId: string;
   customerEmail: string;
   customerName: string;
   companyName?: string | null;
+  guestName?: string;
   spaceName: string;
   startTime: Date;
   endTime: Date;
@@ -159,52 +155,6 @@ async function ensureNoOverlap(
   }
 }
 
-async function resolveOrCreateCustomer(
-  tx: Tx,
-  data: CustomerData,
-): Promise<string> {
-  // userId が提供されている場合、まず userId で顧客を検索
-  if (data.userId) {
-    const existingByUser = await tx.customer.findUnique({
-      where: { userId: data.userId },
-      select: { id: true },
-    });
-    if (existingByUser) {
-      await tx.customer.update({
-        where: { id: existingByUser.id },
-        data: {
-          lastName: data.lastName,
-          firstName: data.firstName,
-          phoneNumber: data.phoneNumber || null,
-          companyName: data.companyName || null,
-        },
-      });
-      return existingByUser.id;
-    }
-  }
-
-  const customer = await tx.customer.upsert({
-    where: { email: data.email },
-    create: {
-      lastName: data.lastName,
-      firstName: data.firstName,
-      email: data.email,
-      phoneNumber: data.phoneNumber || null,
-      companyName: data.companyName || null,
-      userId: data.userId || null,
-    },
-    update: {
-      lastName: data.lastName,
-      firstName: data.firstName,
-      phoneNumber: data.phoneNumber || null,
-      companyName: data.companyName || null,
-      userId: data.userId || null,
-    },
-    select: { id: true },
-  });
-  return customer.id;
-}
-
 async function incrementCustomerReservationStats(
   tx: Tx,
   customerId: string,
@@ -278,12 +228,14 @@ function buildPayload(params: {
   endTime: Date;
   totalPrice: number | null;
   notes?: string | null | undefined;
+  guestName?: string | null;
 }): ReservationPayload {
   return {
     reservationId: params.reservationId,
     customerEmail: params.customer.email,
     customerName: `${params.customer.lastName} ${params.customer.firstName}`,
     companyName: params.customer.companyName,
+    ...(params.guestName && { guestName: params.guestName }),
     spaceName: params.space.name,
     startTime: params.startTime,
     endTime: params.endTime,
@@ -397,8 +349,8 @@ export async function createAdminReservationCommand(input: {
 
     if (!resolvedCustomerId && input.customerData) {
       resolvedCustomerId = await resolveOrCreateCustomer(
-        tx,
         input.customerData,
+        tx,
       );
     }
 
@@ -422,6 +374,13 @@ export async function createAdminReservationCommand(input: {
             ? `${input.notes || ""}\n【手動割引】¥${input.manualDiscountAmount.toLocaleString()} - ${input.manualDiscountReason}`.trim()
             : input.notes || null,
         status: input.status,
+        // Guest contact info (管理者入力の場合は customerData から記録)
+        ...(input.customerData && {
+          guestLastName: input.customerData.lastName,
+          guestFirstName: input.customerData.firstName,
+          guestPhone: input.customerData.phoneNumber || null,
+          guestCompanyName: input.customerData.companyName || null,
+        }),
       },
       include: { customer: { select: CUSTOMER_SELECT } },
     });
@@ -844,14 +803,17 @@ export async function createPublicReservationCommand(
       }
     }
 
-    const customerId = await resolveOrCreateCustomer(tx, {
-      lastName: input.lastName,
-      firstName: input.firstName,
-      email: input.email,
-      phoneNumber: input.phoneNumber,
-      companyName: input.companyName,
-      userId: input.userId,
-    });
+    const customerId = await resolveOrCreateCustomer(
+      {
+        lastName: input.lastName,
+        firstName: input.firstName,
+        email: input.email,
+        phoneNumber: input.phoneNumber,
+        companyName: input.companyName,
+        userId: input.userId,
+      },
+      tx,
+    );
 
     const created = await tx.reservation.create({
       data: {
@@ -864,6 +826,11 @@ export async function createPublicReservationCommand(
         status: ReservationStatus.PENDING,
         notes: input.notes || null,
         userId: input.userId || null,
+        // Guest contact info (予約時の入力を記録)
+        guestLastName: input.lastName,
+        guestFirstName: input.firstName,
+        guestPhone: input.phoneNumber || null,
+        guestCompanyName: input.companyName || null,
       },
       include: { customer: { select: CUSTOMER_SELECT } },
     });
@@ -920,6 +887,13 @@ export async function createPublicReservationCommand(
     return created;
   });
 
+  // Compute guest name diff for admin notification
+  const guestFullName = `${input.lastName} ${input.firstName}`.trim();
+  const customerFullName =
+    `${reservation.customer.lastName} ${reservation.customer.firstName}`.trim();
+  const guestNameDiff =
+    guestFullName !== customerFullName ? guestFullName : null;
+
   return {
     id: reservation.id,
     customerId: reservation.customerId,
@@ -931,6 +905,7 @@ export async function createPublicReservationCommand(
       endTime: endDateTime,
       totalPrice: basePrice,
       notes: input.notes,
+      guestName: guestNameDiff,
     }),
   };
 }
