@@ -1,11 +1,12 @@
 /**
- * Better Auth 設定
+ * Admin Better Auth 設定（管理者専用）
  *
  * 公式推奨パターンに準拠:
  * - better-auth/minimal: Prisma adapter 使用時は Kysely 不要（バンドル削減）
- * - prismaForBetterAuth: 拡張前の素の PrismaClient を渡す
+ * - basePrisma: 拡張前の素の PrismaClient を渡す（$extends 済み prisma は使わない）
  * - nextCookies: plugins 配列の末尾に配置（Server Actions の Set-Cookie 対応）
  * - baseURL: サーバー自身の URL を明示設定
+ * - cookiePrefix: "admin-auth" で顧客セッションと分離
  *
  * @see https://www.better-auth.com/docs
  * @see https://www.better-auth.com/docs/guides/optimizing-for-performance
@@ -68,37 +69,12 @@ async function logAuthEvent(
 
 const appUrl = serverEnv.BETTER_AUTH_URL ?? getAppUrl();
 
-function createAuth() {
-  const googleClientId = serverEnv.GOOGLE_CLIENT_ID;
-  const googleClientSecret = serverEnv.GOOGLE_CLIENT_SECRET;
-  const lineClientId = serverEnv.LINE_CLIENT_ID;
-  const lineClientSecret = serverEnv.LINE_CLIENT_SECRET;
-
-  const socialProviders = {
-    ...(googleClientId && googleClientSecret
-      ? {
-          google: {
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-            scope: ["openid", "email", "profile"],
-          },
-        }
-      : {}),
-    ...(lineClientId && lineClientSecret
-      ? {
-          line: {
-            clientId: lineClientId,
-            clientSecret: lineClientSecret,
-            scope: ["openid", "profile", "email"],
-          },
-        }
-      : {}),
-  };
-
+function createAdminAuth() {
   return betterAuth({
     baseURL: appUrl,
     database: createBetterAuthDatabaseAdapter(),
     advanced: {
+      cookiePrefix: "admin-auth",
       database: {
         // DB スキーマが @db.Uuid のため、全モデルで UUID を生成
         generateId: "uuid",
@@ -122,13 +98,6 @@ function createAuth() {
         });
       },
     },
-    ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
-    account: {
-      accountLinking: {
-        enabled: true,
-        trustedProviders: ["google", "line"],
-      },
-    },
     user: {
       additionalFields: {
         role: {
@@ -137,9 +106,6 @@ function createAuth() {
           input: false,
         },
       },
-      deleteUser: {
-        enabled: true,
-      },
     },
     hooks: {
       after: createAuthMiddleware(async (ctx) => {
@@ -147,11 +113,7 @@ function createAuth() {
           const { user } = ctx.context.newSession;
           void logAuthEvent(AuditAction.LOGIN_SUCCESS, user.id, {
             email: user.email,
-            provider: ctx.path.includes("/line")
-              ? "line"
-              : ctx.path.includes("social")
-                ? "google"
-                : "email",
+            provider: "email",
           });
         }
       }),
@@ -162,23 +124,24 @@ function createAuth() {
   });
 }
 
-type AuthInstance = ReturnType<typeof createAuth>;
+type AdminAuthInstance = ReturnType<typeof createAdminAuth>;
 
-export const auth = createAuth();
+export const adminAuth = createAdminAuth();
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type Session = AuthInstance["$Infer"]["Session"];
+export type AdminSession = AdminAuthInstance["$Infer"]["Session"];
 
 /**
- * Better Auth のユーザー型（role を Role enum に変換）
+ * Admin Better Auth ユーザー型（role を Role enum に変換）
  *
- * Better Auth の additionalFields は string 型で返されるため、
- * role を Role enum に変換したカスタム型を使用。
+ * Better Auth の $Infer は additionalFields.role を string で推論するため、
+ * Omit + Role enum 再付与で型レベルの整合性を確保する。
+ * ランタイムの検証は getAdminSessionUser() / isValidRole() が担う。
  */
-export type User = Omit<Session["user"], "role"> & {
+export type AdminUser = Omit<AdminSession["user"], "role"> & {
   role: Role;
 };
 
@@ -186,7 +149,7 @@ export type User = Omit<Session["user"], "role"> & {
 // Type Guards
 // ---------------------------------------------------------------------------
 
-function isValidSessionUser(user: unknown): user is Session["user"] {
+function isValidSessionUser(user: unknown): user is AdminSession["user"] {
   if (!isRecord(user)) return false;
   if (!("id" in user) || !("email" in user) || !("role" in user)) return false;
   return typeof user["id"] === "string" && typeof user["email"] === "string";
@@ -198,19 +161,12 @@ export function isValidRole(role: string): role is Role {
   return VALID_ROLES.has(role);
 }
 
-export function getRoleFromSession(session: Session | null): Role | null {
-  if (!session?.user?.role) return null;
-  return isValidRole(session.user.role) ? session.user.role : null;
-}
-
-export function getSessionUser(session: Session | null): User | null {
-  if (!session?.user || !isValidSessionUser(session.user)) {
-    return null;
-  }
+export function getAdminSessionUser(
+  session: AdminSession | null,
+): AdminUser | null {
+  if (!session?.user || !isValidSessionUser(session.user)) return null;
   const { role, ...rest } = session.user;
-  if (!isValidRole(role)) {
-    return null;
-  }
+  if (!isValidRole(role)) return null;
   return { ...rest, role };
 }
 
@@ -225,12 +181,12 @@ async function resolveRequestHeaders(
 }
 
 /** セッション検証（cache() でリクエスト単位メモ化） */
-export const verifySession = cache(
-  async (requestHeaders?: Headers): Promise<User> => {
-    const session = await auth.api.getSession({
+const verifySession = cache(
+  async (requestHeaders?: Headers): Promise<AdminUser> => {
+    const session = await adminAuth.api.getSession({
       headers: await resolveRequestHeaders(requestHeaders),
     });
-    const user = getSessionUser(session);
+    const user = getAdminSessionUser(session);
     if (!user) {
       redirect("/admin/login");
     }
@@ -238,62 +194,51 @@ export const verifySession = cache(
   },
 );
 
-/** 管理者セッション検証（ADMIN / SUPER_ADMIN / EDITOR / VIEWER） */
-export const verifyAdminSession = cache(
-  async (requestHeaders?: Headers): Promise<User> => {
-    const user = await verifySession(requestHeaders);
-    if (
-      user.role !== Role.ADMIN &&
-      user.role !== Role.SUPER_ADMIN &&
-      user.role !== Role.EDITOR &&
-      user.role !== Role.VIEWER
-    ) {
-      redirect("/admin/login");
-    }
-    return user;
-  },
-);
-
-/** 現在のユーザー取得（リダイレクトなし） */
-export const getCurrentUser = cache(
-  async (requestHeaders?: Headers): Promise<User | undefined> => {
-    const session = await auth.api.getSession({
-      headers: await resolveRequestHeaders(requestHeaders),
-    });
-    return getSessionUser(session) ?? undefined;
-  },
-);
-
-/** 管理者権限チェック */
-export const isAdmin = cache(
-  async (requestHeaders?: Headers): Promise<boolean> => {
-    const user = await getCurrentUser(requestHeaders);
-    return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
-  },
-);
-
-/** 顧客セッション検証（管理者ロールはリダイレクト） */
-const ADMIN_ROLES: Role[] = [
+/** ダッシュボードアクセス可能なロール（Single Source of Truth） */
+export const DASHBOARD_ROLES: readonly Role[] = [
   Role.SUPER_ADMIN,
   Role.ADMIN,
   Role.EDITOR,
   Role.VIEWER,
 ];
 
-export async function verifyCustomerSession() {
-  const session = await getSession();
-  if (!session) redirect("/login");
-  const user = getSessionUser(session);
-  if (!user) redirect("/login");
-  if (ADMIN_ROLES.includes(user.role)) redirect("/admin");
-  return { session, user };
-}
+/** 管理者セッション検証（DASHBOARD_ROLES のみ許可） */
+export const verifyAdminSession = cache(
+  async (requestHeaders?: Headers): Promise<AdminUser> => {
+    const user = await verifySession(requestHeaders);
+    if (!DASHBOARD_ROLES.includes(user.role)) {
+      // 非管理者ロール（CUSTOMER/USER）は公開サイトへ
+      // /admin/login にリダイレクトすると proxy の Admin Gate で 404 になるか、
+      // gate cookie があれば無限リダイレクトループの原因になる
+      redirect("/");
+    }
+    return user;
+  },
+);
 
-/** セッション取得（キャッシュなし — Server Actions 用） */
-export async function getSession(
+/** 現在の管理者ユーザー取得（リダイレクトなし） */
+export const getCurrentAdminUser = cache(
+  async (requestHeaders?: Headers): Promise<AdminUser | undefined> => {
+    const session = await adminAuth.api.getSession({
+      headers: await resolveRequestHeaders(requestHeaders),
+    });
+    return getAdminSessionUser(session) ?? undefined;
+  },
+);
+
+/** 管理者権限チェック */
+export const isAdmin = cache(
+  async (requestHeaders?: Headers): Promise<boolean> => {
+    const user = await getCurrentAdminUser(requestHeaders);
+    return user?.role === Role.ADMIN || user?.role === Role.SUPER_ADMIN;
+  },
+);
+
+/** 管理者セッション取得（キャッシュなし — Server Actions 用） */
+export async function getAdminSession(
   requestHeaders?: Headers,
-): Promise<Session | null> {
-  return auth.api.getSession({
+): Promise<AdminSession | null> {
+  return adminAuth.api.getSession({
     headers: await resolveRequestHeaders(requestHeaders),
   });
 }
