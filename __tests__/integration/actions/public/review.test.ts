@@ -44,17 +44,24 @@ const mockGetSession = mock<
   }),
 );
 
-mock.module("@/shared/lib/auth", () => ({
-  getSession: mockGetSession,
-  getCurrentUser: mock(() => Promise.resolve(null)),
-  verifySession: mock(() => Promise.resolve(null)),
-  verifyAdminSession: mock(() => Promise.resolve(null)),
+mock.module("@/shared/lib/customer-auth", () => ({
+  getCustomerSession: mockGetSession,
+  getCurrentCustomerUser: mock(() => Promise.resolve(null)),
   verifyCustomerSession: mock(() => Promise.resolve(null)),
-  isAdmin: mock(() => Promise.resolve(false)),
-  getSessionUser: () => null,
-  getRoleFromSession: () => null,
+  getCustomerSessionUser: () => null,
   isValidRole: () => false,
-  auth: {},
+  customerAuth: {},
+}));
+
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: mock(() => Promise.resolve(null)),
+  getCurrentAdminUser: mock(() => Promise.resolve(null)),
+  verifyAdminSession: mock(() => Promise.resolve(null)),
+  getAdminSessionUser: () => null,
+  isAdmin: mock(() => Promise.resolve(false)),
+  isValidRole: () => false,
+  adminAuth: {},
+  DASHBOARD_ROLES: [],
 }));
 
 const mockGetCustomerByUserId = mock<() => Promise<{ id: string } | null>>(() =>

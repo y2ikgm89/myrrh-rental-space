@@ -732,13 +732,13 @@ describe("architecture boundaries", () => {
     expect(source).toContain("NuqsAdapter");
   });
 
-  test("Better Auth は静的 auth export を使い、動的 getAuth を再導入しない", () => {
+  test("Better Auth は静的 adminAuth export を使い、動的 getAuth を再導入しない", () => {
     const source = readFileSync(
-      join(SRC_ROOT, "shared", "lib", "auth.ts"),
+      join(SRC_ROOT, "shared", "lib", "admin-auth.ts"),
       "utf8",
     );
 
-    expect(source).toContain("export const auth = createAuth();");
+    expect(source).toContain("export const adminAuth = createAdminAuth();");
     expect(source).not.toContain("export async function getAuth");
     expect(source).not.toContain("resetAuthInstance");
   });
@@ -784,8 +784,10 @@ describe("architecture boundaries", () => {
     expect(existsSync(AUTH_ROUTE_FILE)).toBe(true);
 
     const source = readFileSync(AUTH_ROUTE_FILE, "utf8");
-    expect(source).toContain('import { auth } from "@/shared/lib/auth"');
-    expect(source).toContain("toNextJsHandler(auth)");
+    expect(source).toContain(
+      'import { adminAuth } from "@/shared/lib/admin-auth"',
+    );
+    expect(source).toContain("toNextJsHandler(adminAuth)");
   });
 
   test("cache tag invalidation は CACHE_TAGS / getCacheTag を経由し、タグ文字列を直書きしない", () => {

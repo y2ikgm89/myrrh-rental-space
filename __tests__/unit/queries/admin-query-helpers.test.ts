@@ -20,17 +20,24 @@ mock.module("next/headers", () => ({
   headers: () => mockHeaders(),
 }));
 
-mock.module("@/shared/lib/auth", () => ({
+mock.module("@/shared/lib/admin-auth", () => ({
   verifyAdminSession: () => mockVerifyAdminSession(),
-  verifySession: mock(() => Promise.resolve(null)),
-  verifyCustomerSession: mock(() => Promise.resolve(null)),
-  getCurrentUser: mock(() => Promise.resolve(null)),
-  getSession: mock(() => Promise.resolve(null)),
+  getCurrentAdminUser: mock(() => Promise.resolve(null)),
+  getAdminSession: mock(() => Promise.resolve(null)),
+  getAdminSessionUser: () => null,
   isAdmin: mock(() => Promise.resolve(false)),
-  getSessionUser: () => null,
-  getRoleFromSession: () => null,
   isValidRole: () => false,
-  auth: {},
+  adminAuth: {},
+  DASHBOARD_ROLES: [],
+}));
+
+mock.module("@/shared/lib/customer-auth", () => ({
+  getCustomerSession: mock(() => Promise.resolve(null)),
+  getCurrentCustomerUser: mock(() => Promise.resolve(null)),
+  verifyCustomerSession: mock(() => Promise.resolve(null)),
+  getCustomerSessionUser: () => null,
+  isValidRole: () => false,
+  customerAuth: {},
 }));
 
 mock.module("@/admin/lib/permissions", () => ({

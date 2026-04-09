@@ -10,9 +10,14 @@
 import { describe, test, expect } from "bun:test";
 import {
   isValidRole,
-  getSessionUser,
-  getRoleFromSession,
-} from "@/shared/lib/auth";
+  getCustomerSessionUser,
+  type CustomerSession,
+} from "@/shared/lib/customer-auth";
+import {
+  getAdminSessionUser,
+  isValidRole as isValidAdminRole,
+  type AdminSession,
+} from "@/shared/lib/admin-auth";
 import { Role } from "@generated/prisma/enums";
 
 // モックセッション型
@@ -79,11 +84,11 @@ describe("isValidRole", () => {
   });
 });
 
-describe("getSessionUser", () => {
+describe("getAdminSessionUser", () => {
   describe("正常系", () => {
     test("有効なセッションからユーザーを取得", () => {
       // any にキャストしてテスト（実際のBetter Auth Session型との互換性のため）
-      const user = getSessionUser(VALID_SESSION as any);
+      const user = getAdminSessionUser(VALID_SESSION as any);
 
       expect(user).not.toBeNull();
       expect(user?.id).toBe("user-123");
@@ -105,7 +110,7 @@ describe("getSessionUser", () => {
           ...VALID_SESSION,
           user: { ...VALID_USER, role },
         };
-        const user = getSessionUser(session as any);
+        const user = getAdminSessionUser(session as any);
 
         expect(user).not.toBeNull();
         expect(user?.role).toBe(role);
@@ -115,13 +120,13 @@ describe("getSessionUser", () => {
 
   describe("異常系", () => {
     test("nullセッションはnullを返す", () => {
-      const user = getSessionUser(null);
+      const user = getAdminSessionUser(null);
       expect(user).toBeNull();
     });
 
     test("user がないセッションはnullを返す", () => {
       const session = { session: VALID_SESSION.session } as any;
-      const user = getSessionUser(session);
+      const user = getAdminSessionUser(session);
       expect(user).toBeNull();
     });
 
@@ -130,7 +135,7 @@ describe("getSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "INVALID_ROLE" },
       };
-      const user = getSessionUser(session as any);
+      const user = getAdminSessionUser(session as any);
       expect(user).toBeNull();
     });
 
@@ -139,7 +144,7 @@ describe("getSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, id: undefined },
       };
-      const user = getSessionUser(session as any);
+      const user = getAdminSessionUser(session as any);
       expect(user).toBeNull();
     });
 
@@ -148,7 +153,7 @@ describe("getSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, email: undefined },
       };
-      const user = getSessionUser(session as any);
+      const user = getAdminSessionUser(session as any);
       expect(user).toBeNull();
     });
 
@@ -157,17 +162,18 @@ describe("getSessionUser", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: undefined },
       };
-      const user = getSessionUser(session as any);
+      const user = getAdminSessionUser(session as any);
       expect(user).toBeNull();
     });
   });
 });
 
-describe("getRoleFromSession", () => {
+describe("getCustomerSessionUser (role extraction)", () => {
   describe("正常系", () => {
     test("有効なセッションからロールを取得", () => {
-      const role = getRoleFromSession(VALID_SESSION as any);
-      expect(role).toBe(Role.ADMIN);
+      const user = getCustomerSessionUser(VALID_SESSION as any);
+      expect(user).not.toBeNull();
+      expect(user?.role).toBe(Role.ADMIN);
     });
 
     test("全ロールで正しく取得される", () => {
@@ -184,22 +190,23 @@ describe("getRoleFromSession", () => {
           ...VALID_SESSION,
           user: { ...VALID_USER, role: roleValue },
         };
-        const role = getRoleFromSession(session as any);
-        expect(role).toBe(roleValue);
+        const user = getCustomerSessionUser(session as any);
+        expect(user).not.toBeNull();
+        expect(user?.role).toBe(roleValue);
       }
     });
   });
 
   describe("異常系", () => {
     test("nullセッションはnullを返す", () => {
-      const role = getRoleFromSession(null);
-      expect(role).toBeNull();
+      const user = getCustomerSessionUser(null);
+      expect(user).toBeNull();
     });
 
     test("user がないセッションはnullを返す", () => {
       const session = { session: VALID_SESSION.session } as any;
-      const role = getRoleFromSession(session);
-      expect(role).toBeNull();
+      const user = getCustomerSessionUser(session);
+      expect(user).toBeNull();
     });
 
     test("無効なロールのセッションはnullを返す", () => {
@@ -207,8 +214,8 @@ describe("getRoleFromSession", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "INVALID_ROLE" },
       };
-      const role = getRoleFromSession(session as any);
-      expect(role).toBeNull();
+      const user = getCustomerSessionUser(session as any);
+      expect(user).toBeNull();
     });
 
     test("role が空文字のセッションはnullを返す", () => {
@@ -216,8 +223,8 @@ describe("getRoleFromSession", () => {
         ...VALID_SESSION,
         user: { ...VALID_USER, role: "" },
       };
-      const role = getRoleFromSession(session as any);
-      expect(role).toBeNull();
+      const user = getCustomerSessionUser(session as any);
+      expect(user).toBeNull();
     });
   });
 });

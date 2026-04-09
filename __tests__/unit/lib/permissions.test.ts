@@ -24,8 +24,8 @@ import {
   userHasPermission,
   userHasResourceAccess,
   ROLE_PERMISSIONS,
-  ADMIN_ROLES,
 } from "@/admin/lib/permissions";
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-auth";
 import {
   SUPER_ADMIN_USER,
   ADMIN_USER,
@@ -163,12 +163,12 @@ describe("canAccessAdmin", () => {
     expect(canAccessAdmin(Role.USER)).toBe(false);
   });
 
-  test("ADMIN_ROLESに正しいロールが含まれる", () => {
-    expect(ADMIN_ROLES).toContain(Role.SUPER_ADMIN);
-    expect(ADMIN_ROLES).toContain(Role.ADMIN);
-    expect(ADMIN_ROLES).toContain(Role.EDITOR);
-    expect(ADMIN_ROLES).toContain(Role.VIEWER);
-    expect(ADMIN_ROLES).not.toContain(Role.USER);
+  test("DASHBOARD_ROLESに正しいロールが含まれる", () => {
+    expect(DASHBOARD_ROLES).toContain(Role.SUPER_ADMIN);
+    expect(DASHBOARD_ROLES).toContain(Role.ADMIN);
+    expect(DASHBOARD_ROLES).toContain(Role.EDITOR);
+    expect(DASHBOARD_ROLES).toContain(Role.VIEWER);
+    expect(DASHBOARD_ROLES).not.toContain(Role.USER);
   });
 });
 

@@ -116,17 +116,24 @@ mock.module("@/shared/lib/serialize", () => ({
 
 const mockGetCurrentUser = mock(() => Promise.resolve(null));
 
-mock.module("@/shared/lib/auth", () => ({
-  getSession: mock(() => Promise.resolve(null)),
-  getCurrentUser: mockGetCurrentUser,
-  verifySession: mock(() => Promise.resolve(null)),
-  verifyAdminSession: mock(() => Promise.resolve(null)),
+mock.module("@/shared/lib/customer-auth", () => ({
+  getCustomerSession: mock(() => Promise.resolve(null)),
+  getCurrentCustomerUser: mockGetCurrentUser,
   verifyCustomerSession: mock(() => Promise.resolve(null)),
-  isAdmin: mock(() => Promise.resolve(false)),
-  getSessionUser: () => null,
-  getRoleFromSession: () => null,
+  getCustomerSessionUser: () => null,
   isValidRole: () => false,
-  auth: {},
+  customerAuth: {},
+}));
+
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: mock(() => Promise.resolve(null)),
+  getCurrentAdminUser: mock(() => Promise.resolve(null)),
+  verifyAdminSession: mock(() => Promise.resolve(null)),
+  getAdminSessionUser: () => null,
+  isAdmin: mock(() => Promise.resolve(false)),
+  isValidRole: () => false,
+  adminAuth: {},
+  DASHBOARD_ROLES: [],
 }));
 
 // server-only モック（テスト環境で server-only を無効化）
