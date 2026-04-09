@@ -1,10 +1,10 @@
 /**
- * Better Auth API Route Handler
+ * 管理者用 Better Auth API Route Handler
  *
  * @see https://www.better-auth.com/docs/integrations/next
  */
 
-import { auth } from "@/shared/lib/auth";
+import { adminAuth } from "@/shared/lib/admin-auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
-export const { GET, POST } = toNextJsHandler(auth);
+export const { GET, POST } = toNextJsHandler(adminAuth);
