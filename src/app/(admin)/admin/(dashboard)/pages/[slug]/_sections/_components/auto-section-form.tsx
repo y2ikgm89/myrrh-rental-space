@@ -371,7 +371,6 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           placeholder={placeholder}
           helpText={helpText}
           control={control}
-          register={register}
           isPending={isPending}
           error={error}
         />
@@ -544,7 +543,6 @@ function AutoColorFieldControlled({
   placeholder,
   helpText,
   control,
-  register,
   isPending,
   error,
 }: {
@@ -555,12 +553,12 @@ function AutoColorFieldControlled({
   readonly helpText: string | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
   readonly control: Control<any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly register: ReturnType<typeof useForm<any>>["register"];
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
   const { field: colorField } = useController({ control, name: fieldKey });
+  const colorValue =
+    typeof colorField.value === "string" ? colorField.value : "#000000";
 
   return (
     <div className="space-y-2">
@@ -570,15 +568,15 @@ function AutoColorFieldControlled({
           type="color"
           id={`${fieldId}-picker`}
           className="h-9 w-12 cursor-pointer rounded border p-1"
-          value={
-            typeof colorField.value === "string" ? colorField.value : "#000000"
-          }
+          value={colorValue}
           onChange={(e) => colorField.onChange(e.target.value)}
           disabled={isPending}
         />
         <Input
           id={fieldId}
-          {...register(fieldKey)}
+          value={colorValue}
+          onChange={(e) => colorField.onChange(e.target.value)}
+          onBlur={colorField.onBlur}
           placeholder={placeholder ?? "#000000"}
           disabled={isPending}
           className="flex-1"
