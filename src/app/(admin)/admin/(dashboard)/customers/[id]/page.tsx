@@ -5,6 +5,7 @@ import { getCustomerById } from "@/admin/queries/customer";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { Button } from "@/admin/components/ui/button";
 import { CustomerDetail } from "./_components/CustomerDetail";
+import { CustomerDetailActions } from "./_components/CustomerDetailActions";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { deleteCustomer } from "@/admin/actions/customer";
 import type { Metadata } from "next";
@@ -52,6 +53,14 @@ export default async function CustomerDetailPage({ params }: PageProps) {
             onDelete={deleteCustomer.bind(null, customer.id)}
             redirectTo="/admin/customers"
             successMessage="顧客を削除しました"
+          />
+          <CustomerDetailActions
+            customer={{
+              id: customer.id,
+              lastName: customer.lastName,
+              firstName: customer.firstName,
+              email: customer.email,
+            }}
           />
           <Button size="sm" asChild>
             <Link href={`/admin/customers/${customer.id}/edit`}>

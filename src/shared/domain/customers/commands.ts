@@ -151,6 +151,88 @@ export async function deleteCustomer(id: string): Promise<void> {
   });
 }
 
+/** 顧客マージ: source の全リレーションを target に移管し source を削除 */
+export async function mergeCustomerCommand(
+  sourceId: string,
+  targetId: string,
+): Promise<{
+  transferredReservations: number;
+  transferredInquiries: number;
+  transferredReviews: number;
+  transferredRegistrations: number;
+}> {
+  if (sourceId === targetId) {
+    throw new DomainError("同じ顧客をマージすることはできません", "VALIDATION");
+  }
+
+  const [source, target] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { id: sourceId },
+      select: { id: true },
+    }),
+    prisma.customer.findUnique({
+      where: { id: targetId },
+      select: { id: true },
+    }),
+  ]);
+  if (!source)
+    throw new DomainError("マージ元の顧客が見つかりません", "NOT_FOUND");
+  if (!target)
+    throw new DomainError("マージ先の顧客が見つかりません", "NOT_FOUND");
+
+  return prisma.$transaction(async (tx) => {
+    const [reservations, inquiries, reviews, registrations] = await Promise.all(
+      [
+        tx.reservation.updateMany({
+          where: { customerId: sourceId },
+          data: { customerId: targetId },
+        }),
+        tx.inquiry.updateMany({
+          where: { customerId: sourceId },
+          data: { customerId: targetId },
+        }),
+        tx.spaceReview.updateMany({
+          where: { customerId: sourceId },
+          data: { customerId: targetId },
+        }),
+        tx.eventRegistration.updateMany({
+          where: { customerId: sourceId },
+          data: { customerId: targetId },
+        }),
+      ],
+    );
+
+    const stats = await tx.reservation.aggregate({
+      where: { customerId: targetId, deletedAt: null },
+      _count: true,
+      _sum: { totalPriceWithTax: true },
+      _min: { createdAt: true },
+      _max: { createdAt: true },
+    });
+
+    await tx.customer.update({
+      where: { id: targetId },
+      data: {
+        totalReservations: stats._count,
+        totalSpent: stats._sum.totalPriceWithTax
+          ? Number(stats._sum.totalPriceWithTax)
+          : null,
+        firstReservationAt: stats._min.createdAt,
+        lastReservationAt: stats._max.createdAt,
+      },
+    });
+
+    await tx.customer.delete({ where: { id: sourceId } });
+
+    return {
+      transferredReservations: reservations.count,
+      transferredInquiries: inquiries.count,
+      transferredReviews: reviews.count,
+      transferredRegistrations: registrations.count,
+    };
+  });
+}
+
 /** 予約のゲスト入力値で顧客情報を更新 */
 export async function updateCustomerFromGuestData(
   customerId: string,

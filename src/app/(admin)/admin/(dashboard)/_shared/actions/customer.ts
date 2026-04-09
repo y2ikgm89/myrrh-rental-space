@@ -12,11 +12,13 @@ import {
 import {
   createCustomer as createCustomerCommand,
   deleteCustomer as deleteCustomerCommand,
+  mergeCustomerCommand,
   toggleCustomerActive as toggleCustomerActiveCommand,
   updateCustomer as updateCustomerCommand,
   updateCustomerNotes as updateCustomerNotesCommand,
   updateCustomerStatus as updateCustomerStatusCommand,
 } from "@/shared/domain/customers/commands";
+import { searchCustomers } from "@/shared/domain/customers/queries";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -161,4 +163,41 @@ export async function deleteCustomer(id: string): Promise<MutationResult> {
       updateTag(CACHE_TAGS.CUSTOMERS);
     },
   });
+}
+
+export async function mergeCustomers(
+  sourceId: string,
+  targetId: string,
+): Promise<
+  MutationResult<{
+    transferredReservations: number;
+    transferredInquiries: number;
+    transferredReviews: number;
+    transferredRegistrations: number;
+  }>
+> {
+  const sourceValid = z.string().uuid().safeParse(sourceId);
+  const targetValid = z.string().uuid().safeParse(targetId);
+  if (!sourceValid.success || !targetValid.success) {
+    return { error: "無効な顧客IDです" };
+  }
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "delete",
+    resourceId: sourceValid.data,
+    execute: async () =>
+      mergeCustomerCommand(sourceValid.data, targetValid.data),
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(CACHE_TAGS.RESERVATIONS);
+      updateTag(CACHE_TAGS.INQUIRIES);
+      updateTag(CACHE_TAGS.REVIEWS);
+      updateTag(CACHE_TAGS.EVENTS);
+    },
+  });
+}
+
+export async function searchCustomersAction(query: string) {
+  return searchCustomers(query);
 }
