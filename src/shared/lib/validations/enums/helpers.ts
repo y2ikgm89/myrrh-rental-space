@@ -439,3 +439,50 @@ export const CANCELLED_BY_LABELS: Record<CancelledByType, string> = {
   [CANCELLED_BY.CUSTOMER]: "顧客",
   [CANCELLED_BY.ADMIN]: "管理者",
 };
+
+// =============================================================================
+// AdminNotification Type（DB VARCHAR 管理 — Prisma enum ではない）
+// =============================================================================
+
+export const NOTIFICATION_TYPE = {
+  RESERVATION_NEW: "reservation_new",
+  RESERVATION_CANCEL: "reservation_cancel",
+  RESERVATION_CHANGE: "reservation_change",
+  INQUIRY_NEW: "inquiry_new",
+  REVIEW_NEW: "review_new",
+  EVENT_REGISTRATION: "event_registration",
+} as const;
+
+export type NotificationType =
+  (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
+
+const VALID_NOTIFICATION_TYPES = new Set<string>(
+  Object.values(NOTIFICATION_TYPE),
+);
+
+export function isValidNotificationType(
+  value: unknown,
+): value is NotificationType {
+  return typeof value === "string" && VALID_NOTIFICATION_TYPES.has(value);
+}
+
+export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
+  [NOTIFICATION_TYPE.RESERVATION_NEW]: "新規予約",
+  [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "予約キャンセル",
+  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "予約変更",
+  [NOTIFICATION_TYPE.INQUIRY_NEW]: "新規お問い合わせ",
+  [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
+};
+
+export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
+  NotificationType,
+  string
+> = {
+  [NOTIFICATION_TYPE.RESERVATION_NEW]: "default",
+  [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "destructive",
+  [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "secondary",
+  [NOTIFICATION_TYPE.INQUIRY_NEW]: "default",
+  [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
+  [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
+};

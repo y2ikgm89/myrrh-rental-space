@@ -148,6 +148,8 @@ export const CACHE_TAGS = {
   EVENTS: "events",
   /** イベント参加登録 */
   EVENT_REGISTRATIONS: "event-registrations",
+  /** 管理通知 */
+  NOTIFICATIONS: "notifications",
 } as const;
 
 /**
@@ -234,6 +236,9 @@ export const getCacheTag = {
   },
   eventRegistrations: {
     list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
+  },
+  notifications: {
+    list: () => CACHE_TAGS.NOTIFICATIONS,
   },
 } as const;
 
