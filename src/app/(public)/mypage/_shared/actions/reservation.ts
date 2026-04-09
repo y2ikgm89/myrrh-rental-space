@@ -24,6 +24,10 @@ import {
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { DomainError } from "@/shared/domain/domain-error";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
 const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
@@ -75,6 +79,22 @@ export async function cancelReservationAction(
     if (!result.success) return createMutationError(result.error);
 
     invalidateReservationCache(parsedId.data, customer.id);
+
+    // Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
+        title: "顧客による予約キャンセル",
+        message: `${customer.lastName}${customer.firstName}様が予約をキャンセルしました`,
+        resourceType: "reservation",
+        resourceId: parsedId.data,
+      }),
+      {
+        operation: "createCustomerCancelNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+
     return null;
   } catch (error) {
     if (error instanceof DomainError) {

@@ -237,9 +237,6 @@ export const getCacheTag = {
   eventRegistrations: {
     list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
   },
-  notifications: {
-    list: () => CACHE_TAGS.NOTIFICATIONS,
-  },
 } as const;
 
 /** キャッシュ有効期間の型 */

@@ -12,7 +12,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   NOTIFICATION_TYPE_LABELS,
   NOTIFICATION_TYPE_BADGE_VARIANTS,
-  type NotificationType,
+  isValidNotificationType,
 } from "@/shared/lib/validations/enums/helpers";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import {
@@ -25,35 +25,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/admin/components/ui";
-
-type NotificationItem = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  resourceType: string | null;
-  resourceId: string | null;
-  isRead: boolean;
-  createdAt: string;
-};
+import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
+import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 
 type NotificationTableProps = {
-  notifications: NotificationItem[];
+  notifications: SerializedAdminNotificationData[];
 };
-
-function getResourceHref(
-  resourceType: string | null,
-  resourceId: string | null,
-): string | null {
-  if (!resourceType || !resourceId) return null;
-  const routes: Record<string, string> = {
-    reservation: `/admin/reservations/${resourceId}`,
-    inquiry: `/admin/inquiries/${resourceId}`,
-    review: `/admin/reviews`,
-    event: `/admin/events/${resourceId}/edit`,
-  };
-  return routes[resourceType] ?? null;
-}
 
 export function NotificationTable({ notifications }: NotificationTableProps) {
   const router = useRouter();
@@ -102,15 +79,16 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
           </TableHeader>
           <TableBody>
             {notifications.map((notification) => {
-              const typeLabel =
-                NOTIFICATION_TYPE_LABELS[
-                  notification.type as NotificationType
-                ] ?? notification.type;
-              const badgeVariant =
-                NOTIFICATION_TYPE_BADGE_VARIANTS[
-                  notification.type as NotificationType
-                ] ?? "secondary";
-              const href = getResourceHref(
+              const validType = isValidNotificationType(notification.type)
+                ? notification.type
+                : null;
+              const typeLabel = validType
+                ? NOTIFICATION_TYPE_LABELS[validType]
+                : notification.type;
+              const badgeVariant = validType
+                ? NOTIFICATION_TYPE_BADGE_VARIANTS[validType]
+                : "secondary";
+              const href = getNotificationResourceHref(
                 notification.resourceType,
                 notification.resourceId,
               );
@@ -126,9 +104,7 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                     )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <Badge variant={badgeVariant as "default"}>
-                      {typeLabel}
-                    </Badge>
+                    <Badge variant={badgeVariant}>{typeLabel}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="min-w-0">

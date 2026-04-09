@@ -17,6 +17,10 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 
 export async function submitReview(
   input: unknown,
@@ -60,6 +64,21 @@ export async function submitReview(
     updateTag(getCacheTag.reviews.stats(result.spaceId));
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(customer.id));
+
+    // 6. Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.REVIEW_NEW,
+        title: "新規レビュー",
+        message: `${customer.lastName}${customer.firstName}様からレビューが投稿されました`,
+        resourceType: "review",
+        resourceId: result.id,
+      }),
+      {
+        operation: "createReviewNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
 
     return { id: result.id };
   } catch (error) {

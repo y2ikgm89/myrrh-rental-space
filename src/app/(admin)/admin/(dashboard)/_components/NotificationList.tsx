@@ -8,39 +8,16 @@ import { markNotificationAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   NOTIFICATION_TYPE_LABELS,
-  type NotificationType,
+  isValidNotificationType,
 } from "@/shared/lib/validations/enums/helpers";
 import { Button } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
-
-type NotificationItem = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  resourceType: string | null;
-  resourceId: string | null;
-  isRead: boolean;
-  createdAt: string;
-};
+import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
+import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 
 type NotificationListProps = {
-  notifications: NotificationItem[];
+  notifications: SerializedAdminNotificationData[];
 };
-
-function getResourceHref(
-  resourceType: string | null,
-  resourceId: string | null,
-): string | null {
-  if (!resourceType || !resourceId) return null;
-  const routes: Record<string, string> = {
-    reservation: `/admin/reservations/${resourceId}`,
-    inquiry: `/admin/inquiries/${resourceId}`,
-    review: `/admin/reviews`,
-    event: `/admin/events/${resourceId}/edit`,
-  };
-  return routes[resourceType] ?? null;
-}
 
 function formatRelativeTime(dateStr: string): string {
   const now = new Date();
@@ -80,10 +57,10 @@ export function NotificationList({ notifications }: NotificationListProps) {
   return (
     <div className="max-h-[400px] overflow-y-auto">
       {notifications.map((notification) => {
-        const typeLabel =
-          NOTIFICATION_TYPE_LABELS[notification.type as NotificationType] ??
-          notification.type;
-        const href = getResourceHref(
+        const typeLabel = isValidNotificationType(notification.type)
+          ? NOTIFICATION_TYPE_LABELS[notification.type]
+          : notification.type;
+        const href = getNotificationResourceHref(
           notification.resourceType,
           notification.resourceId,
         );

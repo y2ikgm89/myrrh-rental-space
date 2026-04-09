@@ -13,14 +13,13 @@ import {
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_TYPE_LABELS,
-  type NotificationType,
 } from "@/shared/lib/validations/enums/helpers";
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "ALL", label: "すべて" },
   ...Object.values(NOTIFICATION_TYPE).map((value) => ({
     value,
-    label: NOTIFICATION_TYPE_LABELS[value as NotificationType],
+    label: NOTIFICATION_TYPE_LABELS[value],
   })),
 ];
 

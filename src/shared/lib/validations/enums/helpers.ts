@@ -475,9 +475,18 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
 };
 
+export type AdminBadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "warning"
+  | "pending";
+
 export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   NotificationType,
-  string
+  AdminBadgeVariant
 > = {
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "default",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "destructive",

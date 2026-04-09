@@ -13,21 +13,11 @@ import { Button } from "@/admin/components/ui";
 import { markAllNotificationsAsRead } from "@/admin/actions/notification";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { NotificationList } from "./NotificationList";
-
-type NotificationItem = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  resourceType: string | null;
-  resourceId: string | null;
-  isRead: boolean;
-  createdAt: string;
-};
+import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 
 type NotificationBellProps = {
   unreadCount: number;
-  recentNotifications: NotificationItem[];
+  recentNotifications: SerializedAdminNotificationData[];
 };
 
 export function NotificationBell({

@@ -24,6 +24,14 @@ export type AdminNotificationData = {
   createdAt: Date;
 };
 
+/** Client Component 用（createdAt は ISO 文字列） */
+export type SerializedAdminNotificationData = Omit<
+  AdminNotificationData,
+  "createdAt"
+> & {
+  createdAt: string;
+};
+
 type GetNotificationsParams = {
   page: number;
   perPage: number;

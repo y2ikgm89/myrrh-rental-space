@@ -16,24 +16,14 @@ import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
 import { LogoutButton } from "./LogoutButton";
 import { NotificationBell } from "./NotificationBell";
-
-type NotificationItem = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  resourceType: string | null;
-  resourceId: string | null;
-  isRead: boolean;
-  createdAt: string;
-};
+import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 
 type TopBarProps = {
   siteName: string | null;
   headerLogoUrl: string | null;
   useHeaderLogo: boolean;
   unreadCount: number;
-  recentNotifications: NotificationItem[];
+  recentNotifications: SerializedAdminNotificationData[];
 };
 
 export function TopBar({
