@@ -26,7 +26,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 
 export async function submitInquiry(
@@ -50,7 +50,7 @@ export async function submitInquiry(
 
   // 4. Resolve customer if logged in
   let customerId: string | null = null;
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (session) {
     const customer = await getCustomerByUserId(session.user.id);
     if (customer) {

@@ -16,7 +16,11 @@ import {
 } from "@/public/components/design-system/dialog";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { linkSocial, unlinkAccount, signOut } from "@/shared/lib/auth-client";
+import {
+  linkSocial,
+  unlinkAccount,
+  signOut,
+} from "@/shared/lib/customer-auth-client";
 import { deleteAccountAction } from "../../_shared/actions/account";
 import {
   TurnstileWidget,

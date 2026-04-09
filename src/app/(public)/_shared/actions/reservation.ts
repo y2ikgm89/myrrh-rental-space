@@ -31,7 +31,7 @@ import { createNotificationCommand } from "@/shared/domain/notifications/command
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import {
   getReservationRequiredTerms,
   type ReservationTermsSummary,
@@ -81,7 +81,7 @@ export async function submitReservation(
   }
 
   // 4. Get current user (non-blocking — undefined if not logged in)
-  const user = await getCurrentUser();
+  const user = await getCurrentCustomerUser();
 
   // 4.5. Extract client IP and user agent for terms audit trail
   const clientIp = await getClientIpFromHeaders();

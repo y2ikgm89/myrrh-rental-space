@@ -9,7 +9,7 @@ import {
   IconCalendarCheck,
   IconUser,
 } from "@tabler/icons-react";
-import { useSession } from "@/shared/lib/auth-client";
+import { useSession } from "@/shared/lib/customer-auth-client";
 
 const staticNavItems = [
   { href: "/", icon: IconHome, label: "ホーム" },

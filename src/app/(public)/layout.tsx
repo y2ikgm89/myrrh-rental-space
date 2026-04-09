@@ -37,7 +37,7 @@ import { GraphJsonLd } from "@/public/components/seo/json-ld";
 import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
 import { getBusinessInfo } from "@/public/data/business";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Role } from "@generated/prisma/enums";
 import {
   getHeaderSettings,
@@ -169,7 +169,7 @@ async function HeaderWithData({
   const [navItems, businessInfo, currentUser] = await Promise.all([
     getHeaderNavigation(),
     getBusinessInfo(),
-    getCurrentUser(),
+    getCurrentCustomerUser(),
   ]);
 
   const isCustomer =
@@ -244,7 +244,24 @@ export default async function PublicRootLayout({
 
             {/* キャッシュされたコンテンツ - 静的シェルに含まれる */}
             <AnnouncementBarWrapper />
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={
+                <header
+                  role="banner"
+                  className="flex h-[var(--header-height,4rem)] items-center border-b border-border/50 px-[var(--container-padding)]"
+                >
+                  <div className="h-5 w-24 animate-pulse bg-surface" />
+                  <nav className="ml-auto hidden gap-6 md:flex">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div
+                        key={i}
+                        className="h-3 w-14 animate-pulse bg-surface"
+                      />
+                    ))}
+                  </nav>
+                </header>
+              }
+            >
               <HeaderWithData headerSettings={headerSettings} />
             </Suspense>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "@/shared/lib/auth-client";
+import { signIn } from "@/shared/lib/customer-auth-client";
 import { cn } from "@/shared/lib/cn";
 import { Stack } from "@/public/components/design-system/stack";
 import {

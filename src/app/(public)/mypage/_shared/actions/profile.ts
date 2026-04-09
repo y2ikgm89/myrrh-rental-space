@@ -1,6 +1,6 @@
 "use server";
 
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { updateCustomerProfileByUserId } from "@/shared/domain/customers/commands";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { updateTag } from "next/cache";
@@ -31,7 +31,7 @@ export async function updateProfileAction(
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const parsed = customerProfileSchema.safeParse(input);

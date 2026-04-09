@@ -6,7 +6,7 @@
 
 import type { ReactElement } from "react";
 import { notFound, redirect } from "next/navigation";
-import { verifyCustomerSession } from "@/shared/lib/auth";
+import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerReservationDetail } from "@/shared/domain/reservations/customer-queries";
 import { getReservationDeadlineSettings } from "@/shared/domain/settings/public-queries";

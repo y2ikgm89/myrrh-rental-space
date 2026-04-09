@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { SearchParams } from "nuqs/server";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
@@ -18,7 +18,7 @@ export default async function LoginPage({
 }: {
   readonly searchParams: Promise<SearchParams>;
 }) {
-  const user = await getCurrentUser();
+  const user = await getCurrentCustomerUser();
   if (user) redirect("/mypage");
 
   const params = await searchParams;

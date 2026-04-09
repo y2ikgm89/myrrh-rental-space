@@ -31,7 +31,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getEventDetailsForEmail } from "@/shared/domain/events/registration-queries";
 
@@ -55,7 +55,7 @@ export async function registerForEvent(
   }
 
   // 4. Get current user (non-blocking — null if not logged in)
-  const session = await getSession();
+  const session = await getCustomerSession();
   const user = session?.user;
   let customerId: string | null = null;
   if (user) {
@@ -167,7 +167,7 @@ export async function cancelEventRegistration(
   if (!idValidation.success) return createMutationError("申込IDが不正です");
 
   // 3. Require authenticated session
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   // 4. Require customer

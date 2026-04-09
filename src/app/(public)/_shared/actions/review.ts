@@ -15,7 +15,7 @@ import {
 import { createReviewCommand } from "@/shared/domain/reviews/commands";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { DomainError } from "@/shared/domain/domain-error";
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
@@ -42,7 +42,7 @@ export async function submitReview(
   }
 
   // 3. Auth - must be logged in customer
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("ログインが必要です");
 
   const customer = await getCustomerByUserId(session.user.id);

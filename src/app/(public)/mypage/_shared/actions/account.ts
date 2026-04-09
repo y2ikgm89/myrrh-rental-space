@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { updateTag } from "next/cache";
-import { getSession, auth } from "@/shared/lib/auth";
+import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
@@ -27,7 +27,7 @@ export async function getAccountLinksAction(): Promise<
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const providers = await getAccountProviders(session.user.id);
@@ -43,13 +43,13 @@ export async function deleteAccountAction(
   const turnstile = await validateTurnstile(turnstileToken);
   if (!turnstile.success) return createMutationError(turnstile.error);
 
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);
 
   try {
-    await auth.api.deleteUser({
+    await customerAuth.api.deleteUser({
       headers: await headers(),
       body: {},
     });

@@ -1,6 +1,6 @@
 "use server";
 
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import {
   cancelCustomerReservation,
@@ -57,7 +57,7 @@ export async function cancelReservationAction(
   const parsedId = reservationIdSchema.safeParse(reservationId);
   if (!parsedId.success) return createMutationError("予約IDが不正です");
 
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);
@@ -110,7 +110,7 @@ export async function updateReservationAction(
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);

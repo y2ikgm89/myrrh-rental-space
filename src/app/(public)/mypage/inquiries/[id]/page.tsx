@@ -7,7 +7,7 @@
 import type { ReactElement } from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { verifyCustomerSession } from "@/shared/lib/auth";
+import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerInquiryById } from "../../_lib/inquiry-queries";
 import { Heading } from "@/public/components/design-system/heading";

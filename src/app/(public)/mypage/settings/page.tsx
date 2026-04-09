@@ -8,7 +8,7 @@
 import type { ReactElement } from "react";
 import { redirect } from "next/navigation";
 import type { SearchParams } from "nuqs/server";
-import { verifyCustomerSession } from "@/shared/lib/auth";
+import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getAccountLinksAction } from "../_shared/actions/account";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";

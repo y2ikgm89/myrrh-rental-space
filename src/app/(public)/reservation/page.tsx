@@ -15,7 +15,7 @@ import { PageLayout } from "@/public/components/design-system/page-layout";
 import { getPublishedLocationsWithSpaces } from "@/shared/domain/locations/public-queries";
 import { getBusinessHoursSettingsQuery } from "@/shared/domain/reservations/availability";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
-import { getCurrentUser } from "@/shared/lib/auth";
+import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { CUSTOMER_PLACEHOLDER_NAME } from "@/shared/domain/customers/link";
 import { ReservationForm } from "./_components/reservation-form";
@@ -43,7 +43,7 @@ export default async function ReservationPage({
       getPublishedLocationsWithSpaces(),
       getBusinessHoursSettingsQuery(),
       getTurnstileSiteKey(),
-      getCurrentUser(),
+      getCurrentCustomerUser(),
     ]);
 
   const customer = user ? await getCustomerByUserId(user.id) : null;
