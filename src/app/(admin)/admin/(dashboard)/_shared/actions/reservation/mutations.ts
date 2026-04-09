@@ -16,6 +16,10 @@ import {
   updateReservationNotesCommand,
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/commands";
+import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
+import { prisma } from "@/shared/db/prisma";
+import { DomainError } from "@/shared/domain/domain-error";
+import { createMutationError } from "@/shared/lib/mutation-result";
 import {
   syncReservationToCalendar,
   updateCalendarSync,
@@ -261,3 +265,43 @@ export const restoreReservation = async (
     },
   });
 };
+
+export async function updateCustomerFromReservation(
+  reservationId: string,
+): Promise<MutationResult<null>> {
+  const parsed = z.string().uuid().safeParse(reservationId);
+  if (!parsed.success) return createMutationError("無効な予約IDです");
+
+  return executeAdminMutationResult({
+    resource: "customer",
+    action: "update",
+    execute: async () => {
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: parsed.data, deletedAt: null },
+        select: {
+          customerId: true,
+          guestLastName: true,
+          guestFirstName: true,
+          guestPhone: true,
+          guestCompanyName: true,
+        },
+      });
+      if (!reservation)
+        throw new DomainError("予約が見つかりません", "NOT_FOUND");
+      if (!reservation.guestLastName)
+        throw new DomainError("ゲスト情報がありません", "VALIDATION");
+
+      await updateCustomerFromGuestData(reservation.customerId, {
+        lastName: reservation.guestLastName,
+        firstName: reservation.guestFirstName ?? "",
+        phoneNumber: reservation.guestPhone,
+        companyName: reservation.guestCompanyName,
+      });
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(CACHE_TAGS.RESERVATIONS);
+    },
+  });
+}

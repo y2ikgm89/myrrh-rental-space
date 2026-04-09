@@ -150,3 +150,26 @@ export async function deleteCustomer(id: string): Promise<void> {
     where: { id },
   });
 }
+
+/** 予約のゲスト入力値で顧客情報を更新 */
+export async function updateCustomerFromGuestData(
+  customerId: string,
+  guestData: {
+    lastName: string;
+    firstName: string;
+    phoneNumber: string | null;
+    companyName: string | null;
+  },
+): Promise<void> {
+  await ensureCustomerExists(customerId);
+
+  await prisma.customer.update({
+    where: { id: customerId },
+    data: {
+      lastName: guestData.lastName,
+      firstName: guestData.firstName,
+      phoneNumber: guestData.phoneNumber,
+      companyName: guestData.companyName,
+    },
+  });
+}

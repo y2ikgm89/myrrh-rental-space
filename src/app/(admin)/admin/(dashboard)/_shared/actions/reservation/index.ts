@@ -10,6 +10,7 @@ export {
   updateReservationNotes,
   deleteReservation,
   restoreReservation,
+  updateCustomerFromReservation,
 } from "./mutations";
 
 export { createAdminReservation, updateAdminReservation } from "./admin";

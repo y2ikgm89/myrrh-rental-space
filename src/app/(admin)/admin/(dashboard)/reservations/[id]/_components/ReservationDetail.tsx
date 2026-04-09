@@ -26,6 +26,7 @@ import {
   updateReservationNotes,
   createCheckoutSession,
   refundReservationPayment,
+  updateCustomerFromReservation,
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
@@ -61,6 +62,20 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
   const [isPaymentPending, startPaymentTransition] = useTransition();
   const [notes, setNotes] = useState(reservation.notes || "");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [isUpdateCustomerPending, startUpdateCustomerTransition] =
+    useTransition();
+
+  const handleUpdateCustomer = () => {
+    startUpdateCustomerTransition(async () => {
+      const result = await updateCustomerFromReservation(reservation.id);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+      } else {
+        toast.success("顧客情報を更新しました");
+        router.refresh();
+      }
+    });
+  };
 
   const handleStatusChange = async (newStatus: ReservationStatus) => {
     if (newStatus === reservation.status) return;
@@ -124,6 +139,18 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
       router.refresh();
     });
   };
+
+  // Guest info diff computation
+  const guestName = reservation.guestLastName
+    ? `${reservation.guestLastName} ${reservation.guestFirstName ?? ""}`.trim()
+    : null;
+  const customerName =
+    `${reservation.customer.lastName} ${reservation.customer.firstName}`.trim();
+  const hasNameDiff = guestName !== null && guestName !== customerName;
+  const hasPhoneDiff =
+    reservation.guestPhone != null &&
+    reservation.guestPhone !== reservation.customer.phoneNumber;
+  const hasGuestDiff = hasNameDiff || hasPhoneDiff;
 
   return (
     <div className="space-y-6">
@@ -248,6 +275,37 @@ export function ReservationDetail({ reservation }: ReservationDetailProps) {
             value={reservation.customer.phoneNumber || "-"}
           />
         </div>
+        {hasGuestDiff && (
+          <div className="mt-4 rounded-lg border border-warning/30 bg-warning/5 p-4">
+            <p className="mb-2 text-sm font-medium text-warning">
+              予約時の入力情報が顧客情報と異なります
+            </p>
+            <dl className="space-y-1 text-sm">
+              {hasNameDiff && (
+                <div className="flex gap-2">
+                  <dt className="text-muted-foreground">予約時の名前:</dt>
+                  <dd>{guestName}</dd>
+                </div>
+              )}
+              {hasPhoneDiff && (
+                <div className="flex gap-2">
+                  <dt className="text-muted-foreground">予約時の電話:</dt>
+                  <dd>{reservation.guestPhone}</dd>
+                </div>
+              )}
+            </dl>
+            <div className="mt-3 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUpdateCustomer}
+                disabled={isUpdateCustomerPending}
+              >
+                {isUpdateCustomerPending ? "更新中..." : "顧客情報を更新"}
+              </Button>
+            </div>
+          </div>
+        )}
       </DetailSection>
 
       {/* キャンセル情報 */}
