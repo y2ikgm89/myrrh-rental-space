@@ -29,6 +29,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 src/app/(admin)/admin/(dashboard)/   管理画面（admin.css, Better Auth）
 src/app/(public)/                    公開ページ（Page-First Architecture, Editorial Magazine）
 src/shared/domain/                   ドメイン層（commands + admin/public/customer-queries）
+src/shared/lib/admin-auth.ts         管理者認証（email/password, RBAC）
+src/shared/lib/customer-auth.ts      顧客認証（Google/LINE, マイページ）
 src/shared/lib/sections/             セクションレジストリ・定義
 generated/prisma/                    Prisma Client（.gitignore対象）
 __tests__/                           unit/ + integration/（36バッチ分離実行）
@@ -63,6 +65,7 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 
 ### Server Actions・キャッシュ
 
+- **`@/shared/lib/auth` / `@/shared/lib/auth-client` import 禁止** → 削除済み。管理側は `admin-auth` / `admin-auth-client`、顧客側は `customer-auth` / `customer-auth-client` を使用
 - **`'use cache'` 関数での直接 prisma 呼び出し禁止** → `safeFetch` + `toPlainObject`/`toPlainArray` 必須 → `server-actions.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)` → `server-actions.md`
 - **公開 Server Action の Turnstile 省略禁止** → 全公開 write mutation に `validateTurnstile` 必須（認証済みユーザー含む、マイページから呼ぶ共有アクションも対象）
@@ -115,6 +118,7 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 - **顧客解決ロジック**: `resolveOrCreateCustomer`（`@/shared/domain/reservations/resolve-customer`）は Shopify 型3段階ロジック。リンク済み顧客のデータ保護・userId 不可侵・P2002 フォールバック付き
 - **顧客マージ**: `mergeCustomerCommand`（`@/shared/domain/customers/commands`）で Reservation/Inquiry/SpaceReview/EventRegistration の customerId を一括移管 + source 削除。統計再計算付き
 - **Better Auth セッション分離**: `adminAuth`（`cookiePrefix: "admin-auth"`）と `customerAuth`（`cookiePrefix: "customer-auth"`、`basePath: "/api/customer-auth"`）で管理者と顧客のセッションを完全分離。API ルートも `/api/auth/` と `/api/customer-auth/` に分離
+- **パスワードリセット**: `/forgot-password`・`/reset-password` は `(public)` ルートグループだが `adminAuthClient` を使用（顧客はソーシャルログインのみでパスワードなし）。Admin Gate の外でアクセス可能にするため `(admin)` には置かない
 - **Better Auth User 型**: `$Infer` は module augmentation で上書き不可。`AdminUser` / `CustomerUser` 型 = `Omit<Session["user"], "role"> & { role: Role }` + `isValidRole()` ランタイム検証が必須パターン
 - **通知システム**: `AdminNotification` モデル（全管理者共有、個人宛なし）。`fireAndForget(createNotificationCommand(...))` で既存アクションの `afterSuccess` から生成。TopBar ベルアイコン + `/admin/notifications` 一覧ページ
 
