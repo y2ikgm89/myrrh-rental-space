@@ -48,3 +48,17 @@ export async function deleteNotificationCommand(id: string): Promise<void> {
     where: { id },
   });
 }
+
+export async function deleteOldNotificationsCommand(
+  olderThanDays: number,
+): Promise<number> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - olderThanDays);
+
+  const result = await prisma.adminNotification.deleteMany({
+    where: {
+      createdAt: { lt: cutoff },
+    },
+  });
+  return result.count;
+}
