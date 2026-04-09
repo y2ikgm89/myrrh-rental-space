@@ -28,6 +28,8 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -119,6 +121,22 @@ export async function registerForEvent(
         category: ErrorCategory.EXTERNAL_API,
       },
     );
+
+    // 8. Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+        title: "イベント申込",
+        message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
+        resourceType: "event",
+        resourceId: result.registration.eventId,
+      }),
+      {
+        operation: "createEventRegistrationNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     return { id: result.registration.id };
   } catch (error) {

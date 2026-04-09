@@ -27,6 +27,8 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentUser } from "@/shared/lib/auth";
@@ -112,6 +114,22 @@ export async function submitReservation(
         category: ErrorCategory.EXTERNAL_API,
       },
     );
+
+    // 8. Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.RESERVATION_NEW,
+        title: "新規予約",
+        message: `${result.payload.customerName}様が${result.payload.spaceName}を予約しました`,
+        resourceType: "reservation",
+        resourceId: result.id,
+      }),
+      {
+        operation: "createReservationNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     return { id: result.id };
   } catch (error) {

@@ -23,6 +23,8 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getSession } from "@/shared/lib/auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -83,6 +85,22 @@ export async function submitInquiry(
       operation: "sendContactAdminNotification",
       category: ErrorCategory.EXTERNAL_API,
     });
+
+    // 8. Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.INQUIRY_NEW,
+        title: "新規お問い合わせ",
+        message: `${result.payload.name}様からお問い合わせがありました`,
+        resourceType: "inquiry",
+        resourceId: result.id,
+      }),
+      {
+        operation: "createInquiryNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     return { id: result.id };
   } catch (error) {

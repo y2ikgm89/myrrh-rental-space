@@ -32,7 +32,11 @@ import {
   sendReservationConfirmationEmail,
   sendReservationStatusChangedEmail,
 } from "@/shared/lib/email/reservation-emails";
-import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import {
+  RESERVATION_STATUS_LABELS,
+  NOTIFICATION_TYPE,
+} from "@/shared/lib/validations/enums/helpers";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 
 const updateStatusSchema = z.object({
   id: z.string().uuid({ error: "IDが不正です" }),
@@ -140,6 +144,21 @@ export const updateReservationStatus = async (
             context: { reservationId: id },
           },
         );
+
+        fireAndForget(
+          createNotificationCommand({
+            type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
+            title: "予約キャンセル",
+            message: `予約がキャンセルされました`,
+            resourceType: "reservation",
+            resourceId: id,
+          }),
+          {
+            operation: "createCancelNotification",
+            category: ErrorCategory.DATABASE,
+          },
+        );
+        updateTag(CACHE_TAGS.NOTIFICATIONS);
       }
 
       // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール
@@ -268,7 +287,7 @@ export const restoreReservation = async (
 
 export async function updateCustomerFromReservation(
   reservationId: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult<{ customerId: string }>> {
   const parsed = z.string().uuid().safeParse(reservationId);
   if (!parsed.success) return createMutationError("無効な予約IDです");
 
@@ -297,10 +316,11 @@ export async function updateCustomerFromReservation(
         phoneNumber: reservation.guestPhone,
         companyName: reservation.guestCompanyName,
       });
-      return null;
+      return { customerId: reservation.customerId };
     },
-    afterSuccess: () => {
+    afterSuccess: (data) => {
       updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(data.customerId));
       updateTag(CACHE_TAGS.RESERVATIONS);
     },
   });
