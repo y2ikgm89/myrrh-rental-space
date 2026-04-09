@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * AutoSelectField — Radix Select ベースの select フィールド
+ * AutoSelectField — useController ベースの制御された Select
  */
 
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useController, type Control } from "react-hook-form";
 import {
   Label,
   Select,
@@ -23,9 +23,9 @@ export function AutoSelectField({
   placeholder,
   helpText,
   schema,
-  setValue,
+  control,
   isPending,
-  defaultValue,
+  error,
 }: {
   readonly fieldKey: string;
   readonly fieldId: string;
@@ -33,21 +33,20 @@ export function AutoSelectField({
   readonly placeholder: string | undefined;
   readonly helpText: string | undefined;
   readonly schema: z.ZodType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly setValue: ReturnType<typeof useForm<any>>["setValue"];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
+  readonly control: Control<any>;
   readonly isPending: boolean;
-  readonly defaultValue: unknown;
+  readonly error: string | undefined;
 }) {
+  const { field } = useController({ control, name: fieldKey });
   const options = getSelectOptions(schema);
 
   return (
     <div className="space-y-2">
       <Label htmlFor={fieldId}>{label}</Label>
       <Select
-        {...(typeof defaultValue === "string" && {
-          defaultValue,
-        })}
-        onValueChange={(v) => setValue(fieldKey, v)}
+        {...(typeof field.value === "string" && { value: field.value })}
+        onValueChange={field.onChange}
         disabled={isPending}
       >
         <SelectTrigger id={fieldId}>
@@ -62,6 +61,11 @@ export function AutoSelectField({
         </SelectContent>
       </Select>
       {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

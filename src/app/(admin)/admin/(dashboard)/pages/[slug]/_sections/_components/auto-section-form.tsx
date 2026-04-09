@@ -215,6 +215,7 @@ function AutoField({
       isPending={isPending}
       defaultValue={defaultValue}
       error={typeof errorMessage === "string" ? errorMessage : undefined}
+      errors={errors}
     />
   );
 }
@@ -237,6 +238,8 @@ interface AutoFieldByTypeProps {
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly error: string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic FieldErrors
+  readonly errors: ReturnType<typeof useForm<any>>["formState"]["errors"];
 }
 
 function AutoFieldByType(props: AutoFieldByTypeProps) {
@@ -255,6 +258,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     isPending,
     defaultValue,
     error,
+    errors,
   } = props;
 
   switch (fieldType) {
@@ -352,44 +356,25 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           placeholder={placeholder}
           helpText={helpText}
           schema={schema}
-          setValue={setValue}
+          control={control}
           isPending={isPending}
-          defaultValue={defaultValue}
+          error={error}
         />
       );
 
     case "color":
       return (
-        <div className="space-y-2">
-          <Label htmlFor={fieldId}>{label}</Label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              id={`${fieldId}-picker`}
-              className="h-9 w-12 cursor-pointer rounded border p-1"
-              defaultValue={
-                typeof defaultValue === "string" ? defaultValue : "#000000"
-              }
-              onChange={(e) => setValue(fieldKey, e.target.value)}
-              disabled={isPending}
-            />
-            <Input
-              id={fieldId}
-              {...register(fieldKey)}
-              placeholder={placeholder ?? "#000000"}
-              disabled={isPending}
-              className="flex-1"
-            />
-          </div>
-          {helpText && (
-            <p className="text-xs text-muted-foreground">{helpText}</p>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error}
-            </p>
-          )}
-        </div>
+        <AutoColorFieldControlled
+          fieldKey={fieldKey}
+          fieldId={fieldId}
+          label={label}
+          placeholder={placeholder}
+          helpText={helpText}
+          control={control}
+          register={register}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "image":
@@ -407,7 +392,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
 
     case "url":
       return (
-        <div className="space-y-1">
+        <div className="space-y-2">
           <Label htmlFor={fieldId}>{label}</Label>
           <Input
             id={fieldId}
@@ -429,15 +414,22 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
 
     case "array":
       return (
-        <AutoArrayField
-          fieldKey={fieldKey}
-          label={label}
-          helpText={helpText}
-          schema={schema}
-          control={control}
-          register={register}
-          isPending={isPending}
-        />
+        <div className="space-y-2">
+          <AutoArrayField
+            fieldKey={fieldKey}
+            label={label}
+            helpText={helpText}
+            schema={schema}
+            control={control}
+            register={register}
+            isPending={isPending}
+          />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </div>
       );
 
     case "group":
@@ -450,6 +442,19 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           renderField={(subField, namePrefix, subDefaultValue) => {
             const nestedKey = `${namePrefix}.${subField.key}`;
             const nestedId = `auto-${nestedKey}`;
+            // Resolve nested error: errors.groupKey.subFieldKey.message
+            const groupErrors = errors[fieldKey];
+            const nestedError =
+              typeof groupErrors === "object" &&
+              groupErrors !== null &&
+              subField.key in groupErrors
+                ? (
+                    groupErrors as Record<
+                      string,
+                      { message?: string } | undefined
+                    >
+                  )[subField.key]?.message
+                : undefined;
             return (
               <AutoFieldByType
                 key={subField.key}
@@ -466,7 +471,10 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
                 control={control}
                 isPending={isPending}
                 defaultValue={subDefaultValue}
-                error={undefined}
+                error={
+                  typeof nestedError === "string" ? nestedError : undefined
+                }
+                errors={errors}
               />
             );
           }}
@@ -507,7 +515,7 @@ function AutoImageFieldControlled({
   const { field } = useController({ control, name: fieldKey });
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <AutoImageField
         fieldId={fieldId}
         label={label}
@@ -516,6 +524,67 @@ function AutoImageFieldControlled({
         {...(helpText !== undefined && { helpText })}
         {...(isPending && { disabled: true })}
       />
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Color Field (useController)
+// ─────────────────────────────────────────────────────────────
+
+function AutoColorFieldControlled({
+  fieldKey,
+  fieldId,
+  label,
+  placeholder,
+  helpText,
+  control,
+  register,
+  isPending,
+  error,
+}: {
+  readonly fieldKey: string;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly placeholder: string | undefined;
+  readonly helpText: string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
+  readonly control: Control<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readonly register: ReturnType<typeof useForm<any>>["register"];
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const { field: colorField } = useController({ control, name: fieldKey });
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={fieldId}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          id={`${fieldId}-picker`}
+          className="h-9 w-12 cursor-pointer rounded border p-1"
+          value={
+            typeof colorField.value === "string" ? colorField.value : "#000000"
+          }
+          onChange={(e) => colorField.onChange(e.target.value)}
+          disabled={isPending}
+        />
+        <Input
+          id={fieldId}
+          {...register(fieldKey)}
+          placeholder={placeholder ?? "#000000"}
+          disabled={isPending}
+          className="flex-1"
+        />
+      </div>
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
