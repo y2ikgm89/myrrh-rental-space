@@ -10,11 +10,11 @@
  */
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useController, useForm, type Control } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import dynamic from "next/dynamic";
 import { z } from "zod";
-import { Input, Label, Switch, Textarea } from "@/admin/components/ui";
+import { Input, Label, Textarea } from "@/admin/components/ui";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
@@ -22,9 +22,11 @@ import { FormActions, type ConfigFormProps } from "./config-forms/shared";
 import { extractSchemaFields } from "./zod-introspection";
 import type { FieldInfo } from "./zod-introspection";
 import type { FieldType } from "@/shared/lib/sections/types";
+import { AutoBooleanField } from "./auto-fields/AutoBooleanField";
 import { AutoSelectField } from "./auto-fields/AutoSelectField";
 import { AutoArrayField } from "./auto-fields/AutoArrayField";
 import { AutoGroupField } from "./auto-fields/AutoGroupField";
+import { AutoImageField } from "./auto-fields/AutoImageField";
 
 const LexicalEditor = dynamic(
   () =>
@@ -93,7 +95,7 @@ export function AutoSectionForm({
     handleSubmit,
     setValue,
     control,
-    formState: { isDirty },
+    formState: { isDirty, errors },
   } = useForm<Record<string, unknown>>({
     ...(schema
       ? {
@@ -152,6 +154,7 @@ export function AutoSectionForm({
             control={control}
             isPending={isPending}
             defaultValue={defaultConfig[fieldInfo.key]}
+            errors={errors}
           />
         ))}
       </div>
@@ -179,6 +182,8 @@ interface AutoFieldProps {
   readonly control: ReturnType<typeof useForm<any>>["control"];
   readonly isPending: boolean;
   readonly defaultValue: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic FieldErrors
+  readonly errors: ReturnType<typeof useForm<any>>["formState"]["errors"];
 }
 
 function AutoField({
@@ -188,9 +193,11 @@ function AutoField({
   control,
   isPending,
   defaultValue,
+  errors,
 }: AutoFieldProps) {
   const { key, meta } = fieldInfo;
   const fieldId = `auto-${key}`;
+  const errorMessage = errors[key]?.message;
 
   return (
     <AutoFieldByType
@@ -207,6 +214,7 @@ function AutoField({
       control={control}
       isPending={isPending}
       defaultValue={defaultValue}
+      error={typeof errorMessage === "string" ? errorMessage : undefined}
     />
   );
 }
@@ -228,6 +236,7 @@ interface AutoFieldByTypeProps {
   readonly control: ReturnType<typeof useForm<any>>["control"];
   readonly isPending: boolean;
   readonly defaultValue: unknown;
+  readonly error: string | undefined;
 }
 
 function AutoFieldByType(props: AutoFieldByTypeProps) {
@@ -245,6 +254,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     control,
     isPending,
     defaultValue,
+    error,
   } = props;
 
   switch (fieldType) {
@@ -262,6 +272,11 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
       );
 
@@ -278,6 +293,11 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           />
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
           )}
         </div>
       );
@@ -302,23 +322,25 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
       );
 
     case "boolean":
       return (
-        <div className="flex items-center gap-2">
-          <Switch
-            id={fieldId}
-            checked={typeof defaultValue === "boolean" ? defaultValue : false}
-            onCheckedChange={(checked) => setValue(fieldKey, checked)}
-            disabled={isPending}
-          />
-          <Label htmlFor={fieldId}>{label}</Label>
-          {helpText && (
-            <p className="text-xs text-muted-foreground ml-2">{helpText}</p>
-          )}
-        </div>
+        <AutoBooleanField
+          fieldKey={fieldKey}
+          fieldId={fieldId}
+          label={label}
+          helpText={helpText}
+          control={control}
+          isPending={isPending}
+          error={error}
+        />
       );
 
     case "select":
@@ -362,26 +384,45 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
           )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
       );
 
     case "image":
+      return (
+        <AutoImageFieldControlled
+          fieldKey={fieldKey}
+          fieldId={fieldId}
+          label={label}
+          helpText={helpText}
+          control={control}
+          isPending={isPending}
+          error={error}
+        />
+      );
+
     case "url":
       return (
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor={fieldId}>{label}</Label>
           <Input
             id={fieldId}
-            type={fieldType === "url" ? "url" : "text"}
+            type="url"
             {...register(fieldKey)}
-            placeholder={
-              placeholder ??
-              (fieldType === "url" ? "https://..." : "画像URLを入力")
-            }
+            placeholder={placeholder ?? "https://..."}
             disabled={isPending}
           />
           {helpText && (
             <p className="text-xs text-muted-foreground">{helpText}</p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
           )}
         </div>
       );
@@ -425,6 +466,7 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
                 control={control}
                 isPending={isPending}
                 defaultValue={subDefaultValue}
+                error={undefined}
               />
             );
           }}
@@ -438,4 +480,47 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
     default:
       return null;
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Image Field (useController)
+// ─────────────────────────────────────────────────────────────
+
+function AutoImageFieldControlled({
+  fieldKey,
+  fieldId,
+  label,
+  helpText,
+  control,
+  isPending,
+  error,
+}: {
+  readonly fieldKey: string;
+  readonly fieldId: string;
+  readonly label: string;
+  readonly helpText: string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
+  readonly control: Control<any>;
+  readonly isPending: boolean;
+  readonly error: string | undefined;
+}) {
+  const { field } = useController({ control, name: fieldKey });
+
+  return (
+    <div className="space-y-1">
+      <AutoImageField
+        fieldId={fieldId}
+        label={label}
+        value={typeof field.value === "string" ? field.value : undefined}
+        onSelect={(url) => field.onChange(url)}
+        {...(helpText !== undefined && { helpText })}
+        {...(isPending && { disabled: true })}
+      />
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
+  );
 }
