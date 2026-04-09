@@ -276,9 +276,6 @@ export async function loadAdminPageSearchParams(
   return adminPageSearchParamsCache.all();
 }
 
-/** PageFilters 等の既存 import 向けエイリアス（`adminPageSearchParamsParsers` と同一参照） */
-export const adminPageParsers = adminPageSearchParamsParsers;
-
 // ============================================================
 // 管理画面: 予約カレンダー
 // ============================================================
@@ -559,4 +556,27 @@ export async function loadAdminEventSearchParams(
 ) {
   await adminEventSearchParamsCache.parse(searchParams);
   return adminEventSearchParamsCache.all();
+}
+
+// ============================================================
+// 管理画面: 通知
+// ============================================================
+
+export const adminNotificationSearchParamsParsers = {
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+  type: parseAsString.withDefault(""),
+  isRead: parseAsString.withDefault(""),
+};
+
+const adminNotificationSearchParamsCache = createSearchParamsCache(
+  adminNotificationSearchParamsParsers,
+);
+
+/** 管理画面通知検索パラメータローダー */
+export async function loadAdminNotificationSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminNotificationSearchParamsCache.parse(searchParams);
+  return adminNotificationSearchParamsCache.all();
 }

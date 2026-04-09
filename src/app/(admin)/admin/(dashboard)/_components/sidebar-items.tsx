@@ -20,6 +20,7 @@ import {
   IconTicket,
   IconMessage,
   IconStar,
+  IconBell,
 } from "@tabler/icons-react";
 import type { SidebarItem } from "@/admin/types/admin-layout";
 
@@ -103,6 +104,11 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "スタッフ管理",
     href: "/admin/staff",
     icon: <IconShield className="h-5 w-5" />,
+  },
+  {
+    label: "通知",
+    href: "/admin/notifications",
+    icon: <IconBell className="h-5 w-5" />,
   },
   {
     label: "監査ログ",
