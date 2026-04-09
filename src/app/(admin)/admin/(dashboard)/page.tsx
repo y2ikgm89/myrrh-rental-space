@@ -11,6 +11,7 @@ import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { DashboardHeader } from "./_components/DashboardHeader";
 import { DashboardStatsSection } from "./_components/DashboardStatsSection";
+import { DashboardNotificationsSection } from "./_components/DashboardNotificationsSection";
 import { DashboardChartSection } from "./_components/DashboardChartSection";
 import { DashboardTodaySection } from "./_components/DashboardTodaySection";
 import { DashboardRecentSection } from "./_components/DashboardRecentSection";
@@ -23,6 +24,10 @@ import {
 
 function ChartSkeleton() {
   return <div className="h-80 animate-pulse rounded-lg bg-muted" />;
+}
+
+function NotificationsSkeleton() {
+  return <div className="h-64 animate-pulse rounded-lg bg-muted" />;
 }
 
 export const metadata: Metadata = {
@@ -52,6 +57,11 @@ export default async function AdminDashboard(): Promise<ReactElement> {
       {/* 統計カード: 最も高速なDBクエリ */}
       <Suspense fallback={<StatsCardsSkeleton />}>
         <DashboardStatsSection />
+      </Suspense>
+
+      {/* 最新通知 */}
+      <Suspense fallback={<NotificationsSkeleton />}>
+        <DashboardNotificationsSection />
       </Suspense>
 
       {/* 予約・売上推移グラフ */}
