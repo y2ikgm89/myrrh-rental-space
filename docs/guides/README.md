@@ -34,7 +34,7 @@ import type { SpaceSummary } from "@/shared/domain/spaces/types";
 import { z } from "zod";
 import { updateTag } from "next/cache";
 import { hasPermission } from "@/admin/lib/permissions";
-import { verifyAdminSession } from "@/shared/lib/auth";
+import { verifyAdminSession } from "@/shared/lib/admin-auth";
 import { CACHE_TAGS } from "@/shared/lib/constants/cache";
 
 const schema = z.object({

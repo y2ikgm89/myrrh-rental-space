@@ -6,7 +6,7 @@ paths:
 
 # 認証パターンルール
 
-> Better Auth 1.5.6 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
+> Better Auth 1.6.1 / RBAC / Next.js 16 対応（`package.json` の `better-auth` と一致）
 
 ## Better Auth 公式パターン
 
@@ -18,7 +18,20 @@ Server Actions で `Set-Cookie` を正しく処理するために必須。**`plu
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 
-export const auth = betterAuth({
+// 管理者用
+export const adminAuth = betterAuth({
+  cookiePrefix: "admin-auth",
+  // ...config
+  plugins: [
+    // 他のプラグイン,
+    nextCookies(), // 必ず配列の最後
+  ],
+});
+
+// 顧客用
+export const customerAuth = betterAuth({
+  cookiePrefix: "customer-auth",
+  basePath: "/api/customer-auth",
   // ...config
   plugins: [
     // 他のプラグイン,
@@ -29,27 +42,31 @@ export const auth = betterAuth({
 
 ### 静的初期化パターン（本プロジェクト正本）
 
-`src/shared/lib/auth.ts` で `export const auth = createAuth()` を **モジュールロード時に 1 回だけ** 生成する。
+管理者用と顧客用で Better Auth インスタンスを分離:
+
+- `src/shared/lib/admin-auth.ts` で `export const adminAuth = createAdminAuth()` を **モジュールロード時に 1 回だけ** 生成（email/password、`cookiePrefix: "admin-auth"`）
+- `src/shared/lib/customer-auth.ts` で `export const customerAuth = createCustomerAuth()` を **モジュールロード時に 1 回だけ** 生成（Google/LINE、`cookiePrefix: "customer-auth"`、`basePath: "/api/customer-auth"`）
+
 Google OAuth は `serverEnv`（env / Secret Manager）を正本とし、**DB から provider を動的に差し替えたり、`getAuth()` / `resetAuthInstance()` で再 bootstrap したりしない**（AGENTS.md の不変条件）。
 
 ### Prisma アダプター + Prisma 7（必須設定）
 
-- **アダプターに渡すクライアント**: `$extends` による Decimal 換算などを付けたアプリ用 `prisma` は使わない。`src/shared/db/prisma.ts` の **`prismaForBetterAuth`（拡張前の `PrismaClient`）** のみを `src/shared/db/better-auth-adapter.ts` から `prismaAdapter(...)` に渡す
+- **アダプターに渡すクライアント**: `$extends` による Decimal 換算などを付けたアプリ用 `prisma` は使わない。`src/shared/db/prisma.ts` の **`basePrisma`（拡張前の `PrismaClient`）** のみを `src/shared/db/better-auth-adapter.ts` から `prismaAdapter(...)` に渡す
 - **`generateId: "uuid"`**: DB スキーマが `@db.Uuid` のため `advanced.database.generateId: "uuid"` 必須（[公式](https://www.better-auth.com/docs/concepts/database)）。未設定だと Better Auth がランダム文字列 ID を生成し `invalid input syntax for type uuid` エラー
 - **`baseURL`**: `betterAuth({ baseURL: serverEnv.BETTER_AUTH_URL ?? getAppUrl(), ... })` で明示設定（[公式](https://www.better-auth.com/docs/concepts/dynamic-base-url)）
 
 ### Server Components でのセッション取得（推奨: DAL ヘルパー）
 
-運用コードでは `verifySession` / `verifyAdminSession` / `getCurrentUser` を優先（下記「セッション取得パターン」）。
-`auth.api.getSession` を直に叩く例:
+運用コードでは `verifyAdminSession` / `getCurrentAdminUser` を優先（下記「セッション取得パターン」）。
+`adminAuth.api.getSession` を直に叩く例（管理画面）:
 
 ```typescript
-import { auth } from "@/shared/lib/auth";
+import { adminAuth } from "@/shared/lib/admin-auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({
+  const session = await adminAuth.api.getSession({
     headers: await headers(),
   });
 
@@ -61,15 +78,15 @@ export default async function DashboardPage() {
 }
 ```
 
-### Server Actions でのセッション取得（auth.api 直接呼び出し）
+### Server Actions でのセッション取得（adminAuth.api 直接呼び出し）
 
 ```typescript
-import { auth } from "@/shared/lib/auth";
+import { adminAuth } from "@/shared/lib/admin-auth";
 import { headers } from "next/headers";
 
 const someAuthenticatedAction = async () => {
   "use server";
-  const session = await auth.api.getSession({
+  const session = await adminAuth.api.getSession({
     headers: await headers(),
   });
 };
@@ -91,6 +108,17 @@ SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER / CUSTOMER
 | `VIEWER`      | 閲覧のみ（編集不可）                                                        |
 | `USER`        | 公開ユーザー（管理画面アクセス不可）                                        |
 | `CUSTOMER`    | ソーシャルログイン顧客（マイページのみアクセス可）                          |
+
+### DASHBOARD_ROLES（ダッシュボードアクセス制御の SSOT）
+
+`@/shared/lib/admin-auth` から export。`verifyAdminSession`・ログインページで使用:
+
+```typescript
+import { DASHBOARD_ROLES } from "@/shared/lib/admin-auth";
+// [SUPER_ADMIN, ADMIN, EDITOR, VIEWER]
+```
+
+ロール追加時はこの定数のみ更新する。ローカルに管理者ロール一覧を定義しない。
 
 ### リソース別アクション一覧
 
@@ -234,18 +262,12 @@ export async function createItem(input: ItemInput) {
 **Next.js Data Access Layer (DAL) パターン**に準拠。同一リクエスト内で複数回呼び出しても DB アクセスは 1 回のみ:
 
 ```typescript
-import { verifySession, verifyAdminSession } from '@/shared/lib/auth'
+import { verifyAdminSession } from "@/shared/lib/admin-auth";
 
-// 認証必須ページ（未認証なら /admin/login にリダイレクト）
+// 管理認証必須ページ（未認証なら /admin/login にリダイレクト、DASHBOARD_ROLES 必須）
 export default async function AdminPage() {
-  const user = await verifySession()
-  return <div>Welcome, {user.name}</div>
-}
-
-// SUPER_ADMIN 限定ページ（ADMIN 以外はリダイレクト）
-export default async function SuperAdminPage() {
-  const user = await verifyAdminSession()
-  // ...
+  const user = await verifyAdminSession();
+  return <div>Welcome, {user.name}</div>;
 }
 ```
 
@@ -254,12 +276,12 @@ export default async function SuperAdminPage() {
 Server Actions は複数リクエストにまたがるため `cache()` を使用しない:
 
 ```typescript
-import { getSession, getSessionUser } from "@/shared/lib/auth";
+import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
 import { createFailure } from "@/shared/types/server-actions";
 
 export async function myAction() {
-  const session = await getSession();
-  const user = getSessionUser(session);
+  const session = await getAdminSession();
+  const user = getAdminSessionUser(session);
   if (!user) {
     return createFailure("ログインが必要です");
   }
@@ -270,27 +292,38 @@ export async function myAction() {
 ### オプショナル認証（リダイレクトなし）
 
 ```typescript
-import { getCurrentUser } from '@/shared/lib/auth'
+import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 
 export default async function Page() {
-  const user = await getCurrentUser()  // User | undefined
+  const user = await getCurrentAdminUser(); // AdminUser | undefined
   if (user) {
-    return <AuthenticatedView user={user} />
+    return <AuthenticatedView user={user} />;
   }
-  return <PublicView />
+  return <PublicView />;
 }
 ```
 
 ### セッション取得関数の使い分け
 
-| 関数                           | キャッシュ     | 未認証時                | 用途                                            |
-| ------------------------------ | -------------- | ----------------------- | ----------------------------------------------- |
-| `verifySession()`              | `cache()` あり | `/admin/login` redirect | Server Components（管理認証必須）               |
-| `verifyAdminSession()`         | `cache()` あり | リダイレクト            | Server Components（SUPER_ADMIN 必須）           |
-| `verifyCustomerSession()`      | なし           | `/login` redirect       | マイページ（CUSTOMER 認証、管理者→`/admin`）    |
-| `getCurrentUser()`             | `cache()` あり | `undefined` を返す      | Server Components（オプショナル）               |
-| `executeAdminMutationResult()` | なし           | `MutationError` を返す  | Server Actions（書き込み系 — **標準パターン**） |
-| `checkPermission()`            | なし           | `ActionFailure` を返す  | API Route（`request.headers` を第3引数に渡す）  |
+**管理者用（`@/shared/lib/admin-auth`）:**
+
+| 関数                           | キャッシュ     | 未認証時               | 用途                                                 |
+| ------------------------------ | -------------- | ---------------------- | ---------------------------------------------------- |
+| `verifyAdminSession()`         | `cache()` あり | `/` redirect           | Server Components（DASHBOARD_ROLES 必須）            |
+| `getCurrentAdminUser()`        | `cache()` あり | `undefined` を返す     | Server Components（オプショナル）                    |
+| `getAdminSession()`            | なし           | `null` を返す          | Server Actions（直接使用は稀）                       |
+| `getAdminSessionUser()`        | なし           | `null` を返す          | Server Actions（セッションから型安全にユーザー取得） |
+| `executeAdminMutationResult()` | なし           | `MutationError` を返す | Server Actions（書き込み系 — **標準パターン**）      |
+| `checkPermission()`            | なし           | `ActionFailure` を返す | API Route（`request.headers` を第3引数に渡す）       |
+
+**顧客用（`@/shared/lib/customer-auth`）:**
+
+| 関数                       | キャッシュ     | 未認証時           | 用途                                              |
+| -------------------------- | -------------- | ------------------ | ------------------------------------------------- |
+| `verifyCustomerSession()`  | なし           | `/login` redirect  | マイページ（CUSTOMER 認証、管理者→`/admin`）      |
+| `getCurrentCustomerUser()` | `cache()` あり | `undefined` を返す | 公開ページ（オプショナル顧客認証）                |
+| `getCustomerSession()`     | なし           | `null` を返す      | マイページ Server Actions                         |
+| `getCustomerSessionUser()` | なし           | `null` を返す      | マイページ Server Actions（型安全なユーザー取得） |
 
 ---
 
@@ -300,19 +333,17 @@ Better Auth の `additionalFields` は `string` 型で定義されるため、
 `getRoleFromSession` / `getSessionUser` で型安全に `Role` enum に変換する:
 
 ```typescript
-import {
-  isValidRole,
-  getRoleFromSession,
-  getSessionUser,
-} from "@/shared/lib/auth";
+// 管理者用
+import { isValidRole, getAdminSessionUser } from "@/shared/lib/admin-auth";
 
-// セッションから Role を取得（string → Role enum）
-const role = getRoleFromSession(session); // Role | null
+const user = getAdminSessionUser(session); // AdminUser | null
 
-// ユーザー取得（role が Role 型に変換済み）
-const user = getSessionUser(session); // User | null
+// 顧客用
+import { getCustomerSessionUser } from "@/shared/lib/customer-auth";
 
-// isValidRole で個別検証
+const user = getCustomerSessionUser(session); // CustomerUser | null
+
+// isValidRole は両モジュールから export（同一実装）
 if (isValidRole(session?.user?.role)) {
   const role = session.user.role; // Role 型に narrowed
 }
@@ -321,8 +352,13 @@ if (isValidRole(session?.user?.role)) {
 **User 型の定義:**
 
 ```typescript
-// Better Auth の Session['user'] の role を Role enum に置き換えた型
-export type User = Omit<Session["user"], "role"> & {
+// 管理者用（admin-auth.ts）
+export type AdminUser = Omit<AdminSession["user"], "role"> & {
+  role: Role;
+};
+
+// 顧客用（customer-auth.ts）
+export type CustomerUser = Omit<CustomerSession["user"], "role"> & {
   role: Role;
 };
 ```
@@ -373,8 +409,8 @@ function logAction(
    - `getRoleFromSession(session)` または `getSessionUser(session)` を使用
 
 4. **`cache()` の誤用禁止**
-   - Server Actions 内では `getSession()` を使用（`cache()` 不使用）
-   - Server Components では `verifySession()` / `getCurrentUser()` を使用（`cache()` あり）
+   - Server Actions 内では `getAdminSession()` / `getCustomerSession()` を使用（`cache()` 不使用）
+   - Server Components では `verifyAdminSession()` / `getCurrentAdminUser()` を使用（`cache()` あり）
 
 5. **権限ハードコード禁止**
    - `user.role === 'ADMIN'` → `executeAdminMutationResult` の `resource`/`action` で宣言的に指定
@@ -387,24 +423,26 @@ function logAction(
 
 ## ファイル配置
 
-| パス                          | 内容                                                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `@/shared/lib/auth.ts`        | Better Auth 設定・遅延初期化・セッション検証ユーティリティ                                               |
-| `@/shared/lib/auth-client.ts` | クライアント用認証フック（`authClient`）                                                                 |
-| `@/admin/lib/admin-action.ts` | `executeAdminMutationResult`（Server Actions 標準認証パターン）                                          |
-| `@/admin/lib/action-auth.ts`  | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
-| `@/admin/lib/permissions.ts`  | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`）                                 |
-| `@/admin/lib/audit.ts`        | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |
-| `@/admin/lib/role-guards.ts`  | ロール判定ヘルパー（`isEditorRole` 等）                                                                  |
+| パス                                   | 内容                                                                                                     |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `@/shared/lib/admin-auth.ts`           | 管理者用 Better Auth 設定・セッション検証（`cookiePrefix: "admin-auth"`、email/password）                |
+| `@/shared/lib/admin-auth-client.ts`    | 管理者用認証クライアント（`adminAuthClient`）                                                            |
+| `@/shared/lib/customer-auth.ts`        | 顧客用 Better Auth 設定・セッション検証（`cookiePrefix: "customer-auth"`、Google/LINE）                  |
+| `@/shared/lib/customer-auth-client.ts` | 顧客用認証クライアント（`customerAuthClient`）                                                           |
+| `@/admin/lib/admin-action.ts`          | `executeAdminMutationResult`（Server Actions 標準認証パターン）                                          |
+| `@/admin/lib/action-auth.ts`           | 認証プリミティブ（`checkAdminAuth`, `checkPermission`, `checkResourceAccess`, `checkRole`, `logAction`） |
+| `@/admin/lib/permissions.ts`           | 権限定義（`ROLE_PERMISSIONS`, `hasPermission`, `userHasResourceAccess`）                                 |
+| `@/admin/lib/audit.ts`                 | 監査ログ記録（`logUserAction`, `logPermissionDenied`）                                                   |
+| `@/admin/lib/role-guards.ts`           | ロール判定ヘルパー（`isEditorRole` 等）                                                                  |
 
 ## 公開顧客認証（ソーシャルログイン）
 
 ### verifyCustomerSession（マイページ用）
 
-未認証→`/login`、管理者ロール→`/admin` にリダイレクト。`verifySession`（→`/admin/login`）とは分離:
+未認証→`/login`、管理者ロール→`/admin` にリダイレクト。`verifyAdminSession`（→`/`）とは分離:
 
 ```typescript
-import { verifyCustomerSession } from "@/shared/lib/auth";
+import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 
 export default async function MypageLayout({ children }) {
   const { user } = await verifyCustomerSession();
@@ -429,11 +467,11 @@ export default async function MypageLayout({ children }) {
 
 ```typescript
 "use server";
-import { getSession } from "@/shared/lib/auth";
+import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 
 export async function myAction(reservationId: string) {
-  const session = await getSession();
+  const session = await getCustomerSession();
   if (!session) return { error: "認証が必要です" };
   const customer = await getCustomerByUserId(session.user.id);
   if (!customer) return { error: "顧客情報が見つかりません" };
@@ -500,7 +538,7 @@ try { await signIn.social({ ... }); } catch (err) { /* 到達しない */ }
 - **`prisma migrate dev` は非対話環境でブロック** — `prisma migrate diff --script` + `prisma db execute` + `prisma migrate resolve --applied` で代替
 - **セッション作成で `invalid input syntax for type uuid` エラー** — `advanced.database.generateId: "uuid"` が未設定。Better Auth のデフォルト ID 生成はランダム文字列で、DB の `@db.Uuid` 制約に違反する
 - **`'use cache'` 関数に Zod スキーマを引数で渡すと `Cannot access safeParse on the server` エラー** — `'use cache'` の引数は React シリアライゼーションを通るため、Zod スキーマ等の関数を含むオブジェクトは渡せない。DB フェッチのみをキャッシュし、バリデーションはキャッシュ境界外で行う
-- **`verifyAdminSession()` / `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
+- **`verifyAdminSession()`（`@/shared/lib/admin-auth`）/ `isAdmin()` は `SUPER_ADMIN` も必須チェック** — `role !== Role.ADMIN` のみでは `SUPER_ADMIN`（全権限保有）が管理画面にアクセスできないバグになる。`role !== Role.ADMIN && role !== Role.SUPER_ADMIN` の形式で記述する
 - **接続テスト・確認系アクションも `executeAdminMutationResult` 必須** — 独自の `checkXxxPermission()` ヘルパーは権限チェックが非標準になり欠落が生じる
 - **Webhook トークン比較に `!==` 禁止** — `crypto.timingSafeEqual` を使用。`receivedToken !== settings.token` はタイミング攻撃に脆弱。Google Calendar webhook の `timingSafeTokenEqual()` が実装例
-- **Better Auth クライアントの `forgetPassword` は `InferClientAPI` で型推論されない** — `emailAndPassword` のコア機能だが、クライアント型に含まれない。`authClient.$fetch("/request-password-reset", { method: "POST", body: { email, redirectTo } })` で直接呼び出す。`resetPassword` は型推論される
+- **Better Auth クライアントの `forgetPassword` は `InferClientAPI` で型推論されない** — `emailAndPassword` のコア機能だが、クライアント型に含まれない。`adminAuthClient.$fetch("/request-password-reset", { method: "POST", body: { email, redirectTo } })` で直接呼び出す（管理者用）。`resetPassword` は型推論される

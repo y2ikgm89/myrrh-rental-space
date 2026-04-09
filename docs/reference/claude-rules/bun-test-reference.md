@@ -149,8 +149,8 @@ import {
 } from "../../mocks/auth";
 import { Role } from "@/shared/generated/prisma/enums";
 
-mock.module("@/shared/lib/auth", () => ({
-  getSession: () => mockGetSession(),
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: () => mockGetSession(),
 }));
 
 beforeEach(() => {

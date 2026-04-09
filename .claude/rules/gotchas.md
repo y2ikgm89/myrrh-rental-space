@@ -12,7 +12,9 @@ paths:
 
 - **`admin-login-gate.ts` に `server-only` / `serverEnv` 依存禁止** — seed.ts・CLI スクリプト（`scripts/generate-login-url.ts`）から import するため。`process.env` を直接参照する
 - **Admin Gate トークン生成の鶏と卵** — 管理画面APIでトークン生成するには既にログインが必要。初回は `bun prisma/seed.ts --admin`（自動URL出力）または `bun scripts/generate-login-url.ts` で生成
-- **proxy.ts の `/admin/login` ガードを削除しない** — Admin Gate が無効化されると管理画面ログインページが公開される。修正時は gate cookie / session / token の3条件を維持すること
+- **proxy.ts の `/admin/login` ガードを削除しない** — Admin Gate が無効化されると管理画面ログインページが公開される。修正時は gate cookie / token の2条件を維持すること。セッション cookie の存在だけでは通過させない（CUSTOMER ロールのセッションでもログインフォームが露出するため）
+- **`verifyAdminSession` は非管理者ロールを `/` にリダイレクト** — `/admin/login` ではなく `/` にリダイレクトする。`/admin/login` にリダイレクトすると Admin Gate で 404 になるか、gate cookie があれば無限リダイレクトループが発生する
+- **`DASHBOARD_ROLES`（`@/shared/lib/admin-auth`）がダッシュボードアクセス可能なロールの Single Source of Truth** — `verifyAdminSession`・ログインページで共有。ロール追加時はこの定数のみ更新
 
 ## 料金フォーマット
 
@@ -26,7 +28,7 @@ paths:
 - **許容される alias**: 第三者ライブラリの primitive リネームのみ（`Command as CommandPrimitive`、`Toaster as SonnerToaster`）
 - **パススルーラッパー関数禁止** — 何も追加しない `async function X() { return XQuery(); }` は削除。直接 import して使う
 - **barrel export の不要な型リネーム禁止** — `export type { FooInput as Foo }` は消費者がいない場合は削除。元の名前でそのまま export する
-- **`utils.ts` は FormData ヘルパー + `generateSlug` のみ** — `cn` は `@/shared/lib/cn`、日付フォーマットは `@/shared/lib/date-format`、`withRetry` は `@/shared/lib/action-helpers` が正本。`utils.ts` に新関数を追加せず専用モジュールを作る
+- **`utils.ts` は非推奨 re-export barrel** — FormData ヘルパーは `@/shared/lib/form-data`、`generateSlug` は `@/shared/lib/slug` が正本。`utils.ts` に新規 import・新関数追加禁止。`cn` は `@/shared/lib/cn`、日付フォーマットは `@/shared/lib/date-format`、`withRetry` は `@/shared/lib/action-helpers`
 
 ## shadcn/ui コンポーネント
 
@@ -50,6 +52,14 @@ paths:
 
 ## ドメイン・予約
 
+- **`fireAndForget` は `@/shared/lib/async-utils`** — `@/shared/lib/errors/server` からは export されない。Server Actions の `afterSuccess` 内でメール送信・通知生成・カレンダー同期等の非クリティカル副作用に使用。第2引数は `{ operation, category }` で logError 用コンテキスト
+- **公開フォーム成功時の管理通知必須** — 予約・お問い合わせ・レビュー・イベント申込の成功パスに `fireAndForget(createNotificationCommand({ type: NOTIFICATION_TYPE.*, ... }))` + `updateTag(CACHE_TAGS.NOTIFICATIONS)` が必要。顧客セルフキャンセル（マイページ）も含む
+- **`exactOptionalPropertyTypes` で Prisma create の optional フィールドに `input.field` を直接渡せない** — `field?: string` に `string | undefined` は非互換。条件スプレッド `...(input.field !== undefined && { field: input.field })` を使用。`notifications/commands.ts` パターン参照
+- **`resolveOrCreateCustomer` で既存顧客のデータを変更禁止** — 既存 Customer（リンク済み・未リンク問わず）の名前・電話・companyName を上書きしない。ゲスト予約では customerId のみ返す。ログイン済み予約では `userId` のみ設定（Shopify 型保護パターン）。名前変更はアカウント登録後のプロフィール編集 or 管理画面で行う
+- **`ensureCustomerLinked` で別ユーザーにリンク済みの Customer を乗っ取らない** — `byEmail.userId` が既に別ユーザーに設定されている場合は新規 Customer を作成する。同一メールの Customer が2つ存在しうるが、管理画面でのマージで対応
+- **予約の guest フィールドと Customer プロフィールは独立** — `guestLastName`/`guestFirstName`/`guestPhone`/`guestCompanyName` は予約時の入力スナップショット。`buildPayload`（メール・カレンダー同期）は `customer` テーブルの現在値を使用。CSV エクスポートには guest フィールドを含めること（「予約時氏名」「予約時電話」列）
+- **Prisma update の `null` と `undefined` の違いに注意** — `null` は DB カラムを NULL に設定、`undefined` はフィールド更新をスキップ。`value || null` は `undefined || null = null` で意図しない NULL 上書きを引き起こす。既存値を保持したい場合はフィールドを data に含めない（[Prisma 公式](https://www.prisma.io/docs/orm/prisma-client/special-fields-and-types/null-and-undefined)）
+- **Server Action の薄い wrapper にも認証チェック必須** — `searchCustomersAction` のように domain query を re-export するだけの Server Action でも `checkAdminAuth()` を呼ぶ。Server Action は endpoint として外部から呼び出せるため、layout の認証ガードに依存しない
 - **予約フォームはプロフィール未完了でも表示する** — ログイン済み顧客のプロフィールが未完了でもフォームをブロックしない（業界標準: インライン収集）。仮名（`CUSTOMER_PLACEHOLDER_NAME`）はプリフィルから除外し空文字にする。`isCustomerProfileComplete()` はマイページのダッシュボード表示にのみ使用
 - **予約フォームの `?spaceId=` 事前選択** — スペース詳細の「予約する」ボタンは `/reservation?spaceId={id}` にリンク。`reservation/page.tsx` が locations 内の存在を検証し `initialSpaceId` として渡す。`resolveAutoIds` が locationId を逆引きし、既存の `skipStep1` でステップ2から開始。不正な spaceId は無視してフォールバック
 - **`executeAdminMutationResult` で `afterSuccess` にデータを渡すには `execute` 戻り値を使用** — `let data = null` を外部クロージャに定義して `execute` 内で代入するパターン禁止（脆弱）。`execute` の戻り値型を適切に定義し `afterSuccess: (data) => { ... }` で受け取る
@@ -101,6 +111,7 @@ paths:
 
 ## 公開ページ レスポンシブ標準
 
+- **公開カレンダーの曜日色は日=`text-destructive`、土=`text-info`** — 日本標準のカレンダー配色。日曜始まり。今日マーカーは `bg-accent text-accent-foreground rounded-full`。曜日ヘッダーは `bg-surface` + 枠線
 - **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け
 - **空状態の CTA は `Button variant="editorial" size="sm"` を使用** — テキストリンクは余白の中で埋もれる。メッセージテキストは `text-muted-foreground`（base サイズ）、ボタンは `space-y-4` で配置
 - **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。SpaceGrid, PostGrid, RelatedSpaces, TestimonialSection, FeaturesSection で採用済み
@@ -125,8 +136,10 @@ paths:
 ## GSAP アニメーション
 
 - **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持され、GSAP がクライアントで上書きする
+- **`ScrollReveal` ラッパー内のカードに `border-b last:border-b-0` 禁止** — `ScrollReveal` の `<div>` が `:last-child` を壊し、全カードで最後の線が消える。親要素に `divide-y divide-border` を使用して区切り線を管理する。実装例: `events/_components/event-list-view.tsx`
 - **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
 - **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
+- **`font-heading` (Cormorant Garamond) で数字+漢字の混合テキスト禁止** — 年月表示（`2026年4月`）等で数字と漢字のベースラインがずれる。sans (`font-sans` / デフォルト) を使用し、`tracking-wide` で可読性を確保。`font-heading` は英語見出し・日付の数字単体（EventCard の日番号等）に限定
 - **`useGSAP` 外の GSAP アニメーションには `useEffect` cleanup 必須** — イベントハンドラで `gsap.fromTo`/`gsap.to` を直接呼ぶ場合、`useEffect` の cleanup で `gsap.killTweensOf(element)` を呼ぶ。ref をクリーンアップ関数内で使う場合はローカル変数にキャプチャする（`exhaustive-deps` 警告回避）
 
 ## Lexical WYSIWYG
@@ -138,7 +151,7 @@ paths:
 - **`SpaceCard` の `imageUrls` prop は optional** — 未指定または1枚のみの場合は `ImageFrame` で単一画像表示。2枚以上で `ImageCarousel`（ホバー左右ナビ + モバイルスワイプ + ドット）が有効化。消費者（`RelatedSpaces`, `SpaceShowcaseSection`, `SpaceGrid`）は全て対応済み
 - **`ImageCarousel` は `next/image` 直接使用の許容例外** — per-image の `opacity` + `aria-hidden` 制御が必要で `ImageFrame` では対応不可。単一画像は `ImageFrame` を使用
 - **`SectionWrapper` と `Section` Primitive を混同しない** — `SectionWrapper`（`sections/SectionWrapper.tsx`）は管理画面 SectionDesign JSON → CSS 変換（padding/background/maxWidth を DB から動的制御）。`Section` Primitive（`design-system/section.tsx`）は静的ページレイアウト用。SectionWrapper を Section に置き換えると管理画面のデザイン制御が効かなくなる
-- **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に FullCalendar がある場合 `event-list` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
+- **一覧ページの trailing sections から同種セクション除外必須** — `/spaces` に SpaceGrid がある場合 `space-list` を、`/events` に自作カレンダーがある場合 `event-calendar` を `trailingSections` フィルタで除外。除外しないとページ独自 UI とセクションシステムの同種コンテンツが重複描画される
 - **ページ固有 CTA（SiteCTA）を持つページは `cta` セクションも除外** — `/faq`（SiteCTA でお問い合わせ誘導）、`/contact`（フォーム自体が CTA）では DB の `cta` セクションが重複。`trailingSections` フィルタに `s.type !== "cta"` を追加
 - **レガシーセクション（`_components/*.tsx`）も Editorial Magazine 準拠必須** — SectionRenderer 経由で描画されるため見落としやすい。`rounded-lg`/`shadow`/`hover:text-accent`/`tracking-wide`/`font-medium` on serif が残りやすい。新規 Primitives 整備後も個別修正が必要
 - **hero 直下の一覧セクションは上余白を縮小** — `py-[var(--spacing-section)]`（112-176px）は hero 後に過剰。`pt-10 pb-[var(--spacing-section)] md:pt-14` で上余白のみ 40-56px に抑える。適用済み: `/spaces`, `/journal`, `/faq`。記事詳細・ホームページセクションは独立コンテンツのためフル余白維持
@@ -150,6 +163,7 @@ paths:
 - **`tracking` は `tracking-[0.18em]` を標準値とする** — SectionLabel, ナビリンク, MagneticButton, ScrollIndicator 等で統一。`tracking-[0.2em]` / `tracking-[0.3em]` は旧値
 - **Button primary の bronze shimmer アニメーション廃止** — `hover:bg-accent/90 hover:shadow-md` のシンプルな遷移に変更。`hover:animate-[bronze-shimmer]` / `hover:bg-[image:linear-gradient(...)]` は使用しない
 - **ImageFrame の hover は `opacity-85`（`scale-105` 廃止）** — Editorial Magazine の控えめなインタラクション。全公開ページ画像で統一。`image-gallery.tsx` の Lightbox 用サムネイルも同様
+- **SC children を CC 内でタブ切替する場合は CSS `hidden` を使用** — CC 内で SC を条件レンダリング（三項演算子）すると SC が再評価される。page.tsx から両ビューを props で渡し、`className={activeView !== "x" ? "hidden" : undefined}` で DOM を保持したまま表示切替。実装例: `events/_components/events-view-switcher.tsx`
 - **公開詳細ページは `PageLayout variant="content"` + `PageHero variant="compact"` + `Section` を使用** — `events/[slug]`, `terms/[slug]`, `spaces/[slug]` で統一。手動 `<section>` + `<>...</>` ラッパーは禁止。hero/cta は `PageLayout` の props に渡す
 - **`/news` `/posts` 一覧ページは `/journal` に統合済み** — 詳細ページ（`/news/[slug]`、`/posts/[...segments]`）は維持。パンくずリンクは `/journal?tab=news` / `/journal?tab=posts`
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。`getPageContent()` / `simplePageContentSchema` / `defaultXxxContent` は全て削除済み。公開ページは `getPageSectionsWithFallback(slug)` + `SectionRenderer` を使用
@@ -222,6 +236,7 @@ paths:
 - **`useState` の setter 命名は `set` + state 変数名の PascalCase 必須** — `const [text, setIconText]` は `@eslint-react/use-state` warning。`const [text, setText]` に統一する
 - **レンダー中の `Object.assign` 禁止** — `@eslint-react/purity` 違反。`CSSProperties` 構築等で `Object.assign(target, source)` を使うとミュータブル操作とみなされる。`let styles = { ...base, ...conditional }` のスプレッドパターンを使用
 - **レンダー中の `new Date()` は避ける** — `@eslint-react/purity`。シリアライズ済み日付（ISO 文字列）を `input[type="date"]` に載せる場合は `dateInputValueFromSerialized()`（`@/shared/lib/serialize`）で文字列のみ正規化する。当日の `min` など「マウント時点で固定したい値」は `useState(() => { ... new Date() ... })` の遅延初期化で一度だけ評価する
+- **`useEffect` 内の同期 `setState` は `set-state-in-effect` 警告** — 親 prop の変更を `useEffect(() => { setX(prop) }, [prop])` で同期するパターンは ESLint 警告。代替: ①開くタイミング（イベントハンドラ）で prop を直接セット ② `key` prop でコンポーネントをリマウント ③ `useState` の初期値に prop を渡す（変更追従不要の場合）
 - **Turbopack チャンク重複は既知の制限** — Lexical core (275KB×3)、Prism.js (168KB×2) 等が admin 内の異なるルートグループ向けに独立チャンクとして生成される（合計 808KB 無駄）。Webpack の `splitChunks` / `cacheGroups` 相当機能が未成熟なため。`next build --webpack` でフォールバック可能だが、Turbopack の高速ビルドを失う。Next.js パッチ（PR #78194, #78199）で段階的改善中。各ページの First Load JS には影響しない（ディスク上の重複のみ）
 - **Turbopack ビルドはルート別 JS サイズを表示しない** — `bun run build` 出力の「Total client JS」は全チャンク合計。1ルートの First Load JS は `.next/server/app/<route>.html` 内の `<script>` 参照チャンクを合計して計算する
 - **Turbopack が `¥`（U+00A5）を JSX 属性内でエスケープシーケンスと誤認識** — `placeholder="¥1,000"` 等はビルドエラー（`Invalid unicode escape`）。モジュールレベル定数に `"\u00A51,000"` で定義し `placeholder={CONST}` で参照する
@@ -332,6 +347,7 @@ paths:
 
 ## Better Auth クライアント
 
+- **Better Auth `$Infer` は module augmentation で上書きできない** — `better-auth.d.ts` で `interface User { role: Role }` を宣言しても、`AuthInstance["$Infer"]["Session"]["user"]["role"]` は `additionalFields` の `type: "string"` から推論された `string` のまま。`Omit<Session["user"], "role"> & { role: Role }` パターン（`admin-auth.ts` / `customer-auth.ts`）が必須。`getAdminSessionUser()` / `getCustomerSessionUser()` のランタイム `isValidRole()` 検証も維持する
 - **`signIn.social()` のエラーハンドリングは `fetchOptions.onError` が公式推奨** — `result.error` だけでは 429 等の HTTP エラー時に Promise がサイレントに処理され UI にフィードバックが出ない。`fetchOptions: { onError(ctx) { ctx.response.status } }` で HTTP ステータスを検査する
 - **Google/LINE ソーシャルログインボタンはブランド SVG ロゴ必須** — テキストのみのボタンは UX 品質不足。Google は公式4色「G」ロゴ + 白背景、LINE は `#06C755` 背景 + 白アイコン
 - **ソーシャルプロバイダーロゴは `@/public/components/ui/social-provider-logos.tsx` の共有コンポーネントを使用** — `GoogleLogo`/`LineLogo`/`PROVIDER_LOGOS` をエクスポート。ログインページ・アカウント連携の両方で使用。ローカル定義禁止

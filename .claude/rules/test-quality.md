@@ -98,7 +98,9 @@ describe("crypto", () => {
 import { describe, test, expect, beforeEach, mock } from "bun:test";
 
 const mockGetSession = mock(() => null);
-mock.module("@/shared/lib/auth", () => ({ getSession: mockGetSession }));
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: mockGetSession,
+}));
 
 const { createNews } = await import("@/admin/actions/news");
 
@@ -260,7 +262,9 @@ expect(result).toMatchObject({
 ```typescript
 // OK: 型のみのインポートはモックと共存可能
 import type { ActionResult } from "@/shared/types/server-actions";
-mock.module("@/shared/lib/auth", () => ({ getSession: mockGetSession }));
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: mockGetSession,
+}));
 
 // 型注釈に使用
 const result: ActionResult<void> = await createPost(data);

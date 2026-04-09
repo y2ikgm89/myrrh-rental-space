@@ -10,8 +10,8 @@ paths:
 ## Better Auth との境界
 
 - **アプリ**: `src/shared/db/prisma.ts` の **`prisma`**（`createAppPrismaClient` 適用済み）。
-- **`prismaAdapter`**: **`prismaForBetterAuth`**（拡張前）のみを `src/shared/db/better-auth-adapter.ts` から渡す。
-- **`experimental.joins`** は `auth.ts` 側で有効維持。理由は `auth-patterns.md` および [Better Auth Prisma ドキュメント](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)。
+- **`prismaAdapter`**: **`basePrisma`**（拡張前）のみを `src/shared/db/better-auth-adapter.ts` から渡す。
+- **`experimental.joins`** は `admin-auth.ts` / `customer-auth.ts` 側で有効維持。理由は `auth-patterns.md` および [Better Auth Prisma ドキュメント](https://www.better-auth.com/docs/adapters/prisma#joins-experimental)。
 
 ## Prisma クライアントの組み立て（拡張の単一ソース）
 
@@ -423,7 +423,7 @@ await prisma.$transaction(async (tx) => {
 | `@/shared/db/create-app-prisma-client.ts` | `$extends`（Decimal→number 等）の単一実装・`AppPrismaClient` 型            |
 | `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`createAppPrismaClient` 適用・型 re-export     |
 | `@/shared/db/prisma-input-json.ts`        | Prisma JSON 入力ヘルパー（`server-only` を付けない。seed から import 可）  |
-| `@generated/prisma/enums.ts`                    | Prisma enum の公開窓口                                                     |
+| `@generated/prisma/enums.ts`              | Prisma enum の公開窓口                                                     |
 | `@/shared/lib/errors/logger-core.ts`      | 構造化 `logError`（スクリプト・非 Next モジュール用）                      |
 | `@/shared/lib/errors/logger.ts`           | `server-only` エントリ（Next Server 向け、`logger-core` を re-export）     |
 | `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |

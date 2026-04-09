@@ -214,7 +214,7 @@ import {
 } from "@/admin/types/server-actions";
 import { withPermission } from "@/admin/lib/server-action-helpers";
 import { postSchema } from "@/admin/lib/validations/post";
-import type { User } from "@/shared/lib/auth";
+import type { AdminUser } from "@/shared/lib/admin-auth";
 
 // withPermission HOF: リソース・アクションを指定して権限チェックを自動化
 export const createPost = withPermission<[CreatePostInput], { id: string }>(

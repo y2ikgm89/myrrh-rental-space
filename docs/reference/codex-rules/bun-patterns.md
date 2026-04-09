@@ -290,8 +290,8 @@ const mockFindUnique = mock<() => Promise<Record<string, unknown> | null>>(() =>
 const mockCreate = mock<() => Promise<Record<string, unknown>>>();
 
 // 2. 依存モジュールを差し替え（import より前）
-mock.module("@/shared/lib/auth", () => ({
-  getSession: () => mockGetSession(),
+mock.module("@/shared/lib/admin-auth", () => ({
+  getAdminSession: () => mockGetSession(),
 }));
 mock.module("@/shared/db", () => ({
   prisma: {
