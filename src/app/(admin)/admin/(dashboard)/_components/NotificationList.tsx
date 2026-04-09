@@ -14,6 +14,7 @@ import { Button } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
+import { useNotificationPolling } from "./NotificationPollingProvider";
 
 type NotificationListProps = {
   notifications: SerializedAdminNotificationData[];
@@ -36,6 +37,7 @@ function formatRelativeTime(dateStr: string): string {
 export function NotificationList({ notifications }: NotificationListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { refresh } = useNotificationPolling();
 
   if (notifications.length === 0) {
     return (
@@ -50,6 +52,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
       const result = await markNotificationAsRead(id);
       if (!isMutationError(result)) {
         router.refresh();
+        refresh();
       }
     });
   };
@@ -94,6 +97,9 @@ export function NotificationList({ notifications }: NotificationListProps) {
                     <Link
                       href={href}
                       className="text-xs text-primary hover:underline"
+                      {...(!notification.isRead && {
+                        onClick: () => handleMarkAsRead(notification.id),
+                      })}
                     >
                       詳細を見る
                     </Link>

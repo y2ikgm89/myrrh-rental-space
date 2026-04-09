@@ -27,6 +27,7 @@ import {
 } from "@/admin/components/ui";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
 import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
+import { useNotificationPolling } from "../../_components/NotificationPollingProvider";
 
 type NotificationTableProps = {
   notifications: SerializedAdminNotificationData[];
@@ -35,6 +36,7 @@ type NotificationTableProps = {
 export function NotificationTable({ notifications }: NotificationTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { refresh } = useNotificationPolling();
 
   if (notifications.length === 0) {
     return (
@@ -49,6 +51,7 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
       const result = await markNotificationAsRead(id);
       if (!isMutationError(result)) {
         router.refresh();
+        refresh();
       }
     });
   };
@@ -58,6 +61,7 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
       const result = await deleteNotification(id);
       if (!isMutationError(result)) {
         router.refresh();
+        refresh();
       }
     });
   };
@@ -118,6 +122,9 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                         <Link
                           href={href}
                           className="mt-1 inline-block text-xs text-primary hover:underline"
+                          {...(!notification.isRead && {
+                            onClick: () => handleMarkAsRead(notification.id),
+                          })}
                         >
                           詳細を見る
                         </Link>
