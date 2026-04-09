@@ -73,19 +73,21 @@ function createResponse(req: NextRequest, pathname: string): NextResponse {
 //
 // 以下のいずれかを満たす場合のみログインページを表示:
 // 1. admin-gate cookie が設定済み（過去にトークン検証済み）
-// 2. セッション cookie が存在（既にログイン済み）
-// 3. ?token= パラメータで有効なトークンを提示（初回アクセス）
+// 2. ?token= パラメータで有効なトークンを提示（初回アクセス）
+//
+// セッション cookie の存在だけでは通過させない。公開サイトのソーシャル
+// ログイン（CUSTOMER ロール）でもセッション cookie は発行されるため、
+// gate cookie なしではログインフォームを表示しない。
 // ---------------------------------------------------------------------------
 
 async function handleAdminLoginGate(
   req: NextRequest,
   pathname: string,
 ): Promise<NextResponse> {
-  const sessionCookie = getSessionCookie(req);
   const gateCookie = req.cookies.get(ADMIN_GATE_COOKIE_NAME);
 
-  // 既に gate cookie またはセッションがある → 通過
-  if (gateCookie?.value === "1" || sessionCookie) {
+  // gate cookie がある → 通過
+  if (gateCookie?.value === "1") {
     return createResponse(req, pathname);
   }
 
@@ -171,7 +173,9 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     }
 
     // その他の管理画面: セッション必須
-    const sessionCookie = getSessionCookie(req);
+    const sessionCookie = getSessionCookie(req, {
+      cookiePrefix: "admin-auth",
+    });
     if (!sessionCookie) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
