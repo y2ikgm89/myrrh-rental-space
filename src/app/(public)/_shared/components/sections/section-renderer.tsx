@@ -34,6 +34,8 @@ import {
 } from "@/shared/domain/sections/queries";
 import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
+import { getInstagramPosts } from "@/shared/domain/instagram/queries";
+import { getGoogleMapsApiKey } from "../../../_shared/data/google-maps";
 
 // v3 components
 import { HeroSection } from "../../../_components/HeroSection";
@@ -246,7 +248,8 @@ export async function SectionRenderer({
 
     case SectionType.MAP: {
       const config = getMapConfig(section.config);
-      return <MapSection config={config} design={design} />;
+      const mapApiKey = await getGoogleMapsApiKey();
+      return <MapSection config={config} design={design} apiKey={mapApiKey} />;
     }
 
     case SectionType.EMBED: {
@@ -256,7 +259,8 @@ export async function SectionRenderer({
 
     case SectionType.INSTAGRAM: {
       const config = getInstagramConfig(section.config);
-      return <InstagramSection config={config} design={design} />;
+      const posts = await getInstagramPosts();
+      return <InstagramSection config={config} design={design} posts={posts} />;
     }
 
     case SectionType.EVENT_CALENDAR: {
