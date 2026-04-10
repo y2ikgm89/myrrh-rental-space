@@ -9,6 +9,7 @@ import {
 } from "@/shared/lib/validations/instagram";
 import { DomainError } from "@/shared/domain/domain-error";
 import { testInstagramConnection } from "@/shared/lib/instagram";
+import type { InstagramMediaItem } from "@/shared/lib/instagram";
 import type { SaveInstagramTokenResult } from "@/shared/domain/instagram/types";
 
 function getMetadataString(
@@ -211,4 +212,50 @@ export async function reorderInstagramPosts(ids: string[]): Promise<void> {
       }),
     ),
   );
+}
+
+/**
+ * Instagram フィードをAPIデータで同期（全件入れ替え）
+ *
+ * @param items - fetchInstagramFeed から取得したメディアアイテム配列
+ */
+export async function syncInstagramFeed(
+  items: InstagramMediaItem[],
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // 既存投稿を全削除
+    await tx.instagramPost.deleteMany({});
+
+    // 新しいデータを一括作成
+    if (items.length > 0) {
+      await tx.instagramPost.createMany({
+        data: items.map((item, index) => ({
+          postId: item.id,
+          postUrl: item.permalink,
+          mediaUrl: item.mediaUrl,
+          caption: item.caption ?? null,
+          mediaType: mapMediaType(item.mediaType),
+          permalink: item.permalink,
+          thumbnailUrl: item.thumbnailUrl ?? null,
+          sortOrder: index,
+        })),
+      });
+    }
+  });
+}
+
+/**
+ * API レスポンスの mediaType 文字列を Prisma enum にマッピング
+ */
+function mapMediaType(mediaType: string): InstagramMediaType {
+  switch (mediaType) {
+    case "IMAGE":
+      return InstagramMediaType.IMAGE;
+    case "VIDEO":
+      return InstagramMediaType.VIDEO;
+    case "CAROUSEL_ALBUM":
+      return InstagramMediaType.CAROUSEL_ALBUM;
+    default:
+      return InstagramMediaType.IMAGE;
+  }
 }
