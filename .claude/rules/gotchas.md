@@ -33,6 +33,7 @@ paths:
 ## shadcn/ui コンポーネント
 
 - **`import * as React from "react"` 禁止** — shadcn/ui 再生成時に混入する。`import type { ComponentProps } from "react"` 等の個別 import に変換。`React.ComponentProps` → `ComponentProps`、`React.HTMLAttributes` → `HTMLAttributes`
+- **`<SelectItem value="">` 禁止** — Radix UI Select は空文字列をプレースホルダー表示用に予約しており、`value=""` はランタイムエラー。nullable 選択にはセンチネル値パターンを使用: `const NONE_VALUE = "__none__"` → `<SelectItem value={NONE_VALUE}>なし</SelectItem>` → `onValueChange` で `value === NONE_VALUE ? null : value` にマップ
 
 ## Route Handler（PPR 環境）
 
@@ -106,6 +107,7 @@ paths:
 - **フォームフィールド間隔は `space-y-6` または `Stack gap="lg"`（gap-6 = 24px）に統一** — `space-y-4` / `Stack gap="md"` は禁止。ContactForm・ProfileForm・認証フォーム全てで統一済み
 - **サーバーエラー表示は `<div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">` に統一** — 素の `<p className="text-sm text-destructive">` は a11y 不足（`role="alert"` 欠落）かつ視認性不足
 - **管理画面ページタイトルは `text-2xl font-bold tracking-tight text-foreground` に統一** — ログインページのモバイル表示含む。`text-xl font-semibold` は禁止
+- **OGP/SNS シェアプレビューは `max-w-lg` で制約** — `aspect-[1200/630]` が親幅に追従するため、制約なしだとプレビューが巨大になる。`max-w-lg`（512px）を外側ラッパーに適用。`PageSeoForm.tsx` で設定
 - **公開 Badge と管理 Badge の variant 型は異なる** — 公開 `"default"|"success"|"warning"|"info"`、管理 shadcn/ui `"secondary"|"outline"|"destructive"` 等。共有 `enums/helpers.ts` の `*_BADGE_VARIANTS` は管理用。公開ページでは `Record<Enum, BadgeVariant>` をコンポーネント内に定義する
 - **RHF `defaultValues` は Zod スキーマの全フィールドを宣言必須** — 省略すると `useWatch` の初期値が `undefined` になり条件分岐が壊れる。`z.literal(true)` フィールド（`agreeToTerms` 等）は `defaultValues` に含めない（型が `true` のため `false` を渡せない）
 
@@ -145,6 +147,9 @@ paths:
 ## Lexical WYSIWYG
 
 - **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
+- **Lexical エディタのコンテンツ領域は `bg-card`（白）** — `bg-background`（`oklch(0.98 ...)` 微グレー）ではなく `bg-card`（`oklch(1 0 0)` 白）を使用。文書編集エリアは紙のメタファーで白背景が適切。`LexicalEditor.tsx` の外枠 div で設定
+- **Lexical ツールバーはエディタ+インスペクターの全幅に配置（Gutenberg パターン）** — ツールバーを `section` の外に出し、外枠 `div.flex-col` の直下に配置。コンテンツ+インスペクターは `div.flex.flex-1` で横並び。ツールバーがインスペクター開閉時にかぶらない。`LexicalEditor.tsx` で実装
+- **`tryConvertHtmlStringToLexicalJsonString` は SSR で使用不可** — `DOMParser` が Node.js に存在しない。Server Component / Server Action から呼ぶと `Attempted to call client function from the server` エラー。`useState` 遅延初期化で呼ぶ場合も `typeof window === "undefined"` ガードが必須（SSR でも実行されるため）
 
 ## Page-First Architecture（公開ページ）
 
@@ -170,10 +175,12 @@ paths:
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`。`"hero-parallax"` 等。`SectionType` Prisma enum は廃止済み（`section.ts` の `as const` オブジェクトとして再定義）
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — `schema.ts` + `metadata.ts` + `registry.ts` への import 追加。Prisma マイグレーション不要。`/create-section-type` スキルで自動生成可能
 - **AutoSectionForm は field メタデータなしのフィールドをスキップ** — `extractFieldMeta()` が `undefined` を返すフィールド（`categoryId` 等の plain Zod）は管理画面フォームに表示されない
+- **AutoSectionForm のフィールドに `defaultValue` + `setValue` パターン禁止** — Radix Switch/Select、native `<input type="color">` は `defaultValue` が静的で UI が追従しない。`useController` で RHF 制御に統一する。参照: `AutoBooleanField`、`AutoSelectField`、`AutoColorFieldControlled`
 - **新規公開ページ追加は `/create-page-content` スキル** — `DEFAULT_PAGE_SECTIONS` にエントリ追加 + `page.tsx` 作成。`PageContent` は使わない
 - **ホームページセクションの `pageId: null` は廃止済み** — 全セクション（ホームページ含む）が Page レコードの `pageId` に紐づく。`pageId: null` でホームページ判定するコードは禁止。ホームページは slug `"home"` の Page レコードで管理
 - **`/admin/pages/homepage/edit` は廃止済み** — ホームページ編集は `/admin/pages/home/edit`（`[slug]/edit` に統合）。`HomepageSectionCommand` 系コマンドも廃止、page-scoped コマンドに統一
-- **`DesignPanel` は `pages/[slug]/edit/_components/` に移動済み** — 旧 `settings/_components/homepage/DesignPanel.tsx` は削除。汎用コンポーネントとして全ページの Design タブで使用
+- **`DesignPanel` は ToggleGroup + Accordion で全面書き換え済み** — `pages/[slug]/edit/_components/DesignPanel.tsx`。生 radio ボタンは全廃。4カテゴリ（余白/背景/テキスト/レイアウト）を Accordion で整理
+- **ページ編集の SEO はページレベルタブ「ページ設定」にある** — `SectionMasterDetail.tsx` の `Tabs [セクション | ページ設定]`。旧 `SEO_SELECTION_ID` / サイドバー SEO リンクは削除済み。SEO 関連機能を追加する場合は「ページ設定」タブ内に配置する
 - **アニメーションファイルは kebab-case のみ** — `scroll-reveal.tsx`, `split-text.tsx`, `magnetic-button.tsx`, `parallax-image.tsx`。旧 PascalCase re-export ラッパーは削除済み。レガシーセクションコンポーネント（`_components/*.tsx`）も kebab-case で直接 import
 - **公開ページのマルチステップフォームでは視覚パターンを全ステップで統一** — `bg-surface` ラッパー・見出しスタイル・ナビゲーション配置をステップ間で揃える。フロー全体の一貫性を優先
 - **Prisma `Decimal` と `createAppPrismaClient`** — アプリ標準の **`prisma`**（`src/shared/db/prisma.ts`）は **`createAppPrismaClient`** により対象モデルの金額等が **読み取り結果で `number`**。**集計**（`_sum` / `_avg`）や拡張前クライアント経由では `Number()` が必要なことがある。`as number` 禁止 → `prisma-patterns.md` の Decimal 節を参照
@@ -225,6 +232,7 @@ paths:
 ## ビルド・検証
 
 - **`useRef` 変数名は `Ref` サフィックス必須** — `@eslint-react/naming-convention-ref-name` が `useRef` の戻り値に `ref` または `*Ref` 命名を要求。`touchStartX` → `touchStartXRef`
+- **Radix `TabsContent` は `Tabs` コンテキスト外で使用不可** — コンポーネントを create/edit モードで共有する場合、`TabsContent` ラップは呼び出し側で行い、中身のフィールドコンポーネントは `Tabs` に依存しない設計にする。`TermsSettingsFields` が実装例
 - **ローカル barrel の tree-shaking は信頼できない** — Next.js の `optimizePackageImports` は npm パッケージのみ対象。`index.ts` で re-export すると未使用コンポーネントもバンドルに含まれる可能性がある。バンドルサイズが問題になる場合は barrel 経由ではなく直接 import する（例: `section-parsers.ts` から直接 import して Zod をクライアントバンドルから除去）
 - **Turbopack `"use server"` barrel re-export はクライアントから解決できない** — `"use server"` ファイルの関数を `index.ts`（barrel）経由で re-export し、`"use client"` コンポーネントから import すると `Export doesn't exist in target module` ビルドエラー。クライアントコンポーネントからは `@/admin/actions/post/mutations` のようにサブモジュールを直接 import する。Server Component / Server Action 間の barrel re-export は問題ない
 - **`global-error.tsx` は Root Layout を完全に置換する** — `<html>` `<body>` を自身で定義するため、admin.css / public.css の CSS 変数・`@theme` トークン・`next/font` が一切利用不可。全スタイルをインラインで記述すること（Tailwind クラス禁止）
@@ -281,7 +289,7 @@ paths:
 - **`updateTag` は 1 引数** — `updateTag(tag: string)` は `revalidateTag` とは異なり第 2 引数なし。混同しない
 - **`global-error.tsx` に `next/font/google` 使用不可** — admin.css/public.css をインポートしないため、変数モードのフォント CSS が preload されるが未使用警告になる。`<body style={{ fontFamily: '...' }}>` でシステムフォントを直接指定する
 - **時刻依存の設定トグルに `CACHE_LIFE.STATIC_SETTINGS` 禁止** — メンテナンスモード等、即時反映が必要な設定は `cacheLife(CACHE_LIFE.DYNAMIC_DATA)` を使う（`STATIC_SETTINGS` は 'days' 単位のため切り替えが即時反映されない）
-- **管理画面ページに `connection()` 禁止** — `connection()` は公開ページ（`src/app/(public)/`）専用の PPR 動的 opt-in。管理画面（`src/app/(admin)/`）では使用しない。`new Date()` が必要なコンポーネントは Client Component にする
+- **管理画面 Suspense 内 async SC には `connection()` 必須** — PPR では Suspense 境界ごとに動的判定される。layout の `headers()` は子の Suspense 境界に伝播しない。`new Date()` や uncached データを使う async Server Component には `await connection()` を先頭に配置（[公式推奨](https://nextjs.org/docs/app/api-reference/functions/connection)）。page.tsx 本体には不要
 - **`generateViewport` は `"use cache"` クエリと組み合わせる** — `viewport` の static export から `generateViewport()` async 関数に変更すると動的レンダリングを引き起こすが、内部クエリが `"use cache"` ならキャッシュから読み取る。layout.tsx が既に動的（`getHeaderSettings` 等）なら影響なし
 - **`'use cache'` 関数に Zod スキーマ・関数・クラスインスタンスを引数で渡せない** — React シリアライゼーション制約。`Cannot access X on the server. You cannot dot into a temporary client reference` エラー。DB フェッチのみをキャッシュ関数に閉じ、バリデーション等は外で行う
 - **`$generateHtmlFromNodes` は Route Handler で動作しない** — `@lexical/html` は `document.createElement` 等を要求。Route Handler (Node.js) には DOM がないため 500 エラー。プレビューはクライアント側 `renderEditorStateJsonToHtmlClient` で生成。Server Actions の `renderEditorStateToHtmlLazy` は動作する
@@ -304,6 +312,10 @@ paths:
 - **`proxy.ts` のヘッダー名は `x-pathname`** — `x-next-pathname` ではない。`headers().get()` で参照する側が不一致だと常に `""` が返りリダイレクトロジックが壊れる
 - **`next.config.ts` に seed/開発専用ドメインを残さない** — `placehold.co` 等の開発用 `remotePatterns` / CSP `img-src` は本番で不要。`dangerouslyAllowSVG` も seed 画像のためだけに有効化しない
 - **監査ログの provider 判定は全 OAuth プロバイダーを列挙** — `ctx.path.includes("social")` だけでは LINE が "google" として記録される。`/line` → `"line"`、`/google` → `"google"` と個別判定する
+- **新しい iframe 埋め込みサービス追加時は `proxy.ts` の `frame-src` 更新必須** — Google Maps（`https://www.google.com`）、YouTube、Stripe 等。未登録だと `Refused to frame` エラーでサイレントにブロックされる
+- **Google Maps Embed API は `https://www.google.com/maps/embed/v1/` を使用** — 非公式パラメータ（`pb=`, `output=embed`）禁止。API key は `getDecryptedGoogleMapsApiKey()` で復号。Maps Embed API は無料（使用量無制限）
+- **Instagram 画像は `*.cdninstagram.com` と `*.fbcdn.net` の両方が必要** — Meta は CDN ドメインを使い分ける。`proxy.ts` の `img-src` と `next.config.ts` の `remotePatterns` の両方に追加すること
+- **`revalidateTag` 先のキャッシュが存在するか確認必須** — cron で `revalidateTag(CACHE_TAGS.X, ...)` を呼んでも、対応するクエリに `'use cache'` + `cacheTag(CACHE_TAGS.X)` がなければ無効化対象が存在しない。新規 cron 追加時は公開クエリ側のキャッシュ設定を必ず確認
 
 ## Editorial デザイン
 
@@ -312,7 +324,7 @@ paths:
 - **`editorial-border-accent` CSS クラスは Divider 専用** — `width: 4rem` を持つ短い装飾線。`Section border="accent"` 等の全幅要素に使うとレイアウトが 4rem 幅に潰れる。Section の accent border は `border-t-2 border-accent`（Tailwind ユーティリティ）を使用
 - **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-background`（白）にし、editorial variant をそのまま使う
 
-- **`section-design.ts` の `sectionBgValues` 変更時は DesignPanel も同期必須** — `pages/[slug]/edit/_components/DesignPanel.tsx` の `backgroundOptions` 配列が `sectionBgValues` と 1:1 対応。値を追加・削除したら DesignPanel の選択肢も更新する
+- **`section-design.ts` の値配列変更時は DesignPanel + 型ガードも同期必須** — `DesignPanel.tsx` の `backgroundOptions`/`paddingOptions`/`maxWidthOptions` + Set-based 型ガード（`isBgValue` 等）が `sectionBgValues`/`sectionSpacingValues`/`sectionMaxWidthValues` と 1:1 対応
 
 ## ナビゲーション
 

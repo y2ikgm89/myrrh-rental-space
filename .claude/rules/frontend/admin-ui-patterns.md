@@ -558,28 +558,30 @@ export default async function CustomerEditPage({ params }) {
 }
 ```
 
-**`connection()` は管理画面では不要**:
+**管理画面 Suspense 内の async Server Component には `connection()` を配置**:
 
-`connection()` は PPR 動的 opt-in のため**公開ページ（`src/app/(public)/`）のみ**で使用する。管理画面（`src/app/(admin)/`）の page.tsx には配置しない。`new Date()` 等の動的データが必要なコンポーネントは Client Component にする。
+PPR 環境では Suspense 境界ごとに動的判定される。layout の `headers()` 呼び出しは子の Suspense 境界に伝播しない。`new Date()` や uncached データを使う async Server Component には `await connection()` を先頭に配置する（[公式推奨](https://nextjs.org/docs/app/api-reference/functions/connection)）。
 
 ```tsx
-// NG: 管理画面で connection() を使う
+// OK: Suspense 内の async Server Component に connection()
 import { connection } from "next/server";
-export default async function AdminPage() {
+
+export async function DashboardStatsSection() {
   await connection();
-  ...
+  const stats = await getDashboardStats(); // 内部で new Date() を使用
+  return <StatsCards stats={stats} />;
 }
 
-// OK: 管理画面では connection() なし
-export default async function AdminPage() {
-  const { id } = await params;
-  ...
-}
-
-// OK: new Date() が必要な場合は Client Component にする
+// OK: UI のみの new Date() は Client Component にする
 "use client";
 export function DashboardHeader() {
   const today = new Date();
+  ...
+}
+
+// 不要: page.tsx 本体（Suspense の外）には connection() 不要
+export default async function AdminPage() {
+  const { id } = await params;
   ...
 }
 ```
@@ -662,6 +664,40 @@ export function DashboardHeader() {
   </div>
 </AlertDialogContent>
 ```
+
+## ToggleGroup パターン（セグメント選択）
+
+少数の排他選択肢は `ToggleGroup`（Radix）を使用。生 `<input type="radio">` は禁止。
+
+```tsx
+import { ToggleGroup, ToggleGroupItem } from "@/admin/components/ui";
+
+<ToggleGroup
+  type="single"
+  value={currentValue}
+  onValueChange={(v) => {
+    if (v) setValue("fieldName", v, { shouldDirty: true });
+  }}
+>
+  <ToggleGroupItem value="sm">小</ToggleGroupItem>
+  <ToggleGroupItem value="md">中</ToggleGroupItem>
+  <ToggleGroupItem value="lg">大</ToggleGroupItem>
+</ToggleGroup>;
+```
+
+**`onValueChange` の `if (v)` ガード必須** — Radix ToggleGroup は同じ値を再クリックすると `""` を返す（deselect）。`if (v)` で空文字列を無視する。
+
+**参照実装**: `pages/[slug]/edit/_components/DesignPanel.tsx`（Accordion + ToggleGroup + カラーピッカー）
+
+**使い分け:**
+
+| 選択肢数                 | コンポーネント | 例                                      |
+| ------------------------ | -------------- | --------------------------------------- |
+| 2-6（テキスト/アイコン） | `ToggleGroup`  | 余白サイズ、テキスト配置、コンテナ幅    |
+| 2-6（説明付きカード）    | `SelectionBox` | 決済方法、プラン選択                    |
+| 7+                       | `Select`       | タイトルサイズ（6段階）、アニメーション |
+
+---
 
 ## ソータブルリスト標準パターン
 
@@ -797,7 +833,7 @@ const [testPending, startTestTransition] = useTransition();
 6. **テーブル操作列インライン Button+Link 禁止** — `ActionDropdown` の `*ActionCell` コンポーネントを使用（`@/admin/components/ActionDropdown`）
 7. **削除ボタンをページ最下部カードに配置禁止** — `DetailDeleteButton` をヘッダー `actions` の編集ボタン左に配置
 8. **詳細・編集ページのバックボタンを詳細コンポーネント内に配置禁止** — `AdminDetailLayout backHref` で左上固定
-9. **管理画面ページで `connection()` 使用禁止** — `connection()` は公開ページ（`src/app/(public)/`）専用。管理画面では不要
+9. **Suspense 内 async Server Component の `connection()` 省略禁止** — `new Date()` や uncached データを使う Suspense 内コンポーネントは先頭に `await connection()` を配置。page.tsx 本体には不要
 10. **新規作成ページで手動ヘッダー実装禁止** — `new/page.tsx` も `AdminDetailLayout` を使用（`locations/new` がテンプレート。`Link`+`ArrowLeft`+`Button` の手動実装禁止）
 11. **`backLabel` にエンティティ名を含めること禁止** — `"クーポン一覧に戻る"` NG → `"一覧に戻る"`（デフォルト）/ `"詳細に戻る"` のみ使用
 12. **バックナビゲーションに `ChevronLeft` 禁止** — `ArrowLeft` は `AdminDetailLayout` 内部で自動提供。手動実装が必要な場合も `ArrowLeft` のみ

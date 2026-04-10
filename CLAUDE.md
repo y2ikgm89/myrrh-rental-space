@@ -9,7 +9,7 @@ bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証（コミット前必須）
 bun run build:skip-env                        # env未設定時ビルド
-bun run test                                  # 全テスト（36バッチ分離実行）
+bun run test                                  # 全テスト（40バッチ分離実行）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
@@ -17,7 +17,7 @@ bun prisma/seed.ts                            # Seed
 bun run e2e                                   # E2E テスト（Playwright）
 ```
 
-> **フック**: Prettier + ESLint --fix + 境界チェック + 型エイリアスガード等 17本（PostToolUse）/ type-check-on-stop（Stop）
+> **フック**: Prettier + ESLint --fix + 境界チェック + 型エイリアスガード等（PostToolUse 10本 + PreToolUse/Stop/SessionStart 等 計17本）
 > **保護**: `.env*`, `bun.lock`, `prisma/migrations/*.sql` 編集不可（PreToolUse）
 > **デプロイ**: Google Cloud Run（`Dockerfile` + `cloudbuild.yaml`）— Vercel 不使用
 
@@ -33,7 +33,7 @@ src/shared/lib/admin-auth.ts         管理者認証（email/password, RBAC）
 src/shared/lib/customer-auth.ts      顧客認証（Google/LINE, マイページ）
 src/shared/lib/sections/             セクションレジストリ・定義
 generated/prisma/                    Prisma Client（.gitignore対象）
-__tests__/                           unit/ + integration/（36バッチ分離実行）
+__tests__/                           unit/ + integration/（40バッチ分離実行）
 ```
 
 公開ページ: Editorial Magazine（Kinfolk/Cereal）— シャープエッジ、serif/sans 対比、bronze accent ≤10% → `project-design-config.md`
@@ -41,14 +41,22 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 
 ## 技術スタック（非自明な注意点のみ）
 
-| 技術         | 注意点                                                                                 |
-| ------------ | -------------------------------------------------------------------------------------- |
-| Next.js 16   | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）                |
-| React 19     | Compiler 1.0 自動メモ化（`useCallback`/`useMemo`/`memo` 不要）、`use()`                |
-| TypeScript 6 | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                              |
-| Prisma 7     | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`              |
-| Tailwind 4   | CSS-first `@theme`、セマンティックトークン必須                                         |
-| Better Auth  | 管理/顧客セッション分離（`adminAuth`/`customerAuth`）、RBAC、`generateId: "uuid"` 必須 |
+| 技術         | 注意点                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js 16   | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。PPR: Suspense 内 async SC は `await connection()` 必須 |
+| React 19     | Compiler 1.0 自動メモ化（`useCallback`/`useMemo`/`memo` 不要）、`use()`                                                         |
+| TypeScript 6 | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                       |
+| Prisma 7     | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`                                                       |
+| Tailwind 4   | CSS-first `@theme`、セマンティックトークン必須                                                                                  |
+| Better Auth  | 管理/顧客セッション分離（`adminAuth`/`customerAuth`）、RBAC、`generateId: "uuid"` 必須                                          |
+
+### 管理画面 UI コンポーネント
+
+`@/admin/components/ui` から barrel import。主要コンポーネント:
+
+- `ToggleGroup` / `ToggleGroupItem` — セグメント選択（生 radio ボタンの代替。Radix ToggleGroup ベース）
+- `SelectionBox` — カード型 radio（大きな選択肢向け）
+- `Accordion` / `AccordionItem` / `AccordionTrigger` / `AccordionContent` — 折りたたみ（設定カテゴリ整理等）
 
 ---
 
@@ -56,6 +64,7 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 
 ### 型・コード品質
 
+- **管理画面で生 HTML `<input type="radio">` 禁止** → `ToggleGroup`（少数選択）または `SelectionBox`（カード型選択）を使用 → `admin-ui-patterns.md`
 - **型アサーション（`as`）禁止** → `type-safety.md`
 - **ゼロ値型エイリアス禁止** → `export type Foo = Bar`（フィールド追加なし）は禁止。元の型を直接使用
 - **className テンプレートリテラル禁止** → `cn()` 使用必須（`@/shared/lib/cn`）。例外: layout.tsx のフォント変数
@@ -65,6 +74,7 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 
 ### Server Actions・キャッシュ
 
+- **Suspense 内 async SC の `connection()` 省略禁止** → PPR は Suspense 境界ごとに動的判定。layout の `headers()` は伝播しない → `admin-ui-patterns.md`
 - **`@/shared/lib/auth` / `@/shared/lib/auth-client` import 禁止** → 削除済み。管理側は `admin-auth` / `admin-auth-client`、顧客側は `customer-auth` / `customer-auth-client` を使用
 - **`'use cache'` 関数での直接 prisma 呼び出し禁止** → `safeFetch` + `toPlainObject`/`toPlainArray` 必須 → `server-actions.md`
 - **公開 Server Action のレート制限省略禁止** → 全公開 mutation に `checkActionRateLimit(formSubmitRateLimiter)` → `server-actions.md`
@@ -121,6 +131,9 @@ __tests__/                           unit/ + integration/（36バッチ分離実
 - **パスワードリセット**: `/forgot-password`・`/reset-password` は `(public)` ルートグループだが `adminAuthClient` を使用（顧客はソーシャルログインのみでパスワードなし）。Admin Gate の外でアクセス可能にするため `(admin)` には置かない
 - **Better Auth User 型**: `$Infer` は module augmentation で上書き不可。`AdminUser` / `CustomerUser` 型 = `Omit<Session["user"], "role"> & { role: Role }` + `isValidRole()` ランタイム検証が必須パターン
 - **通知システム**: `AdminNotification` モデル（全管理者共有、個人宛なし）。`fireAndForget(createNotificationCommand(...))` で既存アクションの `afterSuccess` から生成。TopBar ベルアイコン + `/admin/notifications` 一覧ページ
+- **法的文書管理**: プライバシーポリシー含む全法的文書は Terms システム（`/admin/terms`）で一元管理。`/privacy` は `/terms/privacy-policy` への永続リダイレクト。独立ページ（Section ベース）は作らない
+- **Google Maps Embed API**: 公式 Embed API（API key 必須、無料）。Settings に暗号化保存、公開ページで復号して iframe に埋め込み。非公式 URL（`pb=`, `output=embed`）禁止
+- **Instagram フィード連携**: Graph API + OAuth / 手動トークン。`@/shared/lib/instagram/`（API クライアント）+ `@/shared/domain/instagram/`（ドメイン層）+ 2つの cron（フィード同期 + トークンリフレッシュ）
 
 ## SSOT 定数・シングルトン
 

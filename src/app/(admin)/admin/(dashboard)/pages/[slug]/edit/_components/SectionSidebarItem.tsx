@@ -3,7 +3,7 @@
 /**
  * サイドバーのセクションアイテム（DnD対応）
  *
- * コンパクトなリストアイテム + ⋯ メニュー
+ * 番号付きリスト + ホバーでドラッグハンドル表示
  */
 
 import { useSortable } from "@dnd-kit/sortable";
@@ -31,6 +31,7 @@ import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
 interface SectionSidebarItemProps {
   section: PageSectionData;
+  index: number;
   isSelected: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string, isActive: boolean) => void;
@@ -41,6 +42,7 @@ interface SectionSidebarItemProps {
 
 export function SectionSidebarItem({
   section,
+  index,
   isSelected,
   onSelect,
   onToggle,
@@ -69,46 +71,67 @@ export function SectionSidebarItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group flex items-center gap-2 rounded-md px-2 py-2 cursor-pointer transition-colors",
-        isSelected
-          ? "bg-accent/10 border-l-2 border-l-primary"
-          : "hover:bg-accent/5 border-l-2 border-l-transparent",
-        !section.isActive && "opacity-50",
-        isDragging && "z-50 shadow-lg ring-2 ring-primary/20",
+        "group relative flex items-center gap-2 border-b border-border/40 px-2.5 py-2.5 cursor-pointer transition-colors",
+        isSelected ? "bg-card" : "hover:bg-card/50",
+        !section.isActive && "opacity-40",
+        isDragging && "z-50 shadow-lg ring-2 ring-primary/20 bg-card",
       )}
       onClick={() => onSelect(section.id)}
     >
-      {/* Drag Handle */}
-      <button
-        type="button"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground shrink-0"
-        {...attributes}
-        {...listeners}
-        disabled={disabled}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <IconGripVertical className="h-4 w-4" />
-      </button>
-
-      {/* Icon */}
-      <div className="shrink-0">
-        <SectionTypeIcon
-          type={section.type}
-          className="h-4 w-4 text-muted-foreground"
-        />
+      {/* 番号 — ホバーでドラッグハンドルに切り替え */}
+      <div className="relative shrink-0 flex items-center justify-center w-5 h-5">
+        <span
+          className={cn(
+            "text-[10px] tabular-nums transition-opacity",
+            "group-hover:opacity-0",
+            isSelected
+              ? "font-semibold text-foreground"
+              : "text-muted-foreground",
+          )}
+        >
+          {index + 1}
+        </span>
+        <button
+          type="button"
+          className="absolute inset-0 flex items-center justify-center cursor-grab touch-none text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+          {...attributes}
+          {...listeners}
+          disabled={disabled}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <IconGripVertical className="h-3.5 w-3.5" />
+        </button>
       </div>
 
-      {/* Label */}
+      {/* アイコン */}
+      <SectionTypeIcon
+        type={section.type}
+        className={cn(
+          "h-4 w-4 shrink-0",
+          isSelected ? "text-foreground" : "text-muted-foreground",
+        )}
+      />
+
+      {/* ラベル */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{section.title || label}</p>
+        <p
+          className={cn(
+            "text-sm truncate",
+            isSelected
+              ? "font-medium text-foreground"
+              : "text-muted-foreground",
+          )}
+        >
+          {section.title || label}
+        </p>
       </div>
 
-      {/* Status */}
+      {/* 非表示インジケータ */}
       {!section.isActive && (
         <IconEyeOff className="h-3 w-3 text-muted-foreground shrink-0" />
       )}
 
-      {/* Menu */}
+      {/* メニュー */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

@@ -4,7 +4,7 @@
  * 右パネル — コンテンツ/デザインのタブ切替
  *
  * コンテンツタブ: タイトル入力 + AutoSectionForm（スキーマ駆動）
- * デザインタブ: 汎化版 DesignPanel
+ * デザインタブ: DesignPanel（ToggleGroup + Accordion）
  */
 
 import { useEffect, useState, useTransition } from "react";
@@ -48,14 +48,11 @@ export function SectionDetailPanel({
   const [configDirty, setConfigDirty] = useState(false);
   const [designDirty, setDesignDirty] = useState(false);
 
-  // dirty集約: config or design のいずれかがdirtyなら通知
   useEffect(() => {
     onDirtyChange?.(configDirty || designDirty);
   }, [configDirty, designDirty, onDirtyChange]);
 
-  // セクション変更時にdirtyリセット
   useEffect(() => {
-    // セクションが変更されたら、次のレンダリング時にdirtyをリセット
     return () => {
       setConfigDirty(false);
       setDesignDirty(false);
@@ -102,7 +99,6 @@ export function SectionDetailPanel({
 
   const handleDesignSave = (design: SectionDesign) => {
     startTransition(async () => {
-      // SectionDesign → Record<string, unknown>: Zodバリデーション済みデザイン設定をJSON入力形式に変換
       const designRecord: Record<string, unknown> = Object.fromEntries(
         Object.entries(design),
       );
@@ -119,24 +115,21 @@ export function SectionDetailPanel({
   };
 
   return (
-    <div className="space-y-6">
+    <>
       <SectionDetailHeader section={section} />
 
       <Tabs defaultValue="content" className="w-full">
-        <TabsList>
+        <TabsList className="mt-3">
           <TabsTrigger value="content">コンテンツ</TabsTrigger>
           <TabsTrigger value="design">デザイン</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content" className="mt-4 space-y-6">
-          {/* セクションタイトル */}
           <SectionTitleField
             title={section.title ?? ""}
             onSave={handleTitleSave}
             isPending={isPending}
           />
-
-          {/* Config Form — AutoSectionForm がスキーマ駆動で UI を生成 */}
           <AutoSectionForm
             section={section}
             onSave={handleConfigSave}
@@ -157,7 +150,7 @@ export function SectionDetailPanel({
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </>
   );
 }
 
@@ -175,8 +168,10 @@ function SectionTitleField({
   isPending: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor="section-title">セクションタイトル（管理用）</Label>
+    <div className="space-y-1.5">
+      <Label htmlFor="section-title" className="text-xs text-muted-foreground">
+        管理用タイトル
+      </Label>
       <Input
         id="section-title"
         defaultValue={title}
@@ -189,9 +184,6 @@ function SectionTitleField({
           }
         }}
       />
-      <p className="text-xs text-muted-foreground">
-        管理画面でのセクション識別用。空欄時はタイプ名が表示されます
-      </p>
     </div>
   );
 }

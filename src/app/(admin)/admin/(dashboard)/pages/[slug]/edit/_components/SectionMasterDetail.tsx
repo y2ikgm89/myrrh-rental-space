@@ -336,7 +336,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
             {/* Right Detail Panel */}
             <div
               className={cn(
-                "overflow-y-auto px-4 py-4 lg:px-6",
+                "overflow-y-auto p-3 lg:p-4",
                 "lg:block",
                 showMobileList ? "hidden" : "flex-1",
               )}

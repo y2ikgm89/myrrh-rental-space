@@ -282,7 +282,7 @@ export function PageSeoForm({ page }: PageSeoFormProps) {
           </div>
 
           {/* SNS シェアプレビュー */}
-          <div className="mt-4 rounded-lg border border-border bg-muted/30 p-4">
+          <div className="mt-4 max-w-lg rounded-lg border border-border bg-muted/30 p-4">
             <p className="mb-2 text-xs font-medium text-muted-foreground">
               SNSシェアプレビュー
             </p>

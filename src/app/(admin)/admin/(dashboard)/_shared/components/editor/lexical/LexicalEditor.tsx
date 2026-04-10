@@ -141,143 +141,149 @@ function EditorInner({
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
         className={cn(
-          "flex h-full min-h-0",
-          isFullscreen && `fixed inset-0 z-[${Z_INDEX.editorFullscreen}]`,
+          "flex flex-col h-full min-h-0 bg-card border border-border rounded-lg overflow-hidden",
+          isFullscreen &&
+            `fixed inset-0 z-[${Z_INDEX.editorFullscreen}] rounded-none border-0`,
         )}
+        style={isFullscreen ? undefined : { height }}
       >
-        {/* メインエディタ部分 */}
-        <section
-          aria-label="本文エディタ"
-          className={cn(
-            "flex flex-col flex-1 bg-background border border-border rounded-lg overflow-hidden min-w-0 min-h-0",
-            isFullscreen && "rounded-none border-0",
-          )}
-          style={isFullscreen ? undefined : { height }}
-        >
-          {/* ツールバー */}
-          {showToolbar && (
-            <div className="shrink-0">
-              <ToolbarPlugin
-                openDialog={dialogManager.openDialog}
-                isFullscreen={isFullscreen}
-                onFullscreenToggle={() => setIsFullscreen((prev) => !prev)}
-              />
-            </div>
-          )}
-
-          {/* コンテンツラッパー */}
-          <div
-            ref={setContentWrapperRef}
-            className="flex-1 min-h-0 overflow-y-auto"
-          >
-            <div
-              ref={setContentWidthRef}
-              className={cn("relative", contentWidth != null && "mx-auto")}
-              style={
-                contentWidth != null
-                  ? {
-                      maxWidth: contentWidth + EDITOR_PADDING_HORIZONTAL,
-                    }
-                  : undefined
-              }
-            >
-              <RichTextPlugin
-                contentEditable={
-                  <ContentEditable
-                    aria-multiline
-                    role="textbox"
-                    aria-placeholder={placeholder}
-                    placeholder={
-                      <div
-                        className={cn(
-                          "pointer-events-none absolute top-6 left-10 select-none text-muted-foreground",
-                          // Lexical の Placeholder は contenteditable の兄弟のため prose の子にならない。
-                          // 本文（prose-base / lg:prose-lg + prose-p:leading-relaxed）と行ボックスを揃える
-                          "text-base leading-relaxed lg:text-lg",
-                        )}
-                      >
-                        {placeholder}
-                      </div>
-                    }
-                    className={cn(
-                      "outline-none pl-10 pr-6 py-6 min-h-full",
-                      className,
-                    )}
-                  />
-                }
-                ErrorBoundary={LexicalErrorBoundary}
-              />
-            </div>
+        {/* ツールバー（全幅: エディタ + インスペクターにまたがる） */}
+        {showToolbar && (
+          <div className="shrink-0">
+            <ToolbarPlugin
+              openDialog={dialogManager.openDialog}
+              isFullscreen={isFullscreen}
+              onFullscreenToggle={() => setIsFullscreen((prev) => !prev)}
+            />
           </div>
+        )}
 
-          {/* 公式プラグイン */}
-          <HistoryPlugin />
-          <ListPlugin />
-          <CheckListPlugin />
-          <TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />
-          <LinkPlugin validateUrl={validateUrl} />
-          <AutoLinkPlugin matchers={MATCHERS} />
-          <ClickableLinkPlugin />
-          <TabIndentationPlugin />
-          <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
-          <HorizontalRulePlugin />
-          <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
+        {/* エディタ + インスペクター（横並び） */}
+        <div className="flex flex-1 min-h-0">
+          {/* メインエディタ部分 */}
+          <section
+            aria-label="本文エディタ"
+            className="flex flex-col flex-1 min-w-0 min-h-0"
+          >
+            {/* コンテンツラッパー */}
+            <div
+              ref={setContentWrapperRef}
+              className="flex-1 min-h-0 overflow-y-auto"
+            >
+              <div
+                ref={setContentWidthRef}
+                className={cn("relative", contentWidth != null && "mx-auto")}
+                style={
+                  contentWidth != null
+                    ? {
+                        maxWidth: contentWidth + EDITOR_PADDING_HORIZONTAL,
+                      }
+                    : undefined
+                }
+              >
+                <RichTextPlugin
+                  contentEditable={
+                    <ContentEditable
+                      aria-multiline
+                      role="textbox"
+                      aria-placeholder={placeholder}
+                      placeholder={
+                        <div
+                          className={cn(
+                            "pointer-events-none absolute top-6 left-10 select-none text-muted-foreground",
+                            // Lexical の Placeholder は contenteditable の兄弟のため prose の子にならない。
+                            // 本文（prose-base / lg:prose-lg + prose-p:leading-relaxed）と行ボックスを揃える
+                            "text-base leading-relaxed lg:text-lg",
+                          )}
+                        >
+                          {placeholder}
+                        </div>
+                      }
+                      className={cn(
+                        "outline-none pl-10 pr-6 py-6 min-h-full",
+                        className,
+                      )}
+                    />
+                  }
+                  ErrorBoundary={LexicalErrorBoundary}
+                />
+              </div>
+            </div>
 
-          {/* カスタムプラグイン */}
-          <DisablePlugin disabled={disabled} />
-          <DraggableBlockPlugin anchorElem={contentWidthRef} />
-          <TableActionMenuPlugin anchorElem={contentWidthRef} />
-          {contentWrapperRef && (
-            <FloatingToolbarPlugin
-              anchorElem={contentWrapperRef}
-              setIsLinkEditMode={(isEditMode) => {
-                if (isEditMode) dialogManager.openDialog("link");
-              }}
-              {...(onAddComment && { onAddComment: handleAddComment })}
-              onOpenRuby={() => dialogManager.openDialog("ruby")}
-              onOpenTooltip={() => dialogManager.openDialog("tooltip")}
+            {/* 公式プラグイン */}
+            <HistoryPlugin />
+            <ListPlugin />
+            <CheckListPlugin />
+            <TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />
+            <LinkPlugin validateUrl={validateUrl} />
+            <AutoLinkPlugin matchers={MATCHERS} />
+            <ClickableLinkPlugin />
+            <TabIndentationPlugin />
+            <MarkdownShortcutPlugin transformers={EDITOR_TRANSFORMERS} />
+            <HorizontalRulePlugin />
+            <OnChangePlugin onChange={handleChange} ignoreSelectionChange />
+
+            {/* カスタムプラグイン */}
+            <DisablePlugin disabled={disabled} />
+            <DraggableBlockPlugin anchorElem={contentWidthRef} />
+            <TableActionMenuPlugin anchorElem={contentWidthRef} />
+            {contentWrapperRef && (
+              <FloatingToolbarPlugin
+                anchorElem={contentWrapperRef}
+                setIsLinkEditMode={(isEditMode) => {
+                  if (isEditMode) dialogManager.openDialog("link");
+                }}
+                {...(onAddComment && { onAddComment: handleAddComment })}
+                onOpenRuby={() => dialogManager.openDialog("ruby")}
+                onOpenTooltip={() => dialogManager.openDialog("tooltip")}
+              />
+            )}
+            <LinkHoverPreviewPlugin />
+            <CommentPlugin {...(onMarkClick && { onMarkClick })} />
+            <PageBreakPlugin />
+            <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
+            <ImageDropPlugin />
+            <PasteUrlPlugin />
+            <FindReplacePlugin anchorElem={contentWrapperRef} />
+            <TableOfContentsPlugin />
+            <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
+            <CodeBlockPlugin anchorElem={contentWrapperRef} />
+            {(onAutoSave ?? autoSaveKey) && (
+              <AutoSavePlugin
+                {...(onAutoSave && { onAutoSave })}
+                {...(autoSaveKey !== undefined && { autoSaveKey })}
+                onStatusChange={setSaveStatus}
+              />
+            )}
+
+            {/* ブロックテンプレート */}
+            <BlockTemplatePlugin
+              isSaveOpen={dialogManager.activeDialog === "blockTemplateSave"}
+              isInsertOpen={
+                dialogManager.activeDialog === "blockTemplateInsert"
+              }
+              onClose={dialogManager.closeDialog}
             />
-          )}
-          <LinkHoverPreviewPlugin />
-          <CommentPlugin {...(onMarkClick && { onMarkClick })} />
-          <PageBreakPlugin />
-          <ComponentPickerPlugin openDialog={dialogManager.openDialog} />
-          <ImageDropPlugin />
-          <PasteUrlPlugin />
-          <FindReplacePlugin anchorElem={contentWrapperRef} />
-          <TableOfContentsPlugin />
-          <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
-          <CodeBlockPlugin anchorElem={contentWrapperRef} />
-          {(onAutoSave ?? autoSaveKey) && (
-            <AutoSavePlugin
-              {...(onAutoSave && { onAutoSave })}
-              {...(autoSaveKey !== undefined && { autoSaveKey })}
-              onStatusChange={setSaveStatus}
-            />
-          )}
 
-          {/* ブロックテンプレート */}
-          <BlockTemplatePlugin
-            isSaveOpen={dialogManager.activeDialog === "blockTemplateSave"}
-            isInsertOpen={dialogManager.activeDialog === "blockTemplateInsert"}
-            onClose={dialogManager.closeDialog}
-          />
+            {/* ダイアログ */}
+            <DialogRenderer dialogManager={dialogManager} />
+            <CollapsiblePlugin />
+            <EmojiPickerPlugin />
+            <WordCountPlugin onUpdate={updateWordCount} />
+            {characterLimit !== undefined && (
+              <CharacterLimitPlugin
+                charset="UTF-16"
+                maxLength={characterLimit}
+              />
+            )}
 
-          {/* ダイアログ */}
-          <DialogRenderer dialogManager={dialogManager} />
-          <CollapsiblePlugin />
-          <EmojiPickerPlugin />
-          <WordCountPlugin onUpdate={updateWordCount} />
-          {characterLimit !== undefined && (
-            <CharacterLimitPlugin charset="UTF-16" maxLength={characterLimit} />
-          )}
+            {/* ステータスバー */}
+            <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
+          </section>
 
-          {/* ステータスバー */}
-          <StatusBar wordCount={wordCountData} saveStatus={saveStatus} />
-        </section>
-
-        {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
-        {inspectorEnabled && <InspectorSidebar />}
+          {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
+          {inspectorEnabled && <InspectorSidebar />}
+        </div>
       </div>
     </InspectorSidebarProvider>
   );
