@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * サイドバーのセクションアイテム（DnD対応）
+ * セクションリストアイテム（DnD対応）
  *
  * 番号付きリスト + ホバーでドラッグハンドル表示
+ * 280px幅のパネルに最適化
  */
 
 import { useSortable } from "@dnd-kit/sortable";
@@ -25,14 +26,15 @@ import {
   IconCopy,
   IconTrash,
 } from "@tabler/icons-react";
-import { sectionTypeLabels } from "@/shared/lib/validations/section";
+import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 
-interface SectionSidebarItemProps {
+interface SectionListItemProps {
   section: PageSectionData;
   index: number;
   isSelected: boolean;
+  isLast: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string, isActive: boolean) => void;
   onDuplicate: (id: string) => void;
@@ -40,16 +42,17 @@ interface SectionSidebarItemProps {
   disabled: boolean;
 }
 
-export function SectionSidebarItem({
+export function SectionListItem({
   section,
   index,
   isSelected,
+  isLast,
   onSelect,
   onToggle,
   onDuplicate,
   onDelete,
   disabled,
-}: SectionSidebarItemProps) {
+}: SectionListItemProps) {
   const {
     attributes,
     listeners,
@@ -71,14 +74,15 @@ export function SectionSidebarItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex items-center gap-2 border-b border-border/40 px-2.5 py-2.5 cursor-pointer transition-colors",
+        "group relative flex items-center gap-2 px-2.5 py-2.5 cursor-pointer transition-colors",
+        !isLast && "border-b border-border/40",
         isSelected ? "bg-card" : "hover:bg-card/50",
         !section.isActive && "opacity-40",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20 bg-card",
       )}
       onClick={() => onSelect(section.id)}
     >
-      {/* 番号 — ホバーでドラッグハンドルに切り替え */}
+      {/* 番号 -- ホバーでドラッグハンドルに切り替え */}
       <div className="relative shrink-0 flex items-center justify-center w-5 h-5">
         <span
           className={cn(

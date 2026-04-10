@@ -41,8 +41,8 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/admin/components/ui";
-import { SectionSidebar } from "./SectionSidebar";
-import { SectionDetailPanel } from "./SectionDetailPanel";
+import { SectionList } from "./SectionList";
+import { SectionEditor } from "./SectionEditor";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
 
@@ -72,6 +72,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     parseAsString.withOptions({ history: "push", shallow: false }),
   );
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [insertAtIndex, setInsertAtIndex] = useState<number | undefined>();
 
   const [pageTab, setPageTab] = useQueryState(
     "tab",
@@ -224,6 +225,11 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     });
   }
 
+  function handleOpenAddDialog(insertIndex?: number) {
+    setInsertAtIndex(insertIndex);
+    setShowAddDialog(true);
+  }
+
   function handleAddSection(type: string) {
     startTransition(async () => {
       if (!isSectionType(type)) return;
@@ -233,12 +239,14 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         config: getDefaultSectionConfig(type) ?? {},
         design: {},
         isActive: true,
+        ...(insertAtIndex !== undefined && { order: insertAtIndex }),
       });
       if (isMutationError(result)) {
         toast.error(result.error);
         return;
       }
       toast.success("追加しました");
+      setInsertAtIndex(undefined);
       // リロードして新しいセクションを自動選択
       const sectionList = await fetchPageSections(page.id);
       setSections(sectionList);
@@ -278,7 +286,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
 
   if (sections === null) {
     return (
-      <div className="flex flex-col lg:grid lg:grid-cols-[320px_1fr] gap-6 h-auto lg:h-[calc(100vh-220px)]">
+      <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-6 h-auto lg:h-[calc(100vh-220px)]">
         <div className="space-y-2 p-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
@@ -311,7 +319,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
           forceMount
           className="data-[state=inactive]:hidden"
         >
-          <div className="flex flex-col lg:grid lg:grid-cols-[320px_1fr] gap-0 h-auto lg:h-[calc(100vh-280px)]">
+          <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-0 h-auto lg:h-[calc(100vh-280px)]">
             {/* Left Sidebar */}
             <div
               className={cn(
@@ -320,7 +328,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
                 showMobileList ? "flex-1" : "hidden",
               )}
             >
-              <SectionSidebar
+              <SectionList
                 sections={sections}
                 selectedId={effectiveSelectedId}
                 onSelect={handleSelect}
@@ -328,7 +336,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
                 onToggle={handleToggle}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
-                onAddSection={() => setShowAddDialog(true)}
+                onAddSection={handleOpenAddDialog}
                 disabled={isPending}
               />
             </div>
@@ -341,11 +349,18 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
                 showMobileList ? "hidden" : "flex-1",
               )}
             >
-              <MobileBackButton onClick={handleBackToList} />
-              <SectionDetailPanel
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden"
+              >
+                <IconArrowLeft className="h-4 w-4" />
+                セクション一覧
+              </button>
+              <SectionEditor
                 section={selectedSection}
                 hasSections={sections.length > 0}
-                onAddSection={() => setShowAddDialog(true)}
+                onAddSection={() => handleOpenAddDialog()}
                 onSectionUpdated={handleSectionUpdated}
                 onDirtyChange={handleDirtyChange}
               />
@@ -369,22 +384,5 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         disabled={isPending}
       />
     </>
-  );
-}
-
-// =============================================================================
-// Mobile Back Button (inline)
-// =============================================================================
-
-function MobileBackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden"
-    >
-      <IconArrowLeft className="h-4 w-4" />
-      セクション一覧
-    </button>
   );
 }

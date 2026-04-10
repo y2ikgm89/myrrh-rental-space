@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * セクションサイドバー（左パネル）
+ * セクションリスト（左パネル）
  *
- * DnDで順序変更可能なセクション一覧 + セクション追加ボタン
+ * DnDで順序変更可能なセクション一覧 + セクション挿入ボタン + セクション追加ボタン
  */
 
+import { Fragment } from "react";
 import {
   DndContext,
   closestCenter,
@@ -24,9 +25,10 @@ import {
 import { Button } from "@/admin/components/ui";
 import { IconPlus } from "@tabler/icons-react";
 import type { PageSectionData } from "@/admin/actions/page-section";
-import { SectionSidebarItem } from "./SectionSidebarItem";
+import { SectionListItem } from "./SectionListItem";
+import { SectionInserter } from "./SectionInserter";
 
-interface SectionSidebarProps {
+interface SectionListProps {
   sections: PageSectionData[];
   selectedId: string | null;
   onSelect: (id: string) => void;
@@ -34,11 +36,11 @@ interface SectionSidebarProps {
   onToggle: (id: string, isActive: boolean) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  onAddSection: () => void;
+  onAddSection: (insertIndex?: number) => void;
   disabled: boolean;
 }
 
-export function SectionSidebar({
+export function SectionList({
   sections,
   selectedId,
   onSelect,
@@ -48,7 +50,7 @@ export function SectionSidebar({
   onDelete,
   onAddSection,
   disabled,
-}: SectionSidebarProps) {
+}: SectionListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -82,7 +84,7 @@ export function SectionSidebar({
       <div className="flex-1 overflow-y-auto px-1.5 py-1.5">
         {sections.length > 0 ? (
           <DndContext
-            id="section-sidebar-sortable"
+            id="section-list-sortable"
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
@@ -92,17 +94,29 @@ export function SectionSidebar({
               strategy={verticalListSortingStrategy}
             >
               {sections.map((section, index) => (
-                <SectionSidebarItem
-                  key={section.id}
-                  section={section}
-                  index={index}
-                  isSelected={selectedId === section.id}
-                  onSelect={onSelect}
-                  onToggle={onToggle}
-                  onDuplicate={onDuplicate}
-                  onDelete={onDelete}
-                  disabled={disabled}
-                />
+                <Fragment key={section.id}>
+                  {index === 0 && (
+                    <SectionInserter
+                      onInsert={() => onAddSection(0)}
+                      disabled={disabled}
+                    />
+                  )}
+                  <SectionListItem
+                    section={section}
+                    index={index}
+                    isSelected={selectedId === section.id}
+                    isLast={index === sections.length - 1}
+                    onSelect={onSelect}
+                    onToggle={onToggle}
+                    onDuplicate={onDuplicate}
+                    onDelete={onDelete}
+                    disabled={disabled}
+                  />
+                  <SectionInserter
+                    onInsert={() => onAddSection(index + 1)}
+                    disabled={disabled}
+                  />
+                </Fragment>
               ))}
             </SortableContext>
           </DndContext>
@@ -116,7 +130,7 @@ export function SectionSidebar({
       {/* 追加ボタン */}
       <div className="shrink-0 border-t border-border px-3 py-2">
         <Button
-          onClick={onAddSection}
+          onClick={() => onAddSection()}
           disabled={disabled}
           variant="outline"
           className="w-full"

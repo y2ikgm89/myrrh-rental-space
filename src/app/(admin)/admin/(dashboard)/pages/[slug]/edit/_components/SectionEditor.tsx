@@ -1,35 +1,27 @@
 "use client";
 
 /**
- * 右パネル — コンテンツ/デザインのタブ切替
+ * SectionEditor -- セクション編集パネル（右パネル）
  *
- * コンテンツタブ: タイトル入力 + AutoSectionForm（スキーマ駆動）
- * デザインタブ: DesignPanel（ToggleGroup + Accordion）
+ * タブなし、単一スクロール。コンテンツ + デザインを分離保存。
+ * AutoSectionForm（コンテンツ）と DesignFields（デザイン）はそれぞれ独立した保存フロー。
  */
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  Input,
-  Label,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/admin/components/ui";
+import { Button, Input, Label } from "@/admin/components/ui";
 import {
   updatePageSection,
   type PageSectionData,
 } from "@/admin/actions/page-section";
 import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { SectionDetailHeader } from "./SectionDetailHeader";
 import { SectionEmptyState } from "./SectionEmptyState";
 import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms";
 import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
-import { DesignPanel } from "./DesignPanel";
+import { DesignFields } from "./DesignFields";
 
-interface SectionDetailPanelProps {
+interface SectionEditorProps {
   section: PageSectionData | null;
   hasSections: boolean;
   onAddSection: () => void;
@@ -37,16 +29,17 @@ interface SectionDetailPanelProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function SectionDetailPanel({
+export function SectionEditor({
   section,
   hasSections,
   onAddSection,
   onSectionUpdated,
   onDirtyChange,
-}: SectionDetailPanelProps) {
+}: SectionEditorProps) {
   const [isPending, startTransition] = useTransition();
   const [configDirty, setConfigDirty] = useState(false);
   const [designDirty, setDesignDirty] = useState(false);
+  const latestDesignRef = useRef<SectionDesign | null>(null);
 
   useEffect(() => {
     onDirtyChange?.(configDirty || designDirty);
@@ -56,6 +49,7 @@ export function SectionDetailPanel({
     return () => {
       setConfigDirty(false);
       setDesignDirty(false);
+      latestDesignRef.current = null;
     };
   }, [section?.id]);
 
@@ -97,7 +91,9 @@ export function SectionDetailPanel({
     });
   };
 
-  const handleDesignSave = (design: SectionDesign) => {
+  const handleDesignSave = () => {
+    const design = latestDesignRef.current;
+    if (!design) return;
     startTransition(async () => {
       const designRecord: Record<string, unknown> = Object.fromEntries(
         Object.entries(design),
@@ -115,42 +111,48 @@ export function SectionDetailPanel({
   };
 
   return (
-    <>
-      <SectionDetailHeader section={section} />
+    <div className="space-y-6">
+      {/* 管理用タイトル */}
+      <SectionTitleField
+        title={section.title ?? ""}
+        onSave={handleTitleSave}
+        isPending={isPending}
+      />
 
-      <Tabs defaultValue="content" className="w-full">
-        <TabsList className="mt-3">
-          <TabsTrigger value="content">コンテンツ</TabsTrigger>
-          <TabsTrigger value="design">デザイン</TabsTrigger>
-        </TabsList>
+      {/* コンテンツ */}
+      <AutoSectionForm
+        section={section}
+        onSave={handleConfigSave}
+        isPending={isPending}
+        onDirtyChange={setConfigDirty}
+      />
 
-        <TabsContent value="content" className="mt-4 space-y-6">
-          <SectionTitleField
-            title={section.title ?? ""}
-            onSave={handleTitleSave}
-            isPending={isPending}
-          />
-          <AutoSectionForm
-            section={section}
-            onSave={handleConfigSave}
-            isPending={isPending}
-            onDirtyChange={setConfigDirty}
-          />
-        </TabsContent>
+      {/* 区切り */}
+      <div className="border-t border-border" />
 
-        <TabsContent value="design" className="mt-4">
-          <DesignPanel
-            section={{
-              id: section.id,
-              type: section.type,
-              design: section.design,
-            }}
-            onDesignSave={handleDesignSave}
-            onDirtyChange={setDesignDirty}
-          />
-        </TabsContent>
-      </Tabs>
-    </>
+      {/* デザイン */}
+      <div className="space-y-4">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          デザイン
+        </p>
+        <DesignFields
+          design={section.design}
+          onDesignChange={(d) => {
+            latestDesignRef.current = d;
+          }}
+          onDirtyChange={setDesignDirty}
+        />
+        <div className="flex justify-end">
+          <Button
+            onClick={handleDesignSave}
+            disabled={isPending || !designDirty}
+            size="sm"
+          >
+            {isPending ? "保存中..." : "デザインを保存"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
 
