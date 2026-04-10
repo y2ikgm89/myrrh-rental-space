@@ -3,10 +3,9 @@
 /**
  * セクションサイドバー（左パネル）
  *
- * DnDで順序変更可能なセクション一覧 + SEOリンク + セクション追加ボタン
+ * DnDで順序変更可能なセクション一覧 + セクション追加ボタン
  */
 
-import { cn } from "@/shared/lib/cn";
 import {
   DndContext,
   closestCenter,
@@ -22,12 +21,10 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Button, Separator } from "@/admin/components/ui";
-import { IconWorld, IconPlus } from "@tabler/icons-react";
+import { Button } from "@/admin/components/ui";
+import { IconPlus } from "@tabler/icons-react";
 import type { PageSectionData } from "@/admin/actions/page-section";
 import { SectionSidebarItem } from "./SectionSidebarItem";
-
-const SEO_SELECTION_ID = "__seo__";
 
 interface SectionSidebarProps {
   sections: PageSectionData[];
@@ -40,8 +37,6 @@ interface SectionSidebarProps {
   onAddSection: () => void;
   disabled: boolean;
 }
-
-export { SEO_SELECTION_ID };
 
 export function SectionSidebar({
   sections,
@@ -112,7 +107,7 @@ export function SectionSidebar({
       </div>
 
       {/* Bottom Actions */}
-      <div className="border-t px-3 py-3 space-y-2">
+      <div className="border-t px-3 py-3">
         <Button
           onClick={onAddSection}
           disabled={disabled}
@@ -122,22 +117,6 @@ export function SectionSidebar({
           <IconPlus className="h-4 w-4 mr-2" />
           セクションを追加
         </Button>
-
-        <Separator />
-
-        <button
-          type="button"
-          onClick={() => onSelect(SEO_SELECTION_ID)}
-          className={cn(
-            "flex items-center gap-2 w-full rounded-md px-3 py-2 text-sm transition-colors",
-            selectedId === SEO_SELECTION_ID
-              ? "bg-accent/10 text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/5",
-          )}
-        >
-          <IconWorld className="h-4 w-4" />
-          SEO設定
-        </button>
       </div>
     </div>
   );

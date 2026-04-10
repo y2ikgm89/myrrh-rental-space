@@ -3,17 +3,19 @@
 /**
  * セクション管理 マスターディテール レイアウト
  *
- * 左: セクション一覧（DnD） + SEOリンク
- * 右: 設定パネル（コンテンツ/デザイン タブ）
+ * ページレベルタブ: [セクション | ページ設定]
+ * セクションタブ: 左サイドバー（DnD一覧） + 右設定パネル
+ * ページ設定タブ: SEOフォーム
  *
  * 状態:
  * - sections: props 初期値 + API リロード
  * - selectedId: nuqs URL状態 (?section=<id>)
+ * - pageTab: nuqs URL状態 (?tab=sections|settings)
  * - showAddDialog: セクション追加ダイアログ
  */
 
 import { useState, useEffect, useRef, useTransition } from "react";
-import { useQueryState, parseAsString } from "nuqs";
+import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import { toast } from "sonner";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -33,10 +35,23 @@ import type {
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 import { isSectionType } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { SectionSidebar, SEO_SELECTION_ID } from "./SectionSidebar";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/admin/components/ui";
+import { SectionSidebar } from "./SectionSidebar";
 import { SectionDetailPanel } from "./SectionDetailPanel";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
+
+const PAGE_TAB_VALUES = ["sections", "settings"] as const;
+type PageTab = (typeof PAGE_TAB_VALUES)[number];
+const PAGE_TAB_SET = new Set<string>(PAGE_TAB_VALUES);
+function isPageTab(v: string): v is PageTab {
+  return PAGE_TAB_SET.has(v);
+}
 
 interface SectionMasterDetailProps {
   page: PageForEdit;
@@ -57,6 +72,14 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
     parseAsString.withOptions({ history: "push", shallow: false }),
   );
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const [pageTab, setPageTab] = useQueryState(
+    "tab",
+    parseAsStringLiteral(PAGE_TAB_VALUES)
+      .withDefault("sections")
+      .withOptions({ history: "push", shallow: true }),
+  );
+
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dirty state guard
@@ -270,58 +293,75 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   // Render
   // =========================================================================
 
-  const isSeoSelected = effectiveSelectedId === SEO_SELECTION_ID;
-
   return (
     <>
-      <div className="flex flex-col lg:grid lg:grid-cols-[320px_1fr] gap-0 h-auto lg:h-[calc(100vh-220px)]">
-        {/* Left Sidebar */}
-        <div
-          className={cn(
-            "border-b lg:border-b-0 lg:border-r overflow-hidden",
-            "lg:block",
-            showMobileList ? "flex-1" : "hidden",
-          )}
+      <Tabs
+        value={pageTab ?? "sections"}
+        onValueChange={(v) => {
+          if (isPageTab(v)) void setPageTab(v);
+        }}
+      >
+        <TabsList className="mb-4">
+          <TabsTrigger value="sections">セクション</TabsTrigger>
+          <TabsTrigger value="settings">ページ設定</TabsTrigger>
+        </TabsList>
+
+        <TabsContent
+          value="sections"
+          forceMount
+          className="data-[state=inactive]:hidden"
         >
-          <SectionSidebar
-            sections={sections}
-            selectedId={effectiveSelectedId}
-            onSelect={handleSelect}
-            onReorder={handleReorder}
-            onToggle={handleToggle}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-            onAddSection={() => setShowAddDialog(true)}
-            disabled={isPending}
-          />
-        </div>
+          <div className="flex flex-col lg:grid lg:grid-cols-[320px_1fr] gap-0 h-auto lg:h-[calc(100vh-280px)]">
+            {/* Left Sidebar */}
+            <div
+              className={cn(
+                "border-b lg:border-b-0 lg:border-r overflow-hidden",
+                "lg:block",
+                showMobileList ? "flex-1" : "hidden",
+              )}
+            >
+              <SectionSidebar
+                sections={sections}
+                selectedId={effectiveSelectedId}
+                onSelect={handleSelect}
+                onReorder={handleReorder}
+                onToggle={handleToggle}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+                onAddSection={() => setShowAddDialog(true)}
+                disabled={isPending}
+              />
+            </div>
 
-        {/* Right Detail Panel */}
-        <div
-          className={cn(
-            "overflow-y-auto px-4 py-4 lg:px-6",
-            "lg:block",
-            showMobileList ? "hidden" : "flex-1",
-          )}
+            {/* Right Detail Panel */}
+            <div
+              className={cn(
+                "overflow-y-auto px-4 py-4 lg:px-6",
+                "lg:block",
+                showMobileList ? "hidden" : "flex-1",
+              )}
+            >
+              <MobileBackButton onClick={handleBackToList} />
+              <SectionDetailPanel
+                section={selectedSection}
+                hasSections={sections.length > 0}
+                onAddSection={() => setShowAddDialog(true)}
+                onSectionUpdated={handleSectionUpdated}
+                onDirtyChange={handleDirtyChange}
+              />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          value="settings"
+          forceMount
+          className="data-[state=inactive]:hidden"
         >
-          {/* Mobile back button */}
-          <MobileBackButton onClick={handleBackToList} />
+          <PageSeoForm page={page} />
+        </TabsContent>
+      </Tabs>
 
-          {isSeoSelected ? (
-            <PageSeoForm page={page} />
-          ) : (
-            <SectionDetailPanel
-              section={selectedSection}
-              hasSections={sections.length > 0}
-              onAddSection={() => setShowAddDialog(true)}
-              onSectionUpdated={handleSectionUpdated}
-              onDirtyChange={handleDirtyChange}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Add Section Dialog */}
       <AddSectionDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
