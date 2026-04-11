@@ -71,11 +71,11 @@ export function SectionList({
   return (
     <div className="flex flex-col h-full bg-muted/30">
       {/* ヘッダー */}
-      <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      <div className="shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-border bg-card">
+        <span className="text-xs font-semibold text-foreground">
           セクション
         </span>
-        <span className="text-[10px] tabular-nums text-muted-foreground">
+        <span className="text-[10px] tabular-nums text-muted-foreground bg-muted rounded px-1.5 py-0.5">
           {sections.length}
         </span>
       </div>
@@ -128,16 +128,16 @@ export function SectionList({
       </div>
 
       {/* 追加ボタン */}
-      <div className="shrink-0 border-t border-border px-3 py-2">
+      <div className="shrink-0 border-t border-border px-3 py-2.5 bg-card">
         <Button
           onClick={() => onAddSection()}
           disabled={disabled}
-          variant="outline"
+          variant="default"
           className="w-full"
           size="sm"
         >
           <IconPlus className="h-3.5 w-3.5 mr-1.5" />
-          追加
+          セクションを追加
         </Button>
       </div>
     </div>
