@@ -10,7 +10,6 @@ import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { prisma } from "@/shared/db/prisma";
 import { getGoogleCalendarWebhookState } from "@/shared/domain/settings/admin-queries";
 import {
   clearGoogleCalendarServiceAccount as clearGoogleCalendarServiceAccountCommand,
@@ -20,6 +19,7 @@ import {
   recordGoogleCalendarConnectionError,
   recordGoogleCalendarConnectionSuccess,
   saveGoogleCalendarWebhook,
+  updateEventImportEnabled,
   updateGoogleCalendarSettings as updateGoogleCalendarSettingsCommand,
   updateTwoWaySyncSettings as updateTwoWaySyncSettingsCommand,
 } from "@/shared/domain/settings/commands";
@@ -282,9 +282,7 @@ export async function toggleEventImport(
     resource: "settings",
     action: "update",
     execute: async () => {
-      await prisma.settings.updateMany({
-        data: { eventImportEnabled: enabled },
-      });
+      await updateEventImportEnabled(enabled);
       return null;
     },
     afterSuccess: () => {

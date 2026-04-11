@@ -134,8 +134,6 @@ export type ReservationSettingsInput = {
   modificationDeadlineHours: number;
 };
 
-export type SidebarSettingsInput = SidebarSettings;
-
 export type PermalinkSettingsInput = {
   postPermalinkStructure: PostPermalinkStructure;
   postUrlPrefixEnabled: boolean;
@@ -363,7 +361,7 @@ export async function updateReservationSettings(
 }
 
 export async function updateSidebarSettings(
-  data: SidebarSettingsInput,
+  data: SidebarSettings,
 ): Promise<void> {
   const updateData = {
     sidebarEnabled: data.sidebarEnabled,
@@ -476,6 +474,14 @@ export async function resetRobotsTxtToDefault(): Promise<void> {
     where: { id: "singleton" },
     create: { id: "singleton", robotsTxtEnabled: false, robotsTxtCustom: null },
     update: { robotsTxtEnabled: false, robotsTxtCustom: null },
+  });
+}
+
+export async function updateEventImportEnabled(
+  enabled: boolean,
+): Promise<void> {
+  await prisma.settings.updateMany({
+    data: { eventImportEnabled: enabled },
   });
 }
 
