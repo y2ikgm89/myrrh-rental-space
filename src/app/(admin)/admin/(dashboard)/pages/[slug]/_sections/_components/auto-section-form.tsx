@@ -10,7 +10,15 @@
  */
 
 import { useState } from "react";
-import { useController, useForm, type Control } from "react-hook-form";
+import {
+  useController,
+  useForm,
+  type Control,
+  type FieldErrors,
+  type FieldValues,
+  type UseFormRegister,
+  type UseFormSetValue,
+} from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import dynamic from "next/dynamic";
 import { z } from "zod";
@@ -64,21 +72,13 @@ export function AutoSectionForm({
   const defaultConfig = definition
     ? (() => {
         const result = definition.configSchema.safeParse(section.config);
-        if (
-          result.success &&
-          typeof result.data === "object" &&
-          result.data !== null
-        ) {
-          return result.data as Record<string, unknown>;
+        if (result.success && isRecord(result.data)) {
+          return result.data;
         }
         // config のパースに失敗した場合、空オブジェクトでデフォルト生成
         const fallback = definition.configSchema.safeParse({});
-        if (
-          fallback.success &&
-          typeof fallback.data === "object" &&
-          fallback.data !== null
-        ) {
-          return fallback.data as Record<string, unknown>;
+        if (fallback.success && isRecord(fallback.data)) {
+          return fallback.data;
         }
         return {};
       })()
@@ -175,16 +175,12 @@ export function AutoSectionForm({
 
 interface AutoFieldProps {
   readonly fieldInfo: FieldInfo;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
-  readonly register: ReturnType<typeof useForm<any>>["register"];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly setValue: ReturnType<typeof useForm<any>>["setValue"];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly control: ReturnType<typeof useForm<any>>["control"];
+  readonly register: UseFormRegister<FieldValues>;
+  readonly setValue: UseFormSetValue<FieldValues>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly defaultValue: unknown;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic FieldErrors
-  readonly errors: ReturnType<typeof useForm<any>>["formState"]["errors"];
+  readonly errors: FieldErrors<FieldValues>;
 }
 
 function AutoField({
@@ -230,17 +226,13 @@ interface AutoFieldByTypeProps {
   readonly helpText: string | undefined;
   readonly suffix: string | undefined;
   readonly schema: z.ZodType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly register: ReturnType<typeof useForm<any>>["register"];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly setValue: ReturnType<typeof useForm<any>>["setValue"];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly control: ReturnType<typeof useForm<any>>["control"];
+  readonly register: UseFormRegister<FieldValues>;
+  readonly setValue: UseFormSetValue<FieldValues>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly defaultValue: unknown;
   readonly error: string | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic FieldErrors
-  readonly errors: ReturnType<typeof useForm<any>>["formState"]["errors"];
+  readonly errors: FieldErrors<FieldValues>;
 }
 
 function AutoFieldByType(props: AutoFieldByTypeProps) {
@@ -505,8 +497,7 @@ function AutoImageFieldControlled({
   readonly fieldId: string;
   readonly label: string;
   readonly helpText: string | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
-  readonly control: Control<any>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {
@@ -550,8 +541,7 @@ function AutoColorFieldControlled({
   readonly label: string;
   readonly placeholder: string | undefined;
   readonly helpText: string | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
-  readonly control: Control<any>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {

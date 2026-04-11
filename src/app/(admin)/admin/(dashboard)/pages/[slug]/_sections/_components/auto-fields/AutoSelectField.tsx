@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { useController, type Control } from "react-hook-form";
+import { useController, type Control, type FieldValues } from "react-hook-form";
 import {
   Label,
   Select,
@@ -33,8 +33,7 @@ export function AutoSelectField({
   readonly placeholder: string | undefined;
   readonly helpText: string | undefined;
   readonly schema: z.ZodType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
-  readonly control: Control<any>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
 }) {

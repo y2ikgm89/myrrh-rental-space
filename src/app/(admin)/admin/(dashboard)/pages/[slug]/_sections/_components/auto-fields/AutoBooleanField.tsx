@@ -6,7 +6,7 @@
  * RHF の useController で状態を同期し、Switch の checked prop がリアクティブに更新される。
  */
 
-import { useController, type Control } from "react-hook-form";
+import { useController, type Control, type FieldValues } from "react-hook-form";
 import { Label, Switch } from "@/admin/components/ui";
 
 interface AutoBooleanFieldProps {
@@ -14,8 +14,7 @@ interface AutoBooleanFieldProps {
   readonly fieldId: string;
   readonly label: string;
   readonly helpText: string | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RHF generic compatibility
-  readonly control: Control<any>;
+  readonly control: Control<FieldValues>;
   readonly isPending: boolean;
   readonly error: string | undefined;
 }

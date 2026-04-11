@@ -5,7 +5,12 @@
  */
 
 import { useId } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  useFieldArray,
+  type Control,
+  type FieldValues,
+  type UseFormRegister,
+} from "react-hook-form";
 import { z } from "zod";
 import {
   Button,
@@ -36,10 +41,8 @@ export function AutoArrayField({
   readonly label: string;
   readonly helpText: string | undefined;
   readonly schema: z.ZodType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly control: ReturnType<typeof useForm<any>>["control"];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly register: ReturnType<typeof useForm<any>>["register"];
+  readonly control: Control<FieldValues>;
+  readonly register: UseFormRegister<FieldValues>;
   readonly isPending: boolean;
 }) {
   const { fields, append, remove } = useFieldArray({
@@ -143,8 +146,7 @@ function ArrayItemField({
   readonly parentKey: string;
   readonly index: number;
   readonly itemField: ArrayItemFieldInfo;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly register: ReturnType<typeof useForm<any>>["register"];
+  readonly register: UseFormRegister<FieldValues>;
   readonly isPending: boolean;
 }) {
   const fieldName = `${parentKey}.${index}.${itemField.key}`;
@@ -228,8 +230,7 @@ function ArrayItemSelectField({
   readonly fieldName: string;
   readonly label: string;
   readonly options: readonly string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly register: ReturnType<typeof useForm<any>>["register"];
+  readonly register: UseFormRegister<FieldValues>;
   readonly isPending: boolean;
 }) {
   const id = useId();

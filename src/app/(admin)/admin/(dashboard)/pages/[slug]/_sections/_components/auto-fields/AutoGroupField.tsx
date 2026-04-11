@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { cn } from "@/shared/lib/cn";
+import { isRecord } from "@/shared/lib/serialize";
 import { Card, CardContent } from "@/admin/components/ui";
 import { IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
@@ -36,10 +37,7 @@ export function AutoGroupField({
   const shape = getZodObjectShape(schema);
   if (!shape) return null;
 
-  const groupDefaultValue =
-    typeof defaultValue === "object" && defaultValue !== null
-      ? (defaultValue as Record<string, unknown>)
-      : {};
+  const groupDefaultValue = isRecord(defaultValue) ? defaultValue : {};
 
   const subFields: FieldInfo[] = [];
   for (const [key, fieldSchema] of Object.entries(shape)) {

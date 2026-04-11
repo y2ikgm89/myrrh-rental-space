@@ -1,13 +1,13 @@
 /**
  * Zod 4 スキーマ introspection ヘルパー
  *
- * Zod 内部構造（_zod.def）にアクセスするため unknown 経由で安全に型変換する。
- * これらの introspection ヘルパーは Zod 内部 API への境界アダプターであり、
- * `as` の使用は type-safety.md §keysOf/entriesOf と同じ「境界ヘルパー」パターン。
+ * Zod 内部構造（_zod.def）にアクセスするため `isRecord()` 型ガードで
+ * ランタイム安全にプロパティを読み取る（`as` アサーション不使用）。
  */
 
 import { z } from "zod";
 import { extractFieldMeta } from "@/shared/lib/sections/field-helpers";
+import { isRecord } from "@/shared/lib/serialize";
 import type { FieldMeta } from "@/shared/lib/sections/types";
 
 // ─────────────────────────────────────────────────────────────
@@ -33,10 +33,6 @@ export interface ArrayItemFieldInfo {
 /**
  * Zod スキーマから ZodObject の shape を取得する。
  * ZodDefault, ZodPipe 等のラッパーを再帰的にアンラップする。
- *
- * Zod 4 の内部構造（_zod.def）にアクセスするため unknown 経由で安全に型変換する。
- * これらの introspection ヘルパーは Zod 内部 API への境界アダプターであり、
- * `as` の使用は type-safety.md §keysOf/entriesOf と同じ「境界ヘルパー」パターン。
  */
 export function getZodObjectShape(
   schema: z.ZodType,
@@ -86,12 +82,12 @@ export function getZodDef(
   schema: z.ZodType,
 ): Record<string, unknown> | undefined {
   const raw: unknown = schema;
-  if (typeof raw !== "object" || raw === null) return undefined;
-  const zod = (raw as Record<string, unknown>)["_zod"];
-  if (typeof zod !== "object" || zod === null) return undefined;
-  const def = (zod as Record<string, unknown>)["def"];
-  if (typeof def !== "object" || def === null) return undefined;
-  return def as Record<string, unknown>;
+  if (!isRecord(raw)) return undefined;
+  const zod: unknown = raw["_zod"];
+  if (!isRecord(zod)) return undefined;
+  const def: unknown = zod["def"];
+  if (!isRecord(def)) return undefined;
+  return def;
 }
 
 /**
@@ -101,8 +97,8 @@ export function hasShape(
   schema: z.ZodType,
 ): schema is z.ZodType & { shape: Record<string, z.ZodType> } {
   const raw: unknown = schema;
-  if (typeof raw !== "object" || raw === null) return false;
-  const shape = (raw as Record<string, unknown>)["shape"];
+  if (!isRecord(raw)) return false;
+  const shape: unknown = raw["shape"];
   return typeof shape === "object" && shape !== null;
 }
 
