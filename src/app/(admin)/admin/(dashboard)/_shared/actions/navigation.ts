@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -24,6 +25,8 @@ import {
   updateSocialLink as updateSocialLinkCommand,
   updateSocialLinkOrder as updateSocialLinkOrderCommand,
 } from "@/shared/domain/navigation/commands";
+
+const idSchema = z.string().uuid({ error: "IDが不正です" });
 
 function invalidateNavigationCache(): void {
   updateTag(CACHE_TAGS.NAVIGATION);
@@ -55,6 +58,9 @@ export async function updateNavigationItem(
   id: string,
   data: NavigationItemInput,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = navigationItemInputSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -63,9 +69,9 @@ export async function updateNavigationItem(
   return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async () => {
-      await updateNavigationItemCommand(id, parsed.data);
+      await updateNavigationItemCommand(parsedId.data, parsed.data);
       return null;
     },
     afterSuccess: invalidateNavigationCache,
@@ -75,12 +81,15 @@ export async function updateNavigationItem(
 export async function deleteNavigationItem(
   id: string,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "navigation",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteNavigationItemCommand(id);
+      await deleteNavigationItemCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateNavigationCache,
@@ -127,6 +136,9 @@ export async function updateSocialLink(
   id: string,
   data: SocialLinkInput,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = socialLinkInputSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -135,9 +147,9 @@ export async function updateSocialLink(
   return executeAdminMutationResult({
     resource: "navigation",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async () => {
-      await updateSocialLinkCommand(id, parsed.data);
+      await updateSocialLinkCommand(parsedId.data, parsed.data);
       return null;
     },
     afterSuccess: invalidateNavigationCache,
@@ -145,12 +157,15 @@ export async function updateSocialLink(
 }
 
 export async function deleteSocialLink(id: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "navigation",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteSocialLinkCommand(id);
+      await deleteSocialLinkCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateNavigationCache,

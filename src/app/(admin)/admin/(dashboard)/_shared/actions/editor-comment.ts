@@ -18,6 +18,8 @@ import {
   resolveThreadCommand,
 } from "@/shared/domain/editor-comments/commands";
 
+const idSchema = z.string().uuid({ error: "IDが不正です" });
+
 const createThreadSchema = z.object({
   markId: z.string().min(1, { error: "markId は必須です" }),
   contentType: z
@@ -82,36 +84,45 @@ export async function addComment(
 }
 
 export async function resolveThread(threadId: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(threadId);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "post",
     action: "update",
-    resourceId: threadId,
+    resourceId: parsed.data,
     execute: async (user) => {
-      await resolveThreadCommand(user.id, threadId);
+      await resolveThreadCommand(user.id, parsed.data);
       return null;
     },
   });
 }
 
 export async function reopenThread(threadId: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(threadId);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "post",
     action: "update",
-    resourceId: threadId,
+    resourceId: parsed.data,
     execute: async () => {
-      await reopenThreadCommand(threadId);
+      await reopenThreadCommand(parsed.data);
       return null;
     },
   });
 }
 
 export async function deleteThread(threadId: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(threadId);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "post",
     action: "delete",
-    resourceId: threadId,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteThreadCommand(threadId);
+      await deleteThreadCommand(parsed.data);
       return null;
     },
   });
@@ -120,12 +131,15 @@ export async function deleteThread(threadId: string): Promise<MutationResult> {
 export async function deleteComment(
   commentId: string,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(commentId);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "post",
     action: "delete",
-    resourceId: commentId,
+    resourceId: parsed.data,
     execute: async (user) => {
-      await deleteCommentCommand(user.id, commentId);
+      await deleteCommentCommand(user.id, parsed.data);
       return null;
     },
   });

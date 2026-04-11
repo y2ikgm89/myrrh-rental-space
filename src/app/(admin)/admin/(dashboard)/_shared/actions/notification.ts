@@ -1,7 +1,9 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
+import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   markAsReadCommand,
@@ -10,15 +12,20 @@ import {
 } from "@/shared/domain/notifications/commands";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
+const idSchema = z.string().uuid({ error: "IDが不正です" });
+
 export async function markNotificationAsRead(
   id: string,
 ): Promise<MutationResult<null>> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "notification",
     action: "update",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await markAsReadCommand(id);
+      await markAsReadCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {
@@ -46,12 +53,15 @@ export async function markAllNotificationsAsRead(): Promise<
 export async function deleteNotification(
   id: string,
 ): Promise<MutationResult<null>> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "notification",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteNotificationCommand(id);
+      await deleteNotificationCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {

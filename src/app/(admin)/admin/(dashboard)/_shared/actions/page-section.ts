@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
@@ -23,6 +24,8 @@ import {
   type UpdateSectionOrderInput,
   type SectionConfig,
 } from "@/shared/lib/validations/section";
+
+const idSchema = z.string().uuid({ error: "IDが不正です" });
 
 export type PageSectionData = {
   id: string;
@@ -101,6 +104,9 @@ export async function updatePageSection(
   id: string,
   input: UpdateSectionInput,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = updateSectionSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -118,10 +124,10 @@ export async function updatePageSection(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async () => {
       const result = await updatePageSectionCommand(
-        id,
+        parsedId.data,
         parsed.data,
         contentHtml,
       );
@@ -138,14 +144,17 @@ export async function togglePageSection(
   id: string,
   isActive: boolean,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   let pageId = "";
 
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      const result = await togglePageSectionCommand(id, isActive);
+      const result = await togglePageSectionCommand(parsed.data, isActive);
       pageId = result.pageId;
       return null;
     },
@@ -159,6 +168,9 @@ export async function updatePageSectionOrder(
   pageId: string,
   input: UpdateSectionOrderInput,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(pageId);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = updateSectionOrderSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -167,26 +179,29 @@ export async function updatePageSectionOrder(
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: pageId,
+    resourceId: parsedId.data,
     execute: async () => {
-      await updatePageSectionOrderCommand(pageId, parsed.data);
+      await updatePageSectionOrderCommand(parsedId.data, parsed.data);
       return null;
     },
     afterSuccess: () => {
-      revalidatePages(pageId);
+      revalidatePages(parsedId.data);
     },
   });
 }
 
 export async function deletePageSection(id: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   let pageId = "";
 
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      const result = await deletePageSectionCommand(id);
+      const result = await deletePageSectionCommand(parsed.data);
       pageId = result.pageId;
       return null;
     },
@@ -199,14 +214,17 @@ export async function deletePageSection(id: string): Promise<MutationResult> {
 export async function duplicatePageSection(
   id: string,
 ): Promise<MutationResult<PageSectionData>> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   let duplicatedPageId = "";
 
   return executeAdminMutationResult({
     resource: "page",
     action: "update",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      const result = await duplicatePageSectionCommand(id);
+      const result = await duplicatePageSectionCommand(parsed.data);
       duplicatedPageId = result.pageId ?? "";
       return result.section;
     },

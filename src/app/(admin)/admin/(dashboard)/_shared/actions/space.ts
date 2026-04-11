@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
@@ -24,6 +25,8 @@ import {
 } from "@/admin/lib/validations/space";
 
 export type { SpaceSelectOption } from "@/admin/lib/validations/space";
+
+const idSchema = z.string().uuid({ error: "IDが不正です" });
 
 async function renderDescriptionHtml(
   value: string | null | undefined,
@@ -82,6 +85,9 @@ export async function updateSpace(
   id: string,
   input: SpaceFormData,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = spaceFormSchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -90,14 +96,14 @@ export async function updateSpace(
   return executeAdminMutationResult({
     resource: "space",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async () => {
       const commandInput = await buildSpaceCommandInput(parsed.data);
-      await updateSpaceCommand(id, commandInput);
+      await updateSpaceCommand(parsedId.data, commandInput);
       return null;
     },
     afterSuccess: () => {
-      revalidateSpaces(id);
+      revalidateSpaces(parsedId.data);
     },
   });
 }
@@ -106,31 +112,37 @@ export async function updateSpacePublish(
   id: string,
   isPublished: boolean,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "space",
     action: "publish",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await updateSpacePublishCommand(id, isPublished);
+      await updateSpacePublishCommand(parsed.data, isPublished);
       return null;
     },
     afterSuccess: () => {
-      revalidateSpaces(id);
+      revalidateSpaces(parsed.data);
     },
   });
 }
 
 export async function deleteSpace(id: string): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "space",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteSpaceCommand(id);
+      await deleteSpaceCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {
-      revalidateSpaces(id);
+      revalidateSpaces(parsed.data);
     },
   });
 }
@@ -138,16 +150,19 @@ export async function deleteSpace(id: string): Promise<MutationResult> {
 export async function toggleSpacePublished(
   id: string,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "space",
     action: "publish",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await toggleSpacePublishedCommand(id);
+      await toggleSpacePublishedCommand(parsed.data);
       return null;
     },
     afterSuccess: () => {
-      revalidateSpaces(id);
+      revalidateSpaces(parsed.data);
     },
   });
 }

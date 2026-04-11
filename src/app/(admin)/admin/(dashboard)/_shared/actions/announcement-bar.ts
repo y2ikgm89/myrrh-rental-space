@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { updateTag } from "next/cache";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -16,6 +17,8 @@ import {
   toggleAnnouncementBarActive as toggleAnnouncementBarActiveCommand,
   updateAnnouncementBar as updateAnnouncementBarCommand,
 } from "@/shared/domain/settings/announcement-bar";
+
+const idSchema = z.string().uuid({ error: "IDが不正です" });
 
 function invalidateAnnouncementBarCache(): void {
   updateTag(CACHE_TAGS.ANNOUNCEMENT_BAR);
@@ -47,6 +50,9 @@ export async function updateAnnouncementBar(
   id: string,
   data: AnnouncementBarInput,
 ): Promise<MutationResult> {
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return createValidationMutationError(parsedId.error);
+
   const parsed = announcementBarInputSchema.safeParse(data);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
@@ -55,9 +61,9 @@ export async function updateAnnouncementBar(
   return executeAdminMutationResult({
     resource: "announcementBar",
     action: "update",
-    resourceId: id,
+    resourceId: parsedId.data,
     execute: async () => {
-      await updateAnnouncementBarCommand(id, parsed.data);
+      await updateAnnouncementBarCommand(parsedId.data, parsed.data);
       return null;
     },
     afterSuccess: invalidateAnnouncementBarCache,
@@ -67,12 +73,15 @@ export async function updateAnnouncementBar(
 export async function deleteAnnouncementBar(
   id: string,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "announcementBar",
     action: "delete",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await deleteAnnouncementBarCommand(id);
+      await deleteAnnouncementBarCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateAnnouncementBarCache,
@@ -82,12 +91,15 @@ export async function deleteAnnouncementBar(
 export async function toggleAnnouncementBarActive(
   id: string,
 ): Promise<MutationResult> {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) return createValidationMutationError(parsed.error);
+
   return executeAdminMutationResult({
     resource: "announcementBar",
     action: "update",
-    resourceId: id,
+    resourceId: parsed.data,
     execute: async () => {
-      await toggleAnnouncementBarActiveCommand(id);
+      await toggleAnnouncementBarActiveCommand(parsed.data);
       return null;
     },
     afterSuccess: invalidateAnnouncementBarCache,
