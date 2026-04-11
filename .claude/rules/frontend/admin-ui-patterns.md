@@ -687,7 +687,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/admin/components/ui";
 
 **`onValueChange` の `if (v)` ガード必須** — Radix ToggleGroup は同じ値を再クリックすると `""` を返す（deselect）。`if (v)` で空文字列を無視する。
 
-**参照実装**: `pages/[slug]/edit/_components/DesignPanel.tsx`（Accordion + ToggleGroup + カラーピッカー）
+**参照実装**: `pages/[slug]/edit/_components/DesignFields.tsx`（ToggleGroup + フラット fieldset + カラーピッカー）
 
 **使い分け:**
 

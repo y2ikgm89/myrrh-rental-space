@@ -140,7 +140,7 @@ export function SectionWrapper({
  *
  * - 値は `titleSizeValues`（section-design.ts）と 1:1 対応
  * - `satisfies` で網羅チェック: titleSizeValues に値追加時にコンパイルエラー
- * - 新サイズ追加時: section-design.ts の titleSizeValues → ここに追加 → DesignPanel の titleSizeLabels
+ * - 新サイズ追加時: section-design.ts の titleSizeValues → ここに追加 → DesignFields の titleSizeLabels
  */
 export const titleSizeMap = {
   sm: "text-xl md:text-2xl",

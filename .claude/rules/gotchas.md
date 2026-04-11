@@ -179,7 +179,7 @@ paths:
 - **新規公開ページ追加は `/create-page-content` スキル** — `DEFAULT_PAGE_SECTIONS` にエントリ追加 + `page.tsx` 作成。`PageContent` は使わない
 - **ホームページセクションの `pageId: null` は廃止済み** — 全セクション（ホームページ含む）が Page レコードの `pageId` に紐づく。`pageId: null` でホームページ判定するコードは禁止。ホームページは slug `"home"` の Page レコードで管理
 - **`/admin/pages/homepage/edit` は廃止済み** — ホームページ編集は `/admin/pages/home/edit`（`[slug]/edit` に統合）。`HomepageSectionCommand` 系コマンドも廃止、page-scoped コマンドに統一
-- **`DesignPanel` は ToggleGroup + Accordion で全面書き換え済み** — `pages/[slug]/edit/_components/DesignPanel.tsx`。生 radio ボタンは全廃。4カテゴリ（余白/背景/テキスト/レイアウト）を Accordion で整理
+- **`DesignFields`（旧 `DesignPanel`）は ToggleGroup + フラット fieldset で実装済み** — `pages/[slug]/edit/_components/DesignFields.tsx`。Accordion 廃止、form タグなし。親 `SectionEditor` に埋め込まれる
 - **ページ編集の SEO はページレベルタブ「ページ設定」にある** — `SectionMasterDetail.tsx` の `Tabs [セクション | ページ設定]`。旧 `SEO_SELECTION_ID` / サイドバー SEO リンクは削除済み。SEO 関連機能を追加する場合は「ページ設定」タブ内に配置する
 - **アニメーションファイルは kebab-case のみ** — `scroll-reveal.tsx`, `split-text.tsx`, `magnetic-button.tsx`, `parallax-image.tsx`。旧 PascalCase re-export ラッパーは削除済み。レガシーセクションコンポーネント（`_components/*.tsx`）も kebab-case で直接 import
 - **公開ページのマルチステップフォームでは視覚パターンを全ステップで統一** — `bg-surface` ラッパー・見出しスタイル・ナビゲーション配置をステップ間で揃える。フロー全体の一貫性を優先
@@ -324,7 +324,7 @@ paths:
 - **`editorial-border-accent` CSS クラスは Divider 専用** — `width: 4rem` を持つ短い装飾線。`Section border="accent"` 等の全幅要素に使うとレイアウトが 4rem 幅に潰れる。Section の accent border は `border-t-2 border-accent`（Tailwind ユーティリティ）を使用
 - **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-background`（白）にし、editorial variant をそのまま使う
 
-- **`section-design.ts` の値配列変更時は DesignPanel + 型ガードも同期必須** — `DesignPanel.tsx` の `backgroundOptions`/`paddingOptions`/`maxWidthOptions` + Set-based 型ガード（`isBgValue` 等）が `sectionBgValues`/`sectionSpacingValues`/`sectionMaxWidthValues` と 1:1 対応
+- **`section-design.ts` の値配列変更時は DesignFields + 型ガードも同期必須** — `DesignFields.tsx` の `backgroundOptions`/`paddingOptions`/`maxWidthOptions` + Set-based 型ガード（`isBgValue` 等）が `sectionBgValues`/`sectionSpacingValues`/`sectionMaxWidthValues` と 1:1 対応
 
 ## ナビゲーション
 
