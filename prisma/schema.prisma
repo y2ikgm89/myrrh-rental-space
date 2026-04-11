@@ -97,6 +97,7 @@ enum TermsType {
   CANCELLATION // キャンセルポリシー
   PAYMENT // 支払い規約
   RENTAL_TERMS // 施設利用規約（スペース別）
+  COMMERCIAL_TRANSACTION // 特定商取引法に基づく表記
   CUSTOM // カスタム規約
 }
 
@@ -260,6 +261,7 @@ model User {
   deletedPostComments     PostComment[]          @relation("PostCommentDeleter")
   inquiryReplies          Inquiry[]              @relation("InquiryReplies")
   reservationDeletions    Reservation[]          @relation("ReservationDeletions")
+  eventDeletions          Event[]                @relation("EventDeletions")
   createdTermsVersions    TermsVersion[]         @relation("TermsVersionCreator")
   publishedTermsVersions  TermsVersion[]         @relation("TermsVersionPublisher")
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
@@ -473,6 +475,7 @@ model Space {
   @@index([name])
   @@index([addressDetail])
   @@index([isPublished, isActive])
+  @@index([publishedAt, isActive])
   @@index([termsId])
   @@index([locationId])
   @@index([categoryId])
@@ -664,6 +667,7 @@ model Inquiry {
   @@index([email])
   @@index([status])
   @@index([createdAt])
+  @@index([createdAt, status])
   @@index([customerId])
   @@map("inquiries")
 }
@@ -1088,6 +1092,10 @@ model Settings {
   regularHolidays Json? // 定休日（曜日）
   specialHolidays Json? // 特別休業日（日付リスト）
   holidayNotice   String? @db.Text // 休業日のお知らせ
+
+  // Access Info (アクセス情報)
+  accessInfo  String? @db.Text // 交通案内（最寄り駅・路線・徒歩分数等）
+  parkingInfo String? @db.Text // 駐車場案内（台数・近隣パーキング等）
 
   // MEO Settings (ローカル検索最適化)
   latitude              Float?   // 緯度（例: 35.6812）
@@ -1695,10 +1703,12 @@ model Event {
   googleCalendarEventId String?     @unique
   publishedAt           DateTime?
   deletedAt             DateTime?
+  deletedById           String?     @db.Uuid
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
 
   @@index([startTime, endTime])
@@ -1732,6 +1742,7 @@ model EventRegistration {
   @@index([eventId])
   @@index([customerId])
   @@index([status])
+  @@index([eventId, status, createdAt])
   @@map("event_registrations")
 }
 
