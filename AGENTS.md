@@ -18,13 +18,13 @@
 
 | 技術         | バージョン | 備考                                   |
 | ------------ | ---------- | -------------------------------------- |
-| Next.js      | 16.2.1     | `'use cache'`, `updateTag`, PPR 対応   |
-| React        | 19.2.4     | React Compiler 1.0, `useEffectEvent`   |
-| TypeScript   | 6.0.1      | `target: es2025`, `erasableSyntaxOnly` |
+| Next.js      | 16.2.3     | `'use cache'`, `updateTag`, PPR 対応   |
+| React        | 19.2.5     | React Compiler 1.0, `useEffectEvent`   |
+| TypeScript   | 6.0.2      | `target: es2025`, `erasableSyntaxOnly` |
 | Bun          | 1.3.11     | `bun:test`, `packageManager` と一致    |
-| Prisma       | 7.5.0      | WASM, mapped enums                     |
-| Better Auth  | 1.5.5      | RBAC                                   |
-| Tailwind CSS | 4.2.1      | CSS-first, @theme                      |
+| Prisma       | 7.7.0      | WASM, mapped enums                     |
+| Better Auth  | 1.6.1      | RBAC, Google/LINE OAuth                |
+| Tailwind CSS | 4.2.2      | CSS-first, @theme                      |
 | Zod          | 4.3.6      | `{ error: }` パラメータ                |
 
 ### Project structure
@@ -84,12 +84,14 @@ bun run e2e                     # Playwright E2E
 - ルートレイアウト間（Public ↔ Admin）遷移はフルリロード前提
 - 管理画面専用は `@/admin/*`、公開画面専用は `@/public/*` に閉じる
 - 業務ロジックは `src/shared/domain/*`、Prisma 境界は `src/shared/db/*`
-- 権限制御が必要な管理系 Server Action では `checkPermission()` / `checkAdminAuth()` 必須
+- 管理 write 系 Server Action は `executeAdminMutationResult` 必須（認証・権限・監査ログ一括処理）
+- API Route のみ `checkPermission()` 直接使用
+- `src/app/` から `@/shared/db/prisma` を直接 import しない（例外: `calendar-sync` の `$queryRaw`）
 
 ## Data, auth, and security constraints
 
 - Prisma `$extends` の正本は `src/shared/db/create-app-prisma-client.ts`
-- Better Auth: `prismaAdapter(prismaForBetterAuth)` + `generateId: "uuid"` + `baseURL` 明示
+- Better Auth: `prismaAdapter(basePrisma)` + `generateId: "uuid"` + `baseURL` 明示
 - `@/shared/lib/errors/logger` は `server-only`。seed/CLI では `logger-core` を使う
 - キャッシュ: `'use cache'` + `cacheTag()` 基本、`updateTag()` で read-your-own-writes
 - 監査対象操作は `logAction()` 必須
@@ -103,14 +105,18 @@ bun run e2e                     # Playwright E2E
 
 ## Rule files reference
 
-詳細ルールは `docs/reference/codex-rules/` に配置。主要ファイル:
+詳細ルールは `.claude/rules/`（正本）に配置。`paths:` フロントマターで条件付き自動ロード。主要ファイル:
 
 | ルール                            | 内容                       |
 | --------------------------------- | -------------------------- |
+| `gotchas.md`                      | プロジェクト固有の落とし穴 |
 | `react-patterns.md`               | React 19.2 / Compiler      |
+| `server-actions.md`               | 'use cache' / updateTag    |
+| `type-safety.md`                  | TS 6.0 / noUncheckedIndex  |
+| `auth-patterns.md`                | Better Auth / RBAC         |
 | `lexical-patterns.md`             | Lexical エディタ           |
 | `admin-inline-editor-patterns.md` | Post/News メタデータパネル |
-| `instruction-topology.md`         | 指示配置の正本             |
+| `admin-ui-patterns.md`            | 管理画面 UI パターン       |
 
 ## Codex skill operation
 
