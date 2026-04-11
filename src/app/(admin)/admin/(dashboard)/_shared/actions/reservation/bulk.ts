@@ -8,8 +8,8 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { ReservationStatus } from "@generated/prisma/enums";
-import { prisma } from "@/shared/db/prisma";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { getReservationStatus } from "@/shared/domain/reservations/admin-queries";
 import { updateReservationStatusCommand } from "@/shared/domain/reservations/commands";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -135,10 +135,7 @@ export async function bulkConfirmReservations(
 
       for (const id of parsed.data) {
         try {
-          const reservation = await prisma.reservation.findUnique({
-            where: { id, deletedAt: null },
-            select: { status: true },
-          });
+          const reservation = await getReservationStatus(id);
 
           if (
             !reservation ||
@@ -194,10 +191,7 @@ export async function bulkCancelReservations(
 
       for (const id of parsed.data) {
         try {
-          const reservation = await prisma.reservation.findUnique({
-            where: { id, deletedAt: null },
-            select: { status: true },
-          });
+          const reservation = await getReservationStatus(id);
 
           if (
             !reservation ||

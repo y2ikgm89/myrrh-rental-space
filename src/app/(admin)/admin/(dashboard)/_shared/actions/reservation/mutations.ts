@@ -17,7 +17,7 @@ import {
   updateReservationStatusCommand,
 } from "@/shared/domain/reservations/commands";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
-import { prisma } from "@/shared/db/prisma";
+import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
 import { DomainError } from "@/shared/domain/domain-error";
 import { createMutationError } from "@/shared/lib/mutation-result";
 import {
@@ -295,16 +295,7 @@ export async function updateCustomerFromReservation(
     resource: "customer",
     action: "update",
     execute: async () => {
-      const reservation = await prisma.reservation.findUnique({
-        where: { id: parsed.data, deletedAt: null },
-        select: {
-          customerId: true,
-          guestLastName: true,
-          guestFirstName: true,
-          guestPhone: true,
-          guestCompanyName: true,
-        },
-      });
+      const reservation = await getReservationGuestData(parsed.data);
       if (!reservation)
         throw new DomainError("予約が見つかりません", "NOT_FOUND");
       if (!reservation.guestLastName)

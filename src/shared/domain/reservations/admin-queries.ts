@@ -87,6 +87,10 @@ export async function getReservationsQuery(
         cancellationReason: true,
         cancelledAt: true,
         cancelledByType: true,
+        guestLastName: true,
+        guestFirstName: true,
+        guestPhone: true,
+        guestCompanyName: true,
         notes: true,
         deletedAt: true,
         createdAt: true,
@@ -159,6 +163,10 @@ export async function getReservationByIdQuery(id: string) {
       cancellationReason: true,
       cancelledAt: true,
       cancelledByType: true,
+      guestLastName: true,
+      guestFirstName: true,
+      guestPhone: true,
+      guestCompanyName: true,
       space: {
         select: {
           id: true,
@@ -331,6 +339,26 @@ export async function getSpacesForReservationQuery() {
       orderBy: { name: "asc" },
     }),
   );
+}
+
+export async function getReservationGuestData(id: string) {
+  return prisma.reservation.findUnique({
+    where: { id, deletedAt: null },
+    select: {
+      customerId: true,
+      guestLastName: true,
+      guestFirstName: true,
+      guestPhone: true,
+      guestCompanyName: true,
+    },
+  });
+}
+
+export async function getReservationStatus(id: string) {
+  return prisma.reservation.findUnique({
+    where: { id, deletedAt: null },
+    select: { status: true },
+  });
 }
 
 /** 予約リマインダー cron 用: 指定日時窓内のアクティブ予約とメール用関連を取得 */
