@@ -197,6 +197,20 @@ export async function getAdminTermsVersionById(
   return toPlainObject(version);
 }
 
+export async function getTermsAgreementsForReservation(reservationId: string) {
+  return prisma.termsAgreement.findMany({
+    where: { reservationId },
+    select: {
+      id: true,
+      agreedAt: true,
+      ipAddress: true,
+      terms: { select: { title: true, type: true } },
+      version: { select: { version: true } },
+    },
+    orderBy: { agreedAt: "asc" },
+  });
+}
+
 export async function getAdminTermsAgreements(
   termsId: string,
   page: number,

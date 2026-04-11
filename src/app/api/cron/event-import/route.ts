@@ -12,7 +12,7 @@ import { revalidateTag } from "next/cache";
 import { CACHE_TAGS, CACHE_LIFE } from "@/shared/lib/constants";
 import { importCalendarEvents } from "@/shared/lib/calendar-sync/event-inbound";
 import { isGoogleCalendarEnabled } from "@/shared/lib/google-calendar";
-import { prisma } from "@/shared/db/prisma";
+import { getEventImportSettings } from "@/shared/domain/settings/admin-queries";
 import {
   logError,
   ErrorCategory,
@@ -54,10 +54,7 @@ export async function GET(request: Request) {
     }
 
     // イベントインポートが有効か確認
-    const settings = await prisma.settings.findFirstOrThrow({
-      where: { id: "singleton" },
-      select: { eventImportEnabled: true },
-    });
+    const settings = await getEventImportSettings();
     if (!settings.eventImportEnabled) {
       return jsonSuccess({
         skipped: true,

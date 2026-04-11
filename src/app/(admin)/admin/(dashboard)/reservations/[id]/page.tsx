@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { IconPencil } from "@tabler/icons-react";
 import Link from "next/link";
 import { getReservationById } from "@/admin/queries/reservation";
-import { prisma } from "@/shared/db/prisma";
+import { getTermsAgreementsForReservation } from "@/shared/domain/terms/admin-queries";
 import { ReservationDetail } from "./_components/ReservationDetail";
 import { TermsAgreements } from "./_components/TermsAgreements";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
@@ -36,17 +36,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
   const { id } = await params;
   const [reservation, agreements] = await Promise.all([
     getReservationById(id),
-    prisma.termsAgreement.findMany({
-      where: { reservationId: id },
-      select: {
-        id: true,
-        agreedAt: true,
-        ipAddress: true,
-        terms: { select: { title: true, type: true } },
-        version: { select: { version: true } },
-      },
-      orderBy: { agreedAt: "asc" },
-    }),
+    getTermsAgreementsForReservation(id),
   ]);
 
   if (!reservation) {

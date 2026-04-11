@@ -16,7 +16,7 @@ import type {
   ICalTokenWithRelations,
   RobotsTxtData,
   SettingsData,
-  TaxSettingsData,
+  TaxSettings,
   TwoWaySyncSettingsData,
 } from "@/shared/domain/settings/types";
 import { safeDecrypt } from "@/shared/lib/crypto";
@@ -352,7 +352,7 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
   };
 }
 
-export async function getTaxSettings(): Promise<TaxSettingsData> {
+export async function getTaxSettings(): Promise<TaxSettings> {
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },
     select: {
@@ -380,7 +380,7 @@ export async function getTaxSettings(): Promise<TaxSettingsData> {
   };
 }
 
-export async function getPublicTaxSettings(): Promise<TaxSettingsData> {
+export async function getPublicTaxSettings(): Promise<TaxSettings> {
   return getTaxSettings();
 }
 
@@ -416,4 +416,15 @@ export async function getAdminPermalinkSettings(): Promise<{
     postPermalinkStructure:
       settings?.postPermalinkStructure ?? PostPermalinkStructure.post_name,
   };
+}
+
+export async function getEventImportSettings(): Promise<{
+  eventImportEnabled: boolean;
+}> {
+  const settings = await prisma.settings.findFirstOrThrow({
+    where: { id: "singleton" },
+    select: { eventImportEnabled: true },
+  });
+
+  return { eventImportEnabled: settings.eventImportEnabled };
 }
