@@ -173,8 +173,8 @@ export function DesignFields({
   return (
     <div className="space-y-6">
       {/* -- 余白 ---------------------------------------- */}
-      <fieldset className="space-y-4">
-        <legend className="mb-3 text-xs font-medium text-muted-foreground">
+      <fieldset className="rounded-lg border border-border/50 p-3 space-y-4">
+        <legend className="px-1 text-xs font-semibold text-foreground">
           余白
         </legend>
         <div className="space-y-2">
@@ -216,8 +216,8 @@ export function DesignFields({
       </fieldset>
 
       {/* -- 背景 ---------------------------------------- */}
-      <fieldset className="space-y-4">
-        <legend className="mb-3 text-xs font-medium text-muted-foreground">
+      <fieldset className="rounded-lg border border-border/50 p-3 space-y-4">
+        <legend className="px-1 text-xs font-semibold text-foreground">
           背景
         </legend>
         <div className="space-y-2">
@@ -277,8 +277,8 @@ export function DesignFields({
       </fieldset>
 
       {/* -- テキスト ------------------------------------ */}
-      <fieldset className="space-y-4">
-        <legend className="mb-3 text-xs font-medium text-muted-foreground">
+      <fieldset className="rounded-lg border border-border/50 p-3 space-y-4">
+        <legend className="px-1 text-xs font-semibold text-foreground">
           テキスト
         </legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -387,8 +387,8 @@ export function DesignFields({
       </fieldset>
 
       {/* -- レイアウト ---------------------------------- */}
-      <fieldset className="space-y-4">
-        <legend className="mb-3 text-xs font-medium text-muted-foreground">
+      <fieldset className="rounded-lg border border-border/50 p-3 space-y-4">
+        <legend className="px-1 text-xs font-semibold text-foreground">
           レイアウト
         </legend>
         <div className="space-y-2">
