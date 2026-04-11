@@ -36,7 +36,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "*.cdninstagram.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.fbcdn.net",
       },
     ],
     formats: ["image/avif", "image/webp"],

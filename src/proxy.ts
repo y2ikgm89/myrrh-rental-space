@@ -31,10 +31,10 @@ function buildCsp(nonce: string): string {
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""};
     style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`};
-    img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://images.unsplash.com;
+    img-src 'self' data: blob: https://*.supabase.co https://img.youtube.com https://*.cdninstagram.com https://*.fbcdn.net;
     font-src 'self';
     connect-src 'self' https://*.supabase.co https://api.stripe.com https://unpkg.com https://www.google-analytics.com https://analytics.google.com${isDev ? " ws://localhost:*" : ""};
-    frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com;
+    frame-src 'self' https://challenges.cloudflare.com https://js.stripe.com https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://www.figma.com https://www.instagram.com https://www.google.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
