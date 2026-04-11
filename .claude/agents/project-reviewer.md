@@ -14,7 +14,7 @@ model: sonnet
 memory: project
 ---
 
-You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0.1).
+You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / TypeScript 6.0).
 
 ## Your workflow
 
@@ -63,7 +63,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **Server Actions / Cache** (`.claude/rules/server-actions.md`):
 
-- **Auth check required** (`checkAdminAuth()` / `checkPermission()`) on every admin action
+- **Auth check required** — write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）、API Route のみ `checkPermission()` 直接使用
 - **Cache tags**: Always `CACHE_TAGS.*` constants, never magic strings
 - **`updateTag`** (Server Actions only, immediate invalidation) vs **`revalidateTag`** (Route Handlers / delayed) — do not confuse
 - **`safeFetch`** required for public data fetching — direct Prisma calls without error handling are banned in public actions
@@ -118,7 +118,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 
 **`src/app/(admin)/**/lexical/**`**:
 
-- Lexical 0.41 / NodeState API patterns
+- Lexical 0.43 / NodeState API patterns
 - Node properties must be JSON-serializable
 - `mergeRegister` imported from `lexical` (moved from `@lexical/utils` in 0.40)
 - No top-level Lexical imports in Server Actions — use `lazy-renderer.ts` dynamic import

@@ -1,35 +1,35 @@
 # 技術スタック
 
-最終更新: 2026-03-22
+最終更新: 2026-04-11
 
 ## コア
 
 | 技術       | バージョン | 用途                                       |
 | ---------- | ---------- | ------------------------------------------ |
-| Next.js    | 16.1.6     | App Router, PPR, `proxy.ts`, Metadata API  |
-| React      | 19.2.4     | Server / Client Components, React Compiler |
-| TypeScript | 6.0.1-rc   | strict type-checking, `erasableSyntaxOnly` |
+| Next.js    | 16.2.3     | App Router, PPR, `proxy.ts`, Metadata API  |
+| React      | 19.2.5     | Server / Client Components, React Compiler |
+| TypeScript | 6.0.2      | strict type-checking, `erasableSyntaxOnly` |
 | Bun        | 1.3.11     | package manager, test runner, app runtime  |
 
 ## データと認証
 
 | 技術                 | バージョン | 用途                                                           |
 | -------------------- | ---------- | -------------------------------------------------------------- |
-| Prisma               | 7.5.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
+| Prisma               | 7.7.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
 | PostgreSQL           | Supabase   | 本番 DB                                                        |
-| `@prisma/adapter-pg` | 7.5.0      | Prisma driver adapter（seed / `prisma.ts` で必須）             |
-| Better Auth          | 1.5.5      | session / RBAC                                                 |
+| `@prisma/adapter-pg` | 7.7.0      | Prisma driver adapter（seed / `prisma.ts` で必須）             |
+| Better Auth          | 1.6.2      | session / RBAC                                                 |
 | Zod                  | 4.3.6      | 入出力検証                                                     |
 
 ## UI と体験
 
 | 技術         | バージョン | 用途                               |
 | ------------ | ---------- | ---------------------------------- |
-| Tailwind CSS | 4.2.1      | styling, theme tokens              |
+| Tailwind CSS | 4.2.2      | styling, theme tokens              |
 | GSAP         | 3.14.2     | scroll / timeline animation        |
-| Lenis        | 1.3.19     | smooth scroll（`bun.lock` 解決版） |
+| Lenis        | 1.3.21     | smooth scroll（`bun.lock` 解決版） |
 | nuqs         | 2.8.9      | search params state                |
-| Lexical      | 0.41.0     | admin rich text editor             |
+| Lexical      | 0.43.0     | admin rich text editor             |
 
 ## 実装上の判断
 
@@ -39,7 +39,7 @@
 - 生成物は git 管理しない
 - `src/` 配下には置かない
 - アプリからは `src/shared/db/*` 経由で参照する
-- **`createAppPrismaClient`**（`src/shared/db/create-app-prisma-client.ts`）が `$extends` の単一ソース。`prisma.ts` と `prisma/seed.ts` の両方で適用し、Better Auth には拡張前 **`prismaForBetterAuth`** のみ渡す（`ARCHITECTURE.md` §DB 境界）
+- **`createAppPrismaClient`**（`src/shared/db/create-app-prisma-client.ts`）が `$extends` の単一ソース。`prisma.ts` と `prisma/seed.ts` の両方で適用し、Better Auth には拡張前 **`basePrisma`** のみ渡す（`ARCHITECTURE.md` §DB 境界）
 
 ### Proxy
 
