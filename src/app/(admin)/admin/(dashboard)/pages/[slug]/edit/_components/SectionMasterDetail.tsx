@@ -287,9 +287,10 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   if (sections === null) {
     return (
       <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-6 h-auto lg:h-[calc(100vh-220px)]">
-        <div className="space-y-2 p-4">
+        <div className="space-y-2 p-3 w-full lg:w-[280px]">
+          <div className="h-8 animate-pulse rounded-md bg-muted" />
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-10 animate-pulse rounded-md bg-muted" />
+            <div key={i} className="h-12 animate-pulse rounded-md bg-muted" />
           ))}
         </div>
         <div className="h-40 animate-pulse rounded-lg bg-muted" />
@@ -309,7 +310,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
           if (isPageTab(v)) void setPageTab(v);
         }}
       >
-        <TabsList className="mb-4">
+        <TabsList className="mb-2">
           <TabsTrigger value="sections">セクション</TabsTrigger>
           <TabsTrigger value="settings">ページ設定</TabsTrigger>
         </TabsList>
@@ -344,7 +345,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
             {/* Right Detail Panel */}
             <div
               className={cn(
-                "overflow-y-auto p-3 lg:p-4",
+                "overflow-y-auto p-4",
                 "lg:block",
                 showMobileList ? "hidden" : "flex-1",
               )}
