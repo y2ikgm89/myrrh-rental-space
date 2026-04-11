@@ -28,7 +28,21 @@ import {
 } from "@tabler/icons-react";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
 import type { PageSectionData } from "@/admin/actions/page-section";
+import { isRecord } from "@/shared/lib/serialize";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
+
+function sectionPreviewText(section: PageSectionData): string | null {
+  const config: unknown = section.config;
+  if (!isRecord(config)) return null;
+  const candidates = ["title", "subtitle", "description", "heading", "label"];
+  for (const key of candidates) {
+    const val = config[key];
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+  return null;
+}
 
 interface SectionListItemProps {
   section: PageSectionData;
@@ -68,6 +82,7 @@ export function SectionListItem({
   };
 
   const label = sectionTypeLabels[section.type];
+  const preview = sectionPreviewText(section);
 
   return (
     <div
@@ -76,7 +91,9 @@ export function SectionListItem({
       className={cn(
         "group relative flex items-center gap-2 px-2.5 py-2.5 cursor-pointer transition-colors",
         !isLast && "border-b border-border/40",
-        isSelected ? "bg-card" : "hover:bg-card/50",
+        isSelected
+          ? "bg-primary/5 border-l-2 border-l-primary"
+          : "bg-transparent hover:bg-muted/50",
         !section.isActive && "opacity-40",
         isDragging && "z-50 shadow-lg ring-2 ring-primary/20 bg-card",
       )}
@@ -128,6 +145,11 @@ export function SectionListItem({
         >
           {section.title || label}
         </p>
+        {preview !== null && (
+          <p className="text-[11px] text-muted-foreground truncate">
+            {preview}
+          </p>
+        )}
       </div>
 
       {/* 非表示インジケータ */}
