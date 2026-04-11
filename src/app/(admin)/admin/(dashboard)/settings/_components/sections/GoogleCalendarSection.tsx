@@ -29,6 +29,7 @@ import {
   Switch,
   Textarea,
 } from "@/admin/components/ui";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateGoogleCalendarSettings,
@@ -153,8 +154,14 @@ export function GoogleCalendarSection({
     });
   };
 
-  const serviceAccountJson = form.getValues("serviceAccountJson");
-  const googleCalendarId = form.getValues("googleCalendarId");
+  const serviceAccountJson = useWatch({
+    control: form.control,
+    name: "serviceAccountJson",
+  });
+  const googleCalendarId = useWatch({
+    control: form.control,
+    name: "googleCalendarId",
+  });
 
   return (
     <Form {...form}>

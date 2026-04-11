@@ -26,6 +26,7 @@ import {
   Input,
   SubmitButton,
 } from "@/admin/components/ui";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateResendSettings,
@@ -127,7 +128,10 @@ export function ResendSection({ config }: ResendSectionProps) {
     });
   };
 
-  const resendApiKey = form.getValues("resendApiKey");
+  const resendApiKey = useWatch({
+    control: form.control,
+    name: "resendApiKey",
+  });
 
   return (
     <Form {...form}>

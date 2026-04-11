@@ -31,6 +31,7 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateStripeSettings,
@@ -161,8 +162,14 @@ export function StripeSection({ settings }: StripeSectionProps) {
     });
   };
 
-  const stripeTestMode = form.getValues("stripeTestMode");
-  const stripeSecretKey = form.getValues("stripeSecretKey");
+  const stripeTestMode = useWatch({
+    control: form.control,
+    name: "stripeTestMode",
+  });
+  const stripeSecretKey = useWatch({
+    control: form.control,
+    name: "stripeSecretKey",
+  });
 
   return (
     <Form {...form}>

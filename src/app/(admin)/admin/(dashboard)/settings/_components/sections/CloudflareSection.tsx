@@ -20,6 +20,7 @@ import {
   Input,
   SubmitButton,
 } from "@/admin/components/ui";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import {
   updateCloudflareSettings,
@@ -125,7 +126,10 @@ export function CloudflareSection({ config }: Props) {
   };
 
   const hasExistingConfig = config.zoneId || config.apiTokenMasked;
-  const cloudflareApiToken = form.getValues("cloudflareApiToken");
+  const cloudflareApiToken = useWatch({
+    control: form.control,
+    name: "cloudflareApiToken",
+  });
 
   return (
     <Form {...form}>

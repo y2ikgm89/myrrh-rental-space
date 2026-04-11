@@ -8,6 +8,7 @@ import { useState, useTransition, useId } from "react";
 import { IconX, IconUpload, IconFile, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { cn } from "@/shared/lib/cn";
 import { uploadMedia } from "@/admin/actions/media";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatBytes } from "@/admin/lib/utils";
@@ -150,12 +151,12 @@ export function MediaUploadDialog({
           {/* Drop Zone */}
           {!file ? (
             <div
-              className={`
-                border-2 border-dashed rounded-lg p-8
-                flex flex-col items-center justify-center gap-2
-                cursor-pointer transition-colors
-                ${isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary"}
-              `}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors",
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 hover:border-primary",
+              )}
               onDragOver={(e) => {
                 e.preventDefault();
                 setIsDragging(true);
@@ -298,9 +299,7 @@ export function MediaUploadDialog({
             キャンセル
           </Button>
           <Button onClick={handleSubmit} disabled={!file || isPending}>
-            {isPending && (
-              <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
-            )}
+            {isPending && <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />}
             アップロード
           </Button>
         </DialogFooter>

@@ -64,12 +64,12 @@ function EventMeta({
   return (
     <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
       <span className="inline-flex items-center gap-1.5">
-        <IconCalendar className={`${iconSize} shrink-0`} aria-hidden="true" />
+        <IconCalendar className={cn(iconSize, "shrink-0")} aria-hidden="true" />
         {formatTime(start)} – {formatTime(end)}
       </span>
       {event.location ? (
         <span className="inline-flex items-center gap-1.5">
-          <IconMapPin className={`${iconSize} shrink-0`} aria-hidden="true" />
+          <IconMapPin className={cn(iconSize, "shrink-0")} aria-hidden="true" />
           {event.location}
         </span>
       ) : null}
@@ -109,7 +109,7 @@ export function EventCard({ variant, event }: EventCardProps) {
     <Link
       href={`/events/${event.slug}`}
       className={cn(
-        "group grid gap-6 border-b border-border py-6 transition-colors last:border-b-0 hover:bg-accent/5 md:gap-8 md:py-8",
+        "group grid gap-6 py-6 transition-colors hover:bg-accent/5 md:gap-8 md:py-8",
         event.thumbnailUrl
           ? "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_10rem_1fr_auto]"
           : "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_1fr_auto]",
