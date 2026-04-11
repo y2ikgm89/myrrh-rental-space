@@ -3,9 +3,11 @@
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { PostStatus } from "@generated/prisma/enums";
-import { prisma } from "@/shared/db/prisma";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import {
+  bulkTogglePublishedCommand,
+  bulkDeletePostsCommand,
+} from "@/shared/domain/posts/commands";
 import {
   invalidatePostCollectionCaches,
   purgePostArchive,
@@ -25,16 +27,7 @@ export async function bulkTogglePostPublished(
   return executeAdminMutationResult({
     resource: "post",
     action: "publish",
-    execute: async () => {
-      const result = await prisma.post.updateMany({
-        where: { id: { in: parsed.data } },
-        data: {
-          status: publish ? PostStatus.PUBLISHED : PostStatus.DRAFT,
-          publishedAt: publish ? new Date() : null,
-        },
-      });
-      return { count: result.count, isPublished: publish };
-    },
+    execute: async () => bulkTogglePublishedCommand(parsed.data, publish),
     afterSuccess: async () => {
       await invalidatePostCollectionCaches();
       await purgePostArchive();
@@ -51,12 +44,7 @@ export async function bulkDeletePosts(
   return executeAdminMutationResult({
     resource: "post",
     action: "delete",
-    execute: async () => {
-      const result = await prisma.post.deleteMany({
-        where: { id: { in: parsed.data } },
-      });
-      return { count: result.count };
-    },
+    execute: async () => bulkDeletePostsCommand(parsed.data),
     afterSuccess: async () => {
       await invalidatePostCollectionCaches();
       await purgePostArchive();
