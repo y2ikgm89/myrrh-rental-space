@@ -14,8 +14,8 @@ interface SectionInserterProps {
 
 export function SectionInserter({ onInsert, disabled }: SectionInserterProps) {
   return (
-    <div className="group/inserter relative flex items-center justify-center py-0.5">
-      <div className="absolute inset-x-3 h-px bg-border opacity-0 transition-opacity group-hover/inserter:opacity-100" />
+    <div className="group/inserter relative flex items-center justify-center py-1">
+      <div className="absolute inset-x-0 h-px bg-primary/30 opacity-0 transition-opacity group-hover/inserter:opacity-100" />
       <button
         type="button"
         disabled={disabled}
@@ -23,9 +23,9 @@ export function SectionInserter({ onInsert, disabled }: SectionInserterProps) {
           e.stopPropagation();
           onInsert();
         }}
-        className="relative z-10 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 transition-opacity hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none group-hover/inserter:opacity-100"
+        className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 transition-opacity hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none group-hover/inserter:opacity-100"
       >
-        <IconPlus className="h-3 w-3" />
+        <IconPlus className="h-3.5 w-3.5" />
       </button>
     </div>
   );
