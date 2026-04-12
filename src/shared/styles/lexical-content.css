@@ -729,6 +729,10 @@ details[data-collapsible-item]
   border-radius: 0.5rem;
 }
 
+[data-group] > :first-child {
+  margin-top: 0;
+}
+
 [data-group] > :last-child {
   margin-bottom: 0;
 }
