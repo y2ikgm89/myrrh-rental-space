@@ -40,7 +40,7 @@ import type {
   PostTagData,
 } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { generateSlug } from "@/shared/lib/utils";
+import { generateSlug } from "@/shared/lib/slug";
 import { PostStatus } from "@generated/prisma/enums";
 import type { ContentWidth } from "@/shared/types";
 
@@ -198,7 +198,6 @@ export function PostEditor({
       onSubmit={editor.form.handleSubmit(editor.onSubmit)}
       onSave={editor.handleSave}
       isDirty={editor.isDirty}
-      isPanelOpen={editor.isPanelOpen}
       header={
         <EditorHeader
           title={editor.title}

@@ -3,12 +3,11 @@
 /**
  * 規約インラインエディター（オーケストレーター）
  *
- * create モード: 規約新規作成（テンプレート選択あり）
+ * create モード: 規約新規作成（タイプ・テンプレートはダイアログで選択済み、props で受け取る）
  * edit モード: バージョン選択・公開フロー・バージョン管理を統合
  */
 
 import { useState, useTransition } from "react";
-import { cn } from "@/shared/lib/cn";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
 import { useForm, useWatch } from "react-hook-form";
@@ -43,6 +42,7 @@ import {
   DialogTitle,
   DialogTrigger,
   Tabs,
+  TabsContent,
   TabsList,
   TabsTrigger,
 } from "@/admin/components/ui";
@@ -51,11 +51,6 @@ import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { parseTermsType } from "@/shared/lib/validations/terms";
-import {
-  getTemplatesForType,
-  applyBusinessInfo,
-  type BusinessInfo,
-} from "@/shared/lib/terms-templates";
 import { TermsStatus } from "@generated/prisma/enums";
 import type {
   TermsVersionDetail,
@@ -64,12 +59,21 @@ import type {
 import type { Serialized } from "@/shared/lib/serialize";
 import { TermsAgreementsTab } from "./TermsAgreementsTab";
 import { TermsVersionTab } from "./TermsVersionTab";
-import { TermsSettingsTab } from "./TermsSettingsTab";
-import {
-  fetchTermsDefaultsForType,
-  fetchTermsVersionById,
-} from "./terms-helpers";
+import { TermsSettingsFields } from "./TermsSettingsTab";
+import { fetchTermsVersionById } from "./terms-helpers";
 import type { TermsVersionSummary, TermsData } from "./terms-helpers";
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+/**
+ * 規約コンテンツの幅（px）
+ *
+ * 公開ページ /terms/[slug] は Container variant="narrow" (max-w-3xl = 768px) で表示。
+ * エディタ側も同じ幅に合わせて WYSIWYG 体験を提供する。
+ */
+const TERMS_CONTENT_WIDTH_PX = 768;
 
 // =============================================================================
 // Schema
@@ -86,7 +90,6 @@ const termsFormSchema = z.object({
   contentJson: z.string().min(1, { error: "コンテンツを入力してください" }),
   requiredAtReservation: z.boolean(),
   showInFooter: z.boolean(),
-  selectedTemplate: z.string().optional(),
 });
 
 type FormData = z.infer<typeof termsFormSchema>;
@@ -95,27 +98,70 @@ type FormData = z.infer<typeof termsFormSchema>;
 // Types
 // =============================================================================
 
-interface TermsInlineEditorProps {
+/** TermsInlineEditor の公開 props（page.tsx から渡される） */
+export interface TermsInlineEditorProps {
   terms?: TermsData;
   initialVersion?: Serialized<TermsVersionDetail> | null;
-  businessInfo?: BusinessInfo;
   mode?: "create" | "edit";
   initialAgreements?: TermsAgreementItem[];
   initialTotal?: number;
+  /** create モード: サーバーで解決済みのタイプ */
+  initialType?: string;
+  /** create モード: サーバーで解決済みのタイトル */
+  initialTitle?: string;
+  /** create モード: サーバーで解決済みのスラッグ */
+  initialSlug?: string;
+  /** create モード: テンプレート HTML（クライアントで Lexical JSON に変換） */
+  initialTemplateHtml?: string | null;
+}
+
+/**
+ * テンプレート HTML → Lexical JSON 変換ラッパー
+ *
+ * DOM が必要な tryConvertHtmlStringToLexicalJsonString をクライアント側で実行し、
+ * 変換済み contentJson を本体エディタに渡す。
+ * useState 遅延初期化で初回マウント時に1回だけ変換。
+ */
+export function TermsInlineEditor(props: TermsInlineEditorProps) {
+  // useState 遅延初期化でテンプレート HTML → Lexical JSON 変換
+  // SSR では DOMParser が存在しないため typeof window ガードで回避
+  const [resolvedContentJson] = useState(() => {
+    if (typeof window === "undefined") return null;
+    if (!props.initialTemplateHtml) return null;
+    const converted = tryConvertHtmlStringToLexicalJsonString(
+      props.initialTemplateHtml,
+    );
+    return converted.ok ? converted.json : null;
+  });
+
+  return (
+    <TermsInlineEditorInner
+      {...props}
+      resolvedContentJson={resolvedContentJson}
+    />
+  );
+}
+
+/** 内部コンポーネントの props（変換済み contentJson を追加） */
+interface TermsInlineEditorInnerProps extends TermsInlineEditorProps {
+  resolvedContentJson: string | null;
 }
 
 // =============================================================================
 // Component
 // =============================================================================
 
-export function TermsInlineEditor({
+function TermsInlineEditorInner({
   terms,
   initialVersion,
-  businessInfo,
   mode = "edit",
   initialAgreements = [],
   initialTotal = 0,
-}: TermsInlineEditorProps) {
+  initialType = "",
+  initialTitle = "",
+  initialSlug = "",
+  resolvedContentJson,
+}: TermsInlineEditorInnerProps) {
   const router = useRouter();
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
@@ -155,66 +201,20 @@ export function TermsInlineEditor({
             : EMPTY_LEXICAL_EDITOR_STATE_JSON,
           requiredAtReservation: terms.requiredAtReservation,
           showInFooter: terms.showInFooter,
-          selectedTemplate: "",
         }
       : {
-          title: "",
-          slug: "",
-          type: "",
-          contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+          title: initialTitle,
+          slug: initialSlug,
+          type: initialType,
+          contentJson: resolvedContentJson ?? EMPTY_LEXICAL_EDITOR_STATE_JSON,
           requiredAtReservation: false,
           showInFooter: false,
-          selectedTemplate: "",
         },
   });
 
   const title = useWatch({ control, name: "title" });
   const contentJson = useWatch({ control, name: "contentJson" });
   const slug = useWatch({ control, name: "slug" });
-  const selectedTypeRaw = useWatch({ control, name: "type" });
-
-  const selectedType = parseTermsType(selectedTypeRaw);
-  const templates = selectedType ? getTemplatesForType(selectedType) : [];
-
-  // =============================================================================
-  // Create mode handlers
-  // =============================================================================
-
-  const handleTypeChange = async (newType: string) => {
-    setValue("type", newType, { shouldDirty: true });
-    if (mode !== "create") return;
-    const defaults = await fetchTermsDefaultsForType(newType);
-    if (!defaults) return;
-    setValue("title", defaults.title, { shouldDirty: true });
-    setValue("slug", defaults.slug, { shouldDirty: true });
-    setValue("selectedTemplate", "");
-  };
-
-  const handleTemplateChange = (templateId: string) => {
-    setValue("selectedTemplate", templateId);
-    if (templateId === "blank") {
-      setValue("contentJson", EMPTY_LEXICAL_EDITOR_STATE_JSON, {
-        shouldDirty: true,
-      });
-      setEditorKey((k) => k + 1);
-      setHasEditorChanges(true);
-      return;
-    }
-    const template = templates.find((t) => t.id === templateId);
-    if (template) {
-      const appliedContent = businessInfo
-        ? applyBusinessInfo(template.content, businessInfo)
-        : template.content;
-      const converted = tryConvertHtmlStringToLexicalJsonString(appliedContent);
-      if (!converted.ok) {
-        toast.error(converted.error);
-        return;
-      }
-      setValue("contentJson", converted.json, { shouldDirty: true });
-      setEditorKey((k) => k + 1);
-      setHasEditorChanges(true);
-    }
-  };
 
   // =============================================================================
   // Version management handlers (edit mode only)
@@ -653,7 +653,6 @@ export function TermsInlineEditor({
       onSubmit={handleSubmit(onSubmit)}
       onSave={handleSave}
       isDirty={isFormDirty}
-      isPanelOpen={isSidePanelOpen}
       header={
         <EditorHeader
           title={
@@ -681,21 +680,11 @@ export function TermsInlineEditor({
           title="規約設定"
           width="default"
         >
-          <Tabs
-            defaultValue={mode === "edit" ? "version" : "settings"}
-            className="w-full"
-          >
-            <TabsList
-              className={cn(
-                "grid w-full",
-                mode === "edit" ? "grid-cols-3" : "grid-cols-1",
-              )}
-            >
-              {mode === "edit" && (
+          {mode === "edit" ? (
+            <Tabs defaultValue="version" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="version">バージョン</TabsTrigger>
-              )}
-              <TabsTrigger value="settings">設定</TabsTrigger>
-              {mode === "edit" && (
+                <TabsTrigger value="settings">設定</TabsTrigger>
                 <TabsTrigger value="agreements">
                   同意
                   {initialTotal > 0 && (
@@ -704,11 +693,8 @@ export function TermsInlineEditor({
                     </span>
                   )}
                 </TabsTrigger>
-              )}
-            </TabsList>
+              </TabsList>
 
-            {/* バージョン管理タブ（edit モードのみ） */}
-            {mode === "edit" && (
               <TermsVersionTab
                 localVersions={localVersions}
                 selectedVersionId={selectedVersionId}
@@ -722,28 +708,34 @@ export function TermsInlineEditor({
                 onArchiveVersion={handleArchiveVersion}
                 onDeleteVersion={handleDeleteVersion}
               />
-            )}
 
-            {/* 設定タブ */}
-            <TermsSettingsTab
-              mode={mode}
-              isPending={isPending}
-              control={control}
-              register={register}
-              errors={errors}
-              onTypeChange={(v) => void handleTypeChange(v)}
-              onTemplateChange={handleTemplateChange}
-            />
+              <TabsContent value="settings" className="mt-4">
+                <TermsSettingsFields
+                  isPending={isPending}
+                  control={control}
+                  register={register}
+                  errors={errors}
+                />
+              </TabsContent>
 
-            {/* 同意記録タブ（edit モードのみ） */}
-            {mode === "edit" && terms && (
-              <TermsAgreementsTab
-                termsId={terms.id}
-                initialAgreements={initialAgreements}
-                initialTotal={initialTotal}
+              {terms && (
+                <TermsAgreementsTab
+                  termsId={terms.id}
+                  initialAgreements={initialAgreements}
+                  initialTotal={initialTotal}
+                />
+              )}
+            </Tabs>
+          ) : (
+            <div className="mt-4">
+              <TermsSettingsFields
+                isPending={isPending}
+                control={control}
+                register={register}
+                errors={errors}
               />
-            )}
-          </Tabs>
+            </div>
+          )}
         </SidePanelShell>
       }
     >
@@ -755,6 +747,7 @@ export function TermsInlineEditor({
         className={EDITOR_PROSE_CLASSES}
         showToolbar
         height="100%"
+        contentWidth={TERMS_CONTENT_WIDTH_PX}
       />
     </InlineEditorShell>
   );

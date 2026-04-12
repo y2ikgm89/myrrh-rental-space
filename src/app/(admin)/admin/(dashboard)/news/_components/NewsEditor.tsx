@@ -134,7 +134,6 @@ export function NewsEditor({
       onSubmit={editor.form.handleSubmit(editor.onSubmit)}
       onSave={editor.handleSave}
       isDirty={editor.isDirty}
-      isPanelOpen={editor.isPanelOpen}
       header={
         <EditorHeader
           title={editor.title}

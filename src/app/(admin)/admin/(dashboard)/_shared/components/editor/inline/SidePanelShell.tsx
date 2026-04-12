@@ -19,14 +19,22 @@ import type { ReactNode } from "react";
 
 const styles = tv({
   slots: {
+    // モバイルのみオーバーレイ（デスクトップでは lg:hidden）
     overlay: [
       `fixed inset-0 z-[${Z_INDEX.overlay}] bg-overlay-light transition-opacity duration-300`,
-      "lg:hidden", // デスクトップではオーバーレイなし
+      "lg:hidden",
     ],
+    // パネル本体
+    // モバイル: fixed オーバーレイ（従来通り）
+    // デスクトップ: lg:static で flex 子要素として配置
     panel: [
-      `fixed right-0 z-[${Z_INDEX.editorSidePanel}] bg-background border-l`,
+      "bg-background border-l flex flex-col",
+      // モバイル用
+      `fixed right-0 z-[${Z_INDEX.editorSidePanel}]`,
       "transform transition-transform duration-300 ease-in-out",
-      "flex flex-col",
+      "w-full sm:w-[420px]",
+      // デスクトップ用オーバーライド
+      "lg:static lg:z-auto lg:shrink-0 lg:transform-none lg:transition-none",
     ],
     header: "flex items-center justify-between p-4 border-b flex-shrink-0",
     title: "text-lg font-semibold",
@@ -40,16 +48,18 @@ const styles = tv({
       },
       false: {
         overlay: "opacity-0 pointer-events-none",
-        panel: "translate-x-full",
+        // モバイル: スライドアウト、デスクトップ: 非表示
+        panel: "translate-x-full lg:hidden",
       },
     },
     width: {
-      default: { panel: "w-full sm:w-[420px]" },
-      narrow: { panel: "w-full sm:w-96" },
+      default: { panel: "lg:w-[420px]" },
+      narrow: { panel: "lg:w-96" },
     },
     isFullscreen: {
-      true: { panel: "top-14 h-[calc(100vh-3.5rem)]" }, // EditorHeader(h-14=56px)の下
-      false: { panel: "top-16 h-[calc(100vh-4rem)]" }, // TopBar(h-16=64px)の下
+      // モバイルのみ top/height 制御、デスクトップは flex 親から高さ取得
+      true: { panel: "top-14 h-[calc(100vh-3.5rem)] lg:top-auto lg:h-auto" },
+      false: { panel: "top-16 h-[calc(100vh-4rem)] lg:top-auto lg:h-auto" },
     },
   },
   defaultVariants: {
@@ -110,9 +120,3 @@ export function SidePanelShell({
     </>
   );
 }
-
-/** サイドパネルの幅定数（コンテンツ側のマージン調整用） */
-export const SIDE_PANEL_WIDTH = {
-  default: 420,
-  narrow: 384, // 96 * 4 = 384px (w-96)
-} as const;

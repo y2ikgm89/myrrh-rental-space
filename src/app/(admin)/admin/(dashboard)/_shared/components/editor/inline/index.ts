@@ -33,7 +33,7 @@ export { usePostEditor, useNewsEditor, useContentWidth } from "./hooks/index";
 
 // 基本コンポーネント
 export { EditorHeader } from "./EditorHeader";
-export { SidePanelShell, SIDE_PANEL_WIDTH } from "./SidePanelShell";
+export { SidePanelShell } from "./SidePanelShell";
 export { UnifiedSidePanel } from "./UnifiedSidePanel";
 export { InlineEditorShell } from "./InlineEditorShell";
 

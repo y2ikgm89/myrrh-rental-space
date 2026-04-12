@@ -336,7 +336,6 @@ export function FaqItemInlineEditor({
       onSubmit={handleSubmit(onSubmit)}
       onSave={handleSave}
       isDirty={isFormDirty}
-      isPanelOpen={isSidePanelOpen}
       header={
         <EditorHeader
           title={question || "新規FAQ"}
