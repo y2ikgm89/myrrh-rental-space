@@ -204,10 +204,6 @@ export class GroupNode extends ElementNode {
     return false;
   }
 
-  override isShadowRoot(): boolean {
-    return true;
-  }
-
   override canBeEmpty(): false {
     return false;
   }
