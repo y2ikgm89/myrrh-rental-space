@@ -25,8 +25,8 @@ const styles = tv({
       "lg:hidden",
     ],
     // パネル本体
-    // モバイル: fixed オーバーレイ（従来通り）
-    // デスクトップ: lg:static で flex 子要素として配置
+    // モバイル: fixed オーバーレイ + translate-x アニメーション
+    // デスクトップ: lg:static で flex 子要素、幅 0 ↔ 420px のアニメーション
     panel: [
       "bg-background border-l flex flex-col",
       // モバイル用
@@ -34,24 +34,17 @@ const styles = tv({
       "transform transition-transform duration-300 ease-in-out",
       "w-full sm:w-[420px]",
       // デスクトップ用オーバーライド
-      "lg:static lg:z-auto lg:shrink-0 lg:transform-none lg:transition-none",
+      "lg:static lg:z-auto lg:shrink-0 lg:transform-none",
+      "lg:transition-[width] lg:duration-200 lg:ease-out",
     ],
     header: "flex items-center justify-between p-4 border-b flex-shrink-0",
     title: "text-lg font-semibold",
-    content: "flex-1 overflow-y-auto p-4",
+    // 閉じるときのコンテンツ溢れ防止: overflow-hidden でクリップ
+    content: "flex-1 overflow-y-auto p-4 overflow-x-hidden",
   },
   variants: {
-    isOpen: {
-      true: {
-        overlay: "opacity-100",
-        panel: "translate-x-0",
-      },
-      false: {
-        overlay: "opacity-0 pointer-events-none",
-        // モバイル: スライドアウト、デスクトップ: 非表示
-        panel: "translate-x-full lg:hidden",
-      },
-    },
+    // width を isOpen より先に定義し、isOpen: false の lg:w-0 が
+    // tailwind-merge の「後勝ち」ルールで確実に優先されるようにする
     width: {
       default: { panel: "lg:w-[420px]" },
       narrow: { panel: "lg:w-96" },
@@ -60,6 +53,18 @@ const styles = tv({
       // モバイルのみ top/height 制御、デスクトップは flex 親から高さ取得
       true: { panel: "top-14 h-[calc(100vh-3.5rem)] lg:top-auto lg:h-auto" },
       false: { panel: "top-16 h-[calc(100vh-4rem)] lg:top-auto lg:h-auto" },
+    },
+    isOpen: {
+      true: {
+        overlay: "opacity-100",
+        panel: "translate-x-0",
+      },
+      false: {
+        overlay: "opacity-0 pointer-events-none",
+        // モバイル: スライドアウト
+        // デスクトップ: 幅 0 + border 非表示 + overflow-hidden（内部コンテンツをクリップ）
+        panel: "translate-x-full lg:w-0 lg:border-l-0 lg:overflow-hidden",
+      },
     },
   },
   defaultVariants: {
