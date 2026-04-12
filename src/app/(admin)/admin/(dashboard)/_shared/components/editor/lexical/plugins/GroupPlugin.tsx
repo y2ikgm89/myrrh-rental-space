@@ -12,6 +12,7 @@ import {
   $createParagraphNode,
   $getSelection,
   $isRangeSelection,
+  $isElementNode,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_EDITOR,
   COMMAND_PRIORITY_LOW,
@@ -116,16 +117,24 @@ function $wrapInGroup(groupStyle: GroupStyle): void {
   }
 }
 
-function $onEscape(editor: LexicalEditor, direction: "up" | "down"): boolean {
+/**
+ * グループ境界の最初/最後の子でのみ矢印キーで脱出
+ *
+ * - グループ内の途中の子ノードでは発火しない（通常のカーソル移動）
+ * - 既に兄弟ノードがある場合はそちらにカーソル移動（段落挿入しない）
+ * - 兄弟がない場合のみ段落を挿入
+ */
+function $onEscape(_editor: LexicalEditor, direction: "up" | "down"): boolean {
   const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
     return false;
   }
 
-  const node = selection.anchor.getNode();
-  let groupNode: GroupNode | null = null;
-  let current = node.getParent();
+  const anchorNode = selection.anchor.getNode();
 
+  // GroupNode を探す
+  let groupNode: GroupNode | null = null;
+  let current = anchorNode.getParent();
   while (current) {
     if ($isGroupNode(current)) {
       groupNode = current;
@@ -133,14 +142,65 @@ function $onEscape(editor: LexicalEditor, direction: "up" | "down"): boolean {
     }
     current = current.getParent();
   }
-
   if (!groupNode) return false;
 
-  const isAtStart = selection.anchor.offset === 0;
-  const isAtEnd =
-    selection.anchor.offset === selection.anchor.getNode().getTextContentSize();
+  if (direction === "up") {
+    // offset 0 でないなら通常移動
+    if (selection.anchor.offset !== 0) return false;
 
-  if ((direction === "up" && isAtStart) || (direction === "down" && isAtEnd)) {
+    // グループ最初の子の最初のリーフにいるかチェック
+    const firstChild = groupNode.getFirstChild();
+    if (!firstChild) return false;
+    let firstLeaf: LexicalNode = firstChild;
+    for (;;) {
+      if (!$isElementNode(firstLeaf)) break;
+      const child = firstLeaf.getFirstChild();
+      if (!child) break;
+      firstLeaf = child;
+    }
+    if (
+      anchorNode.getKey() !== firstLeaf.getKey() &&
+      anchorNode.getKey() !== firstChild.getKey()
+    ) {
+      return false;
+    }
+  } else {
+    // 末尾でないなら通常移動
+    if (selection.anchor.offset !== anchorNode.getTextContentSize()) {
+      return false;
+    }
+
+    // グループ最後の子の最後のリーフにいるかチェック
+    const lastChild = groupNode.getLastChild();
+    if (!lastChild) return false;
+    let lastLeaf: LexicalNode = lastChild;
+    for (;;) {
+      if (!$isElementNode(lastLeaf)) break;
+      const child = lastLeaf.getLastChild();
+      if (!child) break;
+      lastLeaf = child;
+    }
+    if (
+      anchorNode.getKey() !== lastLeaf.getKey() &&
+      anchorNode.getKey() !== lastChild.getKey()
+    ) {
+      return false;
+    }
+  }
+
+  // 境界にいる → 既存の兄弟があればそちらに移動、なければ段落挿入
+  const sibling =
+    direction === "up"
+      ? groupNode.getPreviousSibling()
+      : groupNode.getNextSibling();
+
+  if (sibling) {
+    if (direction === "up") {
+      sibling.selectEnd();
+    } else {
+      sibling.selectStart();
+    }
+  } else {
     const paragraph = $createParagraphNode();
     if (direction === "up") {
       groupNode.insertBefore(paragraph);
@@ -148,10 +208,9 @@ function $onEscape(editor: LexicalEditor, direction: "up" | "down"): boolean {
       groupNode.insertAfter(paragraph);
     }
     paragraph.select();
-    return true;
   }
 
-  return false;
+  return true;
 }
 
 // =============================================================================
