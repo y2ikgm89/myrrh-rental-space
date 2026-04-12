@@ -187,7 +187,7 @@ export class GroupNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): false {
     const styleChange = $getStateChange(this, prevNode, groupStyleState);
     if (styleChange !== null) {
       dom.setAttribute("data-group-style", styleChange[0]);

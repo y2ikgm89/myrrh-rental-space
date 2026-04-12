@@ -23,9 +23,10 @@ import {
   mergeRegister,
   type ElementNode,
   type LexicalCommand,
+  $findMatchingParent,
   type LexicalNode,
 } from "lexical";
-import { $insertNodeToNearestRoot, $findMatchingParent } from "@lexical/utils";
+import { $insertNodeToNearestRoot } from "@lexical/utils";
 import {
   $createGroupNode,
   $isGroupNode,
