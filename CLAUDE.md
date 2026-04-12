@@ -17,7 +17,8 @@ bun prisma/seed.ts                            # Seed
 bun run e2e                                   # E2E テスト（Playwright）
 ```
 
-> **フック**: Prettier + ESLint --fix + schema-guard + pattern-guard（7検査統合）（PostToolUse / PreToolUse / Stop / SessionStart）
+> **フック**: Prettier + ESLint --fix + schema-guard + pattern-guard（PostToolUse）、危険コマンド防止 + ファイル保護（PreToolUse）、型チェック（Stop）、日付注入（UserPromptSubmit）
+> **プラグイン**: `autofix-bot`（lint/型エラー自動修正）
 > **保護**: `.env*`, `bun.lock`, `prisma/migrations/*.sql` 編集不可（PreToolUse）
 > **デプロイ**: Google Cloud Run（`Dockerfile` + `cloudbuild.yaml`）— Vercel 不使用
 
@@ -31,15 +32,15 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## 技術スタック（非自明な注意点のみ）
 
-| 技術         | 注意点                                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| Next.js 16   | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。PPR: Suspense 内 async SC は `await connection()` 必須 |
-| React 19     | Compiler 1.0 自動メモ化（`useCallback`/`useMemo`/`memo` 不要）、`use()`                                                         |
-| TypeScript 6 | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                       |
-| Prisma 7     | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`                                                       |
-| Tailwind 4   | CSS-first `@theme`、セマンティックトークン必須                                                                                  |
-| Better Auth  | 管理/顧客セッション分離（`adminAuth`/`customerAuth`）、RBAC、`generateId: "uuid"` 必須                                          |
-| Lexical 0.43 | NodeState API（`$config` + `createState`）。カスタムノード 49、複合階層 12。新規ノードは `lexical-node` スキル使用              |
+| 技術         | 注意点                                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js 16   | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。PPR: Suspense 内 async SC は `await connection()` 必須                         |
+| React 19.2   | Compiler 1.0 自動メモ化（`useCallback`/`useMemo`/`memo` 不要）、`use()`、`useEffectEvent`（deps 除外）                                                  |
+| TypeScript 6 | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                                               |
+| Prisma 7     | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`                                                                               |
+| Tailwind 4.2 | CSS-first `@theme`、セマンティックトークン必須                                                                                                          |
+| Better Auth  | 管理/顧客セッション分離（`adminAuth`/`customerAuth`）、RBAC、`generateId: "uuid"` 必須                                                                  |
+| Lexical 0.43 | NodeState API（`$config` + `createState`）。カスタムノード 50、複合階層 12。新規追加は `lexical-node` / `lexical-plugin` / `lexical-toolbar` スキル使用 |
 
 ---
 
@@ -50,10 +51,11 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 `.claude/rules/` が `paths:` フロントマターで自動ロード。以下はルール未ロード時も適用される普遍ルール:
 
 - **型アサーション（`as`）禁止** — 型ガード・`satisfies`・Zod `safeParse` を使う
-- **`useCallback`/`useMemo`/`memo` 禁止** — React Compiler 1.0 が自動メモ化
+- **`useCallback`/`useMemo`/`memo` 禁止** — React Compiler 1.0 が自動メモ化（例外: `useSyncExternalStore` の subscribe 等 → `react-patterns.md`）
 - **後方互換性ハック禁止** — 不要コードは完全削除
 - **ハードコードカラー禁止** — セマンティックトークン必須（例外: `global-error.tsx`）
 - **className テンプレートリテラル禁止** — `cn()` 使用（`@/shared/lib/cn`）
+- **認証済みフローに Turnstile 禁止** — マイページ（`verifyCustomerSession` 済み）の mutation に Turnstile は冗長。Turnstile は未認証公開フォームのみ
 
 ### プロセス
 
@@ -77,10 +79,31 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 
+## スキル（ドメイン固有）
+
+| カテゴリ      | スキル                                                                                          | 用途                                     |
+| ------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Lexical       | `lexical-node` / `lexical-plugin` / `lexical-toolbar` / `lexical-audit`                         | ノード・プラグイン・ツールバー追加、監査 |
+| 管理画面      | `create-admin-page` / `create-server-action` / `add-settings-field` / `audit-settings-sections` | CRUD・アクション・設定スキャフォールド   |
+| 公開ページ    | `create-page-content` / `create-section-type` / `parallax-section` / `frontend-design`          | ページ・セクション・UI 生成              |
+| DB/キャッシュ | `prisma-migration` / `cache-audit` / `split-action-file` / `ssot-audit`                         | マイグレーション・キャッシュ・分割・SSOT |
+| デバッグ      | `google-calendar-debug` / `instagram-debug` / `stripe-debug` / `turbopack-hmr`                  | 外部連携・HMR 診断                       |
+| 依存関係      | `upgrade-deps`                                                                                  | パッケージアップグレード                 |
+| 品質          | `integration-audit` / `ui-ux-pro-max`                                                           | 連携監査・UI/UX DB検索                   |
+
 ## ルールとレビュー
 
 `.claude/rules/` が `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`。
 レビューエージェントの指摘は `gotchas.md` と照合して検証する（`revalidateTag` 第2引数や Turbopack チャンク重複は誤報されやすい）。
+包括的監査には専門サブエージェントを並列起動:
+
+- **コード品質**: project-reviewer, react-compiler-reviewer, lexical-reviewer
+- **キャッシュ/構造**: cache-strategy-reviewer, route-structure-reviewer, large-file-detector
+- **セキュリティ/認証**: security-reviewer, rate-limit-reviewer
+- **ドメイン**: event-flow-reviewer, reservation-flow-reviewer
+- **UI/UX**: animation-cleanup-reviewer, editorial-consistency-reviewer, accessibility-reviewer
+- **テスト**: test-writer, e2e-test-writer, test-runner
+- **DB**: db-migration-reviewer
 
 ## 設計判断
 
