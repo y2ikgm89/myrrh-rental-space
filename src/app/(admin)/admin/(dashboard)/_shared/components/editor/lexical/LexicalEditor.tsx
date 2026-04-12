@@ -143,7 +143,7 @@ function EditorInner({
     <InspectorSidebarProvider enabled={inspectorEnabled}>
       <div
         className={cn(
-          "flex flex-col h-full min-h-0 bg-card border border-border rounded-lg overflow-hidden",
+          "flex flex-col w-full flex-1 min-w-0 min-h-0 bg-card border border-border rounded-lg overflow-hidden",
           isFullscreen &&
             `fixed inset-0 z-[${Z_INDEX.editorFullscreen}] rounded-none border-0`,
         )}
