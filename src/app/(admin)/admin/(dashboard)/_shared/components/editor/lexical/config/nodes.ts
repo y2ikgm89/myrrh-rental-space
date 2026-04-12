@@ -75,6 +75,7 @@ import { CoverNode } from "../nodes/CoverNode";
 import { CaptionBoxNode } from "../nodes/CaptionBoxNode";
 import { CaptionBoxTitleNode } from "../nodes/CaptionBoxNode";
 import { CaptionBoxContentNode } from "../nodes/CaptionBoxNode";
+import { GroupNode } from "../nodes/GroupNode";
 
 /**
  * エディタに登録する全ノード一覧
@@ -165,4 +166,5 @@ export const EDITOR_NODES: ReadonlyArray<
   CaptionBoxNode,
   CaptionBoxTitleNode,
   CaptionBoxContentNode,
+  GroupNode,
 ];

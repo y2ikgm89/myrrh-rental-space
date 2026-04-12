@@ -59,6 +59,7 @@ import {
 } from "../nodes/FeatureIconListNode";
 import { $isCoverNode } from "../nodes/CoverNode";
 import { $isCaptionBoxNode } from "../nodes/CaptionBoxNode";
+import { $isGroupNode } from "../nodes/GroupNode";
 import { $isCustomTableNode } from "../nodes/CustomTableNode";
 import { $isCustomTableCellNode } from "../nodes/CustomTableCellNode";
 import type {
@@ -82,6 +83,7 @@ export function getInspectableInfoFromRegistry(
   const nodeKey = node.getKey();
   if ($isButtonNode(node)) return { nodeType: "button", node, nodeKey };
   if ($isImageNode(node)) return { nodeType: "image", node, nodeKey };
+  if ($isGroupNode(node)) return { nodeType: "group", node, nodeKey };
   if ($isCalloutNode(node)) return { nodeType: "callout", node, nodeKey };
   if ($isBookmarkNode(node)) return { nodeType: "bookmark", node, nodeKey };
   if ($isPullQuoteNode(node)) return { nodeType: "pullQuote", node, nodeKey };
@@ -142,6 +144,7 @@ export const INSPECTABLE_NODE_TYPES_FROM_REGISTRY: readonly InspectableNodeType[
   [
     "button",
     "image",
+    "group",
     "callout",
     "bookmark",
     "pullQuote",

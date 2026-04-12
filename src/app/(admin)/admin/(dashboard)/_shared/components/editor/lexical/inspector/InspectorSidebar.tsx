@@ -14,6 +14,7 @@ import { useInspectorSidebar } from "./inspector-sidebar-context";
 import {
   ButtonInspectorPanel,
   ImageInspectorPanel,
+  GroupInspectorPanel,
   CalloutInspectorPanel,
   BookmarkInspectorPanel,
   PullQuoteInspectorPanel,
@@ -74,6 +75,8 @@ function renderPanel(info: SelectedNodeInfo) {
       return <ButtonInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "image":
       return <ImageInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
+    case "group":
+      return <GroupInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "callout":
       return <CalloutInspectorPanel nodeKey={info.nodeKey} node={info.node} />;
     case "bookmark":

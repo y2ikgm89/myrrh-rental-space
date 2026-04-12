@@ -715,6 +715,151 @@ details[data-collapsible-item]
  * アイコンは ::before で自動表示（WCAG 1.4.1: 色だけで情報を伝えない）
  * -------------------------------------------------------------------------- */
 
+/* --------------------------------------------------------------------------
+ * Group Node — ボックス装飾コンテナ（15 プリセット）
+ * data-group: ノード識別
+ * data-group-style: スタイルプリセット
+ * data-color: AccentColor（既存 [data-color] CSS 変数と連携）
+ * -------------------------------------------------------------------------- */
+
+[data-group] {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+}
+
+[data-group] > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---- Border ---- */
+
+[data-group-style="solid-border"] {
+  border: 1px solid oklch(0.8 0 0);
+}
+
+[data-group-style="dashed-border"] {
+  border: 1px dashed oklch(0.8 0 0);
+}
+
+[data-group-style="solid-accent"] {
+  border: 1px solid var(--accent, oklch(0.8 0 0));
+}
+
+[data-group-style="dashed-accent"] {
+  border: 1px dashed var(--accent, oklch(0.8 0 0));
+}
+
+[data-group-style="left-border"] {
+  border-left: 4px solid var(--accent, oklch(0.6 0 0));
+  background-color: color-mix(
+    in oklch,
+    var(--accent, oklch(0.6 0 0)) 5%,
+    transparent
+  );
+  border-radius: 0;
+}
+
+/* ---- Background ---- */
+
+[data-group-style="filled"] {
+  background-color: var(--accent, oklch(0.5 0 0));
+  color: var(--accent-fg, oklch(1 0 0));
+}
+
+[data-group-style="filled-light"] {
+  background-color: color-mix(
+    in oklch,
+    var(--accent, oklch(0.5 0 0)) 10%,
+    transparent
+  );
+}
+
+[data-group-style="gray-bg"] {
+  background-color: oklch(0.95 0 0);
+}
+
+[data-group-style="stripe"] {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 6px,
+    color-mix(in oklch, var(--accent, oklch(0.7 0 0)) 8%, transparent) 6px,
+    color-mix(in oklch, var(--accent, oklch(0.7 0 0)) 8%, transparent) 12px
+  );
+}
+
+[data-group-style="grid"] {
+  background-image:
+    linear-gradient(oklch(0.9 0 0) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.9 0 0) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* ---- Decoration ---- */
+
+[data-group-style="stitch"] {
+  border: 2px dashed var(--accent, oklch(0.7 0 0));
+  outline: 1px solid var(--accent, oklch(0.7 0 0));
+  outline-offset: -6px;
+  padding: 1.5rem;
+}
+
+[data-group-style="emboss"] {
+  box-shadow:
+    0 2px 8px oklch(0 0 0 / 0.08),
+    inset 0 1px 0 oklch(1 0 0 / 0.5);
+  border: 1px solid oklch(0.88 0 0);
+}
+
+[data-group-style="kakko"] {
+  position: relative;
+  border: none;
+  padding: 1.5rem 2rem;
+}
+
+[data-group-style="kakko"]::before,
+[data-group-style="kakko"]::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent, oklch(0.6 0 0));
+  border-style: solid;
+}
+
+[data-group-style="kakko"]::before {
+  top: 0;
+  left: 0;
+  border-width: 2px 0 0 2px;
+}
+
+[data-group-style="kakko"]::after {
+  bottom: 0;
+  right: 0;
+  border-width: 0 2px 2px 0;
+}
+
+[data-group-style="big-kakko"] {
+  border: none;
+  border-top: 2px solid var(--accent, oklch(0.7 0 0));
+  border-bottom: 2px solid var(--accent, oklch(0.7 0 0));
+  border-radius: 0;
+  padding: 1.25rem 0.5rem;
+}
+
+[data-group-style="note"] {
+  border-left: 4px solid var(--accent, oklch(0.6 0 0));
+  background-color: color-mix(
+    in oklch,
+    var(--accent, oklch(0.6 0 0)) 5%,
+    transparent
+  );
+  border-radius: 0;
+  box-shadow: 2px 2px 4px oklch(0 0 0 / 0.05);
+}
+
 [data-callout-type] {
   --callout-color: var(--color-accent);
   margin-top: 1.5rem;

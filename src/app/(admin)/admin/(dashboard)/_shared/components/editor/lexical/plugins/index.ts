@@ -63,6 +63,7 @@ export {
 
 export { PageBreakPlugin, INSERT_PAGE_BREAK_COMMAND } from "./PageBreakPlugin";
 export { CalloutPlugin, INSERT_CALLOUT_COMMAND } from "./CalloutPlugin";
+export { GroupPlugin, INSERT_GROUP_COMMAND } from "./GroupPlugin";
 export {
   CollapsiblePlugin,
   INSERT_COLLAPSIBLE_COMMAND,

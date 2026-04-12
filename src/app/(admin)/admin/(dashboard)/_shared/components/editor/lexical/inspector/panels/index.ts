@@ -4,6 +4,7 @@
 
 export { ButtonInspectorPanel } from "./ButtonInspectorPanel";
 export { ImageInspectorPanel } from "./ImageInspectorPanel";
+export { GroupInspectorPanel } from "./GroupInspectorPanel";
 export { CalloutInspectorPanel } from "./CalloutInspectorPanel";
 export { BookmarkInspectorPanel } from "./BookmarkInspectorPanel";
 export { PullQuoteInspectorPanel } from "./PullQuoteInspectorPanel";

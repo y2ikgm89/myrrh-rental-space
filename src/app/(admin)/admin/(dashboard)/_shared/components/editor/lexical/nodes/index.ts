@@ -455,3 +455,16 @@ export {
   $isCaptionBoxContentNode,
 } from "./CaptionBoxNode";
 export type { CaptionBoxStyle } from "./CaptionBoxNode";
+
+export {
+  GroupNode,
+  $createGroupNode,
+  $isGroupNode,
+  groupStyleState,
+  groupColorState,
+  GROUP_STYLES,
+  GROUP_STYLE_CATEGORIES,
+  GROUP_STYLE_LABELS,
+  isGroupStyle,
+} from "./GroupNode";
+export type { GroupStyle } from "./GroupNode";

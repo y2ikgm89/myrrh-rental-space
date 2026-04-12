@@ -59,6 +59,7 @@ import type { CustomTableNode } from "../../nodes/CustomTableNode";
 import type { CustomTableCellNode } from "../../nodes/CustomTableCellNode";
 import type { RubyNode } from "../../nodes/RubyNode";
 import type { TooltipNode } from "../../nodes/TooltipNode";
+import type { GroupNode } from "../../nodes/GroupNode";
 
 // =============================================================================
 // Types
@@ -67,6 +68,7 @@ import type { TooltipNode } from "../../nodes/TooltipNode";
 export type InspectableNodeType =
   | "button"
   | "image"
+  | "group"
   | "callout"
   | "bookmark"
   | "pullQuote"
@@ -112,6 +114,7 @@ export type InspectableNodeType =
 export type SelectedNodeInfo =
   | { nodeType: "button"; node: ButtonNode; nodeKey: NodeKey }
   | { nodeType: "image"; node: ImageNode; nodeKey: NodeKey }
+  | { nodeType: "group"; node: GroupNode; nodeKey: NodeKey }
   | { nodeType: "callout"; node: CalloutNode; nodeKey: NodeKey }
   | { nodeType: "bookmark"; node: BookmarkNode; nodeKey: NodeKey }
   | { nodeType: "pullQuote"; node: PullQuoteNode; nodeKey: NodeKey }

@@ -54,6 +54,7 @@ import {
   IconShoe,
   IconLayoutNavbar,
   IconListTree,
+  IconBox,
   IconBoxMultiple,
   IconDeviceFloppy,
   IconMap,
@@ -77,6 +78,7 @@ import { applyTextCaseToSelection } from "../plugins/TextCasePlugin";
 import { INSERT_PAGE_BREAK_COMMAND } from "../plugins/PageBreakPlugin";
 import { INSERT_COLLAPSIBLE_COMMAND } from "../plugins/CollapsiblePlugin";
 import { INSERT_CAPTION_BOX_COMMAND } from "../plugins/CaptionBoxPlugin";
+import { INSERT_GROUP_COMMAND } from "../plugins/GroupPlugin";
 import { INSERT_TOC_COMMAND } from "../plugins/TableOfContentsPlugin";
 import type { DialogId } from "../dialogs/dialog-types";
 
@@ -535,7 +537,7 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     label: "テーブル",
     icon: IconTable,
     keywords: ["table", "grid", "hyou", "excel"],
-    category: "media",
+    category: "layout",
     showInToolbar: true,
     showInPicker: true,
     dialogId: "table",
@@ -552,6 +554,29 @@ const INSERT_ITEMS: readonly InsertItem[] = [
     showInToolbar: true,
     showInPicker: true,
     dialogId: "layout",
+  },
+  {
+    id: "group",
+    type: "command",
+    label: "グループ",
+    icon: IconBox,
+    keywords: [
+      "group",
+      "box",
+      "container",
+      "border",
+      "background",
+      "guruupu",
+      "bokkusu",
+      "waku",
+    ],
+    category: "layout",
+    showInToolbar: true,
+    showInPicker: true,
+    dispatch: (editor) =>
+      editor.dispatchCommand(INSERT_GROUP_COMMAND, {
+        groupStyle: "solid-border",
+      }),
   },
   {
     id: "callout",
