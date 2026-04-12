@@ -673,71 +673,6 @@ function TermsInlineEditorInner({
           extraActions={deleteDialog}
         />
       }
-      panel={
-        <SidePanelShell
-          isOpen={isSidePanelOpen}
-          onClose={() => setIsSidePanelOpen(false)}
-          title="規約設定"
-          width="default"
-        >
-          {mode === "edit" ? (
-            <Tabs defaultValue="version" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="version">バージョン</TabsTrigger>
-                <TabsTrigger value="settings">設定</TabsTrigger>
-                <TabsTrigger value="agreements">
-                  同意
-                  {initialTotal > 0 && (
-                    <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums">
-                      {initialTotal}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              <TermsVersionTab
-                localVersions={localVersions}
-                selectedVersionId={selectedVersionId}
-                selectedVersionContent={selectedVersionContent}
-                hasDraftVersion={hasDraftVersion}
-                isPending={isPending}
-                isLoadingVersion={isLoadingVersion}
-                onVersionSwitch={(id) => void handleVersionSwitch(id)}
-                onCreateNewVersion={handleCreateNewVersion}
-                onPublishVersion={handlePublishVersion}
-                onArchiveVersion={handleArchiveVersion}
-                onDeleteVersion={handleDeleteVersion}
-              />
-
-              <TabsContent value="settings" className="mt-4">
-                <TermsSettingsFields
-                  isPending={isPending}
-                  control={control}
-                  register={register}
-                  errors={errors}
-                />
-              </TabsContent>
-
-              {terms && (
-                <TermsAgreementsTab
-                  termsId={terms.id}
-                  initialAgreements={initialAgreements}
-                  initialTotal={initialTotal}
-                />
-              )}
-            </Tabs>
-          ) : (
-            <div className="mt-4">
-              <TermsSettingsFields
-                isPending={isPending}
-                control={control}
-                register={register}
-                errors={errors}
-              />
-            </div>
-          )}
-        </SidePanelShell>
-      }
     >
       <LazyLexicalEditor
         key={editorKey}
@@ -748,6 +683,71 @@ function TermsInlineEditorInner({
         showToolbar
         height="100%"
         contentWidth={TERMS_CONTENT_WIDTH_PX}
+        trailingPanel={
+          <SidePanelShell
+            isOpen={isSidePanelOpen}
+            onClose={() => setIsSidePanelOpen(false)}
+            title="規約設定"
+            width="default"
+          >
+            {mode === "edit" ? (
+              <Tabs defaultValue="version" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="version">バージョン</TabsTrigger>
+                  <TabsTrigger value="settings">設定</TabsTrigger>
+                  <TabsTrigger value="agreements">
+                    同意
+                    {initialTotal > 0 && (
+                      <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums">
+                        {initialTotal}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TermsVersionTab
+                  localVersions={localVersions}
+                  selectedVersionId={selectedVersionId}
+                  selectedVersionContent={selectedVersionContent}
+                  hasDraftVersion={hasDraftVersion}
+                  isPending={isPending}
+                  isLoadingVersion={isLoadingVersion}
+                  onVersionSwitch={(id) => void handleVersionSwitch(id)}
+                  onCreateNewVersion={handleCreateNewVersion}
+                  onPublishVersion={handlePublishVersion}
+                  onArchiveVersion={handleArchiveVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                />
+
+                <TabsContent value="settings" className="mt-4">
+                  <TermsSettingsFields
+                    isPending={isPending}
+                    control={control}
+                    register={register}
+                    errors={errors}
+                  />
+                </TabsContent>
+
+                {terms && (
+                  <TermsAgreementsTab
+                    termsId={terms.id}
+                    initialAgreements={initialAgreements}
+                    initialTotal={initialTotal}
+                  />
+                )}
+              </Tabs>
+            ) : (
+              <div className="mt-4">
+                <TermsSettingsFields
+                  isPending={isPending}
+                  control={control}
+                  register={register}
+                  errors={errors}
+                />
+              </div>
+            )}
+          </SidePanelShell>
+        }
       />
     </InlineEditorShell>
   );

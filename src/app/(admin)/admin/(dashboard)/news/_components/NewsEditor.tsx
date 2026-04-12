@@ -153,33 +153,6 @@ export function NewsEditor({
           extraActions={deleteDialog}
         />
       }
-      panel={
-        <>
-          <UnifiedSidePanel
-            isOpen={editor.isSettingsPanelOpen}
-            onClose={editor.closePanel}
-            config={newsConfig.sidePanel}
-            register={editor.form.register}
-            control={editor.form.control}
-            errors={editor.form.formState.errors}
-            setValue={editor.form.setValue}
-            getValues={editor.form.getValues}
-            disabled={editor.isPending}
-            extraProps={sidePanelExtraProps}
-          />
-          {mode === "edit" && news && (
-            <CommentPanel
-              isOpen={editor.isCommentsPanelOpen}
-              contentType="news"
-              contentId={news.id}
-              activeMarkId={editor.activeMarkId}
-              onClose={editor.closePanel}
-              pendingComment={editor.pendingComment}
-              onPendingCommentSubmit={editor.clearPendingComment}
-            />
-          )}
-        </>
-      }
     >
       <LazyLexicalEditor
         contentJson={editor.contentJson}
@@ -193,6 +166,33 @@ export function NewsEditor({
           mode === "edit" && news ? editor.handleAddComment : undefined
         }
         contentWidth={contentWidthPx ?? undefined}
+        trailingPanel={
+          <>
+            <UnifiedSidePanel
+              isOpen={editor.isSettingsPanelOpen}
+              onClose={editor.closePanel}
+              config={newsConfig.sidePanel}
+              register={editor.form.register}
+              control={editor.form.control}
+              errors={editor.form.formState.errors}
+              setValue={editor.form.setValue}
+              getValues={editor.form.getValues}
+              disabled={editor.isPending}
+              extraProps={sidePanelExtraProps}
+            />
+            {mode === "edit" && news && (
+              <CommentPanel
+                isOpen={editor.isCommentsPanelOpen}
+                contentType="news"
+                contentId={news.id}
+                activeMarkId={editor.activeMarkId}
+                onClose={editor.closePanel}
+                pendingComment={editor.pendingComment}
+                onPendingCommentSubmit={editor.clearPendingComment}
+              />
+            )}
+          </>
+        }
       />
     </InlineEditorShell>
   );

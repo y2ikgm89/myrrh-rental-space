@@ -51,4 +51,10 @@ export type LexicalEditorProps = {
   autoSaveKey?: string | undefined;
   /** 文字数制限（指定時のみ CharacterLimitPlugin をマウント） */
   characterLimit?: number | undefined;
+  /**
+   * インスペクターサイドバーの右に追加で表示するパネル（記事設定パネル等）
+   * LexicalEditor の flex 行（ツールバーの下）に配置されるため、
+   * InspectorSidebar と同じ高さ位置から始まる。
+   */
+  trailingPanel?: import("react").ReactNode;
 };

@@ -402,77 +402,6 @@ export function FaqItemInlineEditor({
           }
         />
       }
-      panel={
-        <SidePanelShell
-          isOpen={isSidePanelOpen}
-          onClose={handleCloseSidePanel}
-          title="FAQ設定"
-        >
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="basic">基本</TabsTrigger>
-              <TabsTrigger value="seo">SEO</TabsTrigger>
-            </TabsList>
-            <TabsContent value="basic" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">カテゴリ</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <select
-                    {...register("categoryId")}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    disabled={isPending}
-                  >
-                    {categoryOptions.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="seo" className="mt-4 space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">SEO設定</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SEOFields
-                    register={register}
-                    errors={errors}
-                    disabled={isPending}
-                    fields={{
-                      metaDescription: "metaDescription",
-                      metaKeywords: "metaKeywords",
-                    }}
-                  />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">OGP設定</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <OGPFields
-                    register={register}
-                    control={control}
-                    errors={errors}
-                    setValue={setValue}
-                    disabled={isPending}
-                    fields={{
-                      ogpTitle: "ogpTitle",
-                      ogpDescription: "ogpDescription",
-                      ogpImageUrl: "ogpImageUrl",
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </SidePanelShell>
-      }
     >
       {/* Question Input */}
       <div className="border-b bg-background px-4 py-3">
@@ -508,6 +437,77 @@ export function FaqItemInlineEditor({
           className={EDITOR_PROSE_CLASSES}
           showToolbar
           height="calc(100vh - 300px)"
+          trailingPanel={
+            <SidePanelShell
+              isOpen={isSidePanelOpen}
+              onClose={handleCloseSidePanel}
+              title="FAQ設定"
+            >
+              <Tabs defaultValue="basic" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="basic">基本</TabsTrigger>
+                  <TabsTrigger value="seo">SEO</TabsTrigger>
+                </TabsList>
+                <TabsContent value="basic" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">カテゴリ</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <select
+                        {...register("categoryId")}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        disabled={isPending}
+                      >
+                        {categoryOptions.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="seo" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">SEO設定</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <SEOFields
+                        register={register}
+                        errors={errors}
+                        disabled={isPending}
+                        fields={{
+                          metaDescription: "metaDescription",
+                          metaKeywords: "metaKeywords",
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">OGP設定</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <OGPFields
+                        register={register}
+                        control={control}
+                        errors={errors}
+                        setValue={setValue}
+                        disabled={isPending}
+                        fields={{
+                          ogpTitle: "ogpTitle",
+                          ogpDescription: "ogpDescription",
+                          ogpImageUrl: "ogpImageUrl",
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </SidePanelShell>
+          }
         />
       </div>
     </InlineEditorShell>

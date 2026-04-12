@@ -88,6 +88,7 @@ function EditorInner({
   onAutoSave,
   autoSaveKey,
   characterLimit,
+  trailingPanel,
 }: Omit<LexicalEditorProps, "contentJson">) {
   const [contentWrapperRef, setContentWrapperRef] =
     useState<HTMLDivElement | null>(null);
@@ -285,6 +286,9 @@ function EditorInner({
 
           {/* インスペクターサイドバー（開閉は InspectorSidebar 内 + ツールバー / ショートカット） */}
           {inspectorEnabled && <InspectorSidebar />}
+
+          {/* 記事設定等の追加パネル（InspectorSidebar の右、ツールバーの下） */}
+          {trailingPanel}
         </div>
       </div>
     </InspectorSidebarProvider>

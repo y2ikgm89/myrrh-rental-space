@@ -217,33 +217,6 @@ export function PostEditor({
           extraActions={deleteDialog}
         />
       }
-      panel={
-        <>
-          <UnifiedSidePanel
-            isOpen={editor.isSettingsPanelOpen}
-            onClose={editor.closePanel}
-            config={postConfig.sidePanel}
-            register={editor.form.register}
-            control={editor.form.control}
-            errors={editor.form.formState.errors}
-            setValue={editor.form.setValue}
-            getValues={editor.form.getValues}
-            disabled={editor.isPending}
-            extraProps={sidePanelExtraProps}
-          />
-          {mode === "edit" && post && (
-            <CommentPanel
-              isOpen={editor.isCommentsPanelOpen}
-              contentType="post"
-              contentId={post.id}
-              activeMarkId={editor.activeMarkId}
-              onClose={editor.closePanel}
-              pendingComment={editor.pendingComment}
-              onPendingCommentSubmit={editor.clearPendingComment}
-            />
-          )}
-        </>
-      }
     >
       <LazyLexicalEditor
         contentJson={editor.contentJson}
@@ -257,6 +230,33 @@ export function PostEditor({
           mode === "edit" && post ? editor.handleAddComment : undefined
         }
         contentWidth={contentWidthPx ?? undefined}
+        trailingPanel={
+          <>
+            <UnifiedSidePanel
+              isOpen={editor.isSettingsPanelOpen}
+              onClose={editor.closePanel}
+              config={postConfig.sidePanel}
+              register={editor.form.register}
+              control={editor.form.control}
+              errors={editor.form.formState.errors}
+              setValue={editor.form.setValue}
+              getValues={editor.form.getValues}
+              disabled={editor.isPending}
+              extraProps={sidePanelExtraProps}
+            />
+            {mode === "edit" && post && (
+              <CommentPanel
+                isOpen={editor.isCommentsPanelOpen}
+                contentType="post"
+                contentId={post.id}
+                activeMarkId={editor.activeMarkId}
+                onClose={editor.closePanel}
+                pendingComment={editor.pendingComment}
+                onPendingCommentSubmit={editor.clearPendingComment}
+              />
+            )}
+          </>
+        }
       />
     </InlineEditorShell>
   );
