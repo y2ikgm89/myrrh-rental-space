@@ -30,6 +30,7 @@ const spaceListSelect = {
   imageUrls: true,
   facilities: true,
   addressDetail: true,
+  reviewsEnabled: true,
   category: { select: { id: true, name: true } },
   location: { select: { name: true, address: true } },
 } as const;
@@ -152,6 +153,7 @@ export async function getSpaceBySlug(slug: string) {
           facilities: true,
           addressDetail: true,
           access: true,
+          reviewsEnabled: true,
           metaDescription: true,
           ogpTitle: true,
           ogpDescription: true,

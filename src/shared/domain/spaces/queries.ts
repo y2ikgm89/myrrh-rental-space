@@ -31,6 +31,7 @@ function formatSpaceToPlain(s: {
   isPublished: boolean;
   publishedAt: Date | null;
   isActive: boolean;
+  reviewsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
   termsId: string | null;
@@ -68,6 +69,7 @@ function formatSpaceToPlain(s: {
     isPublished: s.isPublished,
     publishedAt: s.publishedAt ? s.publishedAt.toISOString() : null,
     isActive: s.isActive,
+    reviewsEnabled: s.reviewsEnabled,
     createdAt: s.createdAt.toISOString(),
     updatedAt: s.updatedAt.toISOString(),
     termsId: s.termsId,

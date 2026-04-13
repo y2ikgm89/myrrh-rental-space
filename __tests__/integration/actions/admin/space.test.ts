@@ -34,6 +34,7 @@ const VALID_SPACE_INPUT: SpaceFormData = {
   ],
   facilities: ["Wi-Fi", "プロジェクター", "ホワイトボード"],
   isPublished: false,
+  reviewsEnabled: true,
   termsId: null,
   locationId: VALID_UUID,
   categoryId: null,
