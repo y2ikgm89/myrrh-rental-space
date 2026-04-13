@@ -166,14 +166,24 @@ export async function getReviewForReservation(
   reservationId: string,
   customerId: string,
 ) {
-  return prisma.spaceReview.findFirst({
+  const review = await prisma.spaceReview.findFirst({
     where: { reservationId, customerId },
     select: {
       id: true,
       rating: true,
       title: true,
       comment: true,
+      replyBody: true,
+      repliedAt: true,
       createdAt: true,
     },
   });
+
+  if (!review) return null;
+
+  return {
+    ...review,
+    createdAt: review.createdAt.toISOString(),
+    repliedAt: review.repliedAt ? review.repliedAt.toISOString() : null,
+  };
 }

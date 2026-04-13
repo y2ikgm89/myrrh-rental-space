@@ -141,12 +141,7 @@ export default async function ReservationDetailPage({
       {isCompleted && existingReview ? (
         <>
           <Divider variant="subtle" />
-          <ReviewDisplay
-            review={{
-              ...existingReview,
-              createdAt: existingReview.createdAt.toISOString(),
-            }}
-          />
+          <ReviewDisplay review={existingReview} />
         </>
       ) : null}
 
