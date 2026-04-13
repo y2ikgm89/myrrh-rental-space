@@ -107,3 +107,57 @@ export async function deleteReviewCommand(id: string) {
 
   return { spaceId: review.spaceId };
 }
+
+type ReplyToReviewInput = {
+  reviewId: string;
+  replyBody: string;
+  adminUserId: string;
+};
+
+export async function replyToReviewCommand(
+  input: ReplyToReviewInput,
+): Promise<{ spaceId: string }> {
+  const review = await prisma.spaceReview.findUnique({
+    where: { id: input.reviewId },
+    select: { id: true, spaceId: true },
+  });
+
+  if (!review) {
+    throw new DomainError("レビューが見つかりません", "NOT_FOUND");
+  }
+
+  await prisma.spaceReview.update({
+    where: { id: input.reviewId },
+    data: {
+      replyBody: input.replyBody,
+      repliedAt: new Date(),
+      repliedById: input.adminUserId,
+    },
+  });
+
+  return { spaceId: review.spaceId };
+}
+
+export async function deleteReviewReplyCommand(
+  id: string,
+): Promise<{ spaceId: string }> {
+  const review = await prisma.spaceReview.findUnique({
+    where: { id },
+    select: { id: true, spaceId: true },
+  });
+
+  if (!review) {
+    throw new DomainError("レビューが見つかりません", "NOT_FOUND");
+  }
+
+  await prisma.spaceReview.update({
+    where: { id },
+    data: {
+      replyBody: null,
+      repliedAt: null,
+      repliedById: null,
+    },
+  });
+
+  return { spaceId: review.spaceId };
+}

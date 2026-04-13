@@ -47,6 +47,8 @@ import {
   createReviewCommand,
   toggleReviewPublishedCommand,
   deleteReviewCommand,
+  replyToReviewCommand,
+  deleteReviewReplyCommand,
 } from "@/shared/domain/reviews/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -359,6 +361,140 @@ describe("deleteReviewCommand", () => {
       );
 
       expect(mockSpaceReviewDelete).not.toHaveBeenCalled();
+    });
+  });
+});
+
+const ADMIN_USER_ID = "admin-user-1";
+
+describe("replyToReviewCommand", () => {
+  beforeEach(() => {
+    mockSpaceReviewFindUnique.mockReset();
+    mockSpaceReviewUpdate.mockReset();
+    mockSpaceReviewFindUnique.mockResolvedValue(null);
+    mockSpaceReviewUpdate.mockResolvedValue({ id: REVIEW_ID });
+  });
+
+  describe("正常系", () => {
+    test("返信本文・repliedAt・repliedById を保存して spaceId を返す", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue({
+        id: REVIEW_ID,
+        spaceId: SPACE_ID,
+      });
+
+      const result = await replyToReviewCommand({
+        reviewId: REVIEW_ID,
+        replyBody: "ご利用ありがとうございました。",
+        adminUserId: ADMIN_USER_ID,
+      });
+
+      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(mockSpaceReviewUpdate).toHaveBeenCalledTimes(1);
+      expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: REVIEW_ID },
+          data: expect.objectContaining({
+            replyBody: "ご利用ありがとうございました。",
+            repliedById: ADMIN_USER_ID,
+            repliedAt: expect.any(Date),
+          }),
+        }),
+      );
+    });
+
+    test("既存の返信がある場合は上書き更新する（編集フロー）", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue({
+        id: REVIEW_ID,
+        spaceId: SPACE_ID,
+      });
+
+      await replyToReviewCommand({
+        reviewId: REVIEW_ID,
+        replyBody: "更新された返信",
+        adminUserId: ADMIN_USER_ID,
+      });
+
+      expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ replyBody: "更新された返信" }),
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("レビューが存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue(null);
+
+      await expect(
+        replyToReviewCommand({
+          reviewId: "non-existent",
+          replyBody: "返信",
+          adminUserId: ADMIN_USER_ID,
+        }),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "レビューが見つかりません",
+      });
+    });
+
+    test("存在しないレビューでは update が呼ばれない", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue(null);
+
+      await expect(
+        replyToReviewCommand({
+          reviewId: "non-existent",
+          replyBody: "返信",
+          adminUserId: ADMIN_USER_ID,
+        }),
+      ).rejects.toThrow(DomainError);
+
+      expect(mockSpaceReviewUpdate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("deleteReviewReplyCommand", () => {
+  beforeEach(() => {
+    mockSpaceReviewFindUnique.mockReset();
+    mockSpaceReviewUpdate.mockReset();
+    mockSpaceReviewFindUnique.mockResolvedValue(null);
+    mockSpaceReviewUpdate.mockResolvedValue({ id: REVIEW_ID });
+  });
+
+  describe("正常系", () => {
+    test("replyBody / repliedAt / repliedById を null にクリアして spaceId を返す", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue({
+        id: REVIEW_ID,
+        spaceId: SPACE_ID,
+      });
+
+      const result = await deleteReviewReplyCommand(REVIEW_ID);
+
+      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: REVIEW_ID },
+          data: {
+            replyBody: null,
+            repliedAt: null,
+            repliedById: null,
+          },
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("レビューが存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue(null);
+
+      await expect(
+        deleteReviewReplyCommand("non-existent"),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "レビューが見つかりません",
+      });
     });
   });
 });
