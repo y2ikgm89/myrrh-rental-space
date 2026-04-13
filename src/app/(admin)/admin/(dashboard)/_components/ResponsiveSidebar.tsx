@@ -12,7 +12,7 @@ import { useEffect, useEffectEvent } from "react";
 import type { ReactNode } from "react";
 import { tv } from "tailwind-variants";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/shared/lib/cn";
 import { IconX } from "@tabler/icons-react";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
@@ -70,6 +70,34 @@ const styles = tv({
   },
 });
 
+function isSidebarItemActive(
+  itemHref: string,
+  pathname: string,
+  currentParams: URLSearchParams,
+): boolean {
+  const [itemPath, itemQuery = ""] = itemHref.split("?");
+  if (itemPath === undefined) return false;
+
+  const pathMatches =
+    pathname === itemPath ||
+    (itemPath !== "/admin" && pathname.startsWith(`${itemPath}/`));
+
+  if (!pathMatches) return false;
+
+  if (!itemQuery) {
+    // Bare path: active only if the URL has no `tab` param
+    // (prevents "スペース管理" highlighting when viewing the reviews tab)
+    return !currentParams.has("tab");
+  }
+
+  // Query-bearing item: every key in item's query must match current URL
+  const itemQueryParams = new URLSearchParams(itemQuery);
+  for (const [key, value] of itemQueryParams.entries()) {
+    if (currentParams.get(key) !== value) return false;
+  }
+  return true;
+}
+
 type ResponsiveSidebarProps = {
   userInfo: ReactNode;
 };
@@ -78,6 +106,7 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
   const { sidebarState, closeSidebar, isMobile, isFullscreen, hasMounted } =
     useAdminLayout();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Hydration対策: マウント前はSSR時と同じ値を使用
   // SSR時: sidebarState='expanded', isMobile=false → isOpen=true
   const isOpen = hasMounted ? sidebarState === "expanded" : true;
@@ -151,10 +180,11 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
         <nav className={classes.nav()}>
           <ul className="space-y-1">
             {SIDEBAR_ITEMS.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/admin" &&
-                  pathname.startsWith(item.href + "/"));
+              const isActive = isSidebarItemActive(
+                item.href,
+                pathname,
+                searchParams,
+              );
               return (
                 <li key={item.href}>
                   <Link

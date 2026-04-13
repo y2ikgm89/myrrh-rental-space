@@ -5,6 +5,7 @@ export const ADMIN_SPACE_MANAGEMENT_TABS = [
   "spaces",
   "locations",
   "categories",
+  "reviews",
 ] as const;
 
 export type AdminSpaceManagementTab =

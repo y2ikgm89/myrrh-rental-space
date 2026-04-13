@@ -104,6 +104,7 @@ const VALID_INPUT = {
   imageUrls: ["https://example.com/image1.jpg"],
   facilities: ["Wi-Fi", "プロジェクター"],
   isPublished: false,
+  reviewsEnabled: true,
   locationId: LOCATION_ID,
 };
 

@@ -21,6 +21,7 @@ const TAB_ITEMS: { value: AdminSpaceManagementTab; label: string }[] = [
   { value: "spaces", label: "スペース" },
   { value: "locations", label: "場所" },
   { value: "categories", label: "カテゴリー" },
+  { value: "reviews", label: "レビュー" },
 ];
 
 const tabTriggerClass = cn(

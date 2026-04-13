@@ -30,6 +30,7 @@ function minimalValidSpaceFormPayload() {
     imageUrls: [],
     facilities: [],
     isPublished: false,
+    reviewsEnabled: true,
     termsId: null,
     locationId: "22222222-2222-4222-8222-222222222222",
     categoryId: null,
@@ -72,6 +73,23 @@ describe("space-form-data-codec", () => {
     expect(again.data.imageUrls).toEqual(parsedInput.imageUrls);
     expect(again.data.facilities).toEqual(parsedInput.facilities);
     expect(again.data.isPublished).toBe(parsedInput.isPublished);
+    expect(again.data.reviewsEnabled).toBe(parsedInput.reviewsEnabled);
+  });
+
+  test("roundtrip: reviewsEnabled=false is preserved through FormData", () => {
+    const baseInput = minimalValidSpaceFormPayload();
+    const parsedInput = { ...baseInput, reviewsEnabled: false };
+
+    const fd = spaceFormDataToFormData(parsedInput, {
+      intent: "create",
+      clientNonce: 1,
+    });
+
+    const again = parseSpaceFormFromFormData(fd);
+    expect(again.success).toBe(true);
+    if (!again.success) return;
+
+    expect(again.data.reviewsEnabled).toBe(false);
   });
 
   test("parse rejects invalid numeric field with NaN from codec", () => {

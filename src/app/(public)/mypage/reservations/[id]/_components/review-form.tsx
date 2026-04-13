@@ -25,8 +25,11 @@ import type { SpaceReviewInput } from "@/shared/lib/validations/review";
 interface ReviewFormProps {
   readonly reservationId: string;
   readonly spaceName: string;
+  readonly reviewsEnabled: boolean;
   readonly turnstileSiteKey: string | null;
 }
+
+type ReviewFormInnerProps = Omit<ReviewFormProps, "reviewsEnabled">;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -35,8 +38,33 @@ interface ReviewFormProps {
 export function ReviewForm({
   reservationId,
   spaceName,
+  reviewsEnabled,
   turnstileSiteKey,
 }: ReviewFormProps) {
+  if (!reviewsEnabled) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          このスペースはレビュー投稿を受け付けていません。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ReviewFormInner
+      reservationId={reservationId}
+      spaceName={spaceName}
+      turnstileSiteKey={turnstileSiteKey}
+    />
+  );
+}
+
+function ReviewFormInner({
+  reservationId,
+  spaceName,
+  turnstileSiteKey,
+}: ReviewFormInnerProps) {
   const [submitted, setSubmitted] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
 

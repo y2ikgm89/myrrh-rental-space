@@ -510,6 +510,7 @@ describe("defaultSpaceFormValues", () => {
       imageUrls: [],
       facilities: [],
       isPublished: false,
+      reviewsEnabled: true,
       termsId: null,
       locationId: "",
       categoryId: null,

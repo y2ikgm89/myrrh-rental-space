@@ -23,7 +23,11 @@ export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
   const reviews = await safeFetch({
     fetch: () =>
       prisma.spaceReview.findMany({
-        where: { spaceId, isPublished: true },
+        where: {
+          spaceId,
+          isPublished: true,
+          space: { reviewsEnabled: true },
+        },
         select: {
           id: true,
           rating: true,
@@ -66,7 +70,11 @@ export async function getSpaceReviewStats(spaceId: string) {
   const result = await safeFetch({
     fetch: async () => {
       const aggregate = await prisma.spaceReview.aggregate({
-        where: { spaceId, isPublished: true },
+        where: {
+          spaceId,
+          isPublished: true,
+          space: { reviewsEnabled: true },
+        },
         _avg: { rating: true },
         _count: { id: true },
       });
@@ -110,7 +118,11 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
     fetch: async () => {
       const reviews = await prisma.spaceReview.groupBy({
         by: ["spaceId"],
-        where: { spaceId: { in: spaceIds }, isPublished: true },
+        where: {
+          spaceId: { in: spaceIds },
+          isPublished: true,
+          space: { reviewsEnabled: true },
+        },
         _avg: { rating: true },
         _count: { id: true },
       });

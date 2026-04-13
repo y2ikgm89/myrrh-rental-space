@@ -69,6 +69,7 @@ const COMPLETED_RESERVATION = {
   customerId: CUSTOMER_ID,
   spaceId: SPACE_ID,
   status: "COMPLETED",
+  space: { reviewsEnabled: true },
   review: null,
 };
 
@@ -196,6 +197,33 @@ describe("createReviewCommand", () => {
       ).rejects.toMatchObject({
         code: "VALIDATION",
       });
+    });
+
+    test("スペースの reviewsEnabled が false の場合は VALIDATION エラーをスローする", async () => {
+      mockReservationFindUnique.mockResolvedValue({
+        ...COMPLETED_RESERVATION,
+        space: { reviewsEnabled: false },
+      });
+
+      await expect(
+        createReviewCommand(VALID_CREATE_INPUT),
+      ).rejects.toMatchObject({
+        code: "VALIDATION",
+        message: "このスペースではレビュー投稿が無効化されています",
+      });
+    });
+
+    test("reviewsEnabled が false の場合は spaceReview.create が呼ばれない", async () => {
+      mockReservationFindUnique.mockResolvedValue({
+        ...COMPLETED_RESERVATION,
+        space: { reviewsEnabled: false },
+      });
+
+      await expect(createReviewCommand(VALID_CREATE_INPUT)).rejects.toThrow(
+        DomainError,
+      );
+
+      expect(mockSpaceReviewCreate).not.toHaveBeenCalled();
     });
 
     test("既にレビューが存在する予約には CONFLICT エラーをスローする", async () => {

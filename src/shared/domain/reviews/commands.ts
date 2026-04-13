@@ -20,6 +20,7 @@ export async function createReviewCommand(input: CreateReviewInput) {
       customerId: true,
       spaceId: true,
       status: true,
+      space: { select: { reviewsEnabled: true } },
       review: { select: { id: true } },
     },
   });
@@ -38,6 +39,13 @@ export async function createReviewCommand(input: CreateReviewInput) {
   if (reservation.status !== ReservationStatus.COMPLETED) {
     throw new DomainError(
       "完了済みの予約のみレビューを投稿できます",
+      "VALIDATION",
+    );
+  }
+
+  if (!reservation.space.reviewsEnabled) {
+    throw new DomainError(
+      "このスペースではレビュー投稿が無効化されています",
       "VALIDATION",
     );
   }

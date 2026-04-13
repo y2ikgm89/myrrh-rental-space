@@ -104,6 +104,7 @@ export const spaceFormSchema = z
     imageUrls: imageUrlsSchema,
     facilities: facilitiesSchema,
     isPublished: z.boolean().default(false),
+    reviewsEnabled: z.boolean().default(true),
     termsId: z
       .string()
       .uuid({ error: "利用規約IDが無効です" })
@@ -161,6 +162,7 @@ export const defaultSpaceFormValues: SpaceFormInput = {
   imageUrls: [],
   facilities: [],
   isPublished: false,
+  reviewsEnabled: true,
   termsId: null,
   locationId: "",
   categoryId: null,
@@ -213,6 +215,7 @@ export type SpaceWithStats = {
   /** toISOString() 済み ISO 8601 文字列（React 19 RSC 境界シリアライゼーション対応） */
   publishedAt: string | null;
   isActive: boolean;
+  reviewsEnabled: boolean;
   /** toISOString() 済み ISO 8601 文字列 */
   createdAt: string;
   /** toISOString() 済み ISO 8601 文字列 */
