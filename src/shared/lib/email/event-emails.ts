@@ -192,9 +192,9 @@ export async function sendEventCancelledToAllParticipants(
     locale: ja,
   });
 
-  for (const registration of event.registrations) {
-    try {
-      await sendEmail(
+  const results = await Promise.allSettled(
+    event.registrations.map((registration) =>
+      sendEmail(
         (resend, from) =>
           resend.emails.send({
             from,
@@ -211,17 +211,24 @@ export async function sendEventCancelledToAllParticipants(
           eventId,
           participantEmail: registration.email,
         },
-      );
-    } catch (error) {
-      logError(normalizeError(error), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          operation: "sendEventCancelledToAllParticipants",
-          eventId,
-          participantEmail: registration.email,
-        },
-      });
+      ),
+    ),
+  );
+
+  for (const [i, result] of results.entries()) {
+    if (result.status === "rejected") {
+      const registration = event.registrations[i];
+      if (registration) {
+        logError(normalizeError(result.reason), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "sendEventCancelledToAllParticipants",
+            eventId,
+            participantEmail: registration.email,
+          },
+        });
+      }
     }
   }
 }
@@ -260,9 +267,9 @@ export async function sendEventUpdatedToAllParticipants(
   });
   const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
 
-  for (const registration of event.registrations) {
-    try {
-      await sendEmail(
+  const results = await Promise.allSettled(
+    event.registrations.map((registration) =>
+      sendEmail(
         (resend, from) =>
           resend.emails.send({
             from,
@@ -281,17 +288,24 @@ export async function sendEventUpdatedToAllParticipants(
           eventId,
           participantEmail: registration.email,
         },
-      );
-    } catch (error) {
-      logError(normalizeError(error), {
-        category: ErrorCategory.EXTERNAL_API,
-        severity: ErrorSeverity.MEDIUM,
-        context: {
-          operation: "sendEventUpdatedToAllParticipants",
-          eventId,
-          participantEmail: registration.email,
-        },
-      });
+      ),
+    ),
+  );
+
+  for (const [i, result] of results.entries()) {
+    if (result.status === "rejected") {
+      const registration = event.registrations[i];
+      if (registration) {
+        logError(normalizeError(result.reason), {
+          category: ErrorCategory.EXTERNAL_API,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "sendEventUpdatedToAllParticipants",
+            eventId,
+            participantEmail: registration.email,
+          },
+        });
+      }
     }
   }
 }

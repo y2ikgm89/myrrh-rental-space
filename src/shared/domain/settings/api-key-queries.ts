@@ -104,6 +104,21 @@ export async function getGoogleMapsConfig(): Promise<GoogleMapsConfig> {
   };
 }
 
+export async function getDecryptedGoogleMapsApiKey(): Promise<string | null> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: {
+      googleMapsApiKey: true,
+    },
+  });
+
+  if (!settings?.googleMapsApiKey) {
+    return null;
+  }
+
+  return safeDecrypt(settings.googleMapsApiKey);
+}
+
 export async function getCloudflareConfig(): Promise<CloudflareConfig> {
   const settings = await prisma.settings.findUnique({
     where: { id: "singleton" },

@@ -27,6 +27,11 @@ type PreviewState =
   | { status: "error"; message: string }
   | { status: "ready"; data: NewsPreviewData };
 
+const SERVER_ERROR_STATE: PreviewState = {
+  status: "error",
+  message: "プレビューデータの読み込みに失敗しました。",
+};
+
 function readFromStorage(identifier: string): PreviewState {
   if (typeof window === "undefined") {
     // dynamic({ ssr: false }) により、このパスは到達しない
@@ -83,10 +88,7 @@ export function NewsPreviewContent({
       snapshotRef.current ??= readFromStorage(identifier);
       return snapshotRef.current;
     },
-    (): PreviewState => ({
-      status: "error",
-      message: "プレビューデータの読み込みに失敗しました。",
-    }),
+    () => SERVER_ERROR_STATE,
   );
 
   if (state.status === "error") {

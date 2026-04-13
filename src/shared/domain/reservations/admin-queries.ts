@@ -65,7 +65,7 @@ export async function getReservationsQuery(
     ];
   }
 
-  const [total, reservations] = await prisma.$transaction([
+  const [total, reservations] = await Promise.all([
     prisma.reservation.count({ where }),
     prisma.reservation.findMany({
       where,

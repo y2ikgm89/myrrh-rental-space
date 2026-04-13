@@ -67,6 +67,7 @@ export async function updateContactInfo(
     },
     afterSuccess: () => {
       updateTag(CACHE_TAGS.ORGANIZATION_SETTINGS);
+      updateTag(CACHE_TAGS.BUSINESS_SETTINGS);
     },
   });
 }

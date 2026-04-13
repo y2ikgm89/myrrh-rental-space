@@ -17,6 +17,8 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import {
   adminEventRegistrationSchema,
   type AdminEventRegistrationInput,
@@ -141,6 +143,21 @@ export async function adminCancelRegistration(
       updateTag(CACHE_TAGS.EVENTS);
       updateTag(getCacheTag.events.detail(data.eventId));
       updateTag(getCacheTag.eventRegistrations.list(data.eventId));
+
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+          title: "イベント申込キャンセル（管理者）",
+          message: `${data.name}様の「${data.eventTitle}」申込を管理者がキャンセルしました`,
+          resourceType: "event",
+          resourceId: data.eventId,
+        }),
+        {
+          operation: "createAdminEventCancellationNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+      updateTag(CACHE_TAGS.NOTIFICATIONS);
 
       fireAndForget(
         (async () => {

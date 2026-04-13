@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { z } from "zod";
 import { getSpaces } from "@/admin/queries/space";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
@@ -16,6 +17,7 @@ import { ADMIN_SPACE_LIST_CATEGORY_UNASSIGNED } from "@/shared/lib/constants/adm
 // =============================================================================
 
 async function SpaceList() {
+  await connection();
   const params = adminSpaceSearchParamsCache.all();
 
   let isPublished: boolean | "ALL" = "ALL";
@@ -73,6 +75,7 @@ async function SpaceList() {
 // =============================================================================
 
 export async function SpaceTabContent() {
+  await connection();
   const [locations, categories] = await Promise.all([
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { cn } from "@/shared/lib/cn";
 import { getRecentNotifications } from "@/admin/queries/notification";
@@ -20,6 +21,7 @@ import { getNotificationResourceHref } from "@/admin/lib/notification-helpers";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 
 export async function DashboardNotificationsSection() {
+  await connection();
   const notifications = await getRecentNotifications(5);
   const unreadNotifications = notifications.filter((n) => !n.isRead);
 

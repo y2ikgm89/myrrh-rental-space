@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconList } from "@tabler/icons-react";
 import {
@@ -35,6 +36,7 @@ function CalendarSkeleton() {
 }
 
 async function CalendarData({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminCalendarSearchParams(searchParams);
   const view = getValidCalendarView(params.view, "week");
   // eslint-disable-next-line @eslint-react/purity -- Server Component: new Date() used after data fetch

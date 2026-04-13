@@ -50,7 +50,6 @@ export type {
   CookieConsentSettingsInput,
   ReservationSettingsInput,
   AnnouncementBarCarouselSettingsInput,
-  SidebarSettingsInput,
   PermalinkSettingsInput,
   DiscountSettingsInput,
   DurationDiscountRuleInput,
@@ -145,7 +144,7 @@ export type { DiscountSettingsData } from "@/shared/domain/settings/types";
 
 export { updateTaxSettings } from "./tax";
 
-export type { TaxSettingsData } from "@/shared/domain/settings/types";
+export type { TaxSettings } from "@/shared/domain/settings/types";
 export type { TaxSettingsInput } from "./schemas";
 
 // =============================================================================

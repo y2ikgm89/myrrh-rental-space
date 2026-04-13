@@ -34,6 +34,10 @@ export type ReservationWithRelations = {
   cancellationReason: string | null;
   cancelledAt: string | null;
   cancelledByType: string | null;
+  guestLastName: string | null;
+  guestFirstName: string | null;
+  guestPhone: string | null;
+  guestCompanyName: string | null;
   space: {
     id: string;
     name: string;

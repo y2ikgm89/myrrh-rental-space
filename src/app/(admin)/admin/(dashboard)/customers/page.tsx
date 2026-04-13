@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconDownload, IconPlus } from "@tabler/icons-react";
 import { getCustomers } from "@/admin/queries/customer";
@@ -22,6 +23,7 @@ type PageProps = {
 };
 
 async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminCustomerSearchParams(searchParams);
   const status = parseCustomerStatusFilter(params.status);
 

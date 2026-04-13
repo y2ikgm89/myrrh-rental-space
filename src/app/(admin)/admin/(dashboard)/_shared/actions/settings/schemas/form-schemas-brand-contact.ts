@@ -54,6 +54,8 @@ export const contactInfoFormSchema = z.object({
     .string()
     .max(100, { error: "100文字以内で入力してください" }),
   buildingName: z.string().max(100, { error: "100文字以内で入力してください" }),
+  accessInfo: z.string().max(1000, { error: "1000文字以内で入力してください" }),
+  parkingInfo: z.string().max(500, { error: "500文字以内で入力してください" }),
 });
 
 export type ContactInfoFormInput = z.infer<typeof contactInfoFormSchema>;

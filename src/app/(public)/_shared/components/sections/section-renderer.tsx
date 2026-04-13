@@ -35,7 +35,7 @@ import {
 import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
-import { getGoogleMapsApiKey } from "../../../_shared/data/google-maps";
+import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
 
 // v3 components
 import { HeroSection } from "../../../_components/HeroSection";
@@ -122,7 +122,7 @@ export async function SectionRenderer({
         id: s.id,
         slug: s.slug,
         name: s.name,
-        description: s.description,
+        descriptionPlainText: s.descriptionPlainText,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
         area: s.area,
@@ -143,7 +143,7 @@ export async function SectionRenderer({
         id: s.id,
         slug: s.slug,
         name: s.name,
-        description: s.description,
+        descriptionPlainText: s.descriptionPlainText,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
         dailyPrice: s.dailyPrice,
@@ -248,7 +248,7 @@ export async function SectionRenderer({
 
     case SectionType.MAP: {
       const config = getMapConfig(section.config);
-      const mapApiKey = await getGoogleMapsApiKey();
+      const mapApiKey = await getDecryptedGoogleMapsApiKey();
       return <MapSection config={config} design={design} apiKey={mapApiKey} />;
     }
 

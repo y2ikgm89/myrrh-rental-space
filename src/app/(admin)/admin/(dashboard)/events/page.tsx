@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getEvents } from "@/shared/domain/events/admin-queries";
@@ -22,6 +23,7 @@ type PageProps = {
 };
 
 async function EventList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminEventSearchParams(searchParams);
   const status = isValidEventStatus(params.status) ? params.status : undefined;
 
@@ -63,14 +65,12 @@ export default async function EventsPage({ searchParams }: PageProps) {
             イベントの作成・編集・公開を管理します
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild>
-            <Link href="/admin/events/new">
-              <IconPlus className="mr-2 h-4 w-4" />
-              新規作成
-            </Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/admin/events/new">
+            <IconPlus className="mr-2 h-4 w-4" />
+            新規作成
+          </Link>
+        </Button>
       </div>
 
       {/* フィルター */}

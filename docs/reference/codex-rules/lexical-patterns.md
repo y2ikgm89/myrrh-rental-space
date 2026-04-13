@@ -22,7 +22,7 @@ paths:
 
 | 技術           | バージョン         | 互換性                               |
 | -------------- | ------------------ | ------------------------------------ |
-| Lexical        | 0.41.x             | React 17+対応                        |
+| Lexical        | 0.43.x             | React 17+対応                        |
 | React          | 19.2.4             | ✅ peerDependencies対応              |
 | React Compiler | 1.0.0              | ✅ 自動メモ化（useCallback基本不要） |
 | Turbopack      | Next.js 16 default | ✅ optimizePackageImports設定済み    |
@@ -278,7 +278,7 @@ ContainerNode（ルート）
 
 ### isShadowRoot()
 
-**すべてのコンテナ/コンテンツノードに必須**。キャレットがキーボード操作で境界外に漏れるのを防止:
+**すべてのコンテナ・中間コンテナ・子ノード ElementNode に必須**。キャレットがキーボード操作で境界外に漏れるのを防止:
 
 ```typescript
 isShadowRoot(): boolean {
@@ -286,10 +286,20 @@ isShadowRoot(): boolean {
 }
 ```
 
-**現在の実装状況（全9ノード）:**
+**実装済み（32 ノード — 全 ElementNode コンポジット子ノード）:**
 
-- CollapsibleContainerNode, CollapsibleContentNode
-- LayoutContainerNode, LayoutItemNode
+- Collapsible: ContainerNode, ItemNode, TitleNode, ContentNode
+- Steps: ContainerNode, StepItemNode, StepTitleNode, StepContentNode
+- Tabs: ContainerNode, TabListNode, TabTitleNode, TabPanelNode
+- PullQuote: Node, TextNode, CitationNode
+- Gallery: ContainerNode, ItemNode
+- Testimonial: ContainerNode, ItemNode
+- Timeline: ContainerNode, ItemNode
+- FeatureIconList: ContainerNode, ItemNode
+- PricingTable: ContainerNode, PlanNode, FeatureNode
+- Layout: ContainerNode, ItemNode
+- CaptionBox: Node, TitleNode, ContentNode
+- Cover: Node
 
 #### カラムレイアウト（LayoutContainer / LayoutItem）
 
@@ -758,7 +768,7 @@ editor.update(() => {
 });
 ```
 
-21. **`TableCellResizerPlugin` は @lexical/react 0.41.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+21. **`TableCellResizerPlugin` は @lexical/react 0.43.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
 22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
 23. **組み込みノード（TableNode 等）を継承する場合は Node Replacement パターン必須**: 独自型文字列（`"custom-table"`）を持つカスタムノードと `{ replace: TableNode, with: factory, withKlass: CustomTableNode }` をセットで `EDITOR_NODES` に登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を登録するため `TablePlugin.hasNodes([TableNode])` が通過し、`$isTableNode(customTableNode)` も `instanceof` で `true` になる。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外であり禁止
 24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する

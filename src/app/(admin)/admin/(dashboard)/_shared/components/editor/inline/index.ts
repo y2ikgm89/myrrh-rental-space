@@ -1,23 +1,24 @@
 /**
  * インラインエディターコンポーネント
  *
- * 公式Lexical/Gutenbergパターンに準拠
- * - 専用エディターフック（usePostEditor, useNewsEditor, usePageEditor）
- * - フック経由でフルスクリーン・キーボード・離脱警告を管理
+ * 公式 Lexical / Gutenberg パターンに準拠
+ * - 専用エディターフック（usePostEditor, useNewsEditor）
+ * - 本文と記事設定は独立した RHF フォーム + Server Action で管理
+ * - 設定 UI は SettingsDialog（Radix Dialog）
  */
 
-// 設定
-export { postConfig, newsConfig } from "./content-types";
+// 設定ダイアログ定義
+export { postSettingsPanel, newsSettingsPanel } from "./content-types";
 
 // 型定義
 export type {
-  ContentTypeConfig,
-  ContentEditorProps,
-  ContentEditorExtraData,
   CategoryOption,
   TagOption,
   PostSidePanelExtra,
   NewsSidePanelExtra,
+  SidePanelDefinition,
+  SidePanelInjectedProps,
+  SidePanelRenderContext,
 } from "./content-types";
 
 // 基本フック
@@ -25,7 +26,7 @@ export {
   useFullscreenMode,
   useKeyboardShortcuts,
   useBeforeUnload,
-  useEditorPanels,
+  useCommentPanel,
 } from "./hooks";
 
 // 専用エディターフック
@@ -33,11 +34,11 @@ export { usePostEditor, useNewsEditor, useContentWidth } from "./hooks/index";
 
 // 基本コンポーネント
 export { EditorHeader } from "./EditorHeader";
-export { SidePanelShell } from "./SidePanelShell";
-export { UnifiedSidePanel } from "./UnifiedSidePanel";
+export { SettingsDialog } from "./SettingsDialog";
+export type { SettingsDialogProps } from "./SettingsDialog";
 export { InlineEditorShell } from "./InlineEditorShell";
 
-// 旧型定義
+// 旧型定義（side-panel フィールドコンポーネントが使用）
 export type {
   EditorHeaderProps,
   SidePanelSectionProps,

@@ -6,6 +6,7 @@ type InstagramPostRecord = {
   postId: string;
   postUrl: string;
   mediaUrl: string | null;
+  mediaType: string;
   caption: string | null;
   sortOrder: number;
   createdAt: Date;

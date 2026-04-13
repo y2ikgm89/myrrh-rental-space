@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconCalendar, IconDownload, IconPlus } from "@tabler/icons-react";
 import { getReservations } from "@/admin/queries/reservation";
@@ -26,6 +27,7 @@ async function ReservationList({
 }: {
   searchParams: SearchParams;
 }) {
+  await connection();
   const params = await loadAdminReservationSearchParams(searchParams);
   const status = parseReservationStatusFilter(params.status);
 

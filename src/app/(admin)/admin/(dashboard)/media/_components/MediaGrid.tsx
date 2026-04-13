@@ -40,12 +40,12 @@ export function MediaGrid({ items }: Props) {
             type="button"
             key={item.id}
             aria-label={`${item.alt || item.filename} を選択`}
-            className={`
-              group relative aspect-square rounded-lg border overflow-hidden
-              transition-all duration-200 cursor-pointer text-left
-              hover:ring-2 hover:ring-primary hover:shadow-lg
-              ${selectedId === item.id ? "ring-2 ring-primary" : ""}
-            `}
+            className={cn(
+              "group relative aspect-square rounded-lg border overflow-hidden",
+              "transition-all duration-200 cursor-pointer text-left",
+              "hover:ring-2 hover:ring-primary hover:shadow-lg",
+              selectedId === item.id && "ring-2 ring-primary",
+            )}
             onClick={() =>
               setSelectedId(selectedId === item.id ? null : item.id)
             }

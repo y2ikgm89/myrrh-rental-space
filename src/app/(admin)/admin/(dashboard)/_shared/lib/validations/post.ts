@@ -38,9 +38,20 @@ export const createPostSchema = z
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 
 /**
- * 投稿記事更新スキーマ
+ * 投稿記事 本文更新スキーマ（Server Action）
  */
-export const updatePostSchema = z
+export const updatePostBodySchema = z.object({
+  contentJson: lexicalJsonSchema,
+});
+
+export type UpdatePostBodyInput = z.infer<typeof updatePostBodySchema>;
+
+/**
+ * 投稿記事 設定更新スキーマ（Server Action）
+ *
+ * 本文（contentJson / contentHtml）以外のメタデータをまとめて更新する。
+ */
+export const updatePostSettingsSchema = z
   .object({
     title: z
       .string()
@@ -55,10 +66,10 @@ export const updatePostSchema = z
       .string()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
-    contentJson: lexicalJsonSchema,
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
     tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
+    status: z.enum(PostStatus),
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z
       .number()
@@ -70,12 +81,21 @@ export const updatePostSchema = z
   })
   .merge(seoOgpFieldsSchema);
 
-export type UpdatePostInput = z.infer<typeof updatePostSchema>;
+export type UpdatePostSettingsInput = z.infer<typeof updatePostSettingsSchema>;
 
 /**
- * 投稿記事フォームスキーマ（コンポーネント用）
+ * 投稿記事 本文フォームスキーマ（クライアント）
  */
-export const postFormSchema = z
+export const postBodyFormSchema = z.object({
+  contentJson: z.string().min(1, { error: "本文は必須です" }),
+});
+
+export type PostBodyFormData = z.infer<typeof postBodyFormSchema>;
+
+/**
+ * 投稿記事 設定フォームスキーマ（クライアント — SettingsDialog 専用）
+ */
+export const postSettingsFormSchema = z
   .object({
     title: z
       .string()
@@ -90,7 +110,6 @@ export const postFormSchema = z
       .string()
       .min(1, { error: "抜粋は必須です" })
       .max(500, { error: "抜粋は500文字以内" }),
-    contentJson: z.string().min(1, { error: "本文は必須です" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().min(1, { error: "カテゴリを選択してください" }),
     tags: z.string().optional(),
@@ -101,7 +120,7 @@ export const postFormSchema = z
   })
   .merge(seoOgpFieldsFormSchema);
 
-export type PostFormData = z.infer<typeof postFormSchema>;
+export type PostSettingsFormData = z.infer<typeof postSettingsFormSchema>;
 
 // =============================================================================
 // Post Category Schemas

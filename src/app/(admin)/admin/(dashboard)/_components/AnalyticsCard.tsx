@@ -5,6 +5,7 @@
  * Server Componentとして動作
  */
 
+import { connection } from "next/server";
 import {
   Card,
   CardContent,
@@ -32,7 +33,7 @@ function formatDuration(seconds: number): string {
 }
 
 export async function AnalyticsCard() {
-  // APIが利用可能かチェック
+  await connection();
   if (!isAnalyticsApiAvailable()) {
     return (
       <Card>

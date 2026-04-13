@@ -2,6 +2,7 @@
  * 最近の予約・お問い合わせセクション
  */
 
+import { connection } from "next/server";
 import Link from "next/link";
 import {
   getRecentReservations,
@@ -32,7 +33,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
 export async function DashboardRecentSection() {
-  // 関連データを並列取得
+  await connection();
   const [recentReservations, recentInquiries] = await Promise.all([
     getRecentReservations(5),
     getRecentInquiries(5),

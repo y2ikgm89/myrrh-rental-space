@@ -5,6 +5,8 @@
  *
  * Lexicalリッチテキストエディターを使用したFAQ項目編集UI
  * 新規作成・編集の両方に対応
+ *
+ * 設定は EditorHeader の「設定」ボタンから開くモーダルダイアログで編集する。
  */
 
 import { useState, useTransition } from "react";
@@ -19,7 +21,6 @@ import {
   EditorHeader,
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
-import { SidePanelShell } from "@/admin/components/editor/inline/SidePanelShell";
 import {
   SEOFields,
   OGPFields,
@@ -128,7 +129,7 @@ export function FaqItemInlineEditor({
   const router = useRouter();
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasEditorChanges, setHasEditorChanges] = useState(false);
 
@@ -213,6 +214,7 @@ export function FaqItemInlineEditor({
 
           reset(data);
           setHasEditorChanges(false);
+          setIsSettingsDialogOpen(false);
           router.refresh();
           toast.success("FAQ項目を保存しました");
         }
@@ -295,14 +297,6 @@ export function FaqItemInlineEditor({
     router.push("/admin/faq");
   };
 
-  const handleToggleSidePanel = () => {
-    setIsSidePanelOpen((prev) => !prev);
-  };
-
-  const handleCloseSidePanel = () => {
-    setIsSidePanelOpen(false);
-  };
-
   const handleDelete = () => {
     if (!item) return;
     startTransition(async () => {
@@ -331,185 +325,208 @@ export function FaqItemInlineEditor({
     name: cat.name,
   }));
 
-  return (
-    <InlineEditorShell
-      onSubmit={handleSubmit(onSubmit)}
-      onSave={handleSave}
-      isDirty={isFormDirty}
-      header={
-        <EditorHeader
-          title={question || "新規FAQ"}
-          slug={item ? `faq/items/${item.id}` : "faq/items/new"}
-          isDirty={isFormDirty}
-          isPending={isPending}
-          isSidePanelOpen={isSidePanelOpen}
-          onToggleSidePanel={handleToggleSidePanel}
-          onSave={handleSave}
-          onPreview={handlePreview}
-          onBack={handleBack}
-          publishActions={
-            mode === "edit" && item
-              ? {
-                  status: isPublished,
-                  onPublish: handlePublish,
-                  onUnpublish: handleUnpublish,
-                }
-              : undefined
-          }
-          extraActions={
-            mode === "edit" && item ? (
-              <Dialog
-                open={isDeleteDialogOpen}
-                onOpenChange={setIsDeleteDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={isPending}
-                  >
-                    削除
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>FAQ項目を削除しますか？</DialogTitle>
-                    <DialogDescription>
-                      この操作は取り消せません。本当に削除してもよろしいですか？
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsDeleteDialogOpen(false)}
-                      disabled={isPending}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleDelete}
-                      disabled={isPending}
-                    >
-                      {isPending ? "削除中..." : "削除"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            ) : undefined
-          }
-        />
-      }
-    >
-      {/* Question Input */}
-      <div className="border-b bg-background px-4 py-3">
-        <Label
-          htmlFor="question"
-          className="text-sm font-medium text-muted-foreground"
-        >
-          質問
-        </Label>
-        <Input
-          id="question"
-          {...register("question")}
-          placeholder="例: 予約はいつまでキャンセルできますか？"
-          className="mt-1 text-lg font-medium border-none shadow-none focus-visible:ring-0 px-0"
-          disabled={isPending}
-        />
-        {errors.question && (
-          <p className="text-sm text-destructive mt-1">
-            {errors.question.message}
-          </p>
-        )}
-      </div>
-
-      {/* Lexical Editor for Answer */}
-      <div className="flex-1 overflow-auto">
-        <Label className="text-sm font-medium text-muted-foreground mb-2 block px-8 pt-2">
-          回答
-        </Label>
-        <LexicalEditor
-          contentJson={answerJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
-          onChange={handleJsonChange}
-          disabled={isPending}
-          className={EDITOR_PROSE_CLASSES}
-          showToolbar
-          height="calc(100vh - 300px)"
-          trailingPanel={
-            <SidePanelShell
-              isOpen={isSidePanelOpen}
-              onClose={handleCloseSidePanel}
-              title="FAQ設定"
+  const deleteDialog =
+    mode === "edit" && item ? (
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            disabled={isPending}
+          >
+            削除
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>FAQ項目を削除しますか？</DialogTitle>
+            <DialogDescription>
+              この操作は取り消せません。本当に削除してもよろしいですか？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isPending}
             >
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="basic">基本</TabsTrigger>
-                  <TabsTrigger value="seo">SEO</TabsTrigger>
-                </TabsList>
-                <TabsContent value="basic" className="mt-4 space-y-4">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">カテゴリ</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <select
-                        {...register("categoryId")}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        disabled={isPending}
-                      >
-                        {categoryOptions.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="seo" className="mt-4 space-y-4">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">SEO設定</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <SEOFields
-                        register={register}
-                        errors={errors}
-                        disabled={isPending}
-                        fields={{
-                          metaDescription: "metaDescription",
-                          metaKeywords: "metaKeywords",
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">OGP設定</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <OGPFields
-                        register={register}
-                        control={control}
-                        errors={errors}
-                        setValue={setValue}
-                        disabled={isPending}
-                        fields={{
-                          ogpTitle: "ogpTitle",
-                          ogpDescription: "ogpDescription",
-                          ogpImageUrl: "ogpImageUrl",
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </SidePanelShell>
-          }
-        />
-      </div>
-    </InlineEditorShell>
+              キャンセル
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isPending}
+            >
+              {isPending ? "削除中..." : "削除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    ) : undefined;
+
+  return (
+    <>
+      <InlineEditorShell
+        onSave={handleSave}
+        isDirty={isFormDirty}
+        header={
+          <EditorHeader
+            title={question || "新規FAQ"}
+            slug={item ? `faq/items/${item.id}` : "faq/items/new"}
+            isDirty={isFormDirty}
+            isPending={isPending}
+            onOpenSettings={() => setIsSettingsDialogOpen(true)}
+            metadataPanelLabel="FAQ設定"
+            onSave={handleSave}
+            onPreview={handlePreview}
+            onBack={handleBack}
+            publishActions={
+              mode === "edit" && item
+                ? {
+                    status: isPublished,
+                    onPublish: handlePublish,
+                    onUnpublish: handleUnpublish,
+                  }
+                : undefined
+            }
+            extraActions={deleteDialog}
+          />
+        }
+      >
+        {/* Question Input */}
+        <div className="border-b bg-background px-4 py-3">
+          <Label
+            htmlFor="question"
+            className="text-sm font-medium text-muted-foreground"
+          >
+            質問
+          </Label>
+          <Input
+            id="question"
+            {...register("question")}
+            placeholder="例: 予約はいつまでキャンセルできますか？"
+            className="mt-1 text-lg font-medium border-none shadow-none focus-visible:ring-0 px-0"
+            disabled={isPending}
+          />
+          {errors.question && (
+            <p className="text-sm text-destructive mt-1">
+              {errors.question.message}
+            </p>
+          )}
+        </div>
+
+        {/* Lexical Editor for Answer */}
+        <div className="flex-1 overflow-auto">
+          <Label className="text-sm font-medium text-muted-foreground mb-2 block px-8 pt-2">
+            回答
+          </Label>
+          <LexicalEditor
+            contentJson={answerJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
+            onChange={handleJsonChange}
+            disabled={isPending}
+            className={EDITOR_PROSE_CLASSES}
+            showToolbar
+            height="calc(100vh - 300px)"
+          />
+        </div>
+      </InlineEditorShell>
+
+      {/* 設定ダイアログ — Radix 公式の async form 送信パターン準拠 */}
+      <Dialog
+        open={isSettingsDialogOpen}
+        onOpenChange={setIsSettingsDialogOpen}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>FAQ設定</DialogTitle>
+            <DialogDescription>
+              カテゴリ・SEO・OGP などの設定を編集します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="basic">基本</TabsTrigger>
+                <TabsTrigger value="seo">SEO</TabsTrigger>
+              </TabsList>
+              <TabsContent value="basic" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">カテゴリ</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <select
+                      {...register("categoryId")}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      disabled={isPending}
+                    >
+                      {categoryOptions.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="seo" className="mt-4 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">SEO設定</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <SEOFields
+                      register={register}
+                      errors={errors}
+                      disabled={isPending}
+                      fields={{
+                        metaDescription: "metaDescription",
+                        metaKeywords: "metaKeywords",
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">OGP設定</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <OGPFields
+                      register={register}
+                      control={control}
+                      errors={errors}
+                      setValue={setValue}
+                      disabled={isPending}
+                      fields={{
+                        ogpTitle: "ogpTitle",
+                        ogpDescription: "ogpDescription",
+                        ogpImageUrl: "ogpImageUrl",
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSettingsDialogOpen(false)}
+                disabled={isPending}
+              >
+                閉じる
+              </Button>
+              <Button type="submit" disabled={isPending || !isFormDirty}>
+                {isPending ? "保存中..." : "保存"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

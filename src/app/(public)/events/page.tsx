@@ -54,6 +54,7 @@ export default async function EventsPage({
     price: e.price,
     registrationOpen: e.registrationOpen,
     spaceName: e.space?.name ?? null,
+    thumbnailUrl: e.thumbnailUrl ?? null,
   }));
 
   const heroSection = sections.find(

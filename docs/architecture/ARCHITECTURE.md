@@ -71,7 +71,7 @@ graph TB
 
 - `src/shared/db/*` が Prisma の唯一の公開窓口
 - **クライアント拡張**（`$extends` / Decimal→number）の実装は **`create-app-prisma-client.ts`** に集約。Next のシングルトン（`prisma.ts`）と **`prisma/seed.ts`** はいずれも **`createAppPrismaClient`** を通す（型 `AppPrismaClient` を共有）
-- Better Auth 用は拡張前ベースクライアント **`prismaForBetterAuth`** のみアダプターに渡す（`prisma.ts`）
+- Better Auth 用は拡張前ベースクライアント **`basePrisma`** のみアダプターに渡す（`prisma.ts`）
 - **`@/shared/db/prisma.ts`** は `server-only`。seed / Bun スクリプトは **`@/shared/db/prisma` を import せず**、自前の `PrismaClient` + `createAppPrismaClient` または domain の「`PrismaClient` を引数で受けるコマンド」を使う
 - `src/shared/db/prisma.ts`, `src/shared/db/create-app-prisma-client.ts`, `src/shared/db/enums.ts`, `src/shared/db/better-auth-adapter.ts` を境界の中心とし、barrel / model shim は置かない
 - Prisma 生成物は `generated/prisma/*` に配置し、`src/` 配下へ置かない

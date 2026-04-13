@@ -41,16 +41,6 @@ paths:
 
 - **`export const dynamic = 'force-dynamic'` は PPR 環境で使用不可** — `cacheComponents: true` と Route Segment Config は非互換（ビルドエラー）。公式: 「全ページがデフォルトで動的のため不要」
 
-## Stripe 決済
-
-- **Webhook の署名ヘッダー存在チェックを DB 読み取りの前に配置** — `stripe-signature` ヘッダーが無いリクエストを `getStripeSettings()` 等の DB アクセス・復号処理の前に 400 で弾く。偽造リクエストによる不要な DB 負荷を防止
-
-- **Stripe `checkout.session.completed` で即座に fulfill しない** — `session.payment_status === "paid"` を必ずチェック。非同期決済（銀行振込等）は `"unpaid"` で来るため `async_payment_succeeded` を待つ。カード決済のみでも将来の決済手段追加に備える
-
-- **Webhook べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済み（PAID / REFUNDED）ならスキップ。Stripe は同じイベントを複数回配信する可能性がある
-
-- **`payment_intent` フィールドは `string | PaymentIntent | null`** — `typeof session.payment_intent === "string"` で型安全に取得。`as` 禁止
-
 ## ドメイン・予約
 
 - **`fireAndForget` は `@/shared/lib/async-utils`** — `@/shared/lib/errors/server` からは export されない。Server Actions の `afterSuccess` 内でメール送信・通知生成・カレンダー同期等の非クリティカル副作用に使用。第2引数は `{ operation, category }` で logError 用コンテキスト
@@ -96,6 +86,8 @@ paths:
 - **ソフトデリート追加時は全クエリの `select` に `deletedAt: true` を追加** — 型定義に `deletedAt` を加えても、Prisma の `select` に含めないと型不一致エラー。list/detail/calendar/stats の全クエリを更新すること
 - **ソフトデリートモデルの全 `findUnique`/`findFirst`/`findMany`/`update` に `where: { deletedAt: null }` 必須** — `restoreReservationCommand` のみ例外（削除済みを復元する関数）。`update` の `where` も対象（削除済み予約への返金操作等を防止）。新規クエリ追加時・レビュー時に必ず確認
 - **リレーション経由クエリの親ソフトデリートガード必須** — 子モデル（EventRegistration 等）が `deletedAt` を持たなくても、親モデル（Event）が持つ場合は `where: { eventId, event: { deletedAt: null } }` で親のソフトデリートをフィルタ。CSV エクスポート・集計クエリで特に漏れやすい
+- **ドメインコマンドの mutation クエリも親ソフトデリートガード必須** — `cancelEventRegistrationCommand` 等の update 前 findFirst にも `event: { deletedAt: null }` が必要。read 系だけでなく write 系の前提クエリも対象
+- **メール一括送信は `Promise.allSettled` でパラレル化** — `sendEventCancelledToAllParticipants` / `sendEventUpdatedToAllParticipants` 等の for-of + await 逐次送信は禁止。`Promise.allSettled` + 個別エラーログで並列化する
 - **JSON フィールドのインラインパース禁止** — `Array.isArray(x) ? x.filter(...) : []` のようなインラインフィルタは禁止。`parseStringArray(x)` / `parseBusinessHours(x)` / `parseBusinessAttributes(x)`（`json-validators.ts`）を使用。admin-queries と public-queries の両方で統一すること
 - **`exactOptionalPropertyTypes` で pricing 関数の `null` と `undefined` を混同しない** — `calculateReservationPrice` の `spaceDiscount` は `SpaceDiscountSettings | null`。`undefined` を渡すと型エラー
 - **`proxy.ts` のレート制限は Server Actions をカバーしない** — Server Actions はページURLへのPOST（`/contact` 等）で、proxy の `/api` 判定をバイパスする。公開フォーム送信には `checkActionRateLimit(formSubmitRateLimiter)` を Server Action 冒頭で呼ぶ。`getClientIpFromHeaders()` で `headers()` 経由のIP取得
@@ -129,30 +121,12 @@ paths:
 - **CSS media queries は modern syntax を使う** — `@media (width < 48rem)` を使用。`@media (max-width: 767px)` のハードコードは禁止
 - **DB VARCHAR で管理する非 Prisma enum は `enums/helpers.ts` に `as const` 定数を定義** — `CANCELLED_BY.CUSTOMER` / `CANCELLED_BY.ADMIN` のパターン。文字列リテラル `"CUSTOMER"` の直接使用禁止
 - **`inline-block` + `uppercase` + `tracking-[0.18em]` のテキスト折り返し** — `letter-spacing` が広い uppercase テキストは `inline-block` だとボタン枠内で折り返される。`inline-flex items-center justify-center whitespace-nowrap` を使用する
+- **Badge base は `whitespace-nowrap` 込み** — admin / public の両 Badge コンポーネントが `inline-flex items-center whitespace-nowrap ...` を base に持つ。日本語テキスト（「予約 32件」「定員 50名」等）が狭いセルで折り返されるのを Badge 側で一括防止する。呼び出し側でセルに `whitespace-nowrap` を重ねない
 - **ホームページセクション見出しは日英併記** — 英語 uppercase ラベル（`text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground`）+ 日本語見出し（`font-heading text-[clamp(1.5rem,2.5vw,2rem)] font-light`）。英語のみの見出しは禁止。HowItWorks / Spaces / Features / CTA で統一済み
 - **`exactOptionalPropertyTypes` 下で Next.js `Link` に optional `onClick` を渡す場合は条件スプレッド** — `onClick={props.onClick}` は `(() => void) | undefined` が `MouseEventHandler` と非互換。`{...(props.onClick && { onClick: props.onClick })}` を使用
 
 - **`<header>` に `role="banner"`、`<footer>` に `role="contentinfo"` を明示** — HTML5 暗黙 role は一部 AT で認識されない。公開ページ `site-header.tsx` / `site-footer.tsx` で設定済み
 - **モバイルメニュー閉じ後はトリガー要素にフォーカス復帰** — `closeMenu` の `onComplete` コールバックで `hamburgerRef.current?.focus()` を呼ぶ。WCAG 2.1 AA §2.4.3（フォーカス順序）準拠
-
-## GSAP アニメーション
-
-- **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持され、GSAP がクライアントで上書きする
-- **`ScrollReveal` ラッパー内のカードに `border-b last:border-b-0` 禁止** — `ScrollReveal` の `<div>` が `:last-child` を壊し、全カードで最後の線が消える。親要素に `divide-y divide-border` を使用して区切り線を管理する。実装例: `events/_components/event-list-view.tsx`
-- **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
-- **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
-- **`font-heading` (Cormorant Garamond) で数字+漢字の混合テキスト禁止** — 年月表示（`2026年4月`）等で数字と漢字のベースラインがずれる。sans (`font-sans` / デフォルト) を使用し、`tracking-wide` で可読性を確保。`font-heading` は英語見出し・日付の数字単体（EventCard の日番号等）に限定
-- **`useGSAP` 外の GSAP アニメーションには `useEffect` cleanup 必須** — イベントハンドラで `gsap.fromTo`/`gsap.to` を直接呼ぶ場合、`useEffect` の cleanup で `gsap.killTweensOf(element)` を呼ぶ。ref をクリーンアップ関数内で使う場合はローカル変数にキャプチャする（`exhaustive-deps` 警告回避）
-
-## Lexical WYSIWYG
-
-- **Lexical は既に dynamic import 済み** — `LazyLexicalEditor.tsx` が `next/dynamic` + `ssr: false` でコード分割。管理 layout には Lexical の直接 import なし。パフォーマンスレビューで「Lexical がバンドル肥大化」と指摘された場合は `LazyLexicalEditor` の存在を確認してから対応判断
-- **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
-- **Lexical エディタのコンテンツ領域は `bg-card`（白）** — `bg-background`（`oklch(0.98 ...)` 微グレー）ではなく `bg-card`（`oklch(1 0 0)` 白）を使用。文書編集エリアは紙のメタファーで白背景が適切。`LexicalEditor.tsx` の外枠 div で設定
-- **Lexical ツールバーはエディタ+インスペクターの全幅に配置（Gutenberg パターン）** — ツールバーを `section` の外に出し、外枠 `div.flex-col` の直下に配置。コンテンツ+インスペクターは `div.flex.flex-1` で横並び。ツールバーがインスペクター開閉時にかぶらない。`LexicalEditor.tsx` で実装
-- **`tryConvertHtmlStringToLexicalJsonString` は SSR で使用不可** — `DOMParser` が Node.js に存在しない。Server Component / Server Action から呼ぶと `Attempted to call client function from the server` エラー。`useState` 遅延初期化で呼ぶ場合も `typeof window === "undefined"` ガードが必須（SSR でも実行されるため）
-- **複合ノードの `isShadowRoot()` は全子ノードに必須** — Container だけでなく Item / Title / Content / Panel / Citation 等の全中間・子 ElementNode にも `isShadowRoot(): boolean { return true }` を実装する。欠落するとキャレットがノード境界を越えて漏れる。`updateDOM` の `prevNode` は具象クラス名ではなく `this` 型を使用
-- **Lexical アップグレード時はバージョン参照を全文 grep** — `0.XX` で `.claude/agents/`, `.agents/skills/`, `docs/`, `__tests__/`, ソースコメントを検索。CLAUDE.md・lexical-patterns.md（.claude/rules + docs/reference 両方）・TECH_STACK.md・project-reviewer.md・lexical-reviewer.md・scaffold ファイル・DraggableBlockPlugin フォークコメントが対象。plans/ の完了済みファイルは変更不要
 
 ## Page-First Architecture（公開ページ）
 
@@ -212,29 +186,37 @@ paths:
 - **動的 layout を持つサブルートに `loading.tsx` 必須** — `mypage/layout.tsx`（認証チェーン）や `(dashboard)/layout.tsx` 配下のサブルートには個別の `loading.tsx` を追加。親の `loading.tsx` だけではページ固有のデータ取得待ちと認証待ちが同じスケルトンに合流する
 - **マイページ開発確認は dev login ボタンを使用** — `/login` ページに `NODE_ENV !== "production"` でのみ表示される「テスト顧客でログイン」ボタンあり（`dev-login-action.ts`）。Better Auth の `signUpEmail`/`signInEmail` で `dev-customer@example.com` セッションを作成し、`ensureCustomerLinked` が Customer を自動生成
 
+## Prisma / adapter-pg
+
+- **`prisma.$transaction([...])` 配列形式は pg deprecation を誘発するため禁止** — `@prisma/adapter-pg` 7.7.0 + `pg` 8.20.0 の組み合わせで、pinned PoolClient 上に `BEGIN + N queries + COMMIT` が積まれる瞬間に `pg/lib/client.js:690` の `_queryQueue.length > 0` チェックが発火し `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` を emit する。独立クエリは `Promise.all`、原子性必須は interactive transaction `prisma.$transaction(async (tx) => { ... })` を使う。ESLint `no-restricted-syntax` で error 検出。例外: `prisma/seed.ts` の一括 `deleteMany`（実行回数限定・原子性必須）
+- **`PrismaPg` は explicit `Pool` インスタンスを渡す** — `new PrismaPg({ connectionString, max, ... })` のように config 渡しだと `PrismaPgAdapterFactory.connect()` の内部で `new pg2.Pool(config)` が呼ばれるたびに新しい Pool を作る（`node_modules/@prisma/adapter-pg/dist/index.mjs:752`）。`new Pool(...)` を渡すと `externalPool` 経路で 1 Pool が再利用される。`src/shared/db/prisma.ts` が dev global singleton で保持
+- **`@types/pg` のネスト衝突**: `@prisma/adapter-pg` が内部で `@types/pg@8.11.x` を依存に持ち、project の `@types/pg@8.20.x` と `Client.connect()` 戻り値型が非互換。`package.json` の `overrides: { "@types/pg": "^8.20.0" }` で強制統一
+
 ## Prisma Migrate
 
+- **`prisma db execute --stdin` は SELECT 結果を表示しない** — DDL/DML 専用。ad-hoc クエリには `bun -e` + PrismaClient を使用: `bun -e "const { PrismaClient } = require('./generated/prisma/client'); const { PrismaPg } = require('@prisma/adapter-pg'); const pg = new PrismaPg({ connectionString: process.env.DATABASE_URL }); const p = new PrismaClient({ adapter: pg }); p.xxx.findMany({...}).then(r => { console.log(JSON.stringify(r, null, 2)); p.$disconnect(); })"`
 - **`prisma migrate reset` は AI エージェント保護が発動** — `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="<ユーザーの同意メッセージ>"` 環境変数が必要。ユーザーに確認し、明示的な同意を得てから実行する
 - **DB ドリフト時**: `migrate reset --force`（同意環境変数付き） → seed 再実行が標準フロー
+- **`prisma migrate reset --skip-seed` は Prisma 7.7 で非サポート** — `--force` のみ使用する。reset 後は `bun prisma/seed.ts` を明示実行（`prisma.config.ts` に seed が登録されていないため自動実行されない）
 - **マイグレーションに余分な ALTER TABLE が混入** — Prisma の内部差分検出に起因。`@default(cuid())` 等の表現変更で全テーブルの `ALTER COLUMN DROP DEFAULT` が生成されることがある。機能的に問題なし
 - **`cuid()` の VarChar 長は 30 以上** — `@default(cuid())` は 24-30 文字を生成。`@db.VarChar(21)` では切り詰めエラー。新規モデルは `@db.VarChar(30)` を使用。既存モデル（Reservation 等）は `@db.Uuid` のため影響なし
 - **`prisma migrate diff` の `--from-schema-datasource` は Prisma 7 で削除済み** — `--from-config-datasource` を使用。非対話環境でのマイグレーション手順: `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script > migration.sql` → `prisma db execute --file migration.sql` → `prisma migrate resolve --applied <name>`
-
-## Cron / Webhook
-
-- **Cron の排他実行には `pg_try_advisory_lock` を使用** — Cloud Run 複数インスタンスで同時実行されるとトランザクション競合が発生する。`pg_try_advisory_lock(固定ID)` で非ブロッキングロック取得 → 失敗時は `{ skipped: true }` で即時リターン。`finally` で `pg_advisory_unlock` 必須。実装例: `src/app/api/cron/calendar-sync/route.ts`
-- **`deleteAccountAction` は削除前に customerId 取得 + 全関連タグ無効化必須** — `auth.api.deleteUser()` は Cascade で Customer/Reservation/Review を削除するため、削除後は customerId を取得不可。削除前に `getCustomerByUserId` で取得し、削除後に `CUSTOMERS`/`RESERVATIONS`/`REVIEWS`/`INQUIRIES`/`EVENTS` + `customers.detail(id)` を全て無効化
 
 ## デプロイ
 
 - **`/api/health` で内部インフラ状態（DB 接続状態、バージョン等）を公開しない** — Cloud Run / LB のヘルスチェックには `status` + `timestamp` のみ返す。`database: "connected"/"disconnected"` のようなフィールドは攻撃者のインフラ偵察に利用される
 - **デプロイ先は Google Cloud Run**（Vercel 不使用）— `Dockerfile` + `cloudbuild.yaml`。URL 環境変数は `NEXT_PUBLIC_APP_URL` / `BETTER_AUTH_URL` を Cloud Run に明示設定（`VERCEL_URL` は存在しない）
 - **Docker / 秘密未注入のビルドは `bun run build:skip-env`**（`SKIP_ENV_VALIDATION=true`）— `DATABASE_URL` / `BETTER_AUTH_SECRET` がビルド時に無い場合。本番相当は Secret Manager でビルド時に注入し **`bun run build`**（`@t3-oss/env-nextjs` 検証を通す）
-- **staging 環境にも `CRON_SECRET` を設定必須** — `proxy.ts` の cron 認証は `CRON_SECRET` が未設定の場合スキップされる。本番は起動時チェックで保護されるが、staging（Internet 公開の Cloud Run インスタンス等）は明示設定が必要
+- **staging 環境にも `CRON_SECRET` を設定必須** — `proxy.ts` の cron 認証は本番で `CRON_SECRET` 未設定時に 401 を返す。開発環境のみ認証スキップ。staging は明示設定が必要
+- **`DEFAULT_ROBOTS_TXT` のディレクティブに Tabler Icons プレフィックスが混入していた** — `IconUser-agent` → `User-agent` に修正済み。テンプレートリテラル内の平文テキストに IDE 自動補完でアイコン名が混入するパターン。robots.txt 変更後は `curl -s $URL/robots.txt | head -20` で確認
 
 ## ビルド・検証
 
+- **Playwright MCP が navigate/close 両方タイムアウトする場合** — HMR 多発後にブラウザセッションがスタックする。dev サーバーを `cmd //c "taskkill /PID <pid> /F /T"` で強制終了→再起動すると Playwright も新セッションで回復する
+- **MINGW64 で `bun run X 2>&1 | tail -N` が途中で切り詰められる** — Bash ツール経由のパイプで長い stdout が truncate されるケースがある。長い出力を確実に取得するには `cmd > /tmp/out 2>&1; echo "EXIT:$?"; tail -N /tmp/out` を使う
+
 - **`useRef` 変数名は `Ref` サフィックス必須** — `@eslint-react/naming-convention-ref-name` が `useRef` の戻り値に `ref` または `*Ref` 命名を要求。`touchStartX` → `touchStartXRef`
+- **`useRef<T>()` に初期値なしは TS6 strict でエラー** — `useRef<ReturnType<typeof setTimeout>>()` → `useRef<ReturnType<typeof setTimeout>>(undefined)` と明示する。`useRef` overload は引数1つを要求する
 - **Radix `TabsContent` は `Tabs` コンテキスト外で使用不可** — コンポーネントを create/edit モードで共有する場合、`TabsContent` ラップは呼び出し側で行い、中身のフィールドコンポーネントは `Tabs` に依存しない設計にする。`TermsSettingsFields` が実装例
 - **ローカル barrel の tree-shaking は信頼できない** — Next.js の `optimizePackageImports` は npm パッケージのみ対象。`index.ts` で re-export すると未使用コンポーネントもバンドルに含まれる可能性がある。バンドルサイズが問題になる場合は barrel 経由ではなく直接 import する（例: `section-parsers.ts` から直接 import して Zod をクライアントバンドルから除去）
 - **Turbopack `"use server"` barrel re-export はクライアントから解決できない** — `"use server"` ファイルの関数を `index.ts`（barrel）経由で re-export し、`"use client"` コンポーネントから import すると `Export doesn't exist in target module` ビルドエラー。クライアントコンポーネントからは `@/admin/actions/post/mutations` のようにサブモジュールを直接 import する。Server Component / Server Action 間の barrel re-export は問題ない
@@ -253,6 +235,7 @@ paths:
 - **Turbopack ビルドはルート別 JS サイズを表示しない** — `bun run build` 出力の「Total client JS」は全チャンク合計。1ルートの First Load JS は `.next/server/app/<route>.html` 内の `<script>` 参照チャンクを合計して計算する
 - **Turbopack が `¥`（U+00A5）を JSX 属性内でエスケープシーケンスと誤認識** — `placeholder="¥1,000"` 等はビルドエラー（`Invalid unicode escape`）。モジュールレベル定数に `"\u00A51,000"` で定義し `placeholder={CONST}` で参照する
 - **Turbopack HMR がコンポーネント変更を反映しない場合がある** — Playwright MCP で確認する際に古いレンダリングが残る。`?_t=N` パラメータ付きナビゲーションでも解消しない場合は dev サーバー再起動（`bun dev`）が必要
+- **dev サーバーは `db:generate` 後も古い Prisma Client を保持** — `schema.prisma` 変更 → `bun run db:generate` しても、稼働中の `next dev` プロセスはメモリに旧 Prisma Client の型を持ったまま。新カラムを select すると `PrismaClientValidationError: Unknown field ... for select statement on model ...` で 500 → 公開ページは 404 フォールバック。`cmd //c "taskkill /PID <pid> /F /T"` で強制終了 → `bun dev` で再起動が必須
 - **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
 - **`server-only` の間接依存チェーンに注意** — `safe-fetch.ts` 等の共有ユーティリティが `./logger`（`server-only`）を import すると、テストで `mock.module("server-only")` が効かない場合がある。`server-only` なしの `logger-core` を直接 import する。対象: `safe-fetch.ts`, `cron-auth.ts` 等のテスト対象モジュール
 - **`bun run test` はディレクトリ別分離実行** — `bun test` 一括実行では `mock.module` のグローバル干渉で unit テストと integration テストが相互汚染する。`package.json` の `test` スクリプトは `bun test __tests__/unit/lib && bun test __tests__/unit/api && ... && bun test __tests__/integration` の形式。一括実行（`bun test`）は避ける
@@ -272,6 +255,8 @@ paths:
 
 - **`revise-claude-md` はセッション終了直前に呼ぶ** — CLAUDE.md はプロジェクトレベルのプロンプトキャッシュ層。セッション中に変更するとそれ以降のターンのキャッシュがすべて破壊される
 - **スキルは必ず Skill ツールで呼ぶ（Task ツール不可）** — `plugin:name` や `ns:name` 形式のスキルも同様。Task ツールの `subagent_type` に指定すると `Agent type not found` エラー。CLAUDE.md スキルテーブルで `（Task）` 注釈のないものは全て Skill ツール呼び出し
+- **subagent-driven-development の密結合タスクは 1 implementer にバンドル** — 複数タスクが互いに型依存しており中間状態で `type-check` が broken になる場合（例: 旧 API 削除 → 新 UI 追加 → 新ルート作成 → 旧ルート削除）、個別 dispatch せず単一 implementer に全タスクを渡す。plan の commit 分割は維持したまま N コミット作成することで spec 遵守とクリーン状態復帰を両立できる。spec reviewer は bundle 全体を 1 回でレビュー
+- **plan の schema 前提は実行時に検証** — `writing-plans` で作成した plan が「この列にマイグレーション」「この列を select に追加」等の指示を含む場合、実行前に必ず `grep -A20 "^model <Model>" prisma/schema.prisma` で現行スキーマと照合する。plan 作成時点で存在した列が削除されている / 存在しない列を前提にすることがある（例: `AdminNotification.linkUrl` を前提にしたが実態は `notification-helpers.ts` の render-time 算出だった）。implementer は前提の齟齬を発見したら BLOCKED ではなく justified deviation として報告してよい
 - **MCP ツールはセッション開始前に確定させる** — セッション途中で `.mcp.json` を変更したり MCP サーバーを追加・削除するとツール定義のプレフィックスが変わりキャッシュが破壊される
 - **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
 - **hook スクリプトの `grep` + `pipefail` 罠** — `set -euo pipefail` 下で `var=$(cmd | grep pattern | head -1)` は grep 不一致（exit 1）でスクリプトが無音終了・stderr なし。根本解決: `if ! cmd | grep -qE 'pattern'; then exit 0; fi`（`if` 条件式内は `set -e` 対象外が Bash 仕様）
@@ -289,6 +274,7 @@ paths:
 
 ## フレームワーク固有
 
+- **`'use cache'` は dev 環境でもキャッシュが永続する** — DB を管理画面外で直接更新（SQL / `bun -e`）しても `updateTag` が呼ばれないためキャッシュが残る。dev サーバー再起動で全キャッシュがクリアされる。管理画面の Server Actions 経由の更新は `afterSuccess` の `updateTag` で即時反映される
 - **`revalidateTag` は Next.js 16 で 2 引数必須** — `revalidateTag(tag: string, profile: string | CacheLifeConfig)`。第 2 引数 `profile` は省略不可（旧 Next.js 14/15 との破壊的変更）。`CACHE_LIFE.*` 定数を渡すのが正しい用法。監査・レビュー時に「余分な引数」と誤識別しないこと
 - **`updateTag` は 1 引数** — `updateTag(tag: string)` は `revalidateTag` とは異なり第 2 引数なし。混同しない
 - **`global-error.tsx` に `next/font/google` 使用不可** — admin.css/public.css をインポートしないため、変数モードのフォント CSS が preload されるが未使用警告になる。`<body style={{ fontFamily: '...' }}>` でシステムフォントを直接指定する
@@ -303,13 +289,6 @@ paths:
 - **`exactOptionalPropertyTypes` で optional prop に `T | undefined` を渡せない** — `prop?: string` に `string | undefined` を渡すとエラー。コンポーネント props では `prop: string | undefined`（required + union）で宣言する。`prop?: string` は「省略可能だが渡すなら `string`」の意味
 - **認証・プライベートページには `robots: { index: false, follow: false }` 必須** — `/login`, `/forgot-password`, `/reset-password`, `/mypage/*` 等。layout.tsx に設定すれば全サブページに継承。未設定だとクロールバジェット浪費＋低品質ページ評価リスク
 
-## CSV Export（API Route）
-
-- **空結果で 404/エラーを返さない** — `generateCsv` はヘッダーのみの空 CSV を正常に返す。0件は正常状態
-- **ステータスラベルは `enums/helpers.ts` の `*_STATUS_LABELS` を使用** — Route にローカル定義禁止。`status-badges.tsx` の Badge ラベルも `helpers.ts` を正本とする
-- **ファイル名は `resource-yyyyMMdd.csv`** — イベントタイトル等のユーザー入力値をファイル名に含めない（エンコーディング問題回避）
-- **新しい Prisma enum のステータスラベルは `enums/helpers.ts` に `*_STATUS_LABELS` を追加必須** — Badge config と CSV Export Route の両方から参照される Single Source of Truth。追加済み: `RESERVATION_STATUS_LABELS`, `PAYMENT_STATUS_LABELS`, `EVENT_STATUS_LABELS`
-
 ## セキュリティ
 
 - **API Route の処理順序: 認証 → バリデーション → ビジネスロジック** — バリデーションを認証前に実行すると未認証者にパラメータ名・型情報が漏洩する。`checkPermission` を最初に呼ぶ
@@ -320,15 +299,9 @@ paths:
 - **Google Maps Embed API は `https://www.google.com/maps/embed/v1/` を使用** — 非公式パラメータ（`pb=`, `output=embed`）禁止。API key は `getDecryptedGoogleMapsApiKey()` で復号。Maps Embed API は無料（使用量無制限）
 - **Instagram 画像は `*.cdninstagram.com` と `*.fbcdn.net` の両方が必要** — Meta は CDN ドメインを使い分ける。`proxy.ts` の `img-src` と `next.config.ts` の `remotePatterns` の両方に追加すること
 - **`revalidateTag` 先のキャッシュが存在するか確認必須** — cron で `revalidateTag(CACHE_TAGS.X, ...)` を呼んでも、対応するクエリに `'use cache'` + `cacheTag(CACHE_TAGS.X)` がなければ無効化対象が存在しない。新規 cron 追加時は公開クエリ側のキャッシュ設定を必ず確認
-
-## Editorial デザイン
-
-- **editorial ボタンは全箇所 `Button variant="editorial"` で統一** — raw `<Link>` + インラインスタイルで editorial ボタンを実装しない。`button.tsx` の editorial variant（シャープエッジ + bronze hover）が Single Source of Truth。site-header / cta-section / site-cta すべてで Button コンポーネントを使用
-- **公開ページで `bg-foreground`（ダーク反転セクション）禁止** — Editorial Magazine（Kinfolk/Cereal）は全コンテンツセクション白背景が基本。ダーク全幅セクションは Accent 10% 制約を超え、トーンが崩れる。SiteCTA は `bg-background` + `border-t border-border`（余白で分離）
-- **`editorial-border-accent` CSS クラスは Divider 専用** — `width: 4rem` を持つ短い装飾線。`Section border="accent"` 等の全幅要素に使うとレイアウトが 4rem 幅に潰れる。Section の accent border は `border-t-2 border-accent`（Tailwind ユーティリティ）を使用
-- **Button editorial に色反転 override を書かない** — ダーク背景用の `className="border-background text-background hover:bg-background hover:text-accent"` は Button の variant 設計を迂回するハック。背景を `bg-background`（白）にし、editorial variant をそのまま使う
-
-- **`section-design.ts` の値配列変更時は DesignFields + 型ガードも同期必須** — `DesignFields.tsx` の `backgroundOptions`/`paddingOptions`/`maxWidthOptions` + Set-based 型ガード（`isBgValue` 等）が `sectionBgValues`/`sectionSpacingValues`/`sectionMaxWidthValues` と 1:1 対応
+- **`proxy.ts` の `timingSafeEqual` はシークレット比較の標準** — Cron / Webhook のトークン比較に使用。`!==` による文字列比較はタイミング攻撃に脆弱。新規トークン比較追加時も同関数を使う
+- **dev 便利バイパスには本番ガード必須** — Turnstile / Cron で `if (!secret) return true` パターンは `process.env["NODE_ENV"] === "production"` で本番を保護。staging 環境も保護対象
+- **空配列フォールバック `|| arr.length === 0` で全許可にしない** — `ALLOWED_MIME_TYPES.OTHER = []` + `|| allowedTypes.length === 0` で全 MIME 通過していた。空配列は「何も許可しない」を意味すべき
 
 ## ナビゲーション
 
@@ -339,11 +312,14 @@ paths:
 ## ホームページ Section 管理
 
 - **seed 再実行時のホームページセクション重複** — seed は既存セクションを削除せず追加する。旧型（`hero-parallax`, `concept` 等）と新型（`homepage-*`）が重複し、管理画面に二重表示される。seed 後に旧型を手動削除するか、seed スクリプトに既存セクション削除ロジックを追加すること
+- **seed は既存セクションの config を更新しない** — `DEFAULT_PAGE_SECTIONS` のフォーマットが変更されても（例: `imageUrl`→`images` 配列）、既存 DB レコードは旧フォーマットのまま。`mapHeroConfig` 等のマッパーが `arr(config, "images")` で取得できずデフォルト1枚にフォールバックする。手動で DB 更新するか seed reset が必要
 - **`homepage-*` セクション型はホームページ専用** — 他ページの `hero`/`cta`/`features` 等は標準セクション型（SectionRenderer 描画）。`homepage-*` に置き換えない
 - **ホームページは DB 未登録でも表示される** — `page.tsx` が `homepage-*` セクションをフィルタし、0件なら editorial コンポーネントの defaultProps で直接レンダリング
 - **公開ページのセクション高さは `svh` 単位を使用** — `vh` は iOS Safari のアドレスバー問題がある。`min-h-[*svh]` を使用し、`h-[*vh]` は禁止。`height` ではなく `min-height` でコンテンツ溢れを防ぐ（WCAG 1.4.4 準拠）。例外: error/loading/not-found の中央寄せ用 `min-h-[60vh]`、ダイアログの `max-h-[85vh]`、`min-h-screen`（ページ全体）
 - **ヒーロー高さはセマンティックプリセット + カスタム** — `sm/md/lg/full/custom` の5段階。custom 時は `heightCustom` (svh 数値) をインラインスタイルで適用。ユーザーに px/vh を直接入力させない（Squarespace/Payload CMS 方式）
-- **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（Server Component: ヘッダー+CTA）が `spaces-carousel.tsx`（Client Component: Center Stage Carousel）を呼び出す。中央カード z-30/scale 1、隣 z-20/scale 0.9 の重なりカードスタック。51回繰り返しで無限スクロール。detail パネル（カテゴリ→名前→料金→広さ/定員→説明→View Details）+ ドットインジケーター。モバイルはタッチスワイプ、デスクトップは矢印ナビ + ホバーオーバーレイ
+- **ホームページ Spaces セクションは SC + CC 分離** — `spaces-section.tsx`（Server Component: ヘッダー+CTA）が `spaces-carousel.tsx`（Client Component: Center Stage Carousel + 自動回転）を呼び出す。中央カード z-30/scale 1、隣 z-20/scale 0.9 の重なりカードスタック。51回繰り返しで無限スクロール。detail パネル + ドットインジケーター。手動操作（矢印・スワイプ・キーボード・ドット）+ 自動回転（`autoPlayInterval` 秒、hover/focus/reduced-motion/tab非表示で停止、ユーザー操作後8秒一時停止）
+- **ホームページセクション固有の UI 設定は section config に追加** — カルーセル速度・表示件数等のセクション固有設定は `definitions/homepage-*/schema.ts` に `field.*` ヘルパーで追加する。Settings シングルトンではなくセクション単位で管理画面から制御可能（AutoSectionForm が自動フォーム生成）
+- **セクション定義の enum は `as const` 配列 + `field.select` + Set 型ガード** — `HERO_TRANSITIONS` のように schema ファイルに `as const` 配列を定義し、`field.select` の `options` に渡す。消費側（`page.tsx`）では `new Set<string>(VALUES)` + `is*` 型ガードでパース。`enums/helpers.ts` と同構造だがセクション定義はスキーマファイルに閉じる
 
 ## ブログサ���ドバー
 

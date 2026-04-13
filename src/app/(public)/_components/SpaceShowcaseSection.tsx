@@ -23,7 +23,7 @@ export interface ShowcaseSpaceData {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
-  readonly description: string | null;
+  readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly hourlyPrice: number | null;
   readonly dailyPrice: number | null;
@@ -82,7 +82,7 @@ export function SpaceShowcaseSection({
             <SpaceCard
               slug={featured.slug}
               name={featured.name}
-              description={featured.description}
+              description={featured.descriptionPlainText}
               capacity={featured.capacity}
               area={featured.area}
               hourlyPrice={featured.hourlyPrice}
@@ -112,7 +112,7 @@ export function SpaceShowcaseSection({
               <SpaceCard
                 slug={space.slug}
                 name={space.name}
-                description={space.description}
+                description={space.descriptionPlainText}
                 capacity={space.capacity}
                 area={space.area}
                 hourlyPrice={space.hourlyPrice}

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getAuditLogs } from "@/admin/queries/audit-log";
 import { loadAdminAuditLogSearchParams } from "@/shared/lib/nuqs";
 import { getAuditActionFilterOrAll } from "@/shared/lib/validations/enums/helpers";
@@ -19,6 +20,7 @@ type PageProps = {
 };
 
 async function AuditLogList({ searchParams }: PageProps) {
+  await connection();
   const params = await loadAdminAuditLogSearchParams(searchParams);
   const logs = await getAuditLogs(
     omitUndefined({
@@ -48,15 +50,13 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            監査ログ
-          </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            システム操作の履歴を確認します
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          監査ログ
+        </h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          システム操作の履歴を確認します
+        </p>
       </div>
 
       {/* スタッツカード */}

@@ -9,6 +9,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getSettings } from "@/admin/queries/settings";
 import { SettingsLayout } from "../_components/SettingsLayout";
 import { SettingsTabs } from "../_components/SettingsTabs";
@@ -23,6 +24,7 @@ import type { ReactElement } from "react";
  * 動的コンテンツ: 通知・決済設定
  */
 async function NotifySettingsContent(): Promise<ReactElement> {
+  await connection();
   const settings = await getSettings();
 
   if (!settings) {

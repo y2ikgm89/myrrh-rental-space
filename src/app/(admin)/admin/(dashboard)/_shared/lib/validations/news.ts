@@ -36,16 +36,25 @@ export const createNewsSchema = z.object({
 export type CreateNewsInput = z.infer<typeof createNewsSchema>;
 
 /**
- * お知らせ更新スキーマ
+ * お知らせ 本文更新スキーマ（Server Action）
  */
-export const updateNewsSchema = z
+export const updateNewsBodySchema = z.object({
+  contentJson: lexicalJsonSchema,
+});
+
+export type UpdateNewsBodyInput = z.infer<typeof updateNewsBodySchema>;
+
+/**
+ * お知らせ 設定更新スキーマ（Server Action）
+ */
+export const updateNewsSettingsSchema = z
   .object({
     slug: newsSlugSchema,
     title: z
       .string()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
-    contentJson: lexicalJsonSchema,
+    isPublished: z.boolean(),
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z
       .number()
@@ -57,20 +66,27 @@ export const updateNewsSchema = z
   })
   .merge(seoOgpFieldsSchema);
 
-export type UpdateNewsInput = z.infer<typeof updateNewsSchema>;
+export type UpdateNewsSettingsInput = z.infer<typeof updateNewsSettingsSchema>;
 
 /**
- * お知らせフォームスキーマ（コンポーネント用）
- * 作成・編集両方で使用
+ * お知らせ 本文フォームスキーマ（クライアント）
  */
-export const newsFormSchema = z
+export const newsBodyFormSchema = z.object({
+  contentJson: z.string().min(1, { error: "本文は必須です" }),
+});
+
+export type NewsBodyFormData = z.infer<typeof newsBodyFormSchema>;
+
+/**
+ * お知らせ 設定フォームスキーマ（クライアント — SettingsDialog 専用）
+ */
+export const newsSettingsFormSchema = z
   .object({
     slug: newsSlugSchema,
     title: z
       .string()
       .min(1, { error: "タイトルは必須です" })
       .max(200, { error: "タイトルは200文字以内で入力してください" }),
-    contentJson: z.string().min(1, { error: "本文は必須です" }),
     isPublished: z.boolean(),
     publishedAt: z.string().optional(),
     contentWidth: z.string().optional(),
@@ -78,4 +94,4 @@ export const newsFormSchema = z
   })
   .merge(seoOgpFieldsFormSchema);
 
-export type NewsFormData = z.infer<typeof newsFormSchema>;
+export type NewsSettingsFormData = z.infer<typeof newsSettingsFormSchema>;

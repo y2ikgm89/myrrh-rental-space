@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { IconPlus } from "@tabler/icons-react";
 import { getCoupons } from "@/admin/queries/coupon";
@@ -39,6 +40,7 @@ type PageProps = {
 };
 
 async function CouponList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminCouponSearchParams(searchParams);
   const status = isValidCouponStatusFilter(params.status)
     ? params.status

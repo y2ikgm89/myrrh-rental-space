@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getUserStats } from "@/admin/queries/user";
 import {
   Card,
@@ -7,6 +8,7 @@ import {
 } from "@/admin/components/ui";
 
 export async function StaffStats() {
+  await connection();
   const stats = await getUserStats();
 
   return (

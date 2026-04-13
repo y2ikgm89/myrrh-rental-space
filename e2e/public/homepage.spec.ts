@@ -192,7 +192,7 @@ test.describe("ホームページ - フッター", () => {
 
     if ((await privacyLink.count()) > 0) {
       await privacyLink.click();
-      await page.waitForURL(/privacy/);
+      await page.waitForURL(/terms\/privacy-policy/);
     }
   });
 });

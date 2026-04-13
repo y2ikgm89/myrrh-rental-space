@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Prisma } from "@generated/prisma/client";
 import { prisma } from "@/shared/db/prisma";
 import {
   DiscountType,
@@ -16,7 +17,9 @@ import {
 type SpaceCommandInput = {
   slug: string;
   name: string;
-  description: string;
+  descriptionJson: Prisma.InputJsonValue;
+  descriptionHtml: string;
+  descriptionPlainText: string;
   addressDetail?: string | null | undefined;
   access?: string | null | undefined;
   capacity: number;
@@ -56,7 +59,9 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
   return {
     slug: input.slug,
     name: input.name,
-    description: input.description,
+    descriptionJson: input.descriptionJson,
+    descriptionHtml: input.descriptionHtml,
+    descriptionPlainText: input.descriptionPlainText,
     addressDetail: normalizeNullableString(input.addressDetail),
     access: normalizeNullableString(input.access),
     capacity: input.capacity,

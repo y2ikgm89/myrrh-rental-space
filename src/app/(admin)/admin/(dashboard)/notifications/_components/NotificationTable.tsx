@@ -73,12 +73,10 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="w-8" />
-              <TableHead className="whitespace-nowrap">タイプ</TableHead>
+              <TableHead>タイプ</TableHead>
               <TableHead>内容</TableHead>
-              <TableHead className="hidden md:table-cell whitespace-nowrap">
-                日時
-              </TableHead>
-              <TableHead className="whitespace-nowrap">操作</TableHead>
+              <TableHead className="hidden md:table-cell">日時</TableHead>
+              <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

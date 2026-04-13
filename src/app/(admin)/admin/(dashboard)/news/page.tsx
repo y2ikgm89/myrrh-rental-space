@@ -5,6 +5,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getNewsList } from "@/admin/queries/news";
 import { getPageBySlug } from "@/admin/queries/page";
 import { NewsFilters } from "./_components/NewsFilters";
@@ -32,6 +33,7 @@ type PageProps = {
 // ==============================================================================
 
 async function NewsList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminNewsSearchParams(searchParams);
   const status = parseNewsStatusFilter(params.status);
 
@@ -57,6 +59,7 @@ async function NewsList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 async function SeoContent() {
+  await connection();
   const page = await getPageBySlug("news");
 
   if (!page) {

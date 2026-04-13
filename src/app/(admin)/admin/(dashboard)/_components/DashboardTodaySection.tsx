@@ -2,6 +2,7 @@
  * 本日の予約セクション
  */
 
+import { connection } from "next/server";
 import { getTodayReservations } from "@/admin/queries/dashboard";
 import {
   Card,
@@ -23,6 +24,7 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
 export async function DashboardTodaySection() {
+  await connection();
   const todayReservations = await getTodayReservations();
 
   if (todayReservations.length === 0) {

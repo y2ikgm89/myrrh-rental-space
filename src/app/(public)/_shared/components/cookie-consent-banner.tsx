@@ -19,7 +19,7 @@ const DEFAULT_MESSAGE =
   "当サイトでは、サービス向上のためにCookieを使用しています。Cookieの使用に同意いただける場合は「同意する」をクリックしてください。";
 const DEFAULT_ACCEPT_TEXT = "同意する";
 const DEFAULT_REJECT_TEXT = "拒否する";
-const DEFAULT_POLICY_URL = "/privacy";
+const DEFAULT_POLICY_URL = "/terms/privacy-policy";
 
 const STORAGE_KEY = "cookie-consent";
 

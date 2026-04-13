@@ -1,8 +1,16 @@
 import "server-only";
 
+import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
 import { InstagramFeedLayout } from "@generated/prisma/enums";
 import { safeDecrypt } from "@/shared/lib/crypto";
+import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  safeFetch,
+} from "@/shared/lib/errors/server";
+import { toPlainArray } from "@/shared/lib/serialize";
 import { getValidInstagramFeedLayout } from "@/shared/lib/validations/enums/helpers";
 import { getTokenExpiryDays, shouldRefreshToken } from "@/shared/lib/instagram";
 import type {
@@ -59,23 +67,37 @@ export async function getInstagramConfig(): Promise<InstagramConfig> {
 }
 
 export async function getInstagramPosts(): Promise<InstagramPostData[]> {
-  const posts = await prisma.instagramPost.findMany({
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      postId: true,
-      postUrl: true,
-      mediaUrl: true,
-      caption: true,
-      sortOrder: true,
-      createdAt: true,
-    },
+  "use cache";
+  cacheTag(CACHE_TAGS.INSTAGRAM_FEED);
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+
+  const posts = await safeFetch({
+    fetch: () =>
+      prisma.instagramPost.findMany({
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          postId: true,
+          postUrl: true,
+          mediaUrl: true,
+          mediaType: true,
+          caption: true,
+          sortOrder: true,
+          createdAt: true,
+        },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getInstagramPosts",
   });
 
-  return posts.map((post) => ({
-    ...post,
-    createdAt: post.createdAt.toISOString(),
-  }));
+  return toPlainArray(
+    posts.map((post) => ({
+      ...post,
+      createdAt: post.createdAt.toISOString(),
+    })),
+  );
 }
 
 export async function getDecryptedInstagramToken(): Promise<string | null> {

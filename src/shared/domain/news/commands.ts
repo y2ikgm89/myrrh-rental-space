@@ -9,13 +9,14 @@ import {
   getSlugErrorMessage,
 } from "@/shared/lib/slug-validation";
 import type {
-  CreateNewsBackupResult,
   CreateNewsCommandInput,
+  CreateNewsBackupResult,
   CreateNewsResult,
   DeleteNewsResult,
   PublishNewsResult,
   RestoreNewsVersionResult,
-  UpdateNewsCommandInput,
+  UpdateNewsBodyCommandInput,
+  UpdateNewsSettingsCommandInput,
   UpdateNewsResult,
 } from "@/shared/domain/news/types";
 
@@ -66,15 +67,6 @@ async function ensureNewsSlugAvailable(
   }
 }
 
-function buildNewsData(input: CreateNewsCommandInput | UpdateNewsCommandInput) {
-  return {
-    slug: input.slug,
-    title: input.title,
-    contentHtml: input.contentHtml,
-    contentJson: parseContentJson(input.contentJson),
-  };
-}
-
 export async function createNews(
   input: CreateNewsCommandInput,
 ): Promise<CreateNewsResult> {
@@ -82,7 +74,10 @@ export async function createNews(
 
   const news = await prisma.news.create({
     data: omitUndefined({
-      ...buildNewsData(input),
+      slug: input.slug,
+      title: input.title,
+      contentHtml: input.contentHtml,
+      contentJson: parseContentJson(input.contentJson),
       isPublished: false,
     }),
     select: {
@@ -94,17 +89,44 @@ export async function createNews(
   return news;
 }
 
-export async function updateNews(
+/**
+ * お知らせの本文（contentJson / contentHtml）のみを更新する。
+ */
+export async function updateNewsBody(
   id: string,
-  input: UpdateNewsCommandInput,
+  input: UpdateNewsBodyCommandInput,
+): Promise<UpdateNewsResult> {
+  const existingNews = await ensureNewsExists(id);
+
+  await prisma.news.update({
+    where: { id },
+    data: omitUndefined({
+      contentHtml: input.contentHtml,
+      contentJson: parseContentJson(input.contentJson),
+    }),
+  });
+
+  return {
+    oldSlug: existingNews.slug,
+    slug: existingNews.slug,
+  };
+}
+
+/**
+ * お知らせの設定（メタデータ・公開状態・レイアウト・SEO/OGP）のみを更新する。
+ */
+export async function updateNewsSettings(
+  id: string,
+  input: UpdateNewsSettingsCommandInput,
 ): Promise<UpdateNewsResult> {
   const existingNews = await ensureNewsExists(id);
   await ensureNewsSlugAvailable(input.slug, id);
 
   await prisma.news.update({
     where: { id },
-    data: omitUndefined({
-      ...buildNewsData(input),
+    data: {
+      slug: input.slug,
+      title: input.title,
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       metaDescription: normalizeNullableString(input.metaDescription),
@@ -112,7 +134,7 @@ export async function updateNews(
       ogpTitle: normalizeNullableString(input.ogpTitle),
       ogpDescription: normalizeNullableString(input.ogpDescription),
       ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-    }),
+    },
   });
 
   return {
@@ -161,15 +183,15 @@ export async function publishNews(
 
   const version = (latestVersion?.version ?? 0) + 1;
 
-  await prisma.$transaction([
-    prisma.news.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.news.update({
       where: { id },
       data: {
         isPublished: true,
         publishedAt: news.publishedAt ?? new Date(),
       },
-    }),
-    prisma.newsVersion.create({
+    });
+    await tx.newsVersion.create({
       data: omitUndefined({
         newsId: id,
         version,
@@ -177,8 +199,8 @@ export async function publishNews(
         contentJson: news.contentJson ?? undefined,
         createdBy: userId,
       }),
-    }),
-  ]);
+    });
+  });
 
   return {
     slug: news.slug,

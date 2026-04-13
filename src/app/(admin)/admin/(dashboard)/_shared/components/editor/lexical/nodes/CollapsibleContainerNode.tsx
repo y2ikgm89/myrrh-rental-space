@@ -130,10 +130,7 @@ export class CollapsibleContainerNode extends ElementNode {
     return element;
   }
 
-  override updateDOM(
-    prevNode: CollapsibleContainerNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const styleChange = $getStateChange(this, prevNode, collapsibleStyleState);
     if (styleChange !== null) {
       const [newStyle] = styleChange;

@@ -21,7 +21,7 @@ import type {
   TaxSettings,
 } from "@/shared/lib/pricing/types";
 
-export type { BusinessTimeSlot, BusinessHoursDay, BusinessHours };
+export type { BusinessTimeSlot, BusinessHoursDay, BusinessHours, TaxSettings };
 
 export type SettingsData = {
   id: string;
@@ -56,6 +56,8 @@ export type SettingsData = {
   regularHolidays: string[] | null;
   specialHolidays: string[] | null;
   holidayNotice: string | null;
+  accessInfo: string | null;
+  parkingInfo: string | null;
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;
@@ -168,8 +170,6 @@ export type DiscountSettingsData = {
   showOriginalPrice: boolean;
   discountWarningEnabled: boolean;
 };
-
-export type TaxSettingsData = TaxSettings;
 
 export type RobotsTxtData = {
   robotsTxtEnabled: boolean;

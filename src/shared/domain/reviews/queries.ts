@@ -99,7 +99,7 @@ export async function getReviewsQuery(
   const where: Prisma.SpaceReviewWhereInput =
     conditions.length > 0 ? { AND: conditions } : {};
 
-  const [total, reviews] = await prisma.$transaction([
+  const [total, reviews] = await Promise.all([
     prisma.spaceReview.count({ where }),
     prisma.spaceReview.findMany({
       where,

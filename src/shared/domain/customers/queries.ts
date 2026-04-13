@@ -49,7 +49,7 @@ export async function getCustomers(
   } = pagination;
   const where = buildCustomerWhere(filters);
 
-  const [total, customers] = await prisma.$transaction([
+  const [total, customers] = await Promise.all([
     prisma.customer.count({ where }),
     prisma.customer.findMany({
       where,

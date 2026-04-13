@@ -137,10 +137,7 @@ export class FeatureIconListContainerNode extends ElementNode {
     return ul;
   }
 
-  override updateDOM(
-    prevNode: FeatureIconListContainerNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const columnsChange = $getStateChange(
       this,
       prevNode,

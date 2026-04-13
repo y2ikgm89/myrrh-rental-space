@@ -192,7 +192,7 @@ export function ${PluginName}Plugin() {
 
 import { useEffect } from 'react'
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext'
-import { mergeRegister } from 'lexical'  // Lexical 0.41: canonical import (@lexical/utils も re-export しているが 'lexical' が正規)
+import { mergeRegister } from 'lexical'  // Lexical 0.40+: canonical import (@lexical/utils も re-export しているが 'lexical' が正規)
 
 export function ${PluginName}Plugin() {
   const [editor] = useLexicalComposerContext()

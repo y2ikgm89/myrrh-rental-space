@@ -5,6 +5,8 @@ paths:
   - src/app/(public*)/_shared/components/effects/**
   - src/app/(public*)/_shared/components/providers/SmoothScrollProvider*
   - src/app/(public*)/_shared/lib/a11y/motion*
+  - src/app/(public*)/_components/**/*.tsx
+  - src/app/(public*)/_shared/components/animations/**
 ---
 
 # GSAP パターンルール
@@ -321,6 +323,66 @@ export function useMotionPreference(): React.RefObject<boolean> {
 }
 ```
 
+### タイマー / 状態駆動アニメーション（Pattern C 拡張）
+
+カルーセル等の `setState` 駆動アニメーションは **`useGSAP` + `dependencies` を使わない**。
+dependency 変更ごとに `gsap.context()` が revert（前回の inline style を巻き戻し）してフラッシュが発生する。
+
+**正しいパターン**: ref + `gsap.to()` 直接呼び出し（Pattern C）:
+
+```typescript
+const activeIndexRef = useRef(0);
+const motionOkRef = useMotionPreference();
+
+// イベント駆動のクロスフェード — useGSAP を使わない
+const crossfadeTo = (nextIndex: number) => {
+  const prevEl = imageElsRef.current[activeIndexRef.current];
+  const nextEl = imageElsRef.current[nextIndex];
+  if (motionOkRef.current) {
+    if (prevEl)
+      gsap.to(prevEl, {
+        opacity: 0,
+        duration: DURATION.hero,
+        ease: EASE.inOut,
+      });
+    if (nextEl)
+      gsap.to(nextEl, {
+        opacity: 1,
+        duration: DURATION.hero,
+        ease: EASE.inOut,
+      });
+  } else {
+    if (prevEl) gsap.set(prevEl, { opacity: 0 });
+    if (nextEl) gsap.set(nextEl, { opacity: 1 });
+  }
+  activeIndexRef.current = nextIndex;
+  setActiveIndex(nextIndex);
+};
+
+// タイマー開始は useEffectEvent で deps 除外（React 19）
+const onTimerStart = useEffectEvent(() => {
+  startTimer();
+});
+useEffect(() => {
+  onTimerStart();
+  return stopTimer;
+}, [hasMultiple, count]);
+
+// アンマウント時の GSAP cleanup（Pattern C 要件）
+useEffect(() => {
+  const els = imageElsRef.current;
+  return () => {
+    for (const el of els) {
+      if (el) gsap.killTweensOf(el);
+    }
+  };
+}, []);
+```
+
+**実装例**: `src/app/(public)/_components/homepage/hero-section.tsx`
+
+**Ken Burns の初期ズーム**: タイマー駆動（Pattern C）は mount 時に自動発火しないため、最初の画像のズーム開始には別途 `useGSAP` + `matchMedia`（Pattern A）が必要。Pattern A で初期ズーム → 以降は Pattern C の `crossfadeTo` 内で `gsap.fromTo` ズームを開始する。
+
 ---
 
 ## ScrollTrigger パターン
@@ -617,3 +679,15 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 | `@/public/components/animations/magnetic-button.tsx`     | マウス追従マグネットボタン（パターン C の実装例）                            |
 
 > **詳細リファレンス**: `docs/reference/claude-rules/gsap-reference.md`
+
+## Gotchas
+
+- **`gsap.from(el, { opacity: 0 })` 禁止 — `gsap.fromTo` を使用** — `gsap.from` は要素に `opacity: 0` をインラインセットするため、GSAP が発火しない場合（SSR、reduced-motion、ScrollTrigger 未到達）にコンテンツが不可視のまま。`gsap.fromTo(el, { opacity: 0 }, { opacity: 1 })` なら CSS デフォルト `opacity: 1` が保持され、GSAP がクライアントで上書きする
+- **`ScrollReveal` ラッパー内のカードに `border-b last:border-b-0` 禁止** — `ScrollReveal` の `<div>` が `:last-child` を壊し、全カードで最後の線が消える。親要素に `divide-y divide-border` を使用して区切り線を管理する。実装例: `events/_components/event-list-view.tsx`
+- **テキストの DOM 分割（SplitText 風）は禁止** — テキストを `<span class="inline-block">` に分割すると日本語テキストが縦折れし、SSR↔Client の hydration mismatch が発生する。SplitText はコンテナ全体の fade-up のみ行い、個別文字/単語の DOM 分割はしない
+- **Cormorant Garamond の letter-spacing は負値または 0 にする** — 正の letter-spacing（0.06em 等）は Latin テキスト向けだが、CSS は日本語フォールバック（Noto Sans JP）にも同じ値を適用するため、日本語見出しが横に広がり折れる。`-0.01em` 以下を使用
+- **`font-heading` (Cormorant Garamond) で数字+漢字の混合テキスト禁止** — 年月表示（`2026年4月`）等で数字と漢字のベースラインがずれる。sans (`font-sans` / デフォルト) を使用し、`tracking-wide` で可読性を確保。`font-heading` は英語見出し・日付の数字単体（EventCard の日番号等）に限定
+- **`useGSAP` 外の GSAP アニメーションには `useEffect` cleanup 必須** — イベントハンドラで `gsap.fromTo`/`gsap.to` を直接呼ぶ場合、`useEffect` の cleanup で `gsap.killTweensOf(element)` を呼ぶ。ref をクリーンアップ関数内で使う場合はローカル変数にキャプチャする（`exhaustive-deps` 警告回避）
+- **`useGSAP` + `dependencies` で状態駆動アニメーションを実装しない** — dependency 変更ごとに `gsap.context()` が revert（前回の inline style を巻き戻し）してフラッシュが発生する。タイマー/クリック駆動のクロスフェード等は Pattern C（イベント駆動: `crossfadeTo` 関数 + `activeIndexRef` + `useMotionPreference()`）で実装し、アンマウント時に `useEffect` cleanup で `gsap.killTweensOf()` を呼ぶ。実装例: `_components/homepage/hero-section.tsx`
+- **`exhaustive-deps` は `react-hooks` と `@eslint-react` の2つが有効** — `eslint-disable-next-line react-hooks/exhaustive-deps` では `@eslint-react/exhaustive-deps` が残る。`useEffectEvent`（React 19 stable）で根本解決する。`eslint-disable` は使わない
+- **`useEffect` 内のイベントリスナーから状態変更関数を呼ぶ場合は `useEffectEvent` でラップ** — touch handler の `handleTouchEnd` から `navigate()` を呼ぶ場合、`navigate` を deps に入れるとリスナー再登録が頻発する。`const onSwipe = useEffectEvent((dir) => navigate(dir))` でラップし effect 内では `onSwipe` を呼ぶ。`useEffectEvent` の戻り値は deps 配列に含めない（ESLint が警告）

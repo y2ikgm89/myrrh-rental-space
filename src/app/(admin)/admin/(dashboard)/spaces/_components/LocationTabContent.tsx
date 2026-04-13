@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getLocations } from "@/admin/queries/location";
 import { LocationFilters } from "../../locations/_components/LocationFilters";
 import { LocationTable } from "../../locations/_components/LocationTable";
@@ -12,6 +13,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 // =============================================================================
 
 async function LocationList() {
+  await connection();
   const params = adminSpaceSearchParamsCache.all();
   const includeInactive = params.locPublished !== "true";
 

@@ -1,6 +1,4 @@
 import type { AppPrismaClient } from "@/shared/db/create-app-prisma-client";
-
-export type SystemPagesDbClient = AppPrismaClient;
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import { logError } from "@/shared/lib/errors/logger-core";
@@ -12,7 +10,7 @@ import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
  */
 
 export async function ensurePageSectionsCommand(
-  db: SystemPagesDbClient,
+  db: AppPrismaClient,
   pageId: string,
   slug: string,
 ): Promise<number> {
@@ -77,7 +75,7 @@ export async function ensurePageSectionsCommand(
 }
 
 export async function ensureHomepageSectionsCommand(
-  db: SystemPagesDbClient,
+  db: AppPrismaClient,
 ): Promise<number> {
   const homePage = await db.page.findUnique({
     where: { slug: "home" },
@@ -92,7 +90,7 @@ export async function ensureHomepageSectionsCommand(
 }
 
 export async function bootstrapSystemPagesCommand(
-  db: SystemPagesDbClient,
+  db: AppPrismaClient,
 ): Promise<void> {
   for (const definition of SYSTEM_PAGES) {
     try {
@@ -149,7 +147,7 @@ export async function bootstrapSystemPagesCommand(
  * 冪等: pageId: null のセクションがなければ何もしない
  */
 async function migrateHomepageSectionsToPageId(
-  db: SystemPagesDbClient,
+  db: AppPrismaClient,
   homePageId: string,
 ): Promise<void> {
   const orphanedCount = await db.section.count({

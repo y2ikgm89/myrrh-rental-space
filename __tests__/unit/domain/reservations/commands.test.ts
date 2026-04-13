@@ -79,6 +79,10 @@ const mockCustomerFindUniqueOrThrow = mock<() => Promise<unknown>>(() =>
   Promise.resolve({ firstReservationAt: null }),
 );
 
+const mockCustomerCreate = mock<() => Promise<{ id: string }>>(() =>
+  Promise.resolve({ id: "cust-1" }),
+);
+
 const mockCustomerUpsert = mock<() => Promise<{ id: string }>>(() =>
   Promise.resolve({ id: "cust-1" }),
 );
@@ -106,6 +110,7 @@ const txClient = {
   customer: {
     findUnique: mockCustomerFindUnique,
     findUniqueOrThrow: mockCustomerFindUniqueOrThrow,
+    create: mockCustomerCreate,
     upsert: mockCustomerUpsert,
     update: mockCustomerUpdate,
   },
@@ -134,6 +139,7 @@ mock.module("@/shared/db/prisma", () => ({
     customer: {
       findUnique: mockCustomerFindUnique,
       findUniqueOrThrow: mockCustomerFindUniqueOrThrow,
+      create: mockCustomerCreate,
       upsert: mockCustomerUpsert,
       update: mockCustomerUpdate,
     },
@@ -178,6 +184,7 @@ function resetAllMocks() {
   mockCouponUpdateMany.mockClear();
   mockCustomerFindUnique.mockClear();
   mockCustomerFindUniqueOrThrow.mockClear();
+  mockCustomerCreate.mockClear();
   mockCustomerUpsert.mockClear();
   mockCustomerUpdate.mockClear();
   mockTransaction.mockClear();
@@ -221,6 +228,9 @@ function resetAllMocks() {
   mockCustomerFindUnique.mockImplementation(() => Promise.resolve(null));
   mockCustomerFindUniqueOrThrow.mockImplementation(() =>
     Promise.resolve({ firstReservationAt: null }),
+  );
+  mockCustomerCreate.mockImplementation(() =>
+    Promise.resolve({ id: "cust-1" }),
   );
   mockCustomerUpsert.mockImplementation(() =>
     Promise.resolve({ id: "cust-1" }),
@@ -397,7 +407,7 @@ describe("createAdminReservationCommand", () => {
       });
 
       expect(result.id).toBe("res-1");
-      expect(mockCustomerUpsert).toHaveBeenCalled();
+      expect(mockCustomerCreate).toHaveBeenCalled();
     });
 
     test("totalPrice 指定時は計算価格を上書き", async () => {

@@ -15,7 +15,6 @@ import {
 } from "@/shared/lib/nuqs";
 
 export type { PostTaxonomySortField };
-export type TaxonomySortField = PostTaxonomySortField;
 export type SortOrder = "asc" | "desc";
 
 function useDebouncedCallback(

@@ -13,7 +13,7 @@ import { toPlainArray } from "@/shared/lib/serialize";
 export type SpaceOption = {
   id: string;
   name: string;
-  description: string;
+  descriptionPlainText: string;
   capacity: number;
   area: number | null;
   hourlyPrice: number;
@@ -57,7 +57,7 @@ export async function getPublishedLocationsWithSpaces(): Promise<
             select: {
               id: true,
               name: true,
-              description: true,
+              descriptionPlainText: true,
               capacity: true,
               area: true,
               hourlyPrice: true,
@@ -82,9 +82,6 @@ export async function getPublishedLocationsWithSpaces(): Promise<
         ...l,
         spaces: l.spaces.map((s) => ({
           ...s,
-          hourlyPrice: Number(s.hourlyPrice),
-          dailyPrice: s.dailyPrice ? Number(s.dailyPrice) : null,
-          area: s.area ? Number(s.area) : null,
           imageUrls: Array.isArray(s.imageUrls)
             ? s.imageUrls.filter((u): u is string => typeof u === "string")
             : [],

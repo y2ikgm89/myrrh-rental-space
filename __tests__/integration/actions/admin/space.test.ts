@@ -12,6 +12,7 @@ import {
   spaceFormSchema,
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/lexical/description-defaults";
 
 // 有効なUUID
 const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -20,7 +21,7 @@ const VALID_UUID = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_SPACE_INPUT: SpaceFormData = {
   slug: "test-space",
   name: "テストスペース",
-  description: "これはテスト用のスペースの説明です。10文字以上必要です。",
+  descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "3F",
   access: "渋谷駅から徒歩5分",
   capacity: 10,
@@ -61,7 +62,7 @@ describe("Space Admin Action Integration", () => {
         const minimalInput = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -85,7 +86,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -102,7 +103,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -119,7 +120,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -136,7 +137,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -153,7 +154,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -170,7 +171,7 @@ describe("Space Admin Action Integration", () => {
         const input = {
           slug: "test-space",
           name: "スペース",
-          description: "10文字以上の説明文です。",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           locationId: VALID_UUID,
           capacity: 1,
           hourlyPrice: 0,
@@ -269,30 +270,27 @@ describe("Space Admin Action Integration", () => {
       });
     });
 
-    describe("description", () => {
-      test("空の説明はエラー", () => {
+    describe("descriptionJson", () => {
+      test("空文字列は Lexical JSON ではないためエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          description: "",
+          descriptionJson: "",
         });
         expect(result.success).toBe(false);
       });
 
-      test("10文字未満の説明はエラー", () => {
+      test("プレーンテキストは Lexical JSON ではないためエラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          description: "9文字です",
+          descriptionJson: "9文字です",
         });
         expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("10文字以上");
-        }
       });
 
-      test("10文字の説明はOK", () => {
+      test("有効な Lexical EditorState JSON はOK", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          description: "12345678910", // ちょうど10文字以上
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
         });
         expect(result.success).toBe(true);
       });

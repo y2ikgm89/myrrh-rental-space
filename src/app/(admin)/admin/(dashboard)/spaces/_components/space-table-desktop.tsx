@@ -16,7 +16,6 @@ import {
 import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
-import { spaceDescriptionListSnippet } from "@/shared/lib/space-description-list-snippet";
 import { SpaceActionCell } from "./SpaceActionCell";
 
 type SpaceTableDesktopProps = {
@@ -36,18 +35,18 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
           <TableHeader>
             <TableRow>
               <TableHead>スペース名</TableHead>
-              <TableHead className="hidden lg:table-cell">所在地</TableHead>
               <TableHead className="hidden xl:table-cell">カテゴリ</TableHead>
+              <TableHead className="hidden lg:table-cell">所在地</TableHead>
               <TableHead className="hidden text-right lg:table-cell">
                 定員
               </TableHead>
               <TableHead className="hidden text-right lg:table-cell">
                 時間料金
               </TableHead>
-              <TableHead className="text-center">公開状態</TableHead>
               <TableHead className="hidden text-right xl:table-cell">
                 予約数
               </TableHead>
+              <TableHead className="text-center">公開状態</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -82,13 +81,10 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
                         {space.name}
                       </Link>
                       <div className="text-sm text-muted-foreground line-clamp-1">
-                        {spaceDescriptionListSnippet(space.description)}
+                        {space.descriptionPlainText}
                       </div>
                     </div>
                   </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <div className="text-sm">{space.displayAddress}</div>
                 </TableCell>
                 <TableCell className="hidden xl:table-cell">
                   {space.category ? (
@@ -97,11 +93,19 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
                     <span className="text-sm text-muted-foreground">—</span>
                   )}
                 </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="text-sm">{space.displayAddress}</div>
+                </TableCell>
                 <TableCell className="hidden text-right lg:table-cell">
                   <Badge variant="secondary">{space.capacity}名</Badge>
                 </TableCell>
                 <TableCell className="hidden text-right lg:table-cell">
                   {formatCurrency(space.hourlyPrice)}
+                </TableCell>
+                <TableCell className="hidden text-right xl:table-cell">
+                  <Badge variant="secondary">
+                    {space._count.reservations}件
+                  </Badge>
                 </TableCell>
                 <TableCell
                   className="text-center"
@@ -113,11 +117,6 @@ export function SpaceTableDesktop({ spaces }: SpaceTableDesktopProps) {
                     isPublished={space.isPublished}
                     onToggle={updateSpacePublish}
                   />
-                </TableCell>
-                <TableCell className="hidden text-right xl:table-cell">
-                  <Badge variant="secondary">
-                    {space._count.reservations}件
-                  </Badge>
                 </TableCell>
                 <TableCell
                   className="text-right"

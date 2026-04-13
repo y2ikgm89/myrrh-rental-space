@@ -3,6 +3,7 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { checkAdminAuth } from "@/admin/lib/action-auth";
 import {
   customerFormSchema,
   updateCustomerNotesSchema,
@@ -190,6 +191,8 @@ export async function mergeCustomers(
       mergeCustomerCommand(sourceValid.data, targetValid.data),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.CUSTOMERS);
+      updateTag(getCacheTag.customers.detail(sourceValid.data));
+      updateTag(getCacheTag.customers.detail(targetValid.data));
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(CACHE_TAGS.REVIEWS);
@@ -198,6 +201,10 @@ export async function mergeCustomers(
   });
 }
 
-export async function searchCustomersAction(query: string) {
+export async function searchCustomersAction(
+  query: string,
+): Promise<Awaited<ReturnType<typeof searchCustomers>>> {
+  const auth = await checkAdminAuth();
+  if (!auth.success) return [];
   return searchCustomers(query);
 }

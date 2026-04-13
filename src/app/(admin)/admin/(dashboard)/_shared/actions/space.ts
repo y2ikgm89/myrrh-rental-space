@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { updateTag } from "next/cache";
+import type { Prisma } from "@generated/prisma/client";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
@@ -11,7 +12,7 @@ import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
-import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import {
   createSpaceCommand,
   deleteSpaceCommand,
@@ -27,17 +28,6 @@ import {
 export type { SpaceSelectOption } from "@/admin/lib/validations/space";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
-
-async function renderDescriptionHtml(
-  value: string | null | undefined,
-): Promise<string | null> {
-  if (!value) return value ?? null;
-  if (lexicalJsonSchema.safeParse(value).success) {
-    return renderEditorStateToHtmlLazy(value);
-  }
-
-  return value;
-}
 
 function revalidateSpaces(...ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);
@@ -56,10 +46,21 @@ function revalidateSpaces(...ids: string[]): void {
 }
 
 async function buildSpaceCommandInput(data: SpaceFormData) {
+  const descriptionHtml = await renderEditorStateToHtmlLazy(
+    data.descriptionJson,
+  );
+  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
+  const descriptionJson = JSON.parse(
+    data.descriptionJson,
+  ) as Prisma.InputJsonValue;
+
+  const { descriptionJson: _drop, ...rest } = data;
+  void _drop;
   return omitUndefined({
-    ...data,
-    description:
-      (await renderDescriptionHtml(data.description)) ?? data.description,
+    ...rest,
+    descriptionJson,
+    descriptionHtml,
+    descriptionPlainText,
   });
 }
 

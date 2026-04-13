@@ -3,6 +3,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { loadAdminMediaSearchParams } from "@/shared/lib/nuqs";
 import { MediaFilters } from "./_components/MediaFilters";
@@ -23,6 +24,7 @@ async function MediaListWithLoader({
 }: {
   searchParams: SearchParams;
 }) {
+  await connection();
   const params = await loadAdminMediaSearchParams(searchParams);
   return <MediaListWrapper searchParams={params} />;
 }

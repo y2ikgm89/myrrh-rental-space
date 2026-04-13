@@ -29,7 +29,7 @@ import {
 } from "@/admin/components/ui";
 import { getFieldError, getErrorMessage } from "../types";
 import type { FieldComponentProps } from "../content-types/types";
-import { generateSlug } from "@/shared/lib/utils";
+import { generateSlug } from "@/shared/lib/slug";
 
 // =============================================================================
 // Constants

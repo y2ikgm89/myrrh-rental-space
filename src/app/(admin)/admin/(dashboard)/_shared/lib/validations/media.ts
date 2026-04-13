@@ -167,7 +167,7 @@ export function inferMediaType(mimeType: string): MediaType {
 export function isAllowedMimeType(mimeType: string, type?: MediaType): boolean {
   const mediaType = type || inferMediaType(mimeType);
   const allowedTypes = ALLOWED_MIME_TYPES[mediaType];
-  return allowedTypes.includes(mimeType) || allowedTypes.length === 0;
+  return allowedTypes.includes(mimeType);
 }
 
 /**

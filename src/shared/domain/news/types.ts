@@ -57,16 +57,29 @@ export type NewsPagination = {
   sortOrder?: "asc" | "desc";
 };
 
-type BaseNewsCommandInput = {
+export type CreateNewsCommandInput = {
   slug: string;
   title: string;
   contentJson: string;
   contentHtml: string;
 };
 
-export type CreateNewsCommandInput = BaseNewsCommandInput;
+/**
+ * 本文（contentJson / contentHtml）のみ更新するコマンド入力
+ */
+export type UpdateNewsBodyCommandInput = {
+  contentJson: string;
+  contentHtml: string;
+};
 
-export type UpdateNewsCommandInput = BaseNewsCommandInput & {
+/**
+ * 設定（メタデータ・公開状態・レイアウト・SEO/OGP）を更新するコマンド入力
+ *
+ * 本文は含まない。
+ */
+export type UpdateNewsSettingsCommandInput = {
+  slug: string;
+  title: string;
   contentWidth: LayoutWidth | null;
   contentWidthCustom: number | null;
   metaDescription?: string | null;

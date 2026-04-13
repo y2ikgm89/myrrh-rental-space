@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getNotifications } from "@/admin/queries/notification";
 import { loadAdminNotificationSearchParams } from "@/shared/lib/nuqs";
 import { Pagination } from "@/admin/components/ui";
@@ -17,6 +18,7 @@ type PageProps = {
 };
 
 async function NotificationListSection({ searchParams }: PageProps) {
+  await connection();
   const params = await loadAdminNotificationSearchParams(searchParams);
 
   const isReadFilter =
@@ -70,9 +72,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
             システムからの通知を確認します
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <MarkAllReadButton />
-        </div>
+        <MarkAllReadButton />
       </div>
 
       {/* フィルター */}

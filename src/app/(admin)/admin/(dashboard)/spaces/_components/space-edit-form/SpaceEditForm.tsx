@@ -43,6 +43,7 @@ import {
 import type { TaxSettings } from "@/shared/lib/pricing/types";
 import { DEFAULT_TAX_SETTINGS } from "@/shared/lib/pricing/tax";
 import { getValidTaxRateType } from "@/shared/lib/validations/enums/helpers";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/lexical/description-defaults";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import {
   DiscountType,
@@ -121,7 +122,13 @@ export function SpaceEditForm({
       ? {
           slug: space.slug,
           name: space.name,
-          description: space.description,
+          descriptionJson:
+            typeof space.descriptionJson === "string"
+              ? space.descriptionJson
+              : JSON.stringify(
+                  space.descriptionJson ??
+                    JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON),
+                ),
           addressDetail: space.addressDetail ?? "",
           access: space.access ?? "",
           capacity: space.capacity,
@@ -151,7 +158,7 @@ export function SpaceEditForm({
       : {
           slug: "",
           name: "",
-          description: "",
+          descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
           addressDetail: "",
           access: "",
           capacity: 10,

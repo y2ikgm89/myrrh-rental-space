@@ -217,7 +217,7 @@ export async function getCoupons(
     `;
   } else {
     const where = buildCouponWhere(filters);
-    [total, coupons] = await prisma.$transaction([
+    [total, coupons] = await Promise.all([
       prisma.coupon.count({ where }),
       prisma.coupon.findMany({
         where,

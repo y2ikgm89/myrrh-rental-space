@@ -42,7 +42,7 @@ export function PostTableHeader({
             aria-label="全選択"
           />
         </TableHead>
-        <TableHead className="whitespace-nowrap">ステータス</TableHead>
+        <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
           currentSortBy={params.sortBy}

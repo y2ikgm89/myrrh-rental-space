@@ -46,7 +46,7 @@ export async function getNotificationsQuery(params: GetNotificationsParams) {
   if (type) where["type"] = type;
   if (isRead !== undefined) where["isRead"] = isRead;
 
-  const [total, notifications] = await prisma.$transaction([
+  const [total, notifications] = await Promise.all([
     prisma.adminNotification.count({ where }),
     prisma.adminNotification.findMany({
       where,

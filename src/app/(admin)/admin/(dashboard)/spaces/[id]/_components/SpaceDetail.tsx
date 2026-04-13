@@ -24,6 +24,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatCurrency } from "@/shared/lib/pricing/format";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 
 type SpaceDetailProps = {
   space: SpaceWithStats;
@@ -123,7 +124,10 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             className="sm:col-span-2"
             label="説明"
             value={
-              <span className="whitespace-pre-wrap">{space.description}</span>
+              <SanitizedHtml
+                html={space.descriptionHtml}
+                className="prose prose-sm max-w-none"
+              />
             }
           />
           <DetailField label="所在地" value={space.displayAddress} />

@@ -58,10 +58,10 @@ export function ReviewTable({ reviews }: ReviewTableProps) {
             <TableRow>
               <TableHead>スペース名</TableHead>
               <TableHead>顧客名</TableHead>
-              <TableHead className="whitespace-nowrap">評価</TableHead>
+              <TableHead>評価</TableHead>
               <TableHead className="hidden md:table-cell">タイトル</TableHead>
               <TableHead className="hidden md:table-cell">投稿日</TableHead>
-              <TableHead className="whitespace-nowrap">公開状態</TableHead>
+              <TableHead>公開状態</TableHead>
               <TableHead>操作</TableHead>
             </TableRow>
           </TableHeader>

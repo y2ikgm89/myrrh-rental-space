@@ -66,7 +66,7 @@ export function spaceEditFormDataToSpaceFormPayload(
   return {
     slug: data.slug,
     name: data.name,
-    description: data.description,
+    descriptionJson: data.descriptionJson,
     addressDetail: data.addressDetail || undefined,
     capacity: data.capacity,
     hourlyPrice: data.hourlyPrice,
@@ -119,7 +119,7 @@ const TAB_FIELDS: Record<SpaceEditTabValue, (keyof SpaceEditFormData)[]> = {
   basic: [
     "name",
     "slug",
-    "description",
+    "descriptionJson",
     "locationId",
     "addressDetail",
     "access",

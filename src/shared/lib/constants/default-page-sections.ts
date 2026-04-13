@@ -30,9 +30,21 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         title: "Where silence works.",
         description:
           "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
-        imageUrl:
-          "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
-        imageAlt: "自然光が差し込む開放的なレンタルスペース",
+        images: [
+          {
+            url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
+            alt: "自然光が差し込む開放的なレンタルスペース",
+          },
+          {
+            url: "https://images.unsplash.com/photo-1462826303086-329426d1aef5?w=1200&q=80",
+            alt: "木の温もりを感じるミーティングルーム",
+          },
+          {
+            url: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&q=80",
+            alt: "モダンなデザインのコワーキングスペース",
+          },
+        ],
+        transition: "crossfade",
         buttonText: "Explore spaces",
         buttonUrl: "/spaces",
       },
@@ -229,6 +241,22 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     },
   ],
 
+  access: [
+    {
+      type: "hero",
+      title: null,
+      config: {
+        title: "Access",
+        subtitle: "最寄り駅・駐車場・営業時間をご案内します。",
+        variant: "minimal",
+      },
+      design: { titleSize: "3xl" },
+      content: null,
+      order: 0,
+      isActive: true,
+    },
+  ],
+
   journal: [
     {
       type: "hero",
@@ -273,31 +301,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
       design: { titleSize: "3xl" },
       content: null,
       order: 0,
-      isActive: true,
-    },
-  ],
-
-  privacy: [
-    {
-      type: "hero",
-      title: null,
-      config: {
-        title: "Privacy",
-        subtitle: "個人情報の取り扱いについてご確認ください。",
-        variant: "minimal",
-      },
-      design: { titleSize: "3xl" },
-      content: null,
-      order: 0,
-      isActive: true,
-    },
-    {
-      type: "custom",
-      title: "プライバシーポリシー",
-      config: {},
-      content:
-        "<p>プライバシーポリシーの内容は管理画面から編集してください。</p>",
-      order: 1,
       isActive: true,
     },
   ],

@@ -1,8 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import {
   createPostSchema,
-  updatePostSchema,
-  postFormSchema,
+  updatePostBodySchema,
+  updatePostSettingsSchema,
+  postBodyFormSchema,
+  postSettingsFormSchema,
   postCategorySchema,
   postTagSchema,
 } from "@/admin/lib/validations/post";
@@ -132,79 +134,101 @@ describe("createPostSchema", () => {
   });
 });
 
-describe("updatePostSchema", () => {
+describe("updatePostBodySchema", () => {
+  test("有効な Lexical JSON でバリデーションに成功する", () => {
+    const result = updatePostBodySchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("本文が空の場合にエラー", () => {
+    const result = updatePostBodySchema.safeParse({ contentJson: "" });
+    expect(result.success).toBe(false);
+  });
+
+  test("無効な Lexical JSON はエラー", () => {
+    const result = updatePostBodySchema.safeParse({
+      contentJson: "<p>記事本文</p>",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updatePostSettingsSchema", () => {
   const validBaseData = {
     title: "投稿記事タイトル",
     slug: "sample-post",
     excerpt: "記事の抜粋です",
-    contentJson: VALID_LEXICAL_JSON,
     thumbnailUrl: "https://example.com/image.jpg",
     categoryId: "123e4567-e89b-12d3-a456-426614174000",
     tags: [
       "123e4567-e89b-12d3-a456-426614174001",
       "123e4567-e89b-12d3-a456-426614174002",
     ],
+    status: PostStatus.DRAFT,
   };
 
   test("有効なデータでバリデーションに成功する", () => {
-    const result = updatePostSchema.safeParse(validBaseData);
+    const result = updatePostSettingsSchema.safeParse(validBaseData);
     expect(result.success).toBe(true);
   });
 
-  test("本文が空の場合にエラー", () => {
-    const invalidData = { ...validBaseData, contentJson: "" };
-    const result = updatePostSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("無効なLexical JSONはエラー", () => {
-    const invalidData = { ...validBaseData, contentJson: "<p>記事本文</p>" };
-    const result = updatePostSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("contentWidthフィールドを許可", () => {
+  test("contentWidth フィールドを許可", () => {
     const validData = { ...validBaseData, contentWidth: LayoutWidth.LG };
-    const result = updatePostSchema.safeParse(validData);
+    const result = updatePostSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthにnullを許可", () => {
+  test("contentWidth に null を許可", () => {
     const validData = { ...validBaseData, contentWidth: null };
-    const result = updatePostSchema.safeParse(validData);
+    const result = updatePostSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthCustomの範囲チェック", () => {
+  test("contentWidthCustom の範囲チェック", () => {
     const validData = { ...validBaseData, contentWidthCustom: 1200 };
-    const result = updatePostSchema.safeParse(validData);
+    const result = updatePostSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthCustomが最小値未満の場合にエラー", () => {
+  test("contentWidthCustom が最小値未満の場合にエラー", () => {
     const invalidData = { ...validBaseData, contentWidthCustom: 319 };
-    const result = updatePostSchema.safeParse(invalidData);
+    const result = updatePostSettingsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("contentWidthCustomが最大値超過の場合にエラー", () => {
+  test("contentWidthCustom が最大値超過の場合にエラー", () => {
     const invalidData = { ...validBaseData, contentWidthCustom: 1921 };
-    const result = updatePostSchema.safeParse(invalidData);
+    const result = updatePostSettingsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("SEO/OGPフィールドはオプショナル", () => {
-    const result = updatePostSchema.safeParse(validBaseData);
+  test("SEO/OGP フィールドはオプショナル", () => {
+    const result = updatePostSettingsSchema.safeParse(validBaseData);
     expect(result.success).toBe(true);
   });
 });
 
-describe("postFormSchema", () => {
+describe("postBodyFormSchema", () => {
+  test("有効な本文でバリデーションに成功する", () => {
+    const result = postBodyFormSchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("本文が空の場合にエラー", () => {
+    const result = postBodyFormSchema.safeParse({ contentJson: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("postSettingsFormSchema", () => {
   const validFormData = {
     title: "投稿記事タイトル",
     slug: "sample-post",
     excerpt: "記事の抜粋です",
-    contentJson: VALID_LEXICAL_JSON,
     thumbnailUrl: "https://example.com/image.jpg",
     categoryId: "123e4567-e89b-12d3-a456-426614174000",
     tags: "tag1,tag2",
@@ -212,18 +236,18 @@ describe("postFormSchema", () => {
   };
 
   test("有効なデータでバリデーションに成功する", () => {
-    const result = postFormSchema.safeParse(validFormData);
+    const result = postSettingsFormSchema.safeParse(validFormData);
     expect(result.success).toBe(true);
   });
 
-  test("statusフィールドは必須", () => {
+  test("status フィールドは必須", () => {
     const invalidData = { ...validFormData };
     delete (invalidData as Record<string, unknown>)["status"];
-    const result = postFormSchema.safeParse(invalidData);
+    const result = postSettingsFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("すべてのPostStatus値を許可", () => {
+  test("すべての PostStatus 値を許可", () => {
     const statuses = [
       PostStatus.DRAFT,
       PostStatus.PUBLISHED,
@@ -231,25 +255,25 @@ describe("postFormSchema", () => {
     ];
     statuses.forEach((status) => {
       const data = { ...validFormData, status };
-      const result = postFormSchema.safeParse(data);
+      const result = postSettingsFormSchema.safeParse(data);
       expect(result.success).toBe(true);
     });
   });
 
-  test("tagsフィールドは文字列として受け取る", () => {
+  test("tags フィールドは文字列として受け取る", () => {
     const data = { ...validFormData, tags: "tag1,tag2,tag3" };
-    const result = postFormSchema.safeParse(data);
+    const result = postSettingsFormSchema.safeParse(data);
     expect(result.success).toBe(true);
   });
 
-  test("publishedAtフィールドはオプショナル", () => {
-    const result = postFormSchema.safeParse(validFormData);
+  test("publishedAt フィールドはオプショナル", () => {
+    const result = postSettingsFormSchema.safeParse(validFormData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthフィールドは文字列として受け取る", () => {
+  test("contentWidth フィールドは文字列として受け取る", () => {
     const data = { ...validFormData, contentWidth: "LG" };
-    const result = postFormSchema.safeParse(data);
+    const result = postSettingsFormSchema.safeParse(data);
     expect(result.success).toBe(true);
   });
 });

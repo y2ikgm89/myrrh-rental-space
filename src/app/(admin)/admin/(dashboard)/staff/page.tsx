@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { getUsers } from "@/admin/queries/user";
 import { getPendingInvitations } from "@/admin/queries/staff-invitation";
@@ -55,6 +56,7 @@ type PageProps = {
 };
 
 async function StaffList({ searchParams }: PageProps) {
+  await connection();
   const params = await loadAdminUserSearchParams(searchParams);
   const result = await getUsers(
     omitUndefined({
@@ -80,6 +82,7 @@ async function StaffList({ searchParams }: PageProps) {
 }
 
 async function InvitationSection() {
+  await connection();
   const invitations = await getPendingInvitations();
   if (invitations.length === 0) return null;
   return <InvitationTable invitations={invitations} />;

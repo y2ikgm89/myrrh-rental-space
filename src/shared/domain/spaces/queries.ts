@@ -17,7 +17,9 @@ function formatSpaceToPlain(s: {
   id: string;
   slug: string;
   name: string;
-  description: string;
+  descriptionJson: Prisma.JsonValue;
+  descriptionHtml: string;
+  descriptionPlainText: string;
   addressDetail: string | null;
   access: string | null;
   capacity: number;
@@ -54,7 +56,9 @@ function formatSpaceToPlain(s: {
     id: s.id,
     slug: s.slug,
     name: s.name,
-    description: s.description,
+    descriptionJson: s.descriptionJson,
+    descriptionHtml: s.descriptionHtml,
+    descriptionPlainText: s.descriptionPlainText,
     addressDetail: s.addressDetail,
     displayAddress: formatSpaceLineAddress(s.location.address, s.addressDetail),
     access: s.access,
@@ -123,7 +127,7 @@ export async function getSpacesQuery(
     OR?: Array<
       | { name: { contains: string; mode: "insensitive" } }
       | { addressDetail: { contains: string; mode: "insensitive" } }
-      | { description: { contains: string; mode: "insensitive" } }
+      | { descriptionPlainText: { contains: string; mode: "insensitive" } }
       | { location: { address: { contains: string; mode: "insensitive" } } }
     >;
   } = {
@@ -148,12 +152,12 @@ export async function getSpacesQuery(
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
       { addressDetail: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
+      { descriptionPlainText: { contains: search, mode: "insensitive" } },
       { location: { address: { contains: search, mode: "insensitive" } } },
     ];
   }
 
-  const [total, spaces] = await prisma.$transaction([
+  const [total, spaces] = await Promise.all([
     prisma.space.count({ where }),
     prisma.space.findMany({
       where,

@@ -5,7 +5,7 @@
 ## 実装正本
 
 - [`src/shared/lib/auth.ts`](../../src/shared/lib/auth.ts) — **`betterAuth({ ... })` の単一インスタンス**を `export const auth`。
-- [`src/shared/db/better-auth-adapter.ts`](../../src/shared/db/better-auth-adapter.ts) — **`prismaAdapter` には拡張前 `prismaForBetterAuth` のみ**。
+- [`src/shared/db/better-auth-adapter.ts`](../../src/shared/db/better-auth-adapter.ts) — **`prismaAdapter` には拡張前 `basePrisma` のみ**。
 
 ## 必須項目（現行方針）
 

@@ -45,7 +45,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead>お名前</TableHead>
               <TableHead className="hidden lg:table-cell">
                 メールアドレス

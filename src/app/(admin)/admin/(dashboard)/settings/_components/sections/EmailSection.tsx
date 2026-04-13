@@ -149,8 +149,8 @@ export function EmailSection({ settings }: EmailSectionProps) {
               )}
             />
 
-            <div className="rounded-lg border p-4 space-y-4">
-              <h4 className="font-medium">送信設定</h4>
+            <fieldset className="rounded-lg border p-4 space-y-4">
+              <legend className="px-1 text-sm font-medium">送信設定</legend>
               <div className="flex flex-wrap gap-6">
                 <FormField
                   control={form.control}
@@ -189,7 +189,7 @@ export function EmailSection({ settings }: EmailSectionProps) {
                   )}
                 />
               </div>
-            </div>
+            </fieldset>
 
             <div className="flex justify-end pt-2">
               <SubmitButton

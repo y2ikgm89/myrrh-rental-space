@@ -46,10 +46,8 @@ import {
 import type { PostTagData } from "@/shared/domain/posts/types";
 import type { PostTagInput } from "@/admin/lib/validations/post";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import {
-  useTagFilters,
-  type TaxonomySortField,
-} from "../_hooks/use-taxonomy-filters";
+import { useTagFilters } from "../_hooks/use-taxonomy-filters";
+import type { PostTaxonomySortField } from "@/shared/lib/nuqs";
 
 // =============================================================================
 // Types & Schemas
@@ -366,7 +364,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableTableHead<TaxonomySortField>
+                  <SortableTableHead<PostTaxonomySortField>
                     field="name"
                     currentSortBy={filterParams.sortBy}
                     currentSortOrder={filterParams.sortOrder}
@@ -375,7 +373,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
                     タグ名
                   </SortableTableHead>
                   <TableHead className="w-40">スラッグ</TableHead>
-                  <SortableTableHead<TaxonomySortField>
+                  <SortableTableHead<PostTaxonomySortField>
                     field="postCount"
                     currentSortBy={filterParams.sortBy}
                     currentSortOrder={filterParams.sortOrder}
@@ -384,7 +382,7 @@ export function TagManager({ initialTags }: TagManagerProps) {
                   >
                     記事数
                   </SortableTableHead>
-                  <SortableTableHead<TaxonomySortField>
+                  <SortableTableHead<PostTaxonomySortField>
                     field="createdAt"
                     currentSortBy={filterParams.sortBy}
                     currentSortOrder={filterParams.sortOrder}

@@ -114,7 +114,7 @@ const VALID_COOKIE_CONSENT_INPUT = {
   cookieConsentMessage: "当サイトではCookieを使用しています。",
   cookieConsentAcceptText: "同意する",
   cookieConsentRejectText: "拒否する",
-  cookieConsentPolicyUrl: "/privacy",
+  cookieConsentPolicyUrl: "/terms/privacy-policy",
 };
 
 const VALID_RESERVATION_INPUT = {

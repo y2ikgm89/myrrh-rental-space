@@ -1,16 +1,17 @@
 /**
  * Better Auth 型定義の拡張
  *
- * @see https://www.better-auth.com/docs
+ * additionalFields の role は Better Auth 内部では string 型。
+ * Module augmentation で Role enum に上書きし、型レベルの整合性を確保する。
+ * ランタイムでの検証は auth.ts の isValidRole() が担う。
  *
- * Better Auth は $Infer から型を推論するため、
- * このファイルでは追加のユーザーフィールドのみ定義
+ * @see https://www.better-auth.com/docs/concepts/users-accounts
  */
 
 import type { Role } from "@generated/prisma/enums";
 
 declare module "better-auth" {
-  interface IconUser {
+  interface User {
     role: Role;
   }
 }

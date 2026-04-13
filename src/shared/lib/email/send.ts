@@ -8,7 +8,7 @@
 
 import "server-only";
 import type { Resend } from "resend";
-import { getResendClient, getFromAddress, isEmailEnabled } from "../email";
+import { getResendClient, getFromAddress, isEmailEnabled } from "./client";
 import {
   logError,
   ErrorCategory,

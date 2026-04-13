@@ -140,10 +140,7 @@ export class TestimonialContainerNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(
-    prevNode: TestimonialContainerNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const layoutChange = $getStateChange(
       this,
       prevNode,

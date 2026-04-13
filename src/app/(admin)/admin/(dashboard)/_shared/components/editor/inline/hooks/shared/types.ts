@@ -49,25 +49,21 @@ export type EditorCoreReturn = {
   isDeleteDialogOpen: boolean;
   /** 削除ダイアログ表示フラグのセッター */
   setIsDeleteDialogOpen: (value: boolean) => void;
-  /** パネル管理 */
-  panels: EditorPanelsReturn;
+  /** コメントパネル管理 */
+  comments: CommentPanelReturn;
   /** 戻るボタンハンドラー */
-  handleBack: () => void;
+  handleBack: () => Promise<void>;
 };
 
 // =============================================================================
-// パネル管理戻り値
+// コメントパネル管理戻り値
 // =============================================================================
 
-export type EditorPanelsReturn = {
-  activePanel: "settings" | "comments" | null;
-  isSettingsPanelOpen: boolean;
-  isCommentsPanelOpen: boolean;
-  openSettings: () => void;
-  toggleSettings: () => void;
-  openComments: () => void;
-  toggleComments: () => void;
-  closePanel: () => void;
+export type CommentPanelReturn = {
+  isOpen: boolean;
+  open: () => void;
+  toggle: () => void;
+  close: () => void;
   activeMarkId: string | null;
   selectMark: (markId: string | null) => void;
   pendingComment: AddCommentPayload | null;

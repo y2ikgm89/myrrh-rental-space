@@ -38,7 +38,13 @@ const createPostSchema = z.object({
   ogpDescription: z.string().max(160).nullable().optional(),
 });
 
-const updatePostSchema = z.object({
+// 本文更新: contentJson のみ（updatePostBody に対応）
+const updatePostBodySchema = z.object({
+  contentJson: z.string().min(1, { error: "本文は必須です" }),
+});
+
+// 設定更新: メタデータ・分類・SEO・レイアウト（updatePostSettings に対応）
+const updatePostSettingsSchema = z.object({
   title: z
     .string()
     .min(1, { error: "タイトルは必須です" })
@@ -52,7 +58,6 @@ const updatePostSchema = z.object({
     .string()
     .min(1, { error: "抜粋は必須です" })
     .max(500, { error: "抜粋は500文字以内" }),
-  content: z.string().min(1, { error: "本文は必須です" }),
   thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
   ogpImageUrl: z.string().nullable().optional(),
   categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
@@ -93,15 +98,20 @@ const VALID_CREATE_POST_INPUT = {
   tags: ["テスト", "投稿"],
 };
 
-// 有効な投稿更新データ
-const VALID_UPDATE_POST_INPUT = {
+// 有効な投稿設定更新データ
+const VALID_UPDATE_POST_SETTINGS_INPUT = {
   title: "テスト投稿（更新）",
   slug: "test-post-updated",
   excerpt: "これは更新された投稿の抜粋です。",
-  content: "<p>これは更新された投稿の本文です。</p>",
   thumbnailUrl: "https://example.com/thumbnail-updated.jpg",
   categoryId: VALID_UUID,
   tags: ["テスト", "投稿", "更新"],
+};
+
+// 有効な投稿本文更新データ
+const VALID_UPDATE_POST_BODY_INPUT = {
+  contentJson:
+    '{"root":{"children":[{"children":[{"text":"本文","type":"text"}],"type":"paragraph"}],"type":"root"}}',
 };
 
 // 有効なカテゴリ作成データ
@@ -367,79 +377,85 @@ describe("Post Admin Action Integration", () => {
     });
   });
 
-  describe("updatePostSchema バリデーション", () => {
+  describe("updatePostBodySchema バリデーション", () => {
+    test("有効な contentJson はバリデーション通過", () => {
+      const result = updatePostBodySchema.safeParse(
+        VALID_UPDATE_POST_BODY_INPUT,
+      );
+      expect(result.success).toBe(true);
+    });
+
+    test("空の contentJson はエラー", () => {
+      const result = updatePostBodySchema.safeParse({ contentJson: "" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].message).toContain("本文は必須");
+      }
+    });
+  });
+
+  describe("updatePostSettingsSchema バリデーション", () => {
     describe("正常系", () => {
       test("有効なデータはバリデーション通過", () => {
-        const result = updatePostSchema.safeParse(VALID_UPDATE_POST_INPUT);
+        const result = updatePostSettingsSchema.safeParse(
+          VALID_UPDATE_POST_SETTINGS_INPUT,
+        );
         expect(result.success).toBe(true);
       });
 
       test("contentWidthオプション設定可能", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidth: LayoutWidth.MD,
         });
         expect(result.success).toBe(true);
       });
 
       test("contentWidthCustom設定可能", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 800,
         });
         expect(result.success).toBe(true);
       });
     });
 
-    describe("content", () => {
-      test("空の本文はエラー（更新時は必須）", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
-          content: "",
-        });
-        expect(result.success).toBe(false);
-        if (!result.success) {
-          expect(result.error.issues[0].message).toContain("本文は必須");
-        }
-      });
-    });
-
     describe("contentWidthCustom", () => {
       test("320px（最小値）はOK", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 320,
         });
         expect(result.success).toBe(true);
       });
 
       test("1920px（最大値）はOK", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 1920,
         });
         expect(result.success).toBe(true);
       });
 
       test("319px（最小値未満）はエラー", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 319,
         });
         expect(result.success).toBe(false);
       });
 
       test("1921px（最大値超過）はエラー", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 1921,
         });
         expect(result.success).toBe(false);
       });
 
       test("小数はエラー", () => {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidthCustom: 800.5,
         });
         expect(result.success).toBe(false);
@@ -616,7 +632,7 @@ describe("Post Admin Action Integration", () => {
       expect(LayoutWidth.CUSTOM).toBeDefined();
     });
 
-    test("updatePostSchemaでLayoutWidth使用可能", () => {
+    test("updatePostSettingsSchemaでLayoutWidth使用可能", () => {
       const widths = [
         LayoutWidth.XS,
         LayoutWidth.SM,
@@ -628,8 +644,8 @@ describe("Post Admin Action Integration", () => {
       ];
 
       for (const width of widths) {
-        const result = updatePostSchema.safeParse({
-          ...VALID_UPDATE_POST_INPUT,
+        const result = updatePostSettingsSchema.safeParse({
+          ...VALID_UPDATE_POST_SETTINGS_INPUT,
           contentWidth: width,
         });
         expect(result.success).toBe(true);

@@ -11,7 +11,7 @@ beforeEach(() => {
   installJSDOMForTests();
 });
 
-/** Lexical 0.41 で検証した最小 paragraph + text の EditorState JSON */
+/** Lexical 0.43 で検証した最小 paragraph + text の EditorState JSON */
 const MINIMAL_PARAGRAPH_STATE_JSON = JSON.stringify({
   root: {
     children: [

@@ -3,6 +3,8 @@ import {
   seoOgpFieldsSchema,
   defaultSeoOgpValues,
 } from "@/shared/lib/validations/seo";
+import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/lexical/description-defaults";
 import {
   DiscountType,
   DurationDiscountOverride,
@@ -62,10 +64,7 @@ export const spaceFormSchema = z
       .string()
       .min(1, { error: "名前を入力してください" })
       .max(100, { error: "名前は100文字以内で入力してください" }),
-    description: z
-      .string()
-      .min(1, { error: "説明を入力してください" })
-      .min(10, { error: "説明は10文字以上で入力してください" }),
+    descriptionJson: lexicalJsonSchema,
     addressDetail: z
       .string()
       .max(500, { error: "所在地補足は500文字以内で入力してください" })
@@ -151,7 +150,7 @@ export type SpaceFormData = z.output<typeof spaceFormSchema>;
 export const defaultSpaceFormValues: SpaceFormInput = {
   slug: "",
   name: "",
-  description: "",
+  descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
   addressDetail: "",
   access: "",
   capacity: 10,
@@ -198,7 +197,12 @@ export type SpaceWithStats = {
   id: string;
   slug: string;
   name: string;
-  description: string;
+  /** Lexical EditorState JSON（toPlainObject 通過後の任意 JSON 値） */
+  descriptionJson: unknown;
+  /** Lexical からレンダ済み HTML キャッシュ（公開表示用） */
+  descriptionHtml: string;
+  /** SEO description / カード要約用プレーンテキスト派生 */
+  descriptionPlainText: string;
   addressDetail: string | null;
   /** 拠点住所 + addressDetail を結合した表示用1行 */
   displayAddress: string;

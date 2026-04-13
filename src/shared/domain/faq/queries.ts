@@ -128,7 +128,7 @@ export async function getFaqItems(
   const { page = 1, limit = 20 } = pagination;
   const where = buildFaqItemWhere(filters);
 
-  const [total, items] = await prisma.$transaction([
+  const [total, items] = await Promise.all([
     prisma.faqItem.count({ where }),
     prisma.faqItem.findMany({
       where,

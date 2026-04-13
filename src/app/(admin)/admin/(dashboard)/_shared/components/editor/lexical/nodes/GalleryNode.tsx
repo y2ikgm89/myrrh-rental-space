@@ -101,10 +101,7 @@ export class GalleryContainerNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(
-    prevNode: GalleryContainerNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const colsChange = $getStateChange(this, prevNode, galleryColumnsState);
     const styleChange = $getStateChange(this, prevNode, galleryStyleState);
     if (colsChange !== null) {

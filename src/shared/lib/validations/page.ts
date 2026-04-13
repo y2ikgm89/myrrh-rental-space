@@ -31,11 +31,6 @@ export interface SystemPageDefinition {
 
 export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
   { slug: "home", title: "ホームページ", description: "トップページ" },
-  {
-    slug: "privacy",
-    title: "プライバシーポリシー",
-    description: "個人情報の取り扱いについて",
-  },
   { slug: "about", title: "会社概要", description: "会社・サービスについて" },
   { slug: "faq", title: "よくある質問", description: "FAQ" },
   { slug: "reservation", title: "予約", description: "レンタルスペースの予約" },
@@ -48,6 +43,11 @@ export const SYSTEM_PAGES: readonly SystemPageDefinition[] = [
     slug: "contact",
     title: "お問い合わせ",
     description: "お問い合わせフォーム",
+  },
+  {
+    slug: "access",
+    title: "アクセス",
+    description: "最寄り駅・駐車場・営業時間のご案内",
   },
   {
     slug: "journal",

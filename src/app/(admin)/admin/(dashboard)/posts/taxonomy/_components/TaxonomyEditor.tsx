@@ -49,7 +49,7 @@ import type {
 } from "@/shared/domain/posts/types";
 import type { SelectedMedia } from "@/admin/types/media-picker";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { generateSlug } from "@/shared/lib/utils";
+import { generateSlug } from "@/shared/lib/slug";
 
 // =============================================================================
 // Schema

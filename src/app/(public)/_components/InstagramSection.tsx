@@ -107,7 +107,7 @@ export function InstagramSection({
                 </div>
 
                 {/* Video indicator */}
-                {post.postUrl.includes("/reel/") && (
+                {post.mediaType === "VIDEO" && (
                   <div className="absolute right-2 top-2">
                     <IconPlayerPlay
                       className="h-5 w-5 text-background drop-shadow-md"

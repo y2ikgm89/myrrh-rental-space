@@ -56,7 +56,7 @@ export function tryConvertHtmlStringToLexicalJsonString(
         const nodes = $generateNodesFromDOM(editor, dom);
         const root = $getRoot();
         root.clear();
-        // 空ルート先頭への挿入位置を明示（ElementNode.selectStart / Lexical 0.41）
+        // 空ルート先頭への挿入位置を明示（ElementNode.selectStart）
         root.selectStart();
         $insertNodes(nodes);
       },

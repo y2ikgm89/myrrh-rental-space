@@ -115,7 +115,7 @@ export async function getShowcaseSpaces(
           id: true,
           slug: true,
           name: true,
-          description: true,
+          descriptionPlainText: true,
           capacity: true,
           hourlyPrice: true,
           dailyPrice: true,

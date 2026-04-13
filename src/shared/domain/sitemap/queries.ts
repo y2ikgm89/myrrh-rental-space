@@ -1,7 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { PostStatus } from "@generated/prisma/enums";
+import { PostStatus, TermsStatus } from "@generated/prisma/enums";
 
 export type SitemapSpace = {
   slug: string;
@@ -27,13 +27,19 @@ export type SitemapCustomPage = {
   updatedAt: Date;
 };
 
+export type SitemapTerms = {
+  slug: string;
+  updatedAt: Date;
+};
+
 export async function getSitemapContentData(): Promise<{
   spaces: SitemapSpace[];
   news: SitemapNews[];
   posts: SitemapPost[];
   customPages: SitemapCustomPage[];
+  terms: SitemapTerms[];
 }> {
-  const [spaces, news, posts, customPages] = await Promise.all([
+  const [spaces, news, posts, customPages, terms] = await Promise.all([
     prisma.space.findMany({
       where: { isPublished: true, isActive: true },
       select: { slug: true, updatedAt: true },
@@ -67,6 +73,19 @@ export async function getSitemapContentData(): Promise<{
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
+    prisma.terms.findMany({
+      where: {
+        isActive: true,
+        versions: {
+          some: {
+            isCurrentVersion: true,
+            status: TermsStatus.PUBLISHED,
+          },
+        },
+      },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
   ]);
 
   return {
@@ -74,5 +93,6 @@ export async function getSitemapContentData(): Promise<{
     news,
     posts,
     customPages,
+    terms,
   };
 }

@@ -38,9 +38,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
               <TableHead className="hidden w-24 text-center md:table-cell">
                 スペース数
               </TableHead>
-              <TableHead className="w-28 text-center whitespace-nowrap">
-                状態
-              </TableHead>
+              <TableHead className="w-28 text-center">状態</TableHead>
               <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>

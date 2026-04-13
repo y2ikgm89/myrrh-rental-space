@@ -5,7 +5,6 @@ import { updateSpacePublish } from "@/admin/actions/space";
 import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { EmptyState } from "@/admin/components/EmptyState";
-import { spaceDescriptionListSnippet } from "@/shared/lib/space-description-list-snippet";
 import { SpaceTableDesktop } from "./space-table-desktop";
 
 // =============================================================================
@@ -56,7 +55,7 @@ export function SpaceTable({ spaces }: SpaceTableProps) {
                   {space.name}
                 </Link>
                 <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                  {spaceDescriptionListSnippet(space.description)}
+                  {space.descriptionPlainText}
                 </p>
                 <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
                   <div className="flex flex-wrap gap-x-2 gap-y-1">

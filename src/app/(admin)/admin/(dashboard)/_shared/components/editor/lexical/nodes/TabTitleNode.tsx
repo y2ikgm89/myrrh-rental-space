@@ -114,6 +114,10 @@ export class TabTitleNode extends ElementNode {
     return false;
   }
 
+  override isShadowRoot(): boolean {
+    return true;
+  }
+
   override canInsertTextBefore(): false {
     return false;
   }

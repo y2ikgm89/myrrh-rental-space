@@ -18,7 +18,7 @@ export {
   type TagOption,
   type EditorCoreConfig,
   type EditorCoreReturn,
-  type EditorPanelsReturn,
+  type CommentPanelReturn,
   // 変換関数
   toFormDateString,
   toSubmitDate,

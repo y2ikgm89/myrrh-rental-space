@@ -9,6 +9,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import Link from "next/link";
 import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
 import { SettingsLayout } from "../_components/SettingsLayout";
@@ -19,6 +20,7 @@ import type { ReactElement } from "react";
  * 動的コンテンツ: ナビゲーション管理
  */
 async function NavigationContent(): Promise<ReactElement> {
+  await connection();
   const [desktopItems, mobileItems, footerItems, socialLinks] =
     await Promise.all([
       getNavigationItems("HEADER_DESKTOP"),

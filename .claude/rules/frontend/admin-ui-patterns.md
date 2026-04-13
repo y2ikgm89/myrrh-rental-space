@@ -138,6 +138,67 @@ onClick={() => void setPage(page + 1)}
 <div className="fixed inset-0 z-30 bg-black/60 lg:hidden" />
 ```
 
+## サイドバーアクティブ判定（query-bearing href 対応）
+
+サイドバー項目が `/admin/spaces?tab=reviews` のようなクエリ付き URL を href に使う場合、`pathname === href` 比較では `usePathname()` がクエリを返さないためマッチしない。`useSearchParams()` と併用して query key も比較する必要がある。
+
+同じパスを共有する複数項目（例: 「スペース管理」`/admin/spaces` と「レビュー」`/admin/spaces?tab=reviews`）を正しくハイライト切り替えするためのパターン:
+
+```tsx
+"use client";
+import { usePathname, useSearchParams } from "next/navigation";
+
+// 純粋関数としてコンポーネント外に定義（レンダー毎に再生成しない）
+function isSidebarItemActive(
+  itemHref: string,
+  pathname: string,
+  currentParams: URLSearchParams,
+): boolean {
+  const [itemPath, itemQuery = ""] = itemHref.split("?");
+  if (itemPath === undefined) return false;
+
+  const pathMatches =
+    pathname === itemPath ||
+    (itemPath !== "/admin" && pathname.startsWith(`${itemPath}/`));
+  if (!pathMatches) return false;
+
+  // 裸のパス項目は `tab` パラメータがない時のみアクティブ
+  // （「スペース管理」が `?tab=reviews` 訪問時にハイライトされるのを防ぐ）
+  if (!itemQuery) return !currentParams.has("tab");
+
+  // クエリ付き項目は全キーが一致した時のみアクティブ
+  const itemQueryParams = new URLSearchParams(itemQuery);
+  for (const [key, value] of itemQueryParams.entries()) {
+    if (currentParams.get(key) !== value) return false;
+  }
+  return true;
+}
+
+// コンポーネント内で使用
+const pathname = usePathname();
+const searchParams = useSearchParams();
+// ...
+const isActive = isSidebarItemActive(item.href, pathname, searchParams);
+```
+
+**禁止パターン:**
+
+```tsx
+// NG: path のみの比較。query-bearing href が 1 つでもあると active ハイライトが誤作動する
+const isActive =
+  pathname === item.href ||
+  (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
+```
+
+**ルール:**
+
+- サイドバーに query-bearing href を 1 つでも追加したら、即座にこのパターンへ移行する
+- 裸のパス項目は `!searchParams.has("tab")` でガード（タブが active でない時のみハイライト）
+- query 比較は全キー一致で判定（partial match 禁止）
+- `isSidebarItemActive` はコンポーネント外のモジュールレベル純粋関数として定義
+
+参照実装: `src/app/(admin)/admin/(dashboard)/_components/ResponsiveSidebar.tsx`
+
 ## Server Actions の型インポート
 
 管理画面内の**全ファイル**（Server Actions・`'use client'` コンポーネント・hooks・型定義ファイルを問わず）は `@/admin/types/server-actions` から import する:
@@ -273,25 +334,30 @@ import { SubmitButton } from "@/admin/components/ui";
 | -------------------------- | ---------- | -------------------- | -------------------- |
 | ステータス・タイトル・操作 | スラッグ等 | 補助情報・料金・日時 | 詳細情報・住所・PV数 |
 
-### Badge 列の whitespace-nowrap（必須）
+### Badge の折り返し防止
 
-ステータス・ロール・タイプ等の Badge を含むセルは `whitespace-nowrap` を付与する。
-日本語テキスト（「アクティブ」「非アクティブ」等）は狭い列幅で折り返される:
+`@/admin/components/ui/badge` と `@/public/components/design-system/badge` の base に `whitespace-nowrap` が適用済み。呼び出し側でセル・親要素に `whitespace-nowrap` を重ねて付ける必要はない。
 
-```tsx
-// OK: Badge 列は折り返し防止
-<TableHead className="whitespace-nowrap">ステータス</TableHead>
-...
-<TableCell className="whitespace-nowrap">
-  <StatusBadge status={item.status} />
-</TableCell>
+### TableHead の折り返し防止
 
-// NG: whitespace-nowrap なし（Badge テキストが2行になる）
-<TableHead>ステータス</TableHead>
-<TableCell>
-  <StatusBadge status={item.status} />
-</TableCell>
-```
+`@/admin/components/ui/table` の `TableHead` base に `whitespace-nowrap` が適用済み。`tracking-wider uppercase` で幅が広がりやすい日本語ヘッダーラベル（「公開状態」「時間料金」「予約数」等）が2行折り返しになる問題を根本解決している。呼び出し側で `whitespace-nowrap` を重ね掛けする必要はない。
+
+### カラム順序の標準パターン
+
+管理画面の一覧テーブルは以下の論理順序で並べる（左→右）:
+
+**識別 → 分類 → スペック → 実績 → 状態 → 操作**
+
+| グループ | 例                                         |
+| -------- | ------------------------------------------ |
+| 識別     | 名前・タイトル・スラッグ（画像サムネ併記） |
+| 分類     | カテゴリ・タイプ・所在地                   |
+| スペック | 定員・料金・サイズ等の属性値               |
+| 実績     | 予約数・PV数・閲覧数等の集計値             |
+| 状態     | 公開/非公開スイッチ・ステータス Badge      |
+| 操作     | `ActionDropdown`（常時右端固定）           |
+
+ステータス Badge を**左端**に配置するパターン（予約・お問い合わせ等、状態が最重要なワークフロー系テーブル）は例外として許可。参照実装: `SpaceTableDesktop`（スペース管理）、`LocationTable`（場所管理）。
 
 ### インラインコントロールのモバイル非表示
 
@@ -792,6 +858,22 @@ const { form, isPending, onSubmit } = useFormAction(
   <SubmitButton isPending={isPending} label="保存" disabled={!form.formState.isDirty} />
 </div>
 ```
+
+**Switch グループの fieldset パターン:**
+
+複数の Switch を視覚グループ化する場合は `<fieldset>` + `<legend>` を使用。`<div>` + `<h4>` は禁止（a11y・セマンティクス）:
+
+```tsx
+<fieldset className="rounded-lg border p-4 space-y-4">
+  <legend className="px-1 text-sm font-medium">送信設定</legend>
+  <div className="flex flex-wrap gap-6">
+    <FormField .../> {/* Switch */}
+    <FormField .../> {/* Switch */}
+  </div>
+</fieldset>
+```
+
+参照実装: `EmailSection.tsx`（設定 switch グループ）、`DesignFields.tsx`（ToggleGroup fieldset）
 
 **スキーマ構成（責務分離）:**
 

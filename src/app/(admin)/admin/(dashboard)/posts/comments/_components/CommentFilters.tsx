@@ -8,7 +8,7 @@ import { useQueryStates } from "nuqs";
 import { adminPostSearchParamsParsers } from "@/shared/lib/nuqs";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { Button, Input, SubmitButton } from "@/admin/components/ui";
-import { getFormString } from "@/shared/lib/utils";
+import { getFormString } from "@/shared/lib/form-data";
 
 interface StatusOption {
   value: string;

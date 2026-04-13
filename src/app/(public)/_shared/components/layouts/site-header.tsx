@@ -519,7 +519,7 @@ export function Header({
               variant="editorial"
               size="sm"
               href="/reservation"
-              className="text-[0.6rem] uppercase tracking-[0.18em]"
+              className="text-[0.75rem] uppercase tracking-[0.18em]"
             >
               Reserve
             </Button>

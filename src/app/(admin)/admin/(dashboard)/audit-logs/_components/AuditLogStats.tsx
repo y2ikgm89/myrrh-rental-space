@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getAuditLogStats } from "@/admin/queries/audit-log";
 import {
   Card,
@@ -7,6 +8,7 @@ import {
 } from "@/admin/components/ui";
 
 export async function AuditLogStats() {
+  await connection();
   const stats = await getAuditLogStats();
 
   return (

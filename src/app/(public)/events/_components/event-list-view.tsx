@@ -59,7 +59,7 @@ export function EventListView({ events }: EventListViewProps) {
               </h2>
               <div className="h-px flex-1 bg-border" aria-hidden="true" />
             </div>
-            <div>
+            <div className="divide-y divide-border">
               {monthEvents.map((event, index) => (
                 <ScrollReveal key={event.id} delay={0.08 * Math.min(index, 8)}>
                   <EventCard variant="list" event={event} />

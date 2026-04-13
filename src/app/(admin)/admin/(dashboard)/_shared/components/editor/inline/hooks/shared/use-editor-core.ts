@@ -15,7 +15,7 @@ import type {
   FieldPathByValue,
 } from "react-hook-form";
 import { useConfirm } from "@/admin/contexts/confirm-context";
-import { useEditorPanels } from "../../hooks";
+import { useCommentPanel } from "../../hooks";
 import type { EditorCoreConfig, EditorCoreReturn } from "./types";
 
 // =============================================================================
@@ -42,8 +42,8 @@ export function useEditorCore<TFormData extends FieldValues>({
   const [hasEditorChanges, setHasEditorChanges] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // パネル管理
-  const panels = useEditorPanels();
+  // コメントパネル管理（記事設定はダイアログで独立管理）
+  const comments = useCommentPanel();
 
   // isDirty計算
   const isDirty = form.formState.isDirty || hasEditorChanges;
@@ -77,7 +77,7 @@ export function useEditorCore<TFormData extends FieldValues>({
     setHasEditorChanges,
     isDeleteDialogOpen,
     setIsDeleteDialogOpen,
-    panels,
+    comments,
     handleBack,
   };
 }

@@ -12,11 +12,12 @@ import { Heading } from "../../../_shared/components/design-system/heading";
 import { Prose } from "../../../_shared/components/design-system/prose";
 import { Badge } from "../../../_shared/components/design-system/badge";
 import { Stack } from "../../../_shared/components/design-system/stack";
+import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 
 interface SpaceInfoProps {
   readonly space: {
     readonly name: string;
-    readonly description: string | null;
+    readonly descriptionHtml: string;
     readonly capacity: number;
     readonly area: number | null;
     /** 拠点住所 + 所在地補足の1行 */
@@ -67,13 +68,13 @@ export function SpaceInfo({ space }: SpaceInfoProps) {
       </div>
 
       {/* Description */}
-      {space.description ? (
+      {space.descriptionHtml ? (
         <div>
           <Heading level={2} className="mb-4">
             スペースについて
           </Heading>
           <Prose>
-            <p>{space.description}</p>
+            <SanitizedHtml html={space.descriptionHtml} />
           </Prose>
         </div>
       ) : null}

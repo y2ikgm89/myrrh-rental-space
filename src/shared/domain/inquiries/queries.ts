@@ -40,7 +40,7 @@ export async function getInquiries(
     ];
   }
 
-  const [total, inquiries] = await prisma.$transaction([
+  const [total, inquiries] = await Promise.all([
     prisma.inquiry.count({ where }),
     prisma.inquiry.findMany({
       where,

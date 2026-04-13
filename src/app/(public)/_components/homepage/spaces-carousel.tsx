@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useEffectEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/public/components/design-system/button";
@@ -47,11 +47,19 @@ function getCardStyle(distance: number) {
   return { zIndex: 5, scale: 0.75, opacity: 0.2 };
 }
 
+/** Minimum auto-play interval in seconds (prevents disorienting speed). */
+const MIN_INTERVAL_S = 3;
+
 interface SpacesCarouselProps {
   readonly spaces: readonly ShowcaseSpace[];
+  /** Auto-play interval in seconds. 0 disables auto-play. */
+  readonly autoPlayInterval: number;
 }
 
-export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
+export function SpacesCarousel({
+  spaces,
+  autoPlayInterval,
+}: SpacesCarouselProps): ReactElement {
   const count = spaces.length;
   const safeCount = Math.max(count, 1);
   const totalCards = safeCount * REPEATS;
@@ -96,9 +104,25 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
   const activeIndex = ((scrollIndex % safeCount) + safeCount) % safeCount;
   const activeSpace = spaces[activeIndex];
 
+  // --- Auto-play pause management ---
+  const pausedByUserRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const isHoveredRef = useRef(false);
+  const isFocusedRef = useRef(false);
+
+  /** Pause auto-play temporarily after user interaction, resume after 8s. */
+  const pauseForInteraction = () => {
+    pausedByUserRef.current = true;
+    clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      pausedByUserRef.current = false;
+    }, 8_000);
+  };
+
   const navigate = (direction: 1 | -1) => {
     if (isTransitioningRef.current) return;
     isTransitioningRef.current = true;
+    pauseForInteraction();
     setScrollIndex((prev) => prev + direction);
     setTimeout(() => {
       isTransitioningRef.current = false;
@@ -108,6 +132,7 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
   const jumpTo = (i: number) => {
     if (isTransitioningRef.current || i === scrollIndex) return;
     isTransitioningRef.current = true;
+    pauseForInteraction();
     setScrollIndex(i);
     setTimeout(() => {
       isTransitioningRef.current = false;
@@ -123,6 +148,7 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
       step = diff > 0 ? diff - safeCount : diff + safeCount;
     }
     isTransitioningRef.current = true;
+    pauseForInteraction();
     setScrollIndex((prev) => prev + step);
     setTimeout(() => {
       isTransitioningRef.current = false;
@@ -139,6 +165,11 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
       navigate(1);
     }
   };
+
+  // Touch swipe — useEffectEvent wraps navigate to keep deps clean
+  const onSwipe = useEffectEvent((direction: 1 | -1) => {
+    navigate(direction);
+  });
 
   // Non-passive touch handler for proper preventDefault
   useEffect(() => {
@@ -177,9 +208,9 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
       const t = touchRef.current;
       if (!t.isHorizontal) return;
       if (t.delta > SWIPE_THRESHOLD) {
-        navigate(-1);
+        onSwipe(-1);
       } else if (t.delta < -SWIPE_THRESHOLD) {
-        navigate(1);
+        onSwipe(1);
       }
       t.delta = 0;
     };
@@ -218,6 +249,73 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
     ? ""
     : "transition-all duration-500 ease-[cubic-bezier(0.25,0.1,0.25,1)]";
 
+  // --- Auto-play timer ---
+  const intervalMs =
+    autoPlayInterval >= MIN_INTERVAL_S ? autoPlayInterval * 1000 : 0;
+  const autoPlayEnabled = intervalMs > 0 && count > 1 && !reduceMotion;
+
+  // useEffectEvent: read latest refs without adding them to deps
+  const onAutoPlayTick = useEffectEvent(() => {
+    if (
+      isTransitioningRef.current ||
+      pausedByUserRef.current ||
+      isHoveredRef.current ||
+      isFocusedRef.current
+    )
+      return;
+    setScrollIndex((prev) => prev + 1);
+    isTransitioningRef.current = true;
+    setTimeout(() => {
+      isTransitioningRef.current = false;
+    }, TRANSITION_MS);
+  });
+
+  useEffect(() => {
+    if (!autoPlayEnabled) return;
+
+    // Pause when tab is hidden
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      clearInterval(timer);
+      timer = setInterval(onAutoPlayTick, intervalMs);
+    };
+    const stop = () => clearInterval(timer);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        start();
+      }
+    };
+
+    start();
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [autoPlayEnabled, intervalMs]);
+
+  // Cleanup resume timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(resumeTimerRef.current);
+  }, []);
+
+  // --- Hover/Focus pause for auto-play ---
+  const handlePointerEnter = () => {
+    isHoveredRef.current = true;
+  };
+  const handlePointerLeave = () => {
+    isHoveredRef.current = false;
+  };
+  const handleFocusIn = () => {
+    isFocusedRef.current = true;
+  };
+  const handleFocusOut = () => {
+    isFocusedRef.current = false;
+  };
+
   // Empty spaces guard — after all hooks
   if (count === 0) {
     return <div />;
@@ -234,7 +332,12 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
   }
 
   return (
-    <div>
+    <div
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      onFocusCapture={handleFocusIn}
+      onBlurCapture={handleFocusOut}
+    >
       {/* Carousel viewport — focusable for scoped keyboard nav */}
       <div
         ref={carouselRef}
@@ -242,6 +345,7 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
         role="region"
         aria-label="厳選スペース"
         aria-roledescription="carousel"
+        aria-live={autoPlayEnabled ? "off" : "polite"}
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
@@ -379,23 +483,23 @@ export function SpacesCarousel({ spaces }: SpacesCarouselProps): ReactElement {
               )}
               <span>定員 {activeSpace.capacity}名</span>
             </div>
-            {activeSpace.description && (
+            {activeSpace.descriptionPlainText && (
               <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground md:text-base">
-                {activeSpace.description}
+                {activeSpace.descriptionPlainText}
               </p>
             )}
             <div className="mt-5">
               <Button
                 variant="editorial"
                 href={`/spaces/${activeSpace.slug}`}
-                className="text-[0.65rem] uppercase tracking-[0.18em]"
+                className="text-xs uppercase tracking-[0.18em]"
               >
                 View Details
               </Button>
             </div>
             <Link
               href="/spaces"
-              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
+              className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground/70 transition-colors duration-300 hover:text-foreground"
             >
               すべてのスペースを見る
               <IconArrowRight className="h-3 w-3" aria-hidden="true" />

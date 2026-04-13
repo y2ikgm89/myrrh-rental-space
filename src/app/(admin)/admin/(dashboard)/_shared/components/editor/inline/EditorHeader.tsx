@@ -19,7 +19,6 @@ import {
 } from "@tabler/icons-react";
 import { tv } from "tailwind-variants";
 import { Button } from "@/admin/components/ui";
-import { cn } from "@/shared/lib/cn";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import type { EditorHeaderProps } from "./types";
 
@@ -53,8 +52,7 @@ export function EditorHeader({
   slug,
   isDirty,
   isPending,
-  isSidePanelOpen,
-  onToggleSidePanel,
+  onOpenSettings,
   onSave,
   onPreview,
   onBack,
@@ -106,31 +104,22 @@ export function EditorHeader({
             </Button>
           )}
 
-          {onToggleSidePanel && (
+          {onOpenSettings && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={onToggleSidePanel}
-              className={cn("gap-1.5", isSidePanelOpen && "bg-accent")}
-              aria-expanded={isSidePanelOpen}
+              onClick={onOpenSettings}
+              className="gap-1.5"
               title={
                 metadataPanelLabel
-                  ? isSidePanelOpen
-                    ? `${metadataPanelLabel}を閉じる`
-                    : `${metadataPanelLabel}を開く（タイトル・SEO・公開など）`
-                  : isSidePanelOpen
-                    ? "設定パネルを閉じる"
-                    : "設定パネルを開く（タイトル・SEO・公開など）"
+                  ? `${metadataPanelLabel}を開く（タイトル・SEO・公開など）`
+                  : "設定ダイアログを開く（タイトル・SEO・公開など）"
               }
               aria-label={
                 metadataPanelLabel
-                  ? isSidePanelOpen
-                    ? `${metadataPanelLabel}を閉じる`
-                    : `${metadataPanelLabel}を開く`
-                  : isSidePanelOpen
-                    ? "設定パネルを閉じる"
-                    : "設定パネルを開く"
+                  ? `${metadataPanelLabel}を開く`
+                  : "設定ダイアログを開く"
               }
             >
               <IconSettings className="h-4 w-4 shrink-0" aria-hidden />

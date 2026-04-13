@@ -81,7 +81,7 @@ export function PageListTable({
                 <TableHead className="hidden sm:table-cell">スラッグ</TableHead>
                 <TableHead>タイトル</TableHead>
                 <TableHead className="hidden md:table-cell">種別</TableHead>
-                <TableHead className="whitespace-nowrap">ステータス</TableHead>
+                <TableHead>ステータス</TableHead>
                 <TableHead className="hidden md:table-cell">
                   セクション数
                 </TableHead>

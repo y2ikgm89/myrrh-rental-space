@@ -5,7 +5,7 @@ import { RegistrationStatus } from "@generated/prisma/enums";
 
 export async function getEventRegistrations(eventId: string) {
   return prisma.eventRegistration.findMany({
-    where: { eventId },
+    where: { eventId, event: { deletedAt: null } },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,

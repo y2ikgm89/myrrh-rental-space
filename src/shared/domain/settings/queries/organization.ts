@@ -64,6 +64,8 @@ export async function getPublicBusinessSettings() {
           buildingName: true,
           businessHours: true,
           holidayNotice: true,
+          accessInfo: true,
+          parkingInfo: true,
           googleReviewUrl: true,
           googleBusinessPlaceId: true,
           businessAttributes: true,

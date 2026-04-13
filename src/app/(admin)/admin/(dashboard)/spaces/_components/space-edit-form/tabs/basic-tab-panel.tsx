@@ -6,7 +6,7 @@ import type {
   UseFormRegister,
   UseFormSetValue,
 } from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import { useController, useWatch } from "react-hook-form";
 import {
   Card,
   CardContent,
@@ -20,8 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
   TabsContent,
-  Textarea,
 } from "@/admin/components/ui";
+import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import type { SpaceEditFormData } from "../schema";
 import type { SpaceEditLocationOption } from "../types";
 
@@ -43,6 +43,8 @@ export function SpaceEditBasicTabPanel({
   availableLocations,
 }: SpaceEditBasicTabPanelProps) {
   const locationId = useWatch({ control, name: "locationId" });
+  const { field: descriptionField, fieldState: descriptionFieldState } =
+    useController({ control, name: "descriptionJson" });
 
   return (
     <TabsContent
@@ -85,17 +87,19 @@ export function SpaceEditBasicTabPanel({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">説明 *</Label>
-            <Textarea
-              id="description"
-              {...register("description")}
-              placeholder="スペースの説明を入力..."
-              rows={6}
-              disabled={isPending}
-            />
-            {errors.description && (
+            <Label htmlFor="descriptionJson">説明 *</Label>
+            <div className="overflow-hidden rounded-lg border border-border">
+              <LazyLexicalEditor
+                contentJson={descriptionField.value}
+                onChange={(json) => descriptionField.onChange(json)}
+                height="420px"
+                placeholder="スペースの説明を入力..."
+                showInspector={false}
+              />
+            </div>
+            {descriptionFieldState.error && (
               <p className="text-sm text-destructive">
-                {errors.description.message}
+                {descriptionFieldState.error.message}
               </p>
             )}
           </div>

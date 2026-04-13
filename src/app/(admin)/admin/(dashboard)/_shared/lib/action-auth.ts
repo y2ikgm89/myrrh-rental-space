@@ -150,6 +150,7 @@ export async function checkRole(
     Role.EDITOR,
     Role.VIEWER,
     Role.USER,
+    Role.CUSTOMER,
   ];
   const userRoleIndex = roleHierarchy.indexOf(user.role);
   const requiredRoleIndex = roleHierarchy.indexOf(requiredRole);

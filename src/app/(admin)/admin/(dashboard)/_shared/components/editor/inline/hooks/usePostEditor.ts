@@ -3,8 +3,12 @@
 /**
  * 投稿エディター専用フック
  *
- * PostFormDataに特化した型安全なフック
- * 型アサーション完全排除
+ * 本文（contentJson）と設定（メタデータ・分類・SEO 等）を独立した
+ * RHF フォームとして管理し、保存も独立して実行する。
+ *
+ * - 本文は EditorHeader の保存ボタンで `updatePostBody` を呼ぶ
+ * - 設定は SettingsDialog の保存ボタンで `updatePostSettings` を呼ぶ
+ * - create モードでは保存時に両フォームを統合して `createPost` を呼ぶ
  */
 
 import { useState } from "react";
@@ -14,12 +18,15 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import { PostStatus } from "@generated/prisma/enums";
 import {
-  postFormSchema,
-  type PostFormData,
+  postBodyFormSchema,
+  postSettingsFormSchema,
+  type PostBodyFormData,
+  type PostSettingsFormData,
 } from "@/admin/lib/validations/post";
 import {
   createPost,
-  updatePost,
+  updatePostBody,
+  updatePostSettings,
   deletePost,
   publishPost,
   unpublishPost,
@@ -64,16 +71,23 @@ type UsePostEditorOptions = {
 };
 
 // =============================================================================
-// Transforms (Type-safe)
+// Transforms
 // =============================================================================
 
-function toFormData(data?: PostData): PostFormData {
+function toBodyFormData(data?: PostData): PostBodyFormData {
+  return {
+    contentJson: data?.contentJson
+      ? JSON.stringify(data.contentJson)
+      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  };
+}
+
+function toSettingsFormData(data?: PostData): PostSettingsFormData {
   if (!data) {
     return {
       title: "",
       slug: "",
       excerpt: "",
-      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       thumbnailUrl: "",
       ogpImageUrl: "",
       categoryId: "",
@@ -93,9 +107,6 @@ function toFormData(data?: PostData): PostFormData {
     title: data.title,
     slug: data.slug,
     excerpt: data.excerpt,
-    contentJson: data.contentJson
-      ? JSON.stringify(data.contentJson)
-      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
     thumbnailUrl: data.thumbnailUrl,
     ogpImageUrl: toFormString(data.ogpImageUrl),
     categoryId: data.categoryId,
@@ -111,12 +122,11 @@ function toFormData(data?: PostData): PostFormData {
   };
 }
 
-function toSubmitPayload(formData: PostFormData) {
+function toSettingsSubmitPayload(formData: PostSettingsFormData) {
   return {
     title: formData.title,
     slug: formData.slug,
     excerpt: formData.excerpt,
-    contentJson: formData.contentJson,
     thumbnailUrl: formData.thumbnailUrl,
     ogpImageUrl: toNullableString(formData.ogpImageUrl),
     categoryId: formData.categoryId,
@@ -125,26 +135,30 @@ function toSubmitPayload(formData: PostFormData) {
     metaKeywords: toNullableString(formData.metaKeywords),
     ogpTitle: toNullableString(formData.ogpTitle),
     ogpDescription: toNullableString(formData.ogpDescription),
+    status: formData.status,
     contentWidth: toSubmitContentWidth(formData.contentWidth),
     contentWidthCustom: toSubmitNumber(formData.contentWidthCustom),
   };
 }
 
 function toPreviewData(
-  formData: PostFormData,
+  bodyData: PostBodyFormData,
+  settingsData: PostSettingsFormData,
   categories: CategoryOption[],
   contentHtml: string,
 ): PostPreviewData {
-  const tags = parseTagsString(formData.tags);
-  const selectedCategory = categories.find((c) => c.id === formData.categoryId);
+  const tags = parseTagsString(settingsData.tags);
+  const selectedCategory = categories.find(
+    (c) => c.id === settingsData.categoryId,
+  );
 
   return {
-    title: formData.title || "無題",
-    slug: formData.slug || "preview-new",
-    excerpt: formData.excerpt || "",
+    title: settingsData.title || "無題",
+    slug: settingsData.slug || "preview-new",
+    excerpt: settingsData.excerpt || "",
     contentHtml,
-    thumbnailUrl: formData.thumbnailUrl || "",
-    publishedAt: formData.publishedAt || null,
+    thumbnailUrl: settingsData.thumbnailUrl || "",
+    publishedAt: settingsData.publishedAt || null,
     tags,
     category: {
       name: selectedCategory?.name || "カテゴリなし",
@@ -172,81 +186,181 @@ export function usePostEditor({
     useState<CategoryOption[]>(initialCategories);
   const [tags, setTags] = useState<TagOption[]>(initialTags);
 
+  // 設定ダイアログ開閉
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+
   // プレビュー
   const { saveAndOpenPreview } = createPreviewHandlers("post");
 
-  // フォーム（型アサーション不要）
-  const form = useForm<PostFormData, unknown, PostFormData>({
-    resolver: standardSchemaResolver(postFormSchema),
-    defaultValues: toFormData(post),
+  // 本文フォーム（contentJson のみ）
+  const bodyForm = useForm<PostBodyFormData, unknown, PostBodyFormData>({
+    resolver: standardSchemaResolver(postBodyFormSchema),
+    defaultValues: toBodyFormData(post),
   });
 
-  // コアフック
+  // 設定フォーム（メタデータ・分類・SEO/OGP・公開状態・レイアウト）
+  const settingsForm = useForm<
+    PostSettingsFormData,
+    unknown,
+    PostSettingsFormData
+  >({
+    resolver: standardSchemaResolver(postSettingsFormSchema),
+    defaultValues: toSettingsFormData(post),
+  });
+
+  // コアフック（dirty/transition は両フォームをまたぐので bodyForm を渡しつつ独自集計）
   const core = useEditorCore({
-    form,
+    form: bodyForm,
     listPath: "/admin/posts",
   });
 
-  const { handleSubmit, setValue, getValues, reset, formState, control } = form;
-
-  // 監視値（型アサーション不要 - 具体的な型が推論される）
-  const title = useWatch({ control, name: "title" }) ?? "";
-  const slug = useWatch({ control, name: "slug" }) ?? "";
+  // 監視値（EditorHeader の表示用）
+  const title =
+    useWatch({ control: settingsForm.control, name: "title" }) ?? "";
+  const slug = useWatch({ control: settingsForm.control, name: "slug" }) ?? "";
+  const status =
+    useWatch({ control: settingsForm.control, name: "status" }) ??
+    PostStatus.DRAFT;
   const contentJson =
-    useWatch({ control, name: "contentJson" }) ??
+    useWatch({ control: bodyForm.control, name: "contentJson" }) ??
     EMPTY_LEXICAL_EDITOR_STATE_JSON;
-  const status = useWatch({ control, name: "status" }) ?? PostStatus.DRAFT;
 
-  // isDirty計算
-  const isDirty = formState.isDirty || core.hasEditorChanges;
+  // dirty 計算（本文・設定どちらかが dirty なら未保存扱い）
+  const isBodyDirty = bodyForm.formState.isDirty || core.hasEditorChanges;
+  const isSettingsDirty = settingsForm.formState.isDirty;
+  const isDirty = isBodyDirty || isSettingsDirty;
 
   // ==========================================================================
-  // Handlers (React Compiler auto-memoizes - no useCallback needed)
+  // Handlers
   // ==========================================================================
 
   const handleContentChange = (json: string) => {
-    setValue("contentJson", json, { shouldDirty: true });
+    bodyForm.setValue("contentJson", json, { shouldDirty: true });
     core.setHasEditorChanges(true);
   };
 
-  const onSubmit = (formData: PostFormData) => {
+  const onSubmitBody = (bodyData: PostBodyFormData) => {
+    if (!post) return;
     core.startTransition(async () => {
       try {
-        const payload = toSubmitPayload(formData);
-
-        if (mode === "create") {
-          const result = await createPost(payload);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-            return;
-          }
-
-          toast.success("投稿記事を作成しました");
-          router.push(`/admin/posts/${result.id}`);
-        } else if (post) {
-          const result = await updatePost(post.id, payload);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-            return;
-          }
-
-          reset(formData);
-          core.setHasEditorChanges(false);
-          router.refresh();
-          toast.success("投稿記事を保存しました");
+        const result = await updatePostBody(post.id, {
+          contentJson: bodyData.contentJson,
+        });
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        bodyForm.reset(bodyData);
+        core.setHasEditorChanges(false);
+        router.refresh();
+        toast.success("本文を保存しました");
       } catch (error) {
-        logger.error("保存中にエラーが発生しました", {
+        logger.error("本文の保存中にエラーが発生しました", {
           error: getErrorMessage(error),
         });
-        toast.error("保存中にエラーが発生しました");
+        toast.error("本文の保存中にエラーが発生しました");
       }
     });
   };
 
+  const onSubmitSettings = (settingsData: PostSettingsFormData) => {
+    if (!post) return;
+    core.startTransition(async () => {
+      try {
+        const payload = toSettingsSubmitPayload(settingsData);
+        const result = await updatePostSettings(post.id, payload);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        settingsForm.reset(settingsData);
+        setIsSettingsDialogOpen(false);
+        router.refresh();
+        toast.success("記事設定を保存しました");
+      } catch (error) {
+        logger.error("記事設定の保存中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("記事設定の保存中にエラーが発生しました");
+      }
+    });
+  };
+
+  const onCreateBoth = () => {
+    core.startTransition(async () => {
+      // 両フォームを並行 validate
+      const [bodyValid, settingsValid] = await Promise.all([
+        bodyForm.trigger(),
+        settingsForm.trigger(),
+      ]);
+
+      if (!bodyValid || !settingsValid) {
+        if (!settingsValid) setIsSettingsDialogOpen(true);
+        toast.error("入力内容に誤りがあります");
+        return;
+      }
+
+      const bodyData = bodyForm.getValues();
+      const settingsData = settingsForm.getValues();
+      const settingsPayload = toSettingsSubmitPayload(settingsData);
+
+      try {
+        const result = await createPost({
+          title: settingsPayload.title,
+          slug: settingsPayload.slug,
+          excerpt: settingsPayload.excerpt,
+          contentJson: bodyData.contentJson,
+          thumbnailUrl: settingsPayload.thumbnailUrl,
+          categoryId: settingsPayload.categoryId,
+          tags: settingsPayload.tags,
+          metaDescription: settingsPayload.metaDescription,
+          metaKeywords: settingsPayload.metaKeywords,
+          ogpTitle: settingsPayload.ogpTitle,
+          ogpDescription: settingsPayload.ogpDescription,
+        });
+
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("投稿記事を作成しました");
+        router.push(`/admin/posts/${result.id}`);
+      } catch (error) {
+        logger.error("作成中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("作成中にエラーが発生しました");
+      }
+    });
+  };
+
+  /** EditorHeader の保存ボタン: 本文保存（create モードでは新規作成） */
   const handleSave = () => {
     if (core.isPending) return;
-    handleSubmit(onSubmit)();
+    if (mode === "create") {
+      onCreateBoth();
+      return;
+    }
+    bodyForm.handleSubmit(onSubmitBody)();
+  };
+
+  /** SettingsDialog の保存ボタン: 設定保存 */
+  const handleSaveSettings = () => {
+    if (core.isPending) return;
+    settingsForm.handleSubmit(onSubmitSettings)();
+  };
+
+  /** SettingsDialog のキャンセル/閉じる: 設定フォームをリセット */
+  const closeSettingsDialog = () => {
+    settingsForm.reset(toSettingsFormData(post));
+    setIsSettingsDialogOpen(false);
+  };
+
+  const openSettingsDialog = () => {
+    setIsSettingsDialogOpen(true);
   };
 
   const handlePublish = () => {
@@ -259,7 +373,7 @@ export function usePostEditor({
       }
 
       toast.success(`公開しました（バージョン ${result.version}）`);
-      setValue("status", PostStatus.PUBLISHED);
+      settingsForm.setValue("status", PostStatus.PUBLISHED);
       router.refresh();
     });
   };
@@ -274,7 +388,7 @@ export function usePostEditor({
       }
 
       toast.success("下書きに戻しました");
-      setValue("status", PostStatus.DRAFT);
+      settingsForm.setValue("status", PostStatus.DRAFT);
       router.refresh();
     });
   };
@@ -302,11 +416,19 @@ export function usePostEditor({
 
   const handlePreview = () => {
     try {
-      const values = getValues();
+      const bodyValues = bodyForm.getValues();
+      const settingsValues = settingsForm.getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(values.contentJson);
-      const previewData = toPreviewData(values, categories, contentHtml);
+      const contentHtml = renderEditorStateJsonToHtmlClient(
+        bodyValues.contentJson,
+      );
+      const previewData = toPreviewData(
+        bodyValues,
+        settingsValues,
+        categories,
+        contentHtml,
+      );
       saveAndOpenPreview(identifier, previewData, "/posts");
     } catch (error) {
       logger.error("プレビュー生成中にエラーが発生しました", {
@@ -317,7 +439,7 @@ export function usePostEditor({
   };
 
   // ==========================================================================
-  // カテゴリ/タグ操作 (React Compiler auto-memoizes)
+  // カテゴリ/タグ操作
   // ==========================================================================
 
   const handleCreateCategory = async (name: string) => {
@@ -344,9 +466,12 @@ export function usePostEditor({
 
   return {
     // フォーム
-    form,
+    bodyForm,
+    settingsForm,
     isPending: core.isPending,
     isDirty,
+    isBodyDirty,
+    isSettingsDirty,
     hasEditorChanges: core.hasEditorChanges,
 
     // 監視値
@@ -355,29 +480,30 @@ export function usePostEditor({
     contentJson,
     status,
 
-    // パネル管理
-    isSettingsPanelOpen: core.panels.isSettingsPanelOpen,
-    isCommentsPanelOpen: core.panels.isCommentsPanelOpen,
-    isPanelOpen:
-      core.panels.isSettingsPanelOpen || core.panels.isCommentsPanelOpen,
-    toggleSettings: core.panels.toggleSettings,
-    toggleComments: core.panels.toggleComments,
-    closePanel: core.panels.closePanel,
-    activeMarkId: core.panels.activeMarkId,
-    selectMark: core.panels.selectMark,
-    pendingComment: core.panels.pendingComment,
-    handleAddComment: core.panels.handleAddComment,
-    clearPendingComment: core.panels.clearPendingComment,
+    // 設定ダイアログ
+    isSettingsDialogOpen,
+    openSettingsDialog,
+    closeSettingsDialog,
+
+    // コメントパネル
+    isCommentsPanelOpen: core.comments.isOpen,
+    toggleComments: core.comments.toggle,
+    closeCommentsPanel: core.comments.close,
+    activeMarkId: core.comments.activeMarkId,
+    selectMark: core.comments.selectMark,
+    pendingComment: core.comments.pendingComment,
+    handleAddComment: core.comments.handleAddComment,
+    clearPendingComment: core.comments.clearPendingComment,
 
     // ハンドラー
     handleSave,
+    handleSaveSettings,
     handlePublish,
     handleUnpublish,
     handleDelete,
     handlePreview,
     handleBack: core.handleBack,
     handleContentChange,
-    onSubmit,
 
     // 削除ダイアログ
     isDeleteDialogOpen: core.isDeleteDialogOpen,

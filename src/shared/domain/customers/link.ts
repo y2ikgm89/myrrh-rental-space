@@ -37,11 +37,15 @@ export async function ensureCustomerLinked(user: {
     select: CUSTOMER_LINK_SELECT,
   });
   if (byEmail) {
-    return prisma.customer.update({
-      where: { id: byEmail.id },
-      data: { userId: user.id },
-      select: CUSTOMER_LINK_SELECT,
-    });
+    if (byEmail.userId === null) {
+      // 未リンク → userId を設定してリンク
+      return prisma.customer.update({
+        where: { id: byEmail.id },
+        data: { userId: user.id },
+        select: CUSTOMER_LINK_SELECT,
+      });
+    }
+    // 別ユーザーにリンク済み → リンクせず新規作成へ（乗っ取り防止）
   }
 
   // 3. 新規作成（競合状態対策付き）

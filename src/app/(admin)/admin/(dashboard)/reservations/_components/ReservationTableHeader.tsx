@@ -56,10 +56,8 @@ export function ReservationTableHeader({
         <TableHead>スペース</TableHead>
         <TableHead className="hidden lg:table-cell">顧客</TableHead>
         <TableHead className="hidden text-right md:table-cell">料金</TableHead>
-        <TableHead className="whitespace-nowrap">ステータス</TableHead>
-        <TableHead className="hidden whitespace-nowrap md:table-cell">
-          決済
-        </TableHead>
+        <TableHead>ステータス</TableHead>
+        <TableHead className="hidden md:table-cell">決済</TableHead>
         <SortableColumnHeader
           column="createdAt"
           currentSortBy={params.sortBy}

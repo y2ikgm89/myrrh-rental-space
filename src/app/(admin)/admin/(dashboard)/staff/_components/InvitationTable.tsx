@@ -30,7 +30,7 @@ export function InvitationTable({ invitations }: InvitationTableProps) {
               <TableRow>
                 <TableHead>メールアドレス</TableHead>
                 <TableHead>名前</TableHead>
-                <TableHead className="whitespace-nowrap">ロール</TableHead>
+                <TableHead>ロール</TableHead>
                 <TableHead className="hidden md:table-cell">有効期限</TableHead>
                 <TableHead className="hidden md:table-cell">招待日</TableHead>
                 <TableHead className="text-right">操作</TableHead>

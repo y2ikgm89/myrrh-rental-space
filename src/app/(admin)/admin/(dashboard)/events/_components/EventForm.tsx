@@ -77,6 +77,8 @@ function formatDateTimeForInput(date: Date | string): string {
     .replace(" ", "T");
 }
 
+const SPACE_NONE_VALUE = "__none__";
+
 const EVENT_STATUS_OPTIONS = [
   { value: EventStatus.DRAFT, label: "下書き" },
   { value: EventStatus.PUBLISHED, label: "公開中" },
@@ -288,9 +290,12 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
               <div>
                 <Label htmlFor="spaceId">スペース</Label>
                 <Select
-                  value={watchedSpaceId ?? ""}
+                  value={watchedSpaceId || SPACE_NONE_VALUE}
                   onValueChange={(value) =>
-                    form.setValue("spaceId", value || null)
+                    form.setValue(
+                      "spaceId",
+                      value === SPACE_NONE_VALUE ? null : value,
+                    )
                   }
                   disabled={isPending}
                 >
@@ -298,7 +303,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
                     <SelectValue placeholder="スペースを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">なし</SelectItem>
+                    <SelectItem value={SPACE_NONE_VALUE}>なし</SelectItem>
                     {spaces.map((space) => (
                       <SelectItem key={space.id} value={space.id}>
                         {space.name}

@@ -149,15 +149,10 @@ export async function registerForEvent(
 
 export async function cancelEventRegistration(
   registrationId: string,
-  turnstileToken?: string,
 ): Promise<MutationResult<null>> {
   // 1. Rate limit check
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError(rateLimit.error);
-
-  // 1.5 Turnstile verification
-  const turnstile = await validateTurnstile(turnstileToken);
-  if (!turnstile.success) return createMutationError(turnstile.error);
 
   // 2. UUID validation
   const idValidation = z
@@ -190,7 +185,23 @@ export async function cancelEventRegistration(
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(customer.id));
 
-    // 6. Send cancellation email (fire-and-forget)
+    // 6. Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
+        title: "イベント申込キャンセル",
+        message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
+        resourceType: "event",
+        resourceId: registration.eventId,
+      }),
+      {
+        operation: "createEventCancellationNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+    updateTag(CACHE_TAGS.NOTIFICATIONS);
+
+    // 7. Send cancellation email (fire-and-forget)
     fireAndForget(
       (async () => {
         const event = await getEventDetailsForEmail(registration.eventId);

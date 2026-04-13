@@ -5,6 +5,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
 import {
   getAdminComments,
@@ -44,11 +45,13 @@ type PageProps = {
 // ==============================================================================
 
 async function PostFiltersWrapper() {
+  await connection();
   const categories = await getPostCategories();
   return <PostFilters categories={categories} />;
 }
 
 async function PostList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminPostSearchParams(searchParams);
   const status = parsePostStatusFilter(params.status);
 
@@ -83,6 +86,7 @@ async function PostList({ searchParams }: { searchParams: SearchParams }) {
 // ==============================================================================
 
 async function CategoryContent() {
+  await connection();
   const categories = await getPostCategories();
   return <CategoryManager initialCategories={categories} />;
 }
@@ -92,6 +96,7 @@ async function CategoryContent() {
 // ==============================================================================
 
 async function TagContent() {
+  await connection();
   const tags = await getPostTags();
   return <TagManager initialTags={tags} />;
 }
@@ -101,11 +106,13 @@ async function TagContent() {
 // ==============================================================================
 
 async function CommentStatsWrapper() {
+  await connection();
   const stats = await getCommentStats();
   return <CommentStats stats={stats} />;
 }
 
 async function CommentList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminPostSearchParams(searchParams);
   const status = isValidCommentStatus(params.status)
     ? params.status

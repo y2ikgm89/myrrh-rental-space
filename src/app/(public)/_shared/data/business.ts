@@ -20,6 +20,8 @@ export interface BusinessInfo {
   readonly email: string | null;
   readonly businessHours: unknown;
   readonly holidayNotice: string | null;
+  readonly accessInfo: string | null;
+  readonly parkingInfo: string | null;
   readonly googleReviewUrl: string | null;
   readonly googleMapsUrl: string | null;
   readonly businessAttributes: Record<string, boolean> | null;
@@ -56,6 +58,8 @@ export async function getBusinessInfo(): Promise<BusinessInfo> {
     email: settings?.email ?? null,
     businessHours: settings?.businessHours ?? null,
     holidayNotice: settings?.holidayNotice ?? null,
+    accessInfo: settings?.accessInfo ?? null,
+    parkingInfo: settings?.parkingInfo ?? null,
     googleReviewUrl: settings?.googleReviewUrl ?? null,
     googleMapsUrl: settings?.googleBusinessPlaceId
       ? `https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${settings.googleBusinessPlaceId}`

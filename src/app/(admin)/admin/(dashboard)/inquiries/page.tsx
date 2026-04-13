@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getInquiries } from "@/admin/queries/inquiry";
 import { InquiryFilters } from "./_components/InquiryFilters";
 import { InquiryTable } from "./_components/InquiryTable";
@@ -19,6 +20,7 @@ type PageProps = {
 };
 
 async function InquiryList({ searchParams }: { searchParams: SearchParams }) {
+  await connection();
   const params = await loadAdminInquirySearchParams(searchParams);
   const status = parseInquiryStatusFilter(params.status);
 
@@ -43,15 +45,13 @@ export default async function InquiriesPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            お問い合わせ管理
-          </h1>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            お問い合わせの確認・ステータス管理を行います
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          お問い合わせ管理
+        </h1>
+        <p className="text-sm text-muted-foreground sm:text-base">
+          お問い合わせの確認・ステータス管理を行います
+        </p>
       </div>
 
       {/* フィルター */}

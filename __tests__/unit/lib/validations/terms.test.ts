@@ -429,6 +429,12 @@ describe("TERMS_TYPES", () => {
         defaultSlug: "rental-terms",
       },
       {
+        value: "COMMERCIAL_TRANSACTION",
+        label: "特定商取引法に基づく表記",
+        defaultTitle: "特定商取引法に基づく表記",
+        defaultSlug: "commercial-transaction",
+      },
+      {
         value: "CUSTOM",
         label: "カスタム規約",
         defaultTitle: "カスタム規約",

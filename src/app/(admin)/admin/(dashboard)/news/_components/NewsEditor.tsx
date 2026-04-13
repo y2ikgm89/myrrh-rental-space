@@ -3,8 +3,7 @@
 /**
  * お知らせエディター
  *
- * useNewsEditor専用フックを使用した型安全なエディター
- * 型アサーション完全排除
+ * 本文（Lexical）と設定（メタデータ・SEO）を独立したフォーム・Server Action として管理する。
  */
 
 import {
@@ -23,10 +22,10 @@ import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexical
 import {
   EditorHeader,
   InlineEditorShell,
-  UnifiedSidePanel,
+  SettingsDialog,
   useNewsEditor,
   useContentWidth,
-  newsConfig,
+  newsSettingsPanel,
   type NewsSidePanelExtra,
 } from "@/admin/components/editor/inline";
 import type { NewsData } from "@/shared/domain/news/types";
@@ -52,10 +51,8 @@ export function NewsEditor({
   mode = "edit",
   fallbackContentWidth,
 }: NewsEditorProps) {
-  // 専用フック使用（型アサーション不要）
   const editor = useNewsEditor({ news, mode });
 
-  // 公開アクションの設定
   const publishActions =
     mode === "edit" && news
       ? {
@@ -65,7 +62,6 @@ export function NewsEditor({
         }
       : undefined;
 
-  // 削除ダイアログ
   const deleteDialog =
     mode === "edit" && news ? (
       <Dialog
@@ -110,90 +106,94 @@ export function NewsEditor({
       </Dialog>
     ) : undefined;
 
-  // スラッグの表示
   const displaySlug = `news/${editor.slug}`;
 
-  // コンテンツ幅（px）— エディタに渡すテキスト領域の幅
   const contentWidthPx = useContentWidth({
-    control: editor.form.control,
+    control: editor.settingsForm.control,
     widthFieldName: "contentWidth",
     customFieldName: "contentWidthCustom",
     fallback: fallbackContentWidth,
   });
 
-  // サイドパネル用extraProps
   const sidePanelExtraProps = {
     isPublishedValue: editor.isPublished,
     onIsPublishedChange: (value: boolean) => {
-      editor.form.setValue("isPublished", value);
+      editor.settingsForm.setValue("isPublished", value, { shouldDirty: true });
     },
   } satisfies NewsSidePanelExtra;
 
   return (
-    <InlineEditorShell
-      onSubmit={editor.form.handleSubmit(editor.onSubmit)}
-      onSave={editor.handleSave}
-      isDirty={editor.isDirty}
-      header={
-        <EditorHeader
-          title={editor.title}
-          slug={displaySlug}
-          isDirty={editor.isDirty}
-          isPending={editor.isPending}
-          isSidePanelOpen={editor.isSettingsPanelOpen}
-          metadataPanelLabel={newsConfig.sidePanel.title}
-          onToggleSidePanel={editor.toggleSettings}
-          onSave={editor.handleSave}
-          onPreview={editor.handlePreview}
-          onBack={editor.handleBack}
-          publishActions={publishActions}
-          showCommentButton={mode === "edit" && !!news}
-          isCommentPanelOpen={editor.isCommentsPanelOpen}
-          onToggleCommentPanel={editor.toggleComments}
-          extraActions={deleteDialog}
-        />
-      }
-    >
-      <LazyLexicalEditor
-        contentJson={editor.contentJson}
-        onChange={editor.handleContentChange}
-        disabled={editor.isPending}
-        className={EDITOR_PROSE_CLASSES}
-        showToolbar
-        height="100%"
-        onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
-        onAddComment={
-          mode === "edit" && news ? editor.handleAddComment : undefined
+    <>
+      <InlineEditorShell
+        onSave={editor.handleSave}
+        isDirty={editor.isDirty}
+        header={
+          <EditorHeader
+            title={editor.title}
+            slug={displaySlug}
+            isDirty={editor.isDirty}
+            isPending={editor.isPending}
+            metadataPanelLabel={newsSettingsPanel.title}
+            onOpenSettings={editor.openSettingsDialog}
+            onSave={editor.handleSave}
+            onPreview={editor.handlePreview}
+            onBack={editor.handleBack}
+            publishActions={publishActions}
+            showCommentButton={mode === "edit" && !!news}
+            isCommentPanelOpen={editor.isCommentsPanelOpen}
+            onToggleCommentPanel={editor.toggleComments}
+            extraActions={deleteDialog}
+          />
         }
-        contentWidth={contentWidthPx ?? undefined}
-        trailingPanel={
-          <>
-            <UnifiedSidePanel
-              isOpen={editor.isSettingsPanelOpen}
-              onClose={editor.closePanel}
-              config={newsConfig.sidePanel}
-              register={editor.form.register}
-              control={editor.form.control}
-              errors={editor.form.formState.errors}
-              setValue={editor.form.setValue}
-              getValues={editor.form.getValues}
-              disabled={editor.isPending}
-              extraProps={sidePanelExtraProps}
-            />
-            {mode === "edit" && news && (
+      >
+        <LazyLexicalEditor
+          contentJson={editor.contentJson}
+          onChange={editor.handleContentChange}
+          disabled={editor.isPending}
+          className={EDITOR_PROSE_CLASSES}
+          showToolbar
+          height="100%"
+          onMarkClick={mode === "edit" && news ? editor.selectMark : undefined}
+          onAddComment={
+            mode === "edit" && news ? editor.handleAddComment : undefined
+          }
+          contentWidth={contentWidthPx ?? undefined}
+          trailingPanel={
+            mode === "edit" && news ? (
               <CommentPanel
                 isOpen={editor.isCommentsPanelOpen}
                 contentType="news"
                 contentId={news.id}
                 activeMarkId={editor.activeMarkId}
-                onClose={editor.closePanel}
+                onClose={editor.closeCommentsPanel}
                 pendingComment={editor.pendingComment}
                 onPendingCommentSubmit={editor.clearPendingComment}
               />
-            )}
-          </>
-        }
+            ) : undefined
+          }
+        />
+      </InlineEditorShell>
+
+      <SettingsDialog
+        open={editor.isSettingsDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) editor.closeSettingsDialog();
+        }}
+        config={newsSettingsPanel}
+        injected={{
+          register: editor.settingsForm.register,
+          control: editor.settingsForm.control,
+          errors: editor.settingsForm.formState.errors,
+          setValue: editor.settingsForm.setValue,
+          getValues: editor.settingsForm.getValues,
+          disabled: editor.isPending,
+        }}
+        extraProps={sidePanelExtraProps}
+        onSave={editor.handleSaveSettings}
+        onCancel={editor.closeSettingsDialog}
+        isPending={editor.isPending}
+        isDirty={editor.isSettingsDirty}
       />
-    </InlineEditorShell>
+    </>
   );
 }

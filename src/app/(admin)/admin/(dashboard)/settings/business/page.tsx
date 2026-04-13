@@ -9,6 +9,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import {
   getSettings,
   getDiscountSettings,
@@ -31,6 +32,7 @@ import type { ReactElement } from "react";
  * 動的コンテンツ: ビジネス設定
  */
 async function BusinessSettingsContent(): Promise<ReactElement> {
+  await connection();
   const [settings, discountSettings, taxSettings, socialLinks] =
     await Promise.all([
       getSettings(),

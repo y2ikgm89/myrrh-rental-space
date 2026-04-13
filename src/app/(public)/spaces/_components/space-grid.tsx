@@ -5,7 +5,7 @@ interface Space {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
-  readonly description: string | null;
+  readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly area: number | null;
   readonly hourlyPrice: number | null;
@@ -47,7 +47,7 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
               <SpaceCard
                 slug={space.slug}
                 name={space.name}
-                description={space.description}
+                description={space.descriptionPlainText}
                 capacity={space.capacity}
                 area={space.area}
                 hourlyPrice={space.hourlyPrice}

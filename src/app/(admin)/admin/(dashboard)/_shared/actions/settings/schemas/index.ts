@@ -38,7 +38,6 @@ export {
   permalinkSettingsSchema,
   type PermalinkSettingsInput,
   sidebarSettingsSchema,
-  type SidebarSettingsInput,
   meoSettingsSchema,
   type MeoSettingsInput,
   robotsTxtSettingsSchema,

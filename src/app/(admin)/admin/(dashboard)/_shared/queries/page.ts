@@ -16,14 +16,12 @@ import {
 } from "./_helpers";
 import { isEditorRole } from "@/admin/lib/permissions";
 
-export type PagesListParams = PageListQueryParams;
-
 async function getAllowedPageIds(userId: string): Promise<string[]> {
   return getAssignedPageIdsForUser(userId);
 }
 
 export async function getPagesList(
-  params: PagesListParams = {},
+  params: PageListQueryParams = {},
 ): Promise<PageListResult> {
   const user = await requireAdminPermission("page", "read");
   const allowedPageIds = isEditorRole(user.role)

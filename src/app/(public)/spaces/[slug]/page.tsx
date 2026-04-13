@@ -39,11 +39,12 @@ export async function generateMetadata({
     description:
       space.ogpDescription ??
       space.metaDescription ??
-      space.description ??
+      space.descriptionPlainText ??
       undefined,
     openGraph: {
       title: space.ogpTitle ?? space.name,
-      description: space.ogpDescription ?? space.description ?? undefined,
+      description:
+        space.ogpDescription ?? space.descriptionPlainText ?? undefined,
       images: space.ogpImageUrl ?? space.mainImageUrl ?? undefined,
     },
   };
@@ -91,7 +92,7 @@ export default async function SpaceDetailPage({
       />
       <ProductJsonLd
         name={space.name}
-        description={space.description ?? space.name}
+        description={space.descriptionPlainText || space.name}
         image={space.mainImageUrl ?? `${baseUrl}/og-image.png`}
         url={spaceUrl}
         offers={{

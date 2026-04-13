@@ -55,6 +55,7 @@ import { SITE_DEFAULTS } from "@/shared/lib/constants";
 import { clientEnv } from "@/shared/lib/env/client";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
+import { cn } from "@/shared/lib/cn";
 import "./_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -203,7 +204,11 @@ export default async function PublicRootLayout({
     return (
       <html lang="ja">
         <body
-          className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
+          className={cn(
+            notoSansJP.variable,
+            cormorantGaramond.variable,
+            "font-sans antialiased",
+          )}
         >
           <MaintenancePage message={maintenanceSettings.maintenanceMessage} />
         </body>
@@ -231,7 +236,11 @@ export default async function PublicRootLayout({
         </Suspense>
       </head>
       <body
-        className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
+        className={cn(
+          notoSansJP.variable,
+          cormorantGaramond.variable,
+          "font-sans antialiased",
+        )}
       >
         {/* 全公開ページ共通の構造化データ */}
         <Suspense fallback={null}>

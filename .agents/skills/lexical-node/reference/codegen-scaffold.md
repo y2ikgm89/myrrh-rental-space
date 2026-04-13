@@ -24,7 +24,7 @@ Lexicalエディタ用のカスタムノードを作成します。
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
 - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/CalloutNode.tsx`
 
-Lexical 0.41 の NodeState API 仕様が不明な場合は `context7` で参照:
+Lexical 0.43 の NodeState API 仕様が不明な場合は `context7` で参照:
 `resolve-library-id('lexical')` → `query-docs(id, 'NodeState createState $getState $setState')`
 
 ### 3. ノードファイル作成

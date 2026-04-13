@@ -44,10 +44,10 @@ export function LocationTable({ locations }: LocationTableProps) {
             <TableRow>
               <TableHead>場所名</TableHead>
               <TableHead className="hidden lg:table-cell">住所</TableHead>
-              <TableHead className="text-center">公開状態</TableHead>
               <TableHead className="hidden text-right md:table-cell">
                 スペース数
               </TableHead>
+              <TableHead className="text-center">公開状態</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
@@ -80,15 +80,15 @@ export function LocationTable({ locations }: LocationTableProps) {
                 <TableCell className="hidden lg:table-cell">
                   <div className="text-sm">{location.address}</div>
                 </TableCell>
+                <TableCell className="hidden text-right md:table-cell">
+                  <Badge variant="secondary">{location._count.spaces}件</Badge>
+                </TableCell>
                 <TableCell className="text-center">
                   <PublishSwitch
                     id={location.id}
                     isPublished={location.isPublished}
                     onToggle={toggleLocationPublish}
                   />
-                </TableCell>
-                <TableCell className="hidden text-right md:table-cell">
-                  <Badge variant="secondary">{location._count.spaces}件</Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   <LocationActionCell locationId={location.id} />

@@ -8,6 +8,7 @@
 import "server-only";
 
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { serverEnv } from "@/shared/lib/env/server";
 import {
   PrismaClient,
@@ -44,15 +45,29 @@ export type Customer = ConvertDecimalFields<PrismaCustomer>;
 export type Settings = ConvertDecimalFields<PrismaSettings>;
 export type Coupon = ConvertDecimalFields<PrismaCoupon>;
 
-// Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
-const adapter = new PrismaPg({
-  connectionString: serverEnv.DATABASE_URL,
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 10000,
-  max:
-    serverEnv.DATABASE_POOL_MAX ??
-    (serverEnv.NODE_ENV === "production" ? 3 : 5),
-});
+// pg Pool singleton
+//
+// PrismaPg のコンストラクタに config object を渡すと、`connect()` が呼ばれる
+// たびに新しい Pool インスタンスを生成する（adapter-pg 7.7.0 の実装詳細）。
+// 既存の Pool インスタンスを渡すことで externalPool 経路に入り、1 つの
+// Pool が再利用される。max は Suspense ファンアウトと $transaction バッチを
+// 余裕で捌けるサイズにしておく（デフォルト 10）。
+const globalForPg = globalThis as unknown as { pgPool?: Pool };
+
+const pgPool =
+  globalForPg.pgPool ??
+  new Pool({
+    connectionString: serverEnv.DATABASE_URL,
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 10000,
+    max: serverEnv.DATABASE_POOL_MAX ?? 10,
+  });
+
+if (serverEnv.NODE_ENV !== "production") {
+  globalForPg.pgPool = pgPool;
+}
+
+const adapter = new PrismaPg(pgPool);
 
 // グローバル変数（型は src/shared/types/global.d.ts で定義）
 const globalForPrisma = globalThis;
@@ -79,13 +94,12 @@ if (serverEnv.NODE_ENV !== "production") {
 }
 
 /**
- * Better Auth / Prisma アダプター専用のベースクライアント
+ * 拡張前の素の PrismaClient
  *
- * `$extends` により Decimal 変換などを加えた `prisma` はアプリ本体向け。
- * 認証アダプターは公式推奨どおり素のクライアントデリゲートに任せ、
- * `experimental.joins` 時のリレーション select とも干渉させない。
+ * Better Auth アダプター専用。$extends 済みの `prisma` を認証アダプターに
+ * 渡すと Decimal 変換や joins が干渉するため、素のクライアントを使う。
  */
-export const prismaForBetterAuth = basePrisma;
+export { basePrisma };
 
 /**
  * Prisma Client with Decimal to Number conversion

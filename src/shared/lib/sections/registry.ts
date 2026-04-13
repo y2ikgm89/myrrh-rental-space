@@ -3,6 +3,7 @@
 // セクションレジストリ — 全 22 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
+import { isRecord } from "@/shared/lib/serialize";
 
 import { contactFormConfigSchema } from "./definitions/contact-form/schema";
 import { contactFormMetadata } from "./definitions/contact-form/metadata";
@@ -252,8 +253,8 @@ export function getDefaultConfig(type: string): Record<string, unknown> {
   const result = def.configSchema.safeParse({});
   if (result.success) {
     const data = result.data;
-    if (typeof data === "object" && data !== null) {
-      return data as Record<string, unknown>;
+    if (isRecord(data)) {
+      return data;
     }
   }
 

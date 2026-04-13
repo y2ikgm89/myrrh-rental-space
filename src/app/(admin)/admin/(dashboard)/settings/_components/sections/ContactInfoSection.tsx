@@ -47,6 +47,8 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
         city: emptyToNull(data.city),
         streetAddress: emptyToNull(data.streetAddress),
         buildingName: emptyToNull(data.buildingName),
+        accessInfo: emptyToNull(data.accessInfo),
+        parkingInfo: emptyToNull(data.parkingInfo),
       }),
     {
       defaultValues: {
@@ -59,6 +61,8 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
         city: settings.city || "",
         streetAddress: settings.streetAddress || "",
         buildingName: settings.buildingName || "",
+        accessInfo: settings.accessInfo || "",
+        parkingInfo: settings.parkingInfo || "",
       },
       refresh: true,
       successMessage: "連絡先情報を保存しました",
@@ -238,6 +242,54 @@ export function ContactInfoSection({ settings }: ContactInfoSectionProps) {
                   </FormControl>
                   <p className="text-xs text-muted-foreground">
                     フッターなどに表示する住所形式（上記の項目から自動生成されません）
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="accessInfo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>交通案内</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder={
+                        "○○線 △△駅 北口 徒歩3分\n○○線 □□駅 西口 徒歩5分"
+                      }
+                      rows={3}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    最寄り駅・路線・徒歩分数など。アクセスページに表示されます
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="parkingInfo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>駐車場案内</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder={
+                        "専用駐車場2台あり\n近隣コインパーキング: ○○パーキング（徒歩1分）"
+                      }
+                      rows={2}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    駐車場の有無・台数・近隣パーキング情報。アクセスページに表示されます
                   </p>
                   <FormMessage />
                 </FormItem>

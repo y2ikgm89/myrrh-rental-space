@@ -1,5 +1,5 @@
 /**
- * Lexical `DraggableBlockPlugin` のフォーク（@lexical/react 0.41.0 の LexicalDraggableBlockPlugin をベース）。
+ * Lexical `DraggableBlockPlugin` のフォーク（@lexical/react 0.43.0 の LexicalDraggableBlockPlugin をベース）。
  *
  * - ContentEditable の左右パディング（`editor-layout-constants`）とドロップラインを整合。
  * - unitless `line-height`（`prose` / `leading-relaxed`）でもドラッグハンドルがブロックの先頭行に追従するよう `getBlockLineHeightPx` を使用。

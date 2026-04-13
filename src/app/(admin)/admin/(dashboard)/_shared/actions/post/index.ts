@@ -2,7 +2,8 @@
 
 export {
   createPost,
-  updatePost,
+  updatePostBody,
+  updatePostSettings,
   deletePost,
   publishPost,
   unpublishPost,

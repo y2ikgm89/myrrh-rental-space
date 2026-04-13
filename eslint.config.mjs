@@ -150,6 +150,13 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // cache タグ直書き禁止 + prisma.$transaction([...]) 配列形式禁止
+    //
+    // $transaction の配列形式は adapter-pg / pg 8.x の
+    // "client is already executing a query" deprecation を誘発する
+    // （BEGIN + N queries + COMMIT が pinned PoolClient に 3 つ以上積まれる瞬間がある）。
+    // 原子性不要なら Promise.all、必要なら interactive transaction
+    // `prisma.$transaction(async (tx) => { ... })` を使う。
     name: "cache-tag-boundaries",
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/shared/lib/constants/cache.ts"],
@@ -161,6 +168,12 @@ const eslintConfig = defineConfig([
             "CallExpression[callee.name=/^(cacheTag|updateTag|revalidateTag)$/] > Literal:first-child",
           message:
             "cacheTag / updateTag / revalidateTag のタグ名は直書きせず、CACHE_TAGS または getCacheTag を使ってください。",
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='$transaction'] > ArrayExpression",
+          message:
+            "prisma.$transaction([...]) の配列形式は pg deprecation 'client is already executing a query' を誘発するため禁止。原子性不要なら Promise.all([...])、必要なら interactive transaction `prisma.$transaction(async (tx) => { ... })` を使ってください。",
         },
       ],
     },

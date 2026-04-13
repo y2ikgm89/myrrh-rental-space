@@ -156,7 +156,8 @@ mock.module("@/shared/db/json", () => ({
 
 import {
   createPost,
-  updatePost,
+  updatePostBody,
+  updatePostSettings,
   deletePost,
   publishPost,
   unpublishPost,
@@ -197,12 +198,15 @@ const VALID_CREATE_INPUT = {
   authorId: USER_ID,
 };
 
-const VALID_UPDATE_INPUT = {
+const VALID_UPDATE_BODY_INPUT = {
+  contentJson: '{"root":{}}',
+  contentHtml: "<p>更新テスト</p>",
+};
+
+const VALID_UPDATE_SETTINGS_INPUT = {
   title: "更新テスト投稿",
   slug: "test-post-updated",
   excerpt: "更新概要",
-  contentJson: '{"root":{}}',
-  contentHtml: "<p>更新テスト</p>",
   thumbnailUrl: "https://example.com/thumb-updated.jpg",
   ogpImageUrl: null,
   categoryId: CATEGORY_ID,
@@ -344,10 +348,49 @@ describe("createPost", () => {
 });
 
 // =============================================================================
-// updatePost
+// updatePostBody
 // =============================================================================
 
-describe("updatePost", () => {
+describe("updatePostBody", () => {
+  beforeEach(() => {
+    mockPostFindUnique.mockReset();
+    mockPostUpdate.mockReset();
+
+    mockPostFindUnique.mockResolvedValue(EXISTING_POST);
+    mockPostUpdate.mockResolvedValue({ id: POST_ID });
+  });
+
+  describe("正常系", () => {
+    test("本文のみを更新でき、既存のスラッグを返す", async () => {
+      const result = await updatePostBody(POST_ID, VALID_UPDATE_BODY_INPUT);
+
+      expect(result).toEqual({
+        oldSlug: POST_SLUG,
+        slug: POST_SLUG,
+      });
+      expect(mockPostUpdate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("異常系", () => {
+    test("投稿が存在しない場合 NOT_FOUND エラーをスローする", async () => {
+      mockPostFindUnique.mockResolvedValue(null);
+
+      await expect(
+        updatePostBody(POST_ID, VALID_UPDATE_BODY_INPUT),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "投稿記事が見つかりません",
+      });
+    });
+  });
+});
+
+// =============================================================================
+// updatePostSettings
+// =============================================================================
+
+describe("updatePostSettings", () => {
   beforeEach(() => {
     mockPostFindUnique.mockReset();
     mockCheckSlugAvailability.mockReset();
@@ -363,8 +406,11 @@ describe("updatePost", () => {
   });
 
   describe("正常系", () => {
-    test("有効な入力で投稿を更新でき、oldSlug と新しいスラッグを返す", async () => {
-      const result = await updatePost(POST_ID, VALID_UPDATE_INPUT);
+    test("有効な入力で設定を更新でき、oldSlug と新しいスラッグを返す", async () => {
+      const result = await updatePostSettings(
+        POST_ID,
+        VALID_UPDATE_SETTINGS_INPUT,
+      );
 
       expect(result).toEqual({
         oldSlug: POST_SLUG,
@@ -374,10 +420,10 @@ describe("updatePost", () => {
     });
 
     test("スラッグが変わっていない場合も更新できる", async () => {
-      const input = { ...VALID_UPDATE_INPUT, slug: POST_SLUG };
+      const input = { ...VALID_UPDATE_SETTINGS_INPUT, slug: POST_SLUG };
       mockCheckSlugAvailability.mockResolvedValue({ available: true });
 
-      const result = await updatePost(POST_ID, input);
+      const result = await updatePostSettings(POST_ID, input);
 
       expect(result.slug).toBe(POST_SLUG);
     });
@@ -388,7 +434,7 @@ describe("updatePost", () => {
       mockPostFindUnique.mockResolvedValue(null);
 
       await expect(
-        updatePost(POST_ID, VALID_UPDATE_INPUT),
+        updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "投稿記事が見つかりません",
@@ -402,7 +448,7 @@ describe("updatePost", () => {
       });
 
       await expect(
-        updatePost(POST_ID, VALID_UPDATE_INPUT),
+        updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
@@ -412,7 +458,7 @@ describe("updatePost", () => {
       mockPostCategoryFindUnique.mockResolvedValue(null);
 
       await expect(
-        updatePost(POST_ID, VALID_UPDATE_INPUT),
+        updatePostSettings(POST_ID, VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "カテゴリが見つかりません",

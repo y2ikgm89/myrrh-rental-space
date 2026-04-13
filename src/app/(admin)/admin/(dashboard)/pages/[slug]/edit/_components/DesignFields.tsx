@@ -16,6 +16,7 @@ import {
   IconAlignCenter,
   IconAlignRight,
 } from "@tabler/icons-react";
+import { cn } from "@/shared/lib/cn";
 import {
   Input,
   Label,
@@ -238,7 +239,10 @@ export function DesignFields({
                 className="gap-1.5"
               >
                 <span
-                  className={`inline-block h-3 w-3 rounded-sm border ${opt.chip}`}
+                  className={cn(
+                    "inline-block h-3 w-3 rounded-sm border",
+                    opt.chip,
+                  )}
                 />
                 {opt.label}
               </ToggleGroupItem>
@@ -404,7 +408,7 @@ export function DesignFields({
           >
             {maxWidthOptions.map((opt) => (
               <ToggleGroupItem key={opt.value} value={opt.value}>
-                <span>{opt.label}</span>
+                {opt.label}
                 {opt.sub && (
                   <span className="text-[10px] text-muted-foreground">
                     {opt.sub}

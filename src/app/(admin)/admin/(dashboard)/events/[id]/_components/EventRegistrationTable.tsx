@@ -69,7 +69,7 @@ export function EventRegistrationTable({
               <TableHead>名前</TableHead>
               <TableHead className="hidden md:table-cell">メール</TableHead>
               <TableHead>参加人数</TableHead>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead className="hidden lg:table-cell">申込日時</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>

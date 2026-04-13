@@ -2,6 +2,7 @@
  * メディアリストラッパー（Server Component）
  */
 
+import { connection } from "next/server";
 import { getMediaList } from "@/admin/queries/media";
 import { MediaGrid } from "./MediaGrid";
 import { MediaTable } from "./MediaTable";
@@ -26,6 +27,7 @@ type Props = {
 };
 
 export async function MediaListWrapper({ searchParams }: Props) {
+  await connection();
   const filters: MediaFilters = {
     type: parseMediaTypeFilter(searchParams.type),
     usage: parseMediaUsageFilter(searchParams.usage),

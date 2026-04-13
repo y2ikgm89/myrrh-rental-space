@@ -51,7 +51,7 @@ export async function getPosts(
   } = pagination;
   const where = buildPostWhere(filters);
 
-  const [total, posts] = await prisma.$transaction([
+  const [total, posts] = await Promise.all([
     prisma.post.count({ where }),
     prisma.post.findMany({
       where,

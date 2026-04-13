@@ -1,8 +1,8 @@
 import { Suspense } from "react";
-import Link from "next/link";
+import { connection } from "next/server";
 import { getTermsList } from "@/admin/queries/terms";
 import { TermsTable } from "./_components/TermsTable";
-import { Button } from "@/admin/components/ui";
+import { TermsTypeSelectDialog } from "./_components/TermsTypeSelectDialog";
 import { LoadingState } from "@/admin/components/LoadingState";
 import type { Metadata } from "next";
 
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 async function TermsListContent() {
+  await connection();
   // WARN: 全件取得 — 50件超の運用が見込まれる場合はページネーション + 検索を追加
   const terms = await getTermsList();
   return <TermsTable terms={terms} />;
@@ -28,9 +29,7 @@ export default async function TermsPage() {
             スペースに紐づける利用規約を管理します。バージョン管理により変更履歴を追跡できます。
           </p>
         </div>
-        <Button asChild className="min-h-10 sm:min-h-9">
-          <Link href="/admin/terms/new">規約を追加</Link>
-        </Button>
+        <TermsTypeSelectDialog />
       </div>
       <Suspense fallback={<LoadingState />}>
         <TermsListContent />

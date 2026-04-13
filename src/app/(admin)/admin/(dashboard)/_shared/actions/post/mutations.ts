@@ -6,9 +6,11 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createPostSchema,
-  updatePostSchema,
+  updatePostBodySchema,
+  updatePostSettingsSchema,
   type CreatePostInput,
-  type UpdatePostInput,
+  type UpdatePostBodyInput,
+  type UpdatePostSettingsInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import {
@@ -16,7 +18,8 @@ import {
   deletePost as deletePostCommand,
   publishPost as publishPostCommand,
   unpublishPost as unpublishPostCommand,
-  updatePost as updatePostCommand,
+  updatePostBody as updatePostBodyCommand,
+  updatePostSettings as updatePostSettingsCommand,
 } from "@/shared/domain/posts/commands";
 import { getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -63,16 +66,21 @@ export async function createPost(
   });
 }
 
-export async function updatePost(
+/**
+ * 投稿記事の本文（Lexical エディタの contentJson / 派生 contentHtml）のみを更新する。
+ *
+ * 設定（タイトル・スラッグ・分類等）は変更しない。設定の更新は `updatePostSettings` を使用。
+ */
+export async function updatePostBody(
   id: string,
-  input: UpdatePostInput,
+  input: UpdatePostBodyInput,
 ): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
     return createValidationMutationError(validatedId.error);
   }
 
-  const parsed = updatePostSchema.safeParse(input);
+  const parsed = updatePostBodySchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
@@ -87,11 +95,64 @@ export async function updatePost(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedPost = await updatePostCommand(
+      updatedPost = await updatePostBodyCommand(validatedId.data, {
+        contentJson: parsed.data.contentJson,
+        contentHtml,
+      });
+      return null;
+    },
+    afterSuccess: async () => {
+      if (!updatedPost) {
+        return;
+      }
+
+      await invalidatePostCollectionCaches();
+      updateTag(getCacheTag.posts.detail(updatedPost.slug));
+      await purgePostCaches(updatedPost.slug);
+    },
+  });
+}
+
+/**
+ * 投稿記事の設定（メタデータ・分類・タグ・SEO/OGP・レイアウト）のみを更新する。
+ *
+ * 本文（contentJson / contentHtml）は変更しない。本文の更新は `updatePostBody` を使用。
+ */
+export async function updatePostSettings(
+  id: string,
+  input: UpdatePostSettingsInput,
+): Promise<MutationResult> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationMutationError(validatedId.error);
+  }
+
+  const parsed = updatePostSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  let updatedPost: { oldSlug: string; slug: string } | null = null;
+
+  return executeAdminMutationResult({
+    resource: "post",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => {
+      updatedPost = await updatePostSettingsCommand(
         validatedId.data,
         omitUndefined({
-          ...parsed.data,
-          contentHtml,
+          title: parsed.data.title,
+          slug: parsed.data.slug,
+          excerpt: parsed.data.excerpt,
+          thumbnailUrl: parsed.data.thumbnailUrl,
+          ogpImageUrl: parsed.data.ogpImageUrl,
+          categoryId: parsed.data.categoryId,
+          tags: parsed.data.tags,
+          metaDescription: parsed.data.metaDescription,
+          metaKeywords: parsed.data.metaKeywords,
+          ogpTitle: parsed.data.ogpTitle,
+          ogpDescription: parsed.data.ogpDescription,
           contentWidth: parsed.data.contentWidth ?? null,
           contentWidthCustom: parsed.data.contentWidthCustom ?? null,
         }),

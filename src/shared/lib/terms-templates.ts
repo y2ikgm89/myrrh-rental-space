@@ -394,6 +394,77 @@ const RENTAL_TERMS_TEMPLATE: TermsTemplate = {
 };
 
 /**
+ * 特定商取引法に基づく表記テンプレート
+ */
+const COMMERCIAL_TRANSACTION_TEMPLATE: TermsTemplate = {
+  id: "commercial-transaction",
+  label: "特定商取引法に基づく表記",
+  description:
+    "特定商取引法に基づく表示義務事項テンプレート（レンタルスペース対応）",
+  content: `<h2>事業者情報</h2>
+<table>
+<tbody>
+<tr>
+<th>事業者名称</th>
+<td>【事業者名を入力してください】</td>
+</tr>
+<tr>
+<th>代表者</th>
+<td>【代表者名を入力してください】</td>
+</tr>
+<tr>
+<th>所在地</th>
+<td>【住所を入力してください】</td>
+</tr>
+<tr>
+<th>連絡先</th>
+<td>【メールアドレス/電話番号を入力してください】</td>
+</tr>
+</tbody>
+</table>
+
+<h2>サービスの内容</h2>
+<p>レンタルスペースの時間貸しサービス</p>
+
+<h2>サービスの対価</h2>
+<p>各スペースの詳細ページに表示された料金（税込）</p>
+
+<h2>対価以外に必要な費用</h2>
+<ul>
+<li>インターネット接続に必要な通信料（お客様負担）</li>
+<li>オプションサービスをご利用の場合、別途オプション料金が発生します</li>
+</ul>
+
+<h2>支払方法</h2>
+<ul>
+<li>クレジットカード決済（VISA、Mastercard、JCB、American Express）</li>
+</ul>
+
+<h2>支払時期</h2>
+<p>予約確定時にクレジットカード決済が行われます。</p>
+
+<h2>サービスの提供時期</h2>
+<p>予約確定後、予約日時においてスペースをご利用いただけます。</p>
+
+<h2>キャンセル・返金について</h2>
+<p>キャンセルポリシーに基づきキャンセル料が発生します。詳細は「キャンセルポリシー」をご確認ください。</p>
+
+<h2>動作環境</h2>
+<p>当サイトの予約システムをご利用いただくには、以下の環境が必要です。</p>
+<ul>
+<li>Google Chrome、Safari、Firefox、Microsoft Edge の最新版</li>
+<li>JavaScript が有効であること</li>
+<li>Cookie が有効であること</li>
+</ul>
+
+<h2>特別な販売条件</h2>
+<ul>
+<li>未成年者がご利用される場合は、保護者の同意が必要です</li>
+<li>ご利用にあたっては施設利用規約への同意が必要です</li>
+</ul>`,
+};
+
+/**
  * 規約タイプごとのテンプレート定義
  */
 export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
@@ -402,6 +473,7 @@ export const TERMS_TEMPLATES: Record<TermsType, TermsTemplate[]> = {
   [TermsType.CANCELLATION]: [CANCELLATION_POLICY_TEMPLATE],
   [TermsType.PAYMENT]: [PAYMENT_TERMS_TEMPLATE],
   [TermsType.RENTAL_TERMS]: [RENTAL_TERMS_TEMPLATE],
+  [TermsType.COMMERCIAL_TRANSACTION]: [COMMERCIAL_TRANSACTION_TEMPLATE],
   [TermsType.CUSTOM]: [], // カスタム規約はテンプレートなし
 };
 

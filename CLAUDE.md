@@ -60,6 +60,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ### プロセス
 
 - **検証なしの完了報告禁止** → 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
+- **「公式ベストプラクティス準拠」主張前の context7 検証省略禁止** → Radix / RHF / Next.js / React などの外部ライブラリ挙動を「公式推奨」と主張する前に `mcp__context7__query-docs` で一次資料を確認する
 - **一括修正後の残存チェック省略禁止** → grep/Grep で違反パターンの残存ゼロを確認してから完了報告
 - **アーキテクチャ境界修正後の全量確認省略禁止** → `Grep "from \"@/shared/db/prisma\"" src/app/` で app 層の Prisma 直 import 残存ゼロを確認（`calendar-sync` の `$queryRaw` のみ例外）
 - **曖昧な要件の推測実装禁止** → `AskUserQuestion`で確認

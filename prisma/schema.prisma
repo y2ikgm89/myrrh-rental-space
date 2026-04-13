@@ -420,7 +420,12 @@ model Space {
   id            String    @id @default(uuid()) @db.Uuid
   slug          String    @unique
   name          String
-  description   String    @db.Text
+  /// Lexical EditorState JSON（正本）
+  descriptionJson      Json
+  /// Lexical → 公開表示用 HTML キャッシュ（SanitizedHtml で出力）
+  descriptionHtml      String   @db.Text
+  /// SEO description / カード要約 / メタデータ用プレーンテキスト派生
+  descriptionPlainText String   @db.Text
   /// 号室・フロア等。建物の住所は必ず `Location.address` を正本とする。
   addressDetail String?   @db.Text
   access        String?   @db.Text

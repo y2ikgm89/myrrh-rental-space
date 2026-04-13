@@ -37,7 +37,7 @@ export interface SpaceListData {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
-  readonly description: string | null;
+  readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly hourlyPrice: number | null;
   readonly area: number | null;
@@ -154,12 +154,12 @@ export function SpaceListSection({
               <h3 className="font-heading text-base font-light tracking-tight md:text-lg">
                 {space.name}
               </h3>
-              {space.description && (
+              {space.descriptionPlainText && (
                 <p
                   className="mt-1 line-clamp-2 text-sm text-muted-foreground"
                   style={getTextStyle(design)}
                 >
-                  {space.description}
+                  {space.descriptionPlainText}
                 </p>
               )}
               {(space.capacity != null || space.hourlyPrice != null) && (

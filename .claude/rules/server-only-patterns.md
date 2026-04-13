@@ -32,7 +32,8 @@ paths:
 | ファイル                                     | 理由                                                              |
 | -------------------------------------------- | ----------------------------------------------------------------- |
 | `src/shared/lib/prisma.ts`                   | DB 接続文字列・PrismaClient                                       |
-| `src/shared/lib/auth.ts`                     | OAuth シークレット・Better Auth 設定                              |
+| `src/shared/lib/admin-auth.ts`               | 管理者用 Better Auth 設定・セッション検証                         |
+| `src/shared/lib/customer-auth.ts`            | 顧客用 Better Auth 設定・セッション検証                           |
 | `src/shared/lib/errors/logger.ts`            | サーバー専用構造化ロガー                                          |
 | `src/shared/lib/env/server.ts`               | 全サーバーシークレット（`DATABASE_URL`、`BETTER_AUTH_SECRET` 等） |
 | `src/shared/lib/crypto.ts`                   | `ENCRYPTION_KEY` 読み取り・暗号化/復号化関数                      |
@@ -47,13 +48,13 @@ paths:
 
 ### 管理画面ライブラリ（`src/app/(admin)/.../_shared/lib/`）
 
-| ファイル                                                   | 理由                                                       |
-| ---------------------------------------------------------- | ---------------------------------------------------------- |
-| `src/app/(admin)/.../_shared/lib/action-auth.ts`           | 権限チェック関数群                                         |
-| `src/app/(admin)/.../_shared/lib/permissions.ts`           | ROLE_PERMISSIONS 定義                                      |
-| `src/app/(admin)/.../_shared/lib/audit.ts`                 | 監査ログ記録関数                                           |
-| `src/app/(admin)/.../_shared/lib/server-action-helpers.ts` | `auth.ts`（`server-only`）を import する Server Action HOF |
-| `src/app/(admin)/.../_shared/lib/stripe.ts`                | Stripe API キー復号・クライアント生成                      |
+| ファイル                                                   | 理由                                                             |
+| ---------------------------------------------------------- | ---------------------------------------------------------------- |
+| `src/app/(admin)/.../_shared/lib/action-auth.ts`           | 権限チェック関数群                                               |
+| `src/app/(admin)/.../_shared/lib/permissions.ts`           | ROLE_PERMISSIONS 定義                                            |
+| `src/app/(admin)/.../_shared/lib/audit.ts`                 | 監査ログ記録関数                                                 |
+| `src/app/(admin)/.../_shared/lib/server-action-helpers.ts` | `admin-auth.ts`（`server-only`）を import する Server Action HOF |
+| `src/app/(admin)/.../_shared/lib/stripe.ts`                | Stripe API キー復号・クライアント生成                            |
 
 ## 追加不要なファイル
 

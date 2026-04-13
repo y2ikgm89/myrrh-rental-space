@@ -19,7 +19,10 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import * as announcementBarCommands from "@/shared/domain/settings/announcement-bar";
 import * as settingsCommands from "@/shared/domain/settings/commands";
 
-import { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
+import {
+  sidebarSettingsSchema,
+  type SidebarSettings,
+} from "@/shared/lib/validations/sidebar";
 import {
   maintenanceSettingsSchema,
   cookieConsentSettingsSchema,
@@ -35,7 +38,6 @@ import {
   type PermalinkSettingsInput,
   type HeaderSettingsInput,
   type FooterSettingsInput,
-  type SidebarSettingsInput,
 } from "./schemas";
 
 export async function updateMaintenanceSettings(
@@ -103,7 +105,7 @@ export async function updateReservationSettings(
 }
 
 export async function updateSidebarSettings(
-  data: SidebarSettingsInput,
+  data: SidebarSettings,
 ): Promise<MutationResult> {
   const parsed = sidebarSettingsSchema.safeParse(data);
   if (!parsed.success) {

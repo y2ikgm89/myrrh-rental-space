@@ -38,8 +38,10 @@ export function SpaceDetailDialog({
           <>
             <DialogHeader>
               <DialogTitle>{space.name}</DialogTitle>
-              {space.description.length > 0 ? (
-                <DialogDescription>{space.description}</DialogDescription>
+              {space.descriptionPlainText.length > 0 ? (
+                <DialogDescription>
+                  {space.descriptionPlainText}
+                </DialogDescription>
               ) : (
                 <DialogDescription className="sr-only">
                   スペースの詳細情報

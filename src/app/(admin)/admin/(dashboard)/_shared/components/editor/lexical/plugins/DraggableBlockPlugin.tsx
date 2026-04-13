@@ -3,7 +3,7 @@
  *
  * @description ブロックのドラッグ＆ドロップ並べ替えを提供するプラグイン
  *
- * `lexical-draggable-block-plugin`（Lexical 0.41 フォーク）の DraggableBlockPlugin_EXPERIMENTAL をラップ
+ * `lexical-draggable-block-plugin`（Lexical 0.43 フォーク）の DraggableBlockPlugin_EXPERIMENTAL をラップ
  */
 
 "use client";

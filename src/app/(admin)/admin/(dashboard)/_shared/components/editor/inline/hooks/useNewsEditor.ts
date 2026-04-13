@@ -3,21 +3,25 @@
 /**
  * お知らせエディター専用フック
  *
- * NewsFormDataに特化した型安全なフック
- * 型アサーション完全排除
+ * 本文（contentJson）と設定（メタデータ・SEO 等）を独立した
+ * RHF フォームとして管理し、保存も独立して実行する。
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 import {
-  newsFormSchema,
-  type NewsFormData,
+  newsBodyFormSchema,
+  newsSettingsFormSchema,
+  type NewsBodyFormData,
+  type NewsSettingsFormData,
 } from "@/admin/lib/validations/news";
 import {
   createNews,
-  updateNews,
+  updateNewsBody,
+  updateNewsSettings,
   deleteNews,
   publishNews,
   unpublishNews,
@@ -31,7 +35,6 @@ import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { NewsPreviewData } from "@/shared/types";
 
-// 共有ユーティリティ
 import {
   useEditorCore,
   toFormDateString,
@@ -53,15 +56,22 @@ type UseNewsEditorOptions = {
 };
 
 // =============================================================================
-// Transforms (Type-safe)
+// Transforms
 // =============================================================================
 
-function toFormData(data?: NewsData): NewsFormData {
+function toBodyFormData(data?: NewsData): NewsBodyFormData {
+  return {
+    contentJson: data?.contentJson
+      ? JSON.stringify(data.contentJson)
+      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  };
+}
+
+function toSettingsFormData(data?: NewsData): NewsSettingsFormData {
   if (!data) {
     return {
       slug: "",
       title: "",
-      contentJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       isPublished: false,
       publishedAt: "",
       contentWidth: "",
@@ -77,9 +87,6 @@ function toFormData(data?: NewsData): NewsFormData {
   return {
     slug: data.slug,
     title: data.title,
-    contentJson: data.contentJson
-      ? JSON.stringify(data.contentJson)
-      : EMPTY_LEXICAL_EDITOR_STATE_JSON,
     isPublished: data.isPublished,
     publishedAt: toFormDateString(data.publishedAt),
     contentWidth: toFormContentWidth(data.contentWidth),
@@ -92,11 +99,11 @@ function toFormData(data?: NewsData): NewsFormData {
   };
 }
 
-function toSubmitPayload(formData: NewsFormData) {
+function toSettingsSubmitPayload(formData: NewsSettingsFormData) {
   return {
     slug: formData.slug,
     title: formData.title,
-    contentJson: formData.contentJson,
+    isPublished: formData.isPublished,
     contentWidth: toSubmitContentWidth(formData.contentWidth),
     contentWidthCustom: toSubmitNumber(formData.contentWidthCustom),
     metaDescription: toNullableString(formData.metaDescription),
@@ -108,14 +115,14 @@ function toSubmitPayload(formData: NewsFormData) {
 }
 
 function toPreviewData(
-  formData: NewsFormData,
+  settingsData: NewsSettingsFormData,
   contentHtml: string,
 ): NewsPreviewData {
   return {
-    title: formData.title || "無題",
-    slug: formData.slug || "preview-new",
+    title: settingsData.title || "無題",
+    slug: settingsData.slug || "preview-new",
     contentHtml,
-    publishedAt: formData.publishedAt || null,
+    publishedAt: settingsData.publishedAt || null,
   };
 }
 
@@ -126,81 +133,165 @@ function toPreviewData(
 export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   const router = useRouter();
 
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
+
   // プレビュー
   const { saveAndOpenPreview } = createPreviewHandlers("news");
 
-  // フォーム（型アサーション不要）
-  const form = useForm<NewsFormData, unknown, NewsFormData>({
-    resolver: standardSchemaResolver(newsFormSchema),
-    defaultValues: toFormData(news),
+  // 本文フォーム
+  const bodyForm = useForm<NewsBodyFormData, unknown, NewsBodyFormData>({
+    resolver: standardSchemaResolver(newsBodyFormSchema),
+    defaultValues: toBodyFormData(news),
+  });
+
+  // 設定フォーム
+  const settingsForm = useForm<
+    NewsSettingsFormData,
+    unknown,
+    NewsSettingsFormData
+  >({
+    resolver: standardSchemaResolver(newsSettingsFormSchema),
+    defaultValues: toSettingsFormData(news),
   });
 
   // コアフック
   const core = useEditorCore({
-    form,
+    form: bodyForm,
     listPath: "/admin/news",
   });
 
-  const { handleSubmit, setValue, getValues, reset, formState, control } = form;
-
-  // 監視値（型アサーション不要 - 具体的な型が推論される）
-  const title = useWatch({ control, name: "title" }) ?? "";
-  const slug = useWatch({ control, name: "slug" }) ?? "";
+  // 監視値
+  const title =
+    useWatch({ control: settingsForm.control, name: "title" }) ?? "";
+  const slug = useWatch({ control: settingsForm.control, name: "slug" }) ?? "";
+  const isPublished =
+    useWatch({ control: settingsForm.control, name: "isPublished" }) ?? false;
   const contentJson =
-    useWatch({ control, name: "contentJson" }) ??
+    useWatch({ control: bodyForm.control, name: "contentJson" }) ??
     EMPTY_LEXICAL_EDITOR_STATE_JSON;
-  const isPublished = useWatch({ control, name: "isPublished" }) ?? false;
 
-  // isDirty計算
-  const isDirty = formState.isDirty || core.hasEditorChanges;
+  const isBodyDirty = bodyForm.formState.isDirty || core.hasEditorChanges;
+  const isSettingsDirty = settingsForm.formState.isDirty;
+  const isDirty = isBodyDirty || isSettingsDirty;
 
   // ==========================================================================
-  // Handlers (React Compiler auto-memoizes - no useCallback needed)
+  // Handlers
   // ==========================================================================
 
   const handleContentChange = (json: string) => {
-    setValue("contentJson", json, { shouldDirty: true });
+    bodyForm.setValue("contentJson", json, { shouldDirty: true });
     core.setHasEditorChanges(true);
   };
 
-  const onSubmit = (formData: NewsFormData) => {
+  const onSubmitBody = (bodyData: NewsBodyFormData) => {
+    if (!news) return;
     core.startTransition(async () => {
       try {
-        const payload = toSubmitPayload(formData);
-
-        if (mode === "create") {
-          const result = await createNews(payload);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-            return;
-          }
-
-          toast.success("お知らせを作成しました");
-          router.push(`/admin/news/${result.id}`);
-        } else if (news) {
-          const result = await updateNews(news.id, payload);
-          if (isMutationError(result)) {
-            toast.error(result.error);
-            return;
-          }
-
-          reset(formData);
-          core.setHasEditorChanges(false);
-          router.refresh();
-          toast.success("お知らせを保存しました");
+        const result = await updateNewsBody(news.id, {
+          contentJson: bodyData.contentJson,
+        });
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
         }
+
+        bodyForm.reset(bodyData);
+        core.setHasEditorChanges(false);
+        router.refresh();
+        toast.success("本文を保存しました");
       } catch (error) {
-        logger.error("保存中にエラーが発生しました", {
+        logger.error("本文の保存中にエラーが発生しました", {
           error: getErrorMessage(error),
         });
-        toast.error("保存中にエラーが発生しました");
+        toast.error("本文の保存中にエラーが発生しました");
+      }
+    });
+  };
+
+  const onSubmitSettings = (settingsData: NewsSettingsFormData) => {
+    if (!news) return;
+    core.startTransition(async () => {
+      try {
+        const payload = toSettingsSubmitPayload(settingsData);
+        const result = await updateNewsSettings(news.id, payload);
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        settingsForm.reset(settingsData);
+        setIsSettingsDialogOpen(false);
+        router.refresh();
+        toast.success("お知らせ設定を保存しました");
+      } catch (error) {
+        logger.error("お知らせ設定の保存中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("お知らせ設定の保存中にエラーが発生しました");
+      }
+    });
+  };
+
+  const onCreateBoth = () => {
+    core.startTransition(async () => {
+      const [bodyValid, settingsValid] = await Promise.all([
+        bodyForm.trigger(),
+        settingsForm.trigger(),
+      ]);
+
+      if (!bodyValid || !settingsValid) {
+        if (!settingsValid) setIsSettingsDialogOpen(true);
+        toast.error("入力内容に誤りがあります");
+        return;
+      }
+
+      const bodyData = bodyForm.getValues();
+      const settingsData = settingsForm.getValues();
+
+      try {
+        const result = await createNews({
+          slug: settingsData.slug,
+          title: settingsData.title,
+          contentJson: bodyData.contentJson,
+        });
+
+        if (isMutationError(result)) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("お知らせを作成しました");
+        router.push(`/admin/news/${result.id}`);
+      } catch (error) {
+        logger.error("作成中にエラーが発生しました", {
+          error: getErrorMessage(error),
+        });
+        toast.error("作成中にエラーが発生しました");
       }
     });
   };
 
   const handleSave = () => {
     if (core.isPending) return;
-    handleSubmit(onSubmit)();
+    if (mode === "create") {
+      onCreateBoth();
+      return;
+    }
+    bodyForm.handleSubmit(onSubmitBody)();
+  };
+
+  const handleSaveSettings = () => {
+    if (core.isPending) return;
+    settingsForm.handleSubmit(onSubmitSettings)();
+  };
+
+  const closeSettingsDialog = () => {
+    settingsForm.reset(toSettingsFormData(news));
+    setIsSettingsDialogOpen(false);
+  };
+
+  const openSettingsDialog = () => {
+    setIsSettingsDialogOpen(true);
   };
 
   const handlePublish = () => {
@@ -213,7 +304,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       }
 
       toast.success(`公開しました（バージョン ${result.version}）`);
-      setValue("isPublished", true);
+      settingsForm.setValue("isPublished", true);
       router.refresh();
     });
   };
@@ -228,7 +319,7 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
       }
 
       toast.success("下書きに戻しました");
-      setValue("isPublished", false);
+      settingsForm.setValue("isPublished", false);
       router.refresh();
     });
   };
@@ -256,11 +347,14 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
 
   const handlePreview = () => {
     try {
-      const values = getValues();
+      const bodyValues = bodyForm.getValues();
+      const settingsValues = settingsForm.getValues();
       const identifier =
         mode === "create" ? "preview-new" : slug || "preview-new";
-      const contentHtml = renderEditorStateJsonToHtmlClient(values.contentJson);
-      const previewData = toPreviewData(values, contentHtml);
+      const contentHtml = renderEditorStateJsonToHtmlClient(
+        bodyValues.contentJson,
+      );
+      const previewData = toPreviewData(settingsValues, contentHtml);
       saveAndOpenPreview(identifier, previewData, "/news");
     } catch (error) {
       logger.error("プレビュー生成中にエラーが発生しました", {
@@ -275,43 +369,41 @@ export function useNewsEditor({ news, mode }: UseNewsEditorOptions) {
   // ==========================================================================
 
   return {
-    // フォーム
-    form,
+    bodyForm,
+    settingsForm,
     isPending: core.isPending,
     isDirty,
+    isBodyDirty,
+    isSettingsDirty,
     hasEditorChanges: core.hasEditorChanges,
 
-    // 監視値
     title,
     slug,
     contentJson,
     isPublished,
 
-    // パネル管理
-    isSettingsPanelOpen: core.panels.isSettingsPanelOpen,
-    isCommentsPanelOpen: core.panels.isCommentsPanelOpen,
-    isPanelOpen:
-      core.panels.isSettingsPanelOpen || core.panels.isCommentsPanelOpen,
-    toggleSettings: core.panels.toggleSettings,
-    toggleComments: core.panels.toggleComments,
-    closePanel: core.panels.closePanel,
-    activeMarkId: core.panels.activeMarkId,
-    selectMark: core.panels.selectMark,
-    pendingComment: core.panels.pendingComment,
-    handleAddComment: core.panels.handleAddComment,
-    clearPendingComment: core.panels.clearPendingComment,
+    isSettingsDialogOpen,
+    openSettingsDialog,
+    closeSettingsDialog,
 
-    // ハンドラー
+    isCommentsPanelOpen: core.comments.isOpen,
+    toggleComments: core.comments.toggle,
+    closeCommentsPanel: core.comments.close,
+    activeMarkId: core.comments.activeMarkId,
+    selectMark: core.comments.selectMark,
+    pendingComment: core.comments.pendingComment,
+    handleAddComment: core.comments.handleAddComment,
+    clearPendingComment: core.comments.clearPendingComment,
+
     handleSave,
+    handleSaveSettings,
     handlePublish,
     handleUnpublish,
     handleDelete,
     handlePreview,
     handleBack: core.handleBack,
     handleContentChange,
-    onSubmit,
 
-    // 削除ダイアログ
     isDeleteDialogOpen: core.isDeleteDialogOpen,
     setIsDeleteDialogOpen: core.setIsDeleteDialogOpen,
   };

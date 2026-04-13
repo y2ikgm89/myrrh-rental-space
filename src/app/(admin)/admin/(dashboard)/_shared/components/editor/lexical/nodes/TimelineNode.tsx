@@ -90,10 +90,7 @@ export class TimelineContainerNode extends ElementNode {
     return div;
   }
 
-  override updateDOM(
-    prevNode: TimelineContainerNode,
-    dom: HTMLElement,
-  ): boolean {
+  override updateDOM(prevNode: this, dom: HTMLElement): boolean {
     const dirChange = $getStateChange(this, prevNode, timelineDirectionState);
     if (dirChange !== null) {
       const [newDir] = dirChange;

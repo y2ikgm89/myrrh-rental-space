@@ -106,11 +106,8 @@ export function SectionEditor({
     const design = latestDesignRef.current;
     if (!design) return;
     startTransition(async () => {
-      const designRecord: Record<string, unknown> = Object.fromEntries(
-        Object.entries(design),
-      );
       const result = await updatePageSection(section.id, {
-        design: designRecord,
+        design: { ...design },
       });
       if (!isMutationError(result)) {
         toast.success("デザインを更新しました");

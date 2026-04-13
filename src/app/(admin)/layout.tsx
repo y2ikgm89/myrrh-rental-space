@@ -10,6 +10,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
+import { cn } from "@/shared/lib/cn";
 import "./_styles/admin.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -49,7 +50,11 @@ export default async function AdminRootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
+        className={cn(
+          notoSansJP.variable,
+          cormorantGaramond.variable,
+          "font-sans antialiased",
+        )}
       >
         {children}
       </body>

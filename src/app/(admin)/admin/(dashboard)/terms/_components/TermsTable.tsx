@@ -9,9 +9,9 @@ import {
 } from "@/admin/components/ui";
 import { TERMS_TYPES } from "@/shared/lib/validations/terms";
 import type { TermsWithVersion } from "@/shared/lib/validations/terms";
-import { EmptyState } from "@/admin/components/EmptyState";
 import { TermsActiveSwitch } from "./TermsActiveSwitch";
 import { TermsActionCell } from "./TermsActionCell";
+import { TermsTypeSelectDialog } from "./TermsTypeSelectDialog";
 
 type TermsTableProps = {
   terms: TermsWithVersion[];
@@ -20,10 +20,14 @@ type TermsTableProps = {
 export function TermsTable({ terms }: TermsTableProps) {
   if (terms.length === 0) {
     return (
-      <EmptyState
-        message="利用規約がまだ登録されていません"
-        action={{ label: "規約を追加", href: "/admin/terms/new" }}
-      />
+      <div className="rounded-lg border bg-card p-12 text-center">
+        <p className="text-muted-foreground">
+          利用規約がまだ登録されていません
+        </p>
+        <div className="mt-4">
+          <TermsTypeSelectDialog />
+        </div>
+      </div>
     );
   }
 
@@ -37,12 +41,8 @@ export function TermsTable({ terms }: TermsTableProps) {
               <TableHead className="hidden md:table-cell">スラッグ</TableHead>
               <TableHead className="hidden md:table-cell">バージョン</TableHead>
               <TableHead className="text-center">有効/無効</TableHead>
-              <TableHead className="hidden whitespace-nowrap md:table-cell">
-                予約時必須
-              </TableHead>
-              <TableHead className="hidden whitespace-nowrap md:table-cell">
-                フッター
-              </TableHead>
+              <TableHead className="hidden md:table-cell">予約時必須</TableHead>
+              <TableHead className="hidden md:table-cell">フッター</TableHead>
               <TableHead className="hidden text-right md:table-cell">
                 スペース数
               </TableHead>

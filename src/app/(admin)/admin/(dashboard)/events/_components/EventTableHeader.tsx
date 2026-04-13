@@ -25,7 +25,7 @@ export function EventTableHeader() {
   return (
     <TableHeader>
       <TableRow>
-        <TableHead className="whitespace-nowrap">ステータス</TableHead>
+        <TableHead>ステータス</TableHead>
         <SortableColumnHeader
           column="title"
           currentSortBy={params.sortBy}

@@ -11,7 +11,8 @@ import {
   publishNews as publishNewsCommand,
   restoreNewsVersion as restoreNewsVersionCommand,
   unpublishNews as unpublishNewsCommand,
-  updateNews as updateNewsCommand,
+  updateNewsBody as updateNewsBodyCommand,
+  updateNewsSettings as updateNewsSettingsCommand,
 } from "@/shared/domain/news/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
@@ -22,14 +23,17 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createNewsSchema,
-  updateNewsSchema,
+  updateNewsBodySchema,
+  updateNewsSettingsSchema,
   type CreateNewsInput,
-  type UpdateNewsInput,
+  type UpdateNewsBodyInput,
+  type UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
 
 export type {
   CreateNewsInput,
-  UpdateNewsInput,
+  UpdateNewsBodyInput,
+  UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
 export type {
   GetNewsListResult,
@@ -96,16 +100,19 @@ export async function createNews(
   });
 }
 
-export async function updateNews(
+/**
+ * お知らせの本文（contentJson / 派生 contentHtml）のみを更新する。
+ */
+export async function updateNewsBody(
   id: string,
-  input: UpdateNewsInput,
+  input: UpdateNewsBodyInput,
 ): Promise<MutationResult> {
   const validatedId = idSchema.safeParse(id);
   if (!validatedId.success) {
     return createValidationMutationError(validatedId.error);
   }
 
-  const parsed = updateNewsSchema.safeParse(input);
+  const parsed = updateNewsBodySchema.safeParse(input);
   if (!parsed.success) {
     return createValidationMutationError(parsed.error);
   }
@@ -120,13 +127,60 @@ export async function updateNews(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedNews = await updateNewsCommand(
+      updatedNews = await updateNewsBodyCommand(validatedId.data, {
+        contentJson: parsed.data.contentJson,
+        contentHtml,
+      });
+      return null;
+    },
+    afterSuccess: () => {
+      if (!updatedNews) {
+        return;
+      }
+
+      invalidateNewsCollectionCaches();
+      updateTag(getCacheTag.news.detail(updatedNews.slug));
+      purgeNewsCaches(updatedNews.slug);
+    },
+  });
+}
+
+/**
+ * お知らせの設定（メタデータ・公開状態・SEO/OGP・レイアウト）のみを更新する。
+ */
+export async function updateNewsSettings(
+  id: string,
+  input: UpdateNewsSettingsInput,
+): Promise<MutationResult> {
+  const validatedId = idSchema.safeParse(id);
+  if (!validatedId.success) {
+    return createValidationMutationError(validatedId.error);
+  }
+
+  const parsed = updateNewsSettingsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  let updatedNews: { oldSlug: string; slug: string } | null = null;
+
+  return executeAdminMutationResult({
+    resource: "news",
+    action: "update",
+    resourceId: validatedId.data,
+    execute: async () => {
+      updatedNews = await updateNewsSettingsCommand(
         validatedId.data,
         omitUndefined({
-          ...parsed.data,
-          contentHtml,
+          slug: parsed.data.slug,
+          title: parsed.data.title,
           contentWidth: parsed.data.contentWidth ?? null,
           contentWidthCustom: parsed.data.contentWidthCustom ?? null,
+          metaDescription: parsed.data.metaDescription,
+          metaKeywords: parsed.data.metaKeywords,
+          ogpTitle: parsed.data.ogpTitle,
+          ogpDescription: parsed.data.ogpDescription,
+          ogpImageUrl: parsed.data.ogpImageUrl,
         }),
       );
       return null;

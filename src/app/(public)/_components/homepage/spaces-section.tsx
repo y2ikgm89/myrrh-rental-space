@@ -7,7 +7,7 @@ export interface ShowcaseSpace {
   readonly id: string;
   readonly slug: string;
   readonly name: string;
-  readonly description: string | null;
+  readonly descriptionPlainText: string;
   readonly capacity: number;
   readonly hourlyPrice: number;
   readonly dailyPrice: number | null;
@@ -21,12 +21,14 @@ export interface SpacesSectionProps {
   readonly label: string;
   readonly title: string;
   readonly count: number;
+  readonly autoPlayInterval: number;
 }
 
 export const spacesDefaultProps = {
   label: "Selected Spaces",
   title: "厳選スペース",
   count: 6,
+  autoPlayInterval: 5,
 } as const;
 
 export function SpacesSection({
@@ -34,6 +36,7 @@ export function SpacesSection({
   label = spacesDefaultProps.label,
   title = spacesDefaultProps.title,
   count = spacesDefaultProps.count,
+  autoPlayInterval = spacesDefaultProps.autoPlayInterval,
 }: SpacesSectionProps): ReactElement {
   const limited = spaces.slice(0, count);
 
@@ -54,7 +57,9 @@ export function SpacesSection({
       </Container>
 
       {/* Center Stage Carousel */}
-      {limited.length > 0 && <SpacesCarousel spaces={limited} />}
+      {limited.length > 0 && (
+        <SpacesCarousel spaces={limited} autoPlayInterval={autoPlayInterval} />
+      )}
     </section>
   );
 }

@@ -4,6 +4,7 @@
  * 各種KPIカードを表示
  */
 
+import { connection } from "next/server";
 import { getDashboardStats } from "@/admin/queries/dashboard";
 import {
   Card,
@@ -16,6 +17,7 @@ import { formatChange, getChangeColor } from "@/admin/lib/utils";
 import { cn } from "@/shared/lib/cn";
 
 export async function DashboardStatsSection() {
+  await connection();
   const stats = await getDashboardStats();
 
   return (

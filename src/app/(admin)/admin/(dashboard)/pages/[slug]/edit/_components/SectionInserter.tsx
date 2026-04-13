@@ -23,7 +23,7 @@ export function SectionInserter({ onInsert, disabled }: SectionInserterProps) {
           e.stopPropagation();
           onInsert();
         }}
-        className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 transition-opacity hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none group-hover/inserter:opacity-100"
+        className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 transition-opacity delay-150 hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none group-hover/inserter:opacity-100"
       >
         <IconPlus className="h-3.5 w-3.5" />
       </button>

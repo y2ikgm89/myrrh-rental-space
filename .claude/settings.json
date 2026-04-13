@@ -84,39 +84,9 @@
           },
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-server-action-hof.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pattern-guard.sh",
             "timeout": 10,
-            "statusMessage": "Checking HOF pattern..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/settings-field-reminder.sh",
-            "timeout": 10,
-            "statusMessage": "Settings フィールド確認中..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/import-boundary-check.sh",
-            "timeout": 10,
-            "statusMessage": "Import 境界チェック中..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-disable-audit.sh",
-            "timeout": 5,
-            "statusMessage": "ESLint disable 監査中..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/soft-delete-guard.sh",
-            "timeout": 10,
-            "statusMessage": "ソフトデリート検査中..."
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auth-client-check.sh",
-            "timeout": 5,
-            "statusMessage": "Auth クライアント検査中..."
+            "statusMessage": "パターン検査中..."
           }
         ]
       },
@@ -128,6 +98,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
             "timeout": 10,
             "statusMessage": "空ルートディレクトリをチェック中..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-db-generate.sh",
+            "timeout": 30,
+            "statusMessage": "Prisma generate チェック中..."
           }
         ]
       }

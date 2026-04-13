@@ -37,7 +37,7 @@ export function InquiryTable({ inquiries }: InquiryTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead>件名</TableHead>
               <TableHead className="hidden md:table-cell">お名前</TableHead>
               <TableHead className="hidden lg:table-cell">

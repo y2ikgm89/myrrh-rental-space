@@ -9,12 +9,12 @@ paths:
 
 # Prisma パターンルール
 
-> Prisma 7.5 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
+> Prisma 7.7 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）/ PostgreSQL（`package.json` の `prisma` と一致）
 
 ## Better Auth との境界
 
 - **アプリ本体**: `src/shared/db/prisma.ts` の **`prisma`**（**`createAppPrismaClient`** 適用済み）。
-- **Better Auth の `prismaAdapter`**: 同ファイルの **`prismaForBetterAuth`**（拡張前クライアント）だけを `src/shared/db/better-auth-adapter.ts` 経由で渡す。アダプターに拡張済みクライアントを渡さない。
+- **Better Auth の `prismaAdapter`**: 同ファイルの **`basePrisma`**（拡張前クライアント）だけを `src/shared/db/better-auth-adapter.ts` 経由で渡す。アダプターに拡張済みクライアントを渡さない。
 - 認証設定側では **`experimental.joins: true`** を維持（Prisma アダプター公式推奨）。理由は `.claude/rules/auth-patterns.md` の「Prisma アダプター + Prisma 7」を参照。
 
 ## Prisma クライアントの組み立て（拡張の単一ソース）
@@ -378,6 +378,22 @@ contentHtml String  @db.Text @map("content")  // HTML キャッシュ（公開�
 contentJson Json?                              // Lexical EditorState JSON（プライマリ）
 ```
 
+### SEO プレーン派生を併用するパターン（3 カラム構成 — Space 方式）
+
+SEO description / カード要約 / OG / JSON-LD に本文を使うモデルは **3 カラム**構成を採用する:
+
+```prisma
+descriptionJson      Json      // Lexical EditorState（正本）
+descriptionHtml      String    @db.Text  // renderEditorStateToHtmlLazy キャッシュ
+descriptionPlainText String    @db.Text  // stripHtmlToText(html, 200) 派生
+```
+
+- **共有ヘルパー**: `@/shared/lib/lexical/description-defaults.ts`（`buildParagraphEditorStateJson` / `buildParagraphHtml`）、`@/shared/lib/lexical/html-to-plain-text.ts`（`stripHtmlToText`）。seed・テスト・Server Action で同じ関数を使い、派生の二重実装を禁止
+- **Server Action**: `renderEditorStateToHtmlLazy(json)` → `stripHtmlToText(html, 200)` で 3 値を一括生成（`src/app/(admin)/admin/(dashboard)/_shared/actions/space.ts` の `buildSpaceCommandInput` が参照実装）
+- **公開表示**: 詳細は `SanitizedHtml` + `*Html`、metadata / OG / JSON-LD / カード / 一覧 / ダイアログは `*PlainText` に統一
+- **RHF 連携**: `register("xxxJson")` ではなく `useController({ control, name: "xxxJson" })` + `<LazyLexicalEditor contentJson={field.value} onChange={field.onChange} />`。編集初期値は `typeof v === "string" ? v : JSON.stringify(v ?? JSON.parse(EMPTY_LEXICAL_EDITOR_STATE_JSON))` で文字列化
+- **Zod スキーマ**: `xxxJson: lexicalJsonSchema`、`defaultValues` には `EMPTY_LEXICAL_EDITOR_STATE_JSON` を渡す
+
 ### Server Actions での保存パターン
 
 Editor の `onChange` は JSON 文字列を返す。Server Actions で `renderEditorStateToHtmlLazy()` を使い HTML を生成し、DB に同時保存する:
@@ -429,6 +445,38 @@ export function PostContent({ post }: { post: Post }) {
 ---
 
 ## クエリパターン
+
+### upsert の race condition（公式 Issue #3242）
+
+Prisma の `upsert` は真のアトミック操作ではない（SELECT → INSERT/UPDATE）。同時リクエストで P2002 (Unique constraint failed) が発生する。**`findUnique` → 条件付き `update`/`create` + P2002 フォールバック** を推奨:
+
+```typescript
+// NG: upsert（レースコンディション）
+const customer = await prisma.customer.upsert({
+  where: { email },
+  create: { email, name },
+  update: { name },
+});
+
+// OK: find + create + P2002 フォールバック
+const existing = await prisma.customer.findUnique({ where: { email } });
+if (existing) {
+  await prisma.customer.update({ where: { id: existing.id }, data: { name } });
+  return existing.id;
+}
+try {
+  const created = await prisma.customer.create({ data: { email, name } });
+  return created.id;
+} catch (e) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+    const fallback = await prisma.customer.findUnique({ where: { email } });
+    if (fallback) return fallback.id;
+  }
+  throw e;
+}
+```
+
+参照実装: `src/shared/domain/reservations/resolve-customer.ts`、`src/shared/domain/customers/link.ts`
 
 ### Select 句で型を限定
 
@@ -506,22 +554,41 @@ type PostTableProps = {
 
 ### トランザクション
 
+**`prisma.$transaction([...])` の配列形式は禁止**（ESLint `no-restricted-syntax` で error）。`@prisma/adapter-pg` 7.7.0 + `pg` 8.20.0 の組み合わせで、pinned PoolClient 上に `BEGIN → N queries → COMMIT` が積まれる瞬間があり、pg の `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` deprecation を誘発する（`_queryQueue.length > 0` 時に発火）。
+
 ```typescript
-// バッチトランザクション（複数操作の原子性）
-const [post, auditLog] = await prisma.$transaction([
-  prisma.post.create({ data: postData }),
-  prisma.auditLog.create({ data: auditData }),
+// NG: 配列形式 — pg deprecation を誘発
+const [total, posts] = await prisma.$transaction([
+  prisma.post.count({ where }),
+  prisma.post.findMany({ where, select }),
 ]);
 
-// インタラクティブトランザクション（依存関係あり）
+// OK: 原子性不要な独立クエリは Promise.all（ページネーション count + findMany 等）
+const [total, posts] = await Promise.all([
+  prisma.post.count({ where }),
+  prisma.post.findMany({ where, select }),
+]);
+
+// OK: 原子性必須ならインタラクティブトランザクション（逐次 await で pg queue に積まれない）
 await prisma.$transaction(async (tx) => {
   const post = await tx.post.create({ data: postData });
-  await tx.postTag.createMany({
-    data: tags.map((tagId) => ({ postId: post.id, tagId })),
+  await tx.postVersion.create({
+    data: { postId: post.id, version: 1, contentHtml: post.contentHtml },
   });
   return post;
 });
 ```
+
+**判断基準**:
+
+| 用途                                         | 選ぶもの                            | 理由                                       |
+| -------------------------------------------- | ----------------------------------- | ------------------------------------------ |
+| ページネーションの `count + findMany`        | `Promise.all`                       | 独立クエリ、原子性不要、並列で高速         |
+| 集計の `count + sum + avg`                   | `Promise.all`                       | 同上                                       |
+| `update + versionCreate` 等の履歴付き mutate | `$transaction(async (tx) => {...})` | 原子性必須、逐次 await で deprecation 回避 |
+| 依存する複数 write（FK 制約あり）            | `$transaction(async (tx) => {...})` | 同上                                       |
+
+**例外**: `prisma/seed.ts` の一括 `deleteMany` はデータ全削除の原子性が必須で、実行回数も限られるため配列形式を許容（ESLint 対象外パス）。
 
 ---
 
@@ -542,17 +609,22 @@ await prisma.$transaction(async (tx) => {
 4. **手動 `Number()` 変換禁止（集計以外）**
    - `$extends` が自動変換済み。手動の `Number(space.pricePerHour)` は不要
 
-5. **Prisma オブジェクトの直接 return 禁止（読み取り系 Actions）**
+5. **`prisma.$transaction([...])` 配列形式禁止**
+   - ESLint `no-restricted-syntax` で error
+   - 代替: `Promise.all([...])`（独立クエリ）または `prisma.$transaction(async (tx) => { ... })`（原子性必須）
+   - 詳細: §トランザクション
+
+6. **Prisma オブジェクトの直接 return 禁止（読み取り系 Actions）**
    - `return prismaObj` → NG（React 19 シリアライゼーションエラー）
    - `return prismaArray` → NG
    - `toPlainArray(prismaArray)` のみ（日付マッピングなし）→ NG（戻り値型に `date: string` がある場合、TypeScript 型エラー）
    - **OK**: `return toPlainObject({ ...obj, createdAt: obj.createdAt.toISOString(), updatedAt: obj.updatedAt.toISOString() })` — **`createdAt/updatedAt` だけでなく全ての `Date` フィールド**（`validFrom`, `validUntil`, `startTime`, `endTime`, `publishedAt` 等）も明示的に `.toISOString()` で変換すること。変換漏れがあると型は `Date` でも実態は `string` になりランタイムクラッシュする
    - **OK**: `return toPlainArray(array.map(item => ({ ...item, createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })))`
 
-6. **`renderEditorStateToHtml` のトップレベル import 禁止**
+7. **`renderEditorStateToHtml` のトップレベル import 禁止**
    - `renderEditorStateToHtmlLazy()` を使用（ビルドエラー回避）
 
-7. **`'use cache'` 関数で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
+8. **`'use cache'` 関数で `safeFetch()` を `await` なし・`toPlainObject()` なしで return 禁止**
    - `return safeFetch({...})` → `const result = await safeFetch({...}); return toPlainObject(result)`
    - Prisma モデルの narrow `select` でも Symbol プロパティは残る → `toPlainObject` 必須
    - 詳細と例 → `server-actions.md` §公開データ取得パターン

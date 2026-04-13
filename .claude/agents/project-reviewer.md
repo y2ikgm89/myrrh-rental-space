@@ -4,7 +4,7 @@ description: >
   Expert code reviewer for this project (Next.js 16 / React 19 / TypeScript 6.0).
   Use proactively after writing or modifying code. Reviews for type safety (no `as` assertions),
   semantic color tokens (no hardcoded colors), React Compiler compatibility,
-  eslint-react v3 patterns (no IIFE in JSX, no component-in-hook), Server Actions patterns,
+  eslint-react v4 patterns (no IIFE in JSX, no component-in-hook), Server Actions patterns,
   Zod 4 validation, and applicable `.claude/rules/**/*.md` (path-scoped where frontmatter says so). Catches violations before they reach CI.
 disallowedTools:
   - Write
@@ -49,7 +49,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **No manual `useCallback`/`useMemo`** unless external library requires reference identity
 - **No `useCallback` with `ref.current`** — causes React Compiler `react-hooks/preserve-manual-memoization` error; use plain function
 - **Use `useEffectEvent`** for event callbacks in `useEffect` deps — `import { useEffectEvent } from 'react'`
-- **GSAP / Three.js / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
+- **GSAP / Lenis / Lexical を含むファイル** — 編集後は `react-compiler-reviewer` サブエージェントで互換性チェック（render中の副作用・ref不正アクセス・手動メモ化を検出）
 - **`useSyncExternalStore` の `getServerSnapshot`**: 配列・オブジェクトを返すときは**参照固定**（モジュール定数の `[]` 等）。インラインの `return []` / `return {}` はランタイム警告の原因
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
 - **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
@@ -74,6 +74,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - `toPlainObject()` / `toPlainArray()` for React 19 serialization (strips Symbol properties)
 - Prisma enum constants not string literals (`DiscountType.none` not `'none'`)
 - Type guards from `enums.ts` only — no local `isValid*` definitions
+- **No redundant `Number()` on `$extends`-converted fields** — `hourlyPrice`, `dailyPrice`, `area` etc. are auto-converted by `createAppPrismaClient`. Manual `Number()` is only needed for aggregate results (`_sum`, `_avg`)
 - **Server→Client Date serialization**: Types crossing Server→Client boundary must declare date fields as `string`, not `Date` ([React 19 docs](https://react.dev/reference/rsc/use-client#serializable-types)). Flag:
   - `'use client'` コンポーネント向け型で `startTime: Date` / `endTime: Date` / `createdAt: Date` 等が `Date` 型で宣言されている（`string` に変更が必要）
   - `'use client'` ファイルで `format(field, ...)` / `isSameDay(field, ...)` / `isToday(field)` 等を `new Date()` ラップなしで呼び出している（`format(new Date(field), ...)` が正しい）

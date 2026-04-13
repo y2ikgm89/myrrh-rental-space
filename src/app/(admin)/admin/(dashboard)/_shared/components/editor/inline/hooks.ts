@@ -86,67 +86,52 @@ export function useBeforeUnload({ isDirty }: UseBeforeUnloadProps) {
 }
 
 // =============================================================================
-// useEditorPanels - 排他的パネル管理（設定/コメント）
+// useCommentPanel - コメントパネル管理
 // =============================================================================
 
-type PanelType = "settings" | "comments" | null;
-
 /**
- * エディターの排他的パネル管理フック
+ * エディターのコメントパネル管理フック
  *
- * 設定パネルとコメントパネルを排他的に管理
- * （同時に1つのパネルのみ表示）
+ * 本文中のマークと連動するコメントパネル（インラインの inspector）の開閉と
+ * 保留中コメントを管理する。
+ *
+ * 記事設定は本文編集と独立したダイアログで管理するため、このフックには含まない。
  */
-export function useEditorPanels() {
-  const [activePanel, setActivePanel] = useState<PanelType>(null);
+export function useCommentPanel() {
+  const [isOpen, setIsOpen] = useState(false);
   const [activeMarkId, setActiveMarkId] = useState<string | null>(null);
   const [pendingComment, setPendingComment] =
     useState<AddCommentPayload | null>(null);
 
-  // 設定パネル
-  const openSettings = () => setActivePanel("settings");
-  const toggleSettings = () => {
-    setActivePanel((prev) => (prev === "settings" ? null : "settings"));
-  };
+  const open = () => setIsOpen(true);
+  const toggle = () => setIsOpen((prev) => !prev);
 
-  // コメントパネル
-  const openComments = () => setActivePanel("comments");
-  const toggleComments = () => {
-    setActivePanel((prev) => (prev === "comments" ? null : "comments"));
-  };
-
-  // パネル閉じる（pendingCommentもクリア）
-  const closePanel = () => {
-    setActivePanel(null);
+  const close = () => {
+    setIsOpen(false);
     setPendingComment(null);
   };
 
   // マーク選択（コメントパネルを自動的に開く）
   const selectMark = (markId: string | null) => {
     setActiveMarkId(markId);
-    if (markId) setActivePanel("comments");
+    if (markId) setIsOpen(true);
   };
 
-  // コメント追加ハンドラ（LexicalEditorから呼ばれる）
+  // コメント追加ハンドラ（LexicalEditor から呼ばれる）
   const handleAddComment = (payload: AddCommentPayload) => {
     setPendingComment(payload);
-    setActivePanel("comments");
+    setIsOpen(true);
   };
 
-  // pendingCommentをクリア
   const clearPendingComment = () => {
     setPendingComment(null);
   };
 
   return {
-    activePanel,
-    isSettingsPanelOpen: activePanel === "settings",
-    isCommentsPanelOpen: activePanel === "comments",
-    openSettings,
-    toggleSettings,
-    openComments,
-    toggleComments,
-    closePanel,
+    isOpen,
+    open,
+    toggle,
+    close,
     activeMarkId,
     selectMark,
     pendingComment,

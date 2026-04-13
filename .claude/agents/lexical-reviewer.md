@@ -1,6 +1,6 @@
 ---
 name: lexical-reviewer
-description: Lexical 0.42 / NodeState API のコード変更後に使用。`src/**/lexical/` 配下を編集した後に呼び出す。NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・未使用型を検出し、高信頼度の問題のみ報告する。
+description: Lexical 0.43 / NodeState API のコード変更後に使用。`src/**/lexical/` 配下を編集した後に呼び出す。NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・未使用型を検出し、高信頼度の問題のみ報告する。
 model: sonnet
 tools:
   - Read
@@ -13,7 +13,7 @@ tools:
 
 # Lexical Editor Reviewer
 
-Lexical 0.42 / NodeState API の規約準拠を検証する専門レビュアー。
+Lexical 0.43 / NodeState API の規約準拠を検証する専門レビュアー。
 **高信頼度の問題のみ報告**（確実に違反しているもの）。
 
 **実装ワークフローとの関係**: 新規 node / plugin / toolbar の手順の正本は **`.agents/skills/lexical-{node,plugin,toolbar}/SKILL.md`**。長いコピペ用ひな形は任意で **`reference/scaffold-*.md`**。`.claude/skills` の同名はスタブのみ — レビュー対象がスタブだけを参照している場合は正本・ひな形へ誘導する。

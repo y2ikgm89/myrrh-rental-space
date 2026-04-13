@@ -16,6 +16,25 @@ import {
 import { serverEnv } from "@/shared/lib/env/server";
 import { checkRateLimit, getClientIp } from "@/shared/lib/rate-limit";
 
+/**
+ * Timing-safe string comparison to prevent timing attacks on secret tokens.
+ * Uses Web Crypto API (available in Edge/Node.js middleware).
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  if (bufA.byteLength !== bufB.byteLength) return false;
+  // crypto.subtle.timingSafeEqual is not available in all runtimes;
+  // fall back to constant-time XOR comparison
+  let result = 0;
+  for (let i = 0; i < bufA.byteLength; i++) {
+    result |= (bufA[i] ?? 0) ^ (bufB[i] ?? 0);
+  }
+  return result === 0;
+}
+
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
   ["X-Content-Type-Options", "nosniff"],
@@ -150,11 +169,21 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
     }
 
     if (pathname.startsWith("/api/cron")) {
-      const authHeader = req.headers.get("authorization");
       const cronSecret = serverEnv.CRON_SECRET;
 
-      if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      // 本番では CRON_SECRET 必須（validateProductionEnv で起動時チェック済み）
+      // 非本番でも未設定時は拒否（staging 環境のセキュリティ確保）
+      if (!cronSecret) {
+        if (process.env["NODE_ENV"] === "production") {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+        // 開発環境: CRON_SECRET 未設定時のみ認証スキップ
+      } else {
+        const authHeader = req.headers.get("authorization");
+        const expected = `Bearer ${cronSecret}`;
+        if (!authHeader || !timingSafeEqual(authHeader, expected)) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
       }
     }
 

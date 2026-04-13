@@ -113,7 +113,7 @@ export type PostPagination = {
   sortOrder?: "asc" | "desc";
 };
 
-type BasePostCommandInput = {
+export type CreatePostCommandInput = {
   title: string;
   slug: string;
   excerpt: string;
@@ -127,13 +127,34 @@ type BasePostCommandInput = {
   metaKeywords?: string | null;
   ogpTitle?: string | null;
   ogpDescription?: string | null;
-};
-
-export type CreatePostCommandInput = BasePostCommandInput & {
   authorId: string;
 };
 
-export type UpdatePostCommandInput = BasePostCommandInput & {
+/**
+ * 本文（contentJson / contentHtml）のみ更新するコマンド入力
+ */
+export type UpdatePostBodyCommandInput = {
+  contentJson: string;
+  contentHtml: string;
+};
+
+/**
+ * 設定（メタデータ・分類・公開状態・レイアウト・SEO/OGP）を更新するコマンド入力
+ *
+ * 本文は含まない。
+ */
+export type UpdatePostSettingsCommandInput = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  thumbnailUrl: string;
+  ogpImageUrl?: string | null;
+  categoryId: string;
+  tags: string[];
+  metaDescription?: string | null;
+  metaKeywords?: string | null;
+  ogpTitle?: string | null;
+  ogpDescription?: string | null;
   contentWidth: LayoutWidth | null;
   contentWidthCustom: number | null;
 };

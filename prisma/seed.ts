@@ -31,6 +31,27 @@ import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
+import {
+  buildParagraphEditorStateJson,
+  buildParagraphHtml,
+} from "../src/shared/lib/lexical/description-defaults";
+import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
+
+/**
+ * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
+ * 改行は単一段落に折り畳む（seed 簡易版）。
+ */
+function buildSeedDescription(text: string) {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  const descriptionHtml = buildParagraphHtml(collapsed);
+  return {
+    descriptionJson: JSON.parse(
+      buildParagraphEditorStateJson(collapsed),
+    ) as Prisma.InputJsonValue,
+    descriptionHtml,
+    descriptionPlainText: stripHtmlToText(descriptionHtml, 200),
+  };
+}
 
 // Prisma アダプター（PrismaPg が Pool ライフサイクルを内部管理）
 const adapter = new PrismaPg({
@@ -313,6 +334,10 @@ async function seedSettings() {
     prefecture: "東京都",
     city: "渋谷区",
     streetAddress: "神宮前1-1-1 サンプルビル",
+    accessInfo:
+      "JR山手線 原宿駅 表参道口 徒歩3分\n東京メトロ千代田線・副都心線 明治神宮前駅 5番出口 徒歩5分\n東京メトロ銀座線・半蔵門線 表参道駅 A2出口 徒歩8分",
+    parkingInfo:
+      "専用駐車場はございません\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）",
     footerCopyright: "© 2025 Myrrh Rental Space. All rights reserved.",
     cancellationDeadlineHours: 24,
     modificationDeadlineHours: 24,
@@ -440,17 +465,9 @@ async function seedSpaces() {
     {
       slug: "meeting-room-a",
       name: "ミーティングルーム A",
-      description: `明るく開放的なミーティングルームです。
-
-最大8名様までご利用いただけます。プロジェクター、ホワイトボード、Wi-Fi完備。
-ビジネスミーティング、少人数の研修、面接などに最適です。
-
-【設備】
-・プロジェクター
-・ホワイトボード
-・Wi-Fi（高速回線）
-・電源タップ
-・空調完備`,
+      ...buildSeedDescription(
+        "明るく開放的なミーティングルームです。最大8名様までご利用いただけます。プロジェクター、ホワイトボード、Wi-Fi完備。ビジネスミーティング、少人数の研修、面接などに最適です。",
+      ),
       addressDetail: "3F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 8,
@@ -480,17 +497,9 @@ async function seedSpaces() {
     {
       slug: "seminar-room",
       name: "セミナールーム",
-      description: `最大30名収容可能なセミナールームです。
-
-セミナー、ワークショップ、説明会、発表会などに最適。
-スクール形式、シアター形式など、用途に合わせてレイアウト変更可能です。
-
-【設備】
-・大型スクリーン
-・プロジェクター
-・マイク（ワイヤレス2本）
-・Wi-Fi（高速回線）
-・可動式テーブル・椅子`,
+      ...buildSeedDescription(
+        "最大30名収容可能なセミナールームです。セミナー、ワークショップ、説明会、発表会などに最適。スクール形式、シアター形式など、用途に合わせてレイアウト変更可能です。",
+      ),
       addressDetail: "4F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 30,
@@ -520,17 +529,9 @@ async function seedSpaces() {
     {
       slug: "coworking-space",
       name: "コワーキングスペース",
-      description: `フリーアドレスのコワーキングスペースです。
-
-集中して作業したい方、気分転換に場所を変えて仕事したい方におすすめ。
-ドリンクバー、軽食販売あり。
-
-【設備】
-・Wi-Fi（高速回線）
-・電源完備
-・ロッカー（有料）
-・ドリンクバー
-・複合機（有料）`,
+      ...buildSeedDescription(
+        "フリーアドレスのコワーキングスペースです。集中して作業したい方、気分転換に場所を変えて仕事したい方におすすめ。ドリンクバー、軽食販売あり。",
+      ),
       addressDetail: "2F",
       access: "東京メトロ「表参道駅」A1出口より徒歩5分",
       capacity: 20,
@@ -1927,14 +1928,7 @@ async function seedPages() {
   await bootstrapSystemPagesCommand(prisma);
   console.log("✅ System pages ensured");
 
-  // seed 固有: privacy ページに metaDescription を設定
-  await prisma.page.updateMany({
-    where: { slug: "privacy", metaDescription: null },
-    data: {
-      metaDescription:
-        "当サイトにおける個人情報の取り扱いについてご説明いたします。",
-    },
-  });
+  // privacy ページは Terms システムに移行済み（/terms/privacy-policy）
 }
 
 // =============================================================================
@@ -2000,6 +1994,15 @@ async function seedTerms() {
       showInFooter: false,
       content:
         "<h2>1. 施設利用について</h2><p>本施設をご利用いただくにあたり、以下のルールをお守りください。</p><h2>2. 利用時間</h2><p>予約時間内でのご利用をお願いいたします。</p><h2>3. 原状回復</h2><p>ご利用後は、テーブル・椅子等の配置を元に戻し、ゴミの分別・処理をお願いいたします。</p><h2>4. 禁止事項</h2><ul><li>喫煙（電子タバコを含む）</li><li>危険物・火気の持ち込み</li><li>騒音を発する行為</li></ul>",
+    },
+    {
+      type: TermsType.COMMERCIAL_TRANSACTION,
+      slug: "commercial-transaction",
+      title: "特定商取引法に基づく表記",
+      requiredAtReservation: false,
+      showInFooter: true,
+      content:
+        "<h2>事業者名称</h2><p>Myrrh Rental Space</p><h2>サービスの内容</h2><p>レンタルスペースの時間貸しサービス</p><h2>サービスの対価</h2><p>各スペースの詳細ページに表示された料金（税込）</p><h2>支払方法</h2><p>クレジットカード決済（VISA、Mastercard、JCB、American Express）</p><h2>支払時期</h2><p>予約確定時にクレジットカード決済が行われます。</p><h2>サービスの提供時期</h2><p>予約確定後、予約日時においてスペースをご利用いただけます。</p><h2>キャンセル・返金について</h2><p>キャンセルポリシーに基づきキャンセル料が発生します。</p>",
     },
   ];
 
@@ -2456,12 +2459,13 @@ async function seedNavigation() {
     { label: "ブログ", url: "/posts", order: 3 },
     { label: "お知らせ", url: "/news", order: 4 },
     { label: "よくある質問", url: "/faq", order: 5 },
-    { label: "お問い合わせ", url: "/contact", order: 6 },
+    { label: "アクセス", url: "/access", order: 6 },
+    { label: "お問い合わせ", url: "/contact", order: 7 },
   ];
 
   const footerItems = [
     { label: "利用規約", url: "/terms", order: 0 },
-    { label: "プライバシーポリシー", url: "/p/privacy", order: 1 },
+    { label: "プライバシーポリシー", url: "/terms/privacy-policy", order: 1 },
     { label: "会社概要", url: "/about", order: 2 },
     { label: "お問い合わせ", url: "/contact", order: 3 },
   ];
@@ -2638,7 +2642,6 @@ async function seedSystemPageSections() {
     "faq",
     "news",
     "posts",
-    "privacy",
     "terms",
     "reservation",
     "spaces",

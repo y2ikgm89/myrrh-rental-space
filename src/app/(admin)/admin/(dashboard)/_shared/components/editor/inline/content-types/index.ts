@@ -1,20 +1,13 @@
 /**
- * コンテンツタイプ設定のエクスポート
+ * 設定ダイアログ定義のエクスポート
  *
- * Post / News インラインエディタの統一設定（固定ページは別ルート）
+ * Post / News インラインエディタの設定ダイアログ用 SidePanelDefinition と関連型。
  */
 
 // 型定義
 export type {
-  // 基本型
-  ContentTypeId,
-  ContentTypeConfig,
-  ContentEditorProps,
-  ContentEditorExtraData,
   CategoryOption,
   TagOption,
-
-  // サイドパネル型
   SidePanelDefinition,
   SidePanelTabDefinition,
   SidePanelSectionDefinition,
@@ -23,33 +16,14 @@ export type {
   PostSidePanelExtra,
   NewsSidePanelExtra,
   FieldComponentProps,
-  UnifiedSidePanelProps,
-
-  // 公開制御型
-  PublishControl,
-  StatusPublishControl,
-  BooleanPublishControl,
-
-  // フォームフィールド型
   SEOFormFields,
   OGPFormFields,
   BooleanPublishFormFields,
   StatusPublishFormFields,
   LayoutFormFields,
   ContentBaseFormFields,
-
-  // Server Actions型
-  ContentActions,
-  PublishActionResult,
-
-  // データ変換型
-  ContentTransforms,
-  ContentFeatures,
 } from "./types";
 
-// 型ガード
-export { isStatusPublishControl, isBooleanPublishControl } from "./types";
-
-// コンテンツタイプ設定
-export { postConfig } from "./post";
-export { newsConfig } from "./news";
+// 設定ダイアログ定義
+export { postSettingsPanel } from "./post";
+export { newsSettingsPanel } from "./news";

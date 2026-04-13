@@ -97,7 +97,9 @@ const CATEGORY_ID = "category-1";
 const VALID_INPUT = {
   slug: "test-space",
   name: "テストスペース",
-  description: "テスト用のスペースです",
+  descriptionJson: { root: { type: "root", children: [] } },
+  descriptionHtml: "<p>テスト用のスペースです</p>",
+  descriptionPlainText: "テスト用のスペースです",
   capacity: 10,
   hourlyPrice: 1000,
   mainImageUrl: "https://example.com/image.jpg",

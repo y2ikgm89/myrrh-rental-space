@@ -1,7 +1,7 @@
 ---
 name: react-compiler-reviewer
 description: >
-  React Compiler 1.0 互換性レビュー専門エージェント。GSAP / Lenis / Lexical / Three.js を
+  React Compiler 1.0 互換性レビュー専門エージェント。GSAP / Lenis / Lexical を
   含むコンポーネント編集後に使用。Rules of React 違反・手動メモ化・ref 不正アクセス・
   ライブラリ非互換パターンを検出し、修正案を提示する。
 tools:
@@ -153,24 +153,7 @@ function ScrollSection({ targetId }: { targetId: string }) {
 }
 ```
 
-### G. Three.js / @react-three/fiber パターン
-
-```typescript
-// NG: useFrame 内で setState（レンダリングループのたびに再レンダリング）
-useFrame(() => {
-  setPosition(mesh.current.position.x); // NG: 毎フレーム setState
-});
-
-// OK: ref で位置を管理（React state 不要）
-const meshRef = useRef<Mesh>(null);
-useFrame(() => {
-  if (meshRef.current) {
-    meshRef.current.rotation.x += 0.01; // ref 操作は OK
-  }
-});
-```
-
-### H. Lexical パターン
+### G. Lexical パターン
 
 ```typescript
 // NG: render 中に EditorState を読む
@@ -190,7 +173,7 @@ useEffect(() => {
 }, [editor])
 ```
 
-### I. `'use no memo'` ディレクティブ
+### H. `'use no memo'` ディレクティブ
 
 ```typescript
 // NG: TODO コメントなしで恒久使用
@@ -206,7 +189,7 @@ function Component() {
 }
 ```
 
-### J. forwardRef（禁止）
+### I. forwardRef（禁止）
 
 ```typescript
 // NG: React 19 で廃止

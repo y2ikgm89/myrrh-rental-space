@@ -52,10 +52,10 @@ export function CouponTable({ coupons }: CouponTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead>コード</TableHead>
               <TableHead>名称</TableHead>
-              <TableHead className="whitespace-nowrap">タイプ</TableHead>
+              <TableHead>タイプ</TableHead>
               <TableHead className="text-right">割引</TableHead>
               <TableHead className="hidden text-center md:table-cell">
                 利用数

@@ -20,7 +20,8 @@ import type {
   PostTagMutationInput,
   PublishPostResult,
   RestorePostVersionResult,
-  UpdatePostCommandInput,
+  UpdatePostBodyCommandInput,
+  UpdatePostSettingsCommandInput,
   UpdatePostResult,
 } from "@/shared/domain/posts/types";
 
@@ -146,23 +147,6 @@ async function ensurePostTagUnique(
   throw new DomainError("このスラッグは既に使用されています", "CONFLICT");
 }
 
-function buildPostData(input: CreatePostCommandInput | UpdatePostCommandInput) {
-  return {
-    title: input.title,
-    slug: input.slug,
-    excerpt: input.excerpt,
-    contentHtml: input.contentHtml,
-    contentJson: parseContentJson(input.contentJson),
-    thumbnailUrl: input.thumbnailUrl,
-    ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
-    categoryId: input.categoryId,
-    metaDescription: normalizeNullableString(input.metaDescription),
-    metaKeywords: normalizeNullableString(input.metaKeywords),
-    ogpTitle: normalizeNullableString(input.ogpTitle),
-    ogpDescription: normalizeNullableString(input.ogpDescription),
-  };
-}
-
 export async function createPost(
   input: CreatePostCommandInput,
 ): Promise<CreatePostResult> {
@@ -173,14 +157,25 @@ export async function createPost(
   ]);
 
   const post = await prisma.post.create({
-    data: {
-      ...omitUndefined(buildPostData(input)),
+    data: omitUndefined({
+      title: input.title,
+      slug: input.slug,
+      excerpt: input.excerpt,
+      contentHtml: input.contentHtml,
+      contentJson: parseContentJson(input.contentJson),
+      thumbnailUrl: input.thumbnailUrl,
+      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
+      categoryId: input.categoryId,
+      metaDescription: normalizeNullableString(input.metaDescription),
+      metaKeywords: normalizeNullableString(input.metaKeywords),
+      ogpTitle: normalizeNullableString(input.ogpTitle),
+      ogpDescription: normalizeNullableString(input.ogpDescription),
       status: PostStatus.DRAFT,
       authorId: input.authorId,
       postTags: {
         create: input.tags.map((tagId) => ({ tagId })),
       },
-    },
+    }),
     select: {
       id: true,
       slug: true,
@@ -190,9 +185,41 @@ export async function createPost(
   return post;
 }
 
-export async function updatePost(
+/**
+ * 投稿記事の本文（contentJson / contentHtml）のみを更新する。
+ *
+ * 設定（タイトル・スラッグ・分類・SEO 等）は変更しない。
+ * 設定の更新は `updatePostSettings` を使用する。
+ */
+export async function updatePostBody(
   id: string,
-  input: UpdatePostCommandInput,
+  input: UpdatePostBodyCommandInput,
+): Promise<UpdatePostResult> {
+  const existingPost = await ensurePostExists(id);
+
+  await prisma.post.update({
+    where: { id },
+    data: omitUndefined({
+      contentHtml: input.contentHtml,
+      contentJson: parseContentJson(input.contentJson),
+    }),
+  });
+
+  return {
+    oldSlug: existingPost.slug,
+    slug: existingPost.slug,
+  };
+}
+
+/**
+ * 投稿記事の設定（メタデータ・分類・タグ・レイアウト・SEO/OGP）のみを更新する。
+ *
+ * 本文（contentJson / contentHtml）は変更しない。
+ * 本文の更新は `updatePostBody` を使用する。
+ */
+export async function updatePostSettings(
+  id: string,
+  input: UpdatePostSettingsCommandInput,
 ): Promise<UpdatePostResult> {
   const existingPost = await ensurePostExists(id);
 
@@ -205,7 +232,16 @@ export async function updatePost(
   await prisma.post.update({
     where: { id },
     data: {
-      ...omitUndefined(buildPostData(input)),
+      title: input.title,
+      slug: input.slug,
+      excerpt: input.excerpt,
+      thumbnailUrl: input.thumbnailUrl,
+      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
+      categoryId: input.categoryId,
+      metaDescription: normalizeNullableString(input.metaDescription),
+      metaKeywords: normalizeNullableString(input.metaKeywords),
+      ogpTitle: normalizeNullableString(input.ogpTitle),
+      ogpDescription: normalizeNullableString(input.ogpDescription),
       contentWidth: input.contentWidth,
       contentWidthCustom: input.contentWidthCustom,
       postTags: {
@@ -261,15 +297,15 @@ export async function publishPost(
 
   const version = (latestVersion?.version ?? 0) + 1;
 
-  await prisma.$transaction([
-    prisma.post.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.post.update({
       where: { id },
       data: {
         status: PostStatus.PUBLISHED,
         publishedAt: post.publishedAt ?? new Date(),
       },
-    }),
-    prisma.postVersion.create({
+    });
+    await tx.postVersion.create({
       data: omitUndefined({
         postId: id,
         version,
@@ -277,8 +313,8 @@ export async function publishPost(
         contentJson: post.contentJson ?? undefined,
         createdBy: userId,
       }),
-    }),
-  ]);
+    });
+  });
 
   return {
     slug: post.slug,

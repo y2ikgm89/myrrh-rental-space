@@ -39,7 +39,7 @@ export function NewsTable({ news }: NewsTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead>タイトル</TableHead>
               <TableHead className="hidden md:table-cell">公開日時</TableHead>
               <TableHead className="hidden lg:table-cell">作成日時</TableHead>

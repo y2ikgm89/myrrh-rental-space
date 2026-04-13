@@ -13,12 +13,12 @@ import type { FieldErrors, UseFormSetValue, Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { Button, Label } from "@/admin/components/ui";
 import { useSingleMediaPicker } from "@/admin/hooks/use-media-picker";
-import type { PostFormData } from "@/admin/lib/validations/post";
+import type { PostSettingsFormData } from "@/admin/lib/validations/post";
 
 type ImageFieldsProps = {
-  errors: FieldErrors<PostFormData>;
-  setValue: UseFormSetValue<PostFormData>;
-  control: Control<PostFormData>;
+  errors: FieldErrors<PostSettingsFormData>;
+  setValue: UseFormSetValue<PostSettingsFormData>;
+  control: Control<PostSettingsFormData>;
   disabled?: boolean;
 };
 

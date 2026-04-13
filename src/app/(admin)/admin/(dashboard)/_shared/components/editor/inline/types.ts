@@ -121,12 +121,10 @@ export type EditorHeaderProps = {
   isPending: boolean;
   onSave: () => void;
   onBack: () => void;
-  /** サイドパネル開閉状態（省略時は設定ボタン非表示） */
-  isSidePanelOpen?: boolean;
-  /** サイドパネル切り替えコールバック（省略時は設定ボタン非表示） */
-  onToggleSidePanel?: () => void;
+  /** 設定ダイアログを開くコールバック */
+  onOpenSettings?: () => void;
   /**
-   * メタデータ用サイドパネルの短いラベル（例: postConfig.sidePanel.title）
+   * 設定ダイアログの短いラベル（例: postSettingsPanel.title）
    * 指定時はツールチップ・aria-label・幅のあるビューでのボタン表記に使う
    */
   metadataPanelLabel?: string;

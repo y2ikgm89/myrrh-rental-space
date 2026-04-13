@@ -5,6 +5,7 @@ import {
   getUnreadCountQuery,
   getRecentNotificationsQuery,
 } from "@/shared/domain/notifications/admin-queries";
+import { requireAdminDashboardAccess } from "./_helpers";
 
 export async function getNotifications(params: {
   page: number;
@@ -12,13 +13,16 @@ export async function getNotifications(params: {
   type?: string;
   isRead?: boolean;
 }) {
+  await requireAdminDashboardAccess();
   return getNotificationsQuery(params);
 }
 
 export async function getUnreadNotificationCount() {
+  await requireAdminDashboardAccess();
   return getUnreadCountQuery();
 }
 
 export async function getRecentNotifications(limit?: number) {
+  await requireAdminDashboardAccess();
   return getRecentNotificationsQuery(limit);
 }

@@ -243,16 +243,12 @@ export async function getRecentInquiries(
 }
 
 export async function getTodayReservations(): Promise<RecentReservation[]> {
-  const today = new Date();
-  const todayStart = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-  );
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayEnd = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
     23,
     59,
     59,

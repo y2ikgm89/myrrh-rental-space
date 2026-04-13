@@ -134,4 +134,25 @@ export async function GET(request: Request) {
 
 - **`NEXT_PUBLIC_*` はサーバーコードでも `clientEnv` 経由で参照** — `process.env["NEXT_PUBLIC_APP_URL"]` 等の直接参照は型バリデーションを迂回する。`clientEnv.NEXT_PUBLIC_APP_URL` を使用すること（`@/shared/lib/env/client` から import）
 - **Supabase 環境変数はオプション** — `env/client.ts` で `.optional()` 設定済み。`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` を必須（`z.string()`）に変更しないこと
+
+## Gotchas（gotchas.md より移動）
+
+### Stripe 決済
+
+- **Webhook の署名ヘッダー存在チェックを DB 読み取りの前に配置** — `stripe-signature` ヘッダーが無いリクエストを `getStripeSettings()` 等の DB アクセス・復号処理の前に 400 で弾く。偽造リクエストによる不要な DB 負荷を防止
+- **Stripe `checkout.session.completed` で即座に fulfill しない** — `session.payment_status === "paid"` を必ずチェック。非同期決済（銀行振込等）は `"unpaid"` で来るため `async_payment_succeeded` を待つ。カード決済のみでも将来の決済手段追加に備える
+- **Webhook べき等性ガード必須** — 処理前に現在の `paymentStatus` をチェックし、既に処理済み（PAID / REFUNDED）ならスキップ。Stripe は同じイベントを複数回配信する可能性がある
+- **`payment_intent` フィールドは `string | PaymentIntent | null`** — `typeof session.payment_intent === "string"` で型安全に取得。`as` 禁止
+
+### CSV Export
+
+- **空結果で 404/エラーを返さない** — `generateCsv` はヘッダーのみの空 CSV を正常に返す。0件は正常状態
+- **ステータスラベルは `enums/helpers.ts` の `*_STATUS_LABELS` を使用** — Route にローカル定義禁止。`status-badges.tsx` の Badge ラベルも `helpers.ts` を正本とする
+- **ファイル名は `resource-yyyyMMdd.csv`** — イベントタイトル等のユーザー入力値をファイル名に含めない（エンコーディング問題回避）
+- **新しい Prisma enum のステータスラベルは `enums/helpers.ts` に `*_STATUS_LABELS` を追加必須** — Badge config と CSV Export Route の両方から参照される Single Source of Truth。追加済み: `RESERVATION_STATUS_LABELS`, `PAYMENT_STATUS_LABELS`, `EVENT_STATUS_LABELS`
+
+### Cron / Webhook
+
+- **Cron の排他実行には `pg_try_advisory_lock` を使用** — Cloud Run 複数インスタンスで同時実行されるとトランザクション競合が発生する。`pg_try_advisory_lock(固定ID)` で非ブロッキングロック取得 → 失敗時は `{ skipped: true }` で即時リターン。`finally` で `pg_advisory_unlock` 必須。実装例: `src/app/api/cron/calendar-sync/route.ts`
+- **`deleteAccountAction` は削除前に customerId 取得 + 全関連タグ無効化必須** — `auth.api.deleteUser()` は Cascade で Customer/Reservation/Review を削除するため、削除後は customerId を取得不可。削除前に `getCustomerByUserId` で取得し、削除後に `CUSTOMERS`/`RESERVATIONS`/`REVIEWS`/`INQUIRIES`/`EVENTS` + `customers.detail(id)` を全て無効化
 ````

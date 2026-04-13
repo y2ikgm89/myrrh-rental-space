@@ -94,7 +94,7 @@ export function parseSpaceFormFromFormData(formData: FormData) {
   const raw = {
     slug: getTrimmedString(formData, "slug"),
     name: getTrimmedString(formData, "name"),
-    description: getTrimmedString(formData, "description"),
+    descriptionJson: getTrimmedString(formData, "descriptionJson"),
     addressDetail: getTrimmedString(formData, "addressDetail"),
     access: getTrimmedString(formData, "access"),
     capacity: getRequiredInt(formData, "capacity"),
@@ -148,7 +148,7 @@ export function spaceFormDataToFormData(
 
   fd.set("slug", payload.slug);
   fd.set("name", payload.name);
-  fd.set("description", payload.description);
+  fd.set("descriptionJson", payload.descriptionJson);
   fd.set("addressDetail", payload.addressDetail ?? "");
   fd.set("access", payload.access ?? "");
   fd.set("capacity", String(payload.capacity));

@@ -3,17 +3,19 @@
 /**
  * InlineEditorShell
  *
- * インラインエディタの共通レイアウトシェル
+ * インラインエディタの共通レイアウトシェル。
  * - フルスクリーンモード管理
  * - キーボードショートカット（Ctrl+S）
  * - 離脱警告
  * - レイアウト（ヘッダー + エディタ本体）
  *
- * 記事設定等のサイドパネルは LexicalEditor の `trailingPanel` prop に渡す
- * （InspectorSidebar と同じ flex 行に配置され、ツールバーの下から始まる）。
+ * 本文と設定は呼び出し側で独立した RHF フォームとして管理する。
+ * このシェルはフォーム要素を持たず、レイアウトと副作用のみを担当する。
+ * 保存ボタンは `onSave` を直接呼び、設定ダイアログは親コンポーネントで
+ * 別途レンダリングする。
  */
 
-import type { FormEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   useFullscreenMode,
   useKeyboardShortcuts,
@@ -21,11 +23,9 @@ import {
 } from "./hooks";
 
 type InlineEditorShellProps = {
-  /** フォーム送信ハンドラ */
-  onSubmit?: (e: FormEvent<HTMLFormElement>) => void;
   /** Ctrl+S で呼ばれる保存ハンドラ */
   onSave?: () => void;
-  /** 未保存の変更があるか */
+  /** 未保存の変更があるか（離脱警告用） */
   isDirty?: boolean;
   /** ヘッダー部分 */
   header: ReactNode;
@@ -34,28 +34,19 @@ type InlineEditorShellProps = {
 };
 
 export function InlineEditorShell({
-  onSubmit,
   onSave,
   isDirty = false,
   header,
   children,
 }: InlineEditorShellProps) {
-  // フルスクリーンモード（サイドバー・ヘッダー非表示）
   useFullscreenMode();
-
-  // キーボードショートカット
   useKeyboardShortcuts(onSave ? { onSave } : {});
-
-  // 離脱警告
   useBeforeUnload({ isDirty });
 
   return (
-    <form onSubmit={onSubmit} className="h-screen flex flex-col pt-14">
-      {/* ヘッダー（固定） */}
+    <div className="h-screen flex flex-col pt-14">
       {header}
-
-      {/* メインエリア（エディタ本体） */}
       <div className="flex flex-1 min-w-0 overflow-hidden">{children}</div>
-    </form>
+    </div>
   );
 }

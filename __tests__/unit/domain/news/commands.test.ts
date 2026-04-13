@@ -79,7 +79,8 @@ mock.module("@/shared/lib/serialize", () => ({
 
 import {
   createNews,
-  updateNews,
+  updateNewsBody,
+  updateNewsSettings,
   deleteNews,
   publishNews,
   unpublishNews,
@@ -105,11 +106,14 @@ const VALID_CREATE_INPUT = {
   contentHtml: "<p>テストコンテンツ</p>",
 };
 
-const VALID_UPDATE_INPUT = {
-  slug: NEWS_SLUG,
-  title: "更新後タイトル",
+const VALID_UPDATE_BODY_INPUT = {
   contentJson: '{"root":{"children":[]}}',
   contentHtml: "<p>更新後コンテンツ</p>",
+};
+
+const VALID_UPDATE_SETTINGS_INPUT = {
+  slug: NEWS_SLUG,
+  title: "更新後タイトル",
   contentWidth: null,
   contentWidthCustom: null,
   metaDescription: null,
@@ -195,10 +199,48 @@ describe("createNews", () => {
 });
 
 // ============================================================================
-// updateNews
+// updateNewsBody
 // ============================================================================
 
-describe("updateNews", () => {
+describe("updateNewsBody", () => {
+  beforeEach(() => {
+    mockNewsFindUnique.mockReset();
+    mockNewsUpdate.mockReset();
+    mockNewsFindUnique.mockResolvedValue(EXISTING_NEWS);
+    mockNewsUpdate.mockResolvedValue({ id: NEWS_ID });
+  });
+
+  describe("正常系", () => {
+    test("本文のみを更新し既存のスラッグを返す", async () => {
+      const result = await updateNewsBody(NEWS_ID, VALID_UPDATE_BODY_INPUT);
+
+      expect(result).toEqual({
+        oldSlug: NEWS_SLUG,
+        slug: NEWS_SLUG,
+      });
+      expect(mockNewsUpdate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("異常系", () => {
+    test("存在しないお知らせの場合 NOT_FOUND エラーをスローする", async () => {
+      mockNewsFindUnique.mockResolvedValue(null);
+
+      await expect(
+        updateNewsBody("non-existent", VALID_UPDATE_BODY_INPUT),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "お知らせが見つかりません",
+      });
+    });
+  });
+});
+
+// ============================================================================
+// updateNewsSettings
+// ============================================================================
+
+describe("updateNewsSettings", () => {
   beforeEach(() => {
     mockNewsFindUnique.mockReset();
     mockCheckSlugAvailability.mockReset();
@@ -209,8 +251,11 @@ describe("updateNews", () => {
   });
 
   describe("正常系", () => {
-    test("有効な入力でお知らせを更新し oldSlug と slug を返す", async () => {
-      const result = await updateNews(NEWS_ID, VALID_UPDATE_INPUT);
+    test("有効な入力で設定を更新し oldSlug と slug を返す", async () => {
+      const result = await updateNewsSettings(
+        NEWS_ID,
+        VALID_UPDATE_SETTINGS_INPUT,
+      );
 
       expect(result).toEqual({
         oldSlug: NEWS_SLUG,
@@ -221,8 +266,8 @@ describe("updateNews", () => {
 
     test("スラッグが変更された場合に oldSlug と新しい slug を返す", async () => {
       const newSlug = "updated-news-slug";
-      const result = await updateNews(NEWS_ID, {
-        ...VALID_UPDATE_INPUT,
+      const result = await updateNewsSettings(NEWS_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
         slug: newSlug,
       });
 
@@ -233,8 +278,8 @@ describe("updateNews", () => {
     });
 
     test("nullable フィールドに値を設定して更新できる", async () => {
-      await updateNews(NEWS_ID, {
-        ...VALID_UPDATE_INPUT,
+      await updateNewsSettings(NEWS_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
         metaDescription: "説明文",
         ogpTitle: "OGPタイトル",
       });
@@ -243,8 +288,8 @@ describe("updateNews", () => {
     });
 
     test("nullable フィールドに空文字を渡すと null として保存される", async () => {
-      await updateNews(NEWS_ID, {
-        ...VALID_UPDATE_INPUT,
+      await updateNewsSettings(NEWS_ID, {
+        ...VALID_UPDATE_SETTINGS_INPUT,
         metaDescription: "",
         ogpTitle: "",
       });
@@ -265,7 +310,7 @@ describe("updateNews", () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
       await expect(
-        updateNews("non-existent", VALID_UPDATE_INPUT),
+        updateNewsSettings("non-existent", VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "お知らせが見つかりません",
@@ -276,7 +321,7 @@ describe("updateNews", () => {
       mockNewsFindUnique.mockResolvedValue(null);
 
       await expect(
-        updateNews("non-existent", VALID_UPDATE_INPUT),
+        updateNewsSettings("non-existent", VALID_UPDATE_SETTINGS_INPUT),
       ).rejects.toThrow(DomainError);
       expect(mockNewsUpdate).not.toHaveBeenCalled();
     });
@@ -288,7 +333,10 @@ describe("updateNews", () => {
       });
 
       await expect(
-        updateNews(NEWS_ID, { ...VALID_UPDATE_INPUT, slug: "taken-slug" }),
+        updateNewsSettings(NEWS_ID, {
+          ...VALID_UPDATE_SETTINGS_INPUT,
+          slug: "taken-slug",
+        }),
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });

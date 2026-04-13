@@ -32,7 +32,7 @@ export function StaffTableHeader() {
           名前
         </SortableColumnHeader>
         <TableHead>メールアドレス</TableHead>
-        <TableHead className="whitespace-nowrap">ロール</TableHead>
+        <TableHead>ロール</TableHead>
         <TableHead className="hidden md:table-cell">予約数</TableHead>
         <TableHead className="hidden md:table-cell">記事数</TableHead>
         <SortableColumnHeader

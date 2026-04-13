@@ -16,7 +16,6 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   EditorHeader,
-  SidePanelShell,
   InlineEditorShell,
 } from "@/admin/components/editor/inline";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
@@ -45,6 +44,10 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/admin/components/ui";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
@@ -165,7 +168,7 @@ function TermsInlineEditorInner({
   const router = useRouter();
   const confirm = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasEditorChanges, setHasEditorChanges] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
@@ -188,6 +191,7 @@ function TermsInlineEditorInner({
     handleSubmit,
     control,
     setValue,
+    reset,
     formState: { errors, isDirty },
   } = useForm<FormData>({
     resolver: standardSchemaResolver(termsFormSchema),
@@ -535,7 +539,9 @@ function TermsInlineEditorInner({
           return;
         }
 
+        reset(data);
         setHasEditorChanges(false);
+        setIsSettingsDialogOpen(false);
         router.refresh();
         toast.success("保存しました");
       } catch (error) {
@@ -649,49 +655,59 @@ function TermsInlineEditorInner({
     ) : undefined;
 
   return (
-    <InlineEditorShell
-      onSubmit={handleSubmit(onSubmit)}
-      onSave={handleSave}
-      isDirty={isFormDirty}
-      header={
-        <EditorHeader
-          title={
-            title || (mode === "create" ? "新規規約" : (terms?.title ?? ""))
-          }
-          slug={
-            mode === "create"
-              ? "terms/new"
-              : `terms/${(slug || terms?.slug) ?? ""}`
-          }
-          isDirty={isFormDirty}
-          isPending={isPending || isLoadingVersion}
-          isSidePanelOpen={isSidePanelOpen}
-          onToggleSidePanel={() => setIsSidePanelOpen((prev) => !prev)}
-          onSave={handleSave}
-          onPreview={handlePreview}
-          onBack={handleBack}
-          extraActions={deleteDialog}
+    <>
+      <InlineEditorShell
+        onSave={handleSave}
+        isDirty={isFormDirty}
+        header={
+          <EditorHeader
+            title={
+              title || (mode === "create" ? "新規規約" : (terms?.title ?? ""))
+            }
+            slug={
+              mode === "create"
+                ? "terms/new"
+                : `terms/${(slug || terms?.slug) ?? ""}`
+            }
+            isDirty={isFormDirty}
+            isPending={isPending || isLoadingVersion}
+            onOpenSettings={() => setIsSettingsDialogOpen(true)}
+            metadataPanelLabel="規約設定"
+            onSave={handleSave}
+            onPreview={handlePreview}
+            onBack={handleBack}
+            extraActions={deleteDialog}
+          />
+        }
+      >
+        <LazyLexicalEditor
+          key={editorKey}
+          contentJson={contentJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
+          onChange={handleJsonChange}
+          disabled={isPending || isLoadingVersion}
+          className={EDITOR_PROSE_CLASSES}
+          showToolbar
+          height="100%"
+          contentWidth={TERMS_CONTENT_WIDTH_PX}
         />
-      }
-    >
-      <LazyLexicalEditor
-        key={editorKey}
-        contentJson={contentJson || EMPTY_LEXICAL_EDITOR_STATE_JSON}
-        onChange={handleJsonChange}
-        disabled={isPending || isLoadingVersion}
-        className={EDITOR_PROSE_CLASSES}
-        showToolbar
-        height="100%"
-        contentWidth={TERMS_CONTENT_WIDTH_PX}
-        trailingPanel={
-          <SidePanelShell
-            isOpen={isSidePanelOpen}
-            onClose={() => setIsSidePanelOpen(false)}
-            title="規約設定"
-            width="default"
-          >
+      </InlineEditorShell>
+
+      {/* 設定ダイアログ — Radix 公式の async form 送信パターン準拠 */}
+      <Dialog
+        open={isSettingsDialogOpen}
+        onOpenChange={setIsSettingsDialogOpen}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>規約設定</DialogTitle>
+            <DialogDescription>
+              タイトル・スラッグ・バージョン・同意記録などを管理します。
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {mode === "edit" ? (
-              <Tabs defaultValue="version" className="w-full">
+              <Tabs defaultValue="settings" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="version">バージョン</TabsTrigger>
                   <TabsTrigger value="settings">設定</TabsTrigger>
@@ -719,36 +735,57 @@ function TermsInlineEditorInner({
                   onDeleteVersion={handleDeleteVersion}
                 />
 
-                <TabsContent value="settings" className="mt-4">
-                  <TermsSettingsFields
-                    isPending={isPending}
-                    control={control}
-                    register={register}
-                    errors={errors}
-                  />
+                <TabsContent value="settings" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">規約情報</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <TermsSettingsFields
+                        isPending={isPending}
+                        control={control}
+                        register={register}
+                        errors={errors}
+                      />
+                    </CardContent>
+                  </Card>
                 </TabsContent>
 
                 {terms && (
-                  <TermsAgreementsTab
-                    termsId={terms.id}
-                    initialAgreements={initialAgreements}
-                    initialTotal={initialTotal}
-                  />
+                  <TabsContent value="agreements" className="mt-4">
+                    <TermsAgreementsTab
+                      termsId={terms.id}
+                      initialAgreements={initialAgreements}
+                      initialTotal={initialTotal}
+                    />
+                  </TabsContent>
                 )}
               </Tabs>
             ) : (
-              <div className="mt-4">
-                <TermsSettingsFields
-                  isPending={isPending}
-                  control={control}
-                  register={register}
-                  errors={errors}
-                />
-              </div>
+              <TermsSettingsFields
+                isPending={isPending}
+                control={control}
+                register={register}
+                errors={errors}
+              />
             )}
-          </SidePanelShell>
-        }
-      />
-    </InlineEditorShell>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSettingsDialogOpen(false)}
+                disabled={isPending}
+              >
+                閉じる
+              </Button>
+              <Button type="submit" disabled={isPending || !isFormDirty}>
+                {isPending ? "保存中..." : "保存"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

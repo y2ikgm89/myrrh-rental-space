@@ -57,6 +57,8 @@ export const contactInfoSchema = z.object({
   city: z.string().max(50).nullable(),
   streetAddress: z.string().max(100).nullable(),
   buildingName: z.string().max(100).nullable(),
+  accessInfo: z.string().max(1000).nullable(),
+  parkingInfo: z.string().max(500).nullable(),
 });
 
 export type ContactInfoInput = z.infer<typeof contactInfoSchema>;
@@ -280,7 +282,6 @@ export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;
 
 // Re-export from validations for sidebar
 export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";
-export type { SidebarSettings as SidebarSettingsInput } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================
 // MEO Schemas (ローカル検索最適化)

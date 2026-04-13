@@ -174,7 +174,7 @@ export function CommentTable({ comments }: Props) {
               <TableHead className="hidden lg:table-cell">投稿者</TableHead>
               <TableHead className="hidden md:table-cell">記事</TableHead>
               <TableHead className="hidden md:table-cell">投稿日時</TableHead>
-              <TableHead className="whitespace-nowrap">ステータス</TableHead>
+              <TableHead>ステータス</TableHead>
               <TableHead className="w-24">操作</TableHead>
             </TableRow>
           </TableHeader>

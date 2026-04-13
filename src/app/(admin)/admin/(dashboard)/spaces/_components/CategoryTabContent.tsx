@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { connection } from "next/server";
 import { getSpaceCategories } from "@/admin/queries/space-category";
 import { CategoryFilters } from "../../space-categories/_components/CategoryFilters";
 import { CategoryTable } from "../../space-categories/_components/CategoryTable";
@@ -12,6 +13,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 // =============================================================================
 
 async function CategoryList() {
+  await connection();
   const params = adminSpaceSearchParamsCache.all();
 
   const result = await getSpaceCategories(

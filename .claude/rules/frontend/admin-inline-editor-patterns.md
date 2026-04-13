@@ -70,6 +70,17 @@ paths:
 
 - インライン `content-types` の `ContentTypeId` は **`post` / `news` のみ**。固定ページのレイアウト（`showSidebar` 等）は **`@/shared/lib/validations/page`** とページ編集 UI が正本。将来インラインに載せる場合は `content-types/<id>.tsx` を追加し **`ContentTypeId` ユニオンを拡張**する
 
+## 設定ダイアログの公式送信パターン（FAQ / Terms / 将来の単一フォームエディタ）
+
+FAQ / Terms のように `content-types` 拡張を使わない単一 RHF フォームエディタは、設定 UI を Radix `<Dialog>` 直接埋め込みで実装する。Radix 公式の async form submission パターンに準拠すること:
+
+- `<DialogContent>` 直下を **`<form onSubmit={handleSubmit(onSubmit)}>`** でラップする（`onClick={handleSave}` のみでは Enter 送信が効かず non-idiomatic）
+- 保存ボタンは **`type="submit"`**、閉じる/キャンセルは `type="button"` + `onOpenChange` でクローズ
+- `onSubmit` 成功パスで **`reset(data)` + `setIsSettingsDialogOpen(false)`** を呼び dirty 状態クリア + ダイアログクローズ
+- **`<DialogTitle>` + `<DialogDescription>`** 必須（WAI-ARIA）
+- Tabs 内にバージョン管理など非送信アクションを混在させる場合、それらのボタンには **`type="button"` を明示**（暗黙 submit 防止）
+- 参照実装: `faq/_components/FaqItemInlineEditor.tsx`, `terms/_components/TermsInlineEditor.tsx`
+
 ## 関連ドキュメント
 
 | 内容                   | 参照                   |

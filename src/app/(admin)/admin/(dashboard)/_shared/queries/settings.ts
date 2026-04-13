@@ -10,7 +10,7 @@ import type {
   GoogleCalendarSettingsData,
   RobotsTxtData,
   SettingsData,
-  TaxSettingsData,
+  TaxSettings,
 } from "@/shared/domain/settings/types";
 import type { AnnouncementBarCarouselSettingsInput } from "@/shared/domain/settings/announcement-bar";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -24,7 +24,7 @@ export type {
   DiscountSettingsData,
   GoogleCalendarSettingsData,
   RobotsTxtData,
-  TaxSettingsData,
+  TaxSettings,
 };
 
 export async function getPublicSettings(): Promise<Serialized<SettingsData>> {
@@ -41,12 +41,12 @@ export async function getDiscountSettings(): Promise<DiscountSettingsData> {
   return adminQueries.getDiscountSettings();
 }
 
-export async function getTaxSettings(): Promise<TaxSettingsData> {
+export async function getTaxSettings(): Promise<TaxSettings> {
   await requireAdminPermission("settings", "read");
   return adminQueries.getTaxSettings();
 }
 
-export async function getPublicTaxSettings(): Promise<TaxSettingsData> {
+export async function getPublicTaxSettings(): Promise<TaxSettings> {
   return adminQueries.getPublicTaxSettings();
 }
 

@@ -201,6 +201,21 @@ useEffect(() => {
 
 **使いどころ**: `useEffect` 内で最新の props/state/コールバックを読みたいが、deps に入れると不要な effect の再実行が起きる場合。
 
+**典型例: GSAP タイマー駆動アニメーション**（カルーセル等）:
+
+```typescript
+// startTimer は crossfadeTo / count を読むが、effect は hasMultiple / count 変化時のみ再実行
+const onTimerStart = useEffectEvent(() => {
+  startTimer();
+});
+useEffect(() => {
+  onTimerStart();
+  return stopTimer;
+}, [hasMultiple, count]);
+```
+
+**注意**: `eslint-disable-next-line react-hooks/exhaustive-deps` は `@eslint-react/exhaustive-deps` が残るため不完全。`useEffectEvent` で根本解決する。
+
 ### 'use no memo' — コンパイル除外（一時的エスケープハッチ）
 
 コンパイラに問題があるコンポーネントを一時的に除外する。**恒久的な使用は禁止**:
@@ -396,6 +411,61 @@ imageUrls: data.imageUrls.map((i) => i.url);
 
 ---
 
+## Outer/Inner Component Split（gate + hooks 分離パターン）
+
+フィーチャーフラグ・権限・props 値によって「早期 return するか / 完全な form を描画するか」を切り替えたいが、描画側が hooks を使う場合、単一コンポーネントで `if (!flag) return <Disabled />` を hooks の前に置くと Rules of Hooks 違反（`@eslint-react/rules-of-hooks` / `react-hooks/rules-of-hooks`）になる。
+
+解決パターン: outer（gate、hooks なし）と inner（module-local、全 hooks）に分離する:
+
+```tsx
+type Props = { flag: boolean; reservationId: string /* ... */ };
+type InnerProps = Omit<Props, "flag">;
+
+export function MyForm({ flag, ...rest }: Props) {
+  if (!flag) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          この機能は無効化されています。
+        </p>
+      </div>
+    );
+  }
+  return (
+    <MyFormInner
+      reservationId={rest.reservationId} /* ...explicit forwarding... */
+    />
+  );
+}
+
+function MyFormInner({ reservationId /* ... */ }: InnerProps) {
+  const [state, setState] = useState(/* ... */); // hooks は常に unconditional
+  const ref = useRef<HTMLFormElement>(null);
+  const form = usePublicForm(/* ... */);
+  // ...
+  return <form>{/* ... */}</form>;
+}
+```
+
+**ルール:**
+
+- **outer に hooks を置かない** — 完全に pure な gate にする（`useState` / `useEffect` / `useWatch` 等一切禁止）
+- **inner は module-local（非 export）** — 外部 API を広げない
+- **props は `Omit<Props, "flag">` で inner 型を導出** — flag の forwarding を型レベルで防ぐ
+- **`{...rest}` spread 禁止** — flag が inner に漏れる事故防止のため、明示的に per-name forward する
+- **outer で分岐する条件は props のみ** — inner の render 結果に依存する条件を outer で使わない（相互再帰になる）
+
+**いつ使うか:**
+
+- フィーチャーフラグ（`reviewsEnabled` 等のスペース単位トグル）による render 分岐
+- 権限チェック（`canEdit` / `isOwner`）による UI 切り替え
+- 認証状態による「ログインメッセージ」vs「実際のフォーム」切り替え
+- 早期 return で hooks の前に出したい全てのケース
+
+参照実装: `src/app/(public)/mypage/reservations/[id]/_components/review-form.tsx`（`reviewsEnabled` による投稿フォーム gate）
+
+---
+
 ## useReducer — カスケードステート管理（React 公式推奨）
 
 関連する複数の `useState` がカスケードリセット（親変更→子リセット）を伴う場合、`useReducer` で一元化する（[React 公式: Extracting State Logic into a Reducer](https://react.dev/learn/extracting-state-logic-into-a-reducer)）。
@@ -508,7 +578,7 @@ export default async function Page() {
 
 **注意**: `headers()` でも回避できるが意味的に誤り。`audit.ts` など実際にヘッダー値を読む箇所は `headers()` のまま。
 
-**適用範囲**: `connection()` は**公開ページ（`src/app/(public)/`）のみ**。管理画面（`src/app/(admin)/`）では `connection()` を使用しない。`new Date()` が必要な管理画面コンポーネントは Client Component にする。
+**適用範囲**: 公開ページ・管理画面を問わず、Suspense 内の async Server Component で `new Date()` や uncached データを使う場合に配置する。PPR では Suspense 境界ごとに動的判定されるため、layout の `headers()` は子の Suspense 境界に伝播しない。UI のみの `new Date()`（日付表示等）は Client Component にする。
 
 ---
 

@@ -81,7 +81,7 @@ export async function getNewsList(
   } = pagination;
   const where = buildNewsWhere(filters);
 
-  const [total, news] = await prisma.$transaction([
+  const [total, news] = await Promise.all([
     prisma.news.count({ where }),
     prisma.news.findMany({
       where,

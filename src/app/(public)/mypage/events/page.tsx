@@ -10,7 +10,6 @@ import { verifyCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { getCustomerEventRegistrations } from "@/shared/domain/events/registration-queries";
 import { toPlainArray } from "@/shared/lib/serialize";
-import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { EventRegistrationList } from "./_components/event-registration-list";
@@ -23,10 +22,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
     redirect("/login");
   }
 
-  const [registrations, turnstileSiteKey] = await Promise.all([
-    getCustomerEventRegistrations(customer.id),
-    getTurnstileSiteKey(),
-  ]);
+  const registrations = await getCustomerEventRegistrations(customer.id);
 
   const serializedRegistrations = toPlainArray(
     registrations.map((reg) => ({
@@ -44,10 +40,7 @@ export default async function MypageEventsPage(): Promise<ReactElement> {
   return (
     <Stack gap="lg">
       <Heading level={1}>イベント申込一覧</Heading>
-      <EventRegistrationList
-        registrations={serializedRegistrations}
-        turnstileSiteKey={turnstileSiteKey}
-      />
+      <EventRegistrationList registrations={serializedRegistrations} />
     </Stack>
   );
 }

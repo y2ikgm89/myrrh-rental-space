@@ -18,6 +18,10 @@ export async function getReservationsForExport() {
       spaceDiscountAmount: true,
       notes: true,
       createdAt: true,
+      guestLastName: true,
+      guestFirstName: true,
+      guestPhone: true,
+      guestCompanyName: true,
       space: { select: { name: true } },
       customer: {
         select: {

@@ -30,7 +30,12 @@ import {
   HomepageHero,
   heroDefaultProps,
   type HeroSectionProps,
+  type HeroImage,
 } from "./_components/homepage/hero-section";
+import {
+  HERO_TRANSITIONS,
+  type HeroTransition,
+} from "@/shared/lib/sections/definitions/homepage-hero/schema";
 import {
   HowItWorksSection,
   howItWorksDefaultProps,
@@ -96,13 +101,33 @@ function isTitled(v: unknown): v is { title: string } {
   return isRecord(v) && typeof v["title"] === "string";
 }
 
+function isHeroImage(v: unknown): v is HeroImage {
+  return (
+    isRecord(v) && typeof v["url"] === "string" && typeof v["alt"] === "string"
+  );
+}
+
+const HERO_TRANSITION_SET = new Set<string>(HERO_TRANSITIONS);
+function isHeroTransition(v: unknown): v is HeroTransition {
+  return typeof v === "string" && HERO_TRANSITION_SET.has(v);
+}
+
 function mapHeroConfig(config: unknown): HeroSectionProps {
+  const rawImages = arr(config, "images");
+  const parsed = rawImages ? rawImages.filter(isHeroImage) : [];
+  const images = parsed.length > 0 ? parsed : heroDefaultProps.images;
+
+  const rawTransition = isRecord(config) ? config["transition"] : undefined;
+  const transition = isHeroTransition(rawTransition)
+    ? rawTransition
+    : heroDefaultProps.transition;
+
   return {
     label: str(config, "label", heroDefaultProps.label),
     title: str(config, "title", heroDefaultProps.title),
     description: str(config, "description", heroDefaultProps.description),
-    imageUrl: str(config, "imageUrl", heroDefaultProps.imageUrl),
-    imageAlt: str(config, "imageAlt", heroDefaultProps.imageAlt),
+    images,
+    transition,
     buttonText: str(config, "buttonText", heroDefaultProps.buttonText),
     buttonUrl: str(config, "buttonUrl", heroDefaultProps.buttonUrl),
   };
@@ -124,6 +149,11 @@ function mapSpacesConfig(config: unknown) {
     label: str(config, "label", spacesDefaultProps.label),
     title: str(config, "title", spacesDefaultProps.title),
     count: num(config, "count", spacesDefaultProps.count),
+    autoPlayInterval: num(
+      config,
+      "autoPlayInterval",
+      spacesDefaultProps.autoPlayInterval,
+    ),
   };
 }
 
@@ -199,7 +229,7 @@ export default async function HomePage(): Promise<ReactElement> {
     id: s.id,
     slug: s.slug,
     name: s.name,
-    description: s.description,
+    descriptionPlainText: s.descriptionPlainText,
     capacity: s.capacity,
     hourlyPrice: s.hourlyPrice,
     dailyPrice: s.dailyPrice,
@@ -230,6 +260,7 @@ export default async function HomePage(): Promise<ReactElement> {
             label={spacesDefaultProps.label}
             title={spacesDefaultProps.title}
             count={spacesDefaultProps.count}
+            autoPlayInterval={spacesDefaultProps.autoPlayInterval}
           />
           <FeaturesSection />
           <CtaSection />

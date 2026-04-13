@@ -18,7 +18,6 @@ import {
   IconSettings,
   IconPhoto,
   IconTicket,
-  IconMessage,
   IconStar,
   IconBell,
 } from "@tabler/icons-react";
@@ -59,11 +58,6 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "投稿",
     href: "/admin/posts",
     icon: <IconFileDescription className="h-5 w-5" />,
-  },
-  {
-    label: "コメント管理",
-    href: "/admin/posts/comments",
-    icon: <IconMessage className="h-5 w-5" />,
   },
   {
     label: "メディア",

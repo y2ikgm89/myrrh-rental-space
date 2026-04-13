@@ -1,8 +1,9 @@
 /**
- * MapSection — Google Maps embed (API key 不要)
+ * MapSection — Google Maps Embed API（公式 API key 必須）
  *
- * Server Component。iframe embed モードで地図を表示。
- * showAddressBelow で地図下に住所テキストを表示。
+ * Server Component。Maps Embed API で地図を表示。
+ * API key は管理画面の「API キー管理」で設定。
+ * https://developers.google.com/maps/documentation/embed/get-started
  */
 
 import type { ReactElement } from "react";
@@ -30,22 +31,27 @@ const HEIGHT_MAP = {
 interface MapSectionProps {
   readonly config: MapConfig;
   readonly design: SectionDesign;
+  readonly apiKey: string | null;
 }
 
-function buildMapEmbedUrl(config: MapConfig): string | null {
+function buildMapEmbedUrl(config: MapConfig, apiKey: string): string | null {
   if (config.latitude != null && config.longitude != null) {
-    return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${config.longitude}!3d${config.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sja!2sjp!4v1&z=${config.zoom}`;
+    return `https://www.google.com/maps/embed/v1/view?key=${apiKey}&center=${config.latitude},${config.longitude}&zoom=${config.zoom}&maptype=roadmap`;
   }
   if (config.address) {
     const q = encodeURIComponent(config.address);
-    return `https://www.google.com/maps/embed/v1/place?key=&q=${q}&zoom=${config.zoom}`;
+    return `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${q}&zoom=${config.zoom}`;
   }
   return null;
 }
 
-export function MapSection({ config, design }: MapSectionProps): ReactElement {
+export function MapSection({
+  config,
+  design,
+  apiKey,
+}: MapSectionProps): ReactElement {
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
-  const embedUrl = buildMapEmbedUrl(config);
+  const embedUrl = apiKey ? buildMapEmbedUrl(config, apiKey) : null;
 
   return (
     <SectionWrapper design={design}>
@@ -87,7 +93,8 @@ export function MapSection({ config, design }: MapSectionProps): ReactElement {
           ) : (
             <div className="flex h-full items-center justify-center bg-muted">
               <p className="text-sm text-muted-foreground">
-                地図を表示するには、住所または座標を設定してください。
+                地図を表示するには、管理画面で Google Maps API
+                キーと住所（または座標）を設定してください。
               </p>
             </div>
           )}

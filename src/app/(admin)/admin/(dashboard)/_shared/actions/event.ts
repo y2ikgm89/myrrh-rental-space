@@ -71,6 +71,7 @@ export async function updateEvent(
     },
     afterSuccess: () => {
       invalidateEventCaches(idParsed.data, parsed.data.slug);
+      updateTag(getCacheTag.eventRegistrations.list(idParsed.data));
     },
   });
 }

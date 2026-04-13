@@ -472,7 +472,7 @@ updateTag(CACHE_TAGS.POSTS);
 3. **認証チェック漏れ禁止**
    - 管理画面の変更系 Server Actions は必ず `executeAdminMutationResult` を使用
    - API Routes のみ `checkPermission()` を直接使用
-   - 読み取りアクションはレイアウトの認証ガード（`verifySession()`）に依存
+   - 読み取りアクションはレイアウトの認証ガード（`verifyAdminSession()`）に依存
 
    ```typescript
    // NG: 認証なしで直接 DB 操作

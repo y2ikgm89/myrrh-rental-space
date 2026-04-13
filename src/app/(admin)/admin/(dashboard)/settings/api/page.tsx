@@ -6,6 +6,7 @@
  */
 
 import { Suspense } from "react";
+import { connection } from "next/server";
 import {
   getResendConfig,
   getTurnstileConfig,
@@ -34,6 +35,7 @@ import type { ReactElement } from "react";
  * 動的コンテンツ: API設定
  */
 async function ApiSettingsContent(): Promise<ReactElement> {
+  await connection();
   const [
     resendConfig,
     turnstileConfig,

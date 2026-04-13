@@ -15,6 +15,7 @@
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
+import { cn } from "@/shared/lib/cn";
 import "./(public)/_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -42,7 +43,11 @@ export default function NotFound(): ReactElement {
   return (
     <html lang="ja">
       <body
-        className={`${notoSansJP.variable} ${cormorantGaramond.variable} font-sans antialiased`}
+        className={cn(
+          notoSansJP.variable,
+          cormorantGaramond.variable,
+          "font-sans antialiased",
+        )}
       >
         <div className="flex min-h-screen flex-col items-center justify-center px-5 md:px-8">
           <div className="w-full max-w-md text-center">
@@ -67,14 +72,14 @@ export default function NotFound(): ReactElement {
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/"
-                className="rounded-full border border-accent bg-transparent px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="border border-accent bg-transparent px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 ホームに戻る
               </a>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/spaces"
-                className="rounded-full border border-border bg-card px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="border border-border bg-card px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 スペース一覧を見る
               </a>

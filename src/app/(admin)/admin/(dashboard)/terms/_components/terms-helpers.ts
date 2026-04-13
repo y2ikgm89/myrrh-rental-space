@@ -21,7 +21,6 @@ export interface TermsFormData {
   contentJson: string;
   requiredAtReservation: boolean;
   showInFooter: boolean;
-  selectedTemplate?: string | undefined;
 }
 
 export interface TermsVersionSummary {

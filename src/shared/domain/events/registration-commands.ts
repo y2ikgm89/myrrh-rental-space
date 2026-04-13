@@ -83,6 +83,7 @@ export async function cancelEventRegistrationCommand(
     where: {
       id: registrationId,
       status: RegistrationStatus.CONFIRMED,
+      event: { deletedAt: null },
       ...(customerId ? { customerId } : {}),
     },
     select: {

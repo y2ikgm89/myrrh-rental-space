@@ -20,6 +20,11 @@ import {
 } from "@/shared/domain/users/commands";
 import { isDomainError } from "@/shared/domain/domain-error";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import {
+  logError,
+  ErrorCategory,
+  ErrorSeverity,
+} from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
@@ -133,6 +138,11 @@ export async function updateUserRole(
       return { error: error.message };
     }
 
+    logError(error, {
+      category: ErrorCategory.DATABASE,
+      severity: ErrorSeverity.HIGH,
+      context: { operation: "updateUserRole", userId: parsed.data.id },
+    });
     throw error;
   }
 }

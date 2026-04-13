@@ -52,8 +52,16 @@ async function getTurnstileSecretKey(): Promise<string | null> {
 export async function verifyTurnstileToken(token: string): Promise<boolean> {
   const secretKey = await getTurnstileSecretKey();
 
-  // シークレットキーが設定されていない場合はスキップ（開発環境用）
+  // シークレットキーが設定されていない場合: 本番では拒否、開発では許可
   if (!secretKey) {
+    if (process.env["NODE_ENV"] === "production") {
+      logError(new Error("Turnstile secret key not configured in production"), {
+        category: ErrorCategory.AUTHORIZATION,
+        severity: ErrorSeverity.HIGH,
+        context: { operation: "verifyTurnstileToken" },
+      });
+      return false;
+    }
     return true;
   }
 

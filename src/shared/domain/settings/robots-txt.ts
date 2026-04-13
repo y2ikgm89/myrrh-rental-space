@@ -2,27 +2,31 @@ import { getBaseUrl } from "@/shared/lib/constants";
 
 const BASE_URL = getBaseUrl();
 
-export const DEFAULT_ROBOTS_TXT = `IconUser-agent: *
+export const DEFAULT_ROBOTS_TXT = `User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /reservation/
+Disallow: /mypage/
+Disallow: /login/
+Disallow: /forgot-password/
+Disallow: /reset-password/
 Disallow: /_next/
 Disallow: /static/
 
-IconUser-agent: GPTBot
+User-agent: GPTBot
 Disallow: /
 
-IconUser-agent: ChatGPT-IconUser
+User-agent: ChatGPT-User
 Disallow: /
 
-IconUser-agent: CCBot
+User-agent: CCBot
 Disallow: /
 
-IconUser-agent: anthropic-ai
+User-agent: anthropic-ai
 Disallow: /
 
-IconUser-agent: Google-Extended
+User-agent: Google-Extended
 Disallow: /
 
 Sitemap: ${BASE_URL}/sitemap.xml

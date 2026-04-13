@@ -54,9 +54,9 @@ You are an event registration flow integrity reviewer for the Myrrh Rental Space
 
 6. **Check security layers**:
    - Public `registerForEvent`: Rate Limit + Zod + Turnstile + optional customer linking
-   - Public `cancelEventRegistration`: Rate Limit + session auth + customer ownership check
+   - Public `cancelEventRegistration`: Rate Limit + UUID validation + session auth + customer ownership check (Turnstile なし — 認証済みフロー)
    - Admin actions: `executeAdminMutationResult` with `resource: "event"`
-   - Public `cancelEventRegistration` must NOT use `getCurrentUser()` (must use `getSession()`)
+   - Public `cancelEventRegistration` must use `getCustomerSession()` (not `getCurrentUser()`)
 
 7. **Check Zod schema ↔ form alignment**:
    - `publicEventRegistrationSchema` fields must match EventRegistrationForm fields

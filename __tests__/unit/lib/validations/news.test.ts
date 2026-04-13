@@ -2,8 +2,10 @@ import { describe, test, expect } from "bun:test";
 import {
   newsSlugSchema,
   createNewsSchema,
-  updateNewsSchema,
-  newsFormSchema,
+  updateNewsBodySchema,
+  updateNewsSettingsSchema,
+  newsBodyFormSchema,
+  newsSettingsFormSchema,
 } from "@/admin/lib/validations/news";
 import { LayoutWidth } from "@/shared/types/prisma";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
@@ -117,12 +119,26 @@ describe("createNewsSchema", () => {
   });
 });
 
-describe("updateNewsSchema", () => {
+describe("updateNewsBodySchema", () => {
+  test("有効な Lexical JSON でバリデーションに成功する", () => {
+    const result = updateNewsBodySchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("本文が空の場合にエラー", () => {
+    const result = updateNewsBodySchema.safeParse({ contentJson: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("updateNewsSettingsSchema", () => {
   test("有効なデータでバリデーションに成功する", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: true,
       contentWidth: LayoutWidth.LG,
       contentWidthCustom: 1200,
       metaDescription: "ニュースの概要",
@@ -132,87 +148,89 @@ describe("updateNewsSchema", () => {
       ogpImageUrl: "https://example.com/image.jpg",
     };
 
-    const result = updateNewsSchema.safeParse(validData);
+    const result = updateNewsSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("本文が空の場合にエラー", () => {
-    const invalidData = {
-      slug: "sample-news",
-      title: "サンプルニュース",
-      contentJson: "",
-    };
-
-    const result = updateNewsSchema.safeParse(invalidData);
-    expect(result.success).toBe(false);
-  });
-
-  test("contentWidthにnullを許可", () => {
+  test("contentWidth に null を許可", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
       contentWidth: null,
     };
 
-    const result = updateNewsSchema.safeParse(validData);
+    const result = updateNewsSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthCustomの範囲チェック", () => {
+  test("contentWidthCustom の範囲チェック", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
       contentWidthCustom: 1200,
     };
 
-    const result = updateNewsSchema.safeParse(validData);
+    const result = updateNewsSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthCustomが最小値未満の場合にエラー", () => {
+  test("contentWidthCustom が最小値未満の場合にエラー", () => {
     const invalidData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
       contentWidthCustom: 319,
     };
 
-    const result = updateNewsSchema.safeParse(invalidData);
+    const result = updateNewsSettingsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("contentWidthCustomが最大値超過の場合にエラー", () => {
+  test("contentWidthCustom が最大値超過の場合にエラー", () => {
     const invalidData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
       contentWidthCustom: 1921,
     };
 
-    const result = updateNewsSchema.safeParse(invalidData);
+    const result = updateNewsSettingsSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("SEO/OGPフィールドはオプショナル", () => {
+  test("SEO/OGP フィールドはオプショナル", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
+      isPublished: false,
     };
 
-    const result = updateNewsSchema.safeParse(validData);
+    const result = updateNewsSettingsSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 });
 
-describe("newsFormSchema", () => {
+describe("newsBodyFormSchema", () => {
+  test("有効な本文でバリデーションに成功する", () => {
+    const result = newsBodyFormSchema.safeParse({
+      contentJson: VALID_LEXICAL_JSON,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("本文が空の場合にエラー", () => {
+    const result = newsBodyFormSchema.safeParse({ contentJson: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("newsSettingsFormSchema", () => {
   test("有効なデータでバリデーションに成功する", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
       publishedAt: "2026-01-01T00:00:00Z",
       contentWidth: "LG",
@@ -224,56 +242,52 @@ describe("newsFormSchema", () => {
       ogpImageUrl: "https://example.com/image.jpg",
     };
 
-    const result = newsFormSchema.safeParse(validData);
+    const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("isPublishedフィールドは必須", () => {
+  test("isPublished フィールドは必須", () => {
     const invalidData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
     };
 
-    const result = newsFormSchema.safeParse(invalidData);
+    const result = newsSettingsFormSchema.safeParse(invalidData);
     expect(result.success).toBe(false);
   });
 
-  test("publishedAtフィールドはオプショナル", () => {
+  test("publishedAt フィールドはオプショナル", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
       isPublished: false,
     };
 
-    const result = newsFormSchema.safeParse(validData);
+    const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthフィールドは文字列として受け取る", () => {
+  test("contentWidth フィールドは文字列として受け取る", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
       contentWidth: "SM",
     };
 
-    const result = newsFormSchema.safeParse(validData);
+    const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 
-  test("contentWidthCustomフィールドは文字列として受け取る", () => {
+  test("contentWidthCustom フィールドは文字列として受け取る", () => {
     const validData = {
       slug: "sample-news",
       title: "サンプルニュース",
-      contentJson: VALID_LEXICAL_JSON,
       isPublished: true,
       contentWidthCustom: "1200",
     };
 
-    const result = newsFormSchema.safeParse(validData);
+    const result = newsSettingsFormSchema.safeParse(validData);
     expect(result.success).toBe(true);
   });
 });

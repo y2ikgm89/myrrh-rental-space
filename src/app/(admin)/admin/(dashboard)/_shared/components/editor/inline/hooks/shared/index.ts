@@ -8,7 +8,7 @@ export type {
   TagOption,
   EditorCoreConfig,
   EditorCoreReturn,
-  EditorPanelsReturn,
+  CommentPanelReturn,
 } from "./types";
 
 // 変換関数

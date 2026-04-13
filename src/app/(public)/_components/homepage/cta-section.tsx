@@ -47,7 +47,7 @@ export function CtaSection({
         <Button
           variant="editorial"
           href={buttonUrl}
-          className="mt-8 text-[0.65rem] uppercase tracking-[0.18em]"
+          className="mt-8 text-xs uppercase tracking-[0.18em]"
         >
           {buttonText}
         </Button>

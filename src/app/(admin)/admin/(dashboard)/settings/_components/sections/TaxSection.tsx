@@ -28,15 +28,12 @@ import {
   SubmitButton,
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
-import {
-  updateTaxSettings,
-  type TaxSettingsData,
-} from "@/admin/actions/settings";
+import { updateTaxSettings, type TaxSettings } from "@/admin/actions/settings";
 import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
 import { TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
 
 interface TaxSectionProps {
-  settings: TaxSettingsData;
+  settings: TaxSettings;
 }
 
 export function TaxSection({ settings }: TaxSectionProps) {

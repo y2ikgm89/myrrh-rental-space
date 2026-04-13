@@ -11,7 +11,7 @@ import {
 } from "@/shared/lib/email/event-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { generateSlug } from "@/shared/lib/utils";
+import { generateSlug } from "@/shared/lib/slug";
 
 export async function createEventCommand(data: EventFormInput) {
   const slug = await ensureUniqueSlug(data.slug);
