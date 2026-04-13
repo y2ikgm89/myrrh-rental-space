@@ -29,6 +29,8 @@ interface ReviewFormProps {
   readonly turnstileSiteKey: string | null;
 }
 
+type ReviewFormInnerProps = Omit<ReviewFormProps, "reviewsEnabled">;
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -49,6 +51,20 @@ export function ReviewForm({
     );
   }
 
+  return (
+    <ReviewFormInner
+      reservationId={reservationId}
+      spaceName={spaceName}
+      turnstileSiteKey={turnstileSiteKey}
+    />
+  );
+}
+
+function ReviewFormInner({
+  reservationId,
+  spaceName,
+  turnstileSiteKey,
+}: ReviewFormInnerProps) {
   const [submitted, setSubmitted] = useState(false);
   const turnstileRef = useRef<TurnstileInstance>(null);
 
