@@ -79,6 +79,24 @@ export async function SpaceReviews({ spaceId }: SpaceReviewsProps) {
             <p className="mt-2 text-xs text-muted-foreground">
               {review.customerInitial}
             </p>
+            {review.replyBody ? (
+              <div className="mt-4 border-l-2 border-accent pl-4">
+                <p className="mb-2 text-[0.7rem] uppercase tracking-[0.18em] text-accent">
+                  店舗からの返信
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {review.replyBody}
+                </p>
+                {review.repliedAt ? (
+                  <time
+                    className="mt-2 block text-xs text-muted-foreground"
+                    dateTime={review.repliedAt}
+                  >
+                    {formatSerializedDate(review.repliedAt)}
+                  </time>
+                ) : null}
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
