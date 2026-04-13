@@ -6,6 +6,7 @@ import { SpaceManagementTabs } from "./_components/SpaceManagementTabs";
 import { SpaceTabContent } from "./_components/SpaceTabContent";
 import { LocationTabContent } from "./_components/LocationTabContent";
 import { CategoryTabContent } from "./_components/CategoryTabContent";
+import { ReviewTabContent } from "./_components/ReviewTabContent";
 
 export const metadata: Metadata = {
   title: "スペース管理 | Myrrh Rental Space",
@@ -23,6 +24,8 @@ function tabPanel(tab: AdminSpaceManagementTab) {
       return <LocationTabContent />;
     case "categories":
       return <CategoryTabContent />;
+    case "reviews":
+      return <ReviewTabContent />;
   }
 }
 
@@ -37,7 +40,7 @@ export default async function SpacesPage({ searchParams }: PageProps) {
           スペース管理
         </h1>
         <p className="text-sm text-muted-foreground sm:text-base">
-          スペース・場所・カテゴリーを一元管理します
+          スペース・場所・カテゴリー・レビューを一元管理します
         </p>
       </div>
 
