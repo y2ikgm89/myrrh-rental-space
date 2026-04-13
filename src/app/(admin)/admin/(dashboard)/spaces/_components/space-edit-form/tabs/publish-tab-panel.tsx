@@ -85,7 +85,6 @@ export function SpaceEditPublishTabPanel({
                   setValue("reviewsEnabled", checked, { shouldDirty: true });
                 }}
                 disabled={isPending}
-                aria-label="レビュー機能を有効化"
               />
               <div className="space-y-1">
                 <label
