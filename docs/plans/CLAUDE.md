@@ -5,14 +5,14 @@
 ## セッション継続時
 
 ```bash
-# 進行中の計画を検索（最も頻繁に使う）
-grep -l "実装中\|設計承認済み" docs/plans/*.md
+# 進行中の計画を検索（日付形式 + writing-plans フォーマット両対応）
+grep -l "ステータス.*\(実装中\|設計承認済み\)\|For agentic workers" docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null
 
 # README.md 上部で進行中タスクを確認
 head -50 docs/plans/README.md
 
 # 最新の計画ファイル
-ls -t docs/plans/*.md | head -10
+ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null | head -10
 ```
 
 ## プランの作成
@@ -62,10 +62,10 @@ ls -t docs/plans/*.md | head -10
 
 ## 計画ファイルの配置
 
-| パス                      | 用途                                     |
-| ------------------------- | ---------------------------------------- |
-| `docs/plans/`             | 手動で書いた計画・レガシー計画           |
-| `docs/superpowers/plans/` | `writing-plans` スキルが自動生成する計画 |
-| `docs/superpowers/specs/` | `brainstorming` スキルが生成する設計書   |
+| パス                      | 用途                                                                 |
+| ------------------------- | -------------------------------------------------------------------- |
+| `docs/plans/`             | 直接 Write で作成した日付プラン・軽量タスク                          |
+| `docs/superpowers/plans/` | `superpowers:writing-plans` スキル生成の詳細プラン（タスク分解付き） |
+| `docs/superpowers/specs/` | `superpowers:brainstorming` スキル生成の要件・設計ドキュメント       |
 
 `brainstorming` → `writing-plans` → `subagent-driven-development` のスキルチェーンで使用。

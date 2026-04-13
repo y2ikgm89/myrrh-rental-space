@@ -9,7 +9,7 @@ bun dev                                       # 開発サーバー
 bun run validate                              # type-check → lint
 bun run validate && bun run build             # 完全検証（コミット前必須）
 bun run build:skip-env                        # env未設定時ビルド
-bun run test                                  # 全テスト（40バッチ分離実行）
+bun run test                                  # 全テスト（サブディレクトリ別分離実行）
 bun run test:unit                             # Unit テストのみ
 bun run test:integration                      # Integration テストのみ
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
@@ -41,6 +41,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 | Tailwind 4.2 | CSS-first `@theme`、セマンティックトークン必須                                                                                                          |
 | Better Auth  | 管理/顧客セッション分離（`adminAuth`/`customerAuth`）、RBAC、`generateId: "uuid"` 必須                                                                  |
 | Lexical 0.43 | NodeState API（`$config` + `createState`）。カスタムノード 50、複合階層 12。新規追加は `lexical-node` / `lexical-plugin` / `lexical-toolbar` スキル使用 |
+| nuqs 2.8     | URL クエリ状態管理（パーサーマップ `@/shared/lib/nuqs`）。`useQueryStates({ shallow: false })` で RSC 再レンダリング発火                                |
 
 ---
 
@@ -78,6 +79,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 - **計画作成**: `brainstorming` → `writing-plans`（`docs/plans/YYYY-MM-DD-*.md`）
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
+- **Worktree 作成前**: main の `git status --short | wc -l` + `ls prisma/migrations/ | tail -1` で未コミット migration の有無を確認。ドリフトがあれば先に WIP snapshot commit（→ `gotchas.md` §Worktree）
 - **Subagent 実行規律**: implementer は sonnet 以上（haiku 禁止、report 捏造リスク）/ 完了報告後は `git log --oneline` + `git show --stat HEAD` で独立検証 / 密結合タスクは 1 implementer にバンドル
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 
