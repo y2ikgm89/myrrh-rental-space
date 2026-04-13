@@ -6,7 +6,7 @@ export function getNotificationResourceHref(
   const routes: Record<string, string> = {
     reservation: `/admin/reservations/${resourceId}`,
     inquiry: `/admin/inquiries/${resourceId}`,
-    review: `/admin/reviews`,
+    review: `/admin/spaces?tab=reviews`,
     event: `/admin/events/${resourceId}/edit`,
   };
   return routes[resourceType] ?? null;

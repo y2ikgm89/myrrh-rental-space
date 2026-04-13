@@ -97,7 +97,7 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
   },
   {
     label: "レビュー",
-    href: "/admin/reviews",
+    href: "/admin/spaces?tab=reviews",
     icon: <IconStar className="h-5 w-5" />,
   },
   {
