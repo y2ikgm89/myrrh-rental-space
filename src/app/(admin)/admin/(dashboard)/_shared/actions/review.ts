@@ -14,6 +14,9 @@ import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { reviewReplySchema } from "@/shared/lib/validations/review";
 import type { ReviewReplyInput } from "@/shared/lib/validations/review";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { sendReviewReplyEmail } from "@/shared/lib/email/review-emails";
+import { ErrorCategory } from "@/shared/lib/errors/server";
 
 const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
 
@@ -98,6 +101,26 @@ export async function replyToReview(
         adminUserId: user.id,
       });
       spaceId = result.spaceId;
+
+      if (result.emailContext) {
+        fireAndForget(
+          sendReviewReplyEmail({
+            reviewId: parsed.data.reviewId,
+            customerEmail: result.emailContext.customerEmail,
+            customerName: result.emailContext.customerName,
+            spaceName: result.emailContext.spaceName,
+            rating: result.emailContext.rating,
+            originalTitle: result.emailContext.title,
+            originalComment: result.emailContext.comment,
+            replyBody: result.emailContext.replyBody,
+          }),
+          {
+            operation: "sendReviewReplyEmail",
+            category: ErrorCategory.EXTERNAL_API,
+          },
+        );
+      }
+
       return null;
     },
     afterSuccess: () => {

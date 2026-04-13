@@ -114,12 +114,30 @@ type ReplyToReviewInput = {
   adminUserId: string;
 };
 
+export type ReviewReplyEmailContext = {
+  readonly customerEmail: string;
+  readonly customerName: string;
+  readonly spaceName: string;
+  readonly rating: number;
+  readonly title: string | null;
+  readonly comment: string | null;
+  readonly replyBody: string;
+};
+
 export async function replyToReviewCommand(
   input: ReplyToReviewInput,
-): Promise<{ spaceId: string }> {
+): Promise<{ spaceId: string; emailContext: ReviewReplyEmailContext | null }> {
   const review = await prisma.spaceReview.findUnique({
     where: { id: input.reviewId },
-    select: { id: true, spaceId: true },
+    select: {
+      id: true,
+      spaceId: true,
+      rating: true,
+      title: true,
+      comment: true,
+      customer: { select: { email: true, lastName: true, firstName: true } },
+      space: { select: { name: true } },
+    },
   });
 
   if (!review) {
@@ -135,7 +153,23 @@ export async function replyToReviewCommand(
     },
   });
 
-  return { spaceId: review.spaceId };
+  const customerEmail = review.customer.email;
+  let emailContext: ReviewReplyEmailContext | null = null;
+  if (customerEmail) {
+    const fullName =
+      `${review.customer.lastName} ${review.customer.firstName}`.trim();
+    emailContext = {
+      customerEmail,
+      customerName: fullName || "お客様",
+      spaceName: review.space.name,
+      rating: review.rating,
+      title: review.title,
+      comment: review.comment,
+      replyBody: input.replyBody,
+    };
+  }
+
+  return { spaceId: review.spaceId, emailContext };
 }
 
 export async function deleteReviewReplyCommand(

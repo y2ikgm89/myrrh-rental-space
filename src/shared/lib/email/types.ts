@@ -44,6 +44,17 @@ export type InquiryReplyEmailData = {
   repliedByName: string;
 };
 
+export type ReviewReplyEmailData = {
+  reviewId: string;
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  rating: number;
+  originalTitle: string | null;
+  originalComment: string | null;
+  replyBody: string;
+};
+
 export type WelcomeEmailData = {
   customerName: string;
   customerEmail: string;

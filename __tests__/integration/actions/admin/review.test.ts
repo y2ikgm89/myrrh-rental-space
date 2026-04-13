@@ -61,8 +61,33 @@ const mockToggleReviewPublishedCommand = mock(() =>
 const mockDeleteReviewCommand = mock(() =>
   Promise.resolve({ spaceId: "space-001" }),
 );
-const mockReplyToReviewCommand = mock(() =>
-  Promise.resolve({ spaceId: "space-001" }),
+type MockEmailContext = {
+  customerEmail: string;
+  customerName: string;
+  spaceName: string;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+  replyBody: string;
+};
+type MockReplyResult = {
+  spaceId: string;
+  emailContext: MockEmailContext | null;
+};
+const DEFAULT_EMAIL_CONTEXT: MockEmailContext = {
+  customerEmail: "test@example.com",
+  customerName: "山田 太郎",
+  spaceName: "Test Space",
+  rating: 5,
+  title: "素晴らしい",
+  comment: "また使います",
+  replyBody: "ありがとうございます",
+};
+const mockReplyToReviewCommand = mock<() => Promise<MockReplyResult>>(() =>
+  Promise.resolve({
+    spaceId: "space-001",
+    emailContext: DEFAULT_EMAIL_CONTEXT,
+  }),
 );
 const mockDeleteReviewReplyCommand = mock(() =>
   Promise.resolve({ spaceId: "space-001" }),
@@ -76,6 +101,12 @@ mock.module("@/shared/domain/reviews/commands", () => ({
   createReviewCommand: mock(() =>
     Promise.resolve({ id: "review-001", spaceId: "space-001" }),
   ),
+}));
+
+// review-emails モック（fireAndForget 用）
+const mockSendReviewReplyEmail = mock(() => Promise.resolve({ success: true }));
+mock.module("@/shared/lib/email/review-emails", () => ({
+  sendReviewReplyEmail: mockSendReviewReplyEmail,
 }));
 
 // next/cache モック
@@ -349,8 +380,12 @@ describe("replyToReview", () => {
   beforeEach(() => {
     mockReplyToReviewCommand.mockClear();
     mockUpdateTag.mockClear();
+    mockSendReviewReplyEmail.mockClear();
     mockReplyToReviewCommand.mockImplementation(() =>
-      Promise.resolve({ spaceId: "space-1" }),
+      Promise.resolve({
+        spaceId: "space-1",
+        emailContext: DEFAULT_EMAIL_CONTEXT,
+      }),
     );
   });
 
@@ -379,6 +414,30 @@ describe("replyToReview", () => {
       expect(calledTags).toContain("reviews");
       expect(calledTags).toContain("reviews-space-space-1");
       expect(calledTags).toContain("reviews-stats-space-1");
+    });
+
+    test("emailContext 付きの成功時は sendReviewReplyEmail が呼ばれる", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      await replyToReview(VALID_REPLY_INPUT);
+
+      expect(mockSendReviewReplyEmail).toHaveBeenCalledTimes(1);
+    });
+
+    test("emailContext が null の場合は sendReviewReplyEmail が呼ばれない", async () => {
+      mockReplyToReviewCommand.mockImplementation(() =>
+        Promise.resolve({ spaceId: "space-1", emailContext: null }),
+      );
+
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      await replyToReview(VALID_REPLY_INPUT);
+
+      expect(mockSendReviewReplyEmail).not.toHaveBeenCalled();
     });
   });
 

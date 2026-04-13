@@ -367,6 +367,20 @@ describe("deleteReviewCommand", () => {
 
 const ADMIN_USER_ID = "admin-user-1";
 
+const REVIEW_WITH_CUSTOMER = {
+  id: REVIEW_ID,
+  spaceId: SPACE_ID,
+  rating: 5,
+  title: "素晴らしい",
+  comment: "また利用します",
+  customer: {
+    email: "customer@example.com",
+    lastName: "山田",
+    firstName: "太郎",
+  },
+  space: { name: "Test Space" },
+};
+
 describe("replyToReviewCommand", () => {
   beforeEach(() => {
     mockSpaceReviewFindUnique.mockReset();
@@ -376,11 +390,8 @@ describe("replyToReviewCommand", () => {
   });
 
   describe("正常系", () => {
-    test("返信本文・repliedAt・repliedById を保存して spaceId を返す", async () => {
-      mockSpaceReviewFindUnique.mockResolvedValue({
-        id: REVIEW_ID,
-        spaceId: SPACE_ID,
-      });
+    test("返信本文・repliedAt・repliedById を保存して spaceId と emailContext を返す", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue(REVIEW_WITH_CUSTOMER);
 
       const result = await replyToReviewCommand({
         reviewId: REVIEW_ID,
@@ -388,7 +399,16 @@ describe("replyToReviewCommand", () => {
         adminUserId: ADMIN_USER_ID,
       });
 
-      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(result.spaceId).toBe(SPACE_ID);
+      expect(result.emailContext).toEqual({
+        customerEmail: "customer@example.com",
+        customerName: "山田 太郎",
+        spaceName: "Test Space",
+        rating: 5,
+        title: "素晴らしい",
+        comment: "また利用します",
+        replyBody: "ご利用ありがとうございました。",
+      });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledTimes(1);
       expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -403,10 +423,7 @@ describe("replyToReviewCommand", () => {
     });
 
     test("既存の返信がある場合は上書き更新する（編集フロー）", async () => {
-      mockSpaceReviewFindUnique.mockResolvedValue({
-        id: REVIEW_ID,
-        spaceId: SPACE_ID,
-      });
+      mockSpaceReviewFindUnique.mockResolvedValue(REVIEW_WITH_CUSTOMER);
 
       await replyToReviewCommand({
         reviewId: REVIEW_ID,
@@ -419,6 +436,22 @@ describe("replyToReviewCommand", () => {
           data: expect.objectContaining({ replyBody: "更新された返信" }),
         }),
       );
+    });
+
+    test("customer.email が空文字列の場合 emailContext は null を返す", async () => {
+      mockSpaceReviewFindUnique.mockResolvedValue({
+        ...REVIEW_WITH_CUSTOMER,
+        customer: { email: "", lastName: "山田", firstName: "太郎" },
+      });
+
+      const result = await replyToReviewCommand({
+        reviewId: REVIEW_ID,
+        replyBody: "返信",
+        adminUserId: ADMIN_USER_ID,
+      });
+
+      expect(result.spaceId).toBe(SPACE_ID);
+      expect(result.emailContext).toBeNull();
     });
   });
 
