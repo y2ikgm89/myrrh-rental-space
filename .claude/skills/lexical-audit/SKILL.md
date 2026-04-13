@@ -1,9 +1,8 @@
 ---
 name: lexical-audit
-description: >
-  管理画面の Lexical 実装を監査またはモダナイズするときに使う。
-  deprecated API、private API、listener waterfall、NodeState 逸脱、HTML import、table API を点検し、現行の公式推奨へ寄せる。
-  新しい node/plugin/toolbar を追加する作業には使わない。
+description: Use when auditing or modernizing existing Lexical implementations. Checks deprecated/private APIs, listener waterfall, NodeState violations, HTML import, table API. Do NOT use for adding new nodes/plugins/toolbar.
+paths:
+  - src/**/lexical/**
 ---
 
 # lexical-audit（スタブ）

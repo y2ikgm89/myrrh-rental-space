@@ -1,9 +1,8 @@
 ---
 name: worktree-bootstrap
-description: >
-  隔離された git worktree を作成するスキル。環境変数ファイル・Prisma 生成物のコピーと
-  main の DB drift 事前チェックまで自動化する。新機能の実装を main の進行中作業から
-  隔離したい場合に使用。引数: ブランチ名（kebab-case）。
+description: Use when explicitly creating an isolated git worktree. Automates env file copy, Prisma generated copy, and main DB drift detection.
+disable-model-invocation: true
+argument-hint: "<branch-name-kebab-case>"
 ---
 
 # worktree-bootstrap

@@ -1,6 +1,9 @@
 ---
 name: lexical-node
-description: Lexical カスタムノード追加。手順の正本は .agents/skills/lexical-node（長いひな形は reference/scaffold-lexical-node.md）。このファイルは Claude Code 用スタブ。
+description: Use when explicitly adding a new Lexical custom node. Canonical scaffolding guide in .agents/skills/lexical-node; long templates in reference/scaffold-lexical-node.md.
+disable-model-invocation: true
+paths:
+  - src/**/lexical/**
 ---
 
 # lexical-node（スタブ）

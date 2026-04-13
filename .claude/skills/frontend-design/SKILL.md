@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: 公開ページ UI の design brief 手順。正本は .agents/skills/frontend-design（このファイルは Claude Code 用スタブ）。
+description: Use when designing public page UI. Provides design brief workflow; canonical guide in .agents/skills/frontend-design.
 ---
 
 # frontend-design（スタブ）

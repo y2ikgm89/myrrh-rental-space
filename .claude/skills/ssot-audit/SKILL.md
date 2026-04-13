@@ -1,6 +1,6 @@
 ---
 name: ssot-audit
-description: プロジェクト全体のSSoT違反（ゼロ値型エイリアス、値エイリアス re-export、同一定数の複数定義）を検出する。定期メンテ時に使用。
+description: Use when auditing project-wide SSoT violations. Detects zero-value type aliases, value alias re-exports, and duplicate constant definitions.
 ---
 
 # ssot-audit（スタブ）

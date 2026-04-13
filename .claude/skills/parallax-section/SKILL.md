@@ -1,9 +1,9 @@
 ---
 name: parallax-section
-description: >
-  公開ページのスクロール演出セクションを追加するときに使う。
-  GSAP、effect level、reduced motion、モバイル縮退を前提に実装する。
-  単なる静的セクションには使わない。
+description: Use when explicitly adding a scroll-driven GSAP parallax section to a public page. Includes effect level, reduced motion, and mobile fallback. Do NOT use for static sections.
+disable-model-invocation: true
+paths:
+  - src/app/(public)/**
 ---
 
 # parallax-section（スタブ）

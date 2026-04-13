@@ -1,6 +1,10 @@
 ---
 name: cache-audit
-description: Server Action のキャッシュ無効化の網羅性をチェックする。updateTag/revalidateTag の漏れ、不整合、3点セット欠落を検出。Server Action ファイルを編集した後に使用。
+description: Use when reviewing cache invalidation in Server Actions. Detects missing updateTag/revalidateTag, inconsistencies, and 3-point-set gaps after editing Server Action files.
+paths:
+  - src/**/actions/**
+  - src/**/actions.ts
+  - src/**/mutations.ts
 ---
 
 # cache-audit（スタブ）

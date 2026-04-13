@@ -1,9 +1,10 @@
 ---
 name: create-section-type
-description: >
-  新しいセクションタイプ定義をスキャフォールドする。
-  schema.ts, metadata.ts, 公開コンポーネント (stub), レジストリ登録を一括作成。
-  引数: セクションタイプ名 (kebab-case, 例: pricing-table, team-members)
+description: Use when explicitly adding a new section type. Scaffolds schema.ts, metadata.ts, public component stub, and registry entry.
+disable-model-invocation: true
+argument-hint: "<type-name-kebab-case>"
+paths:
+  - src/shared/lib/sections/**
 ---
 
 # create-section-type

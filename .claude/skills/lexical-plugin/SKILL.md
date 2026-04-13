@@ -1,6 +1,9 @@
 ---
 name: lexical-plugin
-description: Lexical プラグイン追加。手順の正本は .agents/skills/lexical-plugin（長いひな形は reference/scaffold-lexical-plugin.md）。このファイルは Claude Code 用スタブ。
+description: Use when explicitly adding a new Lexical plugin. Canonical scaffolding in .agents/skills/lexical-plugin; long templates in reference/scaffold-lexical-plugin.md.
+disable-model-invocation: true
+paths:
+  - src/**/lexical/**
 ---
 
 # lexical-plugin（スタブ）

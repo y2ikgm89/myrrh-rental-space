@@ -1,8 +1,6 @@
 ---
 name: instagram-debug
-description: >
-  Instagram フィード同期の診断スキル。トークン有効期限、cron 実行状況、DB 投稿数、CDN URL 疎通を
-  一括チェック。「インスタが表示されない」「フィードが更新されない」場面で使用する。
+description: Use when Instagram feed fails (not showing, not updating). Checks token expiry, cron execution status, DB post count, and CDN URL connectivity.
 ---
 
 # instagram-debug（スタブ）

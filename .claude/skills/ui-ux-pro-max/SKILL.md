@@ -1,6 +1,7 @@
 ---
 name: ui-ux-pro-max
-description: 付属 DB 検索。手順・scripts・data の正本は .agents/skills/ui-ux-pro-max（このファイルは Claude Code 用スタブ）。
+description: Use when searching bundled UI/UX pattern database. Canonical scripts/data in .agents/skills/ui-ux-pro-max.
+disable-model-invocation: true
 ---
 
 # ui-ux-pro-max（スタブ）

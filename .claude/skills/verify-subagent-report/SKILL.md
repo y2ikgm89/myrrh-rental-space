@@ -1,10 +1,6 @@
 ---
 name: verify-subagent-report
-description: >
-  Subagent implementer の報告（commit SHA・ファイル変更・テスト結果）を git state
-  に対して独立検証するスキル。Agent tool で implementer を dispatch した直後に必ず
-  使用し、報告と実態の乖離を検出する。haiku モデル使用時・密結合タスクバンドル実行時
-  に特に重要。
+description: Use immediately after dispatching an implementer subagent via Agent tool. Independently verifies reported commit SHA / file changes / test results against actual git state to detect report fabrication.
 ---
 
 # verify-subagent-report

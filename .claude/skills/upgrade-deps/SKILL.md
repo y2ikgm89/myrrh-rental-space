@@ -1,6 +1,7 @@
 ---
 name: upgrade-deps
-description: 依存関係のアップグレード。bun outdated で確認 → semver 範囲内更新 → メジャー/マイナーアップグレード → validate → lint エラー修正 → build 検証の一連フロー。「依存関係を更新して」「パッケージをアップグレードして」場面で使用。
+description: Use when user explicitly asks to upgrade/update dependencies. Runs bun outdated → in-range bun update → major/minor bun add @latest → validate → build verification.
+disable-model-invocation: true
 ---
 
 # upgrade-deps（スタブ）

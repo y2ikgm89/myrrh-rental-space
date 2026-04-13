@@ -1,6 +1,9 @@
 ---
 name: lexical-toolbar
-description: Lexical ツールバー拡張。手順の正本は .agents/skills/lexical-toolbar（長いひな形は reference/scaffold-lexical-toolbar.md）。このファイルは Claude Code 用スタブ。
+description: Use when explicitly extending the Lexical toolbar. Canonical scaffolding in .agents/skills/lexical-toolbar; long templates in reference/scaffold-lexical-toolbar.md.
+disable-model-invocation: true
+paths:
+  - src/**/lexical/**
 ---
 
 # lexical-toolbar（スタブ）

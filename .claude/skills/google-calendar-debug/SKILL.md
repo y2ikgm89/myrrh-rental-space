@@ -1,9 +1,6 @@
 ---
 name: google-calendar-debug
-description: >
-  Google Calendar 同期の診断スキル。OAuth トークン期限切れ、サービスアカウント設定ミス、
-  双方向同期エラー、Webhook チャンネル失効、iCal フィード異常の特定と対処を行う。
-  「カレンダーに予約が反映されない」「同期が止まった」場面で使用する。
+description: Use when Google Calendar sync fails (reservations not reflected, sync stopped). Diagnoses OAuth token expiry, service account misconfig, bidirectional sync errors, webhook channel expiry, iCal feed anomalies.
 ---
 
 # google-calendar-debug（スタブ）

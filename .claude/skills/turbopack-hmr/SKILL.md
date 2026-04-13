@@ -1,6 +1,6 @@
 ---
 name: turbopack-hmr
-description: Turbopack HMR "module factory is not available" エラーの対処法。Next.js 16 開発中に 'use server' ↔ 'use client' のモジュール境界でHMRが失敗した場合の診断と回復手順を提供する
+description: Use when Turbopack HMR fails with "module factory is not available" error during Next.js 16 dev. Diagnoses and recovers from 'use server' ↔ 'use client' module boundary HMR failures.
 ---
 
 # turbopack-hmr（スタブ）

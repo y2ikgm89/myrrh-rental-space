@@ -1,9 +1,8 @@
 ---
 name: create-admin-page
-description: >
-  管理画面の CRUD ページ一式を admin-ui-patterns.md 準拠でスキャフォールド生成する。
-  新しいリソース（モデル）を管理画面に追加する際に使用。
-  引数: リソース名（英語 camelCase, 例: product, spaceCategory, staffMember）
+description: Use when explicitly scaffolding a new admin CRUD page. Generates list/create/edit/detail pages conforming to admin-ui-patterns.md.
+disable-model-invocation: true
+argument-hint: "<resource-name-camelCase>"
 ---
 
 # create-admin-page（スタブ）

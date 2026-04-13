@@ -1,6 +1,6 @@
 ---
 name: integration-audit
-description: 公開ページ・マイページと管理画面の連携を包括的に監査する。キャッシュ無効化の一貫性、Customer紐づけ漏れ、認証パターン準拠、データフロー断絶を検出。新機能追加後や定期メンテ時に使用。
+description: Use when auditing integration between public pages, mypage, and admin UI. Detects cache invalidation inconsistencies, missing Customer links, auth pattern violations, and broken data flows.
 ---
 
 # integration-audit（スタブ）

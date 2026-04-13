@@ -1,8 +1,6 @@
 ---
 name: stripe-debug
-description: >
-  Stripe 決済設定・接続の診断スキル。Stripe キーの設定状況確認、接続テスト失敗の原因特定、
-  Webhook 設定のチェックを行う。Stripe 関連のエラーや「決済が動かない」場面で使用する。
+description: Use when Stripe payment/connection fails. Diagnoses key configuration, connection test failures, and webhook setup for payment-related errors.
 ---
 
 # stripe-debug（スタブ）
