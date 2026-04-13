@@ -33,6 +33,8 @@ export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
           rating: true,
           title: true,
           comment: true,
+          replyBody: true,
+          repliedAt: true,
           createdAt: true,
           customer: { select: { lastName: true } },
         },
@@ -51,6 +53,8 @@ export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
       rating: r.rating,
       title: r.title,
       comment: r.comment,
+      replyBody: r.replyBody,
+      repliedAt: r.repliedAt ? r.repliedAt.toISOString() : null,
       createdAt: r.createdAt.toISOString(),
       customerInitial: r.customer.lastName
         ? `${r.customer.lastName.charAt(0)}○`
