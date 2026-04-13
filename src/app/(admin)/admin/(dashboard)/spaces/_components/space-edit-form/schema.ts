@@ -74,7 +74,7 @@ export function spaceEditFormDataToSpaceFormPayload(
     imageUrls: data.imageUrls.map((f) => f.url),
     facilities: data.facilities.map((f) => f.value),
     isPublished: data.isPublished ?? false,
-    reviewsEnabled: data.reviewsEnabled ?? true,
+    reviewsEnabled: data.reviewsEnabled,
     access: data.access || undefined,
     area: data.area != null ? data.area : undefined,
     dailyPrice: data.dailyPrice != null ? data.dailyPrice : undefined,

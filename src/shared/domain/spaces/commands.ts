@@ -27,7 +27,7 @@ type SpaceCommandInput = {
   imageUrls: string[];
   facilities: string[];
   isPublished: boolean;
-  reviewsEnabled?: boolean | undefined;
+  reviewsEnabled: boolean;
   termsId?: string | null | undefined;
   locationId: string;
   categoryId?: string | null | undefined;
@@ -67,7 +67,7 @@ function buildSpaceData(input: SpaceCommandInput, publishedAt: Date | null) {
     imageUrls: input.imageUrls,
     facilities: input.facilities,
     isPublished: input.isPublished,
-    reviewsEnabled: input.reviewsEnabled ?? true,
+    reviewsEnabled: input.reviewsEnabled,
     publishedAt,
     termsId: input.termsId ?? null,
     locationId: input.locationId,
