@@ -7,9 +7,13 @@ import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
   toggleReviewPublishedCommand,
   deleteReviewCommand,
+  replyToReviewCommand,
+  deleteReviewReplyCommand,
 } from "@/shared/domain/reviews/commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import type { MutationResult } from "@/shared/lib/mutation-result";
+import { reviewReplySchema } from "@/shared/lib/validations/review";
+import type { ReviewReplyInput } from "@/shared/lib/validations/review";
 
 const idSchema = z.string().uuid({ error: "レビューIDが不正です" });
 
@@ -60,6 +64,66 @@ export async function deleteReview(id: string): Promise<MutationResult> {
     resourceId: validated.data,
     execute: async () => {
       const result = await deleteReviewCommand(validated.data);
+      spaceId = result.spaceId;
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.REVIEWS);
+      if (spaceId) {
+        updateTag(getCacheTag.reviews.space(spaceId));
+        updateTag(getCacheTag.reviews.stats(spaceId));
+      }
+    },
+  });
+}
+
+export async function replyToReview(
+  input: ReviewReplyInput,
+): Promise<MutationResult> {
+  const parsed = reviewReplySchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  let spaceId: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "review",
+    action: "update",
+    resourceId: parsed.data.reviewId,
+    execute: async (user) => {
+      const result = await replyToReviewCommand({
+        reviewId: parsed.data.reviewId,
+        replyBody: parsed.data.replyBody,
+        adminUserId: user.id,
+      });
+      spaceId = result.spaceId;
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.REVIEWS);
+      if (spaceId) {
+        updateTag(getCacheTag.reviews.space(spaceId));
+        updateTag(getCacheTag.reviews.stats(spaceId));
+      }
+    },
+  });
+}
+
+export async function deleteReviewReply(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  let spaceId: string | null = null;
+
+  return executeAdminMutationResult({
+    resource: "review",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      const result = await deleteReviewReplyCommand(validated.data);
       spaceId = result.spaceId;
       return null;
     },
