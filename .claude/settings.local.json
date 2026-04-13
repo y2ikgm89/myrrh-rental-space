@@ -1,25 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Read",
-      "Write",
-      "Edit",
-      "Glob",
-      "Grep",
-      "LS",
-      "WebSearch",
-      "WebFetch",
-      "Task",
-      "TodoWrite",
-      "NotebookEdit",
-      "Bash",
       "Bash(rm -rf .next)",
       "Bash(rm -rf node_modules)",
       "Bash(rmdir /s /q .next)",
       "Bash(rmdir /s /q node_modules)",
-      "Skill",
-      "mcp__*",
-      "Bash(sed 's/\",.*//')"
+      "mcp__github__*",
+      "mcp__context7__*",
+      "mcp__postgres__*",
+      "mcp__stripe__*",
+      "mcp__plugin_serena_serena__*",
+      "mcp__plugin_playwright_playwright__*",
+      "Bash(python3 -c ':*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -31,13 +25,11 @@
       "Bash(del /q:*)",
       "Bash(rd /s:*)",
       "Bash(rmdir /s:*)",
-      "Read(./.env)",
-      "Read(./.env.*)",
+      "Read(.env)",
+      "Read(.env.*)",
       "Write(.env)",
-      "Write(.env.local)",
       "Write(.env.*)",
       "Edit(.env)",
-      "Edit(.env.local)",
       "Edit(.env.*)"
     ]
   }

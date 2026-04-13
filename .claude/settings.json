@@ -108,7 +108,7 @@
         ]
       },
       {
-        "matcher": "Task",
+        "matcher": "Task|Agent",
         "hooks": [
           {
             "type": "command",
@@ -143,7 +143,5 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "autofix-bot@claude-plugins-official": true
-  }
+  "enabledPlugins": {}
 }
