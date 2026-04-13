@@ -106,6 +106,17 @@
             "statusMessage": "Prisma generate チェック中..."
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-subagent-git-snapshot.sh",
+            "timeout": 10,
+            "statusMessage": "Subagent 完了後の git state をキャプチャ中..."
+          }
+        ]
       }
     ],
     "Notification": [
