@@ -11,6 +11,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { toggleReviewVisibility, deleteReview } from "@/admin/actions/review";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { ReviewReplyDialog } from "./ReviewReplyDialog";
 
 // =============================================================================
 // Types
@@ -19,6 +20,7 @@ import { isMutationError } from "@/shared/lib/mutation-result";
 type ReviewActionCellProps = {
   reviewId: string;
   isPublished: boolean;
+  replyBody: string | null;
 };
 
 // =============================================================================
@@ -28,10 +30,14 @@ type ReviewActionCellProps = {
 export function ReviewActionCell({
   reviewId,
   isPublished,
+  replyBody,
 }: ReviewActionCellProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
   const [isToggling, startToggleTransition] = useTransition();
   const router = useRouter();
+
+  const hasReply = replyBody !== null;
 
   const handleToggleVisibility = () => {
     startToggleTransition(async () => {
@@ -48,6 +54,10 @@ export function ReviewActionCell({
   return (
     <>
       <ActionDropdown>
+        <ActionDropdownItem onClick={() => setReplyOpen(true)}>
+          {hasReply ? "返信を編集" : "返信する"}
+        </ActionDropdownItem>
+        <ActionDropdownSeparator />
         <ActionDropdownItem
           onClick={handleToggleVisibility}
           disabled={isToggling}
@@ -59,6 +69,12 @@ export function ReviewActionCell({
           削除
         </ActionDropdownItem>
       </ActionDropdown>
+      <ReviewReplyDialog
+        reviewId={reviewId}
+        initialReplyBody={replyBody}
+        open={replyOpen}
+        onOpenChange={setReplyOpen}
+      />
       <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

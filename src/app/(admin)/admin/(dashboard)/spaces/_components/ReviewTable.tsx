@@ -23,6 +23,7 @@ type ReviewRow = {
   title: string | null;
   comment: string | null;
   isPublished: boolean;
+  replyBody: string | null;
   createdAt: string;
   space: { id: string; name: string };
   customer: { id: string; lastName: string; firstName: string };
@@ -97,11 +98,17 @@ export function ReviewTable({ reviews }: ReviewTableProps) {
                   <Badge variant={review.isPublished ? "success" : "secondary"}>
                     {review.isPublished ? "公開" : "非公開"}
                   </Badge>
+                  {review.replyBody !== null ? (
+                    <Badge variant="outline" className="ml-2">
+                      返信済み
+                    </Badge>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <ReviewActionCell
                     reviewId={review.id}
                     isPublished={review.isPublished}
+                    replyBody={review.replyBody}
                   />
                 </TableCell>
               </TableRow>
