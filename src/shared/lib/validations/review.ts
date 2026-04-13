@@ -21,3 +21,13 @@ export const spaceReviewSchema = z.object({
 });
 
 export type SpaceReviewInput = z.infer<typeof spaceReviewSchema>;
+
+export const reviewReplySchema = z.object({
+  reviewId: z.string().uuid({ error: "レビューIDが不正です" }),
+  replyBody: z
+    .string({ error: "返信内容を入力してください" })
+    .min(1, { error: "返信内容を入力してください" })
+    .max(1000, { error: "返信は1000文字以内" }),
+});
+
+export type ReviewReplyInput = z.infer<typeof reviewReplySchema>;
