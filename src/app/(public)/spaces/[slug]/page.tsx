@@ -57,7 +57,9 @@ export default async function SpaceDetailPage({
   const space = await getSpaceBySlug(slug);
   if (!space) notFound();
 
-  const reviewStats = await getSpaceReviewStats(space.id);
+  const reviewStats = space.reviewsEnabled
+    ? await getSpaceReviewStats(space.id)
+    : { averageRating: 0, totalCount: 0 };
   const baseUrl = getBaseUrl();
   const spaceUrl = `${baseUrl}/spaces/${slug}`;
 
@@ -114,9 +116,11 @@ export default async function SpaceDetailPage({
                 name={space.name}
               />
               <SpaceInfo space={space} />
-              <Suspense fallback={null}>
-                <SpaceReviews spaceId={space.id} />
-              </Suspense>
+              {space.reviewsEnabled && (
+                <Suspense fallback={null}>
+                  <SpaceReviews spaceId={space.id} />
+                </Suspense>
+              )}
             </div>
 
             <div className="lg:sticky lg:top-[calc(var(--header-height)+2rem)] lg:self-start">
