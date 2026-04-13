@@ -4,7 +4,7 @@
 
 **Goal:** Space レビューに対して管理者が「店舗からの返信」を1件付与・編集・削除できるようにし、公開スペース詳細ページに返信を表示する。
 
-**Architecture:** `SpaceReview` モデルに `replyBody` / `repliedAt` / `repliedByAdminId` の3カラムを追加（1レビュー1返信、join 不要）。ドメイン層に `replyToReview` / `deleteReviewReply` コマンドを追加し、`executeAdminMutationResult` パターンの Server Action 経由で管理画面から操作する。公開クエリ `getPublishedReviewsForSpace` に reply フィールドを含め、`space-reviews.tsx` でネスト表示。承認制は導入しない（既存の自動公開ポリシー維持）。
+**Architecture:** `SpaceReview` モデルに `replyBody` / `repliedAt` / `repliedById` の3カラムを追加（1レビュー1返信、join 不要）。ドメイン層に `replyToReview` / `deleteReviewReply` コマンドを追加し、`executeAdminMutationResult` パターンの Server Action 経由で管理画面から操作する。公開クエリ `getPublishedReviewsForSpace` に reply フィールドを含め、`space-reviews.tsx` でネスト表示。承認制は導入しない（既存の自動公開ポリシー維持）。
 
 **Tech Stack:** Next.js 16 / React 19.2 / Prisma 7 / Zod 4 / Bun Test / React Hook Form / Tailwind 4.2
 
@@ -57,17 +57,18 @@ model SpaceReview {
   isPublished   Boolean  @default(true)
   replyBody     String?  @db.VarChar(1000)
   repliedAt     DateTime?
-  repliedByUserId String? @db.Uuid
+  repliedById   String? @db.Uuid
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  space         Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  customer      Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  repliedByUser User?       @relation("SpaceReviewReplyAuthor", fields: [repliedByUserId], references: [id], onDelete: SetNull)
+  space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  repliedBy   User?       @relation("SpaceReviewReplyAuthor", fields: [repliedById], references: [id], onDelete: SetNull)
 
   @@index([spaceId, isPublished, createdAt(sort: Desc)])
   @@index([customerId])
+  @@index([repliedById])
   @@map("space_reviews")
 }
 ```
@@ -89,7 +90,8 @@ Run: `bunx --bun prisma migrate dev --name add_space_review_reply`
 Expected:
 
 - `prisma/migrations/YYYYMMDDHHMMSS_add_space_review_reply/migration.sql` が生成される
-- `ALTER TABLE "space_reviews" ADD COLUMN "replyBody" VARCHAR(1000)`, `"repliedAt" TIMESTAMP(3)`, `"repliedByUserId" UUID` を含む
+- `ALTER TABLE "space_reviews" ADD COLUMN "replyBody" VARCHAR(1000)`, `"repliedAt" TIMESTAMP(3)`, `"repliedById" UUID` を含む
+- `CREATE INDEX "space_reviews_repliedById_idx" ON "space_reviews"("repliedById")` を含む
 - 全カラムが nullable なので既存データ破壊なし
 - Prisma Client が自動再生成される
 
@@ -100,13 +102,13 @@ gotchas.md: dev サーバーは db:generate 後も古い Prisma Client を保持
 - [ ] **Step 5: 型チェック**
 
 Run: `bun run type-check`
-Expected: PASS。`SpaceReview` 型に `replyBody` / `repliedAt` / `repliedByUserId` が追加されている。
+Expected: PASS。`SpaceReview` 型に `replyBody` / `repliedAt` / `repliedById` が追加されている。
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add prisma/schema.prisma prisma/migrations/*add_space_review_reply*
-git commit -m "feat(reviews): add reply columns to SpaceReview (replyBody/repliedAt/repliedByUserId)"
+git commit -m "feat(reviews): add reply columns to SpaceReview (replyBody/repliedAt/repliedById)"
 ```
 
 ---
@@ -180,7 +182,7 @@ describe("replyToReviewCommand", () => {
   });
 
   describe("正常系", () => {
-    test("返信本文・repliedAt・repliedByUserId を保存して spaceId を返す", async () => {
+    test("返信本文・repliedAt・repliedById を保存して spaceId を返す", async () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
@@ -199,7 +201,7 @@ describe("replyToReviewCommand", () => {
           where: { id: REVIEW_ID },
           data: expect.objectContaining({
             replyBody: "ご利用ありがとうございました。",
-            repliedByUserId: ADMIN_USER_ID,
+            repliedById: ADMIN_USER_ID,
             repliedAt: expect.any(Date),
           }),
         }),
@@ -267,7 +269,7 @@ describe("deleteReviewReplyCommand", () => {
   });
 
   describe("正常系", () => {
-    test("replyBody / repliedAt / repliedByUserId を null にクリアして spaceId を返す", async () => {
+    test("replyBody / repliedAt / repliedById を null にクリアして spaceId を返す", async () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
@@ -282,7 +284,7 @@ describe("deleteReviewReplyCommand", () => {
           data: {
             replyBody: null,
             repliedAt: null,
-            repliedByUserId: null,
+            repliedById: null,
           },
         }),
       );
@@ -337,7 +339,7 @@ export async function replyToReviewCommand(
     data: {
       replyBody: input.replyBody,
       repliedAt: new Date(),
-      repliedByUserId: input.adminUserId,
+      repliedById: input.adminUserId,
     },
   });
 
@@ -361,7 +363,7 @@ export async function deleteReviewReplyCommand(
     data: {
       replyBody: null,
       repliedAt: null,
-      repliedByUserId: null,
+      repliedById: null,
     },
   });
 
@@ -393,7 +395,7 @@ git commit -m "feat(reviews): add replyToReviewCommand and deleteReviewReplyComm
 
 `src/shared/domain/reviews/queries.ts` を以下のように変更:
 
-`reviewListSelect` 定数（L6-17）に `replyBody`, `repliedAt`, `repliedByUser` を追加:
+`reviewListSelect` 定数（L6-17）に `replyBody`, `repliedAt`, `repliedBy` を追加:
 
 ```typescript
 const reviewListSelect = {
@@ -409,7 +411,7 @@ const reviewListSelect = {
   space: { select: { id: true, name: true } },
   customer: { select: { id: true, lastName: true, firstName: true } },
   reservation: { select: { id: true } },
-  repliedByUser: { select: { id: true, name: true } },
+  repliedBy: { select: { id: true, name: true } },
 } as const;
 ```
 
@@ -426,7 +428,7 @@ function formatReviewRow(r: ReviewListRow) {
     isPublished: r.isPublished,
     replyBody: r.replyBody,
     repliedAt: r.repliedAt ? r.repliedAt.toISOString() : null,
-    repliedByUserName: r.repliedByUser?.name ?? null,
+    repliedByUserName: r.repliedBy?.name ?? null,
     createdAt: r.createdAt.toISOString(),
     space: r.space,
     customer: {

@@ -267,6 +267,7 @@ model User {
   createdStaffInvitations StaffInvitation[]      @relation("StaffInvitationCreator")
   createdLoginTokens      LoginToken[]           @relation("LoginTokenCreator")
   createdBlockTemplates   BlockTemplate[]        @relation("BlockTemplateCreator")
+  repliedSpaceReviews     SpaceReview[]          @relation("SpaceReviewReplyAuthor")
 
   // OR検索用インデックス
   @@index([name])
@@ -1667,23 +1668,28 @@ model BlockTemplate {
 // ==============================================
 
 model SpaceReview {
-  id            String   @id @default(uuid()) @db.Uuid
-  spaceId       String   @db.Uuid
-  customerId    String   @db.Uuid
-  reservationId String   @unique @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  spaceId       String    @db.Uuid
+  customerId    String    @db.Uuid
+  reservationId String    @unique @db.Uuid
   rating        Int
-  title         String?  @db.VarChar(100)
-  comment       String?  @db.VarChar(1000)
-  isPublished   Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  title         String?   @db.VarChar(100)
+  comment       String?   @db.VarChar(1000)
+  isPublished   Boolean   @default(true)
+  replyBody     String?   @db.VarChar(1000)
+  repliedAt     DateTime?
+  repliedById   String?   @db.Uuid
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   space       Space       @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  repliedBy   User?       @relation("SpaceReviewReplyAuthor", fields: [repliedById], references: [id], onDelete: SetNull)
 
   @@index([spaceId, isPublished, createdAt(sort: Desc)])
   @@index([customerId])
+  @@index([repliedById])
   @@map("space_reviews")
 }
 
