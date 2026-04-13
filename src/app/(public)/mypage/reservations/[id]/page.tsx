@@ -156,6 +156,7 @@ export default async function ReservationDetailPage({
           <ReviewForm
             reservationId={reservation.id}
             spaceName={reservation.space.name}
+            reviewsEnabled={reservation.space.reviewsEnabled}
             turnstileSiteKey={turnstileSiteKey}
           />
         </>

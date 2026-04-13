@@ -51,6 +51,7 @@ export async function getCustomerReservationDetail(
           slug: true,
           locationId: true,
           capacity: true,
+          reviewsEnabled: true,
         },
       },
     },

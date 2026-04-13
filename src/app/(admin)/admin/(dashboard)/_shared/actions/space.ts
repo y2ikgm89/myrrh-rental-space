@@ -41,8 +41,12 @@ async function renderDescriptionHtml(
 
 function revalidateSpaces(...ids: string[]): void {
   updateTag(CACHE_TAGS.SPACES);
+  // Review stats depend on Space.reviewsEnabled — invalidate when any space mutates
+  updateTag(CACHE_TAGS.REVIEWS);
   for (const id of [...new Set(ids)]) {
     updateTag(getCacheTag.spaces.detail(id));
+    updateTag(getCacheTag.reviews.space(id));
+    updateTag(getCacheTag.reviews.stats(id));
     fireAndForget(purgeSpaceCache(id), {
       operation: "purgeSpaceCache",
       category: ErrorCategory.EXTERNAL_API,
