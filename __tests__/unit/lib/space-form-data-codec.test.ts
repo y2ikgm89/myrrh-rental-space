@@ -30,6 +30,7 @@ function minimalValidSpaceFormPayload() {
     imageUrls: [],
     facilities: [],
     isPublished: false,
+    reviewsEnabled: true,
     termsId: null,
     locationId: "22222222-2222-4222-8222-222222222222",
     categoryId: null,
@@ -72,6 +73,7 @@ describe("space-form-data-codec", () => {
     expect(again.data.imageUrls).toEqual(parsedInput.imageUrls);
     expect(again.data.facilities).toEqual(parsedInput.facilities);
     expect(again.data.isPublished).toBe(parsedInput.isPublished);
+    expect(again.data.reviewsEnabled).toBe(parsedInput.reviewsEnabled);
   });
 
   test("parse rejects invalid numeric field with NaN from codec", () => {

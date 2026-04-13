@@ -13,6 +13,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Switch,
   TabsContent,
 } from "@/admin/components/ui";
 import {
@@ -40,6 +41,7 @@ export function SpaceEditPublishTabPanel({
   isPending,
 }: SpaceEditPublishTabPanelProps) {
   const isPublished = useWatch({ control, name: "isPublished" });
+  const reviewsEnabled = useWatch({ control, name: "reviewsEnabled" });
 
   return (
     <TabsContent
@@ -67,6 +69,36 @@ export function SpaceEditPublishTabPanel({
                 setValue("isPublished", value, { shouldDirty: true })
               }
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>レビュー設定</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-start gap-3">
+              <Switch
+                id="reviewsEnabled"
+                checked={reviewsEnabled}
+                onCheckedChange={(checked) => {
+                  setValue("reviewsEnabled", checked, { shouldDirty: true });
+                }}
+                disabled={isPending}
+                aria-label="レビュー機能を有効化"
+              />
+              <div className="space-y-1">
+                <label
+                  htmlFor="reviewsEnabled"
+                  className="text-sm font-medium leading-none"
+                >
+                  レビュー機能を有効化
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  オフにすると公開ページでレビューが非表示になり、顧客は新規投稿できなくなります。既存のレビューは削除されません。
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

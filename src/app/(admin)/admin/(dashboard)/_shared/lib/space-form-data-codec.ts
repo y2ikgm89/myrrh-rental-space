@@ -105,6 +105,7 @@ export function parseSpaceFormFromFormData(formData: FormData) {
     imageUrls,
     facilities,
     isPublished: getTrimmedString(formData, "isPublished") === "true",
+    reviewsEnabled: getTrimmedString(formData, "reviewsEnabled") === "true",
     termsId: getOptionalUuid(formData, "termsId"),
     locationId: getRequiredUuidString(formData, "locationId"),
     categoryId: getOptionalUuid(formData, "categoryId"),
@@ -154,6 +155,7 @@ export function spaceFormDataToFormData(
   fd.set("hourlyPrice", String(payload.hourlyPrice));
   fd.set("mainImageUrl", payload.mainImageUrl);
   fd.set("isPublished", payload.isPublished ? "true" : "false");
+  fd.set("reviewsEnabled", payload.reviewsEnabled ? "true" : "false");
 
   if (payload.area != null) {
     fd.set("area", String(payload.area));

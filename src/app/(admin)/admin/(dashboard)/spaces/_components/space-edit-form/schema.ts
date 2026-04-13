@@ -138,6 +138,7 @@ const TAB_FIELDS: Record<SpaceEditTabValue, (keyof SpaceEditFormData)[]> = {
   details: ["categoryId", "facilities", "termsId"],
   publish: [
     "isPublished",
+    "reviewsEnabled",
     "publishedAt",
     "metaDescription",
     "metaKeywords",
