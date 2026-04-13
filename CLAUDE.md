@@ -78,6 +78,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 - **計画作成**: `brainstorming` → `writing-plans`（`docs/plans/YYYY-MM-DD-*.md`）
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
+- **Subagent 実行規律**: implementer は sonnet 以上（haiku 禁止、report 捏造リスク）/ 完了報告後は `git log --oneline` + `git show --stat HEAD` で独立検証 / 密結合タスクは 1 implementer にバンドル
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 
 ## スキル（ドメイン固有）

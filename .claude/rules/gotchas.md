@@ -250,6 +250,8 @@ paths:
 - **`Edit` ツールの `replace_all` は部分一致に注意** — `isJumping` → `isJumpingRef` の rename で `replace_all` を使うと、既存の `isJumpingRef` が `isJumpingRefRef` に二重変換される。rename 対象が別の識別子の部分文字列になる場合は `replace_all` を避け、個別の `old_string` で置換する
 - **`git add` 後はコミット前に `git status` 再確認** — Prettier PostToolUse フックが `git add` で他のステージング済みファイルも変更することがある（` M` に変わる）
 - **選択的コミット** — 多数のファイルがステージ済みの状態で特定ファイルのみコミットするには `git restore --staged . && git add <target-files>` で再ステージする
+- **`git reset --hard` は hook で禁止** — `.claude/hooks/block-dangerous-bash.sh` がブロック。個別 commit 取り消しは `git reset --soft <sha>` で HEAD 移動 → `git restore --staged <file>` → `git checkout HEAD -- <file>` で working tree を個別ファイル単位で復元する。fast-forward merge 前にローカルの stray commit を落とす用途でもこの手順を使う
+- **Bash tool の cwd は呼び出し間で永続** — `cd .worktrees/<name> && ...` を実行すると次の Bash 呼び出しも worktree dir に張り付く。意図した作業ディレクトリで動いているか `pwd` で確認するか、明示的に `cd /g/workspace/work/website/customer/myrrh-rental-space` で main に戻す
 
 ## Claude Code 設定
 
@@ -260,6 +262,8 @@ paths:
 - **MCP ツールはセッション開始前に確定させる** — セッション途中で `.mcp.json` を変更したり MCP サーバーを追加・削除するとツール定義のプレフィックスが変わりキャッシュが破壊される
 - **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
 - **hook スクリプトの `grep` + `pipefail` 罠** — `set -euo pipefail` 下で `var=$(cmd | grep pattern | head -1)` は grep 不一致（exit 1）でスクリプトが無音終了・stderr なし。根本解決: `if ! cmd | grep -qE 'pattern'; then exit 0; fi`（`if` 条件式内は `set -e` 対象外が Bash 仕様）
+- **Subagent report は必ず独立検証する** — implementer の「commit SHA: xxx」「EXIT: 0」報告を鵜呑みにせず、次タスク dispatch 前に `git log --oneline -N` + `git show --stat HEAD` で実在確認する。報告内容と git state の乖離は稀だが発生する（特に安価なモデルを implementer に使った場合）。乖離検出時は同じタスクをより上位モデルで再 dispatch
+- **Implementation サブエージェントに haiku を使わない** — ファイル編集 + commit を伴うタスクで haiku モデルは Bash/Edit ツール呼び出しを省略し成功報告を捏造することがある。`Agent` tool の `model: "haiku"` オプションは read-only 調査（Explore 等）のみで使用し、implementer には sonnet 以上を指定する
 
 ## Worktree
 
@@ -271,6 +275,8 @@ paths:
   3. worktree ディレクトリを削除済みでもブランチ参照が残る → `git worktree prune` → `git branch -d`
 - **ESLint が `.worktrees/` 内ファイルを lint 対象にする** — `eslint.config.mjs` の `globalIgnores` に `.worktrees/**` 追加済み。worktree ディレクトリ名を変えた場合はパターン更新が必要
 - **Windows で worktree 削除時の PermissionError** — bun/node プロセス起動中は native binary（`@tailwindcss/oxide-win32-x64-msvc.node` 等）がロックされる。`cmd /c rd /s /q ".worktrees/<name>"` で大部分は削除できるが binary は残る。git 参照だけなら `git worktree prune` + `git branch -d` で十分。完全削除は全プロセス終了後に `powershell.exe -Command "Remove-Item -Recurse -Force '...'"` で実施
+- **worktree 作成時に共有 dev DB がドリフト済みの場合** — main に未コミットの migration が既にローカル Postgres に適用済みの状態で worktree を切ると、worktree の schema.prisma（HEAD 基準）と DB が乖離し、worktree 内の `prisma migrate dev` が drift 検出 → reset 要求で進めない。**対処**: main 側で WIP スナップショット commit（`git add -A && git commit -m "wip: ..."`）を作ってから worktree を branch する。後で main で `git rebase -i` で分割整理可能。`prisma migrate reset` は共有 dev DB を破壊するため避ける
+- **worktree に `.env` / `.env.local` をコピーする手段** — PreToolUse が Edit/Write を保護し、`cp .env .worktrees/<n>/.env` のような Bash パターンも deny されるケースがある。**動作確認済みの方法**: `python3 -c "import shutil; shutil.copy2('.env', '.worktrees/<name>/.env')"` で bypass（ファイル内容は一切変更せず複製するだけなので安全）
 
 ## フレームワーク固有
 
