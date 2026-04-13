@@ -30,14 +30,16 @@ mock.module("@/shared/lib/action-helpers", () => ({
 }));
 
 // executeAdminMutationResult モック（認証をバイパスし execute を直接呼び出す）
+const MOCK_ADMIN_USER = { id: "admin-user-001", email: "admin@example.com" };
+
 mock.module("@/admin/lib/admin-action", () => ({
   executeAdminMutationResult: mock(
     async (opts: {
-      execute: () => Promise<unknown>;
+      execute: (user: typeof MOCK_ADMIN_USER) => Promise<unknown>;
       afterSuccess?: (data: unknown) => void;
     }) => {
       try {
-        const data = await opts.execute();
+        const data = await opts.execute(MOCK_ADMIN_USER);
         if (opts.afterSuccess) {
           opts.afterSuccess(data);
         }
@@ -59,10 +61,18 @@ const mockToggleReviewPublishedCommand = mock(() =>
 const mockDeleteReviewCommand = mock(() =>
   Promise.resolve({ spaceId: "space-001" }),
 );
+const mockReplyToReviewCommand = mock(() =>
+  Promise.resolve({ spaceId: "space-001" }),
+);
+const mockDeleteReviewReplyCommand = mock(() =>
+  Promise.resolve({ spaceId: "space-001" }),
+);
 
 mock.module("@/shared/domain/reviews/commands", () => ({
   toggleReviewPublishedCommand: mockToggleReviewPublishedCommand,
   deleteReviewCommand: mockDeleteReviewCommand,
+  replyToReviewCommand: mockReplyToReviewCommand,
+  deleteReviewReplyCommand: mockDeleteReviewReplyCommand,
   createReviewCommand: mock(() =>
     Promise.resolve({ id: "review-001", spaceId: "space-001" }),
   ),
@@ -326,6 +336,181 @@ describe("deleteReview", () => {
       await expect(deleteReview(VALID_UUID)).rejects.toThrow(
         "予期しないDBエラー",
       );
+    });
+  });
+});
+
+describe("replyToReview", () => {
+  const VALID_REPLY_INPUT = {
+    reviewId: VALID_UUID,
+    replyBody: "ご利用ありがとうございました。",
+  };
+
+  beforeEach(() => {
+    mockReplyToReviewCommand.mockClear();
+    mockUpdateTag.mockClear();
+    mockReplyToReviewCommand.mockImplementation(() =>
+      Promise.resolve({ spaceId: "space-1" }),
+    );
+  });
+
+  describe("正常系", () => {
+    test("有効な入力で返信できる", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await replyToReview(VALID_REPLY_INPUT);
+
+      expect(result).not.toHaveProperty("error");
+      expect(mockReplyToReviewCommand).toHaveBeenCalledTimes(1);
+    });
+
+    test("成功後に 3 タグ（REVIEWS + reviews.space + reviews.stats）が無効化される", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      await replyToReview(VALID_REPLY_INPUT);
+
+      const calledTags = (
+        mockUpdateTag.mock.calls as unknown as [string][]
+      ).map((c) => c[0]);
+      expect(calledTags).toContain("reviews");
+      expect(calledTags).toContain("reviews-space-space-1");
+      expect(calledTags).toContain("reviews-stats-space-1");
+    });
+  });
+
+  describe("異常系: バリデーションエラー", () => {
+    test("不正な reviewId UUID はエラーを返す", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await replyToReview({
+        reviewId: "not-a-uuid",
+        replyBody: "返信",
+      });
+
+      expect(result).toHaveProperty("error");
+      expect(result).toHaveProperty("fieldErrors");
+      expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
+    });
+
+    test("空の replyBody はエラーを返す", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await replyToReview({
+        reviewId: VALID_UUID,
+        replyBody: "",
+      });
+
+      expect(result).toHaveProperty("error");
+      expect(result).toHaveProperty("fieldErrors");
+      expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
+    });
+
+    test("1001 文字の replyBody はエラーを返す", async () => {
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await replyToReview({
+        reviewId: VALID_UUID,
+        replyBody: "x".repeat(1001),
+      });
+
+      expect(result).toHaveProperty("error");
+      expect(result).toHaveProperty("fieldErrors");
+      expect(mockReplyToReviewCommand).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("異常系: DomainError", () => {
+    test("レビューが見つからない場合はエラーを返す", async () => {
+      mockReplyToReviewCommand.mockImplementation(() =>
+        Promise.reject(
+          new DomainError("レビューが見つかりません", "NOT_FOUND"),
+        ),
+      );
+
+      const { replyToReview } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await replyToReview(VALID_REPLY_INPUT);
+
+      expect(result).toHaveProperty("error");
+      const errorResult = result as { error: string };
+      expect(errorResult.error).toBe("レビューが見つかりません");
+    });
+  });
+});
+
+describe("deleteReviewReply", () => {
+  beforeEach(() => {
+    mockDeleteReviewReplyCommand.mockClear();
+    mockUpdateTag.mockClear();
+    mockDeleteReviewReplyCommand.mockImplementation(() =>
+      Promise.resolve({ spaceId: "space-1" }),
+    );
+  });
+
+  describe("正常系", () => {
+    test("有効な UUID で返信を削除できる", async () => {
+      const { deleteReviewReply } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      const result = await deleteReviewReply(VALID_UUID);
+
+      expect(result).not.toHaveProperty("error");
+      expect(mockDeleteReviewReplyCommand).toHaveBeenCalledTimes(1);
+      expect(mockDeleteReviewReplyCommand).toHaveBeenCalledWith(VALID_UUID);
+    });
+
+    test("成功後に 3 タグ（REVIEWS + reviews.space + reviews.stats）が無効化される", async () => {
+      const { deleteReviewReply } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      await deleteReviewReply(VALID_UUID);
+
+      const calledTags = (
+        mockUpdateTag.mock.calls as unknown as [string][]
+      ).map((c) => c[0]);
+      expect(calledTags).toContain("reviews");
+      expect(calledTags).toContain("reviews-space-space-1");
+      expect(calledTags).toContain("reviews-stats-space-1");
+    });
+  });
+
+  describe("異常系: バリデーションエラー", () => {
+    test.each(INVALID_UUIDS)(
+      "不正な UUID '%s' でエラーを返す",
+      async (invalidId) => {
+        const { deleteReviewReply } = await import(
+          "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+        );
+
+        const result = await deleteReviewReply(invalidId);
+
+        expect(result).toHaveProperty("error");
+        expect(result).toHaveProperty("fieldErrors");
+      },
+    );
+
+    test("バリデーション失敗時は deleteReviewReplyCommand が呼ばれない", async () => {
+      const { deleteReviewReply } = await import(
+        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
+      );
+
+      await deleteReviewReply("invalid-uuid");
+
+      expect(mockDeleteReviewReplyCommand).not.toHaveBeenCalled();
     });
   });
 });
