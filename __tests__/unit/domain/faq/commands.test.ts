@@ -49,6 +49,10 @@ const mockFaqItemUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
 
+const mockFaqItemFindMany = mock<
+  () => Promise<ReadonlyArray<Record<string, unknown>>>
+>(() => Promise.resolve([]));
+
 const mockFaqCategoryUpdateMany = mock<() => Promise<{ count: number }>>(() =>
   Promise.resolve({ count: 0 }),
 );
@@ -76,6 +80,7 @@ type TxClient = {
     delete: typeof mockFaqItemDelete;
     aggregate: typeof mockFaqItemAggregate;
     updateMany: typeof mockFaqItemUpdateMany;
+    findMany: typeof mockFaqItemFindMany;
   };
 };
 
@@ -97,6 +102,7 @@ const txClient: TxClient = {
     delete: mockFaqItemDelete,
     aggregate: mockFaqItemAggregate,
     updateMany: mockFaqItemUpdateMany,
+    findMany: mockFaqItemFindMany,
   },
 };
 
@@ -132,6 +138,7 @@ mock.module("@/shared/db/prisma", () => ({
       delete: mockFaqItemDelete,
       aggregate: mockFaqItemAggregate,
       updateMany: mockFaqItemUpdateMany,
+      findMany: mockFaqItemFindMany,
     },
     $transaction: mockTransaction,
   },
@@ -166,6 +173,8 @@ import {
   deleteFaqItem,
   reorderFaqItems,
   toggleFaqItemPublished,
+  voteFaqItemHelpful,
+  detectStaleFaqItems,
 } from "@/shared/domain/faq/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -995,6 +1004,137 @@ describe("toggleFaqItemPublished", () => {
         DomainError,
       );
       expect(mockFaqItemUpdate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// =============================================================================
+// voteFaqItemHelpful
+// =============================================================================
+
+describe("voteFaqItemHelpful", () => {
+  beforeEach(() => {
+    mockFaqItemUpdateMany.mockReset();
+  });
+
+  describe("正常系", () => {
+    test("helpful 投票で helpfulCount を increment する", async () => {
+      mockFaqItemUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await voteFaqItemHelpful(ITEM_ID, "helpful");
+
+      expect(result).toEqual({ voted: true });
+      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: ITEM_ID, isPublished: true, deletedAt: null },
+          data: { helpfulCount: { increment: 1 } },
+        }),
+      );
+    });
+
+    test("not-helpful 投票で notHelpfulCount を increment する", async () => {
+      mockFaqItemUpdateMany.mockResolvedValue({ count: 1 });
+
+      const result = await voteFaqItemHelpful(ITEM_ID, "not-helpful");
+
+      expect(result).toEqual({ voted: true });
+      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { notHelpfulCount: { increment: 1 } },
+        }),
+      );
+    });
+
+    test("対象が見つからない場合 voted: false を返す", async () => {
+      mockFaqItemUpdateMany.mockResolvedValue({ count: 0 });
+
+      const result = await voteFaqItemHelpful("non-existent", "helpful");
+
+      expect(result).toEqual({ voted: false });
+    });
+
+    test("非公開項目は updateMany の where で除外される", async () => {
+      mockFaqItemUpdateMany.mockResolvedValue({ count: 0 });
+
+      await voteFaqItemHelpful(ITEM_ID, "helpful");
+
+      expect(mockFaqItemUpdateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isPublished: true,
+            deletedAt: null,
+          }),
+        }),
+      );
+    });
+  });
+});
+
+// =============================================================================
+// detectStaleFaqItems
+// =============================================================================
+
+describe("detectStaleFaqItems", () => {
+  beforeEach(() => {
+    mockFaqItemFindMany.mockReset();
+  });
+
+  describe("正常系", () => {
+    test("指定日数以上更新されていない公開中項目を返す", async () => {
+      const staleItems = [
+        {
+          id: "item-1",
+          question: "古い質問 1",
+          updatedAt: new Date("2024-01-01"),
+        },
+        {
+          id: "item-2",
+          question: "古い質問 2",
+          updatedAt: new Date("2024-02-01"),
+        },
+      ];
+      mockFaqItemFindMany.mockResolvedValue(staleItems);
+
+      const result = await detectStaleFaqItems(180);
+
+      expect(result).toHaveLength(2);
+      expect(mockFaqItemFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isPublished: true,
+            deletedAt: null,
+            updatedAt: expect.objectContaining({ lt: expect.any(Date) }),
+          }),
+          orderBy: { updatedAt: "asc" },
+          take: 20,
+        }),
+      );
+    });
+
+    test("対象が無い場合は空配列", async () => {
+      mockFaqItemFindMany.mockResolvedValue([]);
+
+      const result = await detectStaleFaqItems(180);
+
+      expect(result).toEqual([]);
+    });
+
+    test("limit 引数で take を制御できる", async () => {
+      mockFaqItemFindMany.mockResolvedValue([]);
+
+      await detectStaleFaqItems(90, 5);
+
+      expect(mockFaqItemFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({ take: 5 }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("staleDays が 0 以下で DomainError", async () => {
+      await expect(detectStaleFaqItems(0)).rejects.toThrow(DomainError);
+      await expect(detectStaleFaqItems(-1)).rejects.toThrow(DomainError);
+      expect(mockFaqItemFindMany).not.toHaveBeenCalled();
     });
   });
 });

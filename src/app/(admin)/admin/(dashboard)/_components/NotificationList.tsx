@@ -64,6 +64,7 @@ export function NotificationList({ notifications }: NotificationListProps) {
           ? NOTIFICATION_TYPE_LABELS[notification.type]
           : notification.type;
         const href = getNotificationResourceHref(
+          notification.type,
           notification.resourceType,
           notification.resourceId,
         );

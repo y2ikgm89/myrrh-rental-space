@@ -53,6 +53,7 @@ export async function DashboardNotificationsSection() {
                 ? NOTIFICATION_TYPE_BADGE_VARIANTS[notification.type]
                 : "secondary";
               const href = getNotificationResourceHref(
+                notification.type,
                 notification.resourceType,
                 notification.resourceId,
               );

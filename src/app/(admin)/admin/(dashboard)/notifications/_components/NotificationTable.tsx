@@ -91,6 +91,7 @@ export function NotificationTable({ notifications }: NotificationTableProps) {
                 ? NOTIFICATION_TYPE_BADGE_VARIANTS[validType]
                 : "secondary";
               const href = getNotificationResourceHref(
+                notification.type,
                 notification.resourceType,
                 notification.resourceId,
               );

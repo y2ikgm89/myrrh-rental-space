@@ -5,12 +5,16 @@
  * Cloud Scheduler から weekly（月曜 09:00 JST）で起動する想定。
  *
  * 認証: `CRON_SECRET` の Authorization Bearer ヘッダー
- * べき等性: 同日再実行しても重複通知が作られるため Cloud Scheduler 側で頻度制御する
+ * 重複通知抑制: 直近 `DEDUP_DAYS` 日以内に同 type の通知があればスキップ（再実行・頻度緩和対応）
  */
 
+import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { detectStaleFaqItems } from "@/shared/domain/faq/commands";
-import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  createNotificationCommand,
+  hasRecentNotificationOfType,
+} from "@/shared/domain/notifications/commands";
 import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { serverEnv } from "@/shared/lib/env/server";
@@ -22,10 +26,11 @@ import {
 import { logger } from "@/shared/lib/logger";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
-import { revalidateTag } from "next/cache";
 
 const STALE_DAYS = 180;
 const MAX_ITEMS = 20;
+/** 同 type の通知を重複生成しないためのルックバック日数（週次スケジュールより 1 日短い） */
+const DEDUP_DAYS = 6;
 
 export async function GET(request: Request) {
   try {
@@ -36,6 +41,16 @@ export async function GET(request: Request) {
       operation: "faqStaleCheck",
     });
     if (authResult) return authResult;
+
+    // 重複抑制: 直近 6 日以内に同 type 通知が既にあれば no-op（Scheduler 再試行・手動再実行対策）
+    if (
+      await hasRecentNotificationOfType(NOTIFICATION_TYPE.FAQ_STALE, DEDUP_DAYS)
+    ) {
+      logger.info("FAQ stale check: recent notification exists, skipping", {
+        dedupDays: DEDUP_DAYS,
+      });
+      return jsonSuccess({ skipped: true, reason: "recent_notification" });
+    }
 
     const stale = await detectStaleFaqItems(STALE_DAYS, MAX_ITEMS);
 
@@ -54,7 +69,6 @@ export async function GET(request: Request) {
       type: NOTIFICATION_TYPE.FAQ_STALE,
       title: `${stale.length} 件の FAQ が ${STALE_DAYS} 日以上更新されていません`,
       message: `長期間更新されていない公開中の FAQ があります。内容の見直しをご検討ください。\n\n${sample}${more}`,
-      resourceType: "faqItem",
     });
 
     revalidateTag(CACHE_TAGS.NOTIFICATIONS, CACHE_LIFE.DYNAMIC_DATA);

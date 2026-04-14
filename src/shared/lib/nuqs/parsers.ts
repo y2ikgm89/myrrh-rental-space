@@ -371,8 +371,11 @@ export const adminFaqSearchParamsParsers = {
   search: parseAsQuery,
   categoryId: parseAsString.withDefault(""),
   status: parseAsStringLiteral(adminFaqItemStatusValues).withDefault("all"),
+  // 初回ランディングは "order" 昇順（管理者が手動設定した並び順）
+  // viewCount / updatedAt カラムをクリックした時は FaqItemTableHeader.handleSort が
+  // 適切な方向（viewCount → desc、その他 → asc）を URL に書き戻す
   sortBy: parseAsStringLiteral(adminFaqItemSortByValues).withDefault("order"),
-  sortOrder: parseAsSortOrder,
+  sortOrder: parseAsStringLiteral(sortOrders).withDefault("asc"),
   page: parseAsPage,
   perPage: parseAsInteger.withDefault(20),
 };

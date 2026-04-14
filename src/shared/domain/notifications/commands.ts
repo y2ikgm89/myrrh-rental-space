@@ -49,6 +49,22 @@ export async function deleteNotificationCommand(id: string): Promise<void> {
   });
 }
 
+/**
+ * 指定 type の通知が直近 N 日以内に作成されているかを確認する。
+ * 週次 cron（FAQ_STALE 等）の重複通知抑制に使用する。
+ */
+export async function hasRecentNotificationOfType(
+  type: NotificationType,
+  withinDays: number,
+): Promise<boolean> {
+  const since = new Date(Date.now() - withinDays * 24 * 60 * 60 * 1000);
+  const existing = await prisma.adminNotification.findFirst({
+    where: { type, createdAt: { gte: since } },
+    select: { id: true },
+  });
+  return existing !== null;
+}
+
 export async function deleteOldNotificationsCommand(
   olderThanDays: number,
 ): Promise<number> {
