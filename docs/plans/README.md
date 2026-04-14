@@ -30,6 +30,15 @@
   - Phase 4: 設定明示化 — Prettier/ESLint/パッケージ更新（Task 13-15）
   - Phase 5: 全体検証 — admin 53ページからconnection()除去・DashboardHeader Client化（Task 16）
 
+- ✅ [2026-04-14] Clean Restructure（ドメイン commands 分割 + Lexical UI 分割）
+  - 計画書: `docs/plans/2026-04-14-clean-restructure.md`
+  - Workstream 1: `type-safety.md` 例外追記（`standardSchemaResolver` 境界変換）
+  - Workstream 2: `reservations/commands.ts` 928行 → `payloads` / `status` / `admin-commands` / `public-commands` / `lifecycle-commands`
+  - Workstream 3: `faq/commands.ts` 602行 → `category-commands` / `item-commands` / `item-bulk-commands` / `analytics-commands`
+  - Workstream 4: `posts/commands.ts` 594行 → `post-commands` / `version-commands` / `category-commands` / `tag-commands` / `bulk-commands`
+  - Workstream 5: Lexical UI 分割（`ToolbarPlugin` 960→419 + `plugins/toolbar/` 11モジュール、`FloatingToolbarPlugin` 877→534 + `plugins/floating-toolbar/` 9モジュール、`insert-items.ts` 879行 → `config/insert-items/` 6モジュール）
+  - 付随改善: 禁止の `$transaction([...])` 配列形式を interactive transaction へ修正、`import { X as Y }` エイリアスを namespace インポートに統一
+
 - ✅ [2026-03-05] コード品質改善（Prisma select 最適化・大規模ファイル分割・README 更新）
   - 計画書: `docs/plans/2026-03-05-code-quality-improvements.md`
   - Task 1-4: findMany に select 追加（announcement-bar, coupon, faq 等 16 ファイル）

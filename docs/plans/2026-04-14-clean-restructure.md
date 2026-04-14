@@ -1,6 +1,6 @@
 # Clean Restructure Implementation Plan
 
-**ステータス**: Workstreams 1–4 完了 / Workstream 5 (Lexical UI) 別ブランチへ切り出し予定
+**ステータス**: 完了（Workstreams 1–5 全完了）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -14,11 +14,17 @@
 - ✅ **Workstream 4**: posts/commands.ts 分割 → `post-commands` / `version-commands` / `category-commands` / `tag-commands` / `bulk-commands`（`60e55284` 〜 `a3efcc78`、5 コミット）
   - 付随改善: `updatePostCategoryOrder` を禁止の `$transaction([...])` 配列形式から公式推奨の interactive transaction へ修正
   - 付随改善: 呼び出し側の `import { X as Y }` エイリアスを `import * as domainCommands` namespace インポートに統一
-- 🔜 **Workstream 5**: Lexical UI 分割 — 本プランから切り離し、別ブランチ `feature/lexical-ui-split` で実施予定（`ToolbarPlugin.tsx` 960行 / `FloatingToolbarPlugin.tsx` 877行 / `insert-items.ts` 879行 — 各抽出ごとに dev サーバー + ブラウザでのランタイム検証が必須のため、domain 層の純粋リファクタリングとはレビュー粒度が異なる）
+- ✅ **Workstream 5**: Lexical UI 分割
+  - Task 5.4: `insert-items.ts` 879行 → `config/insert-items/` 6モジュール（`bf2f49f9` → merge `2f8b407d`）
+  - Task 5.1–5.2: `ToolbarPlugin.tsx` 960→419行 + `plugins/toolbar/` 11モジュール（`7a9138cd`）
+  - Task 5.3: `FloatingToolbarPlugin.tsx` 877→534行 + `plugins/floating-toolbar/` 9モジュール（`90587e70`）
+  - Merge: `310a4cb1`（`feature/lexical-toolbar-split` → main）
 
-**検証結果 (Workstreams 2–4)**:
+**最終検証結果**:
 
 - `bun run type-check` → 0 errors
+- `bun run lint` → clean
+- `bun run build` → PASS
 - `bun test __tests__/integration/actions/admin/faq.test.ts` → 43/43 pass
 - `bun test __tests__/integration/actions/admin/post.test.ts` → 58/58 pass
 - `bun test __tests__/unit/lib/validations/post.test.ts` → 46/46 pass
