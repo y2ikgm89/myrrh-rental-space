@@ -41,7 +41,7 @@ import {
 } from "@/admin/actions/customer";
 import type { CustomerWithReservationsAndAccount } from "@/shared/domain/customers/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import type { CustomerStatus } from "@generated/prisma/enums";
+import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
 
 type CustomerDetailProps = {

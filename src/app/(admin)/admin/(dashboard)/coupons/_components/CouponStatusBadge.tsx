@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge } from "@/admin/components/ui";
-import type { CouponType } from "@generated/prisma/enums";
+import type { CouponType } from "@/shared/lib/validations/enums/prisma-types";
 
 type CouponBadgeVariant =
   | "default"
