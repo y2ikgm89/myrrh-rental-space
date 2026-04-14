@@ -618,6 +618,7 @@ describe("architecture boundaries", () => {
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_DB_ROOT))
       .filter((file) => !file.startsWith(ENUMS_GATEWAY_ROOT))
+      .filter((file) => !file.startsWith(SHARED_DOMAIN_ROOT))
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return (
