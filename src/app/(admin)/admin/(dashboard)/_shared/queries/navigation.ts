@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { NavigationType } from "@generated/prisma/enums";
+import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getNavigationItems as getNavigationItemsQuery,
   getSocialLinks as getSocialLinksQuery,

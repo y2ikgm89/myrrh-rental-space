@@ -2,7 +2,7 @@
  * 設定セクション用フォームスキーマ — 予約・税
  */
 import { z } from "zod";
-import { TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
+import { TaxDisplayMode, TaxInputMode } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Site > Payment > 消費税

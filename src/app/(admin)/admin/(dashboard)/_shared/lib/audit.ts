@@ -11,7 +11,7 @@
 import "server-only";
 
 import { headers } from "next/headers";
-import { AuditAction } from "@generated/prisma/enums";
+import { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {

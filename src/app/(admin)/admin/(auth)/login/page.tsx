@@ -11,11 +11,8 @@
 
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import {
-  DASHBOARD_ROLES,
-  getAdminSession,
-  getAdminSessionUser,
-} from "@/shared/lib/admin-auth";
+import { getAdminSession, getAdminSessionUser } from "@/shared/lib/admin-auth";
+import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { LoginForm } from "./LoginForm";
 import { CopyrightYear } from "./CopyrightYear";
 import type { ReactElement } from "react";
@@ -29,7 +26,7 @@ export default async function LoginPage(): Promise<ReactElement> {
   const user = getAdminSessionUser(session);
 
   if (session?.user) {
-    if (user && DASHBOARD_ROLES.includes(user.role)) {
+    if (user && isDashboardRole(user.role)) {
       // 管理者ロールでログイン済み → ダッシュボードへ
       redirect("/admin");
     }

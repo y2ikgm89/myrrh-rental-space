@@ -136,15 +136,27 @@ export function LayoutFields({
 // Connected ラッパー（RHF 型ブリッジ）
 // =============================================================================
 
-/** FieldErrors から安全にメッセージを取り出すヘルパー */
-function getErrorMessage<T extends FieldValues>(
-  errors: FieldErrors<T>,
+/**
+ * FieldErrors から安全にメッセージを取り出すヘルパー
+ *
+ * ジェネリック `T` の `FieldErrors<T>` は文字列キーでのインデックスアクセスを
+ * 型レベルで解決できないため、既定の `FieldErrors`（= `FieldErrors<FieldValues>`）
+ * を受け取り、`unknown` 経由で runtime に narrowing する（`as` 型アサーション不使用）。
+ */
+function getErrorMessage(
+  errors: FieldErrors,
   name: string,
 ): string | undefined {
-  const entry = (errors as Record<string, { message?: string } | undefined>)[
-    name
-  ];
-  return entry?.message;
+  const entry: unknown = errors[name];
+  if (
+    entry !== null &&
+    typeof entry === "object" &&
+    "message" in entry &&
+    typeof entry.message === "string"
+  ) {
+    return entry.message;
+  }
+  return undefined;
 }
 
 /**

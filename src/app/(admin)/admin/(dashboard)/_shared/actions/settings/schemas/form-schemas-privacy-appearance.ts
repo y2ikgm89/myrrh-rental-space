@@ -6,7 +6,7 @@ import {
   HeaderBackgroundMode,
   HeaderScrollBehavior,
   LayoutWidth,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { sidebarWidgetsSchema } from "@/shared/lib/validations/sidebar";
 
 // =============================================================================

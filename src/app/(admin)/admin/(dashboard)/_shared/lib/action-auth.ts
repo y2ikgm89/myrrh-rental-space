@@ -14,7 +14,7 @@ import {
   getAdminSessionUser,
   type AdminUser,
 } from "@/shared/lib/admin-auth";
-import { Role, AuditAction } from "@generated/prisma/enums";
+import { Role, AuditAction } from "@/shared/lib/validations/enums/prisma-types";
 import {
   hasPermission,
   userHasResourceAccess,

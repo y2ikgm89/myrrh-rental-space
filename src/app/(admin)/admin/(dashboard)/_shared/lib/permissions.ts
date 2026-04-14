@@ -9,13 +9,13 @@
 
 import "server-only";
 
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
-  DASHBOARD_ROLES,
   getAdminSession,
   getAdminSessionUser,
   type AdminUser,
 } from "@/shared/lib/admin-auth";
+import { isDashboardRole } from "@/shared/lib/admin-roles";
 import { getAssignedPageIdsForUser } from "@/shared/domain/user-page-assignments/queries";
 import { logPermissionDenied } from "@/admin/lib/audit";
 import { isEditorRole } from "./role-guards";
@@ -362,16 +362,12 @@ export const ACTION_LABELS: Record<Action, string> = {
 };
 
 /**
- * ロール説明（UI表示用）
+ * ロール日本語ラベル（UI 表示用）
+ *
+ * Single Source of Truth は `@/shared/lib/admin-roles`。
+ * 既存 import パス（`@/admin/lib/permissions`）を維持するための再 export。
  */
-export const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: "スーパー管理者",
-  ADMIN: "管理者",
-  EDITOR: "編集者",
-  VIEWER: "閲覧者",
-  USER: "ユーザー",
-  CUSTOMER: "顧客",
-};
+export { ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 // =============================================================================
 // 権限チェック関数
@@ -457,7 +453,7 @@ export async function userHasResourceAccess(
  * @returns 管理画面アクセス可能ならtrue
  */
 export function canAccessAdmin(role: Role): boolean {
-  return DASHBOARD_ROLES.includes(role);
+  return isDashboardRole(role);
 }
 
 // =============================================================================

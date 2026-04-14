@@ -11,8 +11,9 @@ import type {
   PostStatus,
   Role,
   AuditAction,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 // =============================================================================
 // Types
@@ -145,18 +146,17 @@ export function NewsStatusBadge({ isPublished }: { isPublished: boolean }) {
 // Role Configuration
 // =============================================================================
 
-const roleConfig = {
-  SUPER_ADMIN: { label: "スーパー管理者", variant: "destructive" },
-  ADMIN: { label: "管理者", variant: "default" },
-  EDITOR: { label: "編集者", variant: "secondary" },
-  VIEWER: { label: "閲覧者", variant: "outline" },
-  USER: { label: "ユーザー", variant: "outline" },
-  CUSTOMER: { label: "顧客", variant: "outline" },
-} satisfies Record<Role, { label: string; variant: BadgeVariant }>;
+const roleVariants = {
+  SUPER_ADMIN: "destructive",
+  ADMIN: "default",
+  EDITOR: "secondary",
+  VIEWER: "outline",
+  USER: "outline",
+  CUSTOMER: "outline",
+} satisfies Record<Role, BadgeVariant>;
 
 export function RoleBadge({ role }: { role: Role }) {
-  const config = roleConfig[role];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={roleVariants[role]}>{ROLE_LABELS[role]}</Badge>;
 }
 
 // =============================================================================

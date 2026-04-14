@@ -23,7 +23,7 @@ import { searchCustomers } from "@/shared/domain/customers/queries";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const idSchema = z.string().uuid({ error: "顧客IDが不正です" });
 

@@ -14,7 +14,7 @@ import type {
   UseFormSetValue,
   UseFormGetValues,
 } from "react-hook-form";
-import type { PostStatus } from "@generated/prisma/enums";
+import type { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // フィールドコンポーネントの Props 型

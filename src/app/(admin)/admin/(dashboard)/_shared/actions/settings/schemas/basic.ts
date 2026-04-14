@@ -9,7 +9,7 @@ import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
   PostPermalinkStructure,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   TIME_REGEX,
   collectBusinessHoursWeekIssues,

@@ -6,7 +6,7 @@ import {
   CalendarSyncMethod,
   DiscountCombinationMode,
   InstagramFeedLayout,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { SUPPORTED_CURRENCY_VALUES } from "@/admin/lib/stripe-shared";
 
 // =============================================================================

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { updateTag } from "next/cache";
-import type { Prisma } from "@generated/prisma/client";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";

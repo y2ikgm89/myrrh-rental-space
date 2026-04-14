@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { setupPassword } from "@/admin/actions/staff-invitation";
 import { signIn } from "@/shared/lib/admin-auth-client";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { ROLE_LABELS } from "@/shared/lib/admin-roles";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
 import { SubmitButton } from "@/admin/components/ui";
 
@@ -100,11 +101,7 @@ export function SetupForm({ invitation, token }: Props): ReactElement {
           <div className="flex justify-between">
             <dt className="text-muted-foreground">権限</dt>
             <dd className="text-foreground font-medium">
-              {invitation.role === "SUPER_ADMIN" && "スーパー管理者"}
-              {invitation.role === "ADMIN" && "管理者"}
-              {invitation.role === "EDITOR" && "編集者"}
-              {invitation.role === "VIEWER" && "閲覧者"}
-              {invitation.role === "USER" && "ユーザー"}
+              {ROLE_LABELS[invitation.role]}
             </dd>
           </div>
         </dl>

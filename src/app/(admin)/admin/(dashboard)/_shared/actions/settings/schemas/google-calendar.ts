@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { CalendarSyncMethod } from "@generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { parseGoogleServiceAccountCredentials } from "@/shared/lib/validations/google-service-account";
 
 // =============================================================================
