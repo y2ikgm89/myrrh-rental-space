@@ -56,7 +56,7 @@ const mockCreatePublicReservationCommand = mock(() =>
   }),
 );
 
-mock.module("@/shared/domain/reservations/commands", () => ({
+mock.module("@/shared/domain/reservations/public-commands", () => ({
   createPublicReservationCommand: mockCreatePublicReservationCommand,
 }));
 

@@ -166,8 +166,8 @@ import {
   updateReservationNotesCommand,
   deleteReservationCommand,
   restoreReservationCommand,
-  createPublicReservationCommand,
 } from "@/shared/domain/reservations/commands";
+import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { validateStatusTransition } from "@/shared/domain/reservations/status";
 import { DomainError } from "@/shared/domain/domain-error";
 
