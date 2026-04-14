@@ -3,7 +3,7 @@
  */
 
 import { z } from "zod";
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Schemas

@@ -8,7 +8,7 @@ import type { CSSProperties } from "react";
 import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   isValidAnnouncementBarAnimation,
   isValidAnnouncementBarDesignStyle,

@@ -22,8 +22,9 @@ import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
-import { AuditAction, Role } from "@generated/prisma/enums";
+import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { isDashboardRole } from "./admin-roles";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord, omitUndefined } from "./serialize";
 import {
@@ -194,19 +195,19 @@ const verifySession = cache(
   },
 );
 
-/** ダッシュボードアクセス可能なロール（Single Source of Truth） */
-export const DASHBOARD_ROLES: readonly Role[] = [
-  Role.SUPER_ADMIN,
-  Role.ADMIN,
-  Role.EDITOR,
-  Role.VIEWER,
-];
+/**
+ * ダッシュボードアクセス可能なロール（Single Source of Truth は `admin-roles.ts`）
+ *
+ * 既存 import パス `@/shared/lib/admin-auth` を維持するための再 export。
+ * 定義本体は client-safe な `@/shared/lib/admin-roles` にある。
+ */
+export { DASHBOARD_ROLES } from "./admin-roles";
 
 /** 管理者セッション検証（DASHBOARD_ROLES のみ許可） */
 export const verifyAdminSession = cache(
   async (requestHeaders?: Headers): Promise<AdminUser> => {
     const user = await verifySession(requestHeaders);
-    if (!DASHBOARD_ROLES.includes(user.role)) {
+    if (!isDashboardRole(user.role)) {
       // 非管理者ロール（CUSTOMER/USER）は公開サイトへ
       // /admin/login にリダイレクトすると proxy の Admin Gate で 404 になるか、
       // gate cookie があれば無限リダイレクトループの原因になる

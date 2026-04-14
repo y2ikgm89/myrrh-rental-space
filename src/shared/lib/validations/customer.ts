@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Customer Schemas

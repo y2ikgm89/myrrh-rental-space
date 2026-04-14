@@ -15,10 +15,10 @@ import { redirect } from "next/navigation";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord } from "./serialize";
-import { DASHBOARD_ROLES } from "./admin-auth";
+import { isDashboardRole } from "./admin-roles";
 import { serverEnv } from "./env/server";
 
 // ---------------------------------------------------------------------------
@@ -155,7 +155,7 @@ export async function verifyCustomerSession() {
   if (!session) redirect("/login");
   const user = getCustomerSessionUser(session);
   if (!user) redirect("/login");
-  if (DASHBOARD_ROLES.includes(user.role)) redirect("/admin");
+  if (isDashboardRole(user.role)) redirect("/admin");
   return { session, user };
 }
 

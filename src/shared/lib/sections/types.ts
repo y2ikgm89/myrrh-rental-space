@@ -15,19 +15,22 @@ export interface FieldMeta {
   readonly helpText?: string;
 }
 
-export type FieldType =
-  | "text"
-  | "textarea"
-  | "richtext"
-  | "number"
-  | "boolean"
-  | "select"
-  | "color"
-  | "image"
-  | "url"
-  | "icon"
-  | "array"
-  | "group";
+export const FIELD_TYPES = [
+  "text",
+  "textarea",
+  "richtext",
+  "number",
+  "boolean",
+  "select",
+  "color",
+  "image",
+  "url",
+  "icon",
+  "array",
+  "group",
+] as const;
+
+export type FieldType = (typeof FIELD_TYPES)[number];
 
 // ────────────────────────────────────────────
 // Section Definition (one per section type)

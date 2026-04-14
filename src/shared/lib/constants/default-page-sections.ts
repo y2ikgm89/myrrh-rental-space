@@ -5,7 +5,7 @@
  * 各ページに適したセクションタイプとconfigを定義。
  */
 
-import type { Prisma } from "@generated/prisma/client";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 
 export type DefaultSectionDef = {
   type: string;

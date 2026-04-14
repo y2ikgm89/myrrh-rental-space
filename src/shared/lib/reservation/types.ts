@@ -4,7 +4,7 @@
  * 管理画面・公開ページ両方で使用される型
  */
 
-import type { ReservationStatus } from "@generated/prisma/enums";
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * Prismaトランザクションクライアント型

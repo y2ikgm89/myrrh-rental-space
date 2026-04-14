@@ -7,7 +7,21 @@
 
 import { z } from "zod";
 
-import type { FieldMeta, FieldType } from "./types";
+import { omitUndefined } from "@/shared/lib/serialize";
+
+import { FIELD_TYPES, type FieldMeta, type FieldType } from "./types";
+
+// ─────────────────────────────────────────────────────────────
+// FieldMeta ランタイム検証スキーマ（JSON.parse 境界の型安全化）
+// ─────────────────────────────────────────────────────────────
+
+const fieldMetaSchema = z.object({
+  fieldType: z.enum(FIELD_TYPES),
+  label: z.string(),
+  placeholder: z.string().optional(),
+  suffix: z.string().optional(),
+  helpText: z.string().optional(),
+});
 
 // ─────────────────────────────────────────────────────────────
 // 内部ユーティリティ
@@ -30,22 +44,14 @@ function withMeta<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
 
 /**
  * Zod スキーマの `.description` から FieldMeta を抽出する。
- * `.describe()` されていないスキーマは `undefined` を返す。
+ * `.describe()` されていないスキーマ・不正な JSON・形式違反は `undefined` を返す。
  */
 export function extractFieldMeta(schema: z.ZodType): FieldMeta | undefined {
   const { description } = schema;
   if (!description) return undefined;
   try {
-    const parsed: unknown = JSON.parse(description);
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      !("fieldType" in parsed) ||
-      !("label" in parsed)
-    ) {
-      return undefined;
-    }
-    return parsed as FieldMeta;
+    const result = fieldMetaSchema.safeParse(JSON.parse(description));
+    return result.success ? omitUndefined(result.data) : undefined;
   } catch {
     return undefined;
   }

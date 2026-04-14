@@ -8,7 +8,7 @@
  * @see https://www.better-auth.com/docs/concepts/users-accounts
  */
 
-import type { Role } from "@generated/prisma/enums";
+import type { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 declare module "better-auth" {
   interface User {

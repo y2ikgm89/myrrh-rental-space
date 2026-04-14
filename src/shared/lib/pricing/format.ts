@@ -10,7 +10,7 @@ import {
   DiscountType,
   TaxDisplayMode,
   TaxRateType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { PriceCalculation, TaxPriceDisplayOptions } from "./types";
 import { calculateTaxIncludedPrice } from "./tax";
 

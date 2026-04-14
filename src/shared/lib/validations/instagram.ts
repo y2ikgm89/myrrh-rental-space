@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { InstagramFeedLayout } from "@generated/prisma/enums";
+import { InstagramFeedLayout } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Settings Schema

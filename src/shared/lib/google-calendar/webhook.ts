@@ -16,7 +16,7 @@ import {
 } from "@/shared/domain/settings/commands";
 import { serverEnv } from "@/shared/lib/env/server";
 import { clientEnv } from "@/shared/lib/env/client";
-import { CalendarSyncMethod } from "@generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";

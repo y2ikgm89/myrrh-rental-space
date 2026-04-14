@@ -4,7 +4,7 @@
  * 規約バージョン作成時に使用できるテンプレートを提供
  */
 
-import { TermsType } from "@generated/prisma/enums";
+import { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 
 export interface TermsTemplate {
   id: string;

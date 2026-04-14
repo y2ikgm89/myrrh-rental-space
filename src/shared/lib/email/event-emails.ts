@@ -14,7 +14,7 @@ import { EventCancelledNotificationEmail } from "@/shared/emails/event-cancelled
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { prisma } from "@/shared/db/prisma";
-import { RegistrationStatus } from "@generated/prisma/enums";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import {

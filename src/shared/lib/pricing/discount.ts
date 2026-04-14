@@ -4,7 +4,7 @@
  * スペース固有割引・長時間割引・クーポン割引の計算
  */
 
-import { DiscountType } from "@generated/prisma/enums";
+import { DiscountType } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   CouponLike,
   DurationDiscountRule,
