@@ -35,7 +35,7 @@ import {
 import { updateAdminReservation } from "@/admin/actions/reservation";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/pricing/format";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { RESERVATION_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";

@@ -30,8 +30,8 @@ import {
 } from "@/admin/actions/reservation";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { ReservationStatus } from "@generated/prisma/enums";
-import { PaymentStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   PAYMENT_STATUS_LABELS,

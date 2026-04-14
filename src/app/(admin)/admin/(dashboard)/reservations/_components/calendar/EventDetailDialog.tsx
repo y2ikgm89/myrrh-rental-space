@@ -27,7 +27,7 @@ import {
 } from "@/admin/components/ui";
 import { ReservationStatusBadge } from "@/admin/components/status-badges";
 import type { CalendarEvent } from "@/admin/lib/calendar";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import {
   TERMINAL_RESERVATION_STATUSES,

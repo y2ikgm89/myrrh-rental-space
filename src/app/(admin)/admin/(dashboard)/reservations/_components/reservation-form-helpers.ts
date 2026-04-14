@@ -1,5 +1,5 @@
 import type { FieldErrors } from "react-hook-form";
-import { ReservationStatus } from "@generated/prisma/enums";
+import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Types

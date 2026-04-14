@@ -6,7 +6,7 @@ import {
 } from "@/admin/queries/post";
 import { PostEditor } from "../_components/PostEditor";
 import { getLayoutSettings } from "@/shared/domain/settings/queries/site";
-import { LayoutWidth } from "@generated/prisma/enums";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import type { ContentWidth } from "@/shared/types";
 import type { Metadata } from "next";

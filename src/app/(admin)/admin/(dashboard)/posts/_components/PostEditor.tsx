@@ -41,7 +41,7 @@ import type {
 } from "@/shared/domain/posts/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { generateSlug } from "@/shared/lib/slug";
-import { PostStatus } from "@generated/prisma/enums";
+import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { ContentWidth } from "@/shared/types";
 
 // =============================================================================
