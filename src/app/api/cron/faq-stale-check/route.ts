@@ -10,7 +10,7 @@
 
 import { revalidateTag } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
-import { detectStaleFaqItems } from "@/shared/domain/faq/commands";
+import { detectStaleFaqItems } from "@/shared/domain/faq/analytics-commands";
 import {
   createNotificationCommand,
   hasRecentNotificationOfType,

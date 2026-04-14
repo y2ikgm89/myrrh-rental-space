@@ -179,7 +179,7 @@ import {
 import {
   voteFaqItemHelpful,
   detectStaleFaqItems,
-} from "@/shared/domain/faq/commands";
+} from "@/shared/domain/faq/analytics-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================
