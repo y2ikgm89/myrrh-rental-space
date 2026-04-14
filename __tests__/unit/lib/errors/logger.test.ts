@@ -1,10 +1,18 @@
 /**
  * エラーロガーテスト
  *
- * src/shared/lib/errors/logger.ts のユニットテスト
+ * src/shared/lib/errors/logger-core.ts のユニットテスト
  */
 
-import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  spyOn,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { logError, createErrorLogger } from "@/shared/lib/errors/logger-core";
 import {
   normalizeError,
@@ -13,23 +21,6 @@ import {
   ErrorSeverity,
 } from "@/shared/lib/errors/types";
 import type { ErrorLogContext } from "@/shared/lib/errors/types";
-
-// console.error をモック化
-const originalConsoleError = console.error;
-const originalNodeEnv = process.env["NODE_ENV"];
-const mockConsoleError = mock<(message?: unknown, ...args: unknown[]) => void>(
-  () => {},
-);
-
-beforeEach(() => {
-  mockConsoleError.mockClear();
-  console.error = mockConsoleError as any;
-});
-
-afterEach(() => {
-  console.error = originalConsoleError;
-  process.env["NODE_ENV"] = originalNodeEnv;
-});
 
 // =============================================================================
 // normalizeError
@@ -142,154 +133,214 @@ describe("logError", () => {
 
   describe("基本動作", () => {
     test("Errorオブジェクトでconsole.errorが呼ばれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("テストエラー"), baseContext);
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
 
     test("文字列エラーでconsole.errorが呼ばれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError("文字列エラー", baseContext);
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
 
     test("undefinedエラーでconsole.errorが呼ばれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(undefined, baseContext);
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
 
     test("nullエラーでconsole.errorが呼ばれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(null, baseContext);
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
   });
 
   describe("コンテキスト情報", () => {
     test("追加コンテキストが含まれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("test"), {
         ...baseContext,
         context: { table: "users", id: "123" },
       });
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
 
     test("userIdが含まれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("test"), {
         ...baseContext,
         userId: "user-123",
       });
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
 
     test("timestampが含まれる", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       const timestamp = new Date("2026-01-01T00:00:00Z");
       logError(new Error("test"), {
         ...baseContext,
         timestamp,
       });
-      expect(console.error).toHaveBeenCalled();
+      expect(spy).toHaveBeenCalled();
     });
   });
 
   describe("本番環境", () => {
-    test("GCP構造化JSON形式で出力される", () => {
+    const originalNodeEnv = process.env["NODE_ENV"];
+
+    beforeAll(() => {
       process.env["NODE_ENV"] = "production";
+    });
+
+    afterAll(() => {
+      process.env["NODE_ENV"] = originalNodeEnv;
+    });
+
+    beforeEach(() => {
+      process.env["NODE_ENV"] = "production";
+    });
+
+    test("GCP構造化JSON形式で出力される", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("本番エラー"), baseContext);
-      expect(console.error).toHaveBeenCalledTimes(1);
-
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const firstCallArg = mockFn.mock.calls[0][0];
-      expect(typeof firstCallArg).toBe("string");
-
-      const parsed = JSON.parse(firstCallArg);
-      expect(parsed.message).toBe("本番エラー");
-      expect(parsed.category).toBe("DATABASE");
-      // ErrorSeverity.MEDIUM → GCP LogSeverity "WARNING"
-      expect(parsed.severity).toBe("WARNING");
-      expect(parsed.serviceContext).toBeDefined();
-      expect(parsed.serviceContext.service).toBe("myrrh-rental-space");
-      expect(parsed.timestamp).toBeDefined();
+      expect(spy).toHaveBeenCalledTimes(1);
+      // JSON string が渡されることを確認
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"本番エラー"'),
+      );
+      // JSON パースして詳細検証
+      const calls = spy.mock.calls;
+      const firstCall = calls[0];
+      if (!firstCall) throw new Error("spy not called");
+      const rawArg = firstCall[0];
+      if (typeof rawArg !== "string") throw new Error("expected JSON string");
+      const parsed: unknown = JSON.parse(rawArg);
+      expect(parsed).toMatchObject({
+        message: "本番エラー",
+        category: "DATABASE",
+        // ErrorSeverity.MEDIUM → GCP LogSeverity "WARNING"
+        severity: "WARNING",
+        serviceContext: expect.objectContaining({
+          service: "myrrh-rental-space",
+        }),
+      });
+      expect(parsed).toMatchObject({ timestamp: expect.any(String) });
     });
 
     test("ERROR以上でstack_traceと@typeが付与される", () => {
-      process.env["NODE_ENV"] = "production";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("重大エラー"), {
         category: ErrorCategory.DATABASE,
         severity: ErrorSeverity.HIGH,
       });
-
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.severity).toBe("ERROR");
-      expect(parsed.stack_trace).toBeDefined();
-      expect(parsed["@type"]).toBe(
-        "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent",
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"severity":"ERROR"'),
+      );
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"stack_trace"'),
+      );
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          '"@type":"type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent"',
+        ),
       );
     });
 
     test("WARNING以下ではstack_traceと@typeは付与されない", () => {
-      process.env["NODE_ENV"] = "production";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("軽微エラー"), baseContext);
-
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.severity).toBe("WARNING");
-      expect(parsed.stack_trace).toBeUndefined();
+      const calls = spy.mock.calls;
+      const firstCall = calls[0];
+      if (!firstCall) throw new Error("spy not called");
+      const rawArg = firstCall[0];
+      if (typeof rawArg !== "string") throw new Error("expected JSON string");
+      const parsed = JSON.parse(rawArg) as Record<string, unknown>;
+      expect(parsed["severity"]).toBe("WARNING");
+      expect(parsed["stack_trace"]).toBeUndefined();
       expect(parsed["@type"]).toBeUndefined();
     });
   });
 
   describe("開発環境", () => {
-    test("オブジェクト形式で出力される", () => {
-      process.env["NODE_ENV"] = "development";
-      logError(new Error("開発エラー"), baseContext);
-      expect(console.error).toHaveBeenCalledTimes(1);
+    const originalNodeEnv = process.env["NODE_ENV"];
 
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const firstArg = mockFn.mock.calls[0][0];
-      const secondArg = mockFn.mock.calls[0][1];
-      expect(firstArg).toBe("[Error]");
-      expect(secondArg.message).toBe("開発エラー");
+    beforeAll(() => {
+      process.env["NODE_ENV"] = "development";
+    });
+
+    afterAll(() => {
+      process.env["NODE_ENV"] = originalNodeEnv;
+    });
+
+    test("オブジェクト形式で出力される", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      logError(new Error("開発エラー"), baseContext);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith(
+        "[Error]",
+        expect.objectContaining({ message: "開発エラー" }),
+      );
     });
   });
 
   describe("エラー種別ごとのメッセージ抽出", () => {
-    test("Errorオブジェクトからmessageを抽出する", () => {
+    const originalNodeEnv = process.env["NODE_ENV"];
+
+    beforeAll(() => {
       process.env["NODE_ENV"] = "production";
+    });
+
+    afterAll(() => {
+      process.env["NODE_ENV"] = originalNodeEnv;
+    });
+
+    beforeEach(() => {
+      process.env["NODE_ENV"] = "production";
+    });
+
+    test("Errorオブジェクトからmessageを抽出する", () => {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError(new Error("Errorメッセージ"), baseContext);
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.message).toBe("Errorメッセージ");
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"Errorメッセージ"'),
+      );
     });
 
     test("文字列からメッセージを抽出する", () => {
-      process.env["NODE_ENV"] = "production";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError("文字列メッセージ", baseContext);
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.message).toBe("文字列メッセージ");
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"message":"文字列メッセージ"'),
+      );
     });
 
     test("Errorオブジェクトの場合ERROR以上でstack_traceが含まれる", () => {
-      process.env["NODE_ENV"] = "production";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       const error = new Error("stackテスト");
       logError(error, {
         category: ErrorCategory.DATABASE,
         severity: ErrorSeverity.CRITICAL,
       });
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.stack_trace).toBeDefined();
-      expect(typeof parsed.stack_trace).toBe("string");
+      const calls = spy.mock.calls;
+      const firstCall = calls[0];
+      if (!firstCall) throw new Error("spy not called");
+      const rawArg = firstCall[0];
+      if (typeof rawArg !== "string") throw new Error("expected JSON string");
+      const parsed = JSON.parse(rawArg) as Record<string, unknown>;
+      expect(typeof parsed["stack_trace"]).toBe("string");
     });
 
     test("非ErrorでERROR以上の場合フォールバックstack_traceが生成される", () => {
-      process.env["NODE_ENV"] = "production";
+      using spy = spyOn(console, "error").mockImplementation(() => {});
       logError("string error", {
         category: ErrorCategory.DATABASE,
         severity: ErrorSeverity.HIGH,
       });
-      const mockFn = console.error as ReturnType<typeof mock>;
-      const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-      expect(parsed.stack_trace).toContain("Error: string error");
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining("Error: string error"),
+      );
     });
   });
 });
@@ -309,50 +360,69 @@ describe("createErrorLogger", () => {
   });
 
   test("スコープ付きロガーでconsole.errorが呼ばれる", () => {
+    using spy = spyOn(console, "error").mockImplementation(() => {});
     const dbLogger = createErrorLogger({
       category: ErrorCategory.DATABASE,
       severity: ErrorSeverity.MEDIUM,
     });
 
     dbLogger(new Error("DBエラー"));
-    expect(console.error).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalled();
   });
 
   test("追加コンテキストを上書きできる", () => {
+    const originalNodeEnv = process.env["NODE_ENV"];
     process.env["NODE_ENV"] = "production";
-    const logger = createErrorLogger({
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.LOW,
-    });
+    try {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      const logger = createErrorLogger({
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.LOW,
+      });
 
-    logger(new Error("上書きテスト"), {
-      severity: ErrorSeverity.HIGH,
-      context: { detail: "extra" },
-    });
+      logger(new Error("上書きテスト"), {
+        severity: ErrorSeverity.HIGH,
+        context: { detail: "extra" },
+      });
 
-    const mockFn = console.error as ReturnType<typeof mock>;
-    const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-    // ErrorSeverity.HIGH → GCP LogSeverity "ERROR"
-    expect(parsed.severity).toBe("ERROR");
-    expect(parsed.context).toEqual({ detail: "extra" });
+      // ERROR severity → GCP "ERROR"、context が付与される
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"severity":"ERROR"'),
+      );
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"detail":"extra"'),
+      );
+    } finally {
+      process.env["NODE_ENV"] = originalNodeEnv;
+    }
   });
 
   test("デフォルトコンテキストがマージされる", () => {
+    const originalNodeEnv = process.env["NODE_ENV"];
     process.env["NODE_ENV"] = "production";
-    const logger = createErrorLogger({
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      userId: "default-user",
-    });
+    try {
+      using spy = spyOn(console, "error").mockImplementation(() => {});
+      const logger = createErrorLogger({
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        userId: "default-user",
+      });
 
-    logger(new Error("マージテスト"));
+      logger(new Error("マージテスト"));
 
-    const mockFn = console.error as ReturnType<typeof mock>;
-    const parsed = JSON.parse(mockFn.mock.calls[0][0]);
-    expect(parsed.category).toBe("EXTERNAL_API");
-    // ErrorSeverity.MEDIUM → GCP LogSeverity "WARNING"
-    expect(parsed.severity).toBe("WARNING");
-    expect(parsed.userId).toBe("default-user");
+      // MEDIUM severity → GCP "WARNING"、EXTERNAL_API カテゴリ、userId が付与される
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"severity":"WARNING"'),
+      );
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"category":"EXTERNAL_API"'),
+      );
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('"userId":"default-user"'),
+      );
+    } finally {
+      process.env["NODE_ENV"] = originalNodeEnv;
+    }
   });
 });
 
