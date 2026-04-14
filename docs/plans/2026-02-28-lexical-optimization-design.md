@@ -3,6 +3,22 @@
 > 作成日: 2026-02-28
 > 方針: 公式 Lexical best practices 準拠・後方互換性なし・クリーン実装
 > 対象: `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/`
+> **ステータス (2026-04-15): 完了**
+
+## 完了ステータス
+
+| Phase | タスク                 | 状態                                                                                                                      |
+| ----- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1-1   | TableActionMenuPlugin  | ✅ 実装済み (`plugins/TableActionMenuPlugin.tsx`)                                                                         |
+| 1-2   | TableCellResizerPlugin | ❌ **不可** — @lexical/react 0.43.x に存在しない ([gotchas.md §Lexical](../../.claude/rules/gotchas.md) 禁止事項 item 21) |
+| 1-3   | InlineImageNode        | ✅ 実装済み (`nodes/InlineImageNode.tsx` + `plugins/InlineImagePlugin.tsx`)                                               |
+| 2-1   | TestimonialNode        | ✅ 実装済み (`nodes/TestimonialNode.tsx` + `plugins/TestimonialPlugin.tsx`)                                               |
+| 2-2   | FeatureIconListNode    | ✅ 実装済み (`nodes/FeatureIconListNode.tsx` + `plugins/FeatureIconListPlugin.tsx`)                                       |
+| 2-3   | CoverNode              | ✅ 実装済み (`nodes/CoverNode.tsx` + `plugins/CoverPlugin.tsx`)                                                           |
+| 3-1   | PasteUrlPlugin         | ✅ 実装済み (`plugins/PasteUrlPlugin.tsx`)                                                                                |
+| 3-2   | CharacterLimitPlugin   | ✅ 実装済み (`LexicalEditor.tsx:277` + `types.ts` `characterLimit?: number`)                                              |
+
+Phase 1-2 を除き 7/8 完了。TableCellResizerPlugin は Lexical 側の削除により永続的に不可のため、本設計書はこれ以上の追跡対象外。
 
 ---
 

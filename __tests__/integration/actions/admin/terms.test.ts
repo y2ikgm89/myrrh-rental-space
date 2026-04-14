@@ -442,8 +442,8 @@ describe("Terms Admin Action Integration", () => {
       expect(TermsType.CUSTOM).toBeDefined();
     });
 
-    test("TermsType enumは6つの値を持つ", () => {
-      expect(Object.values(TermsType)).toHaveLength(6);
+    test("TermsType enum は 7 つの値を持つ（RENTAL_TERMS 追加後）", () => {
+      expect(Object.values(TermsType)).toHaveLength(7);
     });
   });
 

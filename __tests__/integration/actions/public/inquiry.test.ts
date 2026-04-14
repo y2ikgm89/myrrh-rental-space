@@ -41,9 +41,10 @@ mock.module("@/shared/lib/action-helpers", () => ({
 const mockCreateInquiryCommand = mock(() =>
   Promise.resolve({
     id: "inquiry-001",
-    emailData: {
+    payload: {
       inquiryId: "inquiry-001",
       name: "テスト太郎",
+      companyName: null,
       email: "test@example.com",
       subject: "テスト件名",
       message: "テストメッセージ",
@@ -140,9 +141,10 @@ describe("submitInquiry", () => {
     mockCreateInquiryCommand.mockImplementation(() =>
       Promise.resolve({
         id: "inquiry-001",
-        emailData: {
+        payload: {
           inquiryId: "inquiry-001",
           name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
+          companyName: null,
           email: VALID_INPUT.email,
           subject: VALID_INPUT.subject,
           message: VALID_INPUT.message,

@@ -34,7 +34,12 @@ export async function POST(request: Request, context: RouteContext) {
       return jsonError("Invalid FAQ ID", 400);
     }
 
-    const body = (await request.json().catch(() => null)) as unknown;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return jsonError("Invalid JSON body", 400);
+    }
     const parsedBody = bodySchema.safeParse(body);
     if (!parsedBody.success) {
       return jsonError("Invalid vote", 400);

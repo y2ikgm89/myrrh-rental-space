@@ -128,11 +128,11 @@ describe("getClientIp", () => {
 });
 
 describe("checkRateLimit", () => {
-  test("/api/auth パスは認証用リミッターを使用する", () => {
+  test("/api/auth mutation パスは authMutationRateLimiter を使用する", () => {
     const result = checkRateLimit("/api/auth/sign-in", "check-auth-ip");
     expect(result.success).toBe(true);
-    // 認証リミッターは maxRequests: 10
-    expect(result.remaining).toBe(9);
+    // authMutationRateLimiter は maxRequests: 20
+    expect(result.remaining).toBe(19);
   });
 
   test("/api/admin/login-tokens パスはトークン用リミッターを使用する", () => {

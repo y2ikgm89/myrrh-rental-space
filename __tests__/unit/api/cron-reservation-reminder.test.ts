@@ -128,6 +128,7 @@ function makeReservation(overrides: Record<string, unknown> = {}) {
     id: "res-1",
     startTime: new Date("2026-03-29T10:00:00Z"),
     endTime: new Date("2026-03-29T12:00:00Z"),
+    status: "CONFIRMED",
     notes: null,
     space: {
       name: "テストスペース",

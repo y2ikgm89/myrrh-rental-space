@@ -676,9 +676,19 @@ describe("architecture boundaries", () => {
 
   test("shared/ の外に Prisma 直 import を残さない", () => {
     const SHARED_ROOT = join(SRC_ROOT, "shared");
+    // CLAUDE.md ハードルール §app 層からの Prisma 直 import 禁止（例外: calendar-sync $queryRaw）
+    const CALENDAR_SYNC_EXEMPTION = join(
+      SRC_ROOT,
+      "app",
+      "api",
+      "cron",
+      "calendar-sync",
+      "route.ts",
+    );
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_ROOT))
+      .filter((file) => file !== CALENDAR_SYNC_EXEMPTION)
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return source.includes('from "@/shared/db/prisma"');
@@ -1100,6 +1110,7 @@ describe("architecture boundaries", () => {
 
   test("post/news/terms/reservation/page/coupon/customer/faq/block-template mutation action は legacy success wrapper を使わない", () => {
     const files = [
+      // post/ は mutation 実体ファイルを直接検証（index.ts は re-export barrel）
       join(
         SRC_ROOT,
         "app",
@@ -1109,7 +1120,29 @@ describe("architecture boundaries", () => {
         "_shared",
         "actions",
         "post",
-        "index.ts",
+        "mutations.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "post",
+        "taxonomy.ts",
+      ),
+      join(
+        SRC_ROOT,
+        "app",
+        "(admin)",
+        "admin",
+        "(dashboard)",
+        "_shared",
+        "actions",
+        "post",
+        "bulk.ts",
       ),
       join(
         SRC_ROOT,

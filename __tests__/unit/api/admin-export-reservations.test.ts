@@ -159,8 +159,8 @@ describe("GET /api/admin/export/reservations", () => {
     // 予約データが渡される
     expect(rows).toEqual([testReservation]);
 
-    // 17 列のカラム定義が渡される
-    expect(columns).toHaveLength(17);
+    // 19 列のカラム定義が渡される（予約時スナップショット 2 列を含む）
+    expect(columns).toHaveLength(19);
 
     // ヘッダー名の検証
     const headers = columns.map((c) => c.header);
@@ -171,6 +171,8 @@ describe("GET /api/admin/export/reservations", () => {
       "会社名",
       "メール",
       "電話番号",
+      "予約時氏名",
+      "予約時電話",
       "利用日",
       "開始",
       "終了",

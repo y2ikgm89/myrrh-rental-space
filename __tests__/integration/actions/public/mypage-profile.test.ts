@@ -68,6 +68,15 @@ mock.module("@/shared/domain/customers/commands", () => ({
   updateCustomerProfileByUserId: mockUpdateCustomerProfileByUserId,
 }));
 
+// customer query mock（updateProfile は getCustomerByUserId でキャッシュタグ customerId を取得）
+const mockGetCustomerByUserId = mock(() =>
+  Promise.resolve({ id: "customer-001" }),
+);
+
+mock.module("@/shared/domain/customers/queries", () => ({
+  getCustomerByUserId: mockGetCustomerByUserId,
+}));
+
 // auth モック
 const mockGetSession = mock(
   (): Promise<{ user: { id: string; name: string } } | null> =>
@@ -179,13 +188,14 @@ describe("updateProfileAction", () => {
       );
     });
 
-    test("updateTag が CUSTOMERS キャッシュタグで呼ばれる", async () => {
+    test("updateTag が CUSTOMERS + customers.detail(id) キャッシュタグで呼ばれる", async () => {
       const { updateProfileAction } =
         await import("@/app/(public)/mypage/_shared/actions/profile");
 
       await updateProfileAction(VALID_INPUT);
 
-      expect(mockUpdateTag).toHaveBeenCalledTimes(1);
+      // CACHE_TAGS.CUSTOMERS + getCacheTag.customers.detail(id) の 2 回呼ばれる
+      expect(mockUpdateTag).toHaveBeenCalledTimes(2);
       expect(mockUpdateTag).toHaveBeenCalledWith("customers");
     });
 

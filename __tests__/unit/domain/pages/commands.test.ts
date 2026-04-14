@@ -80,7 +80,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 
 const PAGE_SLUG = "test-page";
 const SYSTEM_PAGE_SLUG = "home";
-const ANOTHER_SYSTEM_SLUG = "privacy";
+const ANOTHER_SYSTEM_SLUG = "access";
 
 const EXISTING_PAGE = {
   id: "page-1",

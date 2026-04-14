@@ -523,18 +523,37 @@ describe("Space Admin Action Integration", () => {
     });
 
     describe("imageUrls", () => {
-      test("10枚の画像はOK", () => {
+      test("10枚のユニーク画像はOK", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: Array(10).fill("https://example.com/image.jpg"),
+          imageUrls: Array.from(
+            { length: 10 },
+            (_, i) => `https://example.com/image-${i + 1}.jpg`,
+          ),
         });
         expect(result.success).toBe(true);
       });
 
-      test("11枚の画像はエラー", () => {
+      test("重複した URL は refine エラー", () => {
         const result = spaceFormSchema.safeParse({
           ...VALID_SPACE_INPUT,
-          imageUrls: Array(11).fill("https://example.com/image.jpg"),
+          imageUrls: Array(3).fill("https://example.com/image.jpg"),
+        });
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.issues[0].message).toContain(
+            "同じ画像を複数登録",
+          );
+        }
+      });
+
+      test("11枚のユニーク画像はエラー", () => {
+        const result = spaceFormSchema.safeParse({
+          ...VALID_SPACE_INPUT,
+          imageUrls: Array.from(
+            { length: 11 },
+            (_, i) => `https://example.com/image-${i + 1}.jpg`,
+          ),
         });
         expect(result.success).toBe(false);
         if (!result.success) {

@@ -332,8 +332,12 @@ describe("isAllowedMimeType", () => {
   });
 
   describe("OTHER", () => {
-    test("OTHERは全てのMIMEタイプを許可（空配列のため）", () => {
-      expect(isAllowedMimeType("anything", "OTHER")).toBe(true);
+    test("OTHER は空配列のため全ての MIME タイプを拒否（セキュア既定）", () => {
+      expect(isAllowedMimeType("anything", "OTHER")).toBe(false);
+      expect(isAllowedMimeType("text/plain", "OTHER")).toBe(false);
+      expect(isAllowedMimeType("application/octet-stream", "OTHER")).toBe(
+        false,
+      );
     });
   });
 

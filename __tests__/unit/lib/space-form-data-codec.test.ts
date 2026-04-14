@@ -4,7 +4,8 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/lexical/description-defaults";
 import {
   SPACE_FORM_META_CLIENT_NONCE,
   SPACE_FORM_META_INTENT,
@@ -19,7 +20,7 @@ function minimalValidSpaceFormPayload() {
   const parsed = spaceFormSchema.safeParse({
     slug: "demo-space",
     name: "デモスペース",
-    description: "12345678901234567890",
+    descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     addressDetail: "",
     access: "",
     capacity: 10,

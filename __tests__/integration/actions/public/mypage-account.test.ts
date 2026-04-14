@@ -68,6 +68,15 @@ mock.module("@/shared/domain/users/queries", () => ({
   getAccountProviders: mockGetAccountProviders,
 }));
 
+// customer query mock（deleteAccount は getCustomerByUserId でキャッシュ無効化用 customerId を取得）
+const mockGetCustomerByUserId = mock(() =>
+  Promise.resolve({ id: "customer-001" }),
+);
+
+mock.module("@/shared/domain/customers/queries", () => ({
+  getCustomerByUserId: mockGetCustomerByUserId,
+}));
+
 // auth モック
 const mockDeleteUser = mock(() => Promise.resolve(undefined));
 const mockGetSession = mock(

@@ -114,6 +114,20 @@ const txClient = {
     upsert: mockCustomerUpsert,
     update: mockCustomerUpdate,
   },
+  // public commands が予約時同意必須規約を検証するため必要
+  terms: {
+    findMany: mock<() => Promise<unknown[]>>(() => Promise.resolve([])),
+  },
+  space: {
+    findUnique: mock<() => Promise<{ spaceTerms: unknown[] } | null>>(() =>
+      Promise.resolve({ spaceTerms: [] }),
+    ),
+  },
+  reservationTermsAgreement: {
+    createMany: mock<() => Promise<{ count: number }>>(() =>
+      Promise.resolve({ count: 0 }),
+    ),
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -1178,7 +1192,9 @@ describe("createPublicReservationCommand", () => {
     test("顧客が自動作成される", async () => {
       await createPublicReservationCommand(validInput);
 
-      expect(mockCustomerUpsert).toHaveBeenCalled();
+      // resolveOrCreateCustomer は findUnique → 未存在なら create（upsert ではない）
+      expect(mockCustomerFindUnique).toHaveBeenCalled();
+      expect(mockCustomerCreate).toHaveBeenCalled();
     });
 
     test("userId 付きで予約に userId が設定される", async () => {

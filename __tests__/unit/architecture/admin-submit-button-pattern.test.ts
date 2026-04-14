@@ -22,6 +22,30 @@ const SUBMIT_BUTTON_IMPL = join(
   "SubmitButton.tsx",
 );
 
+/**
+ * admin-ui-patterns.md §SubmitButton 適用対象外（複合条件 disabled 等）
+ * これらのファイルは `<Button type="submit" disabled={complexCondition}>` を保持する
+ */
+const SUBMIT_BUTTON_ALLOWLIST = new Set<string>([
+  join(
+    ADMIN_APP_ROOT,
+    "admin",
+    "(dashboard)",
+    "settings",
+    "_components",
+    "sections",
+    "SidebarSection.tsx",
+  ),
+  join(
+    ADMIN_APP_ROOT,
+    "admin",
+    "(dashboard)",
+    "terms",
+    "_components",
+    "TermsInlineEditor.tsx",
+  ),
+]);
+
 /** JSX / HTML で submit を直指定している疑い（実装ファイルは除外） */
 const SUBMIT_ATTR_PATTERNS: RegExp[] = [
   /<Button[^>]*\btype="submit"/,
@@ -60,6 +84,9 @@ describe("admin submit button pattern", () => {
 
     for (const filePath of files) {
       if (filePath === SUBMIT_BUTTON_IMPL) {
+        continue;
+      }
+      if (SUBMIT_BUTTON_ALLOWLIST.has(filePath)) {
         continue;
       }
       const text = readFileSync(filePath, "utf8");

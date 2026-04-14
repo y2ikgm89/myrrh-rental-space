@@ -46,15 +46,16 @@
   - Task 8-9: list クエリで contentHtml/contentJson を除外（post, news）
   - README バージョン情報更新（Next.js 16.1.6 / React 19.2.4 / TypeScript 6.0-beta）
 
-- 📋 [2026-02-28] Lexical エディタ最適化（バックログ・未実装ギャップは設計書の表を正）
-  - 設計書: `docs/plans/2026-02-28-lexical-optimization-design.md`（README の Phase チェックリストは参照用。進捗はコード＋設計書で確認）
-  - Phase 1: TableActionMenuPlugin / TableCellResizerPlugin / InlineImageNode
-  - Phase 2: TestimonialNode / FeatureIconListNode / CoverNode
-  - Phase 3: URL ペースト Bookmark 変換 / CharacterLimitPlugin
-
 ---
 
 ## 完了した計画
+
+- ✅ [2026-02-28] Lexical エディタ最適化（7/8 完了、1 項目は Lexical 側削除により不可）
+  - 設計書: `docs/plans/2026-02-28-lexical-optimization-design.md`
+  - Phase 1-1 TableActionMenuPlugin / 1-3 InlineImageNode: 実装済み
+  - Phase 2 TestimonialNode / FeatureIconListNode / CoverNode: 全て実装済み
+  - Phase 3 PasteUrlPlugin / CharacterLimitPlugin: 実装済み
+  - Phase 1-2 TableCellResizerPlugin: **不可** — `@lexical/react` 0.43.x に存在しない（`gotchas.md` 禁止事項 item 21）
 
 - ✅ [2026-02-28] Brand Icons 導入（`@icons-pack/react-simple-icons`、Lexical X/Instagram/YouTube/Figma アイコン置き換え）
 - ✅ [2026-02-28] セキュリティ監査全修正（XSS x3、DoS、情報漏洩、トークン URL 露出・Cookie Gate）

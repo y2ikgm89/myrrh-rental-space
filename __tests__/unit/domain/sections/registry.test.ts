@@ -46,9 +46,9 @@ describe("getSectionDefinition", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getAllSectionDefinitions", () => {
-  test("17 件のセクション定義を返す", () => {
+  test("23 件のセクション定義を返す", () => {
     const defs = getAllSectionDefinitions();
-    expect(defs).toHaveLength(17);
+    expect(defs).toHaveLength(23);
   });
 
   test("各定義は type / configSchema / metadata を持つ", () => {
@@ -97,13 +97,14 @@ describe("getAllSectionDefinitions", () => {
 // ─────────────────────────────────────────────────────────────
 
 describe("getSectionDefinitionsByCategory", () => {
-  test("カテゴリ 'hero' には 2 タイプが含まれる", () => {
+  test("カテゴリ 'hero' には 3 タイプが含まれる（hero / hero-parallax / homepage-hero）", () => {
     const grouped = getSectionDefinitionsByCategory();
     const heroTypes = grouped["hero"].map((d) => d.type);
 
-    expect(grouped["hero"]).toHaveLength(2);
+    expect(grouped["hero"]).toHaveLength(3);
     expect(heroTypes).toContain("hero");
     expect(heroTypes).toContain("hero-parallax");
+    expect(heroTypes).toContain("homepage-hero");
   });
 
   test("カテゴリ 'content' に custom / concept / features が含まれる", () => {
@@ -145,7 +146,7 @@ describe("getSectionDefinitionsByCategory", () => {
     expect(mediaTypes).toContain("instagram");
   });
 
-  test("全カテゴリの合計件数が 17 件になる", () => {
+  test("全カテゴリの合計件数が 23 件になる", () => {
     const grouped = getSectionDefinitionsByCategory();
     const total =
       grouped["hero"].length +
@@ -154,7 +155,7 @@ describe("getSectionDefinitionsByCategory", () => {
       grouped["functional"].length +
       grouped["media"].length;
 
-    expect(total).toBe(17);
+    expect(total).toBe(23);
   });
 });
 

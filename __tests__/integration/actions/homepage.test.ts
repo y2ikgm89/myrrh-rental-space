@@ -48,8 +48,9 @@ describe("Homepage Public Action Integration", () => {
     });
 
     test("セクションタイプ数", () => {
+      // event-calendar 追加後 18 タイプ
       const typeCount = Object.values(SectionType).length;
-      expect(typeCount).toBe(17);
+      expect(typeCount).toBe(18);
     });
   });
 

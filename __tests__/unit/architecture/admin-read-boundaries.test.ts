@@ -38,13 +38,6 @@ function hasReadActionExport(source: string): boolean {
   return /export\s+async\s+function\s+get[A-Z]\w*/.test(source);
 }
 
-function hasConnectionOptIn(source: string): boolean {
-  return (
-    /import\s*{\s*connection\s*}\s*from\s*["']next\/server["']/.test(source) ||
-    /await\s+connection\(\)/.test(source)
-  );
-}
-
 describe("admin read boundaries", () => {
   test("admin app の server/client 実装に read 用 admin actions import を残さない", () => {
     const files = collectSourceFiles(adminRoot).filter((file) => {
@@ -74,14 +67,8 @@ describe("admin read boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
-  test("admin app に connection() による dynamic opt-in を残さない", () => {
-    const files = collectSourceFiles(adminRoot);
-    const offenders = files.filter((file) =>
-      hasConnectionOptIn(readFileSync(file, "utf8")),
-    );
-
-    expect(offenders).toEqual([]);
-  });
+  // connection() は Suspense 内 async SC で必須のため、blanket-forbid はしない
+  // （admin-ui-patterns.md §管理画面 Suspense 内 async SC には `connection()` 配置 参照）
 
   test("legacy /api/admin/media を削除し、canonical /admin/api/media のみ残す", () => {
     expect(
