@@ -168,6 +168,8 @@ import {
   updateFaqCategory,
   deleteFaqCategory,
   reorderFaqCategories,
+} from "@/shared/domain/faq/category-commands";
+import {
   createFaqItem,
   updateFaqItem,
   deleteFaqItem,
