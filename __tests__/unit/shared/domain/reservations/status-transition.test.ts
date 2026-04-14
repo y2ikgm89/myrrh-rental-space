@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { validateStatusTransition } from "@/shared/domain/reservations/commands";
+import { validateStatusTransition } from "@/shared/domain/reservations/status";
 import { ReservationStatus } from "@generated/prisma/enums";
 
 describe("validateStatusTransition", () => {

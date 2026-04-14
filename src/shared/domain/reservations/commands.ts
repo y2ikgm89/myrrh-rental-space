@@ -6,8 +6,8 @@ import { DomainError } from "@/shared/domain/domain-error";
 import {
   CANCELLED_BY,
   CREATABLE_RESERVATION_STATUSES,
-  RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";
+import { validateStatusTransition } from "./status";
 import {
   resolveOrCreateCustomer,
   type CustomerData,
@@ -25,17 +25,6 @@ import {
 } from "./payloads";
 
 export type { ReservationPayload } from "./payloads";
-
-export function validateStatusTransition(
-  from: ReservationStatus,
-  to: ReservationStatus,
-): void {
-  if (from === to) return;
-  const allowed = RESERVATION_STATUS_TRANSITIONS[from];
-  if (!allowed || !allowed.includes(to)) {
-    throw new DomainError("このステータスからは変更できません", "VALIDATION");
-  }
-}
 
 const SPACE_SELECT = {
   id: true,

@@ -158,7 +158,6 @@ mock.module("@/shared/lib/reservation", () => ({
 // ---------------------------------------------------------------------------
 
 import {
-  validateStatusTransition,
   createAdminReservationCommand,
   updateAdminReservationCommand,
   updateReservationStatusCommand,
@@ -167,6 +166,7 @@ import {
   restoreReservationCommand,
   createPublicReservationCommand,
 } from "@/shared/domain/reservations/commands";
+import { validateStatusTransition } from "@/shared/domain/reservations/status";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // ---------------------------------------------------------------------------
