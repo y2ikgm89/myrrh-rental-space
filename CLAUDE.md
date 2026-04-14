@@ -6,14 +6,16 @@
 ## コマンド
 
 ```bash
-bun dev                                       # 開発サーバー
+bun dev                                       # 開発サーバー（Turbopack）
 bun run validate                              # type-check → lint（作業中）
 bun run validate && bun run build             # 完全検証（コミット前必須）
 bun run build:skip-env                        # env 未設定時ビルド
-bun run test[:unit|:integration]              # Bun Test（サブディレクトリ別分離実行）
-bun run e2e                                   # Playwright
+bun run test:unit                             # 単体テスト
+bun run test:integration                      # 統合テスト
+bun run test:all                              # 単体 + 統合（順次実行）
+bun run e2e                                   # Playwright E2E
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
-bun prisma/seed.ts                            # Seed
+bun run db:seed                               # Seed
 ```
 
 保護ファイル（PreToolUse hook で編集拒否）: `.env*` / `bun.lock` / `prisma/migrations/*.sql`
@@ -90,8 +92,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## 自動ロード
 
-- **`.claude/rules/**/\*.md`** — `paths:`フロントマターで条件付き自動ロード。最重要は`gotchas.md`
-- **`.claude/skills/`** — Skill ツールの起動時 system message で description 露出、カタログ不要
-- **`.claude/agents/`** — Agent ツールの `subagent_type` パラメータで一覧提示、カタログ不要
+- **Rules**: `.claude/rules/**/*.md` — `paths:` フロントマターで条件付き自動ロード。最重要は `gotchas.md`
+- **Skills**: `.claude/skills/<name>/SKILL.md` は検出用スタブ（description のみ）。手順の正本は `.agents/skills/<name>/SKILL.md` に置く（`stripe-debug` / `cloud-run-debug` 参照）
+- **Subagents**: `.claude/agents/<name>.md` — frontmatter は `name` / `description` / `tools:`（最小権限）/ `model: sonnet` / `memory: project`（`security-reviewer.md` / `zod-schema-reviewer.md` 参照）
 
 包括的監査が必要な場合は、該当 subagent を並列起動する（Agent ツール経由で description を参照して選択）。
