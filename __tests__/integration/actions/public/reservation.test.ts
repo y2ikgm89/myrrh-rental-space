@@ -80,6 +80,14 @@ const mockUpdateTag = mock(() => undefined);
 
 mock.module("next/cache", () => ({
   updateTag: mockUpdateTag,
+  cacheTag: mock(() => undefined),
+  cacheLife: mock(() => undefined),
+  revalidateTag: mock(() => undefined),
+}));
+
+mock.module("next/headers", () => ({
+  headers: mock(() => Promise.resolve(new Headers({ "x-forwarded-for": "127.0.0.1" }))),
+  cookies: mock(() => Promise.resolve({ get: () => undefined, getAll: () => [] })),
 }));
 
 mock.module("@/shared/lib/async-utils", () => ({
