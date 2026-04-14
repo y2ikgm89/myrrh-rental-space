@@ -10,13 +10,10 @@ import {
   type PostTagInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import * as categoryCommands from "@/shared/domain/posts/category-commands";
 import {
-  createPostCategory as createPostCategoryCommand,
   createPostTag as createPostTagCommand,
-  deletePostCategory as deletePostCategoryCommand,
   deletePostTag as deletePostTagCommand,
-  updatePostCategory as updatePostCategoryCommand,
-  updatePostCategoryOrder as updatePostCategoryOrderCommand,
   updatePostTag as updatePostTagCommand,
 } from "@/shared/domain/posts/commands";
 import { CACHE_TAGS } from "@/shared/lib/constants";
@@ -51,7 +48,8 @@ export async function createPostCategory(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostCategoryCommand(omitUndefined(parsed.data)),
+    execute: async () =>
+      categoryCommands.createPostCategory(omitUndefined(parsed.data)),
     afterSuccess: async () => {
       await invalidatePostCategoryCaches();
       await purgePostArchive();
@@ -79,7 +77,7 @@ export async function updatePostCategory(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostCategoryCommand(
+      await categoryCommands.updatePostCategory(
         validatedId.data,
         omitUndefined(parsed.data),
       );
@@ -103,7 +101,7 @@ export async function deletePostCategory(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
-      await deletePostCategoryCommand(validated.data);
+      await categoryCommands.deletePostCategory(validated.data);
       return null;
     },
     afterSuccess: async () => {
@@ -125,7 +123,7 @@ export async function updatePostCategoryOrder(
     resource: "post",
     action: "update",
     execute: async () => {
-      await updatePostCategoryOrderCommand(parsed.data);
+      await categoryCommands.updatePostCategoryOrder(parsed.data);
       return null;
     },
     afterSuccess: async () => {

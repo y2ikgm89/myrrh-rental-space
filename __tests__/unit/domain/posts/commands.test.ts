@@ -171,6 +171,8 @@ import {
   updatePostCategory,
   deletePostCategory,
   updatePostCategoryOrder,
+} from "@/shared/domain/posts/category-commands";
+import {
   createPostTag,
   updatePostTag,
   deletePostTag,
