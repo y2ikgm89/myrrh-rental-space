@@ -16,7 +16,7 @@ import {
   bulkDeleteFaqItems as bulkDeleteFaqItemsCommand,
   bulkMoveFaqItems as bulkMoveFaqItemsCommand,
   bulkPublishFaqItems as bulkPublishFaqItemsCommand,
-} from "@/shared/domain/faq/commands";
+} from "@/shared/domain/faq/item-bulk-commands";
 import {
   createFaqItem as createFaqItemCommand,
   deleteFaqItem as deleteFaqItemCommand,
