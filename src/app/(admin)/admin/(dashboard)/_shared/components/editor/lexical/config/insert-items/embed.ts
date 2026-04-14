@@ -1,0 +1,117 @@
+/**
+ * Embed insert items — 外部サービス埋め込み
+ *
+ * YouTube / Vimeo / X (Twitter) / Instagram / Google Maps / Figma / Spotify / Bookmark OGP.
+ * すべて dialog 型で、埋め込み URL をユーザーに入力させる。
+ */
+
+import {
+  IconBrandFigma,
+  IconBrandInstagram,
+  IconBrandX,
+  IconBrandYoutube,
+  IconExternalLink,
+  IconMap,
+  IconMusic,
+  IconVideo,
+} from "@tabler/icons-react";
+import type { InsertItem } from "./types";
+
+export const EMBED_INSERT_ITEMS: readonly InsertItem[] = [
+  {
+    id: "youtube",
+    type: "dialog",
+    label: "YouTube",
+    icon: IconBrandYoutube,
+    keywords: ["youtube", "video", "embed", "douga", "movie"],
+    category: "media",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "youtube",
+  },
+  {
+    id: "vimeo",
+    type: "dialog",
+    label: "Vimeo",
+    icon: IconVideo,
+    keywords: ["vimeo", "video", "embed", "douga", "movie"],
+    category: "media",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "vimeo",
+  },
+  {
+    id: "x",
+    type: "dialog",
+    label: "X (Twitter)",
+    icon: IconBrandX,
+    keywords: ["x", "twitter", "tweet", "embed", "social", "sns"],
+    category: "media",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "x",
+  },
+  {
+    id: "instagram",
+    type: "dialog",
+    label: "Instagram",
+    icon: IconBrandInstagram,
+    keywords: ["instagram", "insta", "embed", "social", "sns", "photo"],
+    category: "media",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "instagram",
+  },
+  {
+    id: "mapEmbed",
+    type: "dialog",
+    label: "Google マップ",
+    icon: IconMap,
+    keywords: ["map", "google", "maps", "chizu", "embed", "location", "access"],
+    category: "media",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "mapEmbed",
+  },
+  {
+    id: "figma",
+    type: "dialog",
+    label: "Figma",
+    icon: IconBrandFigma,
+    keywords: ["figma", "デザイン", "design", "prototype", "プロトタイプ"],
+    category: "media",
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: "figma",
+  },
+  {
+    id: "spotify",
+    type: "dialog",
+    label: "Spotify",
+    icon: IconMusic,
+    keywords: [
+      "spotify",
+      "音楽",
+      "music",
+      "podcast",
+      "ポッドキャスト",
+      "track",
+      "playlist",
+    ],
+    category: "media",
+    showInToolbar: false,
+    showInPicker: true,
+    dialogId: "spotify",
+  },
+  {
+    id: "bookmark",
+    type: "dialog",
+    label: "ブックマーク",
+    icon: IconExternalLink,
+    keywords: ["bookmark", "ogp", "card", "linkcard", "embed", "shiori"],
+    category: "widget",
+    showInToolbar: true,
+    showInPicker: true,
+    dialogId: "bookmark",
+  },
+];
