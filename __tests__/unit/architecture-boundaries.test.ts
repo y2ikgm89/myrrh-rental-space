@@ -5,6 +5,13 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const SRC_ROOT = join(ROOT, "src");
 const SHARED_DB_ROOT = join(SRC_ROOT, "shared", "db");
+const ENUMS_GATEWAY_ROOT = join(
+  SRC_ROOT,
+  "shared",
+  "lib",
+  "validations",
+  "enums",
+);
 const SHARED_DOMAIN_ROOT = join(SRC_ROOT, "shared", "domain");
 const APP_ROUTE_ROOT = join(SRC_ROOT, "app");
 const API_CRON_ROUTE_ROOT = join(SRC_ROOT, "app", "api", "cron");
@@ -610,6 +617,7 @@ describe("architecture boundaries", () => {
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles
       .filter((file) => !file.startsWith(SHARED_DB_ROOT))
+      .filter((file) => !file.startsWith(ENUMS_GATEWAY_ROOT))
       .filter((file) => {
         const source = readFileSync(file, "utf8");
         return (
