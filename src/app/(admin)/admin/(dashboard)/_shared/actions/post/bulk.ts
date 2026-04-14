@@ -7,7 +7,7 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   bulkTogglePublishedCommand,
   bulkDeletePostsCommand,
-} from "@/shared/domain/posts/commands";
+} from "@/shared/domain/posts/bulk-commands";
 import {
   invalidatePostCollectionCaches,
   purgePostArchive,
