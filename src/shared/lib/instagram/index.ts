@@ -30,7 +30,16 @@ const InstagramApiMediaSchema = z.object({
 });
 
 const InstagramApiFeedResponseSchema = z.object({
-  data: z.array(InstagramApiMediaSchema),
+  // Instagram API は id の一意性を保証するが、防御的に重複を除去する
+  // （React key の stable ID として使われるため）
+  data: z.array(InstagramApiMediaSchema).transform((items) => {
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }),
   paging: z
     .object({
       cursors: z

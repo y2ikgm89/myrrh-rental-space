@@ -35,6 +35,7 @@ interface SpaceInfoProps {
 }
 
 export function SpaceInfo({ space }: SpaceInfoProps) {
+  // facilities はスキーマで重複禁止が保証されている（JsonValue 型ガードのみ実施）
   const facilities: readonly string[] = Array.isArray(space.facilities)
     ? space.facilities.filter((v): v is string => typeof v === "string")
     : [];

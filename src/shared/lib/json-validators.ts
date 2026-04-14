@@ -7,7 +7,12 @@
 import { z } from "zod";
 import type { Prisma } from "@generated/prisma/client";
 
-const stringArraySchema = z.array(z.string());
+// 読み取り側では重複を silent に除去する（React key の stable ID 保証のため）。
+// 書き込み側の Zod スキーマは `.refine()` で厳格に重複を拒否しているため、
+// 重複が残る場合は historical data のみ。`transform` で自己修復する。
+const stringArraySchema = z
+  .array(z.string())
+  .transform((arr) => Array.from(new Set(arr)));
 
 /**
  * 営業時間帯スキーマ（開始・終了時刻のペア）

@@ -20,7 +20,10 @@ export const PostPreviewDataSchema = z.object({
   contentHtml: z.string(),
   thumbnailUrl: z.string(),
   publishedAt: z.string().nullable(),
-  tags: z.array(z.string()),
+  // タグ名は React key の stable ID として機能するため、重複を禁止する
+  tags: z.array(z.string()).refine((arr) => new Set(arr).size === arr.length, {
+    error: "同じタグを複数登録することはできません",
+  }),
   category: z.object({
     name: z.string(),
     slug: z.string(),

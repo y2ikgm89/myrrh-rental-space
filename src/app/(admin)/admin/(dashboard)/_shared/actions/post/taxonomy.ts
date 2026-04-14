@@ -29,12 +29,16 @@ import {
 } from "./cache-helpers";
 
 const idSchema = z.string().uuid({ error: "カテゴリ/タグIDが不正です" });
-const postCategoryOrderSchema = z.array(
-  z.object({
-    id: z.string().uuid({ error: "カテゴリIDが不正です" }),
-    order: z.number().int().min(0, { error: "順序が不正です" }),
-  }),
-);
+const postCategoryOrderSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid({ error: "カテゴリIDが不正です" }),
+      order: z.number().int().min(0, { error: "順序が不正です" }),
+    }),
+  )
+  .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 export async function createPostCategory(
   input: PostCategoryInput,

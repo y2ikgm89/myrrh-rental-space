@@ -131,6 +131,13 @@ const safeUrlSchema = createSafeUrlSchema(500);
 const { ctaButtonSchema, optionalCtaButtonSchema } =
   createCtaSchemas(safeUrlSchema);
 const ctaButtonItemSchema = createCtaButtonItemSchema(safeUrlSchema);
+// ボタンの URL は React key の stable ID として使われるため、一意性を保証する
+const ctaButtonsArraySchema = z
+  .array(ctaButtonItemSchema)
+  .refine(
+    (buttons) => new Set(buttons.map((b) => b.url)).size === buttons.length,
+    { error: "同じURLのボタンを複数登録することはできません" },
+  );
 const maxWidthSchema = z.enum(maxWidthValues).default("lg");
 
 // =============================================================================
@@ -151,7 +158,7 @@ const heroConfigRawSchema = z.object({
     .url({ error: "有効なURLを入力してください" })
     .optional()
     .or(z.literal("")),
-  buttons: z.array(ctaButtonItemSchema).optional(),
+  buttons: ctaButtonsArraySchema.optional(),
   ctaPrimary: ctaButtonSchema.optional(),
   ctaSecondary: optionalCtaButtonSchema,
   height: z.enum(heroHeightValues).default("md"),
@@ -192,7 +199,7 @@ export const heroParallaxConfigSchema = z.object({
     .url({ error: "有効なURLを入力してください" })
     .optional()
     .or(z.literal("")),
-  buttons: z.array(ctaButtonItemSchema).default([
+  buttons: ctaButtonsArraySchema.default([
     {
       text: "Reserve Now",
       url: "/reservation",
@@ -490,7 +497,7 @@ const ctaConfigRawSchema = z.object({
     .string()
     .max(500, { error: "説明は500文字以内です" })
     .optional(),
-  buttons: z.array(ctaButtonItemSchema).optional(),
+  buttons: ctaButtonsArraySchema.optional(),
   ctaPrimary: ctaButtonSchema.optional(),
   ctaSecondary: optionalCtaButtonSchema,
   backgroundColor: z.string().max(50).optional(),
@@ -648,12 +655,16 @@ export const updateSectionSchema = z.object({
 
 /** セクション順序更新スキーマ */
 export const updateSectionOrderSchema = z.object({
-  sections: z.array(
-    z.object({
-      id: z.string().uuid(),
-      order: z.number().int().min(0),
+  sections: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        order: z.number().int().min(0),
+      }),
+    )
+    .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+      error: "同じIDを複数指定することはできません",
     }),
-  ),
 });
 
 // =============================================================================

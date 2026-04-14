@@ -13,8 +13,6 @@ export {
   type BusinessInfoInput,
   contactInfoSchema,
   type ContactInfoInput,
-  timeSlotSchema,
-  businessHoursDaySchema,
   businessHoursSettingsSchema,
   type BusinessHoursSettingsInput,
   metaSettingsSchema,

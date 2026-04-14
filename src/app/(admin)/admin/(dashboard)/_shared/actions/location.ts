@@ -24,12 +24,16 @@ const publishSchema = z.object({
   id: z.string().uuid({ error: "場所IDが不正です" }),
   isPublished: z.boolean(),
 });
-const locationOrderSchema = z.array(
-  z.object({
-    id: z.string().uuid({ error: "場所IDが不正です" }),
-    sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
-  }),
-);
+const locationOrderSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid({ error: "場所IDが不正です" }),
+      sortOrder: z.number().int().min(0, { error: "並び順が不正です" }),
+    }),
+  )
+  .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 export async function createLocation(
   input: LocationFormInput,

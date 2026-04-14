@@ -23,11 +23,16 @@ const spaceEditFormImageUrlsSchema = z
       url: z.string().url({ error: "有効なURLを入力してください" }),
     }),
   )
-  .max(10, { error: "画像は最大10枚までです" });
+  .max(10, { error: "画像は最大10枚までです" })
+  .refine((arr) => new Set(arr.map((item) => item.url)).size === arr.length, {
+    error: "同じ画像を複数登録することはできません",
+  });
 
-const spaceEditFormFacilitiesSchema = z.array(
-  z.object({ value: z.string().min(1).max(50) }),
-);
+const spaceEditFormFacilitiesSchema = z
+  .array(z.object({ value: z.string().min(1).max(50) }))
+  .refine((arr) => new Set(arr.map((item) => item.value)).size === arr.length, {
+    error: "同じ設備を複数登録することはできません",
+  });
 
 /**
  * `standardSchemaResolver` / Standard Schema は入出力型一致が必要なため、
@@ -53,7 +58,14 @@ export const spaceEditFormSchema = spaceFormSchema
     discountType: spaceDiscountTypeSchema,
     durationDiscountOverride: durationDiscountOverrideSchema,
     taxRateType: z.enum(TaxRateType),
-  });
+  })
+  .refine(
+    (data) => !data.imageUrls.some((item) => item.url === data.mainImageUrl),
+    {
+      error: "メイン画像と同じURLを追加画像に登録することはできません",
+      path: ["imageUrls"],
+    },
+  );
 
 export type SpaceEditFormData = z.infer<typeof spaceEditFormSchema>;
 

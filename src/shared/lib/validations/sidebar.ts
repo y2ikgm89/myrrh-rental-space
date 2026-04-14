@@ -37,9 +37,19 @@ export type BuiltinWidget = z.infer<typeof builtinWidgetSchema>;
 export type CustomWidget = z.infer<typeof customWidgetSchema>;
 export type SidebarWidget = BuiltinWidget | CustomWidget;
 
-export const sidebarWidgetsSchema = z.array(
-  z.union([builtinWidgetSchema, customWidgetSchema]),
-);
+// 各 widget の identity（builtin: type / custom: id）は React key の stable ID として
+// 機能するため、重複を禁止する。BlogSidebar / SidebarSection の getWidgetKey と一致。
+export const sidebarWidgetsSchema = z
+  .array(z.union([builtinWidgetSchema, customWidgetSchema]))
+  .refine(
+    (widgets) => {
+      const keys = widgets.map((w) =>
+        w.type === "custom" ? `custom:${w.id}` : `builtin:${w.type}`,
+      );
+      return new Set(keys).size === keys.length;
+    },
+    { error: "同じウィジェットを複数登録することはできません" },
+  );
 
 export type SidebarWidgets = z.infer<typeof sidebarWidgetsSchema>;
 

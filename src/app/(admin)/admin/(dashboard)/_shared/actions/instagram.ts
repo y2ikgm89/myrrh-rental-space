@@ -30,7 +30,11 @@ export type {
 } from "@/shared/domain/instagram/types";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
-const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
+const orderedIdsSchema = z
+  .array(z.string().uuid({ error: "IDが不正です" }))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 function invalidateInstagramCaches(): void {
   updateTag(CACHE_TAGS.INSTAGRAM_FEED);

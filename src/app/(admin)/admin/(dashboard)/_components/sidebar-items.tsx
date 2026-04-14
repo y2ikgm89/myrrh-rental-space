@@ -18,7 +18,6 @@ import {
   IconSettings,
   IconPhoto,
   IconTicket,
-  IconStar,
   IconBell,
 } from "@tabler/icons-react";
 import type { SidebarItem } from "@/admin/types/admin-layout";
@@ -88,11 +87,6 @@ export const SIDEBAR_ITEMS: SidebarItem[] = [
     label: "お問い合わせ",
     href: "/admin/inquiries",
     icon: <IconMail className="h-5 w-5" />,
-  },
-  {
-    label: "レビュー",
-    href: "/admin/spaces?tab=reviews",
-    icon: <IconStar className="h-5 w-5" />,
   },
   {
     label: "スタッフ管理",

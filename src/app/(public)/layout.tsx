@@ -160,37 +160,63 @@ async function StructuredDataContent(): Promise<ReactElement> {
 }
 
 /**
- * Header ラッパー: DB からナビゲーション + ブランド名を取得して Client Component に渡す
+ * 公開ページで共有する認証状態
+ * - CUSTOMER / USER ロール → mypage
+ * - 未認証 → login
+ * - 管理ロール → null（モバイルナビ・ヘッダーでは非表示）
+ */
+type PublicAuthKind = "mypage" | "login" | null;
+
+async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
+  const user = await getCurrentCustomerUser();
+  if (!user) return "login";
+  if (user.role === Role.CUSTOMER || user.role === Role.USER) return "mypage";
+  return null;
+}
+
+/**
+ * Header ラッパー: DB からナビゲーション + ブランド名 + 認証状態を取得
+ *
+ * PPR: `getCurrentCustomerUser()` は uncached なため、この async SC は必ず
+ * 親レイアウトの `<Suspense>` 内で呼び出すこと。
  */
 async function HeaderWithData({
   headerSettings,
 }: {
   headerSettings: HeaderSettings;
 }): Promise<ReactElement> {
-  const [navItems, businessInfo, currentUser] = await Promise.all([
+  const [navItems, businessInfo, authKind] = await Promise.all([
     getHeaderNavigation(),
     getBusinessInfo(),
-    getCurrentCustomerUser(),
+    resolvePublicAuthKind(),
   ]);
 
-  const isCustomer =
-    currentUser?.role === Role.CUSTOMER || currentUser?.role === Role.USER;
   const authLink =
-    currentUser && isCustomer
+    authKind === "mypage"
       ? { href: "/mypage", label: "マイページ" }
-      : currentUser
-        ? undefined
-        : { href: "/login", label: "ログイン" };
+      : authKind === "login"
+        ? { href: "/login", label: "ログイン" }
+        : null;
 
-  const headerProps = {
-    brandName: businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH",
-    scrollBehavior: headerSettings.scrollBehavior,
-    backgroundMode: headerSettings.backgroundMode,
-    ...(navItems.length > 0 ? { navItems } : {}),
-    ...(authLink ? { authLink } : {}),
-  };
+  return (
+    <Header
+      brandName={businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
+      navItems={navItems}
+      scrollBehavior={headerSettings.scrollBehavior}
+      backgroundMode={headerSettings.backgroundMode}
+      authLink={authLink}
+    />
+  );
+}
 
-  return <Header {...headerProps} />;
+/**
+ * MobileNav ラッパー: 認証状態を取得して Client Component に渡す
+ * `<Suspense>` 内で呼び出すこと。`getCurrentCustomerUser()` は request 単位で
+ * `cache()` メモ化されているため HeaderWithData との重複 DB アクセスは発生しない。
+ */
+async function MobileNavWithAuth(): Promise<ReactElement> {
+  const authKind = await resolvePublicAuthKind();
+  return <MobileNav authKind={authKind} />;
 }
 
 export default async function PublicRootLayout({
@@ -292,7 +318,9 @@ export default async function PublicRootLayout({
             </main>
 
             <Footer />
-            <MobileNav />
+            <Suspense fallback={null}>
+              <MobileNavWithAuth />
+            </Suspense>
 
             {/* 動的コンテンツ - リクエスト時にストリーミング */}
             <Suspense fallback={null}>

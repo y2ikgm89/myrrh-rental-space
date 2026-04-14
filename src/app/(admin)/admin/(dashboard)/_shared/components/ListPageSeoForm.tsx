@@ -37,8 +37,8 @@ interface SeoData {
 }
 
 interface ListPageSeoFormProps {
-  /** ページスラッグ（'posts' または 'news'） */
-  slug: "posts" | "news";
+  /** ページスラッグ（'posts' / 'news' / 'faq' など） */
+  slug: "posts" | "news" | "faq";
   /** 現在のSEO設定 */
   seoData: SeoData;
 }

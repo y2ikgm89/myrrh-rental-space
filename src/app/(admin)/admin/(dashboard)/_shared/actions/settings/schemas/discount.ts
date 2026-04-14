@@ -20,7 +20,13 @@ export const durationDiscountRuleSchema = z.object({
 
 export const discountSettingsSchema = z.object({
   durationDiscountEnabled: z.boolean(),
-  durationDiscountRules: z.array(durationDiscountRuleSchema),
+  // hours は割引マップのキーとして機能するため、重複を禁止する
+  durationDiscountRules: z
+    .array(durationDiscountRuleSchema)
+    .refine(
+      (rules) => new Set(rules.map((r) => r.hours)).size === rules.length,
+      { error: "同じ時間数の割引ルールを複数登録することはできません" },
+    ),
   discountCombinationMode: z.enum(DiscountCombinationMode),
   showOriginalPrice: z.boolean(),
   discountWarningEnabled: z.boolean(),

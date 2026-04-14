@@ -46,10 +46,8 @@ export function SpaceCard({
   const { formatUnit } = useFormatPrice();
   const hasHoverData = locationName !== undefined && lineAddress !== undefined;
 
-  // Build deduplicated image list: mainImageUrl first, then remaining from imageUrls
-  const allImages = imageUrls
-    ? [mainImageUrl, ...imageUrls.filter((url) => url !== mainImageUrl)]
-    : [mainImageUrl];
+  // imageUrls / facilities はスキーマで重複禁止が保証されている（mainImageUrl との重複も禁止）
+  const allImages = imageUrls ? [mainImageUrl, ...imageUrls] : [mainImageUrl];
   const [showOverlay, setShowOverlay] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

@@ -34,8 +34,10 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // 画像モーダル用のstate
+  // imageUrls / facilities はスキーマで重複禁止が保証されているため、そのまま使用
   const allImages = [space.mainImageUrl, ...space.imageUrls];
+  const additionalImages = space.imageUrls;
+  const facilities = space.facilities;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -197,7 +199,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
               </button>
             </div>
             {/* 追加画像 */}
-            {space.imageUrls.map((url: string, index: number) => (
+            {additionalImages.map((url, index) => (
               <div key={url} className="flex flex-col gap-1">
                 <span className="text-xs text-muted-foreground">
                   追加{index + 1}
@@ -273,14 +275,14 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
       </Dialog>
 
       {/* 設備 */}
-      {space.facilities.length > 0 && (
+      {facilities.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>設備・アメニティ</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {space.facilities.map((facility: string) => (
+              {facilities.map((facility) => (
                 <Badge key={facility} variant="secondary">
                   {facility}
                 </Badge>

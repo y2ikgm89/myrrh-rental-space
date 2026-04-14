@@ -49,7 +49,11 @@ export const publicReservationSchema = z
       .max(2000, { error: "備考は2000文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
-    agreedTermsIds: z.array(z.string().uuid({ error: "規約IDが不正です" })),
+    agreedTermsIds: z
+      .array(z.string().uuid({ error: "規約IDが不正です" }))
+      .refine((ids) => new Set(ids).size === ids.length, {
+        error: "同じ規約に複数回同意することはできません",
+      }),
     turnstileToken: z.string().optional(),
   })
   .refine(

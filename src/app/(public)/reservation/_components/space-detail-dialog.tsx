@@ -26,10 +26,12 @@ export function SpaceDetailDialog({
   readonly isSelected: boolean;
 }): ReactElement {
   const { formatUnit } = useFormatPrice();
+  // imageUrls / facilities はスキーマで重複禁止が保証されているため、そのまま使用
   const allImages =
     space !== null
       ? [space.mainImageUrl, ...space.imageUrls].filter(Boolean)
       : [];
+  const facilities = space !== null ? space.facilities : [];
 
   return (
     <Dialog open={space !== null} onOpenChange={onOpenChange}>
@@ -105,13 +107,13 @@ export function SpaceDetailDialog({
             </div>
 
             {/* Facilities */}
-            {space.facilities.length > 0 ? (
+            {facilities.length > 0 ? (
               <div className="space-y-2 border-t border-border pt-4">
                 <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   設備
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {space.facilities.map((f) => (
+                  {facilities.map((f) => (
                     <span
                       key={f}
                       className="border border-border px-2 py-1 text-xs tracking-[0.18em] text-muted-foreground"

@@ -19,16 +19,28 @@ import {
 
 /**
  * 画像URL配列のバリデーション
+ *
+ * 各 URL は React key の stable ID として機能するため、重複を禁止する。
  */
 const imageUrlsSchema = z
   .array(z.string().url({ error: "有効なURLを入力してください" }))
   .max(10, { error: "画像は最大10枚までです" })
+  .refine((arr) => new Set(arr).size === arr.length, {
+    error: "同じ画像を複数登録することはできません",
+  })
   .default([]);
 
 /**
  * 設備タグ配列のバリデーション
+ *
+ * 各設備名は React key の stable ID として機能するため、重複を禁止する。
  */
-const facilitiesSchema = z.array(z.string().min(1).max(50)).default([]);
+const facilitiesSchema = z
+  .array(z.string().min(1).max(50))
+  .refine((arr) => new Set(arr).size === arr.length, {
+    error: "同じ設備を複数登録することはできません",
+  })
+  .default([]);
 
 /**
  * スペース割引タイプ
@@ -132,7 +144,11 @@ export const spaceFormSchema = z
     // 税率設定
     taxRateType: z.enum(TaxRateType).default(TaxRateType.standard),
   })
-  .merge(seoOgpFieldsSchema);
+  .merge(seoOgpFieldsSchema)
+  .refine((data) => !data.imageUrls.includes(data.mainImageUrl), {
+    error: "メイン画像と同じURLを追加画像に登録することはできません",
+    path: ["imageUrls"],
+  });
 
 /**
  * フォーム入力値の型

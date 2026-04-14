@@ -6,6 +6,14 @@ import {
 } from "@/shared/lib/validations/seo";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 
+// タグ ID は React key として使われるため、重複を禁止する
+const tagsSchema = z
+  .array(z.string().uuid({ error: "タグIDが不正です" }))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じタグを複数選択することはできません",
+  })
+  .default([]);
+
 // =============================================================================
 // Post Schemas
 // =============================================================================
@@ -31,7 +39,7 @@ export const createPostSchema = z
     contentJson: lexicalJsonSchema,
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
-    tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
+    tags: tagsSchema,
   })
   .merge(seoOgpFieldsSchema);
 
@@ -68,7 +76,7 @@ export const updatePostSettingsSchema = z
       .max(500, { error: "抜粋は500文字以内" }),
     thumbnailUrl: z.string().min(1, { error: "サムネイルURLは必須です" }),
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
-    tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
+    tags: tagsSchema,
     status: z.enum(PostStatus),
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     contentWidthCustom: z

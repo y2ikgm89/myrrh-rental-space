@@ -18,13 +18,17 @@ export const navigationItemInputSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const navigationOrderInputSchema = z.array(
-  z.object({
-    id: z.string().uuid(),
-    order: z.number().int().min(0),
-    parentId: z.string().uuid().nullable().optional(),
-  }),
-);
+export const navigationOrderInputSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid(),
+      order: z.number().int().min(0),
+      parentId: z.string().uuid().nullable().optional(),
+    }),
+  )
+  .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 export const socialLinkInputSchema = z.object({
   platform: z.enum(SocialPlatform),
@@ -38,12 +42,16 @@ export const socialLinkInputSchema = z.object({
   showOnMobile: z.boolean().default(true),
 });
 
-export const socialLinkOrderInputSchema = z.array(
-  z.object({
-    id: z.string().uuid(),
-    order: z.number().int().min(0),
-  }),
-);
+export const socialLinkOrderInputSchema = z
+  .array(
+    z.object({
+      id: z.string().uuid(),
+      order: z.number().int().min(0),
+    }),
+  )
+  .refine((items) => new Set(items.map((i) => i.id)).size === items.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 export type NavigationItemInput = z.infer<typeof navigationItemInputSchema>;
 export type NavigationOrderInput = z.infer<typeof navigationOrderInputSchema>;

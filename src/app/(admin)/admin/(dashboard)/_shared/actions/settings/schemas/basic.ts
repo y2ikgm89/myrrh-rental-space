@@ -10,6 +10,10 @@ import {
   HeaderBackgroundMode,
   PostPermalinkStructure,
 } from "@generated/prisma/enums";
+import {
+  TIME_REGEX,
+  collectBusinessHoursWeekIssues,
+} from "@/shared/lib/validations/business-hours";
 
 // =============================================================================
 // Basic Schemas
@@ -63,96 +67,56 @@ export const contactInfoSchema = z.object({
 
 export type ContactInfoInput = z.infer<typeof contactInfoSchema>;
 
-// 時刻フォーマット: HH:mm（00:00-23:59）
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+const timeSlotObjectSchema = z.object({
+  openTime: z.string().regex(TIME_REGEX, {
+    error: "正しい時刻形式（HH:mm）で入力してください",
+  }),
+  closeTime: z.string().regex(TIME_REGEX, {
+    error: "正しい時刻形式（HH:mm）で入力してください",
+  }),
+});
 
-export const timeSlotSchema = z
-  .object({
-    openTime: z.string().regex(TIME_REGEX, {
-      error: "正しい時刻形式（HH:mm）で入力してください",
-    }),
-    closeTime: z.string().regex(TIME_REGEX, {
-      error: "正しい時刻形式（HH:mm）で入力してください",
-    }),
-  })
-  .refine((data) => data.closeTime > data.openTime, {
-    error: "終了時刻は開始時刻より後にしてください",
-    path: ["closeTime"],
-  });
-
-// 時間帯の重複チェック
-function hasOverlappingSlots(
-  slots: Array<{ openTime: string; closeTime: string }>,
-): boolean {
-  for (let i = 0; i < slots.length; i++) {
-    for (let j = i + 1; j < slots.length; j++) {
-      const a = slots[i];
-      const b = slots[j];
-      if (!a || !b) continue;
-      // 時間帯が重複している場合
-      if (a.openTime < b.closeTime && a.closeTime > b.openTime) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-export const businessHoursDaySchema = z
-  .object({
-    isOpen: z.boolean(),
-    slots: z.array(timeSlotSchema),
-  })
-  .refine(
-    (data) => {
-      // 営業日なら最低1つの時間帯が必要
-      if (data.isOpen && data.slots.length === 0) return false;
-      return true;
-    },
-    { error: "営業日には最低1つの時間帯を設定してください" },
-  )
-  .refine(
-    (data) => {
-      if (!data.isOpen || data.slots.length <= 1) return true;
-      return !hasOverlappingSlots(data.slots);
-    },
-    { error: "時間帯が重複しています" },
-  );
-
-// Note: refine後の型はZodEffectsになるため、基本スキーマを使用
-const businessHoursDayBaseSchema = z.object({
+const businessHoursDayObjectSchema = z.object({
   isOpen: z.boolean(),
-  slots: z.array(
-    z.object({
-      openTime: z.string().regex(TIME_REGEX),
-      closeTime: z.string().regex(TIME_REGEX),
-    }),
-  ),
+  slots: z.array(timeSlotObjectSchema),
 });
 
 const businessHoursWeekSchema = z.object({
-  monday: businessHoursDayBaseSchema,
-  tuesday: businessHoursDayBaseSchema,
-  wednesday: businessHoursDayBaseSchema,
-  thursday: businessHoursDayBaseSchema,
-  friday: businessHoursDayBaseSchema,
-  saturday: businessHoursDayBaseSchema,
-  sunday: businessHoursDayBaseSchema,
+  monday: businessHoursDayObjectSchema,
+  tuesday: businessHoursDayObjectSchema,
+  wednesday: businessHoursDayObjectSchema,
+  thursday: businessHoursDayObjectSchema,
+  friday: businessHoursDayObjectSchema,
+  saturday: businessHoursDayObjectSchema,
+  sunday: businessHoursDayObjectSchema,
 });
 
-export const businessHoursSettingsSchema = z.object({
-  businessHours: businessHoursWeekSchema,
-  regularHolidays: z.array(z.string()).nullable(),
-  specialHolidays: z.array(z.string()).nullable(),
-  // HTMLタグを禁止してXSS対策
-  holidayNotice: z
-    .string()
-    .max(1000)
-    .regex(/^[^<>]*$/, { error: "HTMLタグは使用できません" })
-    .nullable()
-    .or(z.literal(""))
-    .transform((v) => v || null),
-});
+// 各日付は React key の stable ID として機能するため、重複を禁止する
+const uniqueDateArraySchema = (label: string) =>
+  z
+    .array(z.string())
+    .refine((arr) => new Set(arr).size === arr.length, {
+      error: `同じ${label}を複数登録することはできません`,
+    })
+    .nullable();
+
+export const businessHoursSettingsSchema = z
+  .object({
+    businessHours: businessHoursWeekSchema,
+    regularHolidays: uniqueDateArraySchema("定休日"),
+    specialHolidays: uniqueDateArraySchema("特別休業日"),
+    // HTMLタグを禁止してXSS対策
+    holidayNotice: z
+      .string()
+      .max(1000)
+      .regex(/^[^<>]*$/, { error: "HTMLタグは使用できません" })
+      .nullable()
+      .or(z.literal(""))
+      .transform((v) => v || null),
+  })
+  .superRefine((data, ctx) => {
+    collectBusinessHoursWeekIssues(data.businessHours, ["businessHours"], ctx);
+  });
 
 export type BusinessHoursSettingsInput = z.infer<
   typeof businessHoursSettingsSchema

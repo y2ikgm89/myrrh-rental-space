@@ -1,9 +1,8 @@
 /**
- * Footer — Clean minimal footer with DB business data
+ * Site Footer — Editorial Magazine 3-column layout
  *
- * Server Component. Business info + navigation from DB.
- * schema.org microdata for NAP consistency.
- * 営業時間 / Google口コミリンク を含む
+ * Server Component. ナビ・ビジネス情報・SNS リンク・営業時間・規約を DB から取得。
+ * schema.org LocalBusiness microdata で NAP (Name / Address / Phone) 整合性を確保。
  */
 
 import type { ReactElement } from "react";
@@ -16,12 +15,13 @@ import { getSocialLinksForFooter } from "@/shared/domain/settings/queries/organi
 import { getFooterTerms } from "@/shared/domain/terms/public-queries";
 import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
+import { cn } from "@/shared/lib/cn";
 import { CopyrightYear } from "./copyright-year";
 import { SocialLinks } from "./social-links";
 
-// =============================================================================
-// Constants
-// =============================================================================
+/* -------------------------------------------------------------------------- */
+/*  Business hours parsing                                                    */
+/* -------------------------------------------------------------------------- */
 
 const DAY_ORDER = [
   "monday",
@@ -33,7 +33,7 @@ const DAY_ORDER = [
   "sunday",
 ] as const;
 
-const DAY_ABBREV: Record<string, string> = {
+const DAY_ABBREV: Record<(typeof DAY_ORDER)[number], string> = {
   monday: "Mo",
   tuesday: "Tu",
   wednesday: "We",
@@ -43,72 +43,77 @@ const DAY_ABBREV: Record<string, string> = {
   sunday: "Su",
 };
 
-// =============================================================================
-// Helpers
-// =============================================================================
-
 interface FooterHoursDisplay {
-  label: string;
-  time: string;
-  microdataContent: string;
+  readonly label: string;
+  readonly time: string;
+  readonly microdataContent: string;
 }
 
-function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
+interface DayTime {
+  readonly key: (typeof DAY_ORDER)[number];
+  readonly label: string;
+  readonly time: string;
+}
+
+function extractDayTimes(businessHours: unknown): DayTime[] {
   if (!isRecord(businessHours)) return [];
 
-  const dayTimes: { key: string; label: string; time: string }[] = [];
+  const result: DayTime[] = [];
   for (const dayKey of DAY_ORDER) {
     const dayValue = businessHours[dayKey];
     if (
       !isRecord(dayValue) ||
       !dayValue["isOpen"] ||
       !Array.isArray(dayValue["slots"])
-    )
+    ) {
       continue;
-
+    }
     for (const slot of dayValue["slots"]) {
       if (
         !isRecord(slot) ||
         typeof slot["openTime"] !== "string" ||
         typeof slot["closeTime"] !== "string"
-      )
+      ) {
         continue;
-      dayTimes.push({
+      }
+      result.push({
         key: dayKey,
         label: DAY_LABELS[dayKey] ?? dayKey,
         time: `${slot["openTime"]}-${slot["closeTime"]}`,
       });
     }
   }
+  return result;
+}
 
+function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
+  const dayTimes = extractDayTimes(businessHours);
   if (dayTimes.length === 0) return [];
 
-  const groups = new Map<string, string[]>();
-  const groupKeys = new Map<string, string[]>();
+  const groups = new Map<
+    string,
+    { labels: string[]; keys: (typeof DAY_ORDER)[number][] }
+  >();
   for (const dt of dayTimes) {
     const existing = groups.get(dt.time);
-    const existingKeys = groupKeys.get(dt.time);
-    if (existing && existingKeys) {
-      existing.push(dt.label);
-      existingKeys.push(dt.key);
+    if (existing) {
+      existing.labels.push(dt.label);
+      existing.keys.push(dt.key);
     } else {
-      groups.set(dt.time, [dt.label]);
-      groupKeys.set(dt.time, [dt.key]);
+      groups.set(dt.time, { labels: [dt.label], keys: [dt.key] });
     }
   }
 
   const result: FooterHoursDisplay[] = [];
-  for (const [time, labels] of groups) {
-    const keys = groupKeys.get(time) ?? [];
+  for (const [time, { labels, keys }] of groups) {
     const [opens = "", closes = ""] = time.split("-");
-    const abbrevs = keys.map((k) => DAY_ABBREV[k] ?? k);
+    const abbrevs = keys.map((k) => DAY_ABBREV[k]);
     const firstAbbrev = abbrevs[0] ?? "";
     const lastAbbrev = abbrevs[abbrevs.length - 1] ?? "";
     const microdataContent =
       abbrevs.length > 1
         ? `${firstAbbrev}-${lastAbbrev} ${opens}-${closes}`
         : `${firstAbbrev} ${opens}-${closes}`;
-
     const firstLabel = labels[0] ?? "";
     const lastLabel = labels[labels.length - 1] ?? "";
     result.push({
@@ -117,13 +122,24 @@ function parseFooterHours(businessHours: unknown): FooterHoursDisplay[] {
       microdataContent,
     });
   }
-
   return result;
 }
 
-// =============================================================================
-// Component
-// =============================================================================
+/* -------------------------------------------------------------------------- */
+/*  Component                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const NAV_LINK_CLASS =
+  "text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+
+const CONTACT_LINK_CLASS =
+  "text-foreground transition-colors hover:underline hover:underline-offset-4 focus-visible:underline focus-visible:underline-offset-4 focus-visible:outline-none";
+
+const GOOGLE_LINK_CLASS =
+  "inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+
+const HEADING_CLASS =
+  "text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground";
 
 export async function Footer(): Promise<ReactElement> {
   const [info, footerNav, footerSettings, socialLinks, footerTerms] =
@@ -136,6 +152,12 @@ export async function Footer(): Promise<ReactElement> {
     ]);
   const brandShort = (info.name.split(" ")[0] ?? "MYRRH").toUpperCase();
   const hoursDisplay = parseFooterHours(info.businessHours);
+  const taglineLines = (
+    footerSettings.tagline ??
+    "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
+  )
+    .split("\n")
+    .filter((line) => line.length > 0);
 
   return (
     <footer role="contentinfo" className="border-t border-border bg-surface">
@@ -144,7 +166,12 @@ export async function Footer(): Promise<ReactElement> {
         aria-hidden="true"
       />
       <div className="mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-20">
-        <div className="grid gap-10 md:grid-cols-3 md:gap-16">
+        <div
+          className={cn(
+            "grid gap-10 md:gap-16",
+            footerNav.length > 0 ? "md:grid-cols-3" : "md:grid-cols-2",
+          )}
+        >
           {/* Brand */}
           <div>
             <Link
@@ -154,17 +181,12 @@ export async function Footer(): Promise<ReactElement> {
               {brandShort}
             </Link>
             <p className="mt-5 text-[0.8rem] leading-[2.2] text-muted-foreground">
-              {(
-                footerSettings.tagline ??
-                "洗練された空間で、特別なひとときを。\n厳選されたレンタルスペースをご案内します。"
-              )
-                .split("\n")
-                .map((line, i) => (
-                  <span key={`tagline-${line}`}>
-                    {i > 0 && <br />}
-                    {line}
-                  </span>
-                ))}
+              {taglineLines.map((line, i) => (
+                <span key={line}>
+                  {i > 0 && <br />}
+                  {line}
+                </span>
+              ))}
             </p>
             {footerSettings.showSocialLinks && socialLinks.length > 0 && (
               <div className="mt-4">
@@ -174,74 +196,42 @@ export async function Footer(): Promise<ReactElement> {
           </div>
 
           {/* Navigation */}
-          <div>
-            <h3 className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
-              {footerSettings.navigationLabel}
-            </h3>
-            <ul className="mt-4 space-y-3">
-              {footerNav.length > 0 ? (
-                footerNav.map((item) => (
+          {footerNav.length > 0 && (
+            <nav aria-label="フッターナビゲーション">
+              <h2 className={HEADING_CLASS}>
+                {footerSettings.navigationLabel}
+              </h2>
+              <ul className="mt-4 space-y-3">
+                {footerNav.map((item) => (
                   <li key={item.id}>
                     {item.isExternal ? (
                       <a
                         href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-foreground transition-colors hover:text-foreground"
+                        className={NAV_LINK_CLASS}
                       >
                         {item.label}
                         <span className="sr-only"> (新しいタブで開く)</span>
                       </a>
                     ) : (
-                      <Link
-                        href={item.url}
-                        className="text-sm text-foreground transition-colors hover:text-foreground"
-                      >
+                      <Link href={item.url} className={NAV_LINK_CLASS}>
                         {item.label}
                       </Link>
                     )}
                   </li>
-                ))
-              ) : (
-                <>
-                  <li>
-                    <Link
-                      href="/"
-                      className="text-sm text-foreground transition-colors hover:text-foreground"
-                    >
-                      IconHome
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/reservation"
-                      className="text-sm text-foreground transition-colors hover:text-foreground"
-                    >
-                      Reservation
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/contact"
-                      className="text-sm text-foreground transition-colors hover:text-foreground"
-                    >
-                      Contact
-                    </Link>
-                  </li>
-                </>
-              )}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            </nav>
+          )}
 
-          {/* Contact — microdata for NAP consistency */}
+          {/* Contact — schema.org microdata for NAP consistency */}
           <address
             itemScope
             itemType="https://schema.org/LocalBusiness"
             className="not-italic"
           >
-            <h3 className="text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
-              {footerSettings.contactLabel}
-            </h3>
+            <h2 className={HEADING_CLASS}>{footerSettings.contactLabel}</h2>
             <meta itemProp="name" content={info.name} />
             <ul className="mt-4 space-y-3 text-sm text-foreground">
               {info.email && (
@@ -249,7 +239,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="email"
                     href={`mailto:${info.email}`}
-                    className="transition-colors hover:text-foreground"
+                    className={CONTACT_LINK_CLASS}
                   >
                     {info.email}
                   </a>
@@ -260,7 +250,7 @@ export async function Footer(): Promise<ReactElement> {
                   <a
                     itemProp="telephone"
                     href={`tel:${info.phone}`}
-                    className="transition-colors hover:text-foreground"
+                    className={CONTACT_LINK_CLASS}
                   >
                     {info.phone}
                   </a>
@@ -296,10 +286,9 @@ export async function Footer(): Promise<ReactElement> {
                 </li>
               )}
 
-              {/* 営業時間（microdata付き） */}
               {hoursDisplay.length > 0 && (
                 <li className="pt-1">
-                  <span className="block text-[0.6rem] uppercase tracking-[0.18em] text-muted-foreground">
+                  <span className={cn(HEADING_CLASS, "block")}>
                     {footerSettings.hoursLabel}
                   </span>
                   <div className="mt-2 space-y-1">
@@ -321,7 +310,6 @@ export async function Footer(): Promise<ReactElement> {
                 </li>
               )}
 
-              {/* Google リンク */}
               {(info.googleMapsUrl || info.googleReviewUrl) && (
                 <li className="flex flex-col gap-2 pt-1">
                   {info.googleMapsUrl && (
@@ -329,10 +317,14 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                      className={GOOGLE_LINK_CLASS}
                     >
                       Google Maps で見る
-                      <IconExternalLink className="h-3.5 w-3.5" />
+                      <IconExternalLink
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only"> (新しいタブで開く)</span>
                     </a>
                   )}
                   {info.googleReviewUrl && (
@@ -340,10 +332,14 @@ export async function Footer(): Promise<ReactElement> {
                       href={info.googleReviewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+                      className={GOOGLE_LINK_CLASS}
                     >
                       Google で口コミを書く
-                      <IconExternalLink className="h-3.5 w-3.5" />
+                      <IconExternalLink
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only"> (新しいタブで開く)</span>
                     </a>
                   )}
                 </li>
@@ -353,19 +349,22 @@ export async function Footer(): Promise<ReactElement> {
         </div>
 
         <div className="mt-14 border-t border-border pt-8">
-          {footerTerms.length > 0 ? (
-            <div className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {footerTerms.length > 0 && (
+            <nav
+              aria-label="規約・法的文書"
+              className="mb-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+            >
               {footerTerms.map((terms) => (
                 <Link
                   key={terms.slug}
                   href={`/terms/${terms.slug}`}
-                  className="transition-colors hover:text-foreground"
+                  className="transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
                 >
                   {terms.title}
                 </Link>
               ))}
-            </div>
-          ) : null}
+            </nav>
+          )}
           <p className="text-center text-[0.6rem] tracking-[0.1em] text-muted-foreground">
             &copy; <CopyrightYear /> {info.name}. All rights reserved.
           </p>
