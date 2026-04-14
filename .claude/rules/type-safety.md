@@ -247,7 +247,7 @@ export function withMeta<T extends z.ZodType>(schema: T, meta: FieldMeta): T {
 
 **7. `standardSchemaResolver` 境界変換（`auto-section-form.tsx` の RHF 呼び出しのみ）**
 
-RHF の `standardSchemaResolver` は `StandardSchemaV1<FieldValues>` を要求するが、動的セクション定義の `configSchema` は `z.ZodType<unknown>` として保持される（`sectionConfigSchemas` マップから取得）。`configSchema` は全て `z.object({...})` で定義されるため実行時は安全だが、TypeScript の invariance のため `as unknown as z.ZodObject<Record<string, z.ZodType>>` で橋渡しする。同パターンは `react-patterns.md` §React Hook Form — `Control<T>` 不変性 で説明される「Pure Component + Connected wrapper」の例外として許容される（単一フォームのため wrapper 分離は過剰）。
+RHF の `standardSchemaResolver` は `StandardSchemaV1<FieldValues>` を要求するが、動的セクション定義の `configSchema` は `z.ZodType<unknown>` として保持される（`sectionConfigSchemas` マップから取得）。`configSchema` は全て `z.object({...})` で定義されるため実行時は安全だが、TypeScript の invariance のため `as unknown as z.ZodObject<Record<string, z.ZodType>>` で橋渡しする。単一フォームへの適用であり Pure Component + Connected wrapper への分離は過剰なため、境界ヘルパーとして本ファイル内で完結する例外として許容する。
 
 ```typescript
 // src/app/(admin)/admin/(dashboard)/pages/[slug]/_sections/_components/auto-section-form.tsx
