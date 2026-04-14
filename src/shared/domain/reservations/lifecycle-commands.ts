@@ -7,8 +7,6 @@ import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import { validateStatusTransition } from "./status";
 import { CUSTOMER_SELECT, buildPayload } from "./payloads";
 
-export type { ReservationPayload } from "./payloads";
-
 // ---------------------------------------------------------------------------
 // Admin: Status update
 // ---------------------------------------------------------------------------

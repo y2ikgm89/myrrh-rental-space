@@ -10,7 +10,7 @@ import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import { ReservationStatus } from "@generated/prisma/enums";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { getReservationStatus } from "@/shared/domain/reservations/admin-queries";
-import { updateReservationStatusCommand } from "@/shared/domain/reservations/commands";
+import { updateReservationStatusCommand } from "@/shared/domain/reservations/lifecycle-commands";
 import type { ReservationSyncData } from "@/shared/lib/calendar-sync/types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
