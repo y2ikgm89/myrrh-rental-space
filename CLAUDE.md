@@ -47,7 +47,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **配列 uniqueness はスキーマ層で契約** — `imageUrls` / `facilities` / `tags` 等は Zod `.refine()` で重複拒否。UI 層の Set dedup は責務逸脱につき禁止。cross-field 重複（`mainImageUrl` ↔ `imageUrls`）も top-level refine で担保（→ `zod-patterns.md`）
 - **ハードコードカラー禁止** — セマンティックトークン必須（例外: `global-error.tsx`）
 - **`className` テンプレートリテラル禁止** — `cn()` 使用（`@/shared/lib/cn`）
-- **認証済みフローに Turnstile 禁止** — 未認証公開フォーム専用（マイページは `verifyCustomerSession` 済み）
+- **Turnstile 配置基準** — 未認証公開フォームは必須。認証済みフローでも可逆性が低い高リスク操作（予約作成/変更/キャンセル、決済関連等）には許容。ログイン直後の参照系や低リスク操作（プロフィール閲覧等）には不要
 - **app 層からの Prisma 直 import 禁止** — `@/shared/db/prisma` は domain/lib 経由のみ（例外: `calendar-sync` `$queryRaw`）
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須** — スケルトン loading + error boundary
 

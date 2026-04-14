@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { updateTag } from "next/cache";
 import {
   publicReservationSchema,
   type PublicReservationInput,
@@ -26,7 +25,7 @@ import { sendReservationAdminNotification } from "@/shared/lib/email/reservation
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
@@ -97,14 +96,11 @@ export async function submitReservation(
       userAgent,
     });
 
-    // 6. Invalidate cache: reservations (detail + calendar) + customers
-    updateTag(CACHE_TAGS.RESERVATIONS);
-    updateTag(getCacheTag.reservations.detail(result.id));
-    updateTag(getCacheTag.reservations.calendar());
-    updateTag(CACHE_TAGS.CUSTOMERS);
-    if (result.customerId) {
-      updateTag(getCacheTag.customers.detail(result.customerId));
-    }
+    // 6. Invalidate cache: reservations + customers + coupons + notifications
+    invalidateReservationCaches(result.id, result.customerId ?? null, {
+      coupons: true,
+      notifications: true,
+    });
 
     // 7. Send admin notification email (fire-and-forget)
     fireAndForget(
@@ -129,7 +125,6 @@ export async function submitReservation(
         category: ErrorCategory.DATABASE,
       },
     );
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     return { id: result.id };
   } catch (error) {

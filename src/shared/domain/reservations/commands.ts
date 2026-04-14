@@ -399,6 +399,7 @@ export async function createAdminReservationCommand(input: {
 
   return {
     id: reservation.id,
+    customerId: reservation.customerId,
     payload: buildPayload({
       reservationId: reservation.id,
       customer: reservation.customer,
@@ -531,6 +532,7 @@ export async function updateAdminReservationCommand(
 
   return {
     googleCalendarEventId: currentReservation.googleCalendarEventId,
+    customerId: input.customerId,
     payload: buildPayload({
       reservationId: id,
       customer: currentReservation.customer,
@@ -590,6 +592,8 @@ export async function updateReservationStatusCommand(
   return {
     previousStatus,
     googleCalendarEventId: reservation.googleCalendarEventId,
+    customerId: reservation.customerId,
+    couponId: reservation.couponId,
     payload: buildPayload({
       reservationId: id,
       customer: reservation.customer,
@@ -641,6 +645,7 @@ export async function deleteReservationCommand(
       status: true,
       googleCalendarEventId: true,
       couponId: true,
+      customerId: true,
     },
   });
 
@@ -681,13 +686,20 @@ export async function deleteReservationCommand(
 
   return {
     googleCalendarEventId: reservation.googleCalendarEventId,
+    customerId: reservation.customerId,
+    couponId: reservation.couponId,
   };
 }
 
 export async function restoreReservationCommand(id: string) {
   const reservation = await prisma.reservation.findUnique({
     where: { id },
-    select: { id: true, deletedAt: true, couponId: true },
+    select: {
+      id: true,
+      deletedAt: true,
+      couponId: true,
+      customerId: true,
+    },
   });
 
   if (!reservation) {
@@ -710,6 +722,11 @@ export async function restoreReservationCommand(id: string) {
       });
     }
   });
+
+  return {
+    customerId: reservation.customerId,
+    couponId: reservation.couponId,
+  };
 }
 
 // ---------------------------------------------------------------------------

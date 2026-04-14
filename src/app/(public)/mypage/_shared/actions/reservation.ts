@@ -11,8 +11,7 @@ import {
   customerReservationEditSchema,
   type CustomerReservationEditInput,
 } from "@/shared/lib/validations/customer-reservation";
-import { updateTag } from "next/cache";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import {
   createMutationError,
   type MutationResult,
@@ -31,17 +30,6 @@ import { ErrorCategory } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
 const reservationIdSchema = z.string().uuid({ error: "予約IDが不正です" });
-
-function invalidateReservationCache(
-  reservationId: string,
-  customerId: string,
-): void {
-  updateTag(CACHE_TAGS.RESERVATIONS);
-  updateTag(getCacheTag.reservations.detail(reservationId));
-  updateTag(getCacheTag.reservations.calendar());
-  updateTag(CACHE_TAGS.CUSTOMERS);
-  updateTag(getCacheTag.customers.detail(customerId));
-}
 
 export async function cancelReservationAction(
   reservationId: string,
@@ -78,7 +66,10 @@ export async function cancelReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache(parsedId.data, customer.id);
+    invalidateReservationCaches(parsedId.data, customer.id, {
+      coupons: true,
+      notifications: true,
+    });
 
     // Create admin notification (fire-and-forget)
     fireAndForget(
@@ -133,7 +124,9 @@ export async function updateReservationAction(
 
     if (!result.success) return createMutationError(result.error);
 
-    invalidateReservationCache(parsed.data.reservationId, customer.id);
+    invalidateReservationCaches(parsed.data.reservationId, customer.id, {
+      coupons: true,
+    });
     return null;
   } catch (error) {
     if (error instanceof DomainError) {

@@ -4,6 +4,7 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
@@ -158,7 +159,6 @@ export const updateReservationStatus = async (
             category: ErrorCategory.DATABASE,
           },
         );
-        updateTag(CACHE_TAGS.NOTIFICATIONS);
       }
 
       // 確認・キャンセル以外のステータス変更（完了、無断キャンセル等）は汎用通知メール
@@ -196,9 +196,13 @@ export const updateReservationStatus = async (
         );
       }
 
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(id));
-      updateTag(getCacheTag.reservations.calendar());
+      const isCancellation =
+        status === ReservationStatus.CANCELLED &&
+        result.previousStatus !== ReservationStatus.CANCELLED;
+      invalidateReservationCaches(id, result.customerId, {
+        coupons: isCancellation && result.couponId !== null,
+        notifications: isCancellation,
+      });
     },
   });
 };
@@ -233,31 +237,35 @@ export const deleteReservation = async (
   const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  let googleCalendarEventId: string | null = null;
+  let deleteResult:
+    | Awaited<ReturnType<typeof deleteReservationCommand>>
+    | undefined;
 
   return executeAdminMutationResult({
     resource: "reservation",
     action: "delete",
     resourceId: id,
     execute: async (user) => {
-      const result = await deleteReservationCommand(id, user.id);
-      googleCalendarEventId = result.googleCalendarEventId;
+      deleteResult = await deleteReservationCommand(id, user.id);
       return null;
     },
     afterSuccess: () => {
-      if (googleCalendarEventId) {
-        fireAndForget(deleteCalendarSync(id, googleCalendarEventId), {
-          operation: "deleteCalendarSync",
-          category: ErrorCategory.EXTERNAL_API,
-          severity: ErrorSeverity.LOW,
-          context: { reservationId: id, trigger: "deleteReservation" },
-        });
+      if (!deleteResult) return;
+      if (deleteResult.googleCalendarEventId) {
+        fireAndForget(
+          deleteCalendarSync(id, deleteResult.googleCalendarEventId),
+          {
+            operation: "deleteCalendarSync",
+            category: ErrorCategory.EXTERNAL_API,
+            severity: ErrorSeverity.LOW,
+            context: { reservationId: id, trigger: "deleteReservation" },
+          },
+        );
       }
 
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(id));
-      updateTag(getCacheTag.reservations.calendar());
-      updateTag(CACHE_TAGS.CUSTOMERS);
+      invalidateReservationCaches(id, deleteResult.customerId, {
+        coupons: deleteResult.couponId !== null,
+      });
     },
   });
 };
@@ -268,19 +276,23 @@ export const restoreReservation = async (
   const parsed = z.string().uuid({ error: "IDが不正です" }).safeParse(id);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
+  let restoreResult:
+    | Awaited<ReturnType<typeof restoreReservationCommand>>
+    | undefined;
+
   return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
     resourceId: id,
     execute: async () => {
-      await restoreReservationCommand(id);
+      restoreResult = await restoreReservationCommand(id);
       return null;
     },
     afterSuccess: () => {
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(id));
-      updateTag(getCacheTag.reservations.calendar());
-      updateTag(CACHE_TAGS.CUSTOMERS);
+      if (!restoreResult) return;
+      invalidateReservationCaches(id, restoreResult.customerId, {
+        coupons: restoreResult.couponId !== null,
+      });
     },
   });
 };
@@ -313,6 +325,7 @@ export async function updateCustomerFromReservation(
       updateTag(CACHE_TAGS.CUSTOMERS);
       updateTag(getCacheTag.customers.detail(data.customerId));
       updateTag(CACHE_TAGS.RESERVATIONS);
+      updateTag(getCacheTag.reservations.calendar());
     },
   });
 }

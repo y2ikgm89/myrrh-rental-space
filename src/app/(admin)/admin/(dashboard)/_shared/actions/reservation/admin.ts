@@ -1,10 +1,9 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -88,10 +87,9 @@ export const createAdminReservation = async (
         });
       }
 
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(result.id));
-      updateTag(getCacheTag.reservations.calendar());
-      updateTag(CACHE_TAGS.CUSTOMERS);
+      invalidateReservationCaches(result.id, result.customerId, {
+        coupons: true,
+      });
     },
     resolveAuditResourceId: (payload) => payload.id,
   });
@@ -156,9 +154,7 @@ export const updateAdminReservation = async (
         });
       }
 
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(id));
-      updateTag(getCacheTag.reservations.calendar());
+      invalidateReservationCaches(id, result.customerId, { coupons: true });
     },
   });
 };

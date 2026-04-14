@@ -2,6 +2,14 @@ import type { ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
 
 type HeadingLevel = 1 | 2 | 3 | 4;
+type HeadingTag = "h1" | "h2" | "h3" | "h4";
+
+const tagMap = {
+  1: "h1",
+  2: "h2",
+  3: "h3",
+  4: "h4",
+} as const satisfies Record<HeadingLevel, HeadingTag>;
 
 const levelClasses = {
   1: "text-h1",
@@ -25,7 +33,7 @@ interface HeadingProps {
 }
 
 export function Heading({ level, children, className, accent }: HeadingProps) {
-  const Tag = `h${level}` as const;
+  const Tag = tagMap[level];
   return (
     <>
       <Tag className={cn(fontClasses[level], levelClasses[level], className)}>
