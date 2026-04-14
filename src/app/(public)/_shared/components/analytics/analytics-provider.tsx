@@ -12,7 +12,7 @@
 import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import { useCookieConsent } from "@/public/components/cookie-consent-banner";
 import type { AnalyticsConfig } from "@/shared/lib/analytics/config";
-import { AnalyticsType } from "@generated/prisma/enums";
+import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface AnalyticsProviderProps {
   config: AnalyticsConfig;

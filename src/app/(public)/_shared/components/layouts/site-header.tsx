@@ -21,7 +21,7 @@ import type { PublicNavItem } from "@/shared/domain/navigation/queries";
 import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/public/components/design-system/button";
 

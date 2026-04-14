@@ -30,7 +30,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { fireAndForget } from "@/shared/lib/async-utils";
-import { CalendarSyncMethod } from "@generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { serverEnv } from "@/shared/lib/env/server";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { jsonError, jsonSuccess } from "@/shared/lib/route-responses";

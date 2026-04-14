@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { InquiryStatus } from "@generated/prisma/enums";
+import type { InquiryStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { Badge } from "@/public/components/design-system/badge";
 import { Stack } from "@/public/components/design-system/stack";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Badge } from "@/public/components/design-system/badge";
 import { Heading } from "@/public/components/design-system/heading";
-import type { PaymentStatus } from "@generated/prisma/enums";
+import type { PaymentStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   getValidPaymentStatus,
   PAYMENT_STATUS_LABELS,

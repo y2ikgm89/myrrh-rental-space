@@ -7,7 +7,7 @@ import {
   formatPrice,
 } from "@/shared/lib/pricing/format";
 import { getTaxRate } from "@/shared/lib/pricing/tax";
-import { TaxInputMode, TaxRateType } from "@generated/prisma/enums";
+import { TaxInputMode, TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 公開ページ用の税設定対応料金フォーマットフック
