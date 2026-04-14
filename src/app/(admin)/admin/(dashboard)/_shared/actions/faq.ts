@@ -16,6 +16,8 @@ import {
   bulkDeleteFaqItems as bulkDeleteFaqItemsCommand,
   bulkMoveFaqItems as bulkMoveFaqItemsCommand,
   bulkPublishFaqItems as bulkPublishFaqItemsCommand,
+} from "@/shared/domain/faq/commands";
+import {
   createFaqItem as createFaqItemCommand,
   deleteFaqItem as deleteFaqItemCommand,
   permanentlyDeleteFaqItem as permanentlyDeleteFaqItemCommand,
@@ -23,7 +25,7 @@ import {
   restoreFaqItem as restoreFaqItemCommand,
   toggleFaqItemPublished as toggleFaqItemPublishedCommand,
   updateFaqItem as updateFaqItemCommand,
-} from "@/shared/domain/faq/commands";
+} from "@/shared/domain/faq/item-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeFaqCache } from "@/shared/lib/cloudflare";

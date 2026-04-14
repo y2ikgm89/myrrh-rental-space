@@ -175,6 +175,8 @@ import {
   deleteFaqItem,
   reorderFaqItems,
   toggleFaqItemPublished,
+} from "@/shared/domain/faq/item-commands";
+import {
   voteFaqItemHelpful,
   detectStaleFaqItems,
 } from "@/shared/domain/faq/commands";
