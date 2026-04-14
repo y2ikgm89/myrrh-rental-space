@@ -3,8 +3,8 @@ import "server-only";
 import { prisma } from "@/shared/db/prisma";
 import { ReservationStatus, TermsStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import { CANCELLED_BY } from "@/shared/lib/validations/enums/helpers";
 import {
+  CANCELLED_BY,
   CREATABLE_RESERVATION_STATUSES,
   RESERVATION_STATUS_TRANSITIONS,
 } from "@/shared/lib/validations/enums/helpers";

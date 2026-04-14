@@ -25,7 +25,7 @@ type ValidatedCoupon = {
   canCombineWithDurationDiscount: boolean;
 } | null;
 
-export type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export type ReservationPayload = {
   reservationId: string;
