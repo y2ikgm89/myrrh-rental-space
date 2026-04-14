@@ -90,7 +90,7 @@ export function AutoSectionForm({
   // standardSchemaResolver は StandardSchemaV1<FieldValues> を要求するが、
   // z.ZodType<unknown> は input 型が unknown のため直接互換しない。
   // configSchema は常に z.object({...}) で定義されるため FieldValues と互換。
-  // この境界変換は type-safety.md §keysOf/entriesOf と同じ「境界ヘルパー」パターン。
+  // type-safety.md §許可例外 7 で文書化された境界変換パターン。
   const {
     register,
     handleSubmit,
