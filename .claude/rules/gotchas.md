@@ -126,7 +126,14 @@ paths:
 - **`exactOptionalPropertyTypes` 下で Next.js `Link` に optional `onClick` を渡す場合は条件スプレッド** — `onClick={props.onClick}` は `(() => void) | undefined` が `MouseEventHandler` と非互換。`{...(props.onClick && { onClick: props.onClick })}` を使用
 
 - **`<header>` に `role="banner"`、`<footer>` に `role="contentinfo"` を明示** — HTML5 暗黙 role は一部 AT で認識されない。公開ページ `site-header.tsx` / `site-footer.tsx` で設定済み
-- **モバイルメニュー閉じ後はトリガー要素にフォーカス復帰** — `closeMenu` の `onComplete` コールバックで `hamburgerRef.current?.focus()` を呼ぶ。WCAG 2.1 AA §2.4.3（フォーカス順序）準拠
+- **公開モバイルメニューは Radix Dialog (`@radix-ui/react-dialog`) 必須** — 手動オーバーレイ（`useState` + `fixed inset-0`）禁止。Radix が focus trap / Esc / body scroll lock / trigger フォーカス復帰を全て自動処理する。`site-header.tsx` が参照実装
+- **Radix `NavigationMenu.Link` は `asChild` + `active` prop 必須** — Next.js 統合の[公式パターン](https://www.radix-ui.com/primitives/docs/components/navigation-menu#with-client-side-routing)。`usePathname()` で判定し `<NavigationMenu.Link asChild active={isActive}><NextLink aria-current={isActive ? "page" : undefined} /></NavigationMenu.Link>`。`active` prop が `data-active` 属性と aria-current semantics を提供する
+- **`<details>` を `Dialog.Close asChild` でラップ禁止** — summary クリックで accordion 開閉と Dialog 閉じが競合しアコーディオンが開けなくなる。controlled Dialog（`open` state）+ leaf link で `onClick={closeMenu}` を個別付与するパターンを使う
+- **Dialog / メニュー閉じコールバックは `onClick` を使う（`onNavigate` ではない）** — `onNavigate` は client-side SPA 遷移時のみ発火で外部 URL / modifier click では発火しない。Dialog 閉じには `onClick` が必須
+- **`text-foreground` から `hover:text-foreground` は no-op バグ** — 遷移しない無効 hover。Editorial スタイル変換時に頻出。base が `text-muted-foreground` のときのみ `hover:text-foreground` が有効。base が `text-foreground` の場合は `hover:underline hover:underline-offset-4` を使う
+- **公開ページ layout の Client Component で `useSession()` 禁止** — Better Auth クライアントが全公開ページバンドルに含まれる。認証状態は layout の Server Component で `getCurrentCustomerUser()` から解決し、discriminator（例: `"mypage" | "login" | null`）を prop で Client Component に渡す。`mobile-nav.tsx` / `site-header.tsx` 参照実装
+- **PPR で `getCurrentCustomerUser()` を layout 本体 `await` 禁止** — uncached header/cookie 読み取りのため `"Route used uncached data outside of <Suspense>"` ビルドエラー。必ず `<Suspense>` 内の async SC wrapper から呼ぶ。request 単位で `cache()` メモ化されるため複数 Suspense 境界から独立に呼んでも DB アクセスは 1 回
+- **`site-header.tsx` の brand Link / authLink には `whitespace-nowrap` 必須** — 外側 flex に `gap-*` を追加すると、`tracking-[0.08em]` の日本語ブランド名（例: 「株式会社サンプル」）や認証リンクラベルが折り返される。`justify-between` + `gap-*` で最小間隔を確保しつつ、テキスト子要素は個別に nowrap を付ける
 
 ## Page-First Architecture（公開ページ）
 
@@ -167,6 +174,11 @@ paths:
 - **`<button>` 内にインタラクティブ要素（`<button>`, `<a>`, `<input>`）をネスト禁止** — HTML 仕様違反。カード全体が `<button role="radio">` で内部に詳細リンクが必要な場合は `<div role="radio" tabIndex={0} onKeyDown={...}>` + 内部 `<button>` に変更する
 - **Three.js / PixiJS は未使用** — 旧 `effects/` インフラ・`VisualEffectsProvider` は削除済み。`package.json` に `three` / R3F / `pixi.js` は含めない。再導入しない
 - **公開ヘッダーの NavigationMenu は `@radix-ui/react-navigation-menu` を直接使用** — shadcn/ui の NavigationMenu は `@/admin/components/ui` にインストールされるが、公開ページは admin の UI を import しない。`import * as NavigationMenuPrimitive from "@radix-ui/react-navigation-menu"` で直接使用する
+- **FAQ 項目とカテゴリはソフトデリート** — `deletedAt: null` ガードが queries.ts 全クエリに必須。親カテゴリの `category: { deletedAt: null }` も同時適用（親ソフトデリートガードパターン）。30 日以内は Recycle Bin から復元可能。`getDeletedFaqItems` / `getDeletedFaqCategories` は復元候補のみを返す
+- **FAQ 項目の `answerPlainText` は write 時に自動生成** — `stripHtmlToText(answerHtml, 200)` を `createFaqItem` / `updateFaqItem` コマンド内で計算。Space の 3-column Lexical パターン準拠。リスト表示時のプレビュー用
+- **FAQ bulk 操作は `updateMany` または interactive `$transaction`** — `bulkPublishFaqItems` / `bulkDeleteFaqItems` は単純な `updateMany`、`bulkMoveFaqItems` は order の逐次 increment が必要なため `prisma.$transaction(async (tx) => { ... })` で実装（gotchas.md §トランザクション）
+- **FAQ Item の Side panel preview は Radix Dialog の slide-in variant** — 既存の中央 Dialog primitive ではなく `@radix-ui/react-dialog` を直接使い、`fixed right-0 top-0 ... slide-in-from-right` で side drawer 風に実装。`FaqItemPreviewSheet.tsx` が参照実装
+- **FAQ 一覧テーブルの行クリック preview と checkbox/dragHandle/ActionCell の click 衝突** — `onClick={stopPropagation}` で行クリックを遮断する。PointerSensor の `distance: 8` で drag 開始閾値を確保（`FaqItemTable.tsx` 参照）
 - **公開ページ詳細で `Container variant="narrow"` とコンテンツ幅設定の併用禁止** — `max-w-3xl`(768px) がハードコードされ、管理画面の幅設定を上書きする。コンテンツ幅を設定値に従わせる場合は `Container`（default）+ `resolveWidthStyles` の `className`/`style` で制御する
 - **`Container variant="narrow"` + 2カラムグリッドは幅が不足する** — `narrow`(768px) にサイドバー(320px)+gap(48px)を入れるとメイン領域が400pxしか残らない。2カラムレイアウトには `Container`（default: 1280px）を使用
 - **公開ページの sticky サイドバーは `--header-height` を考慮** — `lg:top-8` ではヘッダーに隠れる。`lg:top-[calc(var(--header-height)+2rem)]` を使用（参照実装: `spaces/[slug]/page.tsx`, `contact/page.tsx`）
@@ -214,6 +226,7 @@ paths:
 
 - **Playwright MCP が navigate/close 両方タイムアウトする場合** — HMR 多発後にブラウザセッションがスタックする。dev サーバーを `cmd //c "taskkill /PID <pid> /F /T"` で強制終了→再起動すると Playwright も新セッションで回復する
 - **MINGW64 で `bun run X 2>&1 | tail -N` が途中で切り詰められる** — Bash ツール経由のパイプで長い stdout が truncate されるケースがある。長い出力を確実に取得するには `cmd > /tmp/out 2>&1; echo "EXIT:$?"; tail -N /tmp/out` を使う
+- **Zod スキーマの dead code パターンに注意** — `.refine()` 付きスキーマを定義したが ZodEffects が `.omit()` 等と非互換になるため、`*Base` 版を作って parent に埋め込むと validation が完全に無効化される（例: `businessHoursDaySchema` + `businessHoursDayBaseSchema`）。コメント「refine後の型は...基本スキーマを使用」はこのアンチパターンの兆候。解決策: validation 本体を `collectXxxIssues(data, pathPrefix, ctx)` ヘルパーとして shared に抽出し、parent schema の `.superRefine()` から呼ぶ（→ `zod-patterns.md`）
 
 - **`useRef` 変数名は `Ref` サフィックス必須** — `@eslint-react/naming-convention-ref-name` が `useRef` の戻り値に `ref` または `*Ref` 命名を要求。`touchStartX` → `touchStartXRef`
 - **`useRef<T>()` に初期値なしは TS6 strict でエラー** — `useRef<ReturnType<typeof setTimeout>>()` → `useRef<ReturnType<typeof setTimeout>>(undefined)` と明示する。`useRef` overload は引数1つを要求する
@@ -264,6 +277,7 @@ paths:
 - **hook スクリプトの `grep` + `pipefail` 罠** — `set -euo pipefail` 下で `var=$(cmd | grep pattern | head -1)` は grep 不一致（exit 1）でスクリプトが無音終了・stderr なし。根本解決: `if ! cmd | grep -qE 'pattern'; then exit 0; fi`（`if` 条件式内は `set -e` 対象外が Bash 仕様）
 - **Subagent report は必ず独立検証する** — implementer の「commit SHA: xxx」「EXIT: 0」報告を鵜呑みにせず、次タスク dispatch 前に `git log --oneline -N` + `git show --stat HEAD` で実在確認する。報告内容と git state の乖離は稀だが発生する（特に安価なモデルを implementer に使った場合）。乖離検出時は同じタスクをより上位モデルで再 dispatch
 - **Implementation サブエージェントに haiku を使わない** — ファイル編集 + commit を伴うタスクで haiku モデルは Bash/Edit ツール呼び出しを省略し成功報告を捏造することがある。`Agent` tool の `model: "haiku"` オプションは read-only 調査（Explore 等）のみで使用し、implementer には sonnet 以上を指定する
+- **Explore subagent のファイル名 hallucination** — Explore エージェントは調査結果に実在しないファイルパス（例: `color-swatch-picker.tsx` / `day-view.tsx` 等、それらしいが存在しないパス）を混ぜることがある。大量の発見を報告してきた場合は `Glob` / `Read` で実在確認してから対処する。特に「さらに徹底調査」指示後の報告は hallucination 率が上がる傾向
 
 ## Worktree
 

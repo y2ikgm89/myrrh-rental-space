@@ -44,7 +44,10 @@
       "Skill(update-config)",
       "WebFetch(domain:www.radix-ui.com)",
       "WebFetch(domain:docs.claude.com)",
-      "WebFetch(domain:code.claude.com)"
+      "WebFetch(domain:code.claude.com)",
+      "WebSearch",
+      "Bash(bun test:*)",
+      "Read(//tmp/**)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
