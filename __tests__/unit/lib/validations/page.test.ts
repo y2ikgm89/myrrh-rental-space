@@ -357,11 +357,11 @@ describe("createPageSchema", () => {
 
 describe("SYSTEM_PAGES", () => {
   test("システムページが正しく定義されている", () => {
-    expect(SYSTEM_PAGES.length).toBe(10);
+    expect(SYSTEM_PAGES.length).toBe(11);
 
     const slugs = SYSTEM_PAGES.map((p) => p.slug);
     expect(slugs).toContain("home");
-    expect(slugs).toContain("privacy");
+    expect(slugs).toContain("access");
     expect(slugs).toContain("about");
     expect(slugs).toContain("faq");
     expect(slugs).toContain("reservation");
@@ -370,6 +370,7 @@ describe("SYSTEM_PAGES", () => {
     expect(slugs).toContain("posts");
     expect(slugs).toContain("news");
     expect(slugs).toContain("terms");
+    expect(slugs).toContain("journal");
   });
 
   test("すべてのシステムページにslug/title/descriptionがある", () => {
@@ -389,10 +390,10 @@ describe("SYSTEM_PAGE_SLUGS", () => {
 
 describe("getSystemPageDefinition", () => {
   test("存在するスラッグは定義を返す", () => {
-    const result = getSystemPageDefinition("privacy");
+    const result = getSystemPageDefinition("access");
     expect(result).toBeDefined();
-    expect(result?.slug).toBe("privacy");
-    expect(result?.title).toBe("プライバシーポリシー");
+    expect(result?.slug).toBe("access");
+    expect(result?.title).toBe("アクセス");
   });
 
   test("存在しないスラッグはundefinedを返す", () => {
@@ -404,7 +405,7 @@ describe("getSystemPageDefinition", () => {
 describe("isSystemPageSlug", () => {
   test("システムページスラッグはtrue", () => {
     expect(isSystemPageSlug("home")).toBe(true);
-    expect(isSystemPageSlug("privacy")).toBe(true);
+    expect(isSystemPageSlug("access")).toBe(true);
     expect(isSystemPageSlug("about")).toBe(true);
     expect(isSystemPageSlug("reservation")).toBe(true);
   });
@@ -418,7 +419,7 @@ describe("isSystemPageSlug", () => {
 describe("canDeletePage", () => {
   test("システムページは削除不可", () => {
     expect(canDeletePage("home")).toBe(false);
-    expect(canDeletePage("privacy")).toBe(false);
+    expect(canDeletePage("access")).toBe(false);
     expect(canDeletePage("about")).toBe(false);
     expect(canDeletePage("contact")).toBe(false);
   });

@@ -309,7 +309,7 @@ describe("locationFormSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe(
-        "開店時刻は HH:MM 形式で入力してください",
+        "開店時刻は HH:mm 形式で入力してください",
       );
     }
   });
@@ -337,7 +337,7 @@ describe("locationFormSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe(
-        "閉店時刻は HH:MM 形式で入力してください",
+        "閉店時刻は HH:mm 形式で入力してください",
       );
     }
   });

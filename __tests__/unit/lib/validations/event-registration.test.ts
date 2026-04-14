@@ -6,7 +6,7 @@ import {
 
 describe("publicEventRegistrationSchema", () => {
   const validInput = {
-    eventId: "event-1",
+    eventId: "550e8400-e29b-41d4-a716-446655440000",
     name: "山田太郎",
     email: "yamada@example.com",
     numberOfPeople: 2,
@@ -96,7 +96,7 @@ describe("publicEventRegistrationSchema", () => {
 
 describe("adminEventRegistrationSchema", () => {
   const validInput = {
-    eventId: "event-1",
+    eventId: "550e8400-e29b-41d4-a716-446655440000",
     name: "山田太郎",
     email: "yamada@example.com",
     numberOfPeople: 1,
