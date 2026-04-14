@@ -17,7 +17,7 @@ import {
 import { Button } from "@/admin/components/ui/button";
 import { Badge } from "@/admin/components/ui/badge";
 import { formatDate } from "@/shared/lib/date-format";
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { UserActions } from "../_components/UserActions";
 import type { Metadata } from "next";
 

@@ -41,7 +41,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import type { SpaceEditFormData } from "../schema";
 
 type SpaceEditPricingTabPanelProps = {

@@ -34,7 +34,7 @@ import { updateLayoutSettings } from "@/admin/actions/settings";
 import { layoutFormSchema } from "@/admin/actions/settings/schemas/form-schemas-privacy-appearance";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { LayoutWidth } from "@generated/prisma/enums";
+import { LayoutWidth } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidLayoutWidth } from "@/shared/lib/validations/enums/guards";
 import { getValidLayoutWidth } from "@/shared/lib/validations/enums/helpers";
 import {

@@ -21,6 +21,7 @@ import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deleteUser, updateUserRole } from "@/admin/actions/user";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { Role, isAdminRole } from "@/admin/lib/role-guards";
+import { ROLE_LABELS } from "@/shared/lib/admin-roles";
 import type { UserData } from "@/shared/domain/users/types";
 
 type Props = {
@@ -65,7 +66,7 @@ export function UserActions({ user }: Props) {
   }
 
   const newRole = isAdminRole(user.role) ? Role.USER : Role.ADMIN;
-  const newRoleLabel = isAdminRole(user.role) ? "ユーザー" : "管理者";
+  const newRoleLabel = ROLE_LABELS[newRole];
 
   return (
     <>

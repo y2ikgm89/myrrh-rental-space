@@ -40,7 +40,7 @@ import {
 } from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
-import { AnalyticsType } from "@generated/prisma/enums";
+import { AnalyticsType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidAnalyticsType } from "@/shared/lib/validations/enums/guards";
 
 interface SeoSectionProps {

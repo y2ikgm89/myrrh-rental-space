@@ -25,7 +25,7 @@ import {
   type InstagramConfig,
 } from "@/admin/actions/instagram";
 import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { InstagramFeedLayout } from "@generated/prisma/enums";
+import { InstagramFeedLayout } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums/guards";
 
 // =============================================================================

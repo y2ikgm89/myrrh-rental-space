@@ -28,7 +28,7 @@ import {
   DialogTrigger,
   Badge,
 } from "@/admin/components/ui";
-import { TermsType } from "@generated/prisma/enums";
+import { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 import { getTemplatesForType } from "@/shared/lib/terms-templates";
 import type { TablerIcon } from "@tabler/icons-react";
 

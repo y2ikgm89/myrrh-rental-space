@@ -10,7 +10,7 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   type AnnouncementBarType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Constants

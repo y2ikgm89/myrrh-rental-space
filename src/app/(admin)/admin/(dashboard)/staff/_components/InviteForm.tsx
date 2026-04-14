@@ -24,22 +24,18 @@ import {
 } from "@/admin/components/ui/select";
 import { useFormAction } from "@/admin/hooks";
 import { sendInvitation } from "@/admin/actions/staff-invitation";
-
-// スタッフ用ロール（管理画面アクセス可能なロールのみ）
-type StaffRole = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
-const STAFF_ROLES: readonly StaffRole[] = ["ADMIN", "EDITOR", "VIEWER"];
-
-const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
-  SUPER_ADMIN: "スーパー管理者",
-  ADMIN: "管理者",
-  EDITOR: "編集者",
-  VIEWER: "閲覧者",
-};
+import {
+  DASHBOARD_ROLES,
+  type DashboardRole,
+  ROLE_DESCRIPTIONS,
+  ROLE_LABELS,
+  STAFF_INVITABLE_ROLES,
+} from "@/shared/lib/admin-roles";
 
 const inviteSchema = z.object({
   email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
   name: z.string().max(100).optional(),
-  role: z.enum(["SUPER_ADMIN", "ADMIN", "EDITOR", "VIEWER"] as const),
+  role: z.enum(DASHBOARD_ROLES),
 });
 
 export function InviteForm() {
@@ -163,25 +159,21 @@ export function InviteForm() {
         <Label htmlFor="role">ロール *</Label>
         <Select
           value={currentRole}
-          onValueChange={(value: StaffRole) => setValue("role", value)}
+          onValueChange={(value: DashboardRole) => setValue("role", value)}
         >
           <SelectTrigger className="w-full md:w-1/2">
             <SelectValue placeholder="ロールを選択" />
           </SelectTrigger>
           <SelectContent>
-            {STAFF_ROLES.map((role) => (
+            {STAFF_INVITABLE_ROLES.map((role) => (
               <SelectItem key={role} value={role}>
-                {STAFF_ROLE_LABELS[role]}
+                {ROLE_LABELS[role]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
-          {currentRole === "SUPER_ADMIN" &&
-            "システム全体の管理権限（ユーザー管理、監査ログ含む）"}
-          {currentRole === "ADMIN" && "コンテンツ管理全般（ユーザー管理除く）"}
-          {currentRole === "EDITOR" && "割り当てられたページのみ編集可能"}
-          {currentRole === "VIEWER" && "閲覧のみ（編集不可）"}
+          {ROLE_DESCRIPTIONS[currentRole]}
         </p>
         {errors.role && (
           <p className="text-xs text-destructive">{errors.role.message}</p>

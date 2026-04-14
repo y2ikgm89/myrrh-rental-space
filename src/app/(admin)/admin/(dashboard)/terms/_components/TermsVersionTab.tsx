@@ -6,7 +6,7 @@
  * バージョン一覧・切替・公開/アーカイブ/削除コントロール
  */
 
-import { TermsStatus } from "@generated/prisma/enums";
+import { TermsStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   Badge,
   Button,

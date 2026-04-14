@@ -8,7 +8,7 @@ import {
   applyBusinessInfo,
   type BusinessInfo,
 } from "@/shared/lib/terms-templates";
-import type { TermsType } from "@generated/prisma/enums";
+import type { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 import type { Metadata } from "next";
 import type { SearchParams } from "nuqs/server";
 

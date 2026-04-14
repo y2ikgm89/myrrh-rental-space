@@ -17,7 +17,7 @@ import {
   type DragOverEvent,
 } from "@/admin/components/ui";
 import type { SensorDescriptor, SensorOptions } from "@dnd-kit/core";
-import type { NavigationType } from "@generated/prisma/enums";
+import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { Serialized } from "@/shared/lib/serialize";
 import { DragHandle } from "@/admin/components/ui/sortable";
 import type {

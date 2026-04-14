@@ -2,7 +2,7 @@
 
 import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import type { NavigationType } from "@generated/prisma/enums";
+import type { NavigationType } from "@/shared/lib/validations/enums/prisma-types";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   type NavFormData,

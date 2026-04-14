@@ -36,7 +36,7 @@ import {
   AnnouncementBarAnimation,
   AnnouncementBarDesignStyle,
   AnnouncementBarType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { BarList } from "./BarList";

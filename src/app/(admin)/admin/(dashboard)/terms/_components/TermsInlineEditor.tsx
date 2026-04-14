@@ -54,7 +54,7 @@ import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { parseTermsType } from "@/shared/lib/validations/terms";
-import { TermsStatus } from "@generated/prisma/enums";
+import { TermsStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type {
   TermsVersionDetail,
   TermsAgreementItem,

@@ -14,7 +14,7 @@ import {
   DiscountType,
   DurationDiscountOverride,
   TaxRateType,
-} from "@generated/prisma/enums";
+} from "@/shared/lib/validations/enums/prisma-types";
 import { seoOgpFieldsFormSchema } from "@/shared/lib/validations/seo";
 
 const spaceEditFormImageUrlsSchema = z

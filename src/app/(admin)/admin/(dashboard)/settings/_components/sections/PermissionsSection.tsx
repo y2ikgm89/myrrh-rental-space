@@ -33,29 +33,26 @@ import {
   IconX,
   IconChevronRight,
 } from "@tabler/icons-react";
+import { type DashboardRole, ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 // =============================================================================
 // Types & Constants
 // =============================================================================
 
-type StaffRole = "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
-
 interface RoleConfig {
-  id: StaffRole;
-  label: string;
+  id: DashboardRole;
   icon: typeof IconShield;
   color: string;
   bgColor: string;
   borderColor: string;
   description: string;
-  capabilities: string[];
-  restrictions: string[];
+  capabilities: readonly string[];
+  restrictions: readonly string[];
 }
 
-const ROLE_CONFIGS: RoleConfig[] = [
+const ROLE_CONFIGS: readonly RoleConfig[] = [
   {
     id: "SUPER_ADMIN",
-    label: "スーパー管理者",
     icon: IconShield,
     color: "text-destructive",
     bgColor: "bg-destructive/10",
@@ -72,7 +69,6 @@ const ROLE_CONFIGS: RoleConfig[] = [
   },
   {
     id: "ADMIN",
-    label: "管理者",
     icon: IconSettings,
     color: "text-primary",
     bgColor: "bg-primary/10",
@@ -92,7 +88,6 @@ const ROLE_CONFIGS: RoleConfig[] = [
   },
   {
     id: "EDITOR",
-    label: "編集者",
     icon: IconEdit,
     color: "text-warning",
     bgColor: "bg-warning/10",
@@ -111,7 +106,6 @@ const ROLE_CONFIGS: RoleConfig[] = [
   },
   {
     id: "VIEWER",
-    label: "閲覧者",
     icon: IconEye,
     color: "text-muted-foreground",
     bgColor: "bg-muted/50",
@@ -145,7 +139,7 @@ function RoleCard({ config }: { config: RoleConfig }) {
             <Icon className={cn("h-5 w-5", config.color)} />
           </div>
           <div>
-            <CardTitle className="text-lg">{config.label}</CardTitle>
+            <CardTitle className="text-lg">{ROLE_LABELS[config.id]}</CardTitle>
             <CardDescription className="text-sm mt-0.5">
               {config.description}
             </CardDescription>
@@ -212,7 +206,7 @@ function QuickTips() {
             <div>
               <p className="text-sm font-medium">オーナー・責任者</p>
               <p className="text-xs text-muted-foreground">
-                → スーパー管理者（最小限に）
+                → {ROLE_LABELS.SUPER_ADMIN}（最小限に）
               </p>
             </div>
           </div>
@@ -222,7 +216,9 @@ function QuickTips() {
             </Badge>
             <div>
               <p className="text-sm font-medium">運営担当スタッフ</p>
-              <p className="text-xs text-muted-foreground">→ 管理者</p>
+              <p className="text-xs text-muted-foreground">
+                → {ROLE_LABELS.ADMIN}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
@@ -231,7 +227,9 @@ function QuickTips() {
             </Badge>
             <div>
               <p className="text-sm font-medium">ライター・コンテンツ担当</p>
-              <p className="text-xs text-muted-foreground">→ 編集者</p>
+              <p className="text-xs text-muted-foreground">
+                → {ROLE_LABELS.EDITOR}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
@@ -240,7 +238,9 @@ function QuickTips() {
             </Badge>
             <div>
               <p className="text-sm font-medium">確認のみ必要な方</p>
-              <p className="text-xs text-muted-foreground">→ 閲覧者</p>
+              <p className="text-xs text-muted-foreground">
+                → {ROLE_LABELS.VIEWER}
+              </p>
             </div>
           </div>
         </div>

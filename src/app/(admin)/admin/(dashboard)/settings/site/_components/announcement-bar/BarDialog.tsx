@@ -19,7 +19,7 @@ import {
   SubmitButton,
   Switch,
 } from "@/admin/components/ui";
-import { AnnouncementBarType } from "@generated/prisma/enums";
+import { AnnouncementBarType } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidAnnouncementBarType } from "@/shared/lib/validations/enums/guards";
 import type { BarDialogProps, DeleteDialogProps } from "./types";
 

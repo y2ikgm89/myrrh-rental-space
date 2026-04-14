@@ -52,7 +52,7 @@ import {
   IconAlertCircle,
   IconCircleCheck,
 } from "@tabler/icons-react";
-import { CalendarSyncMethod } from "@generated/prisma/enums";
+import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

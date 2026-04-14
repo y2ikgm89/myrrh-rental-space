@@ -30,7 +30,7 @@ import {
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateTaxSettings, type TaxSettings } from "@/admin/actions/settings";
 import { taxFormSchema } from "@/admin/actions/settings/schemas/form-schemas-booking-tax-terms";
-import { TaxDisplayMode, TaxInputMode } from "@generated/prisma/enums";
+import { TaxDisplayMode, TaxInputMode } from "@/shared/lib/validations/enums/prisma-types";
 
 interface TaxSectionProps {
   settings: TaxSettings;

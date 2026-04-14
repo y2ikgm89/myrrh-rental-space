@@ -20,18 +20,9 @@ import {
   updateUserSchema,
 } from "@/shared/lib/validations/user";
 import type { UserData } from "@/shared/domain/users/types";
-import { Role } from "@generated/prisma/enums";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { keysOf } from "@/shared/lib/serialize";
-
-// ロールラベル（クライアント用ローカル定義）
-const ROLE_LABELS: Record<Role, string> = {
-  SUPER_ADMIN: "スーパー管理者",
-  ADMIN: "管理者",
-  EDITOR: "編集者",
-  VIEWER: "閲覧者",
-  USER: "ユーザー",
-  CUSTOMER: "顧客",
-};
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 type Props =
   | { mode: "create"; user?: never }
@@ -163,13 +154,7 @@ export function UserForm({ mode, user }: Props) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {currentRole === "SUPER_ADMIN" &&
-              "システム全体の管理権限（ユーザー管理、監査ログ含む）"}
-            {currentRole === "ADMIN" &&
-              "コンテンツ管理全般（ユーザー管理除く）"}
-            {currentRole === "EDITOR" && "割り当てられたページのみ編集可能"}
-            {currentRole === "VIEWER" && "閲覧のみ（編集不可）"}
-            {currentRole === "USER" && "公開ユーザー（管理画面アクセス不可）"}
+            {ROLE_DESCRIPTIONS[currentRole]}
           </p>
           {errors.role && (
             <p className="text-xs text-destructive">{errors.role.message}</p>

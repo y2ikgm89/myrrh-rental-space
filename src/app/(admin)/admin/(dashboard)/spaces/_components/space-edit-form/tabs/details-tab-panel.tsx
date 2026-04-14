@@ -22,7 +22,7 @@ import {
   SelectValue,
   TabsContent,
 } from "@/admin/components/ui";
-import { TermsType } from "@generated/prisma/enums";
+import { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 import type { SpaceEditFormData } from "../schema";
 import {
   SELECT_NONE_VALUE,
