@@ -3,10 +3,7 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import {
-  createPostBackup as createPostBackupCommand,
-  restorePostVersion as restorePostVersionCommand,
-} from "@/shared/domain/posts/commands";
+import * as versionCommands from "@/shared/domain/posts/version-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
@@ -33,7 +30,8 @@ export async function createPostBackup(
     resource: "post",
     action: "update",
     resourceId: validated.data,
-    execute: async (user) => createPostBackupCommand(validated.data, user.id),
+    execute: async (user) =>
+      versionCommands.createPostBackup(validated.data, user.id),
   });
 }
 
@@ -53,7 +51,7 @@ export async function restorePostVersion(
     action: "update",
     resourceId: parsed.data.postId,
     execute: async () => {
-      const result = await restorePostVersionCommand(
+      const result = await versionCommands.restorePostVersion(
         parsed.data.postId,
         parsed.data.version,
       );
