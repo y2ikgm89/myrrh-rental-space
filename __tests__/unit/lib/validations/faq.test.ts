@@ -332,6 +332,7 @@ describe("defaultFaqCategoryFormValues", () => {
       name: "",
       slug: "",
       description: null,
+      iconEmoji: null,
       order: 0,
       isActive: true,
     });

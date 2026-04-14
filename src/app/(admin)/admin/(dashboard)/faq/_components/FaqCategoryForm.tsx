@@ -47,6 +47,7 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
             name: category.name,
             slug: category.slug,
             description: category.description,
+            iconEmoji: category.iconEmoji,
             order: category.order,
             isActive: category.isActive,
           }
@@ -61,20 +62,27 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
     control,
   } = form;
 
-  const isActive = useWatch({ control, name: "isActive" });
+  const isActive = useWatch({
+    control,
+    name: "isActive",
+    defaultValue: category?.isActive ?? true,
+  });
 
-  // 名前からスラッグを自動生成
+  // 名前からスラッグを自動生成（新規作成時のみ）
+  // NFD 正規化で日本語・アクセント文字を除去し、半角英数字+ハイフンに正規化
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (mode !== "create") return;
     const name = e.target.value;
-    if (mode === "create") {
-      const slug = name
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .trim();
-      setValue("slug", slug);
-    }
+    const slug = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 100);
+    setValue("slug", slug, { shouldDirty: true });
   };
 
   return (
@@ -119,6 +127,28 @@ export function FaqCategoryForm({ category, mode }: FaqCategoryFormProps) {
             {errors.slug && (
               <p id="slug-error" className="text-xs text-destructive">
                 {errors.slug.message}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="iconEmoji">アイコン（絵文字）</Label>
+            <Input
+              id="iconEmoji"
+              {...register("iconEmoji")}
+              placeholder="例: 🏠 🎯 ⭐"
+              maxLength={4}
+              disabled={isPending}
+              aria-describedby="iconEmoji-hint"
+              className="w-24 text-center text-xl"
+            />
+            <p id="iconEmoji-hint" className="text-xs text-muted-foreground">
+              1
+              文字の絵文字を入力できます（任意）。一覧と公開ページに表示されます。
+            </p>
+            {errors.iconEmoji && (
+              <p className="text-xs text-destructive">
+                {errors.iconEmoji.message}
               </p>
             )}
           </div>

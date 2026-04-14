@@ -451,6 +451,7 @@ export const NOTIFICATION_TYPE = {
   INQUIRY_NEW: "inquiry_new",
   REVIEW_NEW: "review_new",
   EVENT_REGISTRATION: "event_registration",
+  FAQ_STALE: "faq_stale",
 } as const;
 
 export type NotificationType =
@@ -473,6 +474,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "新規お問い合わせ",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
+  [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
 };
 
 export type AdminBadgeVariant =
@@ -494,4 +496,5 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "default",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
+  [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
 };

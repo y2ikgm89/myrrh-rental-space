@@ -1004,34 +1004,43 @@ model SocialLink {
 // ==============================================
 
 model FaqCategory {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
   name        String
-  slug        String   @unique
-  description String?  @db.Text
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  slug        String    @unique
+  description String?   @db.Text
+  iconEmoji   String?   @db.VarChar(8)
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
   items FaqItem[]
 
   @@index([order])
   @@index([isActive, order])
+  @@index([deletedAt])
   @@map("faq_categories")
 }
 
 model FaqItem {
-  id          String    @id @default(uuid()) @db.Uuid
-  categoryId String @db.Uuid
-  question    String
-  answerHtml  String    @db.Text @map("answer") // HTMLキャッシュ（公開表示用）
-  answerJson  Json? // Lexical EditorState JSON（プライマリ）
-  order       Int       @default(0)
-  isPublished Boolean   @default(true)
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(uuid()) @db.Uuid
+  categoryId      String    @db.Uuid
+  question        String
+  answerHtml      String    @db.Text @map("answer") // HTMLキャッシュ（公開表示用）
+  answerJson      Json? // Lexical EditorState JSON（プライマリ）
+  answerPlainText String    @default("") @db.Text // 派生プレビュー（list 表示用、~200 文字）
+  order           Int       @default(0)
+  isPublished     Boolean   @default(true)
+  publishedAt     DateTime?
+  deletedAt       DateTime?
+  viewCount       Int       @default(0) // 公開ページでの閲覧回数（集計値、localStorage で dedup）
+  lastViewedAt    DateTime? // 直近閲覧日時（人気度の新鮮度判断用）
+  helpfulCount    Int       @default(0) // 「役に立った」投票数（localStorage で dedup）
+  notHelpfulCount Int       @default(0) // 「役に立たなかった」投票数（localStorage で dedup）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // SEO設定
   metaDescription String?
@@ -1048,6 +1057,9 @@ model FaqItem {
   @@index([categoryId, order])
   @@index([categoryId, isPublished, order])
   @@index([isPublished])
+  @@index([deletedAt])
+  @@index([updatedAt])
+  @@index([viewCount])
   @@map("faq_items")
 }
 

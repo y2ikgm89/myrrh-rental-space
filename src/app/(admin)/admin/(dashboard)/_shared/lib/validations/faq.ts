@@ -31,6 +31,11 @@ export const faqCategoryFormSchema = z.object({
     .max(500, { error: "説明は500文字以内で入力してください" })
     .nullable()
     .optional(),
+  iconEmoji: z
+    .string()
+    .max(8, { error: "アイコンは1文字の絵文字を入力してください" })
+    .nullable()
+    .optional(),
   order: z.number().int().min(0),
   isActive: z.boolean(),
 });
@@ -41,9 +46,28 @@ export const defaultFaqCategoryFormValues: FaqCategoryFormInput = {
   name: "",
   slug: "",
   description: null,
+  iconEmoji: null,
   order: 0,
   isActive: true,
 };
+
+// ============================================================================
+// Bulk operations schemas
+// ============================================================================
+
+export const bulkFaqItemIdsSchema = z
+  .array(z.string().uuid({ error: "IDが不正です" }))
+  .min(1, { error: "対象を選択してください" })
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じIDを複数指定することはできません",
+  });
+
+export const bulkMoveFaqItemsSchema = z.object({
+  ids: bulkFaqItemIdsSchema,
+  newCategoryId: z.string().uuid({ error: "移動先カテゴリを選択してください" }),
+});
+
+export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
 
 // =============================================================================
 // FaqItem Schemas

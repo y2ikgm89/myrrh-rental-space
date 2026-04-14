@@ -5,12 +5,19 @@ import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
+  bulkDeleteFaqItems as bulkDeleteFaqItemsCommand,
+  bulkMoveFaqItems as bulkMoveFaqItemsCommand,
+  bulkPublishFaqItems as bulkPublishFaqItemsCommand,
   createFaqCategory as createFaqCategoryCommand,
   createFaqItem as createFaqItemCommand,
   deleteFaqCategory as deleteFaqCategoryCommand,
   deleteFaqItem as deleteFaqItemCommand,
+  permanentlyDeleteFaqCategory as permanentlyDeleteFaqCategoryCommand,
+  permanentlyDeleteFaqItem as permanentlyDeleteFaqItemCommand,
   reorderFaqCategories as reorderFaqCategoriesCommand,
   reorderFaqItems as reorderFaqItemsCommand,
+  restoreFaqCategory as restoreFaqCategoryCommand,
+  restoreFaqItem as restoreFaqItemCommand,
   toggleFaqItemPublished as toggleFaqItemPublishedCommand,
   updateFaqCategory as updateFaqCategoryCommand,
   updateFaqItem as updateFaqItemCommand,
@@ -23,6 +30,8 @@ import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
 import {
+  bulkFaqItemIdsSchema,
+  bulkMoveFaqItemsSchema,
   faqCategoryFormSchema,
   faqItemFormSchema,
   type FaqCategoryFormInput,
@@ -43,7 +52,11 @@ export type {
 } from "@/shared/domain/faq/types";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
-const orderedIdsSchema = z.array(z.string().uuid({ error: "IDが不正です" }));
+const orderedIdsSchema = z
+  .array(z.string().uuid({ error: "IDが不正です" }))
+  .refine((ids) => new Set(ids).size === ids.length, {
+    error: "同じIDを複数指定することはできません",
+  });
 
 function invalidateFaqCaches(): void {
   updateTag(CACHE_TAGS.FAQ);
@@ -280,6 +293,162 @@ export async function toggleFaqItemPublished(
     action: "update",
     resourceId: validated.data,
     execute: async () => toggleFaqItemPublishedCommand(validated.data),
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+// ============================================================================
+// Bulk operations
+// ============================================================================
+
+export async function bulkPublishFaqItems(
+  ids: string[],
+  isPublished: boolean,
+): Promise<MutationResult<{ count: number }>> {
+  const parsed = bulkFaqItemIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "update",
+    execute: async () => bulkPublishFaqItemsCommand(parsed.data, isPublished),
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+export async function bulkDeleteFaqItems(
+  ids: string[],
+): Promise<MutationResult<{ count: number }>> {
+  const parsed = bulkFaqItemIdsSchema.safeParse(ids);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "delete",
+    execute: async () => bulkDeleteFaqItemsCommand(parsed.data),
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+export async function bulkMoveFaqItems(input: {
+  ids: string[];
+  newCategoryId: string;
+}): Promise<MutationResult<{ count: number }>> {
+  const parsed = bulkMoveFaqItemsSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "update",
+    execute: async () =>
+      bulkMoveFaqItemsCommand(parsed.data.ids, parsed.data.newCategoryId),
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+// ============================================================================
+// Restore / Permanent delete (Recycle Bin)
+// ============================================================================
+
+export async function restoreFaqCategory(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      await restoreFaqCategoryCommand(validated.data);
+      return null;
+    },
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+export async function restoreFaqItem(id: string): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "update",
+    resourceId: validated.data,
+    execute: async () => {
+      await restoreFaqItemCommand(validated.data);
+      return null;
+    },
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+export async function permanentlyDeleteFaqCategory(
+  id: string,
+): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      await permanentlyDeleteFaqCategoryCommand(validated.data);
+      return null;
+    },
+    afterSuccess: () => {
+      invalidateFaqCaches();
+      purgeFaqCaches();
+    },
+  });
+}
+
+export async function permanentlyDeleteFaqItem(
+  id: string,
+): Promise<MutationResult> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) {
+    return createValidationMutationError(validated.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "faq",
+    action: "delete",
+    resourceId: validated.data,
+    execute: async () => {
+      await permanentlyDeleteFaqItemCommand(validated.data);
+      return null;
+    },
     afterSuccess: () => {
       invalidateFaqCaches();
       purgeFaqCaches();

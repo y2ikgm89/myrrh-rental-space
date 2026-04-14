@@ -10,8 +10,8 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import {
-  getPublishedFaqItems,
   getPageSectionsWithFallback,
+  getPublishedFaqCategoriesWithItems,
 } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
@@ -29,16 +29,18 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
 
-  const [sections, items] = await Promise.all([
+  const [sections, categories] = await Promise.all([
     getPageSectionsWithFallback("faq"),
-    getPublishedFaqItems(50),
+    getPublishedFaqCategoriesWithItems(),
   ]);
 
-  // Strip HTML tags for plain text in JSON-LD Answer
-  const faqJsonLdItems = items.map((item) => ({
-    question: item.question,
-    answer: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
-  }));
+  // JSON-LD は全項目をフラットに展開（構造化データはカテゴリ区別不要）
+  const faqJsonLdItems = categories.flatMap((category) =>
+    category.items.map((item) => ({
+      question: item.question,
+      answer: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
+    })),
+  );
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -72,7 +74,7 @@ export default async function FaqPage(): Promise<ReactElement> {
 
       <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
         <Container variant="narrow">
-          <FaqAccordion items={items} />
+          <FaqAccordion categories={categories} />
         </Container>
       </section>
 

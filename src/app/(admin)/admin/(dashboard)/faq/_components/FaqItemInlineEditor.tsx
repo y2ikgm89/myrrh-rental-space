@@ -34,7 +34,14 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SubmitButton,
 } from "@/admin/components/ui";
+import { useController } from "react-hook-form";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 const LexicalEditor = dynamic(
@@ -68,10 +75,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   Input,
   Label,
 } from "@/admin/components/ui";
+import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { logger } from "@/shared/lib/logger";
 import { getErrorMessage } from "@/shared/lib/errors";
@@ -171,9 +178,21 @@ export function FaqItemInlineEditor({
         },
   });
 
-  const question = useWatch({ control, name: "question" });
-  const isPublished = useWatch({ control, name: "isPublished" });
-  const answerJson = useWatch({ control, name: "answerJson" });
+  const question = useWatch({ control, name: "question", defaultValue: "" });
+  const isPublished = useWatch({
+    control,
+    name: "isPublished",
+    defaultValue: true,
+  });
+  const answerJson = useWatch({
+    control,
+    name: "answerJson",
+    defaultValue: EMPTY_LEXICAL_EDITOR_STATE_JSON,
+  });
+  const { field: categoryField } = useController({
+    control,
+    name: "categoryId",
+  });
 
   const handleJsonChange = (json: string) => {
     setValue("answerJson", json, { shouldDirty: true });
@@ -204,7 +223,7 @@ export function FaqItemInlineEditor({
           }
 
           toast.success("FAQ項目を作成しました");
-          router.push(`/admin/faq/items/${result.id}`);
+          router.push(`/admin/faq/items/${result.id}/edit`);
         } else if (item) {
           const result = await updateFaqItem(item.id, payload);
           if (isMutationError(result)) {
@@ -325,45 +344,18 @@ export function FaqItemInlineEditor({
     name: cat.name,
   }));
 
-  const deleteDialog =
+  const deleteTriggerButton =
     mode === "edit" && item ? (
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive"
-            disabled={isPending}
-          >
-            削除
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>FAQ項目を削除しますか？</DialogTitle>
-            <DialogDescription>
-              この操作は取り消せません。本当に削除してもよろしいですか？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteDialogOpen(false)}
-              disabled={isPending}
-            >
-              キャンセル
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isPending}
-            >
-              {isPending ? "削除中..." : "削除"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive"
+        disabled={isPending}
+        onClick={() => setIsDeleteDialogOpen(true)}
+      >
+        削除
+      </Button>
     ) : undefined;
 
   return (
@@ -391,7 +383,7 @@ export function FaqItemInlineEditor({
                   }
                 : undefined
             }
-            extraActions={deleteDialog}
+            extraActions={deleteTriggerButton}
           />
         }
       >
@@ -457,18 +449,28 @@ export function FaqItemInlineEditor({
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm">カテゴリ</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <select
-                      {...register("categoryId")}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  <CardContent className="space-y-2">
+                    <Select
+                      value={categoryField.value}
+                      onValueChange={categoryField.onChange}
                       disabled={isPending}
                     >
-                      {categoryOptions.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger aria-label="カテゴリを選択">
+                        <SelectValue placeholder="カテゴリを選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.categoryId && (
+                      <p className="text-xs text-destructive">
+                        {errors.categoryId.message}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -520,13 +522,26 @@ export function FaqItemInlineEditor({
               >
                 閉じる
               </Button>
-              <Button type="submit" disabled={isPending || !isFormDirty}>
-                {isPending ? "保存中..." : "保存"}
-              </Button>
+              <SubmitButton
+                isPending={isPending}
+                label="保存"
+                disabled={!isFormDirty}
+              />
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 削除確認ダイアログ — プロジェクト標準の DeleteConfirmDialog */}
+      {mode === "edit" && item && (
+        <DeleteConfirmDialog
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          itemName={item.question}
+          onConfirm={handleDelete}
+          isPending={isPending}
+        />
+      )}
     </>
   );
 }

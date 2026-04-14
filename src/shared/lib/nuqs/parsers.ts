@@ -348,6 +348,47 @@ export async function loadAdminNewsSearchParams(
   return adminNewsSearchParamsCache.all();
 }
 
+// ============================================================
+// 管理画面 FAQ（4 タブ: 質問 | カテゴリ | SEO | ゴミ箱）
+// ============================================================
+
+const adminFaqTabs = ["items", "categories", "seo", "trash"] as const;
+const adminFaqItemStatusValues = ["all", "published", "draft"] as const;
+const adminFaqQuickFilterValues = ["all", "drafts", "recent", "stale"] as const;
+const adminFaqItemSortByValues = [
+  "order",
+  "updatedAt",
+  "viewCount",
+  "createdAt",
+] as const;
+export type AdminFaqItemSortBy = (typeof adminFaqItemSortByValues)[number];
+
+export const adminFaqSearchParamsParsers = {
+  tab: parseAsStringLiteral(adminFaqTabs).withDefault("items"),
+  quickFilter: parseAsStringLiteral(adminFaqQuickFilterValues).withDefault(
+    "all",
+  ),
+  search: parseAsQuery,
+  categoryId: parseAsString.withDefault(""),
+  status: parseAsStringLiteral(adminFaqItemStatusValues).withDefault("all"),
+  sortBy: parseAsStringLiteral(adminFaqItemSortByValues).withDefault("order"),
+  sortOrder: parseAsSortOrder,
+  page: parseAsPage,
+  perPage: parseAsInteger.withDefault(20),
+};
+
+const adminFaqSearchParamsCache = createSearchParamsCache(
+  adminFaqSearchParamsParsers,
+);
+
+/** 管理画面 FAQ 検索パラメータローダー */
+export async function loadAdminFaqSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminFaqSearchParamsCache.parse(searchParams);
+  return adminFaqSearchParamsCache.all();
+}
+
 const adminInquirySearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),

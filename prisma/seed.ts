@@ -475,13 +475,7 @@ async function seedSpaces() {
       hourlyPrice: new Prisma.Decimal(3000),
       dailyPrice: new Prisma.Decimal(20000),
       mainImageUrl: "/images/seed/meeting-room.svg",
-      imageUrls: [
-        "/images/seed/meeting-room.svg",
-        "/images/seed/meeting-room.svg",
-        "/images/seed/meeting-room.svg",
-        "/images/seed/meeting-room.svg",
-        "/images/seed/meeting-room.svg",
-      ],
+      imageUrls: [],
       facilities: [
         "Wi-Fi",
         "プロジェクター",
@@ -507,12 +501,7 @@ async function seedSpaces() {
       hourlyPrice: new Prisma.Decimal(8000),
       dailyPrice: new Prisma.Decimal(50000),
       mainImageUrl: "/images/seed/seminar-room.svg",
-      imageUrls: [
-        "/images/seed/seminar-room.svg",
-        "/images/seed/seminar-room.svg",
-        "/images/seed/seminar-room.svg",
-        "/images/seed/seminar-room.svg",
-      ],
+      imageUrls: [],
       facilities: [
         "Wi-Fi",
         "プロジェクター",
@@ -539,14 +528,7 @@ async function seedSpaces() {
       hourlyPrice: new Prisma.Decimal(500),
       dailyPrice: new Prisma.Decimal(3000),
       mainImageUrl: "/images/seed/coworking.svg",
-      imageUrls: [
-        "/images/seed/coworking.svg",
-        "/images/seed/coworking.svg",
-        "/images/seed/coworking.svg",
-        "/images/seed/coworking.svg",
-        "/images/seed/coworking.svg",
-        "/images/seed/coworking.svg",
-      ],
+      imageUrls: [],
       facilities: [
         "Wi-Fi",
         "電源",
@@ -2189,6 +2171,7 @@ async function seedFaq() {
             categoryId: faqCategory.id,
             question: item.question,
             answerHtml: item.answerHtml,
+            answerPlainText: stripHtmlToText(item.answerHtml, 200),
             order: i,
             isPublished: true,
             publishedAt: new Date(),

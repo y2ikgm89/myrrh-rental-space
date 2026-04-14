@@ -6,9 +6,15 @@ type FaqItemRecord = {
   question: string;
   answerHtml: string;
   answerJson: unknown;
+  answerPlainText: string;
   order: number;
   isPublished: boolean;
   publishedAt: Date | null;
+  deletedAt: Date | null;
+  viewCount: number;
+  lastViewedAt: Date | null;
+  helpfulCount: number;
+  notHelpfulCount: number;
   createdAt: Date;
   updatedAt: Date;
   metaDescription: string | null;
@@ -23,8 +29,10 @@ type FaqCategoryRecord = {
   name: string;
   slug: string;
   description: string | null;
+  iconEmoji: string | null;
   order: number;
   isActive: boolean;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   items: FaqItemRecord[];
@@ -57,10 +65,21 @@ export type FaqItemListResult = {
   totalPages: number;
 };
 
+export type FaqItemQuickFilter = "all" | "drafts" | "recent" | "stale";
+
+export type FaqItemSortBy = "order" | "updatedAt" | "viewCount" | "createdAt";
+export type FaqItemSortOrder = "asc" | "desc";
+
 export type FaqItemFilters = {
   categoryId?: string;
   search?: string;
   isPublished?: boolean;
+  quickFilter?: FaqItemQuickFilter;
+};
+
+export type FaqItemSort = {
+  sortBy: FaqItemSortBy;
+  sortOrder: FaqItemSortOrder;
 };
 
 export type FaqItemPagination = {
@@ -72,6 +91,7 @@ export type FaqCategoryCommandInput = {
   name: string;
   slug: string;
   description?: string | null;
+  iconEmoji?: string | null;
   order: number;
   isActive: boolean;
 };
@@ -89,6 +109,8 @@ export type FaqItemCommandInput = {
   ogpDescription?: string | null;
   ogpImageUrl?: string | null;
 };
+
+export type BulkFaqItemResult = { count: number };
 
 export type CreateFaqCategoryResult = {
   id: string;

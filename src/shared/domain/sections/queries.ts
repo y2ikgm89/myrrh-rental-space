@@ -213,6 +213,8 @@ export async function getPublishedFaqItems(
       prisma.faqItem.findMany({
         where: {
           isPublished: true,
+          deletedAt: null,
+          category: { deletedAt: null, isActive: true },
           ...(categoryId ? { categoryId } : {}),
         },
         select: {
@@ -231,4 +233,74 @@ export async function getPublishedFaqItems(
   });
 
   return toPlainArray(items);
+}
+
+export type PublicFaqCategoryWithItems = {
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly iconEmoji: string | null;
+  readonly items: ReadonlyArray<{
+    readonly id: string;
+    readonly question: string;
+    readonly answerHtml: string;
+    readonly helpfulCount: number;
+    readonly notHelpfulCount: number;
+  }>;
+};
+
+/**
+ * カテゴリグループ化された公開 FAQ を取得
+ * - 非公開カテゴリ（isActive: false / deletedAt != null）は除外
+ * - 空カテゴリ（公開項目が 0 件）は除外
+ * - カテゴリ内の質問は order 昇順
+ * - 公開 /faq ページ専用（セクションシステム経由のフラット一覧は `getPublishedFaqItems` を使用）
+ */
+export async function getPublishedFaqCategoriesWithItems(): Promise<
+  readonly PublicFaqCategoryWithItems[]
+> {
+  "use cache";
+  cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
+  cacheTag(CACHE_TAGS.FAQ);
+
+  const categories = await safeFetch({
+    fetch: () =>
+      prisma.faqCategory.findMany({
+        where: {
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          iconEmoji: true,
+          items: {
+            where: {
+              isPublished: true,
+              deletedAt: null,
+            },
+            select: {
+              id: true,
+              question: true,
+              answerHtml: true,
+              helpfulCount: true,
+              notHelpfulCount: true,
+            },
+            orderBy: { order: "asc" },
+          },
+        },
+        orderBy: { order: "asc" },
+      }),
+    fallback: [],
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getPublishedFaqCategoriesWithItems",
+  });
+
+  // 空カテゴリを除外し、プレーンオブジェクト化
+  const filtered = categories.filter((c) => c.items.length > 0);
+  return toPlainArray(filtered);
 }

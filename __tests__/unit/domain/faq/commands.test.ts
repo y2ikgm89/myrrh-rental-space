@@ -29,6 +29,10 @@ const mockFaqItemFindUnique = mock<
   () => Promise<Record<string, unknown> | null>
 >(() => Promise.resolve(null));
 
+const mockFaqItemFindFirst = mock<
+  () => Promise<Record<string, unknown> | null>
+>(() => Promise.resolve(null));
+
 const mockFaqItemCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "item-1" }),
 );
@@ -41,12 +45,69 @@ const mockFaqItemDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "item-1" }),
 );
 
+const mockFaqItemUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+
+const mockFaqCategoryUpdateMany = mock<() => Promise<{ count: number }>>(() =>
+  Promise.resolve({ count: 0 }),
+);
+
 const mockFaqItemAggregate = mock<
   () => Promise<{ _max: { order: number | null } }>
 >(() => Promise.resolve({ _max: { order: null } }));
 
-const mockTransaction = mock<(ops: unknown[]) => Promise<unknown[]>>((ops) =>
-  Promise.resolve(ops as unknown[]),
+// Interactive transaction の tx オブジェクト型
+type TxClient = {
+  faqCategory: {
+    findUnique: typeof mockFaqCategoryFindUnique;
+    findFirst: typeof mockFaqCategoryFindFirst;
+    create: typeof mockFaqCategoryCreate;
+    update: typeof mockFaqCategoryUpdate;
+    delete: typeof mockFaqCategoryDelete;
+    aggregate: typeof mockFaqCategoryAggregate;
+    updateMany: typeof mockFaqCategoryUpdateMany;
+  };
+  faqItem: {
+    findUnique: typeof mockFaqItemFindUnique;
+    findFirst: typeof mockFaqItemFindFirst;
+    create: typeof mockFaqItemCreate;
+    update: typeof mockFaqItemUpdate;
+    delete: typeof mockFaqItemDelete;
+    aggregate: typeof mockFaqItemAggregate;
+    updateMany: typeof mockFaqItemUpdateMany;
+  };
+};
+
+const txClient: TxClient = {
+  faqCategory: {
+    findUnique: mockFaqCategoryFindUnique,
+    findFirst: mockFaqCategoryFindFirst,
+    create: mockFaqCategoryCreate,
+    update: mockFaqCategoryUpdate,
+    delete: mockFaqCategoryDelete,
+    aggregate: mockFaqCategoryAggregate,
+    updateMany: mockFaqCategoryUpdateMany,
+  },
+  faqItem: {
+    findUnique: mockFaqItemFindUnique,
+    findFirst: mockFaqItemFindFirst,
+    create: mockFaqItemCreate,
+    update: mockFaqItemUpdate,
+    delete: mockFaqItemDelete,
+    aggregate: mockFaqItemAggregate,
+    updateMany: mockFaqItemUpdateMany,
+  },
+};
+
+// $transaction は配列形式と callback 形式の両方をサポート
+const mockTransaction = mock<(argOrCallback: unknown) => Promise<unknown>>(
+  (argOrCallback) => {
+    if (typeof argOrCallback === "function") {
+      return (argOrCallback as (tx: TxClient) => Promise<unknown>)(txClient);
+    }
+    return Promise.resolve(argOrCallback);
+  },
 );
 
 // モジュールモック（import より前に配置）
@@ -61,13 +122,16 @@ mock.module("@/shared/db/prisma", () => ({
       update: mockFaqCategoryUpdate,
       delete: mockFaqCategoryDelete,
       aggregate: mockFaqCategoryAggregate,
+      updateMany: mockFaqCategoryUpdateMany,
     },
     faqItem: {
       findUnique: mockFaqItemFindUnique,
+      findFirst: mockFaqItemFindFirst,
       create: mockFaqItemCreate,
       update: mockFaqItemUpdate,
       delete: mockFaqItemDelete,
       aggregate: mockFaqItemAggregate,
+      updateMany: mockFaqItemUpdateMany,
     },
     $transaction: mockTransaction,
   },
@@ -273,11 +337,13 @@ describe("createFaqCategory", () => {
 
 describe("updateFaqCategory", () => {
   beforeEach(() => {
-    mockFaqCategoryFindUnique.mockReset();
     mockFaqCategoryFindFirst.mockReset();
     mockFaqCategoryUpdate.mockReset();
-    mockFaqCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY);
-    mockFaqCategoryFindFirst.mockResolvedValue(null);
+    // ensureFaqCategoryExists (findFirst #1) → EXISTING
+    // ensureFaqCategoryUnique (findFirst #2) → null (no slug conflict)
+    mockFaqCategoryFindFirst
+      .mockResolvedValueOnce(EXISTING_CATEGORY)
+      .mockResolvedValue(null);
     mockFaqCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
   });
 
@@ -293,7 +359,7 @@ describe("updateFaqCategory", () => {
 
       expect(mockFaqCategoryUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: CATEGORY_ID },
+          where: { id: CATEGORY_ID, deletedAt: null },
           data: expect.objectContaining({
             name: VALID_CATEGORY_INPUT.name,
             slug: VALID_CATEGORY_INPUT.slug,
@@ -321,7 +387,9 @@ describe("updateFaqCategory", () => {
 
   describe("異常系", () => {
     test("存在しないカテゴリの場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      // beforeEach の mockResolvedValueOnce キューをクリアしてから null 固定
+      mockFaqCategoryFindFirst.mockReset();
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(
         updateFaqCategory("non-existent", VALID_CATEGORY_INPUT),
@@ -332,7 +400,8 @@ describe("updateFaqCategory", () => {
     });
 
     test("カテゴリが見つからない場合 update が呼ばれない", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockReset();
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(
         updateFaqCategory("non-existent", VALID_CATEGORY_INPUT),
@@ -341,7 +410,11 @@ describe("updateFaqCategory", () => {
     });
 
     test("新スラッグが別カテゴリで使用されている場合 CONFLICT エラーをスローする", async () => {
-      mockFaqCategoryFindFirst.mockResolvedValue({ id: "other-category" });
+      // beforeEach の once キューをクリアし、両方とも conflict 返却
+      mockFaqCategoryFindFirst.mockReset();
+      mockFaqCategoryFindFirst
+        .mockResolvedValueOnce(EXISTING_CATEGORY) // ensureFaqCategoryExists
+        .mockResolvedValue({ id: "other-category" }); // ensureFaqCategoryUnique
 
       await expect(
         updateFaqCategory(CATEGORY_ID, {
@@ -359,27 +432,30 @@ describe("updateFaqCategory", () => {
 // deleteFaqCategory
 // =============================================================================
 
-describe("deleteFaqCategory", () => {
+describe("deleteFaqCategory (soft delete)", () => {
   beforeEach(() => {
-    mockFaqCategoryFindUnique.mockReset();
-    mockFaqCategoryDelete.mockReset();
-    mockFaqCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY);
-    mockFaqCategoryDelete.mockResolvedValue({ id: CATEGORY_ID });
+    mockFaqCategoryFindFirst.mockReset();
+    mockFaqCategoryUpdate.mockReset();
+    mockFaqCategoryFindFirst.mockResolvedValue(EXISTING_CATEGORY);
+    mockFaqCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
   });
 
   describe("正常系", () => {
-    test("質問が 0 件のカテゴリを削除する", async () => {
+    test("質問が 0 件のカテゴリをソフトデリートする", async () => {
       await deleteFaqCategory(CATEGORY_ID);
 
-      expect(mockFaqCategoryDelete).toHaveBeenCalledTimes(1);
+      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(1);
     });
 
-    test("delete が正しい ID で呼ばれる", async () => {
+    test("update が deletedAt を設定して呼ばれる", async () => {
       await deleteFaqCategory(CATEGORY_ID);
 
-      expect(mockFaqCategoryDelete).toHaveBeenCalledWith(
+      expect(mockFaqCategoryUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: CATEGORY_ID },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
         }),
       );
     });
@@ -387,7 +463,7 @@ describe("deleteFaqCategory", () => {
 
   describe("異常系", () => {
     test("存在しないカテゴリの場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(deleteFaqCategory("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -395,17 +471,17 @@ describe("deleteFaqCategory", () => {
       });
     });
 
-    test("カテゴリが見つからない場合 delete が呼ばれない", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+    test("カテゴリが見つからない場合 update が呼ばれない", async () => {
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(deleteFaqCategory("non-existent")).rejects.toThrow(
         DomainError,
       );
-      expect(mockFaqCategoryDelete).not.toHaveBeenCalled();
+      expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
     });
 
     test("質問が含まれているカテゴリの場合 CONFLICT エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY_WITH_ITEMS);
+      mockFaqCategoryFindFirst.mockResolvedValue(EXISTING_CATEGORY_WITH_ITEMS);
 
       await expect(deleteFaqCategory(CATEGORY_ID)).rejects.toMatchObject({
         code: "CONFLICT",
@@ -414,11 +490,11 @@ describe("deleteFaqCategory", () => {
       });
     });
 
-    test("質問が含まれているカテゴリの場合 delete が呼ばれない", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(EXISTING_CATEGORY_WITH_ITEMS);
+    test("質問が含まれているカテゴリの場合 update が呼ばれない", async () => {
+      mockFaqCategoryFindFirst.mockResolvedValue(EXISTING_CATEGORY_WITH_ITEMS);
 
       await expect(deleteFaqCategory(CATEGORY_ID)).rejects.toThrow(DomainError);
-      expect(mockFaqCategoryDelete).not.toHaveBeenCalled();
+      expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
     });
   });
 });
@@ -430,40 +506,49 @@ describe("deleteFaqCategory", () => {
 describe("reorderFaqCategories", () => {
   beforeEach(() => {
     mockFaqCategoryUpdate.mockReset();
-    mockTransaction.mockReset();
     mockFaqCategoryUpdate.mockResolvedValue({ id: CATEGORY_ID });
-    mockTransaction.mockImplementation((ops: unknown[]) =>
-      Promise.resolve(ops),
-    );
+    // mockTransaction は interactive callback をそのまま実行するデフォルト実装
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと $transaction が呼ばれる", async () => {
+    test("複数 ID を渡すと update が 3 回呼ばれる（interactive transaction）", async () => {
       await reorderFaqCategories(["cat-1", "cat-2", "cat-3"]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(3);
     });
 
     test("各カテゴリが配列インデックス順で update される", async () => {
       await reorderFaqCategories(["cat-a", "cat-b"]);
 
-      // $transaction に渡された操作リストの長さを確認
-      const [ops] = mockTransaction.mock.calls[0] as [unknown[]];
-      expect(ops).toHaveLength(2);
+      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(2);
+      expect(mockFaqCategoryUpdate).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: { id: "cat-a", deletedAt: null },
+          data: { order: 0 },
+        }),
+      );
+      expect(mockFaqCategoryUpdate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: { id: "cat-b", deletedAt: null },
+          data: { order: 1 },
+        }),
+      );
     });
   });
 
   describe("エッジケース", () => {
-    test("空配列を渡した場合 $transaction が呼ばれない", async () => {
+    test("空配列を渡した場合 update が呼ばれない", async () => {
       await reorderFaqCategories([]);
 
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockFaqCategoryUpdate).not.toHaveBeenCalled();
     });
 
     test("1 件の配列を渡しても正常に動作する", async () => {
       await reorderFaqCategories(["cat-1"]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockFaqCategoryUpdate).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -474,10 +559,10 @@ describe("reorderFaqCategories", () => {
 
 describe("createFaqItem", () => {
   beforeEach(() => {
-    mockFaqCategoryFindUnique.mockReset();
+    mockFaqCategoryFindFirst.mockReset();
     mockFaqItemAggregate.mockReset();
     mockFaqItemCreate.mockReset();
-    mockFaqCategoryFindUnique.mockResolvedValue({ id: CATEGORY_ID });
+    mockFaqCategoryFindFirst.mockResolvedValue({ id: CATEGORY_ID });
     mockFaqItemAggregate.mockResolvedValue({ _max: { order: null } });
     mockFaqItemCreate.mockResolvedValue({ id: ITEM_ID });
   });
@@ -560,7 +645,7 @@ describe("createFaqItem", () => {
 
   describe("異常系", () => {
     test("存在しないカテゴリ ID の場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(createFaqItem(VALID_ITEM_INPUT)).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -569,7 +654,7 @@ describe("createFaqItem", () => {
     });
 
     test("カテゴリが見つからない場合 create が呼ばれない", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(createFaqItem(VALID_ITEM_INPUT)).rejects.toThrow(
         DomainError,
@@ -585,11 +670,11 @@ describe("createFaqItem", () => {
 
 describe("updateFaqItem", () => {
   beforeEach(() => {
-    mockFaqItemFindUnique.mockReset();
-    mockFaqCategoryFindUnique.mockReset();
+    mockFaqItemFindFirst.mockReset();
+    mockFaqCategoryFindFirst.mockReset();
     mockFaqItemUpdate.mockReset();
-    mockFaqItemFindUnique.mockResolvedValue(EXISTING_ITEM);
-    mockFaqCategoryFindUnique.mockResolvedValue({ id: CATEGORY_ID });
+    mockFaqItemFindFirst.mockResolvedValue(EXISTING_ITEM);
+    mockFaqCategoryFindFirst.mockResolvedValue({ id: CATEGORY_ID });
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
   });
 
@@ -605,7 +690,7 @@ describe("updateFaqItem", () => {
 
       expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: ITEM_ID },
+          where: { id: ITEM_ID, deletedAt: null },
           data: expect.objectContaining({
             question: VALID_ITEM_INPUT.question,
             categoryId: VALID_ITEM_INPUT.categoryId,
@@ -643,7 +728,7 @@ describe("updateFaqItem", () => {
 
   describe("異常系", () => {
     test("存在しない質問 ID の場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(
         updateFaqItem("non-existent", VALID_ITEM_INPUT),
@@ -654,7 +739,7 @@ describe("updateFaqItem", () => {
     });
 
     test("質問が見つからない場合 update が呼ばれない", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(
         updateFaqItem("non-existent", VALID_ITEM_INPUT),
@@ -663,7 +748,7 @@ describe("updateFaqItem", () => {
     });
 
     test("存在しないカテゴリ ID に変更しようとすると NOT_FOUND エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(
         updateFaqItem(ITEM_ID, {
@@ -682,27 +767,30 @@ describe("updateFaqItem", () => {
 // deleteFaqItem
 // =============================================================================
 
-describe("deleteFaqItem", () => {
+describe("deleteFaqItem (soft delete)", () => {
   beforeEach(() => {
-    mockFaqItemFindUnique.mockReset();
-    mockFaqItemDelete.mockReset();
-    mockFaqItemFindUnique.mockResolvedValue(EXISTING_ITEM);
-    mockFaqItemDelete.mockResolvedValue({ id: ITEM_ID });
+    mockFaqItemFindFirst.mockReset();
+    mockFaqItemUpdate.mockReset();
+    mockFaqItemFindFirst.mockResolvedValue(EXISTING_ITEM);
+    mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
   });
 
   describe("正常系", () => {
-    test("質問を削除する", async () => {
+    test("質問をソフトデリートする", async () => {
       await deleteFaqItem(ITEM_ID);
 
-      expect(mockFaqItemDelete).toHaveBeenCalledTimes(1);
+      expect(mockFaqItemUpdate).toHaveBeenCalledTimes(1);
     });
 
-    test("delete が正しい ID で呼ばれる", async () => {
+    test("update が deletedAt を設定して呼ばれる", async () => {
       await deleteFaqItem(ITEM_ID);
 
-      expect(mockFaqItemDelete).toHaveBeenCalledWith(
+      expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: ITEM_ID },
+          where: { id: ITEM_ID, deletedAt: null },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+          }),
         }),
       );
     });
@@ -710,7 +798,7 @@ describe("deleteFaqItem", () => {
 
   describe("異常系", () => {
     test("存在しない質問の場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(deleteFaqItem("non-existent")).rejects.toMatchObject({
         code: "NOT_FOUND",
@@ -718,8 +806,8 @@ describe("deleteFaqItem", () => {
       });
     });
 
-    test("質問が見つからない場合 delete が呼ばれない", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+    test("質問が見つからない場合 update が呼ばれない", async () => {
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(deleteFaqItem("non-existent")).rejects.toThrow(DomainError);
       expect(mockFaqItemDelete).not.toHaveBeenCalled();
@@ -733,34 +821,43 @@ describe("deleteFaqItem", () => {
 
 describe("reorderFaqItems", () => {
   beforeEach(() => {
-    mockFaqCategoryFindUnique.mockReset();
+    mockFaqCategoryFindFirst.mockReset();
     mockFaqItemUpdate.mockReset();
-    mockTransaction.mockReset();
-    mockFaqCategoryFindUnique.mockResolvedValue({ id: CATEGORY_ID });
+    mockFaqCategoryFindFirst.mockResolvedValue({ id: CATEGORY_ID });
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
-    mockTransaction.mockImplementation((ops: unknown[]) =>
-      Promise.resolve(ops),
-    );
   });
 
   describe("正常系", () => {
-    test("複数 ID を渡すと $transaction が呼ばれる", async () => {
+    test("複数 ID を渡すと update が ID 数分呼ばれる", async () => {
       await reorderFaqItems(CATEGORY_ID, ["item-1", "item-2", "item-3"]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockFaqItemUpdate).toHaveBeenCalledTimes(3);
     });
 
     test("各質問が配列インデックス順で update される", async () => {
       await reorderFaqItems(CATEGORY_ID, ["item-a", "item-b"]);
 
-      const [ops] = mockTransaction.mock.calls[0] as [unknown[]];
-      expect(ops).toHaveLength(2);
+      expect(mockFaqItemUpdate).toHaveBeenCalledTimes(2);
+      expect(mockFaqItemUpdate).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: { id: "item-a", deletedAt: null },
+          data: { order: 0, categoryId: CATEGORY_ID },
+        }),
+      );
+      expect(mockFaqItemUpdate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: { id: "item-b", deletedAt: null },
+          data: { order: 1, categoryId: CATEGORY_ID },
+        }),
+      );
     });
   });
 
   describe("異常系", () => {
     test("存在しないカテゴリ ID の場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(
         reorderFaqItems("non-existent", ["item-1"]),
@@ -770,21 +867,21 @@ describe("reorderFaqItems", () => {
       });
     });
 
-    test("カテゴリが見つからない場合 $transaction が呼ばれない", async () => {
-      mockFaqCategoryFindUnique.mockResolvedValue(null);
+    test("カテゴリが見つからない場合 update が呼ばれない", async () => {
+      mockFaqCategoryFindFirst.mockResolvedValue(null);
 
       await expect(reorderFaqItems("non-existent", ["item-1"])).rejects.toThrow(
         DomainError,
       );
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockFaqItemUpdate).not.toHaveBeenCalled();
     });
   });
 
   describe("エッジケース", () => {
-    test("空配列を渡した場合 $transaction が呼ばれない", async () => {
+    test("空配列を渡した場合 update が呼ばれない", async () => {
       await reorderFaqItems(CATEGORY_ID, []);
 
-      expect(mockTransaction).not.toHaveBeenCalled();
+      expect(mockFaqItemUpdate).not.toHaveBeenCalled();
     });
 
     test("カテゴリは存在するが空配列の場合は正常終了する", async () => {
@@ -799,14 +896,14 @@ describe("reorderFaqItems", () => {
 
 describe("toggleFaqItemPublished", () => {
   beforeEach(() => {
-    mockFaqItemFindUnique.mockReset();
+    mockFaqItemFindFirst.mockReset();
     mockFaqItemUpdate.mockReset();
     mockFaqItemUpdate.mockResolvedValue({ id: ITEM_ID });
   });
 
   describe("正常系", () => {
     test("未公開の質問をトグルすると isPublished: true を返す", async () => {
-      mockFaqItemFindUnique.mockResolvedValue({
+      mockFaqItemFindFirst.mockResolvedValue({
         id: ITEM_ID,
         isPublished: false,
       });
@@ -817,7 +914,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("公開済みの質問をトグルすると isPublished: false を返す", async () => {
-      mockFaqItemFindUnique.mockResolvedValue({
+      mockFaqItemFindFirst.mockResolvedValue({
         id: ITEM_ID,
         isPublished: true,
       });
@@ -828,7 +925,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("公開にトグルすると publishedAt が設定される", async () => {
-      mockFaqItemFindUnique.mockResolvedValue({
+      mockFaqItemFindFirst.mockResolvedValue({
         id: ITEM_ID,
         isPublished: false,
       });
@@ -846,7 +943,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("非公開にトグルすると publishedAt が null になる", async () => {
-      mockFaqItemFindUnique.mockResolvedValue({
+      mockFaqItemFindFirst.mockResolvedValue({
         id: ITEM_ID,
         isPublished: true,
       });
@@ -864,7 +961,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("update が正しい ID で呼ばれる", async () => {
-      mockFaqItemFindUnique.mockResolvedValue({
+      mockFaqItemFindFirst.mockResolvedValue({
         id: ITEM_ID,
         isPublished: false,
       });
@@ -873,7 +970,7 @@ describe("toggleFaqItemPublished", () => {
 
       expect(mockFaqItemUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: ITEM_ID },
+          where: { id: ITEM_ID, deletedAt: null },
         }),
       );
     });
@@ -881,7 +978,7 @@ describe("toggleFaqItemPublished", () => {
 
   describe("異常系", () => {
     test("存在しない質問の場合 NOT_FOUND エラーをスローする", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(
         toggleFaqItemPublished("non-existent"),
@@ -892,7 +989,7 @@ describe("toggleFaqItemPublished", () => {
     });
 
     test("質問が見つからない場合 update が呼ばれない", async () => {
-      mockFaqItemFindUnique.mockResolvedValue(null);
+      mockFaqItemFindFirst.mockResolvedValue(null);
 
       await expect(toggleFaqItemPublished("non-existent")).rejects.toThrow(
         DomainError,

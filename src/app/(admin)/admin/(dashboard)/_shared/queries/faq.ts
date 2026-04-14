@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  getDeletedFaqCategories as getDeletedFaqCategoriesQuery,
+  getDeletedFaqItems as getDeletedFaqItemsQuery,
   getFaqCategories as getFaqCategoriesQuery,
   getFaqCategoryById as getFaqCategoryByIdQuery,
   getFaqItemById as getFaqItemByIdQuery,
@@ -13,6 +15,7 @@ import type {
   FaqItemFilters,
   FaqItemListResult,
   FaqItemPagination,
+  FaqItemSort,
   FaqItemWithCategory,
 } from "@/shared/domain/faq/types";
 import { requireAdminPermission } from "./_helpers";
@@ -40,9 +43,10 @@ export async function getFaqCategoryById(
 export async function getFaqItems(
   filters: FaqItemFilters = {},
   pagination: FaqItemPagination = {},
+  sort?: FaqItemSort,
 ): Promise<FaqItemListResult> {
   await requireAdminPermission("faq", "read");
-  return getFaqItemsQuery(filters, pagination);
+  return getFaqItemsQuery(filters, pagination, sort);
 }
 
 export async function getFaqItemById(
@@ -56,4 +60,16 @@ export async function getFaqItemById(
   }
 
   return getFaqItemByIdQuery(validated.data);
+}
+
+export async function getDeletedFaqItems(): Promise<FaqItemWithCategory[]> {
+  await requireAdminPermission("faq", "read");
+  return getDeletedFaqItemsQuery();
+}
+
+export async function getDeletedFaqCategories(): Promise<
+  FaqCategoryWithItems[]
+> {
+  await requireAdminPermission("faq", "read");
+  return getDeletedFaqCategoriesQuery();
 }
