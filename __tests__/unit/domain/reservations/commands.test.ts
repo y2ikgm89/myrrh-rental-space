@@ -160,6 +160,8 @@ mock.module("@/shared/lib/reservation", () => ({
 import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
+} from "@/shared/domain/reservations/admin-commands";
+import {
   updateReservationStatusCommand,
   updateReservationNotesCommand,
   deleteReservationCommand,
