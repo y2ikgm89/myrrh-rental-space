@@ -13,14 +13,7 @@ import {
   type UpdatePostSettingsInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import {
-  createPost as createPostCommand,
-  deletePost as deletePostCommand,
-  publishPost as publishPostCommand,
-  unpublishPost as unpublishPostCommand,
-  updatePostBody as updatePostBodyCommand,
-  updatePostSettings as updatePostSettingsCommand,
-} from "@/shared/domain/posts/commands";
+import * as postCommands from "@/shared/domain/posts/post-commands";
 import { getCacheTag } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -48,7 +41,7 @@ export async function createPost(
     resource: "post",
     action: "create",
     execute: async (user) => {
-      const result = await createPostCommand(
+      const result = await postCommands.createPost(
         omitUndefined({
           ...parsed.data,
           contentHtml,
@@ -95,7 +88,7 @@ export async function updatePostBody(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedPost = await updatePostBodyCommand(validatedId.data, {
+      updatedPost = await postCommands.updatePostBody(validatedId.data, {
         contentJson: parsed.data.contentJson,
         contentHtml,
       });
@@ -139,7 +132,7 @@ export async function updatePostSettings(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      updatedPost = await updatePostSettingsCommand(
+      updatedPost = await postCommands.updatePostSettings(
         validatedId.data,
         omitUndefined({
           title: parsed.data.title,
@@ -187,7 +180,7 @@ export async function deletePost(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
-      const result = await deletePostCommand(validated.data);
+      const result = await postCommands.deletePost(validated.data);
       deletedPostSlug = result.slug;
       return null;
     },
@@ -218,7 +211,7 @@ export async function publishPost(
     action: "publish",
     resourceId: validated.data,
     execute: async (user) => {
-      publishedPost = await publishPostCommand(validated.data, user.id);
+      publishedPost = await postCommands.publishPost(validated.data, user.id);
       return { version: publishedPost.version };
     },
     afterSuccess: async () => {
@@ -246,7 +239,7 @@ export async function unpublishPost(id: string): Promise<MutationResult> {
     action: "publish",
     resourceId: validated.data,
     execute: async () => {
-      const result = await unpublishPostCommand(validated.data);
+      const result = await postCommands.unpublishPost(validated.data);
       unpublishedPostSlug = result.slug;
       return null;
     },

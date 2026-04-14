@@ -8,7 +8,7 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
-import { incrementFaqItemViewCount } from "@/shared/domain/faq/commands";
+import { incrementFaqItemViewCount } from "@/shared/domain/faq/analytics-commands";
 import {
   ErrorCategory,
   ErrorSeverity,

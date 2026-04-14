@@ -161,16 +161,22 @@ import {
   deletePost,
   publishPost,
   unpublishPost,
+} from "@/shared/domain/posts/post-commands";
+import {
   createPostBackup,
   restorePostVersion,
+} from "@/shared/domain/posts/version-commands";
+import {
   createPostCategory,
   updatePostCategory,
   deletePostCategory,
   updatePostCategoryOrder,
+} from "@/shared/domain/posts/category-commands";
+import {
   createPostTag,
   updatePostTag,
   deletePostTag,
-} from "@/shared/domain/posts/commands";
+} from "@/shared/domain/posts/tag-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // テスト用定数

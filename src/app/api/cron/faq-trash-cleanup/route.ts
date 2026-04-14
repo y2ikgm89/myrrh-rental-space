@@ -11,7 +11,7 @@
  */
 
 import { unstable_rethrow } from "next/navigation";
-import { permanentlyDeleteExpiredFaqTrash } from "@/shared/domain/faq/commands";
+import { permanentlyDeleteExpiredFaqTrash } from "@/shared/domain/faq/analytics-commands";
 import { authorizeCronRequest } from "@/shared/lib/cron-auth";
 import { serverEnv } from "@/shared/lib/env/server";
 import {

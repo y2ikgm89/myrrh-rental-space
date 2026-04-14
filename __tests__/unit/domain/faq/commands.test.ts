@@ -168,14 +168,18 @@ import {
   updateFaqCategory,
   deleteFaqCategory,
   reorderFaqCategories,
+} from "@/shared/domain/faq/category-commands";
+import {
   createFaqItem,
   updateFaqItem,
   deleteFaqItem,
   reorderFaqItems,
   toggleFaqItemPublished,
+} from "@/shared/domain/faq/item-commands";
+import {
   voteFaqItemHelpful,
   detectStaleFaqItems,
-} from "@/shared/domain/faq/commands";
+} from "@/shared/domain/faq/analytics-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // =============================================================================

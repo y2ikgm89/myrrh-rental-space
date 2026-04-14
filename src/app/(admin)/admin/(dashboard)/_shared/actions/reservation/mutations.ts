@@ -16,7 +16,7 @@ import {
   restoreReservationCommand,
   updateReservationNotesCommand,
   updateReservationStatusCommand,
-} from "@/shared/domain/reservations/commands";
+} from "@/shared/domain/reservations/lifecycle-commands";
 import { updateCustomerFromGuestData } from "@/shared/domain/customers/commands";
 import { getReservationGuestData } from "@/shared/domain/reservations/admin-queries";
 import { DomainError } from "@/shared/domain/domain-error";

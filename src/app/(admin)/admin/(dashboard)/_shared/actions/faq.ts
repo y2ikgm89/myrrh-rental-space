@@ -5,23 +5,27 @@ import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
+  createFaqCategory as createFaqCategoryCommand,
+  deleteFaqCategory as deleteFaqCategoryCommand,
+  permanentlyDeleteFaqCategory as permanentlyDeleteFaqCategoryCommand,
+  reorderFaqCategories as reorderFaqCategoriesCommand,
+  restoreFaqCategory as restoreFaqCategoryCommand,
+  updateFaqCategory as updateFaqCategoryCommand,
+} from "@/shared/domain/faq/category-commands";
+import {
   bulkDeleteFaqItems as bulkDeleteFaqItemsCommand,
   bulkMoveFaqItems as bulkMoveFaqItemsCommand,
   bulkPublishFaqItems as bulkPublishFaqItemsCommand,
-  createFaqCategory as createFaqCategoryCommand,
+} from "@/shared/domain/faq/item-bulk-commands";
+import {
   createFaqItem as createFaqItemCommand,
-  deleteFaqCategory as deleteFaqCategoryCommand,
   deleteFaqItem as deleteFaqItemCommand,
-  permanentlyDeleteFaqCategory as permanentlyDeleteFaqCategoryCommand,
   permanentlyDeleteFaqItem as permanentlyDeleteFaqItemCommand,
-  reorderFaqCategories as reorderFaqCategoriesCommand,
   reorderFaqItems as reorderFaqItemsCommand,
-  restoreFaqCategory as restoreFaqCategoryCommand,
   restoreFaqItem as restoreFaqItemCommand,
   toggleFaqItemPublished as toggleFaqItemPublishedCommand,
-  updateFaqCategory as updateFaqCategoryCommand,
   updateFaqItem as updateFaqItemCommand,
-} from "@/shared/domain/faq/commands";
+} from "@/shared/domain/faq/item-commands";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgeFaqCache } from "@/shared/lib/cloudflare";

@@ -1,8 +1,28 @@
 # Clean Restructure Implementation Plan
 
+**ステータス**: Workstreams 1–4 完了 / Workstream 5 (Lexical UI) 別ブランチへ切り出し予定
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 500行超ドメインコマンドファイル3件と Lexical UI プラグイン3件をサブドメイン分割し、型安全例外を文書化することで、後方互換性を捨てたクリーンな構造に再編する。
+
+## 進捗サマリ (2026-04-14)
+
+- ✅ **Workstream 1**: `type-safety.md` 例外追記（`ef53432e`, `d02c86bd`）
+- ✅ **Workstream 2**: reservations/commands.ts 分割 → `payloads` / `status` / `admin-commands` / `public-commands` / `lifecycle-commands`（`69f1549c` 〜 `d86375da`、6 コミット）
+- ✅ **Workstream 3**: faq/commands.ts 分割 → `category-commands` / `item-commands` / `item-bulk-commands` / `analytics-commands`（`a4ac6efd` 〜 `7e850c6b`、4 コミット）
+- ✅ **Workstream 4**: posts/commands.ts 分割 → `post-commands` / `version-commands` / `category-commands` / `tag-commands` / `bulk-commands`（`60e55284` 〜 `a3efcc78`、5 コミット）
+  - 付随改善: `updatePostCategoryOrder` を禁止の `$transaction([...])` 配列形式から公式推奨の interactive transaction へ修正
+  - 付随改善: 呼び出し側の `import { X as Y }` エイリアスを `import * as domainCommands` namespace インポートに統一
+- 🔜 **Workstream 5**: Lexical UI 分割 — 本プランから切り離し、別ブランチ `feature/lexical-ui-split` で実施予定（`ToolbarPlugin.tsx` 960行 / `FloatingToolbarPlugin.tsx` 877行 / `insert-items.ts` 879行 — 各抽出ごとに dev サーバー + ブラウザでのランタイム検証が必須のため、domain 層の純粋リファクタリングとはレビュー粒度が異なる）
+
+**検証結果 (Workstreams 2–4)**:
+
+- `bun run type-check` → 0 errors
+- `bun test __tests__/integration/actions/admin/faq.test.ts` → 43/43 pass
+- `bun test __tests__/integration/actions/admin/post.test.ts` → 58/58 pass
+- `bun test __tests__/unit/lib/validations/post.test.ts` → 46/46 pass
+- 旧 `commands.ts` はすべて完全削除（`grep -rn 'from "@/shared/domain/(faq|posts|reservations)/commands"' src __tests__` → 0 matches）
 
 **Architecture:** 既存の公開 API（Server Actions）は壊さず、内部実装ファイルのみを分割する。各ワークストリームは独立しており、並列実行・ロールバック可能。Barrel re-export は禁止（Turbopack 互換性 / `.claude/rules/gotchas.md`）のため、呼び出し元は全て直接 import に切り替える。
 

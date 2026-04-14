@@ -143,9 +143,35 @@ mock.module("@/shared/domain/settings/public-queries", () => ({
 
 // @/shared/lib/constants はモック不要（純粋な定数ファイル、副作用なし）
 
-// エラーロギングモック
+// エラーロギングモック — errors/server.ts の全 export を含める
+// （bun-patterns.md §Gotchas: 不完全モックはグローバル干渉で他テストを壊す）
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),
+  createErrorLogger: mock(() => mock(() => undefined)),
+  safeFetch: mock(async <T>({ fetch, fallback }: { fetch: () => Promise<T>; fallback: T }) => {
+    try {
+      return await fetch();
+    } catch {
+      return fallback;
+    }
+  }),
+  criticalFetch: mock(async <T>({ fetch }: { fetch: () => Promise<T> }) => fetch()),
+  normalizeError: mock((error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
+  ),
+  getErrorMessage: mock((error: unknown) =>
+    error instanceof Error ? error.message : String(error),
+  ),
+  ReservationOverlapError: class ReservationOverlapError extends Error {
+    constructor(message = "選択された時間帯は既に予約されています") {
+      super(message);
+      this.name = "ReservationOverlapError";
+    }
+  },
+  isReservationOverlapError: mock(
+    (error: unknown) =>
+      error instanceof Error && error.name === "ReservationOverlapError",
+  ),
   ErrorCategory: {
     DATABASE: "DATABASE",
     EXTERNAL_API: "EXTERNAL_API",

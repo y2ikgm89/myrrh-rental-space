@@ -20,7 +20,7 @@ import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
-import { createPublicReservationCommand } from "@/shared/domain/reservations/commands";
+import { createPublicReservationCommand } from "@/shared/domain/reservations/public-commands";
 import { sendReservationAdminNotification } from "@/shared/lib/email/reservation-emails";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { omitUndefined } from "@/shared/lib/serialize";

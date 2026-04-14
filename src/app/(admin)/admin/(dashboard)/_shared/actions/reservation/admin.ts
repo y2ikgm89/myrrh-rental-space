@@ -10,7 +10,7 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import {
   createAdminReservationCommand,
   updateAdminReservationCommand,
-} from "@/shared/domain/reservations/commands";
+} from "@/shared/domain/reservations/admin-commands";
 import {
   syncReservationToCalendar,
   updateCalendarSync,

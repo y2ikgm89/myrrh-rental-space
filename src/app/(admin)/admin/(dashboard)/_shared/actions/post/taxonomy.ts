@@ -10,15 +10,8 @@ import {
   type PostTagInput,
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import {
-  createPostCategory as createPostCategoryCommand,
-  createPostTag as createPostTagCommand,
-  deletePostCategory as deletePostCategoryCommand,
-  deletePostTag as deletePostTagCommand,
-  updatePostCategory as updatePostCategoryCommand,
-  updatePostCategoryOrder as updatePostCategoryOrderCommand,
-  updatePostTag as updatePostTagCommand,
-} from "@/shared/domain/posts/commands";
+import * as categoryCommands from "@/shared/domain/posts/category-commands";
+import * as tagCommands from "@/shared/domain/posts/tag-commands";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -51,7 +44,8 @@ export async function createPostCategory(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostCategoryCommand(omitUndefined(parsed.data)),
+    execute: async () =>
+      categoryCommands.createPostCategory(omitUndefined(parsed.data)),
     afterSuccess: async () => {
       await invalidatePostCategoryCaches();
       await purgePostArchive();
@@ -79,7 +73,7 @@ export async function updatePostCategory(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostCategoryCommand(
+      await categoryCommands.updatePostCategory(
         validatedId.data,
         omitUndefined(parsed.data),
       );
@@ -103,7 +97,7 @@ export async function deletePostCategory(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
-      await deletePostCategoryCommand(validated.data);
+      await categoryCommands.deletePostCategory(validated.data);
       return null;
     },
     afterSuccess: async () => {
@@ -125,7 +119,7 @@ export async function updatePostCategoryOrder(
     resource: "post",
     action: "update",
     execute: async () => {
-      await updatePostCategoryOrderCommand(parsed.data);
+      await categoryCommands.updatePostCategoryOrder(parsed.data);
       return null;
     },
     afterSuccess: async () => {
@@ -146,7 +140,8 @@ export async function createPostTag(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostTagCommand(omitUndefined(parsed.data)),
+    execute: async () =>
+      tagCommands.createPostTag(omitUndefined(parsed.data)),
     afterSuccess: async () => {
       await invalidatePostTagCaches();
     },
@@ -173,7 +168,10 @@ export async function updatePostTag(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostTagCommand(validatedId.data, omitUndefined(parsed.data));
+      await tagCommands.updatePostTag(
+        validatedId.data,
+        omitUndefined(parsed.data),
+      );
       return null;
     },
     afterSuccess: async () => {
@@ -194,7 +192,7 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
-      await deletePostTagCommand(validated.data);
+      await tagCommands.deletePostTag(validated.data);
       return null;
     },
     afterSuccess: () => {
