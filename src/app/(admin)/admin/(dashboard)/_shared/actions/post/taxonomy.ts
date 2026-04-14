@@ -11,11 +11,7 @@ import {
 } from "@/admin/lib/validations/post";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import * as categoryCommands from "@/shared/domain/posts/category-commands";
-import {
-  createPostTag as createPostTagCommand,
-  deletePostTag as deletePostTagCommand,
-  updatePostTag as updatePostTagCommand,
-} from "@/shared/domain/posts/commands";
+import * as tagCommands from "@/shared/domain/posts/tag-commands";
 import { CACHE_TAGS } from "@/shared/lib/constants";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { omitUndefined } from "@/shared/lib/serialize";
@@ -144,7 +140,8 @@ export async function createPostTag(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () => createPostTagCommand(omitUndefined(parsed.data)),
+    execute: async () =>
+      tagCommands.createPostTag(omitUndefined(parsed.data)),
     afterSuccess: async () => {
       await invalidatePostTagCaches();
     },
@@ -171,7 +168,10 @@ export async function updatePostTag(
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updatePostTagCommand(validatedId.data, omitUndefined(parsed.data));
+      await tagCommands.updatePostTag(
+        validatedId.data,
+        omitUndefined(parsed.data),
+      );
       return null;
     },
     afterSuccess: async () => {
@@ -192,7 +192,7 @@ export async function deletePostTag(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async () => {
-      await deletePostTagCommand(validated.data);
+      await tagCommands.deletePostTag(validated.data);
       return null;
     },
     afterSuccess: () => {

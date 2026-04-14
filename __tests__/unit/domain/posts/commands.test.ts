@@ -176,7 +176,7 @@ import {
   createPostTag,
   updatePostTag,
   deletePostTag,
-} from "@/shared/domain/posts/commands";
+} from "@/shared/domain/posts/tag-commands";
 import { DomainError } from "@/shared/domain/domain-error";
 
 // テスト用定数
