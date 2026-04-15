@@ -34,6 +34,11 @@ NNNN-kebab-case-title.md
 | [0006](./0006-renovate-over-dependabot.md)         | Dependabot から Renovate に移行                                             | Accepted | 2026-04-15 |
 | [0007](./0007-axe-core-for-a11y-automation.md)     | axe-core/playwright で WCAG 2.1 AA 自動検証                                 | Accepted | 2026-04-15 |
 | [0008](./0008-conventional-commits-enforcement.md) | Conventional Commits 強制（lefthook commit-msg）                            | Accepted | 2026-04-15 |
+| [0009](./0009-admin-roles-client-safe-ssot.md)     | admin-roles.ts を client-safe な Role SSoT として分離                       | Accepted | 2026-04-15 |
+| [0010](./0010-per-directory-test-batch.md)         | Bun Test は per-directory バッチ実行に統一する                              | Accepted | 2026-04-15 |
+| [0011](./0011-dual-better-auth-instance.md)        | 管理者用と顧客用で Better Auth インスタンスを完全分離する                   | Accepted | 2026-04-15 |
+| [0012](./0012-execute-admin-mutation-result.md)    | 管理画面の書き込み系 Server Actions は executeAdminMutationResult に統一    | Accepted | 2026-04-15 |
+| [0013](./0013-policy-docs-sync.md)                 | .claude/rules と docs/reference/codex-rules を byte-identical に同期        | Accepted | 2026-04-15 |
 
 ## 参考
 
