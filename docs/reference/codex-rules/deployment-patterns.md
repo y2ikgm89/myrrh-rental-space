@@ -323,15 +323,15 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 
 ## ファイル配置
 
-| パス                            | 内容                                       |
-| ------------------------------- | ------------------------------------------ |
+| パス                            | 内容                                                  |
+| ------------------------------- | ----------------------------------------------------- |
 | `Dockerfile`                    | multi-stage（deps / builder-base / builder / runner） |
-| `cloudbuild.yaml`               | Cloud Build + Cloud Run deploy             |
-| `.dockerignore`                 | Docker ビルドコンテキスト除外              |
-| `.gcloudignore`                 | Cloud Build ソースアップロード除外         |
-| `docs/operations/deployment.md` | デプロイ手順・IAM・シークレット管理        |
-| `src/shared/lib/env/server.ts`  | サーバー環境変数定義                       |
-| `src/shared/lib/env/client.ts`  | クライアント環境変数定義（NEXT*PUBLIC*\*） |
+| `cloudbuild.yaml`               | Cloud Build + Cloud Run deploy                        |
+| `.dockerignore`                 | Docker ビルドコンテキスト除外                         |
+| `.gcloudignore`                 | Cloud Build ソースアップロード除外                    |
+| `docs/operations/deployment.md` | デプロイ手順・IAM・シークレット管理                   |
+| `src/shared/lib/env/server.ts`  | サーバー環境変数定義                                  |
+| `src/shared/lib/env/client.ts`  | クライアント環境変数定義（NEXT*PUBLIC*\*）            |
 
 ## 参考
 

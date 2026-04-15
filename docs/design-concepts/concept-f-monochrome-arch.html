@@ -1,618 +1,724 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Concept F — Monochrome Architectural</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept F — Monochrome Architectural</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-  :root {
-    --bg: #f0f0ec;
-    --bg-dark: #1a1a1a;
-    --bg-mid: #e4e4de;
-    --text: #1a1a1a;
-    --text-inv: #f0f0ec;
-    --text-muted: #888;
-    --text-dim: #bbb;
-    --accent: #1a1a1a;
-    --red: #ff3b30;
-    --border: #d0d0c8;
-    --font-display: 'Syne', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
-  }
+      :root {
+        --bg: #f0f0ec;
+        --bg-dark: #1a1a1a;
+        --bg-mid: #e4e4de;
+        --text: #1a1a1a;
+        --text-inv: #f0f0ec;
+        --text-muted: #888;
+        --text-dim: #bbb;
+        --accent: #1a1a1a;
+        --red: #ff3b30;
+        --border: #d0d0c8;
+        --font-display: "Syne", sans-serif;
+        --font-mono: "IBM Plex Mono", monospace;
+      }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-weight: 300;
-    line-height: 1.7;
-    -webkit-font-smoothing: antialiased;
-  }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-mono);
+        font-weight: 300;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
 
-  /* ========== HEADER ========== */
-  header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: var(--bg);
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    height: 3.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .header-left {
-    padding-left: 2rem;
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .logo {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text);
-    text-decoration: none;
-  }
-  .logo .dot { color: var(--red); }
-  nav {
-    justify-self: end;
-    padding-right: 2rem;
-    display: flex; gap: 1.5rem;
-  }
-  nav a {
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  nav a:hover { color: var(--text); }
+      /* ========== HEADER ========== */
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--bg);
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        height: 3.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .header-left {
+        padding-left: 2rem;
+        font-size: 0.6rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .logo {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text);
+        text-decoration: none;
+      }
+      .logo .dot {
+        color: var(--red);
+      }
+      nav {
+        justify-self: end;
+        padding-right: 2rem;
+        display: flex;
+        gap: 1.5rem;
+      }
+      nav a {
+        font-size: 0.6rem;
+        font-weight: 400;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      nav a:hover {
+        color: var(--text);
+      }
 
-  /* ========== HERO ========== */
-  .hero {
-    margin-top: 3.5rem;
-    min-height: calc(100vh - 3.5rem);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    position: relative;
-  }
-  .hero-left {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 4rem 3rem 3rem;
-  }
-  .hero-eyebrow {
-    font-size: 0.55rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-  .hero-title-wrap { margin: auto 0; }
-  .hero-title {
-    font-family: var(--font-display);
-    font-size: clamp(4rem, 8vw, 9rem);
-    font-weight: 800;
-    line-height: 0.9;
-    letter-spacing: -0.04em;
-    text-transform: uppercase;
-  }
-  .hero-title .outline {
-    -webkit-text-stroke: 2px var(--text);
-    color: transparent;
-  }
-  .hero-title .red { color: var(--red); }
-  .hero-bottom-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-  .hero-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    max-width: 20rem;
-    line-height: 1.9;
-  }
-  .hero-cta {
-    display: flex;
-    align-items: center; justify-content: center;
-    width: 4rem; height: 4rem;
-    background: var(--red);
-    color: var(--text-inv);
-    text-decoration: none;
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    font-weight: 700;
-    transition: transform 0.3s;
-  }
-  .hero-cta:hover { transform: scale(1.05); }
-  .hero-right {
-    background: var(--bg-dark);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .hero-right-pattern {
-    position: absolute; inset: 0;
-    background:
-      repeating-linear-gradient(
-        90deg,
-        transparent, transparent 59px,
-        rgba(255,255,255,0.03) 59px, rgba(255,255,255,0.03) 60px
-      );
-  }
-  .hero-right-big {
-    font-family: var(--font-display);
-    font-size: 20rem;
-    font-weight: 800;
-    color: rgba(255,255,255,0.03);
-    line-height: 1;
-    position: relative;
-  }
-  .hero-right-coords {
-    position: absolute;
-    bottom: 2rem; right: 2rem;
-    font-size: 0.6rem;
-    color: rgba(255,255,255,0.2);
-    text-align: right;
-    line-height: 1.8;
-  }
+      /* ========== HERO ========== */
+      .hero {
+        margin-top: 3.5rem;
+        min-height: calc(100vh - 3.5rem);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        position: relative;
+      }
+      .hero-left {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 4rem 3rem 3rem;
+      }
+      .hero-eyebrow {
+        font-size: 0.55rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .hero-title-wrap {
+        margin: auto 0;
+      }
+      .hero-title {
+        font-family: var(--font-display);
+        font-size: clamp(4rem, 8vw, 9rem);
+        font-weight: 800;
+        line-height: 0.9;
+        letter-spacing: -0.04em;
+        text-transform: uppercase;
+      }
+      .hero-title .outline {
+        -webkit-text-stroke: 2px var(--text);
+        color: transparent;
+      }
+      .hero-title .red {
+        color: var(--red);
+      }
+      .hero-bottom-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .hero-desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        max-width: 20rem;
+        line-height: 1.9;
+      }
+      .hero-cta {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 4rem;
+        height: 4rem;
+        background: var(--red);
+        color: var(--text-inv);
+        text-decoration: none;
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        font-weight: 700;
+        transition: transform 0.3s;
+      }
+      .hero-cta:hover {
+        transform: scale(1.05);
+      }
+      .hero-right {
+        background: var(--bg-dark);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .hero-right-pattern {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 59px,
+          rgba(255, 255, 255, 0.03) 59px,
+          rgba(255, 255, 255, 0.03) 60px
+        );
+      }
+      .hero-right-big {
+        font-family: var(--font-display);
+        font-size: 20rem;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.03);
+        line-height: 1;
+        position: relative;
+      }
+      .hero-right-coords {
+        position: absolute;
+        bottom: 2rem;
+        right: 2rem;
+        font-size: 0.6rem;
+        color: rgba(255, 255, 255, 0.2);
+        text-align: right;
+        line-height: 1.8;
+      }
 
-  /* ========== SECTION ========== */
-  .container { max-width: 80rem; margin: 0 auto; padding: 0 3rem; }
+      /* ========== SECTION ========== */
+      .container {
+        max-width: 80rem;
+        margin: 0 auto;
+        padding: 0 3rem;
+      }
 
-  /* ========== INDEX STRIP ========== */
-  .index-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  .index-item {
-    padding: 2rem;
-    border-right: 1px solid var(--border);
-    transition: background 0.3s;
-    cursor: default;
-  }
-  .index-item:last-child { border-right: none; }
-  .index-item:hover { background: var(--bg-mid); }
-  .index-num {
-    font-family: var(--font-display);
-    font-size: 2.5rem;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 0.5rem;
-  }
-  .index-label {
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
+      /* ========== INDEX STRIP ========== */
+      .index-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .index-item {
+        padding: 2rem;
+        border-right: 1px solid var(--border);
+        transition: background 0.3s;
+        cursor: default;
+      }
+      .index-item:last-child {
+        border-right: none;
+      }
+      .index-item:hover {
+        background: var(--bg-mid);
+      }
+      .index-num {
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+      }
+      .index-label {
+        font-size: 0.6rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
 
-  /* ========== ABOUT ========== */
-  .about {
-    padding: clamp(5rem, 10vw, 8rem) 0;
-  }
-  .about-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 4rem;
-    align-items: start;
-  }
-  .about-label {
-    font-family: var(--font-display);
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    position: sticky;
-    top: 5rem;
-  }
-  .about-content h2 {
-    font-family: var(--font-display);
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 2rem;
-    letter-spacing: -0.02em;
-  }
-  .about-content p {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    line-height: 2.2;
-    max-width: 36rem;
-    margin-bottom: 1.5rem;
-  }
+      /* ========== ABOUT ========== */
+      .about {
+        padding: clamp(5rem, 10vw, 8rem) 0;
+      }
+      .about-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 4rem;
+        align-items: start;
+      }
+      .about-label {
+        font-family: var(--font-display);
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        position: sticky;
+        top: 5rem;
+      }
+      .about-content h2 {
+        font-family: var(--font-display);
+        font-size: clamp(1.75rem, 3vw, 2.5rem);
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 2rem;
+        letter-spacing: -0.02em;
+      }
+      .about-content p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        line-height: 2.2;
+        max-width: 36rem;
+        margin-bottom: 1.5rem;
+      }
 
-  /* ========== SPACES ========== */
-  .spaces {
-    background: var(--bg-dark);
-    color: var(--text-inv);
-    padding: clamp(5rem, 10vw, 8rem) 0;
-  }
-  .spaces-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 3rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-  }
-  .spaces-title {
-    font-family: var(--font-display);
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .spaces-count {
-    font-size: 0.6rem;
-    color: rgba(255,255,255,0.3);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
+      /* ========== SPACES ========== */
+      .spaces {
+        background: var(--bg-dark);
+        color: var(--text-inv);
+        padding: clamp(5rem, 10vw, 8rem) 0;
+      }
+      .spaces-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 3rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .spaces-title {
+        font-family: var(--font-display);
+        font-size: 1.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .spaces-count {
+        font-size: 0.6rem;
+        color: rgba(255, 255, 255, 0.3);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
 
-  .space-row {
-    display: grid;
-    grid-template-columns: 4rem 1fr 8rem 8rem 8rem;
-    gap: 2rem;
-    align-items: center;
-    padding: 1.5rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .space-row:hover { background: rgba(255,255,255,0.03); }
-  .space-row-num {
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--red);
-  }
-  .space-row-name {
-    font-family: var(--font-display);
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-  .space-row-type {
-    font-size: 0.6rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.4);
-  }
-  .space-row-capacity {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.5);
-    text-align: right;
-  }
-  .space-row-price {
-    font-size: 0.85rem;
-    text-align: right;
-  }
-  .space-row-price small {
-    font-size: 0.6rem;
-    color: rgba(255,255,255,0.3);
-  }
+      .space-row {
+        display: grid;
+        grid-template-columns: 4rem 1fr 8rem 8rem 8rem;
+        gap: 2rem;
+        align-items: center;
+        padding: 1.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .space-row:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .space-row-num {
+        font-family: var(--font-display);
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--red);
+      }
+      .space-row-name {
+        font-family: var(--font-display);
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      .space-row-type {
+        font-size: 0.6rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.4);
+      }
+      .space-row-capacity {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-align: right;
+      }
+      .space-row-price {
+        font-size: 0.85rem;
+        text-align: right;
+      }
+      .space-row-price small {
+        font-size: 0.6rem;
+        color: rgba(255, 255, 255, 0.3);
+      }
 
-  /* ========== FEATURE BLOCKS ========== */
-  .feature-blocks {
-    padding: clamp(5rem, 10vw, 8rem) 0;
-  }
-  .feature-blocks-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-  }
-  .feature-block {
-    padding: 2.5rem;
-    border: 1px solid var(--border);
-    margin-right: -1px;
-    margin-bottom: -1px;
-    transition: background 0.3s;
-  }
-  .feature-block:hover { background: var(--bg-mid); }
-  .feature-block-num {
-    font-family: var(--font-display);
-    font-size: 3rem;
-    font-weight: 800;
-    color: var(--bg-mid);
-    line-height: 1;
-    margin-bottom: 1.5rem;
-  }
-  .feature-block:hover .feature-block-num { color: var(--red); }
-  .feature-block-title {
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.75rem;
-  }
-  .feature-block-desc {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    line-height: 1.9;
-  }
+      /* ========== FEATURE BLOCKS ========== */
+      .feature-blocks {
+        padding: clamp(5rem, 10vw, 8rem) 0;
+      }
+      .feature-blocks-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+      }
+      .feature-block {
+        padding: 2.5rem;
+        border: 1px solid var(--border);
+        margin-right: -1px;
+        margin-bottom: -1px;
+        transition: background 0.3s;
+      }
+      .feature-block:hover {
+        background: var(--bg-mid);
+      }
+      .feature-block-num {
+        font-family: var(--font-display);
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--bg-mid);
+        line-height: 1;
+        margin-bottom: 1.5rem;
+      }
+      .feature-block:hover .feature-block-num {
+        color: var(--red);
+      }
+      .feature-block-title {
+        font-family: var(--font-display);
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+      }
+      .feature-block-desc {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        line-height: 1.9;
+      }
 
-  /* ========== CTA ========== */
-  .cta-banner {
-    background: var(--red);
-    color: white;
-    padding: clamp(4rem, 8vw, 6rem) 3rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .cta-title {
-    font-family: var(--font-display);
-    font-size: clamp(2rem, 4vw, 3.5rem);
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .cta-btn {
-    display: inline-block;
-    padding: 1rem 2.5rem;
-    background: white;
-    color: var(--red);
-    text-decoration: none;
-    font-family: var(--font-display);
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    transition: transform 0.3s;
-  }
-  .cta-btn:hover { transform: scale(1.03); }
+      /* ========== CTA ========== */
+      .cta-banner {
+        background: var(--red);
+        color: white;
+        padding: clamp(4rem, 8vw, 6rem) 3rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .cta-title {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      }
+      .cta-btn {
+        display: inline-block;
+        padding: 1rem 2.5rem;
+        background: white;
+        color: var(--red);
+        text-decoration: none;
+        font-family: var(--font-display);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        transition: transform 0.3s;
+      }
+      .cta-btn:hover {
+        transform: scale(1.03);
+      }
 
-  /* ========== FOOTER ========== */
-  footer {
-    padding: 2rem 3rem;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    border-top: 1px solid var(--border);
-  }
-  .footer-brand {
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .footer-brand .dot { color: var(--red); }
-  .footer-copy {
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    text-align: center;
-  }
-  .footer-links {
-    justify-self: end;
-    display: flex; gap: 1.5rem;
-  }
-  .footer-links a {
-    font-size: 0.6rem; color: var(--text-muted);
-    text-decoration: none; letter-spacing: 0.1em;
-    text-transform: uppercase; transition: color 0.2s;
-  }
-  .footer-links a:hover { color: var(--text); }
+      /* ========== FOOTER ========== */
+      footer {
+        padding: 2rem 3rem;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        border-top: 1px solid var(--border);
+      }
+      .footer-brand {
+        font-family: var(--font-display);
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .footer-brand .dot {
+        color: var(--red);
+      }
+      .footer-copy {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .footer-links {
+        justify-self: end;
+        display: flex;
+        gap: 1.5rem;
+      }
+      .footer-links a {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        transition: color 0.2s;
+      }
+      .footer-links a:hover {
+        color: var(--text);
+      }
 
-  @media (max-width: 768px) {
-    header { grid-template-columns: 1fr 1fr; height: auto; padding: 1rem 1.5rem; }
-    .header-left { display: none; }
-    nav { padding-right: 0; }
-    .hero { grid-template-columns: 1fr; }
-    .hero-left { padding: 3rem 1.5rem 2rem; }
-    .hero-right { min-height: 40vh; }
-    .container { padding: 0 1.5rem; }
-    .index-strip { grid-template-columns: repeat(2, 1fr); }
-    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
-    .about-label { position: static; }
-    .space-row { grid-template-columns: 3rem 1fr 5rem; }
-    .space-row-type, .space-row-capacity { display: none; }
-    .feature-blocks-grid { grid-template-columns: 1fr; }
-    .cta-banner { flex-direction: column; gap: 2rem; text-align: center; }
-    footer { grid-template-columns: 1fr; gap: 1rem; text-align: center; }
-    .footer-links { justify-self: center; }
-  }
-</style>
-</head>
-<body>
+      @media (max-width: 768px) {
+        header {
+          grid-template-columns: 1fr 1fr;
+          height: auto;
+          padding: 1rem 1.5rem;
+        }
+        .header-left {
+          display: none;
+        }
+        nav {
+          padding-right: 0;
+        }
+        .hero {
+          grid-template-columns: 1fr;
+        }
+        .hero-left {
+          padding: 3rem 1.5rem 2rem;
+        }
+        .hero-right {
+          min-height: 40vh;
+        }
+        .container {
+          padding: 0 1.5rem;
+        }
+        .index-strip {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .about-grid {
+          grid-template-columns: 1fr;
+          gap: 2rem;
+        }
+        .about-label {
+          position: static;
+        }
+        .space-row {
+          grid-template-columns: 3rem 1fr 5rem;
+        }
+        .space-row-type,
+        .space-row-capacity {
+          display: none;
+        }
+        .feature-blocks-grid {
+          grid-template-columns: 1fr;
+        }
+        .cta-banner {
+          flex-direction: column;
+          gap: 2rem;
+          text-align: center;
+        }
+        footer {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+          text-align: center;
+        }
+        .footer-links {
+          justify-self: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="header-left">35°41'N 139°42'E</span>
+      <a href="#" class="logo">MYRRH<span class="dot">.</span></a>
+      <nav>
+        <a href="#">Spaces</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+      </nav>
+    </header>
 
-<header>
-  <span class="header-left">35°41'N 139°42'E</span>
-  <a href="#" class="logo">MYRRH<span class="dot">.</span></a>
-  <nav>
-    <a href="#">Spaces</a>
-    <a href="#">About</a>
-    <a href="#">Contact</a>
-  </nav>
-</header>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-left">
+        <p class="hero-eyebrow">Rental Space — Tokyo</p>
+        <div class="hero-title-wrap">
+          <h1 class="hero-title">
+            <span class="outline">WORK</span><br />
+            <span class="red">SPACE</span><br />
+            RE<span class="outline">DEFINED</span>
+          </h1>
+        </div>
+        <div class="hero-bottom-row">
+          <p class="hero-desc">
+            レンタルスペースの常識を変える。厳選された12の空間が、
+            あなたのプロジェクトに新しい可能性を。
+          </p>
+          <a href="#" class="hero-cta">→</a>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-right-pattern"></div>
+        <span class="hero-right-big">M</span>
+        <div class="hero-right-coords">
+          35°41'22.4"N<br />
+          139°42'01.2"E<br />
+          <br />
+          Est. 2024
+        </div>
+      </div>
+    </section>
 
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-left">
-    <p class="hero-eyebrow">Rental Space — Tokyo</p>
-    <div class="hero-title-wrap">
-      <h1 class="hero-title">
-        <span class="outline">WORK</span><br>
-        <span class="red">SPACE</span><br>
-        RE<span class="outline">DEFINED</span>
-      </h1>
-    </div>
-    <div class="hero-bottom-row">
-      <p class="hero-desc">
-        レンタルスペースの常識を変える。厳選された12の空間が、
-        あなたのプロジェクトに新しい可能性を。
-      </p>
-      <a href="#" class="hero-cta">→</a>
-    </div>
-  </div>
-  <div class="hero-right">
-    <div class="hero-right-pattern"></div>
-    <span class="hero-right-big">M</span>
-    <div class="hero-right-coords">
-      35°41'22.4"N<br>
-      139°42'01.2"E<br>
-      <br>
-      Est. 2024
-    </div>
-  </div>
-</section>
-
-<!-- INDEX STRIP -->
-<div class="index-strip">
-  <div class="index-item">
-    <div class="index-num">12</div>
-    <div class="index-label">Total Spaces</div>
-  </div>
-  <div class="index-item">
-    <div class="index-num">2.4K</div>
-    <div class="index-label">Reservations</div>
-  </div>
-  <div class="index-item">
-    <div class="index-num">98%</div>
-    <div class="index-label">Satisfaction</div>
-  </div>
-  <div class="index-item">
-    <div class="index-num">4.8</div>
-    <div class="index-label">Avg Rating</div>
-  </div>
-</div>
-
-<!-- ABOUT -->
-<section class="about">
-  <div class="container">
-    <div class="about-grid">
-      <div class="about-label">About /<br>Myrrh</div>
-      <div class="about-content">
-        <h2>空間は道具だ。<br>最高の道具を、選ぶ。</h2>
-        <p>
-          Myrrh はレンタルスペースを「道具」として再定義します。
-          優れた道具がそうであるように、私たちの空間は使い手の意図に応え、
-          パフォーマンスを最大化します。
-        </p>
-        <p>
-          全室に自然光を確保し、プロフェッショナル水準の遮音性能を実現。
-          会議、撮影、ワークショップ —— 目的に合わせた空間が、ここにあります。
-        </p>
+    <!-- INDEX STRIP -->
+    <div class="index-strip">
+      <div class="index-item">
+        <div class="index-num">12</div>
+        <div class="index-label">Total Spaces</div>
+      </div>
+      <div class="index-item">
+        <div class="index-num">2.4K</div>
+        <div class="index-label">Reservations</div>
+      </div>
+      <div class="index-item">
+        <div class="index-num">98%</div>
+        <div class="index-label">Satisfaction</div>
+      </div>
+      <div class="index-item">
+        <div class="index-num">4.8</div>
+        <div class="index-label">Avg Rating</div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- SPACES -->
-<section class="spaces">
-  <div class="container">
-    <div class="spaces-header">
-      <h2 class="spaces-title">All Spaces</h2>
-      <span class="spaces-count">12 Available</span>
-    </div>
-    <div class="space-row">
-      <span class="space-row-num">01</span>
-      <span class="space-row-name">Conference Room A</span>
-      <span class="space-row-type">Meeting</span>
-      <span class="space-row-capacity">Max 8</span>
-      <span class="space-row-price">¥3,000 <small>/h</small></span>
-    </div>
-    <div class="space-row">
-      <span class="space-row-num">02</span>
-      <span class="space-row-name">Open Lounge</span>
-      <span class="space-row-type">Coworking</span>
-      <span class="space-row-capacity">Max 30</span>
-      <span class="space-row-price">¥1,500 <small>/h</small></span>
-    </div>
-    <div class="space-row">
-      <span class="space-row-num">03</span>
-      <span class="space-row-name">Hall B</span>
-      <span class="space-row-type">Seminar</span>
-      <span class="space-row-capacity">Max 50</span>
-      <span class="space-row-price">¥8,000 <small>/h</small></span>
-    </div>
-    <div class="space-row">
-      <span class="space-row-num">04</span>
-      <span class="space-row-name">Studio C</span>
-      <span class="space-row-type">Photo</span>
-      <span class="space-row-capacity">Max 10</span>
-      <span class="space-row-price">¥4,500 <small>/h</small></span>
-    </div>
-    <div class="space-row">
-      <span class="space-row-num">05</span>
-      <span class="space-row-name">Private Office D</span>
-      <span class="space-row-type">Office</span>
-      <span class="space-row-capacity">Max 4</span>
-      <span class="space-row-price">¥2,000 <small>/h</small></span>
-    </div>
-  </div>
-</section>
+    <!-- ABOUT -->
+    <section class="about">
+      <div class="container">
+        <div class="about-grid">
+          <div class="about-label">About /<br />Myrrh</div>
+          <div class="about-content">
+            <h2>空間は道具だ。<br />最高の道具を、選ぶ。</h2>
+            <p>
+              Myrrh はレンタルスペースを「道具」として再定義します。
+              優れた道具がそうであるように、私たちの空間は使い手の意図に応え、
+              パフォーマンスを最大化します。
+            </p>
+            <p>
+              全室に自然光を確保し、プロフェッショナル水準の遮音性能を実現。
+              会議、撮影、ワークショップ ——
+              目的に合わせた空間が、ここにあります。
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<!-- FEATURE BLOCKS -->
-<section class="feature-blocks">
-  <div class="container">
-    <div class="feature-blocks-grid">
-      <div class="feature-block">
-        <div class="feature-block-num">01</div>
-        <h3 class="feature-block-title">Natural Light</h3>
-        <p class="feature-block-desc">全室に大きな窓。一日を通じて変化する光が空間に表情を与えます。</p>
+    <!-- SPACES -->
+    <section class="spaces">
+      <div class="container">
+        <div class="spaces-header">
+          <h2 class="spaces-title">All Spaces</h2>
+          <span class="spaces-count">12 Available</span>
+        </div>
+        <div class="space-row">
+          <span class="space-row-num">01</span>
+          <span class="space-row-name">Conference Room A</span>
+          <span class="space-row-type">Meeting</span>
+          <span class="space-row-capacity">Max 8</span>
+          <span class="space-row-price">¥3,000 <small>/h</small></span>
+        </div>
+        <div class="space-row">
+          <span class="space-row-num">02</span>
+          <span class="space-row-name">Open Lounge</span>
+          <span class="space-row-type">Coworking</span>
+          <span class="space-row-capacity">Max 30</span>
+          <span class="space-row-price">¥1,500 <small>/h</small></span>
+        </div>
+        <div class="space-row">
+          <span class="space-row-num">03</span>
+          <span class="space-row-name">Hall B</span>
+          <span class="space-row-type">Seminar</span>
+          <span class="space-row-capacity">Max 50</span>
+          <span class="space-row-price">¥8,000 <small>/h</small></span>
+        </div>
+        <div class="space-row">
+          <span class="space-row-num">04</span>
+          <span class="space-row-name">Studio C</span>
+          <span class="space-row-type">Photo</span>
+          <span class="space-row-capacity">Max 10</span>
+          <span class="space-row-price">¥4,500 <small>/h</small></span>
+        </div>
+        <div class="space-row">
+          <span class="space-row-num">05</span>
+          <span class="space-row-name">Private Office D</span>
+          <span class="space-row-type">Office</span>
+          <span class="space-row-capacity">Max 4</span>
+          <span class="space-row-price">¥2,000 <small>/h</small></span>
+        </div>
       </div>
-      <div class="feature-block">
-        <div class="feature-block-num">02</div>
-        <h3 class="feature-block-title">Sound Proof</h3>
-        <p class="feature-block-desc">プロ水準の遮音設計。外部の喧騒を完全に遮断します。</p>
+    </section>
+
+    <!-- FEATURE BLOCKS -->
+    <section class="feature-blocks">
+      <div class="container">
+        <div class="feature-blocks-grid">
+          <div class="feature-block">
+            <div class="feature-block-num">01</div>
+            <h3 class="feature-block-title">Natural Light</h3>
+            <p class="feature-block-desc">
+              全室に大きな窓。一日を通じて変化する光が空間に表情を与えます。
+            </p>
+          </div>
+          <div class="feature-block">
+            <div class="feature-block-num">02</div>
+            <h3 class="feature-block-title">Sound Proof</h3>
+            <p class="feature-block-desc">
+              プロ水準の遮音設計。外部の喧騒を完全に遮断します。
+            </p>
+          </div>
+          <div class="feature-block">
+            <div class="feature-block-num">03</div>
+            <h3 class="feature-block-title">Flex Layout</h3>
+            <p class="feature-block-desc">
+              可動式の家具と設備で、用途に合わせた自由な配置が可能。
+            </p>
+          </div>
+          <div class="feature-block">
+            <div class="feature-block-num">04</div>
+            <h3 class="feature-block-title">Full AV</h3>
+            <p class="feature-block-desc">
+              プロジェクター、スクリーン、音響設備を全室に完備。
+            </p>
+          </div>
+          <div class="feature-block">
+            <div class="feature-block-num">05</div>
+            <h3 class="feature-block-title">Instant Book</h3>
+            <p class="feature-block-desc">
+              オンラインで空き確認から決済まで完結。当日予約にも対応。
+            </p>
+          </div>
+          <div class="feature-block">
+            <div class="feature-block-num">06</div>
+            <h3 class="feature-block-title">Support</h3>
+            <p class="feature-block-desc">
+              専属スタッフが設営から撤収までフルサポートします。
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="feature-block">
-        <div class="feature-block-num">03</div>
-        <h3 class="feature-block-title">Flex Layout</h3>
-        <p class="feature-block-desc">可動式の家具と設備で、用途に合わせた自由な配置が可能。</p>
-      </div>
-      <div class="feature-block">
-        <div class="feature-block-num">04</div>
-        <h3 class="feature-block-title">Full AV</h3>
-        <p class="feature-block-desc">プロジェクター、スクリーン、音響設備を全室に完備。</p>
-      </div>
-      <div class="feature-block">
-        <div class="feature-block-num">05</div>
-        <h3 class="feature-block-title">Instant Book</h3>
-        <p class="feature-block-desc">オンラインで空き確認から決済まで完結。当日予約にも対応。</p>
-      </div>
-      <div class="feature-block">
-        <div class="feature-block-num">06</div>
-        <h3 class="feature-block-title">Support</h3>
-        <p class="feature-block-desc">専属スタッフが設営から撤収までフルサポートします。</p>
-      </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="cta-banner">
+      <h2 class="cta-title">BOOK YOUR<br />NEXT SPACE</h2>
+      <a href="#" class="cta-btn">Reserve Now</a>
     </div>
-  </div>
-</section>
 
-<!-- CTA -->
-<div class="cta-banner">
-  <h2 class="cta-title">BOOK YOUR<br>NEXT SPACE</h2>
-  <a href="#" class="cta-btn">Reserve Now</a>
-</div>
-
-<!-- FOOTER -->
-<footer>
-  <span class="footer-brand">MYRRH<span class="dot">.</span></span>
-  <span class="footer-copy">&copy; 2026 Myrrh Rental Space — Tokyo, Japan</span>
-  <div class="footer-links">
-    <a href="#">Terms</a>
-    <a href="#">Privacy</a>
-    <a href="#">Contact</a>
-  </div>
-</footer>
-
-</body>
+    <!-- FOOTER -->
+    <footer>
+      <span class="footer-brand">MYRRH<span class="dot">.</span></span>
+      <span class="footer-copy"
+        >&copy; 2026 Myrrh Rental Space — Tokyo, Japan</span
+      >
+      <div class="footer-links">
+        <a href="#">Terms</a>
+        <a href="#">Privacy</a>
+        <a href="#">Contact</a>
+      </div>
+    </footer>
+  </body>
 </html>

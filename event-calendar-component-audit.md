@@ -131,6 +131,7 @@ export function PostTable({ posts }: PostTableProps) {
 ```
 
 **パターン解説**:
+
 - `selectedIds: string[]` 状態で複数選択管理
 - `allSelected` boolean derived state（全選択チェック）
 - `toggleAll()` / `toggleOne(id)` ハンドラパターン
@@ -223,6 +224,7 @@ export function PostTableHeader({
 ```
 
 **パターン解説**:
+
 - `nuqs` パッケージで URL state 管理（filters, sort, pagination）
 - `SortableColumnHeader` でカラムクリック時に toggle
   - 同じカラム: `asc` ↔ `desc`
@@ -302,6 +304,7 @@ export function PostActionCell({ postId, status }: PostActionCellProps) {
 ```
 
 **パターン解説**:
+
 - `useOptimistic()` で即座ビジュアル更新（ネットワーク前）
 - `useTransition()` で `isPending` フラグ管理
 - Server Action 呼び出し → エラー/成功でトースト表示
@@ -356,6 +359,7 @@ export function PostFilters({ categories }: PostFiltersProps) {
 ```
 
 **パターン解説**:
+
 - `<BaseFilters>` ラッパー（検索バー + フィルター棚）
 - `useFilterParamsWithCategory()` で URL state 管理
 - `<Select>` コンポーネント（Headless UI 統合）
@@ -443,6 +447,7 @@ export { DropdownMenuSeparator as ActionDropdownSeparator };
 ```
 
 **パターン解説**:
+
 - `<ActionDropdown>` : 3点メニューボタン + ドロップダウン
 - `<ActionDropdownItem href={...}>` : Link ベース
 - `<ActionDropdownItem onClick={...}>` : onClick ベース
@@ -506,6 +511,7 @@ export function AdminDetailLayout({
 ```
 
 **パターン解説**:
+
 - Server Component（`'use client'` なし）
 - `<IconArrowLeft>` 付き戻るリンク
 - タイトル + サブタイトル
@@ -550,6 +556,7 @@ export function DetailSection({
 ```
 
 **パターン解説**:
+
 - `<Card>` ラッパー
 - `<CardHeader>` に title + description
 - `<CardContent>` に children（フォーム等）
@@ -626,6 +633,7 @@ export function DetailDeleteButton({
 ```
 
 **パターン解説**:
+
 - `<DeleteConfirmDialog>` 確認ダイアログ
 - `useTransition()` で削除中の UI ロック
 - 削除成功時 `router.push(redirectTo)`
@@ -687,13 +695,13 @@ export async function updateInquiryStatus(
     resource: "inquiry",
     action: "update",
     resourceId: parsed.data.id,
-    
+
     // ③ ドメインコマンド実行
     execute: async () => {
       await updateInquiryStatusCommand(parsed.data.id, parsed.data.status);
       return null;
     },
-    
+
     // ④ キャッシュ無効化
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
@@ -744,7 +752,7 @@ export async function replyToInquiry(
     resource: "inquiry",
     action: "update",
     resourceId: parsed.data.id,
-    
+
     execute: async (user) => {
       // ドメインコマンド実行
       const result = await replyToInquiryCommand(
@@ -773,12 +781,12 @@ export async function replyToInquiry(
 
       return { id: result.id };
     },
-    
+
     afterSuccess: () => {
       updateTag(CACHE_TAGS.INQUIRIES);
       updateTag(getCacheTag.inquiries.detail(parsed.data.id));
     },
-    
+
     // 監査ログ用の ID 抽出
     resolveAuditResourceId: (data) => data.id,
   });
@@ -786,6 +794,7 @@ export async function replyToInquiry(
 ```
 
 **パターン解説**:
+
 1. **Zod スキーマ** : リソースごとにスキーマ定義
 2. **safeParse()** : エラーハンドリング
 3. **executeAdminMutationResult()** : 認証・権限・監査ログ一括
@@ -882,15 +891,15 @@ export async function createPageSection(
     resource: "page",
     action: "update",
     ...(parsed.data.pageId != null && { resourceId: parsed.data.pageId }),
-    
+
     execute: async () => createPageSectionCommand(parsed.data, contentHtml),
-    
+
     afterSuccess: () => {
       if (parsed.data.pageId) {
         revalidatePages(parsed.data.pageId);
       }
     },
-    
+
     resolveAuditResourceId: (result) => result.id,
   });
 }
@@ -917,7 +926,7 @@ export async function updatePageSection(
     resource: "page",
     action: "update",
     resourceId: id,
-    
+
     execute: async () => {
       const result = await updatePageSectionCommand(
         id,
@@ -927,7 +936,7 @@ export async function updatePageSection(
       pageId = result.pageId;
       return null;
     },
-    
+
     afterSuccess: () => {
       revalidatePages(pageId);
     },
@@ -944,13 +953,13 @@ export async function togglePageSection(
     resource: "page",
     action: "update",
     resourceId: id,
-    
+
     execute: async () => {
       const result = await togglePageSectionCommand(id, isActive);
       pageId = result.pageId;
       return null;
     },
-    
+
     afterSuccess: () => {
       revalidatePages(pageId);
     },
@@ -970,12 +979,12 @@ export async function updatePageSectionOrder(
     resource: "page",
     action: "update",
     resourceId: pageId,
-    
+
     execute: async () => {
       await updatePageSectionOrderCommand(pageId, parsed.data);
       return null;
     },
-    
+
     afterSuccess: () => {
       revalidatePages(pageId);
     },
@@ -989,13 +998,13 @@ export async function deletePageSection(id: string): Promise<MutationResult> {
     resource: "page",
     action: "update",
     resourceId: id,
-    
+
     execute: async () => {
       const result = await deletePageSectionCommand(id);
       pageId = result.pageId;
       return null;
     },
-    
+
     afterSuccess: () => {
       revalidatePages(pageId);
     },
@@ -1011,23 +1020,24 @@ export async function duplicatePageSection(
     resource: "page",
     action: "update",
     resourceId: id,
-    
+
     execute: async () => {
       const result = await duplicatePageSectionCommand(id);
       duplicatedPageId = result.pageId ?? "";
       return result.section;
     },
-    
+
     afterSuccess: () => {
       revalidatePages(duplicatedPageId);
     },
-    
+
     resolveAuditResourceId: (result) => result.id,
   });
 }
 ```
 
 **パターン解説**:
+
 - **Lexical JSON → HTML** : `renderEditorStateToHtmlLazy()`
 - **`pageId` の遅延キャプチャ** : execute で設定 → afterSuccess で使用
 - **複数キャッシュ無効化** : `revalidatePages()` helper
@@ -1261,6 +1271,7 @@ export async function publishPost(
 ```
 
 **パターン解説**:
+
 1. **前提条件チェック** : `ensureXxxExists()` 関数
 2. **並行実行** : `Promise.all()` で複数チェック同時実行
 3. **Prisma `$transaction`** : 複数操作の一括実行
@@ -1435,6 +1446,7 @@ export async function getPostById(id: string): Promise<PostData | null> {
 ```
 
 **パターン解説**:
+
 - **WHERE 構築** : `buildPostWhere()` で filter object → Prisma WHERE
 - **並行実行** : `$transaction([count, findMany])` で同時実行
 - **Serialization** : Date → ISO string 変換
@@ -1583,6 +1595,7 @@ export const isSpaceListConfig = createConfigGuard(spaceListConfigSchema);
 ```
 
 **パターン解説**:
+
 - **SectionType union** : 17 種類の type 定数
 - **type 別 config schema** : 各セクション固有の Zod schema
 - **transform()** : レガシーデータ形式の統一（CTA button）
@@ -1638,24 +1651,11 @@ export const couponFormSchema = z
       .or(z.literal("")),
     type: couponTypeSchema,
     discountValue: discountValueSchema,
-    minReservationAmount: z.coerce
-      .number()
-      .nonnegative()
-      .optional()
-      .nullable(),
-    maxDiscountAmount: z.coerce
-      .number()
-      .positive()
-      .optional()
-      .nullable(),
+    minReservationAmount: z.coerce.number().nonnegative().optional().nullable(),
+    maxDiscountAmount: z.coerce.number().positive().optional().nullable(),
     validFrom: z.coerce.date({ error: "有効開始日を入力してください" }),
     validUntil: z.coerce.date().optional().nullable(),
-    usageLimit: z.coerce
-      .number()
-      .int()
-      .positive()
-      .optional()
-      .nullable(),
+    usageLimit: z.coerce.number().int().positive().optional().nullable(),
     isActive: z.boolean().default(true),
     canCombineWithDurationDiscount: z.boolean().default(true),
   })
@@ -1691,6 +1691,7 @@ export type CouponFormOutput = z.output<typeof couponFormSchema>;
 ```
 
 **パターン解説**:
+
 - **transform()** : 大文字化（自動正規化）
 - **coerce** : 文字列 → number 自動変換
 - **.refine()** : クロスフィールド検証
@@ -1942,6 +1943,7 @@ export async function SectionRenderer({
 ```
 
 **パターン解説**:
+
 - **Switch 式** : type → コンポーネント出し分け
 - **config parse** : `getXxxConfig()` で safe parse
 - **DB クエリー** : `getShowcaseSpaces()` などで DB データ取得
@@ -2104,6 +2106,7 @@ export function getTextStyle(
 ```
 
 **パターン解説**:
+
 - **Mapping tables** : `satisfies` で網羅性チェック
 - **`skipPadding`** : デフォルト padding を無視
 - **`skipContainer`** : コンテナ div 省略（Hero 等の特殊レイアウト）
@@ -2156,6 +2159,7 @@ export function getTextStyle(
 ---
 
 **参考ファイル一覧**:
+
 - `src/app/(admin)/admin/(dashboard)/posts/_components/*.tsx` (7 ファイル)
 - `src/app/(admin)/admin/(dashboard)/_shared/components/*.tsx` (14+ ファイル)
 - `src/app/(admin)/admin/(dashboard)/_shared/actions/inquiry.ts`

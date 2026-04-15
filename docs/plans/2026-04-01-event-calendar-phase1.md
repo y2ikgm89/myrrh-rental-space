@@ -56,12 +56,12 @@
 
 ### 1. 技術スタック
 
-| 層            | 選択           | 理由                                          |
-| ------------- | -------------- | --------------------------------------------- |
+| 層            | 選択           | 理由                                            |
+| ------------- | -------------- | ----------------------------------------------- |
 | カレンダー UI | Full Calendar  | React 統合・Month/Week/Day ビュー・イベント API |
-| ビューモード  | URL パラメータ | `?view=month&startDate=2026-04&spaceId=xxx`   |
-| キャッシュ    | `'use cache'`  | `CACHE_LIFE.DYNAMIC_DATA` (分単位)            |
-| 状態管理      | (不要)         | ビューモードはURL パラメータで管理             |
+| ビューモード  | URL パラメータ | `?view=month&startDate=2026-04&spaceId=xxx`     |
+| キャッシュ    | `'use cache'`  | `CACHE_LIFE.DYNAMIC_DATA` (分単位)              |
+| 状態管理      | (不要)         | ビューモードはURL パラメータで管理              |
 
 ### 2. データ取得フロー
 
@@ -85,11 +85,11 @@ Client Component で render
 
 ```typescript
 const RESERVATION_STATUS_COLORS = {
-  PENDING: "#fbbf24",    // amber-400
-  CONFIRMED: "#10b981",  // emerald-500
-  COMPLETED: "#6b7280",  // gray-500
-  CANCELLED: "#ef4444",  // red-500
-  NO_SHOW: "#8b5cf6",    // violet-500
+  PENDING: "#fbbf24", // amber-400
+  CONFIRMED: "#10b981", // emerald-500
+  COMPLETED: "#6b7280", // gray-500
+  CANCELLED: "#ef4444", // red-500
+  NO_SHOW: "#8b5cf6", // violet-500
 } as const;
 ```
 
@@ -112,6 +112,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 ### フェーズ A: ページ構造 & Server Component 基盤 (5 タスク)
 
 #### A1. `/admin/calendar` ページ作成
+
 - [ ] `src/app/(admin)/admin/(dashboard)/calendar/page.tsx` 作成
 - [ ] メタデータ設定 (`title: "予約カレンダー | Myrrh Rental Space"`)
 - [ ] nuqs パーサー統合 (`calendarSearchParams` の定義・parse)
@@ -120,6 +121,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run type-check` 通過
 
 #### A2. nuqs パーサー定義 (`src/shared/lib/nuqs/parsers.ts`)
+
 - [ ] `calendarSearchParams` 定義
   - `startDate`: ISO 8601 日付文字列 (default: 当月1日)
   - `endDate`: ISO 8601 日付文字列 (default: 当月末日)
@@ -130,6 +132,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: ブラウザパラメータ遷移確認
 
 #### A3. Reservation クエリ (`_shared/queries.ts` 新規)
+
 - [ ] `getReservationsByDateRange(startDate, endDate, filters)`
   - Prisma `findMany` with `select: { id, spaceId, customerId, startTime, endTime, status, space: { select: { name } } }`
   - `where: { spaceId?, status?, deletedAt: null, startTime >= startDate, endTime <= endDate }`
@@ -139,6 +142,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run type-check` + unit テスト
 
 #### A4. `'use cache'` データ取得関数
+
 - [ ] Server Component で `'use cache'` 関数を実装
 - [ ] `cacheLife(CACHE_LIFE.DYNAMIC_DATA)` (分単位)
 - [ ] `cacheTag(getCacheTag.reservations.calendar())`
@@ -146,6 +150,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: キャッシュタグ確認
 
 #### A5. メインページレイアウト
+
 - [ ] `<div className="space-y-6">` で `h1` + Filters + CalendarView
 - [ ] `<h1 className="text-2xl font-bold">予約カレンダー</h1>`
 - [ ] `<p className="text-sm text-muted-foreground">スペース別に予約スケジュールを表示します</p>`
@@ -157,6 +162,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 ### フェーズ B: UI コンポーネント (4 タスク)
 
 #### B1. CalendarView コンポーネント (`_components/CalendarView.tsx`)
+
 - [ ] `"use client"` コンポーネント
 - [ ] `@fullcalendar/react` インストール・設定
   - `@fullcalendar/daygrid`（月ビュー）
@@ -170,6 +176,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run type-check` + Playwright E2E
 
 #### B2. CalendarFilters コンポーネント (`_components/CalendarFilters.tsx`)
+
 - [ ] `"use client"` コンポーネント
 - [ ] フィルター要素
   - Space SelectBox（全 Space リスト）
@@ -181,6 +188,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: フィルター変更時の URL 確認
 
 #### B3. ReservationCard コンポーネント (`_components/ReservationCard.tsx`)
+
 - [ ] Server Component（純粋な表示）
 - [ ] Props: `reservation: CalendarEvent`
 - [ ] 表示内容
@@ -191,6 +199,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run type-check`
 
 #### B4. ReservationModal コンポーネント (`_components/ReservationModal.tsx`)
+
 - [ ] Client Component（Dialog primitive）
 - [ ] Props: `reservation: Reservation`, `open: boolean`, `onClose: () => void`
 - [ ] レイアウト
@@ -206,6 +215,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 ### フェーズ C: API統合 & キャッシュ (3 タスク)
 
 #### C1. Server Actions 統合 (`_shared/actions.ts`)
+
 - [ ] `deleteReservationFromCalendarAction(id)`
   - `deleteReservationCommand(id)` ラップ
   - `await updateTag(CACHE_TAGS.RESERVATIONS)`
@@ -217,6 +227,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: キャッシュ無効化動作確認
 
 #### C2. 既存 Reservation コマンドへのキャッシュ無効化追加
+
 - [ ] `src/shared/domain/reservations/commands/delete-reservation.ts`
   - 既存: `deleteReservationCommand(id, customerId)`
   - 追加: `updateTag(getCacheTag.reservations.calendar())`
@@ -226,6 +237,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run type-check`
 
 #### C3. 権限・レート制限
+
 - [ ] `src/app/(admin)/admin/(dashboard)/calendar/page.tsx` で `hasPermission()` チェック
   - 権限なし → empty state 表示
 - [ ] 管理画面のため `formSubmitRateLimiter` は不要（セッション認証済み）
@@ -236,6 +248,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 ### フェーズ D: ナビゲーション & 統合 (2 タスク)
 
 #### D1. サイドバー項目追加
+
 - [ ] `src/app/(admin)/admin/(dashboard)/_components/sidebar-items.tsx`
 - [ ] エントリ追加
   ```typescript
@@ -249,6 +262,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: サイドバー表示確認
 
 #### D2. 既存「予約管理」リスト との関係調整
+
 - [ ] `/admin/reservations` (リスト) は維持
 - [ ] `/admin/calendar` (カレンダー) は新規追加
 - [ ] UI で両者を明確に区別（サイドバー + breadcrumb）
@@ -259,12 +273,14 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 ### フェーズ E: テスト & バリデーション (3 タスク)
 
 #### E1. 型チェック & Lint
+
 - [ ] `bun run validate` (type-check + lint)
 - [ ] ESLint `@eslint-react/purity`（Server Component），`React.ComponentProps` 修正
 - [ ] `exactOptionalPropertyTypes` チェック
 - テスト: ビルド成功確認
 
 #### E2. 単体テスト
+
 - [ ] `__tests__/unit/domain/reservations/calendar-queries.test.ts`
   - `getReservationsByDateRange()` with filters
   - ソフトデリート (`deletedAt: null`) フィルター確認
@@ -275,6 +291,7 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 - テスト: `bun run test:unit`
 
 #### E3. 統合テスト & E2E
+
 - [ ] `__tests__/integration/admin/calendar.test.ts`
   - `/admin/calendar` GET → 200 OK
   - フィルター applied → 正しいイベント数
@@ -294,16 +311,17 @@ await updateTag(getCacheTag.reservations.detail(reservationId));
 **既存制約**: 全 `findUnique` / `findFirst` / `findMany` に `where: { deletedAt: null }` 必須
 
 **新規関数**:
+
 ```typescript
 // _shared/queries.ts
 async function getReservationsByDateRange(
   startDate: Date,
   endDate: Date,
-  filters?: { spaceId?: string; status?: ReservationStatus }
+  filters?: { spaceId?: string; status?: ReservationStatus },
 ) {
   return await prisma.reservation.findMany({
     where: {
-      deletedAt: null,  // ← 必須
+      deletedAt: null, // ← 必須
       startTime: { gte: startDate },
       endTime: { lte: endDate },
       ...(filters?.spaceId && { spaceId: filters.spaceId }),
@@ -319,8 +337,8 @@ async function getReservationsByDateRange(
       space: { select: { name: true } },
       customer: { select: { firstName: true, lastName: true } },
     },
-    orderBy: { startTime: 'asc' },
-  })
+    orderBy: { startTime: "asc" },
+  });
 }
 ```
 
@@ -346,14 +364,14 @@ Server Component の `'use cache'` 関数から Client コンポーネントへ�
 return reservations;
 
 // OK: ISO string に変換してから返す
-import { toPlainArray } from '@/shared/lib/serialize'
+import { toPlainArray } from "@/shared/lib/serialize";
 
 return toPlainArray(
-  reservations.map(r => ({
+  reservations.map((r) => ({
     ...r,
     startTime: r.startTime.toISOString(),
     endTime: r.endTime.toISOString(),
-  }))
+  })),
 );
 ```
 
@@ -362,9 +380,9 @@ return toPlainArray(
 ```typescript
 type CalendarEventInput = {
   id: string;
-  title: string;       // "スペース名 (顧客名)"
-  start: string;       // ISO 8601
-  end: string;         // ISO 8601
+  title: string; // "スペース名 (顧客名)"
+  start: string; // ISO 8601
+  end: string; // ISO 8601
   backgroundColor: string;
   borderColor: string;
   extendedProps: {
@@ -392,15 +410,16 @@ type CalendarEventInput = {
 
 ## 依存関係
 
-| パッケージ      | Ver    | インストール必要  |
-| --------------- | ------ | --------------- |
-| @fullcalendar/react | v6   | ✅ 必要          |
-| @fullcalendar/daygrid | v6  | ✅ 必要          |
-| @fullcalendar/timegrid | v6 | ✅ 必要          |
-| @fullcalendar/interaction | v6 | ✅ 必要 (or web) |
-| date-fns        | 既存   | 既に導入          |
+| パッケージ                | Ver  | インストール必要 |
+| ------------------------- | ---- | ---------------- |
+| @fullcalendar/react       | v6   | ✅ 必要          |
+| @fullcalendar/daygrid     | v6   | ✅ 必要          |
+| @fullcalendar/timegrid    | v6   | ✅ 必要          |
+| @fullcalendar/interaction | v6   | ✅ 必要 (or web) |
+| date-fns                  | 既存 | 既に導入         |
 
 **インストールコマンド**:
+
 ```bash
 bun add @fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullcalendar/interaction
 ```
@@ -410,11 +429,13 @@ bun add @fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullca
 ## 検証チェックリスト
 
 ### ビルド・検証
+
 - [ ] `bun run validate` (type-check, lint)
 - [ ] `bun run build` (Next.js ビルド成功)
 - [ ] `bun run test` (全テスト成功)
 
 ### 機能確認
+
 - [ ] カレンダー月ビュー表示
 - [ ] カレンダー週ビュー表示
 - [ ] カレンダー日ビュー表示
@@ -427,11 +448,13 @@ bun add @fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullca
 - [ ] 権限なしユーザー → empty state
 
 ### キャッシュ検証
+
 - [ ] Network タブで `Cache-Control: max-age=60` (分単位)
 - [ ] 予約変更後 → `updateTag` トリガー ＆ 即座に UI 反映
 - [ ] S3/CDN キャッシュと混同しない（App Router `cacheLife` のスコープ）
 
 ### 権限検証
+
 - [ ] SUPER_ADMIN → 表示 OK
 - [ ] ADMIN → 表示 OK
 - [ ] VIEWER → 表示 OK
@@ -454,14 +477,14 @@ bun add @fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullca
 
 ## スケジュール見積もり
 
-| フェーズ | タスク数 | 推定期間 |
-| -------- | ------ | ------- |
-| A        | 5      | 1 day   |
-| B        | 4      | 1 day   |
-| C        | 3      | 0.5 day |
-| D        | 2      | 0.25 day |
-| E        | 3      | 0.75 day |
-| **合計** | **17** | **3.5 days** |
+| フェーズ | タスク数 | 推定期間     |
+| -------- | -------- | ------------ |
+| A        | 5        | 1 day        |
+| B        | 4        | 1 day        |
+| C        | 3        | 0.5 day      |
+| D        | 2        | 0.25 day     |
+| E        | 3        | 0.75 day     |
+| **合計** | **17**   | **3.5 days** |
 
 ---
 

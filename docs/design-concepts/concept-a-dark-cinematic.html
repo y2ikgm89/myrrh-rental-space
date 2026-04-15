@@ -1,570 +1,725 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Concept A — Dark Cinematic</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept A — Dark Cinematic</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-  :root {
-    --bg: #0a0a0a;
-    --bg-elevated: #141414;
-    --bg-card: #1a1a1a;
-    --text: #e8e4df;
-    --text-muted: #8a857e;
-    --accent: #c4956a;
-    --accent-dim: rgba(196, 149, 106, 0.15);
-    --border: rgba(255, 255, 255, 0.06);
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Inter', sans-serif;
-  }
+      :root {
+        --bg: #0a0a0a;
+        --bg-elevated: #141414;
+        --bg-card: #1a1a1a;
+        --text: #e8e4df;
+        --text-muted: #8a857e;
+        --accent: #c4956a;
+        --accent-dim: rgba(196, 149, 106, 0.15);
+        --border: rgba(255, 255, 255, 0.06);
+        --font-display: "Playfair Display", serif;
+        --font-body: "Inter", sans-serif;
+      }
 
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-weight: 300;
-    line-height: 1.7;
-    -webkit-font-smoothing: antialiased;
-  }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+        font-weight: 300;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
 
-  /* ========== HEADER ========== */
-  header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 1.5rem 3rem;
-    display: flex; justify-content: space-between; align-items: center;
-    background: linear-gradient(to bottom, rgba(10,10,10,0.9), transparent);
-    mix-blend-mode: normal;
-  }
-  .logo {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--text);
-    text-decoration: none;
-  }
-  nav a {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.75rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin-left: 2.5rem;
-    transition: color 0.3s;
-  }
-  nav a:hover { color: var(--accent); }
+      /* ========== HEADER ========== */
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 1.5rem 3rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(
+          to bottom,
+          rgba(10, 10, 10, 0.9),
+          transparent
+        );
+        mix-blend-mode: normal;
+      }
+      .logo {
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--text);
+        text-decoration: none;
+      }
+      nav a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.75rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-left: 2.5rem;
+        transition: color 0.3s;
+      }
+      nav a:hover {
+        color: var(--accent);
+      }
 
-  /* ========== HERO ========== */
-  .hero {
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero-image {
-    position: relative;
-    background: linear-gradient(135deg, #2a1f15 0%, #1a1512 50%, #0a0a0a 100%);
-    overflow: hidden;
-  }
-  .hero-image::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(to right, transparent 60%, var(--bg));
-  }
-  .hero-image .img-placeholder {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    opacity: 0.7;
-    filter: contrast(1.1) brightness(0.8);
-  }
-  .hero-content {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 6rem 5rem 6rem 4rem;
-  }
-  .hero-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.4em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 2rem;
-  }
-  .hero-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 4vw, 4.5rem);
-    font-weight: 400;
-    line-height: 1.1;
-    color: var(--text);
-    margin-bottom: 2rem;
-  }
-  .hero-title em {
-    font-style: italic;
-    color: var(--accent);
-  }
-  .hero-subtitle {
-    font-size: 0.95rem;
-    color: var(--text-muted);
-    max-width: 28rem;
-    line-height: 2;
-    margin-bottom: 3rem;
-  }
-  .hero-cta {
-    display: inline-flex;
-    align-items: center;
-    gap: 1rem;
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    transition: gap 0.3s;
-  }
-  .hero-cta:hover { gap: 1.5rem; }
-  .hero-cta .arrow {
-    width: 3rem; height: 1px;
-    background: var(--accent);
-    transition: width 0.3s;
-  }
-  .hero-cta:hover .arrow { width: 4rem; }
+      /* ========== HERO ========== */
+      .hero {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        position: relative;
+        overflow: hidden;
+      }
+      .hero-image {
+        position: relative;
+        background: linear-gradient(
+          135deg,
+          #2a1f15 0%,
+          #1a1512 50%,
+          #0a0a0a 100%
+        );
+        overflow: hidden;
+      }
+      .hero-image::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to right, transparent 60%, var(--bg));
+      }
+      .hero-image .img-placeholder {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.7;
+        filter: contrast(1.1) brightness(0.8);
+      }
+      .hero-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 6rem 5rem 6rem 4rem;
+      }
+      .hero-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 2rem;
+      }
+      .hero-title {
+        font-family: var(--font-display);
+        font-size: clamp(2.5rem, 4vw, 4.5rem);
+        font-weight: 400;
+        line-height: 1.1;
+        color: var(--text);
+        margin-bottom: 2rem;
+      }
+      .hero-title em {
+        font-style: italic;
+        color: var(--accent);
+      }
+      .hero-subtitle {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        max-width: 28rem;
+        line-height: 2;
+        margin-bottom: 3rem;
+      }
+      .hero-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 1rem;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.75rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        transition: gap 0.3s;
+      }
+      .hero-cta:hover {
+        gap: 1.5rem;
+      }
+      .hero-cta .arrow {
+        width: 3rem;
+        height: 1px;
+        background: var(--accent);
+        transition: width 0.3s;
+      }
+      .hero-cta:hover .arrow {
+        width: 4rem;
+      }
 
-  .hero-scroll {
-    position: absolute;
-    bottom: 2rem; left: 50%;
-    transform: translateX(-50%);
-    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-    color: var(--text-muted);
-    font-size: 0.6rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-  }
-  .hero-scroll .line {
-    width: 1px; height: 3rem;
-    background: linear-gradient(to bottom, var(--accent), transparent);
-    animation: scrollPulse 2s ease-in-out infinite;
-  }
-  @keyframes scrollPulse {
-    0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
-    50% { opacity: 1; transform: scaleY(1); }
-  }
+      .hero-scroll {
+        position: absolute;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-muted);
+        font-size: 0.6rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+      }
+      .hero-scroll .line {
+        width: 1px;
+        height: 3rem;
+        background: linear-gradient(to bottom, var(--accent), transparent);
+        animation: scrollPulse 2s ease-in-out infinite;
+      }
+      @keyframes scrollPulse {
+        0%,
+        100% {
+          opacity: 0.3;
+          transform: scaleY(0.6);
+        }
+        50% {
+          opacity: 1;
+          transform: scaleY(1);
+        }
+      }
 
-  /* ========== SECTION COMMONS ========== */
-  section { padding: clamp(5rem, 10vw, 9rem) 0; }
-  .container { max-width: 76rem; margin: 0 auto; padding: 0 3rem; }
-  .section-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.35em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 1.5rem;
-    display: flex; align-items: center; gap: 1rem;
-  }
-  .section-label::before {
-    content: '';
-    width: 2rem; height: 1px;
-    background: var(--accent);
-  }
-  .section-title {
-    font-family: var(--font-display);
-    font-size: clamp(2rem, 3vw, 3rem);
-    font-weight: 400;
-    line-height: 1.15;
-    margin-bottom: 1.5rem;
-  }
-  .section-desc {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    max-width: 32rem;
-    line-height: 2;
-  }
+      /* ========== SECTION COMMONS ========== */
+      section {
+        padding: clamp(5rem, 10vw, 9rem) 0;
+      }
+      .container {
+        max-width: 76rem;
+        margin: 0 auto;
+        padding: 0 3rem;
+      }
+      .section-label {
+        font-size: 0.65rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .section-label::before {
+        content: "";
+        width: 2rem;
+        height: 1px;
+        background: var(--accent);
+      }
+      .section-title {
+        font-family: var(--font-display);
+        font-size: clamp(2rem, 3vw, 3rem);
+        font-weight: 400;
+        line-height: 1.15;
+        margin-bottom: 1.5rem;
+      }
+      .section-desc {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        max-width: 32rem;
+        line-height: 2;
+      }
 
-  /* ========== PHILOSOPHY ========== */
-  .philosophy {
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  .philosophy .container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6rem;
-    align-items: center;
-  }
-  .philosophy-quote {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    font-style: italic;
-    line-height: 1.6;
-    color: var(--text);
-    position: relative;
-    padding-left: 2rem;
-    border-left: 2px solid var(--accent-dim);
-  }
-  .philosophy-text {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    line-height: 2.2;
-  }
+      /* ========== PHILOSOPHY ========== */
+      .philosophy {
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+      .philosophy .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6rem;
+        align-items: center;
+      }
+      .philosophy-quote {
+        font-family: var(--font-display);
+        font-size: 1.75rem;
+        font-style: italic;
+        line-height: 1.6;
+        color: var(--text);
+        position: relative;
+        padding-left: 2rem;
+        border-left: 2px solid var(--accent-dim);
+      }
+      .philosophy-text {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 2.2;
+      }
 
-  /* ========== SPACES ========== */
-  .spaces-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1px;
-    margin-top: 4rem;
-    background: var(--border);
-  }
-  .space-card {
-    background: var(--bg);
-    padding: 0;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-  }
-  .space-card-image {
-    aspect-ratio: 3/4;
-    background: linear-gradient(135deg, #1e1810, #2a2018);
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .space-card:hover .space-card-image {
-    transform: scale(1.03);
-  }
-  .space-card-image::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(to top, var(--bg) 0%, transparent 50%);
-  }
-  .space-card-content {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    padding: 2rem;
-    z-index: 2;
-  }
-  .space-card-category {
-    font-size: 0.6rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.75rem;
-  }
-  .space-card-name {
-    font-family: var(--font-display);
-    font-size: 1.35rem;
-    margin-bottom: 0.5rem;
-  }
-  .space-card-meta {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-  .space-card-price {
-    margin-top: 1rem;
-    font-size: 0.8rem;
-    color: var(--accent);
-  }
+      /* ========== SPACES ========== */
+      .spaces-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        margin-top: 4rem;
+        background: var(--border);
+      }
+      .space-card {
+        background: var(--bg);
+        padding: 0;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+      }
+      .space-card-image {
+        aspect-ratio: 3/4;
+        background: linear-gradient(135deg, #1e1810, #2a2018);
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .space-card:hover .space-card-image {
+        transform: scale(1.03);
+      }
+      .space-card-image::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, var(--bg) 0%, transparent 50%);
+      }
+      .space-card-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 2rem;
+        z-index: 2;
+      }
+      .space-card-category {
+        font-size: 0.6rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.75rem;
+      }
+      .space-card-name {
+        font-family: var(--font-display);
+        font-size: 1.35rem;
+        margin-bottom: 0.5rem;
+      }
+      .space-card-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+      .space-card-price {
+        margin-top: 1rem;
+        font-size: 0.8rem;
+        color: var(--accent);
+      }
 
-  /* ========== NUMBERS ========== */
-  .numbers {
-    background: var(--bg-elevated);
-  }
-  .numbers-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    margin-top: 4rem;
-  }
-  .number-item {
-    text-align: center;
-    padding: 3rem 2rem;
-    border-right: 1px solid var(--border);
-  }
-  .number-item:last-child { border-right: none; }
-  .number-value {
-    font-family: var(--font-display);
-    font-size: 3.5rem;
-    font-weight: 400;
-    color: var(--text);
-    line-height: 1;
-    margin-bottom: 1rem;
-  }
-  .number-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
+      /* ========== NUMBERS ========== */
+      .numbers {
+        background: var(--bg-elevated);
+      }
+      .numbers-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        margin-top: 4rem;
+      }
+      .number-item {
+        text-align: center;
+        padding: 3rem 2rem;
+        border-right: 1px solid var(--border);
+      }
+      .number-item:last-child {
+        border-right: none;
+      }
+      .number-value {
+        font-family: var(--font-display);
+        font-size: 3.5rem;
+        font-weight: 400;
+        color: var(--text);
+        line-height: 1;
+        margin-bottom: 1rem;
+      }
+      .number-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
 
-  /* ========== CTA ========== */
-  .cta {
-    position: relative;
-    overflow: hidden;
-    text-align: center;
-    padding: clamp(6rem, 12vw, 10rem) 0;
-  }
-  .cta::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at center, var(--accent-dim), transparent 70%);
-    pointer-events: none;
-  }
-  .cta-title {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 4vw, 4rem);
-    font-weight: 400;
-    line-height: 1.15;
-    margin-bottom: 2rem;
-    position: relative;
-  }
-  .cta-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 2.5rem;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.7rem;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    transition: all 0.4s;
-    position: relative;
-  }
-  .cta-btn:hover {
-    background: var(--accent);
-    color: var(--bg);
-  }
+      /* ========== CTA ========== */
+      .cta {
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+        padding: clamp(6rem, 12vw, 10rem) 0;
+      }
+      .cta::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          var(--accent-dim),
+          transparent 70%
+        );
+        pointer-events: none;
+      }
+      .cta-title {
+        font-family: var(--font-display);
+        font-size: clamp(2.5rem, 4vw, 4rem);
+        font-weight: 400;
+        line-height: 1.15;
+        margin-bottom: 2rem;
+        position: relative;
+      }
+      .cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 2.5rem;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.7rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        transition: all 0.4s;
+        position: relative;
+      }
+      .cta-btn:hover {
+        background: var(--accent);
+        color: var(--bg);
+      }
 
-  /* ========== FOOTER ========== */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 4rem 0 3rem;
-  }
-  .footer-inner {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
-  .footer-brand {
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-  }
-  .footer-copy {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-  }
-  .footer-links {
-    display: flex; gap: 2rem;
-  }
-  .footer-links a {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    transition: color 0.3s;
-  }
-  .footer-links a:hover { color: var(--accent); }
+      /* ========== FOOTER ========== */
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 4rem 0 3rem;
+      }
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .footer-brand {
+        font-family: var(--font-display);
+        font-size: 0.9rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+      }
+      .footer-copy {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+      }
+      .footer-links {
+        display: flex;
+        gap: 2rem;
+      }
+      .footer-links a {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        transition: color 0.3s;
+      }
+      .footer-links a:hover {
+        color: var(--accent);
+      }
 
-  /* ========== RESPONSIVE ========== */
-  @media (max-width: 768px) {
-    header { padding: 1rem 1.5rem; }
-    nav { display: none; }
-    .hero { grid-template-columns: 1fr; min-height: auto; }
-    .hero-image { height: 50vh; }
-    .hero-content { padding: 3rem 1.5rem; }
-    .container { padding: 0 1.5rem; }
-    .philosophy .container { grid-template-columns: 1fr; gap: 3rem; }
-    .spaces-grid { grid-template-columns: 1fr; }
-    .numbers-grid { grid-template-columns: repeat(2, 1fr); }
-    .number-item { border-bottom: 1px solid var(--border); }
-    .footer-inner { flex-direction: column; gap: 2rem; }
-  }
-</style>
-</head>
-<body>
+      /* ========== RESPONSIVE ========== */
+      @media (max-width: 768px) {
+        header {
+          padding: 1rem 1.5rem;
+        }
+        nav {
+          display: none;
+        }
+        .hero {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+        .hero-image {
+          height: 50vh;
+        }
+        .hero-content {
+          padding: 3rem 1.5rem;
+        }
+        .container {
+          padding: 0 1.5rem;
+        }
+        .philosophy .container {
+          grid-template-columns: 1fr;
+          gap: 3rem;
+        }
+        .spaces-grid {
+          grid-template-columns: 1fr;
+        }
+        .numbers-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .number-item {
+          border-bottom: 1px solid var(--border);
+        }
+        .footer-inner {
+          flex-direction: column;
+          gap: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- HEADER -->
+    <header>
+      <a href="#" class="logo">Myrrh</a>
+      <nav>
+        <a href="#">Spaces</a>
+        <a href="#">Concept</a>
+        <a href="#">Access</a>
+        <a href="#">Contact</a>
+      </nav>
+    </header>
 
-<!-- HEADER -->
-<header>
-  <a href="#" class="logo">Myrrh</a>
-  <nav>
-    <a href="#">Spaces</a>
-    <a href="#">Concept</a>
-    <a href="#">Access</a>
-    <a href="#">Contact</a>
-  </nav>
-</header>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-image">
-    <div class="img-placeholder" style="width:100%;height:100%;background:linear-gradient(160deg, #2d2015 0%, #1a140e 40%, #0f0d0a 100%);display:flex;align-items:center;justify-content:center;">
-      <svg width="120" height="120" viewBox="0 0 120 120" fill="none" style="opacity:0.15;">
-        <rect x="10" y="10" width="100" height="100" stroke="#c4956a" stroke-width="0.5"/>
-        <rect x="25" y="25" width="70" height="70" stroke="#c4956a" stroke-width="0.5"/>
-        <rect x="40" y="40" width="40" height="40" stroke="#c4956a" stroke-width="0.5"/>
-      </svg>
-    </div>
-  </div>
-
-  <div class="hero-content">
-    <p class="hero-label">Rental Space</p>
-    <h1 class="hero-title">
-      The space<br>
-      that <em>inspires</em><br>
-      your next move.
-    </h1>
-    <p class="hero-subtitle">
-      余白が生む集中と創造。厳選されたレンタルスペースで、<br>
-      あなたのビジョンに最適な空間をお届けします。
-    </p>
-    <a href="#" class="hero-cta">
-      View all spaces
-      <span class="arrow"></span>
-    </a>
-  </div>
-
-  <div class="hero-scroll">
-    <span class="line"></span>
-    Scroll
-  </div>
-</section>
-
-<!-- PHILOSOPHY -->
-<section class="philosophy">
-  <div class="container">
-    <div>
-      <div class="section-label">Philosophy</div>
-      <p class="philosophy-quote">
-        空間は、ただの場所ではない。<br>
-        そこに流れる光、静けさ、<br>
-        そして人の意志が交わる場所。
-      </p>
-    </div>
-    <div>
-      <p class="philosophy-text">
-        Myrrh Rental Space は「空間の質」を追求するレンタルスペースです。
-        どの部屋にも十分な自然光と静寂を確保し、
-        会議・撮影・ワークショップなど、あらゆる用途に応える
-        柔軟性を備えています。
-      </p>
-      <br>
-      <p class="philosophy-text">
-        私たちが大切にしているのは、空間がもたらす「余白」の力。
-        無駄を削ぎ落としたミニマルなデザインが、
-        利用者の創造性を最大限に引き出します。
-      </p>
-    </div>
-  </div>
-</section>
-
-<!-- SPACES -->
-<section class="spaces">
-  <div class="container">
-    <div class="section-label">Spaces</div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-      <h2 class="section-title">厳選された空間</h2>
-      <a href="#" class="hero-cta" style="margin-bottom:0.5rem;">
-        All spaces <span class="arrow"></span>
-      </a>
-    </div>
-  </div>
-  <div class="container">
-    <div class="spaces-grid">
-      <div class="space-card">
-        <div class="space-card-image" style="background:linear-gradient(160deg, #2d2822 0%, #1a1510 100%);"></div>
-        <div class="space-card-content">
-          <p class="space-card-category">Meeting</p>
-          <h3 class="space-card-name">Conference Room A</h3>
-          <p class="space-card-meta">20m² · 最大8名</p>
-          <p class="space-card-price">¥3,000 /h</p>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-image">
+        <div
+          class="img-placeholder"
+          style="
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+              160deg,
+              #2d2015 0%,
+              #1a140e 40%,
+              #0f0d0a 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          "
+        >
+          <svg
+            width="120"
+            height="120"
+            viewBox="0 0 120 120"
+            fill="none"
+            style="opacity: 0.15"
+          >
+            <rect
+              x="10"
+              y="10"
+              width="100"
+              height="100"
+              stroke="#c4956a"
+              stroke-width="0.5"
+            />
+            <rect
+              x="25"
+              y="25"
+              width="70"
+              height="70"
+              stroke="#c4956a"
+              stroke-width="0.5"
+            />
+            <rect
+              x="40"
+              y="40"
+              width="40"
+              height="40"
+              stroke="#c4956a"
+              stroke-width="0.5"
+            />
+          </svg>
         </div>
       </div>
-      <div class="space-card">
-        <div class="space-card-image" style="background:linear-gradient(160deg, #1e2a22 0%, #111a14 100%);"></div>
-        <div class="space-card-content">
-          <p class="space-card-category">Coworking</p>
-          <h3 class="space-card-name">Open Lounge</h3>
-          <p class="space-card-meta">80m² · 最大30名</p>
-          <p class="space-card-price">¥1,500 /h</p>
+
+      <div class="hero-content">
+        <p class="hero-label">Rental Space</p>
+        <h1 class="hero-title">
+          The space<br />
+          that <em>inspires</em><br />
+          your next move.
+        </h1>
+        <p class="hero-subtitle">
+          余白が生む集中と創造。厳選されたレンタルスペースで、<br />
+          あなたのビジョンに最適な空間をお届けします。
+        </p>
+        <a href="#" class="hero-cta">
+          View all spaces
+          <span class="arrow"></span>
+        </a>
+      </div>
+
+      <div class="hero-scroll">
+        <span class="line"></span>
+        Scroll
+      </div>
+    </section>
+
+    <!-- PHILOSOPHY -->
+    <section class="philosophy">
+      <div class="container">
+        <div>
+          <div class="section-label">Philosophy</div>
+          <p class="philosophy-quote">
+            空間は、ただの場所ではない。<br />
+            そこに流れる光、静けさ、<br />
+            そして人の意志が交わる場所。
+          </p>
+        </div>
+        <div>
+          <p class="philosophy-text">
+            Myrrh Rental Space は「空間の質」を追求するレンタルスペースです。
+            どの部屋にも十分な自然光と静寂を確保し、
+            会議・撮影・ワークショップなど、あらゆる用途に応える
+            柔軟性を備えています。
+          </p>
+          <br />
+          <p class="philosophy-text">
+            私たちが大切にしているのは、空間がもたらす「余白」の力。
+            無駄を削ぎ落としたミニマルなデザインが、
+            利用者の創造性を最大限に引き出します。
+          </p>
         </div>
       </div>
-      <div class="space-card">
-        <div class="space-card-image" style="background:linear-gradient(160deg, #2a2230 0%, #151018 100%);"></div>
-        <div class="space-card-content">
-          <p class="space-card-category">Seminar</p>
-          <h3 class="space-card-name">Hall B</h3>
-          <p class="space-card-meta">120m² · 最大50名</p>
-          <p class="space-card-price">¥8,000 /h</p>
+    </section>
+
+    <!-- SPACES -->
+    <section class="spaces">
+      <div class="container">
+        <div class="section-label">Spaces</div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          "
+        >
+          <h2 class="section-title">厳選された空間</h2>
+          <a href="#" class="hero-cta" style="margin-bottom: 0.5rem">
+            All spaces <span class="arrow"></span>
+          </a>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+      <div class="container">
+        <div class="spaces-grid">
+          <div class="space-card">
+            <div
+              class="space-card-image"
+              style="
+                background: linear-gradient(160deg, #2d2822 0%, #1a1510 100%);
+              "
+            ></div>
+            <div class="space-card-content">
+              <p class="space-card-category">Meeting</p>
+              <h3 class="space-card-name">Conference Room A</h3>
+              <p class="space-card-meta">20m² · 最大8名</p>
+              <p class="space-card-price">¥3,000 /h</p>
+            </div>
+          </div>
+          <div class="space-card">
+            <div
+              class="space-card-image"
+              style="
+                background: linear-gradient(160deg, #1e2a22 0%, #111a14 100%);
+              "
+            ></div>
+            <div class="space-card-content">
+              <p class="space-card-category">Coworking</p>
+              <h3 class="space-card-name">Open Lounge</h3>
+              <p class="space-card-meta">80m² · 最大30名</p>
+              <p class="space-card-price">¥1,500 /h</p>
+            </div>
+          </div>
+          <div class="space-card">
+            <div
+              class="space-card-image"
+              style="
+                background: linear-gradient(160deg, #2a2230 0%, #151018 100%);
+              "
+            ></div>
+            <div class="space-card-content">
+              <p class="space-card-category">Seminar</p>
+              <h3 class="space-card-name">Hall B</h3>
+              <p class="space-card-meta">120m² · 最大50名</p>
+              <p class="space-card-price">¥8,000 /h</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-<!-- NUMBERS -->
-<section class="numbers">
-  <div class="container">
-    <div class="section-label">Numbers</div>
-    <h2 class="section-title">実績が語る信頼</h2>
-    <div class="numbers-grid">
-      <div class="number-item">
-        <div class="number-value">12</div>
-        <div class="number-label">Spaces</div>
+    <!-- NUMBERS -->
+    <section class="numbers">
+      <div class="container">
+        <div class="section-label">Numbers</div>
+        <h2 class="section-title">実績が語る信頼</h2>
+        <div class="numbers-grid">
+          <div class="number-item">
+            <div class="number-value">12</div>
+            <div class="number-label">Spaces</div>
+          </div>
+          <div class="number-item">
+            <div class="number-value">2,400+</div>
+            <div class="number-label">Reservations</div>
+          </div>
+          <div class="number-item">
+            <div class="number-value">98%</div>
+            <div class="number-label">Satisfaction</div>
+          </div>
+          <div class="number-item">
+            <div class="number-value">4.8</div>
+            <div class="number-label">Rating</div>
+          </div>
+        </div>
       </div>
-      <div class="number-item">
-        <div class="number-value">2,400+</div>
-        <div class="number-label">Reservations</div>
-      </div>
-      <div class="number-item">
-        <div class="number-value">98%</div>
-        <div class="number-label">Satisfaction</div>
-      </div>
-      <div class="number-item">
-        <div class="number-value">4.8</div>
-        <div class="number-label">Rating</div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- CTA -->
-<section class="cta">
-  <div class="container">
-    <h2 class="cta-title">
-      理想の空間を、<br>今すぐ予約
-    </h2>
-    <p class="section-desc" style="margin:0 auto 3rem;text-align:center;">
-      空き状況の確認から予約まで、オンラインで完結。<br>
-      お気軽にお問い合わせください。
-    </p>
-    <a href="#" class="cta-btn">Reserve Now</a>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="container">
-    <div class="footer-inner">
-      <div>
-        <div class="footer-brand">Myrrh</div>
-        <p class="footer-copy">&copy; 2026 Myrrh Rental Space. All rights reserved.</p>
+    <!-- CTA -->
+    <section class="cta">
+      <div class="container">
+        <h2 class="cta-title">理想の空間を、<br />今すぐ予約</h2>
+        <p class="section-desc" style="margin: 0 auto 3rem; text-align: center">
+          空き状況の確認から予約まで、オンラインで完結。<br />
+          お気軽にお問い合わせください。
+        </p>
+        <a href="#" class="cta-btn">Reserve Now</a>
       </div>
-      <div class="footer-links">
-        <a href="#">利用規約</a>
-        <a href="#">プライバシー</a>
-        <a href="#">お問い合わせ</a>
-      </div>
-    </div>
-  </div>
-</footer>
+    </section>
 
-</body>
+    <!-- FOOTER -->
+    <footer>
+      <div class="container">
+        <div class="footer-inner">
+          <div>
+            <div class="footer-brand">Myrrh</div>
+            <p class="footer-copy">
+              &copy; 2026 Myrrh Rental Space. All rights reserved.
+            </p>
+          </div>
+          <div class="footer-links">
+            <a href="#">利用規約</a>
+            <a href="#">プライバシー</a>
+            <a href="#">お問い合わせ</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
 </html>

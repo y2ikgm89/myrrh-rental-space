@@ -1,242 +1,743 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Concept P — Midori Community</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-  :root{
-    --bg:#edebe5;--bg-white:#f8f6f0;--bg-dark:#1e1e1c;
-    --text:#1e1e1c;--text-muted:#6e6b63;--text-inv:#edebe5;--text-inv-muted:rgba(237,235,229,0.5);
-    --warm:#c4956a;--green:#5a7a5a;
-    --border:rgba(30,30,28,0.08);
-    --mincho:'Shippori Mincho',serif;--gothic:'Noto Sans JP',sans-serif
-  }
-  body{background:var(--bg);color:var(--text);font-family:var(--gothic);font-weight:300;line-height:1.9;-webkit-font-smoothing:antialiased}
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept P — Midori Community</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Shippori+Mincho:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      :root {
+        --bg: #edebe5;
+        --bg-white: #f8f6f0;
+        --bg-dark: #1e1e1c;
+        --text: #1e1e1c;
+        --text-muted: #6e6b63;
+        --text-inv: #edebe5;
+        --text-inv-muted: rgba(237, 235, 229, 0.5);
+        --warm: #c4956a;
+        --green: #5a7a5a;
+        --border: rgba(30, 30, 28, 0.08);
+        --mincho: "Shippori Mincho", serif;
+        --gothic: "Noto Sans JP", sans-serif;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--gothic);
+        font-weight: 300;
+        line-height: 1.9;
+        -webkit-font-smoothing: antialiased;
+      }
 
-  /* HEADER — bilingual minimal */
-  header{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--bg-dark);display:flex;justify-content:space-between;align-items:center;padding:0 2.5rem;height:3.25rem}
-  .logo{font-family:var(--mincho);font-size:1rem;font-weight:500;color:var(--text-inv);text-decoration:none;letter-spacing:0.1em}
-  nav{display:flex;align-items:center;gap:0}
-  nav a{font-size:0.6rem;color:var(--text-inv-muted);text-decoration:none;padding:0 1rem;height:3.25rem;display:flex;align-items:center;transition:color 0.3s}
-  nav a:hover{color:var(--text-inv)}
-  .lang-toggle{font-size:0.55rem;color:var(--text-inv-muted);border-left:1px solid rgba(255,255,255,0.08);padding-left:1rem;margin-left:0.5rem}
+      /* HEADER — bilingual minimal */
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--bg-dark);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 2.5rem;
+        height: 3.25rem;
+      }
+      .logo {
+        font-family: var(--mincho);
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--text-inv);
+        text-decoration: none;
+        letter-spacing: 0.1em;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 0;
+      }
+      nav a {
+        font-size: 0.6rem;
+        color: var(--text-inv-muted);
+        text-decoration: none;
+        padding: 0 1rem;
+        height: 3.25rem;
+        display: flex;
+        align-items: center;
+        transition: color 0.3s;
+      }
+      nav a:hover {
+        color: var(--text-inv);
+      }
+      .lang-toggle {
+        font-size: 0.55rem;
+        color: var(--text-inv-muted);
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        padding-left: 1rem;
+        margin-left: 0.5rem;
+      }
 
-  .content{margin-top:3.25rem}
+      .content {
+        margin-top: 3.25rem;
+      }
 
-  /* HERO — video-style with tagline */
-  .hero{min-height:80vh;background:linear-gradient(160deg,#c8baa8 0%,#b0a088 40%,#988870 100%);position:relative;display:flex;align-items:center;overflow:hidden}
-  .hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to right,rgba(30,30,28,0.5) 0%,rgba(30,30,28,0.1) 60%,transparent 100%)}
-  .hero-content{position:relative;z-index:2;padding:4rem 3rem;max-width:32rem}
-  .hero-tag{display:inline-flex;align-items:center;gap:0.5rem;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--warm);margin-bottom:1.5rem}
-  .hero-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--warm)}
-  .hero-title{font-family:var(--mincho);font-size:clamp(2rem,4vw,3rem);font-weight:400;line-height:1.5;color:var(--text-inv);margin-bottom:1.5rem;letter-spacing:0.05em}
-  .hero-desc{font-size:0.82rem;color:var(--text-inv-muted);line-height:2.2;margin-bottom:2rem;max-width:24rem}
-  .hero-actions{display:flex;gap:1rem;flex-wrap:wrap}
-  .btn-primary{padding:0.75rem 1.75rem;background:var(--text-inv);color:var(--bg-dark);text-decoration:none;font-size:0.7rem;font-weight:500;transition:opacity 0.3s}
-  .btn-primary:hover{opacity:0.9}
-  .btn-ghost{padding:0.75rem 1.75rem;border:1px solid var(--text-inv-muted);color:var(--text-inv);text-decoration:none;font-size:0.7rem;transition:all 0.3s}
-  .btn-ghost:hover{border-color:var(--text-inv);background:rgba(255,255,255,0.05)}
+      /* HERO — video-style with tagline */
+      .hero {
+        min-height: 80vh;
+        background: linear-gradient(
+          160deg,
+          #c8baa8 0%,
+          #b0a088 40%,
+          #988870 100%
+        );
+        position: relative;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to right,
+          rgba(30, 30, 28, 0.5) 0%,
+          rgba(30, 30, 28, 0.1) 60%,
+          transparent 100%
+        );
+      }
+      .hero-content {
+        position: relative;
+        z-index: 2;
+        padding: 4rem 3rem;
+        max-width: 32rem;
+      }
+      .hero-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.55rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--warm);
+        margin-bottom: 1.5rem;
+      }
+      .hero-tag .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--warm);
+      }
+      .hero-title {
+        font-family: var(--mincho);
+        font-size: clamp(2rem, 4vw, 3rem);
+        font-weight: 400;
+        line-height: 1.5;
+        color: var(--text-inv);
+        margin-bottom: 1.5rem;
+        letter-spacing: 0.05em;
+      }
+      .hero-desc {
+        font-size: 0.82rem;
+        color: var(--text-inv-muted);
+        line-height: 2.2;
+        margin-bottom: 2rem;
+        max-width: 24rem;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .btn-primary {
+        padding: 0.75rem 1.75rem;
+        background: var(--text-inv);
+        color: var(--bg-dark);
+        text-decoration: none;
+        font-size: 0.7rem;
+        font-weight: 500;
+        transition: opacity 0.3s;
+      }
+      .btn-primary:hover {
+        opacity: 0.9;
+      }
+      .btn-ghost {
+        padding: 0.75rem 1.75rem;
+        border: 1px solid var(--text-inv-muted);
+        color: var(--text-inv);
+        text-decoration: none;
+        font-size: 0.7rem;
+        transition: all 0.3s;
+      }
+      .btn-ghost:hover {
+        border-color: var(--text-inv);
+        background: rgba(255, 255, 255, 0.05);
+      }
 
-  section{padding:clamp(4rem,8vw,6rem) 0}
-  .container{max-width:68rem;margin:0 auto;padding:0 2.5rem}
+      section {
+        padding: clamp(4rem, 8vw, 6rem) 0;
+      }
+      .container {
+        max-width: 68rem;
+        margin: 0 auto;
+        padding: 0 2.5rem;
+      }
 
-  /* LOCATIONS — card carousel style */
-  .locations{background:var(--bg-white)}
-  .loc-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2rem}
-  .loc-label{font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-muted)}
-  .loc-title{font-family:var(--mincho);font-size:1.5rem;font-weight:500;margin-top:0.25rem}
-  .loc-count{font-size:0.6rem;color:var(--text-muted)}
-  .loc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
-  .loc-card{cursor:pointer;transition:transform 0.3s}
-  .loc-card:hover{transform:translateY(-3px)}
-  .loc-img{aspect-ratio:3/2;margin-bottom:0.75rem;overflow:hidden}
-  .loc-img-inner{width:100%;height:100%;transition:transform 0.5s}
-  .loc-card:hover .loc-img-inner{transform:scale(1.03)}
-  .loc-name{font-family:var(--mincho);font-size:0.9rem;font-weight:500;margin-bottom:0.2rem}
-  .loc-addr{font-size:0.65rem;color:var(--text-muted);line-height:1.5}
+      /* LOCATIONS — card carousel style */
+      .locations {
+        background: var(--bg-white);
+      }
+      .loc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 2rem;
+      }
+      .loc-label {
+        font-size: 0.55rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .loc-title {
+        font-family: var(--mincho);
+        font-size: 1.5rem;
+        font-weight: 500;
+        margin-top: 0.25rem;
+      }
+      .loc-count {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+      }
+      .loc-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+      }
+      .loc-card {
+        cursor: pointer;
+        transition: transform 0.3s;
+      }
+      .loc-card:hover {
+        transform: translateY(-3px);
+      }
+      .loc-img {
+        aspect-ratio: 3/2;
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+      }
+      .loc-img-inner {
+        width: 100%;
+        height: 100%;
+        transition: transform 0.5s;
+      }
+      .loc-card:hover .loc-img-inner {
+        transform: scale(1.03);
+      }
+      .loc-name {
+        font-family: var(--mincho);
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 0.2rem;
+      }
+      .loc-addr {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
 
-  /* SPACES — horizontal divider list */
-  .spaces-list{display:flex;flex-direction:column}
-  .sp-row{display:grid;grid-template-columns:5rem 1fr 6rem 5rem 7rem;align-items:center;padding:1.25rem 0;border-bottom:1px solid var(--border);cursor:pointer;transition:padding-left 0.3s}
-  .sp-row:first-child{border-top:1px solid var(--border)}
-  .sp-row:hover{padding-left:0.5rem;background:rgba(0,0,0,0.01)}
-  .sp-thumb{width:3.5rem;height:2.5rem;background:linear-gradient(135deg,#c8baa8,#b0a088);overflow:hidden}
-  .sp-name{font-family:var(--mincho);font-size:0.9rem;font-weight:500}
-  .sp-type{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);text-align:center}
-  .sp-cap{font-size:0.7rem;color:var(--text-muted);text-align:center}
-  .sp-price{font-family:var(--mincho);font-size:0.9rem;font-weight:500;text-align:right;color:var(--warm)}
-  .sp-price small{font-family:var(--gothic);font-size:0.55rem;color:var(--text-muted);font-weight:300}
+      /* SPACES — horizontal divider list */
+      .spaces-list {
+        display: flex;
+        flex-direction: column;
+      }
+      .sp-row {
+        display: grid;
+        grid-template-columns: 5rem 1fr 6rem 5rem 7rem;
+        align-items: center;
+        padding: 1.25rem 0;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: padding-left 0.3s;
+      }
+      .sp-row:first-child {
+        border-top: 1px solid var(--border);
+      }
+      .sp-row:hover {
+        padding-left: 0.5rem;
+        background: rgba(0, 0, 0, 0.01);
+      }
+      .sp-thumb {
+        width: 3.5rem;
+        height: 2.5rem;
+        background: linear-gradient(135deg, #c8baa8, #b0a088);
+        overflow: hidden;
+      }
+      .sp-name {
+        font-family: var(--mincho);
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+      .sp-type {
+        font-size: 0.55rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .sp-cap {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+      .sp-price {
+        font-family: var(--mincho);
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-align: right;
+        color: var(--warm);
+      }
+      .sp-price small {
+        font-family: var(--gothic);
+        font-size: 0.55rem;
+        color: var(--text-muted);
+        font-weight: 300;
+      }
 
-  /* EVENTS — magazine-like section */
-  .events{background:var(--bg-white);border-top:1px solid var(--border)}
-  .events-header{margin-bottom:2rem}
-  .ev-label{font-size:0.55rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.25rem}
-  .ev-title{font-family:var(--mincho);font-size:1.25rem;font-weight:500}
-  .events-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
-  .ev-card{cursor:pointer;transition:transform 0.3s}
-  .ev-card:hover{transform:translateY(-2px)}
-  .ev-img{aspect-ratio:16/9;background:linear-gradient(135deg,#c8baa8,#a89878);margin-bottom:0.75rem}
-  .ev-date{font-size:0.55rem;letter-spacing:0.1em;color:var(--warm);margin-bottom:0.3rem}
-  .ev-name{font-family:var(--mincho);font-size:0.9rem;font-weight:500;margin-bottom:0.3rem}
-  .ev-desc{font-size:0.7rem;color:var(--text-muted);line-height:1.7}
+      /* EVENTS — magazine-like section */
+      .events {
+        background: var(--bg-white);
+        border-top: 1px solid var(--border);
+      }
+      .events-header {
+        margin-bottom: 2rem;
+      }
+      .ev-label {
+        font-size: 0.55rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+      }
+      .ev-title {
+        font-family: var(--mincho);
+        font-size: 1.25rem;
+        font-weight: 500;
+      }
+      .events-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+      }
+      .ev-card {
+        cursor: pointer;
+        transition: transform 0.3s;
+      }
+      .ev-card:hover {
+        transform: translateY(-2px);
+      }
+      .ev-img {
+        aspect-ratio: 16/9;
+        background: linear-gradient(135deg, #c8baa8, #a89878);
+        margin-bottom: 0.75rem;
+      }
+      .ev-date {
+        font-size: 0.55rem;
+        letter-spacing: 0.1em;
+        color: var(--warm);
+        margin-bottom: 0.3rem;
+      }
+      .ev-name {
+        font-family: var(--mincho);
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 0.3rem;
+      }
+      .ev-desc {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
 
-  /* FEATURES */
-  .feat-strip{background:var(--bg-dark);color:var(--text-inv);display:grid;grid-template-columns:repeat(4,1fr)}
-  .feat-item{padding:2.5rem 2rem;border-right:1px solid rgba(255,255,255,0.04);text-align:center}
-  .feat-item:last-child{border-right:none}
-  .feat-val{font-family:var(--mincho);font-size:2rem;font-weight:400;color:var(--warm);line-height:1;margin-bottom:0.5rem}
-  .feat-lbl{font-size:0.55rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-inv-muted)}
+      /* FEATURES */
+      .feat-strip {
+        background: var(--bg-dark);
+        color: var(--text-inv);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+      }
+      .feat-item {
+        padding: 2.5rem 2rem;
+        border-right: 1px solid rgba(255, 255, 255, 0.04);
+        text-align: center;
+      }
+      .feat-item:last-child {
+        border-right: none;
+      }
+      .feat-val {
+        font-family: var(--mincho);
+        font-size: 2rem;
+        font-weight: 400;
+        color: var(--warm);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+      }
+      .feat-lbl {
+        font-size: 0.55rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--text-inv-muted);
+      }
 
-  /* CTA */
-  .cta{text-align:center;background:var(--bg-white);border-top:1px solid var(--border)}
-  .cta-title{font-family:var(--mincho);font-size:clamp(1.5rem,2.5vw,2rem);font-weight:400;line-height:1.6;letter-spacing:0.05em;margin-bottom:1rem}
-  .cta-desc{font-size:0.8rem;color:var(--text-muted);max-width:24rem;margin:0 auto 2rem;line-height:2}
-  .cta-btn{display:inline-block;padding:0.8rem 2.5rem;background:var(--bg-dark);color:var(--text-inv);text-decoration:none;font-size:0.7rem;font-weight:400;transition:background 0.3s}
-  .cta-btn:hover{background:var(--warm)}
+      /* CTA */
+      .cta {
+        text-align: center;
+        background: var(--bg-white);
+        border-top: 1px solid var(--border);
+      }
+      .cta-title {
+        font-family: var(--mincho);
+        font-size: clamp(1.5rem, 2.5vw, 2rem);
+        font-weight: 400;
+        line-height: 1.6;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+      }
+      .cta-desc {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        max-width: 24rem;
+        margin: 0 auto 2rem;
+        line-height: 2;
+      }
+      .cta-btn {
+        display: inline-block;
+        padding: 0.8rem 2.5rem;
+        background: var(--bg-dark);
+        color: var(--text-inv);
+        text-decoration: none;
+        font-size: 0.7rem;
+        font-weight: 400;
+        transition: background 0.3s;
+      }
+      .cta-btn:hover {
+        background: var(--warm);
+      }
 
-  footer{background:var(--bg-dark);color:var(--text-inv);padding:2rem 2.5rem}
-  .footer-inner{max-width:68rem;margin:0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
-  .ft-brand{font-family:var(--mincho);font-size:0.85rem;letter-spacing:0.1em}
-  .ft-copy{text-align:center;font-size:0.55rem;color:var(--text-inv-muted)}
-  .ft-links{justify-self:end;display:flex;gap:1.5rem}
-  .ft-links a{font-size:0.6rem;color:var(--text-inv-muted);text-decoration:none}
-  .ft-links a:hover{color:var(--text-inv)}
+      footer {
+        background: var(--bg-dark);
+        color: var(--text-inv);
+        padding: 2rem 2.5rem;
+      }
+      .footer-inner {
+        max-width: 68rem;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+      }
+      .ft-brand {
+        font-family: var(--mincho);
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+      }
+      .ft-copy {
+        text-align: center;
+        font-size: 0.55rem;
+        color: var(--text-inv-muted);
+      }
+      .ft-links {
+        justify-self: end;
+        display: flex;
+        gap: 1.5rem;
+      }
+      .ft-links a {
+        font-size: 0.6rem;
+        color: var(--text-inv-muted);
+        text-decoration: none;
+      }
+      .ft-links a:hover {
+        color: var(--text-inv);
+      }
 
-  @media(max-width:768px){
-    header{padding:0 1.5rem}
-    nav{display:none}
-    .hero-content{padding:3rem 1.5rem}
-    .container{padding:0 1.5rem}
-    .loc-grid{grid-template-columns:repeat(2,1fr)}
-    .sp-row{grid-template-columns:4rem 1fr 5rem}
-    .sp-type,.sp-cap{display:none}
-    .events-grid{grid-template-columns:1fr}
-    .feat-strip{grid-template-columns:repeat(2,1fr)}
-    .feat-item{border-bottom:1px solid rgba(255,255,255,0.04)}
-    .footer-inner{grid-template-columns:1fr;gap:1rem;text-align:center}
-    .ft-links{justify-self:center}
-  }
-</style>
-</head>
-<body>
-<header>
-  <a href="#" class="logo">没薬</a>
-  <nav>
-    <a href="#">空間一覧</a>
-    <a href="#">拠点</a>
-    <a href="#">イベント</a>
-    <a href="#">お問い合わせ</a>
-    <span class="lang-toggle">EN / JP</span>
-  </nav>
-</header>
+      @media (max-width: 768px) {
+        header {
+          padding: 0 1.5rem;
+        }
+        nav {
+          display: none;
+        }
+        .hero-content {
+          padding: 3rem 1.5rem;
+        }
+        .container {
+          padding: 0 1.5rem;
+        }
+        .loc-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .sp-row {
+          grid-template-columns: 4rem 1fr 5rem;
+        }
+        .sp-type,
+        .sp-cap {
+          display: none;
+        }
+        .events-grid {
+          grid-template-columns: 1fr;
+        }
+        .feat-strip {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .feat-item {
+          border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .footer-inner {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+          text-align: center;
+        }
+        .ft-links {
+          justify-self: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="#" class="logo">没薬</a>
+      <nav>
+        <a href="#">空間一覧</a>
+        <a href="#">拠点</a>
+        <a href="#">イベント</a>
+        <a href="#">お問い合わせ</a>
+        <span class="lang-toggle">EN / JP</span>
+      </nav>
+    </header>
 
-<div class="content">
+    <div class="content">
+      <section class="hero">
+        <div class="hero-content">
+          <p class="hero-tag"><span class="dot"></span> Myrrh Rental Space</p>
+          <h1 class="hero-title">独立した人々を<br />つなげる空間。</h1>
+          <p class="hero-desc">
+            フリーランス、起業家、クリエイター。それぞれの目的を持った人が集まり、静かに交差する場所。
+          </p>
+          <div class="hero-actions">
+            <a href="#" class="btn-primary">空間を見る</a>
+            <a href="#" class="btn-ghost">お問い合わせ</a>
+          </div>
+        </div>
+      </section>
 
-<section class="hero">
-  <div class="hero-content">
-    <p class="hero-tag"><span class="dot"></span> Myrrh Rental Space</p>
-    <h1 class="hero-title">独立した人々を<br>つなげる空間。</h1>
-    <p class="hero-desc">フリーランス、起業家、クリエイター。それぞれの目的を持った人が集まり、静かに交差する場所。</p>
-    <div class="hero-actions">
-      <a href="#" class="btn-primary">空間を見る</a>
-      <a href="#" class="btn-ghost">お問い合わせ</a>
+      <section class="locations">
+        <div class="container">
+          <div class="loc-header">
+            <div>
+              <p class="loc-label">Locations</p>
+              <h2 class="loc-title">拠点一覧</h2>
+            </div>
+            <span class="loc-count">3 locations</span>
+          </div>
+          <div class="loc-grid">
+            <div class="loc-card">
+              <div class="loc-img">
+                <div
+                  class="loc-img-inner"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #c8baa8, #a89878);
+                  "
+                ></div>
+              </div>
+              <h3 class="loc-name">本館</h3>
+              <p class="loc-addr">東京都渋谷区 X-X-X</p>
+            </div>
+            <div class="loc-card">
+              <div class="loc-img">
+                <div
+                  class="loc-img-inner"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #b8c8a8, #98a888);
+                  "
+                ></div>
+              </div>
+              <h3 class="loc-name">別館</h3>
+              <p class="loc-addr">東京都渋谷区 Y-Y-Y</p>
+            </div>
+            <div class="loc-card">
+              <div class="loc-img">
+                <div
+                  class="loc-img-inner"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #c4b8c8, #a89cb0);
+                  "
+                ></div>
+              </div>
+              <h3 class="loc-name">新宿</h3>
+              <p class="loc-addr">東京都新宿区 Z-Z-Z</p>
+            </div>
+            <div class="loc-card">
+              <div class="loc-img">
+                <div
+                  class="loc-img-inner"
+                  style="
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(135deg, #d0c4b4, #b8a898);
+                  "
+                ></div>
+              </div>
+              <h3 class="loc-name">表参道（準備中）</h3>
+              <p class="loc-addr">Coming Soon</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="container">
+          <div style="margin-bottom: 2rem">
+            <p class="loc-label">Spaces</p>
+            <h2 class="loc-title">空間一覧</h2>
+          </div>
+          <div class="spaces-list">
+            <div class="sp-row">
+              <div class="sp-thumb"></div>
+              <span class="sp-name">Conference Room A</span
+              ><span class="sp-type">Meeting</span
+              ><span class="sp-cap">Max 8</span
+              ><span class="sp-price">¥3,000 <small>/h</small></span>
+            </div>
+            <div class="sp-row">
+              <div
+                class="sp-thumb"
+                style="background: linear-gradient(135deg, #b8c8a8, #98a888)"
+              ></div>
+              <span class="sp-name">Open Lounge</span
+              ><span class="sp-type">Coworking</span
+              ><span class="sp-cap">Max 30</span
+              ><span class="sp-price">¥1,500 <small>/h</small></span>
+            </div>
+            <div class="sp-row">
+              <div
+                class="sp-thumb"
+                style="background: linear-gradient(135deg, #c4b8c8, #a89cb0)"
+              ></div>
+              <span class="sp-name">Hall B</span
+              ><span class="sp-type">Seminar</span
+              ><span class="sp-cap">Max 50</span
+              ><span class="sp-price">¥8,000 <small>/h</small></span>
+            </div>
+            <div class="sp-row">
+              <div
+                class="sp-thumb"
+                style="background: linear-gradient(135deg, #d0c4b4, #b8a898)"
+              ></div>
+              <span class="sp-name">Studio C</span
+              ><span class="sp-type">Photo</span
+              ><span class="sp-cap">Max 10</span
+              ><span class="sp-price">¥4,500 <small>/h</small></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="events">
+        <div class="container">
+          <div class="events-header">
+            <p class="ev-label">Events</p>
+            <h2 class="ev-title">イベント</h2>
+          </div>
+          <div class="events-grid">
+            <div class="ev-card">
+              <div class="ev-img"></div>
+              <p class="ev-date">2026.04.15</p>
+              <h3 class="ev-name">フリーランス交流会</h3>
+              <p class="ev-desc">
+                各分野で活躍するフリーランスが集まる月例交流イベント。
+              </p>
+            </div>
+            <div class="ev-card">
+              <div
+                class="ev-img"
+                style="background: linear-gradient(135deg, #a8b8a0, #8aa080)"
+              ></div>
+              <p class="ev-date">2026.04.22</p>
+              <h3 class="ev-name">写真ワークショップ</h3>
+              <p class="ev-desc">
+                自然光を活かしたプロダクト撮影の基礎を学ぶワークショップ。
+              </p>
+            </div>
+            <div class="ev-card">
+              <div
+                class="ev-img"
+                style="background: linear-gradient(135deg, #c0b4a0, #a89880)"
+              ></div>
+              <p class="ev-date">2026.05.10</p>
+              <h3 class="ev-name">起業家ピッチナイト</h3>
+              <p class="ev-desc">
+                スタートアップ起業家によるプレゼンテーションイベント。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="feat-strip">
+        <div class="feat-item">
+          <div class="feat-val">12</div>
+          <div class="feat-lbl">Spaces</div>
+        </div>
+        <div class="feat-item">
+          <div class="feat-val">2.4K</div>
+          <div class="feat-lbl">Bookings</div>
+        </div>
+        <div class="feat-item">
+          <div class="feat-val">98%</div>
+          <div class="feat-lbl">Satisfaction</div>
+        </div>
+        <div class="feat-item">
+          <div class="feat-val">4.8</div>
+          <div class="feat-lbl">Rating</div>
+        </div>
+      </div>
+
+      <section class="cta">
+        <div class="container">
+          <h2 class="cta-title">あなたの居場所を<br />見つけよう。</h2>
+          <p class="cta-desc">
+            空き状況の確認から予約まで、すべてオンラインで完結します。
+          </p>
+          <a href="#" class="cta-btn">空間を探す</a>
+        </div>
+      </section>
     </div>
-  </div>
-</section>
 
-<section class="locations">
-  <div class="container">
-    <div class="loc-header">
-      <div><p class="loc-label">Locations</p><h2 class="loc-title">拠点一覧</h2></div>
-      <span class="loc-count">3 locations</span>
-    </div>
-    <div class="loc-grid">
-      <div class="loc-card">
-        <div class="loc-img"><div class="loc-img-inner" style="width:100%;height:100%;background:linear-gradient(135deg,#c8baa8,#a89878)"></div></div>
-        <h3 class="loc-name">本館</h3>
-        <p class="loc-addr">東京都渋谷区 X-X-X</p>
+    <footer>
+      <div class="footer-inner">
+        <span class="ft-brand">没薬</span>
+        <span class="ft-copy">&copy; 2026 Myrrh Rental Space</span>
+        <div class="ft-links">
+          <a href="#">利用規約</a><a href="#">プライバシー</a
+          ><a href="#">お問い合わせ</a>
+        </div>
       </div>
-      <div class="loc-card">
-        <div class="loc-img"><div class="loc-img-inner" style="width:100%;height:100%;background:linear-gradient(135deg,#b8c8a8,#98a888)"></div></div>
-        <h3 class="loc-name">別館</h3>
-        <p class="loc-addr">東京都渋谷区 Y-Y-Y</p>
-      </div>
-      <div class="loc-card">
-        <div class="loc-img"><div class="loc-img-inner" style="width:100%;height:100%;background:linear-gradient(135deg,#c4b8c8,#a89cb0)"></div></div>
-        <h3 class="loc-name">新宿</h3>
-        <p class="loc-addr">東京都新宿区 Z-Z-Z</p>
-      </div>
-      <div class="loc-card">
-        <div class="loc-img"><div class="loc-img-inner" style="width:100%;height:100%;background:linear-gradient(135deg,#d0c4b4,#b8a898)"></div></div>
-        <h3 class="loc-name">表参道（準備中）</h3>
-        <p class="loc-addr">Coming Soon</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="container">
-    <div style="margin-bottom:2rem"><p class="loc-label">Spaces</p><h2 class="loc-title">空間一覧</h2></div>
-    <div class="spaces-list">
-      <div class="sp-row"><div class="sp-thumb"></div><span class="sp-name">Conference Room A</span><span class="sp-type">Meeting</span><span class="sp-cap">Max 8</span><span class="sp-price">¥3,000 <small>/h</small></span></div>
-      <div class="sp-row"><div class="sp-thumb" style="background:linear-gradient(135deg,#b8c8a8,#98a888)"></div><span class="sp-name">Open Lounge</span><span class="sp-type">Coworking</span><span class="sp-cap">Max 30</span><span class="sp-price">¥1,500 <small>/h</small></span></div>
-      <div class="sp-row"><div class="sp-thumb" style="background:linear-gradient(135deg,#c4b8c8,#a89cb0)"></div><span class="sp-name">Hall B</span><span class="sp-type">Seminar</span><span class="sp-cap">Max 50</span><span class="sp-price">¥8,000 <small>/h</small></span></div>
-      <div class="sp-row"><div class="sp-thumb" style="background:linear-gradient(135deg,#d0c4b4,#b8a898)"></div><span class="sp-name">Studio C</span><span class="sp-type">Photo</span><span class="sp-cap">Max 10</span><span class="sp-price">¥4,500 <small>/h</small></span></div>
-    </div>
-  </div>
-</section>
-
-<section class="events">
-  <div class="container">
-    <div class="events-header"><p class="ev-label">Events</p><h2 class="ev-title">イベント</h2></div>
-    <div class="events-grid">
-      <div class="ev-card">
-        <div class="ev-img"></div>
-        <p class="ev-date">2026.04.15</p>
-        <h3 class="ev-name">フリーランス交流会</h3>
-        <p class="ev-desc">各分野で活躍するフリーランスが集まる月例交流イベント。</p>
-      </div>
-      <div class="ev-card">
-        <div class="ev-img" style="background:linear-gradient(135deg,#a8b8a0,#8aa080)"></div>
-        <p class="ev-date">2026.04.22</p>
-        <h3 class="ev-name">写真ワークショップ</h3>
-        <p class="ev-desc">自然光を活かしたプロダクト撮影の基礎を学ぶワークショップ。</p>
-      </div>
-      <div class="ev-card">
-        <div class="ev-img" style="background:linear-gradient(135deg,#c0b4a0,#a89880)"></div>
-        <p class="ev-date">2026.05.10</p>
-        <h3 class="ev-name">起業家ピッチナイト</h3>
-        <p class="ev-desc">スタートアップ起業家によるプレゼンテーションイベント。</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="feat-strip">
-  <div class="feat-item"><div class="feat-val">12</div><div class="feat-lbl">Spaces</div></div>
-  <div class="feat-item"><div class="feat-val">2.4K</div><div class="feat-lbl">Bookings</div></div>
-  <div class="feat-item"><div class="feat-val">98%</div><div class="feat-lbl">Satisfaction</div></div>
-  <div class="feat-item"><div class="feat-val">4.8</div><div class="feat-lbl">Rating</div></div>
-</div>
-
-<section class="cta">
-  <div class="container">
-    <h2 class="cta-title">あなたの居場所を<br>見つけよう。</h2>
-    <p class="cta-desc">空き状況の確認から予約まで、すべてオンラインで完結します。</p>
-    <a href="#" class="cta-btn">空間を探す</a>
-  </div>
-</section>
-
-</div>
-
-<footer><div class="footer-inner">
-  <span class="ft-brand">没薬</span>
-  <span class="ft-copy">&copy; 2026 Myrrh Rental Space</span>
-  <div class="ft-links"><a href="#">利用規約</a><a href="#">プライバシー</a><a href="#">お問い合わせ</a></div>
-</div></footer>
-</body>
+    </footer>
+  </body>
 </html>

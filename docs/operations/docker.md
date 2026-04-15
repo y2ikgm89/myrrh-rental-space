@@ -57,19 +57,19 @@ CMD ["bun", "server.js"]
 
 ### 設計のポイント
 
-| 項目                 | 詳細                                                                                       |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]` |
-| **ベース**           | `oven/bun:1.3.11-alpine`（`base` を builder / runner で共有）                             |
-| **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                   |
-| **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                 |
-| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                   |
-| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化                           |
-| **builder**          | `bun run type-check && bun run lint && bun run build`（`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は BuildKit secret） |
-| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                                  |
-| **Prisma WASM**      | `node_modules/@prisma` を runner にコピー（standalone trace に含まれないため）             |
+| 項目                 | 詳細                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **ビルド・実行**     | Bun + `bun.lock`（[Bun Docker ガイド](https://bun.sh/guides/ecosystem/docker)）。`CMD ["bun", "server.js"]`         |
+| **ベース**           | `oven/bun:1.3.11-alpine`（`base` を builder / runner で共有）                                                       |
+| **libc6-compat**     | Alpine でのネイティブ互換。deps + runner                                                                            |
+| **Prisma generate**  | deps ステージ。出力先: `generated/prisma/`                                                                          |
+| **generated コピー** | `.gitignore` で除外 → Cloud Build に含まれない → `COPY --from=deps` 必須                                            |
+| **STANDALONE**       | `ENV STANDALONE=true` で `output: 'standalone'` を条件付き有効化                                                    |
+| **builder**          | `bun run type-check && bun run lint && bun run build`（`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` は BuildKit secret）    |
+| **NEXT*PUBLIC*\***   | Docker ARG でビルド時注入（クライアント JS インライン化）                                                           |
+| **Prisma WASM**      | `node_modules/@prisma` を runner にコピー（standalone trace に含まれないため）                                      |
 | **ポート**           | 8080（Cloud Run 標準）。スタートアップは [TCP プローブ](https://cloud.google.com/run/docs/configuring/healthchecks) |
-| **非 root**          | `adduser nextjs` + `USER nextjs`                                                          |
+| **非 root**          | `adduser nextjs` + `USER nextjs`                                                                                    |
 
 ### なぜ STANDALONE 環境変数が必要か
 

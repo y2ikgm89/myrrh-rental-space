@@ -1,464 +1,545 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Myrrh — Design Concepts</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #111;
-    color: #e0e0e0;
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-  }
-  h1 {
-    font-size: 0.65rem;
-    font-weight: 500;
-    letter-spacing: 0.4em;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 1rem;
-  }
-  h2 {
-    font-size: 2rem;
-    font-weight: 300;
-    margin-bottom: 3rem;
-    text-align: center;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-    max-width: 72rem;
-    width: 100%;
-  }
-  .card {
-    border: 1px solid #333;
-    overflow: hidden;
-    transition: all 0.4s;
-    text-decoration: none;
-    color: inherit;
-    display: block;
-  }
-  .card:hover {
-    border-color: #666;
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-  }
-  .card-preview {
-    aspect-ratio: 16/10;
-    overflow: hidden;
-    position: relative;
-  }
-  .card-preview iframe {
-    width: 200%;
-    height: 200%;
-    border: none;
-    transform: scale(0.5);
-    transform-origin: top left;
-    pointer-events: none;
-  }
-  .card-body { padding: 1.5rem; }
-  .card-label {
-    font-size: 0.55rem;
-    font-weight: 500;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: #888;
-    margin-bottom: 0.75rem;
-  }
-  .card-title {
-    font-size: 1.1rem;
-    font-weight: 400;
-    margin-bottom: 0.75rem;
-  }
-  .card-desc {
-    font-size: 0.8rem;
-    color: #777;
-    line-height: 1.7;
-  }
-  .card-tags {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    flex-wrap: wrap;
-  }
-  .tag {
-    font-size: 0.6rem;
-    padding: 0.25rem 0.6rem;
-    border: 1px solid #444;
-    color: #aaa;
-    letter-spacing: 0.05em;
-  }
-  .footer-note {
-    margin-top: 3rem;
-    font-size: 0.75rem;
-    color: #555;
-    text-align: center;
-    line-height: 1.8;
-  }
-  @media (max-width: 900px) {
-    .grid { grid-template-columns: 1fr; max-width: 32rem; }
-  }
-  @media (min-width: 901px) {
-    .grid { grid-template-columns: repeat(3, 1fr); }
-  }
-</style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Myrrh — Design Concepts</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #111;
+        color: #e0e0e0;
+        font-family: "Inter", sans-serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+      }
+      h1 {
+        font-size: 0.65rem;
+        font-weight: 500;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 1rem;
+      }
+      h2 {
+        font-size: 2rem;
+        font-weight: 300;
+        margin-bottom: 3rem;
+        text-align: center;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        max-width: 72rem;
+        width: 100%;
+      }
+      .card {
+        border: 1px solid #333;
+        overflow: hidden;
+        transition: all 0.4s;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+      }
+      .card:hover {
+        border-color: #666;
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      }
+      .card-preview {
+        aspect-ratio: 16/10;
+        overflow: hidden;
+        position: relative;
+      }
+      .card-preview iframe {
+        width: 200%;
+        height: 200%;
+        border: none;
+        transform: scale(0.5);
+        transform-origin: top left;
+        pointer-events: none;
+      }
+      .card-body {
+        padding: 1.5rem;
+      }
+      .card-label {
+        font-size: 0.55rem;
+        font-weight: 500;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: #888;
+        margin-bottom: 0.75rem;
+      }
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 400;
+        margin-bottom: 0.75rem;
+      }
+      .card-desc {
+        font-size: 0.8rem;
+        color: #777;
+        line-height: 1.7;
+      }
+      .card-tags {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+      }
+      .tag {
+        font-size: 0.6rem;
+        padding: 0.25rem 0.6rem;
+        border: 1px solid #444;
+        color: #aaa;
+        letter-spacing: 0.05em;
+      }
+      .footer-note {
+        margin-top: 3rem;
+        font-size: 0.75rem;
+        color: #555;
+        text-align: center;
+        line-height: 1.8;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+          max-width: 32rem;
+        }
+      }
+      @media (min-width: 901px) {
+        .grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Myrrh Rental Space</h1>
+    <h2>Design Concepts</h2>
 
-<h1>Myrrh Rental Space</h1>
-<h2>Design Concepts</h2>
+    <div class="grid">
+      <!-- Concept A -->
+      <a href="concept-a-dark-cinematic.html" class="card">
+        <div class="card-preview" style="background: #0a0a0a">
+          <iframe
+            src="concept-a-dark-cinematic.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept A</div>
+          <h3 class="card-title">Dark Cinematic</h3>
+          <p class="card-desc">
+            ダーク背景に浮かぶ光。映画のような没入感と高級感。
+            ゴールドアクセントとセリフ書体で上質な世界観を構築。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Dark Theme</span>
+            <span class="tag">Playfair Display</span>
+            <span class="tag">Gold Accent</span>
+            <span class="tag">Split Layout</span>
+          </div>
+        </div>
+      </a>
 
-<div class="grid">
-  <!-- Concept A -->
-  <a href="concept-a-dark-cinematic.html" class="card">
-    <div class="card-preview" style="background:#0a0a0a;">
-      <iframe src="concept-a-dark-cinematic.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept A</div>
-      <h3 class="card-title">Dark Cinematic</h3>
-      <p class="card-desc">
-        ダーク背景に浮かぶ光。映画のような没入感と高級感。
-        ゴールドアクセントとセリフ書体で上質な世界観を構築。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Dark Theme</span>
-        <span class="tag">Playfair Display</span>
-        <span class="tag">Gold Accent</span>
-        <span class="tag">Split Layout</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept B -->
+      <a href="concept-b-wabi-sabi.html" class="card">
+        <div class="card-preview" style="background: #f5f0e8">
+          <iframe
+            src="concept-b-wabi-sabi.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept B</div>
+          <h3 class="card-title">Wabi-Sabi Modern</h3>
+          <p class="card-desc">
+            日本の美意識「侘び寂び」を現代的に解釈。
+            自然素材の質感、非対称レイアウト、余白を活かした静かなデザイン。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Noto Serif JP</span>
+            <span class="tag">Earth Tones</span>
+            <span class="tag">Asymmetric</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept B -->
-  <a href="concept-b-wabi-sabi.html" class="card">
-    <div class="card-preview" style="background:#f5f0e8;">
-      <iframe src="concept-b-wabi-sabi.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept B</div>
-      <h3 class="card-title">Wabi-Sabi Modern</h3>
-      <p class="card-desc">
-        日本の美意識「侘び寂び」を現代的に解釈。
-        自然素材の質感、非対称レイアウト、余白を活かした静かなデザイン。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Noto Serif JP</span>
-        <span class="tag">Earth Tones</span>
-        <span class="tag">Asymmetric</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept C -->
+      <a href="concept-c-swiss-brutalist.html" class="card">
+        <div class="card-preview" style="background: #fafaf8">
+          <iframe
+            src="concept-c-swiss-brutalist.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept C</div>
+          <h3 class="card-title">Swiss Brutalist</h3>
+          <p class="card-desc">
+            スイスタイポグラフィの伝統 + ブルータリスト的な太い罫線。
+            大胆なグリッド構造と赤アクセントで力強い印象。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Space Grotesk</span>
+            <span class="tag">Red Accent</span>
+            <span class="tag">Grid System</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept C -->
-  <a href="concept-c-swiss-brutalist.html" class="card">
-    <div class="card-preview" style="background:#fafaf8;">
-      <iframe src="concept-c-swiss-brutalist.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept C</div>
-      <h3 class="card-title">Swiss Brutalist</h3>
-      <p class="card-desc">
-        スイスタイポグラフィの伝統 + ブルータリスト的な太い罫線。
-        大胆なグリッド構造と赤アクセントで力強い印象。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Space Grotesk</span>
-        <span class="tag">Red Accent</span>
-        <span class="tag">Grid System</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept D -->
+      <a href="concept-d-editorial-magazine.html" class="card">
+        <div class="card-preview" style="background: #f7f5f0">
+          <iframe
+            src="concept-d-editorial-magazine.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept D</div>
+          <h3 class="card-title">Editorial Magazine</h3>
+          <p class="card-desc">
+            Kinfolk / Cereal 誌のような雑誌的レイアウト。
+            大量の余白、繊細なセリフ書体、写真主導の構成。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Cormorant Garamond</span>
+            <span class="tag">Whitespace</span>
+            <span class="tag">Magazine Layout</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept D -->
-  <a href="concept-d-editorial-magazine.html" class="card">
-    <div class="card-preview" style="background:#f7f5f0;">
-      <iframe src="concept-d-editorial-magazine.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept D</div>
-      <h3 class="card-title">Editorial Magazine</h3>
-      <p class="card-desc">
-        Kinfolk / Cereal 誌のような雑誌的レイアウト。
-        大量の余白、繊細なセリフ書体、写真主導の構成。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Cormorant Garamond</span>
-        <span class="tag">Whitespace</span>
-        <span class="tag">Magazine Layout</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept E -->
+      <a href="concept-e-art-deco.html" class="card">
+        <div class="card-preview" style="background: #0c0f14">
+          <iframe
+            src="concept-e-art-deco.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept E</div>
+          <h3 class="card-title">Neo Art Deco</h3>
+          <p class="card-desc">
+            アール・デコの幾何学パターンを現代的に再解釈。
+            ダーク背景にメタリックゴールド、装飾的なディバイダー。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Dark Theme</span>
+            <span class="tag">Italiana</span>
+            <span class="tag">Metallic Gold</span>
+            <span class="tag">Geometric</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept E -->
-  <a href="concept-e-art-deco.html" class="card">
-    <div class="card-preview" style="background:#0c0f14;">
-      <iframe src="concept-e-art-deco.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept E</div>
-      <h3 class="card-title">Neo Art Deco</h3>
-      <p class="card-desc">
-        アール・デコの幾何学パターンを現代的に再解釈。
-        ダーク背景にメタリックゴールド、装飾的なディバイダー。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Dark Theme</span>
-        <span class="tag">Italiana</span>
-        <span class="tag">Metallic Gold</span>
-        <span class="tag">Geometric</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept F -->
+      <a href="concept-f-monochrome-arch.html" class="card">
+        <div class="card-preview" style="background: #f0f0ec">
+          <iframe
+            src="concept-f-monochrome-arch.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept F</div>
+          <h3 class="card-title">Monochrome Architectural</h3>
+          <p class="card-desc">
+            モノクロ + 赤のアクセント。建築的な構成、極太書体、
+            テーブル型スペース一覧。工業的で力強い。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Syne</span>
+            <span class="tag">Red Accent</span>
+            <span class="tag">Industrial</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept F -->
-  <a href="concept-f-monochrome-arch.html" class="card">
-    <div class="card-preview" style="background:#f0f0ec;">
-      <iframe src="concept-f-monochrome-arch.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept F</div>
-      <h3 class="card-title">Monochrome Architectural</h3>
-      <p class="card-desc">
-        モノクロ + 赤のアクセント。建築的な構成、極太書体、
-        テーブル型スペース一覧。工業的で力強い。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Syne</span>
-        <span class="tag">Red Accent</span>
-        <span class="tag">Industrial</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept G -->
+      <a href="concept-g-organic-soft.html" class="card">
+        <div class="card-preview" style="background: #faf8f5">
+          <iframe
+            src="concept-g-organic-soft.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept G</div>
+          <h3 class="card-title">Organic Soft</h3>
+          <p class="card-desc">
+            丸み・パステル・ブロブ。柔らかくフレンドリーなデザイン。
+            ピーチ/ラベンダー/ミントの3色アクセント。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Fraunces</span>
+            <span class="tag">Pastel</span>
+            <span class="tag">Rounded</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept G -->
-  <a href="concept-g-organic-soft.html" class="card">
-    <div class="card-preview" style="background:#faf8f5;">
-      <iframe src="concept-g-organic-soft.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept G</div>
-      <h3 class="card-title">Organic Soft</h3>
-      <p class="card-desc">
-        丸み・パステル・ブロブ。柔らかくフレンドリーなデザイン。
-        ピーチ/ラベンダー/ミントの3色アクセント。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Fraunces</span>
-        <span class="tag">Pastel</span>
-        <span class="tag">Rounded</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept H -->
+      <a href="concept-h-typo-only.html" class="card">
+        <div class="card-preview" style="background: #fff">
+          <iframe
+            src="concept-h-typo-only.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept H</div>
+          <h3 class="card-title">High Contrast Typography</h3>
+          <p class="card-desc">
+            白黒のみ。写真なし。巨大なセリフ書体だけで魅せる
+            究極のミニマルデザイン。
+          </p>
+          <div class="card-tags">
+            <span class="tag">B&W Only</span>
+            <span class="tag">Instrument Serif</span>
+            <span class="tag">No Images</span>
+            <span class="tag">Minimal</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept H -->
-  <a href="concept-h-typo-only.html" class="card">
-    <div class="card-preview" style="background:#fff;">
-      <iframe src="concept-h-typo-only.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept H</div>
-      <h3 class="card-title">High Contrast Typography</h3>
-      <p class="card-desc">
-        白黒のみ。写真なし。巨大なセリフ書体だけで魅せる
-        究極のミニマルデザイン。
-      </p>
-      <div class="card-tags">
-        <span class="tag">B&W Only</span>
-        <span class="tag">Instrument Serif</span>
-        <span class="tag">No Images</span>
-        <span class="tag">Minimal</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept I -->
+      <a href="concept-i-retro-70s.html" class="card">
+        <div class="card-preview" style="background: #f5ebe0">
+          <iframe
+            src="concept-i-retro-70s.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept I</div>
+          <h3 class="card-title">Retro 70s</h3>
+          <p class="card-desc">
+            セピア調・レトロ配色。太い罫線 + ドロップシャドウ。 Dela Gothic One
+            で力強く温かい70年代風。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Warm Theme</span>
+            <span class="tag">Dela Gothic One</span>
+            <span class="tag">Rust/Olive</span>
+            <span class="tag">Neo-Retro</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept I -->
-  <a href="concept-i-retro-70s.html" class="card">
-    <div class="card-preview" style="background:#f5ebe0;">
-      <iframe src="concept-i-retro-70s.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept I</div>
-      <h3 class="card-title">Retro 70s</h3>
-      <p class="card-desc">
-        セピア調・レトロ配色。太い罫線 + ドロップシャドウ。
-        Dela Gothic One で力強く温かい70年代風。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Warm Theme</span>
-        <span class="tag">Dela Gothic One</span>
-        <span class="tag">Rust/Olive</span>
-        <span class="tag">Neo-Retro</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept J -->
+      <a href="concept-j-glass.html" class="card">
+        <div class="card-preview" style="background: #0d0d1a">
+          <iframe
+            src="concept-j-glass.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept J</div>
+          <h3 class="card-title">Glass Morphism</h3>
+          <p class="card-desc">
+            半透明カード・ぼかし・グラデーション背景。
+            紫→ピンクのグラデーションアクセント。未来的でモダン。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Dark Theme</span>
+            <span class="tag">Plus Jakarta Sans</span>
+            <span class="tag">Gradient</span>
+            <span class="tag">Glassmorphism</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept J -->
-  <a href="concept-j-glass.html" class="card">
-    <div class="card-preview" style="background:#0d0d1a;">
-      <iframe src="concept-j-glass.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept J</div>
-      <h3 class="card-title">Glass Morphism</h3>
-      <p class="card-desc">
-        半透明カード・ぼかし・グラデーション背景。
-        紫→ピンクのグラデーションアクセント。未来的でモダン。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Dark Theme</span>
-        <span class="tag">Plus Jakarta Sans</span>
-        <span class="tag">Gradient</span>
-        <span class="tag">Glassmorphism</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept K -->
+      <a href="concept-k-vertical-jp.html" class="card">
+        <div class="card-preview" style="background: #f8f5ef">
+          <iframe
+            src="concept-k-vertical-jp.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept K</div>
+          <h3 class="card-title">Japanese Vertical</h3>
+          <p class="card-desc">
+            縦書き主体、和紙テクスチャ、墨色ベース。
+            漢数字、朱色アクセント。「没薬」を活かした和モダン。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Shippori Mincho</span>
+            <span class="tag">Vertical Text</span>
+            <span class="tag">Washi Texture</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept K -->
-  <a href="concept-k-vertical-jp.html" class="card">
-    <div class="card-preview" style="background:#f8f5ef;">
-      <iframe src="concept-k-vertical-jp.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept K</div>
-      <h3 class="card-title">Japanese Vertical</h3>
-      <p class="card-desc">
-        縦書き主体、和紙テクスチャ、墨色ベース。
-        漢数字、朱色アクセント。「没薬」を活かした和モダン。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Shippori Mincho</span>
-        <span class="tag">Vertical Text</span>
-        <span class="tag">Washi Texture</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept L -->
+      <a href="concept-l-split-screen.html" class="card">
+        <div
+          class="card-preview"
+          style="background: linear-gradient(90deg, #f5f3ee 50%, #1a1a1a 50%)"
+        >
+          <iframe
+            src="concept-l-split-screen.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept L</div>
+          <h3 class="card-title">Split Screen</h3>
+          <p class="card-desc">
+            画面を左右に完全分割。ライト × ダークのコントラスト。
+            スクロールしても分割が維持される独自レイアウト。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Dual Theme</span>
+            <span class="tag">Unbounded</span>
+            <span class="tag">Light+Dark</span>
+            <span class="tag">Split Layout</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept L -->
-  <a href="concept-l-split-screen.html" class="card">
-    <div class="card-preview" style="background:linear-gradient(90deg, #f5f3ee 50%, #1a1a1a 50%);">
-      <iframe src="concept-l-split-screen.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept L</div>
-      <h3 class="card-title">Split Screen</h3>
-      <p class="card-desc">
-        画面を左右に完全分割。ライト × ダークのコントラスト。
-        スクロールしても分割が維持される独自レイアウト。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Dual Theme</span>
-        <span class="tag">Unbounded</span>
-        <span class="tag">Light+Dark</span>
-        <span class="tag">Split Layout</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept M -->
+      <a href="concept-m-kinfolk-editorial.html" class="card">
+        <div class="card-preview" style="background: #faf9f6">
+          <iframe
+            src="concept-m-kinfolk-editorial.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept M</div>
+          <h3 class="card-title">Kinfolk Editorial</h3>
+          <p class="card-desc">
+            Kinfolk 誌のデザインを忠実に再現。ずらしグリッド、
+            プルクオート、雑誌の見開きスプレッド。余白が主役。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Cormorant</span>
+            <span class="tag">Staggered Grid</span>
+            <span class="tag">ref: Kinfolk</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept M -->
-  <a href="concept-m-kinfolk-editorial.html" class="card">
-    <div class="card-preview" style="background:#faf9f6;">
-      <iframe src="concept-m-kinfolk-editorial.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept M</div>
-      <h3 class="card-title">Kinfolk Editorial</h3>
-      <p class="card-desc">
-        Kinfolk 誌のデザインを忠実に再現。ずらしグリッド、
-        プルクオート、雑誌の見開きスプレッド。余白が主役。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Cormorant</span>
-        <span class="tag">Staggered Grid</span>
-        <span class="tag">ref: Kinfolk</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept N -->
+      <a href="concept-n-aesop-earth.html" class="card">
+        <div class="card-preview" style="background: #f2ece3">
+          <iframe
+            src="concept-n-aesop-earth.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept N</div>
+          <h3 class="card-title">Aesop Earth</h3>
+          <p class="card-desc">
+            Aesop のアースカラーとナラティブ手法を応用。
+            テラコッタ/セージ/クレイの自然色。物語で語るブランド。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Mixed Theme</span>
+            <span class="tag">EB Garamond</span>
+            <span class="tag">Earth Tones</span>
+            <span class="tag">ref: Aesop</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept N -->
-  <a href="concept-n-aesop-earth.html" class="card">
-    <div class="card-preview" style="background:#f2ece3;">
-      <iframe src="concept-n-aesop-earth.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept N</div>
-      <h3 class="card-title">Aesop Earth</h3>
-      <p class="card-desc">
-        Aesop のアースカラーとナラティブ手法を応用。
-        テラコッタ/セージ/クレイの自然色。物語で語るブランド。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Mixed Theme</span>
-        <span class="tag">EB Garamond</span>
-        <span class="tag">Earth Tones</span>
-        <span class="tag">ref: Aesop</span>
-      </div>
-    </div>
-  </a>
+      <!-- Concept O -->
+      <a href="concept-o-aman-immersive.html" class="card">
+        <div class="card-preview" style="background: #0e0e0c">
+          <iframe
+            src="concept-o-aman-immersive.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept O</div>
+          <h3 class="card-title">Aman Immersive</h3>
+          <p class="card-desc">
+            Aman Resorts の「囁くような」デザイン。極小タイポ、
+            広大な暗闇、金の細線。静寂のラグジュアリー。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Dark Theme</span>
+            <span class="tag">Cinzel</span>
+            <span class="tag">Whisper Typography</span>
+            <span class="tag">ref: Aman</span>
+          </div>
+        </div>
+      </a>
 
-  <!-- Concept O -->
-  <a href="concept-o-aman-immersive.html" class="card">
-    <div class="card-preview" style="background:#0e0e0c;">
-      <iframe src="concept-o-aman-immersive.html" loading="lazy" tabindex="-1"></iframe>
+      <!-- Concept P -->
+      <a href="concept-p-midori-community.html" class="card">
+        <div class="card-preview" style="background: #edebe5">
+          <iframe
+            src="concept-p-midori-community.html"
+            loading="lazy"
+            tabindex="-1"
+          ></iframe>
+        </div>
+        <div class="card-body">
+          <div class="card-label">Concept P</div>
+          <h3 class="card-title">Midori Community</h3>
+          <p class="card-desc">
+            MIDORI.so 風のコミュニティ重視デザイン。ダークヘッダー、
+            拠点カード、テーブル型一覧、イベントセクション。
+          </p>
+          <div class="card-tags">
+            <span class="tag">Light Theme</span>
+            <span class="tag">Shippori Mincho</span>
+            <span class="tag">Community</span>
+            <span class="tag">ref: MIDORI.so</span>
+          </div>
+        </div>
+      </a>
     </div>
-    <div class="card-body">
-      <div class="card-label">Concept O</div>
-      <h3 class="card-title">Aman Immersive</h3>
-      <p class="card-desc">
-        Aman Resorts の「囁くような」デザイン。極小タイポ、
-        広大な暗闇、金の細線。静寂のラグジュアリー。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Dark Theme</span>
-        <span class="tag">Cinzel</span>
-        <span class="tag">Whisper Typography</span>
-        <span class="tag">ref: Aman</span>
-      </div>
-    </div>
-  </a>
 
-  <!-- Concept P -->
-  <a href="concept-p-midori-community.html" class="card">
-    <div class="card-preview" style="background:#edebe5;">
-      <iframe src="concept-p-midori-community.html" loading="lazy" tabindex="-1"></iframe>
-    </div>
-    <div class="card-body">
-      <div class="card-label">Concept P</div>
-      <h3 class="card-title">Midori Community</h3>
-      <p class="card-desc">
-        MIDORI.so 風のコミュニティ重視デザイン。ダークヘッダー、
-        拠点カード、テーブル型一覧、イベントセクション。
-      </p>
-      <div class="card-tags">
-        <span class="tag">Light Theme</span>
-        <span class="tag">Shippori Mincho</span>
-        <span class="tag">Community</span>
-        <span class="tag">ref: MIDORI.so</span>
-      </div>
-    </div>
-  </a>
-</div>
-
-<p class="footer-note">
-  全16コンセプト（A〜P）。各カードをクリックすると全画面で確認できます。<br>
-  気に入った方向性、ミックスしたい要素があればお知らせください。
-</p>
-
-</body>
+    <p class="footer-note">
+      全16コンセプト（A〜P）。各カードをクリックすると全画面で確認できます。<br />
+      気に入った方向性、ミックスしたい要素があればお知らせください。
+    </p>
+  </body>
 </html>
