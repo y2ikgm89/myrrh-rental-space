@@ -10,8 +10,8 @@ import { defineConfig, devices } from "@playwright/test";
  * Project 構成:
  *   - setup-customer / setup-admin → 認証してストレージ保存
  *   - chromium                     → 未認証テスト（auth.spec.ts / 公開ページ smoke 等）
- *   - chromium-customer            → 顧客認証済みテスト（e2e/authenticated/*）
- *   - chromium-admin               → 管理者認証済みテスト（e2e/admin/* の一部）
+ *   - chromium-customer            → 顧客認証済みテスト（e2e/authenticated/customer/*）
+ *   - chromium-admin               → 管理者認証済みテスト（e2e/authenticated/admin/*）
  *
  * @see https://playwright.dev/docs/test-configuration
  */

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { testSpaces, urls, testUsers } from "../fixtures";
+import { testSpaces, urls } from "../../fixtures";
 
 /**
  * 管理画面スペース管理 E2E テスト
@@ -11,38 +11,9 @@ import { testSpaces, urls, testUsers } from "../fixtures";
  * 4. スペースの削除
  * 5. スペースの公開/非公開切り替え
  * 6. フォームバリデーション
+ *
+ * 認証は chromium-admin project の storageState で処理。
  */
-
-// =============================================================================
-// テストセットアップ
-// =============================================================================
-
-/**
- * 各テスト前に管理者として認証
- */
-test.beforeEach(async ({ page }) => {
-  // 管理者としてログイン
-  // Note: 実際の認証実装に応じて調整が必要
-  await page.goto(urls.login);
-
-  // Better Auth のセッションCookieを直接設定する場合
-  // await page.context().addCookies([
-  //   {
-  //     name: 'better-auth.session_token',
-  //     value: 'test-admin-session-token',
-  //     domain: 'localhost',
-  //     path: '/',
-  //   },
-  // ])
-
-  // または、ログインフォームを使用する場合
-  await page.fill('input[name="email"]', testUsers.admin.email);
-  await page.fill('input[name="password"]', "test-password");
-  await page.click('button[type="submit"]');
-
-  // ログイン成功を待機
-  await page.waitForURL(urls.adminDashboard);
-});
 
 // =============================================================================
 // 1. スペース一覧ページの表示

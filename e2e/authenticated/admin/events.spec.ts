@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { urls, testUsers } from "../fixtures";
+import { test, expect } from "@playwright/test";
+import { urls } from "../../fixtures";
 
 /**
  * 管理画面 - イベント管理 E2E テスト
@@ -19,18 +19,6 @@ import { urls, testUsers } from "../fixtures";
 // =============================================================================
 // セットアップ
 // =============================================================================
-
-async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
-}
-
-test.beforeEach(async ({ page }) => {
-  await loginAsAdmin(page);
-});
 
 // =============================================================================
 // 1. イベント一覧ページ

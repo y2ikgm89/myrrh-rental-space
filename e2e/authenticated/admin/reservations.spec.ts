@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { testReservations, urls, testUsers } from "../fixtures";
+import { test, expect } from "@playwright/test";
+import { testReservations, urls } from "../../fixtures";
 
 /**
  * 管理画面予約管理 E2E テスト
@@ -18,28 +18,6 @@ import { testReservations, urls, testUsers } from "../fixtures";
 // =============================================================================
 // ヘルパー関数
 // =============================================================================
-
-/**
- * 管理者としてログインしてセッションを確立
- */
-async function loginAsAdmin(page: Page): Promise<void> {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
-}
-
-// =============================================================================
-// テストセットアップ
-// =============================================================================
-
-/**
- * 各テスト前に管理者として認証
- */
-test.beforeEach(async ({ page }) => {
-  await loginAsAdmin(page);
-});
 
 // =============================================================================
 // 1. 予約一覧ページの表示

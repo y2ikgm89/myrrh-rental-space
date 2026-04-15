@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { testUsers, urls } from "../fixtures";
+import { testUsers, urls } from "../../fixtures";
 
 /**
  * Admin Users Management E2E Tests
@@ -22,17 +22,6 @@ import { testUsers, urls } from "../fixtures";
 // =============================================================================
 // Test Setup
 // =============================================================================
-
-/**
- * Helper function to login as admin
- */
-async function loginAsAdmin(page: Page) {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/admin/, { timeout: 10000 });
-}
 
 /**
  * Helper function to login as a specific user
@@ -60,9 +49,7 @@ async function waitForPageLoad(page: Page) {
 // =============================================================================
 
 test.describe("Admin Users Management", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
-  });
+  // Admin authentication is handled by chromium-admin project storageState.
 
   // ===========================================================================
   // 1. Users List Page

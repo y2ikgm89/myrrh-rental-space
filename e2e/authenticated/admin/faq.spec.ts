@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { urls, testUsers } from "../fixtures";
+import { test, expect } from "@playwright/test";
+import { urls } from "../../fixtures";
 
 /**
  * 管理画面 - FAQ管理 E2E テスト
@@ -13,28 +13,6 @@ import { urls, testUsers } from "../fixtures";
  * 6. 削除確認ダイアログ
  * 7. レスポンシブ対応
  */
-
-// =============================================================================
-// テストセットアップ
-// =============================================================================
-
-/**
- * 管理者としてログイン
- */
-async function loginAsAdmin(page: Page) {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
-}
-
-/**
- * 各テスト前に管理者として認証
- */
-test.beforeEach(async ({ page }) => {
-  await loginAsAdmin(page);
-});
 
 // =============================================================================
 // 1. FAQ一覧ページの表示

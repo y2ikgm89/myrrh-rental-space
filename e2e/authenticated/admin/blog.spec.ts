@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { testBlogPosts, urls, testUsers } from "../fixtures";
+import { test, expect } from "@playwright/test";
+import { testBlogPosts, urls } from "../../fixtures";
 
 /**
  * ブログ管理機能 E2E テスト
@@ -15,28 +15,6 @@ import { testBlogPosts, urls, testUsers } from "../fixtures";
  * 8. ページネーション
  * 9. 検索・フィルター機能
  */
-
-// =============================================================================
-// テストセットアップ
-// =============================================================================
-
-/**
- * 管理者としてログイン
- */
-async function loginAsAdmin(page: Page) {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
-}
-
-/**
- * 各テスト前に管理者として認証
- */
-test.beforeEach(async ({ page }) => {
-  await loginAsAdmin(page);
-});
 
 // =============================================================================
 // 1. ブログ一覧ページの表示
