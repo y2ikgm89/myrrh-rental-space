@@ -1,0 +1,104 @@
+{
+  // VS Code Debug 設定
+  // https://code.visualstudio.com/docs/editor/debugging
+  //
+  // 使い方: Run and Debug パネル (Ctrl+Shift+D) から設定を選択して F5
+  "version": "0.2.0",
+  "configurations": [
+    // ----------------------------------------------------------------
+    // Next.js dev server (server-side debugging)
+    // ----------------------------------------------------------------
+    {
+      "name": "Next.js: dev (server-side)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun dev",
+      "cwd": "${workspaceFolder}"
+    },
+
+    // ----------------------------------------------------------------
+    // Next.js dev server (client-side in Chrome)
+    // 事前に `bun dev` を起動しておく（2 ターミナル運用）
+    // ----------------------------------------------------------------
+    {
+      "name": "Next.js: client (Chrome, requires bun dev running)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/src",
+      "sourceMaps": true,
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile"
+    },
+
+    // ----------------------------------------------------------------
+    // Playwright: 現在のファイルを debug mode で実行
+    // ----------------------------------------------------------------
+    {
+      "name": "Playwright: current file",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bunx",
+      "runtimeArgs": ["playwright", "test", "${relativeFile}", "--debug"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+
+    // ----------------------------------------------------------------
+    // Playwright UI mode（対話的実行）
+    // ----------------------------------------------------------------
+    {
+      "name": "Playwright: UI mode",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bunx",
+      "runtimeArgs": ["playwright", "test", "--ui"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+
+    // ----------------------------------------------------------------
+    // Bun test: 現在のファイル
+    // ----------------------------------------------------------------
+    {
+      "name": "Bun test: current file",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun test ${relativeFile}",
+      "cwd": "${workspaceFolder}"
+    },
+
+    // ----------------------------------------------------------------
+    // Bun test: unit (per-directory batch)
+    // ----------------------------------------------------------------
+    {
+      "name": "Bun test: unit (batch)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun run test:unit",
+      "cwd": "${workspaceFolder}"
+    },
+
+    // ----------------------------------------------------------------
+    // Prisma Studio
+    // ----------------------------------------------------------------
+    {
+      "name": "Prisma Studio",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bunx --bun prisma studio",
+      "cwd": "${workspaceFolder}"
+    }
+  ],
+  "compounds": [
+    // Next.js dev + Chrome debugging を同時起動
+    {
+      "name": "Next.js: full-stack debug",
+      "configurations": [
+        "Next.js: dev (server-side)",
+        "Next.js: client (Chrome, requires bun dev running)"
+      ],
+      "stopAll": true
+    }
+  ]
+}

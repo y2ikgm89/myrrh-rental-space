@@ -1,0 +1,160 @@
+{
+  // ------------------------------------------------------------------
+  // VS Code workspace settings
+  // 個人設定は User Settings で上書き可能、チーム共通のみここに記述
+  // ------------------------------------------------------------------
+
+  // ---- エディタ ----
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.rulers": [100],
+  "editor.wordWrap": "off",
+  "editor.renderWhitespace": "boundary",
+  "editor.bracketPairColorization.enabled": true,
+
+  // ---- ファイル ----
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.turbo": true,
+    "**/dist": true,
+    "**/generated/prisma": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/.lighthouseci": true,
+    "**/coverage": true
+  },
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/node_modules/**": true,
+    "**/generated/prisma/**": true,
+    "**/playwright-report/**": true,
+    "**/test-results/**": true,
+    "**/.lighthouseci/**": true,
+    "**/coverage/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/generated/prisma": true,
+    "**/bun.lock": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/.lighthouseci": true,
+    "**/coverage": true
+  },
+
+  // ---- TypeScript ----
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.inlayHints.parameterNames.enabled": "literals",
+  "typescript.inlayHints.variableTypes.enabled": false,
+
+  // ---- ESLint ----
+  "eslint.format.enable": false,
+  "eslint.validate": ["javascript", "typescript", "javascriptreact", "typescriptreact"],
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.run": "onSave",
+
+  // ---- Prettier ----
+  "prettier.requireConfig": true,
+
+  // ---- Tailwind CSS 4 (CSS-first @theme 対応) ----
+  "tailwindCSS.experimental.classRegex": [
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
+  "tailwindCSS.includeLanguages": {
+    "typescriptreact": "javascript",
+    "typescript": "javascript"
+  },
+  "css.customData": [".vscode/tailwind.json"],
+
+  // ---- Prisma ----
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma",
+    "editor.formatOnSave": true
+  },
+
+  // ---- Markdown ----
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+
+  // ---- YAML / JSON ----
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // ---- GitHub Actions YAML ----
+  "yaml.schemas": {
+    "https://json.schemastore.org/github-workflow.json": [
+      ".github/workflows/*.yml",
+      ".github/workflows/*.yaml"
+    ],
+    "https://json.schemastore.org/dependabot-2.0.json": [".github/dependabot.yml"],
+    "https://docs.renovatebot.com/renovate-schema.json": [
+      ".github/renovate.json",
+      ".github/renovate.json5"
+    ]
+  },
+
+  // ---- Git ----
+  "git.enableCommitSigning": false,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+
+  // ---- Terminal ----
+  "terminal.integrated.scrollback": 10000,
+
+  // ---- Playwright ----
+  "playwright.reuseBrowser": true,
+
+  // ---- Spell check プロジェクト辞書 ----
+  "cSpell.words": [
+    "adminAuth",
+    "basePrisma",
+    "Cormorant",
+    "customerAuth",
+    "executeAdminMutationResult",
+    "Lenis",
+    "Lexical",
+    "lhci",
+    "myrrh",
+    "nuqs",
+    "Prisma",
+    "Renovate",
+    "Tabler",
+    "Turbopack",
+    "Turnstile",
+    "Vercel",
+    "yoyo"
+  ]
+}

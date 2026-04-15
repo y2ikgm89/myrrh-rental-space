@@ -1,0 +1,28 @@
+# EditorConfig: https://editorconfig.org/
+# 全てのエディタで一貫した設定を強制する
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Markdown は trailing whitespace を line break として使うため許容
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefile は tab 必須
+[Makefile]
+indent_style = tab
+
+# YAML / JSON / TypeScript は 2 space
+[*.{yml,yaml,json,ts,tsx,js,jsx,mjs,cjs}]
+indent_size = 2
+
+# Prisma schema は 2 space（Prisma 公式）
+[*.prisma]
+indent_size = 2

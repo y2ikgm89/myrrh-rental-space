@@ -1,0 +1,49 @@
+{
+  // VS Code / Cursor / Windsurf で開いた時に推奨される拡張機能
+  // https://code.visualstudio.com/docs/editor/extension-marketplace#_workspace-recommended-extensions
+  "recommendations": [
+    // ---- コア ----
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+
+    // ---- TypeScript / React ----
+    "ms-vscode.vscode-typescript-next",
+
+    // ---- Tailwind CSS 4 ----
+    "bradlc.vscode-tailwindcss",
+
+    // ---- Prisma ----
+    "prisma.prisma",
+
+    // ---- Playwright ----
+    "ms-playwright.playwright",
+
+    // ---- Git / GitHub ----
+    "github.vscode-pull-request-github",
+    "github.vscode-github-actions",
+    "eamodio.gitlens",
+
+    // ---- YAML / TOML / JSON ----
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+
+    // ---- Markdown ----
+    "yzhang.markdown-all-in-one",
+    "davidanson.vscode-markdownlint",
+
+    // ---- Docker ----
+    "ms-azuretools.vscode-docker",
+
+    // ---- Spell check（コミットメッセージ・コメント用） ----
+    "streetsidesoftware.code-spell-checker",
+
+    // ---- Error Lens (エラーをインラインで表示) ----
+    "usernamehw.errorlens"
+  ],
+  // インストールしないでほしい拡張（衝突回避）
+  "unwantedRecommendations": [
+    // Prettier と競合する自動整形拡張
+    "rvest.vs-code-prettier-eslint"
+  ]
+}
