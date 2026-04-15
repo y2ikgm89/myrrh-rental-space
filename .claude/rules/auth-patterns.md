@@ -111,12 +111,30 @@ SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER / CUSTOMER
 
 ### DASHBOARD_ROLES（ダッシュボードアクセス制御の SSOT）
 
-`@/shared/lib/admin-auth` から export。`verifyAdminSession`・ログインページで使用:
+**Single Source of Truth は `@/shared/lib/admin-roles`**（client-safe、`server-only` なし）。
+`@/shared/lib/admin-auth`（server-only）は互換性のため `DASHBOARD_ROLES` を再 export する。
 
 ```typescript
-import { DASHBOARD_ROLES } from "@/shared/lib/admin-auth";
-// [SUPER_ADMIN, ADMIN, EDITOR, VIEWER]
+// Server-only コード（admin-auth / customer-auth / permissions 等）
+import { isDashboardRole } from "@/shared/lib/admin-roles";
+if (!isDashboardRole(user.role)) redirect("/");
+
+// Client Component（InviteForm / UserForm / status-badges 等）
+import {
+  DASHBOARD_ROLES, // z.enum(DASHBOARD_ROLES) に直接渡せる const tuple
+  STAFF_INVITABLE_ROLES, // SUPER_ADMIN 除外の派生 tuple
+  ROLE_LABELS, // Record<Role, string> 日本語ラベル
+  ROLE_DESCRIPTIONS, // Record<Role, string> UI 説明
+  type DashboardRole,
+} from "@/shared/lib/admin-roles";
 ```
+
+**禁止パターン:**
+
+- **`.includes(user.role)` 直接呼び出し禁止** — `DASHBOARD_ROLES` は `readonly [...]` tuple 型のため、wide `Role` 型を渡すと TS2345。`isDashboardRole()` 型ガードを使う
+- **ローカル `type StaffRole = "SUPER_ADMIN" | ...` 定義禁止** — `DashboardRole` 型を import する
+- **ローカル `ROLE_LABELS` / `"スーパー管理者"` 等のハードコード禁止** — `ROLE_LABELS[role]` を使う
+- **ローカル role description 文字列禁止** — `ROLE_DESCRIPTIONS[role]` を使う
 
 ロール追加時はこの定数のみ更新する。ローカルに管理者ロール一覧を定義しない。
 

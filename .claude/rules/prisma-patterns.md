@@ -633,23 +633,25 @@ await prisma.$transaction(async (tx) => {
 
 ## ファイル配置
 
-| パス                                      | 内容                                                                       |
-| ----------------------------------------- | -------------------------------------------------------------------------- |
-| `@/shared/generated/prisma/client`        | Prisma 生成クライアント・enum（自動生成、編集禁止）                        |
-| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                         |
-| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`prisma` インスタンス・Decimal 変換型          |
-| `@/shared/db/prisma-input-json.ts`        | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし） |
-| `@generated/prisma/enums`                 | Prisma enum 定数（直接 import）                                            |
-| `@generated/prisma/client`                | `Prisma` 名前空間・`PrismaClient`（直接 import）                           |
-| `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                               |
-| `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                  |
-| `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export |
-| `@/shared/lib/errors/logger-core.ts`      | スクリプト可能な `logError`                                                |
-| `@/shared/lib/errors/logger.ts`           | Next Server 専用（`server-only` + `logger-core` re-export）                |
-| `@/admin/lib/lazy-renderer.ts`            | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                      |
+| パス                                      | 内容                                                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/shared/generated/prisma/client`        | Prisma 生成クライアント・enum（自動生成、編集禁止）                                                                                                                 |
+| `@/shared/db/create-app-prisma-client.ts` | `$extends` 正本・`AppPrismaClient`                                                                                                                                  |
+| `@/shared/db/prisma.ts`                   | `server-only` シングルトン・`prisma` インスタンス・Decimal 変換型                                                                                                   |
+| `@/shared/db/prisma-input-json.ts`        | Prisma `InputJson` ヘルパー（seed / 共有コマンド向け、`server-only` なし）                                                                                          |
+| `@generated/prisma/enums`                 | Prisma enum 定数（client-safe・gateway 経由で値再 export）                                                                                                          |
+| `@generated/prisma/browser`               | client-safe な `Prisma` 名前空間 **型のみ**（gateway が type-only re-export 用に使用）                                                                              |
+| `@generated/prisma/client`                | server-only な `Prisma` 名前空間 **値**（`JsonNull` / `DbNull` / `join` / `sql` / `raw`）・`PrismaClient` クラス（`shared/db/` / `shared/domain/` のみ直接 import） |
+| `@/shared/lib/json-validators.ts`         | JSON フィールド Zod スキーマ・型・パース関数                                                                                                                        |
+| `@/shared/lib/serialize.ts`               | `toPlainObject`、`toPlainArray`、`keysOf`                                                                                                                           |
+| `@/shared/lib/validations/enums.ts`       | 全 enum 型ガード（`isValid*`）・デフォルト値取得（`getValid*`）・re-export                                                                                          |
+| `@/shared/lib/errors/logger-core.ts`      | スクリプト可能な `logError`                                                                                                                                         |
+| `@/shared/lib/errors/logger.ts`           | Next Server 専用（`server-only` + `logger-core` re-export）                                                                                                         |
+| `@/admin/lib/lazy-renderer.ts`            | `renderEditorStateToHtmlLazy`（動的 import ラッパー）                                                                                                               |
 
 ## Gotchas
 
 - **`PrismaPg` adapter 必須** — `scripts/` は Next.js ランタイム外のため `new PrismaClient()` 単独で WASM エンジンが初期化できず `PrismaClientInitializationError`。`new PrismaPg({ connectionString: databaseUrl })` → `new PrismaClient({ adapter })` の順で初期化
-- **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.InputJsonValue` 等の実値を使う場合は `import { Prisma } from "@generated/prisma/client"` （`type` キーワードなし）
+- **`import type Prisma` はランタイムで使えない** — `Prisma.JsonNull` / `Prisma.DbNull` 等の **runtime sentinel 値** を使う場合は `import { Prisma } from "@generated/prisma/client"` を使用（`type` キーワードなし）。**型のみ**（`Prisma.InputJsonValue` / `Prisma.WhereInput` 等）はゲートウェイ `@/shared/lib/validations/enums/prisma-types` から `import type { Prisma }` で取得可能
+- **gateway 経由で `Prisma` を値として import 禁止** — gateway は `export type { Prisma } from "@generated/prisma/browser"` で型のみ提供する。`generated/prisma/browser.ts` と `generated/prisma/client.ts` は内部で**異なる runtime モジュール**（`runtime/index-browser` vs `runtime/client`）を参照しており、`Prisma.JsonNull` 等の sentinel は両者で**異なるオブジェクト参照**になる。Prisma client は identity 比較で sentinel を判定するため、gateway 経由（browser 由来）の `JsonNull` を渡すと識別されず通常の null 扱いとなるサイレントバグを引き起こす。`architecture-boundaries.test.ts` で gateway の値 re-export を禁止
 - **nullable JSON update は `Prisma.InputJsonValue`（`JsonValue` 禁止）** — `data: { field: content as Prisma.JsonValue }` は型エラー。`content as Prisma.InputJsonValue` を使う

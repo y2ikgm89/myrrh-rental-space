@@ -431,6 +431,19 @@ bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
 
 `@/shared/lib/constants`（CACHE_TAGS, getCacheTag, CACHE_LIFE）と `@/shared/lib/route-responses` は DB 依存も `server-only` 依存もない。`mock.module` すると不完全なモックがグローバル干渉して他テストファイルを壊す。実モジュールをそのまま import して使用する。
 
+## 同一モジュールへの mock.module 連続呼び出し禁止
+
+```typescript
+// NG: コピペ由来の重複呼び出し（冪等だがコードレビュー時に誤読を招く）
+mock.module("@generated/prisma/enums", () => ALL_ENUMS);
+mock.module("@generated/prisma/enums", () => ALL_ENUMS);
+
+// OK: 1ファイル1呼び出しに統一
+mock.module("@generated/prisma/enums", () => ALL_ENUMS);
+```
+
+`mock.module` は冪等だが、同一モジュールへの連続呼び出しはコピペバグの兆候。ファイル内で grep して重複がないか確認する。
+
 ## mock.calls 直接アクセス禁止
 
 ```typescript

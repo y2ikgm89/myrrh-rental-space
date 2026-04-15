@@ -12,10 +12,23 @@ COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/nul
 # 1. rm targeting system/home directories (always blocked regardless of -r flag)
 # Protects: /, /*, ~, ~/..., /c/Windows, /c/Users, /c/Program Files,
 #           /home/..., /usr/, /bin/, /lib/, /etc/, /root/
-# Allows:   rm -rf node_modules, rm -rf ./dist, rm -rf /g/workspace/..., rm -rf /tmp/...
+# Allows:   rm -rf node_modules, rm -rf ./dist, rm -rf /tmp/..., rm -rf <project>/subdir
 if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])rm\s+[^;|&]*(~(\/|[[:space:]]|$)|\/\s*$|\/\*(\s|$)|\/[cC]\/(Windows|Users|Program)|\/home\/|\/usr\/|\/bin(\/|[[:space:]]|$)|\/lib(\/|[[:space:]]|$)|\/etc\/|\/root(\/|[[:space:]]|$))'; then
   printf 'Blocked: システム・ホームディレクトリへの rm は禁止されています。\nPCのシステムファイルを保護するためブロックしました。ターミナルで直接実行してください。\n' >&2
   exit 2
+fi
+
+# 1b. rm targeting the project root itself (block exact match, allow subdirectories)
+# Uses CLAUDE_PROJECT_DIR if available. Normalizes both Windows (G:\...) and MINGW (/g/...) forms.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  # Normalize to MINGW form: G:\foo\bar → /g/foo/bar
+  PROJECT_MINGW=$(printf '%s' "$CLAUDE_PROJECT_DIR" | sed -E 's#^([A-Za-z]):#/\L\1#; s#\\#/#g')
+  # Escape for regex
+  PROJECT_ESC=$(printf '%s' "$PROJECT_MINGW" | sed 's#[/.]#\\&#g')
+  if printf '%s' "$COMMAND" | grep -qE "(^|[;&|])rm\s+[^;|&]*[[:space:]]${PROJECT_ESC}/?([[:space:]]|;|&|\||$)"; then
+    printf 'Blocked: プロジェクトルート全体への rm は禁止されています。\nサブディレクトリを指定してください（例: rm -rf <project>/node_modules）。\n' >&2
+    exit 2
+  fi
 fi
 
 # 2. rm -r . (recursive deletion of current working directory — wipes entire project)
@@ -75,6 +88,32 @@ fi
 # 8. diskpart or format <drive>:
 if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])(diskpart|format\s+[a-zA-Z]:)'; then
   printf 'Blocked: diskpart および format コマンドは禁止されています。ディスク操作は Claude Code の Bash ツールからは実行できません。\nターミナルで直接実行してください。\n' >&2
+  exit 2
+fi
+
+# 9. sudo (privilege escalation)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])sudo\b'; then
+  printf 'Blocked: sudo は禁止されています。権限昇格を伴う操作は Claude Code の Bash ツールからは実行できません。\nターミナルで直接実行してください。\n' >&2
+  exit 2
+fi
+
+# 10. chmod (permission changes)
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|])chmod\b'; then
+  printf 'Blocked: chmod は禁止されています。ファイル権限変更は Claude Code の Bash ツールからは実行できません。\nターミナルで直接実行してください。\n' >&2
+  exit 2
+fi
+
+# 11. Windows destructive commands: del /s|/q, rd /s, rmdir /s
+if printf '%s' "$COMMAND" | grep -qiE '(^|[;&|])(del\s+[^;|&]*\/[sq]|rd\s+[^;|&]*\/s|rmdir\s+[^;|&]*\/s)'; then
+  printf 'Blocked: Windows の再帰削除コマンド（del /s|/q, rd /s, rmdir /s）は禁止されています。\nターミナルで直接実行してください。\n' >&2
+  exit 2
+fi
+
+# 12. Reading .env files via Bash (cat, less, more, head, tail, source, .)
+# Match only at command position (start of line or after ; && || | () or newline),
+# not inside string arguments like echo "cat .env".
+if printf '%s' "$COMMAND" | grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*(cat|less|more|head|tail|source|\.)[[:space:]]+[^;|&]*\.env(\.[a-zA-Z0-9_.-]+)?([[:space:]]|;|&|\||$)'; then
+  printf 'Blocked: .env ファイルの読み取りは禁止されています。\n環境変数は Cloud Run コンソールまたは .env.example を通じて確認してください。\n' >&2
   exit 2
 fi
 

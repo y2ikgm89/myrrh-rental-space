@@ -463,6 +463,23 @@ function isStringArray(value: unknown): value is string[] {
 }
 ```
 
+### safeParse 結果と exactOptionalPropertyTypes の橋渡し
+
+`z.object({ field: z.string().optional() })` の出力は `{ field: string | undefined }`。
+`readonly field?: string` 型（`exactOptionalPropertyTypes: true` 下）への代入には `omitUndefined` を使う:
+
+```typescript
+import { omitUndefined } from "@/shared/lib/serialize";
+
+// NG: safeParse の result.data を直接返す（string | undefined が readonly field?: string と非互換）
+return result.data; // 型エラー
+
+// OK: omitUndefined で undefined プロパティを除去
+return result.success ? omitUndefined(result.data) : undefined;
+```
+
+参照実装: `src/shared/lib/sections/field-helpers.ts` の `extractFieldMeta`。
+
 ## React Hook Form 連携
 
 ```typescript

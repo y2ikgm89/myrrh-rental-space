@@ -236,6 +236,10 @@ paths:
 - **MINGW64 で `bun run X 2>&1 | tail -N` が途中で切り詰められる** — Bash ツール経由のパイプで長い stdout が truncate されるケースがある。長い出力を確実に取得するには `cmd > /tmp/out 2>&1; echo "EXIT:$?"; tail -N /tmp/out` を使う
 - **Zod スキーマの dead code パターンに注意** — `.refine()` 付きスキーマを定義したが ZodEffects が `.omit()` 等と非互換になるため、`*Base` 版を作って parent に埋め込むと validation が完全に無効化される（例: `businessHoursDaySchema` + `businessHoursDayBaseSchema`）。コメント「refine後の型は...基本スキーマを使用」はこのアンチパターンの兆候。解決策: validation 本体を `collectXxxIssues(data, pathPrefix, ctx)` ヘルパーとして shared に抽出し、parent schema の `.superRefine()` から呼ぶ（→ `zod-patterns.md`）
 - **`as` キャスト監査で raw grep は偽陽性が多い** — `grep "\bas\s+[A-Z]"` は `as const` / `as unknown as` / `import { X as Y }` / `import * as X` / コメント中の "as" をすべて拾う。真の違反数を測るには `grep -vE "as const|as unknown|^import|\* as "` 等でフィルタし、ヒットを type-safety.md §許可例外（DOM event target・Prisma InputJsonValue・withMeta・validateSectionConfig 内部等）と照合する。raw カウントと実違反が 10倍以上乖離することが多い
+- **SSoT 重複検出の grep は symbol 名 + literal 文字列の二段検証必須** — `grep "ROLE_LABELS.*=\s*{$"` のような狭い正規表現は「開き波括弧が同一行」条件で重複定義を見落とす（複数行定義 / 配列中の inline literal / 条件分岐内のハードコードが抜ける）。重複検出の最終検証は ① シンボル名（`ROLE_LABELS` / `StaffRole` / `DASHBOARD_ROLES`）② 実際の定数値 literal（`"スーパー管理者"` / `"閲覧者"` 等）の **両方** で grep し、SSoT モジュール以外にヒットしないことを確認する。`role === "ADMIN" && "管理者"` のようなインライン条件ハードコードは symbol 名では絶対に引っ掛からない
+- **Const tuple の `.includes(wideType)` は TS2345** — `readonly [A, B, C] as const` に wider union type（例: `Role`）を `.includes()` で渡すと「型 X は ... に割り当て不可」エラー。`isXxx()` 型ガード helper（`new Set<Role>(TUPLE).has(role)`）で橋渡しする。`admin-roles.ts` の `isDashboardRole` が参照実装
+- **`z.enum(TUPLE)` は const tuple 必須** — Zod 4 の `z.enum` は `readonly [string, ...string[]]` を要求。`readonly Role[]` のような widened 型では型エラー。`as const satisfies readonly Role[]` で const tuple を維持する
+- **client component から `server-only` モジュールの定数を参照禁止** — `admin-auth.ts` は `import "server-only"` のため、`'use client'` ファイルから `DASHBOARD_ROLES` / `ROLE_LABELS` 等を import するとビルドエラー。SSoT は client-safe モジュール（`admin-roles.ts`）に置き、server-only モジュールは再 export する分離パターン必須。参照実装: `admin-roles.ts` ↔ `admin-auth.ts`
 - **Zod `safeParse` 結果を `readonly field?: string` に代入する際は `omitUndefined` 必須** — `z.string().optional()` の出力は `string | undefined` だが、`exactOptionalPropertyTypes: true` 下の `readonly field?: string` は `undefined` を受け付けない。`omitUndefined(result.data)` で橋渡し（→ `zod-patterns.md` §safeParse 結果と exactOptionalPropertyTypes の橋渡し）
 
 - **`useRef` 変数名は `Ref` サフィックス必須** — `@eslint-react/naming-convention-ref-name` が `useRef` の戻り値に `ref` または `*Ref` 命名を要求。`touchStartX` → `touchStartXRef`
@@ -288,6 +292,7 @@ paths:
 - **Subagent report は必ず独立検証する** — implementer の「commit SHA: xxx」「EXIT: 0」報告を鵜呑みにせず、次タスク dispatch 前に `git log --oneline -N` + `git show --stat HEAD` で実在確認する。報告内容と git state の乖離は稀だが発生する（特に安価なモデルを implementer に使った場合）。乖離検出時は同じタスクをより上位モデルで再 dispatch
 - **Implementation サブエージェントに haiku を使わない** — ファイル編集 + commit を伴うタスクで haiku モデルは Bash/Edit ツール呼び出しを省略し成功報告を捏造することがある。`Agent` tool の `model: "haiku"` オプションは read-only 調査（Explore 等）のみで使用し、implementer には sonnet 以上を指定する
 - **Explore subagent のファイル名 hallucination** — Explore エージェントは調査結果に実在しないファイルパス（例: `color-swatch-picker.tsx` / `day-view.tsx` 等、それらしいが存在しないパス）を混ぜることがある。大量の発見を報告してきた場合は `Glob` / `Read` で実在確認してから対処する。特に「さらに徹底調査」指示後の報告は hallucination 率が上がる傾向
+- **監査 subagent の grep ベース報告は実体検証が必須** — code-quality reviewer 等が grep ヒット数や hallucination で違反を報告することがある。実例: (1) `((calculatedPrice / hourlyPrice) * 10) / 10` のような算術式が JSX IIFE `{(() => ...)()}` パターンとして偽陽性検出される、(2) `select.tsx` の `required` マーク欠落と報告されたが既に実装済み、(3) `Prisma` 値 import 5 ファイルと報告されたが実態は全て `import type`（`verbatimModuleSyntax` で完全 erase）。**ground truth は `bun run lint` exit 0 + Read による source 直接確認**。grep カウントだけで修正に着手しない
 
 ## Worktree
 
@@ -304,6 +309,7 @@ paths:
 
 ## フレームワーク固有
 
+- **Prisma 7 `JsonNull` / `DbNull` の参照同一性フットガン** — `@generated/prisma/browser` と `@generated/prisma/client` は内部で異なる runtime（`runtime/index-browser` vs `runtime/client`）を import しており、`Prisma.JsonNull` は両者で **別オブジェクト参照** になる。Prisma 4+ では unique object 実装で identity 比較されるため、混在すると Prisma client が sentinel と認識せず通常 null として扱う silent bug。**runtime sentinel 値は必ず `@generated/prisma/client` から直接 import**（`shared/db/` / `shared/domain/` のみ許可、他は `@/shared/lib/validations/enums/prisma-types` ゲートウェイの type-only re-export 経由）。`architecture-boundaries.test.ts` で gateway の値 re-export を禁止
 - **`'use cache'` は dev 環境でもキャッシュが永続する** — DB を管理画面外で直接更新（SQL / `bun -e`）しても `updateTag` が呼ばれないためキャッシュが残る。dev サーバー再起動で全キャッシュがクリアされる。管理画面の Server Actions 経由の更新は `afterSuccess` の `updateTag` で即時反映される
 - **`revalidateTag` は Next.js 16 で 2 引数必須** — `revalidateTag(tag: string, profile: string | CacheLifeConfig)`。第 2 引数 `profile` は省略不可（旧 Next.js 14/15 との破壊的変更）。`CACHE_LIFE.*` 定数を渡すのが正しい用法。監査・レビュー時に「余分な引数」と誤識別しないこと
 - **`updateTag` は 1 引数** — `updateTag(tag: string)` は `revalidateTag` とは異なり第 2 引数なし。混同しない
