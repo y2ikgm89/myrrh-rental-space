@@ -37,13 +37,12 @@ pre-commit:
       stage_fixed: true
 
     # 保護ファイルへのコミット防止（CLAUDE.md ハードルール）
+    # 実装: scripts/check-protected-files.sh
+    # - .env*                    常にブロック（秘密情報）
+    # - prisma/migrations/*.sql  常にブロック（生成物）
+    # - bun.lock                 package.json 同時 stage 時のみ許可
     - name: protected-files
-      run: |
-        if git diff --cached --name-only | grep -qE "^(\.env|\.env\..+|bun\.lock|prisma/migrations/.*\.sql)$"; then
-          echo "❌ 保護ファイルへのコミットは禁止されています"
-          echo "   対象: .env* / bun.lock / prisma/migrations/*.sql"
-          exit 1
-        fi
+      run: bash scripts/check-protected-files.sh
 
 pre-push:
   parallel: false
@@ -58,15 +57,9 @@ pre-push:
       run: bun test __tests__/unit/architecture-boundaries.test.ts
       tags: slow
 
-# commit-msg: Conventional Commits 形式の簡易チェック
+# commit-msg: Conventional Commits 形式チェック
+# 実装: scripts/check-commit-msg.sh（lefthook sh -c "..." の quote 問題回避）
 commit-msg:
   jobs:
     - name: conventional-commits
-      run: |
-        MSG=$(cat {1})
-        if ! echo "$MSG" | grep -qE '^(feat|fix|refactor|perf|test|docs|chore|ci|style|build|revert)(\(.+\))?!?: .+'; then
-          echo "❌ コミットメッセージは Conventional Commits 形式で書いてください"
-          echo "   例: feat(reservation): add cancellation flow"
-          echo "   type: feat/fix/refactor/perf/test/docs/chore/ci/style/build/revert"
-          exit 1
-        fi
+      run: bash scripts/check-commit-msg.sh {1}

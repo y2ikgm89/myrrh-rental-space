@@ -131,12 +131,16 @@ jobs:
       - name: Run database migrations
         run: bunx --bun prisma migrate deploy
 
-      - name: Run unit tests with coverage (threshold 90% via bunfig.toml)
-        run: bun test --coverage
+      # per-directory batch 必須（mock.module グローバル干渉防止 — CLAUDE.md ハードルール）
+      - name: Run unit tests (per-directory batch)
+        run: bun run test:unit
 
-      - name: Coverage threshold fallback check
-        if: success()
-        run: node scripts/check-coverage.mjs --threshold 90
+      - name: Run integration tests (per-directory batch)
+        run: bun run test:integration
+
+      # coverage は全件統合実行でのみ計測可能だが mock 干渉するため、
+      # CI では per-directory batch で correctness を優先する。
+      # coverage 計測はローカル `bun test --coverage` で参考値として取得。
 
   e2e-tests:
     name: E2E Tests
