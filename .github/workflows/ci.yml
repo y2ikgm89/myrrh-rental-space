@@ -39,7 +39,7 @@ jobs:
   dependency-audit:
     name: Dependency Audit (bun audit)
     runs-on: ubuntu-latest
-    # 脆弱性は Dependabot + 手動レビューで追跡するため CI では非ブロッキング
+    # 脆弱性は Renovate vulnerabilityAlerts + 手動レビューで追跡するため CI では非ブロッキング
     # transitive deps の low/moderate は upstream 修正待ちになりがち
     continue-on-error: true
     steps:
