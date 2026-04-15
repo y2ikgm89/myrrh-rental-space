@@ -1,0 +1,66 @@
+# CODEOWNERS — PR レビュアー自動ルーティング
+#
+# GitHub 公式: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# 記法: `path-pattern owner1 owner2 ...`
+# - 後の行が先の行を上書きする
+# - glob pattern 対応（`*`, `**`）
+# - owner は GitHub username or team（@org/team-name）
+#
+# このプロジェクトは単一 owner のため全パスを default owner に割り当て、
+# 特定の critical パスは追加レビューを要求する構造にしている。
+
+# ===========================================================================
+# Default: 全変更は owner レビュー必須
+# ===========================================================================
+* @y2ikgm89
+
+# ===========================================================================
+# Critical: DB / 認証 / Prisma gateway / 設定 — 追加で慎重なレビューが必要
+# ===========================================================================
+
+# Prisma schema / migrations — DB スキーマ変更は全て owner レビュー
+/prisma/schema.prisma @y2ikgm89
+/prisma/migrations/ @y2ikgm89
+
+# 認証 / RBAC コア
+/src/shared/lib/admin-auth.ts @y2ikgm89
+/src/shared/lib/customer-auth.ts @y2ikgm89
+/src/shared/lib/admin-roles.ts @y2ikgm89
+/src/admin/lib/action-auth.ts @y2ikgm89
+/src/admin/lib/admin-action.ts @y2ikgm89
+/src/admin/lib/permissions.ts @y2ikgm89
+
+# Prisma gateway（client-safe 型のみ re-export）
+/src/shared/lib/validations/enums/prisma-types.ts @y2ikgm89
+/src/shared/db/prisma.ts @y2ikgm89
+/src/shared/db/create-app-prisma-client.ts @y2ikgm89
+
+# Stripe / Webhook / Cron — 決済と外部連携
+/src/app/api/webhooks/ @y2ikgm89
+/src/app/api/cron/ @y2ikgm89
+/src/shared/lib/stripe.ts @y2ikgm89
+
+# 暗号化 / env / security middleware
+/src/shared/lib/crypto.ts @y2ikgm89
+/src/shared/lib/env/ @y2ikgm89
+/src/proxy.ts @y2ikgm89
+
+# アーキテクチャ境界テスト — 境界違反の検出
+/__tests__/unit/architecture-boundaries.test.ts @y2ikgm89
+
+# ===========================================================================
+# Governance: CI / Claude 設定 / ポリシー文書
+# ===========================================================================
+
+/.github/ @y2ikgm89
+/.claude/rules/ @y2ikgm89
+/.claude/agents/ @y2ikgm89
+/CLAUDE.md @y2ikgm89
+/SECURITY.md @y2ikgm89
+/cloudbuild.yaml @y2ikgm89
+/next.config.ts @y2ikgm89
+/tsconfig.json @y2ikgm89
+/eslint.config.mjs @y2ikgm89
+/playwright.config.ts @y2ikgm89
+/.lighthouserc.json @y2ikgm89

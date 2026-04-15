@@ -1,0 +1,150 @@
+# actions/labeler v5 設定
+# https://github.com/actions/labeler
+#
+# PR 内の変更パスに基づいて自動でラベルを付与する。
+# CODEOWNERS と組み合わせて、ラベル + 自動レビュアーアサインの 2 軸で
+# PR のトリアージを自動化する。
+
+# ============================================================================
+# ドメイン / エリア別
+# ============================================================================
+
+"area: public-pages":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/(public)/**"
+
+"area: admin":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/(admin)/**"
+
+"area: api":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app/api/**"
+
+"area: domain":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/shared/domain/**"
+
+"area: shared-lib":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/shared/lib/**"
+
+# ============================================================================
+# 技術スタック別
+# ============================================================================
+
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "prisma/**"
+          - "src/shared/db/**"
+
+auth:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/shared/lib/admin-auth.ts"
+          - "src/shared/lib/customer-auth.ts"
+          - "src/shared/lib/admin-roles.ts"
+          - "src/admin/lib/action-auth.ts"
+          - "src/admin/lib/permissions.ts"
+
+payment:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/shared/lib/stripe.ts"
+          - "src/app/api/webhooks/stripe/**"
+          - "src/shared/domain/reservations/payment-*.ts"
+
+lexical:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/lexical/**"
+          - "src/app/(admin)/**/editor/**"
+
+# ============================================================================
+# 品質 / テスト
+# ============================================================================
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "__tests__/**"
+          - "e2e/**"
+          - "playwright.config.ts"
+
+e2e:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "e2e/**"
+          - "playwright.config.ts"
+
+a11y:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "e2e/a11y/**"
+          - "e2e/authenticated/admin/axe-admin-pages.spec.ts"
+
+# ============================================================================
+# CI / インフラ
+# ============================================================================
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/actions/**"
+          - "cloudbuild.yaml"
+          - "Dockerfile"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "package.json"
+          - "bun.lock"
+          - ".github/renovate.json5"
+
+# ============================================================================
+# ドキュメント
+# ============================================================================
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+          - "CLAUDE.md"
+          - "README.md"
+          - "CONTRIBUTING.md"
+          - "SECURITY.md"
+          - "CHANGELOG.md"
+
+adr:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/architecture/decisions/**"
+
+claude-rules:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".claude/rules/**"
+          - ".claude/agents/**"
+          - "CLAUDE.md"
+
+# ============================================================================
+# セキュリティ
+# ============================================================================
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - "src/shared/lib/crypto.ts"
+          - "src/proxy.ts"
+          - "src/shared/lib/env/**"
+          - ".github/workflows/codeql.yml"
+          - ".github/workflows/dependency-review.yml"

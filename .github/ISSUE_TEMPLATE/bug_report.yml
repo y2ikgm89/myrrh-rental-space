@@ -1,0 +1,104 @@
+name: バグ報告
+description: 意図しない動作・エラー・UI の崩れを報告する
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグ報告ありがとうございます。再現に必要な情報を提供してください。
+        **セキュリティ脆弱性は公開 issue ではなく [Security Advisory](../security/advisories/new) で報告してください。**
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 何が起きましたか？
+      description: 問題の概要を簡潔に
+      placeholder: 例. 予約確定ボタンをクリックしても反応しない
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 最小再現手順を番号付きで
+      value: |
+        1. `/reservation` にアクセス
+        2. スペース X を選択
+        3. 日時を選択
+        4. 送信ボタンをクリック
+        5. エラー発生
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待される動作
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+      description: エラーメッセージ・stack trace があれば貼ってください
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影響範囲
+      multiple: false
+      options:
+        - 公開ページ（予約フロー）
+        - 公開ページ（その他）
+        - マイページ（認証済み顧客）
+        - 管理画面（ダッシュボード）
+        - 管理画面（コンテンツ編集）
+        - API / Webhook
+        - Cron / バッチ処理
+        - 認証 / セッション
+        - 決済 (Stripe)
+        - メール送信
+        - その他
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 深刻度
+      options:
+        - Critical (サービス停止 / データ損失)
+        - High (主要機能が使えない)
+        - Medium (一部機能が使えない / workaround あり)
+        - Low (軽微な UI 崩れ / typo)
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: ブラウザ / OS
+      placeholder: Chrome 130 / Windows 11
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: スクリーンショット / 動画
+      description: ドラッグ&ドロップで添付できます
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: 追加情報
+      description: ブラウザコンソールのログ・ネットワークタブ・関連 PR 等
+    validations:
+      required: false

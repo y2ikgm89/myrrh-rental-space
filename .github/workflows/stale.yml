@@ -1,0 +1,71 @@
+name: Stale Issue / PR Management
+
+# 長期間更新のない issue / PR を自動で警告・クローズする
+# 参照: https://github.com/actions/stale
+
+on:
+  schedule:
+    # 毎日 UTC 00:00 (JST 09:00) に実行
+    - cron: "0 0 * * *"
+  workflow_dispatch: # 手動実行対応
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark and close stale items
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stale
+        uses: actions/stale@v9
+        with:
+          # ------------------------------------------------------------
+          # Issue 設定
+          # ------------------------------------------------------------
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-label: "stale"
+          stale-issue-message: |
+            この Issue は 60 日間更新されていません。依然として関連性がある場合は
+            コメントを追加してください。さらに 14 日間更新がない場合は自動的に
+            クローズされます。
+
+            再オープンが必要な場合は新しい Issue を作成してください。
+          close-issue-message: |
+            長期間更新がなかったため自動クローズされました。再オープンが必要な
+            場合は新規 Issue を作成してください。
+
+          # ------------------------------------------------------------
+          # Pull Request 設定（より厳格に — 30 日非アクティブで stale）
+          # ------------------------------------------------------------
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          stale-pr-label: "stale"
+          stale-pr-message: |
+            この PR は 30 日間更新されていません。作業を継続する場合は最新の
+            main/develop にリベースするか、コメントで状況を共有してください。
+            さらに 14 日間更新がない場合は自動クローズされます。
+          close-pr-message: |
+            長期間更新がなかったため自動クローズされました。再オープンが必要な
+            場合は新規 PR を作成してください。
+
+          # ------------------------------------------------------------
+          # 除外ラベル（これらが付いた issue/PR は自動クローズしない）
+          # ------------------------------------------------------------
+          exempt-issue-labels: "pinned,security,help-wanted,good-first-issue,in-progress,requires-dba-review,requires-careful-review"
+          exempt-pr-labels: "pinned,security,in-progress,work-in-progress,do-not-merge,requires-careful-review"
+
+          # ------------------------------------------------------------
+          # その他
+          # ------------------------------------------------------------
+          # 古い順に処理
+          ascending: true
+          # 1 日あたり最大 30 件まで処理（API rate limit 対策）
+          operations-per-run: 30
+          # 直近活動があれば再オープン扱いで stale ラベル削除
+          remove-stale-when-updated: true
+          # draft PR は対象外
+          exempt-draft-pr: true

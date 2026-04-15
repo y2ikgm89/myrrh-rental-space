@@ -1,0 +1,11 @@
+# GitHub issue template chooser config
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+blank_issues_enabled: false
+contact_links:
+  - name: セキュリティ脆弱性の報告
+    url: https://github.com/y2ikgm89/myrrh-rental-space/security/advisories/new
+    about: 脆弱性は公開 issue ではなく GitHub Security Advisory で報告してください（SECURITY.md 参照）
+  - name: プロジェクトドキュメント
+    url: https://github.com/y2ikgm89/myrrh-rental-space/blob/main/CLAUDE.md
+    about: セットアップ・開発フロー・ハードルールは CLAUDE.md を参照

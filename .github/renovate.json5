@@ -1,0 +1,198 @@
+// Renovate: https://docs.renovatebot.com/configuration-options/
+//
+// このプロジェクトは Renovate を採用。Dependabot (.github/dependabot.yml) から
+// 移行済み — Renovate は package grouping / auto-merge / schedule 制御で優位。
+//
+// 設定検証: bunx renovate-config-validator
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    "group:recommended",
+    ":timezone(Asia/Tokyo)",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":dependencyDashboard",
+    ":maintainLockFilesWeekly",
+    "schedule:weekdays",
+    "helpers:pinGitHubActionDigests",
+  ],
+  labels: ["dependencies", "automated"],
+  prConcurrentLimit: 10,
+  prHourlyLimit: 4,
+  rangeStrategy: "bump",
+  lockFileMaintenance: {
+    enabled: true,
+    automerge: true,
+    schedule: ["before 5am on monday"],
+  },
+  // major version の更新は手動対応（破壊的変更リスク）
+  separateMajorMinor: true,
+  separateMultipleMajor: true,
+  // 脆弱性検出時は即時更新（schedule 無視）
+  vulnerabilityAlerts: {
+    enabled: true,
+    labels: ["security", "dependencies"],
+    schedule: ["at any time"],
+    assignees: ["@y2ikgm89"],
+  },
+  // 依存グループ定義
+  packageRules: [
+    // ----- 自動マージ可能なパッチ更新 -----
+    {
+      description: "Auto-merge patch updates for non-major (>=1.0.0) deps",
+      matchUpdateTypes: ["patch"],
+      matchCurrentVersion: "!/^0/",
+      matchDepTypes: ["devDependencies", "dependencies"],
+      automerge: true,
+      automergeType: "pr",
+      platformAutomerge: true,
+    },
+    // ----- Next.js エコシステム (同期更新) -----
+    {
+      description: "Group Next.js core packages",
+      matchPackageNames: [
+        "next",
+        "@next/third-parties",
+        "@next/bundle-analyzer",
+      ],
+      groupName: "next.js",
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    // ----- React エコシステム -----
+    {
+      description: "Group React packages",
+      matchPackageNames: [
+        "react",
+        "react-dom",
+        "react-compiler-runtime",
+        "@types/react",
+        "@types/react-dom",
+      ],
+      groupName: "react",
+    },
+    // ----- TypeScript エコシステム -----
+    {
+      description: "Group TypeScript tooling",
+      matchPackageNames: ["typescript", "@types/**", "typescript-eslint"],
+      groupName: "typescript",
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    // ----- Prisma エコシステム -----
+    {
+      description: "Group Prisma packages",
+      matchPackageNames: [
+        "prisma",
+        "@prisma/client",
+        "@prisma/adapter-pg",
+        "@prisma/dev",
+      ],
+      groupName: "prisma",
+    },
+    // ----- Radix UI (30+ パッケージを一括) -----
+    {
+      description: "Group all Radix UI packages",
+      matchPackageNames: ["@radix-ui/**", "radix-ui"],
+      groupName: "radix-ui",
+    },
+    // ----- Lexical (Rich text editor) -----
+    {
+      description: "Group all Lexical packages",
+      matchPackageNames: ["lexical", "@lexical/**"],
+      groupName: "lexical",
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    // ----- Tailwind CSS エコシステム -----
+    {
+      description: "Group Tailwind CSS packages",
+      matchPackageNames: [
+        "tailwindcss",
+        "@tailwindcss/typography",
+        "@tailwindcss/**",
+      ],
+      groupName: "tailwind",
+    },
+    // ----- ESLint / Prettier / tooling -----
+    {
+      description: "Group ESLint / Prettier tooling",
+      matchPackageNames: [
+        "eslint",
+        "eslint-**",
+        "@eslint/**",
+        "@eslint-react/**",
+        "prettier",
+        "@typescript-eslint/**",
+      ],
+      groupName: "lint tooling",
+      matchUpdateTypes: ["minor", "patch"],
+      automerge: true,
+      platformAutomerge: true,
+    },
+    // ----- Playwright / axe-core -----
+    {
+      description: "Group E2E testing tools",
+      matchPackageNames: [
+        "@playwright/test",
+        "playwright",
+        "@axe-core/**",
+        "axe-core",
+      ],
+      groupName: "playwright testing",
+    },
+    // ----- Better Auth -----
+    {
+      description: "Better Auth ecosystem",
+      matchPackageNames: ["better-auth", "@better-auth/**"],
+      groupName: "better-auth",
+    },
+    // ----- GSAP / Lenis (public animations) -----
+    {
+      description: "Group animation libraries",
+      matchPackageNames: ["gsap", "@gsap/**", "lenis"],
+      groupName: "animations",
+    },
+    // ----- dnd-kit -----
+    {
+      description: "Group @dnd-kit packages",
+      matchPackageNames: ["@dnd-kit/**"],
+      groupName: "dnd-kit",
+    },
+    // ----- @tabler/icons-react -----
+    {
+      description: "Tabler icons",
+      matchPackageNames: ["@tabler/icons-react"],
+      groupName: "tabler-icons",
+    },
+    // ----- Lighthouse CI -----
+    {
+      description: "Lighthouse CI",
+      matchPackageNames: ["@lhci/**", "lighthouse"],
+      groupName: "lighthouse-ci",
+    },
+    // ----- GitHub Actions -----
+    {
+      description: "Pin GitHub Actions to SHA for security",
+      matchManagers: ["github-actions"],
+      pinDigests: true,
+      groupName: "github-actions",
+      automerge: true,
+      platformAutomerge: true,
+    },
+    // ----- DB migration 系は慎重に -----
+    {
+      description: "Database drivers require manual review",
+      matchPackageNames: ["pg", "@prisma/adapter-pg"],
+      labels: ["requires-careful-review", "database"],
+      minimumReleaseAge: "7 days",
+    },
+    // ----- Stripe SDK は慎重に -----
+    {
+      description: "Stripe SDK requires manual review for payment safety",
+      matchPackageNames: ["stripe", "@stripe/**"],
+      labels: ["requires-careful-review", "payment"],
+      minimumReleaseAge: "7 days",
+    },
+  ],
+  // 除外パッケージ（手動管理）
+  ignoreDeps: [],
+}

@@ -1,0 +1,39 @@
+[
+  {
+    "path": "/*",
+    "resourceSizes": [
+      { "resourceType": "script", "budget": 600 },
+      { "resourceType": "stylesheet", "budget": 80 },
+      { "resourceType": "image", "budget": 500 },
+      { "resourceType": "font", "budget": 200 },
+      { "resourceType": "total", "budget": 1800 },
+      { "resourceType": "third-party", "budget": 400 }
+    ],
+    "resourceCounts": [
+      { "resourceType": "script", "budget": 30 },
+      { "resourceType": "stylesheet", "budget": 10 },
+      { "resourceType": "font", "budget": 6 },
+      { "resourceType": "third-party", "budget": 15 }
+    ],
+    "timings": [
+      { "metric": "first-contentful-paint", "budget": 2000 },
+      { "metric": "largest-contentful-paint", "budget": 2500 },
+      { "metric": "interactive", "budget": 3500 },
+      { "metric": "cumulative-layout-shift", "budget": 0.1 },
+      { "metric": "total-blocking-time", "budget": 300 }
+    ]
+  },
+  {
+    "path": "/",
+    "resourceSizes": [
+      { "resourceType": "script", "budget": 700 },
+      { "resourceType": "image", "budget": 800 }
+    ],
+    "timings": [{ "metric": "largest-contentful-paint", "budget": 3000 }]
+  },
+  {
+    "path": "/reservation",
+    "resourceSizes": [{ "resourceType": "script", "budget": 750 }],
+    "timings": [{ "metric": "interactive", "budget": 4000 }]
+  }
+]
