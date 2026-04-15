@@ -1,16 +1,11 @@
 {
   "compilerOptions": {
     "target": "es2025",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
+    "lib": ["dom", "esnext"],
     "skipLibCheck": true,
     "noEmit": true,
     // TS 6.0: デフォルト [] — @types/node を明示して Node.js グローバル型を有効化
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     // ── Strict type-checking ──────────────────────────────────────────────
     // Next.js が未指定だと false を注入するため明示必須
     "strict": true,
@@ -39,21 +34,11 @@
     ],
     // ── Path aliases ──────────────────────────────────────────────────────
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@generated/*": [
-        "./generated/*"
-      ],
-      "@/admin/*": [
-        "./src/app/(admin)/admin/(dashboard)/_shared/*"
-      ],
-      "@/public/*": [
-        "./src/app/(public)/_shared/*"
-      ],
-      "@/shared/*": [
-        "./src/shared/*"
-      ]
+      "@/*": ["./src/*"],
+      "@generated/*": ["./generated/*"],
+      "@/admin/*": ["./src/app/(admin)/admin/(dashboard)/_shared/*"],
+      "@/public/*": ["./src/app/(public)/_shared/*"],
+      "@/shared/*": ["./src/shared/*"]
     },
     // ── Next.js 自動注入 ─────────────────────────────────────────────────
     "allowJs": true,
@@ -68,9 +53,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "__tests__",
-    "generated"
-  ]
+  "exclude": ["node_modules", "__tests__", "generated"]
 }

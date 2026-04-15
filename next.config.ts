@@ -1,4 +1,3 @@
-import bundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -175,8 +174,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-const withBundleAnalyzer = bundleAnalyzer({
-  enabled: process.env["ANALYZE"] === "true",
-});
-
-export default withBundleAnalyzer(nextConfig);
+// Bundle analysis: Turbopack-native `next experimental-analyze --output` を使用
+// （`@next/bundle-analyzer` は webpack 専用のため Turbopack プロジェクトでは
+//   実態のあるレポートを生成できず削除済み。`bun run analyze` で実行）
+export default nextConfig;

@@ -7,6 +7,7 @@
     "dev": "bun run db:generate && next dev --turbopack",
     "build": "bun run db:generate && next build",
     "build:skip-env": "bun run db:generate && SKIP_ENV_VALIDATION=true next build",
+    "analyze": "bun run db:generate && next experimental-analyze --output",
     "start": "next start",
     "lint": "eslint src prisma",
     "lint:config": "eslint eslint.config.mjs next.config.ts postcss.config.mjs prisma.config.ts",
@@ -29,9 +30,13 @@
     "test:all": "bun run test:unit && bun run test:integration",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
+    "lhci": "lhci autorun",
+    "lhci:collect": "lhci collect",
+    "lhci:assert": "lhci assert",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "docs:verify-policy-sync": "node scripts/verify-policy-docs.mjs",
+    "prepare": "lefthook install",
     "postinstall": "bun run db:generate"
   },
   "dependencies": {
@@ -109,9 +114,10 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@eslint-react/eslint-plugin": "^4.2.3",
     "@lexical/headless": "0.43.0",
-    "@next/bundle-analyzer": "^16.2.3",
+    "@lhci/cli": "^0.15.1",
     "@next/eslint-plugin-next": "^16.2.3",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.2",
@@ -129,6 +135,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
+    "lefthook": "^2.1.5",
     "prettier": "^3.8.2",
     "tailwindcss": "^4.2.2",
     "typedoc": "^0.28.19",
