@@ -252,6 +252,15 @@ export function $createCollapsibleTitleNode(): CollapsibleTitleNode {
 - **`createState` の `parse` 関数**: デシリアライゼーション時のバリデーション+デフォルト値を担当
 - **`$getState` / `$setState`**: プロパティの読み書きに使用。`__` フィールドや `getWritable()` / `getLatest()` は不要
 
+## 単一レベルコンテナ vs コンポジットノード
+
+| 分類                   | 例                                          | isShadowRoot | Arrow key escape        | 用途                         |
+| ---------------------- | ------------------------------------------- | ------------ | ----------------------- | ---------------------------- |
+| **単一レベルコンテナ** | CalloutNode, GroupNode                      | **不要**     | **不要**                | 装飾・意味付きラッパー       |
+| **コンポジットノード** | Collapsible, Steps, Tabs, Layout, PullQuote | **必須**     | **必要**（`$onEscape`） | Title/Content 内部構造を保護 |
+
+単一レベルコンテナに `isShadowRoot` を追加するとカーソルが閉じ込められ、`$onEscape` で段落挿入が必要になる悪循環を生む。Lexical のデフォルト矢印キー動作で自然に脱出できる。
+
 ## コンポジットノードアーキテクチャ
 
 複数ノードで構成される複合コンポーネント（Tabs、Steps、Collapsible、PullQuote 等）のパターン。
@@ -447,12 +456,12 @@ CSS変数 `--accent` / `--accent-fg` でブロック内の強調色を統一制�
 
 /* 子要素で --accent を参照（フォールバック必須） */
 [data-steps-style="numbered"] .step-number {
-  background-color: var(--accent, var(--color-primary));
-  color: var(--accent-fg, var(--color-primary-foreground));
+  background-color: var(--accent, var(--color-accent));
+  color: var(--accent-fg, var(--color-background));
 }
 ```
 
-`data-color="default"` または属性なし → フォールバック `var(--color-primary)` / `var(--color-primary-foreground)` が適用される。
+`data-color="default"` または属性なし → フォールバック `var(--color-accent)` / `var(--color-background)` が適用される。
 
 #### 新しいブロックに AccentColor を追加する手順
 
@@ -480,7 +489,7 @@ exportDOM(): DOMExportOutput {
 }
 ```
 
-3. **`lexical-content.css`** — `[data-color]` トークンはグローバル定義済み。子要素セレクタに `var(--accent, var(--color-primary))` を参照するだけでよい
+3. **`lexical-content.css`** — `[data-color]` トークンはグローバル定義済み。子要素セレクタに `var(--accent, var(--color-accent))` を参照するだけでよい
 
 4. **InspectorPanel に `ColorSwatchPicker` を追加**
 
@@ -849,6 +858,7 @@ return { node, after: () => [] };
 
 ## Gotchas
 
+- **単一レベルコンテナ（CalloutNode, GroupNode）に `isShadowRoot` 禁止** — `isShadowRoot` はコンポジットノード（Collapsible/Steps/Tabs/Layout 等の Title/Content 内部構造を持つもの）専用。単一レベルコンテナに追加するとカーソルが閉じ込められ `$onEscape` で段落挿入が必要になる。Lexical のデフォルト矢印キー動作で自然に脱出できる
 - **`MobileEditorFallback`（画面幅 &lt; 1024px）** — 親から渡された **`contentJson` を headless で HTML に変換**してプレビューする（未保存の変更を反映）。**`lexicalJsonSchema` 非適合時はプレビューせず警告**（自動正規化しない）。`EMPTY_LEXICAL_EDITOR_STATE_JSON` は **空段落 1 ブロック**。DB 修正は `docs/operations/lexical-editor-state-json.md`。headless 変換は `parseEditorState` のあと **`editor.setEditorState(editorState)`** を挟んでから `$generateHtmlFromNodes` すること（省略すると空 HTML になりうる）。実装: `preview/render-editor-state-to-html-client.ts` / サーバー側は `preview/headless-renderer.ts`
 - **`createDOM` → data-attribute 変換後は `theme.ts` の旧エントリを削除** — `config.theme.*` 参照除去後、`theme.ts` に残った CSS クラスエントリが dead code になる。変換時にセットで削除する
 - **`createEnumGuard` の型ガードは `string` を要求** — `createEnumGuard` が返す関数は `(value: string) => value is T` シグネチャ。`parse: (v: unknown)` から直接渡すと型エラー。AccentColor 等の parse パターン: `parse: (v: unknown): AccentColor => typeof v === "string" && isAccentColor(v) ? v : "default"`
@@ -862,3 +872,13 @@ return { node, after: () => [] };
 
 - Lexical のクリップボードは **`exportDOM` の HTML を使用**（`createDOM` の DOM はクリップボードに使われない）
 - 内部コピペは JSON パス（`exportJSON`/`importJSON`）→ `importDOM` は `exportDOM` 出力タグに合わせる
+
+## Gotchas（gotchas.md より移動）
+
+- **Lexical は既に dynamic import 済み** — `LazyLexicalEditor.tsx` が `next/dynamic` + `ssr: false` でコード分割。管理 layout には Lexical の直接 import なし。パフォーマンスレビューで「Lexical がバンドル肥大化」と指摘された場合は `LazyLexicalEditor` の存在を確認してから対応判断
+- **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
+- **Lexical エディタのコンテンツ領域は `bg-card`（白）** — `bg-background`（`oklch(0.98 ...)` 微グレー）ではなく `bg-card`（`oklch(1 0 0)` 白）を使用。文書編集エリアは紙のメタファーで白背景が適切。`LexicalEditor.tsx` の外枠 div で設定
+- **Lexical ツールバーはエディタ+インスペクターの全幅に配置（Gutenberg パターン）** — ツールバーを `section` の外に出し、外枠 `div.flex-col` の直下に配置。コンテンツ+インスペクターは `div.flex.flex-1` で横並び。ツールバーがインスペクター開閉時にかぶらない。`LexicalEditor.tsx` で実装
+- **`tryConvertHtmlStringToLexicalJsonString` は SSR で使用不可** — `DOMParser` が Node.js に存在しない。Server Component / Server Action から呼ぶと `Attempted to call client function from the server` エラー。`useState` 遅延初期化で呼ぶ場合も `typeof window === "undefined"` ガードが必須（SSR でも実行されるため）
+- **複合ノードの `isShadowRoot()` は全子ノードに必須** — Container だけでなく Item / Title / Content / Panel / Citation 等の全中間・子 ElementNode にも `isShadowRoot(): boolean { return true }` を実装する。欠落するとキャレットがノード境界を越えて漏れる。`updateDOM` の `prevNode` は具象クラス名ではなく `this` 型を使用
+- **Lexical アップグレード時はバージョン参照を全文 grep** — `0.XX` で `.claude/agents/`, `.agents/skills/`, `docs/`, `__tests__/`, ソースコメントを検索。CLAUDE.md・lexical-patterns.md（.claude/rules + docs/reference 両方）・TECH_STACK.md・project-reviewer.md・lexical-reviewer.md・scaffold ファイル・DraggableBlockPlugin フォークコメントが対象。plans/ の完了済みファイルは変更不要
