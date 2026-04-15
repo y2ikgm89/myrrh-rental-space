@@ -631,6 +631,87 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("enums gateway は @generated/prisma/client を import しない（参照同一性フットガン排除）", () => {
+    // gateway は client-safe である必要があるため、server-only な
+    // `@generated/prisma/client` から値を re-export してはならない。
+    // Prisma.JsonNull / DbNull は browser entry と client entry で
+    // 異なる runtime モジュール（runtime/index-browser vs runtime/client）を
+    // 参照しており、unique object として実装されているため両者で別オブジェクト
+    // 参照になる。Prisma client は identity 比較で sentinel を判定するため、
+    // gateway 経由（browser 由来）の sentinel を渡すと検出されない。
+    // gateway は browser entry の type 再 export と enums の値再 export のみ。
+    const gatewayFile = join(ENUMS_GATEWAY_ROOT, "prisma-types.ts");
+    if (!existsSync(gatewayFile)) return;
+
+    // コメント・blank 行を除外した実コード行のみで検査
+    const codeLines = readFileSync(gatewayFile, "utf8")
+      .split(/\r?\n/u)
+      .filter((line) => {
+        const trimmed = line.trim();
+        return (
+          trimmed.length > 0 &&
+          !trimmed.startsWith("//") &&
+          !trimmed.startsWith("*") &&
+          !trimmed.startsWith("/*")
+        );
+      });
+    const codeSource = codeLines.join("\n");
+
+    // server-only の client entry import を禁止
+    expect(codeSource).not.toMatch(
+      /from\s+["']@generated\/prisma\/client["']/u,
+    );
+    // 値としての Prisma re-export を禁止（type-only に限定）
+    expect(codeSource).not.toMatch(/^export\s+\{\s*Prisma\b/mu);
+    // PrismaClient 自体の re-export を禁止（型・値とも）
+    expect(codeSource).not.toMatch(/\bPrismaClient\b/u);
+    // gateway は browser entry または enums entry のみから import 可能
+    // （models / internal 等の他 entry は禁止）
+    const importLines = codeLines.filter((line) =>
+      line.includes("@generated/prisma"),
+    );
+    for (const line of importLines) {
+      expect(line).toMatch(/@generated\/prisma\/(browser|enums)["']/u);
+    }
+  });
+
+  test("PrismaClient のインスタンス化は shared/db/prisma.ts のみ", () => {
+    // `new PrismaClient(...)` が許される唯一のファイルは shared/db/prisma.ts
+    // それ以外で見つかった場合は singleton 規約違反
+    const sourceFiles = collectSourceFiles(SRC_ROOT);
+    const allowedFile = join(SHARED_DB_ROOT, "prisma.ts");
+    const offenders = sourceFiles
+      .filter((file) => file !== allowedFile)
+      .filter((file) => {
+        const lines = readFileSync(file, "utf8").split(/\r?\n/u);
+        return lines.some((line) => {
+          const trimmed = line.trim();
+          // コメント行は除外
+          if (
+            trimmed.startsWith("//") ||
+            trimmed.startsWith("*") ||
+            trimmed.startsWith("/*")
+          ) {
+            return false;
+          }
+          return /\bnew\s+PrismaClient\s*\(/u.test(line);
+        });
+      })
+      .map((file) => relative(ROOT, file));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("shared/db/prisma.ts は basePrisma と prisma の両方を export する", () => {
+    // basePrisma: Better Auth アダプター専用（$extends 前）
+    // prisma:     アプリ本体用（$extends 適用済み）
+    // 両方が export されていることが singleton 規約の前提
+    const prismaFile = join(SHARED_DB_ROOT, "prisma.ts");
+    const source = readFileSync(prismaFile, "utf8");
+    expect(source).toMatch(/export\s+\{\s*basePrisma\s*\}/u);
+    expect(source).toMatch(/export\s+\{\s*prisma\s*\}/u);
+  });
+
   test("legacy prisma shim import は残さない", () => {
     const sourceFiles = collectSourceFiles(SRC_ROOT);
     const offenders = sourceFiles

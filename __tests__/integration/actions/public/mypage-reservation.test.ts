@@ -148,14 +148,24 @@ mock.module("@/shared/domain/settings/public-queries", () => ({
 mock.module("@/shared/lib/errors/server", () => ({
   logError: mock(() => undefined),
   createErrorLogger: mock(() => mock(() => undefined)),
-  safeFetch: mock(async <T>({ fetch, fallback }: { fetch: () => Promise<T>; fallback: T }) => {
-    try {
-      return await fetch();
-    } catch {
-      return fallback;
-    }
-  }),
-  criticalFetch: mock(async <T>({ fetch }: { fetch: () => Promise<T> }) => fetch()),
+  safeFetch: mock(
+    async <T>({
+      fetch,
+      fallback,
+    }: {
+      fetch: () => Promise<T>;
+      fallback: T;
+    }) => {
+      try {
+        return await fetch();
+      } catch {
+        return fallback;
+      }
+    },
+  ),
+  criticalFetch: mock(async <T>({ fetch }: { fetch: () => Promise<T> }) =>
+    fetch(),
+  ),
   normalizeError: mock((error: unknown) =>
     error instanceof Error ? error : new Error(String(error)),
   ),

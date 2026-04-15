@@ -46,7 +46,10 @@ import {
 } from "@/shared/domain/locations/commands";
 import { DomainError } from "@/shared/domain/domain-error";
 // Prisma 実体から JsonNull を取得し、実装と同じ参照で比較する
-import { Prisma } from "@/shared/lib/validations/enums/prisma-types";
+// gateway は型のみ（Prisma 名前空間の値 re-export は Client Component への
+// node:module 伝播を防ぐため除去済み）。テストは server runtime なので
+// @generated/prisma/client から直接値を import する
+import { Prisma } from "@generated/prisma/client";
 
 // テスト用定数
 const LOCATION_ID = "location-1";

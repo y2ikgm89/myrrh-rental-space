@@ -391,9 +391,8 @@ describe("replyToReview", () => {
 
   describe("正常系", () => {
     test("有効な入力で返信できる", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await replyToReview(VALID_REPLY_INPUT);
 
@@ -402,9 +401,8 @@ describe("replyToReview", () => {
     });
 
     test("成功後に 3 タグ（REVIEWS + reviews.space + reviews.stats）が無効化される", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       await replyToReview(VALID_REPLY_INPUT);
 
@@ -417,9 +415,8 @@ describe("replyToReview", () => {
     });
 
     test("emailContext 付きの成功時は sendReviewReplyEmail が呼ばれる", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       await replyToReview(VALID_REPLY_INPUT);
 
@@ -431,9 +428,8 @@ describe("replyToReview", () => {
         Promise.resolve({ spaceId: "space-1", emailContext: null }),
       );
 
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       await replyToReview(VALID_REPLY_INPUT);
 
@@ -443,9 +439,8 @@ describe("replyToReview", () => {
 
   describe("異常系: バリデーションエラー", () => {
     test("不正な reviewId UUID はエラーを返す", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await replyToReview({
         reviewId: "not-a-uuid",
@@ -458,9 +453,8 @@ describe("replyToReview", () => {
     });
 
     test("空の replyBody はエラーを返す", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await replyToReview({
         reviewId: VALID_UUID,
@@ -473,9 +467,8 @@ describe("replyToReview", () => {
     });
 
     test("1001 文字の replyBody はエラーを返す", async () => {
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await replyToReview({
         reviewId: VALID_UUID,
@@ -496,9 +489,8 @@ describe("replyToReview", () => {
         ),
       );
 
-      const { replyToReview } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { replyToReview } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await replyToReview(VALID_REPLY_INPUT);
 
@@ -520,9 +512,8 @@ describe("deleteReviewReply", () => {
 
   describe("正常系", () => {
     test("有効な UUID で返信を削除できる", async () => {
-      const { deleteReviewReply } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { deleteReviewReply } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       const result = await deleteReviewReply(VALID_UUID);
 
@@ -532,9 +523,8 @@ describe("deleteReviewReply", () => {
     });
 
     test("成功後に 3 タグ（REVIEWS + reviews.space + reviews.stats）が無効化される", async () => {
-      const { deleteReviewReply } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { deleteReviewReply } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       await deleteReviewReply(VALID_UUID);
 
@@ -551,9 +541,8 @@ describe("deleteReviewReply", () => {
     test.each(INVALID_UUIDS)(
       "不正な UUID '%s' でエラーを返す",
       async (invalidId) => {
-        const { deleteReviewReply } = await import(
-          "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-        );
+        const { deleteReviewReply } =
+          await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
         const result = await deleteReviewReply(invalidId);
 
@@ -563,9 +552,8 @@ describe("deleteReviewReply", () => {
     );
 
     test("バリデーション失敗時は deleteReviewReplyCommand が呼ばれない", async () => {
-      const { deleteReviewReply } = await import(
-        "@/app/(admin)/admin/(dashboard)/_shared/actions/review"
-      );
+      const { deleteReviewReply } =
+        await import("@/app/(admin)/admin/(dashboard)/_shared/actions/review");
 
       await deleteReviewReply("invalid-uuid");
 

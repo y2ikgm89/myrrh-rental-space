@@ -173,7 +173,6 @@ const ALL_ENUMS = {
 } as const;
 
 mock.module("@generated/prisma/enums", () => ALL_ENUMS);
-mock.module("@generated/prisma/enums", () => ALL_ENUMS);
 
 import {
   calculateSpaceDiscount,
