@@ -1,0 +1,75 @@
+{
+  // GitHub Codespaces / VS Code Dev Containers 設定
+  // https://containers.dev/implementors/json_reference/
+  "name": "Myrrh Rental Space",
+
+  // Node.js 20 + Debian 12 ベース（Bun は Feature でインストール）
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+
+  "features": {
+    // Bun 1.3.11+ (ハードコードで正確に一致させる)
+    "ghcr.io/shyim/devcontainers-features/bun:0": {
+      "version": "1.3.11"
+    },
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Docker in Docker (PostgreSQL を compose で起動)
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // ポート forwarding
+  "forwardPorts": [3000, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js dev server",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // コンテナ起動時に PostgreSQL 起動 + 依存インストール
+  "postCreateCommand": "docker compose up -d db && bun install && bunx --bun prisma migrate deploy && bun run db:seed",
+
+  // 起動後に dev サーバーを起動（オプトアウト可能）
+  "postStartCommand": "echo '✅ Dev container ready. Run `bun dev` to start the Next.js server.'",
+
+  "customizations": {
+    "vscode": {
+      // .vscode/extensions.json の推奨拡張を自動インストール
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "editorconfig.editorconfig",
+        "bradlc.vscode-tailwindcss",
+        "prisma.prisma",
+        "ms-playwright.playwright",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        "eamodio.gitlens",
+        "redhat.vscode-yaml",
+        "usernamehw.errorlens"
+      ],
+      // .vscode/settings.json で workspace settings を上書き
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // 非 root ユーザー
+  "remoteUser": "node",
+  "containerEnv": {
+    // Codespaces の初期環境変数（本番 secret は GitHub Codespaces secrets で注入）
+    "NODE_ENV": "development",
+    "SHELL": "/bin/bash"
+  },
+
+  // ワークスペースのキャッシュマウント
+  "mounts": [
+    "source=myrrh-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=myrrh-next-cache,target=${containerWorkspaceFolder}/.next,type=volume"
+  ]
+}

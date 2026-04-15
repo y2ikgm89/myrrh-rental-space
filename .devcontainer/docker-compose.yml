@@ -1,0 +1,7 @@
+# devcontainer 補助 compose（必要に応じてプロジェクトルートの docker-compose.yml と分離）
+# devcontainer.json の docker-in-docker feature 経由で起動される PostgreSQL は
+# ルート docker-compose.yml の db サービスを再利用する想定。
+#
+# ここでは devcontainer 固有の追加サービスがあれば定義する（現状は空）。
+
+services: {}
