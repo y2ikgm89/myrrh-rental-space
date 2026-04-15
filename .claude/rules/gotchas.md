@@ -234,6 +234,7 @@ paths:
 
 - **Playwright MCP が navigate/close 両方タイムアウトする場合** — HMR 多発後にブラウザセッションがスタックする。dev サーバーを `cmd //c "taskkill /PID <pid> /F /T"` で強制終了→再起動すると Playwright も新セッションで回復する
 - **MINGW64 で `bun run X 2>&1 | tail -N` が途中で切り詰められる** — Bash ツール経由のパイプで長い stdout が truncate されるケースがある。長い出力を確実に取得するには `cmd > /tmp/out 2>&1; echo "EXIT:$?"; tail -N /tmp/out` を使う
+- **Bash pipeline の `$?` は最後のコマンドの終了コード** — `cmd 2>&1 | tail -N; echo $?` は tail の exit（常に 0）で元コマンドの失敗を見逃す。必ず `cmd > /tmp/out.log 2>&1; echo "EXIT=$?"; tail -N /tmp/out.log` の形式を使う。`set -o pipefail` は Bash ツール経由の sh wrapper では有効化されないことがある
 - **Zod スキーマの dead code パターンに注意** — `.refine()` 付きスキーマを定義したが ZodEffects が `.omit()` 等と非互換になるため、`*Base` 版を作って parent に埋め込むと validation が完全に無効化される（例: `businessHoursDaySchema` + `businessHoursDayBaseSchema`）。コメント「refine後の型は...基本スキーマを使用」はこのアンチパターンの兆候。解決策: validation 本体を `collectXxxIssues(data, pathPrefix, ctx)` ヘルパーとして shared に抽出し、parent schema の `.superRefine()` から呼ぶ（→ `zod-patterns.md`）
 - **`as` キャスト監査で raw grep は偽陽性が多い** — `grep "\bas\s+[A-Z]"` は `as const` / `as unknown as` / `import { X as Y }` / `import * as X` / コメント中の "as" をすべて拾う。真の違反数を測るには `grep -vE "as const|as unknown|^import|\* as "` 等でフィルタし、ヒットを type-safety.md §許可例外（DOM event target・Prisma InputJsonValue・withMeta・validateSectionConfig 内部等）と照合する。raw カウントと実違反が 10倍以上乖離することが多い
 - **SSoT 重複検出の grep は symbol 名 + literal 文字列の二段検証必須** — `grep "ROLE_LABELS.*=\s*{$"` のような狭い正規表現は「開き波括弧が同一行」条件で重複定義を見落とす（複数行定義 / 配列中の inline literal / 条件分岐内のハードコードが抜ける）。重複検出の最終検証は ① シンボル名（`ROLE_LABELS` / `StaffRole` / `DASHBOARD_ROLES`）② 実際の定数値 literal（`"スーパー管理者"` / `"閲覧者"` 等）の **両方** で grep し、SSoT モジュール以外にヒットしないことを確認する。`role === "ADMIN" && "管理者"` のようなインライン条件ハードコードは symbol 名では絶対に引っ掛からない
@@ -279,6 +280,7 @@ paths:
 - **選択的コミット** — 多数のファイルがステージ済みの状態で特定ファイルのみコミットするには `git restore --staged . && git add <target-files>` で再ステージする
 - **`git reset --hard` は hook で禁止** — `.claude/hooks/block-dangerous-bash.sh` がブロック。個別 commit 取り消しは `git reset --soft <sha>` で HEAD 移動 → `git restore --staged <file>` → `git checkout HEAD -- <file>` で working tree を個別ファイル単位で復元する。fast-forward merge 前にローカルの stray commit を落とす用途でもこの手順を使う
 - **Bash tool の cwd は呼び出し間で永続** — `cd .worktrees/<name> && ...` を実行すると次の Bash 呼び出しも worktree dir に張り付く。意図した作業ディレクトリで動いているか `pwd` で確認するか、明示的に `cd /g/workspace/work/website/customer/myrrh-rental-space` で main に戻す
+- **MINGW64 で `git status` の `M` 数 ≠ 実 diff 数** — CRLF 正規化 pending のファイルは `M` として表示されるが内容差分ゼロ。実変更数の真値は `git diff --numstat | wc -l`。`git add -A` で CRLF normalize 後の blob hash が一致する phantom 変更は自動的に unstaged に戻るため実害はないが、変更量の見積もり・commit 分割計画時に誤らない
 
 ## Claude Code 設定
 
@@ -289,6 +291,8 @@ paths:
 - **MCP ツールはセッション開始前に確定させる** — セッション途中で `.mcp.json` を変更したり MCP サーバーを追加・削除するとツール定義のプレフィックスが変わりキャッシュが破壊される
 - **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
 - **hook スクリプトの `grep` + `pipefail` 罠** — `set -euo pipefail` 下で `var=$(cmd | grep pattern | head -1)` は grep 不一致（exit 1）でスクリプトが無音終了・stderr なし。根本解決: `if ! cmd | grep -qE 'pattern'; then exit 0; fi`（`if` 条件式内は `set -e` 対象外が Bash 仕様）
+- **lefthook の YAML `run:` block に `"` を含めると実行時 shell syntax error** — lefthook は `sh -c "..."` wrapper で hook を起動するため、YAML literal block scalar (`run: |`) / single-line double-quoted / single-quoted いずれの形式でも内部 `"` が外側 sh -c の閉じ quote と衝突する。対処: 外部 `scripts/*.sh` に抽出して `run: bash scripts/x.sh` で呼び出す。参照実装: `scripts/check-protected-files.sh` / `scripts/check-commit-msg.sh`
+- **`core.hooksPath` が local に設定済みの場合 `lefthook install` が no-op** — `.git/config` で local に `core.hooksPath` が設定されていると lefthook はインストールをスキップする。`bunx lefthook install --force` で上書きインストール、または `bunx lefthook install --reset-hooks-path` で local 設定を解除。`ls .git/hooks/pre-commit` で実インストールを確認する
 - **Subagent report は必ず独立検証する** — implementer の「commit SHA: xxx」「EXIT: 0」報告を鵜呑みにせず、次タスク dispatch 前に `git log --oneline -N` + `git show --stat HEAD` で実在確認する。報告内容と git state の乖離は稀だが発生する（特に安価なモデルを implementer に使った場合）。乖離検出時は同じタスクをより上位モデルで再 dispatch
 - **Implementation サブエージェントに haiku を使わない** — ファイル編集 + commit を伴うタスクで haiku モデルは Bash/Edit ツール呼び出しを省略し成功報告を捏造することがある。`Agent` tool の `model: "haiku"` オプションは read-only 調査（Explore 等）のみで使用し、implementer には sonnet 以上を指定する
 - **Explore subagent のファイル名 hallucination** — Explore エージェントは調査結果に実在しないファイルパス（例: `color-swatch-picker.tsx` / `day-view.tsx` 等、それらしいが存在しないパス）を混ぜることがある。大量の発見を報告してきた場合は `Glob` / `Read` で実在確認してから対処する。特に「さらに徹底調査」指示後の報告は hallucination 率が上がる傾向

@@ -17,7 +17,7 @@ bun run lhci                                  # Lighthouse CI（perf/a11y/SEO/be
 bun run test:unit                             # 単体テスト
 bun run test:integration                      # 統合テスト
 bun run test:all                              # 単体 + 統合（順次実行）
-bun run e2e                                   # Playwright E2E
+bun run e2e                                   # Playwright E2E（認証済みテストは e2e/authenticated/{admin,customer}/*.spec.ts 配置必須 — chromium-{admin,customer} project の testMatch 一致）
 bunx --bun prisma migrate dev --name <name>   # マイグレーション
 bun run db:seed                               # Seed
 ```
@@ -60,7 +60,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ## プロセスルール
 
 - **検証**: 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
-- **`test:unit` / `test:integration` は per-directory バッチ**（`package.json` 参照）— `bun test __tests__/unit` 単一実行への簡略化禁止（`mock.module` グローバル干渉で偽陽性失敗）。新規テストディレクトリ追加時は `package.json` の `test:unit` / `test:integration` チェーンにも追記
+- **`test:unit` / `test:integration` は per-directory バッチ**（`package.json` 参照）— `bun test __tests__/unit` / `bun test --coverage` 単一実行への簡略化禁止（`mock.module` グローバル干渉で偽陽性失敗）。**CI も対象** — `.github/workflows/ci.yml` unit-tests job は `bun run test:unit && bun run test:integration` のみ許可（→ ADR 0010）。新規テストディレクトリ追加時は `package.json` の `test:unit` / `test:integration` チェーンにも追記
+- **`.claude/rules/frontend/{lexical,admin-inline-editor}-patterns.md` 編集後**: `node scripts/verify-policy-docs.mjs` 実行必須。`docs/reference/codex-rules/*.md` と byte-identical ドリフトは `policy-docs-sync` CI job の blocker（→ ADR 0013）
 - **「公式推奨」主張前**: `mcp__context7__query-docs` で一次資料確認（Radix / RHF / Next.js / React / Prisma / Zod）。半端な修正で終わらせず、generator entry の実装ファイル（`generated/prisma/internal/*` 等）まで読む
 - **Radix primitives の具体例は context7 取得不可** → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>` を直接取得（Dialog / NavigationMenu / Popover 等すべて philosophy しか返らない）
 - **一括修正後**: Grep で違反パターン残存ゼロを確認してから完了報告
