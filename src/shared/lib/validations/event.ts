@@ -34,7 +34,7 @@ export const eventFormSchema = z
     registrationOpen: z.boolean().optional(),
   })
   .refine((data) => new Date(data.endTime) > new Date(data.startTime), {
-    message: "終了時刻は開始時刻より後である必要があります",
+    error: "終了時刻は開始時刻より後である必要があります",
     path: ["endTime"],
   });
 

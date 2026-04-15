@@ -23,7 +23,11 @@ import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label } from "@/admin/components/ui";
 import { Button } from "@/admin/components/ui/button";
-import { IconAlignLeft, IconAlignRight, IconMaximize } from "@tabler/icons-react";
+import {
+  IconAlignLeft,
+  IconAlignRight,
+  IconMaximize,
+} from "@tabler/icons-react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
 // =============================================================================

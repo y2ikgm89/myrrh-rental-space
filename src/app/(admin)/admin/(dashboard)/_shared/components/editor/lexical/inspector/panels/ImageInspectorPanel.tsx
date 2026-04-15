@@ -25,7 +25,11 @@ import { InspectorFields } from "../InspectorFields";
 import { InspectorSection } from "../InspectorSection";
 import { useNodeUpdater } from "../hooks/use-node-updater";
 import { Input, Label, Textarea } from "@/admin/components/ui";
-import { IconAlignLeft, IconAlignCenter, IconAlignRight } from "@tabler/icons-react";
+import {
+  IconAlignLeft,
+  IconAlignCenter,
+  IconAlignRight,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 
 // =============================================================================

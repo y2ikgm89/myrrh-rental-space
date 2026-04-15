@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { TermsType, TermsStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  TermsType,
+  TermsStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
 import { lexicalJsonSchema } from "@/shared/lib/validations/lexical";
 

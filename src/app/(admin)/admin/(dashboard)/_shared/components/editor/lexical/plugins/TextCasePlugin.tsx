@@ -22,7 +22,13 @@ import {
   SELECTION_CHANGE_COMMAND,
   type TextFormatType,
 } from "lexical";
-import { IconLetterCaseLower, IconLetterCaseUpper, IconLetterCase, IconChevronDown, IconCheck } from "@tabler/icons-react";
+import {
+  IconLetterCaseLower,
+  IconLetterCaseUpper,
+  IconLetterCase,
+  IconChevronDown,
+  IconCheck,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,

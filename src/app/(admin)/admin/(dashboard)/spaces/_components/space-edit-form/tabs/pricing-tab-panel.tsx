@@ -307,12 +307,17 @@ export function SpaceEditPricingTabPanel({
                       </div>
                     )}
                     <div className="text-sm">
-                      {formatCurrency(hasDiscount ? discountedHourlyPrice : hourlyPrice)}
+                      {formatCurrency(
+                        hasDiscount ? discountedHourlyPrice : hourlyPrice,
+                      )}
                       （税抜）
                     </div>
                     <div className="text-sm font-semibold text-primary">
-                      {formatCurrency(hasDiscount ? discountedTaxIncludedHourlyPrice : taxIncludedHourlyPrice)}
-
+                      {formatCurrency(
+                        hasDiscount
+                          ? discountedTaxIncludedHourlyPrice
+                          : taxIncludedHourlyPrice,
+                      )}
                       （税込）
                     </div>
                   </div>
@@ -327,16 +332,19 @@ export function SpaceEditPricingTabPanel({
                         </div>
                       )}
                       <div className="text-sm">
-                        {formatCurrency(hasDiscount && discountedDailyPrice !== null ? discountedDailyPrice : dailyPrice)}
-
+                        {formatCurrency(
+                          hasDiscount && discountedDailyPrice !== null
+                            ? discountedDailyPrice
+                            : dailyPrice,
+                        )}
                         （税抜）
                       </div>
                       <div className="text-sm font-semibold text-primary">
-                        {formatCurrency((
+                        {formatCurrency(
                           discountedTaxIncludedDailyPrice ??
-                          taxIncludedDailyPrice ??
-                          0
-                        ))}
+                            taxIncludedDailyPrice ??
+                            0,
+                        )}
                         （税込）
                       </div>
                     </div>

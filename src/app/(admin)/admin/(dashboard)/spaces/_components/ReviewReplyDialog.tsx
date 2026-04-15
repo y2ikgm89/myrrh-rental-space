@@ -22,10 +22,7 @@ import {
   SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
-import {
-  replyToReview,
-  deleteReviewReply,
-} from "@/admin/actions/review";
+import { replyToReview, deleteReviewReply } from "@/admin/actions/review";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import {
   reviewReplySchema,
@@ -76,7 +73,9 @@ export function ReviewReplyDialog({
         toast.error(result.error);
         return;
       }
-      toast.success(hasExistingReply ? "返信を更新しました" : "返信を投稿しました");
+      toast.success(
+        hasExistingReply ? "返信を更新しました" : "返信を投稿しました",
+      );
       onOpenChange(false);
       router.refresh();
     });

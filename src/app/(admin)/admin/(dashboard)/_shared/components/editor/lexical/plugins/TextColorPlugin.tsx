@@ -22,7 +22,12 @@ import {
   $getSelectionStyleValueForProperty,
   $patchStyleText,
 } from "@lexical/selection";
-import { IconCheck, IconChevronDown, IconTypography, IconX } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconTypography,
+  IconX,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import {
   DropdownMenu,
@@ -289,7 +294,9 @@ function TextColorMenu({
               />
               <span>{config.label}</span>
             </span>
-            {textColor === color && <IconCheck className="h-4 w-4 text-primary" />}
+            {textColor === color && (
+              <IconCheck className="h-4 w-4 text-primary" />
+            )}
           </DropdownMenuItem>
         );
       })}

@@ -6,9 +6,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 import { calculateReservationPrice } from "@/shared/lib/pricing/reservation";
 import { parseDurationDiscountRules } from "@/shared/lib/pricing/discount";
 import { checkReservationOverlap } from "@/shared/lib/reservation";
-import {
-  getValidDiscountCombinationMode,
-} from "@/shared/lib/validations/enums/helpers";
+import { getValidDiscountCombinationMode } from "@/shared/lib/validations/enums/helpers";
 import { formatSpaceLineAddress } from "@/shared/domain/spaces/format-space-line-address";
 
 // ---------------------------------------------------------------------------

@@ -45,12 +45,7 @@ export function AutoImageField({
       <div className="flex items-start gap-3">
         {value ? (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border">
-            <Image
-              src={value}
-              alt={label}
-              fill
-              className="object-cover"
-            />
+            <Image src={value} alt={label} fill className="object-cover" />
           </div>
         ) : (
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed bg-muted">
@@ -73,9 +68,7 @@ export function AutoImageField({
           )}
         </div>
       </div>
-      {helpText && (
-        <p className="text-xs text-muted-foreground">{helpText}</p>
-      )}
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
 
       {imagePicker.mediaPickerDialog}
     </div>

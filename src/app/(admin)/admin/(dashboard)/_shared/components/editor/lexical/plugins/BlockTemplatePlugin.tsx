@@ -23,7 +23,12 @@ import {
   type SerializedLexicalNode,
 } from "lexical";
 import { z } from "zod";
-import { IconBoxMultiple, IconTrash, IconLoader2, IconDeviceFloppy } from "@tabler/icons-react";
+import {
+  IconBoxMultiple,
+  IconTrash,
+  IconLoader2,
+  IconDeviceFloppy,
+} from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,

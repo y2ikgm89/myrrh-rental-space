@@ -4,7 +4,11 @@
 
 "use client";
 
-import { IconCheck, IconChevronDown, IconLayoutGrid } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconLayoutGrid,
+} from "@tabler/icons-react";
 import { $getNodeByKey, $setState, type LexicalEditor } from "lexical";
 import { Button } from "@/admin/components/ui/button";
 import { Separator } from "@/admin/components/ui/separator";

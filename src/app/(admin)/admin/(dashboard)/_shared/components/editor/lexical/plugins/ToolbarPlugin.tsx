@@ -134,9 +134,7 @@ export function ToolbarPlugin({
         ? anchorNode
         : $findMatchingParent(anchorNode, (e) => {
             const parentElement = e.getParent();
-            return (
-              parentElement !== null && $isRootOrShadowRoot(parentElement)
-            );
+            return parentElement !== null && $isRootOrShadowRoot(parentElement);
           });
 
     if (element === null) {

@@ -9,6 +9,21 @@
  * - Webhookの自動更新
  * - 同期失敗時のエラー通知
  *
+ * ## アーキテクチャ境界の例外
+ *
+ * このファイルは `@/shared/db/prisma` を **app 層から直接 import** している
+ * **唯一の正式な例外** です（`__tests__/unit/architecture-boundaries.test.ts`
+ * の `CALENDAR_SYNC_EXEMPTION` で allowlist に登録）。理由:
+ *
+ * - cron route で `pg_try_advisory_lock` (`$queryRaw`) による排他制御を行う
+ *   ため、ドメインコマンド層では表現できない低レベル DB 操作が必要
+ * - 排他ロックは route handler スコープでの取得・解放が必須で、ドメイン層に
+ *   切り出すとトランザクション境界が壊れる
+ *
+ * 例外を増やさないこと。新しい cron route は原則ドメインコマンド経由で実装し、
+ * 排他ロックが必要な場合は本ファイルのパターン（`pg_try_advisory_lock` →
+ * 処理 → `finally` で `pg_advisory_unlock`）を踏襲する。
+ *
  * @module api/cron/calendar-sync
  */
 

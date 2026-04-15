@@ -5,7 +5,15 @@
  * 各カテゴリをクリックすると詳細ページへ遷移
  */
 
-import { IconWorld, IconBuilding, IconBell, IconKey, IconSettings, IconNavigation, IconSpeakerphone } from "@tabler/icons-react";
+import {
+  IconWorld,
+  IconBuilding,
+  IconBell,
+  IconKey,
+  IconSettings,
+  IconNavigation,
+  IconSpeakerphone,
+} from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
 const SETTINGS_CATEGORIES: SettingsCardProps[] = [

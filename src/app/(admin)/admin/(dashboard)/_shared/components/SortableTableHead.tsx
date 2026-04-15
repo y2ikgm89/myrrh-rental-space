@@ -7,7 +7,11 @@
  */
 
 import type { ReactNode } from "react";
-import { IconArrowsUpDown, IconArrowUp, IconArrowDown } from "@tabler/icons-react";
+import {
+  IconArrowsUpDown,
+  IconArrowUp,
+  IconArrowDown,
+} from "@tabler/icons-react";
 import { TableHead } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 

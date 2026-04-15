@@ -9,7 +9,13 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { IconEye, IconEyeOff, IconTrash, IconX, IconLoader2 } from "@tabler/icons-react";
+import {
+  IconEye,
+  IconEyeOff,
+  IconTrash,
+  IconX,
+  IconLoader2,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui";
 import { bulkTogglePagePublished, bulkDeletePages } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";

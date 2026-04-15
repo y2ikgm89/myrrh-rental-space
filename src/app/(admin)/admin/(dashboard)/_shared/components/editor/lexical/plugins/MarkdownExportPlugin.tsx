@@ -10,7 +10,13 @@ import { useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $convertToMarkdownString } from "@lexical/markdown";
 import { createPortal } from "react-dom";
-import { IconFileDownload, IconCopy, IconCheck, IconDownload, IconX } from "@tabler/icons-react";
+import {
+  IconFileDownload,
+  IconCopy,
+  IconCheck,
+  IconDownload,
+  IconX,
+} from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
 import { EDITOR_TRANSFORMERS } from "../MarkdownTransformers";
 

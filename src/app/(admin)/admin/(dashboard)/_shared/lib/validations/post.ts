@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { LayoutWidth, PostStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  LayoutWidth,
+  PostStatus,
+} from "@/shared/lib/validations/enums/prisma-types";
 import {
   seoOgpFieldsSchema,
   seoOgpFieldsFormSchema,

@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { IconSearch, IconUser, IconMail, IconPhone, IconPlus, IconX } from "@tabler/icons-react";
+import {
+  IconSearch,
+  IconUser,
+  IconMail,
+  IconPhone,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { Input, Button, Label, Card, CardContent } from "@/admin/components/ui";
 import type { CustomerSearchResult } from "@/shared/domain/customers/types";

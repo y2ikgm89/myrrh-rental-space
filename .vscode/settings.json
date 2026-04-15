@@ -65,7 +65,12 @@
 
   // ---- ESLint ----
   "eslint.format.enable": false,
-  "eslint.validate": ["javascript", "typescript", "javascriptreact", "typescriptreact"],
+  "eslint.validate": [
+    "javascript",
+    "typescript",
+    "javascriptreact",
+    "typescriptreact"
+  ],
   "eslint.workingDirectories": [{ "mode": "auto" }],
   "eslint.run": "onSave",
 
@@ -119,7 +124,9 @@
       ".github/workflows/*.yml",
       ".github/workflows/*.yaml"
     ],
-    "https://json.schemastore.org/dependabot-2.0.json": [".github/dependabot.yml"],
+    "https://json.schemastore.org/dependabot-2.0.json": [
+      ".github/dependabot.yml"
+    ],
     "https://docs.renovatebot.com/renovate-schema.json": [
       ".github/renovate.json",
       ".github/renovate.json5"

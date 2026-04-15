@@ -41,8 +41,7 @@ export function getReservationCardDeadlineState(
       deadlineSettings.cancellationDeadlineHours,
       now,
     );
-  const showPastDeadlineMessage =
-    isModifiable && !canModify && !canCancel;
+  const showPastDeadlineMessage = isModifiable && !canModify && !canCancel;
 
   return { canModify, canCancel, showPastDeadlineMessage };
 }

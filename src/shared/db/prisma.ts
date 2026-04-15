@@ -69,7 +69,13 @@ if (serverEnv.NODE_ENV !== "production") {
 
 const adapter = new PrismaPg(pgPool);
 
-// グローバル変数（型は src/shared/types/global.d.ts で定義）
+// 開発環境 hot reload 用のシングルトン保持。型宣言は実体所有者であるこの
+// ファイル内で完結させる（global.d.ts に PrismaClient を import すると
+// gateway 経由で client bundle に node 依存が漏れるリスクを生む）。
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
 const globalForPrisma = globalThis;
 
 /**

@@ -140,8 +140,7 @@ export async function createPostTag(
   return executeAdminMutationResult({
     resource: "post",
     action: "create",
-    execute: async () =>
-      tagCommands.createPostTag(omitUndefined(parsed.data)),
+    execute: async () => tagCommands.createPostTag(omitUndefined(parsed.data)),
     afterSuccess: async () => {
       await invalidatePostTagCaches();
     },

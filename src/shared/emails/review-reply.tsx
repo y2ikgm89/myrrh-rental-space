@@ -38,9 +38,7 @@ export function ReviewReplyEmail({
   return (
     <Html>
       <Head />
-      <Preview>
-        【{spaceName}】レビューへのお返事が届きました
-      </Preview>
+      <Preview>【{spaceName}】レビューへのお返事が届きました</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={heading}>レビューへのお返事</Heading>

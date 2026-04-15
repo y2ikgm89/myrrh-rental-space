@@ -9,7 +9,11 @@ type Props = {
   onOpenTooltip?: (() => void) | undefined;
 };
 
-export function ExtraActions({ onAddComment, onOpenRuby, onOpenTooltip }: Props) {
+export function ExtraActions({
+  onAddComment,
+  onOpenRuby,
+  onOpenTooltip,
+}: Props) {
   return (
     <>
       {onAddComment && (

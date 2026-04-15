@@ -9,7 +9,12 @@
  * CSS変数に依存しないスタイリング
  */
 
-import { IconArrowUp, IconArrowDown, IconTrash, IconPlus } from "@tabler/icons-react";
+import {
+  IconArrowUp,
+  IconArrowDown,
+  IconTrash,
+  IconPlus,
+} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type {

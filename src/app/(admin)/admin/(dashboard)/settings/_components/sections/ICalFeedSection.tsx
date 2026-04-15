@@ -42,7 +42,13 @@ import {
   updateICalFeedSettings,
 } from "@/admin/actions/ical-tokens";
 import { isMutationError } from "@/shared/lib/mutation-result";
-import { IconCopy, IconTrash, IconPlus, IconExternalLink, IconCalendar } from "@tabler/icons-react";
+import {
+  IconCopy,
+  IconTrash,
+  IconPlus,
+  IconExternalLink,
+  IconCalendar,
+} from "@tabler/icons-react";
 
 // =============================================================================
 // Types
