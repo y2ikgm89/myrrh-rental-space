@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { urls, testContacts } from "../fixtures";
+import { urls, testContacts, inquiryFactory } from "../fixtures";
 
 /**
  * 公開フォームバリデーション E2E テスト
@@ -40,10 +40,13 @@ test.describe("お問い合わせフォーム - 空送信バリデーション",
   });
 
   test("名前フィールドが空の場合にエラーが表示される", async ({ page }) => {
+    // factory で並列セーフな unique email を生成
+    const inquiry = inquiryFactory.build();
+
     // メールとメッセージと件名だけ入力
-    await page.fill("#contact-email", testContacts.valid.email);
+    await page.fill("#contact-email", inquiry.email);
     await page.fill("#contact-subject", "件名テスト");
-    await page.fill("#contact-message", "メッセージテスト本文です");
+    await page.fill("#contact-message", inquiry.message);
 
     await page.click('button[type="submit"]');
     await page.waitForTimeout(300);

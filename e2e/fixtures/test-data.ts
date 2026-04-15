@@ -92,9 +92,18 @@ export const urls = {
   spaces: "/spaces",
   reservation: "/reservation",
   blog: "/blog",
+  journal: "/journal",
   news: "/news",
   contact: "/contact",
-  // 認証
+  events: "/events",
+  faq: "/faq",
+  // 顧客認証 + マイページ
+  customerLogin: "/login",
+  mypage: "/mypage",
+  mypageReservations: "/mypage/reservations",
+  mypageInquiries: "/mypage/inquiries",
+  mypageProfile: "/mypage/settings",
+  // 管理者認証
   login: "/admin/login",
   // 管理画面
   adminDashboard: "/admin",
@@ -102,6 +111,7 @@ export const urls = {
   adminReservations: "/admin/reservations",
   adminBlog: "/admin/blog",
   adminNews: "/admin/news",
+  adminEvents: "/admin/events",
   adminUsers: "/admin/users",
   adminSettings: "/admin/settings",
   adminPages: "/admin/pages",

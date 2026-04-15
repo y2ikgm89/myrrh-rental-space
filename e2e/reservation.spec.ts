@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { testReservations, urls } from "./fixtures";
+import { testReservations, urls, reservationFactory } from "./fixtures";
 
 /**
  * E2E Tests: Reservation Flow
@@ -331,14 +331,23 @@ test.describe("Reservation Flow", () => {
     await page.getByRole("button", { name: /次へ進む/i }).click();
     await page.waitForLoadState("networkidle");
 
-    // Step 2: Fill customer info
-    await page.locator('input[name="lastName"]').fill("テスト");
-    await page.locator('input[name="firstName"]').fill("太郎");
+    // Step 2: Fill customer info (factory で並列セーフな unique data 生成)
+    const reservation = reservationFactory.build({
+      customerLastName: "テスト",
+      customerFirstName: "太郎",
+      notes: "E2Eテスト予約",
+    });
     await page
-      .locator('input[name="email"]')
-      .fill(`test-${Date.now()}@example.com`); // Unique email
-    await page.locator('input[name="phoneNumber"]').fill("090-1234-5678");
-    await page.locator('textarea[name="notes"]').fill("E2Eテスト予約");
+      .locator('input[name="lastName"]')
+      .fill(reservation.customerLastName);
+    await page
+      .locator('input[name="firstName"]')
+      .fill(reservation.customerFirstName);
+    await page.locator('input[name="email"]').fill(reservation.customerEmail);
+    await page
+      .locator('input[name="phoneNumber"]')
+      .fill(reservation.customerPhone);
+    await page.locator('textarea[name="notes"]').fill(reservation.notes);
 
     // Accept terms if checkbox is present
     const termsCheckbox = page.locator('input[type="checkbox"]#agreedToTerms');
@@ -401,13 +410,23 @@ test.describe("Reservation Flow", () => {
     await page.getByRole("button", { name: /次へ進む/i }).click();
     await page.waitForLoadState("networkidle");
 
-    // Fill and submit first reservation
-    await page.locator('input[name="lastName"]').fill("一人目");
-    await page.locator('input[name="firstName"]').fill("太郎");
+    // Fill and submit first reservation (factory で unique email 生成)
+    const firstReservation = reservationFactory.build({
+      customerLastName: "一人目",
+      customerFirstName: "太郎",
+    });
+    await page
+      .locator('input[name="lastName"]')
+      .fill(firstReservation.customerLastName);
+    await page
+      .locator('input[name="firstName"]')
+      .fill(firstReservation.customerFirstName);
     await page
       .locator('input[name="email"]')
-      .fill(`first-${Date.now()}@example.com`);
-    await page.locator('input[name="phoneNumber"]').fill("090-1111-1111");
+      .fill(firstReservation.customerEmail);
+    await page
+      .locator('input[name="phoneNumber"]')
+      .fill(firstReservation.customerPhone);
 
     const termsCheckbox = page.locator('input[type="checkbox"]#agreedToTerms');
     const termsCheckboxExists = await termsCheckbox.count();
@@ -465,12 +484,22 @@ test.describe("Reservation Flow", () => {
       await newPage.getByRole("button", { name: /次へ進む/i }).click();
       await newPage.waitForLoadState("networkidle");
 
-      await newPage.locator('input[name="lastName"]').fill("二人目");
-      await newPage.locator('input[name="firstName"]').fill("次郎");
+      const secondReservation = reservationFactory.build({
+        customerLastName: "二人目",
+        customerFirstName: "次郎",
+      });
+      await newPage
+        .locator('input[name="lastName"]')
+        .fill(secondReservation.customerLastName);
+      await newPage
+        .locator('input[name="firstName"]')
+        .fill(secondReservation.customerFirstName);
       await newPage
         .locator('input[name="email"]')
-        .fill(`second-${Date.now()}@example.com`);
-      await newPage.locator('input[name="phoneNumber"]').fill("090-2222-2222");
+        .fill(secondReservation.customerEmail);
+      await newPage
+        .locator('input[name="phoneNumber"]')
+        .fill(secondReservation.customerPhone);
 
       const newTermsCheckbox = newPage.locator(
         'input[type="checkbox"]#agreedToTerms',

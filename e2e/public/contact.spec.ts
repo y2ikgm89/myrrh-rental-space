@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { urls, testContacts } from "../fixtures";
+import { urls, testContacts, inquiryFactory } from "../fixtures";
 
 /**
  * 公開サイト - お問い合わせページ E2E テスト
@@ -262,30 +262,37 @@ test.describe("お問い合わせページ - バリデーション", () => {
 // =============================================================================
 
 test.describe("お問い合わせページ - フォーム入力", () => {
-  test("フォームに正しく入力できる", async ({ page }) => {
+  test("フォームに正しく入力できる（factory 経由で unique data 生成）", async ({
+    page,
+  }) => {
     await page.goto(urls.contact);
     await page.waitForLoadState("networkidle");
 
+    // `inquiryFactory.build()` で並列実行セーフな unique data を生成
+    // （test-data.ts の static fixture では並列実行時に email 衝突の可能性がある）
+    const inquiry = inquiryFactory.build({
+      name: "入力テスト太郎",
+      message: "フォーム入力のテストメッセージです。",
+    });
+
     // 各フィールドに入力
-    await page.fill('input[name="name"]', testContacts.valid.name);
-    await page.fill('input[name="email"]', testContacts.valid.email);
+    await page.fill('input[name="name"]', inquiry.name);
+    await page.fill('input[name="email"]', inquiry.email);
 
     const phoneInput = page.locator('input[name="phone"]');
-    if ((await phoneInput.count()) > 0) {
-      await page.fill('input[name="phone"]', testContacts.valid.phone);
+    if ((await phoneInput.count()) > 0 && inquiry.phone !== null) {
+      await page.fill('input[name="phone"]', inquiry.phone);
     }
 
-    await page.fill('textarea[name="message"]', testContacts.valid.message);
+    await page.fill('textarea[name="message"]', inquiry.message);
 
     // 入力値を確認
-    await expect(page.locator('input[name="name"]')).toHaveValue(
-      testContacts.valid.name,
-    );
+    await expect(page.locator('input[name="name"]')).toHaveValue(inquiry.name);
     await expect(page.locator('input[name="email"]')).toHaveValue(
-      testContacts.valid.email,
+      inquiry.email,
     );
     await expect(page.locator('textarea[name="message"]')).toHaveValue(
-      testContacts.valid.message,
+      inquiry.message,
     );
   });
 
