@@ -1,0 +1,72 @@
+# Lefthook: https://lefthook.dev/
+#
+# インストール:
+#   bun install  (postinstall で自動的に lefthook install)
+#   または: bunx lefthook install
+#
+# スキップ:
+#   LEFTHOOK=0 git commit   # 全 hook スキップ
+#   git commit --no-verify  # 非推奨（CLAUDE.md で deny）
+#
+# 設計原則:
+# - pre-commit は staged files のみを対象（高速）
+# - pre-push はブランチ全体の validate（遅いが安全）
+# - parallel: true で並列実行
+# - stage_fixed: true で auto-fix を staging に戻す
+
+pre-commit:
+  parallel: true
+  jobs:
+    # ESLint: staged .ts/.tsx/.js/.jsx/.mjs/.cjs に対して --fix
+    - name: eslint-fix
+      glob:
+        - "*.ts"
+        - "*.tsx"
+        - "*.js"
+        - "*.jsx"
+        - "*.mjs"
+        - "*.cjs"
+      run: bunx eslint --fix --no-warn-ignored {staged_files}
+      stage_fixed: true
+
+    # Prettier: staged files 全般（eslint と並列実行）
+    - name: prettier-fix
+      glob:
+        - "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml,css}"
+      run: bunx prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+    # 保護ファイルへのコミット防止（CLAUDE.md ハードルール）
+    - name: protected-files
+      run: |
+        if git diff --cached --name-only | grep -qE "^(\.env|\.env\..+|bun\.lock|prisma/migrations/.*\.sql)$"; then
+          echo "❌ 保護ファイルへのコミットは禁止されています"
+          echo "   対象: .env* / bun.lock / prisma/migrations/*.sql"
+          exit 1
+        fi
+
+pre-push:
+  parallel: false
+  jobs:
+    # push 前に type-check を実行（staged files 対応が困難なため全件）
+    - name: type-check
+      run: bun run type-check
+      tags: slow
+
+    # architecture-boundaries test（Prisma gateway 規約等の違反検出）
+    - name: architecture-boundaries
+      run: bun test __tests__/unit/architecture-boundaries.test.ts
+      tags: slow
+
+# commit-msg: Conventional Commits 形式の簡易チェック
+commit-msg:
+  jobs:
+    - name: conventional-commits
+      run: |
+        MSG=$(cat {1})
+        if ! echo "$MSG" | grep -qE '^(feat|fix|refactor|perf|test|docs|chore|ci|style|build|revert)(\(.+\))?!?: .+'; then
+          echo "❌ コミットメッセージは Conventional Commits 形式で書いてください"
+          echo "   例: feat(reservation): add cancellation flow"
+          echo "   type: feat/fix/refactor/perf/test/docs/chore/ci/style/build/revert"
+          exit 1
+        fi

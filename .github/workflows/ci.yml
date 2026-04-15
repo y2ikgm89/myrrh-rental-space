@@ -5,6 +5,15 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    # PR に `visual-regression` ラベルが付与されると visual-regression job が起動
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+    inputs:
+      run_visual:
+        description: "Run visual regression tests"
+        type: boolean
+        required: false
+        default: false
 
 env:
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
@@ -27,6 +36,37 @@ jobs:
       - name: Verify Lexical + inline editor rules are byte-identical
         run: node scripts/verify-policy-docs.mjs
 
+  dependency-audit:
+    name: Dependency Audit (bun audit)
+    runs-on: ubuntu-latest
+    # 脆弱性は Dependabot + 手動レビューで追跡するため CI では非ブロッキング
+    # transitive deps の low/moderate は upstream 修正待ちになりがち
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # bun audit は脆弱性検出時に non-zero exit するが、
+      # continue-on-error で job は継続。結果は artifact + log 両方に保存
+      - name: Run bun audit
+        run: bun audit 2>&1 | tee audit-report.txt
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-audit-${{ github.event.pull_request.number || github.sha }}
+          path: audit-report.txt
+          retention-days: 90
+
   lint-and-typecheck:
     name: Lint & Type Check
     needs: [policy-docs-sync]
@@ -42,6 +82,11 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      # Prettier format check を全ファイル対象で実行（lefthook が pre-commit で
+      # auto-fix する前提だが、CI でも最終ゲートとして検証）
+      - name: Check code formatting
+        run: bun run format:check
 
       - name: Run lint
         run: bun run lint
@@ -124,8 +169,23 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # Playwright browsers は大きい (chromium ~130MB)。hash ベースで cache
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium --with-deps
+
+      - name: Install Playwright system deps (cache hit path)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
 
       - name: Generate Prisma client
         run: bunx --bun prisma generate
@@ -195,6 +255,202 @@ jobs:
           STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_strict_build_only
           GOOGLE_CLIENT_ID: test-google-client-id.apps.googleusercontent.com
           GOOGLE_CLIENT_SECRET: test-google-client-secret-for-ci-strict-build
+
+  bundle-size-diff:
+    name: Bundle Size Diff (PR comment)
+    runs-on: ubuntu-latest
+    needs: [policy-docs-sync, lint-and-typecheck]
+    # PR のみ実行（base vs head の gzipped size 差分を sticky comment）
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # preactjs/compressed-size-action:
+      # base と head で build を実行し、指定 pattern のファイルサイズを gzip で比較
+      # 参照: https://github.com/preactjs/compressed-size-action
+      - name: Compressed size diff
+        uses: preactjs/compressed-size-action@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          build-script: "build:skip-env"
+          pattern: ".next/static/**/*.{js,css}"
+          exclude: "{**/*.map,**/node_modules/**}"
+          # 1KB 以下の増減は警告しない（noise 削減）
+          minimum-change-threshold: 1024
+
+  bundle-analysis:
+    name: Bundle Analysis (Turbopack)
+    runs-on: ubuntu-latest
+    needs: [policy-docs-sync, lint-and-typecheck]
+    # PR とメインブランチ push のみで実行（フィーチャーブランチ push はスキップ）
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx --bun prisma generate
+
+      # Next.js 16 公式の Turbopack-native bundle analyzer
+      # 結果は .next/diagnostics/analyze に出力される
+      - name: Run bundle analyzer
+        run: bun run analyze
+        env:
+          SKIP_ENV_VALIDATION: "true"
+
+      - name: Upload bundle analysis artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bundle-analysis-${{ github.event.pull_request.number || github.sha }}
+          path: .next/diagnostics/analyze/
+          retention-days: 30
+
+  lighthouse-ci:
+    name: Lighthouse CI (perf / a11y / SEO)
+    runs-on: ubuntu-latest
+    needs: [policy-docs-sync, lint-and-typecheck]
+    # Lighthouse は重いため main/develop push と PR のみ実行
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx --bun prisma generate
+
+      - name: Run database migrations
+        run: bunx --bun prisma migrate deploy
+
+      - name: Seed test database
+        run: bunx --bun prisma db seed
+
+      # Lighthouse CI autorun: .lighthouserc.json 設定に従い
+      # collect → assert → upload (temporary-public-storage) を一括実行
+      - name: Run Lighthouse CI
+        run: bunx lhci autorun --config=.lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report-${{ github.event.pull_request.number || github.sha }}
+          path: .lighthouseci/
+          retention-days: 30
+
+  visual-regression:
+    name: Visual Regression (opt-in)
+    runs-on: ubuntu-latest
+    needs: [policy-docs-sync]
+    # opt-in 実行条件:
+    # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
+    # - workflow_dispatch で run_visual=true 指定
+    # - main/develop への push（baseline regeneration 用）
+    if: |
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'visual-regression')) ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_visual == 'true') ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: bunx playwright install chromium --with-deps
+
+      - name: Generate Prisma client
+        run: bunx --bun prisma generate
+
+      - name: Run database migrations
+        run: bunx --bun prisma migrate deploy
+
+      - name: Seed test database
+        run: bunx --bun prisma db seed
+
+      - name: Build application
+        run: bun run build:skip-env
+
+      # Playwright 公式の visual regression:
+      # - baseline が存在すれば diff 検証
+      # - 初回 / baseline 変更時は --update-snapshots で artifact として生成
+      - name: Run visual regression tests
+        run: bunx playwright test --project=chromium-visual
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          PLAYWRIGHT_VISUAL: "1"
+
+      - name: Upload Playwright visual diff report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-visual-report-${{ github.event.pull_request.number || github.sha }}
+          path: |
+            playwright-report/
+            e2e/visual/**/*-snapshots/
+          retention-days: 30
 
   docs:
     name: Generate API Docs
