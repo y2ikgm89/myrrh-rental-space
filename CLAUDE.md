@@ -50,12 +50,13 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **ハードコードカラー禁止** — セマンティックトークン必須（例外: `global-error.tsx`）
 - **`className` テンプレートリテラル禁止** — `cn()` 使用（`@/shared/lib/cn`）
 - **Turnstile 配置基準** — 未認証公開フォームは必須。認証済みフローでも可逆性が低い高リスク操作（予約作成/変更/キャンセル、決済関連等）には許容。ログイン直後の参照系や低リスク操作（プロフィール閲覧等）には不要
-- **app 層からの Prisma 直 import 禁止** — `@/shared/db/prisma` は domain/lib 経由のみ（例外: `calendar-sync` `$queryRaw`）
+- **app 層からの Prisma 直 import 禁止** — `@/shared/db/prisma` は domain/lib 経由のみ（例外: `calendar-sync` `$queryRaw`）。Prisma enum / `Prisma` 名前空間も `@/shared/lib/validations/enums/prisma-types` ゲートウェイ経由（直 `@generated/prisma/*` 禁止、`shared/db` / `shared/domain` / `shared/lib/validations/enums` 自身のみ例外。`architecture-boundaries.test.ts` で検出）
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須** — スケルトン loading + error boundary
 
 ## プロセスルール
 
 - **検証**: 作業中 `bun run type-check`、完了前 `bun run validate`、コミット前 `bun run validate && bun run build`
+- **`test:unit` / `test:integration` は per-directory バッチ**（`package.json` 参照）— `bun test __tests__/unit` 単一実行への簡略化禁止（`mock.module` グローバル干渉で偽陽性失敗）。新規テストディレクトリ追加時は `package.json` の `test:unit` / `test:integration` チェーンにも追記
 - **「公式推奨」主張前**: `mcp__context7__query-docs` で一次資料確認（Radix / RHF / Next.js / React）
 - **Radix primitives の具体例は context7 取得不可** → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>` を直接取得（Dialog / NavigationMenu / Popover 等すべて philosophy しか返らない）
 - **一括修正後**: Grep で違反パターン残存ゼロを確認してから完了報告
@@ -63,6 +64,9 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Worktree 作成前**: `git status --short | wc -l` + `ls prisma/migrations/ | tail -1` で未コミット migration 確認、ドリフトあれば先に WIP snapshot commit（→ `gotchas.md` §Worktree）
 - **Subagent 規律**: implementer は sonnet 以上（haiku 禁止、report 捏造リスク）/ 完了報告後は `git log --oneline` + `git show --stat HEAD` で独立検証 / 密結合タスクは 1 implementer にバンドル
 - **レビューエージェント指摘**: `gotchas.md` と照合して誤報除外（`revalidateTag` 第2引数、Turbopack チャンク重複は頻出誤報）
+- **監査エージェント指摘**: 違反報告後、該当 rule ファイル（`react-patterns.md` / `lexical-patterns.md` / `type-safety.md` 等）の「例外」節と必ずクロスリファレンスする。`useSyncExternalStore` subscribe の `useCallback`、Lexical fork、`as Prisma.InputJsonObject` 等は documented exception
+- **SSoT 重複検出の grep**: symbol 名（`ROLE_LABELS` 等）だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep 必須。狭い正規表現（`ROLE_LABELS.*=\s*{$`）は同一行に開き波括弧がないと見落とす
+- **大規模監査の前提**: `bun run validate` が exit 0 なら compiler/linter 基準ではクリーン。監査で大量違反が報告されたら先行実行して基準合わせる
 
 ---
 
@@ -79,14 +83,15 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## SSOT 定数・シングルトン
 
-| 定数/変数                    | 場所                                 | メモ                                                                   |
-| ---------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
-| `DASHBOARD_ROLES`            | `@/shared/lib/admin-auth`            | ダッシュボードアクセス可能ロール（`verifyAdminSession` と共有）        |
-| `adminAuth` / `customerAuth` | `@/shared/lib/{admin,customer}-auth` | cookie prefix 分離。顧客は Google/LINE、`basePath: /api/customer-auth` |
-| `prisma` / `basePrisma`      | `@/shared/db/prisma`                 | `basePrisma` は Better Auth アダプター専用（`$extends` 前）            |
-| `CACHE_TAGS` / `getCacheTag` | `@/shared/lib/constants`             | `CACHE_TAGS.SETTINGS` は廃止済 → 個別タグ使用                          |
-| `CACHE_LIFE`                 | `@/shared/lib/constants`             | `cacheLife` プリセット                                                 |
-| `NOTIFICATION_TYPE`          | `enums/helpers`                      | DB VARCHAR 管理、`isValidNotificationType` 型ガード付き                |
+| 定数/変数                                                                                                                      | 場所                                          | メモ                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DASHBOARD_ROLES` / `STAFF_INVITABLE_ROLES` / `ROLE_LABELS` / `ROLE_DESCRIPTIONS` / `isDashboardRole()` / `type DashboardRole` | `@/shared/lib/admin-roles`                    | **client-safe** Role SSoT。`admin-auth.ts`（server-only）が `DASHBOARD_ROLES` を再 export。`z.enum(DASHBOARD_ROLES)` 直接利用可。tuple 型のため `.includes()` ではなく `isDashboardRole()` 型ガード必須 |
+| `adminAuth` / `customerAuth`                                                                                                   | `@/shared/lib/{admin,customer}-auth`          | cookie prefix 分離。顧客は Google/LINE、`basePath: /api/customer-auth`                                                                                                                                  |
+| `prisma` / `basePrisma`                                                                                                        | `@/shared/db/prisma`                          | `basePrisma` は Better Auth アダプター専用（`$extends` 前）                                                                                                                                             |
+| `CACHE_TAGS` / `getCacheTag`                                                                                                   | `@/shared/lib/constants`                      | `CACHE_TAGS.SETTINGS` は廃止済 → 個別タグ使用                                                                                                                                                           |
+| `CACHE_LIFE`                                                                                                                   | `@/shared/lib/constants`                      | `cacheLife` プリセット                                                                                                                                                                                  |
+| `NOTIFICATION_TYPE`                                                                                                            | `enums/helpers`                               | DB VARCHAR 管理、`isValidNotificationType` 型ガード付き                                                                                                                                                 |
+| `Prisma` / Prisma enums (`Role` / `ReservationStatus` / `EventStatus` 等 34 種)                                                | `@/shared/lib/validations/enums/prisma-types` | app 層 / shared/lib（非-domain）からの Prisma re-export gateway。`@generated/prisma/*` 直 import は `architecture-boundaries.test.ts` で検出失敗。例外: `shared/db/`, `shared/domain/`, gateway 自身    |
 
 ---
 
