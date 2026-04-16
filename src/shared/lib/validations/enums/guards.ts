@@ -10,6 +10,7 @@ import {
   ReservationStatus,
   InquiryStatus,
   CustomerStatus,
+  CustomerType,
   NavigationType,
   SocialPlatform,
   LayoutWidth,
@@ -51,6 +52,7 @@ const VALID_RESERVATION_STATUSES = new Set<string>(
 );
 const VALID_INQUIRY_STATUSES = new Set<string>(Object.values(InquiryStatus));
 const VALID_CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus));
+const VALID_CUSTOMER_TYPES = new Set<string>(Object.values(CustomerType));
 const VALID_NAVIGATION_TYPES = new Set<string>(Object.values(NavigationType));
 const VALID_SOCIAL_PLATFORMS = new Set<string>(Object.values(SocialPlatform));
 const VALID_LAYOUT_WIDTHS = new Set<string>(Object.values(LayoutWidth));
@@ -123,6 +125,10 @@ export function isValidInquiryStatus(value: unknown): value is InquiryStatus {
 
 export function isValidCustomerStatus(value: unknown): value is CustomerStatus {
   return typeof value === "string" && VALID_CUSTOMER_STATUSES.has(value);
+}
+
+export function isValidCustomerType(value: unknown): value is CustomerType {
+  return typeof value === "string" && VALID_CUSTOMER_TYPES.has(value);
 }
 
 export function isValidNavigationType(value: unknown): value is NavigationType {

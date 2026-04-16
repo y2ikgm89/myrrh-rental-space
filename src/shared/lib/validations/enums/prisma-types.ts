@@ -31,6 +31,7 @@ export {
   ReservationStatus,
   InquiryStatus,
   CustomerStatus,
+  CustomerType,
   PaymentStatus,
   NavigationType,
   SocialPlatform,

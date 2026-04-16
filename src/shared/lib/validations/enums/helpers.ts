@@ -9,6 +9,7 @@ import {
   ReservationStatus,
   InquiryStatus,
   CustomerStatus,
+  CustomerType,
   LayoutWidth,
   PostStatus,
   AuditAction,
@@ -33,12 +34,14 @@ import {
   PaymentStatus,
   RegistrationStatus,
   EventStatus,
+  TermsStatus,
 } from "@generated/prisma/enums";
 import {
   isValidRole,
   isValidReservationStatus,
   isValidInquiryStatus,
   isValidCustomerStatus,
+  isValidCustomerType,
   isValidLayoutWidth,
   isValidPostStatus,
   isValidAuditAction,
@@ -136,6 +139,13 @@ export function getValidInquiryStatus(
   fallback: InquiryStatus,
 ): InquiryStatus {
   return value && isValidInquiryStatus(value) ? value : fallback;
+}
+
+export function getValidCustomerType(
+  value: string | null | undefined,
+  fallback: CustomerType = CustomerType.PERSONAL,
+): CustomerType {
+  return value && isValidCustomerType(value) ? value : fallback;
 }
 
 export function getValidCustomerStatus(
@@ -315,6 +325,12 @@ export function parseInquiryStatusFilter(
   return parseStatusFilter(value, isValidInquiryStatus);
 }
 
+export function parseCustomerTypeFilter(
+  value: string | null | undefined,
+): CustomerType | undefined {
+  return parseStatusFilter(value, isValidCustomerType);
+}
+
 export function parseCustomerStatusFilter(
   value: string | null | undefined,
 ): CustomerStatus | undefined {
@@ -373,6 +389,58 @@ export function getReservationStatusFilterOrAll(
 }
 
 // =============================================================================
+// CustomerType Labels
+// =============================================================================
+
+export const CUSTOMER_TYPE_LABELS: Record<CustomerType, string> = {
+  [CustomerType.PERSONAL]: "個人",
+  [CustomerType.CORPORATE]: "法人・団体",
+};
+
+// =============================================================================
+// CustomerStatus Labels
+// =============================================================================
+
+export const CUSTOMER_STATUS_LABELS: Record<CustomerStatus, string> = {
+  [CustomerStatus.NEW]: "新規",
+  [CustomerStatus.REGULAR]: "リピーター",
+  [CustomerStatus.VIP]: "VIP",
+  [CustomerStatus.INACTIVE]: "休眠",
+  [CustomerStatus.BLACKLIST]: "ブラックリスト",
+};
+
+// =============================================================================
+// InquiryStatus Labels
+// =============================================================================
+
+export const INQUIRY_STATUS_LABELS: Record<InquiryStatus, string> = {
+  [InquiryStatus.NEW]: "新規",
+  [InquiryStatus.IN_PROGRESS]: "対応中",
+  [InquiryStatus.RESOLVED]: "解決済み",
+  [InquiryStatus.CLOSED]: "クローズ",
+};
+
+// =============================================================================
+// PostStatus Labels
+// =============================================================================
+
+export const POST_STATUS_LABELS: Record<PostStatus, string> = {
+  [PostStatus.DRAFT]: "下書き",
+  [PostStatus.PUBLISHED]: "公開中",
+  [PostStatus.ARCHIVED]: "アーカイブ",
+};
+
+// =============================================================================
+// TermsStatus Labels
+// =============================================================================
+
+export const TERMS_STATUS_LABELS: Record<TermsStatus, string> = {
+  [TermsStatus.DRAFT]: "下書き",
+  [TermsStatus.PUBLISHED]: "公開中",
+  [TermsStatus.ARCHIVED]: "アーカイブ",
+};
+
+// =============================================================================
 // ReservationStatus Labels
 // =============================================================================
 
@@ -383,6 +451,53 @@ export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   [ReservationStatus.CANCELLED]: "キャンセル",
   [ReservationStatus.NO_SHOW]: "無断キャンセル",
 };
+
+// =============================================================================
+// AuditAction Labels
+// =============================================================================
+
+export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
+  [AuditAction.CREATE]: "作成",
+  [AuditAction.UPDATE]: "更新",
+  [AuditAction.DELETE]: "削除",
+  [AuditAction.PUBLISH]: "公開",
+  [AuditAction.UNPUBLISH]: "非公開",
+  [AuditAction.LOGIN_SUCCESS]: "ログイン成功",
+  [AuditAction.LOGIN_FAILED]: "ログイン失敗",
+  [AuditAction.LOGOUT]: "ログアウト",
+  [AuditAction.PERMISSION_DENIED]: "権限拒否",
+  [AuditAction.PASSWORD_CHANGE]: "パスワード変更",
+  [AuditAction.PASSWORD_RESET_REQUEST]: "パスワードリセット要求",
+  [AuditAction.ROLE_CHANGE]: "ロール変更",
+};
+
+// =============================================================================
+// EditorCommentStatus Labels
+// =============================================================================
+
+export const EDITOR_COMMENT_STATUS_LABELS: Record<EditorCommentStatus, string> =
+  {
+    [EditorCommentStatus.ACTIVE]: "未解決",
+    [EditorCommentStatus.RESOLVED]: "解決済み",
+    [EditorCommentStatus.DELETED]: "削除済み",
+  };
+
+// =============================================================================
+// Publish Status Labels（boolean isPublished / isActive 用）
+// =============================================================================
+
+export const PUBLISH_LABELS = {
+  published: "公開中",
+  unpublished: "非公開",
+  draft: "下書き",
+} as const;
+
+export function getPublishLabel(
+  isPublished: boolean,
+  falseLabel: "unpublished" | "draft" = "unpublished",
+): string {
+  return isPublished ? PUBLISH_LABELS.published : PUBLISH_LABELS[falseLabel];
+}
 
 // =============================================================================
 // PaymentStatus Labels & Badge Variants
@@ -448,6 +563,7 @@ export const NOTIFICATION_TYPE = {
   RESERVATION_NEW: "reservation_new",
   RESERVATION_CANCEL: "reservation_cancel",
   RESERVATION_CHANGE: "reservation_change",
+  RESERVATION_UPDATE: "reservation_update",
   INQUIRY_NEW: "inquiry_new",
   REVIEW_NEW: "review_new",
   EVENT_REGISTRATION: "event_registration",
@@ -471,10 +587,19 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "新規予約",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "予約キャンセル",
   [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "予約変更",
+  [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "予約更新",
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "新規お問い合わせ",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "新規レビュー",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "イベント申込",
   [NOTIFICATION_TYPE.FAQ_STALE]: "FAQ 鮮度チェック",
+};
+
+export type ReservationAction = "new" | "update" | "cancel";
+
+export const RESERVATION_ACTION_LABELS: Record<ReservationAction, string> = {
+  new: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_NEW],
+  update: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CHANGE],
+  cancel: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CANCEL],
 };
 
 export type AdminBadgeVariant =
@@ -493,6 +618,7 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.RESERVATION_NEW]: "default",
   [NOTIFICATION_TYPE.RESERVATION_CANCEL]: "destructive",
   [NOTIFICATION_TYPE.RESERVATION_CHANGE]: "secondary",
+  [NOTIFICATION_TYPE.RESERVATION_UPDATE]: "secondary",
   [NOTIFICATION_TYPE.INQUIRY_NEW]: "default",
   [NOTIFICATION_TYPE.REVIEW_NEW]: "default",
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
