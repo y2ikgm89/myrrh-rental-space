@@ -18,7 +18,7 @@ export function SidebarCategories({
         {categories.map((cat) => (
           <li key={cat.id}>
             <Link
-              href={`/journal?tab=posts&category=${cat.slug}`}
+              href={`/posts?category=${cat.slug}`}
               className="flex items-center justify-between text-sm transition-colors hover:text-foreground"
             >
               <span>{cat.name}</span>

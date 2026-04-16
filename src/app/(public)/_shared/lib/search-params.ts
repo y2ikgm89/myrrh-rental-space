@@ -53,16 +53,6 @@ export const postsSearchParams = createSearchParamsCache(
   postsSearchParamsParsers,
 );
 
-export const journalSearchParamsParsers = {
-  page: parseAsInteger.withDefault(1),
-  q: parseAsString.withDefault(""),
-  tab: parseAsString.withDefault("all"),
-};
-
-export const journalSearchParams = createSearchParamsCache(
-  journalSearchParamsParsers,
-);
-
 const EVENT_VIEWS = ["list", "calendar"] as const;
 
 export const eventsSearchParamsParsers = {

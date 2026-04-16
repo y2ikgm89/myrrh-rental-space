@@ -17,7 +17,7 @@ export const newsListConfigSchema = z.object({
     .text("全件リンクテキスト", { default: "全てのお知らせ" })
     .pipe(z.string().max(50)),
   viewAllUrl: field
-    .text("全件リンクURL", { default: "/journal?tab=news" })
+    .text("全件リンクURL", { default: "/news" })
     .pipe(z.string().max(200)),
   layout: field.select("レイアウト", {
     options: layouts,

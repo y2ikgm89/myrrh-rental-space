@@ -84,7 +84,7 @@ export async function NewsDetailPageContent({
         breadcrumb={
           <Breadcrumb
             items={[
-              { label: "お知らせ", href: "/journal?tab=news" },
+              { label: "お知らせ", href: "/news" },
               { label: newsItem.title },
             ]}
           />

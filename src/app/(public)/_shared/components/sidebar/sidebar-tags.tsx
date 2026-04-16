@@ -16,7 +16,7 @@ export function SidebarTags({ tags }: SidebarTagsProps): ReactElement {
         {tags.map((tag) => (
           <Link
             key={tag.id}
-            href={`/journal?tag=${tag.slug}`}
+            href={`/posts?tag=${tag.slug}`}
             className="border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             {tag.name}
