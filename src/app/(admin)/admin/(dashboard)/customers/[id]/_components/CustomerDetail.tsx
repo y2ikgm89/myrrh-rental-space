@@ -43,6 +43,11 @@ import type { CustomerWithReservationsAndAccount } from "@/shared/domain/custome
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidCustomerStatus } from "@/shared/lib/validations/enums/guards";
+import {
+  CUSTOMER_STATUS_LABELS,
+  CUSTOMER_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
+import { entriesOf } from "@/shared/lib/serialize";
 
 type CustomerDetailProps = {
   customer: CustomerWithReservationsAndAccount;
@@ -106,6 +111,10 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
             <DetailField
               label="お名前"
               value={`${customer.lastName} ${customer.firstName}`}
+            />
+            <DetailField
+              label="区分"
+              value={CUSTOMER_TYPE_LABELS[customer.customerType]}
             />
             {customer.companyName ? (
               <DetailField
@@ -267,11 +276,11 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
                 <SelectValue placeholder="ステータスを変更" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="NEW">新規</SelectItem>
-                <SelectItem value="REGULAR">リピーター</SelectItem>
-                <SelectItem value="VIP">VIP</SelectItem>
-                <SelectItem value="INACTIVE">休眠</SelectItem>
-                <SelectItem value="BLACKLIST">ブラックリスト</SelectItem>
+                {entriesOf(CUSTOMER_STATUS_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

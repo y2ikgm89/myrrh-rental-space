@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 import { useRouter } from "next/navigation";
+import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks";
 import { createCustomer } from "@/admin/actions/customer";
 import { customerFormSchema } from "@/shared/lib/validations/customer";
@@ -10,10 +11,19 @@ import {
   Input,
   Label,
   Card,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
   SubmitButton,
 } from "@/admin/components/ui";
 import { useKanaInput } from "@/admin/hooks";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
+import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { entriesOf } from "@/shared/lib/serialize";
+import { isValidCustomerType } from "@/shared/lib/validations/enums/guards";
 
 export function CustomerForm(): ReactElement {
   const router = useRouter();
@@ -33,6 +43,11 @@ export function CustomerForm(): ReactElement {
     formState: { errors },
   } = form;
 
+  const customerType = useWatch({
+    control: form.control,
+    name: "customerType",
+  });
+
   // IME 自動カナ入力
   const lastNameKanaInput = useKanaInput({
     onKanaChange: (kana) => setValue("lastNameKana", kana),
@@ -45,6 +60,29 @@ export function CustomerForm(): ReactElement {
     <form onSubmit={onSubmit}>
       <Card className="p-6">
         <div className="space-y-6">
+          {/* 区分 */}
+          <div className="space-y-2">
+            <Label htmlFor="customerType">区分</Label>
+            <Select
+              value={customerType ?? CustomerType.PERSONAL}
+              onValueChange={(value) => {
+                if (isValidCustomerType(value))
+                  setValue("customerType", value, { shouldDirty: true });
+              }}
+            >
+              <SelectTrigger id="customerType">
+                <SelectValue placeholder="区分を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {entriesOf(CUSTOMER_TYPE_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* 氏名 */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
