@@ -42,6 +42,11 @@ enum InquiryStatus {
   CLOSED
 }
 
+enum CustomerType {
+  PERSONAL
+  CORPORATE
+}
+
 enum CustomerStatus {
   NEW
   REGULAR
@@ -526,7 +531,8 @@ model Reservation {
   guestLastName    String?
   guestFirstName   String?
   guestPhone       String?
-  guestCompanyName String?
+  guestCompanyName    String?
+  guestCustomerType   CustomerType?
 
   // Relations
   space           Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
@@ -575,6 +581,7 @@ model Customer {
   lastNameKana       String?        // 姓カナ（任意）
   firstNameKana      String?        // 名カナ（任意）
   companyName        String?        // 会社名・団体名（法人の場合）
+  customerType       CustomerType   @default(PERSONAL)
   email              String         @unique
   phoneNumber        String?
   address            String?        @db.Text
@@ -602,6 +609,7 @@ model Customer {
   @@index([firstName])
   @@index([phoneNumber])
   @@index([status])
+  @@index([customerType])
   @@index([isActive])
   @@index([lastReservationAt])
   @@index([lastName, firstName])
@@ -654,11 +662,12 @@ model Coupon {
 model Inquiry {
   id          String        @id @default(uuid()) @db.Uuid
   name        String
-  companyName String?       // 会社名・団体名（法人の場合）
-  email       String
-  subject   String
-  message   String        @db.Text
-  status    InquiryStatus @default(NEW)
+  companyName  String?       // 会社名・団体名（法人の場合）
+  customerType CustomerType?
+  email        String
+  subject      String
+  message      String        @db.Text
+  status       InquiryStatus @default(NEW)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
@@ -1028,9 +1037,7 @@ model FaqItem {
   id              String    @id @default(uuid()) @db.Uuid
   categoryId      String    @db.Uuid
   question        String
-  answerHtml      String    @db.Text @map("answer") // HTMLキャッシュ（公開表示用）
-  answerJson      Json? // Lexical EditorState JSON（プライマリ）
-  answerPlainText String    @default("") @db.Text // 派生プレビュー（list 表示用、~200 文字）
+  answer          String    @db.Text // 回答（プレーンテキスト、改行保持）
   order           Int       @default(0)
   isPublished     Boolean   @default(true)
   publishedAt     DateTime?
@@ -1041,15 +1048,6 @@ model FaqItem {
   notHelpfulCount Int       @default(0) // 「役に立たなかった」投票数（localStorage で dedup）
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-
-  // SEO設定
-  metaDescription String?
-  metaKeywords    String?
-
-  // OGP設定
-  ogpTitle       String?
-  ogpDescription String?
-  ogpImageUrl    String?
 
   // Relations
   category FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -1415,8 +1413,10 @@ enum AuditAction {
   UNPUBLISH
   LOGIN_SUCCESS
   LOGIN_FAILED
+  LOGOUT
   PERMISSION_DENIED
   PASSWORD_CHANGE
+  PASSWORD_RESET_REQUEST
   ROLE_CHANGE
 }
 
