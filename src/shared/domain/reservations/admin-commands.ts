@@ -135,6 +135,7 @@ export async function createAdminReservationCommand(input: {
           guestFirstName: input.customerData.firstName,
           guestPhone: input.customerData.phoneNumber || null,
           guestCompanyName: input.customerData.companyName || null,
+          guestCustomerType: input.customerData.customerType ?? null,
         }),
       },
       include: { customer: { select: CUSTOMER_SELECT } },

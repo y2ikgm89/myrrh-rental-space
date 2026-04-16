@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { Prisma } from "@generated/prisma/client";
+import { CustomerType } from "@generated/prisma/enums";
 
 // ---------------------------------------------------------------------------
 // Types (moved from commands.ts)
@@ -15,6 +16,7 @@ export type CustomerData = {
   email: string;
   phoneNumber?: string | null | undefined;
   companyName?: string | null | undefined;
+  customerType?: CustomerType | undefined;
   userId?: string | null | undefined;
 };
 
@@ -80,6 +82,7 @@ export async function resolveOrCreateCustomer(
         email: data.email,
         phoneNumber: data.phoneNumber || null,
         companyName: data.companyName || null,
+        customerType: data.customerType ?? CustomerType.PERSONAL,
         userId: data.userId || null,
       },
       select: { id: true },

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus, CustomerType } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type {
   CustomerData,
@@ -18,6 +18,10 @@ function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {
 
   if (filters.status && filters.status !== "ALL") {
     where.status = filters.status;
+  }
+
+  if (filters.customerType && filters.customerType !== "ALL") {
+    where.customerType = filters.customerType;
   }
 
   if (typeof filters.isActive === "boolean") {
@@ -65,6 +69,7 @@ export async function getCustomers(
         lastNameKana: true,
         firstNameKana: true,
         companyName: true,
+        customerType: true,
         email: true,
         phoneNumber: true,
         address: true,
@@ -97,6 +102,7 @@ export async function getCustomers(
       lastNameKana: customer.lastNameKana,
       firstNameKana: customer.firstNameKana,
       companyName: customer.companyName,
+      customerType: customer.customerType,
       email: customer.email,
       phoneNumber: customer.phoneNumber,
       address: customer.address,
@@ -169,6 +175,7 @@ export async function getCustomerById(
     lastNameKana: customer.lastNameKana,
     firstNameKana: customer.firstNameKana,
     companyName: customer.companyName,
+    customerType: customer.customerType,
     email: customer.email,
     phoneNumber: customer.phoneNumber,
     address: customer.address,
@@ -243,6 +250,7 @@ export async function searchCustomers(
       lastName: true,
       firstName: true,
       companyName: true,
+      customerType: true,
       email: true,
       phoneNumber: true,
       status: true,
@@ -264,6 +272,7 @@ export async function getCustomerByUserId(userId: string) {
       lastNameKana: true,
       firstNameKana: true,
       companyName: true,
+      customerType: true,
       email: true,
       phoneNumber: true,
       address: true,

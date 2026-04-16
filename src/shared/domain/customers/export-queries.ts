@@ -11,6 +11,7 @@ export async function getCustomersForExport() {
       lastNameKana: true,
       firstNameKana: true,
       companyName: true,
+      customerType: true,
       email: true,
       phoneNumber: true,
       address: true,

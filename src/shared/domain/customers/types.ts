@@ -1,5 +1,6 @@
 import type {
   CustomerStatus,
+  CustomerType,
   ReservationStatus,
 } from "@generated/prisma/enums";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -11,6 +12,7 @@ type CustomerRecord = {
   lastNameKana: string | null;
   firstNameKana: string | null;
   companyName: string | null;
+  customerType: CustomerType;
   email: string;
   phoneNumber: string | null;
   address: string | null;
@@ -70,6 +72,7 @@ export type GetCustomersResult = {
 
 export type CustomerFilters = {
   status?: CustomerStatus | "ALL";
+  customerType?: CustomerType | "ALL";
   search?: string;
   isActive?: boolean;
 };
@@ -95,6 +98,7 @@ export type CustomerSearchResult = {
   lastName: string;
   firstName: string;
   companyName: string | null;
+  customerType: CustomerType;
   email: string;
   phoneNumber: string | null;
   status: CustomerStatus;

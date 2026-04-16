@@ -1,7 +1,11 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { ReservationStatus, TermsStatus } from "@generated/prisma/enums";
+import {
+  CustomerType,
+  ReservationStatus,
+  TermsStatus,
+} from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
 import { resolveOrCreateCustomer } from "@/shared/domain/reservations/resolve-customer";
 import {
@@ -35,6 +39,7 @@ type PublicReservationInput = {
   email: string;
   phoneNumber?: string | null | undefined;
   companyName?: string | null | undefined;
+  customerType?: CustomerType | undefined;
   notes?: string | null | undefined;
   userId?: string | null | undefined;
   agreedTermsIds?: string[] | undefined;
@@ -119,6 +124,7 @@ export async function createPublicReservationCommand(
         email: input.email,
         phoneNumber: input.phoneNumber,
         companyName: input.companyName,
+        customerType: input.customerType,
         userId: input.userId,
       },
       tx,
@@ -140,6 +146,7 @@ export async function createPublicReservationCommand(
         guestFirstName: input.firstName,
         guestPhone: input.phoneNumber || null,
         guestCompanyName: input.companyName || null,
+        guestCustomerType: input.customerType ?? null,
       },
       include: { customer: { select: CUSTOMER_SELECT } },
     });

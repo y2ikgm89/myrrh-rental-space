@@ -1,6 +1,6 @@
 import "server-only";
 
-import { InquiryStatus } from "@generated/prisma/enums";
+import { CustomerType, InquiryStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 
@@ -122,6 +122,7 @@ type CreateInquiryInput = {
   email: string;
   subject: string;
   message: string;
+  customerType?: CustomerType | null;
   customerId?: string | null;
 };
 
@@ -163,6 +164,7 @@ export async function createInquiryCommand(
       message: input.message,
       status: InquiryStatus.NEW,
       customerId: resolvedCustomerId,
+      customerType: input.customerType ?? null,
     },
   });
 

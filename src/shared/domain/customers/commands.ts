@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CustomerStatus } from "@generated/prisma/enums";
+import { CustomerStatus, CustomerType } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
 import type { CustomerFormData } from "@/shared/lib/validations/customer";
@@ -48,6 +48,7 @@ function toCustomerData(data: CustomerFormData) {
     lastNameKana: data.lastNameKana || null,
     firstNameKana: data.firstNameKana || null,
     companyName: data.companyName || null,
+    customerType: data.customerType ?? CustomerType.PERSONAL,
     email: data.email,
     phoneNumber: data.phoneNumber || null,
     address: data.address || null,
