@@ -282,7 +282,7 @@ const spaceUrl = `${baseUrl}/spaces/${slug}`;
 <BreadcrumbJsonLd
   items={[
     { name: 'ホーム', url: '/' },
-    { name: 'ブログ', url: '/journal?tab=posts' },
+    { name: 'ブログ', url: '/posts' },
     { name: post.title, url: `/posts/${slug}` },
   ]}
 />
@@ -300,7 +300,7 @@ const spaceUrl = `${baseUrl}/spaces/${slug}`;
 <BreadcrumbJsonLd
   items={[
     { name: 'ホーム', url: '/' },
-    { name: 'お知らせ', url: '/journal?tab=news' },
+    { name: 'お知らせ', url: '/news' },
     { name: newsItem.title, url: `/news/${slug}` },
   ]}
 />
