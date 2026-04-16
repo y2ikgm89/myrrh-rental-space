@@ -42,8 +42,10 @@ export async function updateProfileAction(
 
   try {
     await updateCustomerProfileByUserId(session.user.id, {
+      customerType: parsed.data.customerType,
       lastName: parsed.data.lastName,
       firstName: parsed.data.firstName,
+      companyName: parsed.data.companyName || null,
       phoneNumber: parsed.data.phoneNumber || null,
     });
 

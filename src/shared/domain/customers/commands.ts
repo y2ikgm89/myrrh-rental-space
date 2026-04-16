@@ -129,16 +129,20 @@ export async function updateCustomer(
 export async function updateCustomerProfileByUserId(
   userId: string,
   data: {
+    customerType: CustomerType;
     lastName: string;
     firstName: string;
+    companyName: string | null;
     phoneNumber: string | null;
   },
 ): Promise<void> {
   await prisma.customer.update({
     where: { userId },
     data: {
+      customerType: data.customerType,
       lastName: data.lastName,
       firstName: data.firstName,
+      companyName: data.companyName,
       phoneNumber: data.phoneNumber,
     },
   });

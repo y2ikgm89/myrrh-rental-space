@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useWatch } from "react-hook-form";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { usePublicForm } from "@/public/hooks/use-public-form";
@@ -9,11 +10,13 @@ import {
   customerProfileSchema,
   type CustomerProfileInput,
 } from "@/shared/lib/validations/customer-profile";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { updateProfileAction } from "../../_shared/actions/profile";
 import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,8 +24,10 @@ import {
 
 interface ProfileFormProps {
   readonly defaultValues: {
+    readonly customerType: CustomerType;
     readonly lastName: string;
     readonly firstName: string;
+    readonly companyName: string;
     readonly email: string;
     readonly phoneNumber: string;
   };
@@ -58,12 +63,27 @@ export function ProfileForm({
     },
     {
       defaultValues: {
+        customerType: defaultValues.customerType,
         lastName: defaultValues.lastName,
         firstName: defaultValues.firstName,
+        companyName: defaultValues.companyName,
         phoneNumber: defaultValues.phoneNumber,
       },
     },
   );
+
+  const customerType = useWatch({
+    control: form.control,
+    name: "customerType",
+  });
+
+  function handleCustomerTypeChange(type: CustomerType) {
+    form.setValue("customerType", type, { shouldDirty: true });
+    if (type === CustomerType.PERSONAL) {
+      form.setValue("companyName", "");
+      form.clearErrors("companyName");
+    }
+  }
 
   function handleTurnstileVerify(token: string) {
     form.setValue("turnstileToken", token);
@@ -90,6 +110,23 @@ export function ProfileForm({
         >
           プロフィールを更新しました
         </div>
+      )}
+
+      <CustomerTypeToggle
+        value={customerType ?? CustomerType.PERSONAL}
+        onChange={handleCustomerTypeChange}
+      />
+
+      {customerType === CustomerType.CORPORATE && (
+        <Input
+          label="会社名・団体名"
+          required
+          autoComplete="organization"
+          {...form.register("companyName")}
+          {...(form.formState.errors.companyName?.message && {
+            error: form.formState.errors.companyName.message,
+          })}
+        />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

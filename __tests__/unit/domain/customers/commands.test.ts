@@ -441,8 +441,10 @@ describe("customers/commands", () => {
       test("userId を使ってプロフィールを更新できる", async () => {
         await expect(
           updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
             lastName: "山田",
             firstName: "花子",
+            companyName: null,
             phoneNumber: "080-9876-5432",
           }),
         ).resolves.toBeUndefined();
@@ -451,8 +453,10 @@ describe("customers/commands", () => {
           expect.objectContaining({
             where: { userId: USER_ID },
             data: {
+              customerType: CustomerType.PERSONAL,
               lastName: "山田",
               firstName: "花子",
+              companyName: null,
               phoneNumber: "080-9876-5432",
             },
           }),
@@ -462,8 +466,10 @@ describe("customers/commands", () => {
       test("phoneNumber が null の場合も更新できる", async () => {
         await expect(
           updateCustomerProfileByUserId(USER_ID, {
+            customerType: CustomerType.PERSONAL,
             lastName: "山田",
             firstName: "花子",
+            companyName: null,
             phoneNumber: null,
           }),
         ).resolves.toBeUndefined();
@@ -471,8 +477,10 @@ describe("customers/commands", () => {
         expect(mockCustomerUpdate).toHaveBeenCalledWith(
           expect.objectContaining({
             data: {
+              customerType: CustomerType.PERSONAL,
               lastName: "山田",
               firstName: "花子",
+              companyName: null,
               phoneNumber: null,
             },
           }),

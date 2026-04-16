@@ -59,8 +59,10 @@ export default async function SettingsPage({
         <Heading level={2}>プロフィール</Heading>
         <ProfileForm
           defaultValues={{
+            customerType: customer.customerType,
             lastName: customer.lastName,
             firstName: customer.firstName,
+            companyName: customer.companyName ?? "",
             email: customer.email,
             phoneNumber: customer.phoneNumber ?? "",
           }}
