@@ -24,7 +24,10 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -66,6 +69,7 @@ export async function submitInquiry(
       email: parsed.data.email,
       subject: parsed.data.subject,
       message: parsed.data.message,
+      customerType: parsed.data.customerType,
       customerId,
     });
 
@@ -90,7 +94,7 @@ export async function submitInquiry(
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.INQUIRY_NEW,
-        title: "新規お問い合わせ",
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.INQUIRY_NEW],
         message: `${result.payload.name}様からお問い合わせがありました`,
         resourceType: "inquiry",
         resourceId: result.id,

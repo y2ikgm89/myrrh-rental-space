@@ -1,6 +1,6 @@
 import "server-only";
 
-import { CustomerStatus, CustomerType } from "@generated/prisma/enums";
+import { CustomerStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import type {
   CustomerData,
