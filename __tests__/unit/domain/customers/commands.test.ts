@@ -10,6 +10,12 @@ const CustomerStatus = {
 } as const;
 type CustomerStatus = (typeof CustomerStatus)[keyof typeof CustomerStatus];
 
+// CustomerType 定数
+const CustomerType = {
+  PERSONAL: "PERSONAL",
+  CORPORATE: "CORPORATE",
+} as const;
+
 // Prisma モック関数（mock.module より先に定義）
 const mockCustomerFindUnique = mock<
   () => Promise<{ id: string; isActive: boolean } | null>
@@ -48,6 +54,7 @@ mock.module("@/shared/db/prisma", () => ({
 
 mock.module("@generated/prisma/enums", () => ({
   CustomerStatus,
+  CustomerType,
 }));
 
 import { DomainError } from "@/shared/domain/domain-error";
@@ -66,6 +73,7 @@ const CUSTOMER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const USER_ID = "660e8400-e29b-41d4-a716-446655440000";
 
 const VALID_CUSTOMER_DATA = {
+  customerType: CustomerType.PERSONAL,
   lastName: "田中",
   firstName: "太郎",
   lastNameKana: "タナカ",

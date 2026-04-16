@@ -12,10 +12,8 @@ import {
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
 import { usePublicForm } from "@/public/hooks/use-public-form";
-import {
-  publicInquirySchema,
-  type CustomerType,
-} from "@/shared/lib/validations/inquiry";
+import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import { submitInquiry } from "@/public/actions/inquiry";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
@@ -56,7 +54,7 @@ export function ContactForm({
 
   function handleCustomerTypeChange(type: CustomerType) {
     form.setValue("customerType", type);
-    if (type === "personal") {
+    if (type === CustomerType.PERSONAL) {
       form.setValue("companyName", "");
       form.clearErrors("companyName");
     }
@@ -98,7 +96,7 @@ export function ContactForm({
         <div>
           <CustomerTypeToggle
             id="contact-type"
-            value={customerType ?? "personal"}
+            value={customerType ?? CustomerType.PERSONAL}
             onChange={handleCustomerTypeChange}
           />
         </div>
@@ -107,11 +105,13 @@ export function ContactForm({
         <form onSubmit={onSubmit} className="mt-8">
           <div className="border border-border p-6 sm:p-8">
             <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              {customerType === "corporate" ? "ご担当者情報" : "お客様情報"}
+              {customerType === CustomerType.CORPORATE
+                ? "ご担当者情報"
+                : "お客様情報"}
             </p>
 
             <div className="space-y-6">
-              {customerType === "corporate" ? (
+              {customerType === CustomerType.CORPORATE ? (
                 <Input
                   id="contact-company"
                   label="会社名・団体名"
@@ -130,7 +130,9 @@ export function ContactForm({
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <Input
                   id="contact-lastname"
-                  label={customerType === "corporate" ? "担当者 姓" : "姓"}
+                  label={
+                    customerType === CustomerType.CORPORATE ? "担当者 姓" : "姓"
+                  }
                   type="text"
                   required
                   placeholder="山田"
@@ -143,7 +145,9 @@ export function ContactForm({
                 />
                 <Input
                   id="contact-firstname"
-                  label={customerType === "corporate" ? "担当者 名" : "名"}
+                  label={
+                    customerType === CustomerType.CORPORATE ? "担当者 名" : "名"
+                  }
                   type="text"
                   required
                   placeholder="太郎"

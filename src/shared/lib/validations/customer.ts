@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
+import {
+  CustomerStatus,
+  CustomerType,
+} from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // Customer Schemas
@@ -10,6 +13,7 @@ import { CustomerStatus } from "@/shared/lib/validations/enums/prisma-types";
  * コンポーネント・Server Actions両方で使用
  */
 export const customerFormSchema = z.object({
+  customerType: z.enum(CustomerType).default(CustomerType.PERSONAL),
   lastName: z
     .string()
     .min(1, { error: "姓は必須です" })

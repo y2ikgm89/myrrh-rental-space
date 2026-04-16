@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 import { IconBuilding, IconUser } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-import type { CustomerType } from "@/shared/lib/validations/inquiry";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
 interface CustomerTypeToggleProps {
   readonly value: CustomerType;
@@ -30,11 +30,11 @@ export function CustomerTypeToggle({
           id={`${id}-personal`}
           type="button"
           role="radio"
-          aria-checked={value === "personal"}
-          onClick={() => onChange("personal")}
+          aria-checked={value === CustomerType.PERSONAL}
+          onClick={() => onChange(CustomerType.PERSONAL)}
           className={cn(
             "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
-            value === "personal"
+            value === CustomerType.PERSONAL
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
           )}
@@ -46,11 +46,11 @@ export function CustomerTypeToggle({
           id={`${id}-corporate`}
           type="button"
           role="radio"
-          aria-checked={value === "corporate"}
-          onClick={() => onChange("corporate")}
+          aria-checked={value === CustomerType.CORPORATE}
+          onClick={() => onChange(CustomerType.CORPORATE)}
           className={cn(
             "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
-            value === "corporate"
+            value === CustomerType.CORPORATE
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
           )}

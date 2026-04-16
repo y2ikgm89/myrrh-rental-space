@@ -12,6 +12,7 @@
 
 import { describe, test, expect, mock, beforeEach } from "bun:test";
 import { DomainError } from "@/shared/domain/domain-error";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
 // =============================================================================
 // モック設定（import より前に配置）
@@ -112,7 +113,7 @@ mock.module("@/shared/lib/admin-auth", () => ({
 // =============================================================================
 
 const VALID_INPUT = {
-  customerType: "personal" as const,
+  customerType: CustomerType.PERSONAL,
   lastName: "山田",
   firstName: "太郎",
   email: "yamada@example.com",

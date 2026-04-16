@@ -6,7 +6,7 @@ import {
   COMPANY_NAME_REFINE_ERROR,
 } from "./customer-type";
 
-export { CUSTOMER_TYPES, type CustomerType } from "./customer-type";
+export { CustomerType } from "./customer-type";
 
 export const publicInquirySchema = z
   .object({

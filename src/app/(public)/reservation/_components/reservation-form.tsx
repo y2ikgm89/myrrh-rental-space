@@ -15,6 +15,7 @@ import { ImageFrame } from "@/public/components/design-system/image-frame";
 import { StepIndicator } from "@/public/components/ui/step-indicator";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import {
   publicReservationSchema,
   type PublicReservationInput,
@@ -188,7 +189,7 @@ export function ReservationForm({
         locationId: auto.locationId ?? "",
         spaceId: auto.spaceId ?? "",
         numberOfGuests: 1,
-        customerType: "personal",
+        customerType: CustomerType.PERSONAL,
         companyName: "",
         lastName: prefillData?.lastName ?? "",
         firstName: prefillData?.firstName ?? "",

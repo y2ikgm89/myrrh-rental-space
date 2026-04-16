@@ -8,7 +8,7 @@ import { Input } from "@/public/components/design-system/input";
 import { Textarea } from "@/public/components/design-system/textarea";
 import { TurnstileWidget } from "@/public/components/ui/turnstile-widget";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
-import type { CustomerType } from "@/shared/lib/validations/inquiry";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import type { PublicReservationInput } from "@/shared/lib/validations/public-reservation";
 import { BookingSummary } from "./booking-summary";
 import { StickyBottomBar } from "./sticky-bottom-bar";
@@ -57,7 +57,7 @@ export function CustomerStep({
 
   function handleCustomerTypeChange(type: CustomerType) {
     form.setValue("customerType", type);
-    if (type === "personal") {
+    if (type === CustomerType.PERSONAL) {
       form.setValue("companyName", "");
       form.clearErrors("companyName");
     }
@@ -101,7 +101,7 @@ export function CustomerStep({
       <div className="mt-10">
         <CustomerTypeToggle
           id="reservation-type"
-          value={customerType ?? "personal"}
+          value={customerType ?? CustomerType.PERSONAL}
           onChange={handleCustomerTypeChange}
         />
       </div>
@@ -109,11 +109,13 @@ export function CustomerStep({
       {/* Form fields — editorial frame */}
       <div className="mt-8 border border-border p-6 sm:p-8">
         <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          {customerType === "corporate" ? "ご担当者情報" : "お客様情報"}
+          {customerType === CustomerType.CORPORATE
+            ? "ご担当者情報"
+            : "お客様情報"}
         </p>
 
         <div className="space-y-6">
-          {customerType === "corporate" ? (
+          {customerType === CustomerType.CORPORATE ? (
             <Input
               id="reservation-company"
               label="会社名・団体名"
@@ -131,7 +133,9 @@ export function CustomerStep({
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <Input
               id="reservation-lastname"
-              label={customerType === "corporate" ? "担当者 姓" : "姓"}
+              label={
+                customerType === CustomerType.CORPORATE ? "担当者 姓" : "姓"
+              }
               type="text"
               required
               placeholder="山田"
@@ -143,7 +147,9 @@ export function CustomerStep({
             />
             <Input
               id="reservation-firstname"
-              label={customerType === "corporate" ? "担当者 名" : "名"}
+              label={
+                customerType === CustomerType.CORPORATE ? "担当者 名" : "名"
+              }
               type="text"
               required
               placeholder="太郎"

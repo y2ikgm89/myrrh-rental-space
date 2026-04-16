@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
-export const CUSTOMER_TYPES = ["personal", "corporate"] as const;
-export type CustomerType = (typeof CUSTOMER_TYPES)[number];
+export { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 
-export const customerTypeSchema = z.enum(CUSTOMER_TYPES).default("personal");
+export const customerTypeSchema = z
+  .enum(CustomerType)
+  .default(CustomerType.PERSONAL);
 
 export const companyNameSchema = z
   .string()
@@ -18,7 +20,9 @@ export function requireCompanyNameForCorporate(data: {
   customerType: CustomerType;
   companyName?: string | undefined;
 }) {
-  return data.customerType !== "corporate" || !!data.companyName?.trim();
+  return (
+    data.customerType !== CustomerType.CORPORATE || !!data.companyName?.trim()
+  );
 }
 
 export const COMPANY_NAME_REFINE_ERROR = {
