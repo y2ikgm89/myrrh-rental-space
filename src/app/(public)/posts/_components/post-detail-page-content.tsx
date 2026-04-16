@@ -5,7 +5,8 @@ import { PageHero } from "@/public/components/layouts/page-hero";
 import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
 import { Container } from "@/public/components/design-system/container";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
-import { Badge } from "@/public/components/design-system/badge";
+import { ImageFrame } from "@/public/components/design-system/image-frame";
+import { Prose } from "@/public/components/design-system/prose";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -89,29 +90,52 @@ export async function PostDetailPageContent({
         <Container>
           <BlogLayout>
             <div className={contentClassName} style={contentStyle}>
-              <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {post.thumbnailUrl ? (
+                <div className="mb-8">
+                  <ImageFrame
+                    src={post.thumbnailUrl}
+                    alt={post.title}
+                    aspect="video"
+                    fill
+                    sizes="(min-width: 1024px) 60vw, 100vw"
+                    rounded
+                  />
+                </div>
+              ) : null}
+
+              <div className="mb-8 flex flex-wrap items-center gap-3 text-muted-foreground">
                 {post.category?.name ? (
-                  <Badge>{post.category.name}</Badge>
+                  <span className="text-[0.7rem] uppercase tracking-[0.18em] text-accent">
+                    {post.category.name}
+                  </span>
+                ) : null}
+                {post.category?.name &&
+                (post.publishedAt || post.author?.name) ? (
+                  <span aria-hidden="true" className="text-border">
+                    ·
+                  </span>
                 ) : null}
                 <time
                   dateTime={
                     post.publishedAt ? String(post.publishedAt) : undefined
                   }
+                  className="font-heading text-sm font-light"
                 >
                   {formatSerializedDate(toISOString(post.publishedAt))}
                 </time>
                 {post.author?.name ? (
                   <>
-                    <span aria-hidden="true">/</span>
-                    <span>{post.author.name}</span>
+                    <span aria-hidden="true" className="text-border">
+                      ·
+                    </span>
+                    <span className="text-sm">{post.author.name}</span>
                   </>
                 ) : null}
               </div>
 
-              <SanitizedHtml
-                html={post.contentHtml}
-                className="prose prose-lg max-w-none"
-              />
+              <Prose variant="editorial" className="max-w-none">
+                <SanitizedHtml html={post.contentHtml} />
+              </Prose>
 
               {post.postTags.length > 0 ? (
                 <div className="mt-12 border-t border-border pt-6">
@@ -119,7 +143,7 @@ export async function PostDetailPageContent({
                     {post.postTags.map((postTag) => (
                       <span
                         key={postTag.tag.slug}
-                        className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+                        className="border border-border px-3 py-1 text-xs text-muted-foreground"
                       >
                         {postTag.tag.name}
                       </span>

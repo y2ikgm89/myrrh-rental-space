@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { cn } from "@/shared/lib/cn";
 import { SidebarSearch } from "@/public/components/sidebar/sidebar-search";
 import { SidebarRecentPosts } from "@/public/components/sidebar/sidebar-recent-posts";
 import { SidebarPopularPosts } from "@/public/components/sidebar/sidebar-popular-posts";
@@ -44,9 +45,14 @@ export function BlogSidebar({ widgets, data }: BlogSidebarProps): ReactElement {
 
   return (
     <aside aria-label="ブログサイドバー" className="hidden lg:block">
-      <div className="sticky top-[calc(var(--header-height)+2rem)] space-y-8">
-        {enabledWidgets.map((widget) => (
-          <div key={getWidgetKey(widget)}>{renderWidget(widget, data)}</div>
+      <div className="sticky top-[calc(var(--header-height)+2rem)]">
+        {enabledWidgets.map((widget, index) => (
+          <div
+            key={getWidgetKey(widget)}
+            className={cn(index > 0 && "mt-8 border-t border-border pt-8")}
+          >
+            {renderWidget(widget, data)}
+          </div>
         ))}
       </div>
     </aside>
