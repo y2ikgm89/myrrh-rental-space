@@ -47,6 +47,7 @@ export function CustomerEditForm({
         firstName: customer.firstName,
         lastNameKana: customer.lastNameKana ?? "",
         firstNameKana: customer.firstNameKana ?? "",
+        companyName: customer.companyName ?? "",
         email: customer.email,
         phoneNumber: customer.phoneNumber ?? "",
         address: customer.address ?? "",
@@ -65,6 +66,15 @@ export function CustomerEditForm({
     control: form.control,
     name: "customerType",
   });
+
+  function handleCustomerTypeChange(value: string) {
+    if (!isValidCustomerType(value)) return;
+    setValue("customerType", value, { shouldDirty: true });
+    if (value === CustomerType.PERSONAL) {
+      setValue("companyName", "");
+      form.clearErrors("companyName");
+    }
+  }
 
   // IME 自動カナ入力（既存データで初期化）
   const lastNameKanaInput = useKanaInput({
@@ -85,10 +95,7 @@ export function CustomerEditForm({
             <Label htmlFor="customerType">区分</Label>
             <Select
               value={customerType ?? CustomerType.PERSONAL}
-              onValueChange={(value) => {
-                if (isValidCustomerType(value))
-                  setValue("customerType", value, { shouldDirty: true });
-              }}
+              onValueChange={handleCustomerTypeChange}
             >
               <SelectTrigger id="customerType">
                 <SelectValue placeholder="区分を選択" />
@@ -194,6 +201,29 @@ export function CustomerEditForm({
               />
             </div>
           </div>
+
+          {/* 会社名・団体名（法人時のみ表示） */}
+          {customerType === CustomerType.CORPORATE && (
+            <div className="space-y-2">
+              <Label htmlFor="companyName">
+                会社名・団体名 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="companyName"
+                {...register("companyName")}
+                placeholder="株式会社〇〇"
+                aria-invalid={!!errors.companyName}
+                aria-describedby={
+                  errors.companyName ? "companyName-error" : undefined
+                }
+              />
+              {errors.companyName && (
+                <p id="companyName-error" className="text-xs text-destructive">
+                  {errors.companyName.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* メールアドレス */}
           <div className="space-y-2">
