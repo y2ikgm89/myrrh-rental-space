@@ -82,12 +82,25 @@ test.describe("Visual Regression - 公開ページ主要ルート", () => {
     });
   });
 
-  test("ジャーナル一覧ページ - full page snapshot", async ({ page }) => {
-    await page.goto(urls.journal);
+  test("ブログ一覧ページ - full page snapshot", async ({ page }) => {
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(500);
 
-    await expect(page).toHaveScreenshot("journal-list.png", {
+    await expect(page).toHaveScreenshot("posts-list.png", {
+      fullPage: true,
+      animations: "disabled",
+      mask: dynamicMaskLocators(page),
+      maxDiffPixelRatio: 0.01,
+    });
+  });
+
+  test("お知らせ一覧ページ - full page snapshot", async ({ page }) => {
+    await page.goto(urls.news);
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveScreenshot("news-list.png", {
       fullPage: true,
       animations: "disabled",
       mask: dynamicMaskLocators(page),

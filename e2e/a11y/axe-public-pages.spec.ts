@@ -95,10 +95,8 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
     ).toEqual([]);
   });
 
-  test("ジャーナル一覧ページに critical/serious 違反がない", async ({
-    page,
-  }) => {
-    await page.goto(urls.journal);
+  test("ブログ一覧ページに critical/serious 違反がない", async ({ page }) => {
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const results = await buildAxeScanner(page).analyze();
@@ -106,7 +104,20 @@ test.describe("a11y scan - 公開ページ主要ルート", () => {
 
     expect(
       blocking,
-      `Journal a11y violations:\n${formatAxeViolations(results.violations)}`,
+      `Posts a11y violations:\n${formatAxeViolations(results.violations)}`,
+    ).toEqual([]);
+  });
+
+  test("お知らせ一覧ページに critical/serious 違反がない", async ({ page }) => {
+    await page.goto(urls.news);
+    await page.waitForLoadState("networkidle");
+
+    const results = await buildAxeScanner(page).analyze();
+    const blocking = results.violations.filter(isBlocking);
+
+    expect(
+      blocking,
+      `News a11y violations:\n${formatAxeViolations(results.violations)}`,
     ).toEqual([]);
   });
 

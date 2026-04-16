@@ -21,14 +21,14 @@ import { urls } from "../fixtures";
 
 test.describe("ブログ一覧ページ - 基本表示", () => {
   test("ブログ一覧ページが正しく読み込まれる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     expect(page.url()).toContain("/blog");
   });
 
   test("ページタイトルが設定されている", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
 
     const title = await page.title();
     expect(title.length).toBeGreaterThan(0);
@@ -36,7 +36,7 @@ test.describe("ブログ一覧ページ - 基本表示", () => {
   });
 
   test("見出しが表示される", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const heading = page.locator("h1");
@@ -44,7 +44,7 @@ test.describe("ブログ一覧ページ - 基本表示", () => {
   });
 
   test("ブログ記事一覧が表示される", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // 記事カードまたはリストアイテムを確認
@@ -67,7 +67,7 @@ test.describe("ブログ一覧ページ - 基本表示", () => {
   });
 
   test("記事カードに必要な情報が含まれる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articles = page.locator('article, [data-testid="blog-card"]');
@@ -90,7 +90,7 @@ test.describe("ブログ一覧ページ - 基本表示", () => {
   });
 
   test("記事カードにサムネイルが表示される（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articles = page.locator('article, [data-testid="blog-card"]');
@@ -120,7 +120,7 @@ test.describe("ブログ一覧ページ - 基本表示", () => {
 
 test.describe("ブログ記事詳細ページ", () => {
   test("記事一覧から詳細ページに遷移できる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -138,7 +138,7 @@ test.describe("ブログ記事詳細ページ", () => {
   });
 
   test("記事詳細ページにタイトルが表示される", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -157,7 +157,7 @@ test.describe("ブログ記事詳細ページ", () => {
   });
 
   test("記事詳細ページに本文が表示される", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -178,7 +178,7 @@ test.describe("ブログ記事詳細ページ", () => {
   });
 
   test("記事詳細ページに公開日が表示される", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -202,7 +202,7 @@ test.describe("ブログ記事詳細ページ", () => {
   });
 
   test("記事詳細ページから一覧に戻れる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -244,7 +244,7 @@ test.describe("ブログ記事詳細ページ", () => {
 
 test.describe("ブログ一覧 - カテゴリフィルター", () => {
   test("カテゴリリンクが表示される（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // カテゴリナビゲーションまたはフィルター
@@ -259,7 +259,7 @@ test.describe("ブログ一覧 - カテゴリフィルター", () => {
   });
 
   test("カテゴリでフィルターできる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const categoryLink = page.locator('a[href*="/blog/category"]').first();
@@ -277,7 +277,7 @@ test.describe("ブログ一覧 - カテゴリフィルター", () => {
   });
 
   test("タグでフィルターできる（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const tagLink = page.locator('a[href*="/blog/tag"]').first();
@@ -301,7 +301,7 @@ test.describe("ブログ一覧 - カテゴリフィルター", () => {
 
 test.describe("ブログ一覧 - ページネーション", () => {
   test("ページネーションが表示される（記事が多い場合）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // ページネーションコンポーネント
@@ -316,7 +316,7 @@ test.describe("ブログ一覧 - ページネーション", () => {
   });
 
   test("次のページに移動できる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const nextButton = page.locator(
@@ -339,7 +339,7 @@ test.describe("ブログ一覧 - ページネーション", () => {
   });
 
   test("ページ番号をクリックして移動できる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const pageNumber = page
@@ -364,7 +364,7 @@ test.describe("ブログ一覧 - ページネーション", () => {
 
 test.describe("ブログ一覧 - 検索機能", () => {
   test("検索フォームが表示される（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const searchInput = page.locator(
@@ -377,7 +377,7 @@ test.describe("ブログ一覧 - 検索機能", () => {
   });
 
   test("検索を実行できる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const searchInput = page
@@ -406,7 +406,7 @@ test.describe("ブログ一覧 - 検索機能", () => {
 test.describe("ブログページ - レスポンシブ", () => {
   test("モバイルビューで一覧ページが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const main = page.locator("main");
@@ -415,7 +415,7 @@ test.describe("ブログページ - レスポンシブ", () => {
 
   test("モバイルビューで記事カードが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articles = page.locator('article, [data-testid="blog-card"]');
@@ -427,7 +427,7 @@ test.describe("ブログページ - レスポンシブ", () => {
 
   test("タブレットビューで一覧ページが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const main = page.locator("main");
@@ -436,7 +436,7 @@ test.describe("ブログページ - レスポンシブ", () => {
 
   test("モバイルビューで記事詳細ページが表示される", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -460,7 +460,7 @@ test.describe("ブログページ - レスポンシブ", () => {
 
 test.describe("ブログページ - SEO/OGP", () => {
   test("一覧ページにメタディスクリプションがある", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
 
     const metaDescription = page.locator('meta[name="description"]');
     const content = await metaDescription.getAttribute("content");
@@ -470,7 +470,7 @@ test.describe("ブログページ - SEO/OGP", () => {
   });
 
   test("記事詳細ページにOGPタグがある", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -495,7 +495,7 @@ test.describe("ブログページ - SEO/OGP", () => {
   });
 
   test("記事詳細ページにcanonical URLがある", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -523,7 +523,7 @@ test.describe("ブログページ - SEO/OGP", () => {
 
 test.describe("ブログページ - アクセシビリティ", () => {
   test("一覧ページにmain要素が1つ存在する", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
 
     const mainElements = page.locator("main");
     const count = await mainElements.count();
@@ -532,7 +532,7 @@ test.describe("ブログページ - アクセシビリティ", () => {
   });
 
   test("記事リンクがキーボードでアクセスできる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // Tabキーで移動
@@ -546,7 +546,7 @@ test.describe("ブログページ - アクセシビリティ", () => {
   });
 
   test("画像にalt属性がある", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const images = page.locator('article img, [data-testid="blog-card"] img');
@@ -562,7 +562,7 @@ test.describe("ブログページ - アクセシビリティ", () => {
   });
 
   test("見出し階層が正しい", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // h1が存在することを確認
@@ -581,7 +581,7 @@ test.describe("ブログページ - パフォーマンス", () => {
   test("一覧ページが5秒以内に読み込まれる", async ({ page }) => {
     const startTime = Date.now();
 
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("domcontentloaded");
 
     const loadTime = Date.now() - startTime;
@@ -590,7 +590,7 @@ test.describe("ブログページ - パフォーマンス", () => {
   });
 
   test("記事詳細ページが5秒以内に読み込まれる", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -623,7 +623,7 @@ test.describe("ブログページ - エラーハンドリング", () => {
       errors.push(error.message);
     });
 
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     expect(errors.length).toBe(0);
@@ -638,7 +638,7 @@ test.describe("ブログページ - エラーハンドリング", () => {
       }
     });
 
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     // 致命的なエラーを除外
@@ -659,7 +659,7 @@ test.describe("ブログページ - エラーハンドリング", () => {
 
 test.describe("ブログ記事 - コメント機能", () => {
   test("コメントセクションが表示される（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
@@ -683,7 +683,7 @@ test.describe("ブログ記事 - コメント機能", () => {
   });
 
   test("コメントフォームが表示される（あれば）", async ({ page }) => {
-    await page.goto(urls.blog);
+    await page.goto(urls.posts);
     await page.waitForLoadState("networkidle");
 
     const articleLink = page.locator('a[href*="/blog/"]').first();
