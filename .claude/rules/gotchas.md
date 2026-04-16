@@ -155,6 +155,7 @@ paths:
 - **SC children を CC 内でタブ切替する場合は CSS `hidden` を使用** — CC 内で SC を条件レンダリング（三項演算子）すると SC が再評価される。page.tsx から両ビューを props で渡し、`className={activeView !== "x" ? "hidden" : undefined}` で DOM を保持したまま表示切替。実装例: `events/_components/events-view-switcher.tsx`
 - **公開詳細ページは `PageLayout variant="content"` + `PageHero variant="compact"` + `Section` を使用** — `events/[slug]`, `terms/[slug]`, `spaces/[slug]` で統一。手動 `<section>` + `<>...</>` ラッパーは禁止。hero/cta は `PageLayout` の props に渡す
 - **`/posts` はブログ一覧、`/news` はお知らせ一覧** — 各詳細ページ（`/news/[slug]`、`/posts/[...segments]`）も個別に維持。`/journal` は廃止済み
+- **`SearchBar` は `searchFilterParsers`（q + page）固定** — ページ固有のパーサー（`postsSearchParamsParsers` の `category` 等）とは別だが、nuqs の `useQueryStates` は設定キーのみ更新し他キーは保持するため共存可能。`SearchBar` を流用する場合にパーサー統一は不要
 - **`PageContent` モデルは廃止済み** — 全ページが `Page` + `Section` で管理。`getPageContent()` / `simplePageContentSchema` / `defaultXxxContent` は全て削除済み。公開ページは `getPageSectionsWithFallback(slug)` + `SectionRenderer` を使用
 - **セクションタイプは kebab-case 文字列** — DB の `Section.type` は `String @db.VarChar(64)`。`"hero-parallax"` 等。`SectionType` Prisma enum は廃止済み（`section.ts` の `as const` オブジェクトとして再定義）
 - **新セクションタイプ追加は `definitions/` ディレクトリ作成のみ** — `schema.ts` + `metadata.ts` + `registry.ts` への import 追加。Prisma マイグレーション不要。`/create-section-type` スキルで自動生成可能
