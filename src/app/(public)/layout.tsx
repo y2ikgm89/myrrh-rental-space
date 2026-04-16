@@ -76,6 +76,11 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_DEFAULTS.name}`,
   },
   description: SITE_DEFAULTS.description,
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed.xml",
+    },
+  },
 };
 
 export async function generateViewport(): Promise<Viewport> {
