@@ -1,9 +1,10 @@
 import { describe, test, expect } from "bun:test";
+import { CustomerType } from "@generated/prisma/enums";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 
 describe("publicInquirySchema", () => {
   const VALID_PERSONAL = {
-    customerType: "personal" as const,
+    customerType: CustomerType.PERSONAL,
     lastName: "山田",
     firstName: "太郎",
     email: "test@example.com",
@@ -13,7 +14,7 @@ describe("publicInquirySchema", () => {
 
   const VALID_CORPORATE = {
     ...VALID_PERSONAL,
-    customerType: "corporate" as const,
+    customerType: CustomerType.CORPORATE,
     companyName: "株式会社テスト",
   };
 

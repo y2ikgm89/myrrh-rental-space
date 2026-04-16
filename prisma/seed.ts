@@ -23,6 +23,7 @@ import {
   PrismaClient,
   Prisma,
   Role,
+  CustomerType,
   EventStatus,
   RegistrationStatus,
   TermsType,
@@ -906,6 +907,7 @@ async function seedCustomers() {
     {
       lastName: "田村",
       firstName: "健一",
+      customerType: CustomerType.CORPORATE,
       companyName: "株式会社ABC",
       email: "tamura@abc-corp.example.com",
       phoneNumber: "03-1234-5678",
@@ -916,6 +918,7 @@ async function seedCustomers() {
     {
       lastName: "森田",
       firstName: "裕子",
+      customerType: CustomerType.CORPORATE,
       companyName: "合同会社XYZ",
       email: "morita@xyz-llc.example.com",
       phoneNumber: "03-9876-5432",
@@ -926,6 +929,7 @@ async function seedCustomers() {
     {
       lastName: "西村",
       firstName: "誠",
+      customerType: CustomerType.CORPORATE,
       companyName: "有限会社サンプル",
       email: "nishimura@sample.example.com",
       phoneNumber: "03-1111-2222",
@@ -936,6 +940,7 @@ async function seedCustomers() {
     {
       lastName: "村上",
       firstName: "恵美",
+      customerType: CustomerType.CORPORATE,
       companyName: "NPO法人地域支援",
       email: "murakami@npo.example.com",
       phoneNumber: "03-3333-4444",
@@ -2061,28 +2066,25 @@ async function seedFaq() {
       items: [
         {
           question: "予約はどのくらい前からできますか？",
-          answerHtml:
-            "<p>ご予約は<strong>3ヶ月前</strong>から承っております。</p>",
+          answer: "ご予約は3ヶ月前から承っております。",
         },
         {
           question: "予約のキャンセルはできますか？",
-          answerHtml:
-            "<p>はい、可能です。キャンセル規定は7日前まで無料、3日前まで50%、前日・当日100%となります。</p>",
+          answer:
+            "はい、可能です。キャンセル規定は7日前まで無料、3日前まで50%、前日・当日100%となります。",
         },
         {
           question: "予約の変更はできますか？",
-          answerHtml:
-            "<p>日時・スペースの変更は<strong>3日前まで</strong>無料で承ります。</p>",
+          answer: "日時・スペースの変更は3日前まで無料で承ります。",
         },
         {
           question: "当日予約は可能ですか？",
-          answerHtml:
-            "<p>空き状況によっては可能です。お電話にてお問い合わせください。</p>",
+          answer:
+            "空き状況によっては可能です。お電話にてお問い合わせください。",
         },
         {
           question: "定期利用の割引はありますか？",
-          answerHtml:
-            "<p>月4回以上のご利用で<strong>10%OFF</strong>、月8回以上で<strong>15%OFF</strong>となります。</p>",
+          answer: "月4回以上のご利用で10%OFF、月8回以上で15%OFFとなります。",
         },
       ],
     },
@@ -2096,20 +2098,20 @@ async function seedFaq() {
       items: [
         {
           question: "支払い方法は何がありますか？",
-          answerHtml:
-            "<p>クレジットカード、銀行振込、請求書払い（法人のみ）に対応しております。</p>",
+          answer:
+            "クレジットカード、銀行振込、請求書払い（法人のみ）に対応しております。",
         },
         {
           question: "領収書は発行できますか？",
-          answerHtml: "<p>はい、マイページよりダウンロードいただけます。</p>",
+          answer: "はい、マイページよりダウンロードいただけます。",
         },
         {
           question: "請求書払いは可能ですか？",
-          answerHtml: "<p>法人のお客様に限り対応しております。</p>",
+          answer: "法人のお客様に限り対応しております。",
         },
         {
           question: "延長料金はいくらですか？",
-          answerHtml: "<p>30分単位で、通常の時間料金の50%となります。</p>",
+          answer: "30分単位で、通常の時間料金の50%となります。",
         },
       ],
     },
@@ -2123,26 +2125,24 @@ async function seedFaq() {
       items: [
         {
           question: "Wi-Fiは利用できますか？",
-          answerHtml:
-            "<p>はい、全スペースで<strong>高速Wi-Fi</strong>を無料でご利用いただけます。</p>",
+          answer: "はい、全スペースで高速Wi-Fiを無料でご利用いただけます。",
         },
         {
           question: "プロジェクターの持ち込みは可能ですか？",
-          answerHtml:
-            "<p>可能ですが、各スペースにプロジェクターを完備しております。</p>",
+          answer: "可能ですが、各スペースにプロジェクターを完備しております。",
         },
         {
           question: "飲食の持ち込みはできますか？",
-          answerHtml: "<p>はい、可能です。ゴミはお持ち帰りください。</p>",
+          answer: "はい、可能です。ゴミはお持ち帰りください。",
         },
         {
           question: "ホワイトボードはありますか？",
-          answerHtml: "<p>全ての会議室・セミナールームに完備しております。</p>",
+          answer: "全ての会議室・セミナールームに完備しております。",
         },
         {
           question: "電源・延長コードは使えますか？",
-          answerHtml:
-            "<p>各席に電源コンセントを完備しております。延長コードも無料貸出しております。</p>",
+          answer:
+            "各席に電源コンセントを完備しております。延長コードも無料貸出しております。",
         },
       ],
     },
@@ -2170,8 +2170,7 @@ async function seedFaq() {
           data: {
             categoryId: faqCategory.id,
             question: item.question,
-            answerHtml: item.answerHtml,
-            answerPlainText: stripHtmlToText(item.answerHtml, 200),
+            answer: item.answer,
             order: i,
             isPublished: true,
             publishedAt: new Date(),
