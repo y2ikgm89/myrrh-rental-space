@@ -68,6 +68,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **server-only チェーン内の定数を Client Component から import 禁止** — client-safe ファイルに分離して server-only モジュールが re-export するパターンを使う（`admin-roles.ts` / `admin-resources.ts` 参照）
 - **管理画面のアクションボタン（新規作成等）はページヘッダー右端に配置** — タブ行内配置禁止。タブ別にボタンが変わる場合はラベルを明示して分岐（`spaces/page.tsx` `HeaderAction` 参照）
 - **enum 依存の条件フィールドは `useWatch` + 条件レンダリング** — `customerType === CORPORATE` で会社名表示等。切替時に `setValue("field", "")` + `form.clearErrors("field")` でクリア。公開フォーム・管理フォーム・マイページで同一パターンを適用（`contact-form.tsx` / `CustomerForm.tsx` / `profile-form.tsx` 参照）
+- **外部 API 統合は retry + idempotency の SSoT ヘルパー経由必須** — `resend.emails.send()` は `sendEmail()`（`@/shared/lib/email/send.ts`）、Google Calendar API は `withGoogleApiRetry()`（`@/shared/lib/google-calendar/retry.ts`）。直接 SDK メソッド呼び出しは接続テスト / OAuth 初期化のみ例外（→ `external-api-retry-patterns.md`）
 
 ## プロセスルール
 

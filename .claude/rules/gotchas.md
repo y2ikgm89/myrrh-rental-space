@@ -217,6 +217,9 @@ paths:
 
 - **`prisma.$transaction([...])` 配列形式は pg deprecation を誘発するため禁止** — `@prisma/adapter-pg` 7.7.0 + `pg` 8.20.0 の組み合わせで、pinned PoolClient 上に `BEGIN + N queries + COMMIT` が積まれる瞬間に `pg/lib/client.js:690` の `_queryQueue.length > 0` チェックが発火し `Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0` を emit する。独立クエリは `Promise.all`、原子性必須は interactive transaction `prisma.$transaction(async (tx) => { ... })` を使う。ESLint `no-restricted-syntax` で error 検出。例外: `prisma/seed.ts` の一括 `deleteMany`（実行回数限定・原子性必須）
 - **`PrismaPg` は explicit `Pool` インスタンスを渡す** — `new PrismaPg({ connectionString, max, ... })` のように config 渡しだと `PrismaPgAdapterFactory.connect()` の内部で `new pg2.Pool(config)` が呼ばれるたびに新しい Pool を作る（`node_modules/@prisma/adapter-pg/dist/index.mjs:752`）。`new Pool(...)` を渡すと `externalPool` 経路で 1 Pool が再利用される。`src/shared/db/prisma.ts` が dev global singleton で保持
+- **Prisma 7.7 の `pg Pool` v7 デフォルト（idle 10s / connect 0s）は Cloud Run で早期切断** — コールドスタート直後に接続が切れる。公式の v6 互換推奨値 `connectionTimeoutMillis: 5_000` / `idleTimeoutMillis: 300_000` を明示指定する（`src/shared/db/prisma.ts` 参照実装）
+- **Prisma Client singleton は `globalThis as unknown as { prisma? }` パターン** — `declare global { var prisma }` 形式は Prisma 7 公式推奨から外れている（Next.js 公式ドキュメント準拠）。`globalStore` キャスト経由で `pgPool` も同居させる
+- **Prisma `log` 設定は本番 `["error"]` / dev `["warn", "error"]`** — `"query"` は dev でもノイズが大きく、`info` 以上で serialize 可能な値が少ないため除外。本番は必ず `error` のみ
 - **`@types/pg` のネスト衝突**: `@prisma/adapter-pg` が内部で `@types/pg@8.11.x` を依存に持ち、project の `@types/pg@8.20.x` と `Client.connect()` 戻り値型が非互換。`package.json` の `overrides: { "@types/pg": "^8.20.0" }` で強制統一
 - **`node_modules/@prisma/client/` が空になる（runtime ファイル消失）** — worktree の install や branch 切替後に `@prisma/client/runtime/client.d.ts` 等が消えることがある。generated client は `@prisma/client/runtime/client` を import するため型推論が崩壊し、`bun run type-check` で Prisma 型が `never` に解決される大量エラー（例: `Property 'facilities' does not exist on type 'never'`、`Parameter 'space' implicitly has an 'any' type`）が発生する。`skipLibCheck: true` のため silent fail で `any` フォールバック。**復旧**: `bun install @prisma/client` を単独実行（1 コマンド、1-2 秒）。再発時は同じ対処で復旧。根本原因は bun の workspace hoist の不安定性で、`bun.lock` 変更なしで復旧するため commit 不要
 
@@ -368,6 +371,13 @@ paths:
 - **`proxy.ts` の `timingSafeEqual` はシークレット比較の標準** — Cron / Webhook のトークン比較に使用。`!==` による文字列比較はタイミング攻撃に脆弱。新規トークン比較追加時も同関数を使う
 - **dev 便利バイパスには本番ガード必須** — Turnstile / Cron で `if (!secret) return true` パターンは `process.env["NODE_ENV"] === "production"` で本番を保護。staging 環境も保護対象
 - **空配列フォールバック `|| arr.length === 0` で全許可にしない** — `ALLOWED_MIME_TYPES.OTHER = []` + `|| allowedTypes.length === 0` で全 MIME 通過していた。空配列は「何も許可しない」を意味すべき
+
+## 外部 API 統合
+
+- **Resend SDK の `emails.send()` 直接呼び出し禁止** — `@/shared/lib/email/send.ts` の `sendEmail()` 経由のみ。idempotency key + exponential backoff retry（429/500/503）が自動適用される。接続テスト `api-keys/resend.ts` の `domains.list()` のみ例外（単発検証）
+- **Google Calendar API 呼び出しは `withGoogleApiRetry()` 必須** — `@/shared/lib/google-calendar/retry.ts`。公式推奨の 429/500/503 + ネットワークエラー（ECONNRESET/ETIMEDOUT/EAI_AGAIN/ENOTFOUND/ECONNREFUSED）を exponential backoff（1s → 2s → 4s + jitter）で自動再試行。400/401/403/404/410 は即時失敗（公式準拠）。新規 API 呼び出し追加時は必ずラップする
+- **Resend `CreateEmailOptions` は discriminated union** — `Omit<CreateEmailOptions, "from"> + { ...payload, from }` は `exactOptionalPropertyTypes: true` 下で union 型を失うため、`as CreateEmailOptions` で SDK 境界 cast が許容される（`Prisma.InputJsonObject` と同じ扱い、`send.ts` 内の 1 箇所のみ）
+- **Resend idempotency key は 2 引数形式** — `resend.emails.send(payload, { idempotencyKey })` が Resend v6 公式推奨。payload 内 inline も動作するが公式ドキュメント準拠のため 2 引数形式に統一（`send.ts` 内部実装）。key 形式は `<event-type>/<entity-id>` + 24 時間有効、長い URL / email は `hashForKey()`（sha256 先頭 32 文字）でハッシュ化
 
 ## ナビゲーション
 

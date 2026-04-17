@@ -348,11 +348,11 @@ export default async function Page() {
 ## 型安全な Role 取得
 
 Better Auth の `additionalFields` は `string` 型で定義されるため、
-`getRoleFromSession` / `getSessionUser` で型安全に `Role` enum に変換する:
+`getAdminSessionUser` / `getCustomerSessionUser` で型安全に `Role` enum に変換する:
 
 ```typescript
 // 管理者用
-import { isValidRole, getAdminSessionUser } from "@/shared/lib/admin-auth";
+import { getAdminSessionUser } from "@/shared/lib/admin-auth";
 
 const user = getAdminSessionUser(session); // AdminUser | null
 
@@ -361,7 +361,9 @@ import { getCustomerSessionUser } from "@/shared/lib/customer-auth";
 
 const user = getCustomerSessionUser(session); // CustomerUser | null
 
-// isValidRole は両モジュールから export（同一実装）
+// isValidRole は SSoT に集約: @/shared/lib/validations/enums/guards
+// （旧 admin-auth.ts / customer-auth.ts の重複定義は削除済み）
+import { isValidRole } from "@/shared/lib/validations/enums/guards";
 if (isValidRole(session?.user?.role)) {
   const role = session.user.role; // Role 型に narrowed
 }
@@ -436,6 +438,11 @@ function logAction(
 
 6. **HOF（`withPermission` / `withReadPermission`）パターン禁止**
    - Turbopack HMR との互換性のため廃止済み
+
+7. **`isValidRole` / `VALID_ROLES` のローカル再定義禁止**
+   - SSoT は `@/shared/lib/validations/enums/guards.ts` のみ
+   - `admin-auth.ts` / `customer-auth.ts` 内の `getAdminSessionUser()` / `getCustomerSessionUser()` は guards.ts の `isValidRole` を import して使う
+   - 旧 API（`admin-auth.ts` / `customer-auth.ts` からの `isValidRole` export）は削除済み。復活させない
 
 ---
 
