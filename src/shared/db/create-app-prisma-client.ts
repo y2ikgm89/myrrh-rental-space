@@ -3,9 +3,25 @@
  *
  * Next の singleton（`prisma.ts`）と `prisma/seed.ts` の両方から同じ `$extends` を適用する。
  * これにより `AppPrismaClient` が一意になり、seed とアプリで型・挙動が揃う。
+ *
+ * @see https://www.prisma.io/docs/orm/prisma-client/client-extensions/result
  */
 
 import { PrismaClient } from "@generated/prisma/client";
+
+type DecimalLike = { toString(): string } | null | undefined;
+
+/**
+ * Decimal フィールドを number に変換する result 拡張の factory。
+ * Prisma の `$extends` API が `needs` の型推論を行えるようにモデル名毎にインライン展開する。
+ */
+function decimalToNumber(value: DecimalLike): number | null {
+  return value ? Number(value) : null;
+}
+
+function decimalToNumberStrict(value: DecimalLike): number {
+  return Number(value);
+}
 
 export function createAppPrismaClient(base: PrismaClient) {
   return base.$extends({
@@ -13,133 +29,83 @@ export function createAppPrismaClient(base: PrismaClient) {
       reservation: {
         totalPrice: {
           needs: { totalPrice: true },
-          compute(reservation) {
-            return reservation.totalPrice
-              ? Number(reservation.totalPrice)
-              : null;
-          },
+          compute: (r) => decimalToNumber(r.totalPrice),
         },
         basePrice: {
           needs: { basePrice: true },
-          compute(reservation) {
-            return reservation.basePrice ? Number(reservation.basePrice) : null;
-          },
+          compute: (r) => decimalToNumber(r.basePrice),
         },
         couponDiscountAmount: {
           needs: { couponDiscountAmount: true },
-          compute(reservation) {
-            return reservation.couponDiscountAmount
-              ? Number(reservation.couponDiscountAmount)
-              : null;
-          },
+          compute: (r) => decimalToNumber(r.couponDiscountAmount),
         },
         durationDiscountAmount: {
           needs: { durationDiscountAmount: true },
-          compute(reservation) {
-            return reservation.durationDiscountAmount
-              ? Number(reservation.durationDiscountAmount)
-              : null;
-          },
+          compute: (r) => decimalToNumber(r.durationDiscountAmount),
         },
         spaceDiscountAmount: {
           needs: { spaceDiscountAmount: true },
-          compute(reservation) {
-            return reservation.spaceDiscountAmount
-              ? Number(reservation.spaceDiscountAmount)
-              : null;
-          },
+          compute: (r) => decimalToNumber(r.spaceDiscountAmount),
         },
         taxRate: {
           needs: { taxRate: true },
-          compute(reservation) {
-            return reservation.taxRate ? Number(reservation.taxRate) : null;
-          },
+          compute: (r) => decimalToNumber(r.taxRate),
         },
         taxAmount: {
           needs: { taxAmount: true },
-          compute(reservation) {
-            return reservation.taxAmount ? Number(reservation.taxAmount) : null;
-          },
+          compute: (r) => decimalToNumber(r.taxAmount),
         },
         totalPriceWithTax: {
           needs: { totalPriceWithTax: true },
-          compute(reservation) {
-            return reservation.totalPriceWithTax
-              ? Number(reservation.totalPriceWithTax)
-              : null;
-          },
+          compute: (r) => decimalToNumber(r.totalPriceWithTax),
         },
       },
       space: {
         area: {
           needs: { area: true },
-          compute(space) {
-            return space.area ? Number(space.area) : null;
-          },
+          compute: (s) => decimalToNumber(s.area),
         },
         hourlyPrice: {
           needs: { hourlyPrice: true },
-          compute(space) {
-            return Number(space.hourlyPrice);
-          },
+          compute: (s) => decimalToNumberStrict(s.hourlyPrice),
         },
         dailyPrice: {
           needs: { dailyPrice: true },
-          compute(space) {
-            return space.dailyPrice ? Number(space.dailyPrice) : null;
-          },
+          compute: (s) => decimalToNumber(s.dailyPrice),
         },
         discountValue: {
           needs: { discountValue: true },
-          compute(space) {
-            return space.discountValue ? Number(space.discountValue) : null;
-          },
+          compute: (s) => decimalToNumber(s.discountValue),
         },
       },
       customer: {
         totalSpent: {
           needs: { totalSpent: true },
-          compute(customer) {
-            return customer.totalSpent ? Number(customer.totalSpent) : null;
-          },
+          compute: (c) => decimalToNumber(c.totalSpent),
         },
       },
       settings: {
         taxStandardRate: {
           needs: { taxStandardRate: true },
-          compute(settings) {
-            return Number(settings.taxStandardRate);
-          },
+          compute: (s) => decimalToNumberStrict(s.taxStandardRate),
         },
         taxReducedRate: {
           needs: { taxReducedRate: true },
-          compute(settings) {
-            return Number(settings.taxReducedRate);
-          },
+          compute: (s) => decimalToNumberStrict(s.taxReducedRate),
         },
       },
       coupon: {
         discountValue: {
           needs: { discountValue: true },
-          compute(coupon) {
-            return Number(coupon.discountValue);
-          },
+          compute: (c) => decimalToNumberStrict(c.discountValue),
         },
         minReservationAmount: {
           needs: { minReservationAmount: true },
-          compute(coupon) {
-            return coupon.minReservationAmount
-              ? Number(coupon.minReservationAmount)
-              : null;
-          },
+          compute: (c) => decimalToNumber(c.minReservationAmount),
         },
         maxDiscountAmount: {
           needs: { maxDiscountAmount: true },
-          compute(coupon) {
-            return coupon.maxDiscountAmount
-              ? Number(coupon.maxDiscountAmount)
-              : null;
-          },
+          compute: (c) => decimalToNumber(c.maxDiscountAmount),
         },
       },
     },

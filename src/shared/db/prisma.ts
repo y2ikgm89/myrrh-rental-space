@@ -1,8 +1,13 @@
 /**
- * Prisma Client Singleton
+ * Prisma Client Singleton（Prisma 7.7 / adapter-pg / Next.js 16 公式推奨パターン）
  *
- * Prisma 7 では接続リークを防ぐため、シングルトンパターンで実装します。
- * 開発環境では Hot Reload 時に新しいインスタンスが作成されないようにします。
+ * - `globalThis` を使った singleton（hot reload 時のコネクションリーク防止）
+ * - `adapter-pg` には外部 `Pool` を渡して `externalPool` 経路に入れる（毎接続での新 Pool 生成を防止）
+ * - v6 互換のタイムアウト設定を採用（v7 デフォルトの 10s idle は短すぎて Vercel/Cloud Run で早期切断される）
+ * - Better Auth には素の `PrismaClient` を渡す（Decimal 拡張干渉を防ぐため）
+ *
+ * @see https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections/connection-pool
+ * @see https://www.prisma.io/docs/ai/prompts/nextjs
  */
 
 import "server-only";
@@ -25,8 +30,7 @@ import { createAppPrismaClient } from "./create-app-prisma-client";
 export type { AppPrismaClient } from "./create-app-prisma-client";
 
 /**
- * Decimal → number 変換ユーティリティ型
- * Decimal型のみを変換し、他の型はそのまま保持する
+ * Decimal → number 変換ユーティリティ型（`createAppPrismaClient` の runtime 挙動に整合）
  */
 type ConvertDecimalFields<T> = {
   [K in keyof T]: T[K] extends Decimal
@@ -36,82 +40,79 @@ type ConvertDecimalFields<T> = {
       : T[K];
 };
 
-/**
- * Extended Prisma types with Decimal converted to number
- */
+/** Decimal → number 変換済みの型エイリアス */
 export type Space = ConvertDecimalFields<PrismaSpace>;
 export type Reservation = ConvertDecimalFields<PrismaReservation>;
 export type Customer = ConvertDecimalFields<PrismaCustomer>;
 export type Settings = ConvertDecimalFields<PrismaSettings>;
 export type Coupon = ConvertDecimalFields<PrismaCoupon>;
 
-// pg Pool singleton
-//
-// PrismaPg のコンストラクタに config object を渡すと、`connect()` が呼ばれる
-// たびに新しい Pool インスタンスを生成する（adapter-pg 7.7.0 の実装詳細）。
-// 既存の Pool インスタンスを渡すことで externalPool 経路に入り、1 つの
-// Pool が再利用される。max は Suspense ファンアウトと $transaction バッチを
-// 余裕で捌けるサイズにしておく（デフォルト 10）。
-const globalForPg = globalThis as unknown as { pgPool?: Pool };
+// ---------------------------------------------------------------------------
+// Singleton: pg Pool + PrismaClient
+// ---------------------------------------------------------------------------
 
+type GlobalStore = {
+  pgPool?: Pool;
+  prisma?: PrismaClient;
+};
+
+const globalStore = globalThis as unknown as GlobalStore;
+const isProduction = serverEnv.NODE_ENV === "production";
+
+/**
+ * pg Pool singleton
+ *
+ * `PrismaPg({ connectionString })` 形式だと `connect()` 毎に新 Pool が作られる
+ * （adapter-pg 7.7 の実装詳細）。明示的な `Pool` インスタンスを渡すことで
+ * externalPool 経路に入り、1 Pool が再利用される。
+ *
+ * タイムアウト値は Prisma 公式の「v6 互換」推奨値に準拠:
+ * - `connectionTimeoutMillis: 5_000` (v6 connect_timeout)
+ * - `idleTimeoutMillis: 300_000` (v6 max_idle_connection_lifetime)
+ * v7 デフォルト（idle 10s）は短すぎて Cloud Run のコールドスタート直後に切断される。
+ */
 const pgPool =
-  globalForPg.pgPool ??
+  globalStore.pgPool ??
   new Pool({
     connectionString: serverEnv.DATABASE_URL,
-    connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5_000,
+    idleTimeoutMillis: 300_000,
     max: serverEnv.DATABASE_POOL_MAX ?? 10,
   });
 
-if (serverEnv.NODE_ENV !== "production") {
-  globalForPg.pgPool = pgPool;
+if (!isProduction) {
+  globalStore.pgPool = pgPool;
 }
 
 const adapter = new PrismaPg(pgPool);
 
-// 開発環境 hot reload 用のシングルトン保持。型宣言は実体所有者であるこの
-// ファイル内で完結させる（global.d.ts に PrismaClient を import すると
-// gateway 経由で client bundle に node 依存が漏れるリスクを生む）。
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-
-const globalForPrisma = globalThis;
-
 /**
- * Base Prisma Client インスタンス
+ * Base PrismaClient（$extends 前の素のクライアント）
  *
- * - 開発環境: グローバル変数に保存して再利用
- * - 本番環境: 新しいインスタンスを作成
+ * 本番ではクエリログを有効化しない（パフォーマンス・ログサイズ両方のコスト）。
+ * 開発環境でも `query` ログはノイズが大きいため `warn` + `error` に限定する。
  */
 const basePrisma =
-  globalForPrisma.prisma ??
+  globalStore.prisma ??
   new PrismaClient({
     adapter,
-    log:
-      serverEnv.NODE_ENV === "development"
-        ? ["query", "error", "warn"]
-        : ["error"],
+    log: isProduction ? ["error"] : ["warn", "error"],
   });
 
-// 開発環境ではグローバル変数に保存
-if (serverEnv.NODE_ENV !== "production") {
-  globalForPrisma.prisma = basePrisma;
+if (!isProduction) {
+  globalStore.prisma = basePrisma;
 }
 
 /**
- * 拡張前の素の PrismaClient
+ * 拡張前の素の PrismaClient（Better Auth アダプター専用）
  *
- * Better Auth アダプター専用。$extends 済みの `prisma` を認証アダプターに
- * 渡すと Decimal 変換や joins が干渉するため、素のクライアントを使う。
+ * $extends 済み `prisma` は Decimal 変換が認証アダプターと干渉するため使わない。
  */
 export { basePrisma };
 
 /**
- * Prisma Client with Decimal to Number conversion
+ * アプリ標準の PrismaClient（Decimal → number 変換済み）
  *
- * `createAppPrismaClient` で拡張（`prisma/seed.ts` と同一設定）
+ * `createAppPrismaClient` で `$extends` を適用（seed と共通実装）。
  */
-const prisma = createAppPrismaClient(basePrisma);
-
-export { prisma };
+export const prisma = createAppPrismaClient(basePrisma);
