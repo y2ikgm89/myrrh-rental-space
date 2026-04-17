@@ -1,84 +1,71 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Heading, Hr, Section, Text } from "@react-email/components";
+import { EmailLayout } from "./_layout";
 
 type Props = {
-  customerName: string;
   spaceName: string;
   reservationDate: string;
   startTime: string;
   endTime: string;
   reservationId: string;
+  greeting: string;
+  intro: string;
+  outro: string;
+  preview: string;
+  companyName: string;
+  footerNote?: string;
+  supportContactText?: string;
 };
 
 export function ReservationCancelledEmail({
-  customerName,
   spaceName,
   reservationDate,
   startTime,
   endTime,
   reservationId,
+  greeting,
+  intro,
+  outro,
+  preview,
+  companyName,
+  footerNote,
+  supportContactText,
 }: Props) {
   return (
-    <Html>
-      <Head />
-      <Preview>予約キャンセルのお知らせ - {spaceName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>予約キャンセルのお知らせ</Heading>
+    <EmailLayout
+      preview={preview}
+      companyName={companyName}
+      footerNote={footerNote}
+      supportContactText={supportContactText}
+    >
+      <Heading style={heading}>予約キャンセルのお知らせ</Heading>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{greeting}</Text>
 
-          <Text style={text}>以下のご予約がキャンセルされました。</Text>
+      <Text style={text}>{intro}</Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>キャンセルされた予約</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>予約番号:</strong> {reservationId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {reservationDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>時間:</strong> {startTime} - {endTime}
-            </Text>
-          </Section>
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>キャンセルされた予約</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>予約番号:</strong> {reservationId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {reservationDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>時間:</strong> {startTime} - {endTime}
+        </Text>
+      </Section>
 
-          <Hr style={hr} />
+      <Hr style={hr} />
 
-          <Text style={text}>またのご利用をお待ちしております。</Text>
-
-          <Text style={footer}>Myrrh Rental Space</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>{outro}</Text>
+    </EmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
 
 const heading = {
   fontSize: "24px",
@@ -117,12 +104,6 @@ const detailItem = {
 const hr = {
   borderColor: "#e6e6e6",
   margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
 };
 
 export default ReservationCancelledEmail;

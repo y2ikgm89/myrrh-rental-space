@@ -1,16 +1,12 @@
 import {
-  Body,
-  Container,
-  Head,
   Heading,
   Hr,
-  Html,
-  Preview,
   Section,
   Text,
 } from "@react-email/components";
 import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import { EmailLayout } from "./_layout";
 
 type StatusBadgeColors = {
   color: string;
@@ -31,7 +27,6 @@ const DEFAULT_BADGE_COLORS: StatusBadgeColors = {
 };
 
 type ReservationStatusChangedEmailProps = {
-  customerName: string;
   spaceName: string;
   reservationDate: string;
   startTime: string;
@@ -40,10 +35,16 @@ type ReservationStatusChangedEmailProps = {
   reservationId: string;
   newStatus: string;
   location?: string;
+  greeting: string;
+  intro: string;
+  outro: string;
+  preview: string;
+  companyName: string;
+  footerNote?: string;
+  supportContactText?: string;
 };
 
 export function ReservationStatusChangedEmail({
-  customerName,
   spaceName,
   reservationDate,
   startTime,
@@ -52,6 +53,13 @@ export function ReservationStatusChangedEmail({
   reservationId,
   newStatus,
   location,
+  greeting,
+  intro,
+  outro,
+  preview,
+  companyName,
+  footerNote,
+  supportContactText,
 }: ReservationStatusChangedEmailProps) {
   const badgeColors = STATUS_BADGE_COLORS[newStatus] ?? DEFAULT_BADGE_COLORS;
   const statusLabel = isValidReservationStatus(newStatus)
@@ -59,82 +67,62 @@ export function ReservationStatusChangedEmail({
     : newStatus;
 
   return (
-    <Html>
-      <Head />
-      <Preview>予約ステータス更新のお知らせ - {spaceName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>予約ステータス更新のお知らせ</Heading>
+    <EmailLayout
+      preview={preview}
+      companyName={companyName}
+      footerNote={footerNote}
+      supportContactText={supportContactText}
+    >
+      <Heading style={heading}>予約ステータス更新のお知らせ</Heading>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{greeting}</Text>
 
-          <Text style={text}>
-            ご予約のステータスが更新されましたのでお知らせいたします。
+      <Text style={text}>{intro}</Text>
+
+      <Section style={statusSection}>
+        <Text style={statusLabel_style}>新しいステータス</Text>
+        <Text
+          style={{
+            ...statusBadge,
+            color: badgeColors.color,
+            backgroundColor: badgeColors.backgroundColor,
+          }}
+        >
+          {statusLabel}
+        </Text>
+      </Section>
+
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>予約詳細</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>予約番号:</strong> {reservationId}
+        </Text>
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        {location && (
+          <Text style={detailItem}>
+            <strong>場所:</strong> {location}
           </Text>
+        )}
+        <Text style={detailItem}>
+          <strong>日付:</strong> {reservationDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>時間:</strong> {startTime} - {endTime}
+        </Text>
+        <Text style={detailItem}>
+          <strong>料金:</strong> {totalPrice}
+        </Text>
+      </Section>
 
-          <Section style={statusSection}>
-            <Text style={statusLabel_style}>新しいステータス</Text>
-            <Text
-              style={{
-                ...statusBadge,
-                color: badgeColors.color,
-                backgroundColor: badgeColors.backgroundColor,
-              }}
-            >
-              {statusLabel}
-            </Text>
-          </Section>
+      <Hr style={hr} />
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>予約詳細</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>予約番号:</strong> {reservationId}
-            </Text>
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            {location && (
-              <Text style={detailItem}>
-                <strong>場所:</strong> {location}
-              </Text>
-            )}
-            <Text style={detailItem}>
-              <strong>日付:</strong> {reservationDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>時間:</strong> {startTime} - {endTime}
-            </Text>
-            <Text style={detailItem}>
-              <strong>料金:</strong> {totalPrice}
-            </Text>
-          </Section>
-
-          <Hr style={hr} />
-
-          <Text style={text}>
-            ご不明な点がございましたら、お気軽にお問い合わせください。
-          </Text>
-
-          <Text style={footer}>Myrrh Rental Space</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>{outro}</Text>
+    </EmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
 
 const heading = {
   fontSize: "24px",
@@ -193,12 +181,6 @@ const detailItem = {
 const hr = {
   borderColor: "#e6e6e6",
   margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
 };
 
 export default ReservationStatusChangedEmail;
