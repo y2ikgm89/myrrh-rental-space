@@ -2786,6 +2786,149 @@ async function seedEvents() {
   console.log(`✅ Created ${registrationCount.toString()} event registrations`);
 }
 
+async function seedEmailTemplates() {
+  await prisma.emailTemplate.deleteMany({});
+
+  const defaults = [
+    {
+      type: "reservation_confirmation",
+      subject: "【ご予約確認】{{spaceName}} - {{reservationDate}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "この度はご予約いただき、誠にありがとうございます。以下の内容でご予約を承りました。",
+      outro: "ご不明な点がございましたら、お気軽にお問い合わせください。",
+    },
+    {
+      type: "reservation_cancelled",
+      subject: "【予約キャンセル】{{spaceName}} - {{reservationDate}}",
+      greeting: "{{customerName}} 様",
+      intro: "下記のご予約がキャンセルされました。",
+      outro: "またのご利用を心よりお待ちしております。",
+    },
+    {
+      type: "reservation_status_changed",
+      subject: "【予約{{action}}】{{spaceName}} - {{reservationDate}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "ご予約のステータスが「{{previousStatus}}」から「{{newStatus}}」に変更されました。",
+      outro: "ご確認のほど、よろしくお願いいたします。",
+    },
+    {
+      type: "reservation_reminder",
+      subject: "【予約リマインダー】明日のご予約 - {{spaceName}}",
+      greeting: "{{customerName}} 様",
+      intro: "明日、ご予約の日です。以下の内容でお待ちしております。",
+      outro: "当日のご来場をお待ちしております。",
+    },
+    {
+      type: "reservation_updated",
+      subject: "【予約内容変更】{{spaceName}} - {{reservationDate}}",
+      greeting: "{{customerName}} 様",
+      intro: "ご予約の内容が変更されました。以下をご確認ください。",
+      outro: "ご不明な点がございましたら、お気軽にお問い合わせください。",
+    },
+    {
+      type: "admin_notification",
+      subject: "【新規予約】{{spaceName}} - {{customerName}}",
+      greeting: "管理者各位",
+      intro:
+        "新しい予約を受け付けました。以下のリンクから詳細をご確認ください。",
+      outro: "対応をお願いいたします。",
+    },
+    {
+      type: "event_registration_confirmation",
+      subject: "【イベント申込完了】{{eventTitle}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "この度はイベントにお申込みいただき、誠にありがとうございます。以下の内容で受け付けました。",
+      outro: "当日のご来場をお待ちしております。",
+    },
+    {
+      type: "event_registration_cancelled",
+      subject: "【イベント申込キャンセル】{{eventTitle}}",
+      greeting: "{{customerName}} 様",
+      intro: "下記のイベントお申込みがキャンセルされました。",
+      outro: "またのお申込みをお待ちしております。",
+    },
+    {
+      type: "event_admin_notification",
+      subject: "【新規イベント申込】{{eventTitle}} - {{customerName}}",
+      greeting: "管理者各位",
+      intro: "新しいイベント申込を受け付けました。",
+      outro: "対応をお願いいたします。",
+    },
+    {
+      type: "event_cancelled_notification",
+      subject: "【イベント中止】{{eventTitle}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "誠に申し訳ございませんが、下記のイベントは中止となりました。理由: {{reason}}",
+      outro: "またの機会にぜひご参加ください。",
+    },
+    {
+      type: "event_updated_notification",
+      subject: "【イベント内容変更】{{eventTitle}}",
+      greeting: "{{customerName}} 様",
+      intro: "下記のイベント内容が変更されました。{{changeSummary}}",
+      outro: "変更内容をご確認のうえ、引き続きご参加をお願いいたします。",
+    },
+    {
+      type: "contact_confirmation",
+      subject: "【お問い合わせ受付】{{inquirySubject}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "この度はお問い合わせいただき、誠にありがとうございます。以下の内容で受け付けました。",
+      outro: "担当者より順次ご返信いたしますので、今しばらくお待ちください。",
+    },
+    {
+      type: "inquiry_reply",
+      subject: "【お問い合わせへの返信】{{inquirySubject}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "お問い合わせいただいた件につきまして、以下のとおりご返信申し上げます。\n\n{{replyMessage}}",
+      outro: "引き続きよろしくお願いいたします。",
+    },
+    {
+      type: "review_reply",
+      subject: "【レビューへの返信】{{spaceName}}",
+      greeting: "{{customerName}} 様",
+      intro:
+        "この度はレビューをお寄せいただき、誠にありがとうございます。\n\n{{replyMessage}}",
+      outro: "またのご利用を心よりお待ちしております。",
+    },
+    {
+      type: "welcome",
+      subject: "ようこそ {{companyName}} へ",
+      greeting: "{{customerName}} 様",
+      intro:
+        "ご登録いただき、誠にありがとうございます。下記のリンクからログインできます。\n\n{{loginUrl}}",
+      outro: "ご不明な点がございましたら、お気軽にお問い合わせください。",
+    },
+    {
+      type: "password_reset",
+      subject: "【パスワードリセット】",
+      greeting: "{{customerName}} 様",
+      intro:
+        "パスワードリセットのリクエストを受け付けました。以下のリンクから {{expiresInHours}} 時間以内にパスワードを再設定してください。\n\n{{resetUrl}}",
+      outro: "心当たりがない場合は、このメールを破棄してください。",
+    },
+    {
+      type: "staff_invitation",
+      subject: "【スタッフ招待】管理画面へのアクセス",
+      greeting: "{{inviterName}} 様より招待が届きました",
+      intro:
+        "ロール「{{role}}」でご招待いたします。有効期限: {{expiresAt}}\n\n以下のリンクから参加してください。\n{{invitationUrl}}",
+      outro: "ご参加をお待ちしております。",
+    },
+  ];
+
+  for (const template of defaults) {
+    await prisma.emailTemplate.create({ data: template });
+  }
+
+  console.log(`✉️  Seeded ${defaults.length.toString()} email templates`);
+}
+
 // =============================================================================
 // Main
 // =============================================================================
@@ -2833,6 +2976,9 @@ async function seedAll(email: string, password: string, name: string) {
 
   // Phase 8: イベント
   await seedEvents();
+
+  // Phase 9: メールテンプレート
+  await seedEmailTemplates();
 }
 
 async function seedDemo() {
