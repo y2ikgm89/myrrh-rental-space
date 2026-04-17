@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
+import { withGoogleApiRetry } from "./retry";
 import { parseServiceAccountCredentials } from "./service-account";
 
 /**
@@ -43,9 +44,11 @@ export async function testServiceAccountConnection(params: {
     const calendar = google.calendar({ version: "v3", auth });
 
     // カレンダーのメタデータを取得して接続確認
-    const response = await calendar.calendars.get({
-      calendarId: params.calendarId,
-    });
+    const response = await withGoogleApiRetry(() =>
+      calendar.calendars.get({
+        calendarId: params.calendarId,
+      }),
+    );
 
     return omitUndefined({
       success: true,

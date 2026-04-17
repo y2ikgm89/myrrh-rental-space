@@ -20,6 +20,7 @@ import { CalendarSyncMethod } from "@/shared/lib/validations/enums/prisma-types"
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { WebhookSetupResult, WebhookRenewalResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
+import { withGoogleApiRetry } from "./retry";
 import { getServiceAccountClient } from "./service-account";
 
 const WEBHOOK_RENEWAL_THRESHOLD_DAYS = 2;
@@ -47,16 +48,19 @@ export async function setupWebhookWatch(
     const expiration = new Date();
     expiration.setDate(expiration.getDate() + 7); // 7日間有効（最大）
 
-    const response = await client.events.watch({
-      calendarId: settings.calendarId,
-      requestBody: {
-        id: channelId,
-        type: "web_hook",
-        address: webhookUrl,
-        token: webhookToken, // x-goog-channel-token として送信される
-        expiration: String(expiration.getTime()),
-      },
-    });
+    const calendarId = settings.calendarId;
+    const response = await withGoogleApiRetry(() =>
+      client.events.watch({
+        calendarId,
+        requestBody: {
+          id: channelId,
+          type: "web_hook",
+          address: webhookUrl,
+          token: webhookToken, // x-goog-channel-token として送信される
+          expiration: String(expiration.getTime()),
+        },
+      }),
+    );
 
     const registeredChannelId = response.data.id ?? undefined;
     const registeredResourceId = response.data.resourceId ?? undefined;
@@ -103,12 +107,14 @@ export async function stopWebhookWatch(
   }
 
   try {
-    await client.channels.stop({
-      requestBody: {
-        id: channelId,
-        resourceId,
-      },
-    });
+    await withGoogleApiRetry(() =>
+      client.channels.stop({
+        requestBody: {
+          id: channelId,
+          resourceId,
+        },
+      }),
+    );
 
     return { success: true };
   } catch (error) {

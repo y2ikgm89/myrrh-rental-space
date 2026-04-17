@@ -13,6 +13,7 @@ import { updateGoogleOAuthAccountTokens } from "@/shared/domain/auth/commands";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarConnectionTestResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
+import { withGoogleApiRetry } from "./retry";
 
 /**
  * OAuth連携されている管理者のGoogle Calendar APIクライアントを取得
@@ -84,9 +85,11 @@ export async function testOAuthConnection(
   }
 
   try {
-    const response = await client.calendars.get({
-      calendarId: "primary",
-    });
+    const response = await withGoogleApiRetry(() =>
+      client.calendars.get({
+        calendarId: "primary",
+      }),
+    );
 
     return omitUndefined({
       success: true,

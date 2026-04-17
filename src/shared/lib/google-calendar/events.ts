@@ -11,8 +11,35 @@ import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-querie
 import type { CalendarEventParams, CalendarEventResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
+import { withGoogleApiRetry } from "./retry";
 import { getServiceAccountClient } from "./service-account";
 import { getOAuthClient } from "./oauth";
+
+/**
+ * Asia/Tokyo タイムゾーンのカレンダーイベント構築ヘルパー
+ */
+function buildEventBody(
+  params: CalendarEventParams,
+  options?: { includeAttendee?: boolean },
+): calendar_v3.Schema$Event {
+  return omitUndefined({
+    summary: params.summary,
+    description: params.description,
+    location: params.location,
+    start: {
+      dateTime: params.startTime.toISOString(),
+      timeZone: "Asia/Tokyo",
+    },
+    end: {
+      dateTime: params.endTime.toISOString(),
+      timeZone: "Asia/Tokyo",
+    },
+    attendees:
+      options?.includeAttendee && params.attendeeEmail
+        ? [{ email: params.attendeeEmail }]
+        : undefined,
+  });
+}
 
 /**
  * カレンダーにイベントを作成
@@ -26,34 +53,19 @@ export async function createCalendarEvent(
   }
 
   const settings = await getGoogleCalendarSettings();
-
-  if (!settings.calendarId) {
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
-    const event: calendar_v3.Schema$Event = omitUndefined({
-      summary: params.summary,
-      description: params.description,
-      location: params.location,
-      start: {
-        dateTime: params.startTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-      end: {
-        dateTime: params.endTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-      attendees: params.attendeeEmail
-        ? [{ email: params.attendeeEmail }]
-        : undefined,
-    });
-
-    const response = await client.events.insert({
-      calendarId: settings.calendarId,
-      requestBody: event,
-      sendUpdates: "none",
-    });
+    const response = await withGoogleApiRetry(() =>
+      client.events.insert({
+        calendarId,
+        requestBody: buildEventBody(params, { includeAttendee: true }),
+        sendUpdates: "none",
+      }),
+    );
 
     return omitUndefined({
       success: true,
@@ -86,32 +98,20 @@ export async function updateCalendarEvent(
   }
 
   const settings = await getGoogleCalendarSettings();
-
-  if (!settings.calendarId) {
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
-    const event: calendar_v3.Schema$Event = omitUndefined({
-      summary: params.summary,
-      description: params.description,
-      location: params.location,
-      start: {
-        dateTime: params.startTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-      end: {
-        dateTime: params.endTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-    });
-
-    const response = await client.events.update({
-      calendarId: settings.calendarId,
-      eventId,
-      requestBody: event,
-      sendUpdates: "none",
-    });
+    const response = await withGoogleApiRetry(() =>
+      client.events.update({
+        calendarId,
+        eventId,
+        requestBody: buildEventBody(params),
+        sendUpdates: "none",
+      }),
+    );
 
     return omitUndefined({
       success: true,
@@ -143,17 +143,19 @@ export async function deleteCalendarEvent(
   }
 
   const settings = await getGoogleCalendarSettings();
-
-  if (!settings.calendarId) {
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
-    await client.events.delete({
-      calendarId: settings.calendarId,
-      eventId,
-      sendUpdates: "none",
-    });
+    await withGoogleApiRetry(() =>
+      client.events.delete({
+        calendarId,
+        eventId,
+        sendUpdates: "none",
+      }),
+    );
 
     return { success: true };
   } catch (error) {
@@ -182,24 +184,12 @@ export async function createOAuthCalendarEvent(
   }
 
   try {
-    const event: calendar_v3.Schema$Event = omitUndefined({
-      summary: params.summary,
-      description: params.description,
-      location: params.location,
-      start: {
-        dateTime: params.startTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-      end: {
-        dateTime: params.endTime.toISOString(),
-        timeZone: "Asia/Tokyo",
-      },
-    });
-
-    const response = await client.events.insert({
-      calendarId: "primary",
-      requestBody: event,
-    });
+    const response = await withGoogleApiRetry(() =>
+      client.events.insert({
+        calendarId: "primary",
+        requestBody: buildEventBody(params),
+      }),
+    );
 
     return omitUndefined({
       success: true,
@@ -237,16 +227,18 @@ export async function getCalendarEvent(eventId: string): Promise<{
   }
 
   const settings = await getGoogleCalendarSettings();
-
-  if (!settings.calendarId) {
+  const calendarId = settings.calendarId;
+  if (!calendarId) {
     return { success: false, error: "Calendar ID is not configured" };
   }
 
   try {
-    const response = await client.events.get({
-      calendarId: settings.calendarId,
-      eventId,
-    });
+    const response = await withGoogleApiRetry(() =>
+      client.events.get({
+        calendarId,
+        eventId,
+      }),
+    );
 
     return { success: true, event: response.data };
   } catch (error) {

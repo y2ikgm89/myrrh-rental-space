@@ -11,6 +11,7 @@ import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-querie
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { CalendarChange, SyncChangesResult } from "./types";
 import { formatGoogleApiError } from "./helpers";
+import { withGoogleApiRetry } from "./retry";
 import { getServiceAccountClient } from "./service-account";
 
 /**
@@ -73,7 +74,9 @@ export async function fetchCalendarChanges(
         params.pageToken = pageToken;
       }
 
-      const response = await client.events.list(params);
+      const response = await withGoogleApiRetry(() =>
+        client.events.list(params),
+      );
 
       for (const event of response.data.items ?? []) {
         if (!event.id) continue;

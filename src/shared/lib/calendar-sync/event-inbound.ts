@@ -21,6 +21,7 @@ import { logger } from "@/shared/lib/logger";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
 import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-account";
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
+import { withGoogleApiRetry } from "@/shared/lib/google-calendar/retry";
 import { upsertEventFromCalendar } from "@/shared/domain/events/commands";
 
 export interface EventImportResult {
@@ -197,7 +198,7 @@ async function fetchEventChanges(
       params.pageToken = pageToken;
     }
 
-    const response = await client.events.list(params);
+    const response = await withGoogleApiRetry(() => client.events.list(params));
 
     for (const event of response.data.items ?? []) {
       if (!event.id) continue;
