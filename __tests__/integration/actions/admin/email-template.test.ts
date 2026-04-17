@@ -45,7 +45,7 @@ mock.module("@/admin/lib/admin-action", () => ({
         if (opts.afterSuccess) {
           opts.afterSuccess(data);
         }
-        return { data };
+        return data;
       } catch (err) {
         if (err instanceof DomainError) {
           return { error: err.message };
@@ -113,7 +113,7 @@ describe("updateEmailTemplate", () => {
       outro: "新締め文",
       enabled: true,
     });
-    expect(result).toEqual({ data: { id: "template-001" } });
+    expect(result).toEqual({ id: "template-001" });
     expect(mockUpdateEmailTemplateCommand).toHaveBeenCalledTimes(1);
   });
 
@@ -152,7 +152,7 @@ describe("toggleEmailTemplateEnabled", () => {
       "reservation_confirmation",
       false,
     );
-    expect(result).toEqual({ data: { id: "template-001" } });
+    expect(result).toEqual({ id: "template-001" });
     expect(mockToggleEmailTemplateEnabledCommand).toHaveBeenCalledWith(
       "reservation_confirmation",
       false,
@@ -179,7 +179,7 @@ describe("sendTestEmail", () => {
       intro: "テスト導入文",
       outro: "テスト締め文",
     });
-    expect(result).toEqual({ data: null });
+    expect(result).toBeNull();
     expect(mockSendTestEmailForType).toHaveBeenCalledTimes(1);
   });
 
