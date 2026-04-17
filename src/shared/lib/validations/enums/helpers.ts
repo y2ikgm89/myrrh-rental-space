@@ -652,26 +652,6 @@ export const EMAIL_TEMPLATE_TYPE = {
 export type EmailTemplateType =
   (typeof EMAIL_TEMPLATE_TYPE)[keyof typeof EMAIL_TEMPLATE_TYPE];
 
-export const EMAIL_TEMPLATE_TYPE_LABELS: Record<EmailTemplateType, string> = {
-  reservation_confirmation: "予約確認",
-  reservation_cancelled: "予約キャンセル",
-  reservation_status_changed: "予約ステータス変更",
-  reservation_reminder: "予約リマインダー",
-  reservation_updated: "予約内容変更",
-  admin_notification: "管理者通知（予約）",
-  event_registration_confirmation: "イベント申込確認",
-  event_registration_cancelled: "イベント申込キャンセル",
-  event_admin_notification: "管理者通知（イベント申込）",
-  event_cancelled_notification: "イベント中止通知",
-  event_updated_notification: "イベント変更通知",
-  contact_confirmation: "お問い合わせ受付",
-  inquiry_reply: "お問い合わせ返信",
-  review_reply: "レビュー返信",
-  welcome: "ウェルカム",
-  password_reset: "パスワードリセット",
-  staff_invitation: "スタッフ招待",
-};
-
 const VALID_EMAIL_TEMPLATE_TYPES = new Set<string>(
   Object.values(EMAIL_TEMPLATE_TYPE),
 );
@@ -681,3 +661,23 @@ export function isValidEmailTemplateType(
 ): value is EmailTemplateType {
   return typeof value === "string" && VALID_EMAIL_TEMPLATE_TYPES.has(value);
 }
+
+export const EMAIL_TEMPLATE_TYPE_LABELS: Record<EmailTemplateType, string> = {
+  [EMAIL_TEMPLATE_TYPE.RESERVATION_CONFIRMATION]: "予約確認",
+  [EMAIL_TEMPLATE_TYPE.RESERVATION_CANCELLED]: "予約キャンセル",
+  [EMAIL_TEMPLATE_TYPE.RESERVATION_STATUS_CHANGED]: "予約ステータス変更",
+  [EMAIL_TEMPLATE_TYPE.RESERVATION_REMINDER]: "予約リマインダー",
+  [EMAIL_TEMPLATE_TYPE.RESERVATION_UPDATED]: "予約内容変更",
+  [EMAIL_TEMPLATE_TYPE.ADMIN_NOTIFICATION]: "管理者通知（予約）",
+  [EMAIL_TEMPLATE_TYPE.EVENT_REGISTRATION_CONFIRMATION]: "イベント申込確認",
+  [EMAIL_TEMPLATE_TYPE.EVENT_REGISTRATION_CANCELLED]: "イベント申込キャンセル",
+  [EMAIL_TEMPLATE_TYPE.EVENT_ADMIN_NOTIFICATION]: "管理者通知（イベント申込）",
+  [EMAIL_TEMPLATE_TYPE.EVENT_CANCELLED_NOTIFICATION]: "イベント中止通知",
+  [EMAIL_TEMPLATE_TYPE.EVENT_UPDATED_NOTIFICATION]: "イベント変更通知",
+  [EMAIL_TEMPLATE_TYPE.CONTACT_CONFIRMATION]: "お問い合わせ受付",
+  [EMAIL_TEMPLATE_TYPE.INQUIRY_REPLY]: "お問い合わせ返信",
+  [EMAIL_TEMPLATE_TYPE.REVIEW_REPLY]: "レビュー返信",
+  [EMAIL_TEMPLATE_TYPE.WELCOME]: "ウェルカム",
+  [EMAIL_TEMPLATE_TYPE.PASSWORD_RESET]: "パスワードリセット",
+  [EMAIL_TEMPLATE_TYPE.STAFF_INVITATION]: "スタッフ招待",
+};
