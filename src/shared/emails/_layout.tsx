@@ -13,8 +13,8 @@ import type { ReactNode } from "react";
 export type EmailLayoutProps = {
   preview: string;
   companyName: string;
-  footerNote?: string;
-  supportContactText?: string;
+  footerNote: string | undefined;
+  supportContactText: string | undefined;
   children: ReactNode;
 };
 

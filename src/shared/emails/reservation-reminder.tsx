@@ -1,35 +1,36 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Heading, Hr, Section, Text } from "@react-email/components";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { EmailLayout } from "./_layout";
 
 type Props = {
-  customerName: string;
   spaceName: string;
   startTime: Date;
   endTime: Date;
   location: string | undefined;
   notes: string | undefined;
-  siteName: string;
+  greeting: string;
+  intro: string;
+  outro: string;
+  preview: string;
+  companyName: string;
+  footerNote?: string;
+  supportContactText?: string;
 };
 
 export function ReservationReminderEmail({
-  customerName,
   spaceName,
   startTime,
   endTime,
   location,
   notes,
-  siteName,
+  greeting,
+  intro,
+  outro,
+  preview,
+  companyName,
+  footerNote,
+  supportContactText,
 }: Props) {
   const reservationDate = format(startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
@@ -38,67 +39,49 @@ export function ReservationReminderEmail({
   const endTimeFormatted = format(endTime, "HH:mm", { locale: ja });
 
   return (
-    <Html>
-      <Head />
-      <Preview>明日のご予約リマインダー: {spaceName}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={heading}>ご予約リマインダー</Heading>
+    <EmailLayout
+      preview={preview}
+      companyName={companyName}
+      footerNote={footerNote}
+      supportContactText={supportContactText}
+    >
+      <Heading style={heading}>ご予約リマインダー</Heading>
 
-          <Text style={text}>{customerName} 様</Text>
+      <Text style={text}>{greeting}</Text>
 
-          <Text style={text}>明日のご予約についてお知らせいたします。</Text>
+      <Text style={text}>{intro}</Text>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>ご予約内容</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>スペース:</strong> {spaceName}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日時:</strong> {reservationDate} {startTimeFormatted} -{" "}
-              {endTimeFormatted}
-            </Text>
-            {location ? (
-              <Text style={detailItem}>
-                <strong>場所:</strong> {location}
-              </Text>
-            ) : null}
-            {notes ? (
-              <>
-                <Text style={detailItem}>
-                  <strong>備考:</strong>
-                </Text>
-                <Text style={notesText}>{notes}</Text>
-              </>
-            ) : null}
-          </Section>
-
-          <Hr style={hr} />
-
-          <Text style={text}>
-            ご不明な点がございましたら、お気軽にお問い合わせください。
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>ご予約内容</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>スペース:</strong> {spaceName}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日時:</strong> {reservationDate} {startTimeFormatted} -{" "}
+          {endTimeFormatted}
+        </Text>
+        {location ? (
+          <Text style={detailItem}>
+            <strong>場所:</strong> {location}
           </Text>
+        ) : null}
+        {notes ? (
+          <>
+            <Text style={detailItem}>
+              <strong>備考:</strong>
+            </Text>
+            <Text style={notesText}>{notes}</Text>
+          </>
+        ) : null}
+      </Section>
 
-          <Text style={footer}>{siteName}</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Hr style={hr} />
+
+      <Text style={text}>{outro}</Text>
+    </EmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
 
 const heading = {
   fontSize: "24px",
@@ -148,12 +131,6 @@ const notesText: React.CSSProperties = {
 const hr = {
   borderColor: "#e6e6e6",
   margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
 };
 
 export default ReservationReminderEmail;

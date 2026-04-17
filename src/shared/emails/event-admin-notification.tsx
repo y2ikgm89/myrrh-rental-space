@@ -1,35 +1,38 @@
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Preview,
-  Section,
-  Text,
-} from "@react-email/components";
+import { Heading, Hr, Section, Text } from "@react-email/components";
+import { EmailLayout } from "./_layout";
 
 type Props = {
   type: "registration" | "cancellation";
-  participantName: string;
   participantEmail: string;
   eventTitle: string;
   eventDate: string;
   numberOfPeople: number;
   currentRegistrations: number;
   capacity: number | null;
+  greeting: string;
+  intro: string;
+  outro: string;
+  preview: string;
+  companyName: string;
+  footerNote?: string;
+  supportContactText?: string;
 };
 
 export function EventAdminNotificationEmail({
   type,
-  participantName,
   participantEmail,
   eventTitle,
   eventDate,
   numberOfPeople,
   currentRegistrations,
   capacity,
+  greeting,
+  intro,
+  outro,
+  preview,
+  companyName,
+  footerNote,
+  supportContactText,
 }: Props) {
   const isRegistration = type === "registration";
   const actionText = isRegistration
@@ -43,61 +46,57 @@ export function EventAdminNotificationEmail({
       : `${String(currentRegistrations)}名`;
 
   return (
-    <Html>
-      <Head />
-      <Preview>
-        [{actionText}] {eventTitle} - {participantName}様
-      </Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={{ ...heading, color: actionColor }}>
-            {actionText}のお知らせ
-          </Heading>
+    <EmailLayout
+      preview={preview}
+      companyName={companyName}
+      footerNote={footerNote}
+      supportContactText={supportContactText}
+    >
+      <Heading style={{ ...heading, color: actionColor }}>
+        {actionText}のお知らせ
+      </Heading>
 
-          <Section style={detailsSection}>
-            <Text style={detailsHeading}>申込情報</Text>
-            <Hr style={hr} />
-            <Text style={detailItem}>
-              <strong>イベント:</strong> {eventTitle}
-            </Text>
-            <Text style={detailItem}>
-              <strong>日付:</strong> {eventDate}
-            </Text>
-            <Text style={detailItem}>
-              <strong>参加者:</strong> {participantName} ({participantEmail})
-            </Text>
-            <Text style={detailItem}>
-              <strong>参加人数:</strong> {String(numberOfPeople)}名
-            </Text>
-            <Text style={detailItem}>
-              <strong>現在の申込状況:</strong> {capacityText}
-            </Text>
-          </Section>
+      <Text style={text}>{greeting}</Text>
 
-          <Text style={footer}>Myrrh Rental Space 管理システム</Text>
-        </Container>
-      </Body>
-    </Html>
+      <Text style={text}>{intro}</Text>
+
+      <Section style={detailsSection}>
+        <Text style={detailsHeading}>申込情報</Text>
+        <Hr style={hr} />
+        <Text style={detailItem}>
+          <strong>イベント:</strong> {eventTitle}
+        </Text>
+        <Text style={detailItem}>
+          <strong>日付:</strong> {eventDate}
+        </Text>
+        <Text style={detailItem}>
+          <strong>参加者メール:</strong> {participantEmail}
+        </Text>
+        <Text style={detailItem}>
+          <strong>参加人数:</strong> {String(numberOfPeople)}名
+        </Text>
+        <Text style={detailItem}>
+          <strong>現在の申込状況:</strong> {capacityText}
+        </Text>
+      </Section>
+
+      <Hr style={hr} />
+
+      <Text style={text}>{outro}</Text>
+    </EmailLayout>
   );
 }
-
-const main = {
-  backgroundColor: "#f6f9fc",
-  fontFamily:
-    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Ubuntu, sans-serif',
-};
-
-const container = {
-  backgroundColor: "#ffffff",
-  margin: "0 auto",
-  padding: "40px 20px",
-  maxWidth: "560px",
-};
 
 const heading = {
   fontSize: "24px",
   fontWeight: "600",
   marginBottom: "24px",
+};
+
+const text = {
+  fontSize: "16px",
+  lineHeight: "26px",
+  color: "#484848",
 };
 
 const detailsSection = {
@@ -124,12 +123,6 @@ const detailItem = {
 const hr = {
   borderColor: "#e6e6e6",
   margin: "16px 0",
-};
-
-const footer = {
-  fontSize: "12px",
-  color: "#8898aa",
-  marginTop: "32px",
 };
 
 export default EventAdminNotificationEmail;
