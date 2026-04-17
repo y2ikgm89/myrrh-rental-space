@@ -2787,8 +2787,6 @@ async function seedEvents() {
 }
 
 async function seedEmailTemplates() {
-  await prisma.emailTemplate.deleteMany({});
-
   const defaults = [
     {
       type: "reservation_confirmation",
@@ -2923,7 +2921,11 @@ async function seedEmailTemplates() {
   ];
 
   for (const template of defaults) {
-    await prisma.emailTemplate.create({ data: template });
+    await prisma.emailTemplate.upsert({
+      where: { type: template.type },
+      create: template,
+      update: template,
+    });
   }
 
   console.log(`✉️  Seeded ${defaults.length.toString()} email templates`);
@@ -3031,6 +3033,9 @@ async function seedDemo() {
 
   // イベント
   await seedEvents();
+
+  // メールテンプレート
+  await seedEmailTemplates();
 }
 
 async function main() {
