@@ -163,21 +163,49 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    spaceName: data.spaceName,
+    reservationDate,
+    startTime,
+    endTime,
+    reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.RESERVATION_CANCELLED,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
-      resend.emails.send({
-        from,
-        to: data.customerEmail,
-        subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
-        react: ReservationCancelledEmail({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+      resend.emails.send(
+        omitUndefined({
+          from,
+          to: data.customerEmail,
+          subject: resolved.subject,
+          react: ReservationCancelledEmail(
+            omitUndefined({
+              spaceName: data.spaceName,
+              reservationDate,
+              startTime,
+              endTime,
+              reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+              greeting: resolved.greeting,
+              intro: resolved.intro,
+              outro: resolved.outro,
+              preview: resolved.preview,
+              companyName: resolved.companyName,
+              footerNote: resolved.footerNote,
+              supportContactText: resolved.supportContactText,
+            }),
+          ),
         }),
-      }),
+      ),
     {
       operation: "sendReservationCancelledEmail",
       reservationId: data.reservationId,
@@ -198,16 +226,36 @@ export async function sendReservationStatusChangedEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    spaceName: data.spaceName,
+    reservationDate,
+    startTime,
+    endTime,
+    totalPrice: formatPrice(data.totalPrice, "未設定"),
+    reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+    newStatus: data.newStatus,
+    oldStatus: data.oldStatus,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.RESERVATION_STATUS_CHANGED,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
       resend.emails.send(
         omitUndefined({
           from,
           to: data.customerEmail,
-          subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
+          subject: resolved.subject,
           react: ReservationStatusChangedEmail(
             omitUndefined({
-              customerName: data.customerName,
               spaceName: data.spaceName,
               reservationDate,
               startTime,
@@ -216,6 +264,13 @@ export async function sendReservationStatusChangedEmail(
               reservationId: data.reservationId.slice(0, 8).toUpperCase(),
               newStatus: data.newStatus,
               location: data.location,
+              greeting: resolved.greeting,
+              intro: resolved.intro,
+              outro: resolved.outro,
+              preview: resolved.preview,
+              companyName: resolved.companyName,
+              footerNote: resolved.footerNote,
+              supportContactText: resolved.supportContactText,
             }),
           ),
         }),
@@ -246,29 +301,61 @@ export async function sendReservationAdminNotification(
 
   const actionText = RESERVATION_ACTION_LABELS[action];
 
+  const variables = omitUndefined({
+    action,
+    actionText,
+    customerName: data.customerName,
+    customerEmail: data.customerEmail,
+    spaceName: data.spaceName,
+    reservationDate,
+    startTime,
+    endTime,
+    totalPrice: formatPrice(data.totalPrice, "未設定"),
+    reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+    guestName: data.guestName ?? "",
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.ADMIN_NOTIFICATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
-      resend.emails.send({
-        from,
-        to: notificationEmails,
-        subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
-        react: AdminNotificationEmail(
-          omitUndefined({
-            type: "reservation" as const,
-            action,
-            customerName: data.customerName,
-            customerEmail: data.customerEmail,
-            guestName: data.guestName,
-            spaceName: data.spaceName,
-            reservationDate,
-            startTime,
-            endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
-            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-            adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
-          }),
-        ),
-      }),
+      resend.emails.send(
+        omitUndefined({
+          from,
+          to: notificationEmails,
+          subject: resolved.subject,
+          react: AdminNotificationEmail(
+            omitUndefined({
+              type: "reservation" as const,
+              action,
+              customerName: data.customerName,
+              customerEmail: data.customerEmail,
+              guestName: data.guestName,
+              spaceName: data.spaceName,
+              reservationDate,
+              startTime,
+              endTime,
+              totalPrice: formatPrice(data.totalPrice, "未設定"),
+              reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+              adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
+              greeting: resolved.greeting,
+              intro: resolved.intro,
+              outro: resolved.outro,
+              preview: resolved.preview,
+              companyName: resolved.companyName,
+              footerNote: resolved.footerNote,
+              supportContactText: resolved.supportContactText,
+            }),
+          ),
+        }),
+      ),
     {
       operation: "sendReservationAdminNotification",
       reservationId: data.reservationId,

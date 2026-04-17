@@ -15,8 +15,10 @@ import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-not
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { EMAIL_TEMPLATE_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { omitUndefined } from "../serialize";
 import {
   logError,
   ErrorCategory,
@@ -24,6 +26,7 @@ import {
   normalizeError,
 } from "../errors/server";
 import { sendEmail } from "./send";
+import { resolveTemplate } from "./resolve-template";
 import type { EmailResult } from "./types";
 
 // =============================================================================
@@ -53,22 +56,50 @@ export async function sendEventRegistrationConfirmation(
   const startTime = format(data.eventStartTime, "HH:mm", { locale: ja });
   const endTime = format(data.eventEndTime, "HH:mm", { locale: ja });
 
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    eventTitle: data.eventTitle,
+    eventDate,
+    startTime,
+    endTime,
+    location: data.location ?? "",
+    numberOfPeople: String(data.numberOfPeople),
+    registrationId: data.registrationId.slice(0, 8).toUpperCase(),
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.EVENT_REGISTRATION_CONFIRMATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
       resend.emails.send({
         from,
         to: data.customerEmail,
-        subject: `【イベント申込確認】${data.eventTitle} - ${eventDate}`,
-        react: EventRegistrationConfirmationEmail({
-          customerName: data.customerName,
-          eventTitle: data.eventTitle,
-          eventDate,
-          startTime,
-          endTime,
-          location: data.location,
-          numberOfPeople: data.numberOfPeople,
-          registrationId: data.registrationId.slice(0, 8).toUpperCase(),
-        }),
+        subject: resolved.subject,
+        react: EventRegistrationConfirmationEmail(
+          omitUndefined({
+            eventTitle: data.eventTitle,
+            eventDate,
+            startTime,
+            endTime,
+            location: data.location,
+            numberOfPeople: data.numberOfPeople,
+            registrationId: data.registrationId.slice(0, 8).toUpperCase(),
+            greeting: resolved.greeting,
+            intro: resolved.intro,
+            outro: resolved.outro,
+            preview: resolved.preview,
+            companyName: resolved.companyName,
+            footerNote: resolved.footerNote,
+            supportContactText: resolved.supportContactText,
+          }),
+        ),
       }),
     {
       operation: "sendEventRegistrationConfirmation",
@@ -95,17 +126,40 @@ export async function sendEventRegistrationCancelled(
     locale: ja,
   });
 
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    eventTitle: data.eventTitle,
+    eventDate,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.EVENT_REGISTRATION_CANCELLED,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
       resend.emails.send({
         from,
         to: data.customerEmail,
-        subject: `【イベント申込キャンセル】${data.eventTitle}`,
-        react: EventRegistrationCancelledEmail({
-          customerName: data.customerName,
-          eventTitle: data.eventTitle,
-          eventDate,
-        }),
+        subject: resolved.subject,
+        react: EventRegistrationCancelledEmail(
+          omitUndefined({
+            eventTitle: data.eventTitle,
+            eventDate,
+            greeting: resolved.greeting,
+            intro: resolved.intro,
+            outro: resolved.outro,
+            preview: resolved.preview,
+            companyName: resolved.companyName,
+            footerNote: resolved.footerNote,
+            supportContactText: resolved.supportContactText,
+          }),
+        ),
       }),
     {
       operation: "sendEventRegistrationCancelled",
@@ -138,25 +192,50 @@ export async function sendEventAdminNotification(
     locale: ja,
   });
 
-  const actionText =
-    type === "registration" ? "新規イベント申込" : "イベント申込キャンセル";
+  const variables = omitUndefined({
+    participantName: data.participantName,
+    participantEmail: data.participantEmail,
+    eventTitle: data.eventTitle,
+    eventDate,
+    numberOfPeople: String(data.numberOfPeople),
+    currentRegistrations: String(data.currentRegistrations),
+    capacity: data.capacity != null ? String(data.capacity) : "",
+    type,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.EVENT_ADMIN_NOTIFICATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
 
   return sendEmail(
     (resend, from) =>
       resend.emails.send({
         from,
         to: notificationEmails,
-        subject: `【${actionText}】${data.eventTitle} - ${data.participantName}様`,
-        react: EventAdminNotificationEmail({
-          type,
-          participantName: data.participantName,
-          participantEmail: data.participantEmail,
-          eventTitle: data.eventTitle,
-          eventDate,
-          numberOfPeople: data.numberOfPeople,
-          currentRegistrations: data.currentRegistrations,
-          capacity: data.capacity,
-        }),
+        subject: resolved.subject,
+        react: EventAdminNotificationEmail(
+          omitUndefined({
+            type,
+            participantEmail: data.participantEmail,
+            eventTitle: data.eventTitle,
+            eventDate,
+            numberOfPeople: data.numberOfPeople,
+            currentRegistrations: data.currentRegistrations,
+            capacity: data.capacity,
+            greeting: resolved.greeting,
+            intro: resolved.intro,
+            outro: resolved.outro,
+            preview: resolved.preview,
+            companyName: resolved.companyName,
+            footerNote: resolved.footerNote,
+            supportContactText: resolved.supportContactText,
+          }),
+        ),
       }),
     {
       operation: "sendEventAdminNotification",
@@ -192,6 +271,21 @@ export async function sendEventCancelledToAllParticipants(
     locale: ja,
   });
 
+  // テンプレートは loop 前に1度だけ解決する（DB アクセス削減）
+  const variables = omitUndefined({
+    eventTitle: event.title,
+    eventDate,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.EVENT_CANCELLED_NOTIFICATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return;
+  }
+
   const results = await Promise.allSettled(
     event.registrations.map((registration) =>
       sendEmail(
@@ -199,12 +293,20 @@ export async function sendEventCancelledToAllParticipants(
           resend.emails.send({
             from,
             to: registration.email,
-            subject: `【イベント中止のお知らせ】${event.title}`,
-            react: EventCancelledNotificationEmail({
-              customerName: registration.name,
-              eventTitle: event.title,
-              eventDate,
-            }),
+            subject: resolved.subject,
+            react: EventCancelledNotificationEmail(
+              omitUndefined({
+                eventTitle: event.title,
+                eventDate,
+                greeting: resolved.greeting,
+                intro: resolved.intro,
+                outro: resolved.outro,
+                preview: resolved.preview,
+                companyName: resolved.companyName,
+                footerNote: resolved.footerNote,
+                supportContactText: resolved.supportContactText,
+              }),
+            ),
           }),
         {
           operation: "sendEventCancelledToAllParticipants",
@@ -266,6 +368,24 @@ export async function sendEventUpdatedToAllParticipants(
     locale: ja,
   });
   const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
+  const newEventDateRange = `${newEventDate}〜${newEndTime}`;
+
+  // テンプレートは loop 前に1度だけ解決する（DB アクセス削減）
+  const variables = omitUndefined({
+    eventTitle: event.title,
+    eventDate: oldEventDate,
+    newEventDate: newEventDateRange,
+    location: event.location ?? "",
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.EVENT_UPDATED_NOTIFICATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return;
+  }
 
   const results = await Promise.allSettled(
     event.registrations.map((registration) =>
@@ -274,14 +394,22 @@ export async function sendEventUpdatedToAllParticipants(
           resend.emails.send({
             from,
             to: registration.email,
-            subject: `【イベント内容変更のお知らせ】${event.title}`,
-            react: EventUpdatedNotificationEmail({
-              customerName: registration.name,
-              eventTitle: event.title,
-              eventDate: oldEventDate,
-              newEventDate: `${newEventDate}〜${newEndTime}`,
-              location: event.location ?? undefined,
-            }),
+            subject: resolved.subject,
+            react: EventUpdatedNotificationEmail(
+              omitUndefined({
+                eventTitle: event.title,
+                eventDate: oldEventDate,
+                newEventDate: newEventDateRange,
+                ...(event.location ? { location: event.location } : {}),
+                greeting: resolved.greeting,
+                intro: resolved.intro,
+                outro: resolved.outro,
+                preview: resolved.preview,
+                companyName: resolved.companyName,
+                footerNote: resolved.footerNote,
+                supportContactText: resolved.supportContactText,
+              }),
+            ),
           }),
         {
           operation: "sendEventUpdatedToAllParticipants",

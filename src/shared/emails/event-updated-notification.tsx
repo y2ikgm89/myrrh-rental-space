@@ -5,7 +5,7 @@ type Props = {
   eventTitle: string;
   eventDate: string;
   newEventDate: string;
-  location: string | undefined;
+  location?: string;
   greeting: string;
   intro: string;
   outro: string;

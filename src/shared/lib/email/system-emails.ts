@@ -11,8 +11,11 @@ import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
 import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { getAdminUrl, SITE_DEFAULTS } from "../constants";
+import { getAdminUrl } from "../constants";
+import { omitUndefined } from "../serialize";
+import { EMAIL_TEMPLATE_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { sendEmail } from "./send";
+import { resolveTemplate } from "./resolve-template";
 import type { StaffInvitationEmailData, EmailResult } from "./types";
 
 // =============================================================================
@@ -106,17 +109,46 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 export async function sendStaffInvitationEmail(
   data: StaffInvitationEmailData,
 ): Promise<EmailResult> {
+  const expiresAtFormatted = format(data.expiresAt, "yyyy年M月d日 HH:mm", {
+    locale: ja,
+  });
+
+  const variables = omitUndefined({
+    userName: data.staffName,
+    staffName: data.staffName,
+    setupUrl: data.setupUrl,
+    invitationUrl: data.setupUrl,
+    expiresAt: expiresAtFormatted,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.STAFF_INVITATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
   return sendEmail(
     (resend, from) =>
       resend.emails.send({
         from,
         to: data.to,
-        subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
-        react: StaffInvitationEmail({
-          staffName: data.staffName,
-          setupUrl: data.setupUrl,
-          expiresAt: data.expiresAt,
-        }),
+        subject: resolved.subject,
+        react: StaffInvitationEmail(
+          omitUndefined({
+            setupUrl: data.setupUrl,
+            expiresAt: data.expiresAt,
+            greeting: resolved.greeting,
+            intro: resolved.intro,
+            outro: resolved.outro,
+            preview: resolved.preview,
+            companyName: resolved.companyName,
+            footerNote: resolved.footerNote,
+            supportContactText: resolved.supportContactText,
+          }),
+        ),
       }),
     {
       operation: "sendStaffInvitationEmail",

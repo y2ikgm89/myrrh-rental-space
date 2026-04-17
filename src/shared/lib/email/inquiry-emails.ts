@@ -1,35 +1,55 @@
 import "server-only";
 import { InquiryReplyEmail } from "@/shared/emails/inquiry-reply";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
-import { SITE_DEFAULTS } from "../constants";
+import { EMAIL_TEMPLATE_TYPE } from "@/shared/lib/validations/enums/helpers";
+import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
+import { resolveTemplate } from "./resolve-template";
 import type { InquiryReplyEmailData, EmailResult } from "./types";
-
-async function getSiteName(): Promise<string> {
-  const seo = await getSeoSettings();
-  return seo?.siteName || SITE_DEFAULTS.name;
-}
 
 export async function sendInquiryReplyEmail(
   data: InquiryReplyEmailData,
 ): Promise<EmailResult> {
-  const siteName = await getSiteName();
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    inquirySubject: data.originalSubject,
+    originalMessage: data.originalMessage,
+    replyMessage: data.replyMessage,
+    repliedByName: data.repliedByName,
+  });
+
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.INQUIRY_REPLY,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
 
   return sendEmail(
     (resend, from) =>
-      resend.emails.send({
-        from,
-        to: data.customerEmail,
-        subject: `【お問い合わせ回答】${data.originalSubject}`,
-        react: InquiryReplyEmail({
-          customerName: data.customerName,
-          originalSubject: data.originalSubject,
-          originalMessage: data.originalMessage,
-          replyMessage: data.replyMessage,
-          repliedByName: data.repliedByName,
-          siteName,
+      resend.emails.send(
+        omitUndefined({
+          from,
+          to: data.customerEmail,
+          subject: resolved.subject,
+          react: InquiryReplyEmail(
+            omitUndefined({
+              originalSubject: data.originalSubject,
+              originalMessage: data.originalMessage,
+              replyMessage: data.replyMessage,
+              repliedByName: data.repliedByName,
+              greeting: resolved.greeting,
+              intro: resolved.intro,
+              outro: resolved.outro,
+              preview: resolved.preview,
+              companyName: resolved.companyName,
+              footerNote: resolved.footerNote,
+              supportContactText: resolved.supportContactText,
+            }),
+          ),
         }),
-      }),
+      ),
     {
       operation: "sendInquiryReplyEmail",
       inquiryId: data.inquiryId,

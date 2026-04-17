@@ -6,7 +6,7 @@ type Props = {
   eventDate: string;
   startTime: string;
   endTime: string;
-  location: string | undefined;
+  location?: string;
   numberOfPeople: number;
   registrationId: string;
   greeting: string;
