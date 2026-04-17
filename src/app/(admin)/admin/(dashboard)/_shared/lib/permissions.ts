@@ -149,6 +149,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "notification:read",
     "notification:update",
     "notification:delete",
+    "emailTemplate:read",
+    "emailTemplate:update",
   ],
   ADMIN: [
     // コンテンツ管理（ユーザー管理・監査ログ除く）
@@ -249,6 +251,8 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "notification:read",
     "notification:update",
     "notification:delete",
+    "emailTemplate:read",
+    "emailTemplate:update",
   ],
   EDITOR: [
     // 割り当てページ編集のみ（要リソースIDチェック）
@@ -270,6 +274,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "event:update",
     "notification:read",
     "notification:update",
+    "emailTemplate:read",
   ],
   VIEWER: [
     // 閲覧のみ
@@ -291,6 +296,7 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "review:read",
     "event:read",
     "notification:read",
+    "emailTemplate:read",
   ],
   USER: [],
   CUSTOMER: [],
