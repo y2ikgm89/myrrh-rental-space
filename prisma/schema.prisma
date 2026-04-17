@@ -1128,6 +1128,10 @@ model Settings {
   senderEmail                       String?
   senderName                        String?
   replyToEmail                      String?
+  // Email Template Settings
+  emailSubjectPrefix      String? @db.VarChar(32)
+  emailFooterNote         String? @db.Text
+  emailSupportContactText String? @db.Text
   reservationConfirmationTemplateId String?
   reservationCancelledTemplateId    String?
   reservationUpdatedTemplateId      String?
@@ -1349,6 +1353,25 @@ model Settings {
   modificationDeadlineHours  Int @default(24) // 変更可能期限（時間前）
 
   @@map("settings")
+}
+
+// ==============================================
+// Email Template (メールテンプレート)
+// ==============================================
+
+model EmailTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      String   @unique @db.VarChar(64) // EmailTemplateType の値
+  subject   String   @db.VarChar(256)
+  greeting  String   @db.VarChar(256)
+  intro     String   @db.Text
+  outro     String   @db.Text
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@map("email_templates")
 }
 
 // =============================================================================
