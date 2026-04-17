@@ -31,8 +31,9 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "../errors/server";
-import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { RESERVATION_ACTION_LABELS, EMAIL_TEMPLATE_TYPE } from "@/shared/lib/validations/enums/helpers";
 import { sendEmail } from "./send";
+import { resolveTemplate } from "./resolve-template";
 import type {
   ReservationEmailData,
   StatusChangeEmailData,
@@ -55,10 +56,27 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  // カレンダー設定を取得
-  const calendarSettings = await getCalendarEmailSettings();
+  const variables = omitUndefined({
+    customerName: data.customerName,
+    spaceName: data.spaceName,
+    reservationDate,
+    startTime,
+    endTime,
+    totalPrice: formatPrice(data.totalPrice, "未設定"),
+    reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+    notes: data.notes ?? "",
+  });
 
-  // カレンダーイベントを生成
+  const resolved = await resolveTemplate(
+    EMAIL_TEMPLATE_TYPE.RESERVATION_CONFIRMATION,
+    variables,
+  );
+
+  if (!resolved || !resolved.enabled) {
+    return { success: true };
+  }
+
+  const calendarSettings = await getCalendarEmailSettings();
   const calendarEvent = createReservationEvent(
     omitUndefined({
       reservationId: data.reservationId,
@@ -71,12 +89,10 @@ export async function sendReservationConfirmationEmail(
     }),
   );
 
-  // Add to Calendarリンクを生成
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? generateAddToCalendarLinks(calendarEvent)
     : undefined;
 
-  // iCalファイルを生成（添付用）
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -95,7 +111,6 @@ export async function sendReservationConfirmationEmail(
           reservationId: data.reservationId,
         },
       });
-      // 添付なしで続行
     }
   }
 
@@ -105,10 +120,9 @@ export async function sendReservationConfirmationEmail(
         omitUndefined({
           from,
           to: data.customerEmail,
-          subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
+          subject: resolved.subject,
           react: ReservationConfirmationEmail(
             omitUndefined({
-              customerName: data.customerName,
               spaceName: data.spaceName,
               reservationDate,
               startTime,
@@ -117,6 +131,13 @@ export async function sendReservationConfirmationEmail(
               reservationId: data.reservationId.slice(0, 8).toUpperCase(),
               notes: data.notes,
               addToCalendarLinks,
+              greeting: resolved.greeting,
+              intro: resolved.intro,
+              outro: resolved.outro,
+              preview: resolved.preview,
+              companyName: resolved.companyName,
+              footerNote: resolved.footerNote,
+              supportContactText: resolved.supportContactText,
             }),
           ),
           attachments,
