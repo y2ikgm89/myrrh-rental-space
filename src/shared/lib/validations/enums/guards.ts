@@ -286,3 +286,4 @@ export function isValidPaymentStatus(value: unknown): value is PaymentStatus {
 export function isValidEventStatus(value: unknown): value is EventStatus {
   return typeof value === "string" && VALID_EVENT_STATUSES.has(value);
 }
+

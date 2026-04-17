@@ -624,3 +624,60 @@ export const NOTIFICATION_TYPE_BADGE_VARIANTS: Record<
   [NOTIFICATION_TYPE.EVENT_REGISTRATION]: "default",
   [NOTIFICATION_TYPE.FAQ_STALE]: "warning",
 };
+
+// =============================================================================
+// EmailTemplate Type（DB VARCHAR 管理 — Prisma enum ではない）
+// =============================================================================
+
+export const EMAIL_TEMPLATE_TYPE = {
+  RESERVATION_CONFIRMATION: "reservation_confirmation",
+  RESERVATION_CANCELLED: "reservation_cancelled",
+  RESERVATION_STATUS_CHANGED: "reservation_status_changed",
+  RESERVATION_REMINDER: "reservation_reminder",
+  RESERVATION_UPDATED: "reservation_updated",
+  ADMIN_NOTIFICATION: "admin_notification",
+  EVENT_REGISTRATION_CONFIRMATION: "event_registration_confirmation",
+  EVENT_REGISTRATION_CANCELLED: "event_registration_cancelled",
+  EVENT_ADMIN_NOTIFICATION: "event_admin_notification",
+  EVENT_CANCELLED_NOTIFICATION: "event_cancelled_notification",
+  EVENT_UPDATED_NOTIFICATION: "event_updated_notification",
+  CONTACT_CONFIRMATION: "contact_confirmation",
+  INQUIRY_REPLY: "inquiry_reply",
+  REVIEW_REPLY: "review_reply",
+  WELCOME: "welcome",
+  PASSWORD_RESET: "password_reset",
+  STAFF_INVITATION: "staff_invitation",
+} as const;
+
+export type EmailTemplateType =
+  (typeof EMAIL_TEMPLATE_TYPE)[keyof typeof EMAIL_TEMPLATE_TYPE];
+
+export const EMAIL_TEMPLATE_TYPE_LABELS: Record<EmailTemplateType, string> = {
+  reservation_confirmation: "予約確認",
+  reservation_cancelled: "予約キャンセル",
+  reservation_status_changed: "予約ステータス変更",
+  reservation_reminder: "予約リマインダー",
+  reservation_updated: "予約内容変更",
+  admin_notification: "管理者通知（予約）",
+  event_registration_confirmation: "イベント申込確認",
+  event_registration_cancelled: "イベント申込キャンセル",
+  event_admin_notification: "管理者通知（イベント申込）",
+  event_cancelled_notification: "イベント中止通知",
+  event_updated_notification: "イベント変更通知",
+  contact_confirmation: "お問い合わせ受付",
+  inquiry_reply: "お問い合わせ返信",
+  review_reply: "レビュー返信",
+  welcome: "ウェルカム",
+  password_reset: "パスワードリセット",
+  staff_invitation: "スタッフ招待",
+};
+
+const VALID_EMAIL_TEMPLATE_TYPES = new Set<string>(
+  Object.values(EMAIL_TEMPLATE_TYPE),
+);
+
+export function isValidEmailTemplateType(
+  value: unknown,
+): value is EmailTemplateType {
+  return typeof value === "string" && VALID_EMAIL_TEMPLATE_TYPES.has(value);
+}
