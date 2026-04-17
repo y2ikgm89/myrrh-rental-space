@@ -13,8 +13,12 @@ export async function BlogLayout({
   children,
   showSidebar,
 }: BlogLayoutProps): Promise<ReactElement> {
-  const settings = await getSidebarSettings();
+  // Fast path: explicit disable skips the settings fetch entirely.
+  if (showSidebar === false) {
+    return <>{children}</>;
+  }
 
+  const settings = await getSidebarSettings();
   const sidebarEnabled = showSidebar != null ? showSidebar : settings.enabled;
 
   if (!sidebarEnabled) {

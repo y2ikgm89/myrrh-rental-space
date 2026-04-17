@@ -12,6 +12,7 @@ import { Button } from "@/admin/components/ui";
 import { Badge } from "@/admin/components/ui/badge";
 import { togglePagePublished } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 interface PublishToggleProps {
   slug: string;
@@ -42,7 +43,7 @@ export function PublishToggle({ slug, isPublished }: PublishToggleProps) {
   return (
     <div className="flex items-center gap-2">
       <Badge variant={isPublished ? "success" : "secondary"}>
-        {isPublished ? "公開中" : "非公開"}
+        {getPublishLabel(isPublished)}
       </Badge>
       <Button
         variant="outline"

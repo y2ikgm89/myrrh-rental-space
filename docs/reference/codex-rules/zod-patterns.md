@@ -1,6 +1,9 @@
 ---
 paths:
-  - src/**
+  - src/shared/lib/validations/**
+  - src/**/lib/validations/**
+  - src/**/actions/**/*.ts
+  - src/shared/domain/**
 ---
 
 # Zod パターンルール
@@ -90,7 +93,7 @@ export const updatePostSchema = z
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
   })
-  .merge(seoOgpFieldsSchema); // SEO/OGPフィールドを合成
+  .extend(seoOgpFieldsSchema.shape); // SEO/OGPフィールドを合成
 
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 
@@ -104,7 +107,7 @@ export const postFormSchema = z
     tags: z.string().optional(), // フォーム: comma-separated string
     publishedAt: z.string().optional(), // フォーム: 文字列のまま
   })
-  .merge(seoOgpFieldsFormSchema);
+  .extend(seoOgpFieldsFormSchema.shape);
 
 export type PostFormData = z.infer<typeof postFormSchema>;
 ```
@@ -207,6 +210,91 @@ discountType: z.enum(DiscountType).default(DiscountType.none);
 taxRateType: z.enum(TaxRateType).default(TaxRateType.standard);
 ```
 
+## 配列要素の uniqueness 契約（React key 安全性）
+
+配列要素を React key として使う可能性がある場合、Zod スキーマで重複を拒否する。UI 層の Set dedup は禁止（責務逸脱・データ契約が暗黙化）:
+
+```typescript
+// primitive string[] — .refine() で重複拒否
+const imageUrlsSchema = z
+  .array(z.string().url())
+  .refine((arr) => new Set(arr).size === arr.length, {
+    error: "同じ画像を複数登録することはできません",
+  });
+
+// useFieldArray の object[] — 同フィールドで dedupe
+const buttonsSchema = z
+  .array(z.object({ url: z.string(), text: z.string() }))
+  .refine((arr) => new Set(arr.map((b) => b.url)).size === arr.length, {
+    error: "同じURLのボタンを複数登録することはできません",
+  });
+
+// cross-field 重複（mainImage ↔ imageUrls）— top-level refine
+export const spaceFormSchema = z
+  .object({ mainImageUrl: z.string(), imageUrls: imageUrlsSchema /* ... */ })
+  .refine((data) => !data.imageUrls.includes(data.mainImageUrl), {
+    error: "メイン画像と同じURLを追加画像に登録することはできません",
+    path: ["imageUrls"],
+  });
+
+// discriminated union — 合成キーで dedupe
+const sidebarWidgetsSchema = z
+  .array(z.union([builtinWidgetSchema, customWidgetSchema]))
+  .refine((widgets) => {
+    const keys = widgets.map((w) =>
+      w.type === "custom" ? `custom:${w.id}` : `builtin:${w.type}`,
+    );
+    return new Set(keys).size === keys.length;
+  });
+
+// read-side 防御層（write-side 厳格化 + historical data 自己修復）
+const stringArraySchema = z
+  .array(z.string())
+  .transform((arr) => Array.from(new Set(arr)));
+```
+
+**ルール:**
+
+- write-side（フォーム送信 / Server Action 入力）は `.refine()` で厳格拒否
+- read-side（DB JSON パーサー `parseStringArray` 等）は `.transform()` で silent dedupe（historical data の自己修復）
+- 外部 API 応答（Instagram 等）は `.transform()` で防御的 dedupe（契約外事象への備え）
+
+### 複雑な cross-field 検証は `.superRefine()` を parent level で
+
+nested schema に `.refine()` を付けると ZodEffects 化して `.omit()` / `.extend()` が使えなくなる。`*Base` 版を作って parent に埋め込むと validation が完全に無効化される（**dead code パターン** — `gotchas.md` 参照）。
+
+解決策: validation 本体を `collectXxxIssues(data, pathPrefix, ctx)` ヘルパーとして shared に抽出し、parent schema の `.superRefine()` から呼ぶ:
+
+```typescript
+// src/shared/lib/validations/business-hours.ts
+export function collectBusinessHoursWeekIssues(
+  week: BusinessHoursWeek,
+  pathPrefix: readonly (string | number)[],
+  ctx: z.RefinementCtx,
+): void {
+  for (const day of ["monday", "tuesday" /* ... */] as const) {
+    const d = week[day];
+    if (d.isOpen && d.slots.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        message: "営業日には最低1つの時間帯を設定してください",
+        path: [...pathPrefix, day, "slots"],
+      });
+    }
+    // overlap / order チェックも同様
+  }
+}
+
+// 呼び出し側: parent schema で .superRefine()
+export const businessHoursSettingsSchema = z
+  .object({ businessHours: businessHoursWeekSchema /* ... */ })
+  .superRefine((data, ctx) => {
+    collectBusinessHoursWeekIssues(data.businessHours, ["businessHours"], ctx);
+  });
+```
+
+**利点:** nested schema は ZodObject のまま、検証ロジックは shared に集約、UI / Zod / 他モデル（location 等）で同一ロジックを再利用。
+
 ## 共通スキーマの再利用
 
 ### SEOフィールド（seoFieldsSchema / ogpFieldsSchema）
@@ -240,24 +328,30 @@ export const ogpFieldsSchema = z.object({
   ogpImageUrl: z.string().url().nullable().optional(),
 });
 
-// 統合スキーマ（merge で合成）
-export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema);
+// 統合スキーマ（spread で合成 — Zod 4 推奨、.merge() は deprecated）
+export const seoOgpFieldsSchema = z.object({
+  ...seoFieldsSchema.shape,
+  ...ogpFieldsSchema.shape,
+});
 
 // フォーム用（空文字許可）
 export const seoFieldsFormSchema = z.object({
   metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).optional(),
 });
-export const seoOgpFieldsFormSchema =
-  seoFieldsFormSchema.merge(ogpFieldsFormSchema);
+export const seoOgpFieldsFormSchema = z.object({
+  ...seoFieldsFormSchema.shape,
+  ...ogpFieldsFormSchema.shape,
+});
 ```
 
 **スキーマ合成の使い分け**:
 
-| 方法                                   | 用途                         | 備考                     |
-| -------------------------------------- | ---------------------------- | ------------------------ |
-| `.merge(other)`                        | 既存 `ZodObject` どうし      | Zod 4 推奨（型推論効率） |
-| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成 | tsc 効率優先時           |
+| 方法                                   | 用途                                    | 備考                          |
+| -------------------------------------- | --------------------------------------- | ----------------------------- |
+| `.extend(other.shape)`                 | 既存 ZodObject にフィールドを追加       | Zod 4 推奨（`.merge()` 廃止） |
+| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成            | tsc 効率最良                  |
+| `.merge(other)`                        | **deprecated** — `.extend()` に移行する | Zod 4 changelog で非推奨明記  |
 
 ### URLバリデーション
 
@@ -280,6 +374,23 @@ const safeUrlSchema = z
   .refine((val) => !val || val.startsWith("/") || val.startsWith("http"), {
     error: "URLは / または http で始まる必要があります",
   });
+```
+
+### useFieldArray との連携（object[] 必須）
+
+RHF の `useFieldArray` は primitive 配列（`string[]`）を管理できない。フォームで配列フィールドを D&D ソートや動的追加/削除する場合は object 配列にすること:
+
+```typescript
+// NG: useFieldArray に渡せない（primitive 配列）
+imageUrls: z.array(z.string().url());
+
+// OK: { url: string }[] — useFieldArray が id フィールドを自動付与して管理
+imageUrls: z.array(
+  z.object({ url: z.string().url({ error: "有効なURLを入力してください" }) }),
+);
+
+// Server Action 側では .map((i) => i.url) で string[] に変換して Prisma へ渡す
+// 編集時の初期値: DB string[] → フォーム { url: string }[]: location.imageUrls.map((url) => ({ url }))
 ```
 
 ### URLパラメータバリデーション
@@ -357,6 +468,23 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === "string");
 }
 ```
+
+### safeParse 結果と exactOptionalPropertyTypes の橋渡し
+
+`z.object({ field: z.string().optional() })` の出力は `{ field: string | undefined }`。
+`readonly field?: string` 型（`exactOptionalPropertyTypes: true` 下）への代入には `omitUndefined` を使う:
+
+```typescript
+import { omitUndefined } from "@/shared/lib/serialize";
+
+// NG: safeParse の result.data を直接返す（string | undefined が readonly field?: string と非互換）
+return result.data; // 型エラー
+
+// OK: omitUndefined で undefined プロパティを除去
+return result.success ? omitUndefined(result.data) : undefined;
+```
+
+参照実装: `src/shared/lib/sections/field-helpers.ts` の `extractFieldMeta`。
 
 ## React Hook Form 連携
 

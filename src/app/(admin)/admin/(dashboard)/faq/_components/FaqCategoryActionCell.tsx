@@ -11,20 +11,25 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deleteFaqCategory } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
+import { FaqCategoryDialog } from "./FaqCategoryDialog";
 
 type FaqCategoryActionCellProps = {
   readonly id: string;
   readonly name: string;
   readonly itemCount: number;
+  readonly category: FaqCategoryWithItems;
 };
 
 export function FaqCategoryActionCell({
   id,
   name,
   itemCount,
+  category,
 }: FaqCategoryActionCellProps) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const canDelete = itemCount === 0;
 
@@ -44,7 +49,7 @@ export function FaqCategoryActionCell({
   return (
     <>
       <ActionDropdown disabled={isPending}>
-        <ActionDropdownItem href={`/admin/faq/categories/${id}/edit`}>
+        <ActionDropdownItem onClick={() => setEditOpen(true)}>
           編集
         </ActionDropdownItem>
         <ActionDropdownSeparator />
@@ -56,6 +61,12 @@ export function FaqCategoryActionCell({
           削除
         </ActionDropdownItem>
       </ActionDropdown>
+      <FaqCategoryDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        mode="edit"
+        category={category}
+      />
       <DeleteConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}

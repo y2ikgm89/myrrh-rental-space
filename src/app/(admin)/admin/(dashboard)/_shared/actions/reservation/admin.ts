@@ -26,6 +26,11 @@ import {
   updateReservationSchema,
   type UpdateReservationInput,
 } from "@/admin/lib/validations/admin-reservation";
+import { createNotificationCommand } from "@/shared/domain/notifications/commands";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 
 export const createAdminReservation = async (
   input: AdminReservationInput,
@@ -87,8 +92,23 @@ export const createAdminReservation = async (
         });
       }
 
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.RESERVATION_NEW,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_NEW],
+          message: "管理者が新規予約を作成しました",
+          resourceType: "reservation",
+          resourceId: result.id,
+        }),
+        {
+          operation: "createAdminReservationNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+
       invalidateReservationCaches(result.id, result.customerId, {
         coupons: true,
+        notifications: true,
       });
     },
     resolveAuditResourceId: (payload) => payload.id,
@@ -154,7 +174,24 @@ export const updateAdminReservation = async (
         });
       }
 
-      invalidateReservationCaches(id, result.customerId, { coupons: true });
+      fireAndForget(
+        createNotificationCommand({
+          type: NOTIFICATION_TYPE.RESERVATION_UPDATE,
+          title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
+          message: "管理者が予約を更新しました",
+          resourceType: "reservation",
+          resourceId: id,
+        }),
+        {
+          operation: "updateAdminReservationNotification",
+          category: ErrorCategory.DATABASE,
+        },
+      );
+
+      invalidateReservationCaches(id, result.customerId, {
+        coupons: true,
+        notifications: true,
+      });
     },
   });
 };

@@ -3,7 +3,6 @@
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
-import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
 import {
   createFaqCategory as createFaqCategoryCommand,
   deleteFaqCategory as deleteFaqCategoryCommand,
@@ -41,19 +40,6 @@ import {
   type FaqCategoryFormInput,
   type FaqItemFormInput,
 } from "@/admin/lib/validations/faq";
-
-export type {
-  FaqCategoryFormInput,
-  FaqItemFormInput,
-} from "@/admin/lib/validations/faq";
-export type {
-  FaqCategoryListResult,
-  FaqCategoryWithItems,
-  FaqItemFilters,
-  FaqItemListResult,
-  FaqItemPagination,
-  FaqItemWithCategory,
-} from "@/shared/domain/faq/types";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z
@@ -177,18 +163,10 @@ export async function createFaqItem(
     return createValidationMutationError(parsed.error);
   }
 
-  const answerHtml = await renderEditorStateToHtmlLazy(parsed.data.answerJson);
-
   return executeAdminMutationResult({
     resource: "faq",
     action: "create",
-    execute: async () =>
-      createFaqItemCommand(
-        omitUndefined({
-          ...parsed.data,
-          answerHtml,
-        }),
-      ),
+    execute: async () => createFaqItemCommand(omitUndefined(parsed.data)),
     afterSuccess: () => {
       invalidateFaqCaches();
       purgeFaqCaches();
@@ -211,20 +189,12 @@ export async function updateFaqItem(
     return createValidationMutationError(parsed.error);
   }
 
-  const answerHtml = await renderEditorStateToHtmlLazy(parsed.data.answerJson);
-
   return executeAdminMutationResult({
     resource: "faq",
     action: "update",
     resourceId: validatedId.data,
     execute: async () => {
-      await updateFaqItemCommand(
-        validatedId.data,
-        omitUndefined({
-          ...parsed.data,
-          answerHtml,
-        }),
-      );
+      await updateFaqItemCommand(validatedId.data, omitUndefined(parsed.data));
       return null;
     },
     afterSuccess: () => {

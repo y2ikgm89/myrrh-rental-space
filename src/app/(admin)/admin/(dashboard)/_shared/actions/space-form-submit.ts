@@ -17,26 +17,7 @@ import {
   readSpaceFormActionMeta,
 } from "@/admin/lib/space-form-data-codec";
 import { createSpace, updateSpace } from "./space";
-
-export type SpaceFormActionState =
-  | { status: "idle" }
-  | {
-      status: "error";
-      message: string;
-      clientNonce: number;
-      fieldErrors?: Record<string, string[]>;
-    }
-  | {
-      status: "success";
-      message: string;
-      clientNonce: number;
-      /** 作成直後の詳細ページへ遷移するために返す */
-      createdId?: string;
-    };
-
-export const SPACE_FORM_ACTION_INITIAL_STATE: SpaceFormActionState = {
-  status: "idle",
-};
+import type { SpaceFormActionState } from "./space-form-submit-types";
 
 export async function submitSpaceFormAction(
   _prev: SpaceFormActionState,

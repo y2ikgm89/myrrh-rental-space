@@ -19,7 +19,10 @@ import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 
 export async function submitReview(
@@ -64,12 +67,13 @@ export async function submitReview(
     updateTag(getCacheTag.reviews.stats(result.spaceId));
     updateTag(CACHE_TAGS.CUSTOMERS);
     updateTag(getCacheTag.customers.detail(customer.id));
+    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     // 6. Create admin notification (fire-and-forget)
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.REVIEW_NEW,
-        title: "新規レビュー",
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.REVIEW_NEW],
         message: `${customer.lastName}${customer.firstName}様からレビューが投稿されました`,
         resourceType: "review",
         resourceId: result.id,

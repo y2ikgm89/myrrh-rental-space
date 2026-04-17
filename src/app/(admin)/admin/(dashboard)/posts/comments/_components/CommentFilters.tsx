@@ -9,6 +9,7 @@ import { adminPostSearchParamsParsers } from "@/shared/lib/nuqs";
 import { IconSearch, IconX } from "@tabler/icons-react";
 import { Button, Input, SubmitButton } from "@/admin/components/ui";
 import { getFormString } from "@/shared/lib/form-data";
+import { EDITOR_COMMENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 interface StatusOption {
   value: string;
@@ -17,8 +18,8 @@ interface StatusOption {
 
 const STATUS_OPTIONS: readonly StatusOption[] = [
   { value: "ALL", label: "すべて" },
-  { value: "ACTIVE", label: "アクティブ" },
-  { value: "DELETED", label: "削除済み" },
+  { value: "ACTIVE", label: EDITOR_COMMENT_STATUS_LABELS.ACTIVE },
+  { value: "DELETED", label: EDITOR_COMMENT_STATUS_LABELS.DELETED },
 ];
 
 export function CommentFilters() {

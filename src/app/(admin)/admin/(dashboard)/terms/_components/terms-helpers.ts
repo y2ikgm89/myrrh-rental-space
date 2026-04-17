@@ -6,6 +6,7 @@
 
 import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { TermsStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { TERMS_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { TermsType } from "@/shared/lib/validations/enums/prisma-types";
 import type { TermsVersionDetail } from "@/shared/lib/validations/terms";
 import type { Serialized } from "@/shared/lib/serialize";
@@ -87,7 +88,5 @@ export function statusBadgeVariant(
 }
 
 export function statusLabel(status: TermsStatus): string {
-  if (status === TermsStatus.PUBLISHED) return "公開中";
-  if (status === TermsStatus.DRAFT) return "下書き";
-  return "アーカイブ";
+  return TERMS_STATUS_LABELS[status];
 }

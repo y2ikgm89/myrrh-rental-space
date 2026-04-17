@@ -12,8 +12,9 @@ export function getNotificationResourceHref(
   resourceId: string | null,
 ): string | null {
   // サマリー通知は resourceId を持たず type 単独でルーティング
+  // FAQ は master-detail 構造のため、カテゴリ一覧に誘導する
   if (type === NOTIFICATION_TYPE.FAQ_STALE) {
-    return "/admin/faq?quickFilter=stale";
+    return "/admin/faq";
   }
 
   if (!resourceType || !resourceId) return null;

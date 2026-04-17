@@ -8,8 +8,6 @@ import {
   TabsContent,
 } from "@/admin/components/ui/tabs";
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { Button } from "@/admin/components/ui";
 
 // =============================================================================
 // 型定義
@@ -50,17 +48,10 @@ export function NewsManagementTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <div className="mb-2 flex items-center justify-between">
-        <TabsList>
-          <TabsTrigger value="posts">記事一覧</TabsTrigger>
-          <TabsTrigger value="meta">メタ情報</TabsTrigger>
-        </TabsList>
-        {activeTab === "posts" && (
-          <Button asChild className="min-h-10 sm:min-h-9">
-            <Link href="/admin/news/new">新規作成</Link>
-          </Button>
-        )}
-      </div>
+      <TabsList className="mb-2">
+        <TabsTrigger value="posts">記事一覧</TabsTrigger>
+        <TabsTrigger value="meta">メタ情報</TabsTrigger>
+      </TabsList>
 
       <TabsContent
         value="posts"

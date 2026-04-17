@@ -144,17 +144,6 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-mock.module("@/shared/db/json", () => ({
-  parsePrismaInputJson: mock((value: string, _errorMessage: string) => {
-    if (!value) return undefined;
-    try {
-      return JSON.parse(value) as unknown;
-    } catch {
-      throw new Error("回答データが不正です");
-    }
-  }),
-}));
-
 mock.module("@/shared/lib/serialize", () => ({
   omitUndefined: mock(<T extends Record<string, unknown>>(obj: T): T => {
     return Object.fromEntries(
@@ -219,15 +208,9 @@ const VALID_CATEGORY_INPUT = {
 const VALID_ITEM_INPUT = {
   categoryId: CATEGORY_ID,
   question: "質問タイトル",
-  answerJson: '{"root":{"children":[]}}',
-  answerHtml: "<p>回答内容</p>",
+  answer: "回答内容",
   order: 1,
   isPublished: false,
-  metaDescription: null,
-  metaKeywords: null,
-  ogpTitle: null,
-  ogpDescription: null,
-  ogpImageUrl: null,
 };
 
 // =============================================================================
@@ -623,33 +606,6 @@ describe("createFaqItem", () => {
           data: expect.objectContaining({
             isPublished: false,
             publishedAt: null,
-          }),
-        }),
-      );
-    });
-
-    test("nullable フィールドに値を設定して作成できる", async () => {
-      await createFaqItem({
-        ...VALID_ITEM_INPUT,
-        metaDescription: "説明",
-        ogpTitle: "OGPタイトル",
-      });
-
-      expect(mockFaqItemCreate).toHaveBeenCalledTimes(1);
-    });
-
-    test("nullable フィールドが空文字の場合 null として保存する", async () => {
-      await createFaqItem({
-        ...VALID_ITEM_INPUT,
-        metaDescription: "",
-        ogpTitle: "",
-      });
-
-      expect(mockFaqItemCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            metaDescription: null,
-            ogpTitle: null,
           }),
         }),
       );

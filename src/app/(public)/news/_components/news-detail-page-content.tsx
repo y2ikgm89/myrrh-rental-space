@@ -1,23 +1,19 @@
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
 import { NewsArticleJsonLd } from "@/public/components/seo/json-ld";
-import { PageHero } from "@/public/components/layouts/page-hero";
-import { Breadcrumb } from "@/public/components/layouts/breadcrumb";
-import { Container } from "@/public/components/design-system/container";
-import { SiteCTA } from "@/public/components/layouts/site-cta";
+import { ArticleLayout } from "@/public/components/layouts/article-layout";
+import { ArticleHeader } from "@/public/components/layouts/article-header";
 import {
   generateArticleMetadata,
   getSeoSettings,
 } from "@/public/lib/seo/metadata-factory";
+import { Prose } from "@/public/components/design-system/prose";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import { ShareButtons } from "@/public/components/ui/share-buttons";
+import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
-import { resolveWidthStyles } from "@/shared/lib/styles/layout-mapper";
 import { toISOString } from "@/shared/lib/serialize";
-import { formatSerializedDate } from "@/shared/lib/serialize";
-import { BlogLayout } from "@/public/components/layouts/blog-layout";
 
 type PublishedNewsItem = NonNullable<
   Awaited<ReturnType<typeof getPublishedNewsItem>>
@@ -57,65 +53,38 @@ export async function NewsDetailPageContent({
   newsItem: PublishedNewsItem;
 }): Promise<ReactElement> {
   const layoutConfig = await getNewsLayoutSettings(newsItem.id);
-  const { className: contentClassName, style: contentStyle } =
-    resolveWidthStyles({
-      width: layoutConfig.contentWidth,
-      customPx: layoutConfig.contentWidthCustom,
-    });
-
   const baseUrl = getBaseUrl();
+  const articleUrl = `${baseUrl}${newsItem.url}`;
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
 
   return (
-    <>
-      <NewsArticleJsonLd
-        headline={newsItem.title}
-        description={newsItem.metaDescription ?? newsItem.title}
-        {...(newsItem.ogpImageUrl != null
-          ? { image: newsItem.ogpImageUrl }
-          : {})}
-        url={`${baseUrl}${newsItem.url}`}
-        datePublished={datePublished}
-      />
-
-      <PageHero
-        variant="compact"
+    <ArticleLayout
+      jsonLd={
+        <NewsArticleJsonLd
+          headline={newsItem.title}
+          description={newsItem.metaDescription ?? newsItem.title}
+          {...(newsItem.ogpImageUrl != null
+            ? { image: newsItem.ogpImageUrl }
+            : {})}
+          url={articleUrl}
+          datePublished={datePublished}
+        />
+      }
+      breadcrumb={[
+        { label: "お知らせ", href: "/news" },
+        { label: newsItem.title },
+      ]}
+      contentWidth={layoutConfig.contentWidth}
+      contentWidthCustom={layoutConfig.contentWidthCustom}
+    >
+      <ArticleHeader
         title={newsItem.title}
-        breadcrumb={
-          <Breadcrumb
-            items={[
-              { label: "お知らせ", href: "/news" },
-              { label: newsItem.title },
-            ]}
-          />
-        }
+        publishedAt={newsItem.publishedAt}
       />
-
-      <article className="py-[var(--spacing-section)]">
-        <Container>
-          <BlogLayout>
-            <div className={contentClassName} style={contentStyle}>
-              <div className="mb-6 text-sm text-muted-foreground">
-                <time dateTime={newsItem.publishedAt ?? undefined}>
-                  {formatSerializedDate(newsItem.publishedAt)}
-                </time>
-              </div>
-              <SanitizedHtml
-                html={newsItem.contentHtml}
-                className="prose prose-lg max-w-none"
-              />
-              <div className="mt-12 border-t border-border pt-6">
-                <ShareButtons
-                  url={`${baseUrl}${newsItem.url}`}
-                  title={newsItem.title}
-                />
-              </div>
-            </div>
-          </BlogLayout>
-        </Container>
-      </article>
-
-      <SiteCTA />
-    </>
+      <Prose variant="editorial" className="max-w-none">
+        <SanitizedHtml html={newsItem.contentHtml} />
+      </Prose>
+      <ArticleFooter url={articleUrl} title={newsItem.title} />
+    </ArticleLayout>
   );
 }

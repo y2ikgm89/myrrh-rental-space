@@ -16,12 +16,14 @@ type FaqItemActionCellProps = {
   readonly id: string;
   readonly question: string;
   readonly isPublished: boolean;
+  readonly onEdit: () => void;
 };
 
 export function FaqItemActionCell({
   id,
   question,
   isPublished,
+  onEdit,
 }: FaqItemActionCellProps) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -59,9 +61,7 @@ export function FaqItemActionCell({
   return (
     <>
       <ActionDropdown disabled={isPending}>
-        <ActionDropdownItem href={`/admin/faq/items/${id}/edit`}>
-          編集
-        </ActionDropdownItem>
+        <ActionDropdownItem onClick={onEdit}>編集</ActionDropdownItem>
         <ActionDropdownItem onClick={handleTogglePublished}>
           {isPublished ? "非公開にする" : "公開する"}
         </ActionDropdownItem>

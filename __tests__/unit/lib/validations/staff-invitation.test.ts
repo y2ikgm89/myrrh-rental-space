@@ -32,13 +32,13 @@ describe("createInvitationSchema", () => {
     }
   });
 
-  test("roleフィールドはデフォルトでUSER", () => {
+  test("role フィールドは必須（デフォルト値なし）", () => {
+    // role のデフォルト値は UI 層（InviteForm の defaultValues）が設定する。
+    // スキーマ側では必須にすることで、`SUPER_ADMIN` のような意図しないデフォルトが
+    // サーバー API へ漏れるリスクを排除する。
     const data = { email: "staff@example.com" };
     const result = createInvitationSchema.safeParse(data);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.role).toBe(Role.USER);
-    }
+    expect(result.success).toBe(false);
   });
 
   test("nameフィールドはオプショナル", () => {
@@ -59,19 +59,26 @@ describe("createInvitationSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("すべてのRole値を許可", () => {
-    const roles = [
-      Role.SUPER_ADMIN,
-      Role.ADMIN,
-      Role.EDITOR,
-      Role.VIEWER,
-      Role.USER,
-    ];
-    roles.forEach((role) => {
+  test("INVITABLE_ROLES（ADMIN/EDITOR/VIEWER）のみ許可", () => {
+    for (const role of [Role.ADMIN, Role.EDITOR, Role.VIEWER]) {
       const data = { email: "staff@example.com", role };
       const result = createInvitationSchema.safeParse(data);
       expect(result.success).toBe(true);
-    });
+    }
+  });
+
+  test("SUPER_ADMIN はスキーマレベルで拒否（システム初期化時のみ作成可）", () => {
+    const data = { email: "staff@example.com", role: Role.SUPER_ADMIN };
+    const result = createInvitationSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("USER / CUSTOMER は拒否", () => {
+    for (const role of [Role.USER, Role.CUSTOMER]) {
+      const data = { email: "staff@example.com", role };
+      const result = createInvitationSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    }
   });
 
   test("無効なRole値の場合にエラー", () => {

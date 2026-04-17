@@ -50,14 +50,18 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/admin/components/ui/accordion";
+import { ToggleGroup, ToggleGroupItem } from "@/admin/components/ui";
 import { updateSidebarSettings } from "@/admin/actions/settings";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 import {
   parseSidebarWidgets,
-  type SidebarWidget,
   type CustomWidget,
+  type PopularWidget,
+  type PostListLayout,
+  type RecentWidget,
+  type SidebarWidget,
 } from "@/shared/lib/validations/sidebar";
 import {
   IconGripVertical,
@@ -398,11 +402,30 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
   })();
 
   // --- Widget helpers ---
-  const isWidgetEnabled = (type: string) =>
-    widgets.some(
-      (w) =>
-        (w.type === "custom" ? w.id === type : w.type === type) && w.enabled,
+  const recentWidget = widgets.find(
+    (w): w is RecentWidget => w.type === "recent",
+  );
+  const popularWidget = widgets.find(
+    (w): w is PopularWidget => w.type === "popular",
+  );
+
+  const handleChangeRecentLayout = (layout: PostListLayout) => {
+    setWidgets((prev) =>
+      prev.map((w) => (w.type === "recent" ? { ...w, layout } : w)),
     );
+  };
+
+  const handleChangePopularLayout = (layout: PostListLayout) => {
+    setWidgets((prev) =>
+      prev.map((w) => (w.type === "popular" ? { ...w, layout } : w)),
+    );
+  };
+
+  const handleTogglePopularRanking = (showRanking: boolean) => {
+    setWidgets((prev) =>
+      prev.map((w) => (w.type === "popular" ? { ...w, showRanking } : w)),
+    );
+  };
 
   const handleToggleWidget = (id: string, enabled: boolean) => {
     setWidgets((prev) =>
@@ -564,52 +587,114 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
               </DndContext>
             </div>
 
-            {/* 表示件数設定 */}
-            {(isWidgetEnabled("recent") || isWidgetEnabled("popular")) && (
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">表示件数設定</h4>
+            {/* 記事ウィジェット設定 */}
+            {(recentWidget?.enabled || popularWidget?.enabled) && (
+              <div className="space-y-6">
+                <h4 className="text-sm font-medium">記事ウィジェット設定</h4>
 
-                {isWidgetEnabled("recent") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="sidebar-recent-count">
-                      新着記事の表示件数
-                    </Label>
-                    <Input
-                      id="sidebar-recent-count"
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={recentCount}
-                      onChange={(e) =>
-                        setRecentCount(parseInt(e.target.value, 10) || 5)
-                      }
-                      disabled={isPending}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      1〜20件の範囲で指定してください
-                    </p>
+                {recentWidget?.enabled && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <p className="text-sm font-medium">新着記事</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="sidebar-recent-count">表示件数</Label>
+                      <Input
+                        id="sidebar-recent-count"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={recentCount}
+                        onChange={(e) =>
+                          setRecentCount(parseInt(e.target.value, 10) || 5)
+                        }
+                        disabled={isPending}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        1〜20件の範囲で指定してください
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>レイアウト</Label>
+                      <ToggleGroup
+                        type="single"
+                        value={recentWidget.layout}
+                        onValueChange={(v) => {
+                          if (v === "compact" || v === "stacked") {
+                            handleChangeRecentLayout(v);
+                          }
+                        }}
+                        disabled={isPending}
+                      >
+                        <ToggleGroupItem value="compact">
+                          コンパクト
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="stacked">
+                          縦積み
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                      <p className="text-sm text-muted-foreground">
+                        コンパクト: 横並びサムネ（5件推奨） / 縦積み:
+                        大きなサムネ（3件推奨）
+                      </p>
+                    </div>
                   </div>
                 )}
 
-                {isWidgetEnabled("popular") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="sidebar-popular-count">
-                      人気記事の表示件数
-                    </Label>
-                    <Input
-                      id="sidebar-popular-count"
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={popularCount}
-                      onChange={(e) =>
-                        setPopularCount(parseInt(e.target.value, 10) || 5)
-                      }
-                      disabled={isPending}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      1〜20件の範囲で指定してください
-                    </p>
+                {popularWidget?.enabled && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <p className="text-sm font-medium">人気記事</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="sidebar-popular-count">表示件数</Label>
+                      <Input
+                        id="sidebar-popular-count"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={popularCount}
+                        onChange={(e) =>
+                          setPopularCount(parseInt(e.target.value, 10) || 5)
+                        }
+                        disabled={isPending}
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        1〜20件の範囲で指定してください
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>レイアウト</Label>
+                      <ToggleGroup
+                        type="single"
+                        value={popularWidget.layout}
+                        onValueChange={(v) => {
+                          if (v === "compact" || v === "stacked") {
+                            handleChangePopularLayout(v);
+                          }
+                        }}
+                        disabled={isPending}
+                      >
+                        <ToggleGroupItem value="compact">
+                          コンパクト
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="stacked">
+                          縦積み
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="sidebar-popular-ranking">
+                          ランキング番号を表示
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          サムネイル左上に 01〜 の連番を重ねます
+                        </p>
+                      </div>
+                      <Switch
+                        id="sidebar-popular-ranking"
+                        checked={popularWidget.showRanking}
+                        onCheckedChange={handleTogglePopularRanking}
+                        disabled={isPending}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -647,6 +732,13 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
                   カスタムウィジェットでは自由なテキストとリンクを追加できます
                 </li>
                 <li>表示件数は1〜20件の範囲で設定できます</li>
+                <li>
+                  新着・人気記事はコンパクト（横並び）/
+                  縦積みの2種類のレイアウトから選べます
+                </li>
+                <li>
+                  人気記事はサムネイル左上に 01〜 のランキング番号を表示できます
+                </li>
               </ul>
             </AccordionContent>
           </AccordionItem>

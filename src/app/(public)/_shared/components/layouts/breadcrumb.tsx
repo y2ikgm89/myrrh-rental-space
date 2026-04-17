@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { IconHome } from "@tabler/icons-react";
 import { BreadcrumbJsonLd } from "@/public/components/seo/json-ld";
+import { cn } from "@/shared/lib/cn";
 
 interface BreadcrumbItem {
   readonly label: string;
@@ -9,9 +10,13 @@ interface BreadcrumbItem {
 
 interface BreadcrumbProps {
   readonly items: readonly BreadcrumbItem[];
+  /** "sm" reduces padding and icon size for compact breadcrumb bars */
+  readonly size?: "default" | "sm";
 }
 
-export function Breadcrumb({ items }: BreadcrumbProps) {
+export function Breadcrumb({ items, size = "default" }: BreadcrumbProps) {
+  const isSmall = size === "sm";
+
   return (
     <>
       <BreadcrumbJsonLd
@@ -30,10 +35,13 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
           <li>
             <Link
               href="/"
-              className="px-1 py-1 hover:text-foreground"
+              className={cn(
+                "hover:text-foreground",
+                isSmall ? "py-0" : "px-1 py-1",
+              )}
               aria-label="ホーム"
             >
-              <IconHome className="h-4 w-4" />
+              <IconHome className={isSmall ? "h-3.5 w-3.5" : "h-4 w-4"} />
             </Link>
           </li>
           {items.map((item, i) => (
@@ -44,7 +52,10 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
               {item.href && i < items.length - 1 ? (
                 <Link
                   href={item.href}
-                  className="px-1 py-1 hover:text-foreground"
+                  className={cn(
+                    "hover:text-foreground",
+                    isSmall ? "py-0" : "px-1 py-1",
+                  )}
                 >
                   {item.label}
                 </Link>

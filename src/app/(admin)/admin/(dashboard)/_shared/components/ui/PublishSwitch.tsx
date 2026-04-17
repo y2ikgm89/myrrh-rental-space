@@ -8,6 +8,7 @@ import {
   isMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Types
@@ -28,7 +29,10 @@ export function PublishSwitch<TData = unknown>({
   id,
   isPublished,
   onToggle,
-  label = { published: "公開", unpublished: "非公開" },
+  label = {
+    published: PUBLISH_LABELS.published,
+    unpublished: PUBLISH_LABELS.unpublished,
+  },
 }: PublishSwitchProps<TData>) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

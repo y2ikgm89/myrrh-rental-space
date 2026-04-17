@@ -36,7 +36,6 @@ import { MobileNav } from "@/public/components/layouts/mobile-nav";
 import { GraphJsonLd } from "@/public/components/seo/json-ld";
 import { getGraphJsonLdData } from "@/public/lib/seo";
 import { getHeaderNavigation } from "@/shared/domain/navigation/queries";
-import { getBusinessInfo } from "@/public/data/business";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import {
@@ -180,7 +179,10 @@ async function resolvePublicAuthKind(): Promise<PublicAuthKind> {
 }
 
 /**
- * Header ラッパー: DB からナビゲーション + ブランド名 + 認証状態を取得
+ * Header ラッパー: DB からナビゲーション + 認証状態を取得
+ *
+ * ブランド（サイト名・ロゴ・ロゴ使用フラグ）は `headerSettings.brand` に
+ * Settings から既にロード済みのため、ここでは追加フェッチ不要。
  *
  * PPR: `getCurrentCustomerUser()` は uncached なため、この async SC は必ず
  * 親レイアウトの `<Suspense>` 内で呼び出すこと。
@@ -190,9 +192,8 @@ async function HeaderWithData({
 }: {
   headerSettings: HeaderSettings;
 }): Promise<ReactElement> {
-  const [navItems, businessInfo, authKind] = await Promise.all([
+  const [navItems, authKind] = await Promise.all([
     getHeaderNavigation(),
-    getBusinessInfo(),
     resolvePublicAuthKind(),
   ]);
 
@@ -205,7 +206,7 @@ async function HeaderWithData({
 
   return (
     <Header
-      brandName={businessInfo.name.split(" ")[0]?.toUpperCase() ?? "MYRRH"}
+      brand={headerSettings.brand}
       navItems={navItems}
       scrollBehavior={headerSettings.scrollBehavior}
       backgroundMode={headerSettings.backgroundMode}

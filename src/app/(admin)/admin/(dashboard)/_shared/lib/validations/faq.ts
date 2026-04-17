@@ -5,10 +5,6 @@
  */
 
 import { z } from "zod";
-import {
-  seoOgpFieldsSchema,
-  defaultSeoOgpValues,
-} from "@/shared/lib/validations/seo";
 
 // =============================================================================
 // FaqCategory Schemas
@@ -73,29 +69,26 @@ export type BulkMoveFaqItemsInput = z.infer<typeof bulkMoveFaqItemsSchema>;
 // FaqItem Schemas
 // =============================================================================
 
-export const faqItemFormSchema = z
-  .object({
-    categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
-    question: z
-      .string()
-      .min(1, { error: "質問を入力してください" })
-      .max(500, { error: "質問は500文字以内で入力してください" }),
-    answerJson: z
-      .string()
-      .min(1, { error: "回答を入力してください" })
-      .max(500000, { error: "回答が大きすぎます" }),
-    order: z.number().int().min(0),
-    isPublished: z.boolean(),
-  })
-  .merge(seoOgpFieldsSchema);
+export const faqItemFormSchema = z.object({
+  categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
+  question: z
+    .string()
+    .min(1, { error: "質問を入力してください" })
+    .max(500, { error: "質問は500文字以内で入力してください" }),
+  answer: z
+    .string()
+    .min(1, { error: "回答を入力してください" })
+    .max(5000, { error: "回答は5000文字以内で入力してください" }),
+  order: z.number().int().min(0),
+  isPublished: z.boolean(),
+});
 
 export type FaqItemFormInput = z.infer<typeof faqItemFormSchema>;
 
 export const defaultFaqItemFormValues: FaqItemFormInput = {
   categoryId: "",
   question: "",
-  answerJson: "",
+  answer: "",
   order: 0,
   isPublished: true,
-  ...defaultSeoOgpValues,
 };

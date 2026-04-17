@@ -18,6 +18,7 @@ import { toggleLocationPublish } from "@/admin/actions/location";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import type { LocationWithStats } from "@/shared/domain/locations/types";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
+import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 type LocationDetailProps = {
   location: LocationWithStats;
@@ -54,7 +55,7 @@ export function LocationDetail({ location }: LocationDetailProps) {
             />
             <div>
               <p className="font-medium">
-                {location.isPublished ? "公開中" : "非公開"}
+                {getPublishLabel(location.isPublished)}
               </p>
               <p className="text-sm text-muted-foreground">
                 {location.isPublished

@@ -207,7 +207,7 @@ export async function SectionRenderer({
             (f) => ({
               id: f.id,
               question: f.question,
-              answer: f.answerHtml ?? "",
+              answer: f.answer,
             }),
           );
       return <FaqListSection config={config} items={items} design={design} />;

@@ -11,11 +11,12 @@ import {
   Input,
 } from "@/admin/components/ui";
 import { adminSpaceSearchParamsParsers } from "@/shared/lib/nuqs";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 const PUBLISHED_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "true", label: "公開" },
-  { value: "false", label: "非公開" },
+  { value: "true", label: PUBLISH_LABELS.published },
+  { value: "false", label: PUBLISH_LABELS.unpublished },
 ];
 
 const RATING_OPTIONS = [

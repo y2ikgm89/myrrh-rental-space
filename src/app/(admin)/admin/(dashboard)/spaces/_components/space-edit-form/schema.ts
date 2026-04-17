@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
   spaceDiscountTypeSchema,
   durationDiscountOverrideSchema,
-  spaceFormSchema,
+  spaceFormBaseSchema,
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
 import {
@@ -38,7 +38,7 @@ const spaceEditFormFacilitiesSchema = z
  * `standardSchemaResolver` / Standard Schema は入出力型一致が必要なため、
  * `spaceFormSchema` の `.default()` 付きフィールドは RHF 用に必須形へ差し替える。
  */
-export const spaceEditFormSchema = spaceFormSchema
+export const spaceEditFormSchema = spaceFormBaseSchema
   .omit({
     imageUrls: true,
     facilities: true,
@@ -48,8 +48,8 @@ export const spaceEditFormSchema = spaceFormSchema
     durationDiscountOverride: true,
     taxRateType: true,
   })
-  .merge(seoOgpFieldsFormSchema)
   .extend({
+    ...seoOgpFieldsFormSchema.shape,
     imageUrls: spaceEditFormImageUrlsSchema,
     facilities: spaceEditFormFacilitiesSchema,
     publishedAt: z.string().optional(),

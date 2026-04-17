@@ -1,20 +1,15 @@
-export class DomainError extends Error {
-  readonly code:
-    | "NOT_FOUND"
-    | "CONFLICT"
-    | "VALIDATION"
-    | "UNAUTHORIZED"
-    | "UNEXPECTED";
+export type DomainErrorCode =
+  | "NOT_FOUND"
+  | "CONFLICT"
+  | "VALIDATION"
+  | "UNAUTHORIZED"
+  | "FORBIDDEN"
+  | "UNEXPECTED";
 
-  constructor(
-    message: string,
-    code:
-      | "NOT_FOUND"
-      | "CONFLICT"
-      | "VALIDATION"
-      | "UNAUTHORIZED"
-      | "UNEXPECTED" = "UNEXPECTED",
-  ) {
+export class DomainError extends Error {
+  readonly code: DomainErrorCode;
+
+  constructor(message: string, code: DomainErrorCode = "UNEXPECTED") {
     super(message);
     this.name = "DomainError";
     this.code = code;

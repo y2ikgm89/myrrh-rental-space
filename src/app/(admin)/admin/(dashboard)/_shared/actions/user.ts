@@ -45,7 +45,8 @@ export async function createUser(
   return executeAdminMutationResult({
     resource: "user",
     action: "create",
-    execute: async () => createUserCommand(parsed.data),
+    execute: async (user) =>
+      createUserCommand(parsed.data, { id: user.id, role: user.role }),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
     },
@@ -71,8 +72,11 @@ export async function updateUser(
     resource: "user",
     action: "update",
     resourceId: validatedId.data,
-    execute: async () => {
-      await updateUserCommand(validatedId.data, parsed.data);
+    execute: async (user) => {
+      await updateUserCommand(validatedId.data, parsed.data, {
+        id: user.id,
+        role: user.role,
+      });
       return null;
     },
     afterSuccess: () => {
@@ -93,7 +97,10 @@ export async function deleteUser(id: string): Promise<MutationResult> {
     action: "delete",
     resourceId: validated.data,
     execute: async (user) => {
-      await deleteUserCommand(validated.data, user.id);
+      await deleteUserCommand(validated.data, {
+        id: user.id,
+        role: user.role,
+      });
       return null;
     },
     afterSuccess: () => {

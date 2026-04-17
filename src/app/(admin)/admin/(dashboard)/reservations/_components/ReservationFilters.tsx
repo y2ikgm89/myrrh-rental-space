@@ -12,15 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { entriesOf } from "@/shared/lib/serialize";
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "PENDING", label: "確認待ち" },
-  { value: "CONFIRMED", label: "確定" },
-  { value: "COMPLETED", label: "完了" },
-  { value: "CANCELLED", label: "キャンセル" },
-  { value: "NO_SHOW", label: "無断キャンセル" },
-] as const;
+  ...entriesOf(RESERVATION_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
+];
 
 export function ReservationFilters() {
   const [params, setParams] = useQueryStates(

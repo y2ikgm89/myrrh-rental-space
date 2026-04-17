@@ -44,7 +44,7 @@ export const createPostSchema = z
     categoryId: z.string().uuid({ error: "カテゴリを選択してください" }),
     tags: tagsSchema,
   })
-  .merge(seoOgpFieldsSchema);
+  .extend(seoOgpFieldsSchema.shape);
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
 
@@ -90,7 +90,7 @@ export const updatePostSettingsSchema = z
       .nullable()
       .optional(),
   })
-  .merge(seoOgpFieldsSchema);
+  .extend(seoOgpFieldsSchema.shape);
 
 export type UpdatePostSettingsInput = z.infer<typeof updatePostSettingsSchema>;
 
@@ -129,7 +129,7 @@ export const postSettingsFormSchema = z
     contentWidth: z.string().optional(),
     contentWidthCustom: z.string().optional(),
   })
-  .merge(seoOgpFieldsFormSchema);
+  .extend(seoOgpFieldsFormSchema.shape);
 
 export type PostSettingsFormData = z.infer<typeof postSettingsFormSchema>;
 

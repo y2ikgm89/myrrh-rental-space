@@ -11,6 +11,7 @@ import {
   ADMIN_SPACE_LIST_SORT_BY,
   ADMIN_SPACE_MANAGEMENT_TABS,
 } from "@/shared/lib/constants/admin-space-management";
+import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
 import {
   createParser,
   createSearchParamsCache,
@@ -303,6 +304,26 @@ export async function loadAdminCalendarSearchParams(
 // 管理画面: 顧客
 // ============================================================
 
+const adminCustomerSortByValues = [
+  "createdAt",
+  "lastReservationAt",
+  "totalReservations",
+  "totalSpent",
+] as const;
+
+export type AdminCustomerSortBy = (typeof adminCustomerSortByValues)[number];
+
+/** 顧客種別フィルター（"ALL" は「すべて」を表す sentinel） */
+export const CUSTOMER_TYPE_FILTER_ALL = "ALL" as const;
+
+const customerTypeFilterValues = [
+  CUSTOMER_TYPE_FILTER_ALL,
+  CustomerType.PERSONAL,
+  CustomerType.CORPORATE,
+] as const;
+
+export type CustomerTypeFilter = (typeof customerTypeFilterValues)[number];
+
 /**
  * 顧客・お問い合わせ・予約一覧などのベース。
  * `BaseFilters` / `useFilterParams` の `perPage` とサーバー `limit` を一致させる。
@@ -310,6 +331,13 @@ export async function loadAdminCalendarSearchParams(
 export const adminCustomerSearchParamsParsers = {
   search: parseAsQuery,
   status: parseAsString.withDefault(""),
+  customerType: parseAsStringLiteral(customerTypeFilterValues).withDefault(
+    CUSTOMER_TYPE_FILTER_ALL,
+  ),
+  sortBy: parseAsStringLiteral(adminCustomerSortByValues).withDefault(
+    "createdAt",
+  ),
+  sortOrder: parseAsSortOrder,
   page: parseAsPage,
   perPage: parseAsPerPage,
 };
@@ -349,12 +377,12 @@ export async function loadAdminNewsSearchParams(
 }
 
 // ============================================================
-// 管理画面 FAQ（4 タブ: 質問 | カテゴリ | SEO | ゴミ箱）
+// 管理画面 FAQ
+// ランディング `/admin/faq` はカテゴリ一覧（search params なし）、
+// 詳細 `/admin/faq/[categoryId]` は配下の質問の検索/並び替え用パラメータのみを持つ。
 // ============================================================
 
-const adminFaqTabs = ["items", "categories", "seo", "trash"] as const;
 const adminFaqItemStatusValues = ["all", "published", "draft"] as const;
-const adminFaqQuickFilterValues = ["all", "drafts", "recent", "stale"] as const;
 const adminFaqItemSortByValues = [
   "order",
   "updatedAt",
@@ -363,33 +391,26 @@ const adminFaqItemSortByValues = [
 ] as const;
 export type AdminFaqItemSortBy = (typeof adminFaqItemSortByValues)[number];
 
-export const adminFaqSearchParamsParsers = {
-  tab: parseAsStringLiteral(adminFaqTabs).withDefault("items"),
-  quickFilter: parseAsStringLiteral(adminFaqQuickFilterValues).withDefault(
-    "all",
-  ),
+export const adminFaqCategoryDetailSearchParamsParsers = {
   search: parseAsQuery,
-  categoryId: parseAsString.withDefault(""),
   status: parseAsStringLiteral(adminFaqItemStatusValues).withDefault("all"),
   // 初回ランディングは "order" 昇順（管理者が手動設定した並び順）
-  // viewCount / updatedAt カラムをクリックした時は FaqItemTableHeader.handleSort が
-  // 適切な方向（viewCount → desc、その他 → asc）を URL に書き戻す
   sortBy: parseAsStringLiteral(adminFaqItemSortByValues).withDefault("order"),
   sortOrder: parseAsStringLiteral(sortOrders).withDefault("asc"),
   page: parseAsPage,
   perPage: parseAsInteger.withDefault(20),
 };
 
-const adminFaqSearchParamsCache = createSearchParamsCache(
-  adminFaqSearchParamsParsers,
+const adminFaqCategoryDetailSearchParamsCache = createSearchParamsCache(
+  adminFaqCategoryDetailSearchParamsParsers,
 );
 
-/** 管理画面 FAQ 検索パラメータローダー */
-export async function loadAdminFaqSearchParams(
+/** 管理画面 FAQ カテゴリ詳細ページの検索パラメータローダー */
+export async function loadAdminFaqCategoryDetailSearchParams(
   searchParams: Promise<SearchParams>,
 ) {
-  await adminFaqSearchParamsCache.parse(searchParams);
-  return adminFaqSearchParamsCache.all();
+  await adminFaqCategoryDetailSearchParamsCache.parse(searchParams);
+  return adminFaqCategoryDetailSearchParamsCache.all();
 }
 
 const adminInquirySearchParamsParsers = {

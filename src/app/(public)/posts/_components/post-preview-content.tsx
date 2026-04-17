@@ -1,17 +1,19 @@
 "use client";
 
 /**
- * PostPreviewContent — 投稿プレビュークライアントコンポーネント
+ * PostPreviewContent — 投稿プレビュー本文
  *
- * sessionStorage からプレビューデータを読み取り表示する。
- * /posts/preview/[slug] ページで使用。
- * dynamic({ ssr: false }) 経由でのみ利用されるため SSR は行われない。
+ * sessionStorage からプレビューデータを読み取り、ArticleLayout の
+ * children として ArticleHeader + Prose + タグフッターを描画する。
+ * Layout / banner / CTA は呼び出し側（page.tsx）が担当。
  */
 
 import type { ReactElement } from "react";
 import { useRef, useSyncExternalStore } from "react";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
-import { ArticleDetailHero } from "@/public/components/article-detail-hero";
+import { ArticleHeader } from "@/public/components/layouts/article-header";
+import { ArticleTagList } from "@/public/components/ui/article-tag-list";
+import { Prose } from "@/public/components/design-system/prose";
 import {
   getPreviewStorageKey,
   isPreviewDataValid,
@@ -34,11 +36,7 @@ const SERVER_ERROR_STATE: PreviewState = {
 
 function readFromStorage(identifier: string): PreviewState {
   if (typeof window === "undefined") {
-    // dynamic({ ssr: false }) により、このパスは到達しない
-    return {
-      status: "error",
-      message: "プレビューデータの読み込みに失敗しました。",
-    };
+    return SERVER_ERROR_STATE;
   }
 
   const key = getPreviewStorageKey("post", identifier);
@@ -71,10 +69,7 @@ function readFromStorage(identifier: string): PreviewState {
     }
     return { status: "ready", data: parsed.data.data };
   } catch {
-    return {
-      status: "error",
-      message: "プレビューデータの読み込みに失敗しました。",
-    };
+    return SERVER_ERROR_STATE;
   }
 }
 
@@ -93,9 +88,9 @@ export function PostPreviewContent({
 
   if (state.status === "error") {
     return (
-      <div className="mx-auto max-w-6xl px-5 py-24 text-center">
-        <p className="text-muted-foreground">{state.message}</p>
-      </div>
+      <p className="py-24 text-center text-sm text-muted-foreground">
+        {state.message}
+      </p>
     );
   }
 
@@ -103,35 +98,21 @@ export function PostPreviewContent({
 
   return (
     <>
-      <div className="bg-accent/10 py-2 text-center text-xs text-accent">
-        プレビューモード — このページは公開されていません
-      </div>
-      <ArticleDetailHero
+      <ArticleHeader
         title={data.title}
-        categoryName={data.category.name}
         publishedAt={data.publishedAt}
-        authorName={null}
+        category={data.category.name}
       />
-      <article className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
-        <SanitizedHtml
-          html={data.contentHtml}
-          className="prose prose-lg max-w-none"
-        />
-        {data.tags.length > 0 && (
-          <div className="mt-12 border-t border-border pt-6">
-            <div className="flex flex-wrap gap-2">
-              {data.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </article>
+      <Prose variant="editorial" className="max-w-none">
+        <SanitizedHtml html={data.contentHtml} />
+      </Prose>
+      {data.tags.length > 0 ? (
+        <footer className="mt-12 border-y border-border py-6">
+          <ArticleTagList
+            tags={data.tags.map((tag) => ({ slug: tag, name: tag }))}
+          />
+        </footer>
+      ) : null}
     </>
   );
 }

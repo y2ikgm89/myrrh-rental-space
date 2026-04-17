@@ -19,9 +19,20 @@ import {
   isValidHeaderScrollBehavior,
 } from "@/shared/lib/validations/enums/guards";
 
+/**
+ * ブランド表示用の共有型。
+ * ヘッダー/フッター両方で使用（`siteName` フォールバック + logo トグル + URL）。
+ */
+export interface SiteBrand {
+  siteName: string;
+  logoUrl: string | null;
+  useLogo: boolean;
+}
+
 export interface HeaderSettings {
   scrollBehavior: HeaderScrollBehavior;
   backgroundMode: HeaderBackgroundMode;
+  brand: SiteBrand;
 }
 
 export interface FooterSettings {
@@ -31,7 +42,10 @@ export interface FooterSettings {
   hoursLabel: string;
   showSocialLinks: boolean;
   themeColor: string;
+  brand: SiteBrand;
 }
+
+const DEFAULT_SITE_NAME = "Myrrh Rental Space";
 
 export async function getHeaderSettings(): Promise<HeaderSettings> {
   "use cache";
@@ -45,6 +59,9 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
         select: {
           headerScrollBehavior: true,
           headerBackgroundMode: true,
+          siteName: true,
+          headerLogoUrl: true,
+          useHeaderLogo: true,
         },
       }),
     fallback: null,
@@ -60,6 +77,11 @@ export async function getHeaderSettings(): Promise<HeaderSettings> {
     backgroundMode: isValidHeaderBackgroundMode(result?.headerBackgroundMode)
       ? result.headerBackgroundMode
       : HeaderBackgroundMode.solid,
+    brand: {
+      siteName: result?.siteName ?? DEFAULT_SITE_NAME,
+      logoUrl: result?.headerLogoUrl ?? null,
+      useLogo: result?.useHeaderLogo ?? true,
+    },
   };
 }
 
@@ -79,6 +101,9 @@ export async function getFooterSettings(): Promise<FooterSettings> {
           footerHoursLabel: true,
           footerShowSocialLinks: true,
           themeColor: true,
+          siteName: true,
+          footerLogoUrl: true,
+          useFooterLogo: true,
         },
       }),
     fallback: null,
@@ -94,6 +119,11 @@ export async function getFooterSettings(): Promise<FooterSettings> {
     hoursLabel: result?.footerHoursLabel ?? "Hours",
     showSocialLinks: result?.footerShowSocialLinks ?? true,
     themeColor: result?.themeColor ?? "#fafafa",
+    brand: {
+      siteName: result?.siteName ?? DEFAULT_SITE_NAME,
+      logoUrl: result?.footerLogoUrl ?? null,
+      useLogo: result?.useFooterLogo ?? true,
+    },
   };
 }
 

@@ -38,33 +38,43 @@
   --color-info-foreground: oklch(0.985 0 0);
 
   /* --------------------------------------------------------------------------
-   * Typography
+   * Typography — Editorial Magazine × Japanese
+   *
+   * Scale: Modular ratio ~1.25 (Major Third) between heading levels.
+   * Fluid: clamp(min, preferred, max) anchored to 375px→1280px viewport.
+   * Japanese-optimized: line-height slightly relaxed for kanji density.
+   * Hero is intentionally outside the modular scale (dramatic outlier).
    * -------------------------------------------------------------------------- */
   --font-sans: "Noto Sans JP", sans-serif;
   --font-serif: "Cormorant Garamond", "Noto Sans JP", serif;
 
-  --text-hero: clamp(3rem, 7vw + 1rem, 6rem);
+  /* Hero — landing page impact (48→80px) */
+  --text-hero: clamp(3rem, 2rem + 4.5vw, 5rem);
   --text-hero--line-height: 1.05;
   --text-hero--letter-spacing: -0.03em;
   --text-hero--font-weight: 300;
 
-  --text-h1: clamp(2.25rem, 4vw + 0.5rem, 3.75rem);
-  --text-h1--line-height: 1.1;
+  /* h1 — page main title (30→40px) */
+  --text-h1: clamp(1.875rem, 1.5rem + 1.75vw, 2.5rem);
+  --text-h1--line-height: 1.2;
   --text-h1--letter-spacing: -0.02em;
   --text-h1--font-weight: 300;
 
-  --text-h2: clamp(1.75rem, 3vw + 0.5rem, 2.75rem);
-  --text-h2--line-height: 1.15;
+  /* h2 — major section heading (24→32px) */
+  --text-h2: clamp(1.5rem, 1.25rem + 1.15vw, 2rem);
+  --text-h2--line-height: 1.25;
   --text-h2--letter-spacing: -0.02em;
   --text-h2--font-weight: 300;
 
-  --text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem);
-  --text-h3--line-height: 1.25;
+  /* h3 — subsection / card title (20→24px) */
+  --text-h3: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --text-h3--line-height: 1.35;
   --text-h3--letter-spacing: -0.01em;
   --text-h3--font-weight: 400;
 
+  /* h4 — label-style heading (fixed 18px) */
   --text-h4: 1.125rem;
-  --text-h4--line-height: 1.3;
+  --text-h4--line-height: 1.45;
   --text-h4--letter-spacing: 0em;
   --text-h4--font-weight: 500;
 
@@ -80,12 +90,14 @@
   --tracking-normal: 0;
   --tracking-wide: 0.1em;
 
+  /* Eyebrow — uppercase section label (11px) */
   --text-eyebrow: 0.6875rem;
   --text-eyebrow--line-height: 1;
   --text-eyebrow--letter-spacing: 0.18em;
   --text-eyebrow--font-weight: 500;
 
-  --text-pullquote: clamp(1.5rem, 3vw + 0.5rem, 2.5rem);
+  /* Pullquote — editorial highlight (24→32px, aligned with h2) */
+  --text-pullquote: clamp(1.5rem, 1.25rem + 1.15vw, 2rem);
   --text-pullquote--line-height: 1.3;
   --text-pullquote--letter-spacing: -0.01em;
   --text-pullquote--font-weight: 300;
@@ -144,6 +156,19 @@
     color: var(--color-foreground);
     background-color: var(--color-background);
     line-height: var(--leading-normal);
+  }
+
+  /* Heading typography defaults — balanced wrap + Japanese phrase-aware break.
+     text-wrap: balance  → evens out multi-line headings (Chrome 114+, Safari 17.5)
+     word-break: auto-phrase → phrase-boundary wrap for Japanese (Chrome 119+) */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+    word-break: auto-phrase;
   }
 
   /* transparent モードのみ: 非Hero最初の要素にmargin-top補正
@@ -508,9 +533,10 @@
  * ========================================================================== */
 
 @layer utilities {
+  /* Serif heading family utility. Letter-spacing is governed per-level by
+     --text-{hero,h1,h2,h3,h4}--letter-spacing so we do NOT set it here. */
   .font-heading {
     font-family: var(--font-serif);
-    letter-spacing: var(--tracking-tight);
   }
 
   /* メンテナンスページ フェードイン（モーション許可時のみ） */

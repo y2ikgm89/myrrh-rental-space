@@ -1,29 +1,12 @@
 import "server-only";
 
-import { parsePrismaInputJson } from "@/shared/db/json";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
 import type {
   CreateFaqItemResult,
   FaqItemCommandInput,
   ToggleFaqItemPublishedResult,
 } from "@/shared/domain/faq/types";
-
-const ANSWER_PLAIN_TEXT_MAX_LENGTH = 200;
-
-function parseAnswerJson(answerJson: string) {
-  return parsePrismaInputJson(answerJson, "回答データが不正です");
-}
-
-function normalizeNullableString(
-  value: string | null | undefined,
-): string | null {
-  if (!value) {
-    return null;
-  }
-  return value;
-}
 
 async function ensureFaqCategoryExists(id: string): Promise<void> {
   const category = await prisma.faqCategory.findFirst({
@@ -65,20 +48,10 @@ export async function createFaqItem(
     data: {
       categoryId: input.categoryId,
       question: input.question,
-      answerJson: parseAnswerJson(input.answerJson),
-      answerHtml: input.answerHtml,
-      answerPlainText: stripHtmlToText(
-        input.answerHtml,
-        ANSWER_PLAIN_TEXT_MAX_LENGTH,
-      ),
+      answer: input.answer,
       order: input.order || (maxOrder._max.order ?? 0) + 1,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
-      metaDescription: normalizeNullableString(input.metaDescription),
-      metaKeywords: normalizeNullableString(input.metaKeywords),
-      ogpTitle: normalizeNullableString(input.ogpTitle),
-      ogpDescription: normalizeNullableString(input.ogpDescription),
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
     },
     select: { id: true },
   });
@@ -100,20 +73,10 @@ export async function updateFaqItem(
     data: {
       categoryId: input.categoryId,
       question: input.question,
-      answerJson: parseAnswerJson(input.answerJson),
-      answerHtml: input.answerHtml,
-      answerPlainText: stripHtmlToText(
-        input.answerHtml,
-        ANSWER_PLAIN_TEXT_MAX_LENGTH,
-      ),
+      answer: input.answer,
       order: input.order,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
-      metaDescription: normalizeNullableString(input.metaDescription),
-      metaKeywords: normalizeNullableString(input.metaKeywords),
-      ogpTitle: normalizeNullableString(input.ogpTitle),
-      ogpDescription: normalizeNullableString(input.ogpDescription),
-      ogpImageUrl: normalizeNullableString(input.ogpImageUrl),
     },
   });
 }

@@ -58,9 +58,7 @@ const ITEM_SELECT = {
   id: true,
   categoryId: true,
   question: true,
-  answerHtml: true,
-  answerJson: true,
-  answerPlainText: true,
+  answer: true,
   order: true,
   isPublished: true,
   publishedAt: true,
@@ -71,11 +69,6 @@ const ITEM_SELECT = {
   notHelpfulCount: true,
   createdAt: true,
   updatedAt: true,
-  metaDescription: true,
-  metaKeywords: true,
-  ogpTitle: true,
-  ogpDescription: true,
-  ogpImageUrl: true,
 } as const;
 
 const ITEM_WITH_CATEGORY_SELECT = {
@@ -145,8 +138,7 @@ type FaqItemWhere = {
   updatedAt?: { gte?: Date; lte?: Date };
   OR?: Array<{
     question?: { contains: string; mode: "insensitive" };
-    answerHtml?: { contains: string; mode: "insensitive" };
-    answerPlainText?: { contains: string; mode: "insensitive" };
+    answer?: { contains: string; mode: "insensitive" };
   }>;
 };
 
@@ -177,7 +169,7 @@ function buildFaqItemWhere(filters: FaqItemFilters): FaqItemWhere {
   if (filters.search) {
     where.OR = [
       { question: { contains: filters.search, mode: "insensitive" } },
-      { answerPlainText: { contains: filters.search, mode: "insensitive" } },
+      { answer: { contains: filters.search, mode: "insensitive" } },
     ];
   }
 

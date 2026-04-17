@@ -28,8 +28,17 @@ async function CustomerList({ searchParams }: { searchParams: SearchParams }) {
   const status = parseCustomerStatusFilter(params.status);
 
   const result = await getCustomers(
-    omitUndefined({ status, search: params.search || undefined }),
-    { page: params.page, limit: params.perPage },
+    omitUndefined({
+      status,
+      customerType: params.customerType,
+      search: params.search || undefined,
+    }),
+    {
+      page: params.page,
+      limit: params.perPage,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
+    },
   );
 
   return (

@@ -185,6 +185,9 @@ const VALID_CREATE_INPUT = {
   name: "テストスタッフ",
 };
 
+const SUPER_ADMIN_CREATOR = { id: USER_ID, role: "SUPER_ADMIN" as const };
+const ADMIN_CREATOR = { id: USER_ID, role: "ADMIN" as const };
+
 const VALID_SETUP_INPUT = {
   token: "abc123def456".padEnd(64, "0"),
   password: "securepassword123",
@@ -217,7 +220,10 @@ describe("sendInvitation", () => {
 
   describe("正常系", () => {
     test("有効な入力で招待を作成してメールを送信し InvitationData を返す", async () => {
-      const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+      const result = await sendInvitation(
+        VALID_CREATE_INPUT,
+        SUPER_ADMIN_CREATOR,
+      );
       expect(result).toMatchObject({
         id: INVITATION_ID,
         email: "staff@example.com",
@@ -228,7 +234,10 @@ describe("sendInvitation", () => {
     });
 
     test("InvitationData の日付フィールドが ISO 文字列として返される", async () => {
-      const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+      const result = await sendInvitation(
+        VALID_CREATE_INPUT,
+        SUPER_ADMIN_CREATOR,
+      );
       expect(typeof result.createdAt).toBe("string");
       expect(typeof result.expiresAt).toBe("string");
     });
@@ -239,13 +248,13 @@ describe("sendInvitation", () => {
       );
       const result = await sendInvitation(
         { ...VALID_CREATE_INPUT, name: undefined },
-        USER_ID,
+        SUPER_ADMIN_CREATOR,
       );
       expect(result.name).toBeNull();
     });
 
     test("メール送信時に setupUrl が /admin/setup/{token} 形式になる", async () => {
-      await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+      await sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR);
       expect(mockSendStaffInvitationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           to: "staff@example.com",
@@ -261,7 +270,7 @@ describe("sendInvitation", () => {
         Promise.resolve({ id: USER_ID }),
       );
       await expect(
-        sendInvitation(VALID_CREATE_INPUT, USER_ID),
+        sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
       ).rejects.toMatchObject({
         code: "CONFLICT",
         message: "このメールアドレスは既に登録されています",
@@ -273,7 +282,7 @@ describe("sendInvitation", () => {
         Promise.resolve({ id: INVITATION_ID }),
       );
       await expect(
-        sendInvitation(VALID_CREATE_INPUT, USER_ID),
+        sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
       ).rejects.toMatchObject({
         code: "CONFLICT",
       });
@@ -284,7 +293,7 @@ describe("sendInvitation", () => {
         Promise.resolve({ success: false, error: "SMTP error" }),
       );
       await expect(
-        sendInvitation(VALID_CREATE_INPUT, USER_ID),
+        sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
       ).rejects.toMatchObject({ code: "UNEXPECTED" });
       expect(mockInvitationDelete).toHaveBeenCalledTimes(1);
     });
@@ -295,9 +304,37 @@ describe("sendInvitation", () => {
         Promise.resolve({ success: false, error: "SMTP error" }),
       );
       await expect(
-        sendInvitation(VALID_CREATE_INPUT, USER_ID),
+        sendInvitation(VALID_CREATE_INPUT, SUPER_ADMIN_CREATOR),
       ).rejects.toThrow();
       expect(mockLogError).toHaveBeenCalledTimes(1);
+    });
+
+    test("ADMIN が ADMIN を招待しようとすると FORBIDDEN エラーをスロー", async () => {
+      await expect(
+        sendInvitation({ ...VALID_CREATE_INPUT, role: "ADMIN" }, ADMIN_CREATOR),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        message: "このロールで招待する権限がありません",
+      });
+
+      expect(mockInvitationCreate).not.toHaveBeenCalled();
+    });
+
+    test("ADMIN が EDITOR / VIEWER を招待するのは正常", async () => {
+      for (const role of ["EDITOR", "VIEWER"] as const) {
+        mockUserFindUnique.mockImplementation(() => Promise.resolve(null));
+        mockInvitationFindFirst.mockImplementation(() => Promise.resolve(null));
+        mockInvitationCreate.mockImplementation(() =>
+          Promise.resolve({ ...VALID_INVITATION_RECORD, role }),
+        );
+        mockSendStaffInvitationEmail.mockImplementation(() =>
+          Promise.resolve({ success: true }),
+        );
+
+        await expect(
+          sendInvitation({ ...VALID_CREATE_INPUT, role }, ADMIN_CREATOR),
+        ).resolves.toMatchObject({ role });
+      }
     });
   });
 });
@@ -633,7 +670,10 @@ describe("toInvitationData 変換（sendInvitation 経由）", () => {
     mockInvitationCreate.mockImplementation(() =>
       Promise.resolve({ ...VALID_INVITATION_RECORD, expiresAt: FUTURE_DATE }),
     );
-    const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+    const result = await sendInvitation(
+      VALID_CREATE_INPUT,
+      SUPER_ADMIN_CREATOR,
+    );
     expect(result.expiresAt).toBe(FUTURE_DATE.toISOString());
   });
 
@@ -641,7 +681,10 @@ describe("toInvitationData 変換（sendInvitation 経由）", () => {
     mockInvitationCreate.mockImplementation(() =>
       Promise.resolve({ ...VALID_INVITATION_RECORD, usedAt: null }),
     );
-    const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+    const result = await sendInvitation(
+      VALID_CREATE_INPUT,
+      SUPER_ADMIN_CREATOR,
+    );
     expect(result.usedAt).toBeNull();
   });
 
@@ -650,7 +693,10 @@ describe("toInvitationData 変換（sendInvitation 経由）", () => {
     mockInvitationCreate.mockImplementation(() =>
       Promise.resolve({ ...VALID_INVITATION_RECORD, usedAt: usedDate }),
     );
-    const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+    const result = await sendInvitation(
+      VALID_CREATE_INPUT,
+      SUPER_ADMIN_CREATOR,
+    );
     expect(result.usedAt).toBe(usedDate.toISOString());
   });
 
@@ -659,7 +705,10 @@ describe("toInvitationData 変換（sendInvitation 経由）", () => {
     mockInvitationCreate.mockImplementation(() =>
       Promise.resolve({ ...VALID_INVITATION_RECORD, createdAt: createdDate }),
     );
-    const result = await sendInvitation(VALID_CREATE_INPUT, USER_ID);
+    const result = await sendInvitation(
+      VALID_CREATE_INPUT,
+      SUPER_ADMIN_CREATOR,
+    );
     expect(result.createdAt).toBe(createdDate.toISOString());
   });
 });

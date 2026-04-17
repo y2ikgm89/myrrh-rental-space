@@ -6,6 +6,8 @@
 
 import { Suspense } from "react";
 import { connection } from "next/server";
+import Link from "next/link";
+import { IconPlus } from "@tabler/icons-react";
 import { getPosts, getPostCategories, getPostTags } from "@/admin/queries/post";
 import {
   getAdminComments,
@@ -19,7 +21,7 @@ import { TagManager } from "./taxonomy/_components/TagManager";
 import { CommentFilters } from "./comments/_components/CommentFilters";
 import { CommentTable } from "./comments/_components/CommentTable";
 import { CommentStats } from "./comments/_components/CommentStats";
-import { Pagination } from "@/admin/components/ui";
+import { Pagination, Button } from "@/admin/components/ui";
 import { LoadingState } from "@/admin/components/LoadingState";
 import { parsePostStatusFilter } from "@/shared/lib/validations/enums/helpers";
 import { createTypeGuard, omitUndefined } from "@/shared/lib/serialize";
@@ -149,13 +151,21 @@ export default async function PostsPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          投稿管理
-        </h1>
-        <p className="text-sm text-muted-foreground sm:text-base">
-          投稿・カテゴリー・タグ・コメントを管理します
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            投稿管理
+          </h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            投稿・カテゴリー・タグ・コメントを管理します
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/admin/posts/new">
+            <IconPlus className="mr-2 h-4 w-4" />
+            新規投稿作成
+          </Link>
+        </Button>
       </div>
 
       <PostsManagementTabs

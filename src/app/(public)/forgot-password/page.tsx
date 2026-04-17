@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default async function ForgotPasswordPage() {
   const user = await getCurrentAdminUser();
-  if (user) redirect("/mypage");
+  if (user) redirect("/admin");
 
   return (
     <>

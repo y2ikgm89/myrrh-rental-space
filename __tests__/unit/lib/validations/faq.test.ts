@@ -21,18 +21,13 @@ const VALID_FAQ_CATEGORY = {
   isActive: true,
 };
 
-// 有効なFAQアイテムデータ（SEO/OGPフィールドを含む）
+// 有効なFAQアイテムデータ
 const VALID_FAQ_ITEM = {
   categoryId: "123e4567-e89b-12d3-a456-426614174000",
   question: "これはテスト質問ですか？",
-  answerJson: "はい、これはテスト回答です。",
+  answer: "はい、これはテスト回答です。",
   order: 0,
   isPublished: true,
-  metaDescription: null,
-  metaKeywords: null,
-  ogpTitle: null,
-  ogpDescription: null,
-  ogpImageUrl: null,
 };
 
 describe("faqCategoryFormSchema", () => {
@@ -263,11 +258,11 @@ describe("faqItemFormSchema", () => {
     });
   });
 
-  describe("answerJson", () => {
+  describe("answer", () => {
     test("空文字はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: "",
+        answer: "",
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -275,21 +270,21 @@ describe("faqItemFormSchema", () => {
       }
     });
 
-    test("500000文字超過はエラー", () => {
+    test("5000文字超過はエラー", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: "あ".repeat(500001),
+        answer: "あ".repeat(5001),
       });
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toContain("大きすぎます");
+        expect(result.error.issues[0].message).toContain("5000文字以内");
       }
     });
 
-    test("500000文字ちょうどは許可", () => {
+    test("5000文字ちょうどは許可", () => {
       const result = faqItemFormSchema.safeParse({
         ...VALID_FAQ_ITEM,
-        answerJson: "あ".repeat(500000),
+        answer: "あ".repeat(5000),
       });
       expect(result.success).toBe(true);
     });
@@ -344,14 +339,9 @@ describe("defaultFaqItemFormValues", () => {
     expect(defaultFaqItemFormValues).toEqual({
       categoryId: "",
       question: "",
-      answerJson: "",
+      answer: "",
       order: 0,
       isPublished: true,
-      metaDescription: null,
-      metaKeywords: null,
-      ogpTitle: null,
-      ogpDescription: null,
-      ogpImageUrl: null,
     });
   });
 });

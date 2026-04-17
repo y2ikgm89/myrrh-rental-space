@@ -637,6 +637,60 @@ function getServerSnapshot(): null {
 
 **注意**: ブラウザ API 依存のため `dynamic({ ssr: false })` とセットで使用する。
 
+### 外部ストア + 楽観的 local state の併用パターン
+
+投票・ブックマーク・お気に入り等、**ユーザー操作の即座反映（楽観的更新）** と **localStorage 永続化** の両方が必要な UI は、`useSyncExternalStore` と `useState` を二重 state として組み合わせる。SSR → hydration の遷移は render 中の state sync で橋渡しする（`useEffect` を使うと `@eslint-react/set-state-in-effect` に違反する）。
+
+```tsx
+const subscribe = () => () => {}; // localStorage は通知なし
+const getServerSnapshot = (): VoteValue | null => null; // プリミティブで参照安定
+
+function Vote({ id }: { id: string }) {
+  // 1) 外部ストア（永続値）
+  const snapshotRef = useRef<VoteValue | null>(null);
+  const storedVote = useSyncExternalStore(
+    subscribe,
+    () => {
+      snapshotRef.current ??= readFromStorage(id);
+      return snapshotRef.current;
+    },
+    getServerSnapshot,
+  );
+
+  // 2) 楽観的 local state（UI 即時反映用）
+  const [voted, setVoted] = useState<VoteValue | null>(storedVote);
+
+  // 3) hydration 後に storedVote が変わったら voted に反映（render 中 sync）
+  //    上記「親 prop の変化を render 中に検知して state を同期」参照
+  const [previousStored, setPreviousStored] = useState(storedVote);
+  if (storedVote !== previousStored) {
+    setPreviousStored(storedVote);
+    if (voted === null && storedVote !== null) setVoted(storedVote);
+  }
+
+  const handleVote = (vote: VoteValue) => {
+    if (voted) return;
+    setVoted(vote); // 即時 UI 反映
+    writeToStorage(id, vote); // 永続化
+    void sendVoteToServer(id, vote); // サーバー集計（fire-and-forget）
+  };
+}
+```
+
+参照実装: `src/app/(public)/faq/_components/faq-helpful-vote.tsx`
+
+**アンチパターン:**
+
+```tsx
+// NG: useState lazy initializer で localStorage を読む → hydration mismatch
+const [voted, setVoted] = useState(() => readFromStorage(id));
+
+// NG: useEffect で storedVote → voted を同期 → set-state-in-effect 警告
+useEffect(() => {
+  if (storedVote) setVoted(storedVote);
+}, [storedVote]);
+```
+
 ---
 
 ## React 19 `<Activity>` — EXPERIMENTAL 採用禁止

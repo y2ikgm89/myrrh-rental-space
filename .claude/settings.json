@@ -8,7 +8,11 @@
       "mcp__github__*",
       "mcp__context7__*",
       "mcp__plugin_serena_serena__*",
-      "mcp__plugin_playwright_playwright__*"
+      "mcp__plugin_playwright_playwright__*",
+      "Bash(bun run validate *)",
+      "Bash(bun run type-check *)",
+      "Bash(bun run lint *)",
+      "Bash(bun outdated *)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -87,6 +91,12 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pattern-guard.sh",
             "timeout": 10,
             "statusMessage": "パターン検査中..."
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-policy-docs.sh",
+            "timeout": 15,
+            "statusMessage": "Policy docs 同期検証中..."
           }
         ]
       },

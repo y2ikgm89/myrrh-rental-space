@@ -27,7 +27,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
-import type { PageSectionData } from "@/admin/actions/page-section";
+import type { PageSectionData } from "@/admin/actions/page-section-types";
 import { isRecord } from "@/shared/lib/serialize";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
 

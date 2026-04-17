@@ -27,7 +27,10 @@ import { omitUndefined } from "@/shared/lib/serialize";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { verifySpaceBelongsToLocation } from "@/shared/domain/spaces/public-queries";
 import { getCurrentCustomerUser } from "@/shared/lib/customer-auth";
@@ -115,7 +118,7 @@ export async function submitReservation(
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.RESERVATION_NEW,
-        title: "新規予約",
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_NEW],
         message: `${result.payload.customerName}様が${result.payload.spaceName}を予約しました`,
         resourceType: "reservation",
         resourceId: result.id,

@@ -32,15 +32,8 @@ import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards"
 import {
   TERMINAL_RESERVATION_STATUSES,
   RESERVATION_STATUS_TRANSITIONS,
+  RESERVATION_STATUS_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
-
-const STATUS_LABELS: Record<ReservationStatus, string> = {
-  [ReservationStatus.PENDING]: "保留中",
-  [ReservationStatus.CONFIRMED]: "確認済み",
-  [ReservationStatus.COMPLETED]: "完了",
-  [ReservationStatus.CANCELLED]: "キャンセル",
-  [ReservationStatus.NO_SHOW]: "無断キャンセル",
-};
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;
@@ -156,12 +149,12 @@ export function EventDetailDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={event.status}>
-                    {STATUS_LABELS[event.status]}
+                    {RESERVATION_STATUS_LABELS[event.status]}
                   </SelectItem>
                   {(RESERVATION_STATUS_TRANSITIONS[event.status] ?? []).map(
                     (status) => (
                       <SelectItem key={status} value={status}>
-                        {STATUS_LABELS[status]}
+                        {RESERVATION_STATUS_LABELS[status]}
                       </SelectItem>
                     ),
                   )}

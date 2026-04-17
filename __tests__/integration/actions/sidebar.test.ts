@@ -172,8 +172,13 @@ describe("Sidebar Public Action Integration", () => {
     test("デフォルトウィジェット設定", () => {
       const defaultWidgets: SidebarWidgets = [
         { type: "search", enabled: true },
-        { type: "recent", enabled: true },
-        { type: "popular", enabled: true },
+        { type: "recent", enabled: true, layout: "compact" },
+        {
+          type: "popular",
+          enabled: true,
+          layout: "compact",
+          showRanking: true,
+        },
         { type: "categories", enabled: true },
         { type: "tags", enabled: true },
       ];
@@ -196,8 +201,13 @@ describe("Sidebar Public Action Integration", () => {
     test("部分的な設定のマージ（特定ウィジェットを無効化）", () => {
       const defaultWidgets: SidebarWidgets = [
         { type: "search", enabled: true },
-        { type: "recent", enabled: true },
-        { type: "popular", enabled: true },
+        { type: "recent", enabled: true, layout: "compact" },
+        {
+          type: "popular",
+          enabled: true,
+          layout: "compact",
+          showRanking: true,
+        },
         { type: "categories", enabled: true },
         { type: "tags", enabled: true },
       ];

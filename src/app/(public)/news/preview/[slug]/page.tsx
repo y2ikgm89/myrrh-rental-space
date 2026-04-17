@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { ArticleLayout } from "@/public/components/layouts/article-layout";
+import { PreviewBanner } from "@/public/components/ui/preview-banner";
 import { NewsPreviewContent } from "../../_components/news-preview-content";
 
 interface PageProps {
@@ -15,5 +17,13 @@ export default async function NewsPreviewPage({ params }: PageProps) {
   await connection();
 
   const { slug } = await params;
-  return <NewsPreviewContent identifier={slug} />;
+  return (
+    <ArticleLayout
+      banner={<PreviewBanner />}
+      showSidebar={false}
+      showCta={false}
+    >
+      <NewsPreviewContent identifier={slug} />
+    </ArticleLayout>
+  );
 }

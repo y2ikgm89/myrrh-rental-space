@@ -11,6 +11,7 @@ import {
 import { EmptyState } from "@/admin/components/EmptyState";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { ReviewActionCell } from "./ReviewActionCell";
+import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 // =============================================================================
 // Types
@@ -96,7 +97,7 @@ export function ReviewTable({ reviews }: ReviewTableProps) {
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   <Badge variant={review.isPublished ? "success" : "secondary"}>
-                    {review.isPublished ? "公開" : "非公開"}
+                    {getPublishLabel(review.isPublished)}
                   </Badge>
                   {review.replyBody !== null ? (
                     <Badge variant="outline" className="ml-2">

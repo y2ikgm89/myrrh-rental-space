@@ -345,39 +345,6 @@ export const SPACE_PUBLISH_FIELDS = {
 };
 
 /**
- * FAQ編集用フォームデータ
- */
-export type FaqEditorFormData = {
-  question: string;
-  answerJson: string;
-  categoryId: string;
-  order: number;
-} & SEOFormFields &
-  OGPFormFields &
-  PublishFormFields;
-
-/** FaqEditorFormData用のSEOフィールド名 */
-export const FAQ_SEO_FIELDS = {
-  metaDescription: "metaDescription",
-  metaKeywords: "metaKeywords",
-} as const satisfies { [K in keyof SEOFormFields]-?: Path<FaqEditorFormData> };
-
-/** FaqEditorFormData用のOGPフィールド名 */
-export const FAQ_OGP_FIELDS = {
-  ogpTitle: "ogpTitle",
-  ogpDescription: "ogpDescription",
-  ogpImageUrl: "ogpImageUrl",
-} as const satisfies { [K in keyof OGPFormFields]-?: Path<FaqEditorFormData> };
-
-/** FaqEditorFormData用の公開設定フィールド名 */
-export const FAQ_PUBLISH_FIELDS = {
-  isPublished: "isPublished",
-  publishedAt: "publishedAt",
-} as const satisfies {
-  [K in keyof PublishFormFields]-?: Path<FaqEditorFormData>;
-};
-
-/**
  * カテゴリオプション（汎用）
  */
 export type CategoryOption = {

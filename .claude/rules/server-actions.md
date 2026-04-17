@@ -8,6 +8,45 @@ paths:
 
 > Next.js 16 / 'use cache' / PPR 対応
 
+## `"use server"` ファイルの export 契約（Next.js 16 公式仕様）
+
+ファイルレベル `"use server"` ディレクティブを持つファイルは **async 関数のみ** export 可能（[公式](https://nextjs.org/docs/app/api-reference/directives/use-server)）。Turbopack の server-actions bundler は型・非関数識別子を runtime 参照として残し `ReferenceError: X is not defined` を引き起こす。
+
+**許可される export**:
+
+- `export async function foo() {}`
+- `export const foo = async () => {}`
+
+**禁止される export**（型も含む — Turbopack は `verbatimModuleSyntax` 下でも誤変換する）:
+
+- `export type { X } from "..."` / `export type X = ...` / `export interface X {}`
+- `export const X = { ... }`（非 async 値）・`export class X {}`・`export function X() {}`（非 async）
+- `export default <非 async>`
+
+**型・定数の退避先**: co-located な `<file>-types.ts` に分離し、server-actions ファイルと consumers の両方がそこから import する（`page-section-types.ts` / `space-form-submit-types.ts` が参照実装）。内部のみで使う `type` は export せずローカル宣言のみ。
+
+**検出 grep**:
+
+```bash
+for f in $(grep -rl '^"use server"' src/ --include="*.ts"); do
+  grep -nE "^export (type|interface|class |let |var )" "$f"
+  grep -nE "^export const [A-Za-z_]+" "$f" | grep -v "= async"
+done
+```
+
+**consumer 側逆方向 grep**（UI / Client Component が `"use server"` ファイルから型を import していないか検出。`TS2305 has no exported member` の典型原因）:
+
+```bash
+for f in $(grep -rl '^"use server"' src/ --include="*.ts"); do
+  modpath=$(echo "$f" | sed 's|^src/|@/|; s|\.ts$||')
+  grep -rnE "^\s*type [A-Z][A-Za-z]+,?\s*$" src/ --include="*.tsx" --include="*.ts" | grep "from \"$modpath\""
+done
+```
+
+**型 SSoT の選択**: 型は ① domain 層（`@/shared/domain/**/types.ts`）② co-located `<action>-types.ts` のどちらかに置く。UI / Client Component は **action ファイルから `type X` を import しない**。
+
+---
+
 ## 'use cache' パターン（Next.js 16 新API）
 
 ### 基本キャッシュ（関数レベル）

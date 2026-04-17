@@ -25,6 +25,7 @@ import type { SpaceWithStats } from "@/admin/lib/validations/space";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
+import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 type SpaceDetailProps = {
   space: SpaceWithStats;
@@ -100,7 +101,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
             />
             <div>
               <p className="font-medium">
-                {space.isPublished ? "公開中" : "非公開"}
+                {getPublishLabel(space.isPublished)}
               </p>
               <p className="text-sm text-muted-foreground">
                 {space.isPublished

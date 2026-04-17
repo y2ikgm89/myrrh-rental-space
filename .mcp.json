@@ -8,20 +8,12 @@
       }
     },
     "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"]
-    },
-    "postgres": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
-    },
-    "stripe": {
-      "command": "npx",
+      "command": "bunx",
       "args": [
         "-y",
-        "@stripe/mcp",
-        "--tools=all",
-        "--api-key=${STRIPE_SECRET_KEY}"
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-cd6ff437-5e4e-4f23-8a87-82e0856d9948"
       ]
     }
   }

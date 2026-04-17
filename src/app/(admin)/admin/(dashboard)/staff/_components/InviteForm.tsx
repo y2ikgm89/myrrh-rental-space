@@ -5,12 +5,14 @@
  *
  * メールアドレスを入力して招待メールを送信
  * スタッフ自身がパスワードを設定するフロー
+ *
+ * ロール選択肢は `invitableRoles` prop（呼び出し側が現在ユーザーの階層から決定）に従う。
+ * サーバー側でも `canInviteRole()` で defense-in-depth チェックを行う。
  */
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWatch } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/admin/components/ui/button";
 import { SubmitButton } from "@/admin/components/ui";
 import { Input } from "@/admin/components/ui/input";
@@ -24,26 +26,44 @@ import {
 } from "@/admin/components/ui/select";
 import { useFormAction } from "@/admin/hooks";
 import { sendInvitation } from "@/admin/actions/staff-invitation";
-import {
-  DASHBOARD_ROLES,
-  type DashboardRole,
-  ROLE_DESCRIPTIONS,
-  ROLE_LABELS,
-  STAFF_INVITABLE_ROLES,
-} from "@/shared/lib/admin-roles";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/shared/lib/admin-roles";
+import { createInvitationSchema } from "@/shared/lib/validations/staff-invitation";
+import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
-const inviteSchema = z.object({
-  email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
-  name: z.string().max(100).optional(),
-  role: z.enum(DASHBOARD_ROLES),
-});
+/**
+ * 招待フォームが受け付けるロール（createInvitationSchema の INVITABLE_ROLES と一致）。
+ * `invitableRoles` prop はこのサブセットで渡される（actor 階層による更なるフィルタ）。
+ */
+type InvitableRole = "ADMIN" | "EDITOR" | "VIEWER";
 
-export function InviteForm() {
+const INVITABLE_ROLE_SET = new Set<string>([
+  Role.ADMIN,
+  Role.EDITOR,
+  Role.VIEWER,
+]);
+
+function isInvitableRole(value: string): value is InvitableRole {
+  return INVITABLE_ROLE_SET.has(value);
+}
+
+type Props = {
+  /** 現在ユーザーが付与可能なロール（`getInvitableRoles(currentUser.role)` で取得） */
+  invitableRoles: readonly Role[];
+};
+
+export function InviteForm({ invitableRoles }: Props) {
   const router = useRouter();
   const [success, setSuccess] = useState(false);
 
+  // 安全側の狭窄: invitableRoles は既に actor 階層でフィルタされているが、schema の枠で絞る
+  const safeRoles = invitableRoles.filter(isInvitableRole);
+
+  const defaultRole: InvitableRole = safeRoles.includes("EDITOR")
+    ? "EDITOR"
+    : (safeRoles[0] ?? "VIEWER");
+
   const { form, isPending, onSubmit } = useFormAction(
-    inviteSchema,
+    createInvitationSchema,
     async (data) =>
       sendInvitation({
         email: data.email,
@@ -55,12 +75,11 @@ export function InviteForm() {
       defaultValues: {
         email: "",
         name: "",
-        role: "EDITOR",
+        role: defaultRole,
       },
       onSuccess: () => {
         setSuccess(true);
         form.reset();
-        // 3秒後にスタッフ一覧へ戻る
         setTimeout(() => {
           router.push("/admin/staff");
           router.refresh();
@@ -80,13 +99,18 @@ export function InviteForm() {
 
   if (success) {
     return (
-      <div className="rounded-md bg-success/10 p-6 text-center">
-        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-success/20 mb-4">
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-md bg-success/10 p-6 text-center"
+      >
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/20">
           <svg
             className="h-6 w-6 text-success"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
@@ -123,13 +147,18 @@ export function InviteForm() {
           <Input
             id="email"
             type="email"
+            autoComplete="email"
             {...register("email")}
             placeholder="staff@example.com"
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
           />
           {errors.email && (
-            <p id="email-error" className="text-xs text-destructive">
+            <p
+              id="email-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
               {errors.email.message}
             </p>
           )}
@@ -139,6 +168,7 @@ export function InviteForm() {
           <Label htmlFor="name">名前（任意）</Label>
           <Input
             id="name"
+            autoComplete="name"
             {...register("name")}
             placeholder="山田 太郎"
             aria-invalid={!!errors.name}
@@ -148,7 +178,11 @@ export function InviteForm() {
             未入力の場合、メールアドレスから自動生成されます
           </p>
           {errors.name && (
-            <p id="name-error" className="text-xs text-destructive">
+            <p
+              id="name-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
               {errors.name.message}
             </p>
           )}
@@ -159,24 +193,34 @@ export function InviteForm() {
         <Label htmlFor="role">ロール *</Label>
         <Select
           value={currentRole}
-          onValueChange={(value: DashboardRole) => setValue("role", value)}
+          onValueChange={(value) => {
+            if (isInvitableRole(value)) {
+              setValue("role", value);
+            }
+          }}
         >
-          <SelectTrigger className="w-full md:w-1/2">
+          <SelectTrigger
+            id="role"
+            className="w-full md:w-1/2"
+            aria-describedby="role-description"
+          >
             <SelectValue placeholder="ロールを選択" />
           </SelectTrigger>
           <SelectContent>
-            {STAFF_INVITABLE_ROLES.map((role) => (
+            {safeRoles.map((role) => (
               <SelectItem key={role} value={role}>
                 {ROLE_LABELS[role]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
+        <p id="role-description" className="text-xs text-muted-foreground">
           {ROLE_DESCRIPTIONS[currentRole]}
         </p>
         {errors.role && (
-          <p className="text-xs text-destructive">{errors.role.message}</p>
+          <p role="alert" className="text-xs text-destructive">
+            {errors.role.message}
+          </p>
         )}
       </div>
 

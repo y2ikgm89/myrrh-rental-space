@@ -31,6 +31,7 @@ import {
   ErrorSeverity,
   normalizeError,
 } from "../errors/server";
+import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { sendEmail } from "./send";
 import type {
   ReservationEmailData,
@@ -222,11 +223,7 @@ export async function sendReservationAdminNotification(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  const actionText = {
-    new: "新規予約",
-    update: "予約変更",
-    cancel: "予約キャンセル",
-  }[action];
+  const actionText = RESERVATION_ACTION_LABELS[action];
 
   return sendEmail(
     (resend, from) =>

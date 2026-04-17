@@ -18,7 +18,7 @@ type PageProps = {
 
 export default async function ResetPasswordPage({ searchParams }: PageProps) {
   const user = await getCurrentAdminUser();
-  if (user) redirect("/mypage");
+  if (user) redirect("/admin");
 
   const params = await searchParams;
   const token = typeof params["token"] === "string" ? params["token"] : null;

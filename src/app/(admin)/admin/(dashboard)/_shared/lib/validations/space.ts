@@ -67,9 +67,12 @@ export const spaceSlugSchema = z
   });
 
 /**
- * スペース作成・編集フォームスキーマ
+ * スペース作成・編集フォームの基底 ZodObject（.refine() 前）
+ *
+ * cross-field 検証（mainImageUrl ↔ imageUrls 重複チェック）は含まない。
+ * `.omit()` / `.extend()` が必要な派生スキーマ（spaceEditFormSchema 等）はこちらを使う。
  */
-export const spaceFormSchema = z
+export const spaceFormBaseSchema = z
   .object({
     slug: spaceSlugSchema,
     name: z
@@ -144,11 +147,20 @@ export const spaceFormSchema = z
     // 税率設定
     taxRateType: z.enum(TaxRateType).default(TaxRateType.standard),
   })
-  .merge(seoOgpFieldsSchema)
-  .refine((data) => !data.imageUrls.includes(data.mainImageUrl), {
+  .extend(seoOgpFieldsSchema.shape);
+
+/**
+ * スペース作成・編集フォームスキーマ（cross-field 検証付き）
+ *
+ * Server Action の safeParse で使用。
+ */
+export const spaceFormSchema = spaceFormBaseSchema.refine(
+  (data) => !data.imageUrls.includes(data.mainImageUrl),
+  {
     error: "メイン画像と同じURLを追加画像に登録することはできません",
     path: ["imageUrls"],
-  });
+  },
+);
 
 /**
  * フォーム入力値の型

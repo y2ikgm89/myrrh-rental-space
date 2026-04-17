@@ -4,6 +4,7 @@ import { hashPassword } from "better-auth/crypto";
 import { Role } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
+import { canInviteRole, canModifyUser } from "@/shared/lib/admin-roles";
 import type {
   CreateUserInput,
   UpdateUserInput,
@@ -66,7 +67,15 @@ async function ensureEmailAvailable(
 
 export async function createUser(
   data: CreateUserInput,
+  actor: { id: string; role: Role },
 ): Promise<{ id: string }> {
+  if (!canInviteRole(actor.role, data.role)) {
+    throw new DomainError(
+      "このロールでユーザーを作成する権限がありません",
+      "FORBIDDEN",
+    );
+  }
+
   await ensureEmailAvailable(data.email);
   const hashedPassword = await hashPassword(data.password);
 
@@ -91,8 +100,23 @@ export async function createUser(
 export async function updateUser(
   id: string,
   data: UpdateUserInput,
+  actor: { id: string; role: Role },
 ): Promise<void> {
-  await ensureUserExists(id);
+  const existing = await ensureUserExists(id);
+
+  // 対象ユーザーの現在のロールを操作できるか
+  if (!canModifyUser(actor.role, existing.role)) {
+    throw new DomainError(
+      "このユーザーを編集する権限がありません",
+      "FORBIDDEN",
+    );
+  }
+
+  // ロール変更を伴う場合、新ロールへの付与権限も必要（特権昇格防止）
+  if (data.role !== existing.role && !canInviteRole(actor.role, data.role)) {
+    throw new DomainError("このロールに変更する権限がありません", "FORBIDDEN");
+  }
+
   await ensureEmailAvailable(data.email, id);
 
   const hashedPassword =
@@ -144,13 +168,21 @@ export async function updateUser(
 
 export async function deleteUser(
   id: string,
-  actorUserId: string,
+  actor: { id: string; role: Role },
 ): Promise<void> {
-  if (actorUserId === id) {
+  if (actor.id === id) {
     throw new DomainError("自分自身を削除することはできません", "CONFLICT");
   }
 
   const user = await ensureUserExists(id);
+
+  if (!canModifyUser(actor.role, user.role)) {
+    throw new DomainError(
+      "このユーザーを削除する権限がありません",
+      "FORBIDDEN",
+    );
+  }
+
   if (user.reservations > 0 || user.posts > 0) {
     throw new DomainError(
       `このユーザーには予約${user.reservations}件、投稿${user.posts}件が関連付けられています。先に関連データを削除してください`,
@@ -163,6 +195,12 @@ export async function deleteUser(
   });
 }
 
+/**
+ * ロールのみを変更する特権操作（SUPER_ADMIN 専用）
+ *
+ * 既存の `updateUser` と違い、SUPER_ADMIN の格上げ・格下げを含む全ロール変更に対応。
+ * Server Action 側で `checkRole(Role.SUPER_ADMIN)` を先に通すことで保護する。
+ */
 export async function updateUserRole(
   id: string,
   role: Role,

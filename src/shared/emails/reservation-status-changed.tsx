@@ -9,43 +9,23 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 
-type StatusBadgeStyle = {
-  label: string;
+type StatusBadgeColors = {
   color: string;
   backgroundColor: string;
 };
 
-const STATUS_BADGE_MAP: Record<string, StatusBadgeStyle> = {
-  CONFIRMED: {
-    label: "確認済み",
-    color: "#ffffff",
-    backgroundColor: "#22c55e",
-  },
-  COMPLETED: {
-    label: "完了",
-    color: "#ffffff",
-    backgroundColor: "#3b82f6",
-  },
-  CANCELLED: {
-    label: "キャンセル",
-    color: "#ffffff",
-    backgroundColor: "#ef4444",
-  },
-  NO_SHOW: {
-    label: "ノーショー",
-    color: "#ffffff",
-    backgroundColor: "#f97316",
-  },
-  PENDING: {
-    label: "保留中",
-    color: "#1a1a1a",
-    backgroundColor: "#eab308",
-  },
+const STATUS_BADGE_COLORS: Record<string, StatusBadgeColors> = {
+  CONFIRMED: { color: "#ffffff", backgroundColor: "#22c55e" },
+  COMPLETED: { color: "#ffffff", backgroundColor: "#3b82f6" },
+  CANCELLED: { color: "#ffffff", backgroundColor: "#ef4444" },
+  NO_SHOW: { color: "#ffffff", backgroundColor: "#f97316" },
+  PENDING: { color: "#1a1a1a", backgroundColor: "#eab308" },
 };
 
-const DEFAULT_BADGE: StatusBadgeStyle = {
-  label: "",
+const DEFAULT_BADGE_COLORS: StatusBadgeColors = {
   color: "#ffffff",
   backgroundColor: "#6b7280",
 };
@@ -73,8 +53,10 @@ export function ReservationStatusChangedEmail({
   newStatus,
   location,
 }: ReservationStatusChangedEmailProps) {
-  const badge = STATUS_BADGE_MAP[newStatus] ?? DEFAULT_BADGE;
-  const statusLabel = badge.label || newStatus;
+  const badgeColors = STATUS_BADGE_COLORS[newStatus] ?? DEFAULT_BADGE_COLORS;
+  const statusLabel = isValidReservationStatus(newStatus)
+    ? RESERVATION_STATUS_LABELS[newStatus]
+    : newStatus;
 
   return (
     <Html>
@@ -95,8 +77,8 @@ export function ReservationStatusChangedEmail({
             <Text
               style={{
                 ...statusBadge,
-                color: badge.color,
-                backgroundColor: badge.backgroundColor,
+                color: badgeColors.color,
+                backgroundColor: badgeColors.backgroundColor,
               }}
             >
               {statusLabel}

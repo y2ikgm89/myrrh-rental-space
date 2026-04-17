@@ -24,7 +24,6 @@ import {
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/public/lib/gsap-config";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
-import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import type { PublicFaqCategoryWithItems } from "@/shared/domain/sections/queries";
 import { FaqHelpfulVote } from "./faq-helpful-vote";
 import { FaqViewTracker } from "./faq-view-tracker";
@@ -159,10 +158,9 @@ function FaqAccordionItem({
             </svg>
           </span>
         </summary>
-        <SanitizedHtml
-          html={item.answerHtml}
-          className="mt-3 text-sm leading-relaxed text-muted-foreground"
-        />
+        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+          {item.answer}
+        </p>
         <FaqHelpfulVote
           id={item.id}
           helpfulCount={item.helpfulCount}

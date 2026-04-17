@@ -16,8 +16,8 @@ import {
 } from "@/admin/components/ui/card";
 import { Button } from "@/admin/components/ui/button";
 import { Badge } from "@/admin/components/ui/badge";
+import { RoleBadge } from "@/admin/components/status-badges";
 import { formatDate } from "@/shared/lib/date-format";
-import { Role } from "@/shared/lib/validations/enums/prisma-types";
 import { UserActions } from "../_components/UserActions";
 import type { Metadata } from "next";
 
@@ -144,17 +144,4 @@ export default async function StaffDetailPage({ params }: Props) {
       )}
     </AdminDetailLayout>
   );
-}
-
-function RoleBadge({ role }: { role: Role }) {
-  switch (role) {
-    case Role.SUPER_ADMIN:
-      return <Badge variant="default">スーパー管理者</Badge>;
-    case Role.ADMIN:
-      return <Badge variant="default">管理者</Badge>;
-    case Role.USER:
-      return <Badge variant="secondary">スタッフ</Badge>;
-    default:
-      return <Badge variant="outline">{role}</Badge>;
-  }
 }

@@ -10,6 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 type ReservationNotificationProps = {
   type: "reservation";
@@ -58,11 +59,7 @@ function ReservationNotification({
   reservationId,
   adminUrl,
 }: ReservationNotificationProps) {
-  const actionText = {
-    new: "新規予約",
-    update: "予約変更",
-    cancel: "予約キャンセル",
-  }[action];
+  const actionText = RESERVATION_ACTION_LABELS[action];
 
   const actionColor = {
     new: "#16a34a",

@@ -18,12 +18,14 @@ import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, ScrollTrigger } from "@/public/lib/gsap-config";
 import type { PublicNavItem } from "@/shared/domain/navigation/queries";
+import type { SiteBrand as SiteBrandValue } from "@/shared/domain/settings/queries/display";
 import {
   HeaderScrollBehavior,
   HeaderBackgroundMode,
 } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/public/components/design-system/button";
+import { SiteBrand } from "./site-brand";
 
 interface AuthLink {
   readonly href: string;
@@ -31,7 +33,7 @@ interface AuthLink {
 }
 
 interface HeaderProps {
-  readonly brandName: string;
+  readonly brand: SiteBrandValue;
   readonly navItems: readonly PublicNavItem[];
   readonly scrollBehavior: HeaderScrollBehavior;
   readonly backgroundMode: HeaderBackgroundMode;
@@ -179,7 +181,7 @@ function MobileNavItem({
 /* -------------------------------------------------------------------------- */
 
 export function Header({
-  brandName,
+  brand,
   navItems,
   scrollBehavior,
   backgroundMode,
@@ -320,12 +322,7 @@ export function Header({
       )}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-5 py-4 md:gap-12 md:px-8 md:py-5 lg:gap-16">
-        <Link
-          href="/"
-          className="font-heading whitespace-nowrap text-xl font-light italic tracking-[0.08em] text-foreground"
-        >
-          {brandName}
-        </Link>
+        <SiteBrand brand={brand} variant="header" />
 
         {/* Desktop — Radix NavigationMenu */}
         <NavigationMenu.Root
@@ -409,13 +406,11 @@ export function Header({
               </Dialog.Description>
 
               <div className="flex items-center justify-between px-5 py-4">
-                <Link
-                  href="/"
-                  onClick={closeMenu}
-                  className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground"
-                >
-                  {brandName}
-                </Link>
+                <SiteBrand
+                  brand={brand}
+                  variant="header"
+                  onNavigate={closeMenu}
+                />
                 <Dialog.Close
                   className="flex h-10 w-10 items-center justify-center text-foreground"
                   aria-label="メニューを閉じる"

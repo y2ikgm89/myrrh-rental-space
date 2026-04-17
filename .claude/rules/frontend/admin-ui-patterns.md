@@ -9,7 +9,7 @@ paths:
 
 ## タブUI パターン（管理画面 CRUD）
 
-タブ付き CRUD は **用途で (A) / (B) を選ぶ**。アクションボタンは従来どおり **タブリスト右端**（タブがコンテキストを持つため、ページヘッダー単独に置かない）。
+タブ付き CRUD は **用途で (A) / (B) を選ぶ**。アクションボタン（新規作成等）は **ページヘッダー右端**に配置する（全管理ページで位置を統一）。タブがコンテキストを持つ場合はボタンのラベルをタブに応じて切り替える（例: スペース管理 → `HeaderAction` で tab 別分岐）。参照実装: `spaces/page.tsx`。
 
 ### (A) 重いクライアント状態をタブ間で保持したい
 
@@ -47,6 +47,91 @@ const [activeTab, setActiveTab] = useQueryState(
 | 子のデータ読み | `searchParamsCache.all()` / `get`      | 親で `parse` 済みなら子で二重 `parse` を避ける     |
 
 **(A) と (B) の選び方**: タブ内に Lexical・大きなクライアント状態・「戻ったときに入力を残したい」要件がある → **(A)**。タブが一覧＋フィルタのみで、初回・タブ切替の DB 負荷を抑えたい → **(B)**。
+
+---
+
+## Dialog 型 CRUD パターン（軽量エンティティ向け）
+
+カテゴリ・タグ・短い Q&A 等の **フィールド 10 個以下 / 個別 URL 不要 / リッチエディタ不要** のエンティティは、専用ページではなく Dialog で create/edit を行う。`AdminDetailLayout` + 専用ルートと使い分ける。
+
+### 適用判断
+
+| 条件                                    | Dialog | 専用ページ |
+| --------------------------------------- | ------ | ---------- |
+| フィールド数                            | ≤ 10   | > 10       |
+| 個別 URL の deep link 需要              | なし   | あり       |
+| リッチエディタ（Lexical）使用           | なし   | あり       |
+| 親エンティティの context 内で完結するか | する   | しない     |
+
+### canonical pattern（`useFormAction` + Radix Dialog controlled）
+
+Radix Dialog の close-after-async-submit 公式パターンを `useFormAction` と組み合わせる:
+
+```tsx
+// 1. 共用 Dialog コンポーネント（create/edit mode prop で切替）
+export function FooDialog({ open, onOpenChange, mode, foo }: Props) {
+  const { form, isPending, onSubmit } = useFormAction(
+    fooSchema,
+    (data) => (mode === "create" ? createFoo(data) : updateFoo(foo!.id, data)),
+    {
+      refresh: true, // 成功後 router.refresh()
+      onSuccess: () => onOpenChange(false), // Dialog を閉じる
+      defaultValues: mode === "edit" && foo ? { ...foo } : defaultFooValues,
+    },
+  );
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{mode === "create" ? "作成" : "編集"}</DialogTitle>
+          <DialogDescription>...</DialogDescription>
+          {/* a11y 必須 */}
+        </DialogHeader>
+        <form onSubmit={onSubmit}>...</form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// 2. 親コンポーネントで編集対象 state + open state を管理
+const [editingFoo, setEditingFoo] = useState<Foo | null>(null);
+const [open, setOpen] = useState(false);
+const handleEdit = (foo: Foo) => {
+  setEditingFoo(foo);
+  setOpen(true);
+};
+const handleAdd = () => {
+  setEditingFoo(null);
+  setOpen(true);
+};
+```
+
+`DialogTitle` / `DialogDescription` は Radix の a11y 要件で必須（未配置は WCAG 4.1.2 違反）。省略したい場合は `VisuallyHidden` でラップする。
+
+参照実装: `FaqItemDialog.tsx` / `FaqCategoryDialog.tsx` / `FaqCategoryDetailView.tsx`
+
+### Dialog を起動する EmptyState
+
+`EmptyState` コンポーネントの `action` prop は discriminated union で `{ href }` / `{ onClick }` を受ける。Dialog 起動には `onClick` を使う:
+
+```tsx
+<EmptyState
+  message="カテゴリがまだありません"
+  action={{
+    label: "最初のカテゴリを作成",
+    onClick: () => setCreateOpen(true),
+  }}
+/>
+```
+
+### master-detail ルーティングとの組み合わせ
+
+親子関係の強いデータ（FAQ の Category → Item 等）は master-detail ルーティング + Dialog 型 CRUD を組み合わせる:
+
+- `/admin/{resource}` → master（親一覧 + 親 CRUD Dialog）
+- `/admin/{resource}/[parentId]` → detail（親詳細 + 子一覧 + 子 CRUD Dialog）
+
+子の create Dialog は親 context から `parentId` を注入（`<input type="hidden" {...register("parentId")} />`）し、Dialog 内でのカテゴリ変更は許可しない（移動は別途 bulk move Dialog）。参照: `/admin/faq` / `/admin/faq/[categoryId]`
 
 ---
 
@@ -962,13 +1047,52 @@ const [testPending, startTestTransition] = useTransition();
    sortBy: parseAsStringLiteral(["createdAt", "fieldA", "fieldB"] as const).withDefault("createdAt"),
    sortOrder: parseAsSortOrder,
    ```
-2. クエリ関数に `orderBy: { [sortBy]: sortOrder }` を追加
+2. クエリ関数に `buildXxxOrderBy(sortBy, sortOrder)` helper を追加。nullable 列は `{ [col]: { sort, nulls: "last" } }` + tie-breaker（`updatedAt: "desc"`）で stabilize（→ `gotchas.md` §Nullable 列のソート）。non-nullable 列は `{ [col]: sortOrder }` 単独で OK
 3. `*TableHeader.tsx`（Client Component）を作成:
    - `useQueryStates(parsers)` で sortBy/sortOrder を読み書き
    - `SortableColumnHeader` でソート可能カラムを定義
 4. テーブルの `<TableHeader>` を `<*TableHeader />` に置換
 
-**参照実装**: `ReservationTableHeader.tsx`, `PostTableHeader.tsx`, `StaffTableHeader.tsx`
+**参照実装**: `ReservationTableHeader.tsx`, `PostTableHeader.tsx`, `StaffTableHeader.tsx`, `CustomerTableHeader.tsx`（nullable 列 + tie-breaker 版）
+
+---
+
+## 複数フィルター共存パターン（BaseFilters + useQueryStates 直接）
+
+ステータス + search に追加フィルター（種別・タイプ等）を持つ一覧は、`BaseFilters`（内部 `useFilterParams`）と親コンポーネントの `useQueryStates(adminXxxSearchParamsParsers, ...)` を共存させる。両者が同一パーサーマップを参照するため URL 同期は保たれる:
+
+```tsx
+"use client";
+
+export function CustomerFilters() {
+  const [params, setParams] = useQueryStates(adminCustomerSearchParamsParsers, {
+    history: "push",
+    shallow: false,
+  });
+  return (
+    <BaseFilters statusOptions={...} searchPlaceholder="...">
+      <div className="w-full sm:w-48">
+        <Select
+          value={params.customerType}
+          onValueChange={(v) => void setParams({ customerType: v, page: 1 })}
+        >
+          <SelectTrigger aria-label="顧客種別"><SelectValue /></SelectTrigger>
+          <SelectContent>{/* ... */}</SelectContent>
+        </Select>
+      </div>
+    </BaseFilters>
+  );
+}
+```
+
+**ルール**:
+
+- 追加フィルターは **`<Select>`（`@/admin/components/ui`）で実装** — ToggleGroup 等の非 Select UI は `BaseFilters` のステータス Select + 既存カテゴリ Select パターンと視覚的一貫性が崩れるため禁止
+- パーサーマップは `parseAsStringLiteral([SENTINEL, ...enumValues] as const).withDefault(SENTINEL)` で型安全化（→ `nuqs-patterns.md` §新規 enum フィルター追加時の best practice）
+- Sentinel は `"ALL" as const` 等を `_FILTER_ALL` サフィックスで export（例: `CUSTOMER_TYPE_FILTER_ALL`）。空文字 `""` は Radix Select の placeholder 予約なので禁止
+- `page.tsx` 側では `parseAsStringLiteral` が validation 責務を持つため `parseXxxFilter` narrowing helper の呼び出しは不要（SSoT 化）
+
+**参照実装**: `PostFilters.tsx`, `InquiryFilters.tsx`, `CustomerFilters.tsx`
 
 ---
 

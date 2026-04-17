@@ -4,9 +4,7 @@ type FaqItemRecord = {
   id: string;
   categoryId: string;
   question: string;
-  answerHtml: string;
-  answerJson: unknown;
-  answerPlainText: string;
+  answer: string;
   order: number;
   isPublished: boolean;
   publishedAt: Date | null;
@@ -17,11 +15,6 @@ type FaqItemRecord = {
   notHelpfulCount: number;
   createdAt: Date;
   updatedAt: Date;
-  metaDescription: string | null;
-  metaKeywords: string | null;
-  ogpTitle: string | null;
-  ogpDescription: string | null;
-  ogpImageUrl: string | null;
 };
 
 type FaqCategoryRecord = {
@@ -99,15 +92,9 @@ export type FaqCategoryCommandInput = {
 export type FaqItemCommandInput = {
   categoryId: string;
   question: string;
-  answerJson: string;
-  answerHtml: string;
+  answer: string;
   order: number;
   isPublished: boolean;
-  metaDescription?: string | null;
-  metaKeywords?: string | null;
-  ogpTitle?: string | null;
-  ogpDescription?: string | null;
-  ogpImageUrl?: string | null;
 };
 
 export type BulkFaqItemResult = { count: number };

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { IconPlus } from "@tabler/icons-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -39,7 +40,10 @@ export function CreateCategoryDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>新規作成</Button>
+        <Button>
+          <IconPlus className="mr-2 h-4 w-4" />
+          カテゴリ追加
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>

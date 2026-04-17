@@ -8,6 +8,7 @@ import { Prisma } from "@generated/prisma/client";
 import { DomainError } from "@/shared/domain/domain-error";
 import { omitUndefined } from "@/shared/lib/serialize";
 import type { InvitationData } from "@/shared/domain/staff-invitations/types";
+import { canInviteRole } from "@/shared/lib/admin-roles";
 import { getAppUrl } from "@/shared/lib/constants";
 import { sendStaffInvitationEmail } from "@/shared/lib/email/system-emails";
 import {
@@ -168,8 +169,12 @@ async function sendInvitationEmailOrThrow(params: {
 
 export async function sendInvitation(
   input: CreateInvitationInput,
-  createdBy: string,
+  creator: { id: string; role: Role },
 ): Promise<InvitationData> {
+  if (!canInviteRole(creator.role, input.role)) {
+    throw new DomainError("このロールで招待する権限がありません", "FORBIDDEN");
+  }
+
   await ensureInvitationAvailable(input.email);
 
   const token = generateToken();
@@ -183,7 +188,7 @@ export async function sendInvitation(
         role: input.role,
         name: input.name,
         expiresAt: getExpiryDate(),
-        createdBy,
+        createdBy: creator.id,
       }),
     });
   } catch (error) {

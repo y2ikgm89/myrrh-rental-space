@@ -95,6 +95,31 @@ OKLCH の利点:
 - 色相回転が数値的に予測可能
 - P3 広色域対応
 
+### @theme --text-\*--\* による Typography SSoT
+
+`--text-h1` 等を `@theme` で定義すると、以下が同一名で自動適用される（[Tailwind 4 公式 API](https://tailwindcss.com/docs/font-size#customizing-your-theme)）:
+
+```css
+@theme {
+  --text-h1: clamp(1.875rem, 1.5rem + 1.75vw, 2.5rem);
+  --text-h1--line-height: 1.2;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 300;
+}
+```
+
+呼び出し側で **`font-light` / `leading-*` / `tracking-*` を重ねない**:
+
+```tsx
+// NG: @theme で既に定義済みの font-weight を重複指定
+<h1 className="text-h1 font-light">
+
+// OK: @theme の SSoT に任せる
+<h1 className="text-h1">
+```
+
+**例外**: `editorial-card` の featured variant 等、意図的に標準値と異なる override は許容。コメントで理由を明記する。
+
 ### @keyframes の埋め込み
 
 アニメーションの keyframes は `@theme` 内に定義可:
@@ -128,24 +153,25 @@ OKLCH の利点:
 
 **よく間違えるハードコードカラー → セマンティックトークン（管理画面）**:
 
-| 禁止                       | 代替                             |
-| -------------------------- | -------------------------------- |
-| `text-gray-900`            | `text-foreground`                |
-| `text-gray-600`            | `text-muted-foreground`          |
-| `bg-gray-100`              | `bg-muted`                       |
-| `bg-gray-50`               | `bg-muted/50`                    |
-| `bg-white`                 | `bg-card` または `bg-background` |
-| `border-gray-200`          | `border-border`                  |
-| `hover:bg-gray-100`        | `hover:bg-accent`                |
-| `ring-blue-500`            | `ring-ring`                      |
-| `text-green-600`           | `text-success`                   |
-| `bg-green-500`             | `bg-success`                     |
-| `text-red-600`             | `text-destructive`               |
-| `bg-red-500`               | `bg-destructive`                 |
-| `text-yellow-600`          | `text-warning`                   |
-| `bg-blue-600`              | `bg-primary`                     |
-| `text-blue-600`            | `text-primary`                   |
-| `shadow-[..rgb(0_0_0/..)]` | `shadow-xs` または `shadow-sm`   |
+| 禁止                       | 代替                                                                    |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `text-gray-900`            | `text-foreground`                                                       |
+| `text-gray-600`            | `text-muted-foreground`                                                 |
+| `bg-gray-100`              | `bg-muted`                                                              |
+| `bg-gray-50`               | `bg-muted/50`                                                           |
+| `bg-white`                 | `bg-card` または `bg-background`                                        |
+| `border-gray-200`          | `border-border`                                                         |
+| `hover:bg-gray-100`        | `hover:bg-accent`                                                       |
+| `ring-blue-500`            | `ring-ring`                                                             |
+| `text-green-600`           | `text-success`                                                          |
+| `bg-green-500`             | `bg-success`                                                            |
+| `text-red-600`             | `text-destructive`                                                      |
+| `bg-red-500`               | `bg-destructive`                                                        |
+| `text-yellow-600`          | `text-warning`                                                          |
+| `bg-blue-600`              | `bg-primary`                                                            |
+| `text-blue-600`            | `text-primary`                                                          |
+| `shadow-[..rgb(0_0_0/..)]` | `shadow-xs` または `shadow-sm`                                          |
+| inset shadow（くぼみ効果） | `shadow-inner`（arbitrary `shadow-[inset_...]` + hardcoded color 禁止） |
 
 ### 公開ページ（public.css） — Luxury White × Bronze テーマ
 

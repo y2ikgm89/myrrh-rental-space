@@ -22,46 +22,10 @@ import {
   type CreateSectionInput,
   type UpdateSectionInput,
   type UpdateSectionOrderInput,
-  type SectionConfig,
 } from "@/shared/lib/validations/section";
+import type { PageSectionData } from "./page-section-types";
 
 const idSchema = z.string().uuid({ error: "IDが不正です" });
-
-export type PageSectionData = {
-  id: string;
-  pageId: string;
-  type: string;
-  title: string | null;
-  config: SectionConfig;
-  design: unknown;
-  contentHtml: string | null;
-  contentJson: unknown;
-  order: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type PageWithSections = {
-  id: string;
-  slug: string;
-  title: string;
-  sections: PageSectionData[];
-};
-
-export type PageForEdit = {
-  id: string;
-  slug: string;
-  title: string;
-  isPublished: boolean;
-  isSystem: boolean;
-  metaDescription: string | null;
-  metaKeywords: string | null;
-  ogpTitle: string | null;
-  ogpDescription: string | null;
-  ogpImageUrl: string | null;
-  sections: PageSectionData[];
-};
 
 function revalidatePages(pageId?: string) {
   updateTag(CACHE_TAGS.SECTIONS);

@@ -20,10 +20,8 @@ import {
 } from "@/admin/components/ui";
 import { useWatch } from "react-hook-form";
 import { useFormAction } from "@/admin/hooks/useFormAction";
-import {
-  updateInstagramSettings,
-  type InstagramConfig,
-} from "@/admin/actions/instagram";
+import { updateInstagramSettings } from "@/admin/actions/instagram";
+import type { InstagramConfig } from "@/shared/domain/instagram/types";
 import { instagramFeedFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import { InstagramFeedLayout } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidInstagramFeedLayout } from "@/shared/lib/validations/enums/guards";

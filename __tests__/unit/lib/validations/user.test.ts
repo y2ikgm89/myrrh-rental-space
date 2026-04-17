@@ -10,7 +10,7 @@ describe("createUserSchema", () => {
     email: "user@example.com",
     password: "password123",
     name: "山田太郎",
-    role: Role.USER,
+    role: Role.EDITOR,
   };
 
   test("有効なデータでバリデーションに成功する", () => {
@@ -63,19 +63,25 @@ describe("createUserSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("すべてのRole値を許可", () => {
-    const roles = [
-      Role.SUPER_ADMIN,
-      Role.ADMIN,
-      Role.EDITOR,
-      Role.VIEWER,
-      Role.USER,
-    ];
+  test("DASHBOARD_ROLES の全ロール値を許可", () => {
+    const roles = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER];
     roles.forEach((role) => {
       const data = { ...validUserData, role };
       const result = createUserSchema.safeParse(data);
       expect(result.success).toBe(true);
     });
+  });
+
+  test("USER ロールはスキーマレベルで拒否（公開ユーザー用のため）", () => {
+    const data = { ...validUserData, role: Role.USER };
+    const result = createUserSchema.safeParse(data);
+    expect(result.success).toBe(false);
+  });
+
+  test("CUSTOMER ロールはスキーマレベルで拒否", () => {
+    const data = { ...validUserData, role: Role.CUSTOMER };
+    const result = createUserSchema.safeParse(data);
+    expect(result.success).toBe(false);
   });
 
   test("無効なRole値の場合にエラー", () => {
@@ -89,7 +95,7 @@ describe("updateUserSchema", () => {
   const validUpdateData = {
     email: "user@example.com",
     name: "山田太郎",
-    role: Role.USER,
+    role: Role.EDITOR,
   };
 
   test("有効なデータでバリデーションに成功する", () => {
@@ -147,19 +153,21 @@ describe("updateUserSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  test("すべてのRole値を許可", () => {
-    const roles = [
-      Role.SUPER_ADMIN,
-      Role.ADMIN,
-      Role.EDITOR,
-      Role.VIEWER,
-      Role.USER,
-    ];
+  test("DASHBOARD_ROLES の全ロール値を許可", () => {
+    const roles = [Role.SUPER_ADMIN, Role.ADMIN, Role.EDITOR, Role.VIEWER];
     roles.forEach((role) => {
       const data = { ...validUpdateData, role };
       const result = updateUserSchema.safeParse(data);
       expect(result.success).toBe(true);
     });
+  });
+
+  test("USER / CUSTOMER ロールは拒否", () => {
+    for (const role of [Role.USER, Role.CUSTOMER]) {
+      const data = { ...validUpdateData, role };
+      const result = updateUserSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    }
   });
 
   test("無効なRole値の場合にエラー", () => {

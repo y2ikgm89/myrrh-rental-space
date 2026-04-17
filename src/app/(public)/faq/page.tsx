@@ -38,7 +38,7 @@ export default async function FaqPage(): Promise<ReactElement> {
   const faqJsonLdItems = categories.flatMap((category) =>
     category.items.map((item) => ({
       question: item.question,
-      answer: (item.answerHtml ?? "").replace(/<[^>]*>/g, ""),
+      answer: item.answer,
     })),
   );
 

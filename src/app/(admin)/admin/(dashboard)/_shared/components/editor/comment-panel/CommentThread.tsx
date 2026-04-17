@@ -25,6 +25,7 @@ import {
 } from "@/admin/components/ui/collapsible";
 import { Badge } from "@/admin/components/ui/badge";
 import { cn } from "@/shared/lib/cn";
+import { EDITOR_COMMENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type {
   EditorCommentThread,
   EditorCommentStatus,
@@ -47,9 +48,18 @@ const STATUS_CONFIG: Record<
   EditorCommentStatus,
   { label: string; variant: "default" | "secondary" | "destructive" }
 > = {
-  ACTIVE: { label: "未解決", variant: "secondary" },
-  RESOLVED: { label: "解決済み", variant: "default" },
-  DELETED: { label: "削除済み", variant: "destructive" },
+  ACTIVE: {
+    label: EDITOR_COMMENT_STATUS_LABELS.ACTIVE,
+    variant: "secondary",
+  },
+  RESOLVED: {
+    label: EDITOR_COMMENT_STATUS_LABELS.RESOLVED,
+    variant: "default",
+  },
+  DELETED: {
+    label: EDITOR_COMMENT_STATUS_LABELS.DELETED,
+    variant: "destructive",
+  },
 };
 
 export function CommentThread({
@@ -69,7 +79,8 @@ export function CommentThread({
 
   const statusConfig = STATUS_CONFIG[thread.status];
   const statusVariant = statusConfig?.variant ?? "secondary";
-  const statusLabel = statusConfig?.label ?? "未解決";
+  const statusLabel =
+    statusConfig?.label ?? EDITOR_COMMENT_STATUS_LABELS.ACTIVE;
   const timeAgo = formatDistanceToNow(new Date(thread.createdAt), {
     addSuffix: true,
     locale: ja,

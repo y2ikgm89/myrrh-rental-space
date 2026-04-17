@@ -1,10 +1,9 @@
 import { IconAlertTriangle } from "@tabler/icons-react";
 import {
+  Badge,
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
   Tooltip,
   TooltipContent,
@@ -15,7 +14,10 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { CustomerStatusBadge } from "@/admin/components/status-badges";
 import type { CustomerData } from "@/shared/domain/customers/types";
 import { formatDateShort } from "@/shared/lib/date-format";
+import { formatPrice } from "@/shared/lib/pricing/format";
+import { CUSTOMER_TYPE_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { CustomerActionCell } from "./CustomerActionCell";
+import { CustomerTableHeader } from "./CustomerTableHeader";
 
 // =============================================================================
 // Types
@@ -43,21 +45,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
     <div className="overflow-hidden rounded-lg border bg-card">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ステータス</TableHead>
-              <TableHead>お名前</TableHead>
-              <TableHead className="hidden lg:table-cell">
-                メールアドレス
-              </TableHead>
-              <TableHead className="hidden md:table-cell">電話番号</TableHead>
-              <TableHead className="hidden text-right md:table-cell">
-                予約数
-              </TableHead>
-              <TableHead className="hidden lg:table-cell">最終予約</TableHead>
-              <TableHead>操作</TableHead>
-            </TableRow>
-          </TableHeader>
+          <CustomerTableHeader />
           <TableBody>
             {customers.map((customer) => {
               const guest = customer.latestGuestName;
@@ -98,6 +86,11 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                       </div>
                     ) : null}
                   </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Badge variant="outline">
+                      {CUSTOMER_TYPE_LABELS[customer.customerType]}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <a
                       href={`mailto:${customer.email}`}
@@ -112,10 +105,16 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   <TableCell className="hidden text-right text-muted-foreground md:table-cell">
                     {customer.totalReservations}
                   </TableCell>
+                  <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
+                    {formatPrice(customer.totalSpent, "-")}
+                  </TableCell>
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {customer.lastReservationAt
                       ? formatDateShort(customer.lastReservationAt)
                       : "-"}
+                  </TableCell>
+                  <TableCell className="hidden text-right text-muted-foreground lg:table-cell">
+                    {formatDateShort(customer.createdAt)}
                   </TableCell>
                   <TableCell>
                     <CustomerActionCell customerId={customer.id} />

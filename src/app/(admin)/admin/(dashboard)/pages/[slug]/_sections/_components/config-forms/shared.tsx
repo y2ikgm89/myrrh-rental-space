@@ -7,7 +7,7 @@
 import { useEffect } from "react";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { SubmitButton } from "@/admin/components/ui";
-import type { PageSectionData } from "@/admin/actions/page-section";
+import type { PageSectionData } from "@/admin/actions/page-section-types";
 
 export interface ConfigFormSavePayload {
   config: Record<string, unknown>;

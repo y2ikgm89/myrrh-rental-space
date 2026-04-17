@@ -23,12 +23,6 @@ import { testInstagramConnection } from "@/shared/lib/instagram";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import { DomainError } from "@/shared/domain/domain-error";
 
-export type { InstagramSettingsInput } from "@/shared/lib/validations/instagram";
-export type {
-  InstagramConfig,
-  InstagramPostData,
-} from "@/shared/domain/instagram/types";
-
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 const orderedIdsSchema = z
   .array(z.string().uuid({ error: "IDが不正です" }))

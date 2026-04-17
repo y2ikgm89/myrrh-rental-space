@@ -21,42 +21,12 @@ import { logPermissionDenied } from "@/admin/lib/audit";
 import { isEditorRole } from "./role-guards";
 
 // =============================================================================
-// Types
+// Types (SSOT: admin-resources.ts — client-safe)
 // =============================================================================
 
-/** リソース種別 */
-export type Resource =
-  | "space"
-  | "location"
-  | "spaceCategory"
-  | "reservation"
-  | "customer"
-  | "inquiry"
-  | "post"
-  | "news"
-  | "page"
-  | "faq"
-  | "terms"
-  | "settings"
-  | "user"
-  | "auditLog"
-  | "navigation"
-  | "announcementBar"
-  | "media"
-  | "coupon"
-  | "blockTemplate"
-  | "review"
-  | "event"
-  | "notification";
+import type { Resource, Action } from "./admin-resources";
 
-/** アクション種別 */
-export type Action =
-  | "create"
-  | "read"
-  | "update"
-  | "delete"
-  | "publish"
-  | "manage";
+export type { Resource, Action };
 
 /** 権限キー（resource:action） */
 export type PermissionKey = `${Resource}:${Action}`;
@@ -238,7 +208,12 @@ export const ROLE_PERMISSIONS: RolePermissions = {
     "terms:publish",
     "settings:read",
     "settings:update",
-    "user:read", // 閲覧のみ
+    // ユーザー管理（階層制御あり — admin-roles.ts INVITABLE_BY で EDITOR/VIEWER のみ操作可）
+    // `user:manage`（ロール変更等の特権操作）は SUPER_ADMIN 専用で温存
+    "user:create",
+    "user:read",
+    "user:update",
+    "user:delete",
     "navigation:create",
     "navigation:read",
     "navigation:update",
@@ -323,31 +298,11 @@ export const ROLE_PERMISSIONS: RolePermissions = {
 
 /**
  * リソース説明（UI表示用）
+ *
+ * Single Source of Truth は `@/admin/lib/admin-resources`（client-safe）。
+ * 既存 import パス（`@/admin/lib/permissions`）を維持するための再 export。
  */
-export const RESOURCE_LABELS: Record<Resource, string> = {
-  space: "スペース",
-  location: "場所",
-  spaceCategory: "スペースカテゴリー",
-  reservation: "予約",
-  customer: "顧客",
-  inquiry: "お問い合わせ",
-  post: "投稿",
-  news: "お知らせ",
-  page: "固定ページ",
-  faq: "FAQ",
-  terms: "利用規約",
-  settings: "設定",
-  user: "ユーザー",
-  auditLog: "監査ログ",
-  navigation: "ナビゲーション",
-  announcementBar: "お知らせバー",
-  media: "メディア",
-  coupon: "クーポン",
-  blockTemplate: "ブロックテンプレート",
-  review: "レビュー",
-  event: "イベント",
-  notification: "通知",
-};
+export { RESOURCE_LABELS } from "./admin-resources";
 
 /**
  * アクション説明（UI表示用）

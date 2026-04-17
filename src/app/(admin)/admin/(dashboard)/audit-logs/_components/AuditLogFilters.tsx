@@ -11,35 +11,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import type { AuditAction } from "@/shared/lib/validations/enums/prisma-types";
+import { AUDIT_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { RESOURCE_LABELS } from "@/admin/lib/admin-resources";
+import { entriesOf } from "@/shared/lib/serialize";
 
-const ACTION_OPTIONS: { value: AuditAction | "ALL"; label: string }[] = [
+const ACTION_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "CREATE", label: "作成" },
-  { value: "UPDATE", label: "更新" },
-  { value: "DELETE", label: "削除" },
-  { value: "PUBLISH", label: "公開" },
-  { value: "UNPUBLISH", label: "非公開" },
-  { value: "LOGIN_SUCCESS", label: "ログイン成功" },
-  { value: "LOGIN_FAILED", label: "ログイン失敗" },
-  { value: "PERMISSION_DENIED", label: "権限拒否" },
-  { value: "PASSWORD_CHANGE", label: "パスワード変更" },
-  { value: "ROLE_CHANGE", label: "ロール変更" },
+  ...entriesOf(AUDIT_ACTION_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
 ];
 
 const RESOURCE_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "space", label: "スペース" },
-  { value: "reservation", label: "予約" },
-  { value: "customer", label: "顧客" },
-  { value: "inquiry", label: "お問い合わせ" },
-  { value: "post", label: "投稿" },
-  { value: "news", label: "お知らせ" },
-  { value: "page", label: "固定ページ" },
-  { value: "faq", label: "FAQ" },
-  { value: "settings", label: "設定" },
-  { value: "user", label: "ユーザー" },
-  { value: "auth", label: "認証" },
+  ...entriesOf(RESOURCE_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
 export function AuditLogFilters() {

@@ -220,8 +220,7 @@ export async function getPublishedFaqItems(
         select: {
           id: true,
           question: true,
-          answerHtml: true,
-          answerJson: true,
+          answer: true,
         },
         orderBy: { order: "asc" },
         take: maxItems,
@@ -244,7 +243,7 @@ export type PublicFaqCategoryWithItems = {
   readonly items: ReadonlyArray<{
     readonly id: string;
     readonly question: string;
-    readonly answerHtml: string;
+    readonly answer: string;
     readonly helpfulCount: number;
     readonly notHelpfulCount: number;
   }>;
@@ -285,7 +284,7 @@ export async function getPublishedFaqCategoriesWithItems(): Promise<
             select: {
               id: true,
               question: true,
-              answerHtml: true,
+              answer: true,
               helpfulCount: true,
               notHelpfulCount: true,
             },

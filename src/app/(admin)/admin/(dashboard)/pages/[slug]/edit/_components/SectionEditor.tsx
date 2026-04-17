@@ -19,10 +19,8 @@ import {
   Input,
   Label,
 } from "@/admin/components/ui";
-import {
-  updatePageSection,
-  type PageSectionData,
-} from "@/admin/actions/page-section";
+import { updatePageSection } from "@/admin/actions/page-section";
+import type { PageSectionData } from "@/admin/actions/page-section-types";
 import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";

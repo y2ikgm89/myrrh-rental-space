@@ -73,11 +73,12 @@ describe("hasPermission", () => {
       expect(hasPermission(Role.ADMIN, "reservation", "manage")).toBe(true);
     });
 
-    test("ユーザー管理権限を持たない（閲覧のみ）", () => {
+    test("ユーザー管理権限を持つ（manage は SUPER_ADMIN 専用で持たない）", () => {
+      // ADMIN は EDITOR/VIEWER のみ操作可（階層制御は domain 層の canModifyUser で検証）
       expect(hasPermission(Role.ADMIN, "user", "read")).toBe(true);
-      expect(hasPermission(Role.ADMIN, "user", "create")).toBe(false);
-      expect(hasPermission(Role.ADMIN, "user", "update")).toBe(false);
-      expect(hasPermission(Role.ADMIN, "user", "delete")).toBe(false);
+      expect(hasPermission(Role.ADMIN, "user", "create")).toBe(true);
+      expect(hasPermission(Role.ADMIN, "user", "update")).toBe(true);
+      expect(hasPermission(Role.ADMIN, "user", "delete")).toBe(true);
       expect(hasPermission(Role.ADMIN, "user", "manage")).toBe(false);
     });
 
@@ -175,7 +176,10 @@ describe("canAccessAdmin", () => {
 describe("userHasPermission", () => {
   test("ユーザーのロールに基づいて権限をチェック", () => {
     expect(userHasPermission(SUPER_ADMIN_USER, "user", "delete")).toBe(true);
-    expect(userHasPermission(ADMIN_USER, "user", "delete")).toBe(false);
+    // ADMIN は user:delete を持つ（EDITOR/VIEWER のみ対象、階層制御は domain 層）
+    expect(userHasPermission(ADMIN_USER, "user", "delete")).toBe(true);
+    // manage（ロール変更等の特権）は SUPER_ADMIN 専用
+    expect(userHasPermission(ADMIN_USER, "user", "manage")).toBe(false);
     expect(userHasPermission(EDITOR_USER, "page", "update")).toBe(true);
     expect(userHasPermission(VIEWER_USER, "space", "read")).toBe(true);
     expect(userHasPermission(REGULAR_USER, "space", "read")).toBe(false);

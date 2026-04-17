@@ -80,6 +80,7 @@ docs/api/
 .claude/memory/
 .claude/agent-memory-local/
 .claude/agent-memory/
+.claude/settings.local.json
 tmpclaude-*-cwd
 nul
 

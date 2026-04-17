@@ -17,6 +17,7 @@ import { DAY_LABELS } from "@/public/lib/seo/json-ld-config";
 import { isRecord } from "@/shared/lib/serialize";
 import { cn } from "@/shared/lib/cn";
 import { CopyrightYear } from "./copyright-year";
+import { SiteBrand } from "./site-brand";
 import { SocialLinks } from "./social-links";
 
 /* -------------------------------------------------------------------------- */
@@ -150,7 +151,6 @@ export async function Footer(): Promise<ReactElement> {
       getSocialLinksForFooter(),
       getFooterTerms(),
     ]);
-  const brandShort = (info.name.split(" ")[0] ?? "MYRRH").toUpperCase();
   const hoursDisplay = parseFooterHours(info.businessHours);
   const taglineLines = (
     footerSettings.tagline ??
@@ -174,12 +174,7 @@ export async function Footer(): Promise<ReactElement> {
         >
           {/* Brand */}
           <div>
-            <Link
-              href="/"
-              className="font-heading text-xl font-light italic tracking-[0.08em] text-foreground"
-            >
-              {brandShort}
-            </Link>
+            <SiteBrand brand={footerSettings.brand} variant="footer" />
             <p className="mt-5 text-[0.8rem] leading-[2.2] text-muted-foreground">
               {taglineLines.map((line, i) => (
                 <span key={line}>

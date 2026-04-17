@@ -25,7 +25,10 @@ import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
 import { DomainError } from "@/shared/domain/domain-error";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { z } from "zod";
 
@@ -126,7 +129,24 @@ export async function updateReservationAction(
 
     invalidateReservationCaches(parsed.data.reservationId, customer.id, {
       coupons: true,
+      notifications: true,
     });
+
+    // Create admin notification (fire-and-forget)
+    fireAndForget(
+      createNotificationCommand({
+        type: NOTIFICATION_TYPE.RESERVATION_UPDATE,
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_UPDATE],
+        message: `${customer.lastName}${customer.firstName}様が予約を変更しました`,
+        resourceType: "reservation",
+        resourceId: parsed.data.reservationId,
+      }),
+      {
+        operation: "createCustomerUpdateNotification",
+        category: ErrorCategory.DATABASE,
+      },
+    );
+
     return null;
   } catch (error) {
     if (error instanceof DomainError) {

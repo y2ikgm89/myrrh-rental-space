@@ -24,6 +24,7 @@ import { createEvent, updateEvent } from "@/admin/actions/event";
 import { eventFormSchema } from "@/shared/lib/validations/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidEventStatus } from "@/shared/lib/validations/enums/guards";
+import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 import { LazyLexicalEditor } from "@/admin/components/editor/lexical/LazyLexicalEditor";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
@@ -80,10 +81,19 @@ function formatDateTimeForInput(date: Date | string): string {
 const SPACE_NONE_VALUE = "__none__";
 
 const EVENT_STATUS_OPTIONS = [
-  { value: EventStatus.DRAFT, label: "下書き" },
-  { value: EventStatus.PUBLISHED, label: "公開中" },
-  { value: EventStatus.CANCELLED, label: "キャンセル" },
-  { value: EventStatus.ARCHIVED, label: "アーカイブ" },
+  { value: EventStatus.DRAFT, label: EVENT_STATUS_LABELS[EventStatus.DRAFT] },
+  {
+    value: EventStatus.PUBLISHED,
+    label: EVENT_STATUS_LABELS[EventStatus.PUBLISHED],
+  },
+  {
+    value: EventStatus.CANCELLED,
+    label: EVENT_STATUS_LABELS[EventStatus.CANCELLED],
+  },
+  {
+    value: EventStatus.ARCHIVED,
+    label: EVENT_STATUS_LABELS[EventStatus.ARCHIVED],
+  },
 ] as const;
 
 // =============================================================================

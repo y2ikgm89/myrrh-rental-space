@@ -13,11 +13,9 @@ import {
   resolveUrl,
 } from "@/admin/lib/ogp-parser";
 
-// =============================================================================
-// Types
-// =============================================================================
+const urlSchema = z.string().url({ error: "有効なURLを入力してください" });
 
-export type OgpData = {
+type OgpData = {
   url: string;
   title: string | null;
   description: string | null;
@@ -25,12 +23,6 @@ export type OgpData = {
   faviconUrl: string;
   siteName: string | null;
 };
-
-// =============================================================================
-// Schema
-// =============================================================================
-
-const urlSchema = z.string().url({ error: "有効なURLを入力してください" });
 
 // =============================================================================
 // Server Action

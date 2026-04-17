@@ -10,15 +10,16 @@ import {
   SelectValue,
 } from "@/admin/components/ui";
 import { adminEventSearchParamsParsers } from "@/shared/lib/nuqs";
-import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { EVENT_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { entriesOf } from "@/shared/lib/serialize";
 
 const EVENT_STATUS_OPTIONS = [
   { value: "ALL", label: "すべてのステータス" },
-  { value: EventStatus.DRAFT, label: "下書き" },
-  { value: EventStatus.PUBLISHED, label: "公開中" },
-  { value: EventStatus.CANCELLED, label: "キャンセル" },
-  { value: EventStatus.ARCHIVED, label: "アーカイブ" },
-] as const;
+  ...entriesOf(EVENT_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
+];
 
 export function EventFilters() {
   const [params, setParams] = useQueryStates(adminEventSearchParamsParsers, {

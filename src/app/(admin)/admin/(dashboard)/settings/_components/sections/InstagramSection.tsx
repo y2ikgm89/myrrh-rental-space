@@ -11,10 +11,8 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useConfirm } from "@/admin/contexts/confirm-context";
-import {
-  disconnectInstagram,
-  type InstagramConfig,
-} from "@/admin/actions/instagram";
+import { disconnectInstagram } from "@/admin/actions/instagram";
+import type { InstagramConfig } from "@/shared/domain/instagram/types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { ConnectionCard } from "./instagram/ConnectionCard";
 import { FeedSettingsCard } from "./instagram/FeedSettingsCard";

@@ -37,7 +37,10 @@ import { useFormAction } from "@/admin/hooks/useFormAction";
 import { formatCurrency } from "@/shared/lib/pricing/format";
 import { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
-import { RESERVATION_STATUS_TRANSITIONS } from "@/shared/lib/validations/enums/helpers";
+import {
+  RESERVATION_STATUS_LABELS,
+  RESERVATION_STATUS_TRANSITIONS,
+} from "@/shared/lib/validations/enums/helpers";
 import type { ReservationWithRelations } from "@/admin/actions/reservation";
 
 // =============================================================================
@@ -80,25 +83,26 @@ function toLocalTimeString(date: string | Date): string {
 // Constants
 // =============================================================================
 
+const STATUS_DESCRIPTIONS: Record<ReservationStatus, string> = {
+  [ReservationStatus.PENDING]: "確認待ち",
+  [ReservationStatus.CONFIRMED]: "予約が確定済み",
+  [ReservationStatus.COMPLETED]: "利用完了",
+  [ReservationStatus.CANCELLED]: "予約をキャンセル",
+  [ReservationStatus.NO_SHOW]: "連絡なしキャンセル",
+};
+
 const ALL_STATUS_OPTIONS: Record<
   string,
   { label: string; description: string }
-> = {
-  [ReservationStatus.PENDING]: { label: "保留", description: "確認待ち" },
-  [ReservationStatus.CONFIRMED]: {
-    label: "確定",
-    description: "予約が確定済み",
-  },
-  [ReservationStatus.COMPLETED]: { label: "完了", description: "利用完了" },
-  [ReservationStatus.CANCELLED]: {
-    label: "キャンセル",
-    description: "予約をキャンセル",
-  },
-  [ReservationStatus.NO_SHOW]: {
-    label: "無断キャンセル",
-    description: "連絡なしキャンセル",
-  },
-};
+> = Object.fromEntries(
+  Object.values(ReservationStatus).map((status) => [
+    status,
+    {
+      label: RESERVATION_STATUS_LABELS[status],
+      description: STATUS_DESCRIPTIONS[status],
+    },
+  ]),
+);
 
 function getStatusOptionsForCurrent(currentStatus: ReservationStatus) {
   const transitions = RESERVATION_STATUS_TRANSITIONS[currentStatus] ?? [];

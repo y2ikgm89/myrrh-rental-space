@@ -93,7 +93,7 @@ export const updatePostSchema = z
     contentWidth: z.enum(LayoutWidth).nullable().optional(),
     tags: z.array(z.string().uuid({ error: "タグIDが不正です" })).default([]),
   })
-  .merge(seoOgpFieldsSchema); // SEO/OGPフィールドを合成
+  .extend(seoOgpFieldsSchema.shape); // SEO/OGPフィールドを合成
 
 export type UpdatePostInput = z.infer<typeof updatePostSchema>;
 
@@ -107,7 +107,7 @@ export const postFormSchema = z
     tags: z.string().optional(), // フォーム: comma-separated string
     publishedAt: z.string().optional(), // フォーム: 文字列のまま
   })
-  .merge(seoOgpFieldsFormSchema);
+  .extend(seoOgpFieldsFormSchema.shape);
 
 export type PostFormData = z.infer<typeof postFormSchema>;
 ```
@@ -328,24 +328,30 @@ export const ogpFieldsSchema = z.object({
   ogpImageUrl: z.string().url().nullable().optional(),
 });
 
-// 統合スキーマ（merge で合成）
-export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema);
+// 統合スキーマ（spread で合成 — Zod 4 推奨、.merge() は deprecated）
+export const seoOgpFieldsSchema = z.object({
+  ...seoFieldsSchema.shape,
+  ...ogpFieldsSchema.shape,
+});
 
 // フォーム用（空文字許可）
 export const seoFieldsFormSchema = z.object({
   metaDescription: z.string().max(SEO_LIMITS.META_DESCRIPTION).optional(),
   metaKeywords: z.string().max(SEO_LIMITS.META_KEYWORDS).optional(),
 });
-export const seoOgpFieldsFormSchema =
-  seoFieldsFormSchema.merge(ogpFieldsFormSchema);
+export const seoOgpFieldsFormSchema = z.object({
+  ...seoFieldsFormSchema.shape,
+  ...ogpFieldsFormSchema.shape,
+});
 ```
 
 **スキーマ合成の使い分け**:
 
-| 方法                                   | 用途                         | 備考                     |
-| -------------------------------------- | ---------------------------- | ------------------------ |
-| `.merge(other)`                        | 既存 `ZodObject` どうし      | Zod 4 推奨（型推論効率） |
-| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成 | tsc 効率優先時           |
+| 方法                                   | 用途                                    | 備考                          |
+| -------------------------------------- | --------------------------------------- | ----------------------------- |
+| `.extend(other.shape)`                 | 既存 ZodObject にフィールドを追加       | Zod 4 推奨（`.merge()` 廃止） |
+| `z.object({ ...A.shape, ...B.shape })` | 複数スキーマのスプレッド合成            | tsc 効率最良                  |
+| `.merge(other)`                        | **deprecated** — `.extend()` に移行する | Zod 4 changelog で非推奨明記  |
 
 ### URLバリデーション
 
@@ -408,6 +414,46 @@ export async function getPublishedPost(slug: string) {
   return prisma.post.findUnique({ where: { slug: validated.data } });
 }
 ```
+
+## Discriminated union + `.default()` による破壊的 schema 拡張（migration 不要）
+
+既存の `z.enum([...])` 統一 schema を `z.literal(...)` + discriminated union に分割し、特定 type のみにフィールドを追加する場合、`.default()` が safeParse 時に欠落を補完するため、DB JSON カラムの既存データはそのまま互換を保てる（Prisma migration 不要）:
+
+```ts
+// Before: 全 type 共通の狭い schema
+const builtinSchema = z.object({
+  type: z.enum(["search", "recent", "popular"] as const),
+  enabled: z.boolean(),
+});
+
+// After: recent/popular に固有フィールド追加（残りは simple schema へ分離）
+const simpleSchema = z.object({
+  type: z.enum(["search", "categories", "tags"] as const),
+  enabled: z.boolean(),
+});
+const recentSchema = z.object({
+  type: z.literal("recent"),
+  enabled: z.boolean(),
+  layout: z.enum(["compact", "stacked"]).default("compact"),
+});
+const popularSchema = z.object({
+  type: z.literal("popular"),
+  enabled: z.boolean(),
+  layout: z.enum(["compact", "stacked"]).default("compact"),
+  showRanking: z.boolean().default(true),
+});
+const schema = z.array(
+  z.union([simpleSchema, recentSchema, popularSchema /* ... */]),
+);
+```
+
+**利点**:
+
+- 既存 JSON `{ type: "recent", enabled: true }` は safeParse で `layout: "compact"` が補完される
+- UI 側は `switch (widget.type)` の narrow で `widget.layout` / `widget.showRanking` に**型アサーションなし**でアクセス可能
+- DB migration / 一括データ書き換え不要で破壊的拡張を完遂できる
+
+**注意**: `z.infer<typeof schema>` 型を inline で使うテストデータ（例: `__tests__/integration/actions/sidebar.test.ts`）は schema 拡張時に手動同期必要（→ `test-quality.md` §統合テストのインライン Zod スキーマは手動保守）
 
 ## 型ガードパターン
 

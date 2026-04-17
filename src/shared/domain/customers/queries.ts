@@ -7,11 +7,26 @@ import type {
   CustomerFilters,
   CustomerPagination,
   CustomerSearchResult,
+  CustomerSortBy,
   CustomerStats,
   CustomerWithReservationsAndAccount,
   GetCustomersResult,
 } from "@/shared/domain/customers/types";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import type { CustomerWhereInput } from "@/shared/types/prisma";
+
+function buildCustomerOrderBy(
+  sortBy: CustomerSortBy,
+  sortOrder: "asc" | "desc",
+): Prisma.CustomerOrderByWithRelationInput[] {
+  // lastReservationAt / totalSpent は nullable のため nulls: "last" で安定化
+  const primary: Prisma.CustomerOrderByWithRelationInput =
+    sortBy === "lastReservationAt" || sortBy === "totalSpent"
+      ? { [sortBy]: { sort: sortOrder, nulls: "last" } }
+      : { [sortBy]: sortOrder };
+  // tie-breaker: 同値の場合は更新日時降順で安定化
+  return [primary, { updatedAt: "desc" }];
+}
 
 function buildCustomerWhere(filters: CustomerFilters): CustomerWhereInput {
   const where: CustomerWhereInput = {};
@@ -57,9 +72,7 @@ export async function getCustomers(
     prisma.customer.count({ where }),
     prisma.customer.findMany({
       where,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
+      orderBy: buildCustomerOrderBy(sortBy, sortOrder),
       skip: (page - 1) * limit,
       take: limit,
       select: {

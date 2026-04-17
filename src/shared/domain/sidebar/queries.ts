@@ -23,6 +23,8 @@ export interface SidebarPostItem {
   title: string;
   url: string;
   publishedAt: string | null;
+  thumbnailUrl: string;
+  category: { name: string; slug: string } | null;
 }
 
 export interface SidebarCategoryItem {
@@ -74,7 +76,8 @@ export async function getSidebarData(
     slug: true,
     title: true,
     publishedAt: true,
-    category: { select: { slug: true } },
+    thumbnailUrl: true,
+    category: { select: { name: true, slug: true } },
   } as const;
 
   const [recentRaw, popularRaw, categoriesRaw, tagsRaw, permalinkSettings] =
@@ -159,12 +162,15 @@ export async function getSidebarData(
     slug: string;
     title: string;
     publishedAt: Date | null;
-    category: { slug: string } | null;
+    thumbnailUrl: string;
+    category: { name: string; slug: string } | null;
   }): SidebarPostItem => ({
     id: p.id,
     title: p.title,
     url: buildPostCanonicalPath(p, permalinkSettings ?? undefined),
     publishedAt: p.publishedAt?.toISOString() ?? null,
+    thumbnailUrl: p.thumbnailUrl,
+    category: p.category,
   });
 
   const mapCategory = (c: {

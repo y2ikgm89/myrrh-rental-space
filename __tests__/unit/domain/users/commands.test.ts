@@ -105,6 +105,8 @@ import {
 // テスト用定数
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 const ACTOR_USER_ID = "660e8400-e29b-41d4-a716-446655440001";
+const SUPER_ADMIN_ACTOR = { id: ACTOR_USER_ID, role: Role.SUPER_ADMIN };
+const ADMIN_ACTOR = { id: ACTOR_USER_ID, role: Role.ADMIN };
 
 const VALID_CREATE_INPUT = {
   email: "user@example.com",
@@ -166,7 +168,7 @@ describe("users/commands", () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
         mockUserCreate.mockResolvedValueOnce({ id: "new-user-id" });
 
-        const result = await createUser(VALID_CREATE_INPUT);
+        const result = await createUser(VALID_CREATE_INPUT, SUPER_ADMIN_ACTOR);
 
         expect(result).toEqual({ id: "new-user-id" });
         expect(mockUserCreate).toHaveBeenCalledTimes(1);
@@ -176,7 +178,7 @@ describe("users/commands", () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
         mockUserCreate.mockResolvedValueOnce({ id: "user-1" });
 
-        await createUser(VALID_CREATE_INPUT);
+        await createUser(VALID_CREATE_INPUT, SUPER_ADMIN_ACTOR);
 
         expect(mockHashPassword).toHaveBeenCalledWith("password123");
         expect(mockUserCreate).toHaveBeenCalledWith(
@@ -197,13 +199,24 @@ describe("users/commands", () => {
         );
       });
 
-      test("各 Role で作成できる", async () => {
-        for (const role of Object.values(Role)) {
+      test("SUPER_ADMIN は全 DashboardRole のユーザーを作成できる", async () => {
+        for (const role of [Role.ADMIN, Role.EDITOR, Role.VIEWER] as const) {
           mockUserFindUnique.mockResolvedValueOnce(null);
           mockUserCreate.mockResolvedValueOnce({ id: "user-1" });
 
           await expect(
-            createUser({ ...VALID_CREATE_INPUT, role }),
+            createUser({ ...VALID_CREATE_INPUT, role }, SUPER_ADMIN_ACTOR),
+          ).resolves.toEqual({ id: "user-1" });
+        }
+      });
+
+      test("ADMIN は EDITOR / VIEWER を作成できる", async () => {
+        for (const role of [Role.EDITOR, Role.VIEWER] as const) {
+          mockUserFindUnique.mockResolvedValueOnce(null);
+          mockUserCreate.mockResolvedValueOnce({ id: "user-1" });
+
+          await expect(
+            createUser({ ...VALID_CREATE_INPUT, role }, ADMIN_ACTOR),
           ).resolves.toEqual({ id: "user-1" });
         }
       });
@@ -217,12 +230,43 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 0 },
         });
 
-        await expect(createUser(VALID_CREATE_INPUT)).rejects.toMatchObject({
+        await expect(
+          createUser(VALID_CREATE_INPUT, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
           message: "このメールアドレスは既に使用されています",
         });
 
         expect(mockUserCreate).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は ADMIN を作成できない（FORBIDDEN）", async () => {
+        await expect(
+          createUser({ ...VALID_CREATE_INPUT, role: Role.ADMIN }, ADMIN_ACTOR),
+        ).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message: "このロールでユーザーを作成する権限がありません",
+        });
+
+        expect(mockUserCreate).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は SUPER_ADMIN を作成できない（FORBIDDEN）", async () => {
+        await expect(
+          createUser(
+            { ...VALID_CREATE_INPUT, role: Role.SUPER_ADMIN },
+            ADMIN_ACTOR,
+          ),
+        ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      });
+
+      test("EDITOR はユーザーを作成できない（FORBIDDEN）", async () => {
+        await expect(
+          createUser(VALID_CREATE_INPUT, {
+            id: ACTOR_USER_ID,
+            role: Role.EDITOR,
+          }),
+        ).rejects.toMatchObject({ code: "FORBIDDEN" });
       });
     });
   });
@@ -242,7 +286,7 @@ describe("users/commands", () => {
         mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
 
         await expect(
-          updateUser(USER_ID, VALID_UPDATE_INPUT),
+          updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
         ).resolves.toBeUndefined();
 
         expect(mockTransaction).toHaveBeenCalledTimes(1);
@@ -274,7 +318,7 @@ describe("users/commands", () => {
         mockTxAccountFindFirst.mockResolvedValueOnce(null);
 
         await expect(
-          updateUser(USER_ID, VALID_UPDATE_INPUT),
+          updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
         ).resolves.toBeUndefined();
 
         expect(mockTxAccountCreate).toHaveBeenCalledWith(
@@ -294,7 +338,11 @@ describe("users/commands", () => {
         mockUserFindFirst.mockResolvedValueOnce(null);
         mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
 
-        await updateUser(USER_ID, { ...VALID_UPDATE_INPUT, password: "" });
+        await updateUser(
+          USER_ID,
+          { ...VALID_UPDATE_INPUT, password: "" },
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(mockHashPassword).not.toHaveBeenCalled();
         // password フィールドは含まれない（undefined）
@@ -312,11 +360,15 @@ describe("users/commands", () => {
         mockUserFindFirst.mockResolvedValueOnce(null);
         mockTxAccountFindFirst.mockResolvedValueOnce({ id: "account-1" });
 
-        await updateUser(USER_ID, {
-          email: "updated@example.com",
-          name: "田中次郎",
-          role: Role.EDITOR,
-        });
+        await updateUser(
+          USER_ID,
+          {
+            email: "updated@example.com",
+            name: "田中次郎",
+            role: Role.EDITOR,
+          },
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(mockHashPassword).not.toHaveBeenCalled();
       });
@@ -326,7 +378,11 @@ describe("users/commands", () => {
         mockUserFindFirst.mockResolvedValueOnce(null);
         mockTxAccountFindFirst.mockResolvedValueOnce(null);
 
-        await updateUser(USER_ID, { ...VALID_UPDATE_INPUT, password: "" });
+        await updateUser(
+          USER_ID,
+          { ...VALID_UPDATE_INPUT, password: "" },
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(mockTxAccountCreate).not.toHaveBeenCalled();
       });
@@ -336,11 +392,15 @@ describe("users/commands", () => {
         mockUserFindFirst.mockResolvedValueOnce(null);
         mockTxAccountFindFirst.mockResolvedValueOnce(null);
 
-        await updateUser(USER_ID, {
-          email: "user@example.com",
-          name: "田中太郎",
-          role: Role.ADMIN,
-        });
+        await updateUser(
+          USER_ID,
+          {
+            email: "user@example.com",
+            name: "田中太郎",
+            role: Role.ADMIN,
+          },
+          SUPER_ADMIN_ACTOR,
+        );
 
         expect(mockUserFindFirst).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -358,7 +418,7 @@ describe("users/commands", () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
 
         await expect(
-          updateUser(USER_ID, VALID_UPDATE_INPUT),
+          updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
         ).rejects.toMatchObject({
           code: "NOT_FOUND",
           message: "ユーザーが見つかりません",
@@ -373,13 +433,78 @@ describe("users/commands", () => {
         mockUserFindFirst.mockResolvedValueOnce({ id: "other-user" });
 
         await expect(
-          updateUser(USER_ID, VALID_UPDATE_INPUT),
+          updateUser(USER_ID, VALID_UPDATE_INPUT, SUPER_ADMIN_ACTOR),
         ).rejects.toMatchObject({
           code: "CONFLICT",
           message: "このメールアドレスは既に使用されています",
         });
 
         expect(mockTransaction).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は別 ADMIN を編集できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER); // role: ADMIN
+
+        await expect(
+          updateUser(USER_ID, VALID_UPDATE_INPUT, ADMIN_ACTOR),
+        ).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message: "このユーザーを編集する権限がありません",
+        });
+
+        expect(mockTransaction).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は SUPER_ADMIN を編集できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.SUPER_ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+
+        await expect(
+          updateUser(USER_ID, VALID_UPDATE_INPUT, ADMIN_ACTOR),
+        ).rejects.toMatchObject({ code: "FORBIDDEN" });
+      });
+
+      test("ADMIN は EDITOR を ADMIN に昇格できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.EDITOR,
+          _count: { reservations: 0, posts: 0 },
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          updateUser(
+            USER_ID,
+            { ...VALID_UPDATE_INPUT, role: Role.ADMIN },
+            ADMIN_ACTOR,
+          ),
+        ).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message: "このロールに変更する権限がありません",
+        });
+
+        expect(mockTransaction).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は EDITOR を VIEWER に変更できる", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.EDITOR,
+          _count: { reservations: 0, posts: 0 },
+        });
+        mockUserFindFirst.mockResolvedValueOnce(null);
+        mockTxAccountFindFirst.mockResolvedValueOnce(null);
+
+        await expect(
+          updateUser(
+            USER_ID,
+            { ...VALID_UPDATE_INPUT, role: Role.VIEWER },
+            ADMIN_ACTOR,
+          ),
+        ).resolves.toBeUndefined();
       });
     });
   });
@@ -394,7 +519,7 @@ describe("users/commands", () => {
         mockUserFindUnique.mockResolvedValueOnce(EXISTING_USER);
 
         await expect(
-          deleteUser(USER_ID, ACTOR_USER_ID),
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
         ).resolves.toBeUndefined();
 
         expect(mockUserDelete).toHaveBeenCalledWith(
@@ -407,12 +532,12 @@ describe("users/commands", () => {
       test("予約・投稿が0件のユーザーは削除できる", async () => {
         mockUserFindUnique.mockResolvedValueOnce({
           id: USER_ID,
-          role: Role.USER,
+          role: Role.EDITOR,
           _count: { reservations: 0, posts: 0 },
         });
 
         await expect(
-          deleteUser(USER_ID, ACTOR_USER_ID),
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
         ).resolves.toBeUndefined();
 
         expect(mockUserDelete).toHaveBeenCalledTimes(1);
@@ -421,8 +546,9 @@ describe("users/commands", () => {
 
     describe("異常系", () => {
       test("自分自身を削除しようとすると CONFLICT エラーをスローする", async () => {
-        // actorUserId と id が同じ
-        await expect(deleteUser(USER_ID, USER_ID)).rejects.toMatchObject({
+        await expect(
+          deleteUser(USER_ID, { id: USER_ID, role: Role.SUPER_ADMIN }),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
           message: "自分自身を削除することはできません",
         });
@@ -435,7 +561,9 @@ describe("users/commands", () => {
       test("存在しないユーザー ID で NOT_FOUND エラーをスローする", async () => {
         mockUserFindUnique.mockResolvedValueOnce(null);
 
-        await expect(deleteUser(USER_ID, ACTOR_USER_ID)).rejects.toMatchObject({
+        await expect(
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
           code: "NOT_FOUND",
           message: "ユーザーが見つかりません",
         });
@@ -446,11 +574,13 @@ describe("users/commands", () => {
       test("予約が紐付いているユーザーは削除できない", async () => {
         mockUserFindUnique.mockResolvedValueOnce({
           id: USER_ID,
-          role: Role.USER,
+          role: Role.EDITOR,
           _count: { reservations: 3, posts: 0 },
         });
 
-        await expect(deleteUser(USER_ID, ACTOR_USER_ID)).rejects.toMatchObject({
+        await expect(
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
         });
 
@@ -464,21 +594,64 @@ describe("users/commands", () => {
           _count: { reservations: 0, posts: 2 },
         });
 
-        await expect(deleteUser(USER_ID, ACTOR_USER_ID)).rejects.toMatchObject({
+        await expect(
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
         });
 
         expect(mockUserDelete).not.toHaveBeenCalled();
       });
 
+      test("ADMIN は別 ADMIN を削除できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+
+        await expect(deleteUser(USER_ID, ADMIN_ACTOR)).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message: "このユーザーを削除する権限がありません",
+        });
+
+        expect(mockUserDelete).not.toHaveBeenCalled();
+      });
+
+      test("ADMIN は SUPER_ADMIN を削除できない（FORBIDDEN）", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.SUPER_ADMIN,
+          _count: { reservations: 0, posts: 0 },
+        });
+
+        await expect(deleteUser(USER_ID, ADMIN_ACTOR)).rejects.toMatchObject({
+          code: "FORBIDDEN",
+        });
+      });
+
+      test("ADMIN は EDITOR を削除できる", async () => {
+        mockUserFindUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          role: Role.EDITOR,
+          _count: { reservations: 0, posts: 0 },
+        });
+
+        await expect(deleteUser(USER_ID, ADMIN_ACTOR)).resolves.toBeUndefined();
+
+        expect(mockUserDelete).toHaveBeenCalledTimes(1);
+      });
+
       test("エラーメッセージに予約件数・投稿件数が含まれる", async () => {
         mockUserFindUnique.mockResolvedValueOnce({
           id: USER_ID,
-          role: Role.USER,
+          role: Role.EDITOR,
           _count: { reservations: 2, posts: 5 },
         });
 
-        await expect(deleteUser(USER_ID, ACTOR_USER_ID)).rejects.toMatchObject({
+        await expect(
+          deleteUser(USER_ID, SUPER_ADMIN_ACTOR),
+        ).rejects.toMatchObject({
           code: "CONFLICT",
           message: expect.stringContaining("2"),
         });

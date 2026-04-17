@@ -233,6 +233,33 @@ export const parseAsBoolean = createParser<boolean>({
 });
 ```
 
+### 新規 enum フィルター追加時の best practice
+
+`parseAsString.withDefault("") + parseXxxFilter() narrowing helper` は禁止。
+`parseAsStringLiteral(values as const).withDefault(SENTINEL)` を使う:
+
+- Parser 自体が validation 責務を持つ（SSoT 化、別 helper 不要）
+- Default 値は `clearOnDefault` により URL から自動除外（[nuqs 公式](https://nuqs.dev/docs/options)）
+- Sentinel は `"ALL" as const` 等。空文字 `""` は Radix Select の placeholder 予約なので禁止
+- 型は `(typeof values)[number]` で derive し、export して domain filter と揃える
+- 参照実装: `adminCustomerSearchParamsParsers.customerType` (`CUSTOMER_TYPE_FILTER_ALL` sentinel)
+
+```typescript
+const customerTypeFilterValues = [
+  CUSTOMER_TYPE_FILTER_ALL,
+  CustomerType.PERSONAL,
+  CustomerType.CORPORATE,
+] as const;
+export type CustomerTypeFilter = (typeof customerTypeFilterValues)[number];
+
+export const adminCustomerSearchParamsParsers = {
+  customerType: parseAsStringLiteral(customerTypeFilterValues).withDefault(
+    CUSTOMER_TYPE_FILTER_ALL,
+  ),
+  // ...
+};
+```
+
 ## プロジェクト標準パーサー
 
 `@/shared/lib/nuqs/parsers.ts` に集約（`@/shared/lib/nuqs` barrel経由で re-export）:

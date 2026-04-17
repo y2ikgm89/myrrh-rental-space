@@ -21,6 +21,8 @@ import {
   SelectValue,
   Input,
 } from "@/admin/components/ui";
+import { POST_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { entriesOf } from "@/shared/lib/serialize";
 
 // =============================================================================
 // Types
@@ -46,8 +48,10 @@ type BaseFiltersProps = {
 
 const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
   { value: "ALL", label: "すべて" },
-  { value: "PUBLISHED", label: "公開中" },
-  { value: "DRAFT", label: "下書き" },
+  ...entriesOf(POST_STATUS_LABELS).map(([value, label]) => ({
+    value,
+    label,
+  })),
 ];
 
 // =============================================================================

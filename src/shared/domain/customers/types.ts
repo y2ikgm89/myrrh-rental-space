@@ -77,10 +77,17 @@ export type CustomerFilters = {
   isActive?: boolean;
 };
 
+export type CustomerSortBy =
+  | "createdAt"
+  | "lastName"
+  | "totalReservations"
+  | "lastReservationAt"
+  | "totalSpent";
+
 export type CustomerPagination = {
   page?: number;
   limit?: number;
-  sortBy?: "createdAt" | "lastName" | "totalReservations" | "lastReservationAt";
+  sortBy?: CustomerSortBy;
   sortOrder?: "asc" | "desc";
 };
 

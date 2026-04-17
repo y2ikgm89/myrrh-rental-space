@@ -14,13 +14,32 @@ export const BUILTIN_WIDGET_TYPES = [
 
 export type BuiltinWidgetType = (typeof BUILTIN_WIDGET_TYPES)[number];
 
+export const POST_LIST_LAYOUTS = ["compact", "stacked"] as const;
+export type PostListLayout = (typeof POST_LIST_LAYOUTS)[number];
+
 // ---------------------------------------------------------------------------
-// Widget schemas
+// Widget schemas（discriminated union）
 // ---------------------------------------------------------------------------
 
-const builtinWidgetSchema = z.object({
-  type: z.enum(BUILTIN_WIDGET_TYPES),
+// layout / ranking 設定を持たないビルトイン widget
+const simpleBuiltinWidgetSchema = z.object({
+  type: z.enum(["search", "categories", "tags"] as const),
   enabled: z.boolean(),
+});
+
+// 新着記事 widget — layout 設定のみ
+const recentWidgetSchema = z.object({
+  type: z.literal("recent"),
+  enabled: z.boolean(),
+  layout: z.enum(POST_LIST_LAYOUTS).default("compact"),
+});
+
+// 人気記事 widget — layout + ランキング表示設定
+const popularWidgetSchema = z.object({
+  type: z.literal("popular"),
+  enabled: z.boolean(),
+  layout: z.enum(POST_LIST_LAYOUTS).default("compact"),
+  showRanking: z.boolean().default(true),
 });
 
 const customWidgetSchema = z.object({
@@ -33,14 +52,27 @@ const customWidgetSchema = z.object({
   linkLabel: z.string().max(100).optional(),
 });
 
-export type BuiltinWidget = z.infer<typeof builtinWidgetSchema>;
+export type SimpleBuiltinWidget = z.infer<typeof simpleBuiltinWidgetSchema>;
+export type RecentWidget = z.infer<typeof recentWidgetSchema>;
+export type PopularWidget = z.infer<typeof popularWidgetSchema>;
 export type CustomWidget = z.infer<typeof customWidgetSchema>;
-export type SidebarWidget = BuiltinWidget | CustomWidget;
+export type SidebarWidget =
+  | SimpleBuiltinWidget
+  | RecentWidget
+  | PopularWidget
+  | CustomWidget;
 
 // 各 widget の identity（builtin: type / custom: id）は React key の stable ID として
 // 機能するため、重複を禁止する。BlogSidebar / SidebarSection の getWidgetKey と一致。
 export const sidebarWidgetsSchema = z
-  .array(z.union([builtinWidgetSchema, customWidgetSchema]))
+  .array(
+    z.union([
+      simpleBuiltinWidgetSchema,
+      recentWidgetSchema,
+      popularWidgetSchema,
+      customWidgetSchema,
+    ]),
+  )
   .refine(
     (widgets) => {
       const keys = widgets.map((w) =>
@@ -72,8 +104,8 @@ export type SidebarSettings = z.infer<typeof sidebarSettingsSchema>;
 
 export const DEFAULT_SIDEBAR_WIDGETS: SidebarWidget[] = [
   { type: "search", enabled: true },
-  { type: "recent", enabled: true },
-  { type: "popular", enabled: true },
+  { type: "recent", enabled: true, layout: "compact" },
+  { type: "popular", enabled: true, layout: "compact", showRanking: true },
   { type: "categories", enabled: true },
   { type: "tags", enabled: true },
 ];

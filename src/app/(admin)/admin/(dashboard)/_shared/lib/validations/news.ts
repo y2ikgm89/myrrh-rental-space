@@ -64,7 +64,7 @@ export const updateNewsSettingsSchema = z
       .nullable()
       .optional(),
   })
-  .merge(seoOgpFieldsSchema);
+  .extend(seoOgpFieldsSchema.shape);
 
 export type UpdateNewsSettingsInput = z.infer<typeof updateNewsSettingsSchema>;
 
@@ -92,6 +92,6 @@ export const newsSettingsFormSchema = z
     contentWidth: z.string().optional(),
     contentWidthCustom: z.string().optional(),
   })
-  .merge(seoOgpFieldsFormSchema);
+  .extend(seoOgpFieldsFormSchema.shape);
 
 export type NewsSettingsFormData = z.infer<typeof newsSettingsFormSchema>;

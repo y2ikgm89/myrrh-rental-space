@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Button } from "./ui/button";
 
+type EmptyStateAction =
+  | { label: string; href: string; onClick?: never }
+  | { label: string; onClick: () => void; href?: never };
+
 type EmptyStateProps = {
   message: string;
   description?: string;
-  action?: {
-    label: string;
-    href: string;
-  };
+  action?: EmptyStateAction;
 };
 
 /**
@@ -15,13 +16,16 @@ type EmptyStateProps = {
  *
  * @example
  * ```tsx
- * // アクションなし
- * <EmptyState message="データがありません" />
- *
- * // アクションあり
+ * // リンクアクション
  * <EmptyState
  *   message="ブログ記事がありません"
  *   action={{ label: "新規作成", href: "/admin/posts/new" }}
+ * />
+ *
+ * // クリックアクション（Dialog 起動等）
+ * <EmptyState
+ *   message="質問がありません"
+ *   action={{ label: "質問を追加", onClick: () => setOpen(true) }}
  * />
  * ```
  */
@@ -32,11 +36,16 @@ export function EmptyState({ message, description, action }: EmptyStateProps) {
       {description && (
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       )}
-      {action && (
-        <Button asChild className="mt-4">
-          <Link href={action.href}>{action.label}</Link>
-        </Button>
-      )}
+      {action &&
+        (action.href !== undefined ? (
+          <Button asChild className="mt-4">
+            <Link href={action.href}>{action.label}</Link>
+          </Button>
+        ) : (
+          <Button type="button" className="mt-4" onClick={action.onClick}>
+            {action.label}
+          </Button>
+        ))}
     </div>
   );
 }

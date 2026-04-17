@@ -23,8 +23,8 @@ import {
 import {
   saveManualToken,
   testInstagramConnectionAction,
-  type InstagramConfig,
 } from "@/admin/actions/instagram";
+import type { InstagramConfig } from "@/shared/domain/instagram/types";
 import { StatusBanner } from "../../shared";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";

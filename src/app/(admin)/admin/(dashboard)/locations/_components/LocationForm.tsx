@@ -48,6 +48,7 @@ import {
   useMultipleMediaPicker,
 } from "@/admin/hooks/use-media-picker";
 import { useFormAction } from "@/admin/hooks/useFormAction";
+import { getPublishLabel } from "@/shared/lib/validations/enums/helpers";
 
 type LocationFormProps = {
   location?: LocationWithStats;
@@ -486,7 +487,7 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                   </FormControl>
                   <div>
                     <FormLabel className="text-base font-medium">
-                      {field.value ? "公開中" : "非公開"}
+                      {getPublishLabel(field.value ?? false)}
                     </FormLabel>
                     <FormDescription>
                       {field.value

@@ -30,19 +30,6 @@ import {
   type UpdateNewsSettingsInput,
 } from "@/admin/lib/validations/news";
 
-export type {
-  CreateNewsInput,
-  UpdateNewsBodyInput,
-  UpdateNewsSettingsInput,
-} from "@/admin/lib/validations/news";
-export type {
-  GetNewsListResult,
-  NewsData,
-  NewsFilters,
-  NewsPagination,
-  NewsVersionData,
-} from "@/shared/domain/news/types";
-
 const idSchema = z.string().uuid({ error: "お知らせIDが不正です" });
 const versionSchema = z.object({
   newsId: z.string().uuid({ error: "お知らせIDが不正です" }),

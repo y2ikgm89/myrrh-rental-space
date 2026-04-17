@@ -36,6 +36,7 @@ import {
 import {
   RESERVATION_STATUS_LABELS,
   NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
 } from "@/shared/lib/validations/enums/helpers";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 
@@ -149,7 +150,8 @@ export const updateReservationStatus = async (
         fireAndForget(
           createNotificationCommand({
             type: NOTIFICATION_TYPE.RESERVATION_CANCEL,
-            title: "予約キャンセル",
+            title:
+              NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.RESERVATION_CANCEL],
             message: `予約がキャンセルされました`,
             resourceType: "reservation",
             resourceId: id,

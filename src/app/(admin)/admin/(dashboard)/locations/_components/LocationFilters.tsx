@@ -12,11 +12,12 @@ import {
   SelectValue,
   Input,
 } from "@/admin/components/ui";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 const PUBLISH_STATUS_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "true", label: "公開中" },
-  { value: "false", label: "非公開" },
+  { value: "true", label: PUBLISH_LABELS.published },
+  { value: "false", label: PUBLISH_LABELS.unpublished },
 ];
 
 export function LocationFilters() {

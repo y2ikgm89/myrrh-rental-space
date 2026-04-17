@@ -110,12 +110,41 @@ function createAdminAuth() {
     },
     hooks: {
       after: createAuthMiddleware(async (ctx) => {
+        // ログイン成功
         if (ctx.path.startsWith("/sign-in") && ctx.context.newSession) {
           const { user } = ctx.context.newSession;
           void logAuthEvent(AuditAction.LOGIN_SUCCESS, user.id, {
             email: user.email,
             provider: "email",
           });
+        }
+
+        // ログアウト
+        if (ctx.path.startsWith("/sign-out")) {
+          try {
+            const session = ctx.context.session;
+            if (session) {
+              void logAuthEvent(AuditAction.LOGOUT, session.user.id, {
+                email: session.user.email,
+              });
+            }
+          } catch {
+            // セッション取得失敗でも認証フローを阻害しない
+          }
+        }
+
+        // パスワードリセット要求（Better Auth は "forget-password" パスを使用）
+        if (ctx.path.startsWith("/forget-password")) {
+          try {
+            const body = isRecord(ctx.body) ? ctx.body : {};
+            const email =
+              typeof body["email"] === "string" ? body["email"] : "unknown";
+            void logAuthEvent(AuditAction.PASSWORD_RESET_REQUEST, undefined, {
+              email,
+            });
+          } catch {
+            // 監査ログ失敗でも認証フローを阻害しない
+          }
         }
       }),
     },

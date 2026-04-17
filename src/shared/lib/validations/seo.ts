@@ -59,7 +59,10 @@ export const ogpFieldsSchema = z.object({
 /**
  * SEO/OGP 統合スキーマ（Server Action用）
  */
-export const seoOgpFieldsSchema = seoFieldsSchema.merge(ogpFieldsSchema);
+export const seoOgpFieldsSchema = z.object({
+  ...seoFieldsSchema.shape,
+  ...ogpFieldsSchema.shape,
+});
 
 // =============================================================================
 // フォーム用スキーマ（optional で空文字許可）
@@ -85,8 +88,10 @@ export const ogpFieldsFormSchema = z.object({
 /**
  * SEO/OGP 統合スキーマ（フォーム用）
  */
-export const seoOgpFieldsFormSchema =
-  seoFieldsFormSchema.merge(ogpFieldsFormSchema);
+export const seoOgpFieldsFormSchema = z.object({
+  ...seoFieldsFormSchema.shape,
+  ...ogpFieldsFormSchema.shape,
+});
 
 // =============================================================================
 // 型定義

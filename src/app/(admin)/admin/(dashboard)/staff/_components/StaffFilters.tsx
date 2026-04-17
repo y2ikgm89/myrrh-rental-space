@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
+import { DASHBOARD_ROLES, ROLE_LABELS } from "@/shared/lib/admin-roles";
 
 export function StaffFilters() {
   const [params, setParams] = useQueryStates(adminUserSearchParamsParsers, {
@@ -47,10 +48,11 @@ export function StaffFilters() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">すべて</SelectItem>
-            <SelectItem value="SUPER_ADMIN">スーパー管理者</SelectItem>
-            <SelectItem value="ADMIN">管理者</SelectItem>
-            <SelectItem value="EDITOR">編集者</SelectItem>
-            <SelectItem value="VIEWER">閲覧者</SelectItem>
+            {DASHBOARD_ROLES.map((role) => (
+              <SelectItem key={role} value={role}>
+                {ROLE_LABELS[role]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -34,7 +34,8 @@ export async function sendInvitation(
   return executeAdminMutationResult({
     resource: "user",
     action: "create",
-    execute: async (user) => sendInvitationCommand(parsed.data, user.id),
+    execute: async (user) =>
+      sendInvitationCommand(parsed.data, { id: user.id, role: user.role }),
     afterSuccess: () => {
       updateTag(CACHE_TAGS.STAFF);
     },

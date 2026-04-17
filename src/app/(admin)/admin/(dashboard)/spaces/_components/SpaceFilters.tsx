@@ -17,11 +17,12 @@ import {
   ADMIN_SPACE_LIST_SORT_BY,
 } from "@/shared/lib/constants/admin-space-management";
 import type { AdminSpaceListSortBy } from "@/shared/lib/constants/admin-space-management";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 const PUBLISH_STATUS_OPTIONS = [
   { value: "ALL", label: "すべて" },
-  { value: "true", label: "公開中" },
-  { value: "false", label: "非公開" },
+  { value: "true", label: PUBLISH_LABELS.published },
+  { value: "false", label: PUBLISH_LABELS.unpublished },
 ] as const;
 
 const SORT_OPTIONS: { value: AdminSpaceListSortBy; label: string }[] = [

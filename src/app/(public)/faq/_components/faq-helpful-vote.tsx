@@ -5,9 +5,19 @@
  *
  * Zendesk / HubSpot KB 方式: 集計値のみ、個人データは記録しない。
  * localStorage で投票済みフラグを永続化し、同じ項目への重複投票を防止する。
+ *
+ * React 19 公式推奨パターン: localStorage のような **変更通知を持たない外部ストア** は
+ * `useSyncExternalStore` で読み取る（`.claude/rules/react-patterns.md` §useSyncExternalStore）。
+ * `useState` lazy initializer で `window.localStorage` を読むと SSR と client 初回 render で
+ * 値が食い違い hydration mismatch を起こす。
  */
 
-import { useState, type ReactElement } from "react";
+import {
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+} from "react";
 import { IconThumbDown, IconThumbUp } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 
@@ -46,6 +56,15 @@ async function sendVote(id: string, vote: VoteValue): Promise<void> {
   }
 }
 
+// localStorage は変更通知を持たないため subscribe は no-op
+// react-patterns.md §useSyncExternalStore 準拠
+const subscribe = () => () => {};
+
+// SSR/ハイドレーション時のフォールバック値 — プリミティブ null は
+// 呼び出しごとに同一参照（Object.is）のため getServerSnapshot の参照安定性を満たす
+// react-patterns.md §getServerSnapshot の参照安定性 準拠
+const getServerSnapshot = (): VoteValue | null => null;
+
 type FaqHelpfulVoteProps = {
   readonly id: string;
   readonly helpfulCount: number;
@@ -57,9 +76,33 @@ export function FaqHelpfulVote({
   helpfulCount,
   notHelpfulCount,
 }: FaqHelpfulVoteProps): ReactElement {
-  const [voted, setVoted] = useState<VoteValue | null>(() => getStoredVote(id));
+  // useRef でスナップショットをキャッシュ（getSnapshot は毎レンダーで呼ばれるため、
+  // 参照安定性のために初回読み取り結果を保持する）
+  // react-patterns.md §useSyncExternalStore 参照
+  const snapshotRef = useRef<VoteValue | null>(null);
+  const storedVote = useSyncExternalStore(
+    subscribe,
+    () => {
+      snapshotRef.current ??= getStoredVote(id);
+      return snapshotRef.current;
+    },
+    getServerSnapshot,
+  );
+
+  // 投票後のローカル state（楽観的更新）— storedVote を初期値として注入
+  const [voted, setVoted] = useState<VoteValue | null>(storedVote);
   const [helpful, setHelpful] = useState(helpfulCount);
   const [notHelpful, setNotHelpful] = useState(notHelpfulCount);
+
+  // hydration 後に localStorage から値が読めた場合、voted state に反映する
+  // （ハイドレーション初回は getServerSnapshot が null を返すため）
+  const [previousStoredVote, setPreviousStoredVote] = useState(storedVote);
+  if (storedVote !== previousStoredVote) {
+    setPreviousStoredVote(storedVote);
+    if (voted === null && storedVote !== null) {
+      setVoted(storedVote);
+    }
+  }
 
   const handleVote = (vote: VoteValue) => {
     if (voted) return;

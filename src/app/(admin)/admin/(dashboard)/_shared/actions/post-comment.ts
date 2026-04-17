@@ -83,5 +83,3 @@ export async function restoreCommentAdmin(
     },
   });
 }
-
-export type { AdminCommentData } from "@/shared/domain/post-comments/types";

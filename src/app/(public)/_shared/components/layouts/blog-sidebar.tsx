@@ -1,8 +1,7 @@
 import type { ReactElement } from "react";
 import { cn } from "@/shared/lib/cn";
 import { SidebarSearch } from "@/public/components/sidebar/sidebar-search";
-import { SidebarRecentPosts } from "@/public/components/sidebar/sidebar-recent-posts";
-import { SidebarPopularPosts } from "@/public/components/sidebar/sidebar-popular-posts";
+import { SidebarPostList } from "@/public/components/sidebar/sidebar-post-list";
 import { SidebarCategories } from "@/public/components/sidebar/sidebar-categories";
 import { SidebarTags } from "@/public/components/sidebar/sidebar-tags";
 import { SidebarCustom } from "@/public/components/sidebar/sidebar-custom";
@@ -22,9 +21,22 @@ function renderWidget(
     case "search":
       return <SidebarSearch />;
     case "recent":
-      return <SidebarRecentPosts posts={data.recentPosts} />;
+      return (
+        <SidebarPostList
+          label="Recent"
+          posts={data.recentPosts}
+          layout={widget.layout}
+        />
+      );
     case "popular":
-      return <SidebarPopularPosts posts={data.popularPosts} />;
+      return (
+        <SidebarPostList
+          label="Popular"
+          posts={data.popularPosts}
+          layout={widget.layout}
+          showRanking={widget.showRanking}
+        />
+      );
     case "categories":
       return <SidebarCategories categories={data.categories} />;
     case "tags":

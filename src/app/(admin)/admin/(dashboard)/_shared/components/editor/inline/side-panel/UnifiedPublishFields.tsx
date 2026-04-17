@@ -9,6 +9,7 @@
 
 import type { FieldValues, Path } from "react-hook-form";
 import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { POST_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import {
   Input,
   Label,
@@ -26,9 +27,9 @@ import type { FieldComponentProps } from "../content-types/types";
 type PublishControlType = "status" | "isPublished";
 
 const STATUS_OPTIONS = [
-  { value: PostStatus.DRAFT, label: "下書き" },
-  { value: PostStatus.PUBLISHED, label: "公開" },
-  { value: PostStatus.ARCHIVED, label: "アーカイブ" },
+  { value: PostStatus.DRAFT, label: POST_STATUS_LABELS.DRAFT },
+  { value: PostStatus.PUBLISHED, label: POST_STATUS_LABELS.PUBLISHED },
+  { value: PostStatus.ARCHIVED, label: POST_STATUS_LABELS.ARCHIVED },
 ] as const;
 
 const VALID_STATUSES: ReadonlySet<string> = new Set(

@@ -1,9 +1,24 @@
 /**
  * スタッフ招待バリデーションスキーマ
+ *
+ * ロール階層: admin-roles.ts `INVITABLE_BY` を正とする。
+ * SUPER_ADMIN は招待経由で付与不可（システム初期化時のみ作成可）。
  */
 
 import { z } from "zod";
 import { Role } from "@/shared/lib/validations/enums/prisma-types";
+
+// =============================================================================
+// Invitable roles (SUPER_ADMIN を除外)
+// =============================================================================
+
+/**
+ * 招待フォーム / 招待 API が受け付けるロール。
+ *
+ * SUPER_ADMIN / USER / CUSTOMER を除外。Server Action 層で更に actor 階層チェックを行うが、
+ * スキーマ段階で基本的な上限を切る（defense-in-depth の第一層）。
+ */
+const INVITABLE_ROLES = [Role.ADMIN, Role.EDITOR, Role.VIEWER] as const;
 
 // =============================================================================
 // Schemas
@@ -11,10 +26,12 @@ import { Role } from "@/shared/lib/validations/enums/prisma-types";
 
 /**
  * 招待作成スキーマ
+ *
+ * 階層チェック（actor が target を招待可能か）はドメインコマンド層で行う。
  */
 export const createInvitationSchema = z.object({
   email: z.string().email({ error: "有効なメールアドレスを入力してください" }),
-  role: z.enum(Role).default(Role.USER),
+  role: z.enum(INVITABLE_ROLES),
   name: z.string().max(100).optional(),
 });
 

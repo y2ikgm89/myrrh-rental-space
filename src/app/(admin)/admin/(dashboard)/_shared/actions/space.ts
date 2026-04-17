@@ -25,8 +25,6 @@ import {
   type SpaceFormData,
 } from "@/admin/lib/validations/space";
 
-export type { SpaceSelectOption } from "@/admin/lib/validations/space";
-
 const idSchema = z.string().uuid({ error: "IDが不正です" });
 
 function revalidateSpaces(...ids: string[]): void {

@@ -31,10 +31,8 @@ import {
   TabsTrigger,
   type DragEndEvent,
 } from "@/admin/components/ui";
-import {
-  SPACE_FORM_ACTION_INITIAL_STATE,
-  submitSpaceFormAction,
-} from "@/admin/actions/space-form-submit";
+import { submitSpaceFormAction } from "@/admin/actions/space-form-submit";
+import { SPACE_FORM_ACTION_INITIAL_STATE } from "@/admin/actions/space-form-submit-types";
 import { spaceFormDataToFormData } from "@/admin/lib/space-form-data-codec";
 import {
   useSingleMediaPicker,

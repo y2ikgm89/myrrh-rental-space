@@ -24,7 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Button } from "@/admin/components/ui";
 import { IconPlus } from "@tabler/icons-react";
-import type { PageSectionData } from "@/admin/actions/page-section";
+import type { PageSectionData } from "@/admin/actions/page-section-types";
 import { SectionListItem } from "./SectionListItem";
 import { SectionInserter } from "./SectionInserter";
 

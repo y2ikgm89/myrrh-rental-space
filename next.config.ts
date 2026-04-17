@@ -72,6 +72,9 @@ const nextConfig: NextConfig = {
     cachedNavigations: true,
     // ナビゲーション後のフォーカス管理改善（active element を blur、ブラウザ標準挙動に準拠）
     appNewScrollHandler: true,
+    // Multiple Root Layouts 用の global 404 ページ（app/global-not-found.tsx）
+    // 公式: https://nextjs.org/docs/app/api-reference/file-conventions/not-found#global-not-foundjs
+    globalNotFound: true,
     // Optimize package imports - tree shaking for barrel exports
     optimizePackageImports: [
       // Icons (@tabler/icons-react is optimized by Next.js by default)

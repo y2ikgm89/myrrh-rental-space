@@ -108,3 +108,57 @@ describe("sidebarSettingsSchema", () => {
     expect(result.success).toBe(false);
   });
 });
+
+describe("sidebarWidgetsSchema — recent/popular layout & ranking", () => {
+  test("recent widget の layout は省略時に compact がデフォルトで補完される", () => {
+    const widgets = [{ type: "recent", enabled: true }];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data[0]).toMatchObject({
+        type: "recent",
+        enabled: true,
+        layout: "compact",
+      });
+    }
+  });
+
+  test("popular widget の layout / showRanking は省略時にデフォルト値が補完される", () => {
+    const widgets = [{ type: "popular", enabled: true }];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data[0]).toMatchObject({
+        type: "popular",
+        enabled: true,
+        layout: "compact",
+        showRanking: true,
+      });
+    }
+  });
+
+  test("recent widget が layout: stacked を受け付ける", () => {
+    const widgets = [{ type: "recent", enabled: true, layout: "stacked" }];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(true);
+  });
+
+  test("popular widget が layout: stacked + showRanking: false を受け付ける", () => {
+    const widgets = [
+      {
+        type: "popular",
+        enabled: true,
+        layout: "stacked",
+        showRanking: false,
+      },
+    ];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(true);
+  });
+
+  test("無効な layout 値を拒否する", () => {
+    const widgets = [{ type: "recent", enabled: true, layout: "horizontal" }];
+    const result = sidebarWidgetsSchema.safeParse(widgets);
+    expect(result.success).toBe(false);
+  });
+});

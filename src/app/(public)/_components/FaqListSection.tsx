@@ -24,7 +24,6 @@ import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { CONTAINER_WIDTH_MAP } from "@/public/lib/section-style-maps";
 import { Heading } from "@/public/components/design-system/heading";
 import { cn } from "@/shared/lib/cn";
-import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import {
   parseContainerWidth,
   parseFaqInitialOpen,
@@ -171,10 +170,9 @@ export function FaqListSection({
                     </span>
                   )}
                 </summary>
-                <SanitizedHtml
-                  html={item.answer}
-                  className="mt-3 text-sm leading-relaxed text-muted-foreground"
-                />
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                  {item.answer}
+                </p>
               </details>
             ))}
           </div>
@@ -208,7 +206,7 @@ export function FaqListSection({
               name: item.question,
               acceptedAnswer: {
                 "@type": "Answer",
-                text: item.answer.replace(/<[^>]*>/g, ""),
+                text: item.answer,
               },
             })),
           })

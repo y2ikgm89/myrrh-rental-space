@@ -15,10 +15,7 @@ import {
   deleteICalToken as deleteICalTokenCommand,
   updateICalFeedSettings as updateICalFeedSettingsCommand,
 } from "@/shared/domain/settings/commands";
-import type {
-  ICalFeedSettingsData,
-  ICalTokenWithRelations,
-} from "@/shared/domain/settings/types";
+import type { ICalFeedSettingsData } from "@/shared/domain/settings/types";
 
 const createTokenSchema = z.object({
   name: z.string().min(1, { error: "トークン名は必須です" }).max(100),
@@ -94,5 +91,3 @@ export async function updateICalFeedSettings(
     afterSuccess: invalidateSettingsCache,
   });
 }
-
-export type { ICalTokenWithRelations };

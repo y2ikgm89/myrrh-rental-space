@@ -148,20 +148,37 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     <div className="grid gap-6 md:grid-cols-3">
       {/* メイン情報 */}
       <div className="md:col-span-2 space-y-6">
-        {/* 受付日時 */}
-        <p className="text-sm text-muted-foreground">
-          受付日時: {formatDate(inquiry.createdAt, true)}
-        </p>
+        {/* 送信者情報 */}
+        <DetailSection title="送信者情報">
+          <div className="space-y-4">
+            <DetailField label="お名前" value={inquiry.name} />
+            {inquiry.companyName ? (
+              <DetailField label="会社名・団体名" value={inquiry.companyName} />
+            ) : null}
+            <DetailField
+              label="メールアドレス"
+              value={
+                <a
+                  href={`mailto:${inquiry.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {inquiry.email}
+                </a>
+              }
+            />
+          </div>
+        </DetailSection>
 
-        {/* 件名 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">件名</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-medium">{inquiry.subject}</p>
-          </CardContent>
-        </Card>
+        {/* 件名 + 受付日時 */}
+        <DetailSection title="お問い合わせ詳細">
+          <div className="space-y-4">
+            <DetailField label="件名" value={inquiry.subject} />
+            <DetailField
+              label="受付日時"
+              value={formatDate(inquiry.createdAt, true)}
+            />
+          </div>
+        </DetailSection>
 
         {/* 本文 */}
         <Card>
@@ -265,27 +282,6 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
             </Select>
           </CardContent>
         </Card>
-
-        {/* 送信者情報 */}
-        <DetailSection title="送信者情報">
-          <div className="space-y-4">
-            <DetailField label="お名前" value={inquiry.name} />
-            {inquiry.companyName ? (
-              <DetailField label="会社名・団体名" value={inquiry.companyName} />
-            ) : null}
-            <DetailField
-              label="メールアドレス"
-              value={
-                <a
-                  href={`mailto:${inquiry.email}`}
-                  className="text-primary hover:underline"
-                >
-                  {inquiry.email}
-                </a>
-              }
-            />
-          </div>
-        </DetailSection>
 
         {/* 顧客紐づけ */}
         <Card>

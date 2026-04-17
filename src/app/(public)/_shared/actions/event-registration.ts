@@ -29,7 +29,10 @@ import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
-import { NOTIFICATION_TYPE } from "@/shared/lib/validations/enums/helpers";
+import {
+  NOTIFICATION_TYPE,
+  NOTIFICATION_TYPE_LABELS,
+} from "@/shared/lib/validations/enums/helpers";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -126,7 +129,7 @@ export async function registerForEvent(
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-        title: "イベント申込",
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
         message: `${result.registration.name}様が「${result.event.title}」に申し込みました`,
         resourceType: "event",
         resourceId: result.registration.eventId,
@@ -189,7 +192,7 @@ export async function cancelEventRegistration(
     fireAndForget(
       createNotificationCommand({
         type: NOTIFICATION_TYPE.EVENT_REGISTRATION,
-        title: "イベント申込キャンセル",
+        title: NOTIFICATION_TYPE_LABELS[NOTIFICATION_TYPE.EVENT_REGISTRATION],
         message: `${registration.name}様が「${registration.event.title}」の申込をキャンセルしました`,
         resourceType: "event",
         resourceId: registration.eventId,
