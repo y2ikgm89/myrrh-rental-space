@@ -144,6 +144,8 @@ export const CACHE_TAGS = {
   BLOCK_TEMPLATES: "block-templates",
   /** スペースレビュー */
   REVIEWS: "reviews",
+  /** メールテンプレート */
+  EMAIL_TEMPLATES: "email-templates",
   /** イベント */
   EVENTS: "events",
   /** イベント参加登録 */
@@ -228,6 +230,9 @@ export const getCacheTag = {
   reviews: {
     space: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-space-${spaceId}`,
     stats: (spaceId: string) => `${CACHE_TAGS.REVIEWS}-stats-${spaceId}`,
+  },
+  emailTemplates: {
+    detail: (type: string) => `${CACHE_TAGS.EMAIL_TEMPLATES}-${type}`,
   },
   events: {
     list: () => CACHE_TAGS.EVENTS,
