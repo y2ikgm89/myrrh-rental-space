@@ -24,6 +24,7 @@ import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
 import { createAuditLogRecord } from "@/shared/domain/audit-log/commands";
+import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import { isDashboardRole } from "./admin-roles";
 import { SESSION_CONFIG, getAppUrl } from "./constants";
 import { isRecord, omitUndefined } from "./serialize";
@@ -183,12 +184,6 @@ function isValidSessionUser(user: unknown): user is AdminSession["user"] {
   if (!isRecord(user)) return false;
   if (!("id" in user) || !("email" in user) || !("role" in user)) return false;
   return typeof user["id"] === "string" && typeof user["email"] === "string";
-}
-
-const VALID_ROLES = new Set<string>(Object.values(Role));
-
-export function isValidRole(role: string): role is Role {
-  return VALID_ROLES.has(role);
 }
 
 export function getAdminSessionUser(

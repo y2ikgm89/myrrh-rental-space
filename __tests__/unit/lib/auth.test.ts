@@ -8,14 +8,13 @@
  */
 
 import { describe, test, expect } from "bun:test";
+import { isValidRole } from "@/shared/lib/validations/enums/guards";
 import {
-  isValidRole,
   getCustomerSessionUser,
   type CustomerSession,
 } from "@/shared/lib/customer-auth";
 import {
   getAdminSessionUser,
-  isValidRole as isValidAdminRole,
   type AdminSession,
 } from "@/shared/lib/admin-auth";
 import { Role } from "@generated/prisma/enums";
