@@ -107,6 +107,7 @@ export async function registerForEvent(
           }),
           sendEventAdminNotification(
             {
+              registrationId: result.registration.id,
               participantName: result.registration.name,
               participantEmail: result.registration.email,
               eventTitle: result.event.title,
@@ -212,6 +213,7 @@ export async function cancelEventRegistration(
 
         await Promise.all([
           sendEventRegistrationCancelled({
+            registrationId: registration.id,
             customerName: registration.name,
             customerEmail: registration.email,
             eventTitle: registration.event.title,
@@ -219,6 +221,7 @@ export async function cancelEventRegistration(
           }),
           sendEventAdminNotification(
             {
+              registrationId: registration.id,
               participantName: registration.name,
               participantEmail: registration.email,
               eventTitle: registration.event.title,

@@ -7,17 +7,13 @@
  */
 
 import "server-only";
-import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
-import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { StaffInvitationEmail } from "@/shared/emails/staff-invitation";
+import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
 import { getAdminUrl, SITE_DEFAULTS } from "../constants";
-import { sendEmail } from "./send";
-import type { StaffInvitationEmailData, EmailResult } from "./types";
-
-// =============================================================================
-// System Notification Emails
-// =============================================================================
+import { hashForKey, sendEmail } from "./send";
+import type { EmailResult, StaffInvitationEmailData } from "./types";
 
 /**
  * カレンダー同期による時間変更拒否の管理者通知メールを送信
@@ -85,19 +81,18 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 ※ Google Calendarでの変更は反映されていません。予約は元の時間のままです。
     `.trim();
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: notificationEmails,
-        subject: `【カレンダー同期エラー】時間変更拒否 - ${data.spaceName}`,
-        text: textContent,
-      }),
-    {
-      operation: "sendCalendarSyncRejectionEmail",
+  return sendEmail({
+    payload: {
+      to: notificationEmails,
+      subject: `【カレンダー同期エラー】時間変更拒否 - ${data.spaceName}`,
+      text: textContent,
+    },
+    idempotencyKey: `calendar-sync-rejection/${data.reservationId}/${data.attemptedStartTime.getTime()}`,
+    operation: "sendCalendarSyncRejectionEmail",
+    context: {
       reservationId: data.reservationId,
     },
-  );
+  });
 }
 
 /**
@@ -106,27 +101,30 @@ ${getAdminUrl(`/reservations/${data.reservationId}`)}
 export async function sendStaffInvitationEmail(
   data: StaffInvitationEmailData,
 ): Promise<EmailResult> {
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: data.to,
-        subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
-        react: StaffInvitationEmail({
-          staffName: data.staffName,
-          setupUrl: data.setupUrl,
-          expiresAt: data.expiresAt,
-        }),
+  return sendEmail({
+    payload: {
+      to: data.to,
+      subject: `【スタッフ招待】${SITE_DEFAULTS.name}`,
+      react: StaffInvitationEmail({
+        staffName: data.staffName,
+        setupUrl: data.setupUrl,
+        expiresAt: data.expiresAt,
       }),
-    {
-      operation: "sendStaffInvitationEmail",
+    },
+    // setupUrl は一意なトークンを含むため、再招待時は新しいキーになる
+    idempotencyKey: `staff-invitation/${hashForKey(data.setupUrl)}`,
+    operation: "sendStaffInvitationEmail",
+    context: {
       to: data.to,
     },
-  );
+  });
 }
 
 /**
  * Webhook更新通知メールを送信
+ *
+ * 各更新実行は一意のため idempotency key は不要（24 時間以内の同じ更新イベントは
+ * 理論上発生しない）
  */
 export async function sendWebhookRenewalNotification(data: {
   success: boolean;
@@ -169,14 +167,12 @@ ${getAdminUrl("/settings")}
       `.trim();
   }
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: notificationEmails,
-        subject,
-        text: textContent,
-      }),
-    { operation: "sendWebhookRenewalNotification" },
-  );
+  return sendEmail({
+    payload: {
+      to: notificationEmails,
+      subject,
+      text: textContent,
+    },
+    operation: "sendWebhookRenewalNotification",
+  });
 }

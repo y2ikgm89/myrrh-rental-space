@@ -7,41 +7,37 @@
  */
 
 import "server-only";
-import { formatPrice } from "@/shared/lib/pricing/format";
-import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
-import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
-import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 import { AdminNotificationEmail } from "@/shared/emails/admin-notification";
+import { ReservationCancelledEmail } from "@/shared/emails/reservation-cancelled";
+import { ReservationConfirmationEmail } from "@/shared/emails/reservation-confirmation";
+import { ReservationStatusChangedEmail } from "@/shared/emails/reservation-status-changed";
 import {
   getCalendarEmailSettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
-import { format } from "date-fns";
-import { ja } from "date-fns/locale";
+import { formatPrice } from "@/shared/lib/pricing/format";
+import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { getAdminUrl } from "../constants";
+import {
+  ErrorCategory,
+  ErrorSeverity,
+  logError,
+  normalizeError,
+} from "../errors/server";
 import {
   createReservationEvent,
   generateAddToCalendarLinks,
   generateICalContent,
-} from "@/shared/lib/ical";
-import { getAdminUrl } from "../constants";
+} from "../ical";
 import { omitUndefined } from "../serialize";
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-  normalizeError,
-} from "../errors/server";
-import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { sendEmail } from "./send";
 import type {
+  EmailResult,
   ReservationEmailData,
   StatusChangeEmailData,
-  EmailResult,
 } from "./types";
-
-// =============================================================================
-// Reservation Emails
-// =============================================================================
 
 /**
  * 予約確認メールを送信
@@ -55,10 +51,8 @@ export async function sendReservationConfirmationEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  // カレンダー設定を取得
   const calendarSettings = await getCalendarEmailSettings();
 
-  // カレンダーイベントを生成
   const calendarEvent = createReservationEvent(
     omitUndefined({
       reservationId: data.reservationId,
@@ -71,12 +65,10 @@ export async function sendReservationConfirmationEmail(
     }),
   );
 
-  // Add to Calendarリンクを生成
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
     ? generateAddToCalendarLinks(calendarEvent)
     : undefined;
 
-  // iCalファイルを生成（添付用）
   let attachments: { filename: string; content: Buffer }[] | undefined;
   if (calendarSettings.icalAttachmentEnabled) {
     try {
@@ -95,39 +87,35 @@ export async function sendReservationConfirmationEmail(
           reservationId: data.reservationId,
         },
       });
-      // 添付なしで続行
     }
   }
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send(
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
+      react: ReservationConfirmationEmail(
         omitUndefined({
-          from,
-          to: data.customerEmail,
-          subject: `【ご予約確認】${data.spaceName} - ${reservationDate}`,
-          react: ReservationConfirmationEmail(
-            omitUndefined({
-              customerName: data.customerName,
-              spaceName: data.spaceName,
-              reservationDate,
-              startTime,
-              endTime,
-              totalPrice: formatPrice(data.totalPrice, "未設定"),
-              reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-              notes: data.notes,
-              addToCalendarLinks,
-            }),
-          ),
-          attachments,
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          totalPrice: formatPrice(data.totalPrice, "未設定"),
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          notes: data.notes,
+          addToCalendarLinks,
         }),
       ),
-    {
-      operation: "sendReservationConfirmationEmail",
+      attachments,
+    }),
+    idempotencyKey: `reservation-confirm/${data.reservationId}`,
+    operation: "sendReservationConfirmationEmail",
+    context: {
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
     },
-  );
+  });
 }
 
 /**
@@ -142,27 +130,26 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: data.customerEmail,
-        subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
-        react: ReservationCancelledEmail({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          reservationDate,
-          startTime,
-          endTime,
-          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-        }),
+  return sendEmail({
+    payload: {
+      to: data.customerEmail,
+      subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
+      react: ReservationCancelledEmail({
+        customerName: data.customerName,
+        spaceName: data.spaceName,
+        reservationDate,
+        startTime,
+        endTime,
+        reservationId: data.reservationId.slice(0, 8).toUpperCase(),
       }),
-    {
-      operation: "sendReservationCancelledEmail",
+    },
+    idempotencyKey: `reservation-cancel/${data.reservationId}`,
+    operation: "sendReservationCancelledEmail",
+    context: {
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
     },
-  );
+  });
 }
 
 /**
@@ -177,34 +164,31 @@ export async function sendReservationStatusChangedEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send(
+  return sendEmail({
+    payload: omitUndefined({
+      to: data.customerEmail,
+      subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
+      react: ReservationStatusChangedEmail(
         omitUndefined({
-          from,
-          to: data.customerEmail,
-          subject: `【予約ステータス更新】${data.spaceName} - ${reservationDate}`,
-          react: ReservationStatusChangedEmail(
-            omitUndefined({
-              customerName: data.customerName,
-              spaceName: data.spaceName,
-              reservationDate,
-              startTime,
-              endTime,
-              totalPrice: formatPrice(data.totalPrice, "未設定"),
-              reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-              newStatus: data.newStatus,
-              location: data.location,
-            }),
-          ),
+          customerName: data.customerName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          totalPrice: formatPrice(data.totalPrice, "未設定"),
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          newStatus: data.newStatus,
+          location: data.location,
         }),
       ),
-    {
-      operation: "sendReservationStatusChangedEmail",
+    }),
+    idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}`,
+    operation: "sendReservationStatusChangedEmail",
+    context: {
       reservationId: data.reservationId,
       customerEmail: data.customerEmail,
     },
-  );
+  });
 }
 
 /**
@@ -225,33 +209,32 @@ export async function sendReservationAdminNotification(
 
   const actionText = RESERVATION_ACTION_LABELS[action];
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: notificationEmails,
-        subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
-        react: AdminNotificationEmail(
-          omitUndefined({
-            type: "reservation" as const,
-            action,
-            customerName: data.customerName,
-            customerEmail: data.customerEmail,
-            guestName: data.guestName,
-            spaceName: data.spaceName,
-            reservationDate,
-            startTime,
-            endTime,
-            totalPrice: formatPrice(data.totalPrice, "未設定"),
-            reservationId: data.reservationId.slice(0, 8).toUpperCase(),
-            adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
-          }),
-        ),
-      }),
-    {
-      operation: "sendReservationAdminNotification",
+  return sendEmail({
+    payload: {
+      to: notificationEmails,
+      subject: `【${actionText}】${data.spaceName} - ${data.customerName}様`,
+      react: AdminNotificationEmail(
+        omitUndefined({
+          type: "reservation" as const,
+          action,
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          guestName: data.guestName,
+          spaceName: data.spaceName,
+          reservationDate,
+          startTime,
+          endTime,
+          totalPrice: formatPrice(data.totalPrice, "未設定"),
+          reservationId: data.reservationId.slice(0, 8).toUpperCase(),
+          adminUrl: getAdminUrl(`/reservations/${data.reservationId}`),
+        }),
+      ),
+    },
+    idempotencyKey: `reservation-admin/${data.reservationId}/${action}`,
+    operation: "sendReservationAdminNotification",
+    context: {
       reservationId: data.reservationId,
       action,
     },
-  );
+  });
 }

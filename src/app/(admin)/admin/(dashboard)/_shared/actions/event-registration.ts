@@ -88,6 +88,7 @@ export async function adminCreateRegistration(
             }),
             sendEventAdminNotification(
               {
+                registrationId: data.registration.id,
                 participantName: data.registration.name,
                 participantEmail: data.registration.email,
                 eventTitle: data.event.title,
@@ -111,6 +112,7 @@ export async function adminCreateRegistration(
 }
 
 type CancelRegistrationData = {
+  registrationId: string;
   eventId: string;
   name: string;
   email: string;
@@ -132,6 +134,7 @@ export async function adminCancelRegistration(
       const registration = await cancelEventRegistrationCommand(validated.data);
 
       return {
+        registrationId: registration.id,
         eventId: registration.eventId,
         name: registration.name,
         email: registration.email,
@@ -166,6 +169,7 @@ export async function adminCancelRegistration(
 
           await Promise.all([
             sendEventRegistrationCancelled({
+              registrationId: data.registrationId,
               customerName: data.name,
               customerEmail: data.email,
               eventTitle: data.eventTitle,
@@ -173,6 +177,7 @@ export async function adminCancelRegistration(
             }),
             sendEventAdminNotification(
               {
+                registrationId: data.registrationId,
                 participantName: data.name,
                 participantEmail: data.email,
                 eventTitle: data.eventTitle,

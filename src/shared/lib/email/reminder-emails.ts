@@ -1,11 +1,11 @@
 import "server-only";
-import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
-import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
+import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { SITE_DEFAULTS } from "../constants";
 import { sendEmail } from "./send";
-import type { ReminderEmailData, EmailResult } from "./types";
+import type { EmailResult, ReminderEmailData } from "./types";
 
 async function getSiteName(): Promise<string> {
   const seo = await getSeoSettings();
@@ -20,26 +20,25 @@ export async function sendReservationReminderEmail(
     locale: ja,
   });
 
-  return sendEmail(
-    (resend, from) =>
-      resend.emails.send({
-        from,
-        to: data.customerEmail,
-        subject: `【ご予約リマインダー】${data.spaceName} - ${reservationDate}`,
-        react: ReservationReminderEmail({
-          customerName: data.customerName,
-          spaceName: data.spaceName,
-          startTime: data.startTime,
-          endTime: data.endTime,
-          location: data.location,
-          notes: data.notes,
-          siteName,
-        }),
+  return sendEmail({
+    payload: {
+      to: data.customerEmail,
+      subject: `【ご予約リマインダー】${data.spaceName} - ${reservationDate}`,
+      react: ReservationReminderEmail({
+        customerName: data.customerName,
+        spaceName: data.spaceName,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        location: data.location,
+        notes: data.notes,
+        siteName,
       }),
-    {
-      operation: "sendReservationReminderEmail",
+    },
+    idempotencyKey: `reservation-reminder/${data.reservationId}`,
+    operation: "sendReservationReminderEmail",
+    context: {
       reservationId: data.reservationId,
       email: data.customerEmail,
     },
-  );
+  });
 }
