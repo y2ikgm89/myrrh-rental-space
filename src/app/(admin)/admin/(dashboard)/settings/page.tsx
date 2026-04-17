@@ -13,6 +13,7 @@ import {
   IconSettings,
   IconNavigation,
   IconSpeakerphone,
+  IconMail,
 } from "@tabler/icons-react";
 import { SettingsCard } from "./_components/SettingsCard";
 import type { SettingsCardProps } from "./_components/SettingsCard";
@@ -51,6 +52,13 @@ const SETTINGS_CATEGORIES: SettingsCardProps[] = [
     href: "/admin/settings/notify",
     icon: IconBell,
     items: ["メール", "決済 (Stripe)"],
+  },
+  {
+    title: "メールテンプレート",
+    description: "送信メールの件名・挨拶文・導入文・締め文を編集",
+    href: "/admin/settings/email-templates",
+    icon: IconMail,
+    items: ["予約", "イベント", "お問い合わせ", "認証"],
   },
   {
     title: "外部連携",

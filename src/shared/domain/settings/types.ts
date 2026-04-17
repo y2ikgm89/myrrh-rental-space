@@ -61,6 +61,9 @@ export type SettingsData = {
   senderEmail: string | null;
   senderName: string | null;
   replyToEmail: string | null;
+  emailSubjectPrefix: string | null;
+  emailFooterNote: string | null;
+  emailSupportContactText: string | null;
   defaultMetaDescription: string | null;
   defaultMetaKeywords: string | null;
   defaultOgpTitle: string | null;

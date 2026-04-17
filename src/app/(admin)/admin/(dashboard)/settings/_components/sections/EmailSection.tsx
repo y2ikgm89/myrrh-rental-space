@@ -22,6 +22,7 @@ import {
   Input,
   SubmitButton,
   Switch,
+  Textarea,
 } from "@/admin/components/ui";
 import { useFormAction } from "@/admin/hooks/useFormAction";
 import { updateEmailSettings } from "@/admin/actions/settings";
@@ -47,6 +48,9 @@ export function EmailSection({ settings }: EmailSectionProps) {
         notificationEmailAddresses: emptyToNull(
           data.notificationEmailAddresses,
         ),
+        emailSubjectPrefix: emptyToNull(data.emailSubjectPrefix),
+        emailFooterNote: emptyToNull(data.emailFooterNote),
+        emailSupportContactText: emptyToNull(data.emailSupportContactText),
       }),
     {
       defaultValues: {
@@ -57,6 +61,9 @@ export function EmailSection({ settings }: EmailSectionProps) {
           settings.sendReservationConfirmationEmail,
         sendAdminNotificationEmail: settings.sendAdminNotificationEmail,
         notificationEmailAddresses: settings.notificationEmailAddresses || "",
+        emailSubjectPrefix: settings.emailSubjectPrefix || "",
+        emailFooterNote: settings.emailFooterNote || "",
+        emailSupportContactText: settings.emailSupportContactText || "",
       },
       refresh: true,
       successMessage: "メール設定を更新しました",
@@ -148,6 +155,74 @@ export function EmailSection({ settings }: EmailSectionProps) {
                 </FormItem>
               )}
             />
+
+            <fieldset className="rounded-lg border p-4 space-y-4">
+              <legend className="px-1 text-sm font-medium">
+                テンプレート共通項目
+              </legend>
+              <FormField
+                control={form.control}
+                name="emailSubjectPrefix"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>件名プレフィックス</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="[Myrrh] "
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      全メールの件名冒頭に付加する文字列（32文字以内）
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="emailFooterNote"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>フッター補足</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="このメールは自動送信されています。"
+                        rows={3}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      全メールのフッター下部に表示される補足文
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="emailSupportContactText"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>サポート問い合わせ文言</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="ご不明な点がございましたら support@example.com までお問い合わせください。"
+                        rows={3}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      締め文の下に表示されるサポート案内
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </fieldset>
 
             <fieldset className="rounded-lg border p-4 space-y-4">
               <legend className="px-1 text-sm font-medium">送信設定</legend>

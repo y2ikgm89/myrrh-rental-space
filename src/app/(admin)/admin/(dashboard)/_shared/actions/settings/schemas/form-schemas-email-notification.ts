@@ -28,6 +28,15 @@ export const emailFormSchema = z.object({
   notificationEmailAddresses: z
     .string()
     .max(500, { error: "500文字以内で入力してください" }),
+  emailSubjectPrefix: z
+    .string()
+    .max(32, { error: "32文字以内で入力してください" }),
+  emailFooterNote: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
+  emailSupportContactText: z
+    .string()
+    .max(500, { error: "500文字以内で入力してください" }),
 });
 
 export type EmailFormInput = z.infer<typeof emailFormSchema>;

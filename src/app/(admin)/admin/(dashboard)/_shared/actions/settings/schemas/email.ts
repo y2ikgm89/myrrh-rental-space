@@ -15,6 +15,9 @@ export const emailSettingsSchema = z.object({
   sendReservationConfirmationEmail: z.boolean(),
   sendAdminNotificationEmail: z.boolean(),
   notificationEmailAddresses: z.string().max(500).nullable(),
+  emailSubjectPrefix: z.string().max(32).nullable(),
+  emailFooterNote: z.string().max(500).nullable(),
+  emailSupportContactText: z.string().max(500).nullable(),
 });
 
 export type EmailSettingsInput = z.infer<typeof emailSettingsSchema>;
