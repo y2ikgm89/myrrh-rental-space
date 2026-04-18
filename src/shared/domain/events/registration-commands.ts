@@ -104,6 +104,7 @@ export async function cancelEventRegistrationCommand(
     data: {
       status: RegistrationStatus.CANCELLED,
       cancelledAt: new Date(),
+      icsSequence: { increment: 1 },
     },
   });
 

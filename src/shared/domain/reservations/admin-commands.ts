@@ -267,6 +267,7 @@ export async function updateAdminReservationCommand(
         couponDiscountAmount: pricing.couponDiscountAmount,
         durationDiscountAmount: pricing.durationDiscountAmount,
         notes: input.notes || null,
+        icsSequence: { increment: 1 },
       },
     });
 

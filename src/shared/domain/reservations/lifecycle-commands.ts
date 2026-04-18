@@ -45,6 +45,7 @@ export async function updateReservationStatusCommand(
     where: { id, deletedAt: null },
     data: {
       status,
+      icsSequence: { increment: 1 },
       ...(isCancellation
         ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
         : {}),
@@ -127,6 +128,7 @@ export async function deleteReservationCommand(
       data: {
         deletedAt: now,
         deletedById: userId ?? null,
+        icsSequence: { increment: 1 },
         ...(needsCancellationTracking
           ? {
               status: ReservationStatus.CANCELLED,
@@ -174,7 +176,11 @@ export async function restoreReservationCommand(id: string) {
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
       where: { id },
-      data: { deletedAt: null, deletedById: null },
+      data: {
+        deletedAt: null,
+        deletedById: null,
+        icsSequence: { increment: 1 },
+      },
     });
 
     if (reservation.couponId) {

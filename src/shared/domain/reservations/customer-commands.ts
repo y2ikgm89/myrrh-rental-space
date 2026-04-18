@@ -70,6 +70,7 @@ export async function cancelCustomerReservation(
         status: ReservationStatus.CANCELLED,
         cancelledAt: new Date(),
         cancelledByType: CANCELLED_BY.CUSTOMER,
+        icsSequence: { increment: 1 },
         ...(cancellationReason ? { cancellationReason } : {}),
       },
     });
@@ -263,6 +264,7 @@ export async function updateCustomerReservation(
         taxAmount,
         totalPriceWithTax: priceResult.totalPrice + taxAmount,
         couponId: couponForCalc ? reservation.couponId : null,
+        icsSequence: { increment: 1 },
       },
     });
 
