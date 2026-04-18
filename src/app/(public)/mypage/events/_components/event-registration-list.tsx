@@ -20,6 +20,9 @@ import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
+import { getAppUrl } from "@/shared/lib/constants";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical";
+import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -166,6 +169,27 @@ function EventRegistrationCard({
           role="alert"
         >
           {error}
+        </div>
+      )}
+
+      {registration.status === RegistrationStatus.CONFIRMED && (
+        <div className="mt-4 border-t border-border pt-3">
+          <AddToCalendar
+            urls={buildAddToCalendarUrls({
+              summary: registration.event.title,
+              description: [
+                `申込ID: ${registration.id.slice(0, 8).toUpperCase()}`,
+                `イベント: ${registration.event.title}`,
+                `参加人数: ${registration.numberOfPeople}名`,
+              ].join("\n"),
+              startTime: new Date(registration.event.startTime),
+              endTime: new Date(registration.event.endTime),
+              ...(registration.event.location != null
+                ? { location: registration.event.location }
+                : {}),
+              icsDownloadUrl: `${getAppUrl()}/api/calendar/event/${registration.id}`,
+            })}
+          />
         </div>
       )}
 
