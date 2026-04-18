@@ -78,11 +78,8 @@ export {
   type WordCountData,
 } from "./WordCountPlugin";
 
-// Table of Contents
-export {
-  TableOfContentsPlugin,
-  INSERT_TOC_COMMAND,
-} from "./TableOfContentsPlugin";
+// Heading anchor auto-generation（目次アンカー ID 自動生成）
+export { HeadingAnchorPlugin } from "./HeadingAnchorPlugin";
 
 // Keyboard shortcuts & Auto save
 export { KeyboardShortcutsPlugin } from "./KeyboardShortcutsPlugin";

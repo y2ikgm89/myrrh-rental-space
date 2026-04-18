@@ -49,7 +49,7 @@ import {
   CollapsiblePlugin,
   GroupPlugin,
   EmojiPickerPlugin,
-  TableOfContentsPlugin,
+  HeadingAnchorPlugin,
   KeyboardShortcutsPlugin,
   CodeBlockPlugin,
   useComment,
@@ -247,7 +247,7 @@ function EditorInner({
             <ImageDropPlugin />
             <PasteUrlPlugin />
             <FindReplacePlugin anchorElem={contentWrapperRef} />
-            <TableOfContentsPlugin />
+            <HeadingAnchorPlugin />
             <KeyboardShortcutsPlugin openDialog={dialogManager.openDialog} />
             <CodeBlockPlugin anchorElem={contentWrapperRef} />
             {(onAutoSave ?? autoSaveKey) && (

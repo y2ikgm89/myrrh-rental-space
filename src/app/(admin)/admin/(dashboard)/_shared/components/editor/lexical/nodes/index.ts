@@ -221,12 +221,13 @@ export {
   tabPanelActiveState,
 } from "./TabPanelNode";
 
-// Table of Contents
+// Custom Heading（NodeState で anchorId を持つ HeadingNode の置換）
 export {
-  TableOfContentsNode,
-  $createTableOfContentsNode,
-  $isTableOfContentsNode,
-} from "./TableOfContentsNode";
+  CustomHeadingNode,
+  $createCustomHeadingNode,
+  $isCustomHeadingNode,
+  anchorIdState,
+} from "./CustomHeadingNode";
 
 // MapEmbed
 export {

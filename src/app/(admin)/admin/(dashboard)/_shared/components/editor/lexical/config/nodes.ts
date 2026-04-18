@@ -11,6 +11,10 @@ import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { MarkNode } from "@lexical/mark";
 import { TableNode, TableCellNode, TableRowNode } from "@lexical/table";
 import {
+  CustomHeadingNode,
+  $createCustomHeadingNode,
+} from "../nodes/CustomHeadingNode";
+import {
   CustomTableNode,
   $createCustomTableNode,
 } from "../nodes/CustomTableNode";
@@ -47,7 +51,6 @@ import { TabsContainerNode } from "../nodes/TabsContainerNode";
 import { TabListNode } from "../nodes/TabListNode";
 import { TabTitleNode } from "../nodes/TabTitleNode";
 import { TabPanelNode } from "../nodes/TabPanelNode";
-import { TableOfContentsNode } from "../nodes/TableOfContentsNode";
 import { MapEmbedNode } from "../nodes/MapEmbedNode";
 import { RubyNode } from "../nodes/RubyNode";
 import { TooltipNode } from "../nodes/TooltipNode";
@@ -84,7 +87,15 @@ export const EDITOR_NODES: ReadonlyArray<
   Klass<LexicalNode> | LexicalNodeReplacement
 > = [
   // 公式ノード
-  HeadingNode,
+  // Heading: Node Replacement パターン（公式ベストプラクティス）
+  // withKlass により editor._nodes.get("heading") = CustomHeadingNode となり
+  // $isHeadingNode(customHeadingNode) が instanceof チェックで true を返す
+  CustomHeadingNode,
+  {
+    replace: HeadingNode,
+    with: (node: HeadingNode) => $createCustomHeadingNode(node.getTag()),
+    withKlass: CustomHeadingNode,
+  },
   QuoteNode,
   ListNode,
   ListItemNode,
@@ -142,7 +153,6 @@ export const EDITOR_NODES: ReadonlyArray<
   TabListNode,
   TabTitleNode,
   TabPanelNode,
-  TableOfContentsNode,
   MapEmbedNode,
   RubyNode,
   TooltipNode,

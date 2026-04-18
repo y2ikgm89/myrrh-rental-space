@@ -28,14 +28,12 @@ import {
   IconList,
   IconListCheck,
   IconListNumbers,
-  IconListTree,
   IconMinus,
   IconPilcrow,
   IconPointer,
   IconScissors,
 } from "@tabler/icons-react";
 import { INSERT_PAGE_BREAK_COMMAND } from "../../plugins/PageBreakPlugin";
-import { INSERT_TOC_COMMAND } from "../../plugins/TableOfContentsPlugin";
 import { applyTextCaseToSelection } from "../../plugins/TextCasePlugin";
 import { applySetBlocksType, createParagraphBlock } from "./types";
 import type { InsertItem } from "./types";
@@ -218,17 +216,6 @@ export const STRUCTURE_INSERT_ITEMS: readonly InsertItem[] = [
     showInPicker: true,
     dispatch: (editor) =>
       editor.dispatchCommand(INSERT_HORIZONTAL_RULE_COMMAND, undefined),
-  },
-  {
-    id: "toc",
-    type: "command",
-    label: "目次",
-    icon: IconListTree,
-    keywords: ["toc", "table of contents", "mokuji", "heading", "navigation"],
-    category: "other",
-    showInToolbar: true,
-    showInPicker: true,
-    dispatch: (editor) => editor.dispatchCommand(INSERT_TOC_COMMAND, undefined),
   },
   {
     id: "pageBreak",
