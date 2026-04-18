@@ -1,9 +1,6 @@
-import {
-  IconBrandGoogle,
-  IconBrandWindows,
-  IconCalendarPlus,
-} from "@tabler/icons-react";
+import { IconBrandGoogle, IconCalendarPlus } from "@tabler/icons-react";
 import type { AddToCalendarUrls } from "@/shared/lib/ical";
+import { OutlookLogo } from "./icons/outlook-logo";
 import { cn } from "@/shared/lib/cn";
 
 type Variant = "public" | "authenticated";
@@ -64,7 +61,7 @@ export function AddToCalendar({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground shadow-sm transition hover:bg-accent/5 hover:underline hover:underline-offset-4"
           >
-            <IconBrandWindows className="h-4 w-4" aria-hidden="true" />
+            <OutlookLogo className="h-4 w-4" aria-hidden="true" />
             <span>Outlook</span>
           </a>
         </li>
