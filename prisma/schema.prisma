@@ -558,6 +558,9 @@ model Reservation {
   cancelledAt        DateTime?
   cancelledByType    String?  @db.VarChar(20) // "CUSTOMER" | "ADMIN"
 
+  // iCal RFC 5545 SEQUENCE (increments on update/cancel)
+  icsSequence Int @default(0)
+
   @@index([spaceId])
   @@index([customerId])
   @@index([userId])
@@ -1766,6 +1769,9 @@ model EventRegistration {
   cancelledAt     DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
+
+  // iCal RFC 5545 SEQUENCE (increments on update/cancel)
+  icsSequence Int @default(0)
 
   event           Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
   customer        Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
