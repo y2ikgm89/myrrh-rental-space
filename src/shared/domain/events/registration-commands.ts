@@ -70,6 +70,7 @@ export async function createEventRegistrationCommand(data: {
       name: true,
       email: true,
       numberOfPeople: true,
+      icsSequence: true,
     },
   });
 
@@ -99,14 +100,15 @@ export async function cancelEventRegistrationCommand(
 
   if (!registration) throw new DomainError("申込が見つかりません", "NOT_FOUND");
 
-  await prisma.eventRegistration.update({
+  const updated = await prisma.eventRegistration.update({
     where: { id: registrationId },
     data: {
       status: RegistrationStatus.CANCELLED,
       cancelledAt: new Date(),
       icsSequence: { increment: 1 },
     },
+    select: { icsSequence: true },
   });
 
-  return registration;
+  return { ...registration, icsSequence: updated.icsSequence };
 }

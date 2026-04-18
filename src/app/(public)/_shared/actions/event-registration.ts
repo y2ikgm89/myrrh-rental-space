@@ -110,6 +110,7 @@ export async function registerForEvent(
             eventEndTime: event.endTime,
             location: event.location ?? undefined,
             numberOfPeople: result.registration.numberOfPeople,
+            icsSequence: result.registration.icsSequence,
           }),
           sendEventAdminNotification(
             {
@@ -223,6 +224,10 @@ export async function cancelEventRegistration(
             customerEmail: registration.email,
             eventTitle: registration.event.title,
             eventStartTime: event.startTime,
+            eventEndTime: event.endTime,
+            location: event.location ?? undefined,
+            numberOfPeople: registration.numberOfPeople,
+            icsSequence: registration.icsSequence,
           }),
           sendEventAdminNotification(
             {

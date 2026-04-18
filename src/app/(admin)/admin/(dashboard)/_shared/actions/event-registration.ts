@@ -35,6 +35,7 @@ type CreateRegistrationResult = {
     name: string;
     email: string;
     numberOfPeople: number;
+    icsSequence: number;
   };
   event: { title: string };
 };
@@ -85,6 +86,7 @@ export async function adminCreateRegistration(
               eventEndTime: event.endTime,
               location: event.location ?? undefined,
               numberOfPeople: data.registration.numberOfPeople,
+              icsSequence: data.registration.icsSequence,
             }),
             sendEventAdminNotification(
               {
@@ -118,6 +120,7 @@ type CancelRegistrationData = {
   email: string;
   eventTitle: string;
   numberOfPeople: number;
+  icsSequence: number;
 };
 
 export async function adminCancelRegistration(
@@ -140,6 +143,7 @@ export async function adminCancelRegistration(
         email: registration.email,
         eventTitle: registration.event.title,
         numberOfPeople: registration.numberOfPeople,
+        icsSequence: registration.icsSequence,
       };
     },
     afterSuccess: (data) => {
@@ -174,6 +178,10 @@ export async function adminCancelRegistration(
               customerEmail: data.email,
               eventTitle: data.eventTitle,
               eventStartTime: event.startTime,
+              eventEndTime: event.endTime,
+              location: event.location ?? undefined,
+              numberOfPeople: data.numberOfPeople,
+              icsSequence: data.icsSequence,
             }),
             sendEventAdminNotification(
               {

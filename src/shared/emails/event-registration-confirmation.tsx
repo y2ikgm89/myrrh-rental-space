@@ -5,10 +5,17 @@ import {
   Heading,
   Hr,
   Html,
+  Link,
   Preview,
   Section,
   Text,
 } from "@react-email/components";
+
+type AddToCalendarLinks = {
+  google: string;
+  outlookWeb: string;
+  ics: string;
+};
 
 type Props = {
   customerName: string;
@@ -16,9 +23,10 @@ type Props = {
   eventDate: string;
   startTime: string;
   endTime: string;
-  location: string | undefined;
+  location?: string;
   numberOfPeople: number;
   registrationId: string;
+  addToCalendarLinks?: AddToCalendarLinks;
 };
 
 export function EventRegistrationConfirmationEmail({
@@ -30,6 +38,7 @@ export function EventRegistrationConfirmationEmail({
   location,
   numberOfPeople,
   registrationId,
+  addToCalendarLinks,
 }: Props) {
   return (
     <Html>
@@ -70,6 +79,28 @@ export function EventRegistrationConfirmationEmail({
               <strong>参加人数:</strong> {String(numberOfPeople)}名
             </Text>
           </Section>
+
+          {addToCalendarLinks && (
+            <Section style={calendarSection}>
+              <Text style={calendarHeading}>カレンダーに追加</Text>
+              <Text style={calendarDescription}>
+                このイベントをカレンダーに追加できます:
+              </Text>
+              <Text style={calendarLinks}>
+                <Link href={addToCalendarLinks.google} style={calendarLink}>
+                  Google Calendar
+                </Link>
+                {" | "}
+                <Link href={addToCalendarLinks.outlookWeb} style={calendarLink}>
+                  Outlook
+                </Link>
+                {" | "}
+                <Link href={addToCalendarLinks.ics} style={calendarLink}>
+                  iCal (.ics)
+                </Link>
+              </Text>
+            </Section>
+          )}
 
           <Hr style={hr} />
 
@@ -140,6 +171,36 @@ const footer = {
   fontSize: "12px",
   color: "#8898aa",
   marginTop: "32px",
+};
+
+const calendarSection = {
+  backgroundColor: "#e8f4fd",
+  borderRadius: "8px",
+  padding: "16px 20px",
+  margin: "24px 0",
+};
+
+const calendarHeading = {
+  fontSize: "16px",
+  fontWeight: "600",
+  color: "#1a1a1a",
+  marginBottom: "8px",
+};
+
+const calendarDescription = {
+  fontSize: "14px",
+  color: "#484848",
+  marginBottom: "12px",
+};
+
+const calendarLinks = {
+  fontSize: "14px",
+  lineHeight: "24px",
+};
+
+const calendarLink = {
+  color: "#0066cc",
+  textDecoration: "underline",
 };
 
 export default EventRegistrationConfirmationEmail;

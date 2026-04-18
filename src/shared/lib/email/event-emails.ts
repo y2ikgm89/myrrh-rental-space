@@ -15,7 +15,10 @@ import { EventRegistrationCancelledEmail } from "@/shared/emails/event-registrat
 import { EventRegistrationConfirmationEmail } from "@/shared/emails/event-registration-confirmation";
 import { EventUpdatedNotificationEmail } from "@/shared/emails/event-updated-notification";
 import { prisma } from "@/shared/db/prisma";
-import { getNotificationEmailAddresses } from "@/shared/domain/settings/queries/notification";
+import {
+  getCalendarEmailSettings,
+  getNotificationEmailAddresses,
+} from "@/shared/domain/settings/queries/notification";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -23,6 +26,13 @@ import {
   logError,
   normalizeError,
 } from "../errors/server";
+import {
+  buildAddToCalendarUrls,
+  buildEventCalendar,
+  buildEventCancelCalendar,
+} from "../ical";
+import { omitUndefined } from "../serialize";
+import { getAppHost, getAppUrl } from "../constants";
 import { hashForKey, sendEmail } from "./send";
 import type { EmailResult } from "./types";
 
@@ -39,6 +49,7 @@ type EventRegistrationConfirmationData = {
   eventEndTime: Date;
   location: string | undefined;
   numberOfPeople: number;
+  icsSequence: number;
 };
 
 /**
@@ -53,21 +64,79 @@ export async function sendEventRegistrationConfirmation(
   const startTime = format(data.eventStartTime, "HH:mm", { locale: ja });
   const endTime = format(data.eventEndTime, "HH:mm", { locale: ja });
 
+  const calendarSettings = await getCalendarEmailSettings();
+  const appUrl = getAppUrl();
+  const host = getAppHost();
+
+  const calendarParams = omitUndefined({
+    registrationId: data.registrationId,
+    eventTitle: data.eventTitle,
+    customerName: data.customerName,
+    startTime: data.eventStartTime,
+    endTime: data.eventEndTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    numberOfPeople: data.numberOfPeople,
+    sequence: data.icsSequence,
+  });
+
+  const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
+    ? buildAddToCalendarUrls({
+        summary: data.eventTitle,
+        description: [
+          `申込ID: ${data.registrationId.slice(0, 8).toUpperCase()}`,
+          `イベント: ${data.eventTitle}`,
+          `日時: ${eventDate} ${startTime} - ${endTime}`,
+        ].join("\n"),
+        startTime: data.eventStartTime,
+        endTime: data.eventEndTime,
+        ...(data.location !== undefined ? { location: data.location } : {}),
+        icsDownloadUrl: `${appUrl}/api/calendar/event/${data.registrationId}`,
+      })
+    : undefined;
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `event-${data.registrationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildEventCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateEventICalAttachment",
+          registrationId: data.registrationId,
+        },
+      });
+    }
+  }
+
   return sendEmail({
-    payload: {
+    payload: omitUndefined({
       to: data.customerEmail,
       subject: `【イベント申込確認】${data.eventTitle} - ${eventDate}`,
-      react: EventRegistrationConfirmationEmail({
-        customerName: data.customerName,
-        eventTitle: data.eventTitle,
-        eventDate,
-        startTime,
-        endTime,
-        location: data.location,
-        numberOfPeople: data.numberOfPeople,
-        registrationId: data.registrationId.slice(0, 8).toUpperCase(),
-      }),
-    },
+      react: EventRegistrationConfirmationEmail(
+        omitUndefined({
+          customerName: data.customerName,
+          eventTitle: data.eventTitle,
+          eventDate,
+          startTime,
+          endTime,
+          location: data.location,
+          numberOfPeople: data.numberOfPeople,
+          registrationId: data.registrationId.slice(0, 8).toUpperCase(),
+          addToCalendarLinks,
+        }),
+      ),
+      attachments,
+    }),
     idempotencyKey: `event-reg-confirm/${data.registrationId}`,
     operation: "sendEventRegistrationConfirmation",
     context: {
@@ -83,10 +152,14 @@ type EventRegistrationCancelledData = {
   customerEmail: string;
   eventTitle: string;
   eventStartTime: Date;
+  eventEndTime: Date;
+  location: string | undefined;
+  numberOfPeople: number;
+  icsSequence: number;
 };
 
 /**
- * イベント申込キャンセル確認メールを送信
+ * イベント申込キャンセル確認メールを送信（CANCEL ICS 添付）
  */
 export async function sendEventRegistrationCancelled(
   data: EventRegistrationCancelledData,
@@ -95,8 +168,46 @@ export async function sendEventRegistrationCancelled(
     locale: ja,
   });
 
+  const calendarSettings = await getCalendarEmailSettings();
+  const host = getAppHost();
+
+  const calendarParams = omitUndefined({
+    registrationId: data.registrationId,
+    eventTitle: data.eventTitle,
+    customerName: data.customerName,
+    startTime: data.eventStartTime,
+    endTime: data.eventEndTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    numberOfPeople: data.numberOfPeople,
+    sequence: data.icsSequence,
+  });
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `event-cancel-${data.registrationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildEventCancelCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateEventICalCancelAttachment",
+          registrationId: data.registrationId,
+        },
+      });
+    }
+  }
+
   return sendEmail({
-    payload: {
+    payload: omitUndefined({
       to: data.customerEmail,
       subject: `【イベント申込キャンセル】${data.eventTitle}`,
       react: EventRegistrationCancelledEmail({
@@ -104,7 +215,8 @@ export async function sendEventRegistrationCancelled(
         eventTitle: data.eventTitle,
         eventDate,
       }),
-    },
+      attachments,
+    }),
     idempotencyKey: `event-reg-cancel/${data.registrationId}`,
     operation: "sendEventRegistrationCancelled",
     context: {
@@ -167,7 +279,7 @@ export async function sendEventAdminNotification(
 }
 
 /**
- * イベント中止時に全参加者へ通知メールを送信
+ * イベント中止時に全参加者へ通知メールを送信（CANCEL ICS 添付）
  */
 export async function sendEventCancelledToAllParticipants(
   eventId: string,
@@ -177,11 +289,16 @@ export async function sendEventCancelledToAllParticipants(
     select: {
       title: true,
       startTime: true,
+      endTime: true,
+      location: true,
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
+          id: true,
           name: true,
           email: true,
+          numberOfPeople: true,
+          icsSequence: true,
         },
       },
     },
@@ -193,10 +310,40 @@ export async function sendEventCancelledToAllParticipants(
     locale: ja,
   });
 
+  const calendarSettings = await getCalendarEmailSettings();
+  const host = getAppHost();
+
   const results = await Promise.allSettled(
-    event.registrations.map((registration) =>
-      sendEmail({
-        payload: {
+    event.registrations.map((registration) => {
+      let attachments: { filename: string; content: Buffer }[] | undefined;
+      if (calendarSettings.icalAttachmentEnabled) {
+        try {
+          const calendarParams = omitUndefined({
+            registrationId: registration.id,
+            eventTitle: event.title,
+            customerName: registration.name,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            ...(event.location !== null ? { location: event.location } : {}),
+            numberOfPeople: registration.numberOfPeople,
+            sequence: registration.icsSequence + 1,
+          });
+          attachments = [
+            {
+              filename: `event-cancel-${registration.id.slice(0, 8)}.ics`,
+              content: Buffer.from(
+                buildEventCancelCalendar(calendarParams, host),
+                "utf-8",
+              ),
+            },
+          ];
+        } catch {
+          // ical generation failure is non-critical, continue without attachment
+        }
+      }
+
+      return sendEmail({
+        payload: omitUndefined({
           to: registration.email,
           subject: `【イベント中止のお知らせ】${event.title}`,
           react: EventCancelledNotificationEmail({
@@ -204,15 +351,16 @@ export async function sendEventCancelledToAllParticipants(
             eventTitle: event.title,
             eventDate,
           }),
-        },
+          attachments,
+        }),
         idempotencyKey: `event-cancelled/${eventId}/${hashForKey(registration.email)}`,
         operation: "sendEventCancelledToAllParticipants",
         context: {
           eventId,
           participantEmail: registration.email,
         },
-      }),
-    ),
+      });
+    }),
   );
 
   for (const [i, result] of results.entries()) {
@@ -234,7 +382,7 @@ export async function sendEventCancelledToAllParticipants(
 }
 
 /**
- * イベント内容変更時に全参加者へ通知メールを送信
+ * イベント内容変更時に全参加者へ通知メールを送信（REQUEST ICS 添付）
  */
 export async function sendEventUpdatedToAllParticipants(
   eventId: string,
@@ -250,8 +398,11 @@ export async function sendEventUpdatedToAllParticipants(
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
+          id: true,
           name: true,
           email: true,
+          numberOfPeople: true,
+          icsSequence: true,
         },
       },
     },
@@ -268,10 +419,40 @@ export async function sendEventUpdatedToAllParticipants(
   const newEndTime = format(event.endTime, "HH:mm", { locale: ja });
   const oldStartTimestamp = oldStartTime.getTime();
 
+  const calendarSettings = await getCalendarEmailSettings();
+  const host = getAppHost();
+
   const results = await Promise.allSettled(
-    event.registrations.map((registration) =>
-      sendEmail({
-        payload: {
+    event.registrations.map((registration) => {
+      let attachments: { filename: string; content: Buffer }[] | undefined;
+      if (calendarSettings.icalAttachmentEnabled) {
+        try {
+          const calendarParams = omitUndefined({
+            registrationId: registration.id,
+            eventTitle: event.title,
+            customerName: registration.name,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            ...(event.location !== null ? { location: event.location } : {}),
+            numberOfPeople: registration.numberOfPeople,
+            sequence: registration.icsSequence + 1,
+          });
+          attachments = [
+            {
+              filename: `event-${registration.id.slice(0, 8)}.ics`,
+              content: Buffer.from(
+                buildEventCalendar(calendarParams, host),
+                "utf-8",
+              ),
+            },
+          ];
+        } catch {
+          // ical generation failure is non-critical, continue without attachment
+        }
+      }
+
+      return sendEmail({
+        payload: omitUndefined({
           to: registration.email,
           subject: `【イベント内容変更のお知らせ】${event.title}`,
           react: EventUpdatedNotificationEmail({
@@ -281,15 +462,16 @@ export async function sendEventUpdatedToAllParticipants(
             newEventDate: `${newEventDate}〜${newEndTime}`,
             location: event.location ?? undefined,
           }),
-        },
+          attachments,
+        }),
         idempotencyKey: `event-updated/${eventId}/${oldStartTimestamp}/${hashForKey(registration.email)}`,
         operation: "sendEventUpdatedToAllParticipants",
         context: {
           eventId,
           participantEmail: registration.email,
         },
-      }),
-    ),
+      });
+    }),
   );
 
   for (const [i, result] of results.entries()) {
