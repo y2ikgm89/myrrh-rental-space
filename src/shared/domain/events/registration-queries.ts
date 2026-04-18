@@ -83,3 +83,53 @@ export async function getCustomerEventRegistrations(customerId: string) {
     },
   });
 }
+
+export async function getEventRegistrationForCalendar(params: {
+  registrationId: string;
+  customerId: string;
+}): Promise<{
+  id: string;
+  eventTitle: string;
+  customerName: string;
+  startTime: Date;
+  endTime: Date;
+  location: string | null;
+  numberOfPeople: number;
+  icsSequence: number;
+  status: RegistrationStatus;
+} | null> {
+  const reg = await prisma.eventRegistration.findFirst({
+    where: {
+      id: params.registrationId,
+      customerId: params.customerId,
+      event: { deletedAt: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      numberOfPeople: true,
+      icsSequence: true,
+      status: true,
+      event: {
+        select: {
+          title: true,
+          startTime: true,
+          endTime: true,
+          location: true,
+        },
+      },
+    },
+  });
+  if (!reg) return null;
+  return {
+    id: reg.id,
+    eventTitle: reg.event.title,
+    customerName: reg.name,
+    startTime: reg.event.startTime,
+    endTime: reg.event.endTime,
+    location: reg.event.location,
+    numberOfPeople: reg.numberOfPeople,
+    icsSequence: reg.icsSequence,
+    status: reg.status,
+  };
+}
