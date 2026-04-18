@@ -1165,6 +1165,7 @@ model Settings {
   sidebarWidgets      Json    @default("{\"search\":true,\"recent\":true,\"popular\":true,\"categories\":true,\"tags\":true}") // ウィジェット個別設定
   sidebarRecentCount  Int     @default(5) // 新着記事の表示件数
   sidebarPopularCount Int     @default(5) // 人気記事の表示件数
+  sidebarTocEnabled   Boolean @default(true) // 公開記事詳細ページの目次サイドバー表示（グローバル）
 
   // Permalink Settings (パーマリンク設定)
   postPermalinkStructure PostPermalinkStructure @default(post_name)
