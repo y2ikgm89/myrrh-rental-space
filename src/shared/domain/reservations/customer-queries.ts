@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
+import type { ReservationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 const CUSTOMER_RESERVATION_SELECT = {
   id: true,
@@ -56,4 +57,58 @@ export async function getCustomerReservationDetail(
       },
     },
   });
+}
+
+export async function getReservationForCalendar(params: {
+  reservationId: string;
+  customerId: string;
+}): Promise<{
+  id: string;
+  spaceName: string;
+  customerName: string;
+  startTime: Date;
+  endTime: Date;
+  location: string | null;
+  notes: string | null;
+  icsSequence: number;
+  status: ReservationStatus;
+} | null> {
+  const reservation = await prisma.reservation.findFirst({
+    where: {
+      id: params.reservationId,
+      customerId: params.customerId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      startTime: true,
+      endTime: true,
+      notes: true,
+      icsSequence: true,
+      status: true,
+      space: {
+        select: {
+          name: true,
+          location: { select: { address: true } },
+        },
+      },
+      customer: {
+        select: { lastName: true, firstName: true },
+      },
+    },
+  });
+  if (!reservation) return null;
+  return {
+    id: reservation.id,
+    spaceName: reservation.space.name,
+    customerName:
+      `${reservation.customer.lastName} ${reservation.customer.firstName}`.trim() ||
+      "お客様",
+    startTime: reservation.startTime,
+    endTime: reservation.endTime,
+    location: reservation.space.location?.address ?? null,
+    notes: reservation.notes,
+    icsSequence: reservation.icsSequence,
+    status: reservation.status,
+  };
 }
