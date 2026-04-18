@@ -1,6 +1,5 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { z } from "zod";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import {
@@ -12,7 +11,7 @@ import {
 } from "@/shared/domain/events/commands";
 import { getEventById } from "@/shared/domain/events/admin-queries";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import {
   eventFormSchema,
   type EventFormInput,
@@ -20,14 +19,6 @@ import {
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
-
-function invalidateEventCaches(id: string, slug?: string) {
-  updateTag(CACHE_TAGS.EVENTS);
-  updateTag(getCacheTag.events.detail(id));
-  if (slug) {
-    updateTag(getCacheTag.events.slug(slug));
-  }
-}
 
 export async function createEvent(
   input: EventFormInput,
@@ -43,9 +34,7 @@ export async function createEvent(
       return { id: event.id, slug: event.slug };
     },
     afterSuccess: (data) => {
-      updateTag(CACHE_TAGS.EVENTS);
-      updateTag(getCacheTag.events.detail(data.id));
-      updateTag(getCacheTag.events.slug(data.slug));
+      invalidateEventCaches(data.id, data.slug);
     },
     resolveAuditResourceId: (data) => data.id,
   });
@@ -70,8 +59,9 @@ export async function updateEvent(
       return null;
     },
     afterSuccess: () => {
-      invalidateEventCaches(idParsed.data, parsed.data.slug);
-      updateTag(getCacheTag.eventRegistrations.list(idParsed.data));
+      invalidateEventCaches(idParsed.data, parsed.data.slug, {
+        registrations: true,
+      });
     },
   });
 }
@@ -92,10 +82,7 @@ export async function deleteEvent(
       return event?.slug ?? null;
     },
     afterSuccess: (slug) => {
-      updateTag(CACHE_TAGS.EVENTS);
-      updateTag(getCacheTag.events.detail(validated.data));
-      if (slug) updateTag(getCacheTag.events.slug(slug));
-      updateTag(getCacheTag.eventRegistrations.list(validated.data));
+      invalidateEventCaches(validated.data, slug, { registrations: true });
     },
   });
 }
@@ -116,8 +103,7 @@ export async function publishEvent(
       return event?.slug ?? null;
     },
     afterSuccess: (slug) => {
-      invalidateEventCaches(validated.data, slug ?? undefined);
-      updateTag(getCacheTag.eventRegistrations.list(validated.data));
+      invalidateEventCaches(validated.data, slug, { registrations: true });
     },
   });
 }
@@ -138,8 +124,7 @@ export async function cancelEvent(
       return event?.slug ?? null;
     },
     afterSuccess: (slug) => {
-      invalidateEventCaches(validated.data, slug ?? undefined);
-      updateTag(getCacheTag.eventRegistrations.list(validated.data));
+      invalidateEventCaches(validated.data, slug, { registrations: true });
     },
   });
 }

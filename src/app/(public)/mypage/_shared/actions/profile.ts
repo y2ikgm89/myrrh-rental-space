@@ -15,6 +15,7 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
   logError,
   ErrorCategory,
@@ -37,7 +38,10 @@ export async function updateProfileAction(
   const parsed = customerProfileSchema.safeParse(input);
   if (!parsed.success) return createValidationMutationError(parsed.error);
 
-  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: parsed.data.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.mypage_profile,
+  });
   if (!turnstile.success) return createMutationError(turnstile.error);
 
   try {

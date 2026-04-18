@@ -77,61 +77,89 @@ export async function createReservation(data: Input) {
 
 ### 概要
 
-Cloudflareの無料Bot保護サービス。reCAPTCHAの代替。
+Cloudflare の無料 Bot 保護サービス。reCAPTCHA の代替。
 
-### 導入
+### キー管理
 
-```bash
-bun add @marsidev/react-turnstile
-```
+Site Key / Secret Key は **DB の `Settings` テーブル**に暗号化保存（管理画面 `/admin/settings/security-integrations` から設定）。
+環境変数には置かない（`NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` は不使用）。
+
+### 公式推奨の追加保護（本プロジェクトで全採用）
+
+- **`remoteip` 送信**: クライアント IP を Cloudflare に転送（ボットスコア精度向上）
+- **`idempotency_key`**: `crypto.randomUUID()` で毎回生成（ネットワーク失敗時の安全な再検証）
+- **`action` binding**: フォーム種別ごとの識別子をトークンに埋め込み、サーバーで検証
+- **timeout 10 秒**: 公式推奨値
+
+→ 参照: [Cloudflare 公式 siteverify](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+
+### Action 識別子 SSoT
+
+`@/shared/lib/turnstile-actions` の `TURNSTILE_ACTIONS` が全アクションを一元管理。
+Widget の `data-action` とサーバー側 `expectedAction` 検証で同一値を参照。
+
+制約: alphanumeric + `_` + `-` のみ、**最大 32 文字**。
 
 ### クライアント
 
 ```tsx
 "use client";
-import { Turnstile } from "@marsidev/react-turnstile";
+import { TurnstileWidget } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
-<Turnstile
-  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-  onSuccess={(token) => setTurnstileToken(token)}
+// デフォルト: appearance="always" — Cloudflare 公式デフォルト、Bot 保護の UI を明示
+<TurnstileWidget
+  siteKey={turnstileSiteKey}
+  action={TURNSTILE_ACTIONS.inquiry}
+  onVerify={(token) => setTurnstileToken(token)}
+/>;
+
+// 「見せない」モード（ボット判定時のみ widget を表示、最もクリーンな UX）
+<TurnstileWidget
+  siteKey={turnstileSiteKey}
+  action={TURNSTILE_ACTIONS.inquiry}
+  appearance="interaction-only"
+  onVerify={(token) => setTurnstileToken(token)}
 />;
 ```
 
-### サーバー検証
+`appearance` は以下 3 値のみ（`TurnstileAppearance` で型限定）:
+
+- `"always"`（デフォルト・公式標準） — ページロード時から常時表示。Bot 保護の UI を明示し、ユーザーに「検証中」のフィードバックを提供
+- `"interaction-only"` — ボット判定で interaction が必要な時のみ表示。ほぼ全ての人間ユーザーには widget が見えない最もクリーンな UX
+- `"execute"` — プログラム的に `turnstile.execute()` を呼んだ後に表示（高度ユースケース）
+
+### サーバー検証（Server Action）
 
 ```typescript
-import { verifyTurnstileToken } from "@/lib/turnstile";
+import { validateTurnstile } from "@/shared/lib/action-helpers";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
-export async function handleSubmit(data: Input) {
-  const isValid = await verifyTurnstileToken(data.turnstileToken);
+export async function submitInquiry(input: InquiryInput) {
+  const turnstile = await validateTurnstile({
+    token: input.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.inquiry,
+  });
+  if (!turnstile.success) return createMutationError(turnstile.error);
 
-  if (!isValid) {
-    return createFailure("Bot検証に失敗しました");
-  }
-
-  // 処理続行
+  // 処理続行（remoteip は validateTurnstile が getClientIpFromHeaders() で自動取得）
 }
 ```
 
-### 検証API
+### Better Auth 統合
 
-```typescript
-export async function verifyTurnstileToken(token: string): Promise<boolean> {
-  const response = await fetch(
-    "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        secret: process.env.TURNSTILE_SECRET_KEY,
-        response: token,
-      }),
-    },
-  );
+`/request-password-reset` と `/reset-password` は `admin-auth.ts` の before hook で Turnstile
+保護。クライアントは `x-captcha-response` ヘッダーでトークンを送信（Better Auth 公式
+`captcha` プラグインと同一契約）。
 
-  const data = await response.json();
-  return data.success === true;
-}
+```tsx
+await adminAuthClient.resetPassword({
+  newPassword,
+  token,
+  fetchOptions: {
+    headers: { "x-captcha-response": turnstileToken },
+  },
+});
 ```
 
 ## 4. 荒らし対策

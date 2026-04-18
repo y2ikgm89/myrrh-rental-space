@@ -17,6 +17,9 @@ import {
 import { cancelEventRegistration } from "@/public/actions/event-registration";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
+import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
+import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards";
+import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,14 +52,9 @@ interface EventRegistrationListProps {
 
 type BadgeVariant = "default" | "success" | "warning" | "info";
 
-const REGISTRATION_STATUS_LABELS: Record<string, string> = {
-  CONFIRMED: "申込済み",
-  CANCELLED: "キャンセル済み",
-};
-
-const REGISTRATION_STATUS_VARIANTS: Record<string, BadgeVariant> = {
-  CONFIRMED: "success",
-  CANCELLED: "default",
+const REGISTRATION_STATUS_VARIANTS: Record<RegistrationStatus, BadgeVariant> = {
+  [RegistrationStatus.CONFIRMED]: "success",
+  [RegistrationStatus.CANCELLED]: "default",
 };
 
 // ---------------------------------------------------------------------------
@@ -103,7 +101,7 @@ function EventRegistrationCard({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const canCancel = registration.status === "CONFIRMED";
+  const canCancel = registration.status === RegistrationStatus.CONFIRMED;
 
   const handleConfirmCancel = () => {
     setError(null);
@@ -118,10 +116,15 @@ function EventRegistrationCard({
     });
   };
 
-  const statusLabel =
-    REGISTRATION_STATUS_LABELS[registration.status] ?? registration.status;
-  const statusVariant =
-    REGISTRATION_STATUS_VARIANTS[registration.status] ?? "default";
+  const status = isValidRegistrationStatus(registration.status)
+    ? registration.status
+    : null;
+  const statusLabel = status
+    ? REGISTRATION_STATUS_LABELS[status]
+    : registration.status;
+  const statusVariant: BadgeVariant = status
+    ? REGISTRATION_STATUS_VARIANTS[status]
+    : "default";
 
   return (
     <div className="border border-border p-4 sm:p-6">

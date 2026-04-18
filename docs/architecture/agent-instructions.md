@@ -10,7 +10,7 @@
 2. 最も近い `AGENTS.override.md`
 3. ルート `AGENTS.md`
 4. `docs/reference/codex-rules/*.md`（詳細ルール）
-5. `.agents/skills/<name>/SKILL.md`（繰り返しワークフロー）
+5. `.claude/skills/<name>/SKILL.md`（繰り返しワークフロー）
 
 ## ツール別の読み込み
 
@@ -19,16 +19,16 @@
 | ルート方針       | `AGENTS.md`                          | **`CLAUDE.md`** + `AGENTS.md`（不変条件）                        |
 | 詳細ルール       | `docs/reference/codex-rules/`        | **`.claude/rules/**/\*.md`**（`paths:` 付き自動ロード）          |
 | 自動ガード       | エージェント設定に依存               | **`.claude/hooks/*.sh`** + **`.claude/settings.json`**           |
-| スキル           | **`.agents/skills/`**（正本）        | **`.claude/skills/`**（スタブ → `.agents/skills/` の正本を参照） |
+| スキル           | **`.claude/skills/`**（正本）        | **`.claude/skills/`**（スタブ → `.claude/skills/` の正本を参照） |
 | サブエージェント | 増やさない（skill / ルールへ寄せる） | **`.claude/agents/*.md`**                                        |
 
 ## スキル配置
 
-- **Codex**: `.agents/skills/<name>/SKILL.md` に本文・`reference/`・`scripts/`・`data/` を置く
+- **Codex**: `.claude/skills/<name>/SKILL.md` に本文・`reference/`・`scripts/`・`data/` を置く
 - **Claude Code**: `.claude/skills/<name>/SKILL.md` はスタブ（正本へのポインタ）。Skill ツールで自動検出される
-- 索引: `.agents/skills/README.md`
+- 索引: `.claude/skills/README.md`
 
-> **将来の統合**: Claude Code 公式は `.claude/skills/` に正本を推奨。Codex 互換が不要になった時点で `.agents/skills/` → `.claude/skills/` に一本化する。
+> **将来の統合**: Claude Code 公式は `.claude/skills/` に正本を推奨。Codex 互換が不要になった時点で `.claude/skills/` → `.claude/skills/` に一本化する。
 
 ## 二重管理が必要なトピック
 

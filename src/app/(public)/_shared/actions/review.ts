@@ -1,6 +1,5 @@
 "use server";
 
-import { updateTag } from "next/cache";
 import { spaceReviewSchema } from "@/shared/lib/validations/review";
 import {
   checkActionRateLimit,
@@ -8,12 +7,13 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
   createMutationError,
   type MutationResult,
 } from "@/shared/lib/mutation-result";
 import { createReviewCommand } from "@/shared/domain/reviews/commands";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateReviewCaches } from "@/shared/lib/cache/review-cache";
 import { DomainError } from "@/shared/domain/domain-error";
 import { getCustomerSession } from "@/shared/lib/customer-auth";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
@@ -39,7 +39,10 @@ export async function submitReview(
   }
 
   // 2.5. Turnstile verification
-  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: parsed.data.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.review,
+  });
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }
@@ -62,12 +65,10 @@ export async function submitReview(
     });
 
     // 5. Cache invalidation
-    updateTag(CACHE_TAGS.REVIEWS);
-    updateTag(getCacheTag.reviews.space(result.spaceId));
-    updateTag(getCacheTag.reviews.stats(result.spaceId));
-    updateTag(CACHE_TAGS.CUSTOMERS);
-    updateTag(getCacheTag.customers.detail(customer.id));
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
+    invalidateReviewCaches(result.spaceId, result.spaceSlug, {
+      customerId: customer.id,
+      notifications: true,
+    });
 
     // 6. Create admin notification (fire-and-forget)
     fireAndForget(

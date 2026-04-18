@@ -5,6 +5,7 @@ import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { ForgotPasswordForm } from "./_components/forgot-password-form";
 
 export const metadata: Metadata = {
@@ -16,6 +17,8 @@ export default async function ForgotPasswordPage() {
   const user = await getCurrentAdminUser();
   if (user) redirect("/admin");
 
+  const turnstileSiteKey = await getTurnstileSiteKey();
+
   return (
     <>
       <PageHero variant="minimal" title="パスワードをお忘れの方" />
@@ -26,7 +29,7 @@ export default async function ForgotPasswordPage() {
             ご登録のメールアドレスを入力してください。
             パスワードリセットのリンクをお送りします。
           </p>
-          <ForgotPasswordForm />
+          <ForgotPasswordForm turnstileSiteKey={turnstileSiteKey} />
           <p className="text-center text-sm text-muted-foreground">
             <Link
               href="/login"

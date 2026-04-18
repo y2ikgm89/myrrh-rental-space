@@ -8,14 +8,10 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import {
-  getGoogleCalendarSettings as getGoogleCalendarSettingsQuery,
-  getTwoWaySyncSettings as getTwoWaySyncSettingsQuery,
+  getGoogleCalendarSettings,
+  getTwoWaySyncSettings,
 } from "@/shared/domain/settings/admin-queries";
-import type {
-  GoogleCalendarSettings,
-  TwoWaySyncSettings,
-  CalendarConnectionTestResult,
-} from "./types";
+import type { CalendarConnectionTestResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
 import { withGoogleApiRetry } from "./retry";
@@ -72,14 +68,9 @@ export async function testServiceAccountConnection(params: {
 }
 
 /**
- * Google Calendar設定を取得
- */
-export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSettings> {
-  return getGoogleCalendarSettingsQuery();
-}
-
-/**
- * Google Calendar接続が有効かどうか
+ * Google Calendar 連携が稼働可能な状態か判定する（semantic helper）。
+ *
+ * `enabled` フラグ ON かつ接続テスト通過済みの場合のみ true。
  */
 export async function isGoogleCalendarEnabled(): Promise<boolean> {
   const settings = await getGoogleCalendarSettings();
@@ -87,19 +78,21 @@ export async function isGoogleCalendarEnabled(): Promise<boolean> {
 }
 
 /**
- * 双方向同期設定を取得
- */
-export async function getTwoWaySyncSettings(): Promise<TwoWaySyncSettings> {
-  return getTwoWaySyncSettingsQuery();
-}
-
-/**
- * 双方向同期が有効かどうか（ポーリング用）
+ * 双方向同期が稼働可能な状態か判定する（semantic helper）。
+ *
+ * Calendar 自体が enabled + 接続 OK で、かつ two-way sync toggle が ON の場合のみ true。
+ * 2 クエリを Promise.all で並行実行する（webhook route の hot path のため）。
  */
 export async function isTwoWaySyncEnabled(): Promise<boolean> {
-  const settings = await getTwoWaySyncSettings();
-  const calendarEnabled = await isGoogleCalendarEnabled();
-  return calendarEnabled && settings.enabled;
+  const [calendarSettings, twoWaySyncSettings] = await Promise.all([
+    getGoogleCalendarSettings(),
+    getTwoWaySyncSettings(),
+  ]);
+  return (
+    calendarSettings.enabled &&
+    calendarSettings.connectionStatus === "connected" &&
+    twoWaySyncSettings.enabled
+  );
 }
 
 /**

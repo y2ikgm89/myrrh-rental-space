@@ -23,7 +23,7 @@ repo 全体の構造、境界、データ取得方針、キャッシュ戦略の
 | -------------------------------------------------------------------------------- | ------------------------------- |
 | [../operations/prisma-schema-cleanup.md](../operations/prisma-schema-cleanup.md) | Prisma 破壊的スキーマ整理の手順 |
 
-Lexical の網羅的モダン化は [`.agents/skills/lexical-audit/SKILL.md`](../../.agents/skills/lexical-audit/SKILL.md) を定期実行する。
+Lexical の網羅的モダン化は [`.claude/skills/lexical-audit/SKILL.md`](../../.claude/skills/lexical-audit/SKILL.md) を定期実行する。
 
 ## 現在の原則
 

@@ -8,6 +8,7 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 import { getGoogleCalendarSettings } from "@/shared/domain/settings/admin-queries";
+import type { GoogleCalendarSettingsData } from "@/shared/domain/settings/types";
 import type { CalendarEventParams, CalendarEventResult } from "./types";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { formatGoogleApiError } from "./helpers";
@@ -16,12 +17,41 @@ import { getServiceAccountClient } from "./service-account";
 import { getOAuthClient } from "./oauth";
 
 /**
- * Asia/Tokyo タイムゾーンのカレンダーイベント構築ヘルパー
+ * `reminderMinutes` を Google Calendar `reminders` オブジェクトに変換する。
+ *
+ * - null → `useDefault: true`（カレンダー側の既定に従う）
+ * - 0 → `useDefault: false, overrides: []`（通知なし）
+ * - N > 0 → `useDefault: false, overrides: [{ method: "email", minutes: N }]`
+ */
+function toReminders(
+  reminderMinutes: number | null,
+): calendar_v3.Schema$Event["reminders"] {
+  if (reminderMinutes === null) return { useDefault: true };
+  if (reminderMinutes <= 0) return { useDefault: false, overrides: [] };
+  return {
+    useDefault: false,
+    overrides: [{ method: "email", minutes: reminderMinutes }],
+  };
+}
+
+/**
+ * Asia/Tokyo タイムゾーンのカレンダーイベント構築ヘルパー。
+ *
+ * - `reminders` は Settings の `reminderMinutes` を反映（null=default, 0=無効, N=N分前メール）
+ * - `conferenceData` は `settings.meetEnabled` が true かつ `withMeet=true` のときのみ付与
+ *   （Google Meet は OAuth ユーザーコンテキスト or Domain-Wide Delegation が必要）
  */
 function buildEventBody(
   params: CalendarEventParams,
-  options?: { includeAttendee?: boolean },
+  settings: GoogleCalendarSettingsData,
+  options: { includeAttendee?: boolean; withMeet?: boolean },
 ): calendar_v3.Schema$Event {
+  const withMeet =
+    options.withMeet === true && settings.meetEnabled && params.startTime;
+  const conferenceRequestId = withMeet
+    ? `myrrh-${params.startTime.getTime()}-${Math.random().toString(36).slice(2, 10)}`
+    : undefined;
+
   return omitUndefined({
     summary: params.summary,
     description: params.description,
@@ -35,9 +65,18 @@ function buildEventBody(
       timeZone: "Asia/Tokyo",
     },
     attendees:
-      options?.includeAttendee && params.attendeeEmail
+      options.includeAttendee && params.attendeeEmail
         ? [{ email: params.attendeeEmail }]
         : undefined,
+    reminders: toReminders(settings.reminderMinutes),
+    conferenceData: withMeet
+      ? {
+          createRequest: {
+            requestId: conferenceRequestId ?? "myrrh-fallback",
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        }
+      : undefined,
   });
 }
 
@@ -59,11 +98,16 @@ export async function createCalendarEvent(
   }
 
   try {
+    const requestBody = buildEventBody(params, settings, {
+      includeAttendee: true,
+      withMeet: settings.meetEnabled,
+    });
     const response = await withGoogleApiRetry(() =>
       client.events.insert({
         calendarId,
-        requestBody: buildEventBody(params, { includeAttendee: true }),
+        requestBody,
         sendUpdates: "none",
+        ...(settings.meetEnabled ? { conferenceDataVersion: 1 } : {}),
       }),
     );
 
@@ -104,11 +148,12 @@ export async function updateCalendarEvent(
   }
 
   try {
+    const requestBody = buildEventBody(params, settings, { withMeet: false });
     const response = await withGoogleApiRetry(() =>
       client.events.update({
         calendarId,
         eventId,
-        requestBody: buildEventBody(params),
+        requestBody,
         sendUpdates: "none",
       }),
     );
@@ -173,6 +218,8 @@ export async function deleteCalendarEvent(
 
 /**
  * OAuth連携された管理者の個人カレンダーにイベントを作成
+ *
+ * 個人カレンダーでは Meet は常に生成可能（OAuth コンテキスト）。
  */
 export async function createOAuthCalendarEvent(
   userId: string,
@@ -183,11 +230,17 @@ export async function createOAuthCalendarEvent(
     return { success: false, error: "OAuth is not connected" };
   }
 
+  const settings = await getGoogleCalendarSettings();
+
   try {
+    const requestBody = buildEventBody(params, settings, {
+      withMeet: settings.meetEnabled,
+    });
     const response = await withGoogleApiRetry(() =>
       client.events.insert({
         calendarId: "primary",
-        requestBody: buildEventBody(params),
+        requestBody,
+        ...(settings.meetEnabled ? { conferenceDataVersion: 1 } : {}),
       }),
     );
 

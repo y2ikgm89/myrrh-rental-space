@@ -9,7 +9,7 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 2. もっとも近い `AGENTS.override.md`
 3. リポジトリルートの `AGENTS.md`
 4. 関連する `docs/reference/codex-rules/*.md`
-5. 関連する `.agents/skills/<skill-name>/SKILL.md`
+5. 関連する `.claude/skills/<skill-name>/SKILL.md`
 6. skill が参照する `scripts/`, `reference/`, `assets/`
 
 ## 何をどこに置くか
@@ -58,7 +58,7 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 
 **lexical-patterns / admin-inline-editor-patterns の二重配置**: `docs/reference/codex-rules/` の該当ファイルと `.claude/rules/frontend/` の対応ファイルは **同一バイト列**を保つ（Claude Code の `paths:` 条件付きルール用ミラー）。編集後は `bun run docs:verify-policy-sync`（実装: [`scripts/verify-policy-docs.mjs`](../../../scripts/verify-policy-docs.mjs)）で検証する。いずれか片方だけ更新したコミットは CI で失敗する。
 
-### `.agents/skills/<skill-name>/SKILL.md`
+### `.claude/skills/<skill-name>/SKILL.md`
 
 置くもの:
 
@@ -104,12 +104,12 @@ Codex では、指示を 1 つの巨大ファイルに集約するより、役�
 
 **Claude Code を使う場合、`.claude/*` は第一級のプロジェクト資産**（`rules` / `agents` / `hooks` / `settings.json`）。補助フォルダではない。
 
-Codex の「コード正本」の優先順位は `AGENTS.md`、`AGENTS.override.md`、`docs/reference/codex-rules/`、`.agents/skills/` とする。これは **Codex 向けドキュメントの参照先**を指し、Claude 利用者が `.claude` を使わないという意味ではない。役割の切り分けは `docs/architecture/agent-instructions.md` を参照する。
+Codex の「コード正本」の優先順位は `AGENTS.md`、`AGENTS.override.md`、`docs/reference/codex-rules/`、`.claude/skills/` とする。これは **Codex 向けドキュメントの参照先**を指し、Claude 利用者が `.claude` を使わないという意味ではない。役割の切り分けは `docs/architecture/agent-instructions.md` を参照する。
 
 ### スキル本文の単一正本（必須）
 
-繰り返しワークフローの本文・`scripts/`・`data/` は **`.agents/skills/<name>/` にのみ**置く。
-Claude Code がスキルディレクトリを参照する場合、`.claude/skills/<name>/SKILL.md` は **スタブ**（正本パスへのポインタ）にとどめ、**長文手順や CSV を `.claude` 側に複製しない**。一覧は `.agents/skills/README.md`。
+繰り返しワークフローの本文・`scripts/`・`data/` は **`.claude/skills/<name>/` にのみ**置く。
+Claude Code がスキルディレクトリを参照する場合、`.claude/skills/<name>/SKILL.md` は **スタブ**（正本パスへのポインタ）にとどめ、**長文手順や CSV を `.claude` 側に複製しない**。一覧は `.claude/skills/README.md`。
 
 全体像は `docs/architecture/agent-instructions.md` を参照する。
 

@@ -181,8 +181,10 @@ describe("updateProfileAction", () => {
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
         "user-001",
         {
+          customerType: "PERSONAL",
           lastName: "山田",
           firstName: "太郎",
+          companyName: null,
           phoneNumber: "090-1234-5678",
         },
       );
@@ -235,8 +237,10 @@ describe("updateProfileAction", () => {
       expect(mockUpdateCustomerProfileByUserId).toHaveBeenCalledWith(
         "user-001",
         {
+          customerType: "PERSONAL",
           lastName: "山田",
           firstName: "太郎",
+          companyName: null,
           phoneNumber: null,
         },
       );

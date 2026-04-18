@@ -17,6 +17,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -171,6 +172,7 @@ export function EditReservationForm({
       <TurnstileWidget
         ref={turnstileRef}
         siteKey={turnstileSiteKey}
+        action={TURNSTILE_ACTIONS.mypage_reservation_edit}
         onVerify={handleTurnstileVerify}
         onExpire={handleTurnstileExpire}
       />

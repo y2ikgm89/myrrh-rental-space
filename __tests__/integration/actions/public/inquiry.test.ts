@@ -175,6 +175,7 @@ describe("submitInquiry", () => {
         name: `${VALID_INPUT.lastName} ${VALID_INPUT.firstName}`,
         companyName: null,
         customerId: null,
+        customerType: VALID_INPUT.customerType,
         email: VALID_INPUT.email,
         subject: VALID_INPUT.subject,
         message: VALID_INPUT.message,

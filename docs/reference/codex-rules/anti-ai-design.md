@@ -62,7 +62,7 @@ paths:
 
 ```
 1. `project-design-config.md` と `design-system-memory.md` を確認
-2. `.agents/skills/frontend-design/SKILL.md` で Design Brief 作成
+2. `.claude/skills/frontend-design/SKILL.md` で Design Brief 作成
 3. Design Brief の Anti-AI checks を確認
 4. animations.ts の定数を使用して実装
 5. セルフレビュー質問（3/6 以上 yes）
@@ -75,6 +75,6 @@ paths:
 - `(public*)/_styles/public*.css` — テーマ変数
 - `(public*)/_shared/lib/animations.ts` — DURATION / EASE / STAGGER / PARALLAX 定数
 - `(public*)/_shared/components/animations/` — SplitText, ParallaxImage, MagneticButton, ScrollReveal
-- `.agents/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
-- `.agents/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
+- `.claude/skills/frontend-design/SKILL.md` — 実装前デザイン分析スキル
+- `.claude/skills/frontend-design/reference/anti-ai-patterns.md` — 詳細パターンカタログ
 - `docs/reference/codex-rules/ui-ux-patterns.md` — UI / UX の補助ルール

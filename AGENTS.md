@@ -120,15 +120,15 @@ bun run e2e                     # Playwright E2E
 
 ## Codex skill operation
 
-- Codex 用スキルは `.agents/skills/<name>/SKILL.md` に配置
+- Codex 用スキルは `.claude/skills/<name>/SKILL.md` に配置
 - `SKILL.md` の frontmatter は `name` と `description` のみ使用
 - 1 skill = 1 workflow、複数 unrelated task をまとめない
 - `description` には「いつ使うか」「何をしないか」の境界を書く
-- 詳細は `.agents/skills/README.md` 参照
+- 詳細は `.claude/skills/README.md` 参照
 
 ## Additional documentation
 
 - `docs/architecture/agent-instructions.md`: AI 向け指示の配置
 - `docs/architecture/`: アーキテクチャ、DB 設計、キャッシュ戦略
 - `docs/reference/codex-rules/`: 詳細ルール
-- `.agents/skills/README.md`: Codex スキルの索引と作成基準
+- `.claude/skills/README.md`: Codex スキルの索引と作成基準

@@ -11,7 +11,7 @@ paths:
 
 - 現在のブランド設定: `docs/reference/codex-rules/project-design-config.md`
 - 実装時の anti-pattern: `docs/reference/codex-rules/anti-ai-design.md`
-- UI 作業の流れ: `.agents/skills/frontend-design/SKILL.md`
+- UI 作業の流れ: `.claude/skills/frontend-design/SKILL.md`
 
 ## 読み取りプロトコル
 

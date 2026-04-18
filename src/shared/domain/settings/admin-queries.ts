@@ -196,6 +196,8 @@ export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSetting
       googleCalendarConnectionStatus: true,
       googleCalendarLastTestedAt: true,
       googleCalendarOAuthEnabled: true,
+      googleCalendarMeetEnabled: true,
+      googleCalendarReminderMinutes: true,
     },
   });
 
@@ -207,6 +209,8 @@ export async function getGoogleCalendarSettings(): Promise<GoogleCalendarSetting
     ),
     lastTestedAt: settings?.googleCalendarLastTestedAt ?? null,
     oauthEnabled: settings?.googleCalendarOAuthEnabled ?? false,
+    meetEnabled: settings?.googleCalendarMeetEnabled ?? false,
+    reminderMinutes: settings?.googleCalendarReminderMinutes ?? null,
   };
 }
 

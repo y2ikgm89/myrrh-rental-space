@@ -5,6 +5,7 @@ import { getCurrentAdminUser } from "@/shared/lib/admin-auth";
 import { Container } from "@/public/components/design-system/container";
 import { Stack } from "@/public/components/design-system/stack";
 import { PageHero } from "@/public/components/layouts/page-hero";
+import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { ResetPasswordForm } from "./_components/reset-password-form";
 
 export const metadata: Metadata = {
@@ -48,6 +49,8 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
     );
   }
 
+  const turnstileSiteKey = await getTurnstileSiteKey();
+
   return (
     <>
       <PageHero variant="minimal" title="新しいパスワードを設定" />
@@ -57,7 +60,10 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
           <p className="text-center text-muted-foreground">
             新しいパスワードを入力してください。
           </p>
-          <ResetPasswordForm token={token} />
+          <ResetPasswordForm
+            token={token}
+            turnstileSiteKey={turnstileSiteKey}
+          />
           <p className="text-center text-sm text-muted-foreground">
             <Link
               href="/login"

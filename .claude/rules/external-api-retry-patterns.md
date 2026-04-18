@@ -25,15 +25,35 @@ paths:
 
 ## 実装 SSoT
 
-| 領域            | ヘルパー                                      | 場所                                    |
-| --------------- | --------------------------------------------- | --------------------------------------- |
-| Resend          | `sendEmail({ payload, idempotencyKey, ... })` | `@/shared/lib/email/send.ts`            |
-| Google Calendar | `withGoogleApiRetry(() => client.xxx(...))`   | `@/shared/lib/google-calendar/retry.ts` |
+| 領域            | ヘルパー                                       | 場所                                    |
+| --------------- | ---------------------------------------------- | --------------------------------------- |
+| Resend          | `sendEmail({ payload, idempotencyKey, ... })`  | `@/shared/lib/email/send.ts`            |
+| Google Calendar | `withGoogleApiRetry(() => client.xxx(...))`    | `@/shared/lib/google-calendar/retry.ts` |
+| Turnstile       | `validateTurnstile({ token, expectedAction })` | `@/shared/lib/action-helpers.ts`        |
 
 **直接 SDK メソッド呼び出しは禁止**。例外:
 
 - 接続テスト（`domains.list()` / `calendars.get()` 等の単発検証）
 - SDK 初期化時の OAuth 設定（`oauth2Client.on('tokens', ...)` 等のイベント登録）
+- Turnstile の `verifyTurnstileToken` は `turnstile.ts` 内部のみ（`validateTurnstile` が唯一の公開境界）
+
+## Turnstile 固有の retry 戦略（公式仕様）
+
+Turnstile の siteverify は **token 1 回限り消費** のため通常 retry 不可（再送すると `timeout-or-duplicate` エラーが返る）。
+公式推奨は `idempotency_key` + 同一 token の組み合わせで「元の検証結果を再取得」する方式:
+
+- `verifyTurnstileToken` は毎回 `crypto.randomUUID()` で `idempotency_key` を自動生成し siteverify に送信
+- network 失敗時は同じ (`token`, `idempotency_key`) ペアで再送すれば元の結果を取得可能（ただし現プロジェクトの retry ループは未実装）
+- timeout は公式推奨 10 秒
+- `remoteip` を送信してボットスコア精度を向上
+- response `action` と呼び出し時 `expectedAction` を突き合わせて token 盗用による action 偽装を防ぐ
+
+**新規 captcha 保護エンドポイント追加時**:
+
+1. `TURNSTILE_ACTIONS` (`@/shared/lib/turnstile-actions`) に識別子を追加（公式制約: 英数/`_`/`-`、最大32文字）
+2. クライアント Widget に `action={TURNSTILE_ACTIONS.xxx}` を指定
+3. Server Action / API Route で `validateTurnstile({ token, expectedAction: TURNSTILE_ACTIONS.xxx })` を呼ぶ
+4. Better Auth エンドポイントの場合は `admin-auth.ts` の `TURNSTILE_PROTECTED_ENDPOINTS` Map に `[path, action]` を追加
 
 ## 新規 SDK 統合時のチェックリスト
 
@@ -98,7 +118,8 @@ return await withGoogleApiRetry(() => sdk.method());
 grep -rn "resend\.emails\.send\|new Resend(" src/ | grep -v "email/send.ts\|api-keys/resend.ts"
 
 # Google Calendar 直接呼び出しチェック（許可: retry.ts + oauth.ts/setCredentials）
-grep -rn "client\.events\.\(insert\|update\|delete\|list\|get\|watch\)\|client\.channels\.\|client\.calendars\.get" src/ | grep -v "retry\|withGoogleApiRetry"
+# events / calendars / channels 配下の全メソッドを検出（将来追加メソッドも拾う）
+grep -rnE "(calendar|client)\.(events|calendars|channels)\.[a-zA-Z]+\s*\(" src/ | grep -v "retry\|withGoogleApiRetry"
 ```
 
 ## 参照実装

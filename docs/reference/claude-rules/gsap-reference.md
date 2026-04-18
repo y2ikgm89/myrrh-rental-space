@@ -1316,13 +1316,13 @@ GSAP パターンと `ui-ux-pro-max` スタイルデータベースの対応関�
 
 ```bash
 # スタイルに合うGSAPパターンを調査
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "motion parallax scroll" --domain style
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "motion parallax scroll" --domain style
 
 # アニメーションのUXガイドライン
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "animation timing scroll" --domain ux
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "animation timing scroll" --domain ux
 
 # Next.js固有のスクロール最適化
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "scroll animation lazy" --stack nextjs
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll animation lazy" --stack nextjs
 ```
 
 → `.claude/skills/parallax-section/SKILL.md` の Step 1.5 で詳細な検索フローを参照

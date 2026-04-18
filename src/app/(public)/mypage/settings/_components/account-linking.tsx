@@ -26,6 +26,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
 // Provider config
@@ -221,6 +222,7 @@ export function AccountLinking({
             <TurnstileWidget
               ref={deleteTurnstileRef}
               siteKey={turnstileSiteKey}
+              action={TURNSTILE_ACTIONS.mypage_account_delete}
               onVerify={setDeleteTurnstileToken}
               onExpire={() => setDeleteTurnstileToken("")}
             />

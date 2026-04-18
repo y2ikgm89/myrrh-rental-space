@@ -48,7 +48,6 @@ cloudbuild.yaml
 # AI / Tools
 .claude/
 .serena/
-.agents/
 
 # Misc
 *.log

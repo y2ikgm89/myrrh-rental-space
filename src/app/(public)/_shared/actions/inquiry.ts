@@ -11,6 +11,7 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
   createMutationError,
   type MutationResult,
@@ -46,7 +47,10 @@ export async function submitInquiry(
   }
 
   // 3. Turnstile verification
-  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: parsed.data.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.inquiry,
+  });
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }

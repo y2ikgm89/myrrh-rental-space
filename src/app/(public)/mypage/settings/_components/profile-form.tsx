@@ -17,6 +17,7 @@ import {
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
 import { CustomerTypeToggle } from "@/public/components/ui/customer-type-toggle";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -174,6 +175,7 @@ export function ProfileForm({
       <TurnstileWidget
         ref={turnstileRef}
         siteKey={turnstileSiteKey}
+        action={TURNSTILE_ACTIONS.mypage_profile}
         onVerify={handleTurnstileVerify}
         onExpire={handleTurnstileExpire}
       />

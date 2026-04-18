@@ -8,15 +8,26 @@
  *
  * ## 使い方
  * Server Component で siteKey を取得し、props で渡す。
- * onVerify でトークンを受け取り、form.setValue("turnstileToken", token) でフォームに注入。
- * フォーム送信成功後は ref.current?.reset() でトークンをリセット（1回限り使用）。
+ * `action` は TURNSTILE_ACTIONS の値を必ず指定（server 側の expectedAction と一致）。
+ * `appearance` は省略時 "always"（Cloudflare 公式デフォルト）、widget を隠したい場合は "interaction-only"。
+ * onVerify でトークンを受け取り、form state に注入。
+ * フォーム送信成功/失敗後は ref.current?.reset() でトークンをリセット（1 回限り使用）。
+ *
+ * @see https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
  */
 
 import { type ReactElement, type Ref } from "react";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import {
+  DEFAULT_TURNSTILE_APPEARANCE,
+  type TurnstileAction,
+  type TurnstileAppearance,
+} from "@/shared/lib/turnstile-actions";
 
 interface TurnstileWidgetProps {
   readonly siteKey: string | null;
+  readonly action: TurnstileAction;
+  readonly appearance?: TurnstileAppearance;
   readonly onVerify: (token: string) => void;
   readonly onExpire?: () => void;
   readonly onError?: (errorCode: string) => void;
@@ -25,6 +36,8 @@ interface TurnstileWidgetProps {
 
 export function TurnstileWidget({
   siteKey,
+  action,
+  appearance = DEFAULT_TURNSTILE_APPEARANCE,
   onVerify,
   onExpire,
   onError,
@@ -40,9 +53,12 @@ export function TurnstileWidget({
       onExpire={onExpire}
       onError={onError}
       options={{
+        action,
+        appearance,
         theme: "auto",
         size: "flexible",
         language: "ja",
+        retry: "auto",
         refreshExpired: "auto",
         refreshTimeout: "auto",
       }}

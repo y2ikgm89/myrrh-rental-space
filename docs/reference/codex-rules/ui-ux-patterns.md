@@ -6,7 +6,7 @@ paths:
 
 # UI/UX パターンルール
 
-> Codex 用参照ドキュメント。UI 作業ではこのファイルと `.agents/skills/` を正本とし、Claude 用 asset は参照元にしない。
+> Codex 用参照ドキュメント。UI 作業ではこのファイルと `.claude/skills/` を正本とし、Claude 用 asset は参照元にしない。
 
 ## 目的
 
@@ -16,10 +16,10 @@ paths:
 
 | タスク                               | 使うもの                                   |
 | ------------------------------------ | ------------------------------------------ |
-| 公開ページの新規 UI / 大幅リデザイン | `.agents/skills/frontend-design/SKILL.md`  |
-| UI の方向性調査                      | `.agents/skills/ui-ux-pro-max/SKILL.md`    |
-| スクロール演出セクション             | `.agents/skills/parallax-section/SKILL.md` |
-| Lexical 拡張                         | `.agents/skills/lexical-*/SKILL.md`        |
+| 公開ページの新規 UI / 大幅リデザイン | `.claude/skills/frontend-design/SKILL.md`  |
+| UI の方向性調査                      | `.claude/skills/ui-ux-pro-max/SKILL.md`    |
+| スクロール演出セクション             | `.claude/skills/parallax-section/SKILL.md` |
+| Lexical 拡張                         | `.claude/skills/lexical-*/SKILL.md`        |
 
 ## 基本フロー
 
@@ -43,10 +43,10 @@ paths:
 **Windows**（PowerShell / cmd）では `python3` の代わりに **`py -3`** を使う。以下の `python3` は macOS / Linux 向け。
 
 ```bash
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "hospitality editorial" --domain style
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "warm serif elegant" --domain typography
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "accessibility contrast" --domain ux
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack nextjs
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "hospitality editorial" --domain style
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "warm serif elegant" --domain typography
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "accessibility contrast" --domain ux
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack nextjs
 ```
 
 ## プロジェクト固有制約

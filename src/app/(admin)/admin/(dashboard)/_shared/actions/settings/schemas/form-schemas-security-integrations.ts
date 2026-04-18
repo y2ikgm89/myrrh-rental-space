@@ -118,6 +118,12 @@ export const googleCalendarFormSchema = z.object({
   serviceAccountJson: z.string(),
   icalAttachmentEnabled: z.boolean(),
   addToCalendarLinksEnabled: z.boolean(),
+  googleCalendarMeetEnabled: z.boolean(),
+  /**
+   * フォーム上では null=既定 / 0=無効 / N=N分前
+   * `number | null` にすることで `<input type="number">` 空欄も許容する
+   */
+  googleCalendarReminderMinutes: z.number().int().min(0).max(40320).nullable(),
 });
 
 export type GoogleCalendarFormInput = z.infer<typeof googleCalendarFormSchema>;

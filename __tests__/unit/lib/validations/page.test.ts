@@ -357,7 +357,7 @@ describe("createPageSchema", () => {
 
 describe("SYSTEM_PAGES", () => {
   test("システムページが正しく定義されている", () => {
-    expect(SYSTEM_PAGES.length).toBe(11);
+    expect(SYSTEM_PAGES.length).toBe(10);
 
     const slugs = SYSTEM_PAGES.map((p) => p.slug);
     expect(slugs).toContain("home");
@@ -370,7 +370,7 @@ describe("SYSTEM_PAGES", () => {
     expect(slugs).toContain("posts");
     expect(slugs).toContain("news");
     expect(slugs).toContain("terms");
-    expect(slugs).toContain("journal");
+    expect(slugs).not.toContain("journal");
   });
 
   test("すべてのシステムページにslug/title/descriptionがある", () => {

@@ -17,6 +17,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { cancelReservationAction } from "../../../_shared/actions/reservation";
 
 interface CancelButtonProps {
@@ -91,6 +92,7 @@ export function CancelButton({
           <TurnstileWidget
             ref={turnstileRef}
             siteKey={turnstileSiteKey}
+            action={TURNSTILE_ACTIONS.mypage_reservation_cancel}
             onVerify={setTurnstileToken}
             onExpire={() => setTurnstileToken("")}
           />

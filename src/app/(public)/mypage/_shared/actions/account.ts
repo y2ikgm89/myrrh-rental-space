@@ -5,6 +5,7 @@ import { updateTag } from "next/cache";
 import { getCustomerSession, customerAuth } from "@/shared/lib/customer-auth";
 import { getAccountProviders } from "@/shared/domain/users/queries";
 import { getCustomerByUserId } from "@/shared/domain/customers/queries";
+import { getEventIdsByCustomerId } from "@/shared/domain/events/registration-queries";
 import {
   createMutationError,
   type MutationResult,
@@ -19,6 +20,7 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 
 export async function getAccountLinksAction(): Promise<
@@ -40,13 +42,21 @@ export async function deleteAccountAction(
   const rateLimit = await checkActionRateLimit(formSubmitRateLimiter);
   if (!rateLimit.success) return createMutationError("リクエストが多すぎます");
 
-  const turnstile = await validateTurnstile(turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.mypage_account_delete,
+  });
   if (!turnstile.success) return createMutationError(turnstile.error);
 
   const session = await getCustomerSession();
   if (!session) return createMutationError("認証が必要です");
 
   const customer = await getCustomerByUserId(session.user.id);
+
+  // 削除前に影響を受けるイベント ID を取得（削除後は customerId から逆引き不可）
+  const affectedEventIds = customer
+    ? await getEventIdsByCustomerId(customer.id)
+    : [];
 
   try {
     await customerAuth.api.deleteUser({
@@ -61,6 +71,10 @@ export async function deleteAccountAction(
     updateTag(CACHE_TAGS.EVENTS);
     if (customer) {
       updateTag(getCacheTag.customers.detail(customer.id));
+    }
+    for (const eventId of affectedEventIds) {
+      updateTag(getCacheTag.events.detail(eventId));
+      updateTag(getCacheTag.eventRegistrations.list(eventId));
     }
 
     return null;

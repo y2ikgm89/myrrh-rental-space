@@ -19,7 +19,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { betterAuth } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { createBetterAuthDatabaseAdapter } from "@/shared/db/better-auth-adapter";
 import { AuditAction, Role } from "@/shared/lib/validations/enums/prisma-types";
@@ -36,6 +36,23 @@ import {
 } from "./errors/server";
 import { sendPasswordResetEmail } from "./email/password-reset-emails";
 import { serverEnv } from "./env/server";
+import { validateTurnstile } from "./action-helpers";
+import { TURNSTILE_ACTIONS, type TurnstileAction } from "./turnstile-actions";
+
+/**
+ * Cloudflare Turnstile で保護する Better Auth エンドポイント
+ *
+ * Better Auth 公式 captcha プラグインと同一の契約（`x-captcha-response` ヘッダー）を
+ * before hook で実装する。DB-based な Turnstile secret key 管理（`Settings` テーブル）と
+ * 整合させるため、静的な secretKey を要求する公式プラグインではなく hook 実装を採用。
+ *
+ * @see https://www.better-auth.com/docs/plugins/captcha
+ */
+const TURNSTILE_PROTECTED_ENDPOINTS: ReadonlyMap<string, TurnstileAction> =
+  new Map([
+    ["/request-password-reset", TURNSTILE_ACTIONS.admin_password_reset_request],
+    ["/reset-password", TURNSTILE_ACTIONS.admin_password_reset],
+  ]);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,6 +127,19 @@ function createAdminAuth() {
       },
     },
     hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        const expectedAction = TURNSTILE_PROTECTED_ENDPOINTS.get(ctx.path);
+        if (!expectedAction) return;
+
+        const token = ctx.headers?.get("x-captcha-response") ?? undefined;
+        const result = await validateTurnstile({
+          token,
+          expectedAction,
+        });
+        if (!result.success) {
+          throw new APIError("BAD_REQUEST", { message: result.error });
+        }
+      }),
       after: createAuthMiddleware(async (ctx) => {
         // ログイン成功
         if (ctx.path.startsWith("/sign-in") && ctx.context.newSession) {
@@ -134,8 +164,8 @@ function createAdminAuth() {
           }
         }
 
-        // パスワードリセット要求（Better Auth は "forget-password" パスを使用）
-        if (ctx.path.startsWith("/forget-password")) {
+        // パスワードリセット要求（Better Auth 公式パス）
+        if (ctx.path === "/request-password-reset") {
           try {
             const body = isRecord(ctx.body) ? ctx.body : {};
             const email =

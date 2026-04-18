@@ -215,7 +215,6 @@ __tests__
 e2e/
 .claude/
 .serena/
-.agents/
 ```
 
 ### .gcloudignore
@@ -229,7 +228,6 @@ __tests__/
 e2e/
 .claude/
 .serena/
-.agents/
 *.md
 *.log
 ```

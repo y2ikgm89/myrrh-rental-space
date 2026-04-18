@@ -22,6 +22,7 @@ export async function createEventRegistrationCommand(data: {
     select: {
       id: true,
       title: true,
+      slug: true,
       capacity: true,
       registrationOpen: true,
       _count: {
@@ -72,7 +73,7 @@ export async function createEventRegistrationCommand(data: {
     },
   });
 
-  return { registration, event: { title: event.title } };
+  return { registration, event: { title: event.title, slug: event.slug } };
 }
 
 export async function cancelEventRegistrationCommand(
@@ -92,7 +93,7 @@ export async function cancelEventRegistrationCommand(
       name: true,
       email: true,
       numberOfPeople: true,
-      event: { select: { title: true } },
+      event: { select: { title: true, slug: true } },
     },
   });
 

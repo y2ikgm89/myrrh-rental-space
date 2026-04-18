@@ -1292,6 +1292,12 @@ model Settings {
   googleCalendarOAuthEnabled Boolean @default(false)
   // ※ access_token/refresh_tokenはAccountテーブルに保存
 
+  // Google Meet ビデオ会議自動生成
+  googleCalendarMeetEnabled Boolean @default(false)
+
+  // リマインダー設定: null=Googleカレンダー既定を使う, 0=通知なし, N=N分前にメール通知
+  googleCalendarReminderMinutes Int?
+
   // 予約者向けiCal設定
   icalAttachmentEnabled     Boolean @default(true) // メールにiCal添付
   addToCalendarLinksEnabled Boolean @default(true) // Add to Calendarリンク表示

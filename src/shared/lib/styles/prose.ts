@@ -77,12 +77,6 @@ export const ENHANCED_PROSE_CLASSES = cn(
 );
 
 /**
- * コンテンツ表示用の Prose クラス
- * ENHANCED_PROSE_CLASSESのエイリアス（可読性のため維持）
- */
-export const PROSE_CLASSES = ENHANCED_PROSE_CLASSES;
-
-/**
  * エディター用の Prose クラス
  * エディター内でも公開ページと同じ見た目を実現
  */

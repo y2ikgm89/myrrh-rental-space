@@ -40,6 +40,14 @@ export const googleCalendarSettingsSchema = z.object({
     ), // 新規入力時のみ
   icalAttachmentEnabled: z.boolean(),
   addToCalendarLinksEnabled: z.boolean(),
+  googleCalendarMeetEnabled: z.boolean(),
+  /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知（最大 40320 = 4週間） */
+  googleCalendarReminderMinutes: z
+    .number()
+    .int()
+    .min(0, { error: "0 以上で入力してください" })
+    .max(40320, { error: "40320（4週間）以下で入力してください" })
+    .nullable(),
 });
 
 export type GoogleCalendarSettingsInput = z.infer<

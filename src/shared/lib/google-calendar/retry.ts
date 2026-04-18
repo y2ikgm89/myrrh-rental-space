@@ -1,18 +1,34 @@
 /**
  * Google Calendar API 呼び出しの exponential backoff リトライヘルパー
  *
- * Google 公式推奨: 429 (rate limit) / 500 (internal error) / 503 (unavailable) は
- * exponential backoff + jitter で再試行する。
- * 400 / 401 / 403 / 404 / 410 は即時失敗扱い（回復不能 or 意味が異なる）。
+ * Google 公式推奨:
+ * - 429 (rate limit) / 500 (internal error) / 503 (unavailable) は
+ *   exponential backoff + jitter で再試行する。
+ * - 403 でも `reason` が `rateLimitExceeded` / `userRateLimitExceeded` / `quotaExceeded`
+ *   の場合は 429 と機能的に同等で、同じく exponential backoff で再試行する
+ *   （公式: "rateLimitExceeded errors can return either 403 or 429 error codes—
+ *    currently they are functionally similar and should be responded to in the same way"）
+ * - それ以外の 400 / 401 / 403 / 404 / 410 は即時失敗扱い（回復不能 or 意味が異なる）。
  *
  * @see https://developers.google.com/calendar/api/guides/errors
+ * @see https://developers.google.com/calendar/api/guides/quota
  * @see https://cloud.google.com/apis/design/errors#retrying_errors
  */
 
 import "server-only";
 
-/** 再試行対象の HTTP ステータスコード */
+/** 再試行対象の HTTP ステータスコード（reason に関わらず常に retry） */
 const RETRYABLE_STATUS_CODES: ReadonlySet<number> = new Set([429, 500, 503]);
+
+/**
+ * 403 で retry 対象となる Google API エラー reason。
+ * これ以外の 403（`forbidden` 等）は認可エラーなので即失敗にする。
+ */
+const RETRYABLE_403_REASONS: ReadonlySet<string> = new Set([
+  "rateLimitExceeded",
+  "userRateLimitExceeded",
+  "quotaExceeded",
+]);
 
 /** ネットワーク層の一時的エラーコード（Node / undici / pg 互換） */
 const RETRYABLE_SYSTEM_ERRORS: ReadonlySet<string> = new Set([
@@ -58,11 +74,47 @@ function extractSystemErrorCode(error: unknown): string | null {
 }
 
 /**
+ * Google API の構造化エラーから最初の `reason` 文字列を抽出する。
+ *
+ * GaxiosError の response.data は以下の形式:
+ * ```
+ * { error: { code: 403, message: "...", errors: [{ domain: "usageLimits", reason: "rateLimitExceeded", ... }] } }
+ * ```
+ */
+function extractFirstErrorReason(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const err = error as {
+    response?: {
+      data?: { error?: { errors?: Array<{ reason?: string }> } };
+    };
+    errors?: Array<{ reason?: string }>;
+  };
+
+  const direct = err.errors?.[0]?.reason;
+  if (typeof direct === "string") return direct;
+
+  const nested = err.response?.data?.error?.errors?.[0]?.reason;
+  if (typeof nested === "string") return nested;
+
+  return null;
+}
+
+/**
  * エラーが retry 対象かを判定する。
+ *
+ * 判定順:
+ * 1. HTTP status が 429 / 500 / 503 → retry
+ * 2. HTTP status が 403 かつ reason が usageLimits 系 → retry（公式推奨）
+ * 3. system error code が一時的な network エラー → retry
  */
 export function isRetryableGoogleApiError(error: unknown): boolean {
   const status = extractStatusCode(error);
   if (status !== null && RETRYABLE_STATUS_CODES.has(status)) return true;
+
+  if (status === 403) {
+    const reason = extractFirstErrorReason(error);
+    if (reason !== null && RETRYABLE_403_REASONS.has(reason)) return true;
+  }
 
   const sysCode = extractSystemErrorCode(error);
   if (sysCode !== null && RETRYABLE_SYSTEM_ERRORS.has(sysCode)) return true;

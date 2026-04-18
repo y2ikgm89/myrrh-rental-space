@@ -703,13 +703,13 @@ describe("architecture boundaries", () => {
   });
 
   test("shared/db/prisma.ts は basePrisma と prisma の両方を export する", () => {
-    // basePrisma: Better Auth アダプター専用（$extends 前）
-    // prisma:     アプリ本体用（$extends 適用済み）
+    // basePrisma: Better Auth アダプター専用（$extends 前）→ `export { basePrisma }` 形式
+    // prisma:     アプリ本体用（$extends 適用済み）       → `export const prisma = createAppPrismaClient(...)` 形式
     // 両方が export されていることが singleton 規約の前提
     const prismaFile = join(SHARED_DB_ROOT, "prisma.ts");
     const source = readFileSync(prismaFile, "utf8");
     expect(source).toMatch(/export\s+\{\s*basePrisma\s*\}/u);
-    expect(source).toMatch(/export\s+\{\s*prisma\s*\}/u);
+    expect(source).toMatch(/export\s+const\s+prisma\s*=/u);
   });
 
   test("legacy prisma shim import は残さない", () => {

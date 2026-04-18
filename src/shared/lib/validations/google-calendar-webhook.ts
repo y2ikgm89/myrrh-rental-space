@@ -13,6 +13,12 @@ export const googleCalendarWebhookHeadersSchema = z.object({
   resourceState: z.enum(["sync", "exists", "not_exists"], {
     error: "x-goog-resource-state が不正です",
   }),
+  /**
+   * `x-goog-resource-uri` は監視対象リソースの version-specific URI
+   * （例: `https://www.googleapis.com/calendar/v3/calendars/XXX/events?...`）。
+   * calendar ID の改ざん検出に使用する。公式仕様上は必須送信される。
+   */
+  resourceUri: z.string().optional(),
   channelToken: z.string().optional(),
   messageNumber: z.string().optional(),
 });

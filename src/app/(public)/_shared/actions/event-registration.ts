@@ -12,6 +12,7 @@ import {
   validateTurnstile,
 } from "@/shared/lib/action-helpers";
 import { formSubmitRateLimiter } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
   createMutationError,
   type MutationResult,
@@ -28,6 +29,7 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
 import { createNotificationCommand } from "@/shared/domain/notifications/commands";
 import {
   NOTIFICATION_TYPE,
@@ -52,7 +54,10 @@ export async function registerForEvent(
   }
 
   // 3. Turnstile verification
-  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: parsed.data.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.event_registration,
+  });
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }
@@ -82,9 +87,10 @@ export async function registerForEvent(
     });
 
     // 6. Invalidate cache
-    updateTag(CACHE_TAGS.EVENTS);
-    updateTag(getCacheTag.events.detail(result.registration.eventId));
-    updateTag(getCacheTag.eventRegistrations.list(result.registration.eventId));
+    invalidateEventCaches(result.registration.eventId, result.event.slug, {
+      registrations: true,
+      notifications: true,
+    });
 
     // 7. Send emails (fire-and-forget)
     fireAndForget(
@@ -140,7 +146,6 @@ export async function registerForEvent(
         category: ErrorCategory.DATABASE,
       },
     );
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     return { id: result.registration.id };
   } catch (error) {
@@ -181,9 +186,10 @@ export async function cancelEventRegistration(
     );
 
     // 5. Invalidate cache
-    updateTag(CACHE_TAGS.EVENTS);
-    updateTag(getCacheTag.events.detail(registration.eventId));
-    updateTag(getCacheTag.eventRegistrations.list(registration.eventId));
+    invalidateEventCaches(registration.eventId, registration.event.slug, {
+      registrations: true,
+      notifications: true,
+    });
 
     // 顧客統計が変わる場合は CUSTOMERS も無効化
     updateTag(CACHE_TAGS.CUSTOMERS);
@@ -203,7 +209,6 @@ export async function cancelEventRegistration(
         category: ErrorCategory.DATABASE,
       },
     );
-    updateTag(CACHE_TAGS.NOTIFICATIONS);
 
     // 7. Send cancellation email (fire-and-forget)
     fireAndForget(

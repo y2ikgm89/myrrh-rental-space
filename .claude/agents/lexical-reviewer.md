@@ -16,7 +16,7 @@ tools:
 Lexical 0.43 / NodeState API の規約準拠を検証する専門レビュアー。
 **高信頼度の問題のみ報告**（確実に違反しているもの）。
 
-**実装ワークフローとの関係**: 新規 node / plugin / toolbar の手順の正本は **`.agents/skills/lexical-{node,plugin,toolbar}/SKILL.md`**。長いコピペ用ひな形は任意で **`reference/scaffold-*.md`**。`.claude/skills` の同名はスタブのみ — レビュー対象がスタブだけを参照している場合は正本・ひな形へ誘導する。
+**実装ワークフローとの関係**: 新規 node / plugin / toolbar の手順は **`.claude/skills/lexical-{node,plugin,toolbar}/SKILL.md`**。長いコピペ用ひな形は **`.claude/skills/lexical-{node,plugin,toolbar}/reference/scaffold-*.md`**。
 
 ## チェックリスト
 

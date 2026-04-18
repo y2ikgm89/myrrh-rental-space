@@ -125,6 +125,8 @@ export type SettingsData = {
   googleCalendarLastTestedAt: Date | null;
   googleCalendarConnectionStatus: string | null;
   googleCalendarOAuthEnabled: boolean;
+  googleCalendarMeetEnabled: boolean;
+  googleCalendarReminderMinutes: number | null;
   icalAttachmentEnabled: boolean;
   addToCalendarLinksEnabled: boolean;
   googleCalendarTwoWaySyncEnabled: boolean;
@@ -202,6 +204,9 @@ export type GoogleCalendarSettingsData = {
   connectionStatus: "connected" | "error" | null;
   lastTestedAt: Date | null;
   oauthEnabled: boolean;
+  meetEnabled: boolean;
+  /** null = Google Calendar 既定を使う, 0 = 通知なし, N = N分前にメール通知 */
+  reminderMinutes: number | null;
 };
 
 export type TwoWaySyncSettingsData = {

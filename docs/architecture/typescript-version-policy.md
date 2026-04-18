@@ -13,4 +13,4 @@
 
 ## 依存更新
 
-セマンバー範囲内の更新は `bun update`（[upgrade-deps スキル](../../.agents/skills/upgrade-deps/SKILL.md)）。
+セマンバー範囲内の更新は `bun update`（[upgrade-deps スキル](../../.claude/skills/upgrade-deps/SKILL.md)）。

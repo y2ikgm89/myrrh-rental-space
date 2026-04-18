@@ -16,6 +16,7 @@ import {
   getClientIpFromHeaders,
   publicQueryRateLimiter,
 } from "@/shared/lib/rate-limit";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import {
   createMutationError,
   type MutationResult,
@@ -66,7 +67,10 @@ export async function submitReservation(
   }
 
   // 3. Turnstile verification
-  const turnstile = await validateTurnstile(parsed.data.turnstileToken);
+  const turnstile = await validateTurnstile({
+    token: parsed.data.turnstileToken,
+    expectedAction: TURNSTILE_ACTIONS.reservation,
+  });
   if (!turnstile.success) {
     return createMutationError(turnstile.error);
   }
@@ -85,7 +89,7 @@ export async function submitReservation(
   // 4. Get current user (non-blocking — undefined if not logged in)
   const user = await getCurrentCustomerUser();
 
-  // 4.5. Extract client IP and user agent for terms audit trail
+  // 4.5. Extract client IP for terms audit trail
   const clientIp = await getClientIpFromHeaders();
   const headersList = await headers();
   const userAgent = headersList.get("user-agent");

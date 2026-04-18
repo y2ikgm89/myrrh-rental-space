@@ -11,6 +11,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { publicInquirySchema } from "@/shared/lib/validations/inquiry";
 import { CustomerType } from "@/shared/lib/validations/enums/prisma-types";
@@ -200,6 +201,7 @@ export function ContactForm({
               <TurnstileWidget
                 ref={turnstileRef}
                 siteKey={turnstileSiteKey}
+                action={TURNSTILE_ACTIONS.inquiry}
                 onVerify={handleTurnstileVerify}
                 onExpire={handleTurnstileExpire}
               />

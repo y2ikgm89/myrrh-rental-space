@@ -10,6 +10,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import { usePublicForm } from "@/public/hooks/use-public-form";
 import { publicEventRegistrationSchema } from "@/shared/lib/validations/event-registration";
 import { registerForEvent } from "@/public/actions/event-registration";
@@ -150,6 +151,7 @@ export function EventRegistrationForm({
         <TurnstileWidget
           ref={turnstileRef}
           siteKey={turnstileSiteKey}
+          action={TURNSTILE_ACTIONS.event_registration}
           onVerify={handleTurnstileVerify}
           onExpire={handleTurnstileExpire}
         />

@@ -122,7 +122,6 @@ __tests__
 e2e/
 .claude/
 .serena/
-.agents/
 ```
 
 ---

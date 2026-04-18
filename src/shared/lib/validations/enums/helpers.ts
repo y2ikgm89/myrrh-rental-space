@@ -527,8 +527,8 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
 // =============================================================================
 
 export const REGISTRATION_STATUS_LABELS: Record<RegistrationStatus, string> = {
-  [RegistrationStatus.CONFIRMED]: "確認済み",
-  [RegistrationStatus.CANCELLED]: "キャンセル",
+  [RegistrationStatus.CONFIRMED]: "申込済み",
+  [RegistrationStatus.CANCELLED]: "キャンセル済み",
 };
 
 export const PAYMENT_STATUS_BADGE_VARIANTS: Record<PaymentStatus, string> = {

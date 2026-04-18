@@ -112,4 +112,4 @@ Memory 作成時は以下のセクション見出しを使用。値は `project-
 
 - `.claude/rules/project-design-config.md` — プロジェクト固有デザイン値（Memory 未作成時の初期値）
 - `.claude/rules/anti-ai-design.md` — Anti-AI 強制ルール・セルフレビュー
-- `.agents/skills/frontend-design/SKILL.md` — Design Brief 作成スキル（正本）
+- `.claude/skills/frontend-design/SKILL.md` — Design Brief 作成スキル（正本）

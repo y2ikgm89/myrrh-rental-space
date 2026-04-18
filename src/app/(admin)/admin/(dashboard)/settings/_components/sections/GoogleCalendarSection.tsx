@@ -78,6 +78,8 @@ export function GoogleCalendarSection({
         serviceAccountJson: data.serviceAccountJson || null,
         icalAttachmentEnabled: data.icalAttachmentEnabled,
         addToCalendarLinksEnabled: data.addToCalendarLinksEnabled,
+        googleCalendarMeetEnabled: data.googleCalendarMeetEnabled,
+        googleCalendarReminderMinutes: data.googleCalendarReminderMinutes,
       }),
     {
       defaultValues: {
@@ -86,6 +88,8 @@ export function GoogleCalendarSection({
         serviceAccountJson: "",
         icalAttachmentEnabled: settings.icalAttachmentEnabled,
         addToCalendarLinksEnabled: settings.addToCalendarLinksEnabled,
+        googleCalendarMeetEnabled: settings.googleCalendarMeetEnabled,
+        googleCalendarReminderMinutes: settings.googleCalendarReminderMinutes,
       },
       refresh: true,
       successMessage: "Google Calendar設定を更新しました",
@@ -346,6 +350,106 @@ export function GoogleCalendarSection({
                 </StatusBanner>
               )}
             </div>
+
+            {/* カレンダーイベント設定（Meet + リマインダー） */}
+            <fieldset className="space-y-4 rounded-lg border p-4">
+              <legend className="px-1 text-sm font-medium">
+                カレンダーイベント設定
+              </legend>
+
+              <FormField
+                control={form.control}
+                name="googleCalendarMeetEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel>Google Meet を自動生成</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        予約イベントに Google Meet
+                        ビデオ会議リンクを自動追加します（OAuth 連携必須）
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="googleCalendarReminderMinutes"
+                render={({ field }) => {
+                  const rawValue = field.value;
+                  const selectValue =
+                    rawValue === null
+                      ? "default"
+                      : rawValue === 0
+                        ? "off"
+                        : "custom";
+                  return (
+                    <FormItem>
+                      <FormLabel>メール通知リマインダー</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <select
+                            value={selectValue}
+                            onChange={(event) => {
+                              const v = event.target.value;
+                              if (v === "default") field.onChange(null);
+                              else if (v === "off") field.onChange(0);
+                              else field.onChange(60);
+                            }}
+                            disabled={isPending}
+                            className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+                            aria-label="リマインダー設定"
+                          >
+                            <option value="default">
+                              カレンダー既定を使う
+                            </option>
+                            <option value="off">通知なし</option>
+                            <option value="custom">開始前にメール通知</option>
+                          </select>
+                          {selectValue === "custom" && (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={40320}
+                                step={5}
+                                value={rawValue ?? 60}
+                                onChange={(event) => {
+                                  const parsed = Number(event.target.value);
+                                  field.onChange(
+                                    Number.isFinite(parsed) && parsed > 0
+                                      ? parsed
+                                      : 60,
+                                  );
+                                }}
+                                disabled={isPending}
+                                className="w-28"
+                              />
+                              <span className="text-sm text-muted-foreground">
+                                分前
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        既定: Google カレンダーに設定された通知タイミングを使用
+                        / 0 分で通知なし / 最大 40320 分（4 週間）
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </fieldset>
 
             {/* 予約者向け設定 */}
             <div className="space-y-4 border-t pt-4">

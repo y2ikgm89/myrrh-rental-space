@@ -56,6 +56,7 @@ import { DomainError } from "@/shared/domain/domain-error";
 const CUSTOMER_ID = "customer-1";
 const RESERVATION_ID = "reservation-1";
 const SPACE_ID = "space-1";
+const SPACE_SLUG = "space-slug-1";
 const REVIEW_ID = "review-1";
 
 const VALID_CREATE_INPUT = {
@@ -71,7 +72,7 @@ const COMPLETED_RESERVATION = {
   customerId: CUSTOMER_ID,
   spaceId: SPACE_ID,
   status: "COMPLETED",
-  space: { reviewsEnabled: true },
+  space: { slug: SPACE_SLUG, reviewsEnabled: true },
   review: null,
 };
 
@@ -92,7 +93,11 @@ describe("createReviewCommand", () => {
 
       const result = await createReviewCommand(VALID_CREATE_INPUT);
 
-      expect(result).toEqual({ id: REVIEW_ID, spaceId: SPACE_ID });
+      expect(result).toEqual({
+        id: REVIEW_ID,
+        spaceId: SPACE_ID,
+        spaceSlug: SPACE_SLUG,
+      });
       expect(mockSpaceReviewCreate).toHaveBeenCalledTimes(1);
     });
 
@@ -109,7 +114,11 @@ describe("createReviewCommand", () => {
         comment: null,
       });
 
-      expect(result).toEqual({ id: REVIEW_ID, spaceId: SPACE_ID });
+      expect(result).toEqual({
+        id: REVIEW_ID,
+        spaceId: SPACE_ID,
+        spaceSlug: SPACE_SLUG,
+      });
     });
 
     test("title と comment が空文字の場合も null として作成できる", async () => {
@@ -204,7 +213,7 @@ describe("createReviewCommand", () => {
     test("スペースの reviewsEnabled が false の場合は VALIDATION エラーをスローする", async () => {
       mockReservationFindUnique.mockResolvedValue({
         ...COMPLETED_RESERVATION,
-        space: { reviewsEnabled: false },
+        space: { slug: SPACE_SLUG, reviewsEnabled: false },
       });
 
       await expect(
@@ -218,7 +227,7 @@ describe("createReviewCommand", () => {
     test("reviewsEnabled が false の場合は spaceReview.create が呼ばれない", async () => {
       mockReservationFindUnique.mockResolvedValue({
         ...COMPLETED_RESERVATION,
-        space: { reviewsEnabled: false },
+        space: { slug: SPACE_SLUG, reviewsEnabled: false },
       });
 
       await expect(createReviewCommand(VALID_CREATE_INPUT)).rejects.toThrow(
@@ -257,11 +266,12 @@ describe("toggleReviewPublishedCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
+        space: { slug: SPACE_SLUG },
       });
 
       const result = await toggleReviewPublishedCommand(REVIEW_ID, true);
 
-      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledTimes(1);
     });
 
@@ -269,11 +279,12 @@ describe("toggleReviewPublishedCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
+        space: { slug: SPACE_SLUG },
       });
 
       const result = await toggleReviewPublishedCommand(REVIEW_ID, false);
 
-      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { isPublished: false },
@@ -319,11 +330,12 @@ describe("deleteReviewCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
+        space: { slug: SPACE_SLUG },
       });
 
       const result = await deleteReviewCommand(REVIEW_ID);
 
-      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewDelete).toHaveBeenCalledTimes(1);
     });
 
@@ -331,6 +343,7 @@ describe("deleteReviewCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
+        space: { slug: SPACE_SLUG },
       });
 
       await deleteReviewCommand(REVIEW_ID);
@@ -378,7 +391,7 @@ const REVIEW_WITH_CUSTOMER = {
     lastName: "山田",
     firstName: "太郎",
   },
-  space: { name: "Test Space" },
+  space: { name: "Test Space", slug: SPACE_SLUG },
 };
 
 describe("replyToReviewCommand", () => {
@@ -500,11 +513,12 @@ describe("deleteReviewReplyCommand", () => {
       mockSpaceReviewFindUnique.mockResolvedValue({
         id: REVIEW_ID,
         spaceId: SPACE_ID,
+        space: { slug: SPACE_SLUG },
       });
 
       const result = await deleteReviewReplyCommand(REVIEW_ID);
 
-      expect(result).toEqual({ spaceId: SPACE_ID });
+      expect(result).toEqual({ spaceId: SPACE_ID, spaceSlug: SPACE_SLUG });
       expect(mockSpaceReviewUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: REVIEW_ID },

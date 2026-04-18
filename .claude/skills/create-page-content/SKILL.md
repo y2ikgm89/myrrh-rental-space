@@ -1,8 +1,10 @@
 ---
 name: create-page-content
-description: Use when explicitly adding a new public page. Generates Page record + DEFAULT_PAGE_SECTIONS entry + page.tsx template using Dynamic Section Architecture.
-disable-model-invocation: true
-argument-hint: "<page-key-kebab-case>"
+description: >
+  公開ページをスキャフォールド生成する（Dynamic Section Architecture）。
+  Page レコード + DEFAULT_PAGE_SECTIONS エントリ + page.tsx テンプレート。
+  新規公開ページ追加時に使用。
+  引数: ページキー（英語 kebab-case, 例: gallery, pricing, staff）
 ---
 
 # 公開ページ スキャフォールド（Dynamic Section Architecture）

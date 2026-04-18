@@ -444,13 +444,13 @@ Three.js パターンと `ui-ux-pro-max` スタイルデータベースの対応
 
 ```bash
 # Three.js に適したスタイルを調査
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "3D immersive depth WebGL" --domain style
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "3D immersive depth WebGL" --domain style
 
 # 3D UXガイドライン
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "3D performance WebGL" --domain ux
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "3D performance WebGL" --domain ux
 
 # Next.js での3D最適化
-python3 .agents/skills/ui-ux-pro-max/scripts/search.py "3D lazy loading WebGL" --stack nextjs
+python3 .claude/skills/ui-ux-pro-max/scripts/search.py "3D lazy loading WebGL" --stack nextjs
 ```
 
 -> `.claude/skills/parallax-section/SKILL.md` の Step 1.5 で詳細な検索フローを参照

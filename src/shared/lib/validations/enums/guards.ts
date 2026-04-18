@@ -39,6 +39,7 @@ import {
   PostPermalinkStructure,
   PaymentStatus,
   EventStatus,
+  RegistrationStatus,
 } from "@generated/prisma/enums";
 import { SectionType, isSectionType } from "@/shared/lib/validations/section";
 
@@ -104,6 +105,9 @@ const VALID_POST_PERMALINK_STRUCTURES = new Set<string>(
 );
 const VALID_PAYMENT_STATUSES = new Set<string>(Object.values(PaymentStatus));
 const VALID_EVENT_STATUSES = new Set<string>(Object.values(EventStatus));
+const VALID_REGISTRATION_STATUSES = new Set<string>(
+  Object.values(RegistrationStatus),
+);
 
 // =============================================================================
 // Type Guards
@@ -285,4 +289,10 @@ export function isValidPaymentStatus(value: unknown): value is PaymentStatus {
 
 export function isValidEventStatus(value: unknown): value is EventStatus {
   return typeof value === "string" && VALID_EVENT_STATUSES.has(value);
+}
+
+export function isValidRegistrationStatus(
+  value: unknown,
+): value is RegistrationStatus {
+  return typeof value === "string" && VALID_REGISTRATION_STATUSES.has(value);
 }

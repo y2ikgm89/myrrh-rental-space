@@ -1,20 +1,36 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { adminAuthClient } from "@/shared/lib/admin-auth-client";
 import { Button } from "@/public/components/design-system/button";
 import { Input } from "@/public/components/design-system/input";
 import { Stack } from "@/public/components/design-system/stack";
+import {
+  TurnstileWidget,
+  type TurnstileInstance,
+} from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 
-export function ForgotPasswordForm() {
+type Props = {
+  readonly turnstileSiteKey: string | null;
+};
+
+export function ForgotPasswordForm({ turnstileSiteKey }: Props) {
   const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(undefined);
+
+    if (turnstileSiteKey && !turnstileToken) {
+      setError("セキュリティ検証を完了してください。");
+      return;
+    }
 
     startTransition(async () => {
       const { error: fetchError } = await adminAuthClient.$fetch(
@@ -22,11 +38,16 @@ export function ForgotPasswordForm() {
         {
           method: "POST",
           body: { email, redirectTo: "/reset-password" },
+          ...(turnstileToken && {
+            headers: { "x-captcha-response": turnstileToken },
+          }),
         },
       );
 
       if (fetchError) {
         setError(fetchError.message ?? "エラーが発生しました");
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
       } else {
         setSubmitted(true);
       }
@@ -54,6 +75,8 @@ export function ForgotPasswordForm() {
           onClick={() => {
             setSubmitted(false);
             setEmail("");
+            setTurnstileToken("");
+            turnstileRef.current?.reset();
           }}
         >
           別のメールアドレスで試す
@@ -76,9 +99,18 @@ export function ForgotPasswordForm() {
           disabled={isPending}
         />
 
+        <TurnstileWidget
+          ref={turnstileRef}
+          siteKey={turnstileSiteKey}
+          action={TURNSTILE_ACTIONS.admin_password_reset_request}
+          onVerify={setTurnstileToken}
+          onExpire={() => setTurnstileToken("")}
+          onError={() => setTurnstileToken("")}
+        />
+
         {error ? (
           <div
-            className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             role="alert"
           >
             {error}

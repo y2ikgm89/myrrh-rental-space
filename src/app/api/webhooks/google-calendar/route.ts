@@ -34,10 +34,8 @@ function timingSafeTokenEqual(
   return crypto.timingSafeEqual(a, b);
 }
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
-import {
-  isTwoWaySyncEnabled,
-  getTwoWaySyncSettings,
-} from "@/shared/lib/google-calendar";
+import { isTwoWaySyncEnabled } from "@/shared/lib/google-calendar";
+import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
 import {
   logError,
   ErrorCategory,
@@ -71,6 +69,7 @@ export async function POST(request: Request) {
       channelId: request.headers.get("x-goog-channel-id") ?? undefined,
       resourceId: request.headers.get("x-goog-resource-id") ?? undefined,
       resourceState: request.headers.get("x-goog-resource-state") ?? undefined,
+      resourceUri: request.headers.get("x-goog-resource-uri") ?? undefined,
       channelToken: request.headers.get("x-goog-channel-token") ?? undefined,
       messageNumber: request.headers.get("x-goog-message-number") ?? undefined,
     });
@@ -91,6 +90,7 @@ export async function POST(request: Request) {
       channelId,
       resourceId,
       resourceState,
+      resourceUri,
       channelToken: receivedToken,
     } = headersResult.data;
 
@@ -130,6 +130,30 @@ export async function POST(request: Request) {
       });
       // 不明なWebhookでも200を返す（Googleが再送しないように）
       return jsonSuccess({ ignored: true });
+    }
+
+    // X-Goog-Resource-URI の改ざん検証（公式仕様: URI には監視対象の calendar ID が含まれる）
+    // 例: https://www.googleapis.com/calendar/v3/calendars/<CALENDAR_ID>/events?...
+    if (resourceUri && settings.calendarId) {
+      const encodedCalendarId = encodeURIComponent(settings.calendarId);
+      const expectedSegment = `/calendars/${encodedCalendarId}/events`;
+      const plainSegment = `/calendars/${settings.calendarId}/events`;
+      if (
+        !resourceUri.includes(expectedSegment) &&
+        !resourceUri.includes(plainSegment)
+      ) {
+        logError(new Error("Webhook resource URI mismatch"), {
+          category: ErrorCategory.VALIDATION,
+          severity: ErrorSeverity.MEDIUM,
+          context: {
+            operation: "googleCalendarWebhook",
+            resourceUri,
+            expectedCalendarId: settings.calendarId,
+          },
+        });
+        // 不整合でも 200 を返す（Google の再送抑制）
+        return jsonSuccess({ ignored: true });
+      }
     }
 
     // syncイベントは初回登録時の確認なのでスキップ

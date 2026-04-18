@@ -34,9 +34,9 @@ import { prisma } from "@/shared/db/prisma";
 import { syncFromCalendar } from "@/shared/lib/calendar-sync/inbound";
 import {
   isTwoWaySyncEnabled,
-  getTwoWaySyncSettings,
   renewWebhookIfNeeded,
 } from "@/shared/lib/google-calendar";
+import { getTwoWaySyncSettings } from "@/shared/domain/settings/admin-queries";
 import { sendWebhookRenewalNotification } from "@/shared/lib/email/system-emails";
 import {
   logError,

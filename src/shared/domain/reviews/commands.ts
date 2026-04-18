@@ -20,7 +20,7 @@ export async function createReviewCommand(input: CreateReviewInput) {
       customerId: true,
       spaceId: true,
       status: true,
-      space: { select: { reviewsEnabled: true } },
+      space: { select: { slug: true, reviewsEnabled: true } },
       review: { select: { id: true } },
     },
   });
@@ -57,7 +57,7 @@ export async function createReviewCommand(input: CreateReviewInput) {
     );
   }
 
-  return prisma.spaceReview.create({
+  const created = await prisma.spaceReview.create({
     data: {
       spaceId: reservation.spaceId,
       customerId: input.customerId,
@@ -68,15 +68,25 @@ export async function createReviewCommand(input: CreateReviewInput) {
     },
     select: { id: true, spaceId: true },
   });
+
+  return {
+    id: created.id,
+    spaceId: created.spaceId,
+    spaceSlug: reservation.space.slug,
+  };
 }
 
 export async function toggleReviewPublishedCommand(
   id: string,
   isPublished: boolean,
-): Promise<{ spaceId: string }> {
+): Promise<{ spaceId: string; spaceSlug: string }> {
   const review = await prisma.spaceReview.findUnique({
     where: { id },
-    select: { id: true, spaceId: true },
+    select: {
+      id: true,
+      spaceId: true,
+      space: { select: { slug: true } },
+    },
   });
 
   if (!review) {
@@ -88,13 +98,17 @@ export async function toggleReviewPublishedCommand(
     data: { isPublished },
   });
 
-  return { spaceId: review.spaceId };
+  return { spaceId: review.spaceId, spaceSlug: review.space.slug };
 }
 
 export async function deleteReviewCommand(id: string) {
   const review = await prisma.spaceReview.findUnique({
     where: { id },
-    select: { id: true, spaceId: true },
+    select: {
+      id: true,
+      spaceId: true,
+      space: { select: { slug: true } },
+    },
   });
 
   if (!review) {
@@ -105,7 +119,7 @@ export async function deleteReviewCommand(id: string) {
     where: { id },
   });
 
-  return { spaceId: review.spaceId };
+  return { spaceId: review.spaceId, spaceSlug: review.space.slug };
 }
 
 type ReplyToReviewInput = {
@@ -124,9 +138,11 @@ export type ReviewReplyEmailContext = {
   readonly replyBody: string;
 };
 
-export async function replyToReviewCommand(
-  input: ReplyToReviewInput,
-): Promise<{ spaceId: string; emailContext: ReviewReplyEmailContext | null }> {
+export async function replyToReviewCommand(input: ReplyToReviewInput): Promise<{
+  spaceId: string;
+  spaceSlug: string;
+  emailContext: ReviewReplyEmailContext | null;
+}> {
   const review = await prisma.spaceReview.findUnique({
     where: { id: input.reviewId },
     select: {
@@ -136,7 +152,7 @@ export async function replyToReviewCommand(
       title: true,
       comment: true,
       customer: { select: { email: true, lastName: true, firstName: true } },
-      space: { select: { name: true } },
+      space: { select: { name: true, slug: true } },
     },
   });
 
@@ -169,15 +185,23 @@ export async function replyToReviewCommand(
     };
   }
 
-  return { spaceId: review.spaceId, emailContext };
+  return {
+    spaceId: review.spaceId,
+    spaceSlug: review.space.slug,
+    emailContext,
+  };
 }
 
 export async function deleteReviewReplyCommand(
   id: string,
-): Promise<{ spaceId: string }> {
+): Promise<{ spaceId: string; spaceSlug: string }> {
   const review = await prisma.spaceReview.findUnique({
     where: { id },
-    select: { id: true, spaceId: true },
+    select: {
+      id: true,
+      spaceId: true,
+      space: { select: { slug: true } },
+    },
   });
 
   if (!review) {
@@ -193,5 +217,5 @@ export async function deleteReviewReplyCommand(
     },
   });
 
-  return { spaceId: review.spaceId };
+  return { spaceId: review.spaceId, spaceSlug: review.space.slug };
 }

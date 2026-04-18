@@ -16,6 +16,7 @@ import {
   TurnstileWidget,
   type TurnstileInstance,
 } from "@/public/components/ui/turnstile-widget";
+import { TURNSTILE_ACTIONS } from "@/shared/lib/turnstile-actions";
 import type { SpaceReviewInput } from "@/shared/lib/validations/review";
 
 // ---------------------------------------------------------------------------
@@ -175,6 +176,7 @@ function ReviewFormInner({
         <TurnstileWidget
           ref={turnstileRef}
           siteKey={turnstileSiteKey}
+          action={TURNSTILE_ACTIONS.review}
           onVerify={handleTurnstileVerify}
           onExpire={handleTurnstileExpire}
         />

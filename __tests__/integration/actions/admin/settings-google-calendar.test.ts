@@ -27,6 +27,8 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         serviceAccountJson: validServiceAccountJson,
         icalAttachmentEnabled: true,
         addToCalendarLinksEnabled: true,
+        googleCalendarMeetEnabled: false,
+        googleCalendarReminderMinutes: null,
       });
 
       expect(result.success).toBe(true);
@@ -39,6 +41,8 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         serviceAccountJson: null,
         icalAttachmentEnabled: false,
         addToCalendarLinksEnabled: false,
+        googleCalendarMeetEnabled: false,
+        googleCalendarReminderMinutes: null,
       });
 
       expect(result.success).toBe(true);
@@ -54,6 +58,8 @@ describe("Google Calendar Settings Admin Action Integration", () => {
         }),
         icalAttachmentEnabled: true,
         addToCalendarLinksEnabled: true,
+        googleCalendarMeetEnabled: false,
+        googleCalendarReminderMinutes: null,
       });
 
       expect(result.success).toBe(false);

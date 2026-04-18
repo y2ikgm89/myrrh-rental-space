@@ -10,6 +10,5 @@ playwright.config.ts
 playwright-report/
 .claude/
 .serena/
-.agents/
 *.md
 *.log

@@ -14,6 +14,8 @@
 
 import type { ZodError } from "zod";
 import { verifyTurnstileToken, isTurnstileEnabled } from "./turnstile";
+import type { TurnstileAction } from "./turnstile-actions";
+import { getClientIpFromHeaders } from "./rate-limit";
 import type { MutationError } from "@/shared/lib/mutation-result";
 
 /**
@@ -59,35 +61,48 @@ export function createValidationMutationError(
 }
 
 /**
- * Turnstile検証結果
+ * Turnstile 検証結果
  */
-type TurnstileResult = { success: true } | { success: false; error: string };
+export type TurnstileResult =
+  | { readonly success: true }
+  | { readonly success: false; readonly error: string };
+
+export type ValidateTurnstileParams = {
+  readonly token: string | undefined;
+  readonly expectedAction: TurnstileAction;
+};
 
 /**
- * Turnstile検証の共通フロー
+ * Turnstile 検証の共通フロー（公式推奨の action binding + remoteip + idempotency key）
  *
- * @param token - クライアントから受け取ったトークン
- * @param options.skipEnabledCheck - trueの場合、isTurnstileEnabled()のチェックをスキップ
- *   （呼び出し元で既にチェック済みの場合に使用し、二重DBクエリを回避）
- * @returns 検証結果
+ * 呼び出し側は `expectedAction` を TURNSTILE_ACTIONS から指定するだけでよい。
+ * `remoteip` は `getClientIpFromHeaders()` で自動取得（Server Actions / Route Handlers /
+ * Better Auth hook すべてで動作）。
+ *
+ * Settings テーブルに site/secret key が未設定の場合は検証をスキップ（dev フレンドリー）。
+ * 本番で secret 未設定は `verifyTurnstileToken` 側で拒否される。
  */
 export async function validateTurnstile(
-  token?: string,
-  options?: { skipEnabledCheck?: boolean },
+  params: ValidateTurnstileParams,
 ): Promise<TurnstileResult> {
-  if (!options?.skipEnabledCheck && !(await isTurnstileEnabled())) {
+  if (!(await isTurnstileEnabled())) {
     return { success: true };
   }
 
-  if (!token) {
+  if (!params.token) {
     return {
       success: false,
       error: "セキュリティ検証が必要です。ページを再読み込みしてください。",
     };
   }
 
-  const isValid = await verifyTurnstileToken(token);
-  if (!isValid) {
+  const result = await verifyTurnstileToken({
+    token: params.token,
+    expectedAction: params.expectedAction,
+    remoteip: await getClientIpFromHeaders(),
+  });
+
+  if (!result.success) {
     return {
       success: false,
       error:

@@ -38,9 +38,7 @@ export {
 
 export {
   testServiceAccountConnection,
-  getGoogleCalendarSettings,
   isGoogleCalendarEnabled,
-  getTwoWaySyncSettings,
   isTwoWaySyncEnabled,
   isValidCalendarId,
 } from "./settings";

@@ -124,6 +124,45 @@ describe("createNews", () => {
 });
 ```
 
+### mock.module の追従更新（最重要）
+
+Server Action が新しい domain query / external helper を呼び出すようになったら、
+対応する integration test の `mock.module()` にも stub を追加する必要がある。
+
+**未更新の兆候**:
+
+- テスト実行時に `prisma.xxx.findMany() Authentication failed against the database server`
+- テスト実行時に実 DB に接続しようとする（ネットワークエラー / 認証エラー）
+
+**検出手順**:
+
+1. `bun test <failing-file>` で実行 → エラーメッセージで「未モックの domain query」を特定
+2. 該当 Server Action の import 文を確認し、モック漏れを洗い出す
+3. `mock.module("@/shared/domain/<x>/queries", () => ({ <fn>: mock(...) }))` を追加
+
+**参照実装**: `deleteAccountAction` が `getEventIdsByCustomerId` を呼び出すようになった時、
+`mypage-account.test.ts` に以下を追加して解決:
+
+```typescript
+mock.module("@/shared/domain/events/registration-queries", () => ({
+  getEventIdsByCustomerId: mock(() => Promise.resolve([])),
+}));
+```
+
+### toHaveBeenCalledWith 差分の読み方
+
+`- Expected - 0 / + Received + N` = **「期待値より N 個多いプロパティがある」**
+
+主な原因:
+
+- Zod スキーマの `.default()` 値が実装で展開されてテスト期待値に未反映
+  （例: `customerType: CustomerType.PERSONAL` が default で埋まる）
+- Server Action に新規フィールドが追加されたがテスト期待値が未更新
+
+対処: 実装の呼び出し引数をそのまま `toHaveBeenCalledWith` に反映する。
+`expect.objectContaining({...})` でパーシャルマッチに緩和してもよいが、
+破壊的変更検出の観点では厳密マッチ推奨。
+
 ## Bun Test 型安全パターン
 
 `noUncheckedIndexedAccess` / `strict` 有効環境での Bun テスト固有の型制約と対処法。
