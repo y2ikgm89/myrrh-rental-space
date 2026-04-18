@@ -378,6 +378,7 @@ export async function findReservationsForReminderWindow(
       startTime: true,
       endTime: true,
       notes: true,
+      icsSequence: true,
       customer: {
         select: { firstName: true, lastName: true, email: true },
       },

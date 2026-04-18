@@ -41,7 +41,7 @@ export async function updateReservationStatusCommand(
     status === ReservationStatus.CANCELLED &&
     previousStatus !== ReservationStatus.CANCELLED;
 
-  await prisma.reservation.update({
+  const updated = await prisma.reservation.update({
     where: { id, deletedAt: null },
     data: {
       status,
@@ -50,6 +50,7 @@ export async function updateReservationStatusCommand(
         ? { cancelledAt: new Date(), cancelledByType: CANCELLED_BY.ADMIN }
         : {}),
     },
+    select: { icsSequence: true },
   });
 
   return {
@@ -65,6 +66,7 @@ export async function updateReservationStatusCommand(
       endTime: reservation.endTime,
       totalPrice: reservation.totalPrice,
       notes: reservation.notes,
+      icsSequence: updated.icsSequence,
     }),
   };
 }

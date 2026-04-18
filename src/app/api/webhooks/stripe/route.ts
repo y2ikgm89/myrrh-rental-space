@@ -208,6 +208,7 @@ async function fulfillPayment(
         totalPrice: reservation.totalPrice,
         location: reservation.space.location?.name,
         notes: reservation.notes ?? undefined,
+        icsSequence: reservation.icsSequence,
       }),
     ),
     {

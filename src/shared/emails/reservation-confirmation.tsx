@@ -13,9 +13,8 @@ import {
 
 type AddToCalendarLinks = {
   google: string;
-  outlook: string;
   outlookWeb: string;
-  apple: string;
+  ics: string;
 };
 
 type Props = {
@@ -96,8 +95,8 @@ export function ReservationConfirmationEmail({
                   Outlook
                 </Link>
                 {" | "}
-                <Link href={addToCalendarLinks.apple} style={calendarLink}>
-                  Apple Calendar
+                <Link href={addToCalendarLinks.ics} style={calendarLink}>
+                  iCal (.ics)
                 </Link>
               </Text>
             </Section>

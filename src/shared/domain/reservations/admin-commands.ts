@@ -164,6 +164,7 @@ export async function createAdminReservationCommand(input: {
       endTime: endDateTime,
       totalPrice: calculatedPrice,
       notes: input.notes,
+      icsSequence: reservation.icsSequence,
     }),
   };
 }
@@ -242,6 +243,8 @@ export async function updateAdminReservationCommand(
   const oldCouponId = currentReservation.couponId;
   const couponChanged = oldCouponId !== newCouponId;
 
+  let updatedIcsSequence = 0;
+
   await prisma.$transaction(async (tx) => {
     await ensureNoOverlap(
       {
@@ -253,7 +256,7 @@ export async function updateAdminReservationCommand(
       tx,
     );
 
-    await tx.reservation.update({
+    const updatedReservation = await tx.reservation.update({
       where: { id, deletedAt: null },
       data: {
         spaceId: input.spaceId,
@@ -269,7 +272,9 @@ export async function updateAdminReservationCommand(
         notes: input.notes || null,
         icsSequence: { increment: 1 },
       },
+      select: { icsSequence: true },
     });
+    updatedIcsSequence = updatedReservation.icsSequence;
 
     if (couponChanged) {
       if (oldCouponId) {
@@ -298,6 +303,7 @@ export async function updateAdminReservationCommand(
       endTime: endDateTime,
       totalPrice: calculatedPrice,
       notes: input.notes,
+      icsSequence: updatedIcsSequence,
     }),
   };
 }

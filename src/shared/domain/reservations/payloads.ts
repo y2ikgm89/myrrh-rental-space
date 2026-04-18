@@ -37,6 +37,7 @@ export type ReservationPayload = {
   totalPrice: number | null;
   notes?: string | undefined;
   location?: string | undefined;
+  icsSequence: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -227,6 +228,7 @@ export function buildPayload(params: {
   totalPrice: number | null;
   notes?: string | null | undefined;
   guestName?: string | null;
+  icsSequence: number;
 }): ReservationPayload {
   return {
     reservationId: params.reservationId,
@@ -243,5 +245,6 @@ export function buildPayload(params: {
       params.space.location.address,
       params.space.addressDetail,
     ),
+    icsSequence: params.icsSequence,
   };
 }

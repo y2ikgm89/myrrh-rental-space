@@ -185,6 +185,7 @@ export const updateReservationStatus = async (
             totalPrice: payloadData.totalPrice,
             oldStatus: oldLabel,
             newStatus: newLabel,
+            icsSequence: payloadData.icsSequence,
             ...(payloadData.location != null
               ? { location: payloadData.location }
               : {}),

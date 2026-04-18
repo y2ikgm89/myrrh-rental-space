@@ -16,6 +16,7 @@ export type ReservationEmailData = {
   totalPrice: number | null;
   notes?: string;
   location?: string;
+  icsSequence: number;
 };
 
 export type ContactEmailData = {
@@ -70,6 +71,7 @@ export type ReminderEmailData = {
   endTime: Date;
   location: string | undefined;
   notes: string | undefined;
+  icsSequence: number;
 };
 
 export type PasswordResetEmailData = {
@@ -89,6 +91,7 @@ export type StatusChangeEmailData = {
   oldStatus: string;
   newStatus: string;
   location?: string;
+  icsSequence: number;
 };
 
 export type EmailResult = { success: boolean; error?: string };

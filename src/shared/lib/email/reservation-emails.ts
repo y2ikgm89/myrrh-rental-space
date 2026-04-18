@@ -19,7 +19,7 @@ import {
 } from "@/shared/domain/settings/queries/notification";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
-import { getAdminUrl } from "../constants";
+import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -27,9 +27,9 @@ import {
   normalizeError,
 } from "../errors/server";
 import {
-  createReservationEvent,
-  generateAddToCalendarLinks,
-  generateICalContent,
+  buildAddToCalendarUrls,
+  buildReservationCalendar,
+  buildReservationCancelCalendar,
 } from "../ical";
 import { omitUndefined } from "../serialize";
 import { sendEmail } from "./send";
@@ -52,21 +52,33 @@ export async function sendReservationConfirmationEmail(
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
   const calendarSettings = await getCalendarEmailSettings();
+  const appUrl = getAppUrl();
+  const host = getAppHost();
 
-  const calendarEvent = createReservationEvent(
-    omitUndefined({
-      reservationId: data.reservationId,
-      spaceName: data.spaceName,
-      customerName: data.customerName,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      location: data.location,
-      notes: data.notes,
-    }),
-  );
+  const calendarParams = omitUndefined({
+    reservationId: data.reservationId,
+    spaceName: data.spaceName,
+    customerName: data.customerName,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    ...(data.notes !== undefined ? { notes: data.notes } : {}),
+    sequence: data.icsSequence,
+  });
 
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
-    ? generateAddToCalendarLinks(calendarEvent)
+    ? buildAddToCalendarUrls({
+        summary: `【予約】${data.spaceName}`,
+        description: [
+          `予約ID: ${data.reservationId.slice(0, 8).toUpperCase()}`,
+          `スペース: ${data.spaceName}`,
+          `日時: ${reservationDate} ${startTime} - ${endTime}`,
+        ].join("\n"),
+        startTime: data.startTime,
+        endTime: data.endTime,
+        ...(data.location !== undefined ? { location: data.location } : {}),
+        icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
+      })
     : undefined;
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
@@ -75,7 +87,10 @@ export async function sendReservationConfirmationEmail(
       attachments = [
         {
           filename: `reservation-${data.reservationId.slice(0, 8)}.ics`,
-          content: Buffer.from(generateICalContent(calendarEvent), "utf-8"),
+          content: Buffer.from(
+            buildReservationCalendar(calendarParams, host),
+            "utf-8",
+          ),
         },
       ];
     } catch (icalError) {
@@ -119,7 +134,7 @@ export async function sendReservationConfirmationEmail(
 }
 
 /**
- * 予約キャンセルメールを送信
+ * 予約キャンセルメールを送信（CANCEL ICS 添付）
  */
 export async function sendReservationCancelledEmail(
   data: ReservationEmailData,
@@ -130,8 +145,46 @@ export async function sendReservationCancelledEmail(
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
 
+  const calendarSettings = await getCalendarEmailSettings();
+  const host = getAppHost();
+
+  const calendarParams = omitUndefined({
+    reservationId: data.reservationId,
+    spaceName: data.spaceName,
+    customerName: data.customerName,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    ...(data.notes !== undefined ? { notes: data.notes } : {}),
+    sequence: data.icsSequence,
+  });
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      attachments = [
+        {
+          filename: `reservation-cancel-${data.reservationId.slice(0, 8)}.ics`,
+          content: Buffer.from(
+            buildReservationCancelCalendar(calendarParams, host),
+            "utf-8",
+          ),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateICalCancelAttachment",
+          reservationId: data.reservationId,
+        },
+      });
+    }
+  }
+
   return sendEmail({
-    payload: {
+    payload: omitUndefined({
       to: data.customerEmail,
       subject: `【予約キャンセル】${data.spaceName} - ${reservationDate}`,
       react: ReservationCancelledEmail({
@@ -142,7 +195,8 @@ export async function sendReservationCancelledEmail(
         endTime,
         reservationId: data.reservationId.slice(0, 8).toUpperCase(),
       }),
-    },
+      attachments,
+    }),
     idempotencyKey: `reservation-cancel/${data.reservationId}`,
     operation: "sendReservationCancelledEmail",
     context: {
@@ -154,6 +208,7 @@ export async function sendReservationCancelledEmail(
 
 /**
  * 予約ステータス変更通知メールを送信
+ * CANCELLED の場合は CANCEL ICS を添付、それ以外は REQUEST ICS を添付
  */
 export async function sendReservationStatusChangedEmail(
   data: StatusChangeEmailData,
@@ -163,6 +218,64 @@ export async function sendReservationStatusChangedEmail(
   });
   const startTime = format(data.startTime, "HH:mm", { locale: ja });
   const endTime = format(data.endTime, "HH:mm", { locale: ja });
+
+  const calendarSettings = await getCalendarEmailSettings();
+  const appUrl = getAppUrl();
+  const host = getAppHost();
+
+  const isCancelled =
+    data.newStatus === "キャンセル" || data.newStatus === "CANCELLED";
+
+  const calendarParams = omitUndefined({
+    reservationId: data.reservationId,
+    spaceName: data.spaceName,
+    customerName: data.customerName,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    ...(data.location !== undefined ? { location: data.location } : {}),
+    sequence: data.icsSequence,
+  });
+
+  const addToCalendarLinks =
+    !isCancelled && calendarSettings.addToCalendarLinksEnabled
+      ? buildAddToCalendarUrls({
+          summary: `【予約】${data.spaceName}`,
+          description: [
+            `予約ID: ${data.reservationId.slice(0, 8).toUpperCase()}`,
+            `スペース: ${data.spaceName}`,
+            `日時: ${reservationDate} ${startTime} - ${endTime}`,
+          ].join("\n"),
+          startTime: data.startTime,
+          endTime: data.endTime,
+          ...(data.location !== undefined ? { location: data.location } : {}),
+          icsDownloadUrl: `${appUrl}/api/calendar/reservation/${data.reservationId}`,
+        })
+      : undefined;
+
+  let attachments: { filename: string; content: Buffer }[] | undefined;
+  if (calendarSettings.icalAttachmentEnabled) {
+    try {
+      const icsContent = isCancelled
+        ? buildReservationCancelCalendar(calendarParams, host)
+        : buildReservationCalendar(calendarParams, host);
+      const filePrefix = isCancelled ? "reservation-cancel-" : "reservation-";
+      attachments = [
+        {
+          filename: `${filePrefix}${data.reservationId.slice(0, 8)}.ics`,
+          content: Buffer.from(icsContent, "utf-8"),
+        },
+      ];
+    } catch (icalError) {
+      logError(normalizeError(icalError), {
+        category: ErrorCategory.UNKNOWN,
+        severity: ErrorSeverity.LOW,
+        context: {
+          operation: "generateICalStatusChangeAttachment",
+          reservationId: data.reservationId,
+        },
+      });
+    }
+  }
 
   return sendEmail({
     payload: omitUndefined({
@@ -179,8 +292,10 @@ export async function sendReservationStatusChangedEmail(
           reservationId: data.reservationId.slice(0, 8).toUpperCase(),
           newStatus: data.newStatus,
           location: data.location,
+          addToCalendarLinks,
         }),
       ),
+      attachments,
     }),
     idempotencyKey: `reservation-status/${data.reservationId}/${data.newStatus}`,
     operation: "sendReservationStatusChangedEmail",

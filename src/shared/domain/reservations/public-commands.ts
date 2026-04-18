@@ -222,6 +222,7 @@ export async function createPublicReservationCommand(
       totalPrice: basePrice,
       notes: input.notes,
       guestName: guestNameDiff,
+      icsSequence: reservation.icsSequence,
     }),
   };
 }

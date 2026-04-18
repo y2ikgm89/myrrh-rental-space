@@ -71,6 +71,7 @@ export async function GET(request: Request) {
           endTime: reservation.endTime,
           location: reservation.space.location?.name,
           notes: reservation.notes ?? undefined,
+          icsSequence: reservation.icsSequence,
         });
         sent++;
       } catch (error) {
