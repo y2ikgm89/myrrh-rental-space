@@ -1,6 +1,12 @@
-// ---------------------------------------------------------------------------
-// Scroll utilities for the reservation flow
-// ---------------------------------------------------------------------------
+/**
+ * 公開ページ共通スクロールユーティリティ
+ *
+ * - `--header-height` CSS 変数を読み取って固定ヘッダー分のオフセットを差し引く
+ * - `prefers-reduced-motion: reduce` の場合は `behavior: "instant"` に自動切替
+ * - SSR セーフ（`typeof window === "undefined"` ガード）
+ *
+ * 予約フローの step scroll / 目次アンカージャンプ / ページ内リンクで共用する。
+ */
 
 function getScrollBehavior(): ScrollBehavior {
   return typeof window !== "undefined" &&
@@ -31,6 +37,10 @@ export function scrollToElement(el: HTMLElement | null): void {
     getHeaderHeight() -
     SCROLL_MARGIN;
   window.scrollTo({ top: Math.max(0, top), behavior: getScrollBehavior() });
+}
+
+export function scrollToElementById(id: string): void {
+  scrollToElement(document.getElementById(id));
 }
 
 export function scrollToSectionAfterRender(id: string): void {

@@ -38,7 +38,7 @@ import {
   scrollToTop,
   scrollToElement,
   scrollToSectionAfterRender,
-} from "./scroll-utils";
+} from "@/public/lib/scroll";
 
 // ---------------------------------------------------------------------------
 // Constants
