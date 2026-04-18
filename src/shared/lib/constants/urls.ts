@@ -48,3 +48,17 @@ export function getAdminUrl(path: string): string {
 export function getPublicUrl(path: string): string {
   return `${getBaseUrl()}${path}`;
 }
+
+/**
+ * アプリ URL のホスト名を取得（iCal UID の localpart@domain 用）
+ *
+ * 例: "https://example.com/foo" → "example.com"
+ * URL 解析失敗時は "localhost" にフォールバック
+ */
+export function getAppHost(): string {
+  try {
+    return new URL(getAppUrl()).host;
+  } catch {
+    return "localhost";
+  }
+}

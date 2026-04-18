@@ -69,6 +69,7 @@ export async function getICalReservations(input: {
     spaceAddress: string | null;
     customerFirstName: string;
     customerLastName: string;
+    icsSequence: number;
   }>
 > {
   const reservations = await prisma.reservation.findMany({
@@ -105,5 +106,6 @@ export async function getICalReservations(input: {
     ),
     customerFirstName: reservation.customer.firstName,
     customerLastName: reservation.customer.lastName,
+    icsSequence: reservation.icsSequence,
   }));
 }

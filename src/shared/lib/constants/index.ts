@@ -8,7 +8,13 @@
 export { SITE_DEFAULTS } from "./defaults";
 export { SESSION_CONFIG } from "./session";
 export { PAGINATION_DEFAULTS } from "./pagination";
-export { getBaseUrl, getAppUrl, getAdminUrl, getPublicUrl } from "./urls";
+export {
+  getBaseUrl,
+  getAppUrl,
+  getAdminUrl,
+  getPublicUrl,
+  getAppHost,
+} from "./urls";
 export { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "./cache";
 export type { CacheLife, CacheTag } from "./cache";
 export {
