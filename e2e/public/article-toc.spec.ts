@@ -4,10 +4,13 @@ import { urls } from "../fixtures";
 /**
  * 公開記事ページの目次（Table of Contents）E2E テスト
  *
+ * 対象: /posts/[slug]（ブログ）/ /news/[slug]（お知らせ）/ /terms/[slug]（規約）
+ *
  * テストシナリオ:
  * 1. デスクトップ: sticky サイドバー目次の表示 / クリック / scroll-spy
  * 2. モバイル: 本文冒頭の `<details>` 折りたたみ目次
  * 3. 短い記事（h2 < 2）では TOC が表示されないこと
+ * 4. 規約（terms）詳細ページでも同じ ArticleLayout + TOC が適用される
  *
  * 注: `ArticleTableOfContents` は contentJson に anchorId が永続化されて
  * いる記事でのみ表示される。未マイグレーション記事（anchorId 空）では
@@ -189,5 +192,35 @@ test.describe("記事詳細 TOC - アクセシビリティ", () => {
 
     await tocLink.focus();
     await expect(tocLink).toBeFocused();
+  });
+});
+
+// =============================================================================
+// 4. 規約ページ（/terms/[slug]）
+// =============================================================================
+
+test.describe("規約詳細 - TOC", () => {
+  test("規約ページも ArticleLayout で表示される（h1 + 目次候補）", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/terms/terms-of-use");
+    await page.waitForLoadState("networkidle");
+
+    // 規約ページが存在しない seed 環境ではスキップ
+    const h1 = page.locator("article h1").first();
+    if ((await h1.count()) === 0) {
+      test.skip(true, "terms-of-use が seed に存在しません");
+      return;
+    }
+
+    await expect(h1).toBeVisible();
+
+    // TOC は条件付き（h2 が 2 本以上かつ sidebarTocEnabled=true）
+    const toc = page.locator('nav[aria-label="目次"]').first();
+    if ((await toc.count()) > 0) {
+      await expect(toc).toBeVisible();
+      await expect(toc.locator("ol li")).not.toHaveCount(0);
+    }
   });
 });
