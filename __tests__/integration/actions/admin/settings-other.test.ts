@@ -90,6 +90,7 @@ const sidebarSettingsSchema = z.object({
   sidebarWidgets: sidebarWidgetsSchema,
   sidebarRecentCount: z.number().int().min(1).max(20),
   sidebarPopularCount: z.number().int().min(1).max(20),
+  sidebarTocEnabled: z.boolean(),
 });
 
 const robotsTxtSettingsSchema = z.object({
@@ -158,6 +159,7 @@ const VALID_SIDEBAR_INPUT = {
   },
   sidebarRecentCount: 5,
   sidebarPopularCount: 5,
+  sidebarTocEnabled: true,
 };
 
 const VALID_ROBOTS_TXT_INPUT = {

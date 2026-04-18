@@ -368,6 +368,7 @@ export async function updateSidebarSettings(
     sidebarWidgets: data.sidebarWidgets,
     sidebarRecentCount: data.sidebarRecentCount,
     sidebarPopularCount: data.sidebarPopularCount,
+    sidebarTocEnabled: data.sidebarTocEnabled,
   };
 
   await prisma.settings.upsert({

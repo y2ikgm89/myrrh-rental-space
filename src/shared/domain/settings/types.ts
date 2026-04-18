@@ -143,6 +143,7 @@ export type SettingsData = {
   sidebarWidgets: unknown;
   sidebarRecentCount: number;
   sidebarPopularCount: number;
+  sidebarTocEnabled: boolean;
   latitude: number | null;
   longitude: number | null;
   priceRange: string | null;

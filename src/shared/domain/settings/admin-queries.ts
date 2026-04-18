@@ -100,6 +100,7 @@ function toSettingsData(
     sidebarWidgets: settings.sidebarWidgets,
     sidebarRecentCount: settings.sidebarRecentCount,
     sidebarPopularCount: settings.sidebarPopularCount,
+    sidebarTocEnabled: settings.sidebarTocEnabled,
     latitude: settings.latitude,
     longitude: settings.longitude,
     priceRange: settings.priceRange,

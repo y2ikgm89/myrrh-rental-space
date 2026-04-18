@@ -92,6 +92,7 @@ describe("sidebarSettingsSchema", () => {
       sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
       sidebarRecentCount: 5,
       sidebarPopularCount: 5,
+      sidebarTocEnabled: true,
     };
     const result = sidebarSettingsSchema.safeParse(settings);
     expect(result.success).toBe(true);
@@ -103,6 +104,19 @@ describe("sidebarSettingsSchema", () => {
       sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
       sidebarRecentCount: 0,
       sidebarPopularCount: 21,
+      sidebarTocEnabled: true,
+    };
+    const result = sidebarSettingsSchema.safeParse(settings);
+    expect(result.success).toBe(false);
+  });
+
+  test("rejects missing sidebarTocEnabled", () => {
+    const settings = {
+      sidebarEnabled: true,
+      sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
+      sidebarRecentCount: 5,
+      sidebarPopularCount: 5,
+      // sidebarTocEnabled 欠落
     };
     const result = sidebarSettingsSchema.safeParse(settings);
     expect(result.success).toBe(false);

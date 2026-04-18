@@ -379,6 +379,8 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
   const [popularCount, setPopularCount] = useState(
     settings.sidebarPopularCount ?? 5,
   );
+  // SettingsData.sidebarTocEnabled は non-optional boolean（DB NOT NULL + Prisma 型保証）
+  const [tocEnabled, setTocEnabled] = useState(settings.sidebarTocEnabled);
   const [isPending, startTransition] = useTransition();
 
   // --- Custom widget dialog ---
@@ -397,6 +399,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
     if (sidebarEnabled !== (settings.sidebarEnabled ?? true)) return true;
     if (recentCount !== (settings.sidebarRecentCount ?? 5)) return true;
     if (popularCount !== (settings.sidebarPopularCount ?? 5)) return true;
+    if (tocEnabled !== settings.sidebarTocEnabled) return true;
     if (JSON.stringify(widgets) !== JSON.stringify(initial)) return true;
     return false;
   })();
@@ -510,6 +513,7 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
         sidebarWidgets: widgets,
         sidebarRecentCount: recentCount,
         sidebarPopularCount: popularCount,
+        sidebarTocEnabled: tocEnabled,
       });
       if (isMutationError(result)) {
         toast.error(result.error);
@@ -540,6 +544,24 @@ export function SidebarSection({ settings }: SidebarSectionProps) {
           <Switch
             checked={sidebarEnabled}
             onCheckedChange={setSidebarEnabled}
+            disabled={isPending}
+          />
+        </div>
+
+        {/* 記事目次サイドバーの有効/無効（独立設定） */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium">
+              記事の目次サイドバーを表示する
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ブログ・お知らせの記事詳細ページで、見出しから自動生成された目次サイドバーを表示します（見出し（h2）が
+              2 つ以上ある記事のみ）
+            </p>
+          </div>
+          <Switch
+            checked={tocEnabled}
+            onCheckedChange={setTocEnabled}
             disabled={isPending}
           />
         </div>

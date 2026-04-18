@@ -19,6 +19,8 @@ export interface PublicSidebarSettings {
   widgets: SidebarWidget[];
   recentCount: number;
   popularCount: number;
+  /** 公開記事詳細の目次サイドバー表示トグル（グローバル） */
+  tocEnabled: boolean;
 }
 
 const DEFAULTS: PublicSidebarSettings = {
@@ -26,6 +28,7 @@ const DEFAULTS: PublicSidebarSettings = {
   widgets: DEFAULT_SIDEBAR_WIDGETS,
   recentCount: 5,
   popularCount: 5,
+  tocEnabled: true,
 };
 
 export async function getSidebarSettings(): Promise<PublicSidebarSettings> {
@@ -42,6 +45,7 @@ export async function getSidebarSettings(): Promise<PublicSidebarSettings> {
           sidebarWidgets: true,
           sidebarRecentCount: true,
           sidebarPopularCount: true,
+          sidebarTocEnabled: true,
         },
       }),
     fallback: null,
@@ -57,5 +61,6 @@ export async function getSidebarSettings(): Promise<PublicSidebarSettings> {
     widgets: parseSidebarWidgets(result.sidebarWidgets),
     recentCount: result.sidebarRecentCount,
     popularCount: result.sidebarPopularCount,
+    tocEnabled: result.sidebarTocEnabled,
   };
 }

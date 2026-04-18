@@ -94,6 +94,8 @@ export const sidebarSettingsSchema = z.object({
   sidebarWidgets: sidebarWidgetsSchema,
   sidebarRecentCount: z.number().int().min(1).max(20),
   sidebarPopularCount: z.number().int().min(1).max(20),
+  /** 公開記事詳細ページに目次サイドバーを表示するグローバルトグル（h2 数 >= 2 の記事のみ有効） */
+  sidebarTocEnabled: z.boolean(),
 });
 
 export type SidebarSettings = z.infer<typeof sidebarSettingsSchema>;

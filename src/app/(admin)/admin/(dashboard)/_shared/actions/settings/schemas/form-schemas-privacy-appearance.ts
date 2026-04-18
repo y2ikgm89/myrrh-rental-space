@@ -76,6 +76,7 @@ export const sidebarFormSchema = z.object({
   sidebarWidgets: sidebarWidgetsSchema,
   sidebarRecentCount: z.number().int().min(1).max(20),
   sidebarPopularCount: z.number().int().min(1).max(20),
+  sidebarTocEnabled: z.boolean(),
 });
 
 export type SidebarFormInput = z.infer<typeof sidebarFormSchema>;
