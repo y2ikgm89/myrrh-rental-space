@@ -216,6 +216,23 @@ useEffect(() => {
 
 **注意**: `eslint-disable-next-line react-hooks/exhaustive-deps` は `@eslint-react/exhaustive-deps` が残るため不完全。`useEffectEvent` で根本解決する。
 
+**Anti-pattern: state を deps に含む effect 内で `useEffectEvent` を呼ぶ過剰抽象化**:
+
+```typescript
+// NG: activeId が deps にあるため useEffectEvent の価値なし（抽象化コストだけ増える）
+const applyActive = useEffectEvent((id: string) => {
+  /* DOM 操作 */
+});
+useEffect(() => applyActive(activeId), [activeId]);
+
+// OK: useEffect 内で直接処理（state 変化で trigger したい意図と一致）
+useEffect(() => {
+  /* DOM 操作 */
+}, [activeId]);
+```
+
+`useEffectEvent` の本来用途は「effect 内で最新 props / state / callback を読みたいが deps に入れると不要な再実行が起きる」ケースのみ。state が deps にある時点で trigger させたい意図なので素直に useEffect 内で処理する。
+
 ### 'use no memo' — コンパイル除外（一時的エスケープハッチ）
 
 コンパイラに問題があるコンポーネントを一時的に除外する。**恒久的な使用は禁止**:
