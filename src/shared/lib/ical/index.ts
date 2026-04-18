@@ -1,349 +1,290 @@
 /**
- * iCal (.ics) 生成 + Add to Calendar リンク生成
+ * iCal (.ics) 生成 + Add to Calendar URL ヘルパー
  *
- * RFC 5545 準拠のiCalendarファイル生成と
- * 各カレンダーサービス（Google, Outlook, Apple）への追加リンク生成
+ * `ical-generator` v10 ベース。RFC 5545 準拠で UID 安定・SEQUENCE 管理・
+ * METHOD:REQUEST/CANCEL・VTIMEZONE (Asia/Tokyo) をサポートする。
  *
+ * @see https://datatracker.ietf.org/doc/html/rfc5545
  * @module shared/lib/ical
  */
 
 import { format } from "date-fns";
-import { omitUndefined } from "@/shared/lib/serialize";
+import ical, {
+  ICalCalendarMethod,
+  ICalEventBusyStatus,
+  ICalEventStatus,
+  type ICalCalendar,
+} from "ical-generator";
+import { getVtimezoneComponent } from "@touch4it/ical-timezones";
+import { buildEventRegistrationUid, buildReservationUid } from "./uid";
+import type {
+  AddToCalendarUrls,
+  CalendarEventInput,
+  EventCalendarParams,
+  ICalFeedEntry,
+  ReservationCalendarParams,
+} from "./types";
+
+const PRODID = "-//Myrrh Rental Space//Reservation System//JP";
+const DEFAULT_TIMEZONE = "Asia/Tokyo";
 
 // =============================================================================
-// Types
+// Calendar factory
 // =============================================================================
 
-export interface CalendarEvent {
-  title: string;
-  description: string;
-  location?: string | undefined;
-  startTime: Date;
-  endTime: Date;
-  url?: string | undefined;
-}
-
-export interface AddToCalendarLinks {
-  google: string;
-  outlook: string;
-  outlookWeb: string;
-  apple: string; // iCal data URL
-  ical: string; // 直接ダウンロード用
-}
-
-// =============================================================================
-// iCal Generation (RFC 5545)
-// =============================================================================
-
-/**
- * iCalendarファイルの内容を生成
- */
-export function generateICalContent(event: CalendarEvent): string {
-  const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@myrrh-rental-space`;
-  const dtstamp = formatICalDate(new Date());
-  const dtstart = formatICalDate(event.startTime);
-  const dtend = formatICalDate(event.endTime);
-
-  // 説明文のエスケープ（改行、カンマ、セミコロン、バックスラッシュ）
-  const escapedDescription = escapeICalText(event.description);
-  const escapedTitle = escapeICalText(event.title);
-  const escapedLocation = event.location ? escapeICalText(event.location) : "";
-
-  const lines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Myrrh Rental Space//Reservation System//JP",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "BEGIN:VEVENT",
-    `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`,
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:${escapedTitle}`,
-  ];
-
-  if (escapedDescription) {
-    lines.push(`DESCRIPTION:${escapedDescription}`);
-  }
-
-  if (escapedLocation) {
-    lines.push(`LOCATION:${escapedLocation}`);
-  }
-
-  if (event.url) {
-    lines.push(`URL:${event.url}`);
-  }
-
-  lines.push("END:VEVENT", "END:VCALENDAR");
-
-  // RFC 5545: 行は75オクテット以下、CRLF で終端
-  return lines.map(foldLine).join("\r\n") + "\r\n";
-}
-
-/**
- * iCal形式の日時フォーマット（UTC）
- * Format: YYYYMMDDTHHmmssZ
- *
- * 注意: 入力はローカル時刻（JST）として扱い、UTCに変換して出力
- */
-function formatICalDate(date: Date): string {
-  // DateオブジェクトをUTC文字列に変換してからフォーマット
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
-
-  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
-}
-
-/**
- * iCalテキストのエスケープ
- * - バックスラッシュ → \\
- * - セミコロン → \;
- * - カンマ → \,
- * - 改行 → \n
- */
-function escapeICalText(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
-}
-
-/**
- * RFC 5545: 行の折り返し（75オクテット制限）
- */
-function foldLine(line: string): string {
-  if (line.length <= 75) return line;
-
-  const parts: string[] = [];
-  let remaining = line;
-
-  while (remaining.length > 75) {
-    // 最初の行は75文字、継続行は74文字（スペース1文字分）
-    const limit = parts.length === 0 ? 75 : 74;
-    parts.push(remaining.slice(0, limit));
-    remaining = remaining.slice(limit);
-  }
-
-  if (remaining) {
-    parts.push(remaining);
-  }
-
-  // 継続行は先頭にスペースを付ける
-  return parts.join("\r\n ");
+function createCalendar(
+  method: ICalCalendarMethod,
+  name?: string,
+): ICalCalendar {
+  const cal = ical({
+    prodId: PRODID,
+    method,
+    timezone: {
+      name: DEFAULT_TIMEZONE,
+      generator: getVtimezoneComponent,
+    },
+  });
+  if (name !== undefined) cal.name(name);
+  return cal;
 }
 
 // =============================================================================
-// iCal Feed Generation (Multiple Events)
+// Reservation
 // =============================================================================
 
-/**
- * 複数イベントのiCalフィードを生成（外部カレンダー購読用）
- */
-export function generateICalFeed(
-  events: CalendarEvent[],
-  calendarName: string = "予約カレンダー",
+function buildReservationDescription(
+  params: ReservationCalendarParams,
 ): string {
-  const lines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Myrrh Rental Space//Reservation System//JP",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeICalText(calendarName)}`,
-    "X-WR-TIMEZONE:Asia/Tokyo",
+  const formattedDate = format(params.startTime, "yyyy/MM/dd");
+  const formattedStart = format(params.startTime, "HH:mm");
+  const formattedEnd = format(params.endTime, "HH:mm");
+
+  const lines = [
+    `予約ID: ${params.reservationId.slice(0, 8).toUpperCase()}`,
+    `スペース: ${params.spaceName}`,
+    `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
+    `お名前: ${params.customerName}`,
   ];
-
-  for (const event of events) {
-    lines.push(...generateVEventLines(event));
+  if (params.notes !== undefined && params.notes.length > 0) {
+    lines.push(`備考: ${params.notes}`);
   }
-
-  lines.push("END:VCALENDAR");
-  return lines.map(foldLine).join("\r\n") + "\r\n";
+  return lines.join("\n");
 }
 
-/**
- * 単一イベントのVEVENTセクションを生成（内部使用）
- */
-function generateVEventLines(
-  event: CalendarEvent & { uid?: string },
-): string[] {
-  // UIDは予約IDベースで生成（一意性を保証）
-  const uid =
-    event.uid ||
-    `${Date.now()}-${Math.random().toString(36).slice(2)}@myrrh-rental-space`;
-  const dtstamp = formatICalDate(new Date());
-  const dtstart = formatICalDate(event.startTime);
-  const dtend = formatICalDate(event.endTime);
-
-  const escapedDescription = escapeICalText(event.description);
-  const escapedTitle = escapeICalText(event.title);
-  const escapedLocation = event.location ? escapeICalText(event.location) : "";
-
-  const lines: string[] = [
-    "BEGIN:VEVENT",
-    `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`,
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:${escapedTitle}`,
-  ];
-
-  if (escapedDescription) {
-    lines.push(`DESCRIPTION:${escapedDescription}`);
+export function buildReservationCalendar(
+  params: ReservationCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.REQUEST);
+  const event = cal.createEvent({
+    id: buildReservationUid(params.reservationId, host),
+    start: params.startTime,
+    end: params.endTime,
+    summary: `【予約】${params.spaceName}`,
+    description: buildReservationDescription(params),
+    status: ICalEventStatus.CONFIRMED,
+    busystatus: ICalEventBusyStatus.BUSY,
+    sequence: params.sequence,
+  });
+  if (params.location !== undefined) event.location(params.location);
+  if (params.url !== undefined) event.url(params.url);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
   }
+  return cal.toString();
+}
 
-  if (escapedLocation) {
-    lines.push(`LOCATION:${escapedLocation}`);
+export function buildReservationCancelCalendar(
+  params: ReservationCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.CANCEL);
+  const event = cal.createEvent({
+    id: buildReservationUid(params.reservationId, host),
+    start: params.startTime,
+    end: params.endTime,
+    summary: `【キャンセル】${params.spaceName}`,
+    description: buildReservationDescription(params),
+    status: ICalEventStatus.CANCELLED,
+    sequence: params.sequence,
+  });
+  if (params.location !== undefined) event.location(params.location);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
   }
-
-  if (event.url) {
-    lines.push(`URL:${event.url}`);
-  }
-
-  lines.push("END:VEVENT");
-  return lines;
+  return cal.toString();
 }
 
 // =============================================================================
-// Add to Calendar Links
+// Event registration
 // =============================================================================
 
-/**
- * 各カレンダーサービスへの追加リンクを生成
- */
-export function generateAddToCalendarLinks(
-  event: CalendarEvent,
-): AddToCalendarLinks {
-  const icalContent = generateICalContent(event);
+function buildEventDescription(params: EventCalendarParams): string {
+  const formattedDate = format(params.startTime, "yyyy/MM/dd");
+  const formattedStart = format(params.startTime, "HH:mm");
+  const formattedEnd = format(params.endTime, "HH:mm");
 
-  return {
-    google: generateGoogleCalendarLink(event),
-    outlook: generateOutlookLink(event),
-    outlookWeb: generateOutlookWebLink(event),
-    apple: generateICalDataUrl(icalContent),
-    ical: generateICalDataUrl(icalContent),
-  };
+  return [
+    `申込ID: ${params.registrationId.slice(0, 8).toUpperCase()}`,
+    `イベント: ${params.eventTitle}`,
+    `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
+    `お名前: ${params.customerName}`,
+    `参加人数: ${params.numberOfPeople}名`,
+  ].join("\n");
 }
 
-/**
- * Google Calendar追加リンク
- */
-function generateGoogleCalendarLink(event: CalendarEvent): string {
+export function buildEventCalendar(
+  params: EventCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.REQUEST);
+  const event = cal.createEvent({
+    id: buildEventRegistrationUid(params.registrationId, host),
+    start: params.startTime,
+    end: params.endTime,
+    summary: params.eventTitle,
+    description: buildEventDescription(params),
+    status: ICalEventStatus.CONFIRMED,
+    busystatus: ICalEventBusyStatus.BUSY,
+    sequence: params.sequence,
+  });
+  if (params.location !== undefined) event.location(params.location);
+  if (params.url !== undefined) event.url(params.url);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
+  }
+  return cal.toString();
+}
+
+export function buildEventCancelCalendar(
+  params: EventCalendarParams,
+  host: string,
+): string {
+  const cal = createCalendar(ICalCalendarMethod.CANCEL);
+  const event = cal.createEvent({
+    id: buildEventRegistrationUid(params.registrationId, host),
+    start: params.startTime,
+    end: params.endTime,
+    summary: `【中止】${params.eventTitle}`,
+    description: buildEventDescription(params),
+    status: ICalEventStatus.CANCELLED,
+    sequence: params.sequence,
+  });
+  if (params.location !== undefined) event.location(params.location);
+  if (
+    params.organizerName !== undefined &&
+    params.organizerEmail !== undefined
+  ) {
+    event.organizer({
+      name: params.organizerName,
+      email: params.organizerEmail,
+    });
+  }
+  return cal.toString();
+}
+
+// =============================================================================
+// iCal Feed (管理者購読)
+// =============================================================================
+
+export type ICalFeedParams = {
+  readonly calendarName: string;
+  readonly entries: readonly ICalFeedEntry[];
+};
+
+export function buildICalFeed(params: ICalFeedParams, _host: string): string {
+  const cal = createCalendar(ICalCalendarMethod.PUBLISH, params.calendarName);
+  for (const entry of params.entries) {
+    const event = cal.createEvent({
+      id: entry.uid,
+      start: entry.startTime,
+      end: entry.endTime,
+      summary: entry.summary,
+      description: entry.description,
+      status: ICalEventStatus.CONFIRMED,
+      busystatus: ICalEventBusyStatus.BUSY,
+      sequence: entry.sequence,
+    });
+    if (entry.location !== undefined) event.location(entry.location);
+  }
+  return cal.toString();
+}
+
+// =============================================================================
+// Add to Calendar URL Builders
+// =============================================================================
+
+function formatUtcCompact(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const min = String(date.getUTCMinutes()).padStart(2, "0");
+  const s = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${y}${m}${d}T${h}${min}${s}Z`;
+}
+
+export function buildGoogleCalendarUrl(event: CalendarEventInput): string {
   const params = new URLSearchParams({
     action: "TEMPLATE",
-    text: event.title,
-    dates: `${formatGoogleDate(event.startTime)}/${formatGoogleDate(event.endTime)}`,
+    text: event.summary,
+    dates: `${formatUtcCompact(event.startTime)}/${formatUtcCompact(event.endTime)}`,
     details: event.description,
   });
-
-  if (event.location) {
-    params.set("location", event.location);
-  }
-
+  if (event.location !== undefined) params.set("location", event.location);
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-/**
- * Google Calendar用の日時フォーマット（UTC）
- */
-function formatGoogleDate(date: Date): string {
-  return formatICalDate(date); // 同じフォーマットを使用
-}
-
-/**
- * Outlook (デスクトップ) 追加リンク
- * webcal://スキームでiCalファイルを開く
- */
-function generateOutlookLink(event: CalendarEvent): string {
-  const icalContent = generateICalContent(event);
-  // data URLをwebcal://で開く
-  // ただし、実際にはdata URLはwebcal://で使えないので、
-  // iCalダウンロードリンクを使う
-  return generateICalDataUrl(icalContent);
-}
-
-/**
- * Outlook Web (Outlook.com) 追加リンク
- */
-function generateOutlookWebLink(event: CalendarEvent): string {
+export function buildOutlookWebUrl(event: CalendarEventInput): string {
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
     rru: "addevent",
     startdt: event.startTime.toISOString(),
     enddt: event.endTime.toISOString(),
-    subject: event.title,
+    subject: event.summary,
     body: event.description,
   });
-
-  if (event.location) {
-    params.set("location", event.location);
-  }
-
+  if (event.location !== undefined) params.set("location", event.location);
   return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
 }
 
-/**
- * iCalファイルのData URL生成
- * Apple Calendarやその他のカレンダーアプリで使用可能
- */
-function generateICalDataUrl(icalContent: string): string {
-  // Base64エンコード
-  const base64 = Buffer.from(icalContent, "utf-8").toString("base64");
-  return `data:text/calendar;charset=utf-8;base64,${base64}`;
+export type BuildAddToCalendarUrlsParams = CalendarEventInput & {
+  readonly icsDownloadUrl: string;
+};
+
+export function buildAddToCalendarUrls(
+  params: BuildAddToCalendarUrlsParams,
+): AddToCalendarUrls {
+  return {
+    google: buildGoogleCalendarUrl(params),
+    outlookWeb: buildOutlookWebUrl(params),
+    ics: params.icsDownloadUrl,
+  };
 }
 
-// =============================================================================
-// Reservation-specific Helpers
-// =============================================================================
-
-/**
- * 予約情報からカレンダーイベントを生成
- */
-export function createReservationEvent(params: {
-  reservationId: string;
-  spaceName: string;
-  customerName: string;
-  startTime: Date;
-  endTime: Date;
-  location?: string;
-  notes?: string;
-}): CalendarEvent {
-  const formattedDate = format(params.startTime, "yyyy/MM/dd");
-  const formattedStart = format(params.startTime, "HH:mm");
-  const formattedEnd = format(params.endTime, "HH:mm");
-
-  const description = [
-    `予約ID: ${params.reservationId.slice(0, 8).toUpperCase()}`,
-    `スペース: ${params.spaceName}`,
-    `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,
-    `お名前: ${params.customerName}`,
-    params.notes ? `備考: ${params.notes}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return omitUndefined({
-    title: `【予約】${params.spaceName}`,
-    description,
-    location: params.location,
-    startTime: params.startTime,
-    endTime: params.endTime,
-  });
-}
-
-/**
- * iCalファイルのダウンロード用ファイル名を生成
- */
-export function generateICalFilename(
-  reservationId: string,
-  startTime: Date,
-): string {
-  const dateStr = format(startTime, "yyyyMMdd");
-  return `reservation-${reservationId.slice(0, 8)}-${dateStr}.ics`;
-}
+export type {
+  AddToCalendarUrls,
+  CalendarEventInput,
+  EventCalendarParams,
+  ICalFeedEntry,
+  ReservationCalendarParams,
+} from "./types";
+export { buildEventRegistrationUid, buildReservationUid } from "./uid";
