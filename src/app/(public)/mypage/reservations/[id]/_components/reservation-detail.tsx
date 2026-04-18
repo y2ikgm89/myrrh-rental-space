@@ -12,6 +12,9 @@ import {
 } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { formatSerializedDate } from "@/shared/lib/serialize";
+import { getAppUrl } from "@/shared/lib/constants";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical";
+import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -266,6 +269,27 @@ export function ReservationDetail({
               {deadlineSettings.cancellationDeadlineHours}時間前まで
             </li>
           </ul>
+        </div>
+      )}
+
+      {/* Add to Calendar (active reservations only) */}
+      {status !== "CANCELLED" && (
+        <div className="px-4 sm:px-6 py-4 border-t border-border">
+          <AddToCalendar
+            urls={buildAddToCalendarUrls({
+              summary: `【予約】${space.name}`,
+              description: [
+                `予約ID: ${id.slice(0, 8).toUpperCase()}`,
+                `スペース: ${space.name}`,
+                ...(notes != null && notes.length > 0
+                  ? [`備考: ${notes}`]
+                  : []),
+              ].join("\n"),
+              startTime: new Date(startTime),
+              endTime: new Date(endTime),
+              icsDownloadUrl: `${getAppUrl()}/api/calendar/reservation/${id}`,
+            })}
+          />
         </div>
       )}
 
