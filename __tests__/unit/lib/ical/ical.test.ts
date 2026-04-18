@@ -8,7 +8,7 @@ import {
   buildGoogleCalendarUrl,
   buildOutlookWebUrl,
   buildAddToCalendarUrls,
-} from "../index";
+} from "@/shared/lib/ical";
 
 const SAMPLE_RESERVATION = {
   reservationId: "abc-123",

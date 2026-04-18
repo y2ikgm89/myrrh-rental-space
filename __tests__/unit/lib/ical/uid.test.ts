@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { buildReservationUid, buildEventRegistrationUid } from "../uid";
+import {
+  buildReservationUid,
+  buildEventRegistrationUid,
+} from "@/shared/lib/ical/uid";
 
 describe("buildReservationUid", () => {
   test("returns stable uid for same reservationId", () => {

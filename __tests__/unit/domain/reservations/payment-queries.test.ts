@@ -140,6 +140,7 @@ describe("reservations/payment-queries", () => {
           totalPrice: 5000,
           notes: null,
           paymentStatus: PaymentStatus.PAID,
+          icsSequence: 0,
           customer: {
             email: "customer@example.com",
             lastName: "田中",
