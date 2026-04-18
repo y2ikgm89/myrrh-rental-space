@@ -20,13 +20,29 @@ interface ArticleLayoutProps {
   readonly banner?: ReactNode;
   /** When provided, renders a `bg-surface` breadcrumb band. */
   readonly breadcrumb?: ReadonlyArray<BreadcrumbItem>;
-  /** `null` = follow global sidebar settings. `true`/`false` = explicit override. */
+  /**
+   * `null` = follow global sidebar settings. `true`/`false` = explicit override.
+   * `toc` が渡されたときは BlogLayout を経由せず独自 2 カラムを組むため
+   * この値は無視される（TOC サイドバーが sidebar slot を占有する）。
+   */
   readonly showSidebar?: boolean | null;
   /** Article body width preset. Omitted = fluid width (no max-width). */
   readonly contentWidth?: LayoutWidth;
   readonly contentWidthCustom?: number | null;
   /** Append `<SiteCTA />` after the article (default `true`). */
   readonly showCta?: boolean;
+  /**
+   * Desktop sidebar (`lg+`) に配置する目次などの補助ナビゲーション。
+   * 指定されると BlogLayout の widget サイドバーを置き換える 2 カラム grid を組む。
+   */
+  readonly toc?: ReactNode;
+  /**
+   * 本文冒頭（breadcrumb の下、`<article>` 内の最上部）に挿入されるコンテンツ。
+   * モバイル用 `<details>` 折りたたみ目次などに使う（sidebar は `<lg` で末尾スタック
+   * されるため、モバイルでは冒頭配置が定石）。
+   * `toc` が desktop 側に置かれていても mobile 表示用は別途ここで渡す。
+   */
+  readonly mobileToc?: ReactNode;
 }
 
 /**
@@ -35,9 +51,9 @@ interface ArticleLayoutProps {
  * posts / news / preview 詳細ページの単一エントリポイント。
  * Breadcrumb 帯 → semantic `<article>` → optional sidebar → optional CTA。
  *
- * 階層は最小化されており、Container と article が直接ネストする
- * （contentClassName 重複ラッパー廃止、BlogLayout は sidebar 有効時のみ
- * grid wrapper を生成する）。
+ * 標準パスは `BlogLayout`（widget ベース）。`toc` prop が渡された場合のみ
+ * 独自 2 カラム grid（`lg:grid-cols-[1fr_280px]`）に切り替わり、TOC が
+ * sticky サイドバーとして配置される。
  */
 export function ArticleLayout({
   children,
@@ -48,6 +64,8 @@ export function ArticleLayout({
   contentWidth,
   contentWidthCustom = null,
   showCta = true,
+  toc,
+  mobileToc,
 }: ArticleLayoutProps): ReactElement {
   const widthStyles = contentWidth
     ? resolveWidthStyles({ width: contentWidth, customPx: contentWidthCustom })
@@ -58,6 +76,7 @@ export function ArticleLayout({
       className={cn(widthStyles?.className)}
       {...(widthStyles?.style && { style: widthStyles.style })}
     >
+      {mobileToc ? <div className="lg:hidden">{mobileToc}</div> : null}
       {children}
     </article>
   );
@@ -74,7 +93,14 @@ export function ArticleLayout({
         </div>
       ) : null}
       <Container className="pt-10 pb-[var(--spacing-section)] md:pt-14">
-        <BlogLayout showSidebar={showSidebar}>{article}</BlogLayout>
+        {toc ? (
+          <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
+            <div className="min-w-0">{article}</div>
+            <aside className="hidden lg:block">{toc}</aside>
+          </div>
+        ) : (
+          <BlogLayout showSidebar={showSidebar}>{article}</BlogLayout>
+        )}
       </Container>
       {showCta ? <SiteCTA /> : null}
     </>

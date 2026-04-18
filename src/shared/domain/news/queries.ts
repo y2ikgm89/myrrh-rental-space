@@ -28,6 +28,7 @@ const newsDetailSelect = {
   slug: true,
   title: true,
   contentHtml: true,
+  contentJson: true,
   publishedAt: true,
   contentWidth: true,
   contentWidthCustom: true,

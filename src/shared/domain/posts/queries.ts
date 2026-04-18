@@ -40,6 +40,7 @@ const postDetailSelect = {
   title: true,
   excerpt: true,
   contentHtml: true,
+  contentJson: true,
   thumbnailUrl: true,
   publishedAt: true,
   contentWidth: true,

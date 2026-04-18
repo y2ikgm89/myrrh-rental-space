@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { NewsArticleJsonLd } from "@/public/components/seo/json-ld";
 import { ArticleLayout } from "@/public/components/layouts/article-layout";
 import { ArticleHeader } from "@/public/components/layouts/article-header";
+import { ArticleTableOfContents } from "@/public/components/article/article-table-of-contents";
 import {
   generateArticleMetadata,
   getSeoSettings,
@@ -13,7 +14,12 @@ import { ArticleFooter } from "@/public/components/ui/article-footer";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { getPublishedNewsItem } from "@/shared/domain/news/queries";
 import { getNewsLayoutSettings } from "@/shared/domain/settings/queries/site";
+import { getSidebarSettings } from "@/shared/domain/settings/queries/sidebar";
 import { toISOString } from "@/shared/lib/serialize";
+import { extractHeadings } from "@/shared/lib/lexical/extract-headings";
+
+/** 目次を表示するための最低 h2 数。これ未満なら TOC を非表示にする。 */
+const TOC_MIN_H2 = 2;
 
 type PublishedNewsItem = NonNullable<
   Awaited<ReturnType<typeof getPublishedNewsItem>>
@@ -52,10 +58,17 @@ export async function NewsDetailPageContent({
 }: {
   newsItem: PublishedNewsItem;
 }): Promise<ReactElement> {
-  const layoutConfig = await getNewsLayoutSettings(newsItem.id);
+  const [layoutConfig, sidebarSettings] = await Promise.all([
+    getNewsLayoutSettings(newsItem.id),
+    getSidebarSettings(),
+  ]);
   const baseUrl = getBaseUrl();
   const articleUrl = `${baseUrl}${newsItem.url}`;
   const datePublished = toISOString(newsItem.publishedAt) ?? "";
+
+  const headings = extractHeadings(newsItem.contentJson);
+  const h2Count = headings.filter((h) => h.level === 2).length;
+  const showToc = sidebarSettings.tocEnabled && h2Count >= TOC_MIN_H2;
 
   return (
     <ArticleLayout
@@ -76,6 +89,12 @@ export async function NewsDetailPageContent({
       ]}
       contentWidth={layoutConfig.contentWidth}
       contentWidthCustom={layoutConfig.contentWidthCustom}
+      {...(showToc && {
+        toc: <ArticleTableOfContents variant="sidebar" headings={headings} />,
+        mobileToc: (
+          <ArticleTableOfContents variant="mobile" headings={headings} />
+        ),
+      })}
     >
       <ArticleHeader
         title={newsItem.title}
