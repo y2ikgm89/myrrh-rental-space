@@ -90,8 +90,11 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **SSoT 重複検出の grep**: symbol 名（`ROLE_LABELS` 等）だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep 必須。狭い正規表現（`ROLE_LABELS.*=\s*{$`）は同一行に開き波括弧がないと見落とす
 - **SSoT ラベル監査の網羅チェック**: 全 enum の日本語ラベル（`"保留中"` / `"公開中"` / `"下書き"` / `"未払い"` 等）を `_components/` + `_shared/` 配下で grep し、SSOT 定数以外のヒットがゼロであることを確認。`status-badges.tsx` / `*Filters.tsx` / `*Form.tsx` / `*Detail.tsx` / `*-helpers.ts` が典型的な重複箇所
 - **大規模監査の前提**: `bun run validate` が exit 0 なら compiler/linter 基準ではクリーン。監査で大量違反が報告されたら先行実行して基準合わせる
+- **パススルー関数検出 grep** — 「何も追加しない async wrapper」（CLAUDE.md 禁止事項）を audit する際は `grep -rnE "async function [a-zA-Z]+\(\)[^{]*\{\s*return [a-zA-Z]+\(\);?\s*\}" src/` で単一行パススルーを検出。複数行整形された場合は `import { X as XQuery }` alias + `return XQuery()` パターンを目視確認（今回 `@/shared/lib/google-calendar/settings.ts` の `getGoogleCalendarSettings` / `getTwoWaySyncSettings` で検出）
 - **Pre-existing test failure の切り分け**: `bun run test:unit` で既存 failure に混じった新規 failure を見極めるには `git stash -u && bun test <failing-file> && git stash pop` で HEAD 時点の fail 数と比較。変更前から fail していたものは自分の変更起因ではないため deferred 扱い可
 - **公開一覧ページ新設時**: ① `page.tsx` + `loading.tsx` + `error.tsx` ② `generatePageMetadata(slug)` + `BreadcrumbJsonLd` ③ `getPageSectionsWithFallback(slug)` で hero/trailing sections ④ trailing sections から同種セクション（`post-list` 等）+ `cta` を除外 ⑤ `default-page-sections.ts` + `page.ts` SYSTEM_PAGES にスラッグ追加 ⑥ seed.ts の Page レコード ⑦ sitemap.ts 確認 ⑧ ナビゲーション（seed NavigationItem）確認 ⑨ E2E fixtures の urls 追加 ⑩ layout.tsx の RSS `alternates` 追加（該当時）
+- **テストファイルの配置は top-level `__tests__/` のみ** — `src/**/__tests__/` 配置禁止（`tsconfig.test.json` の include で `bun:test` 型が解決されず TS2307 になる）。`src/shared/lib/foo.ts` → `__tests__/unit/lib/foo.test.ts` の対応付け（→ `test-quality.md` §ファイル配置）
+- **schema.prisma 編集 commit 後は `prisma/migrations/` 側も同時 commit 必須** — schema 変更のみ commit されて migration SQL が untracked 残存すると `prisma migrate deploy` が CI/prod で fail する silent drift。`bunx --bun prisma migrate dev` 後は `git status prisma/migrations/` で untracked なしを確認してから `git add prisma/schema.prisma prisma/migrations/<new>` で両方 stage する
 
 ---
 

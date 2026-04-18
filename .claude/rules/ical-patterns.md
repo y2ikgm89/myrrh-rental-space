@@ -1,3 +1,22 @@
+---
+paths:
+  - src/shared/lib/ical/**
+  - src/shared/domain/ical/**
+  - src/app/api/calendar/**
+  - src/app/api/ical/**
+  - src/shared/lib/email/reservation-emails*
+  - src/shared/lib/email/event-emails*
+  - src/shared/lib/email/reminder-emails*
+  - src/shared/emails/reservation-*
+  - src/shared/emails/event-registration-*
+  - src/app/(public)/mypage/reservations/**
+  - src/app/(public)/mypage/events/**
+  - src/app/(public)/events/[slug]/**
+  - src/app/(public)/_shared/components/ui/add-to-calendar*
+  - __tests__/unit/lib/ical/**
+  - __tests__/integration/api/calendar-*
+---
+
 # iCal / Add to Calendar パターンルール
 
 > `ical-generator` v10 + `@touch4it/ical-timezones` / RFC 5545 準拠 / Asia/Tokyo VTIMEZONE

@@ -18,7 +18,8 @@ paths:
 ## 共通原則（公式ベストプラクティス準拠）
 
 - **リトライ対象**: 429 / 500 / 503 + ネットワークエラー（`ECONNRESET` / `ETIMEDOUT` / `EAI_AGAIN` / `ENOTFOUND` / `ECONNREFUSED`）
-- **即時失敗**: 400 / 401 / 403 / 404 / 409 / 422（公式推奨: 再試行しない。`invalid_api_key` / `validation_error` 等）
+- **403 の扱いは `reason` 検査が必要** — 公式仕様で `rateLimitExceeded` / `userRateLimitExceeded` / `quotaExceeded` reason は 429 と機能的に同等（Google Calendar API 公式: _"rateLimitExceeded errors can return either 403 or 429 error codes—functionally similar, respond with exponential backoff"_）。HTTP status だけで判定せず `error.errors[*].reason` と `error.response.data.error.errors[*].reason` 両方を検査する（参照実装: `@/shared/lib/google-calendar/retry.ts` の `extractFirstErrorReason`）
+- **即時失敗**: 400 / 401 / 403 (`forbidden` 等 usageLimits 以外) / 404 / 409 / 422（公式推奨: 再試行しない。`invalid_api_key` / `validation_error` 等）
 - **Backoff**: `INITIAL_BACKOFF_MS * 2^attempt + jitter`（例: 1s → 2s → 4s + 0-200ms jitter）
 - **最大リトライ回数**: 3（公式推奨 3-5 の下限）
 - **冪等性**: mutation API には idempotency key / 重複防止識別子を付与
