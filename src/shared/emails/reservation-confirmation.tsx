@@ -10,12 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-
-type AddToCalendarLinks = {
-  google: string;
-  outlookWeb: string;
-  ics: string;
-};
+import type { AddToCalendarUrls } from "@/shared/lib/ical";
 
 type Props = {
   customerName: string;
@@ -26,7 +21,7 @@ type Props = {
   totalPrice: string;
   reservationId: string;
   notes?: string;
-  addToCalendarLinks?: AddToCalendarLinks;
+  addToCalendarLinks?: AddToCalendarUrls;
 };
 
 export function ReservationConfirmationEmail({

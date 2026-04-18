@@ -12,6 +12,7 @@ import {
 } from "@react-email/components";
 import { RESERVATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
+import type { AddToCalendarUrls } from "@/shared/lib/ical";
 
 type StatusBadgeColors = {
   color: string;
@@ -31,12 +32,6 @@ const DEFAULT_BADGE_COLORS: StatusBadgeColors = {
   backgroundColor: "#6b7280",
 };
 
-type AddToCalendarLinks = {
-  google: string;
-  outlookWeb: string;
-  ics: string;
-};
-
 type ReservationStatusChangedEmailProps = {
   customerName: string;
   spaceName: string;
@@ -47,7 +42,7 @@ type ReservationStatusChangedEmailProps = {
   reservationId: string;
   newStatus: string;
   location?: string;
-  addToCalendarLinks?: AddToCalendarLinks;
+  addToCalendarLinks?: AddToCalendarUrls;
 };
 
 export function ReservationStatusChangedEmail({
