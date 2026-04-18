@@ -19,6 +19,7 @@ import {
   type ReservationCalendarParams,
 } from "@/shared/lib/ical";
 import { getAppHost } from "@/shared/lib/constants";
+import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -65,6 +66,7 @@ export async function GET(
 
     // 5. ICS 生成
     const host = getAppHost();
+    const organizer = await getIcalOrganizer();
     const calendarParams: ReservationCalendarParams = {
       reservationId: reservation.id,
       spaceName: reservation.spaceName,
@@ -76,6 +78,8 @@ export async function GET(
         ? { location: reservation.location }
         : {}),
       ...(reservation.notes != null ? { notes: reservation.notes } : {}),
+      organizerName: organizer.name,
+      organizerEmail: organizer.email,
     };
 
     const isCancelled = reservation.status === "CANCELLED";

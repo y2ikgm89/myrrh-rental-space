@@ -19,6 +19,7 @@ import {
   getCalendarEmailSettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
+import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -67,6 +68,7 @@ export async function sendEventRegistrationConfirmation(
   const calendarSettings = await getCalendarEmailSettings();
   const appUrl = getAppUrl();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -77,6 +79,8 @@ export async function sendEventRegistrationConfirmation(
     ...(data.location !== undefined ? { location: data.location } : {}),
     numberOfPeople: data.numberOfPeople,
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
@@ -170,6 +174,7 @@ export async function sendEventRegistrationCancelled(
 
   const calendarSettings = await getCalendarEmailSettings();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     registrationId: data.registrationId,
@@ -180,6 +185,8 @@ export async function sendEventRegistrationCancelled(
     ...(data.location !== undefined ? { location: data.location } : {}),
     numberOfPeople: data.numberOfPeople,
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
@@ -312,6 +319,7 @@ export async function sendEventCancelledToAllParticipants(
 
   const calendarSettings = await getCalendarEmailSettings();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const results = await Promise.allSettled(
     event.registrations.map((registration) => {
@@ -327,6 +335,8 @@ export async function sendEventCancelledToAllParticipants(
             ...(event.location !== null ? { location: event.location } : {}),
             numberOfPeople: registration.numberOfPeople,
             sequence: registration.icsSequence + 1,
+            organizerName: organizer.name,
+            organizerEmail: organizer.email,
           });
           attachments = [
             {
@@ -421,6 +431,7 @@ export async function sendEventUpdatedToAllParticipants(
 
   const calendarSettings = await getCalendarEmailSettings();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const results = await Promise.allSettled(
     event.registrations.map((registration) => {
@@ -436,6 +447,8 @@ export async function sendEventUpdatedToAllParticipants(
             ...(event.location !== null ? { location: event.location } : {}),
             numberOfPeople: registration.numberOfPeople,
             sequence: registration.icsSequence + 1,
+            organizerName: organizer.name,
+            organizerEmail: organizer.email,
           });
           attachments = [
             {

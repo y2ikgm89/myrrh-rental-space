@@ -4,6 +4,7 @@ import { ja } from "date-fns/locale";
 import { ReservationReminderEmail } from "@/shared/emails/reservation-reminder";
 import { getSeoSettings } from "@/shared/domain/settings/queries/site";
 import { getCalendarEmailSettings } from "@/shared/domain/settings/queries/notification";
+import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { SITE_DEFAULTS, getAppHost } from "../constants";
 import {
   ErrorCategory,
@@ -31,6 +32,7 @@ export async function sendReservationReminderEmail(
 
   const calendarSettings = await getCalendarEmailSettings();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -41,6 +43,8 @@ export async function sendReservationReminderEmail(
     ...(data.location !== undefined ? { location: data.location } : {}),
     ...(data.notes !== undefined ? { notes: data.notes } : {}),
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   let attachments: { filename: string; content: Buffer }[] | undefined;

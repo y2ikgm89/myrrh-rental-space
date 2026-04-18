@@ -62,6 +62,24 @@ describe("buildReservationCalendar", () => {
     );
     expect(ics).toContain("SEQUENCE:3");
   });
+
+  test("includes ORGANIZER when organizerName + organizerEmail provided", () => {
+    const ics = buildReservationCalendar(SAMPLE_RESERVATION, "example.com");
+    const unfolded = ics.replace(/\r\n /g, "");
+    expect(unfolded).toContain("ORGANIZER");
+    expect(unfolded).toContain("Myrrh Rental Space");
+    expect(unfolded).toContain("noreply@example.com");
+  });
+
+  test("omits ORGANIZER when organizerName or organizerEmail missing", () => {
+    const {
+      organizerName: _n,
+      organizerEmail: _e,
+      ...rest
+    } = SAMPLE_RESERVATION;
+    const ics = buildReservationCalendar(rest, "example.com");
+    expect(ics).not.toContain("ORGANIZER");
+  });
 });
 
 describe("buildReservationCancelCalendar", () => {

@@ -2,7 +2,7 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS, getAppHost } from "@/shared/lib/constants";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -212,4 +212,46 @@ export async function getSocialLinksForFooter(): Promise<
     showOnDesktop: link.showOnDesktop,
     showOnMobile: link.showOnMobile,
   }));
+}
+
+/**
+ * iCal ICS の ORGANIZER フィールド用設定を返す。
+ *
+ * RFC 5545 ORGANIZER は必須ではないが、設定するとカレンダーアプリ上で
+ * 組織名として表示される。`Settings.businessName` / `Settings.email` を正とし、
+ * 未設定時は `"Myrrh Rental Space"` / `noreply@<host>` にフォールバック。
+ */
+export async function getIcalOrganizer(): Promise<{
+  name: string;
+  email: string;
+}> {
+  "use cache";
+  cacheLife(CACHE_LIFE.STATIC_SETTINGS);
+  cacheTag(CACHE_TAGS.BUSINESS_SETTINGS);
+
+  const settings = await safeFetch({
+    fetch: () =>
+      prisma.settings.findUnique({
+        where: { id: "singleton" },
+        select: {
+          businessName: true,
+          email: true,
+        },
+      }),
+    fallback: null,
+    category: ErrorCategory.DATABASE,
+    severity: ErrorSeverity.LOW,
+    operationName: "getIcalOrganizer",
+  });
+
+  const name =
+    settings?.businessName && settings.businessName.length > 0
+      ? settings.businessName
+      : "Myrrh Rental Space";
+  const email =
+    settings?.email && settings.email.length > 0
+      ? settings.email
+      : `noreply@${getAppHost()}`;
+
+  return { name, email };
 }

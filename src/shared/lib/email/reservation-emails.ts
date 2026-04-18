@@ -17,6 +17,7 @@ import {
   getCalendarEmailSettings,
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
+import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import { formatPrice } from "@/shared/lib/pricing/format";
 import { RESERVATION_ACTION_LABELS } from "@/shared/lib/validations/enums/helpers";
 import { getAdminUrl, getAppHost, getAppUrl } from "../constants";
@@ -54,6 +55,7 @@ export async function sendReservationConfirmationEmail(
   const calendarSettings = await getCalendarEmailSettings();
   const appUrl = getAppUrl();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -64,6 +66,8 @@ export async function sendReservationConfirmationEmail(
     ...(data.location !== undefined ? { location: data.location } : {}),
     ...(data.notes !== undefined ? { notes: data.notes } : {}),
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   const addToCalendarLinks = calendarSettings.addToCalendarLinksEnabled
@@ -147,6 +151,7 @@ export async function sendReservationCancelledEmail(
 
   const calendarSettings = await getCalendarEmailSettings();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const calendarParams = omitUndefined({
     reservationId: data.reservationId,
@@ -157,6 +162,8 @@ export async function sendReservationCancelledEmail(
     ...(data.location !== undefined ? { location: data.location } : {}),
     ...(data.notes !== undefined ? { notes: data.notes } : {}),
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   let attachments: { filename: string; content: Buffer }[] | undefined;
@@ -222,6 +229,7 @@ export async function sendReservationStatusChangedEmail(
   const calendarSettings = await getCalendarEmailSettings();
   const appUrl = getAppUrl();
   const host = getAppHost();
+  const organizer = await getIcalOrganizer();
 
   const isCancelled =
     data.newStatus === "キャンセル" || data.newStatus === "CANCELLED";
@@ -234,6 +242,8 @@ export async function sendReservationStatusChangedEmail(
     endTime: data.endTime,
     ...(data.location !== undefined ? { location: data.location } : {}),
     sequence: data.icsSequence,
+    organizerName: organizer.name,
+    organizerEmail: organizer.email,
   });
 
   const addToCalendarLinks =

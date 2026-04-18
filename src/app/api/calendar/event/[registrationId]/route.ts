@@ -19,6 +19,7 @@ import {
   type EventCalendarParams,
 } from "@/shared/lib/ical";
 import { getAppHost } from "@/shared/lib/constants";
+import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
 import {
   ErrorCategory,
   ErrorSeverity,
@@ -68,6 +69,7 @@ export async function GET(
 
     // 5. ICS 生成
     const host = getAppHost();
+    const organizer = await getIcalOrganizer();
     const calendarParams: EventCalendarParams = {
       registrationId: registration.id,
       eventTitle: registration.eventTitle,
@@ -79,6 +81,8 @@ export async function GET(
       ...(registration.location != null
         ? { location: registration.location }
         : {}),
+      organizerName: organizer.name,
+      organizerEmail: organizer.email,
     };
 
     const isCancelled = registration.status === "CANCELLED";
