@@ -19,6 +19,8 @@ import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
 import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
 import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical";
+import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 
 interface PageProps {
@@ -153,6 +155,18 @@ export default async function EventDetailPage({
                 </div>
               ) : null}
             </div>
+
+            <AddToCalendar
+              variant="public"
+              urls={buildAddToCalendarUrls({
+                summary: event.title,
+                description: event.description ?? event.title,
+                startTime: new Date(event.startTime),
+                endTime: new Date(event.endTime),
+                ...(event.location != null ? { location: event.location } : {}),
+                icsDownloadUrl: "",
+              })}
+            />
 
             {event.description ? (
               <div className="space-y-2">
