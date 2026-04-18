@@ -865,6 +865,10 @@ return { node, after: () => [] };
 - **`importDOM` で `getAttribute()` → AccentColor 変換に型ガード必須** — `element.getAttribute("data-color") ?? "default"` の型は `string`（`AccentColor` ではない）。必ず `isAccentColor(colorAttr) ? colorAttr : "default"` でガードする
 - **テーブルセル内の `mb-4` が余分な縦幅を生む** — HTML 仕様でテーブルセル内はマージン相殺が起きず、`ParagraphNode` の `mb-4`（16px）がそのまま余白になる。`lexical-content.css` に `table :is(td, th) > :last-child { margin-bottom: 0; }` を追加（unlayered CSS は Tailwind utilities より優先）
 - **`theme.ts` の `w-full` と `fixedLayout` state は競合する** — テーマクラスの `w-full` がインライン style による `fixedLayout` 制御を上書きする。テーマから `w-full` を削除し、幅制御は `CustomTableNode._applyAttributes()` の `fixedLayout` state に一本化すること
+- **constructor 必須引数を持つ組み込みノード拡張時は `new CustomNode(arg)` 直接使用** — `$create(Klass)` は引数を渡せず `__tag` 等 private フィールドが undefined になる。`(node as unknown as { __tag }).__tag = tag` で後付けするのは型アサーション禁止違反。Lexical 公式 `$createHeadingNode` も `new HeadingNode(tag)` パターンを採用（`@lexical/rich-text`）。`CustomHeadingNode` / `CustomTableNode` が参照実装
+- **`registerNodeTransform` コールバック引数は公式型 `(node: T) => void` に準拠** — document 全体を走査して重複解決する等で引数を使わない場合でも `(_node: T) => {...}` で明示する（TypeScript の parameter omission で実行時は動くが、型要件明示がクリーン）
+- **Node Transform の fallback 値は deterministic 必須** — `crypto.randomUUID()` / `Math.random()` 等ランダム値を transform 内で生成すると、再実行ごとに別値 → `$setState` 差分検出 → 再び dirty で無限ループ。`used.size + 1` や position ベースの deterministic fallback を使う（例: `section-${used.size + 1}`）。`HeadingAnchorPlugin` 参照実装
+- **Prisma JSON フィールドは headless 外でも JSON 直接 traverse が可能** — `@lexical/headless` + `createHeadlessEditor` は Node 環境で動くが全ノード登録が必要。公開側の単純な heading 抽出等は **`contentJson` を JSON.parse して再帰 traverse**（`unknown` 受付）する方が軽量。`extractHeadings` (`@/shared/lib/lexical/extract-headings`) が参照実装
 
 ### createDOM と exportDOM のタグ不一致は許容される
 
