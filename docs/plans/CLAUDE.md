@@ -50,7 +50,7 @@ ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null | head -10
 
 `設計中` → `設計承認済み` → `実装中` → `完了`
 
-完了時は計画ファイルと `README.md` の両方を更新（`README.md` には `✅` を付与）。
+完了時は計画ファイル先頭に `> **ステータス**: ✅ 完了（YYYY-MM-DD、commit `<start>..<end>`）` を追記し、`README.md` にも `✅` を付与。commit range があると後続セッション・`plan-drift-detector` subagent が plan と実装の対応を追跡しやすい。
 
 ## 実行
 
