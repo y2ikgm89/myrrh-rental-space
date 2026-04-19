@@ -18,6 +18,7 @@ import {
   INQUIRY_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   POST_STATUS_LABELS,
+  PUBLISH_LABELS,
   REGISTRATION_STATUS_LABELS,
   RESERVATION_STATUS_LABELS,
   AUDIT_ACTION_LABELS,
@@ -160,6 +161,19 @@ export function NewsStatusBadge({ isPublished }: { isPublished: boolean }) {
   const config = isPublished
     ? newsPublishConfig.published
     : newsPublishConfig.draft;
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+}
+
+// Page は isPublished (boolean) 方式。News と異なり「下書き」ではなく「非公開」を使う
+const pagePublishConfig = {
+  published: { label: PUBLISH_LABELS.published, variant: "success" },
+  unpublished: { label: PUBLISH_LABELS.unpublished, variant: "secondary" },
+} satisfies Record<string, { label: string; variant: BadgeVariant }>;
+
+export function PageStatusBadge({ isPublished }: { isPublished: boolean }) {
+  const config = isPublished
+    ? pagePublishConfig.published
+    : pagePublishConfig.unpublished;
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 

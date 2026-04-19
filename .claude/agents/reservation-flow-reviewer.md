@@ -9,6 +9,7 @@ disallowedTools:
   - Edit
   - NotebookEdit
 model: sonnet
+memory: project
 ---
 
 You are a reservation flow integrity reviewer for the Myrrh Rental Space project.

@@ -3,32 +3,37 @@
 /**
  * ページ一覧テーブル
  *
- * チェックボックス付きのインタラクティブテーブル
- * ホームページは Page レコードとして通常表示
+ * カラム順（admin-ui-patterns.md §テーブルカラム順序、ワークフロー系例外）:
+ *   checkbox → ステータス → タイトル → 種別 → スラッグ(sm+) → セクション数(md+) → 更新日時(md+) → 操作
+ *
+ * - 空状態は `EmptyState` を表示し CreatePageDialog を起動する
+ * - 列ヘッダーソートは PageTableHeader + nuqs `useQueryStates` で URL 同期
  */
 
 import { useState } from "react";
 import {
+  Badge,
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
-} from "@/admin/components/ui/table";
-import { Badge } from "@/admin/components/ui/badge";
+} from "@/admin/components/ui";
+import { EmptyState } from "@/admin/components/EmptyState";
+import { PageStatusBadge } from "@/admin/components/status-badges";
 import { Pagination } from "@/admin/components/ui/Pagination";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { PageData } from "@/shared/domain/pages/types";
 import { PageActions } from "./PageActions";
 import { BulkActions } from "./BulkActions";
+import { CreatePageDialog } from "./CreatePageDialog";
+import { PageTableHeader } from "./PageTableHeader";
 
-interface PageListTableProps {
+type PageListTableProps = {
   pages: PageData[];
   total: number;
   currentPage: number;
   perPage: number;
-}
+};
 
 export function PageListTable({
   pages,
@@ -37,6 +42,28 @@ export function PageListTable({
   perPage,
 }: PageListTableProps) {
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  // 空状態（フィルタで絞り込んだ結果が 0 件の場合も含む）
+  if (pages.length === 0) {
+    return (
+      <>
+        <EmptyState
+          message="ページがありません"
+          description="新規作成するか、フィルター条件を変更してください。"
+          action={{
+            label: "新規ページ作成",
+            onClick: () => setCreateOpen(true),
+          }}
+        />
+        <CreatePageDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          showTrigger={false}
+        />
+      </>
+    );
+  }
 
   const selectableSlugs = pages
     .filter((p) => !p.isSystemPage)
@@ -67,28 +94,10 @@ export function PageListTable({
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    className="rounded border-border"
-                    aria-label="全選択"
-                  />
-                </TableHead>
-                <TableHead className="hidden sm:table-cell">スラッグ</TableHead>
-                <TableHead>タイトル</TableHead>
-                <TableHead className="hidden md:table-cell">種別</TableHead>
-                <TableHead>ステータス</TableHead>
-                <TableHead className="hidden md:table-cell">
-                  セクション数
-                </TableHead>
-                <TableHead className="hidden md:table-cell">更新日時</TableHead>
-                <TableHead className="w-40 text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
+            <PageTableHeader
+              allSelected={allSelected}
+              onToggleAll={toggleAll}
+            />
             <TableBody>
               {pages.map((page) => {
                 const isHomepage = page.slug === "home";
@@ -109,35 +118,27 @@ export function PageListTable({
                         />
                       )}
                     </TableCell>
-                    <TableCell className="hidden font-mono text-sm sm:table-cell">
-                      {isHomepage ? "/" : `/${page.slug}`}
+                    <TableCell className="whitespace-nowrap">
+                      <PageStatusBadge isPublished={page.isPublished} />
                     </TableCell>
                     <TableCell className="font-medium">{page.title}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       {page.isSystemPage ? (
-                        <Badge variant="outline" className="text-xs">
-                          システム
-                        </Badge>
+                        <Badge variant="outline">システム</Badge>
                       ) : (
-                        <Badge variant="default" className="text-xs">
-                          カスタム
-                        </Badge>
+                        <Badge variant="default">カスタム</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {page.isPublished ? (
-                        <Badge variant="success">公開中</Badge>
-                      ) : (
-                        <Badge variant="secondary">非公開</Badge>
-                      )}
+                    <TableCell className="hidden font-mono text-sm text-muted-foreground sm:table-cell">
+                      {isHomepage ? "/" : `/${page.slug}`}
                     </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                    <TableCell className="hidden text-right text-muted-foreground md:table-cell">
                       {page.sectionCount ?? 0}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatDateTimeShort(page.updatedAt)}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell>
                       <PageActions
                         slug={page.slug}
                         title={page.title}
@@ -155,14 +156,12 @@ export function PageListTable({
         </div>
       </div>
 
-      {/* ページネーション */}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         total={total}
       />
 
-      {/* 一括操作バー */}
       <BulkActions
         selectedSlugs={selectedSlugs}
         onClear={() => setSelectedSlugs([])}

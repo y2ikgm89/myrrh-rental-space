@@ -256,13 +256,36 @@ export async function loadAdminCommentSearchParams(
 // 管理画面: 固定ページ一覧
 // ============================================================
 
+const adminPageStatusFilterValues = ["all", "published", "draft"] as const;
+export type AdminPageStatusFilter =
+  (typeof adminPageStatusFilterValues)[number];
+const adminPageStatusFilterSet = new Set<string>(adminPageStatusFilterValues);
+export function isAdminPageStatusFilter(
+  value: string,
+): value is AdminPageStatusFilter {
+  return adminPageStatusFilterSet.has(value);
+}
+
+const adminPageTypeFilterValues = ["all", "system", "custom"] as const;
+export type AdminPageTypeFilter = (typeof adminPageTypeFilterValues)[number];
+const adminPageTypeFilterSet = new Set<string>(adminPageTypeFilterValues);
+export function isAdminPageTypeFilter(
+  value: string,
+): value is AdminPageTypeFilter {
+  return adminPageTypeFilterSet.has(value);
+}
+
+const adminPageSortByValues = ["updatedAt", "title", "slug"] as const;
+export type AdminPageSortBy = (typeof adminPageSortByValues)[number];
+
 export const adminPageSearchParamsParsers = {
   q: parseAsQuery,
-  status: parseAsString.withDefault("all"),
-  type: parseAsString.withDefault("all"),
+  status: parseAsStringLiteral(adminPageStatusFilterValues).withDefault("all"),
+  type: parseAsStringLiteral(adminPageTypeFilterValues).withDefault("all"),
   page: parseAsPage,
   perPage: parseAsInteger.withDefault(20),
-  sort: parseAsSortOrder,
+  sortBy: parseAsStringLiteral(adminPageSortByValues).withDefault("updatedAt"),
+  sortOrder: parseAsSortOrder,
 };
 
 const adminPageSearchParamsCache = createSearchParamsCache(

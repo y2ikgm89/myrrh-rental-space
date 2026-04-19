@@ -4,7 +4,7 @@ description: >
   公開ページをスキャフォールド生成する（Dynamic Section Architecture）。
   Page レコード + DEFAULT_PAGE_SECTIONS エントリ + page.tsx テンプレート。
   新規公開ページ追加時に使用。
-  引数: ページキー（英語 kebab-case, 例: gallery, pricing, staff）
+argument-hint: <page-slug-kebab-case>
 ---
 
 # 公開ページ スキャフォールド（Dynamic Section Architecture）

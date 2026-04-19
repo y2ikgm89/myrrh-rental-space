@@ -1,8 +1,11 @@
 /**
  * Resend API Key Management
  *
- * Resend接続テストと設定管理
+ * Resend接続テストと設定管理。Resend SDK は Node.js 専用のため
+ * server-only で保護し、Client Component への混入をビルド時に検出する。
  */
+
+import "server-only";
 
 import { Resend } from "resend";
 import type { ApiKeyTestResult } from "@/admin/types/api-keys";

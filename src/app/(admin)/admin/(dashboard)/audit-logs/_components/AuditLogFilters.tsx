@@ -48,7 +48,30 @@ export function AuditLogFilters() {
   };
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground">期間:</span>
+        <Input
+          type="date"
+          aria-label="開始日"
+          value={params.dateFrom}
+          onChange={(e) =>
+            void setParams({ dateFrom: e.target.value || null, page: 1 })
+          }
+          className="w-[160px]"
+        />
+        <span className="text-sm text-muted-foreground">〜</span>
+        <Input
+          type="date"
+          aria-label="終了日"
+          value={params.dateTo}
+          onChange={(e) =>
+            void setParams({ dateTo: e.target.value || null, page: 1 })
+          }
+          className="w-[160px]"
+        />
+      </div>
+
       <Select
         value={params.action || "ALL"}
         onValueChange={(value) =>
@@ -84,26 +107,6 @@ export function AuditLogFilters() {
           ))}
         </SelectContent>
       </Select>
-
-      <Input
-        type="date"
-        value={params.dateFrom}
-        onChange={(e) =>
-          void setParams({ dateFrom: e.target.value || null, page: 1 })
-        }
-        className="w-[160px]"
-        placeholder="開始日"
-      />
-
-      <Input
-        type="date"
-        value={params.dateTo}
-        onChange={(e) =>
-          void setParams({ dateTo: e.target.value || null, page: 1 })
-        }
-        className="w-[160px]"
-        placeholder="終了日"
-      />
 
       {hasFilters && (
         <Button variant="ghost" onClick={handleReset}>

@@ -21,7 +21,7 @@ import { REGISTRATION_STATUS_LABELS } from "@/shared/lib/validations/enums/helpe
 import { isValidRegistrationStatus } from "@/shared/lib/validations/enums/guards";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { getAppUrl } from "@/shared/lib/constants";
-import { buildAddToCalendarUrls } from "@/shared/lib/ical";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 
 // ---------------------------------------------------------------------------

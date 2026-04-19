@@ -3,97 +3,93 @@
 /**
  * ページ管理フィルター
  *
- * 検索・ステータス・種別フィルターをnuqsで管理
+ * 標準フィルターバーパターン（admin-ui-patterns.md §標準フィルターバー順序）:
+ *   検索 | ステータス | 種別
+ *
+ * - `useDebouncedCallback` で検索入力を 300ms debounce
+ * - Select の sentinel は parser のデフォルト値 `"all"` と一致
+ * - 状態は `useQueryStates({ history: "push", shallow: false })` で URL 同期
  */
 
-import { useEffect, useRef } from "react";
 import { useQueryStates } from "nuqs";
 import { IconSearch } from "@tabler/icons-react";
 import {
   Input,
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/admin/components/ui";
-import { adminPageSearchParamsParsers } from "@/shared/lib/nuqs";
+import { useDebouncedCallback } from "@/admin/hooks";
+import {
+  adminPageSearchParamsParsers,
+  isAdminPageStatusFilter,
+  isAdminPageTypeFilter,
+} from "@/shared/lib/nuqs";
 
 export function PageFilters() {
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
     history: "push",
     shallow: false,
   });
 
-  function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      void setParams({ q: value || null, page: 1 });
-    }, 300);
-  }
-
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
+  const setSearchDebounced = useDebouncedCallback(
+    (value: string) => void setParams({ q: value || null, page: 1 }),
+    300,
+  );
 
   return (
-    <div className="flex flex-wrap gap-2 items-center">
-      {/* Search */}
-      <div className="relative">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="relative flex-1">
         <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="search"
           placeholder="タイトル・スラッグで検索..."
           defaultValue={params.q}
-          onChange={handleSearchChange}
-          className="w-56 pl-9"
+          onChange={(e) => setSearchDebounced(e.target.value)}
+          className="pl-9"
         />
       </div>
 
-      {/* Status Filter */}
-      <Select
-        value={params.status}
-        onValueChange={(v) =>
-          void setParams({ status: v === "all" ? null : v, page: 1 })
-        }
-      >
-        <SelectTrigger className="h-9 w-auto min-w-[130px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">すべてのステータス</SelectItem>
-          <SelectItem value="published">公開中</SelectItem>
-          <SelectItem value="draft">非公開</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="w-full sm:w-[180px]">
+        <Select
+          value={params.status}
+          onValueChange={(v) => {
+            if (!isAdminPageStatusFilter(v)) return;
+            // "all" は parser のデフォルトのため null で URL から除去
+            void setParams({ status: v === "all" ? null : v, page: 1 });
+          }}
+        >
+          <SelectTrigger aria-label="ステータス">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべてのステータス</SelectItem>
+            <SelectItem value="published">公開中</SelectItem>
+            <SelectItem value="draft">非公開</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Type Filter */}
-      <Select
-        value={params.type}
-        onValueChange={(v) =>
-          void setParams({ type: v === "all" ? null : v, page: 1 })
-        }
-      >
-        <SelectTrigger className="h-9 w-auto min-w-[130px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">すべての種別</SelectItem>
-          <SelectItem value="system">システム</SelectItem>
-          <SelectItem value="custom">カスタム</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="w-full sm:w-[180px]">
+        <Select
+          value={params.type}
+          onValueChange={(v) => {
+            if (!isAdminPageTypeFilter(v)) return;
+            void setParams({ type: v === "all" ? null : v, page: 1 });
+          }}
+        >
+          <SelectTrigger aria-label="種別">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべての種別</SelectItem>
+            <SelectItem value="system">システム</SelectItem>
+            <SelectItem value="custom">カスタム</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 }

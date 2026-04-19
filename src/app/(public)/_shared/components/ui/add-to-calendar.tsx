@@ -1,5 +1,5 @@
 import { IconBrandGoogle, IconCalendarPlus } from "@tabler/icons-react";
-import type { AddToCalendarUrls } from "@/shared/lib/ical";
+import type { AddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { OutlookLogo } from "./icons/outlook-logo";
 import { cn } from "@/shared/lib/cn";
 

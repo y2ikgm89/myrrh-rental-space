@@ -28,9 +28,40 @@ export function EventFilters() {
   });
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-      {/* ステータスフィルター */}
-      <div className="w-full sm:w-48">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground">期間:</span>
+        <Input
+          type="date"
+          aria-label="開始日"
+          value={params.dateFrom}
+          onChange={(e) =>
+            void setParams({ dateFrom: e.target.value || null, page: 1 })
+          }
+          className="w-full sm:w-[160px]"
+        />
+        <span className="text-sm text-muted-foreground">〜</span>
+        <Input
+          type="date"
+          aria-label="終了日"
+          value={params.dateTo}
+          onChange={(e) =>
+            void setParams({ dateTo: e.target.value || null, page: 1 })
+          }
+          className="w-full sm:w-[160px]"
+        />
+      </div>
+      <div className="flex-1">
+        <Input
+          type="search"
+          placeholder="タイトル、場所で検索..."
+          defaultValue={params.search}
+          onChange={(e) =>
+            void setParams({ search: e.target.value || null, page: 1 })
+          }
+        />
+      </div>
+      <div className="w-full sm:w-[180px]">
         <Select
           value={params.status || "ALL"}
           onValueChange={(value) =>
@@ -51,42 +82,6 @@ export function EventFilters() {
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* 検索 */}
-      <div className="w-full sm:w-64">
-        <Input
-          type="search"
-          placeholder="タイトル、場所で検索..."
-          defaultValue={params.search}
-          onChange={(e) =>
-            void setParams({ search: e.target.value || null, page: 1 })
-          }
-        />
-      </div>
-
-      {/* 開始日フィルター */}
-      <div className="w-full sm:w-44">
-        <Input
-          type="date"
-          value={params.dateFrom}
-          onChange={(e) =>
-            void setParams({ dateFrom: e.target.value || null, page: 1 })
-          }
-          aria-label="開始日から"
-        />
-      </div>
-
-      {/* 終了日フィルター */}
-      <div className="w-full sm:w-44">
-        <Input
-          type="date"
-          value={params.dateTo}
-          onChange={(e) =>
-            void setParams({ dateTo: e.target.value || null, page: 1 })
-          }
-          aria-label="終了日まで"
-        />
       </div>
     </div>
   );

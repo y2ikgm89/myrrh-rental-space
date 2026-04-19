@@ -63,10 +63,17 @@ export async function getPagesListQuery(
     where.isSystemPage = false;
   }
 
+  // Tie-breaker: 非 updatedAt ソート時は updatedAt desc で安定化
+  // (gotchas.md §Nullable 列のソート の安定ソートポリシー)
+  const orderBy: Prisma.PageOrderByWithRelationInput[] =
+    sortBy === "updatedAt"
+      ? [{ updatedAt: sortOrder }]
+      : [{ [sortBy]: sortOrder }, { updatedAt: "desc" }];
+
   const [pages, total] = await Promise.all([
     prisma.page.findMany({
       where,
-      orderBy: { [sortBy]: sortOrder },
+      orderBy,
       skip: (page - 1) * perPage,
       take: perPage,
       include: {

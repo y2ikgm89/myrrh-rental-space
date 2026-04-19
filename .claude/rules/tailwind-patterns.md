@@ -305,6 +305,8 @@ admin.css / public.css の両方で統一:
 
    **例外**: カラーピッカーのスウォッチプレビュー等、特定の色を表示目的で使う場合は許可
 
+3.1. **`className` 文字列内の改行禁止** — `className="fixed ...\n  md:hidden"` は SSR が生文字列（改行+インデント込み）を出力するのに対し、React は CSR で空白正規化した文字列を比較するため hydration mismatch になる。single-line に統一するか、長い場合は `cn("fixed ...", "md:hidden")` で配列分割する
+
 3.5. **`start-*` / `end-*` 配置ユーティリティ禁止**（v4.2 廃止予定）
 
 - `start-4` / `end-4` 等（`inset-inline-start` / `inset-inline-end` のショートハンド）は v4.2 で deprecated

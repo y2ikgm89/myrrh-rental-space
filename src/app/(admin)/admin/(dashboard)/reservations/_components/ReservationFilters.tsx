@@ -38,64 +38,59 @@ export function ReservationFilters() {
   );
 
   return (
-    <div className="space-y-3">
-      {/* ステータス + 検索 */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="顧客名、スペース名で検索..."
-            defaultValue={params.search}
-            onChange={(e) => setSearchDebounced(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <div className="w-full sm:w-[180px]">
-          <Select
-            value={params.status === "" ? "ALL" : params.status}
-            onValueChange={(value) =>
-              void setParams({
-                status: value === "ALL" ? null : value,
-                page: 1,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="ステータス" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* 期間フィルター */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground">期間:</span>
-        <div className="flex flex-1 items-center gap-2">
-          <Input
-            type="date"
-            value={params.dateFrom}
-            onChange={(e) =>
-              void setParams({ dateFrom: e.target.value || null, page: 1 })
-            }
-            className="w-full sm:w-[180px]"
-          />
-          <span className="text-sm text-muted-foreground">〜</span>
-          <Input
-            type="date"
-            value={params.dateTo}
-            onChange={(e) =>
-              void setParams({ dateTo: e.target.value || null, page: 1 })
-            }
-            className="w-full sm:w-[180px]"
-          />
-        </div>
+        <Input
+          type="date"
+          aria-label="開始日"
+          value={params.dateFrom}
+          onChange={(e) =>
+            void setParams({ dateFrom: e.target.value || null, page: 1 })
+          }
+          className="w-full sm:w-[160px]"
+        />
+        <span className="text-sm text-muted-foreground">〜</span>
+        <Input
+          type="date"
+          aria-label="終了日"
+          value={params.dateTo}
+          onChange={(e) =>
+            void setParams({ dateTo: e.target.value || null, page: 1 })
+          }
+          className="w-full sm:w-[160px]"
+        />
+      </div>
+      <div className="relative flex-1">
+        <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="顧客名、スペース名で検索..."
+          defaultValue={params.search}
+          onChange={(e) => setSearchDebounced(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+      <div className="w-full sm:w-[180px]">
+        <Select
+          value={params.status === "" ? "ALL" : params.status}
+          onValueChange={(value) =>
+            void setParams({
+              status: value === "ALL" ? null : value,
+              page: 1,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="ステータス" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

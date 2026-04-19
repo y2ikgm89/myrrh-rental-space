@@ -253,8 +253,15 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
   return (
     <div>
       {/* Header — month navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="flex items-center gap-2 justify-self-start">
+          <button
+            type="button"
+            onClick={goToday}
+            className="h-10 border border-border px-4 text-xs tracking-[0.18em] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            今日
+          </button>
           <button
             type="button"
             onClick={prevMonth}
@@ -273,19 +280,15 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
           </button>
         </div>
 
-        <MonthPicker
-          year={currentYear}
-          month={currentMonth}
-          onSelect={jumpToMonth}
-        />
+        <div className="justify-self-center">
+          <MonthPicker
+            year={currentYear}
+            month={currentMonth}
+            onSelect={jumpToMonth}
+          />
+        </div>
 
-        <button
-          type="button"
-          onClick={goToday}
-          className="border border-border px-3 py-1.5 text-xs tracking-[0.18em] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          今日
-        </button>
+        <div aria-hidden="true" />
       </div>
 
       {/* Desktop: 2-column (calendar + side panel) */}

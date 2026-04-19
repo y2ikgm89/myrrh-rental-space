@@ -11,6 +11,7 @@ disallowedTools:
   - Edit
   - NotebookEdit
 model: haiku
+memory: project
 ---
 
 You are a Next.js 16 cache strategy specialist for the Myrrh Rental Space project.

@@ -55,6 +55,8 @@ paths:
 | `src/app/(admin)/.../_shared/lib/audit.ts`                 | 監査ログ記録関数                                                 |
 | `src/app/(admin)/.../_shared/lib/server-action-helpers.ts` | `admin-auth.ts`（`server-only`）を import する Server Action HOF |
 | `src/app/(admin)/.../_shared/lib/stripe.ts`                | Stripe API キー復号・クライアント生成                            |
+| `src/app/(admin)/.../_shared/lib/api-keys/resend.ts`       | Resend SDK（Node.js 専用）の直接 import                          |
+| `src/app/(admin)/.../_shared/lib/api-keys/index.ts`        | barrel — `resend.ts` を推移的に含むため全体を server-only 化     |
 
 ## 追加不要なファイル
 
@@ -88,6 +90,32 @@ bun add server-only
 # 各ファイル先頭の最初の import の前に1行追加
 import 'server-only'
 ```
+
+## 検出 grep（監査用）
+
+Node-only npm パッケージを直接 import しているのに `import "server-only"` マーカーが欠落しているファイルを検出:
+
+```bash
+grep -rlE '^import .+ from "(ical-generator|googleapis|resend|@touch4it|nodemailer|stripe|google-auth-library|@google-analytics|node:)' src/ | while read f; do
+  head -30 "$f" | grep -q '^import "server-only"' || echo "MISSING: $f"
+done
+```
+
+追加対象（Data Access Layer）の変更時・新規 SDK 統合時・監査時に実行する。Explore subagent の「違反なし」報告は grep hallucination リスクがあるため、このコマンドでの ground truth 検証を必須とする。
+
+## Dual-use barrel 分離パターン
+
+1 つのモジュールが「Node-only SDK 依存のビルダー」と「純粋関数（URL 組立等）」を両方提供する場合、同一 barrel から `export *` / named export すると、Client Component が純粋関数を import した瞬間 Node SDK が client bundle に引き込まれ Turbopack エラーになる。
+
+**canonical 分離パターン（`@/shared/lib/ical` が参照実装）**:
+
+| ファイル                   | 保護        | 内容                                     |
+| -------------------------- | ----------- | ---------------------------------------- |
+| `ical/index.ts`            | server-only | ICS ビルダー（ical-generator 依存）      |
+| `ical/urls.ts`             | client-safe | Add to Calendar URL ビルダー（純粋関数） |
+| `ical/uid.ts` / `types.ts` | client-safe | UID・型定義                              |
+
+Client Component / SSR Email コンポーネントは必ずサブパスから import する（`@/shared/lib/ical/urls`）。barrel 経由（`@/shared/lib/ical`）は `import "server-only"` ガードでビルドエラーになる。
 
 ## 禁止事項
 

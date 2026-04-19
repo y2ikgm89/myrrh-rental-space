@@ -9,6 +9,7 @@ tools:
   - LS
   - mcp__context7__resolve-library-id
   - mcp__context7__query-docs
+memory: project
 ---
 
 # Lexical Editor Reviewer

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { IconCalendar, IconMapPin, IconArrowRight } from "@tabler/icons-react";
+import { IconCalendar, IconMapPin } from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
 import { Heading } from "@/public/components/design-system/heading";
 import { Badge } from "@/public/components/design-system/badge";
@@ -111,8 +111,8 @@ export function EventCard({ variant, event }: EventCardProps) {
       className={cn(
         "group grid gap-6 py-6 transition-colors hover:bg-accent/5 md:gap-8 md:py-8",
         event.thumbnailUrl
-          ? "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_10rem_1fr_auto]"
-          : "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_1fr_auto]",
+          ? "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_10rem_1fr]"
+          : "grid-cols-[4.5rem_1fr] md:grid-cols-[5.5rem_1fr]",
       )}
     >
       {/* Date block */}
@@ -155,12 +155,6 @@ export function EventCard({ variant, event }: EventCardProps) {
         <div className="mt-3">
           <EventMeta event={event} iconSize="h-3.5 w-3.5" />
         </div>
-      </div>
-      <div className="hidden items-center md:flex">
-        <IconArrowRight
-          className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-accent"
-          aria-hidden="true"
-        />
       </div>
     </Link>
   );

@@ -13,7 +13,7 @@ import {
 import { isValidReservationStatus } from "@/shared/lib/validations/enums/guards";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 import { getAppUrl } from "@/shared/lib/constants";
-import { buildAddToCalendarUrls } from "@/shared/lib/ical";
+import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 
 // ---------------------------------------------------------------------------

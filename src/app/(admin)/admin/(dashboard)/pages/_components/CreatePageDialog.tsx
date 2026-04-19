@@ -21,6 +21,7 @@ import { Button, SubmitButton } from "@/admin/components/ui";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -80,9 +81,35 @@ async function fetchSlugAvailability(
   );
 }
 
-export function CreatePageDialog() {
+type CreatePageDialogProps = {
+  /**
+   * 親が open 状態を管理する controlled モード。
+   * 省略時は内部で state を持ち、`<DialogTrigger>` の「新規ページ」ボタンを自動表示する
+   * （従来の stand-alone 利用互換）。
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * トリガー（「新規ページ」ボタン）を表示するか。
+   * controlled モード時は通常 false を渡し、外部から open 制御する。
+   */
+  showTrigger?: boolean;
+};
+
+export function CreatePageDialog({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  showTrigger,
+}: CreatePageDialogProps = {}) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : uncontrolledOpen;
+  const setIsOpen = (open: boolean) => {
+    if (!isControlled) setUncontrolledOpen(open);
+    controlledOnOpenChange?.(open);
+  };
+  const shouldShowTrigger = showTrigger ?? !isControlled;
   const [isManualSlug, setIsManualSlug] = useState(false);
   const [slugStatus, setSlugStatus] = useState<SlugStatus>("idle");
   const [slugMessage, setSlugMessage] = useState("");
@@ -184,15 +211,20 @@ export function CreatePageDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <IconPlus className="h-4 w-4" />
-          新規ページ
-        </Button>
-      </DialogTrigger>
+      {shouldShowTrigger && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <IconPlus className="h-4 w-4" />
+            新規ページ
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>新規ページ作成</DialogTitle>
+          <DialogDescription>
+            タイトルと URL スラッグを設定し、エディターで本文を作成します。
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4">

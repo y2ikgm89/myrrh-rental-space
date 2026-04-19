@@ -56,6 +56,11 @@ export function CustomerStep({
     name: "agreedTermsIds",
   });
 
+  const allTermsAgreed =
+    requiredTerms.length === 0 ||
+    requiredTerms.every((term) => agreedTermsIds?.includes(term.id));
+  const isSubmitDisabled = isPending || !allTermsAgreed;
+
   function handleCustomerTypeChange(type: CustomerType) {
     form.setValue("customerType", type);
     if (type === CustomerType.PERSONAL) {
@@ -268,7 +273,7 @@ export function CustomerStep({
         >
           戻る
         </Button>
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isSubmitDisabled}>
           {isPending ? "送信中..." : "予約を確定する"}
         </Button>
       </div>
@@ -286,7 +291,7 @@ export function CustomerStep({
           >
             戻る
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isSubmitDisabled}>
             {isPending ? "送信中..." : "予約を確定する"}
           </Button>
         </div>

@@ -242,7 +242,26 @@ export const parseAsBoolean = createParser<boolean>({
 - Default 値は `clearOnDefault` により URL から自動除外（[nuqs 公式](https://nuqs.dev/docs/options)）
 - Sentinel は `"ALL" as const` 等。空文字 `""` は Radix Select の placeholder 予約なので禁止
 - 型は `(typeof values)[number]` で derive し、export して domain filter と揃える
-- 参照実装: `adminCustomerSearchParamsParsers.customerType` (`CUSTOMER_TYPE_FILTER_ALL` sentinel)
+- 参照実装: `adminCustomerSearchParamsParsers.customerType` (`CUSTOMER_TYPE_FILTER_ALL` sentinel)、`adminPageSearchParamsParsers.status` / `.type`（sentinel `"all"`）
+
+**Select `onValueChange` の型安全 narrow**: `parseAsStringLiteral` で narrow 化した parser に Radix Select の `string` を代入するには、`as` ではなく型ガード関数を parsers.ts から export し `onValueChange` で narrow する（`type-safety.md` の `as` 禁止原則と整合）:
+
+```typescript
+// parsers.ts
+const adminPageStatusFilterValues = ["all", "published", "draft"] as const;
+const adminPageStatusFilterSet = new Set<string>(adminPageStatusFilterValues);
+export function isAdminPageStatusFilter(v: string): v is AdminPageStatusFilter {
+  return adminPageStatusFilterSet.has(v);
+}
+
+// Select onValueChange
+onValueChange={(v) => {
+  if (!isAdminPageStatusFilter(v)) return;
+  void setParams({ status: v === "all" ? null : v, page: 1 });
+}}
+```
+
+参照実装: `pages/_components/PageFilters.tsx`（`isAdminPageStatusFilter` / `isAdminPageTypeFilter`）
 
 ```typescript
 const customerTypeFilterValues = [

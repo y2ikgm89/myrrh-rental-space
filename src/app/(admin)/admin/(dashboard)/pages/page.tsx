@@ -38,7 +38,8 @@ export default async function PagesManagementPage({
       type: params.type === "all" ? undefined : params.type,
       page: params.page,
       perPage: params.perPage,
-      sortOrder: params.sort,
+      sortBy: params.sortBy,
+      sortOrder: params.sortOrder,
     }),
   );
 

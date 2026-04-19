@@ -9,6 +9,7 @@ disallowedTools:
   - Edit
   - NotebookEdit
 model: sonnet
+memory: project
 ---
 
 You are a Next.js 16 routing structure reviewer for a Multiple Root Layouts project.

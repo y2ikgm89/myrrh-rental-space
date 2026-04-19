@@ -23,7 +23,13 @@ paths:
 
 ## 原則
 
+- **モジュール分離（公式ベストプラクティス）**
+  - `@/shared/lib/ical`（index.ts）— **server-only**（`import "server-only"`）。`ical-generator` / `@touch4it/ical-timezones` に依存する ICS ビルダー SSoT。API Route / Server Action / メール送信層から使う
+  - `@/shared/lib/ical/urls` — **client-safe**（純粋関数のみ、`ical-generator` 非依存）。`buildAddToCalendarUrls` / `buildGoogleCalendarUrl` / `buildOutlookWebUrl` と関連型。Client Component はこのサブパスから import する
+  - `@/shared/lib/ical/uid` — **client-safe**（純粋関数）。UID ビルダー
+  - `@/shared/lib/ical/types` — **client-safe**（型のみ）
 - **ICS 生成は `@/shared/lib/ical` のヘルパー経由のみ** — `ical()` を直接呼ばない（SDK 境界は `index.ts` に閉じる）
+- **URL ビルダーは Client Component から `@/shared/lib/ical` 直接 import 禁止** — `server-only` ガードによりビルドエラーになる。必ず `@/shared/lib/ical/urls` サブパスを使う
 - **UID は `buildReservationUid` / `buildEventRegistrationUid` で生成** — `localpart@domain` 形式、同一リソースで永続的に安定（RFC 5545 §3.8.4.7）
 - **update / cancel で SEQUENCE を必ずインクリメント** — `Reservation.icsSequence` / `EventRegistration.icsSequence` を `{ increment: 1 }` で更新。更新・キャンセル両方で必要（METHOD:REQUEST / METHOD:CANCEL どちらも SEQUENCE を読む）
 - **キャンセル通知は `METHOD:CANCEL` + `STATUS:CANCELLED`** — 同一 UID + インクリメント済 SEQUENCE で既存カレンダー登録を上書きキャンセル
@@ -158,17 +164,18 @@ const attachments = calendarSettings.icalAttachmentEnabled
 
 ## ファイル配置
 
-| パス                                                   | 内容                                                     |
-| ------------------------------------------------------ | -------------------------------------------------------- |
-| `@/shared/lib/ical/index.ts`                           | ビルダー / URL ヘルパーの SSoT                           |
-| `@/shared/lib/ical/uid.ts`                             | `buildReservationUid` / `buildEventRegistrationUid`      |
-| `@/shared/lib/ical/types.ts`                           | `AddToCalendarUrls` / `ReservationCalendarParams` 等の型 |
-| `@/public/components/ui/add-to-calendar.tsx`           | Server Component UI                                      |
-| `src/app/api/calendar/reservation/[id]/route.ts`       | 予約 ICS ダウンロード（customer 認証）                   |
-| `src/app/api/calendar/event/[registrationId]/route.ts` | イベント申込 ICS ダウンロード（customer 認証）           |
-| `src/app/api/ical/[token]/route.ts`                    | 管理者 iCal フィード（token 認証）                       |
-| `__tests__/unit/lib/ical/`                             | unit テスト（uid / index）                               |
-| `__tests__/integration/api/calendar-*.test.ts`         | route handler integration テスト                         |
+| パス                                                   | 内容                                                                       |
+| ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `@/shared/lib/ical/index.ts`                           | **server-only** — ICS ビルダー SSoT（`ical-generator` 依存）               |
+| `@/shared/lib/ical/urls.ts`                            | **client-safe** — Add to Calendar URL ビルダー（純粋関数）                 |
+| `@/shared/lib/ical/uid.ts`                             | **client-safe** — `buildReservationUid` / `buildEventRegistrationUid`      |
+| `@/shared/lib/ical/types.ts`                           | **client-safe** — `AddToCalendarUrls` / `ReservationCalendarParams` 等の型 |
+| `@/public/components/ui/add-to-calendar.tsx`           | Server Component UI                                                        |
+| `src/app/api/calendar/reservation/[id]/route.ts`       | 予約 ICS ダウンロード（customer 認証）                                     |
+| `src/app/api/calendar/event/[registrationId]/route.ts` | イベント申込 ICS ダウンロード（customer 認証）                             |
+| `src/app/api/ical/[token]/route.ts`                    | 管理者 iCal フィード（token 認証）                                         |
+| `__tests__/unit/lib/ical/`                             | unit テスト（uid / index）                                                 |
+| `__tests__/integration/api/calendar-*.test.ts`         | route handler integration テスト                                           |
 
 ## 参照
 

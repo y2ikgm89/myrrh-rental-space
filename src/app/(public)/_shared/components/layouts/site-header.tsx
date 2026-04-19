@@ -25,19 +25,33 @@ import {
 } from "@/shared/lib/validations/enums/prisma-types";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/public/components/design-system/button";
+import { LogoutButton } from "@/public/components/ui/logout-button";
 import { SiteBrand } from "./site-brand";
 
-interface AuthLink {
-  readonly href: string;
-  readonly label: string;
-}
+/**
+ * 顧客認証状態に応じたヘッダー右端のスロット。
+ * - `authenticated`: マイページリンク + ログアウトボタンを並置
+ * - `guest`: ログインリンクのみ
+ * - `null`: 認証導線自体を出さない（特殊ページ向け）
+ */
+export type HeaderAuthSlot =
+  | {
+      readonly variant: "authenticated";
+      readonly mypageHref: string;
+      readonly mypageLabel: string;
+    }
+  | {
+      readonly variant: "guest";
+      readonly loginHref: string;
+      readonly loginLabel: string;
+    };
 
 interface HeaderProps {
   readonly brand: SiteBrandValue;
   readonly navItems: readonly PublicNavItem[];
   readonly scrollBehavior: HeaderScrollBehavior;
   readonly backgroundMode: HeaderBackgroundMode;
-  readonly authLink: AuthLink | null;
+  readonly authSlot: HeaderAuthSlot | null;
 }
 
 /** Scroll offset (px) where header background becomes opaque */
@@ -45,8 +59,13 @@ const SCROLL_THRESHOLD = 80;
 /** Accumulated downward scroll (px) before auto_hide hides the header */
 const HIDE_THRESHOLD = 150;
 
+/**
+ * Editorial underline reveal（Kinfolk / Aesop / Apple 方式）。
+ * ::after 疑似要素が左→右に scaleX(0 → 1) で展開し、bronze アクセント下線を描画。
+ * hover / focus-visible / aria-current=page（現在ページ）で同じ表示 → 一貫した視覚フィードバック。
+ */
 const DESKTOP_NAV_LINK_CLASS =
-  "whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none";
+  "relative whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 aria-[current=page]:text-foreground aria-[current=page]:after:origin-left aria-[current=page]:after:scale-x-100";
 
 const DROPDOWN_LINK_CLASS =
   "block rounded-sm px-3 py-2 text-sm text-foreground transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none";
@@ -185,7 +204,7 @@ export function Header({
   navItems,
   scrollBehavior,
   backgroundMode,
-  authLink,
+  authSlot,
 }: HeaderProps): ReactElement {
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
@@ -321,21 +340,22 @@ export function Header({
         scrolled && "border-b border-border/50",
       )}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-8 px-5 py-4 md:gap-12 md:px-8 md:py-5 lg:gap-16">
+      <div className="mx-auto grid max-w-[90rem] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 md:grid-cols-3 md:gap-10 md:px-8 md:py-5 lg:gap-16">
+        {/* Brand — 左列（container の justify-items-start が default 適用） */}
         <SiteBrand brand={brand} variant="header" />
 
-        {/* Desktop — Radix NavigationMenu */}
-        <NavigationMenu.Root
-          aria-label="メインナビゲーション"
-          className="relative hidden items-center gap-4 lg:gap-8 md:flex"
-        >
-          {items.length > 0 && (
+        {/* Desktop Nav — 中央列（Radix 公式構造: Root > List 単体）。justify-self-center で cell 内中央 */}
+        {items.length > 0 && (
+          <NavigationMenu.Root
+            aria-label="メインナビゲーション"
+            className="relative hidden md:col-start-2 md:flex md:justify-self-center"
+          >
             <NavigationMenu.List className="flex items-center gap-4 lg:gap-8">
               {items.map((item) => (
                 <NavigationMenu.Item key={item.id}>
                   {item.children.length > 0 ? (
                     <>
-                      <NavigationMenu.Trigger className="group inline-flex items-center gap-1 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none">
+                      <NavigationMenu.Trigger className="group relative inline-flex items-center gap-1 whitespace-nowrap text-[0.75rem] uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-1 after:h-px after:origin-right after:scale-x-0 after:bg-accent after:transition-transform after:duration-300 hover:after:origin-left hover:after:scale-x-100 focus-visible:after:origin-left focus-visible:after:scale-x-100 data-[state=open]:text-foreground data-[state=open]:after:origin-left data-[state=open]:after:scale-x-100">
                         {item.label}
                         <IconChevronDown
                           className="h-3 w-3 transition-transform duration-200 group-data-[state=open]:rotate-180"
@@ -363,11 +383,25 @@ export function Header({
                 </NavigationMenu.Item>
               ))}
             </NavigationMenu.List>
-          )}
+          </NavigationMenu.Root>
+        )}
 
-          {authLink && (
-            <Link href={authLink.href} className={DESKTOP_NAV_LINK_CLASS}>
-              {authLink.label}
+        {/* Desktop Auth + CTA — 右列（md:justify-self-end で cell 内右端 / 認証内部 gap-5 / CTA 間 gap-8 で暗黙分離） */}
+        <div className="hidden items-center gap-8 md:col-start-3 md:flex md:justify-self-end">
+          {authSlot?.variant === "authenticated" && (
+            <div className="flex items-center gap-5">
+              <Link
+                href={authSlot.mypageHref}
+                className={DESKTOP_NAV_LINK_CLASS}
+              >
+                {authSlot.mypageLabel}
+              </Link>
+              <LogoutButton variant="desktop-nav" />
+            </div>
+          )}
+          {authSlot?.variant === "guest" && (
+            <Link href={authSlot.loginHref} className={DESKTOP_NAV_LINK_CLASS}>
+              {authSlot.loginLabel}
             </Link>
           )}
           <Button
@@ -378,12 +412,12 @@ export function Header({
           >
             Reserve
           </Button>
-        </NavigationMenu.Root>
+        </div>
 
         {/* Mobile — Radix Dialog (focus trap + body scroll lock + Esc) */}
         <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger
-            className="flex h-10 w-10 items-center justify-center text-foreground md:hidden"
+            className="flex h-10 w-10 items-center justify-center justify-self-end text-foreground md:hidden"
             aria-label="メニューを開く"
           >
             <IconMenu2
@@ -424,22 +458,6 @@ export function Header({
               </div>
 
               <nav className="flex flex-1 flex-col items-center justify-center gap-8">
-                <Link
-                  href="/reservation"
-                  onClick={closeMenu}
-                  className="inline-flex items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
-                >
-                  Reserve
-                </Link>
-                {authLink && (
-                  <Link
-                    href={authLink.href}
-                    onClick={closeMenu}
-                    className={MOBILE_PARENT_CLASS}
-                  >
-                    {authLink.label}
-                  </Link>
-                )}
                 {items.map((item) => (
                   <MobileNavItem
                     key={item.id}
@@ -447,6 +465,40 @@ export function Header({
                     onNavigate={closeMenu}
                   />
                 ))}
+                {authSlot && (
+                  <div aria-hidden="true" className="h-px w-16 bg-border/60" />
+                )}
+                {authSlot?.variant === "authenticated" && (
+                  <>
+                    <Link
+                      href={authSlot.mypageHref}
+                      onClick={closeMenu}
+                      className={MOBILE_PARENT_CLASS}
+                    >
+                      {authSlot.mypageLabel}
+                    </Link>
+                    <LogoutButton
+                      variant="mobile-nav"
+                      onBeforeLogout={closeMenu}
+                    />
+                  </>
+                )}
+                {authSlot?.variant === "guest" && (
+                  <Link
+                    href={authSlot.loginHref}
+                    onClick={closeMenu}
+                    className={MOBILE_PARENT_CLASS}
+                  >
+                    {authSlot.loginLabel}
+                  </Link>
+                )}
+                <Link
+                  href="/reservation"
+                  onClick={closeMenu}
+                  className="inline-flex items-center justify-center border border-foreground px-5 py-2.5 text-[0.75rem] uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
+                >
+                  Reserve
+                </Link>
               </nav>
             </Dialog.Content>
           </Dialog.Portal>

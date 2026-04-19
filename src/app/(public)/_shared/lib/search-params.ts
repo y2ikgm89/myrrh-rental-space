@@ -53,10 +53,27 @@ export const postsSearchParams = createSearchParamsCache(
   postsSearchParamsParsers,
 );
 
-const EVENT_VIEWS = ["list", "calendar"] as const;
+export const EVENT_VIEWS = ["list", "calendar"] as const;
+export type EventView = (typeof EVENT_VIEWS)[number];
+
+const eventViewSet = new Set<string>(EVENT_VIEWS);
+export function isEventView(value: string): value is EventView {
+  return eventViewSet.has(value);
+}
+
+export const EVENT_SCOPES = ["upcoming", "past"] as const;
+export type EventScope = (typeof EVENT_SCOPES)[number];
+
+const eventScopeSet = new Set<string>(EVENT_SCOPES);
+export function isEventScope(value: string): value is EventScope {
+  return eventScopeSet.has(value);
+}
 
 export const eventsSearchParamsParsers = {
   view: parseAsStringLiteral(EVENT_VIEWS).withDefault("list"),
+  scope: parseAsStringLiteral(EVENT_SCOPES).withDefault("upcoming"),
+  y: parseAsInteger,
+  m: parseAsInteger,
 };
 
 export const eventsSearchParams = createSearchParamsCache(

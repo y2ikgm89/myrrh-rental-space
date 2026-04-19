@@ -1,19 +1,25 @@
 "use client";
 
 import type { ReactNode } from "react";
+import * as Tabs from "@radix-ui/react-tabs";
 import { useQueryStates } from "nuqs";
 import { cn } from "@/shared/lib/cn";
-import { eventsSearchParamsParsers } from "@/public/lib/search-params";
+import {
+  eventsSearchParamsParsers,
+  isEventView,
+  type EventView,
+} from "@/public/lib/search-params";
 
-const VIEW_TABS = [
+const VIEW_TABS: readonly {
+  readonly value: EventView;
+  readonly label: string;
+}[] = [
   { value: "list", label: "一覧" },
   { value: "calendar", label: "カレンダー" },
-] as const;
-
-type ViewType = (typeof VIEW_TABS)[number]["value"];
+];
 
 interface EventsViewSwitcherProps {
-  readonly activeView: ViewType;
+  readonly activeView: EventView;
   readonly listView: ReactNode;
   readonly calendarView: ReactNode;
 }
@@ -28,56 +34,60 @@ export function EventsViewSwitcher({
     shallow: false,
   });
 
-  function handleViewChange(view: ViewType) {
-    void setParams({ view: view === "list" ? null : view });
+  function handleValueChange(value: string) {
+    if (!isEventView(value)) return;
+    void setParams({ view: value });
   }
 
   return (
-    <div>
-      <nav aria-label="表示切替" className="mb-10 md:mb-14">
-        <ul className="flex gap-1 border-b border-border" role="tablist">
-          {VIEW_TABS.map((tab) => {
-            const isActive = activeView === tab.value;
-            return (
-              <li key={tab.value} role="presentation">
-                <button
-                  type="button"
-                  role="tab"
-                  id={`events-tab-${tab.value}`}
-                  aria-selected={isActive}
-                  aria-controls={`events-panel-${tab.value}`}
-                  onClick={() => handleViewChange(tab.value)}
-                  className={cn(
-                    "px-5 py-3 text-sm tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    isActive
-                      ? "border-b-2 border-accent text-accent"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+    <Tabs.Root
+      value={activeView}
+      onValueChange={handleValueChange}
+      activationMode="automatic"
+    >
+      <div className="mb-10 flex justify-center md:mb-14">
+        <Tabs.List
+          aria-label="表示切替"
+          className="flex border-b border-border"
+        >
+          {VIEW_TABS.map((tab) => (
+            <Tabs.Trigger
+              key={tab.value}
+              value={tab.value}
+              className={cn(
+                "group whitespace-nowrap px-5 py-3 text-base tracking-[0.12em] outline-none transition-colors",
+                "text-muted-foreground hover:text-foreground",
+                "data-[state=active]:text-accent",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              )}
+            >
+              <span
+                className={cn(
+                  "underline decoration-2 underline-offset-[6px] transition-colors",
+                  "decoration-transparent group-data-[state=active]:decoration-accent",
+                )}
+              >
+                {tab.label}
+              </span>
+            </Tabs.Trigger>
+          ))}
+        </Tabs.List>
+      </div>
 
-      <div
-        id="events-panel-list"
-        role="tabpanel"
-        aria-labelledby="events-tab-list"
-        className={activeView !== "list" ? "hidden" : undefined}
+      <Tabs.Content
+        value="list"
+        forceMount
+        className="outline-none data-[state=inactive]:hidden"
       >
         {listView}
-      </div>
-      <div
-        id="events-panel-calendar"
-        role="tabpanel"
-        aria-labelledby="events-tab-calendar"
-        className={activeView !== "calendar" ? "hidden" : undefined}
+      </Tabs.Content>
+      <Tabs.Content
+        value="calendar"
+        forceMount
+        className="outline-none data-[state=inactive]:hidden"
       >
         {calendarView}
-      </div>
-    </div>
+      </Tabs.Content>
+    </Tabs.Root>
   );
 }

@@ -165,7 +165,7 @@ export function StandardHeroSection({
       <section
         ref={sectionRef}
         data-hero=""
-        className="relative flex items-end overflow-hidden pb-10 pt-[calc(var(--header-height)+3rem)] md:pb-14 md:pt-[calc(var(--header-height)+5rem)]"
+        className="relative flex items-end overflow-hidden pb-6 pt-[calc(var(--header-height)+1rem)] md:pb-10 md:pt-[calc(var(--header-height)+1.5rem)]"
       >
         <div
           className="absolute inset-0 bg-gradient-to-b from-surface via-background to-background"

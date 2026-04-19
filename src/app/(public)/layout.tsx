@@ -20,7 +20,10 @@ import type { ReactElement, ReactNode } from "react";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
-import { Header } from "@/public/components/layouts/site-header";
+import {
+  Header,
+  type HeaderAuthSlot,
+} from "@/public/components/layouts/site-header";
 import { Footer } from "@/public/components/layouts/site-footer";
 import {
   AnalyticsProvider,
@@ -197,11 +200,15 @@ async function HeaderWithData({
     resolvePublicAuthKind(),
   ]);
 
-  const authLink =
+  const authSlot: HeaderAuthSlot | null =
     authKind === "mypage"
-      ? { href: "/mypage", label: "マイページ" }
+      ? {
+          variant: "authenticated",
+          mypageHref: "/mypage",
+          mypageLabel: "マイページ",
+        }
       : authKind === "login"
-        ? { href: "/login", label: "ログイン" }
+        ? { variant: "guest", loginHref: "/login", loginLabel: "ログイン" }
         : null;
 
   return (
@@ -210,7 +217,7 @@ async function HeaderWithData({
       navItems={navItems}
       scrollBehavior={headerSettings.scrollBehavior}
       backgroundMode={headerSettings.backgroundMode}
-      authLink={authLink}
+      authSlot={authSlot}
     />
   );
 }

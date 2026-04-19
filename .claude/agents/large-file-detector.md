@@ -9,7 +9,6 @@ tools:
   - Glob
   - Bash
 model: haiku
-memory: false
 ---
 
 # large-file-detector

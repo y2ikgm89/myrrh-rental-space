@@ -9,6 +9,7 @@ tools:
   - Read
   - Glob
 model: haiku
+memory: project
 ---
 
 You are a Next.js 16 build performance specialist for the Myrrh Rental Space project.

@@ -555,6 +555,50 @@ if (result.error) { /* 429 はここに到達しない */ }
 try { await signIn.social({ ... }); } catch (err) { /* 到達しない */ }
 ```
 
+### signOut（マイページ / 公開ヘッダー用）
+
+Better Auth 公式推奨パターン。`router.push` 単独だと PPR の server-side session キャッシュが古いため `router.refresh()` を併用:
+
+```typescript
+await signOut({
+  fetchOptions: {
+    onSuccess: () => {
+      router.push("/");
+      router.refresh(); // PPR server-side session キャッシュ無効化
+    },
+  },
+});
+```
+
+実装は `@/public/components/ui/logout-button.tsx` の `LogoutButton`（`desktop-nav` / `mobile-nav` variants）に集約。**マイページ・設定ページ等にローカル再実装禁止**。業界標準（GitHub / Stripe / Notion / Amazon）はヘッダー右上配置 — `site-header.tsx` の `authSlot?.variant === "authenticated"` 分岐のみが SSoT。
+
+### signIn（公開サインイン用）
+
+**Better Auth Client API `signIn.email({ callbackURL })` / `signIn.social({ callbackURL })` が公式パターン**。Client API の Set-Cookie response を Next.js の `nextCookies` プラグインが Router Cache と同期するため、callbackURL へのリダイレクト後にヘッダー等の Server Component が新 session で自動再評価される。
+
+```typescript
+// OK: Client API + callbackURL — Set-Cookie + Router Cache 自動更新
+await signIn.email({
+  email,
+  password,
+  callbackURL: "/mypage",
+  fetchOptions: {
+    onError: (ctx) => setError(ctx.error.message ?? "ログインに失敗しました"),
+  },
+});
+```
+
+**NG パターン**: Server Action 経由 `customerAuth.api.signInEmail` + `revalidatePath("/", "layout")` + `router.push + router.refresh()` では Next.js 16 PPR 環境で Router Cache が更新されず、`/mypage` 遷移後もヘッダーが未認証表示のまま残る（`revalidatePath` は server-side Full Route Cache のみ無効化、Client Router Cache には伝播しない）。
+
+```typescript
+// NG: Server Action 経由の signInEmail
+"use server";
+await customerAuth.api.signInEmail({ body: {...}, headers: await headers() });
+revalidatePath("/", "layout"); // ← ヘッダー更新に不十分
+```
+
+**hybrid パターン**（server 操作が必要な場合）: ユーザー作成等を Server Action (`ensureDevUserAction` 等) に分離し、sign-in 自体は Client API で実行する。credentials は `xxx-credentials.ts` に SSoT 抽出して client / server 両方で参照（参照実装: `src/app/(public)/login/_components/dev-login-{action,button,credentials}.ts`）。
+
 ---
 
 ## Gotchas

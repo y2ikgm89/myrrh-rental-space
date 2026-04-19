@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { getErrorMessage } from "@/shared/lib/errors";
-import { devLoginAction } from "./dev-login-action";
+import { signIn } from "@/shared/lib/customer-auth-client";
+import { ensureDevUserAction } from "./dev-login-action";
+import { DEV_CUSTOMER_CREDENTIALS } from "./dev-login-credentials";
 
 export function DevLoginButton() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -14,12 +14,24 @@ export function DevLoginButton() {
     setError(null);
     startTransition(async () => {
       try {
-        const result = await devLoginAction();
-        if (!result.success) {
-          setError(result.error);
+        // 1. Server Action でテストユーザーの存在確認 + 作成（idempotent）
+        const ensureResult = await ensureDevUserAction();
+        if (!ensureResult.success) {
+          setError(ensureResult.error);
           return;
         }
-        router.push("/mypage");
+        // 2. Better Auth Client API でサインイン
+        //    callbackURL で自動 redirect → Set-Cookie + Router Cache 自動更新（公式パターン）
+        await signIn.email({
+          email: DEV_CUSTOMER_CREDENTIALS.email,
+          password: DEV_CUSTOMER_CREDENTIALS.password,
+          callbackURL: "/mypage",
+          fetchOptions: {
+            onError: (ctx) => {
+              setError(ctx.error.message ?? "テストログインに失敗しました");
+            },
+          },
+        });
       } catch (err) {
         setError(getErrorMessage(err));
       }

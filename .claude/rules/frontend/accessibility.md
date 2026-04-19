@@ -86,6 +86,42 @@ paths:
 <Link href="/spaces">スペース一覧</Link>
 ```
 
+### ナビゲーション vs タブの WAI-ARIA 区別
+
+ページ遷移は **tab パターンではない**。`role="tab"` は同一ページ内で `tabpanel` を切り替える（=URL は変わらない）インタラクション専用:
+
+```tsx
+// NG: ページ遷移リンクに role="tab"（WAI-ARIA 誤用 — tab は tabpanel 切替用）
+<div role="tablist">
+  <Link href="/mypage/events" role="tab" aria-selected={isActive}>イベント</Link>
+</div>
+
+// OK: ページ遷移は nav + aria-current="page"
+<nav aria-label="マイページナビゲーション">
+  <ul>
+    <li>
+      <Link
+        href="/mypage"
+        aria-current={isActive ? "page" : undefined}
+      >
+        予約一覧
+      </Link>
+    </li>
+  </ul>
+</nav>
+
+// OK: 同一ページ内で tabpanel 切替なら Radix Tabs primitive
+<Tabs.Root value={view} onValueChange={setView}>
+  <Tabs.List>
+    <Tabs.Trigger value="list">一覧</Tabs.Trigger>
+    <Tabs.Trigger value="calendar">カレンダー</Tabs.Trigger>
+  </Tabs.List>
+  <Tabs.Content value="list" forceMount className="data-[state=inactive]:hidden">
+    {listView}
+  </Tabs.Content>
+</Tabs.Root>
+```
+
 ---
 
 ## aria-\* 属性
