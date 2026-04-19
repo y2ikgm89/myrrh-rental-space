@@ -7,8 +7,11 @@ import { Button } from "@/public/components/design-system/button";
 import { EventCard } from "./event-card";
 import type { EventCardData } from "./event-card";
 
+type EventListVariant = "upcoming" | "past";
+
 interface EventListViewProps {
   readonly events: readonly EventCardData[];
+  readonly variant?: EventListVariant;
 }
 
 function groupByMonth(
@@ -27,16 +30,23 @@ function groupByMonth(
   return map;
 }
 
-export function EventListView({ events }: EventListViewProps) {
+export function EventListView({
+  events,
+  variant = "upcoming",
+}: EventListViewProps) {
   if (events.length === 0) {
     return (
       <div className="space-y-4 py-12 text-center md:py-16">
         <p className="text-muted-foreground">
-          現在予定されているイベントはありません。
+          {variant === "past"
+            ? "過去のイベントはまだありません。"
+            : "現在予定されているイベントはありません。"}
         </p>
-        <Button variant="editorial" size="sm" href="/contact">
-          お問い合わせ
-        </Button>
+        {variant === "upcoming" ? (
+          <Button variant="editorial" size="sm" href="/contact">
+            お問い合わせ
+          </Button>
+        ) : null}
       </div>
     );
   }
