@@ -36,7 +36,7 @@ export default async function EventsPage({
 }: EventsPageProps): Promise<ReactElement> {
   await connection();
 
-  const { view } = await eventsSearchParams.parse(searchParams);
+  const { view, scope, y, m } = await eventsSearchParams.parse(searchParams);
 
   const [sections, rawEvents] = await Promise.all([
     getPageSectionsWithFallback("events"),
@@ -78,8 +78,14 @@ export default async function EventsPage({
         <Container>
           <EventsViewSwitcher
             activeView={view}
-            listView={<EventListView events={events} />}
-            calendarView={<EventCalendarView events={events} />}
+            listView={<EventListView events={events} initialScope={scope} />}
+            calendarView={
+              <EventCalendarView
+                events={events}
+                initialYear={y}
+                initialMonth={m}
+              />
+            }
           />
         </Container>
       </section>
