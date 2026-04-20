@@ -199,7 +199,30 @@ OKLCH形式。Luxury White × Bronze。
 
 - `justify-between` は要素が 2 個の場合のみ真に対称。3 要素で「左群 + 中央 + 空」にするには grid が必須（flex では不可能）
 - 「今日」ボタンは `<` / `>` と同じ `h-10` に揃える（`px-4` で横長化してグループ一体感）
-- 参照実装: `src/app/(public)/events/_components/event-calendar-view.tsx`
+- 左集約グループ内のボタンは同一 border treatment で揃える（`[今月] [<] [>]` 全て `h-10 border border-border hover:border-foreground/30`）。borderless chevron と bordered 「今月」の混在は視覚不一致を招く。矢印を borderless にするのは中央フランキング（`< 2026年5月 >` 型）で「月名=主役、矢印=脇役」を強調する時のみ
+- **中央配置ボタンに trailing icon（`▾` / chevron 等）を置く場合は `absolute left-full` で flow 外に出す** — `<button>Label<span>▾</span></button>` を `grid-cols-[1fr_auto_1fr]` の auto 列に置くと、button 幾何中心は「Label + icon」全幅の中央になり、Label テキストの光学中心が兄弟の flex 中央揃え要素（タブ等）と比べて icon 幅分だけ左にずれる。`<span aria-hidden className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2">▾</span>` で icon を flow 外に出すと Label が auto 列の真ん中に揃う。参照実装: `month-picker.tsx` のトリガーボタン
+- 参照実装: `src/app/(public)/events/_components/calendar-month-nav.tsx`（shared component） / `event-calendar-view.tsx` / `event-list-view.tsx`
+
+## Disclosure trigger chevron（Radix / shadcn 準拠）
+
+Accordion / Select / Popover / custom picker の trigger に付く `▾` / chevron は **`aria-expanded` と rotate で state 連動させる**。`group-hover:translate-y-*` 等の装飾-only hover アニメは禁止（open 中も `▾` のまま state と矛盾し、hover で下がる動きに意味がない）。
+
+```tsx
+<button aria-expanded={open} className="group relative ...">
+  {label}
+  <span
+    aria-hidden="true"
+    className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180"
+  >
+    ▾
+  </span>
+</button>
+```
+
+- trigger に `aria-expanded={open}` が既に付与されていれば CSS のみで state feedback 実現（JS 不要）
+- `▾` + `rotate-180` = `▴` 相当の視覚表現（Unicode 文字切替より transform の方が滑らか）
+- Radix Accordion `data-[state=open]:rotate-180` も同義だが、custom trigger では `aria-expanded` 属性セレクタを使う（Radix primitive 外でも機能）
+- 参照実装: `src/app/(public)/events/_components/month-picker.tsx`
 
 ## Editorial underline reveal（Apple / Aesop / Kinfolk 方式）
 

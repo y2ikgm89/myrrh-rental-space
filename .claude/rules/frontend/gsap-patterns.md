@@ -385,6 +385,41 @@ useEffect(() => {
 
 ---
 
+## パターン D: リスト stagger（ScrollRevealGroup）
+
+`.map` で N 個生成するカード・リストアイテムでは、**個別の `<ScrollReveal>` wrap を禁止**。
+GSAP 公式推奨の「1 ScrollTrigger + stagger」に集約する。個別 ScrollReveal は N 個の ScrollTrigger を作り、
+縦並びで大きなカードだと fold 外要素が `opacity:0` で待機する silent bug（「1 個目しか見えない」）を引き起こす。
+
+```tsx
+// NG: N ScrollTrigger + fold 外要素の待機 bug
+{
+  items.map((item, i) => (
+    <ScrollReveal key={item.id} delay={i * 0.08}>
+      <Card {...item} />
+    </ScrollReveal>
+  ));
+}
+
+// OK: 1 ScrollTrigger + stagger（公式推奨）
+<ScrollRevealGroup className="grid gap-6">
+  {items.map((item) => (
+    <Card key={item.id} {...item} />
+  ))}
+</ScrollRevealGroup>;
+```
+
+`ScrollRevealGroup` は内部で `gsap.fromTo(items, {...}, { stagger, scrollTrigger: { trigger: container } })`
+を `gsap.matchMedia("(prefers-reduced-motion: no-preference)")` でラップして実行。
+コンテナ上端が viewport 85% に到達した時点で全子要素が連続発火する。
+
+- デフォルト stagger: `STAGGER.element`（0.1）。上書きは `stagger={0.08}` prop
+- ルート要素は `<div>` 固定。news archive 等で `<ul>/<li>` が欲しい場合も `<div className="divide-y border-y border-border divide-border">` に統一する（event-list / news-list で採用）
+- 参照実装: `src/app/(public)/_shared/components/animations/scroll-reveal.tsx`
+- 移行済み消費者: event-list-view / post-grid / space-grid / news-list / features-section / how-it-works-section / SpaceShowcaseSection
+
+---
+
 ## ScrollTrigger パターン
 
 ### 基本スクロールアニメーション（入場系）
@@ -662,6 +697,7 @@ gsap.set(imageRef.current, { scale: 1.15 })  // 初期値も GSAP で設定
 10. **`markers: true` の本番残存禁止**
 11. **`top` / `left` プロパティのアニメーション禁止** — `x`, `y`, `xPercent`, `yPercent` を使用
 12. **アニメーション定数（`animations.ts`）外のマジックナンバー禁止** — duration / ease / stagger は定数を使用
+13. **リスト `.map` 内の個別 `<ScrollReveal delay={i * 0.08}>` wrap 禁止** — パターン D の `ScrollRevealGroup`（1 ScrollTrigger + stagger）を使う。N ScrollTrigger 生成 + fold 外要素 opacity:0 待機の silent bug 防止
 
 ---
 

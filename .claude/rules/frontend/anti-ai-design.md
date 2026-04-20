@@ -35,7 +35,9 @@ paths:
 - **`EASE` 定数外の easing 禁止** — `animations.ts` で定義された easing のみ使用
 - **`STAGGER` 定数外の stagger 禁止** — `animations.ts` で定義された stagger のみ使用
 - **fade-in-up 一辺倒禁止** — SplitText + ScrollReveal + ParallaxImage を組み合わせ
-- **同時発火禁止** — `ScrollReveal delay={0.1}` `delay={0.2}` で時差をつける
+- **同時発火禁止**
+  - Hero / CTA の少数要素: `<ScrollReveal delay={0.1}>` `delay={0.2}` で個別に時差
+  - リスト `.map`: `ScrollRevealGroup` の stagger を使用（個別 `<ScrollReveal delay={i*0.08}>` wrap は N ScrollTrigger 生成 + fold 外要素 opacity:0 待機の silent bug を引き起こすため禁止 → `gsap-patterns.md` §パターン D）
 
 ## コンポーネント禁止パターン
 

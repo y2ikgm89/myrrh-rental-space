@@ -444,6 +444,22 @@ const { params, setCategory } = useFilterParamsWithCategory({
    - **RSC 一覧タブ**で URL の `searchParams` を正にしたい場合は、`Link` でクエリを更新するか `shallow: false` を使う（`admin-ui-patterns.md` のタブ (B)・スペース管理参照実装）。
    - **同一ページ内のクライアント専用タブ**（例: 編集フォームの「基本 / 料金」切替で RSC を再取得しない）は `shallow: true` や `useQueryState` のみでもよい。
 
+7. **`shallow: true` で useQueryStates する Client Component に SC から initial props を渡さない**
+
+   `shallow: true` は RSC を再レンダーしないため、SC で parse した初期値を props で渡すと最初の URL 変更後に stale 化する（例: 「今月の y/m を URL から削除」後、SSR 時点の `initialYear`/`initialMonth` が残り続けて client state が正しい today fallback に戻らない silent bug）。useQueryStates は SSR でも URL から値を読むため、Client で直接読み、fallback は「today」等の非 SC 値にする。`shallow: false` の場合は SC が都度 parse するので initial props OK（`events-view-switcher.tsx` の `activeView` prop パターン）。
+
+   ```typescript
+   // NG: shallow: true + initial props（URL clean 後に stale）
+   <EventCalendarView initialYear={parsedY} initialMonth={parsedM} />
+   // Client 側: const y = urlY ?? initialYear ?? today.year  ← initialYear が SSR 時点で固着
+
+   // OK: Client で useQueryStates のみ + today fallback
+   const [{ y: urlY, m: urlM }] = useQueryStates(parsers, { shallow: true })
+   const year = urlY ?? today.year
+   ```
+
+   参照実装: `src/app/(public)/events/_components/use-calendar-month.ts`
+
 ## ファイル配置
 
 | パス                                 | 内容                                                    |

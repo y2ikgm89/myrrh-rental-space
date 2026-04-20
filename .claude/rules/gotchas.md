@@ -296,6 +296,7 @@ paths:
 - **Turbopack ビルドはルート別 JS サイズを表示しない** — `bun run build` 出力の「Total client JS」は全チャンク合計。1ルートの First Load JS は `.next/server/app/<route>.html` 内の `<script>` 参照チャンクを合計して計算する
 - **Turbopack が `¥`（U+00A5）を JSX 属性内でエスケープシーケンスと誤認識** — `placeholder="¥1,000"` 等はビルドエラー（`Invalid unicode escape`）。モジュールレベル定数に `"\u00A51,000"` で定義し `placeholder={CONST}` で参照する
 - **Turbopack HMR がコンポーネント変更を反映しない場合がある** — Playwright MCP で確認する際に古いレンダリングが残る。`?_t=N` パラメータ付きナビゲーションでも解消しない場合は dev サーバー再起動（`bun dev`）が必要
+- **Turbopack の server-rendered Client Component bundle が Fast Refresh 後も stale する** — Client Component の className / JSX 構造変更後、client bundle は HMR で更新されるのに server-side module cache が古いまま残り、SSR HTML と client hydrate 結果で差分が出る（`+ className="flex items-center gap-2"` vs `- className="justify-self-start"` のような hydration mismatch ログ + `+ 今月` vs `- 今日` のテキスト差分）。`bun run validate` が EXIT=0 でも発生する dev-only 問題。対処: ① `netstat -ano | grep :3000` で PID 特定 ② `cmd //c "taskkill /PID <pid> /F /T"` ③ `python3 -c "import shutil; shutil.rmtree('.next', ignore_errors=True)"` ④ `bun dev` 再起動。Tailwind JIT re-scan issue とは別問題（JIT は新規 class のみ、こちらは既存 class の再配置でも発動）
 - **dev サーバーは `db:generate` 後も古い Prisma Client を保持** — `schema.prisma` 変更 → `bun run db:generate` しても、稼働中の `next dev` プロセスはメモリに旧 Prisma Client の型を持ったまま。新カラムを select すると `PrismaClientValidationError: Unknown field ... for select statement on model ...` で 500 → 公開ページは 404 フォールバック。`cmd //c "taskkill /PID <pid> /F /T"` で強制終了 → `bun dev` で再起動が必須
 - **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
 - **`server-only` の間接依存チェーンに注意** — `safe-fetch.ts` 等の共有ユーティリティが `./logger`（`server-only`）を import すると、テストで `mock.module("server-only")` が効かない場合がある。`server-only` なしの `logger-core` を直接 import する。対象: `safe-fetch.ts`, `cron-auth.ts` 等のテスト対象モジュール
@@ -444,6 +445,10 @@ paths:
 - **`Post.thumbnailUrl` は `String` 非 nullable（空文字列あり得る）** — サイドバー・カード・ギャラリー等の表示コンポーネントは `post.thumbnailUrl ? <Image .../> : <div className="aspect-[3/2] bg-surface" />` でフォールバック必須。`thumbnailUrl == null` はスキーマ上存在しないため `post.thumbnailUrl ?? fallback` パターンは機能しない
 
 - **公開ページのアクションボタンに `rounded-full` 禁止** — Editorial Magazine はシャープエッジが基本。`Button` Primitive の primary/secondary/ghost/editorial は全てシャープ。`rounded-full` はバッジ・タグ・アイコンボタン（シェア・ギャラリーナビ）・スピナー・カルーセルドットのみ許容
+
+- **リスト `.map` 内の個別 `<ScrollReveal delay={i*0.08}>` wrap は anti-pattern** — 縦並びで大きなカード（event-list 等）は 2 個目以降が viewport 外で `opacity:0` のまま待機、スクロールしないと見えない silent bug。`ScrollRevealGroup`（1 ScrollTrigger + stagger、`@/public/components/animations/scroll-reveal`）に集約。event-list-view / post-grid / space-grid / news-list / features-section / how-it-works-section / SpaceShowcaseSection で統一済み。詳細は `frontend/gsap-patterns.md` §パターン D
+- **Structured list の canonical border/divider pattern** — `divide-y border-y border-border divide-border` をコンテナに適用（上下 + 各アイテム間の線）。per-item `cn("border-b", i === 0 && "border-t")` 分岐ロジックは廃止。features-section / event-list-view / news-list が参照実装
+- **news archive は `<ul>/<li>` ではなく `<div className="divide-y border-y ...">`** — event-list と同形で統一。Editorial Magazine（Kinfolk / Cereal / The Gentlewoman）は news archive を `<ul>` でマークアップしない業界標準
 
 ## レートリミッター
 
