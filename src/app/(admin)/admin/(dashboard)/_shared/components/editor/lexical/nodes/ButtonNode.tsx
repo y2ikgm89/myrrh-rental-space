@@ -27,7 +27,11 @@ import {
   createState,
   DecoratorNode,
 } from "lexical";
-import { createEnumGuard, parseBoolean } from "../config/type-guards";
+import {
+  createEnumGuard,
+  parseBoolean,
+  parseStringWithDefault,
+} from "../config/type-guards";
 
 // =============================================================================
 // Types
@@ -89,11 +93,11 @@ const BUTTON_BASE_CLASS =
 // =============================================================================
 
 export const buttonTextState = createState("text", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : "ボタン"),
+  parse: parseStringWithDefault("ボタン"),
 });
 
 export const buttonHrefState = createState("href", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : "#"),
+  parse: parseStringWithDefault("#"),
 });
 
 export const buttonVariantState = createState("variant", {

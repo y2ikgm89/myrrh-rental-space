@@ -16,7 +16,11 @@ import {
   createState,
   ElementNode,
 } from "lexical";
-import { parseBoolean, parseString } from "../config/type-guards";
+import {
+  parseBoolean,
+  parseBooleanWithDefault,
+  parseString,
+} from "../config/type-guards";
 import { type AccentColor, isAccentColor } from "../config/accent-colors";
 
 // =============================================================================
@@ -49,7 +53,7 @@ export const planColorState = createState("color", {
 // =============================================================================
 
 export const featureIncludedState = createState("included", {
-  parse: (v: unknown): boolean => v !== false,
+  parse: parseBooleanWithDefault(true),
 });
 
 // =============================================================================

@@ -24,7 +24,7 @@ import {
   $createParagraphNode,
   $isElementNode,
 } from "lexical";
-import { createEnumGuard } from "../config/type-guards";
+import { createEnumGuard, parseStringWithDefault } from "../config/type-guards";
 import { isAccentColor, type AccentColor } from "../config/accent-colors";
 
 // =============================================================================
@@ -70,7 +70,7 @@ export const stepsStyleState = createState("stepsStyle", {
 });
 
 export const stepsLabelState = createState("stepsLabel", {
-  parse: (v: unknown): string => (typeof v === "string" ? v : "STEP"),
+  parse: parseStringWithDefault("STEP"),
 });
 
 export const stepsShapeState = createState("stepsShape", {

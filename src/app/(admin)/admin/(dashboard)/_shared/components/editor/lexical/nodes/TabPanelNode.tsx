@@ -22,6 +22,7 @@ import {
   createState,
   ElementNode,
 } from "lexical";
+import { parseBooleanWithDefault } from "../config/type-guards";
 
 // =============================================================================
 // State
@@ -33,7 +34,7 @@ export const tabPanelIndexState = createState("tabIndex", {
 });
 
 export const tabPanelActiveState = createState("isActive", {
-  parse: (v: unknown): boolean => (typeof v === "boolean" ? v : true),
+  parse: parseBooleanWithDefault(true),
 });
 
 // =============================================================================

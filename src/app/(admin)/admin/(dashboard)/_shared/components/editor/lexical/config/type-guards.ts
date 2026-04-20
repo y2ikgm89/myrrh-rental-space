@@ -36,3 +36,15 @@ export function parseString(v: unknown): string {
 export function parseBoolean(v: unknown): boolean {
   return typeof v === "boolean" ? v : false;
 }
+
+/** 任意のデフォルト値を持つ string パーサーを生成する */
+export const parseStringWithDefault =
+  (defaultValue: string) =>
+  (v: unknown): string =>
+    typeof v === "string" ? v : defaultValue;
+
+/** 任意のデフォルト値を持つ boolean パーサーを生成する */
+export const parseBooleanWithDefault =
+  (defaultValue: boolean) =>
+  (v: unknown): boolean =>
+    typeof v === "boolean" ? v : defaultValue;
