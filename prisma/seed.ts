@@ -389,7 +389,17 @@ async function seedLocations() {
       name: "本館",
       description: "表参道駅から徒歩5分の好立地。全フロアにWi-Fi完備。",
       address: "東京都渋谷区神宮前1-1-1 サンプルビル",
-      access: "東京メトロ「表参道駅」A1出口より徒歩5分",
+      access:
+        "東京メトロ「表参道駅」A1出口より徒歩5分\nJR「原宿駅」表参道口より徒歩8分",
+      parkingInfo:
+        "専用駐車場 3台（要事前予約）\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）",
+      amenities: {
+        wifi: true,
+        parking: true,
+        barrier_free: true,
+        elevator: true,
+        food_allowed: true,
+      },
       imageUrl: "/images/seed/location-main.svg",
       sortOrder: 0,
       isPublished: true,
@@ -398,7 +408,14 @@ async function seedLocations() {
       name: "別館",
       description: "落ち着いた雰囲気の別館。少人数のミーティングに最適。",
       address: "東京都渋谷区神宮前1-2-3 別館ビル",
-      access: "本館より徒歩2分",
+      access: "本館より徒歩2分\n表参道駅A1出口より徒歩7分",
+      parkingInfo: "専用駐車場はございません。本館駐車場をご利用ください。",
+      amenities: {
+        wifi: true,
+        elevator: false,
+        food_allowed: true,
+        photography_allowed: true,
+      },
       imageUrl: "/images/seed/location-annex.svg",
       sortOrder: 1,
       isPublished: true,
@@ -407,19 +424,36 @@ async function seedLocations() {
       name: "新宿支店",
       description: "新宿駅直結でアクセス抜群。大人数のセミナーにも対応。",
       address: "東京都新宿区西新宿1-1-1 新宿タワー",
-      access: "JR「新宿駅」西口直結",
+      access: "JR「新宿駅」西口直結\n都営大江戸線「新宿西口駅」D5出口直結",
+      parkingInfo: "新宿タワー地下駐車場（有料・先着順）",
+      amenities: {
+        wifi: true,
+        parking: true,
+        barrier_free: true,
+        elevator: true,
+        smoking_area: true,
+        food_allowed: true,
+        photography_allowed: true,
+        music_allowed: true,
+      },
       imageUrl: "/images/seed/location-shinjuku.svg",
       sortOrder: 2,
       isPublished: false,
     },
   ];
 
-  await prisma.location.createMany({
-    data: locations,
-    skipDuplicates: true,
-  });
+  // upsert で idempotent 化（name @unique が SSoT キー）
+  // createMany({ skipDuplicates: true }) は name に unique がないと UUID 衝突のみで
+  // skip 判定されるため、再実行ごとに同名レコードが量産される
+  for (const loc of locations) {
+    await prisma.location.upsert({
+      where: { name: loc.name },
+      create: loc,
+      update: loc,
+    });
+  }
 
-  console.log("✅ Created locations");
+  console.log("✅ Upserted locations");
 }
 
 // =============================================================================
@@ -458,12 +492,16 @@ async function seedSpaceCategories() {
     },
   ];
 
-  await prisma.spaceCategory.createMany({
-    data: categories,
-    skipDuplicates: true,
-  });
+  // upsert で idempotent 化（name @unique が SSoT キー）
+  for (const cat of categories) {
+    await prisma.spaceCategory.upsert({
+      where: { name: cat.name },
+      create: cat,
+      update: cat,
+    });
+  }
 
-  console.log("✅ Created space categories");
+  console.log("✅ Upserted space categories");
 }
 
 // =============================================================================
@@ -2775,7 +2813,29 @@ async function seedSystemPageSections() {
 // =============================================================================
 
 async function seedEvents() {
-  const eventSeedSource = [
+  // Location は seedLocations で先に作られている前提（seedAll / seedDemo で呼び出し順保証）
+  const locationsByName = new Map(
+    (await prisma.location.findMany({ select: { id: true, name: true } })).map(
+      (l) => [l.name, l.id],
+    ),
+  );
+  const honkanId = locationsByName.get("本館") ?? null;
+  const bekkanId = locationsByName.get("別館") ?? null;
+
+  const eventSeedSource: Array<{
+    title: string;
+    slug: string;
+    description: string;
+    startTime: Date;
+    endTime: Date;
+    capacity: number;
+    price: number;
+    addressDetail?: string;
+    locationId?: string | null;
+    status: EventStatus;
+    registrationOpen: boolean;
+    publishedAt?: Date;
+  }> = [
     {
       title: "ヨガ＆マインドフルネス体験会",
       slug: "yoga-mindfulness-workshop",
@@ -2785,7 +2845,8 @@ async function seedEvents() {
       endTime: new Date("2026-05-15T12:00:00+09:00"),
       capacity: 15,
       price: 2000,
-      location: "スタジオA",
+      locationId: honkanId,
+      addressDetail: "3F スタジオA",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
       publishedAt: new Date(),
@@ -2799,7 +2860,8 @@ async function seedEvents() {
       endTime: new Date("2026-05-20T17:00:00+09:00"),
       capacity: 10,
       price: 5000,
-      location: "ギャラリールーム",
+      locationId: bekkanId,
+      addressDetail: "ギャラリールーム",
       status: EventStatus.PUBLISHED,
       registrationOpen: true,
       publishedAt: new Date(),
@@ -2812,7 +2874,8 @@ async function seedEvents() {
       endTime: new Date("2026-06-01T20:00:00+09:00"),
       capacity: 30,
       price: 0,
-      location: "メインホール",
+      locationId: honkanId,
+      addressDetail: "1F メインホール",
       status: EventStatus.DRAFT,
       registrationOpen: false,
     },
@@ -2824,6 +2887,7 @@ async function seedEvents() {
       endTime: new Date("2026-04-10T12:00:00+09:00"),
       capacity: 8,
       price: 1500,
+      // 外部会場（location なし、addressDetail も空）の例
       status: EventStatus.CANCELLED,
       registrationOpen: false,
     },
@@ -2836,7 +2900,7 @@ async function seedEvents() {
       endTime: new Date("2026-03-05T12:00:00+09:00"),
       capacity: 10,
       price: 3000,
-      location: "和室",
+      addressDetail: "渋谷区文化総合センター大和田 和室",
       status: EventStatus.ARCHIVED,
       registrationOpen: false,
       publishedAt: new Date("2026-02-15T09:00:00+09:00"),

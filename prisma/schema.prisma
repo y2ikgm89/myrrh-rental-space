@@ -383,10 +383,12 @@ model StaffInvitation {
 
 model Location {
   id            String   @id @default(uuid()) @db.Uuid
-  name          String // 例: 本館、渋谷店
+  name          String   @unique // 例: 本館、渋谷店（seed idempotency 保証）
   description   String?  @db.Text
   address       String // 住所
   access        String?  @db.Text // アクセス情報
+  parkingInfo   String?  @db.Text // 駐車場案内（拠点ごと）
+  amenities     Json     @default("{}") // 設備属性 {"wifi": true, ...}（拠点ごと）
   imageUrl      String // 建物画像（必須）
   imageUrls     Json     @default("[]") // 追加画像
   businessHours Json? // 営業時間
@@ -398,6 +400,7 @@ model Location {
 
   // Relations
   spaces Space[]
+  events Event[]
 
   @@index([isPublished, isActive])
   @@index([sortOrder])
@@ -406,7 +409,7 @@ model Location {
 
 model SpaceCategory {
   id          String   @id @default(uuid()) @db.Uuid
-  name        String // 例: 会議室、スタジオ、セミナー室
+  name        String   @unique // 例: 会議室、スタジオ、セミナー室（seed idempotency 保証）
   description String?  @db.Text
   icon        String? // アイコン名（任意）
   color       String? // テーマカラー（任意）
@@ -446,8 +449,9 @@ model Space {
   isPublished   Boolean   @default(false)
   publishedAt   DateTime?
   isActive      Boolean   @default(true)
-  /// レビュー機能の ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
-  reviewsEnabled Boolean  @default(true)
+  /// レビュー機能の per-space ON/OFF。false の場合は公開ページで非表示 + 投稿不可。
+  /// 新規スペースはデフォルト false（opt-in）。`Settings.reviewsEnabledGlobal` が上位 gate。
+  reviewsEnabled Boolean  @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -1327,6 +1331,11 @@ model Settings {
   eventImportEnabled   Boolean @default(false)
   eventImportSyncToken String? @db.Text
 
+  // Review Feature Gate (multi-tenant SaaS pattern)
+  /// サイト全体のレビュー機能 ON/OFF（global gate）。false の場合 per-space `reviewsEnabled` に関わらず全レビュー非表示。
+  /// 上位 gate: Global OFF → 全て非表示 / Global ON → per-space toggle が効く（WordPress / Ghost precedence）。
+  reviewsEnabledGlobal Boolean @default(true)
+
   // Webhook設定（Push Notifications）
   googleCalendarWebhookChannelId  String? // Webhook チャンネルID
   googleCalendarWebhookResourceId String? // Webhook リソースID
@@ -1448,6 +1457,7 @@ enum MediaUsage {
   NEWS
   PAGE
   SPACE
+  EVENT
   SITE
   GENERAL
 }
@@ -1735,10 +1745,18 @@ model Event {
   endTime               DateTime
   capacity              Int?
   price                 Int?
-  location              String?     @db.VarChar(200)
+  /// 号室・フロア・補足情報または外部会場名。
+  /// locationId/spaceId と併用時は補足情報（フロア・入口案内等）、
+  /// 両方 null のときは外部会場名として使う。
+  addressDetail         String?     @db.VarChar(200)
+  /// 会場（本館・渋谷店等）。null = 外部会場または未設定
+  locationId            String?     @db.Uuid
+  /// 会場内のスペース。null = 会場全体 or 外部会場
   spaceId               String?     @db.Uuid
   status                EventStatus @default(DRAFT)
   registrationOpen      Boolean     @default(true)
+  /// 申込締切日時（null = 開始時刻まで受付）。startTime <= 必須。
+  registrationDeadline  DateTime?
   googleCalendarEventId String?     @unique
   publishedAt           DateTime?
   deletedAt             DateTime?
@@ -1746,12 +1764,14 @@ model Event {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
+  location      Location?           @relation(fields: [locationId], references: [id], onDelete: SetNull)
   space         Space?              @relation(fields: [spaceId], references: [id], onDelete: SetNull)
   deletedBy     User?               @relation("EventDeletions", fields: [deletedById], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
 
   @@index([startTime, endTime])
   @@index([status])
+  @@index([locationId])
   @@index([spaceId])
   @@index([deletedAt])
   @@map("events")
