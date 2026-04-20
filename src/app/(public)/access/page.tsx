@@ -1,32 +1,33 @@
 /**
- * /access — アクセスページ（セクションベース）
+ * /access — アクセスページ（多拠点対応 Editorial layout）
  *
- * Hero はセクションシステムから描画。
- * Google Maps 埋め込み + 交通案内 + 駐車場情報 + ビジネス情報。
+ * 設計方針: Hoshinoya / Aman / Cotton Club Tokyo の調査結果に基づく Vertical Chapter pattern。
+ * - 拠点 1+ 件: 各拠点を「章」として縦に展開、上部に anchor index ナビ
+ * - 拠点 0 件:  Settings から合成した単一 chapter にフォールバック
+ *
+ * 参照: docs/research/access-page-patterns.md（NN/g + Baymard + 業界実装調査）
  */
 
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Suspense } from "react";
 import { connection } from "next/server";
-import {
-  IconMapPin,
-  IconTrain,
-  IconCar,
-  IconExternalLink,
-} from "@tabler/icons-react";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { Container } from "@/public/components/design-system/container";
-import { Heading } from "@/public/components/design-system/heading";
 import { PageLayout } from "@/public/components/design-system/page-layout";
-import { Section } from "@/public/components/design-system/section";
+import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import {
+  getPublishedLocationsForAccess,
+  type LocationForAccess,
+} from "@/shared/domain/locations/public-queries";
 import { getBusinessInfo } from "@/public/data/business";
-import { BusinessInfo } from "../contact/_components/business-info";
-import { AccessMap } from "./_components/access-map";
+import { generateUniqueSlug } from "@/shared/lib/slug";
+import { LocationChapter } from "./_components/location-chapter";
+import { LocationsOverview } from "./_components/locations-overview";
+import { AccessGlobalInfo } from "./_components/access-global-info";
 
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
@@ -34,72 +35,113 @@ export async function generateMetadata(): Promise<Metadata> {
   return generatePageMetadata("access");
 }
 
-async function AccessInfoSection(): Promise<ReactElement> {
+/**
+ * Settings からフォールバック用の合成 Location を生成
+ * 拠点が DB に登録されていない場合の単一拠点モードで使用。
+ */
+async function buildFallbackLocation(): Promise<LocationForAccess | null> {
   const info = await getBusinessInfo();
+  if (!info.address) return null;
 
-  const hasAccessInfo = Boolean(info.accessInfo);
-  const hasParkingInfo = Boolean(info.parkingInfo);
-  const hasGoogleMapsUrl = Boolean(info.googleMapsUrl);
+  return {
+    id: "fallback",
+    name: info.name || "本拠点",
+    description: null,
+    address: info.address,
+    access: info.accessInfo ?? null,
+    parkingInfo: info.parkingInfo ?? null,
+    amenities: info.businessAttributes ?? {},
+    imageUrl: "", // フォールバック時は画像なし（LocationChapter で条件レンダリング）
+    businessHours: info.businessHours,
+  };
+}
 
-  if (!hasAccessInfo && !hasParkingInfo && !hasGoogleMapsUrl) {
-    return <></>;
+/**
+ * 拠点リストとアンカー情報を解決（公開拠点 → なければ Settings フォールバック合成）
+ * `'use cache'` のおかげで Overview / Chapters の 2 箇所から呼んでも DB アクセスは 1 回。
+ */
+async function resolveLocations(): Promise<
+  ReadonlyArray<{
+    anchorId: string;
+    index: number;
+    location: LocationForAccess;
+  }>
+> {
+  const locations = await getPublishedLocationsForAccess();
+
+  if (locations.length === 0) {
+    const fallback = await buildFallbackLocation();
+    return fallback
+      ? [{ anchorId: "main-location", index: 1, location: fallback }]
+      : [];
   }
 
+  const usedSlugs = new Set<string>();
+  return locations.map((loc, i) => {
+    const anchorId = generateUniqueSlug(loc.name, usedSlugs, "location");
+    usedSlugs.add(anchorId);
+    return { anchorId, index: i + 1, location: loc };
+  });
+}
+
+async function AccessOverview(): Promise<ReactElement> {
+  const enriched = await resolveLocations();
+  if (enriched.length === 0) return <></>;
+
+  const navItems = enriched.map(({ anchorId, index, location }) => ({
+    anchorId,
+    index,
+    name: location.name,
+  }));
+
   return (
-    <ScrollReveal delay={0.1}>
-      <div className="space-y-6">
-        {/* 交通案内 */}
-        {hasAccessInfo && (
-          <div className="border border-border p-6">
-            <div className="flex items-center gap-2">
-              <IconTrain className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                交通案内
-              </p>
-            </div>
-            <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-foreground">
-              {info.accessInfo}
-            </div>
-          </div>
-        )}
-
-        {/* 駐車場情報 */}
-        {hasParkingInfo && (
-          <div className="border border-border p-6">
-            <div className="flex items-center gap-2">
-              <IconCar className="h-4 w-4 text-muted-foreground" />
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                駐車場
-              </p>
-            </div>
-            <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-foreground">
-              {info.parkingInfo}
-            </div>
-          </div>
-        )}
-
-        {/* Google Maps で開くボタン */}
-        {hasGoogleMapsUrl && (
-          <a
-            href={info.googleMapsUrl ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center border border-foreground px-5 py-2.5 text-base text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground"
-          >
-            <IconMapPin className="mr-2 h-4 w-4" />
-            Google Maps で開く
-            <IconExternalLink className="ml-2 h-3.5 w-3.5" />
-          </a>
-        )}
-      </div>
+    <ScrollReveal>
+      <LocationsOverview
+        locations={navItems}
+        headline={
+          navItems.length > 1
+            ? "全拠点のご案内"
+            : (navItems[0]?.name ?? "拠点のご案内")
+        }
+      />
     </ScrollReveal>
+  );
+}
+
+interface AccessChaptersProps {
+  readonly googleMapsUrl: string | null;
+}
+
+async function AccessChapters({
+  googleMapsUrl,
+}: AccessChaptersProps): Promise<ReactElement> {
+  const enriched = await resolveLocations();
+  if (enriched.length === 0) return <></>;
+
+  return (
+    <div className="space-y-20 md:space-y-28">
+      {enriched.map(({ anchorId, index, location }, i) => (
+        <ScrollReveal key={anchorId} delay={Math.min(0.1 * i, 0.3)}>
+          <LocationChapter
+            anchorId={anchorId}
+            index={index}
+            location={location}
+            googleMapsUrl={googleMapsUrl}
+            showSectionDivider={i > 0}
+          />
+        </ScrollReveal>
+      ))}
+    </div>
   );
 }
 
 export default async function AccessPage(): Promise<ReactElement> {
   await connection();
 
-  const sections = await getPageSectionsWithFallback("access");
+  const [sections, businessInfo] = await Promise.all([
+    getPageSectionsWithFallback("access"),
+    getBusinessInfo(),
+  ]);
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -125,56 +167,36 @@ export default async function AccessPage(): Promise<ReactElement> {
         />
       }
     >
-      {/* 情報セクション（2カラム） */}
-      <section className="pt-10 md:pt-14">
+      {/* Section 1: Overview（拠点ヘッダー + アンカーナビ） */}
+      <section className="pt-12 md:pt-20">
         <Container>
-          <div className="mb-8 text-center md:mb-12">
-            <ScrollReveal>
-              <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Information
-              </span>
-              <Heading level={2} className="mt-4 italic">
-                ご案内
-              </Heading>
-            </ScrollReveal>
-          </div>
+          <Suspense fallback={null}>
+            <AccessOverview />
+          </Suspense>
+        </Container>
+      </section>
 
-          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-            {/* 左: 交通案内・駐車場・Google Maps ボタン */}
+      {/* Section 2: 全社共通 General Info — 高頻度の Contact 等を上層に配置
+          chapter divider と同じスタイル（border + pb）で次セクションと視覚的に分離 */}
+      <section className="pt-16 md:pt-20">
+        <Container>
+          <div className="border-b border-border pb-16 md:pb-20">
             <Suspense fallback={null}>
-              <AccessInfoSection />
+              <AccessGlobalInfo />
             </Suspense>
-
-            {/* 右: ビジネス情報（住所・電話・営業時間・設備） */}
-            <ScrollReveal delay={0.2}>
-              <Suspense fallback={null}>
-                <BusinessInfo />
-              </Suspense>
-            </ScrollReveal>
           </div>
         </Container>
       </section>
 
-      {/* 地図セクション（フル幅） */}
-      <Section>
+      {/* Section 3: 拠点ごとの詳細 chapters
+          pb-[var(--spacing-section)] で SiteCTA の border-t と視覚的に分離 */}
+      <section className="pt-20 pb-[var(--spacing-section)] md:pt-28">
         <Container>
-          <ScrollReveal>
-            <div className="overflow-hidden rounded-lg">
-              <Suspense
-                fallback={
-                  <div className="flex h-[400px] items-center justify-center bg-surface">
-                    <p className="text-sm text-muted-foreground">
-                      地図を読み込み中...
-                    </p>
-                  </div>
-                }
-              >
-                <AccessMap />
-              </Suspense>
-            </div>
-          </ScrollReveal>
+          <Suspense fallback={null}>
+            <AccessChapters googleMapsUrl={businessInfo.googleMapsUrl} />
+          </Suspense>
         </Container>
-      </Section>
+      </section>
 
       {trailingSections.map((section) => (
         <SectionRenderer key={section.id} section={section} />

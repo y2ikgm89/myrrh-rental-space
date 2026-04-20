@@ -11,6 +11,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Checkbox,
   Input,
   Switch,
   Textarea,
@@ -35,6 +36,7 @@ import {
   SubmitButton,
   type DragEndEvent,
 } from "@/admin/components/ui";
+import { BUSINESS_ATTRIBUTE_OPTIONS } from "@/shared/lib/business-attributes";
 import {
   locationFormSchema,
   defaultLocationFormValues,
@@ -177,6 +179,8 @@ export function LocationForm({ location, mode }: LocationFormProps) {
             description: location.description ?? "",
             address: location.address,
             access: location.access ?? "",
+            parkingInfo: location.parkingInfo ?? "",
+            amenities: location.amenities,
             imageUrl: location.imageUrl,
             // LocationWithStats.imageUrls は string[] のため { url: string }[] へ変換
             imageUrls: location.imageUrls.map((url) => ({ url })),
@@ -338,6 +342,28 @@ export function LocationForm({ location, mode }: LocationFormProps) {
 
             <FormField
               control={form.control}
+              name="parkingInfo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>駐車場案内</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder={`例: 専用駐車場 3台\n近隣コインパーキング: タイムズ神宮前（徒歩1分・24時間）`}
+                      rows={3}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    この拠点の駐車場情報。拠点ごとに設定できます。
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="sortOrder"
               render={({ field }) => (
                 <FormItem>
@@ -463,6 +489,48 @@ export function LocationForm({ location, mode }: LocationFormProps) {
                   </DndContext>
                 </>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 設備・サービス */}
+        <Card>
+          <CardHeader>
+            <CardTitle>設備・サービス</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <FormLabel>この拠点の設備</FormLabel>
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+                {BUSINESS_ATTRIBUTE_OPTIONS.map((attr) => (
+                  <FormField
+                    key={attr.key}
+                    control={form.control}
+                    name={`amenities.${attr.key}`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value || false}
+                              onCheckedChange={(checked) =>
+                                field.onChange(checked === true)
+                              }
+                              disabled={isPending}
+                            />
+                          </FormControl>
+                          <FormLabel className="cursor-pointer text-sm font-normal">
+                            {attr.label}
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                拠点ごとに利用可能な設備を選択してください。
+              </p>
             </div>
           </CardContent>
         </Card>

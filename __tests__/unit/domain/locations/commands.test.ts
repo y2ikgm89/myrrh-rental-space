@@ -81,6 +81,8 @@ const VALID_FORM_DATA = {
   description: "渋谷駅近くのレンタルスペース",
   address: "東京都渋谷区1-1-1",
   access: "渋谷駅から徒歩5分",
+  parkingInfo: "近隣コインパーキング",
+  amenities: { wifi: true, parking: true } as Record<string, boolean>,
   imageUrl: "https://example.com/main.jpg",
   imageUrls: [
     { url: "https://example.com/image1.jpg" },

@@ -7,6 +7,8 @@ type LocationRecord = {
   description: string | null;
   address: string;
   access: string | null;
+  parkingInfo: string | null;
+  amenities: Record<string, boolean>;
   imageUrl: string;
   imageUrls: string[];
   businessHours: BusinessHours | null;

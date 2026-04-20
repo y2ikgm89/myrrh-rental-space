@@ -47,6 +47,8 @@ function toLocationData(data: LocationFormData) {
     description: data.description || null,
     address: data.address,
     access: data.access || null,
+    parkingInfo: data.parkingInfo || null,
+    amenities: data.amenities as Prisma.InputJsonValue,
     imageUrl: data.imageUrl,
     imageUrls: data.imageUrls.map((image) => image.url),
     businessHours: businessHoursToJson(data.businessHours ?? null),
@@ -119,7 +121,7 @@ export async function toggleLocationPublish(
 export async function updateLocationOrder(
   items: { id: string; sortOrder: number }[],
 ): Promise<{ updated: number }> {
-  await prisma.$transaction(
+  await Promise.all(
     items.map((item) =>
       prisma.location.update({
         where: { id: item.id },

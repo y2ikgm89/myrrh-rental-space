@@ -12,12 +12,25 @@ import {
   parseStringArray,
 } from "@/shared/lib/json-validators";
 
+function parseAmenities(
+  value: Prisma.JsonValue | null,
+): Record<string, boolean> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result: Record<string, boolean> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (typeof v === "boolean") result[k] = v;
+  }
+  return result;
+}
+
 function formatLocation(location: {
   id: string;
   name: string;
   description: string | null;
   address: string;
   access: string | null;
+  parkingInfo: string | null;
+  amenities: Prisma.JsonValue;
   imageUrl: string;
   imageUrls: Prisma.JsonValue | null;
   businessHours: Prisma.JsonValue | null;
@@ -36,6 +49,8 @@ function formatLocation(location: {
     description: location.description,
     address: location.address,
     access: location.access,
+    parkingInfo: location.parkingInfo,
+    amenities: parseAmenities(location.amenities),
     imageUrl: location.imageUrl,
     imageUrls: parseStringArray(location.imageUrls),
     businessHours: parseBusinessHours(location.businessHours),
@@ -83,6 +98,8 @@ export async function getLocations(options: {
         description: true,
         address: true,
         access: true,
+        parkingInfo: true,
+        amenities: true,
         imageUrl: true,
         imageUrls: true,
         businessHours: true,
