@@ -278,6 +278,42 @@ const tab = isValidTab(params.tab) ? params.tab : 'default'
 onValueChange={(value) => { if (isValidDiscountType(value)) setType(value) }}
 ```
 
+## Mutually Exclusive Props は Discriminated Union
+
+排他的な prop の組合せ（`fill` vs `width+height`、`controlled` vs `uncontrolled` 等）は型レベル排他化。
+runtime check ではなくコンパイル時に invalid combination を弾くのが公式 TypeScript パターン:
+
+```typescript
+// NG: 任意組合せが許容され invalid state でランタイムエラー
+interface Props {
+  width?: number;
+  height?: number;
+  fill?: boolean;
+  aspect?: AspectRatio; // aspect 単独だと width/height/fill 全部欠落 → next/image エラー
+}
+
+// OK: discriminated union で排他化
+interface FillProps {
+  fill: true;
+  aspect?: AspectRatio;
+  width?: never; // 型レベル禁止
+  height?: never;
+}
+interface DimensionProps {
+  fill?: never;
+  aspect?: never; // dimension 指定時は aspect 不要
+  width: number;
+  height: number;
+}
+type Props = FillProps | DimensionProps;
+```
+
+**判定基準**: 「prop A と prop B が同時指定されると invalid state になる」場合は discriminated union 化。
+runtime エラーやサイレントバグを防ぐ。新規コンポーネント設計時のデフォルトパターンとする。
+
+参照実装: `@/public/components/design-system/image-frame.tsx`（`FillProps | DimensionProps`）。
+Next.js `<Image>` の「width+height OR fill 必須」契約を型レベルで強制。
+
 ## `satisfies` キーワード
 
 型チェックを維持しながら定数オブジェクトのプロパティ型を保持する:

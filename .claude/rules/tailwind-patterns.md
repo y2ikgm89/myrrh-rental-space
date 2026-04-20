@@ -289,6 +289,34 @@ admin.css / public.css の両方で統一:
 
 ---
 
+## Pair Grid の動的カラム切替
+
+2-col grid で片方が条件付きレンダリングの場合、両方 present 時のみ `grid-cols-2` を適用する。
+片方欠損時は `grid-cols-1`（full-width）にフォールバックして横の空白を避ける:
+
+```tsx
+import { cn } from "@/shared/lib/cn";
+
+// NG: 常に grid-cols-2 → 片方なしで右半分空白の視覚バグ
+<div className="grid gap-12 lg:grid-cols-2">
+  {a && <BlockA />}
+  {b && <BlockB />}
+</div>
+
+// OK: 両方 present 時のみ 2-col、片方なら full-width
+<div className={cn("grid gap-12 lg:gap-16", a && b && "lg:grid-cols-2")}>
+  {a && <BlockA />}
+  {b && <BlockB />}
+</div>
+```
+
+**判定基準**: pair の片方が optional フィールド（DB nullable / オプション設定）の場合は必ず動的化。
+seed や本番データで片方欠損するケースを silent に許容できる。
+
+参照実装: `LocationChapter` の Address/Routes pair、Parking/Amenities pair（`/access/_components/location-chapter.tsx`）。
+
+---
+
 ## 禁止事項
 
 1. **globals.css 作成禁止**

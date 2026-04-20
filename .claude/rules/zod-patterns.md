@@ -393,6 +393,36 @@ imageUrls: z.array(
 // 編集時の初期値: DB string[] → フォーム { url: string }[]: location.imageUrls.map((url) => ({ url }))
 ```
 
+### datetime-local input との連携（`.datetime({ local: true })`）
+
+`<input type="datetime-local">` の value は `"YYYY-MM-DDTHH:mm"` 形式（タイムゾーン情報なし）。strict `.datetime()` はこの形式を reject するため、Zod 4 公式オプション `{ local: true }` を必ず指定する:
+
+```typescript
+// NG: form 送信値 "2024-06-15T10:00" が validation error → silent bug
+startTime: z.string().datetime({ error: "..." });
+
+// OK: full ISO（"...T...Z"）と datetime-local 形式の両方を許容
+startTime: z.string().datetime({ local: true, error: "..." });
+```
+
+**空欄許容（nullable optional）**: datetime-local input は空時 `""` を返すため `.or(z.literal(""))` で許容、command 層で falsy 判定により null 化:
+
+```typescript
+registrationDeadline: z
+  .string()
+  .datetime({ local: true })
+  .or(z.literal(""))
+  .nullable()
+  .optional();
+
+// command 側
+registrationDeadline: data.registrationDeadline
+  ? new Date(data.registrationDeadline)
+  : null,
+```
+
+**テストの落とし穴**: テストで full ISO `"2024-06-15T10:00:00Z"` を使うと `.datetime({ local: true })` の有無に関わらず通るため、サイレントに発生する。E2E で実 form 送信を確認するか、unit テストで明示的に `"2024-06-15T10:00"` 形式を含めること。
+
 ### URLパラメータバリデーション
 
 ```typescript
