@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
-import { cn } from "@/shared/lib/cn";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import {
+  ScrollReveal,
+  ScrollRevealGroup,
+} from "@/public/components/animations/scroll-reveal";
 
 export interface FeatureItem {
   readonly title: string;
@@ -59,30 +61,26 @@ export function FeaturesSection({
           </div>
         </ScrollReveal>
 
-        <div>
+        <ScrollRevealGroup className="divide-y border-y border-border divide-border">
           {items.map((feature, i) => (
-            <ScrollReveal key={`feature-${String(i)}`} delay={i * 0.08}>
-              <div
-                className={cn(
-                  "grid grid-cols-[3rem_1fr] items-start gap-4 border-b border-border py-6 md:gap-6 md:py-8",
-                  i === 0 && "border-t",
-                )}
-              >
-                <span className="text-right font-heading text-[2rem] font-light italic leading-none text-accent/50">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <h3 className="text-base font-normal tracking-[0.02em]">
-                    {feature.title}
-                  </h3>
-                  <p className="mt-1 text-[0.9rem] leading-[1.9] text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
+            <div
+              key={`feature-${String(i)}`}
+              className="grid grid-cols-[3rem_1fr] items-start gap-4 py-6 md:gap-6 md:py-8"
+            >
+              <span className="text-right font-heading text-[2rem] font-light italic leading-none text-accent/50">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 className="text-base font-normal tracking-[0.02em]">
+                  {feature.title}
+                </h3>
+                <p className="mt-1 text-[0.9rem] leading-[1.9] text-muted-foreground">
+                  {feature.description}
+                </p>
               </div>
-            </ScrollReveal>
+            </div>
           ))}
-        </div>
+        </ScrollRevealGroup>
       </div>
     </section>
   );

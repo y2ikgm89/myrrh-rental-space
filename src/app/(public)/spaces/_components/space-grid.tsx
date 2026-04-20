@@ -1,4 +1,4 @@
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
 import { SpaceCard } from "./space-card";
 
 interface Space {
@@ -38,37 +38,34 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:gap-x-10 md:gap-y-14">
-      {spaces.map((space, i) => {
+    <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:gap-x-10 md:gap-y-14">
+      {spaces.map((space) => {
         const stats = reviewStats?.[space.id];
         return (
-          <ScrollReveal key={space.id} delay={i * 0.08}>
-            <div>
-              <SpaceCard
-                slug={space.slug}
-                name={space.name}
-                description={space.descriptionPlainText}
-                capacity={space.capacity}
-                area={space.area}
-                hourlyPrice={space.hourlyPrice}
-                dailyPrice={space.dailyPrice}
-                locationName={space.location.name}
-                lineAddress={space.lineAddress}
-                facilities={space.facilities}
-                mainImageUrl={space.mainImageUrl}
-                imageUrls={space.imageUrls}
-                categoryName={space.category?.name}
-                {...(stats && stats.totalCount > 0
-                  ? {
-                      averageRating: stats.averageRating,
-                      reviewCount: stats.totalCount,
-                    }
-                  : {})}
-              />
-            </div>
-          </ScrollReveal>
+          <SpaceCard
+            key={space.id}
+            slug={space.slug}
+            name={space.name}
+            description={space.descriptionPlainText}
+            capacity={space.capacity}
+            area={space.area}
+            hourlyPrice={space.hourlyPrice}
+            dailyPrice={space.dailyPrice}
+            locationName={space.location.name}
+            lineAddress={space.lineAddress}
+            facilities={space.facilities}
+            mainImageUrl={space.mainImageUrl}
+            imageUrls={space.imageUrls}
+            categoryName={space.category?.name}
+            {...(stats && stats.totalCount > 0
+              ? {
+                  averageRating: stats.averageRating,
+                  reviewCount: stats.totalCount,
+                }
+              : {})}
+          />
         );
       })}
-    </div>
+    </ScrollRevealGroup>
   );
 }

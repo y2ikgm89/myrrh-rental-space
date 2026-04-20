@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 import Link from "next/link";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
 import { Heading } from "@/public/components/design-system/heading";
 import { formatSerializedDate } from "@/shared/lib/serialize";
 
@@ -28,31 +28,28 @@ export function NewsList({ items }: NewsListProps): ReactElement {
   }
 
   return (
-    <ul className="divide-y divide-border">
-      {items.map((item, index) => (
-        <li key={item.id}>
-          <ScrollReveal delay={0.08 * Math.min(index, 8)}>
-            <Link
-              href={item.url}
-              className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
-            >
-              <time
-                dateTime={item.publishedAt ?? undefined}
-                className="shrink-0 text-xs text-muted-foreground md:text-sm"
-              >
-                {formatSerializedDate(item.publishedAt)}
-              </time>
+    <ScrollRevealGroup className="divide-y border-y border-border divide-border">
+      {items.map((item) => (
+        <Link
+          key={item.id}
+          href={item.url}
+          className="group flex items-baseline gap-4 py-5 transition-colors hover:bg-accent/30 md:gap-6 md:py-6"
+        >
+          <time
+            dateTime={item.publishedAt ?? undefined}
+            className="shrink-0 text-xs text-muted-foreground md:text-sm"
+          >
+            {formatSerializedDate(item.publishedAt)}
+          </time>
 
-              <Heading
-                level={2}
-                className="!text-sm font-medium transition-colors group-hover:text-foreground md:!text-base"
-              >
-                {item.title}
-              </Heading>
-            </Link>
-          </ScrollReveal>
-        </li>
+          <Heading
+            level={2}
+            className="!text-sm font-medium transition-colors group-hover:text-foreground md:!text-base"
+          >
+            {item.title}
+          </Heading>
+        </Link>
       ))}
-    </ul>
+    </ScrollRevealGroup>
   );
 }

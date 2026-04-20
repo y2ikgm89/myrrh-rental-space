@@ -8,7 +8,10 @@ import {
   IconWifi,
   IconCreditCard,
 } from "@tabler/icons-react";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import {
+  ScrollReveal,
+  ScrollRevealGroup,
+} from "@/public/components/animations/scroll-reveal";
 
 export interface HowItWorksStep {
   readonly title: string;
@@ -79,54 +82,53 @@ export function HowItWorksSection({
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:gap-12">
+        <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:gap-12">
           {steps.map((step, i) => {
             const Icon = STEP_ICONS[i] ?? IconCircleCheck;
             return (
-              <ScrollReveal key={`step-${String(i)}`} delay={i * 0.1}>
-                <div className="text-center">
-                  <Icon
-                    className="mx-auto mb-5 text-accent"
-                    size={36}
-                    strokeWidth={1}
-                    aria-hidden="true"
-                  />
-                  <span className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent/50">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h3 className="font-heading text-[1.25rem] font-light tracking-[0.01em]">
-                    {step.title}
-                  </h3>
-                  <p className="mt-3 text-[0.85rem] leading-[1.8] text-muted-foreground">
-                    {step.description}
-                  </p>
-                </div>
-              </ScrollReveal>
+              <div key={`step-${String(i)}`} className="text-center">
+                <Icon
+                  className="mx-auto mb-5 text-accent"
+                  size={36}
+                  strokeWidth={1}
+                  aria-hidden="true"
+                />
+                <span className="mb-4 block font-heading text-[2.5rem] font-light italic text-accent/50">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="font-heading text-[1.25rem] font-light tracking-[0.01em]">
+                  {step.title}
+                </h3>
+                <p className="mt-3 text-[0.85rem] leading-[1.8] text-muted-foreground">
+                  {step.description}
+                </p>
+              </div>
             );
           })}
-        </div>
+        </ScrollRevealGroup>
 
         {/* Value props strip */}
-        <div className="mt-14 flex flex-wrap justify-center gap-x-10 gap-y-6 md:mt-16 md:gap-x-16">
+        <ScrollRevealGroup
+          className="mt-14 flex flex-wrap justify-center gap-x-10 gap-y-6 md:mt-16 md:gap-x-16"
+          stagger={0.08}
+        >
           {valueProps.map((prop, i) => {
             const Icon = VALUE_PROP_ICONS[i] ?? IconClock;
             return (
-              <ScrollReveal key={`vp-${String(i)}`} delay={i * 0.08}>
-                <div className="flex items-center gap-3">
-                  <Icon
-                    className="text-accent"
-                    size={28}
-                    strokeWidth={1.2}
-                    aria-hidden="true"
-                  />
-                  <span className="text-[0.95rem] tracking-[0.02em] text-foreground/70">
-                    {prop.title}
-                  </span>
-                </div>
-              </ScrollReveal>
+              <div key={`vp-${String(i)}`} className="flex items-center gap-3">
+                <Icon
+                  className="text-accent"
+                  size={28}
+                  strokeWidth={1.2}
+                  aria-hidden="true"
+                />
+                <span className="text-[0.95rem] tracking-[0.02em] text-foreground/70">
+                  {prop.title}
+                </span>
+              </div>
             );
           })}
-        </div>
+        </ScrollRevealGroup>
       </div>
     </section>
   );

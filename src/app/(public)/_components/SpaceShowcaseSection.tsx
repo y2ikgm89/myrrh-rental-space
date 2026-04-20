@@ -5,7 +5,10 @@
  */
 
 import type { ReactElement } from "react";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import {
+  ScrollReveal,
+  ScrollRevealGroup,
+} from "@/public/components/animations/scroll-reveal";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { Heading } from "@/public/components/design-system/heading";
 import {
@@ -100,33 +103,33 @@ export function SpaceShowcaseSection({
 
       {/* Remaining cards — smaller grid */}
       {remaining.length > 0 && (
-        <div
+        <ScrollRevealGroup
           className={cn(
             "grid gap-6",
             getCardGridColsClass(config.columns),
             "md:gap-8",
           )}
+          stagger={0.08}
         >
-          {remaining.map((space, i) => (
-            <ScrollReveal key={space.id} delay={(i + 1) * 0.08}>
-              <SpaceCard
-                slug={space.slug}
-                name={space.name}
-                description={space.descriptionPlainText}
-                capacity={space.capacity}
-                area={space.area}
-                hourlyPrice={space.hourlyPrice}
-                dailyPrice={space.dailyPrice}
-                mainImageUrl={space.mainImageUrl}
-                imageUrls={space.imageUrls}
-                categoryName={space.categoryName}
-                locationName={space.locationName ?? undefined}
-                lineAddress={space.lineAddress ?? undefined}
-                facilities={space.facilities}
-              />
-            </ScrollReveal>
+          {remaining.map((space) => (
+            <SpaceCard
+              key={space.id}
+              slug={space.slug}
+              name={space.name}
+              description={space.descriptionPlainText}
+              capacity={space.capacity}
+              area={space.area}
+              hourlyPrice={space.hourlyPrice}
+              dailyPrice={space.dailyPrice}
+              mainImageUrl={space.mainImageUrl}
+              imageUrls={space.imageUrls}
+              categoryName={space.categoryName}
+              locationName={space.locationName ?? undefined}
+              lineAddress={space.lineAddress ?? undefined}
+              facilities={space.facilities}
+            />
           ))}
-        </div>
+        </ScrollRevealGroup>
       )}
     </SectionWrapper>
   );
