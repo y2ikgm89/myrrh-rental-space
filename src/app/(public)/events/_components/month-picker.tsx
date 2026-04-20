@@ -94,12 +94,15 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
           setPickerYear(year);
           setIsEditingYear(false);
         }}
-        className="group text-xl font-light tracking-wide text-foreground transition-colors hover:text-accent md:text-2xl"
+        className="group relative text-xl font-light tracking-wide text-foreground transition-colors hover:text-accent md:text-2xl"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
         {monthYearLabel}
-        <span className="ml-1.5 inline-block text-muted-foreground transition-transform group-hover:translate-y-0.5">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-full top-1/2 ml-1.5 -translate-y-1/2 text-muted-foreground transition-transform duration-200 group-aria-expanded:rotate-180"
+        >
           ▾
         </span>
       </button>

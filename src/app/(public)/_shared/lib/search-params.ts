@@ -61,17 +61,8 @@ export function isEventView(value: string): value is EventView {
   return eventViewSet.has(value);
 }
 
-export const EVENT_SCOPES = ["upcoming", "past"] as const;
-export type EventScope = (typeof EVENT_SCOPES)[number];
-
-const eventScopeSet = new Set<string>(EVENT_SCOPES);
-export function isEventScope(value: string): value is EventScope {
-  return eventScopeSet.has(value);
-}
-
 export const eventsSearchParamsParsers = {
   view: parseAsStringLiteral(EVENT_VIEWS).withDefault("list"),
-  scope: parseAsStringLiteral(EVENT_SCOPES).withDefault("upcoming"),
   y: parseAsInteger,
   m: parseAsInteger,
 };

@@ -1,22 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconCalendar,
-  IconMapPin,
-} from "@tabler/icons-react";
 import { cn } from "@/shared/lib/cn";
-import { Badge } from "@/public/components/design-system/badge";
-import {
-  getJSTDateParts,
-  isSameJSTDay,
-  formatTime,
-  formatEventPrice,
-} from "@/public/lib/format-event-date";
-import { MonthPicker } from "./month-picker";
+import { isSameJSTDay } from "@/public/lib/format-event-date";
+import { CalendarMonthNav } from "./calendar-month-nav";
+import { useCalendarMonth } from "./use-calendar-month";
+import { EventCard } from "./event-card";
 import type { EventCardData } from "./event-card";
 
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
@@ -72,11 +61,13 @@ function SideDayPanel({
   selectedDay,
   month,
   year,
+  nowMs,
 }: {
   readonly events: readonly EventCardData[];
   readonly selectedDay: number;
   readonly month: number;
   readonly year: number;
+  readonly nowMs: number;
 }) {
   const dayEvents = events.filter((e) =>
     isSameJSTDay(e.startTime, year, month, selectedDay),
@@ -97,7 +88,7 @@ function SideDayPanel({
             </p>
           </div>
         ) : (
-          <DayEventList events={dayEvents} />
+          <DayEventList events={dayEvents} nowMs={nowMs} />
         )}
       </div>
     </div>
@@ -111,11 +102,13 @@ function InlineDayPanel({
   selectedDay,
   month,
   year,
+  nowMs,
 }: {
   readonly events: readonly EventCardData[];
   readonly selectedDay: number;
   readonly month: number;
   readonly year: number;
+  readonly nowMs: number;
 }) {
   const dayEvents = events.filter((e) =>
     isSameJSTDay(e.startTime, year, month, selectedDay),
@@ -133,7 +126,7 @@ function InlineDayPanel({
           <p className="text-sm text-muted-foreground">イベントはありません</p>
         </div>
       ) : (
-        <DayEventList events={dayEvents} />
+        <DayEventList events={dayEvents} nowMs={nowMs} />
       )}
     </div>
   );
@@ -143,53 +136,21 @@ function InlineDayPanel({
 
 function DayEventList({
   events,
+  nowMs,
 }: {
   readonly events: readonly EventCardData[];
+  readonly nowMs: number;
 }) {
   return (
     <div className="divide-y divide-border">
-      {events.map((event) => {
-        const start = new Date(event.startTime);
-        const end = new Date(event.endTime);
-        return (
-          <Link
-            key={event.id}
-            href={`/events/${event.slug}`}
-            className="group block px-4 py-4 transition-colors hover:bg-surface/50"
-          >
-            <div className="flex flex-wrap items-center gap-1.5">
-              {event.price !== null ? (
-                <Badge variant={event.price === 0 ? "success" : "default"}>
-                  {formatEventPrice(event.price)}
-                </Badge>
-              ) : null}
-              {!event.registrationOpen ? (
-                <Badge variant="warning">受付終了</Badge>
-              ) : null}
-            </div>
-            <h3 className="mt-1.5 text-sm font-medium text-foreground">
-              {event.title}
-            </h3>
-            {event.description ? (
-              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                {event.description}
-              </p>
-            ) : null}
-            <div className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <IconCalendar className="h-3 w-3 shrink-0" aria-hidden="true" />
-                {formatTime(start)} – {formatTime(end)}
-              </span>
-              {event.location ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <IconMapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
-                  {event.location}
-                </span>
-              ) : null}
-            </div>
-          </Link>
-        );
-      })}
+      {events.map((event) => (
+        <EventCard
+          key={event.id}
+          variant="compact"
+          event={event}
+          isPast={new Date(event.endTime).getTime() < nowMs}
+        />
+      ))}
     </div>
   );
 }
@@ -201,44 +162,27 @@ interface EventCalendarViewProps {
 }
 
 export function EventCalendarView({ events }: EventCalendarViewProps) {
-  const [today] = useState(() => getJSTDateParts(new Date()));
-  const [currentYear, setCurrentYear] = useState(() => today.year);
-  const [currentMonth, setCurrentMonth] = useState(() => today.month);
+  const {
+    today,
+    year: currentYear,
+    month: currentMonth,
+    nowMs,
+    prev,
+    next,
+    goToday,
+    jump,
+  } = useCalendarMonth();
+
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  const monthKey = `${String(currentYear)}-${String(currentMonth)}`;
+  const [previousMonthKey, setPreviousMonthKey] = useState(monthKey);
+  if (monthKey !== previousMonthKey) {
+    setPreviousMonthKey(monthKey);
+    setSelectedDay(null);
+  }
+
   const days = getCalendarDays(currentYear, currentMonth);
-
-  function prevMonth() {
-    if (currentMonth === 0) {
-      setCurrentYear((y) => y - 1);
-      setCurrentMonth(11);
-    } else {
-      setCurrentMonth((m) => m - 1);
-    }
-    setSelectedDay(null);
-  }
-
-  function nextMonth() {
-    if (currentMonth === 11) {
-      setCurrentYear((y) => y + 1);
-      setCurrentMonth(0);
-    } else {
-      setCurrentMonth((m) => m + 1);
-    }
-    setSelectedDay(null);
-  }
-
-  function goToday() {
-    setCurrentYear(today.year);
-    setCurrentMonth(today.month);
-    setSelectedDay(today.day);
-  }
-
-  function jumpToMonth(y: number, m: number) {
-    setCurrentYear(y);
-    setCurrentMonth(m);
-    setSelectedDay(null);
-  }
 
   function dayHasEvents(day: number, m: number, y: number): boolean {
     return events.some((e) => isSameJSTDay(e.startTime, y, m, day));
@@ -252,44 +196,14 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
 
   return (
     <div>
-      {/* Header — month navigation */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <div className="flex items-center gap-2 justify-self-start">
-          <button
-            type="button"
-            onClick={goToday}
-            className="h-10 border border-border px-4 text-xs tracking-[0.18em] text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            今日
-          </button>
-          <button
-            type="button"
-            onClick={prevMonth}
-            className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="前の月"
-          >
-            <IconChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={nextMonth}
-            className="flex h-10 w-10 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="次の月"
-          >
-            <IconChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="justify-self-center">
-          <MonthPicker
-            year={currentYear}
-            month={currentMonth}
-            onSelect={jumpToMonth}
-          />
-        </div>
-
-        <div aria-hidden="true" />
-      </div>
+      <CalendarMonthNav
+        year={currentYear}
+        month={currentMonth}
+        onPrev={prev}
+        onNext={next}
+        onToday={goToday}
+        onJump={jump}
+      />
 
       {/* Desktop: 2-column (calendar + side panel) */}
       <div className="mt-6 hidden items-stretch gap-8 lg:grid lg:grid-cols-[1fr_20rem]">
@@ -312,6 +226,7 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
               selectedDay={selectedDay}
               month={currentMonth}
               year={currentYear}
+              nowMs={nowMs}
             />
           ) : (
             <div className="flex h-full items-center justify-center border border-border p-5 text-center">
@@ -343,6 +258,7 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
             selectedDay={selectedDay}
             month={currentMonth}
             year={currentYear}
+            nowMs={nowMs}
           />
         ) : null}
       </div>
@@ -401,6 +317,14 @@ function CalendarGrid({
             cell.day === today.day &&
             currentMonth === today.month &&
             currentYear === today.year;
+          const isPast =
+            cell.isCurrentMonth &&
+            !isToday &&
+            (currentYear < today.year ||
+              (currentYear === today.year && currentMonth < today.month) ||
+              (currentYear === today.year &&
+                currentMonth === today.month &&
+                cell.day < today.day));
           const isSelected = cell.isCurrentMonth && cell.day === selectedDay;
           const hasEvents =
             cell.isCurrentMonth &&
@@ -422,6 +346,7 @@ function CalendarGrid({
                 cell.isCurrentMonth
                   ? "hover:bg-surface/50"
                   : "cursor-default bg-background text-muted-foreground/30",
+                isPast && "bg-surface/30",
                 isSelected && "bg-accent/5",
               )}
             >

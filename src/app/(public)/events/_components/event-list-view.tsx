@@ -1,84 +1,66 @@
+"use client";
+
 import {
   formatMonthYear,
-  getJSTMonthKey,
+  getJSTDateParts,
 } from "@/public/lib/format-event-date";
-import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
-import { Button } from "@/public/components/design-system/button";
+import { ScrollRevealGroup } from "@/public/components/animations/scroll-reveal";
+import { CalendarMonthNav } from "./calendar-month-nav";
+import { useCalendarMonth } from "./use-calendar-month";
 import { EventCard } from "./event-card";
 import type { EventCardData } from "./event-card";
 
-type EventListVariant = "upcoming" | "past";
-
 interface EventListViewProps {
   readonly events: readonly EventCardData[];
-  readonly variant?: EventListVariant;
 }
 
-function groupByMonth(
-  events: readonly EventCardData[],
-): Map<string, EventCardData[]> {
-  const map = new Map<string, EventCardData[]>();
-  for (const event of events) {
-    const key = getJSTMonthKey(event.startTime);
-    const existing = map.get(key);
-    if (existing) {
-      existing.push(event);
-    } else {
-      map.set(key, [event]);
-    }
-  }
-  return map;
+function isInJSTMonth(iso: string, year: number, month: number): boolean {
+  const parts = getJSTDateParts(new Date(iso));
+  return parts.year === year && parts.month === month;
 }
 
-export function EventListView({
-  events,
-  variant = "upcoming",
-}: EventListViewProps) {
-  if (events.length === 0) {
-    return (
-      <div className="space-y-4 py-12 text-center md:py-16">
-        <p className="text-muted-foreground">
-          {variant === "past"
-            ? "過去のイベントはまだありません。"
-            : "現在予定されているイベントはありません。"}
-        </p>
-        {variant === "upcoming" ? (
-          <Button variant="editorial" size="sm" href="/contact">
-            お問い合わせ
-          </Button>
-        ) : null}
-      </div>
-    );
-  }
+export function EventListView({ events }: EventListViewProps) {
+  const { year, month, nowMs, prev, next, goToday, jump } = useCalendarMonth();
 
-  const grouped = groupByMonth(events);
+  const monthEvents = events.filter((e) =>
+    isInJSTMonth(e.startTime, year, month),
+  );
+  const monthLabel = formatMonthYear(new Date(year, month, 1));
 
   return (
-    <div className="space-y-12 md:space-y-16">
-      {[...grouped.entries()].map(([monthKey, monthEvents]) => {
-        const firstEvent = monthEvents[0];
-        if (!firstEvent) return null;
-        const firstDate = new Date(firstEvent.startTime);
-        const monthLabel = formatMonthYear(firstDate);
+    <div>
+      <CalendarMonthNav
+        year={year}
+        month={month}
+        onPrev={prev}
+        onNext={next}
+        onToday={goToday}
+        onJump={jump}
+      />
 
-        return (
-          <section key={monthKey}>
-            <div className="mb-6 flex items-center gap-4 md:mb-8">
-              <h2 className="text-xl font-light tracking-wide text-foreground md:text-2xl">
-                {monthLabel}
-              </h2>
-              <div className="h-px flex-1 bg-border" aria-hidden="true" />
-            </div>
-            <div className="divide-y divide-border">
-              {monthEvents.map((event, index) => (
-                <ScrollReveal key={event.id} delay={0.08 * Math.min(index, 8)}>
-                  <EventCard variant="list" event={event} />
-                </ScrollReveal>
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      <section className="mt-10" aria-label={`${monthLabel}のイベント`}>
+        {monthEvents.length === 0 ? (
+          <div className="py-16 text-center md:py-20">
+            <p className="text-muted-foreground">
+              {monthLabel}にイベントはありません。
+            </p>
+            <p className="mt-2 text-xs tracking-[0.12em] text-muted-foreground/70">
+              前後の月を確認してください
+            </p>
+          </div>
+        ) : (
+          <ScrollRevealGroup className="divide-y border-y border-border divide-border">
+            {monthEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                variant="list"
+                event={event}
+                isPast={new Date(event.endTime).getTime() < nowMs}
+              />
+            ))}
+          </ScrollRevealGroup>
+        )}
+      </section>
     </div>
   );
 }
