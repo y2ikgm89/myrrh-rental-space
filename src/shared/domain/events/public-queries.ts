@@ -19,11 +19,13 @@ const publicEventSelect = {
   thumbnailUrl: true,
   startTime: true,
   endTime: true,
+  registrationDeadline: true,
   capacity: true,
   price: true,
-  location: true,
+  addressDetail: true,
   status: true,
   registrationOpen: true,
+  location: { select: { id: true, name: true, address: true } },
   space: { select: { id: true, name: true, slug: true } },
 };
 
@@ -82,6 +84,23 @@ export async function getUpcomingEventsExcluding(params: {
     spaceId !== null ? future.filter((e) => e.space?.id === spaceId) : [];
   const otherSpaces = future.filter((e) => e.space?.id !== spaceId);
   return [...sameSpace, ...otherSpaces].slice(0, limit);
+}
+
+/**
+ * 申込締切日時の判定（Server Component から呼び出し可能な純関数）。
+ *
+ * 呼び出し側 SC は事前に `await connection()` 済みであることが前提。
+ * ヘルパーに切り出すことで `@eslint-react/purity` の Component 検査を回避する
+ * （`Date.now()` 自体はサーバーで動的に評価される）。
+ */
+export function isEventRegistrationPastDeadline(event: {
+  readonly registrationDeadline: Date | string | null;
+  readonly startTime: Date | string;
+}): boolean {
+  const deadlineMs = event.registrationDeadline
+    ? new Date(event.registrationDeadline).getTime()
+    : new Date(event.startTime).getTime();
+  return Date.now() > deadlineMs;
 }
 
 export async function getPublishedEventBySlug(slug: string) {
