@@ -5,10 +5,11 @@ description: >
   understanding code architecture, tracing symbol references, finding
   implementations, or answering questions about the codebase structure.
   Remembers file locations and patterns across sessions for faster lookups.
-disallowedTools:
-  - Write
-  - Edit
-  - NotebookEdit
+tools:
+  - Read
+  - Grep
+  - Glob
+  - LS
 model: haiku
 memory: project
 ---

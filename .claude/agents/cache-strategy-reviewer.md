@@ -6,10 +6,10 @@ description: >
   'use cache' 関数での safeFetch + toPlainObject パターン違反を検出する。
   Server Actions / Route Handlers / 'use cache' 関数を編集した後に使用。
   updateTag・revalidateTag・CACHE_TAGS・'use cache' を含むファイルを編集したら使用すること。
-disallowedTools:
-  - Write
-  - Edit
-  - NotebookEdit
+tools:
+  - Read
+  - Grep
+  - Glob
 model: haiku
 memory: project
 ---

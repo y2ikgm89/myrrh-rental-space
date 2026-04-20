@@ -4,10 +4,10 @@ description: >
   イベント申込フロー整合性チェッカー。events/ 配下のコンポーネント編集後に使用。
   Event → EventRegistration → 残枠計算 → キャッシュ無効化 → メール送信の
   整合性を検証し、フロー全体の一貫性を確認する。
-disallowedTools:
-  - Write
-  - Edit
-  - NotebookEdit
+tools:
+  - Read
+  - Grep
+  - Glob
 model: sonnet
 memory: project
 ---

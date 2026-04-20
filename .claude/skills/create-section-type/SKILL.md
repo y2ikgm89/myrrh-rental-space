@@ -3,8 +3,6 @@ name: create-section-type
 description: Use when explicitly adding a new section type. Scaffolds schema.ts, metadata.ts, public component stub, and registry entry.
 disable-model-invocation: true
 argument-hint: "<type-name-kebab-case>"
-paths:
-  - src/shared/lib/sections/**
 ---
 
 # create-section-type

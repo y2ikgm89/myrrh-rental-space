@@ -5,10 +5,11 @@ description: >
   before applying with `bunx --bun prisma migrate dev`. Checks for DROP COLUMN,
   non-nullable without DEFAULT, type narrowing, renamed tables/columns without
   data migration steps, and seed compatibility. Returns SAFE / REVIEW NEEDED / BREAKING.
-disallowedTools:
-  - Write
-  - Edit
-  - NotebookEdit
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
 model: haiku
 memory: local
 ---

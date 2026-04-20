@@ -8,8 +8,6 @@ tools:
   - Read
   - Grep
   - Glob
-  - Write
-  - Edit
 model: haiku
 memory: local
 ---
