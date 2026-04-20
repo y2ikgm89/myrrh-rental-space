@@ -75,7 +75,7 @@ function createCustomerAuth() {
     },
     emailAndPassword: {
       // 開発環境のみ有効（dev-login-action 用）
-      enabled: process.env["NODE_ENV"] !== "production",
+      enabled: serverEnv.NODE_ENV !== "production",
     },
     ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
     account: {

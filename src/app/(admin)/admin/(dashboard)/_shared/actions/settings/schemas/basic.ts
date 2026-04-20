@@ -20,13 +20,34 @@ import {
 // =============================================================================
 
 export const basicInfoSchema = z.object({
-  siteName: z.string().max(100).nullable(),
-  siteDescription: z.string().max(500).nullable(),
-  faviconUrl: z.string().max(500).nullable(),
-  defaultOgpImageUrl: z.string().max(500).nullable(),
-  headerLogoUrl: z.string().max(500).nullable(),
-  footerLogoUrl: z.string().max(500).nullable(),
-  footerCopyright: z.string().max(200).nullable(),
+  siteName: z
+    .string()
+    .max(100, { error: "サイト名は100文字以内で入力してください" })
+    .nullable(),
+  siteDescription: z
+    .string()
+    .max(500, { error: "サイト説明は500文字以内で入力してください" })
+    .nullable(),
+  faviconUrl: z
+    .string()
+    .max(500, { error: "ファビコンURLは500文字以内で入力してください" })
+    .nullable(),
+  defaultOgpImageUrl: z
+    .string()
+    .max(500, { error: "OGP画像URLは500文字以内で入力してください" })
+    .nullable(),
+  headerLogoUrl: z
+    .string()
+    .max(500, { error: "ヘッダーロゴURLは500文字以内で入力してください" })
+    .nullable(),
+  footerLogoUrl: z
+    .string()
+    .max(500, { error: "フッターロゴURLは500文字以内で入力してください" })
+    .nullable(),
+  footerCopyright: z
+    .string()
+    .max(200, { error: "コピーライトは200文字以内で入力してください" })
+    .nullable(),
   useHeaderLogo: z.boolean(),
   useFooterLogo: z.boolean(),
 });
@@ -38,31 +59,90 @@ export type BasicInfoInput = z.infer<typeof basicInfoSchema>;
 // =============================================================================
 
 export const businessInfoSchema = z.object({
-  businessName: z.string().max(100).nullable(),
-  businessNameKana: z.string().max(100).nullable(),
-  representativeName: z.string().max(50).nullable(),
-  businessType: z.string().max(50).nullable(),
-  industryType: z.string().max(50).nullable(),
+  businessName: z
+    .string()
+    .max(100, { error: "事業者名は100文字以内で入力してください" })
+    .nullable(),
+  businessNameKana: z
+    .string()
+    .max(100, { error: "事業者名（カナ）は100文字以内で入力してください" })
+    .nullable(),
+  representativeName: z
+    .string()
+    .max(50, { error: "代表者名は50文字以内で入力してください" })
+    .nullable(),
+  businessType: z
+    .string()
+    .max(50, { error: "事業形態は50文字以内で入力してください" })
+    .nullable(),
+  industryType: z
+    .string()
+    .max(50, { error: "業種は50文字以内で入力してください" })
+    .nullable(),
   establishedDate: z.string().nullable(),
-  registrationNumber: z.string().max(50).nullable(),
-  invoiceNumber: z.string().max(20).nullable(),
-  businessDescription: z.string().max(2000).nullable(),
+  registrationNumber: z
+    .string()
+    .max(50, { error: "法人番号は50文字以内で入力してください" })
+    .nullable(),
+  invoiceNumber: z
+    .string()
+    .max(20, { error: "インボイス番号は20文字以内で入力してください" })
+    .nullable(),
+  businessDescription: z
+    .string()
+    .max(2000, { error: "事業内容は2000文字以内で入力してください" })
+    .nullable(),
 });
 
 export type BusinessInfoInput = z.infer<typeof businessInfoSchema>;
 
 export const contactInfoSchema = z.object({
-  phoneNumber: z.string().max(20).nullable(),
-  faxNumber: z.string().max(20).nullable(),
-  email: z.string().email().max(100).nullable().or(z.literal("")),
-  address: z.string().max(500).nullable(),
-  postalCode: z.string().max(10).nullable(),
-  prefecture: z.string().max(10).nullable(),
-  city: z.string().max(50).nullable(),
-  streetAddress: z.string().max(100).nullable(),
-  buildingName: z.string().max(100).nullable(),
-  accessInfo: z.string().max(1000).nullable(),
-  parkingInfo: z.string().max(500).nullable(),
+  phoneNumber: z
+    .string()
+    .max(20, { error: "電話番号は20文字以内で入力してください" })
+    .nullable(),
+  faxNumber: z
+    .string()
+    .max(20, { error: "FAX番号は20文字以内で入力してください" })
+    .nullable(),
+  email: z
+    .string()
+    .email({ error: "有効なメールアドレスを入力してください" })
+    .max(100, { error: "メールアドレスは100文字以内で入力してください" })
+    .nullable()
+    .or(z.literal("")),
+  address: z
+    .string()
+    .max(500, { error: "住所は500文字以内で入力してください" })
+    .nullable(),
+  postalCode: z
+    .string()
+    .max(10, { error: "郵便番号は10文字以内で入力してください" })
+    .nullable(),
+  prefecture: z
+    .string()
+    .max(10, { error: "都道府県は10文字以内で入力してください" })
+    .nullable(),
+  city: z
+    .string()
+    .max(50, { error: "市区町村は50文字以内で入力してください" })
+    .nullable(),
+  streetAddress: z
+    .string()
+    .max(100, { error: "番地は100文字以内で入力してください" })
+    .nullable(),
+  buildingName: z
+    .string()
+    .max(100, { error: "建物名は100文字以内で入力してください" })
+    .nullable(),
+  accessInfo: z
+    .string()
+    .max(1000, { error: "アクセス情報は1000文字以内で入力してください" })
+    .nullable(),
+  parkingInfo: z
+    .string()
+    .max(500, { error: "駐車場案内は500文字以内で入力してください" })
+    .nullable(),
 });
 
 export type ContactInfoInput = z.infer<typeof contactInfoSchema>;
@@ -108,7 +188,7 @@ export const businessHoursSettingsSchema = z
     // HTMLタグを禁止してXSS対策
     holidayNotice: z
       .string()
-      .max(1000)
+      .max(1000, { error: "お知らせは1000文字以内で入力してください" })
       .regex(/^[^<>]*$/, { error: "HTMLタグは使用できません" })
       .nullable()
       .or(z.literal(""))
@@ -243,6 +323,18 @@ export const permalinkSettingsSchema = z.object({
 });
 
 export type PermalinkSettingsInput = z.infer<typeof permalinkSettingsSchema>;
+
+// =============================================================================
+// Reviews Feature Gate (multi-tenant global toggle)
+// =============================================================================
+
+export const reviewsGlobalSettingsSchema = z.object({
+  reviewsEnabledGlobal: z.boolean(),
+});
+
+export type ReviewsGlobalSettingsInput = z.infer<
+  typeof reviewsGlobalSettingsSchema
+>;
 
 // Re-export from validations for sidebar
 export { sidebarSettingsSchema } from "@/shared/lib/validations/sidebar";

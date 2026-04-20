@@ -78,6 +78,12 @@ export const locationFormSchema = z
       .max(1000, { error: "アクセス情報は1000文字以内で入力してください" })
       .optional()
       .or(z.literal("")),
+    parkingInfo: z
+      .string()
+      .max(500, { error: "駐車場案内は500文字以内で入力してください" })
+      .optional()
+      .or(z.literal("")),
+    amenities: z.record(z.string(), z.boolean()).default({}),
     imageUrl: z
       .string()
       .min(1, { error: "建物画像URLを入力してください" })
@@ -112,6 +118,8 @@ export const defaultLocationFormValues: LocationFormInput = {
   description: "",
   address: "",
   access: "",
+  parkingInfo: "",
+  amenities: {},
   imageUrl: "",
   imageUrls: [],
   businessHours: null,
