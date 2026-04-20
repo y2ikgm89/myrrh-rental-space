@@ -57,7 +57,6 @@ const backgroundOptions = [
   { value: "surface", label: "表面", chip: "bg-muted" },
   { value: "accent", label: "淡色", chip: "bg-primary/10" },
   { value: "primary", label: "強調", chip: "bg-primary/20" },
-  { value: "dark", label: "暗色", chip: "bg-foreground" },
   { value: "image", label: "画像", chip: "bg-muted border-dashed" },
 ] as const;
 

@@ -36,7 +36,6 @@ const backgroundMap = {
   surface: "bg-surface",
   accent: "bg-accent/5",
   primary: "bg-accent/10",
-  dark: "bg-foreground text-background",
   image: "bg-cover bg-center bg-no-repeat",
 } satisfies Record<NonNullable<SectionDesign["background"]>, string>;
 

@@ -202,7 +202,6 @@ const sectionBgValues = [
   "surface",
   "accent",
   "primary",
-  "dark",
   "image",
 ] as const;
 export type SectionBg = (typeof sectionBgValues)[number];

@@ -94,7 +94,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
           setPickerYear(year);
           setIsEditingYear(false);
         }}
-        className="group relative text-xl font-light tracking-wide text-foreground transition-colors hover:text-accent md:text-2xl"
+        className="group relative text-xl font-light tracking-wide text-foreground transition-colors hover:text-foreground md:text-2xl"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -145,7 +145,7 @@ export function MonthPicker({ year, month, onSelect }: MonthPickerProps) {
               <button
                 type="button"
                 onClick={startYearEdit}
-                className="text-lg font-light text-foreground transition-colors hover:text-accent"
+                className="text-lg font-light text-foreground transition-colors hover:text-foreground"
                 aria-label="年を直接入力"
                 title="クリックで年を入力"
               >
