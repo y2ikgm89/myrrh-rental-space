@@ -170,7 +170,7 @@ export async function updatePageSectionOrderCommand(
 ): Promise<void> {
   await ensurePageExists(pageId);
 
-  await prisma.$transaction(
+  await Promise.all(
     input.sections.map((item) =>
       prisma.section.update({
         where: { id: item.id },

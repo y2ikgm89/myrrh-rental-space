@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type {
   Control,
   FieldErrors,
@@ -30,6 +31,7 @@ type SpaceEditPublishTabPanelProps = {
   setValue: UseFormSetValue<SpaceEditFormData>;
   getValues: UseFormGetValues<SpaceEditFormData>;
   isPending: boolean;
+  reviewsEnabledGlobal: boolean;
 };
 
 export function SpaceEditPublishTabPanel({
@@ -39,6 +41,7 @@ export function SpaceEditPublishTabPanel({
   setValue,
   getValues,
   isPending,
+  reviewsEnabledGlobal,
 }: SpaceEditPublishTabPanelProps) {
   const isPublished = useWatch({ control, name: "isPublished" });
   const reviewsEnabled = useWatch({ control, name: "reviewsEnabled" });
@@ -76,7 +79,19 @@ export function SpaceEditPublishTabPanel({
           <CardHeader>
             <CardTitle>レビュー設定</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
+            {!reviewsEnabledGlobal ? (
+              <div className="rounded-lg border border-warning/50 bg-warning/5 p-3 text-sm text-muted-foreground">
+                レビュー機能はサイト全体で無効化されています。この設定は{" "}
+                <Link
+                  href="/admin/settings/site?tab=features"
+                  className="underline hover:text-foreground"
+                >
+                  サイト設定の「機能」タブ
+                </Link>{" "}
+                で変更できます。個別の ON/OFF は Global ON 時のみ有効です。
+              </div>
+            ) : null}
             <div className="flex items-start gap-3">
               <Switch
                 id="reviewsEnabled"
@@ -84,7 +99,7 @@ export function SpaceEditPublishTabPanel({
                 onCheckedChange={(checked) => {
                   setValue("reviewsEnabled", checked, { shouldDirty: true });
                 }}
-                disabled={isPending}
+                disabled={isPending || !reviewsEnabledGlobal}
               />
               <div className="space-y-1">
                 <label

@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { updateTag } from "next/cache";
 import { fireAndForget } from "@/shared/lib/async-utils";

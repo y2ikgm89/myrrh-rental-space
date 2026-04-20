@@ -1,11 +1,10 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { IconMapPin, IconStar } from "@tabler/icons-react";
-import { cn } from "@/shared/lib/cn";
 import { ImageFrame } from "@/public/components/design-system/image-frame";
-import { useFormatPrice } from "@/public/hooks/use-format-price";
+import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
+import { formatUnitPriceWithTax } from "@/shared/lib/pricing/format";
+import { getTaxRate } from "@/shared/lib/pricing/tax";
+import { TaxRateType } from "@/shared/lib/validations/enums/prisma-types";
 import { ImageCarousel } from "./image-carousel";
 
 interface SpaceCardProps {
@@ -19,14 +18,18 @@ interface SpaceCardProps {
   readonly imageUrls?: readonly string[] | undefined;
   readonly categoryName?: string | null | undefined;
   readonly locationName?: string | undefined;
-  readonly lineAddress?: string | undefined;
-  readonly facilities?: readonly string[] | undefined;
-  readonly dailyPrice?: number | null | undefined;
   readonly averageRating?: number | undefined;
   readonly reviewCount?: number | undefined;
 }
 
-export function SpaceCard({
+/**
+ * 公開スペースカード（async Server Component）
+ *
+ * 税表示モードは layout の `TaxSettingsProvider` が SSoT だが、Server Component から
+ * Context は読めないため `getPublicTaxSettings()` を直接呼ぶ。`'use cache'` で
+ * リクエスト単位に dedup されるため、グリッド内の複数カード描画でも DB 1 回。
+ */
+export async function SpaceCard({
   slug,
   name,
   description,
@@ -37,49 +40,28 @@ export function SpaceCard({
   imageUrls,
   categoryName,
   locationName,
-  lineAddress,
-  facilities,
-  dailyPrice,
   averageRating,
   reviewCount,
 }: SpaceCardProps) {
-  const { formatUnit } = useFormatPrice();
-  const hasHoverData = locationName !== undefined && lineAddress !== undefined;
-
-  // imageUrls / facilities はスキーマで重複禁止が保証されている（mainImageUrl との重複も禁止）
+  // imageUrls はスキーマで重複禁止が保証されている（mainImageUrl との重複も禁止）
   const allImages = imageUrls ? [mainImageUrl, ...imageUrls] : [mainImageUrl];
-  const [showOverlay, setShowOverlay] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const handlePointerEnter = (e: React.PointerEvent) => {
-    if (!hasHoverData || e.pointerType !== "mouse") return;
-    timerRef.current = setTimeout(() => setShowOverlay(true), 500);
-  };
-
-  const handlePointerLeave = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    setShowOverlay(false);
-  };
+  const tax = await getPublicTaxSettings();
+  const taxRate = getTaxRate(TaxRateType.standard, tax);
+  const hourlyPriceLabel =
+    hourlyPrice != null
+      ? formatUnitPriceWithTax(
+          hourlyPrice,
+          taxRate,
+          tax.displayModePublic,
+          "/h",
+        )
+      : null;
 
   return (
     <Link
       href={`/spaces/${slug}`}
       className="group block overflow-hidden border border-border"
-      onPointerEnter={handlePointerEnter}
-      onPointerLeave={handlePointerLeave}
-      onFocus={() => {
-        if (hasHoverData) setShowOverlay(true);
-      }}
-      onBlur={() => setShowOverlay(false)}
     >
       {/* Image area */}
       <div className="relative">
@@ -98,51 +80,6 @@ export function SpaceCard({
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
         )}
-
-        {/* Hover Preview Overlay */}
-        {hasHoverData ? (
-          <div
-            aria-hidden="true"
-            className={cn(
-              "pointer-events-none absolute inset-0 z-20 flex flex-col justify-end bg-overlay p-4 backdrop-blur-sm transition-opacity duration-300 motion-reduce:duration-0",
-              showOverlay ? "opacity-100" : "opacity-0",
-            )}
-          >
-            <div className="space-y-2 text-sm text-overlay-foreground">
-              <div className="flex items-center gap-1.5">
-                <IconMapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="font-medium">{locationName}</span>
-              </div>
-              <p className="text-xs text-overlay-foreground/80">
-                {lineAddress}
-              </p>
-
-              {facilities && facilities.length > 0 ? (
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {facilities.slice(0, 4).map((f) => (
-                    <span
-                      key={f}
-                      className="rounded bg-overlay-foreground/20 px-1.5 py-0.5 text-[11px]"
-                    >
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              {hourlyPrice != null ? (
-                <div className="pt-1 text-xs font-medium">
-                  <span>{formatUnit(hourlyPrice, "/h")}</span>
-                  {dailyPrice != null ? (
-                    <span className="ml-2 text-overlay-foreground/80">
-                      {formatUnit(dailyPrice, "/day")}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {/* Content */}
@@ -155,8 +92,14 @@ export function SpaceCard({
         <h3 className="mt-1 font-heading text-[1.25rem] font-light tracking-tight">
           {name}
         </h3>
+        {locationName ? (
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <IconMapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{locationName}</span>
+          </p>
+        ) : null}
         {description ? (
-          <p className="mt-1 line-clamp-2 text-[0.85rem] leading-relaxed text-muted-foreground">
+          <p className="mt-2 line-clamp-2 text-[0.85rem] leading-relaxed text-muted-foreground">
             {description}
           </p>
         ) : null}
@@ -176,11 +119,11 @@ export function SpaceCard({
         <p className="mt-2 text-[0.75rem] text-muted-foreground">
           {area != null ? `${area}m² · ` : ""}
           {capacity != null ? `Max ${capacity}` : ""}
-          {hourlyPrice != null ? (
+          {hourlyPriceLabel ? (
             <>
               {(area != null || capacity != null) && " · "}
               <span className="font-heading text-[0.95rem] text-accent">
-                {formatUnit(hourlyPrice, "/h")}
+                {hourlyPriceLabel}
               </span>
             </>
           ) : null}

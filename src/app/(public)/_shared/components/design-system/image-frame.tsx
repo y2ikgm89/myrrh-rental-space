@@ -1,3 +1,18 @@
+/**
+ * ImageFrame — next/image の type-safe ラッパー
+ *
+ * Next.js 公式: <Image> は `width + height` または `fill` の **どちらか必須**。
+ * このコンポーネントの props は discriminated union でその排他制約を型レベルで強制する。
+ *
+ * Variants:
+ *   - fill mode（推奨・レスポンシブ）:   `<ImageFrame fill aspect="wide" sizes="..." />`
+ *   - explicit dimensions（intrinsic）:    `<ImageFrame width={400} height={300} sizes="..." />`
+ *
+ * `aspect` は fill mode 専用（CSS aspect-ratio で container をサイズ → image が fill で追従）。
+ *
+ * @see https://nextjs.org/docs/app/api-reference/components/image
+ */
+
 import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 
@@ -18,41 +33,51 @@ const aspectClasses = {
   photo: "aspect-[3/2]",
 } as const satisfies Record<AspectRatio, string>;
 
-interface ImageFrameProps {
+interface ImageFrameBaseProps {
   readonly src: string;
   readonly alt: string;
-  readonly width?: number;
-  readonly height?: number;
-  readonly fill?: boolean;
-  readonly aspect?: AspectRatio;
   readonly sizes: string;
   readonly priority?: boolean;
   readonly className?: string;
   readonly rounded?: boolean;
 }
 
-export function ImageFrame({
-  src,
-  alt,
-  width,
-  height,
-  fill,
-  aspect,
-  sizes,
-  priority = false,
-  className,
-  rounded = false,
-}: ImageFrameProps) {
+interface FillProps extends ImageFrameBaseProps {
+  readonly fill: true;
+  readonly aspect?: AspectRatio;
+  readonly width?: never;
+  readonly height?: never;
+}
+
+interface DimensionProps extends ImageFrameBaseProps {
+  readonly fill?: never;
+  readonly aspect?: never;
+  readonly width: number;
+  readonly height: number;
+}
+
+type ImageFrameProps = FillProps | DimensionProps;
+
+export function ImageFrame(props: ImageFrameProps) {
+  const {
+    src,
+    alt,
+    sizes,
+    priority = false,
+    className,
+    rounded = false,
+  } = props;
+
   return (
     <div
       className={cn(
         "group relative overflow-hidden bg-surface",
         rounded && "rounded-lg",
-        aspect && aspectClasses[aspect],
+        props.fill && props.aspect && aspectClasses[props.aspect],
         className,
       )}
     >
-      {fill ? (
+      {props.fill ? (
         <Image
           src={src}
           alt={alt}
@@ -65,8 +90,8 @@ export function ImageFrame({
         <Image
           src={src}
           alt={alt}
-          {...(width !== undefined && { width })}
-          {...(height !== undefined && { height })}
+          width={props.width}
+          height={props.height}
           sizes={sizes}
           priority={priority}
           className="h-full w-full object-cover transition-opacity duration-400 group-hover:opacity-85"

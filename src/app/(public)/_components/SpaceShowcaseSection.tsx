@@ -29,14 +29,11 @@ export interface ShowcaseSpaceData {
   readonly descriptionPlainText: string;
   readonly capacity: number | null;
   readonly hourlyPrice: number | null;
-  readonly dailyPrice: number | null;
   readonly area: number | null;
   readonly mainImageUrl: string;
   readonly imageUrls: readonly string[];
-  readonly facilities: readonly string[];
   readonly categoryName: string | null;
   readonly locationName: string | null;
-  readonly lineAddress: string | null;
 }
 
 interface SpaceShowcaseSectionProps {
@@ -89,13 +86,10 @@ export function SpaceShowcaseSection({
               capacity={featured.capacity}
               area={featured.area}
               hourlyPrice={featured.hourlyPrice}
-              dailyPrice={featured.dailyPrice}
               mainImageUrl={featured.mainImageUrl}
               imageUrls={featured.imageUrls}
               categoryName={featured.categoryName}
               locationName={featured.locationName ?? undefined}
-              lineAddress={featured.lineAddress ?? undefined}
-              facilities={featured.facilities}
             />
           </div>
         </ScrollReveal>
@@ -120,13 +114,10 @@ export function SpaceShowcaseSection({
               capacity={space.capacity}
               area={space.area}
               hourlyPrice={space.hourlyPrice}
-              dailyPrice={space.dailyPrice}
               mainImageUrl={space.mainImageUrl}
               imageUrls={space.imageUrls}
               categoryName={space.categoryName}
               locationName={space.locationName ?? undefined}
-              lineAddress={space.lineAddress ?? undefined}
-              facilities={space.facilities}
             />
           ))}
         </ScrollRevealGroup>

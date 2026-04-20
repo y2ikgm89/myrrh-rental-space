@@ -146,14 +146,11 @@ export async function SectionRenderer({
         descriptionPlainText: s.descriptionPlainText,
         capacity: s.capacity,
         hourlyPrice: s.hourlyPrice,
-        dailyPrice: s.dailyPrice,
         area: s.area,
         mainImageUrl: s.mainImageUrl,
         imageUrls: s.imageUrls,
-        facilities: s.facilities,
         categoryName: s.category?.name ?? null,
         locationName: s.location?.name ?? null,
-        lineAddress: s.lineAddress,
       }));
       return (
         <SpaceShowcaseSection config={config} spaces={spaces} design={design} />

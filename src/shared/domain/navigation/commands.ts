@@ -121,7 +121,7 @@ export async function deleteNavigationItem(id: string): Promise<void> {
 export async function updateNavigationOrder(
   items: NavigationOrderInput,
 ): Promise<void> {
-  await prisma.$transaction(
+  await Promise.all(
     items.map((item) =>
       prisma.navigationItem.update({
         where: { id: item.id },
@@ -185,7 +185,7 @@ export async function deleteSocialLink(id: string): Promise<void> {
 export async function updateSocialLinkOrder(
   items: SocialLinkOrderInput,
 ): Promise<void> {
-  await prisma.$transaction(
+  await Promise.all(
     items.map((item) =>
       prisma.socialLink.update({
         where: { id: item.id },

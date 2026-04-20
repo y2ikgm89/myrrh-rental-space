@@ -27,21 +27,44 @@ interface ReviewFormProps {
   readonly reservationId: string;
   readonly spaceName: string;
   readonly reviewsEnabled: boolean;
+  readonly reviewsEnabledGlobal: boolean;
   readonly turnstileSiteKey: string | null;
 }
 
-type ReviewFormInnerProps = Omit<ReviewFormProps, "reviewsEnabled">;
+type ReviewFormInnerProps = Omit<
+  ReviewFormProps,
+  "reviewsEnabled" | "reviewsEnabledGlobal"
+>;
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * Outer gate (hooks なし):
+ * - Global OFF → "サイト全体で無効化" メッセージ
+ * - Global ON + per-space OFF → "このスペースは受け付けていません" メッセージ
+ * - 両方 ON → ReviewFormInner
+ *
+ * precedence: global が上位（WordPress / Ghost pattern）
+ */
 export function ReviewForm({
   reservationId,
   spaceName,
   reviewsEnabled,
+  reviewsEnabledGlobal,
   turnstileSiteKey,
 }: ReviewFormProps) {
+  if (!reviewsEnabledGlobal) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-6 text-center">
+        <p className="text-sm text-muted-foreground">
+          レビュー機能は現在サイト全体で無効化されています。
+        </p>
+      </div>
+    );
+  }
+
   if (!reviewsEnabled) {
     return (
       <div className="rounded-lg border border-border bg-surface p-6 text-center">

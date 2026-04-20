@@ -53,12 +53,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getPermalinkSettings(),
     getSitemapContentData(),
   ]);
-  const { spaces, news, posts, customPages, terms } = content;
+  const { spaces, news, posts, customPages, terms, events } = content;
 
   // 各コンテンツタイプの最新更新日を取得
   const latestSpaceUpdate = spaces[0]?.updatedAt ?? new Date();
   const latestNewsUpdate = news[0]?.updatedAt ?? new Date();
   const latestPostUpdate = posts[0]?.updatedAt ?? new Date();
+  const latestEventUpdate = events[0]?.updatedAt ?? new Date();
 
   const entries: SitemapEntry[] = [];
 
@@ -86,6 +87,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   entries.push({
     url: `${BASE_URL}/posts`,
     lastModified: latestPostUpdate,
+  });
+  entries.push({
+    url: `${BASE_URL}/events`,
+    lastModified: latestEventUpdate,
   });
 
   // ==========================================================================
@@ -135,6 +140,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entries.push({
       url: `${BASE_URL}/terms/${term.slug}`,
       lastModified: term.updatedAt,
+    });
+  }
+
+  // ==========================================================================
+  // 8. イベント詳細ページ
+  // 過去イベントも含める（schema.org/Event の endDate + eventStatus で
+  // Google が終了判定するため noindex や sitemap 除外は不要）
+  // @see https://developers.google.com/search/docs/appearance/structured-data/event
+  // ==========================================================================
+  for (const event of events) {
+    entries.push({
+      url: `${BASE_URL}/events/${event.slug}`,
+      lastModified: event.updatedAt,
     });
   }
 

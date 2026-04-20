@@ -75,7 +75,7 @@ export async function updateSpaceCategory(
 export async function updateSpaceCategoryOrder(
   items: SpaceCategoryOrderInput[],
 ): Promise<{ updated: number }> {
-  await prisma.$transaction(
+  await Promise.all(
     items.map((item) =>
       prisma.spaceCategory.update({
         where: { id: item.id },

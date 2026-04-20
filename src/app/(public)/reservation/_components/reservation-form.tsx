@@ -496,7 +496,6 @@ export function ReservationForm({
               alt={currentLocation.name}
               width={160}
               height={90}
-              aspect="video"
               sizes="160px"
               rounded={false}
               className="w-40 shrink-0"

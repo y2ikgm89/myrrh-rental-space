@@ -17,6 +17,7 @@ import {
   getPublishedSpacesPaginated,
   getActiveCategories,
 } from "@/shared/domain/spaces/public-queries";
+import { getActiveLocations } from "@/shared/domain/locations/public-queries";
 import { getSpaceReviewStatsMultiple } from "@/shared/domain/reviews/public-queries";
 import { spaceSearchParams } from "@/public/lib/search-params";
 import { Container } from "@/public/components/design-system/container";
@@ -40,19 +41,28 @@ export default async function SpacesPage({
 }: SpacesPageProps): Promise<ReactElement> {
   await connection();
 
-  const { page, category: categoryId } =
-    await spaceSearchParams.parse(searchParams);
+  const {
+    page,
+    category: categoryId,
+    location: locationId,
+  } = await spaceSearchParams.parse(searchParams);
 
-  const [sections, { items, totalPages, currentPage }, categories] =
-    await Promise.all([
-      getPageSectionsWithFallback("spaces"),
-      getPublishedSpacesPaginated(
-        Math.max(1, page),
-        undefined,
-        categoryId ?? undefined,
-      ),
-      getActiveCategories(),
-    ]);
+  const [
+    sections,
+    { items, totalCount, totalPages, currentPage },
+    categories,
+    locations,
+  ] = await Promise.all([
+    getPageSectionsWithFallback("spaces"),
+    getPublishedSpacesPaginated(
+      Math.max(1, page),
+      undefined,
+      categoryId ?? undefined,
+      locationId ?? undefined,
+    ),
+    getActiveCategories(),
+    getActiveLocations(),
+  ]);
 
   const reviewStats = await getSpaceReviewStatsMultiple(items.map((s) => s.id));
 
@@ -78,7 +88,11 @@ export default async function SpacesPage({
           {/* Filter */}
           <Suspense fallback={null}>
             <div className="mb-10 md:mb-14">
-              <FilterBar categories={categories} />
+              <FilterBar
+                categories={categories}
+                locations={locations}
+                resultCount={totalCount}
+              />
             </div>
           </Suspense>
 
@@ -93,11 +107,10 @@ export default async function SpacesPage({
               currentPage={currentPage}
               totalPages={totalPages}
               basePath="/spaces"
-              {...(categoryId !== undefined &&
-              categoryId !== null &&
-              categoryId !== ""
-                ? { preservedQuery: { category: categoryId } }
-                : {})}
+              preservedQuery={{
+                ...(categoryId ? { category: categoryId } : {}),
+                ...(locationId ? { location: locationId } : {}),
+              }}
             />
           </div>
         </Container>

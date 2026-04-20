@@ -7,6 +7,7 @@ import { getActiveTermsForSelect } from "@/admin/queries/terms";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
+import { getReviewsEnabledGlobal } from "@/shared/domain/settings/public-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
@@ -34,12 +35,14 @@ export default async function EditSpacePage({ params }: PageProps) {
     availableLocations,
     availableCategories,
     taxSettings,
+    reviewsEnabledGlobal,
   ] = await Promise.all([
     getSpaceById(id),
     getActiveTermsForSelect(),
     getActiveLocationsForSelect(),
     getActiveSpaceCategories(),
     getTaxSettings(),
+    getReviewsEnabledGlobal(),
   ]);
 
   if (!space) notFound();
@@ -77,6 +80,7 @@ export default async function EditSpacePage({ params }: PageProps) {
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}
+        reviewsEnabledGlobal={reviewsEnabledGlobal}
       />
     </AdminDetailLayout>
   );

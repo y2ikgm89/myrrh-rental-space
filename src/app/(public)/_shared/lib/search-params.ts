@@ -23,6 +23,7 @@ export const paginationSearchParams = createSearchParamsCache(
 export const spaceSearchParamsParsers = {
   page: parseAsInteger.withDefault(1),
   category: parseAsString,
+  location: parseAsString,
 };
 
 export const spaceSearchParams = createSearchParamsCache(

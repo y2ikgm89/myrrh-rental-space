@@ -24,6 +24,7 @@ import {
   getDecryptedTurnstileSecretKey,
   getTurnstileConfig,
 } from "@/shared/domain/settings/api-key-queries";
+import { serverEnv } from "./env/server";
 import {
   logError,
   ErrorCategory,
@@ -83,7 +84,7 @@ export async function verifyTurnstileToken(
   const secretKey = await getTurnstileSecretKey();
 
   if (!secretKey) {
-    if (process.env["NODE_ENV"] === "production") {
+    if (serverEnv.NODE_ENV === "production") {
       logError(new Error("Turnstile secret key not configured in production"), {
         category: ErrorCategory.AUTHORIZATION,
         severity: ErrorSeverity.HIGH,

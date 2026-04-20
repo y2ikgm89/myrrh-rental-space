@@ -52,9 +52,12 @@ function mapSpaceListItem(s: SpaceListRow) {
 }
 
 /**
- * 公開済み・有効なスペース一覧を取得（カテゴリ付き）
+ * 公開済み・有効なスペース一覧を取得（カテゴリ + 拠点フィルタ）
  */
-export async function getPublishedSpaces(categoryId?: string) {
+export async function getPublishedSpaces(
+  categoryId?: string,
+  locationId?: string,
+) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.SPACES);
@@ -66,6 +69,7 @@ export async function getPublishedSpaces(categoryId?: string) {
           isPublished: true,
           isActive: true,
           ...(categoryId ? { categoryId } : {}),
+          ...(locationId ? { locationId } : {}),
         },
         select: spaceListSelect,
         orderBy: { name: "asc" },
@@ -86,6 +90,7 @@ export async function getPublishedSpacesPaginated(
   page: number = 1,
   perPage: number = PAGINATION_DEFAULTS.public.default,
   categoryId?: string,
+  locationId?: string,
 ) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
@@ -95,6 +100,7 @@ export async function getPublishedSpacesPaginated(
     isPublished: true,
     isActive: true,
     ...(categoryId ? { categoryId } : {}),
+    ...(locationId ? { locationId } : {}),
   };
 
   const skip = (page - 1) * perPage;
@@ -114,11 +120,12 @@ export async function getPublishedSpacesPaginated(
 
       return {
         items: toPlainArray(rawItems.map((s) => mapSpaceListItem(s))),
+        totalCount,
         totalPages: Math.ceil(totalCount / perPage),
         currentPage: page,
       };
     },
-    fallback: { items: [], totalPages: 0, currentPage: page },
+    fallback: { items: [], totalCount: 0, totalPages: 0, currentPage: page },
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: "getPublishedSpacesPaginated",

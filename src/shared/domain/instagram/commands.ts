@@ -204,7 +204,7 @@ export async function reorderInstagramPosts(ids: string[]): Promise<void> {
     throw new DomainError("並び順のIDリストが必要です", "VALIDATION");
   }
 
-  await prisma.$transaction(
+  await Promise.all(
     ids.map((id, index) =>
       prisma.instagramPost.update({
         where: { id },

@@ -2,6 +2,7 @@ import { getActiveTermsForSelect } from "@/admin/queries/terms";
 import { getActiveLocationsForSelect } from "@/admin/queries/location";
 import { getActiveSpaceCategories } from "@/admin/queries/space-category";
 import { getTaxSettings } from "@/admin/queries/settings";
+import { getReviewsEnabledGlobal } from "@/shared/domain/settings/public-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SpaceEditForm } from "../_components/SpaceEditForm";
 import type { Metadata } from "next";
@@ -11,13 +12,19 @@ export const metadata: Metadata = {
 };
 
 export default async function NewSpacePage() {
-  const [availableTerms, availableLocations, availableCategories, taxSettings] =
-    await Promise.all([
-      getActiveTermsForSelect(),
-      getActiveLocationsForSelect(),
-      getActiveSpaceCategories(),
-      getTaxSettings(),
-    ]);
+  const [
+    availableTerms,
+    availableLocations,
+    availableCategories,
+    taxSettings,
+    reviewsEnabledGlobal,
+  ] = await Promise.all([
+    getActiveTermsForSelect(),
+    getActiveLocationsForSelect(),
+    getActiveSpaceCategories(),
+    getTaxSettings(),
+    getReviewsEnabledGlobal(),
+  ]);
 
   return (
     <AdminDetailLayout
@@ -31,6 +38,7 @@ export default async function NewSpacePage() {
         availableLocations={availableLocations}
         availableCategories={availableCategories}
         taxSettings={taxSettings}
+        reviewsEnabledGlobal={reviewsEnabledGlobal}
       />
     </AdminDetailLayout>
   );
