@@ -3,11 +3,13 @@ import {
   eventFormSchema,
   updateEventSchema,
 } from "@/shared/lib/validations/event";
+import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
 
 describe("eventFormSchema", () => {
   const validInput = {
     title: "テストイベント",
     slug: "test-event",
+    descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
     startTime: "2026-05-01T10:00:00.000Z",
     endTime: "2026-05-01T12:00:00.000Z",
     status: "DRAFT",
@@ -56,8 +58,9 @@ describe("eventFormSchema", () => {
       description: "説明文",
       capacity: 30,
       price: 1000,
-      location: "会議室A",
-      spaceId: "space123",
+      addressDetail: "2F 会議室A",
+      locationId: "11111111-1111-4111-8111-111111111111",
+      spaceId: "22222222-2222-4222-8222-222222222222",
       registrationOpen: true,
       thumbnailUrl: "https://example.com/image.jpg",
     });
@@ -82,6 +85,7 @@ describe("updateEventSchema", () => {
       id: "test-id",
       title: "更新イベント",
       slug: "updated-event",
+      descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
       startTime: "2026-05-01T10:00:00.000Z",
       endTime: "2026-05-01T12:00:00.000Z",
       status: "PUBLISHED",

@@ -13,6 +13,7 @@ import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { getPublishedEvents } from "@/shared/domain/events/public-queries";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 import { Container } from "@/public/components/design-system/container";
 import { PageLayout } from "@/public/components/design-system/page-layout";
 import { SiteCTA } from "@/public/components/layouts/site-cta";
@@ -48,7 +49,11 @@ export default async function EventsPage({
     title: e.title,
     slug: e.slug,
     descriptionPlainText: e.descriptionPlainText,
-    location: e.location,
+    location: formatEventVenue({
+      location: e.location,
+      space: e.space,
+      addressDetail: e.addressDetail,
+    }),
     startTime: e.startTime,
     endTime: e.endTime,
     price: e.price,

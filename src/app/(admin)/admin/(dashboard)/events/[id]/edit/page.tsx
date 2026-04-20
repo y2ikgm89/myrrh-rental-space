@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import {
   getEventById,
+  getLocationsForEvent,
   getSpacesForEvent,
 } from "@/shared/domain/events/admin-queries";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
@@ -33,8 +34,9 @@ export async function generateMetadata({
 export default async function EditEventPage({ params }: PageProps) {
   const { id } = await params;
 
-  const [event, spaces] = await Promise.all([
+  const [event, locations, spaces] = await Promise.all([
     getEventById(id),
+    getLocationsForEvent(),
     getSpacesForEvent(),
   ]);
 
@@ -49,7 +51,7 @@ export default async function EditEventPage({ params }: PageProps) {
       title="イベントを編集"
       subtitle={event.title}
     >
-      <EventForm event={event} spaces={spaces} />
+      <EventForm event={event} locations={locations} spaces={spaces} />
     </AdminDetailLayout>
   );
 }

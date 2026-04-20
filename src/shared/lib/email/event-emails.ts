@@ -20,6 +20,7 @@ import {
   getNotificationEmailAddresses,
 } from "@/shared/domain/settings/queries/notification";
 import { getIcalOrganizer } from "@/shared/domain/settings/queries/organization";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 import { RegistrationStatus } from "@/shared/lib/validations/enums/prisma-types";
 import {
   ErrorCategory,
@@ -297,7 +298,9 @@ export async function sendEventCancelledToAllParticipants(
       title: true,
       startTime: true,
       endTime: true,
-      location: true,
+      addressDetail: true,
+      location: { select: { name: true } },
+      space: { select: { name: true } },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -312,6 +315,12 @@ export async function sendEventCancelledToAllParticipants(
   });
 
   if (!event) return;
+
+  const venueDisplay = formatEventVenue({
+    location: event.location,
+    space: event.space,
+    addressDetail: event.addressDetail,
+  });
 
   const eventDate = format(event.startTime, "yyyy年M月d日 (EEEE)", {
     locale: ja,
@@ -332,7 +341,7 @@ export async function sendEventCancelledToAllParticipants(
             customerName: registration.name,
             startTime: event.startTime,
             endTime: event.endTime,
-            ...(event.location !== null ? { location: event.location } : {}),
+            ...(venueDisplay !== null ? { location: venueDisplay } : {}),
             numberOfPeople: registration.numberOfPeople,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
@@ -404,7 +413,9 @@ export async function sendEventUpdatedToAllParticipants(
       title: true,
       startTime: true,
       endTime: true,
-      location: true,
+      addressDetail: true,
+      location: { select: { name: true } },
+      space: { select: { name: true } },
       registrations: {
         where: { status: RegistrationStatus.CONFIRMED },
         select: {
@@ -419,6 +430,12 @@ export async function sendEventUpdatedToAllParticipants(
   });
 
   if (!event) return;
+
+  const venueDisplay = formatEventVenue({
+    location: event.location,
+    space: event.space,
+    addressDetail: event.addressDetail,
+  });
 
   const oldEventDate = format(oldStartTime, "yyyy年M月d日 (EEEE) HH:mm", {
     locale: ja,
@@ -444,7 +461,7 @@ export async function sendEventUpdatedToAllParticipants(
             customerName: registration.name,
             startTime: event.startTime,
             endTime: event.endTime,
-            ...(event.location !== null ? { location: event.location } : {}),
+            ...(venueDisplay !== null ? { location: venueDisplay } : {}),
             numberOfPeople: registration.numberOfPeople,
             sequence: registration.icsSequence + 1,
             organizerName: organizer.name,
@@ -473,7 +490,7 @@ export async function sendEventUpdatedToAllParticipants(
             eventTitle: event.title,
             eventDate: oldEventDate,
             newEventDate: `${newEventDate}〜${newEndTime}`,
-            location: event.location ?? undefined,
+            location: venueDisplay ?? undefined,
           }),
           attachments,
         }),

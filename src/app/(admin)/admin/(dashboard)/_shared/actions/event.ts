@@ -10,6 +10,7 @@ import {
   cancelEventCommand,
   createEventCommand,
   deleteEventCommand,
+  duplicateEventCommand,
   publishEventCommand,
   updateEventCommand,
 } from "@/shared/domain/events/commands";
@@ -134,6 +135,23 @@ export async function publishEvent(
     afterSuccess: (slug) => {
       invalidateEventCaches(validated.data, slug, { registrations: true });
     },
+  });
+}
+
+export async function duplicateEvent(
+  id: string,
+): Promise<MutationResult<{ id: string; slug: string }>> {
+  const validated = idSchema.safeParse(id);
+  if (!validated.success) return createValidationMutationError(validated.error);
+
+  return executeAdminMutationResult({
+    resource: "event",
+    action: "create",
+    execute: async () => duplicateEventCommand(validated.data),
+    afterSuccess: (data) => {
+      invalidateEventCaches(data.id, data.slug);
+    },
+    resolveAuditResourceId: (data) => data.id,
   });
 }
 

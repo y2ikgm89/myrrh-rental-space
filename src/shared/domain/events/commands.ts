@@ -34,12 +34,29 @@ export interface EventCommandInput {
   thumbnailUrl?: string | null;
   startTime: string;
   endTime: string;
+  /** 申込締切日時（null = 開始時刻まで受付）。startTime 以前である必要あり。 */
+  registrationDeadline?: string | null;
   capacity?: number | null;
   price?: number | null;
-  location?: string | null;
+  addressDetail?: string | null;
+  locationId?: string | null;
   spaceId?: string | null;
   status: (typeof EventStatusEnum)[keyof typeof EventStatusEnum];
   registrationOpen?: boolean;
+}
+
+/**
+ * status と registrationOpen の不変条件を server-side で強制。
+ *
+ * `status !== PUBLISHED` のとき申込を受け付ける状態は論理矛盾のため、
+ * UI の戻り値を信用せず必ず正規化する（多重防御）。
+ */
+function normalizeRegistrationOpen(
+  status: EventCommandInput["status"],
+  registrationOpen: boolean | undefined,
+): boolean {
+  if (status !== EventStatus.PUBLISHED) return false;
+  return registrationOpen ?? true;
 }
 
 export async function createEventCommand(data: EventCommandInput) {
@@ -55,12 +72,19 @@ export async function createEventCommand(data: EventCommandInput) {
       thumbnailUrl: data.thumbnailUrl ?? null,
       startTime: new Date(data.startTime),
       endTime: new Date(data.endTime),
+      registrationDeadline: data.registrationDeadline
+        ? new Date(data.registrationDeadline)
+        : null,
       capacity: data.capacity ?? null,
       price: data.price ?? null,
-      location: data.location ?? null,
+      addressDetail: data.addressDetail ?? null,
+      locationId: data.locationId ?? null,
       spaceId: data.spaceId ?? null,
       status: data.status,
-      registrationOpen: data.registrationOpen ?? true,
+      registrationOpen: normalizeRegistrationOpen(
+        data.status,
+        data.registrationOpen,
+      ),
       publishedAt: data.status === EventStatus.PUBLISHED ? new Date() : null,
     },
     select: { id: true, slug: true },
@@ -78,7 +102,9 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       status: true,
       startTime: true,
       endTime: true,
-      location: true,
+      locationId: true,
+      spaceId: true,
+      addressDetail: true,
     },
   });
   if (!existing) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
@@ -106,12 +132,19 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
       thumbnailUrl: data.thumbnailUrl ?? null,
       startTime: newStartTime,
       endTime: newEndTime,
+      registrationDeadline: data.registrationDeadline
+        ? new Date(data.registrationDeadline)
+        : null,
       capacity: data.capacity ?? null,
       price: data.price ?? null,
-      location: data.location ?? null,
+      addressDetail: data.addressDetail ?? null,
+      locationId: data.locationId ?? null,
       spaceId: data.spaceId ?? null,
       status: data.status,
-      registrationOpen: data.registrationOpen ?? true,
+      registrationOpen: normalizeRegistrationOpen(
+        data.status,
+        data.registrationOpen,
+      ),
       ...(wasPublished && { publishedAt: new Date() }),
     },
   });
@@ -119,10 +152,13 @@ export async function updateEventCommand(id: string, data: EventCommandInput) {
   const dateTimeChanged =
     existing.startTime.getTime() !== newStartTime.getTime() ||
     existing.endTime.getTime() !== newEndTime.getTime();
-  const locationChanged = (existing.location ?? "") !== (data.location ?? "");
+  const venueChanged =
+    (existing.locationId ?? null) !== (data.locationId ?? null) ||
+    (existing.spaceId ?? null) !== (data.spaceId ?? null) ||
+    (existing.addressDetail ?? "") !== (data.addressDetail ?? "");
 
   if (
-    (dateTimeChanged || locationChanged) &&
+    (dateTimeChanged || venueChanged) &&
     data.status === EventStatus.PUBLISHED
   ) {
     fireAndForget(sendEventUpdatedToAllParticipants(id, existing.startTime), {
@@ -177,12 +213,75 @@ export async function cancelEventCommand(id: string) {
   });
 }
 
+/**
+ * 既存イベントを複製して新規 DRAFT イベントを作成する。
+ *
+ * - 本文・サムネイル・日時・会場・定員・料金は全てコピー
+ * - status は強制的に `DRAFT`、`publishedAt` / `googleCalendarEventId` は `null`
+ * - 申込（EventRegistration）は複製しない
+ * - slug は `${original.slug}-copy` をベースに `ensureUniqueSlug` で衝突回避
+ * - title は `${original.title}（コピー）` の慣例に従う
+ */
+export async function duplicateEventCommand(id: string) {
+  const source = await prisma.event.findFirst({
+    where: { id, deletedAt: null },
+    select: {
+      title: true,
+      slug: true,
+      descriptionJson: true,
+      descriptionHtml: true,
+      descriptionPlainText: true,
+      thumbnailUrl: true,
+      startTime: true,
+      endTime: true,
+      registrationDeadline: true,
+      capacity: true,
+      price: true,
+      addressDetail: true,
+      locationId: true,
+      spaceId: true,
+      registrationOpen: true,
+    },
+  });
+  if (!source) throw new DomainError("イベントが見つかりません", "NOT_FOUND");
+
+  const slug = await ensureUniqueSlug(`${source.slug}-copy`);
+
+  const created = await prisma.event.create({
+    data: {
+      title: `${source.title}（コピー）`,
+      slug,
+      descriptionJson: source.descriptionJson as Prisma.InputJsonValue,
+      descriptionHtml: source.descriptionHtml,
+      descriptionPlainText: source.descriptionPlainText,
+      thumbnailUrl: source.thumbnailUrl,
+      startTime: source.startTime,
+      endTime: source.endTime,
+      registrationDeadline: source.registrationDeadline,
+      capacity: source.capacity,
+      price: source.price,
+      addressDetail: source.addressDetail,
+      locationId: source.locationId,
+      spaceId: source.spaceId,
+      status: EventStatus.DRAFT,
+      // DRAFT 化に伴い受付状態は強制 false（normalizeRegistrationOpen と同等）
+      registrationOpen: false,
+      publishedAt: null,
+      googleCalendarEventId: null,
+    },
+    select: { id: true, slug: true },
+  });
+
+  return created;
+}
+
 export async function upsertEventFromCalendar(data: {
   googleCalendarEventId: string;
   title: string;
   description?: string | null;
   startTime: Date;
   endTime: Date;
+  /** Google Calendar の location 文字列。外部会場名として addressDetail に格納 */
   location?: string | null;
 }) {
   const plain = (data.description ?? "").trim();
@@ -210,7 +309,7 @@ export async function upsertEventFromCalendar(data: {
         descriptionPlainText,
         startTime: data.startTime,
         endTime: data.endTime,
-        location: data.location ?? null,
+        addressDetail: data.location ?? null,
       },
     });
     return { id: existing.id, action: "updated" as const };
@@ -226,7 +325,7 @@ export async function upsertEventFromCalendar(data: {
       descriptionPlainText,
       startTime: data.startTime,
       endTime: data.endTime,
-      location: data.location ?? null,
+      addressDetail: data.location ?? null,
       status: EventStatus.DRAFT,
       googleCalendarEventId: data.googleCalendarEventId,
     },
@@ -235,6 +334,13 @@ export async function upsertEventFromCalendar(data: {
   return { id: event.id, action: "created" as const };
 }
 
+/**
+ * `slug` が空いていればそのまま返し、衝突したら `${slug}-2`, `${slug}-3` ...
+ * の最小未使用番号を返す（WordPress / Ghost / Notion 互換のインクリメンタル方式）。
+ *
+ * deterministic な番号付けにより、複製イベントの URL が「（コピー）」「（コピー）-2」
+ * のように人間に予測可能な並びになる。
+ */
 async function ensureUniqueSlug(
   slug: string,
   excludeId?: string,
@@ -250,6 +356,24 @@ async function ensureUniqueSlug(
 
   if (!existing) return slug;
 
-  const randomSuffix = crypto.randomUUID().slice(0, 8);
-  return `${slug}-${randomSuffix}`;
+  const siblings = await prisma.event.findMany({
+    where: {
+      slug: { startsWith: `${slug}-` },
+      deletedAt: null,
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { slug: true },
+  });
+
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^${escaped}-(\\d+)$`);
+  const used = new Set<number>();
+  for (const s of siblings) {
+    const match = s.slug.match(pattern);
+    if (match?.[1]) used.add(Number(match[1]));
+  }
+
+  let n = 2;
+  while (used.has(n)) n++;
+  return `${slug}-${n}`;
 }

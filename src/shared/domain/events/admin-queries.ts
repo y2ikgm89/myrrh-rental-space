@@ -10,14 +10,16 @@ const eventListSelect = {
   slug: true,
   startTime: true,
   endTime: true,
+  registrationDeadline: true,
   capacity: true,
   price: true,
-  location: true,
+  addressDetail: true,
   status: true,
   registrationOpen: true,
   publishedAt: true,
   deletedAt: true,
   createdAt: true,
+  location: { select: { id: true, name: true } },
   space: { select: { id: true, name: true } },
 } satisfies Prisma.EventSelect;
 
@@ -27,6 +29,7 @@ const eventDetailSelect = {
   descriptionHtml: true,
   descriptionPlainText: true,
   thumbnailUrl: true,
+  locationId: true,
   spaceId: true,
   googleCalendarEventId: true,
   updatedAt: true,
@@ -61,7 +64,9 @@ export async function getEvents(options: GetEventsOptions = {}) {
       ? {
           OR: [
             { title: { contains: search, mode: "insensitive" } },
-            { location: { contains: search, mode: "insensitive" } },
+            { addressDetail: { contains: search, mode: "insensitive" } },
+            { location: { name: { contains: search, mode: "insensitive" } } },
+            { space: { name: { contains: search, mode: "insensitive" } } },
           ],
         }
       : {}),
@@ -102,8 +107,16 @@ export async function getEventById(id: string) {
 
 export async function getSpacesForEvent() {
   return prisma.space.findMany({
-    where: { isPublished: true },
-    select: { id: true, name: true },
+    where: { isPublished: true, isActive: true },
+    select: { id: true, name: true, locationId: true },
     orderBy: { name: "asc" },
+  });
+}
+
+export async function getLocationsForEvent() {
+  return prisma.location.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 }

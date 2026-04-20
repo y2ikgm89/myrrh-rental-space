@@ -6,6 +6,7 @@ import { Section } from "@/public/components/design-system/section";
 import { Heading } from "@/public/components/design-system/heading";
 import { Stack } from "@/public/components/design-system/stack";
 import { getUpcomingEventsExcluding } from "@/shared/domain/events/public-queries";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 import { EventCard, type EventCardData } from "../../_components/event-card";
 
 interface RelatedEventsProps {
@@ -41,7 +42,11 @@ export async function RelatedEvents({
     title: e.title,
     slug: e.slug,
     descriptionPlainText: e.descriptionPlainText,
-    location: e.location,
+    location: formatEventVenue({
+      location: e.location,
+      space: e.space,
+      addressDetail: e.addressDetail,
+    }),
     startTime: e.startTime,
     endTime: e.endTime,
     price: e.price,

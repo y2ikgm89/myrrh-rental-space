@@ -18,8 +18,25 @@ export const eventFormBaseSchema = z.object({
   /** Lexical EditorState JSON 文字列（UI: LazyLexicalEditor） */
   descriptionJson: lexicalJsonSchema,
   thumbnailUrl: z.string().nullable().optional(),
-  startTime: z.string().datetime({ error: "有効な日時を入力してください" }),
-  endTime: z.string().datetime({ error: "有効な日時を入力してください" }),
+  // `local: true` は `<input type="datetime-local">` の値（"YYYY-MM-DDTHH:mm" / "...:ss"）
+  // と full ISO（Z 付き）の両方を許容する Zod 4 公式オプション。
+  startTime: z
+    .string()
+    .datetime({ local: true, error: "有効な日時を入力してください" }),
+  endTime: z
+    .string()
+    .datetime({ local: true, error: "有効な日時を入力してください" }),
+  /**
+   * 申込締切日時（null/"" = 開始時刻まで受付）。startTime 以前である必要あり。
+   * `<input type="datetime-local">` が空欄時 `""` を返すため `.or(z.literal(""))` で許容、
+   * 後段（cross-field refine, command 層）で falsy 判定により null に正規化。
+   */
+  registrationDeadline: z
+    .string()
+    .datetime({ local: true, error: "有効な日時を入力してください" })
+    .or(z.literal(""))
+    .nullable()
+    .optional(),
   capacity: z
     .number()
     .int()
@@ -32,27 +49,74 @@ export const eventFormBaseSchema = z.object({
     .min(0, { error: "料金は0以上です" })
     .nullable()
     .optional(),
-  location: z.string().max(200).nullable().optional(),
-  spaceId: z.string().nullable().optional(),
+  /** 号室・フロア・補足情報、または外部会場名（locationId が null のとき） */
+  addressDetail: z
+    .string()
+    .max(200, { error: "会場情報は200文字以内です" })
+    .nullable()
+    .optional(),
+  /** 会場（Location FK）。null = 外部会場または未設定 */
+  locationId: z
+    .string()
+    .uuid({ error: "無効な会場 ID です" })
+    .nullable()
+    .optional(),
+  spaceId: z
+    .string()
+    .uuid({ error: "無効なスペース ID です" })
+    .nullable()
+    .optional(),
   status: z.enum(EventStatus, { error: "無効なステータスです" }),
   registrationOpen: z.boolean().optional(),
 });
 
-export const eventFormSchema = eventFormBaseSchema.refine(
-  (data) => new Date(data.endTime) > new Date(data.startTime),
-  {
-    error: "終了時刻は開始時刻より後である必要があります",
-    path: ["endTime"],
-  },
-);
+/**
+ * cross-field validation を集約。base schema を破壊しないために
+ * `superRefine` を使用（複数 refine の chain より公式推奨）。
+ */
+export const eventFormSchema = eventFormBaseSchema.superRefine((data, ctx) => {
+  if (new Date(data.endTime) <= new Date(data.startTime)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "終了時刻は開始時刻より後である必要があります",
+      path: ["endTime"],
+    });
+  }
+
+  if (
+    data.registrationDeadline &&
+    new Date(data.registrationDeadline) > new Date(data.startTime)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "申込締切は開始時刻以前である必要があります",
+      path: ["registrationDeadline"],
+    });
+  }
+});
 
 export type EventFormInput = z.infer<typeof eventFormSchema>;
 
 export const updateEventSchema = eventFormBaseSchema
   .extend({ id: z.string().min(1, { error: "IDは必須です" }) })
-  .refine((data) => new Date(data.endTime) > new Date(data.startTime), {
-    error: "終了時刻は開始時刻より後である必要があります",
-    path: ["endTime"],
+  .superRefine((data, ctx) => {
+    if (new Date(data.endTime) <= new Date(data.startTime)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "終了時刻は開始時刻より後である必要があります",
+        path: ["endTime"],
+      });
+    }
+    if (
+      data.registrationDeadline &&
+      new Date(data.registrationDeadline) > new Date(data.startTime)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "申込締切は開始時刻以前である必要があります",
+        path: ["registrationDeadline"],
+      });
+    }
   });
 
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;

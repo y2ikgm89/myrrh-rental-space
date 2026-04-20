@@ -18,6 +18,10 @@ const mockEventFindFirst = mock<() => Promise<Record<string, unknown> | null>>(
   () => Promise.resolve(null),
 );
 
+const mockEventFindMany = mock<() => Promise<{ slug: string }[]>>(() =>
+  Promise.resolve([]),
+);
+
 const mockEventCreate = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "event-1", slug: "test-event" }),
 );
@@ -44,6 +48,7 @@ mock.module("@/shared/db/prisma", () => ({
   prisma: {
     event: {
       findFirst: mockEventFindFirst,
+      findMany: mockEventFindMany,
       create: mockEventCreate,
       update: mockEventUpdate,
     },
@@ -75,6 +80,7 @@ import {
   createEventCommand,
   updateEventCommand,
   deleteEventCommand,
+  duplicateEventCommand,
   publishEventCommand,
   cancelEventCommand,
   upsertEventFromCalendar,
@@ -124,12 +130,16 @@ const VALID_EVENT_INPUT = {
   thumbnailUrl: null,
   startTime: "2024-06-15T10:00:00Z",
   endTime: "2024-06-15T12:00:00Z",
+  registrationDeadline: null,
   capacity: 30,
   price: 5000,
-  location: "東京都渋谷区",
+  addressDetail: "東京都渋谷区",
+  locationId: null,
   spaceId: null,
   status: EventStatus.DRAFT,
-  registrationOpen: true,
+  // status !== PUBLISHED 時は normalizeRegistrationOpen で false に強制されるため
+  // 入力時点でも false にしておく（DB と入力の一貫性）
+  registrationOpen: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -139,9 +149,11 @@ const VALID_EVENT_INPUT = {
 describe("createEventCommand", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
+    mockEventFindMany.mockClear();
     mockEventCreate.mockClear();
     // スラッグ重複なし（ensureUniqueSlug が null を返す）
     mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
+    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
     mockEventCreate.mockImplementation(() =>
       Promise.resolve({ id: "event-1", slug: "test-event" }),
     );
@@ -188,20 +200,85 @@ describe("createEventCommand", () => {
       );
     });
 
-    test("スラッグ重複がある場合、サフィックス付きスラッグで作成される", async () => {
-      // 1回目（ensureUniqueSlug のチェック）は既存あり、2回目（create の select）は不問
+    test("DRAFT 入力時 registrationOpen: true は server-side で false に正規化される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.DRAFT,
+        registrationOpen: true,
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: EventStatus.DRAFT,
+            registrationOpen: false,
+          }),
+        }),
+      );
+    });
+
+    test("PUBLISHED 入力時 registrationOpen: true はそのまま保持される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        status: EventStatus.PUBLISHED,
+        registrationOpen: true,
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: EventStatus.PUBLISHED,
+            registrationOpen: true,
+          }),
+        }),
+      );
+    });
+
+    test("registrationDeadline が null の場合、Date 変換は走らず null として保存される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        registrationDeadline: null,
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ registrationDeadline: null }),
+        }),
+      );
+    });
+
+    test("registrationDeadline が ISO 文字列の場合、Date オブジェクトに変換される", async () => {
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        registrationDeadline: "2024-06-14T23:59:00Z",
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            registrationDeadline: new Date("2024-06-14T23:59:00Z"),
+          }),
+        }),
+      );
+    });
+
+    test("スラッグ重複がある場合、インクリメンタルサフィックス付きスラッグで作成される", async () => {
+      // ensureUniqueSlug: findFirst で既存あり → findMany で兄弟取得 → -2 採番
       mockEventFindFirst.mockImplementationOnce(() =>
         Promise.resolve({ id: "existing-event" }),
       );
+      mockEventFindMany.mockImplementationOnce(() => Promise.resolve([]));
       mockEventCreate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1", slug: "test-event-abcd1234" }),
+        Promise.resolve({ id: "event-1", slug: "test-event-2" }),
       );
 
-      const result = await createEventCommand(VALID_EVENT_INPUT);
+      await createEventCommand(VALID_EVENT_INPUT);
 
-      expect(result).toBeDefined();
-      // create が呼ばれたことを確認（サフィックス付きスラッグで）
-      expect(mockEventCreate).toHaveBeenCalledTimes(1);
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ slug: "test-event-2" }),
+        }),
+      );
     });
   });
 });
@@ -209,8 +286,10 @@ describe("createEventCommand", () => {
 describe("updateEventCommand", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
+    mockEventFindMany.mockClear();
     mockEventUpdate.mockClear();
     mockFireAndForget.mockClear();
+    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
   });
 
   describe("正常系", () => {
@@ -221,7 +300,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.DRAFT,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -242,7 +323,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.DRAFT,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       // 1回目: findFirst（既存イベント取得）、2回目: findFirst（スラッグ重複チェック）
       mockEventFindFirst
@@ -268,7 +351,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.DRAFT,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -290,7 +375,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.DRAFT,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -317,7 +404,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.PUBLISHED,
         startTime: new Date("2024-06-15T10:00:00Z"), // 変更前
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -340,7 +429,9 @@ describe("updateEventCommand", () => {
         status: EventStatus.PUBLISHED,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -349,23 +440,25 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        // 同じ日時・場所
+        // 同じ日時・会場
         startTime: "2024-06-15T10:00:00Z",
         endTime: "2024-06-15T12:00:00Z",
-        location: "東京都渋谷区",
+        addressDetail: "東京都渋谷区",
       });
 
       expect(mockFireAndForget).not.toHaveBeenCalled();
     });
 
-    test("場所変更かつ PUBLISHED 状態の場合、参加者メール通知が送られる", async () => {
+    test("会場情報変更かつ PUBLISHED 状態の場合、参加者メール通知が送られる", async () => {
       const existingEvent = {
         id: "event-1",
         slug: "test-event",
         status: EventStatus.PUBLISHED,
         startTime: new Date("2024-06-15T10:00:00Z"),
         endTime: new Date("2024-06-15T12:00:00Z"),
-        location: "東京都渋谷区",
+        locationId: null,
+        spaceId: null,
+        addressDetail: "東京都渋谷区",
       };
       mockEventFindFirst.mockImplementation(() =>
         Promise.resolve(existingEvent),
@@ -374,7 +467,7 @@ describe("updateEventCommand", () => {
       await updateEventCommand("event-1", {
         ...VALID_EVENT_INPUT,
         status: EventStatus.PUBLISHED,
-        location: "大阪府梅田",
+        addressDetail: "大阪府梅田",
       });
 
       expect(mockFireAndForget).toHaveBeenCalledTimes(1);
@@ -604,11 +697,204 @@ describe("cancelEventCommand", () => {
   });
 });
 
+describe("duplicateEventCommand", () => {
+  const SOURCE_EVENT = {
+    title: "オリジナルイベント",
+    slug: "original-event",
+    descriptionJson: { root: { type: "root", children: [] } },
+    descriptionHtml: "<p>本文</p>",
+    descriptionPlainText: "本文",
+    thumbnailUrl: "https://example.com/thumb.jpg",
+    startTime: new Date("2024-06-15T10:00:00Z"),
+    endTime: new Date("2024-06-15T12:00:00Z"),
+    registrationDeadline: new Date("2024-06-14T23:59:00Z"),
+    capacity: 30,
+    price: 5000,
+    addressDetail: "東京都渋谷区",
+    locationId: null,
+    spaceId: null,
+    registrationOpen: true,
+  };
+
+  beforeEach(() => {
+    mockEventFindFirst.mockClear();
+    mockEventFindMany.mockClear();
+    mockEventCreate.mockClear();
+    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
+    mockEventCreate.mockImplementation(() =>
+      Promise.resolve({ id: "duplicated-event", slug: "original-event-copy" }),
+    );
+  });
+
+  describe("正常系", () => {
+    test("複製で新規 DRAFT イベントが作成される", async () => {
+      // 1回目: source 取得 / 2回目: ensureUniqueSlug 重複チェック (null = 空き)
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve(null));
+
+      const result = await duplicateEventCommand("source-event-id");
+
+      expect(result).toMatchObject({
+        id: "duplicated-event",
+        slug: "original-event-copy",
+      });
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: EventStatus.DRAFT,
+            publishedAt: null,
+            googleCalendarEventId: null,
+            slug: "original-event-copy",
+            title: "オリジナルイベント（コピー）",
+          }),
+        }),
+      );
+    });
+
+    test("本文・サムネイル・日時・会場・定員・料金・申込締切が全て複製される", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve(null));
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            descriptionJson: SOURCE_EVENT.descriptionJson,
+            descriptionHtml: SOURCE_EVENT.descriptionHtml,
+            descriptionPlainText: SOURCE_EVENT.descriptionPlainText,
+            thumbnailUrl: SOURCE_EVENT.thumbnailUrl,
+            startTime: SOURCE_EVENT.startTime,
+            endTime: SOURCE_EVENT.endTime,
+            registrationDeadline: SOURCE_EVENT.registrationDeadline,
+            capacity: SOURCE_EVENT.capacity,
+            price: SOURCE_EVENT.price,
+            addressDetail: SOURCE_EVENT.addressDetail,
+          }),
+        }),
+      );
+    });
+
+    test("元が registrationOpen: true でも複製は false になる（DRAFT 強制と整合）", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve(null));
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: EventStatus.DRAFT,
+            registrationOpen: false,
+          }),
+        }),
+      );
+    });
+
+    test("元が PUBLISHED でも複製の status は DRAFT になる", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve(null));
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: EventStatus.DRAFT }),
+        }),
+      );
+    });
+
+    test("googleCalendarEventId は必ず null になる（unique 制約衝突防止）", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve(null));
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ googleCalendarEventId: null }),
+        }),
+      );
+    });
+
+    test("baseSlug が衝突する場合、`-copy-2` が採番される", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve({ id: "existing-copy" }));
+      mockEventFindMany.mockImplementation(() => Promise.resolve([]));
+      mockEventCreate.mockImplementation(() =>
+        Promise.resolve({
+          id: "duplicated-event",
+          slug: "original-event-copy-2",
+        }),
+      );
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ slug: "original-event-copy-2" }),
+        }),
+      );
+    });
+
+    test("`-copy`, `-copy-2` が両方存在する場合、`-copy-3` が採番される", async () => {
+      mockEventFindFirst
+        .mockImplementationOnce(() => Promise.resolve(SOURCE_EVENT))
+        .mockImplementationOnce(() => Promise.resolve({ id: "existing-copy" }));
+      mockEventFindMany.mockImplementation(() =>
+        Promise.resolve([{ slug: "original-event-copy-2" }]),
+      );
+      mockEventCreate.mockImplementation(() =>
+        Promise.resolve({
+          id: "duplicated-event",
+          slug: "original-event-copy-3",
+        }),
+      );
+
+      await duplicateEventCommand("source-event-id");
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ slug: "original-event-copy-3" }),
+        }),
+      );
+    });
+  });
+
+  describe("異常系", () => {
+    test("存在しないイベントを複製しようとすると DomainError をスローする", async () => {
+      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
+
+      await expect(duplicateEventCommand("non-existent")).rejects.toThrow(
+        DomainError,
+      );
+      expect(mockEventCreate).not.toHaveBeenCalled();
+    });
+
+    test("ソフトデリート済みイベントを複製しようとすると DomainError をスローする", async () => {
+      // deletedAt: null 条件でフィルタされるため null が返る
+      mockEventFindFirst.mockImplementation(() => Promise.resolve(null));
+
+      await expect(duplicateEventCommand("deleted-event")).rejects.toThrow(
+        DomainError,
+      );
+    });
+  });
+});
+
 describe("upsertEventFromCalendar", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
+    mockEventFindMany.mockClear();
     mockEventCreate.mockClear();
     mockEventUpdate.mockClear();
+    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
   });
 
   const CALENDAR_INPUT = {
@@ -679,8 +965,8 @@ describe("upsertEventFromCalendar", () => {
           where: expect.objectContaining({ id: "event-1", deletedAt: null }),
           data: expect.objectContaining({
             title: "Google Calendar Event",
-            description: "説明",
-            location: "オンライン",
+            // Google Calendar の location 文字列は addressDetail に格納される
+            addressDetail: "オンライン",
           }),
         }),
       );
@@ -705,7 +991,9 @@ describe("upsertEventFromCalendar", () => {
 describe("ensureUniqueSlug（createEventCommand 経由）", () => {
   beforeEach(() => {
     mockEventFindFirst.mockClear();
+    mockEventFindMany.mockClear();
     mockEventCreate.mockClear();
+    mockEventFindMany.mockImplementation(() => Promise.resolve([]));
     mockEventCreate.mockImplementation(() =>
       Promise.resolve({ id: "event-1", slug: "unique-slug" }),
     );
@@ -724,12 +1012,13 @@ describe("ensureUniqueSlug（createEventCommand 経由）", () => {
       );
     });
 
-    test("スラッグ重複ありの場合、サフィックス付きのスラッグで create が呼ばれる", async () => {
+    test("スラッグ重複ありの場合、`-2` から始まるインクリメンタル採番で create が呼ばれる", async () => {
       mockEventFindFirst.mockImplementationOnce(() =>
         Promise.resolve({ id: "existing-event" }),
       );
+      mockEventFindMany.mockImplementationOnce(() => Promise.resolve([]));
       mockEventCreate.mockImplementation(() =>
-        Promise.resolve({ id: "event-1", slug: "duplicate-slug-abcd1234" }),
+        Promise.resolve({ id: "event-1", slug: "duplicate-slug-2" }),
       );
 
       await createEventCommand({
@@ -737,13 +1026,35 @@ describe("ensureUniqueSlug（createEventCommand 経由）", () => {
         slug: "duplicate-slug",
       });
 
-      expect(mockEventCreate).toHaveBeenCalledTimes(1);
-      // サフィックスが付いたスラッグで create が呼ばれる
       expect(mockEventCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            slug: expect.stringContaining("duplicate-slug-"),
-          }),
+          data: expect.objectContaining({ slug: "duplicate-slug-2" }),
+        }),
+      );
+    });
+
+    test("既存兄弟が `-2`,`-4` の場合、欠番 `-3` が採番される", async () => {
+      mockEventFindFirst.mockImplementationOnce(() =>
+        Promise.resolve({ id: "existing-event" }),
+      );
+      mockEventFindMany.mockImplementationOnce(() =>
+        Promise.resolve([
+          { slug: "duplicate-slug-2" },
+          { slug: "duplicate-slug-4" },
+        ]),
+      );
+      mockEventCreate.mockImplementation(() =>
+        Promise.resolve({ id: "event-1", slug: "duplicate-slug-3" }),
+      );
+
+      await createEventCommand({
+        ...VALID_EVENT_INPUT,
+        slug: "duplicate-slug",
+      });
+
+      expect(mockEventCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ slug: "duplicate-slug-3" }),
         }),
       );
     });

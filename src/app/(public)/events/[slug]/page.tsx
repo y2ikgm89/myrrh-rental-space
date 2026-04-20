@@ -24,8 +24,15 @@ import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { EventJsonLd } from "@/public/components/seo/json-ld";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import { formatEventDateTimeRange } from "@/public/lib/format-event-date";
-import { getPublishedEventBySlug } from "@/shared/domain/events/public-queries";
+import {
+  getPublishedEventBySlug,
+  isEventRegistrationPastDeadline,
+} from "@/shared/domain/events/public-queries";
 import { getRegistrationCount } from "@/shared/domain/events/registration-queries";
+import {
+  formatEventAddress,
+  formatEventVenue,
+} from "@/shared/domain/events/venue";
 import { getTurnstileSiteKey } from "@/public/data/turnstile";
 import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
@@ -90,13 +97,28 @@ export default async function EventDetailPage({
   const remainingCapacity =
     event.capacity != null ? event.capacity - registrationCount : null;
   const isFull = remainingCapacity !== null && remainingCapacity <= 0;
+  // 申込締切：未設定なら開始時刻、設定があればその時刻まで受付（domain ヘルパー）
+  const isPastDeadline = isEventRegistrationPastDeadline(event);
   const canRegister =
-    event.registrationOpen && event.status === "PUBLISHED" && !isFull;
+    event.registrationOpen &&
+    event.status === "PUBLISHED" &&
+    !isFull &&
+    !isPastDeadline;
 
   const baseUrl = getBaseUrl();
   const eventUrl = `${baseUrl}/events/${slug}`;
   const startDateIso = new Date(event.startTime).toISOString();
   const endDateIso = new Date(event.endTime).toISOString();
+
+  const venueName = formatEventVenue({
+    location: event.location,
+    space: event.space,
+    addressDetail: event.addressDetail,
+  });
+  const venueAddress = formatEventAddress({
+    location: event.location,
+    addressDetail: event.addressDetail,
+  });
 
   const breadcrumbItems: readonly { label: string; href?: string }[] = [
     { label: "イベント一覧", href: "/events" },
@@ -136,11 +158,11 @@ export default async function EventDetailPage({
         {...(event.thumbnailUrl ? { image: event.thumbnailUrl } : {})}
         eventStatus="EventScheduled"
         eventAttendanceMode="OfflineEventAttendanceMode"
-        {...(event.location || event.space
+        {...(venueName
           ? {
               location: {
-                name: event.space?.name ?? event.location ?? event.title,
-                ...(event.location ? { address: event.location } : {}),
+                name: venueName,
+                ...(venueAddress ? { address: venueAddress } : {}),
                 ...(event.space?.slug
                   ? { url: `${baseUrl}/spaces/${event.space.slug}` }
                   : {}),
@@ -206,9 +228,23 @@ export default async function EventDetailPage({
               {event.location ? (
                 <InfoCell
                   icon={<IconMapPin className="h-5 w-5" aria-hidden="true" />}
-                  label="場所"
+                  label="会場"
                 >
-                  {event.location}
+                  {event.location.name}
+                  {event.location.address ? (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {event.location.address}
+                    </span>
+                  ) : null}
+                </InfoCell>
+              ) : null}
+
+              {event.addressDetail ? (
+                <InfoCell
+                  icon={<IconMapPin className="h-5 w-5" aria-hidden="true" />}
+                  label="補足"
+                >
+                  {event.addressDetail}
                 </InfoCell>
               ) : null}
 
@@ -246,7 +282,7 @@ export default async function EventDetailPage({
                     : event.title,
                 startTime: new Date(event.startTime),
                 endTime: new Date(event.endTime),
-                ...(event.location != null ? { location: event.location } : {}),
+                ...(venueName !== null ? { location: venueName } : {}),
                 icsDownloadUrl: "",
               })}
             />
@@ -271,6 +307,12 @@ export default async function EventDetailPage({
                 variant="warning"
                 title="定員に達しました"
                 description="このイベントは満員のため、現在お申し込みいただけません。"
+              />
+            ) : isPastDeadline ? (
+              <EventStatusNotice
+                variant="muted"
+                title="申込受付を終了しました"
+                description="申込締切を過ぎたため、現在お申し込みいただけません。"
               />
             ) : !event.registrationOpen ? (
               <EventStatusNotice

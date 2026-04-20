@@ -29,6 +29,7 @@ export const USAGE_OPTIONS: readonly UsageOption[] = [
   { value: MediaUsage.NEWS, label: "お知らせ" },
   { value: MediaUsage.PAGE, label: "ページ" },
   { value: MediaUsage.SPACE, label: "スペース" },
+  { value: MediaUsage.EVENT, label: "イベント" },
   { value: MediaUsage.SITE, label: "サイト" },
 ];
 
@@ -43,6 +44,7 @@ export const USAGE_LABELS: Record<MediaUsage, string> = {
   [MediaUsage.NEWS]: "お知らせ",
   [MediaUsage.PAGE]: "ページ",
   [MediaUsage.SPACE]: "スペース",
+  [MediaUsage.EVENT]: "イベント",
   [MediaUsage.SITE]: "サイト",
 };
 

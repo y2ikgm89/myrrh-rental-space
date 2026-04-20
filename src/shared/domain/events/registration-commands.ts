@@ -25,6 +25,8 @@ export async function createEventRegistrationCommand(data: {
       slug: true,
       capacity: true,
       registrationOpen: true,
+      registrationDeadline: true,
+      startTime: true,
       _count: {
         select: {
           registrations: {
@@ -39,6 +41,14 @@ export async function createEventRegistrationCommand(data: {
   if (!event.registrationOpen)
     throw new DomainError(
       "このイベントは申込受付を終了しています",
+      "VALIDATION",
+    );
+
+  // 申込締切：未設定なら開始時刻、設定があればその時刻まで受付
+  const deadline = event.registrationDeadline ?? event.startTime;
+  if (Date.now() > deadline.getTime())
+    throw new DomainError(
+      "申込締切を過ぎたため受け付けできません",
       "VALIDATION",
     );
 

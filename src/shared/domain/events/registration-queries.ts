@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { RegistrationStatus } from "@generated/prisma/enums";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 
 export async function getEventRegistrations(eventId: string) {
   return prisma.eventRegistration.findMany({
@@ -40,14 +41,22 @@ export async function getRegistrationCount(eventId: string) {
   return result._sum.numberOfPeople ?? 0;
 }
 
-export async function getEventDetailsForEmail(eventId: string) {
-  return prisma.event.findFirst({
+export async function getEventDetailsForEmail(eventId: string): Promise<{
+  readonly startTime: Date;
+  readonly endTime: Date;
+  readonly location: string | null;
+  readonly capacity: number | null;
+  readonly confirmedCount: number;
+} | null> {
+  const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
     select: {
       startTime: true,
       endTime: true,
-      location: true,
+      addressDetail: true,
       capacity: true,
+      location: { select: { name: true } },
+      space: { select: { name: true } },
       _count: {
         select: {
           registrations: {
@@ -57,10 +66,22 @@ export async function getEventDetailsForEmail(eventId: string) {
       },
     },
   });
+  if (!event) return null;
+  return {
+    startTime: event.startTime,
+    endTime: event.endTime,
+    location: formatEventVenue({
+      location: event.location,
+      space: event.space,
+      addressDetail: event.addressDetail,
+    }),
+    capacity: event.capacity,
+    confirmedCount: event._count.registrations,
+  };
 }
 
 export async function getCustomerEventRegistrations(customerId: string) {
-  return prisma.eventRegistration.findMany({
+  const rows = await prisma.eventRegistration.findMany({
     where: { customerId, event: { deletedAt: null } },
     orderBy: { createdAt: "desc" },
     select: {
@@ -76,12 +97,34 @@ export async function getCustomerEventRegistrations(customerId: string) {
           slug: true,
           startTime: true,
           endTime: true,
-          location: true,
+          addressDetail: true,
           status: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
         },
       },
     },
   });
+  return rows.map((row) => ({
+    id: row.id,
+    numberOfPeople: row.numberOfPeople,
+    status: row.status,
+    cancelledAt: row.cancelledAt,
+    createdAt: row.createdAt,
+    event: {
+      id: row.event.id,
+      title: row.event.title,
+      slug: row.event.slug,
+      startTime: row.event.startTime,
+      endTime: row.event.endTime,
+      status: row.event.status,
+      location: formatEventVenue({
+        location: row.event.location,
+        space: row.event.space,
+        addressDetail: row.event.addressDetail,
+      }),
+    },
+  }));
 }
 
 export async function getEventRegistrationForCalendar(params: {
@@ -115,7 +158,9 @@ export async function getEventRegistrationForCalendar(params: {
           title: true,
           startTime: true,
           endTime: true,
-          location: true,
+          addressDetail: true,
+          location: { select: { name: true } },
+          space: { select: { name: true } },
         },
       },
     },
@@ -127,7 +172,11 @@ export async function getEventRegistrationForCalendar(params: {
     customerName: reg.name,
     startTime: reg.event.startTime,
     endTime: reg.event.endTime,
-    location: reg.event.location,
+    location: formatEventVenue({
+      location: reg.event.location,
+      space: reg.event.space,
+      addressDetail: reg.event.addressDetail,
+    }),
     numberOfPeople: reg.numberOfPeople,
     icsSequence: reg.icsSequence,
     status: reg.status,

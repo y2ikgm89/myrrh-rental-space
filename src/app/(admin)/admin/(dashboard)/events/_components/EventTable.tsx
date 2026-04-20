@@ -7,6 +7,7 @@ import { EventActionCell } from "./EventActionCell";
 import { EventTableHeader } from "./EventTableHeader";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import type { getEvents } from "@/shared/domain/events/admin-queries";
+import { formatEventVenue } from "@/shared/domain/events/venue";
 
 type EventListItem = Awaited<ReturnType<typeof getEvents>>["events"][number];
 
@@ -52,7 +53,11 @@ export function EventTable({ events }: EventTableProps) {
                   {formatDateTimeShort(event.endTime)}
                 </TableCell>
                 <TableCell className="hidden text-muted-foreground lg:table-cell">
-                  {event.location ?? "-"}
+                  {formatEventVenue({
+                    location: event.location,
+                    space: event.space,
+                    addressDetail: event.addressDetail,
+                  }) ?? "-"}
                 </TableCell>
                 <TableCell>
                   <EventActionCell eventId={event.id} status={event.status} />

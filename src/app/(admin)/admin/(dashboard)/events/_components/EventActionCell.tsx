@@ -1,13 +1,18 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ActionDropdown,
   ActionDropdownItem,
   ActionDropdownSeparator,
 } from "@/admin/components/ActionDropdown";
-import { publishEvent, cancelEvent } from "@/admin/actions/event";
+import {
+  cancelEvent,
+  duplicateEvent,
+  publishEvent,
+} from "@/admin/actions/event";
 import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { isMutationError } from "@/shared/lib/mutation-result";
 
@@ -17,6 +22,7 @@ type EventActionCellProps = {
 };
 
 export function EventActionCell({ eventId, status }: EventActionCellProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const handlePublish = () => {
@@ -27,6 +33,18 @@ export function EventActionCell({ eventId, status }: EventActionCellProps) {
         return;
       }
       toast.success("イベントを公開しました");
+    });
+  };
+
+  const handleDuplicate = () => {
+    startTransition(async () => {
+      const result = await duplicateEvent(eventId);
+      if (isMutationError(result)) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("イベントを複製しました");
+      router.push(`/admin/events/${result.id}/edit`);
     });
   };
 
@@ -49,6 +67,7 @@ export function EventActionCell({ eventId, status }: EventActionCellProps) {
       <ActionDropdownItem href={`/admin/events/${eventId}/edit`}>
         編集
       </ActionDropdownItem>
+      <ActionDropdownItem onClick={handleDuplicate}>複製</ActionDropdownItem>
       <ActionDropdownSeparator />
       {status === EventStatus.DRAFT && (
         <ActionDropdownItem onClick={handlePublish}>
