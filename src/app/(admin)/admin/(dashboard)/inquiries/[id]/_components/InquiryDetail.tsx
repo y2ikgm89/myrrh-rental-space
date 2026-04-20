@@ -87,7 +87,7 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
     }
 
     if (!searchQuery || searchQuery.trim().length < 2) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
       setSearchResults([]);
       return;
     }

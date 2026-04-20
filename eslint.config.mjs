@@ -175,6 +175,13 @@ const eslintConfig = defineConfig([
           message:
             "prisma.$transaction([...]) の配列形式は pg deprecation 'client is already executing a query' を誘発するため禁止。原子性不要なら Promise.all([...])、必要なら interactive transaction `prisma.$transaction(async (tx) => { ... })` を使ってください。",
         },
+        {
+          // items.map(...) 等の動的配列形式も同じく禁止
+          selector:
+            "CallExpression[callee.property.name='$transaction'] > CallExpression[callee.property.name='map']",
+          message:
+            "prisma.$transaction(items.map(...)) の動的配列形式も pg deprecation 'client is already executing a query' を誘発するため禁止。原子性不要なら Promise.all(items.map(...))、必要なら interactive transaction `prisma.$transaction(async (tx) => { ... })` を使ってください。",
+        },
       ],
     },
   },

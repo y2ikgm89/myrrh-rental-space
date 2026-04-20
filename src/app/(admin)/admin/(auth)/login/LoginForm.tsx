@@ -28,7 +28,7 @@ export function LoginForm(): ReactElement {
   useEffect(() => {
     const savedEmail = localStorage.getItem(STORAGE_KEY);
     if (savedEmail) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
       setEmail(savedEmail);
       // eslint-disable-next-line @eslint-react/set-state-in-effect
       setRememberMe(true);

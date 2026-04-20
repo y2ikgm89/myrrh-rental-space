@@ -83,7 +83,7 @@ export function CustomerSelector({
 
     // 検索クエリが2文字未満の場合は検索しない
     if (!searchQuery || searchQuery.trim().length < 2) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect
+      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
       setSearchResults([]);
       return;
     }
