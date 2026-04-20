@@ -9,7 +9,6 @@ import {
   CardTitle,
   Input,
   Label,
-  Textarea,
   Select,
   SelectContent,
   SelectItem,
@@ -50,18 +49,15 @@ type EventFormProps = {
 // Helpers
 // =============================================================================
 
-function serializeContentJson(contentJson: unknown): string {
-  if (contentJson == null) return EMPTY_LEXICAL_EDITOR_STATE_JSON;
-  if (typeof contentJson === "string") return contentJson;
-  return JSON.stringify(contentJson);
-}
-
-function parseContentJsonSafe(json: string): unknown {
-  try {
-    return JSON.parse(json) as unknown;
-  } catch {
-    return null;
-  }
+/**
+ * DB の Lexical JSON（オブジェクト形式）を Editor 初期値用の文字列に変換。
+ * Prisma JSON カラムは runtime ではパース済みオブジェクトが返るため、
+ * Editor に渡す前に文字列化する。
+ */
+function serializeDescriptionJson(value: unknown): string {
+  if (value == null) return EMPTY_LEXICAL_EDITOR_STATE_JSON;
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
 }
 
 function formatDateTimeForInput(date: Date | string): string {
@@ -120,8 +116,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
         ? {
             title: event.title,
             slug: event.slug,
-            description: event.description ?? "",
-            contentJson: event.contentJson ?? null,
+            descriptionJson: serializeDescriptionJson(event.descriptionJson),
             startTime: formatDateTimeForInput(event.startTime),
             endTime: formatDateTimeForInput(event.endTime),
             capacity: event.capacity ?? undefined,
@@ -134,8 +129,7 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
         : {
             title: "",
             slug: "",
-            description: "",
-            contentJson: null,
+            descriptionJson: EMPTY_LEXICAL_EDITOR_STATE_JSON,
             startTime: "",
             endTime: "",
             capacity: undefined,
@@ -154,18 +148,13 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
     control: form.control,
     name: "registrationOpen",
   });
-  const watchedContentJson = useWatch({
+  const watchedDescriptionJson = useWatch({
     control: form.control,
-    name: "contentJson",
+    name: "descriptionJson",
   });
 
-  // Lexical エディタ用: DB の JSON オブジェクトを文字列に変換
-  const contentJsonString = serializeContentJson(watchedContentJson);
-
-  const handleContentJsonChange = (json: string) => {
-    form.setValue("contentJson", parseContentJsonSafe(json), {
-      shouldDirty: true,
-    });
+  const handleDescriptionJsonChange = (json: string) => {
+    form.setValue("descriptionJson", json, { shouldDirty: true });
   };
 
   return (
@@ -203,16 +192,6 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
                   {form.formState.errors.slug.message}
                 </p>
               )}
-            </div>
-
-            <div>
-              <Label htmlFor="description">説明</Label>
-              <Textarea
-                id="description"
-                {...form.register("description")}
-                rows={4}
-                disabled={isPending}
-              />
             </div>
 
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -366,17 +345,22 @@ export function EventForm({ event, spaces }: EventFormProps): ReactElement {
       {/* 本文コンテンツ（Lexical エディタ） */}
       <Card>
         <CardHeader>
-          <CardTitle>本文コンテンツ</CardTitle>
+          <CardTitle>本文</CardTitle>
         </CardHeader>
         <CardContent>
           <LazyLexicalEditor
-            contentJson={contentJsonString}
-            onChange={handleContentJsonChange}
+            contentJson={watchedDescriptionJson}
+            onChange={handleDescriptionJsonChange}
             disabled={isPending}
             className={EDITOR_PROSE_CLASSES}
-            placeholder="イベントの詳細な説明を入力..."
+            placeholder="イベントの詳細・プログラム・参加要件等を入力..."
             showInspector={false}
           />
+          {form.formState.errors.descriptionJson && (
+            <p className="text-sm text-destructive mt-2">
+              {form.formState.errors.descriptionJson.message}
+            </p>
+          )}
         </CardContent>
       </Card>
 

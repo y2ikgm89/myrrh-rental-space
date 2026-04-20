@@ -88,8 +88,39 @@ import { DomainError } from "@/shared/domain/domain-error";
 const VALID_EVENT_INPUT = {
   title: "テストイベント",
   slug: "test-event",
-  description: "テストの説明",
-  contentJson: null,
+  descriptionJson: {
+    root: {
+      type: "root",
+      format: "",
+      indent: 0,
+      version: 1,
+      direction: "ltr",
+      children: [
+        {
+          type: "paragraph",
+          format: "",
+          indent: 0,
+          version: 1,
+          direction: "ltr",
+          textFormat: 0,
+          textStyle: "",
+          children: [
+            {
+              type: "text",
+              text: "テストの説明",
+              detail: 0,
+              format: 0,
+              mode: "normal",
+              style: "",
+              version: 1,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  descriptionHtml: "<p>テストの説明</p>",
+  descriptionPlainText: "テストの説明",
   thumbnailUrl: null,
   startTime: "2024-06-15T10:00:00Z",
   endTime: "2024-06-15T12:00:00Z",
@@ -99,7 +130,7 @@ const VALID_EVENT_INPUT = {
   spaceId: null,
   status: EventStatus.DRAFT,
   registrationOpen: true,
-} as const;
+};
 
 // ---------------------------------------------------------------------------
 // テスト

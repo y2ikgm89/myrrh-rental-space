@@ -2775,7 +2775,7 @@ async function seedSystemPageSections() {
 // =============================================================================
 
 async function seedEvents() {
-  const events = [
+  const eventSeedSource = [
     {
       title: "ヨガ＆マインドフルネス体験会",
       slug: "yoga-mindfulness-workshop",
@@ -2842,6 +2842,11 @@ async function seedEvents() {
       publishedAt: new Date("2026-02-15T09:00:00+09:00"),
     },
   ];
+
+  const events = eventSeedSource.map(({ description, ...rest }) => ({
+    ...rest,
+    ...buildSeedDescription(description),
+  }));
 
   let createdCount = 0;
   for (const eventData of events) {

@@ -62,8 +62,11 @@ export function EventRegistrationForm({
 
   if (submitted) {
     return (
-      <div className="border border-accent/20 px-8 py-12 text-center">
-        <IconCircleCheck className="mx-auto h-10 w-10 text-accent" />
+      <div className="border border-accent/30 bg-surface px-8 py-12 text-center">
+        <IconCircleCheck
+          className="mx-auto h-10 w-10 text-accent"
+          aria-hidden
+        />
         <Heading level={3} className="mt-4">
           お申し込みを受け付けました
         </Heading>
@@ -75,15 +78,23 @@ export function EventRegistrationForm({
   }
 
   return (
-    <div>
-      <Heading level={2}>参加申込</Heading>
-      {remainingCapacity !== null ? (
-        <p className="mt-2 text-sm text-muted-foreground">
-          残り{String(remainingCapacity)}枠
-        </p>
-      ) : null}
+    <section aria-label="参加申込" className="space-y-4">
+      <div className="space-y-1">
+        <Heading level={2}>参加申込</Heading>
+        {remainingCapacity !== null ? (
+          <p className="text-sm text-muted-foreground">
+            現在の残り枠:{" "}
+            <span className="font-medium text-foreground">
+              {String(remainingCapacity)} 名
+            </span>
+          </p>
+        ) : null}
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 space-y-6">
+      <form
+        onSubmit={onSubmit}
+        className="space-y-6 border border-border p-6 sm:p-8"
+      >
         <input type="hidden" {...form.register("eventId")} />
 
         <Input
@@ -165,10 +176,10 @@ export function EventRegistrationForm({
           </div>
         )}
 
-        <Button type="submit" disabled={isPending}>
+        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
           {isPending ? "送信中..." : "申し込む"}
         </Button>
       </form>
-    </div>
+    </section>
   );
 }

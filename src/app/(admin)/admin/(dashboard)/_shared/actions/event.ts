@@ -1,7 +1,11 @@
 "use server";
 
 import { z } from "zod";
+import type { Prisma } from "@/shared/lib/validations/enums/prisma-types";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { renderEditorStateToHtmlLazy } from "@/admin/lib/lazy-renderer";
+import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
+import { omitUndefined } from "@/shared/lib/serialize";
 import {
   cancelEventCommand,
   createEventCommand,
@@ -20,6 +24,29 @@ import type { MutationResult } from "@/shared/lib/mutation-result";
 
 const idSchema = z.string().uuid({ error: "イベントIDが不正です" });
 
+/**
+ * EventFormInput (Lexical JSON 文字列) → EventCommandInput (Prisma InputJsonValue + HTML cache + plain text)
+ * Space の buildSpaceCommandInput と同じ変換責務。
+ */
+async function buildEventCommandInput(data: EventFormInput) {
+  const descriptionHtml = await renderEditorStateToHtmlLazy(
+    data.descriptionJson,
+  );
+  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
+  const descriptionJson = JSON.parse(
+    data.descriptionJson,
+  ) as Prisma.InputJsonValue;
+
+  const { descriptionJson: _drop, ...rest } = data;
+  void _drop;
+  return omitUndefined({
+    ...rest,
+    descriptionJson,
+    descriptionHtml,
+    descriptionPlainText,
+  });
+}
+
 export async function createEvent(
   input: EventFormInput,
 ): Promise<MutationResult<{ id: string; slug: string }>> {
@@ -30,7 +57,8 @@ export async function createEvent(
     resource: "event",
     action: "create",
     execute: async () => {
-      const event = await createEventCommand(parsed.data);
+      const commandInput = await buildEventCommandInput(parsed.data);
+      const event = await createEventCommand(commandInput);
       return { id: event.id, slug: event.slug };
     },
     afterSuccess: (data) => {
@@ -55,7 +83,8 @@ export async function updateEvent(
     action: "update",
     resourceId: idParsed.data,
     execute: async () => {
-      await updateEventCommand(idParsed.data, parsed.data);
+      const commandInput = await buildEventCommandInput(parsed.data);
+      await updateEventCommand(idParsed.data, commandInput);
       return null;
     },
     afterSuccess: () => {

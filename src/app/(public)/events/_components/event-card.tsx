@@ -15,7 +15,8 @@ export interface EventCardData {
   readonly id: string;
   readonly title: string;
   readonly slug: string;
-  readonly description: string | null;
+  /** SEO / カード要約用プレーンテキスト（Lexical HTML から派生） */
+  readonly descriptionPlainText: string;
   readonly location: string | null;
   readonly startTime: string;
   readonly endTime: string;
@@ -28,24 +29,37 @@ export interface EventCardData {
 interface EventCardListProps {
   readonly variant: "list";
   readonly event: EventCardData;
+  readonly isPast?: boolean;
 }
 
 interface EventCardCompactProps {
   readonly variant: "compact";
   readonly event: EventCardData;
+  readonly isPast?: boolean;
 }
 
 type EventCardProps = EventCardListProps | EventCardCompactProps;
 
-function EventBadges({ event }: { readonly event: EventCardData }) {
+function EventBadges({
+  event,
+  isPast,
+}: {
+  readonly event: EventCardData;
+  readonly isPast: boolean;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {isPast ? (
+        <Badge variant="default" className="text-muted-foreground">
+          終了
+        </Badge>
+      ) : null}
       {event.price !== null ? (
         <Badge variant={event.price === 0 ? "success" : "default"}>
           {formatEventPrice(event.price)}
         </Badge>
       ) : null}
-      {!event.registrationOpen ? (
+      {!isPast && !event.registrationOpen ? (
         <Badge variant="warning">受付終了</Badge>
       ) : null}
     </div>
@@ -77,20 +91,20 @@ function EventMeta({
   );
 }
 
-export function EventCard({ variant, event }: EventCardProps) {
+export function EventCard({ variant, event, isPast = false }: EventCardProps) {
   if (variant === "compact") {
     return (
       <Link
         href={`/events/${event.slug}`}
         className="group block px-4 py-4 transition-colors hover:bg-surface/50"
       >
-        <EventBadges event={event} />
+        <EventBadges event={event} isPast={isPast} />
         <h3 className="mt-1.5 text-sm font-medium text-foreground">
           {event.title}
         </h3>
-        {event.description ? (
+        {event.descriptionPlainText ? (
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-            {event.description}
+            {event.descriptionPlainText}
           </p>
         ) : null}
         <div className="mt-2">
@@ -140,16 +154,16 @@ export function EventCard({ variant, event }: EventCardProps) {
 
       {/* Content */}
       <div className="min-w-0">
-        <EventBadges event={event} />
+        <EventBadges event={event} isPast={isPast} />
         <Heading
           level={3}
           className="mt-2 !text-base transition-colors group-hover:text-foreground md:!text-lg"
         >
           {event.title}
         </Heading>
-        {event.description ? (
+        {event.descriptionPlainText ? (
           <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-            {event.description}
+            {event.descriptionPlainText}
           </p>
         ) : null}
         <div className="mt-3">

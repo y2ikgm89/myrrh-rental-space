@@ -140,7 +140,10 @@ export default async function EventDetailPage({ params }: PageProps) {
             label="料金"
             value={event.price !== null ? formatPrice(event.price) : "-"}
           />
-          <DetailField label="説明" value={event.description ?? "-"} />
+          <DetailField
+            label="説明"
+            value={event.descriptionPlainText.trim() || "-"}
+          />
           <DetailField
             label="公開日時"
             value={formatDateTimeShort(event.publishedAt)}

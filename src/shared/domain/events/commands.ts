@@ -1,10 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
-import { Prisma } from "@generated/prisma/client";
+import type { Prisma } from "@generated/prisma/client";
 import { EventStatus } from "@generated/prisma/enums";
 import { DomainError } from "@/shared/domain/domain-error";
-import type { EventFormInput } from "@/shared/lib/validations/event";
 import {
   sendEventCancelledToAllParticipants,
   sendEventUpdatedToAllParticipants,
@@ -12,16 +11,47 @@ import {
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { ErrorCategory } from "@/shared/lib/errors/server";
 import { generateSlug } from "@/shared/lib/slug";
+import {
+  buildParagraphEditorStateJson,
+  buildParagraphHtml,
+} from "@/shared/lib/lexical/description-defaults";
+import { stripHtmlToText } from "@/shared/lib/lexical/html-to-plain-text";
+import { EventStatus as EventStatusEnum } from "@/shared/lib/validations/enums/prisma-types";
 
-export async function createEventCommand(data: EventFormInput) {
+/**
+ * Domain レイヤーの Event 書き込み入力型。
+ * Server Action 側で `buildEventCommandInput` が `EventFormInput`（Lexical JSON string）
+ * から 3 値（descriptionJson / descriptionHtml / descriptionPlainText）を生成して渡す。
+ *
+ * Space の `SpaceCommandInput` と同じ分離パターン。
+ */
+export interface EventCommandInput {
+  title: string;
+  slug: string;
+  descriptionJson: Prisma.InputJsonValue;
+  descriptionHtml: string;
+  descriptionPlainText: string;
+  thumbnailUrl?: string | null;
+  startTime: string;
+  endTime: string;
+  capacity?: number | null;
+  price?: number | null;
+  location?: string | null;
+  spaceId?: string | null;
+  status: (typeof EventStatusEnum)[keyof typeof EventStatusEnum];
+  registrationOpen?: boolean;
+}
+
+export async function createEventCommand(data: EventCommandInput) {
   const slug = await ensureUniqueSlug(data.slug);
 
   const event = await prisma.event.create({
     data: {
       title: data.title,
       slug,
-      description: data.description ?? null,
-      contentJson: data.contentJson ?? Prisma.JsonNull,
+      descriptionJson: data.descriptionJson,
+      descriptionHtml: data.descriptionHtml,
+      descriptionPlainText: data.descriptionPlainText,
       thumbnailUrl: data.thumbnailUrl ?? null,
       startTime: new Date(data.startTime),
       endTime: new Date(data.endTime),
@@ -39,7 +69,7 @@ export async function createEventCommand(data: EventFormInput) {
   return event;
 }
 
-export async function updateEventCommand(id: string, data: EventFormInput) {
+export async function updateEventCommand(id: string, data: EventCommandInput) {
   const existing = await prisma.event.findFirst({
     where: { id, deletedAt: null },
     select: {
@@ -70,8 +100,9 @@ export async function updateEventCommand(id: string, data: EventFormInput) {
     data: {
       title: data.title,
       slug,
-      description: data.description ?? null,
-      contentJson: data.contentJson ?? Prisma.JsonNull,
+      descriptionJson: data.descriptionJson,
+      descriptionHtml: data.descriptionHtml,
+      descriptionPlainText: data.descriptionPlainText,
       thumbnailUrl: data.thumbnailUrl ?? null,
       startTime: newStartTime,
       endTime: newEndTime,
@@ -154,6 +185,13 @@ export async function upsertEventFromCalendar(data: {
   endTime: Date;
   location?: string | null;
 }) {
+  const plain = (data.description ?? "").trim();
+  const descriptionJson = JSON.parse(
+    buildParagraphEditorStateJson(plain),
+  ) as Prisma.InputJsonValue;
+  const descriptionHtml = buildParagraphHtml(plain);
+  const descriptionPlainText = stripHtmlToText(descriptionHtml, 200);
+
   const existing = await prisma.event.findFirst({
     where: {
       googleCalendarEventId: data.googleCalendarEventId,
@@ -167,7 +205,9 @@ export async function upsertEventFromCalendar(data: {
       where: { id: existing.id, deletedAt: null },
       data: {
         title: data.title,
-        description: data.description ?? null,
+        descriptionJson,
+        descriptionHtml,
+        descriptionPlainText,
         startTime: data.startTime,
         endTime: data.endTime,
         location: data.location ?? null,
@@ -181,7 +221,9 @@ export async function upsertEventFromCalendar(data: {
     data: {
       title: data.title,
       slug,
-      description: data.description ?? null,
+      descriptionJson,
+      descriptionHtml,
+      descriptionPlainText,
       startTime: data.startTime,
       endTime: data.endTime,
       location: data.location ?? null,

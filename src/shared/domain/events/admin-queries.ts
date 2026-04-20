@@ -23,8 +23,9 @@ const eventListSelect = {
 
 const eventDetailSelect = {
   ...eventListSelect,
-  description: true,
-  contentJson: true,
+  descriptionJson: true,
+  descriptionHtml: true,
+  descriptionPlainText: true,
   thumbnailUrl: true,
   spaceId: true,
   googleCalendarEventId: true,
