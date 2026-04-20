@@ -486,5 +486,13 @@ export async function updateEventImportEnabled(
   });
 }
 
+export async function updateReviewsGlobalSettings(data: {
+  reviewsEnabledGlobal: boolean;
+}): Promise<void> {
+  await prisma.settings.updateMany({
+    data: { reviewsEnabledGlobal: data.reviewsEnabledGlobal },
+  });
+}
+
 // Re-export integration commands (Stripe, Google Calendar, iCal)
 export * from "./integration-commands";

@@ -67,6 +67,7 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
         googleMapsApiKey: data.googleMapsApiKey || null,
       });
       if (!isMutationError(result)) {
+        // eslint-disable-next-line react-hooks/immutability
         form.setValue("googleMapsApiKey", "");
         setShowKeyInput(false);
       }

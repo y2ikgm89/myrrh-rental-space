@@ -30,6 +30,7 @@ import { updateMeoSettings } from "@/admin/actions/settings";
 import { emptyToNull } from "@/admin/actions/settings/schemas/form-schema-helpers";
 import { meoFormSchema } from "@/admin/actions/settings/schemas/form-schemas-seo-analytics";
 import { parseBusinessAttributes } from "@/shared/lib/json-validators";
+import { BUSINESS_ATTRIBUTE_OPTIONS } from "@/shared/lib/business-attributes";
 import type { SettingsData } from "@/admin/actions/settings";
 import type { Serialized } from "@/shared/lib/serialize";
 
@@ -50,17 +51,6 @@ function getScoreMessage(score: number): string {
   if (score >= 40) return "いくつかの項目が未設定です。改善の余地があります";
   return "多くの項目が未設定です。MEO対策を強化してください";
 }
-
-const BUSINESS_ATTRIBUTE_OPTIONS = [
-  { key: "wifi", label: "Wi-Fi" },
-  { key: "parking", label: "駐車場" },
-  { key: "barrier_free", label: "バリアフリー" },
-  { key: "elevator", label: "エレベーター" },
-  { key: "smoking_area", label: "喫煙所" },
-  { key: "food_allowed", label: "飲食可" },
-  { key: "photography_allowed", label: "撮影可" },
-  { key: "music_allowed", label: "楽器演奏可" },
-] as const;
 
 // =============================================================================
 // Types

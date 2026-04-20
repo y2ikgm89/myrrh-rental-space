@@ -69,6 +69,7 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
         turnstileSecretKey: data.turnstileSecretKey || null,
       });
       if (!isMutationError(result)) {
+        // eslint-disable-next-line react-hooks/immutability
         form.setValue("turnstileSecretKey", "");
         setShowSecretKeyInput(false);
       }

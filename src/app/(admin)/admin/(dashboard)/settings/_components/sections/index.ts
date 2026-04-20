@@ -18,6 +18,9 @@ export { StripeSection } from "./StripeSection";
 // Posts Settings
 export { PermalinkSection } from "./PermalinkSection";
 
+// Feature Gates (multi-tenant global toggles)
+export { ReviewsSection } from "./ReviewsSection";
+
 // External Service API Keys
 export { ResendSection } from "./ResendSection";
 export { TurnstileSection } from "./TurnstileSection";

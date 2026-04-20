@@ -20,6 +20,7 @@ import {
   SeoSection,
   RobotsTxtSection,
   PermalinkSection,
+  ReviewsSection,
 } from "../_components/sections";
 import { LayoutSection } from "../_components/sections/LayoutSection";
 import { HeaderSection } from "../_components/sections/HeaderSection";
@@ -84,6 +85,15 @@ async function SiteSettingsContent(): Promise<ReactElement> {
       value: "post",
       label: "投稿",
       content: <PermalinkSection settings={settings} />,
+    },
+    {
+      value: "features",
+      label: "機能",
+      content: (
+        <div className="space-y-6">
+          <ReviewsSection settings={settings} />
+        </div>
+      ),
     },
   ];
 

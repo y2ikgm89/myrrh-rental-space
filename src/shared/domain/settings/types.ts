@@ -161,6 +161,7 @@ export type SettingsData = {
   footerHoursLabel: string;
   footerShowSocialLinks: boolean;
   eventImportEnabled: boolean;
+  reviewsEnabledGlobal: boolean;
   themeColor: string;
   createdAt: Date;
   updatedAt: Date;

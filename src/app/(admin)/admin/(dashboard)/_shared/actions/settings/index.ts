@@ -55,6 +55,7 @@ export type {
   DurationDiscountRuleInput,
   HeaderSettingsInput,
   FooterSettingsInput,
+  ReviewsGlobalSettingsInput,
 } from "./schemas";
 
 // =============================================================================
@@ -128,6 +129,7 @@ export {
   updatePermalinkSettings,
   updateHeaderSettings,
   updateFooterSettings,
+  updateReviewsGlobalSettings,
 } from "./other";
 
 // =============================================================================

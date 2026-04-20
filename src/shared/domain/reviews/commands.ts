@@ -13,6 +13,19 @@ type CreateReviewInput = {
 };
 
 export async function createReviewCommand(input: CreateReviewInput) {
+  // Global gate: multi-tenant サイト全体でレビュー機能が無効化されている場合
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: { reviewsEnabledGlobal: true },
+  });
+
+  if (settings && !settings.reviewsEnabledGlobal) {
+    throw new DomainError(
+      "レビュー機能は現在サイト全体で無効化されています",
+      "VALIDATION",
+    );
+  }
+
   const reservation = await prisma.reservation.findUnique({
     where: { id: input.reservationId, deletedAt: null },
     select: {

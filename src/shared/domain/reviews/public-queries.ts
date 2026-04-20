@@ -11,6 +11,21 @@ import {
 import { toPlainArray, toPlainObject } from "@/shared/lib/serialize";
 
 /**
+ * サイト全体のレビュー機能 global gate
+ *
+ * multi-tenant SaaS pattern: Settings.reviewsEnabledGlobal が false の場合
+ * 全スペースでレビュー非表示（per-space `Space.reviewsEnabled` に関わらず）。
+ * 3 つの review query すべてが invocation 開始時にこの関数で gate 判定する。
+ */
+async function isReviewsEnabledGlobally(): Promise<boolean> {
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+    select: { reviewsEnabledGlobal: true },
+  });
+  return settings?.reviewsEnabledGlobal ?? true;
+}
+
+/**
  * 公開済みレビュー一覧（スペース詳細ページ用）
  *
  * 顧客名はイニシャル表示（例: 山田 → 山○）
@@ -19,6 +34,8 @@ export async function getPublishedReviewsForSpace(spaceId: string, limit = 5) {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS, getCacheTag.reviews.space(spaceId));
+
+  if (!(await isReviewsEnabledGlobally())) return [];
 
   const reviews = await safeFetch({
     fetch: () =>
@@ -71,6 +88,10 @@ export async function getSpaceReviewStats(spaceId: string) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS, getCacheTag.reviews.stats(spaceId));
 
+  if (!(await isReviewsEnabledGlobally())) {
+    return toPlainObject({ averageRating: 0, totalCount: 0 });
+  }
+
   const result = await safeFetch({
     fetch: async () => {
       const aggregate = await prisma.spaceReview.aggregate({
@@ -109,7 +130,7 @@ export async function getSpaceReviewStatsMultiple(spaceIds: string[]) {
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.REVIEWS);
 
-  if (spaceIds.length === 0) {
+  if (spaceIds.length === 0 || !(await isReviewsEnabledGlobally())) {
     return toPlainObject(
       {} satisfies Record<
         string,
