@@ -19,27 +19,17 @@ export const metadata: Metadata = {
 function extractBusinessInfo(
   settings: Awaited<ReturnType<typeof getSettings>>,
 ): BusinessInfo {
-  if (!settings) {
-    return {
-      businessName: null,
-      email: null,
-      phoneNumber: null,
-      postalCode: null,
-      prefecture: null,
-      city: null,
-      streetAddress: null,
-      buildingName: null,
-    };
-  }
   return {
-    businessName: settings.businessName,
-    email: settings.email,
-    phoneNumber: settings.phoneNumber,
-    postalCode: settings.postalCode,
-    prefecture: settings.prefecture,
-    city: settings.city,
-    streetAddress: settings.streetAddress,
-    buildingName: settings.buildingName,
+    businessName: settings?.businessName ?? null,
+    representativeName: settings?.representativeName ?? null,
+    invoiceNumber: settings?.invoiceNumber ?? null,
+    email: settings?.email ?? null,
+    phoneNumber: settings?.phoneNumber ?? null,
+    postalCode: settings?.postalCode ?? null,
+    prefecture: settings?.prefecture ?? null,
+    city: settings?.city ?? null,
+    streetAddress: settings?.streetAddress ?? null,
+    buildingName: settings?.buildingName ?? null,
   };
 }
 
@@ -79,6 +69,7 @@ export default async function NewTermsPage({ searchParams }: PageProps) {
 
   return (
     <TermsInlineEditor
+      key={typeParam}
       mode="create"
       initialType={typeParam}
       initialTitle={defaults?.title ?? ""}

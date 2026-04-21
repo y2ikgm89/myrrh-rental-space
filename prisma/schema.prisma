@@ -103,6 +103,8 @@ enum TermsType {
   PAYMENT // 支払い規約
   RENTAL_TERMS // 施設利用規約（スペース別）
   COMMERCIAL_TRANSACTION // 特定商取引法に基づく表記
+  REVIEW_GUIDELINES // レビュー投稿ガイドライン（SpaceReview 機能と連動）
+  COOKIE_POLICY // Cookie ポリシー（ePrivacy 指令準拠の独立ページ）
   CUSTOM // カスタム規約
 }
 

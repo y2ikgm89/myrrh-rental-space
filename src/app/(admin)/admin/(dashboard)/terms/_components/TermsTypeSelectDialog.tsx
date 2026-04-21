@@ -16,6 +16,8 @@ import {
   IconCreditCard,
   IconBuilding,
   IconScale,
+  IconStar,
+  IconCookie,
   IconFileDescription,
 } from "@tabler/icons-react";
 import {
@@ -79,6 +81,18 @@ const TERMS_TYPE_META: TermsTypeMeta[] = [
     label: "特定商取引法に基づく表記",
     description: "特定商取引法に基づく表示義務事項",
     icon: IconScale,
+  },
+  {
+    type: TermsType.REVIEW_GUIDELINES,
+    label: "レビュー投稿ガイドライン",
+    description: "レビュー投稿時の基準・禁止事項・モデレーション方針",
+    icon: IconStar,
+  },
+  {
+    type: TermsType.COOKIE_POLICY,
+    label: "Cookie ポリシー",
+    description: "Cookie および類似技術の利用に関する独立ポリシー",
+    icon: IconCookie,
   },
   {
     type: TermsType.CUSTOM,

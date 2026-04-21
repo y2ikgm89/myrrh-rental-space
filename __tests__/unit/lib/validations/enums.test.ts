@@ -251,7 +251,10 @@ describe("isValidTermsType", () => {
     expect(isValidTermsType(TermsType.PRIVACY_POLICY)).toBe(true);
     expect(isValidTermsType(TermsType.CANCELLATION)).toBe(true);
     expect(isValidTermsType(TermsType.PAYMENT)).toBe(true);
+    expect(isValidTermsType(TermsType.RENTAL_TERMS)).toBe(true);
     expect(isValidTermsType(TermsType.COMMERCIAL_TRANSACTION)).toBe(true);
+    expect(isValidTermsType(TermsType.REVIEW_GUIDELINES)).toBe(true);
+    expect(isValidTermsType(TermsType.COOKIE_POLICY)).toBe(true);
     expect(isValidTermsType(TermsType.CUSTOM)).toBe(true);
   });
 

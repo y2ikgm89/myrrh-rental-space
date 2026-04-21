@@ -37,6 +37,11 @@ import {
   buildParagraphHtml,
 } from "../src/shared/lib/lexical/description-defaults";
 import { stripHtmlToText } from "../src/shared/lib/lexical/html-to-plain-text";
+import {
+  getTemplatesForType,
+  applyBusinessInfo,
+  type BusinessInfo,
+} from "../src/shared/lib/terms-templates";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -2000,6 +2005,34 @@ async function seedTerms() {
     return;
   }
 
+  // Settings 事業者情報でテンプレートのプレースホルダーを置換
+  // 未設定のフィールドはプレースホルダーがそのまま残り、管理画面での入力プロンプトとなる
+  const settings = await prisma.settings.findUnique({
+    where: { id: "singleton" },
+  });
+  const businessInfo: BusinessInfo = {
+    businessName: settings?.businessName ?? null,
+    representativeName: settings?.representativeName ?? null,
+    invoiceNumber: settings?.invoiceNumber ?? null,
+    email: settings?.email ?? null,
+    phoneNumber: settings?.phoneNumber ?? null,
+    postalCode: settings?.postalCode ?? null,
+    prefecture: settings?.prefecture ?? null,
+    city: settings?.city ?? null,
+    streetAddress: settings?.streetAddress ?? null,
+    buildingName: settings?.buildingName ?? null,
+  };
+
+  function resolveTemplateHtml(type: TermsType): string {
+    const template = getTemplatesForType(type)[0];
+    if (!template) {
+      throw new Error(`No template registered for TermsType.${type}`);
+    }
+    return applyBusinessInfo(template.content, businessInfo);
+  }
+
+  // 6 種の標準 TermsType を `terms-templates.ts` の SSoT から seed する
+  // CUSTOM は管理者が必要に応じて個別作成する前提のため seed 対象外
   const termsConfig: {
     type: TermsType;
     slug: string;
@@ -2014,8 +2047,7 @@ async function seedTerms() {
       title: "利用規約",
       requiredAtReservation: false,
       showInFooter: true,
-      content:
-        "<p>この利用規約は、レンタルスペース予約サービス「Myrrh Rental Space」の利用条件を定めるものです。</p><h2>第1条（適用）</h2><p>本規約は、当サービスの利用に関わる一切の関係に適用されます。</p><h2>第2条（禁止事項）</h2><p>利用者は、以下の行為をしてはなりません。</p><ul><li>法令または公序良俗に違反する行為</li><li>当社または第三者の権利を侵害する行為</li><li>その他、当社が不適切と判断する行為</li></ul>",
+      content: resolveTemplateHtml(TermsType.TERMS_OF_USE),
     },
     {
       type: TermsType.PRIVACY_POLICY,
@@ -2023,8 +2055,7 @@ async function seedTerms() {
       title: "プライバシーポリシー",
       requiredAtReservation: true,
       showInFooter: true,
-      content:
-        "<h2>1. 個人情報の収集</h2><p>当施設は、サービスの提供にあたり、氏名、メールアドレス、電話番号等の個人情報を収集することがあります。</p><h2>2. 個人情報の利用目的</h2><p>収集した個人情報は、予約の受付・管理、サービスに関するご連絡、お問い合わせへの対応に利用します。</p><h2>3. 個人情報の第三者提供</h2><p>当施設は、法令に基づく場合を除き、個人情報を第三者に提供しません。</p>",
+      content: resolveTemplateHtml(TermsType.PRIVACY_POLICY),
     },
     {
       type: TermsType.CANCELLATION,
@@ -2032,8 +2063,7 @@ async function seedTerms() {
       title: "キャンセルポリシー",
       requiredAtReservation: true,
       showInFooter: false,
-      content:
-        "<h2>キャンセル料金について</h2><p>ご予約のキャンセルには、以下のキャンセル料金が発生します。</p><ul><li>ご利用日の7日前まで：無料</li><li>ご利用日の3日前〜6日前：利用料金の30%</li><li>ご利用日の前日〜2日前：利用料金の50%</li><li>ご利用日当日：利用料金の100%</li></ul>",
+      content: resolveTemplateHtml(TermsType.CANCELLATION),
     },
     {
       type: TermsType.PAYMENT,
@@ -2041,8 +2071,7 @@ async function seedTerms() {
       title: "支払い規約",
       requiredAtReservation: false,
       showInFooter: false,
-      content:
-        "<h2>1. 料金体系</h2><p>利用料金は、スペースごとに設定された時間単価に利用時間を乗じて算出されます。料金には消費税が含まれています。</p><h2>2. 支払方法</h2><p>クレジットカード（VISA、Mastercard、JCB、American Express）をご利用いただけます。</p>",
+      content: resolveTemplateHtml(TermsType.PAYMENT),
     },
     {
       type: TermsType.RENTAL_TERMS,
@@ -2050,8 +2079,7 @@ async function seedTerms() {
       title: "施設利用規約",
       requiredAtReservation: false,
       showInFooter: false,
-      content:
-        "<h2>1. 施設利用について</h2><p>本施設をご利用いただくにあたり、以下のルールをお守りください。</p><h2>2. 利用時間</h2><p>予約時間内でのご利用をお願いいたします。</p><h2>3. 原状回復</h2><p>ご利用後は、テーブル・椅子等の配置を元に戻し、ゴミの分別・処理をお願いいたします。</p><h2>4. 禁止事項</h2><ul><li>喫煙（電子タバコを含む）</li><li>危険物・火気の持ち込み</li><li>騒音を発する行為</li></ul>",
+      content: resolveTemplateHtml(TermsType.RENTAL_TERMS),
     },
     {
       type: TermsType.COMMERCIAL_TRANSACTION,
@@ -2059,17 +2087,23 @@ async function seedTerms() {
       title: "特定商取引法に基づく表記",
       requiredAtReservation: false,
       showInFooter: true,
-      content:
-        "<h2>事業者名称</h2><p>Myrrh Rental Space</p><h2>サービスの内容</h2><p>レンタルスペースの時間貸しサービス</p><h2>サービスの対価</h2><p>各スペースの詳細ページに表示された料金（税込）</p><h2>支払方法</h2><p>クレジットカード決済（VISA、Mastercard、JCB、American Express）</p><h2>支払時期</h2><p>予約確定時にクレジットカード決済が行われます。</p><h2>サービスの提供時期</h2><p>予約確定後、予約日時においてスペースをご利用いただけます。</p><h2>キャンセル・返金について</h2><p>キャンセルポリシーに基づきキャンセル料が発生します。</p>",
+      content: resolveTemplateHtml(TermsType.COMMERCIAL_TRANSACTION),
     },
     {
-      type: TermsType.CUSTOM,
-      slug: "event-rules",
-      title: "イベント参加規約",
+      type: TermsType.REVIEW_GUIDELINES,
+      slug: "review-guidelines",
+      title: "レビュー投稿ガイドライン",
       requiredAtReservation: false,
       showInFooter: false,
-      content:
-        "<h2>第1条（適用範囲）</h2><p>本規約は、当施設で開催する各種イベントへの参加に適用されます。</p><h2>第2条（参加資格）</h2><p>イベントへの参加は、申込フォームから事前登録された方に限ります。</p><h2>第3条（参加費と返金）</h2><p>参加費は開催日の7日前まで全額返金対象です。それ以降のキャンセルは返金不可となります。</p>",
+      content: resolveTemplateHtml(TermsType.REVIEW_GUIDELINES),
+    },
+    {
+      type: TermsType.COOKIE_POLICY,
+      slug: "cookie-policy",
+      title: "Cookie ポリシー",
+      requiredAtReservation: false,
+      showInFooter: true,
+      content: resolveTemplateHtml(TermsType.COOKIE_POLICY),
     },
   ];
 

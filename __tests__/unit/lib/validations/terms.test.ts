@@ -435,6 +435,18 @@ describe("TERMS_TYPES", () => {
         defaultSlug: "commercial-transaction",
       },
       {
+        value: "REVIEW_GUIDELINES",
+        label: "レビュー投稿ガイドライン",
+        defaultTitle: "レビュー投稿ガイドライン",
+        defaultSlug: "review-guidelines",
+      },
+      {
+        value: "COOKIE_POLICY",
+        label: "Cookie ポリシー",
+        defaultTitle: "Cookie ポリシー",
+        defaultSlug: "cookie-policy",
+      },
+      {
         value: "CUSTOM",
         label: "カスタム規約",
         defaultTitle: "カスタム規約",

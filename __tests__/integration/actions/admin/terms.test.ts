@@ -102,6 +102,10 @@ describe("Terms Admin Action Integration", () => {
           TermsType.PRIVACY_POLICY,
           TermsType.CANCELLATION,
           TermsType.PAYMENT,
+          TermsType.RENTAL_TERMS,
+          TermsType.COMMERCIAL_TRANSACTION,
+          TermsType.REVIEW_GUIDELINES,
+          TermsType.COOKIE_POLICY,
           TermsType.CUSTOM,
         ];
 
@@ -439,11 +443,14 @@ describe("Terms Admin Action Integration", () => {
       expect(TermsType.CANCELLATION).toBeDefined();
       expect(TermsType.PAYMENT).toBeDefined();
       expect(TermsType.RENTAL_TERMS).toBeDefined();
+      expect(TermsType.COMMERCIAL_TRANSACTION).toBeDefined();
+      expect(TermsType.REVIEW_GUIDELINES).toBeDefined();
+      expect(TermsType.COOKIE_POLICY).toBeDefined();
       expect(TermsType.CUSTOM).toBeDefined();
     });
 
-    test("TermsType enum は 7 つの値を持つ（RENTAL_TERMS 追加後）", () => {
-      expect(Object.values(TermsType)).toHaveLength(7);
+    test("TermsType enum は 9 つの値を持つ（REVIEW_GUIDELINES / COOKIE_POLICY 追加後）", () => {
+      expect(Object.values(TermsType)).toHaveLength(9);
     });
   });
 
