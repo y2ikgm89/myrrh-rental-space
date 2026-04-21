@@ -2,8 +2,9 @@ import "server-only";
 
 import { prisma } from "@/shared/db/prisma";
 import { DomainError } from "@/shared/domain/domain-error";
-import { STORAGE_BUCKETS } from "@/shared/lib/supabase";
-import { deleteFile, deleteFiles, uploadFile } from "@/shared/lib/storage";
+import { STORAGE_PREFIXES } from "@/shared/lib/r2/keys";
+import { uploadFile } from "@/shared/lib/r2/upload";
+import { deleteFile, deleteFiles } from "@/shared/lib/r2/delete";
 import type { MediaType, MediaUsage } from "@generated/prisma/enums";
 
 export async function uploadMediaCommand(input: {
@@ -20,7 +21,7 @@ export async function uploadMediaCommand(input: {
   let uploadedPath: string | undefined;
 
   try {
-    const result = await uploadFile(input.file, STORAGE_BUCKETS.MEDIA, {
+    const result = await uploadFile(input.file, STORAGE_PREFIXES.MEDIA, {
       folder: input.folder,
     });
 
@@ -38,7 +39,7 @@ export async function uploadMediaCommand(input: {
         filename: input.file.name,
         storagePath: result.path,
         url: result.url,
-        bucket: STORAGE_BUCKETS.MEDIA,
+        bucket: STORAGE_PREFIXES.MEDIA,
         mimeType: input.file.type,
         size: input.file.size,
         width: null,
@@ -60,7 +61,7 @@ export async function uploadMediaCommand(input: {
     return media;
   } catch (error) {
     if (uploadedPath) {
-      await deleteFile(uploadedPath, STORAGE_BUCKETS.MEDIA);
+      await deleteFile(uploadedPath);
     }
 
     if (error instanceof DomainError) {
@@ -119,7 +120,7 @@ export async function deleteMediaCommand(id: string): Promise<void> {
     throw new DomainError("メディアが見つかりません", "NOT_FOUND");
   }
 
-  await deleteFile(media.storagePath, STORAGE_BUCKETS.MEDIA);
+  await deleteFile(media.storagePath);
   await prisma.media.update({
     where: { id },
     data: { isActive: false },
@@ -142,10 +143,7 @@ export async function bulkDeleteMediaCommand(
     throw new DomainError("削除対象が見つかりません", "NOT_FOUND");
   }
 
-  await deleteFiles(
-    mediaItems.map((media) => media.storagePath),
-    STORAGE_BUCKETS.MEDIA,
-  );
+  await deleteFiles(mediaItems.map((media) => media.storagePath));
 
   await prisma.media.updateMany({
     where: { id: { in: ids } },
