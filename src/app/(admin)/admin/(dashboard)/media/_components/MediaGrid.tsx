@@ -2,14 +2,21 @@
 
 /**
  * メディアグリッド表示
+ *
+ * Block Link / Card Overlay パターン（業界標準・WAI-ARIA First Rule 準拠）:
+ * - Primary action（カードクリック → 詳細ダイアログ）は native <button> を `absolute inset-0 z-10`
+ *   でカード全体に重ね、native の keyboard / focus / disabled 契約をそのまま利用する
+ * - Secondary actions（URL コピー / 削除）は別レイヤ（z-20）に配置し、
+ *   `pointer-events-none` でコンテナを透過させ、各 <button> のみ `pointer-events-auto`
+ *   で受け取ることで HTML 仕様違反（button ネスト）と `stopPropagation` を同時回避
+ * - ARIA First Rule: `role="button"` + 自前キーボードハンドラよりも native <button> を優先
+ *   （W3C WAI-ARIA APG: Disclosure / Navigation Menu / Accordion と同方針）
  */
 
 import { useState } from "react";
 import {
-  IconCheck,
   IconCopy,
   IconTrash,
-  IconEye,
   IconFileText,
   IconMovie,
   IconFile,
@@ -27,7 +34,6 @@ type Props = {
 };
 
 export function MediaGrid({ items }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<MediaData | null>(null);
   const handleCopyUrl = createCopyUrlHandler();
   const { handleDelete, isPending } = useDeleteMedia();
@@ -36,67 +42,52 @@ export function MediaGrid({ items }: Props) {
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {items.map((item) => (
-          <button
-            type="button"
+          <article
             key={item.id}
-            aria-label={`${item.alt || item.filename} を選択`}
-            className={cn(
-              "group relative aspect-square rounded-lg border overflow-hidden",
-              "transition-all duration-200 cursor-pointer text-left",
-              "hover:ring-2 hover:ring-primary hover:shadow-lg",
-              selectedId === item.id && "ring-2 ring-primary",
-            )}
-            onClick={() =>
-              setSelectedId(selectedId === item.id ? null : item.id)
-            }
+            className="group relative aspect-square rounded-lg border overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 hover:shadow-lg"
           >
-            {/* Thumbnail */}
+            {/* Thumbnail + Type badge */}
             <MediaThumbnail item={item} />
+            <TypeBadge type={item.type} />
 
-            {/* Overlay on hover */}
-            <div className="absolute inset-0 bg-overlay opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-              {/* Top: Actions */}
+            {/* ① Primary target: native <button> covering entire card */}
+            <button
+              type="button"
+              onClick={() => setDetailItem(item)}
+              aria-label={`${item.alt || item.filename} の詳細を表示`}
+              className="absolute inset-0 z-10 cursor-pointer rounded-lg focus-visible:outline-none"
+            />
+
+            {/* ② Hover / focus overlay: secondary actions + filename */}
+            <div
+              className={cn(
+                "absolute inset-0 z-20 flex flex-col justify-between p-2",
+                "bg-overlay pointer-events-none opacity-0 transition-opacity",
+                "group-hover:opacity-100 group-focus-within:opacity-100",
+              )}
+            >
               <div className="flex justify-end gap-1">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopyUrl(item.url);
-                  }}
-                  className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
-                  aria-label="URLをコピー"
+                  onClick={() => handleCopyUrl(item.url)}
+                  className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${item.filename} の URL をコピー`}
                   title="URLをコピー"
                 >
                   <IconCopy className="h-4 w-4 text-primary-foreground" />
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDetailItem(item);
-                  }}
-                  className="p-1.5 rounded bg-overlay-action hover:bg-overlay-action-hover transition-colors"
-                  aria-label="詳細を表示"
-                  title="詳細"
-                >
-                  <IconEye className="h-4 w-4 text-primary-foreground" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(item);
-                  }}
+                  onClick={() => handleDelete(item)}
                   disabled={isPending}
-                  className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50"
-                  aria-label="削除"
+                  className="p-1.5 rounded bg-destructive/80 hover:bg-destructive transition-colors disabled:opacity-50 pointer-events-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${item.filename} を削除`}
                   title="削除"
                 >
                   <IconTrash className="h-4 w-4 text-primary-foreground" />
                 </button>
               </div>
 
-              {/* Bottom: Info */}
               <div className="text-primary-foreground text-xs">
                 <p className="truncate font-medium">{item.filename}</p>
                 <p className="text-primary-foreground/70">
@@ -104,17 +95,7 @@ export function MediaGrid({ items }: Props) {
                 </p>
               </div>
             </div>
-
-            {/* Selection indicator */}
-            {selectedId === item.id && (
-              <div className="absolute top-2 left-2 p-1 rounded-full bg-primary">
-                <IconCheck className="h-3 w-3 text-primary-foreground" />
-              </div>
-            )}
-
-            {/* Type badge */}
-            <TypeBadge type={item.type} />
-          </button>
+          </article>
         ))}
       </div>
 

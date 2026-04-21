@@ -111,7 +111,9 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 ### 調査・監査
 
 - **「公式推奨」主張前**: `mcp__context7__query-docs` で一次資料確認（Radix / RHF / Next.js / React / Prisma / Zod）
-- **「公式準拠」「クリーン実装」「ベストプラクティス」指示時は context7 verification 必須** — agent dispatch 前に Next.js / React / Prisma / Zod / Better Auth / Lexical の該当バージョン docs を `mcp__context7__query-docs` で取得し、プロジェクトルール（`.claude/rules/**`）との乖離をチェック。プロジェクト独自厳格化（公式より厳しい）は ADR 扱いで保持
+- **「公式準拠」「クリーン実装」「ベストプラクティス」指示時は context7 verification 必須** — agent dispatch 前に Next.js / React / Prisma / Zod / Better Auth / Lexical / **WAI-ARIA APG（`/w3c/aria-practices`）** の該当バージョン docs を `mcp__context7__query-docs` で取得し、プロジェクトルール（`.claude/rules/**`）との乖離をチェック。プロジェクト独自厳格化（公式より厳しい）は ADR 扱いで保持
+- **a11y 実装は ARIA First Rule（"native HTML > ARIA role"）を最優先で適用** — `role="button"` + 自前キーボードハンドラ（Enter=keydown / Space=keyup）は 2nd-best。native `<button>` を absolute overlay + `pointer-events-none/auto` で組み替えられないか先検討（gotchas.md §button ネスト禁止 の Block Link / Card Overlay パターン）。2nd-best 実装を提案する前に必ず第一推奨の適用可否を検証
+- **a11y 実装前に UX state の実使用を grep で確認** — `selectedId` / `isSelected` 等の state が外部 consumer と連動しない「視覚ハイライト専用」なら dead state として削除候補。dead state に `aria-pressed` / キーボードハンドラ / focus ring を付けるのは over-engineering（`media/_components/MediaGrid.tsx` の `selectedId` 削除が参照事例）
 - **context7 に無い Playground / reference implementation は `gh api` で一次ソース直接参照** — Lexical の `FloatingTextFormatToolbarPlugin` / `setFloatingElemPosition` / `DraggableBlockPlugin_EXPERIMENTAL` 等は `@lexical/react` の公開 API ではなく Playground 固有の参考実装のため context7（`/facebook/lexical` / `/websites/lexical_dev` 両方）にヒットしない。`gh api repos/facebook/lexical/contents/packages/lexical-playground/...` で裏取り。この場合の主張粒度は「公式 API ドキュメント準拠」ではなく **「reference implementation 準拠」** と明記（overstate 回避）
 - **Radix primitives の具体例**: context7 取得不可 → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>`
 - **一括修正後**: Grep で違反パターン残存ゼロ確認してから完了報告
