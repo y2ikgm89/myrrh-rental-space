@@ -34,8 +34,9 @@ export interface EventImportResult {
 /**
  * Google Calendar からイベントをインポート
  *
- * 予約イベント（description に "予約ID:" を含む）はスキップし、
- * それ以外のイベントを Event モデルに upsert する。
+ * 以下の GCal イベントはスキップし、残りを Event モデルに upsert する:
+ * - description に "予約ID:" を含むイベント（outbound.ts が書き込んだ予約）
+ * - description に "イベントID:" を含むイベント（event-outbound.ts が書き込んだ本アプリのイベント — ループ防止）
  */
 export async function importCalendarEvents(): Promise<EventImportResult> {
   const result: EventImportResult = {
@@ -203,8 +204,11 @@ async function fetchEventChanges(
     for (const event of response.data.items ?? []) {
       if (!event.id) continue;
 
-      // 予約イベントはスキップ（予約同期の管轄）
+      // 予約イベントはスキップ（予約同期 outbound.ts の管轄）
       if (event.description?.includes("予約ID:")) continue;
+
+      // 本アプリが書き込んだイベントはスキップ（event-outbound.ts のループ防止）
+      if (event.description?.includes("イベントID:")) continue;
 
       // キャンセルされたイベントはスキップ
       if (event.status === "cancelled") continue;
