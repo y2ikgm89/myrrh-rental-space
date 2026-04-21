@@ -81,14 +81,15 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
   }, []);
 
   // 顧客検索（デバウンス付き）
+  // 短いクエリで state をリセットするのではなく、render 中に derive（visibleSearchResults）して
+  // 「You Might Not Need an Effect」に準拠。
+  // https://react.dev/learn/you-might-not-need-an-effect#caching-expensive-calculations
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
     if (!searchQuery || searchQuery.trim().length < 2) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-      setSearchResults([]);
       return;
     }
 
@@ -107,6 +108,10 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
       }
     }, 300);
   }, [searchQuery]);
+
+  // 短いクエリ時は空配列として表示（state のリセットではなく render 中 derive）
+  const hasQuery = searchQuery.trim().length >= 2;
+  const visibleSearchResults = hasQuery ? searchResults : [];
 
   const handleStatusChange = (status: InquiryStatus) => {
     startTransition(async () => {
@@ -337,9 +342,9 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                   <div className="text-sm text-muted-foreground">検索中...</div>
                 )}
 
-                {searchResults.length > 0 && (
+                {visibleSearchResults.length > 0 && (
                   <div className="max-h-48 overflow-y-auto rounded-md border">
-                    {searchResults.map((customer) => (
+                    {visibleSearchResults.map((customer) => (
                       <button
                         key={customer.id}
                         type="button"
@@ -374,9 +379,9 @@ export function InquiryDetail({ inquiry }: InquiryDetailProps) {
                   </div>
                 )}
 
-                {searchQuery.length >= 2 &&
+                {hasQuery &&
                   !isSearching &&
-                  searchResults.length === 0 && (
+                  visibleSearchResults.length === 0 && (
                     <div className="text-sm text-muted-foreground">
                       該当する顧客が見つかりませんでした
                     </div>

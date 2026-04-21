@@ -75,6 +75,8 @@ export function CustomerSelector({
   }, []);
 
   // 検索処理（デバウンス付き）
+  // 短いクエリ時は state をリセットせず render 中に derive（visibleSearchResults）する。
+  // 「You Might Not Need an Effect」準拠。
   useEffect(() => {
     // 既存のタイムアウトをクリア
     if (searchTimeoutRef.current) {
@@ -83,8 +85,6 @@ export function CustomerSelector({
 
     // 検索クエリが2文字未満の場合は検索しない
     if (!searchQuery || searchQuery.trim().length < 2) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-      setSearchResults([]);
       return;
     }
 
@@ -104,6 +104,10 @@ export function CustomerSelector({
       }
     }, 300);
   }, [searchQuery]);
+
+  // 短いクエリ時は空配列として表示（render 中 derive）
+  const hasQuery = searchQuery.trim().length >= 2;
+  const visibleSearchResults = hasQuery ? searchResults : [];
 
   // 新規顧客フォームの変更を親に伝える
   useEffect(() => {
@@ -238,11 +242,11 @@ export function CustomerSelector({
           )}
 
           {/* 検索結果リスト */}
-          {searchResults.length > 0 && (
+          {visibleSearchResults.length > 0 && (
             <Card>
               <CardContent className="p-0">
                 <div className="max-h-64 overflow-y-auto">
-                  {searchResults.map((customer) => (
+                  {visibleSearchResults.map((customer) => (
                     <button
                       key={customer.id}
                       type="button"
@@ -274,13 +278,11 @@ export function CustomerSelector({
           )}
 
           {/* 検索結果なし */}
-          {searchQuery.length >= 2 &&
-            !isSearching &&
-            searchResults.length === 0 && (
-              <div className="text-sm text-muted-foreground">
-                該当する顧客が見つかりませんでした
-              </div>
-            )}
+          {hasQuery && !isSearching && visibleSearchResults.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              該当する顧客が見つかりませんでした
+            </div>
+          )}
 
           {/* ヒント */}
           {!searchQuery && (
