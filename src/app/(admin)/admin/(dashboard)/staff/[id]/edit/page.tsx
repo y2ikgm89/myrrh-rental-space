@@ -48,7 +48,12 @@ export default async function EditStaffPage({ params }: Props) {
         title="スタッフ情報"
         description="スタッフ情報を編集します。パスワードを変更しない場合は空欄のままにしてください。"
       >
-        <UserForm mode="edit" user={user} editableRoles={editableRoles} />
+        <UserForm
+          key={user.id}
+          mode="edit"
+          user={user}
+          editableRoles={editableRoles}
+        />
       </DetailSection>
     </AdminDetailLayout>
   );

@@ -65,7 +65,7 @@ export default async function ReservationDetailPage({ params }: PageProps) {
         </>
       }
     >
-      <ReservationDetail reservation={reservation} />
+      <ReservationDetail key={reservation.id} reservation={reservation} />
       <TermsAgreements agreements={agreements} />
     </AdminDetailLayout>
   );

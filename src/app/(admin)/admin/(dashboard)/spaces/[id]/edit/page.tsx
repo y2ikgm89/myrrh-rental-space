@@ -74,6 +74,7 @@ export default async function EditSpacePage({ params }: PageProps) {
       }
     >
       <SpaceEditForm
+        key={space.id}
         space={space}
         mode="edit"
         availableTerms={availableTerms}

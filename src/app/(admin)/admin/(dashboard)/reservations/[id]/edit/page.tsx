@@ -48,7 +48,11 @@ export default async function ReservationEditPage({ params }: PageProps) {
       subtitle={`${reservation.customer.lastName} ${reservation.customer.firstName} 様の予約`}
     >
       {/* 編集フォーム */}
-      <ReservationEditForm reservation={reservation} spaces={spaces} />
+      <ReservationEditForm
+        key={reservation.id}
+        reservation={reservation}
+        spaces={spaces}
+      />
     </AdminDetailLayout>
   );
 }

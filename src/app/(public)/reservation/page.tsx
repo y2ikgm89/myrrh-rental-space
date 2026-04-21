@@ -86,6 +86,7 @@ export default async function ReservationPage({
     >
       <div className="mx-auto max-w-4xl">
         <ReservationForm
+          key={initialSpaceId ?? ""}
           locations={locations}
           businessHours={businessHours}
           turnstileSiteKey={turnstileSiteKey}

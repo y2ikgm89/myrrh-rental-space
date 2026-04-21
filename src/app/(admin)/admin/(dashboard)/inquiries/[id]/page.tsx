@@ -50,7 +50,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         />
       }
     >
-      <InquiryDetail inquiry={inquiry} />
+      <InquiryDetail key={inquiry.id} inquiry={inquiry} />
     </AdminDetailLayout>
   );
 }

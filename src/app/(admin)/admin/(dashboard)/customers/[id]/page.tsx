@@ -71,7 +71,7 @@ export default async function CustomerDetailPage({ params }: PageProps) {
         </>
       }
     >
-      <CustomerDetail customer={customer} />
+      <CustomerDetail key={customer.id} customer={customer} />
     </AdminDetailLayout>
   );
 }

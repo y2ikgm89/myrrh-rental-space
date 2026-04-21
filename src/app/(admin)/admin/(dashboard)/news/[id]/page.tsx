@@ -49,6 +49,7 @@ export default async function EditNewsPage({ params }: PageProps) {
 
   return (
     <NewsEditor
+      key={news.id}
       news={news}
       mode="edit"
       fallbackContentWidth={fallbackContentWidth}

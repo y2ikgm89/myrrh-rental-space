@@ -32,7 +32,7 @@ export default async function CustomerEditPage({ params }: PageProps) {
       title="顧客情報を編集"
       subtitle={`${customer.lastName} ${customer.firstName}`}
     >
-      <CustomerEditForm customer={customer} />
+      <CustomerEditForm key={customer.id} customer={customer} />
     </AdminDetailLayout>
   );
 }

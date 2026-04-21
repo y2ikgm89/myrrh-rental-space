@@ -74,7 +74,7 @@ export default async function CouponDetailPage({ params }: PageProps) {
       </DetailSection>
 
       {/* フォーム */}
-      <CouponForm coupon={coupon} />
+      <CouponForm key={coupon.id} coupon={coupon} />
     </AdminDetailLayout>
   );
 }

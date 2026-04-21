@@ -35,7 +35,7 @@ export default async function EditCategoryPage({ params }: PageProps) {
       backHref="/admin/posts?tab=categories"
       title={category.name}
     >
-      <CategoryEditor category={category} />
+      <CategoryEditor key={category.id} category={category} />
     </AdminDetailLayout>
   );
 }

@@ -75,7 +75,7 @@ export default async function EditPagePage({
         </>
       }
     >
-      <SectionMasterDetail page={page} />
+      <SectionMasterDetail key={page.id} page={page} />
     </AdminDetailLayout>
   );
 }

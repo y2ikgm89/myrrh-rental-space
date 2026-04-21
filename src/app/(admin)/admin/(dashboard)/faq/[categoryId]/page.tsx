@@ -99,6 +99,7 @@ async function CategoryDetailContent({
       </div>
 
       <FaqCategoryDetailView
+        key={category.id}
         category={category}
         items={items}
         allCategories={allCategoryOptions}

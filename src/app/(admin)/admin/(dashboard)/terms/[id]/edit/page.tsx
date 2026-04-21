@@ -35,6 +35,7 @@ export default async function TermsEditPage({ params }: PageProps) {
 
   return (
     <TermsInlineEditor
+      key={terms.id}
       terms={{
         id: terms.id,
         title: terms.title,

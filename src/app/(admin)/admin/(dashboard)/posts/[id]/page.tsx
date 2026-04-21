@@ -55,6 +55,7 @@ export default async function EditPostPage({ params }: PageProps) {
 
   return (
     <PostEditor
+      key={post.id}
       post={post}
       categories={categories}
       tags={tags}

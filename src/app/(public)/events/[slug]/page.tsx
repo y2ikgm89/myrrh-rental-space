@@ -298,6 +298,7 @@ export default async function EventDetailPage({
 
             {canRegister ? (
               <EventRegistrationForm
+                key={event.id}
                 eventId={event.id}
                 turnstileSiteKey={turnstileSiteKey}
                 remainingCapacity={remainingCapacity}

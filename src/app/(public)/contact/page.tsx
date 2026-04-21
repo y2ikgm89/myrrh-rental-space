@@ -62,6 +62,7 @@ export default async function ContactPage({
         <Container>
           <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:gap-12">
             <ContactForm
+              key={defaultSubject ?? ""}
               turnstileSiteKey={turnstileSiteKey}
               defaultSubject={defaultSubject}
             />

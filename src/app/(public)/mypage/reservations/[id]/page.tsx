@@ -154,6 +154,7 @@ export default async function ReservationDetailPage({
         <>
           <Divider variant="subtle" />
           <ReviewForm
+            key={reservation.id}
             reservationId={reservation.id}
             spaceName={reservation.space.name}
             reviewsEnabled={reservation.space.reviewsEnabled}

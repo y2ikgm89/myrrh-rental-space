@@ -116,6 +116,7 @@ export default async function ReservationEditPage({
       <Heading level={1}>予約内容の変更</Heading>
 
       <EditReservationForm
+        key={reservation.id}
         reservationId={reservation.id}
         numberOfGuests={1}
         spaces={spaces}

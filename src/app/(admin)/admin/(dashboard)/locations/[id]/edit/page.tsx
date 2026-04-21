@@ -42,7 +42,7 @@ export default async function EditLocationPage({ params }: PageProps) {
       title="拠点情報を編集"
       subtitle={location.name}
     >
-      <LocationForm location={location} mode="edit" />
+      <LocationForm key={location.id} location={location} mode="edit" />
     </AdminDetailLayout>
   );
 }

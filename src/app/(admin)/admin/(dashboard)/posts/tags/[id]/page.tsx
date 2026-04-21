@@ -30,7 +30,7 @@ export default async function EditTagPage({ params }: PageProps) {
 
   return (
     <AdminDetailLayout backHref="/admin/posts?tab=tags" title={tag.name}>
-      <TagEditor tag={tag} />
+      <TagEditor key={tag.id} tag={tag} />
     </AdminDetailLayout>
   );
 }

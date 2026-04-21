@@ -51,7 +51,12 @@ export default async function EditEventPage({ params }: PageProps) {
       title="イベントを編集"
       subtitle={event.title}
     >
-      <EventForm event={event} locations={locations} spaces={spaces} />
+      <EventForm
+        key={event.id}
+        event={event}
+        locations={locations}
+        spaces={spaces}
+      />
     </AdminDetailLayout>
   );
 }
