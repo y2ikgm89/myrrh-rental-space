@@ -34,3 +34,10 @@ export function buildEventRegistrationUid(
 ): string {
   return `event-registration-${registrationId}@${normalizeHost(host)}`;
 }
+
+/**
+ * イベント（GCal 連携用）の iCal UID を生成する（`event-<id>@<host>`）。
+ */
+export function buildEventUid(eventId: string, host: string): string {
+  return `event-${eventId}@${normalizeHost(host)}`;
+}

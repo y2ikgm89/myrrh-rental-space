@@ -253,4 +253,8 @@ export type {
   ReservationCalendarParams,
 } from "./types";
 
-export { buildEventRegistrationUid, buildReservationUid } from "./uid";
+export {
+  buildEventRegistrationUid,
+  buildEventUid,
+  buildReservationUid,
+} from "./uid";

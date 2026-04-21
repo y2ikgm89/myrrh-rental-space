@@ -16,6 +16,18 @@ export interface ReservationSyncData {
   totalPrice?: number | null;
 }
 
+export interface EventSyncData {
+  eventId: string;
+  title: string;
+  descriptionPlainText: string; // Lexical plainText 派生
+  startTime: Date;
+  endTime: Date;
+  /** 合成済み会場文字列（formatEventVenue の結果）*/
+  location: string | null;
+  /** 公開ページ URL（管理者が GCal から公開ページに飛べるようにする） */
+  publicUrl: string;
+}
+
 export interface SyncResult {
   success: boolean;
   eventId?: string;
