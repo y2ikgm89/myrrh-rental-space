@@ -62,23 +62,20 @@ export function GoogleMapsSection({ config }: GoogleMapsSectionProps) {
 
   const { form, isPending, onSubmit } = useFormAction(
     googleMapsFormSchema,
-    async (data) => {
-      const result = await updateGoogleMapsSettings({
+    async (data) =>
+      updateGoogleMapsSettings({
         googleMapsApiKey: data.googleMapsApiKey || null,
-      });
-      if (!isMutationError(result)) {
-        // eslint-disable-next-line react-hooks/immutability
-        form.setValue("googleMapsApiKey", "");
-        setShowKeyInput(false);
-      }
-      return result;
-    },
+      }),
     {
       defaultValues: {
         googleMapsApiKey: "",
       },
       refresh: true,
       successMessage: "Google Maps設定を保存しました",
+      onSuccess: (_data, form) => {
+        form.setValue("googleMapsApiKey", "");
+        setShowKeyInput(false);
+      },
     },
   );
 

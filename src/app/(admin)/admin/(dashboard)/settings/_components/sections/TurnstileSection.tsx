@@ -63,18 +63,11 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
 
   const { form, isPending, onSubmit } = useFormAction(
     turnstileFormSchema,
-    async (data) => {
-      const result = await updateTurnstileSettings({
+    async (data) =>
+      updateTurnstileSettings({
         turnstileSiteKey: data.turnstileSiteKey || null,
         turnstileSecretKey: data.turnstileSecretKey || null,
-      });
-      if (!isMutationError(result)) {
-        // eslint-disable-next-line react-hooks/immutability
-        form.setValue("turnstileSecretKey", "");
-        setShowSecretKeyInput(false);
-      }
-      return result;
-    },
+      }),
     {
       defaultValues: {
         turnstileSiteKey: config.siteKey || "",
@@ -82,6 +75,10 @@ export function TurnstileSection({ config }: TurnstileSectionProps) {
       },
       refresh: true,
       successMessage: "Turnstile設定を保存しました",
+      onSuccess: (_data, form) => {
+        form.setValue("turnstileSecretKey", "");
+        setShowSecretKeyInput(false);
+      },
     },
   );
 

@@ -37,8 +37,17 @@ import {
 type UseFormActionOptions<TInput extends FieldValues, TOutput> = {
   /** フォームの初期値 */
   defaultValues?: DefaultValues<TInput>;
-  /** 成功時のコールバック（data を直接受け取る） */
-  onSuccess?: (data: TOutput) => void;
+  /**
+   * 成功時のコールバック
+   *
+   * React 公式「Return values and arguments to Hooks are immutable」に従い、
+   * 呼び出し側は form を callback の第 2 引数から受け取ること。
+   * 外部 closure で form を参照すると `react-hooks/immutability` に違反する。
+   */
+  onSuccess?: (
+    data: TOutput,
+    form: UseFormReturn<TInput, unknown, TInput>,
+  ) => void;
   /** エラー時のコールバック */
   onError?: (error: string, fieldErrors?: Record<string, string[]>) => void;
   /** 成功時のリダイレクト先 */
@@ -150,8 +159,8 @@ export function useFormAction<TInput extends FieldValues, TOutput = null>(
         toast.success(options?.successMessage || "保存しました");
       }
 
-      // コールバック（data を直接渡す）
-      options?.onSuccess?.(result);
+      // コールバック（data + form を渡す — form は hook return 値を closure しないため）
+      options?.onSuccess?.(result, form);
 
       // リダイレクト or リフレッシュ
       if (options?.redirectTo) {
