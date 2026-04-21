@@ -112,6 +112,16 @@ try {
 return await withGoogleApiRetry(() => sdk.method());
 ```
 
+## Cloudflare R2（`@aws-sdk/client-s3`）
+
+- **SSoT ヘルパー**: `uploadFile()` / `deleteFile()` / `deleteFiles()`（`@/shared/lib/r2/{upload,delete}`）経由のみ。`S3Client` や `PutObjectCommand` / `DeleteObjectCommand` の直接 send は `r2/*` 内部のみ許可
+- **S3Client**: `getR2Client()`（`@/shared/lib/r2/client`）singleton。`new S3Client(...)` 直接生成禁止
+- **リトライ**: AWS SDK v3 が標準の retry（`maxAttempts: 3` + exponential backoff + network / 5xx / throttle 自動対象）を内蔵。カスタム wrapper 不要
+- **キー・URL 操作**: `generateStorageKey()` / `buildPublicUrl()` / `extractKeyFromUrl()`（`@/shared/lib/r2/keys`）経由。raw string 組み立て禁止
+- **アップロード方式**: Server Action プロキシ（ブラウザ → Server Action → R2）。Presigned URL 未採用（Cloud Run HTTP/1 32 MiB 制約内 + credentials のブラウザ露出回避）
+- **Bucket 構成**: 単一 bucket + key prefix（`STORAGE_PREFIXES` = `spaces` / `posts` / `site` / `media`）。prefix 毎の別 bucket は不可
+- **非対応 S3 機能**: ACL / KMS 暗号化 / Object Lock / Object Tagging（[R2 公式](https://developers.cloudflare.com/r2/api/s3/api/)）
+
 ## 検出 grep（新規直接呼び出しの検出）
 
 ```bash
@@ -121,6 +131,9 @@ grep -rn "resend\.emails\.send\|new Resend(" src/ | grep -v "email/send.ts\|api-
 # Google Calendar 直接呼び出しチェック（許可: retry.ts + oauth.ts/setCredentials）
 # events / calendars / channels 配下の全メソッドを検出（将来追加メソッドも拾う）
 grep -rnE "(calendar|client)\.(events|calendars|channels)\.[a-zA-Z]+\s*\(" src/ | grep -v "retry\|withGoogleApiRetry"
+
+# Cloudflare R2 直接呼び出しチェック（許可: shared/lib/r2/* 内部のみ）
+grep -rnE "new S3Client\(|new (Put|Delete|Get|List|Head|Copy)Object(s)?Command\(" src/ | grep -v "shared/lib/r2/"
 ```
 
 ## 参照実装
@@ -128,4 +141,8 @@ grep -rnE "(calendar|client)\.(events|calendars|channels)\.[a-zA-Z]+\s*\(" src/ 
 - `@/shared/lib/email/send.ts` — Resend 用 SSoT（idempotency + retry）
 - `@/shared/lib/google-calendar/retry.ts` — Google Calendar 用 retry wrapper
 - `@/shared/lib/google-calendar/events.ts` — retry wrapper 経由の実装例
+- `@/shared/lib/r2/client.ts` — R2 S3Client singleton
+- `@/shared/lib/r2/upload.ts` — R2 `PutObjectCommand`（`@aws-sdk/client-s3`）
+- `@/shared/lib/r2/delete.ts` — R2 `DeleteObject` / `DeleteObjectsCommand`
+- `@/shared/lib/r2/keys.ts` — R2 Object key 生成・Public URL 組み立て
 - `resend-patterns.md` — Resend SDK 固有のエラーハンドリング詳細

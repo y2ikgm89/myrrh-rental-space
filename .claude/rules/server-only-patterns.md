@@ -45,6 +45,9 @@ paths:
 | `src/shared/lib/turnstile.ts`                | DB から Turnstile Secret Key を復号してトークン検証               |
 | `src/shared/lib/calendar-sync.ts`            | DB + Google Calendar API（双方向同期）                            |
 | `src/shared/lib/analytics/ga-data-api.ts`    | Google Analytics サービスアカウント認証                           |
+| `src/shared/lib/r2/client.ts`                | Cloudflare R2 S3Client singleton・API トークン読み取り            |
+| `src/shared/lib/r2/upload.ts`                | `@aws-sdk/client-s3` の `PutObjectCommand` 呼び出し               |
+| `src/shared/lib/r2/delete.ts`                | `@aws-sdk/client-s3` の `DeleteObject` / `DeleteObjectsCommand`   |
 
 ### 管理画面ライブラリ（`src/app/(admin)/.../_shared/lib/`）
 
@@ -96,7 +99,7 @@ import 'server-only'
 Node-only npm パッケージを直接 import しているのに `import "server-only"` マーカーが欠落しているファイルを検出:
 
 ```bash
-grep -rlE '^import .+ from "(ical-generator|googleapis|resend|@touch4it|nodemailer|stripe|google-auth-library|@google-analytics|node:)' src/ | while read f; do
+grep -rlE '^import .+ from "(ical-generator|googleapis|resend|@touch4it|nodemailer|stripe|google-auth-library|@google-analytics|@aws-sdk/client-s3|node:)' src/ | while read f; do
   head -30 "$f" | grep -q '^import "server-only"' || echo "MISSING: $f"
 done
 ```

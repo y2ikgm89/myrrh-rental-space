@@ -76,7 +76,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Mutually exclusive boolean フィールドは 3 層防御** — ① UI `disabled` ② onChange で子 field クリア ③ domain command で `normalizeXxx()` ヘルパー強制正規化（Event `status` ↔ `registrationOpen` 参照）
 - **管理ユーザー操作（招待・作成・ロール変更・削除）は階層制御の 2 層防御必須** — UI で `getInvitableRoles(actorRole)` フィルタ + domain command で `canInviteRole()` / `canModifyUser()` による `DomainError("FORBIDDEN")`
 - **ドメインコマンドの actor 引数は `{ id: string; role: Role }` オブジェクト** — 単独 `actorUserId: string` 禁止。`executeAdminMutationResult` から `(user) => cmd(input, { id: user.id, role: user.role })` で渡す
-- **外部 API 統合は SSoT ヘルパー経由必須** — Resend は `sendEmail()`、Google Calendar は `withGoogleApiRetry()`、Turnstile は `validateTurnstile()`。直接 SDK 呼び出しは接続テスト / OAuth 初期化のみ例外（→ `external-api-retry-patterns.md`）
+- **外部 API 統合は SSoT ヘルパー経由必須** — Resend は `sendEmail()`、Google Calendar は `withGoogleApiRetry()`、Turnstile は `validateTurnstile()`、Cloudflare R2 は `uploadFile()` / `deleteFile()`（`@/shared/lib/r2/*`）。直接 SDK 呼び出しは接続テスト / OAuth 初期化のみ例外（→ `external-api-retry-patterns.md`）
 - **GCal outbound sync は attendees 空 + description マーカー + fireAndForget** — サービスアカウント + DWD 未設定では `attendees` populate 不可（Google 公式）。業界標準（Eventbrite/Peatix/connpass/Luma/Meetup 全社）と揃える。description 1 行目に `予約ID:` / `イベントID:` マーカー（`OUTBOUND_*_MARKER`）を埋め込み `isAppGeneratedCalendarEvent` で inbound ループ防止。Server Action の `afterSuccess` で `fireAndForget` 非ブロッキング実行。エラー記録は `markXxxCalendarSyncError` 経由のみ（catch で `logError` 重複禁止）（→ `ical-patterns.md` §GCal Outbound Sync）
 - **Turnstile 配置基準** — 未認証公開フォーム必須。認証済みでも予約作成/変更/キャンセル・決済等の高リスク操作は許容。参照系は不要
 
