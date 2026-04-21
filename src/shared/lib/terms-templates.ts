@@ -19,7 +19,7 @@
  *
  * 当プロジェクトが実際に利用するサービスのみを記載する（推測で書かない）:
  * Stripe / Resend / Google OAuth / LINE OAuth / Google Calendar API /
- * Google Maps Embed API / Google Analytics / Cloudflare Turnstile /
+ * Google Maps Embed API / Google Analytics / Cloudflare Turnstile / Cloudflare R2 /
  * Instagram Graph API / Google Cloud Run
  *
  * ## プレースホルダー
@@ -383,8 +383,12 @@ const PRIVACY_POLICY_TEMPLATE: TermsTemplate = {
 <li>Google Analytics オプトアウト：https://tools.google.com/dlpage/gaoptout</li>
 </ul>
 
-<h3>7.8 不正アクセス防止（Cloudflare Turnstile）</h3>
-<p>お問い合わせフォーム・会員登録等の Bot 対策に、Cloudflare, Inc.（アメリカ合衆国）の提供する「Turnstile」を利用しています。</p>
+<h3>7.8 セキュリティ・ストレージ（Cloudflare）</h3>
+<p>以下の目的に、Cloudflare, Inc.（アメリカ合衆国）のサービスを利用しています。</p>
+<ul>
+<li><strong>Cloudflare Turnstile</strong>：お問い合わせフォーム・会員登録等の Bot 対策・スパム防止。IP アドレス・User-Agent・ブラウザ指紋等の bot 検出用メタデータを取得します。</li>
+<li><strong>Cloudflare R2</strong>：スペース画像・ロゴ・オープングラフ画像等のメディアファイルの保存および公開配信。管理者による運営コンテンツの保管に限り利用し、顧客の個人情報の保管には利用していません。アップロードされたファイルおよびそのメタデータが保存されます。</li>
+</ul>
 <ul>
 <li>Cloudflare プライバシーポリシー：https://www.cloudflare.com/privacypolicy/</li>
 </ul>
@@ -397,12 +401,6 @@ const PRIVACY_POLICY_TEMPLATE: TermsTemplate = {
 
 <h3>7.10 クラウドインフラ（Google Cloud Run）</h3>
 <p>本サービスのサーバー環境に、Google LLC の提供する「Google Cloud Run」を利用しています。データセンターの所在地は原則として日本国内（東京リージョン）ですが、サービス提供上必要な場合に限り、他リージョンとの間でデータが転送されることがあります。</p>
-
-<h3>7.11 画像・メディアストレージ（Supabase Storage）</h3>
-<p>スペース画像・ロゴ・オープングラフ画像等のメディアファイルの保存に、Supabase, Inc.（アメリカ合衆国）の提供する「Supabase Storage」を利用しています。管理者による運営コンテンツの保管に限り利用し、顧客の個人情報の保管には利用していません。</p>
-<ul>
-<li>Supabase プライバシーポリシー：https://supabase.com/privacy</li>
-</ul>
 
 <h2>8. 個人データの越境移転</h2>
 <p>前項に記載のとおり、当社の利用する外部サービスの一部はアメリカ合衆国に所在する事業者が提供しており、個人データが同国に移転される場合があります。当社は、個人情報保護法第 28 条に基づき、次の措置を講じています。</p>
