@@ -196,26 +196,7 @@ coverageSkipTestFiles = true
 
 ### テスト用データベース
 
-#### オプション1: テスト用Supabaseプロジェクト（推奨）
-
-**セットアップ手順**:
-
-1. Supabaseダッシュボードでテスト用プロジェクトを作成
-2. テスト用プロジェクトの接続URLを取得
-3. `.env.test.local`に`DATABASE_URL`を設定
-
-**メリット**:
-
-- 本番環境と同一のデータベース環境
-- 簡単なセットアップ
-- 自動バックアップ・復旧
-
-**デメリット**:
-
-- コスト（Supabase無料プランで対応可能）
-- テスト間のデータ分離に注意が必要
-
-#### オプション2: ローカルPostgreSQL
+#### オプション1: ローカルPostgreSQL（推奨）
 
 **セットアップ手順**:
 
@@ -254,11 +235,6 @@ DATABASE_URL="postgresql://user:password@localhost:5432/test_db"
 BETTER_AUTH_SECRET="test-secret-key"
 BETTER_AUTH_URL="http://localhost:3000"
 
-# Supabase（テスト用プロジェクトまたはモック）
-SUPABASE_URL="https://test-project.supabase.co"
-SUPABASE_ANON_KEY="test-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="test-service-role-key"
-
 # メール送信（テスト用、Resendのテストモードまたはモック）
 RESEND_API_KEY="test-resend-api-key"
 
@@ -270,7 +246,6 @@ NODE_ENV="test"
 
 - `BETTER_AUTH_SECRET`: テスト専用のシークレットキー（本番とは別）
 - `BETTER_AUTH_URL`: `http://localhost:3000`（テストサーバー用）
-- `SUPABASE_URL`: テスト用SupabaseプロジェクトのURL
 - `RESEND_API_KEY`: ResendのテストモードAPIキー（実際のメール送信を回避）
 
 ### Dockerコンテナでのテスト実行
@@ -507,10 +482,10 @@ tests/integration/
   - `beforeEach`で`deleteMany()`を実行
   - シンプルだが、並列実行時は注意が必要
 
-**外部サービス（Supabase、Resend等）のモック方法**:
+**外部サービス（Resend / Cloudflare R2 等）のモック方法**:
 
-- Supabase: テスト用Supabaseプロジェクトを使用（推奨）またはモック
 - Resend: テストモードAPIキーを使用（実際のメール送信を回避）
+- Cloudflare R2: `mock.module()` でストレージ関数をモック
 - その他: 必要に応じてモックライブラリを使用
 
 **例（トランザクション使用 - 推奨）**:
@@ -884,9 +859,6 @@ jobs:
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           BETTER_AUTH_SECRET: ${{ secrets.TEST_BETTER_AUTH_SECRET }}
           BETTER_AUTH_URL: http://localhost:3000
-          SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Generate LCOV coverage report
         run: bun test --coverage --coverage-reporter=lcov
@@ -998,33 +970,24 @@ options:
 
 ## モック/スタブの使用方法
 
-### 外部サービス（Supabase、Resend等）のモック方法
+### 外部サービス（Cloudflare R2、Resend 等）のモック方法
 
-#### Supabase
+#### Cloudflare R2
 
-**オプション1: テスト用Supabaseプロジェクト（推奨）**
-
-- テスト用Supabaseプロジェクトを作成
-- `.env.test.local`にテスト用プロジェクトのURLとキーを設定
-- 実際のSupabase APIを使用（テスト環境）
-
-**オプション2: モック（`mock.module()`を使用）**
+**モック（`mock.module()`を使用）**
 
 ```typescript
-import { mock, mock.module } from 'bun:test'
+import { mock } from "bun:test";
 
-// モジュール全体をモック
-mock.module('./lib/supabase', () => ({
-  createClient: mock(() => ({
-    from: mock(() => ({
-      select: mock(() => ({
-        eq: mock(() => ({
-          single: mock(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-    })),
+// ストレージ関数をモック
+mock.module("@/shared/lib/r2", () => ({
+  uploadFile: mock(async () => ({
+    success: true,
+    url: "https://media.example.com/spaces/test-image.jpg",
+    key: "spaces/test-image.jpg",
   })),
-}))
+  deleteFile: mock(async () => ({ success: true })),
+}));
 
 // テストで使用（モックされたモジュールが自動的に使用される）
 ```

@@ -82,7 +82,7 @@
 | form-data.ts              | 🟡 P2  | フォームデータ処理           |
 | api-keys.ts               | 🟡 P2  | APIキー管理                  |
 | async-utils.ts            | 🟡 P2  | 非同期ユーティリティ         |
-| その他                    | —      | ロガー、Supabase設定等       |
+| その他                    | —      | ロガー、設定等               |
 
 ---
 

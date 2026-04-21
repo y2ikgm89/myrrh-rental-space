@@ -80,8 +80,8 @@
   - `slug`: スラッグ（String, 必須, ユニーク）
   - `excerpt`: 概要（String, 必須, 1-500文字）
   - `content`: 本文（String, 必須, リッチテキスト（HTML形式））
-  - `thumbnailUrl`: サムネイル画像URL（String, 必須, Supabase Storage URL）
-  - `ogpImageUrl`: OGP画像URL（String, nullable, Supabase Storage URL）
+  - `thumbnailUrl`: サムネイル画像URL（String, 必須, Cloudflare R2 URL）
+  - `ogpImageUrl`: OGP画像URL（String, nullable, Cloudflare R2 URL）
 - **分類**:
   - `categoryId`: カテゴリID（String, FK, 必須）
   - `tags`: タグ配列（Json, String[]）, デフォルト: []
@@ -145,9 +145,9 @@
 - **サイト基本情報**:
   - `siteName`: サイト名（String, nullable, 1-100文字）
   - `siteDescription`: サイト説明（String, nullable, 1-500文字）
-  - `faviconUrl`: ファビコンURL（String, nullable, Supabase Storage URL）
-  - `defaultOgpImageUrl`: デフォルトOGP画像URL（String, nullable, Supabase Storage URL）
-  - `headerLogoUrl`: ヘッダーロゴURL（String, nullable, Supabase Storage URL）
+  - `faviconUrl`: ファビコンURL（String, nullable, Cloudflare R2 URL）
+  - `defaultOgpImageUrl`: デフォルトOGP画像URL（String, nullable, Cloudflare R2 URL）
+  - `headerLogoUrl`: ヘッダーロゴURL（String, nullable, Cloudflare R2 URL）
   - `footerCopyright`: フッターコピーライトテキスト（String, nullable, 1-200文字）
 - **連絡先情報**:
   - `phoneNumber`: 電話番号（String, nullable）
@@ -207,7 +207,7 @@
   - `metaKeywords`: メタキーワード（String, nullable, カンマ区切り）
   - `ogpTitle`: OGPタイトル（String, nullable, 1-60文字）
   - `ogpDescription`: OGP説明（String, nullable, 1-200文字）
-  - `ogpImageUrl`: OGP画像URL（String, nullable, Supabase Storage URL）
+  - `ogpImageUrl`: OGP画像URL（String, nullable, Cloudflare R2 URL）
 - **公開設定**:
   - `isPublished`: 公開フラグ（Boolean, デフォルト: true）
   - `publishedAt`: 公開日時（DateTime, nullable）
@@ -720,7 +720,7 @@ bunx --bun prisma migrate deploy
 
 ### 接続プーリング
 
-Supabase接続プーリングURLを使用して、データベース接続を最適化します。
+接続プーリング対応 PostgreSQL URL を使用して、データベース接続を最適化します。
 
 ```prisma
 // prisma/schema.prisma
@@ -788,7 +788,7 @@ try {
 - [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
 - [Prisma Indexes](https://www.prisma.io/docs/concepts/components/prisma-schema/indexes)
 - [Prisma Relations](https://www.prisma.io/docs/concepts/components/prisma-schema/relations)
-- [Supabase Connection Pooling](https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler)
+- [Prisma Connection Management](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections)
 
 ### ベストプラクティス
 

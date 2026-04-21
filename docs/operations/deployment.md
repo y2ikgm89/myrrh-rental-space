@@ -114,8 +114,6 @@ Cloud Build トリガーの substitutions で実際の値を設定する:
 | --------------------------------- | ------------------ | ---- |
 | `_NEXT_PUBLIC_BASE_URL`           | 公開サイト URL     | Yes  |
 | `_NEXT_PUBLIC_APP_URL`            | アプリ URL         | Yes  |
-| `_NEXT_PUBLIC_SUPABASE_URL`       | Supabase URL       | Yes  |
-| `_NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Supabase Anon Key  | Yes  |
 | `_NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Turnstile Site Key | No   |
 | `_NEXT_PUBLIC_GA_MEASUREMENT_ID`  | GA4 測定 ID        | No   |
 | `_BETTER_AUTH_URL`                | Better Auth URL    | Yes  |

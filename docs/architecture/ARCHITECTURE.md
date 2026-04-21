@@ -16,7 +16,7 @@ graph TB
   DB["src/shared/db/*"]
   Infra["src/shared/lib/*"]
   PrismaGen["generated/prisma/*"]
-  Postgres["PostgreSQL (Supabase)"]
+  Postgres["PostgreSQL"]
 
   Browser --> Proxy
   Proxy --> PublicRoutes

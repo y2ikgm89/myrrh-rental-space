@@ -285,15 +285,15 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 #### 接続プーリングの設定
 
-**Supabase接続プーリングURLの使用**:
+**接続プーリング URL の使用**:
 
-Supabaseでは、接続プーリングURLを使用することで、接続数を最適化できます。
+接続プーリング URL を使用することで、接続数を最適化できます。
 
 ```typescript
-// Supabase接続プーリングURLを使用する場合
+// 接続プーリングURLを使用する場合
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL, // 接続プーリングURL
-  max: 20, // 最大接続数（Supabaseのプランに応じて調整）
+  max: 20, // 最大接続数（プランに応じて調整）
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
@@ -301,7 +301,7 @@ const pool = new Pool({
 
 **接続プーリングの設定パラメータ**:
 
-- `max`: 最大接続数（デフォルト: 10、Supabaseのプランに応じて調整）
+- `max`: 最大接続数（デフォルト: 10、プランに応じて調整）
 - `idleTimeoutMillis`: アイドル接続のタイムアウト（デフォルト: 10000ms）
 - `connectionTimeoutMillis`: 接続タイムアウト（デフォルト: 0 = 無制限）
 
@@ -441,7 +441,7 @@ import type { StockStatus } from "@/generated/prisma/client";
 - **2026-01-08**: Context7で取得した最新情報に基づき、driver adaptersの詳細な説明を追加
   - driver adaptersの必須性とインストール方法
   - 接続プーリングの詳細な設定方法（`max`、`idleTimeoutMillis`、`connectionTimeoutMillis`）
-  - Supabase接続プーリングURLの使用例
+  - 接続プーリングURLの使用例
   - パフォーマンス最適化のポイント
 - **2026-01-07**: prisma.config.ts 公式推奨パターンに更新
 

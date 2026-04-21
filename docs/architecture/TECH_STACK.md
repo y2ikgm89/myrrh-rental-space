@@ -16,7 +16,7 @@
 | 技術                 | バージョン | 用途                                                           |
 | -------------------- | ---------- | -------------------------------------------------------------- |
 | Prisma               | 7.7.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
-| PostgreSQL           | Supabase   | 本番 DB                                                        |
+| PostgreSQL           | 16         | 本番 DB（Cloud Run から接続）                                  |
 | `@prisma/adapter-pg` | 7.7.0      | Prisma driver adapter（seed / `prisma.ts` で必須）             |
 | Better Auth          | 1.6.2      | session / RBAC                                                 |
 | Zod                  | 4.3.6      | 入出力検証                                                     |

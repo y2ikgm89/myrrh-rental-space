@@ -241,8 +241,8 @@
   - リスト（順序付き、順序なし）
   - 引用
   - リンク
-  - 画像埋め込み（Supabase Storageからアップロード）
-  - 動画埋め込み（Supabase Storageからアップロード、オプション）
+  - 画像埋め込み（Cloudflare R2 にアップロード）
+  - 動画埋め込み（Cloudflare R2 にアップロード、オプション）
   - コードブロック
   - テーブル
   - 水平線
@@ -356,8 +356,8 @@
 - リスト（順序付き、順序なし）
 - 引用（Blockquote）
 - リンク（内部リンク、外部リンク）
-- 画像埋め込み（Supabase Storageからアップロード）
-- 動画埋め込み（Supabase Storageからアップロード、オプション）
+- 画像埋め込み（Cloudflare R2 にアップロード）
+- 動画埋め込み（Cloudflare R2 にアップロード、オプション）
 - コードブロック（シンタックスハイライト）
 - テーブル（行・列の追加・削除、セル結合）
 - 水平線
@@ -404,7 +404,7 @@
 
 - `@tiptap/extension-link`: リンク機能
 - `@tiptap/extension-image`: 画像埋め込み
-- `@tiptap/extension-video`: 動画埋め込み（カスタム拡張、Supabase Storage対応）
+- `@tiptap/extension-video`: 動画埋め込み（カスタム拡張、Cloudflare R2対応）
 - `@tiptap/extension-code-block`: コードブロック（シンタックスハイライト）
 - `@tiptap/extension-table`: テーブル機能
   - `@tiptap/extension-table-row`: テーブル行
@@ -541,15 +541,15 @@ npx @tiptap/cli@latest add floating-element
 
 - Tiptapは自動的にHTMLサニタイゼーションを実行
 - 危険なHTMLタグや属性を自動的に除去
-- 画像URLの検証（Supabase Storage URLのみ許可）
-- 動画URLの検証（Supabase Storage URLのみ許可）
+- 画像URLの検証（Cloudflare R2 URLのみ許可）
+- 動画URLの検証（Cloudflare R2 URLのみ許可）
 
 **入力検証**:
 
 - サーバーサイドでHTMLコンテンツを再検証
 - 許可されたHTMLタグのみ保存
-- 画像URLの検証（Supabase Storage URLのみ許可）
-- 動画URLの検証（Supabase Storage URLのみ許可）
+- 画像URLの検証（Cloudflare R2 URLのみ許可）
+- 動画URLの検証（Cloudflare R2 URLのみ許可）
 
 ### パフォーマンス要件
 
@@ -632,7 +632,7 @@ npx @tiptap/cli@latest add floating-element
 - **スペース管理** (`/admin/spaces`): 最大 **10MB**（メイン画像1枚、サブ画像複数枚）
 - **ブログ管理** (`/admin/posts`): 最大 **5MB**（サムネイル画像、OGP画像、本文埋め込み画像）
 
-**保存先**: Supabase Storage
+**保存先**: Cloudflare R2
 
 **最適化**:
 
@@ -669,7 +669,7 @@ npx @tiptap/cli@latest add floating-element
 - **スペース管理** (`/admin/spaces`): 最大 **100MB**（スペース紹介動画、1本のみ）
 - **ブログ管理** (`/admin/posts`): 最大 **50MB**（本文埋め込み動画、複数本可能）
 
-**保存先**: Supabase Storage
+**保存先**: Cloudflare R2
 
 **表示方法**:
 
@@ -711,8 +711,8 @@ npx @tiptap/cli@latest add floating-element
 - `slug`: String, 必須, ユニーク, @unique
 - `excerpt`: String, 必須, 1-500文字
 - `content`: String, 必須, リッチテキスト（HTML形式）
-- `thumbnailUrl`: String, 必須, Supabase Storage URL
-- `ogpImageUrl`: String?, オプション, Supabase Storage URL
+- `thumbnailUrl`: String, 必須, Cloudflare R2 URL
+- `ogpImageUrl`: String?, オプション, Cloudflare R2 URL
 
 **分類**:
 
@@ -926,7 +926,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 
 - フォーム送信フロー（Tiptapエディタ統合）
 - データベース操作（Prisma経由、トランザクションを使用したテスト分離）
-- 画像アップロード（Supabase Storage）
+- 画像アップロード（Cloudflare R2）
 
 **テスト環境**: テスト用データベースを使用。詳細は[`testing.md`](./testing.md)を参照。
 
@@ -991,7 +991,7 @@ Tiptapは以下の4つのカテゴリのコンポーネントを提供してお�
 | SEO最適化          | 中           | ✅ 可能    | メタタグ、OGP設定                |
 | 検索機能           | 中           | ✅ 可能    | サーバーサイド検索実装           |
 | Tiptap統合         | 中           | ✅ 可能    | デザイン統一が重要               |
-| 画像アップロード   | 低           | ✅ 可能    | Supabase Storage使用             |
+| 画像アップロード   | 低           | ✅ 可能    | Cloudflare R2使用                |
 
 ---
 

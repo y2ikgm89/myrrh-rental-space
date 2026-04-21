@@ -15,7 +15,7 @@
 ## 環境構成
 
 ```
-[ユーザー] → [Cloudflare CDN] → [Cloud Run] → [Supabase PostgreSQL]
+[ユーザー] → [Cloudflare CDN] → [Cloud Run] → [PostgreSQL]
                   ↓
             [Turnstile]（Bot保護）
 ```
