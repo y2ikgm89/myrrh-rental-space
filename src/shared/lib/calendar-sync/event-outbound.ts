@@ -9,12 +9,7 @@
 
 import "server-only";
 
-import {
-  logError,
-  ErrorCategory,
-  ErrorSeverity,
-  normalizeError,
-} from "@/shared/lib/errors/server";
+import { normalizeError } from "@/shared/lib/errors/server";
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -101,22 +96,13 @@ export async function syncEventToCalendar(
 
     return omitUndefined({ success: false, error: result.error });
   } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "syncEventToCalendar",
-        eventId: data.eventId,
-      },
-    });
-
-    const message = error instanceof Error ? error.message : "Unknown error";
-
+    // markEventCalendarSyncError が内部で logError を呼ぶため重複呼び出し禁止
+    const message =
+      error instanceof Error ? error.message : normalizeError(error).message;
     await markEventCalendarSyncError({
       eventId: data.eventId,
       error: message,
     });
-
     return { success: false, error: message };
   }
 }
@@ -148,20 +134,14 @@ export async function updateEventCalendarSync(
 
     return omitUndefined({ success: false, error: result.error });
   } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "updateEventCalendarSync",
-        eventId: data.eventId,
-        existingEventId,
-      },
+    // markEventCalendarSyncError が内部で logError を呼ぶため重複呼び出し禁止
+    const message =
+      error instanceof Error ? error.message : normalizeError(error).message;
+    await markEventCalendarSyncError({
+      eventId: data.eventId,
+      error: message,
     });
-
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    return { success: false, error: message };
   }
 }
 
@@ -188,19 +168,13 @@ export async function deleteEventCalendarSync(
 
     return omitUndefined({ success: false, error: result.error });
   } catch (error) {
-    logError(normalizeError(error), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "deleteEventCalendarSync",
-        eventId,
-        gcalEventId,
-      },
+    // markEventCalendarSyncError が内部で logError を呼ぶため重複呼び出し禁止
+    const message =
+      error instanceof Error ? error.message : normalizeError(error).message;
+    await markEventCalendarSyncError({
+      eventId,
+      error: message,
     });
-
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    return { success: false, error: message };
   }
 }
