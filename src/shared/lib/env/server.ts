@@ -96,6 +96,14 @@ export const serverEnv = createEnv({
     // Google Analytics（サービスアカウント JSON — GA4 Data API）
     GOOGLE_APPLICATION_CREDENTIALS_JSON: z.string().optional(),
 
+    // Cloudflare R2（本番必須 - ランタイム検証）
+    // 画像ストレージ（S3 互換 API）
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET_NAME: z.string().optional(),
+    R2_PUBLIC_URL: z.string().url().optional(),
+
     // Node environment
     NODE_ENV: z
       .enum(["development", "production", "test"])
@@ -123,6 +131,11 @@ export const serverEnv = createEnv({
     DATABASE_POOL_MAX: process.env["DATABASE_POOL_MAX"],
     GOOGLE_APPLICATION_CREDENTIALS_JSON:
       process.env["GOOGLE_APPLICATION_CREDENTIALS_JSON"],
+    R2_ACCOUNT_ID: process.env["R2_ACCOUNT_ID"],
+    R2_ACCESS_KEY_ID: process.env["R2_ACCESS_KEY_ID"],
+    R2_SECRET_ACCESS_KEY: process.env["R2_SECRET_ACCESS_KEY"],
+    R2_BUCKET_NAME: process.env["R2_BUCKET_NAME"],
+    R2_PUBLIC_URL: process.env["R2_PUBLIC_URL"],
     NODE_ENV: process.env["NODE_ENV"],
   },
   // ビルド時検証をスキップするオプション（CI環境用）
@@ -148,6 +161,12 @@ export function validateProductionEnv(): void {
     { name: "ENCRYPTION_KEY", value: serverEnv.ENCRYPTION_KEY },
     { name: "CRON_SECRET", value: serverEnv.CRON_SECRET },
     { name: "ADMIN_LOGIN_TOKEN", value: serverEnv.ADMIN_LOGIN_TOKEN },
+    // Cloudflare R2 — 画像ストレージ必須
+    { name: "R2_ACCOUNT_ID", value: serverEnv.R2_ACCOUNT_ID },
+    { name: "R2_ACCESS_KEY_ID", value: serverEnv.R2_ACCESS_KEY_ID },
+    { name: "R2_SECRET_ACCESS_KEY", value: serverEnv.R2_SECRET_ACCESS_KEY },
+    { name: "R2_BUCKET_NAME", value: serverEnv.R2_BUCKET_NAME },
+    { name: "R2_PUBLIC_URL", value: serverEnv.R2_PUBLIC_URL },
     // Google OAuth は env / Secret Manager を正本とする
   ];
 

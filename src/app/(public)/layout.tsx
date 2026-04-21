@@ -54,7 +54,6 @@ import {
 import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
 import { SITE_DEFAULTS } from "@/shared/lib/constants";
-import { clientEnv } from "@/shared/lib/env/client";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
 import { cn } from "@/shared/lib/cn";
@@ -132,13 +131,6 @@ async function HeadContent(): Promise<ReactElement> {
   return (
     <>
       {/* Preconnect hints for external resources */}
-      {clientEnv.NEXT_PUBLIC_SUPABASE_URL && (
-        <link
-          rel="preconnect"
-          href={new URL(clientEnv.NEXT_PUBLIC_SUPABASE_URL).origin}
-          crossOrigin="anonymous"
-        />
-      )}
       <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
       <link rel="dns-prefetch" href="https://js.stripe.com" />
 

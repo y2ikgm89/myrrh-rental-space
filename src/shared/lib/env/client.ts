@@ -14,10 +14,6 @@ export const clientEnv = createEnv({
     NEXT_PUBLIC_BASE_URL: z.string().url(),
     NEXT_PUBLIC_APP_URL: z.string().url(),
 
-    // Supabase（ストレージ機能が有効な場合のみ必須）
-    NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
-
     // Turnstile (optional)
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 
@@ -27,8 +23,6 @@ export const clientEnv = createEnv({
   runtimeEnv: {
     NEXT_PUBLIC_BASE_URL: process.env["NEXT_PUBLIC_BASE_URL"],
     NEXT_PUBLIC_APP_URL: process.env["NEXT_PUBLIC_APP_URL"],
-    NEXT_PUBLIC_SUPABASE_URL: process.env["NEXT_PUBLIC_SUPABASE_URL"],
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"],
     NEXT_PUBLIC_TURNSTILE_SITE_KEY:
       process.env["NEXT_PUBLIC_TURNSTILE_SITE_KEY"],
     NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env["NEXT_PUBLIC_GA_MEASUREMENT_ID"],
