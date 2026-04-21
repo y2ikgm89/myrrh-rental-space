@@ -133,6 +133,7 @@ Server Action が新しい domain query / external helper を呼び出すよう�
 
 - テスト実行時に `prisma.xxx.findMany() Authentication failed against the database server`
 - テスト実行時に実 DB に接続しようとする（ネットワークエラー / 認証エラー）
+- `cacheLife() is only available with the cacheComponents config` エラー → Route Handler が呼ぶ `'use cache'` 関数（`getIcalOrganizer` 等の設定クエリ）のモック漏れ。テスト環境には PPR dynamic scope がないため `cacheLife()` が throw する。`mock.module("@/shared/domain/settings/queries/<x>", () => ({ <fn>: mock(...) }))` を追加
 
 **検出手順**:
 

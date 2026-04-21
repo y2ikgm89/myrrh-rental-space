@@ -110,6 +110,8 @@ paths:
 - **OGP/SNS シェアプレビューは `max-w-lg` で制約** — `aspect-[1200/630]` が親幅に追従するため、制約なしだとプレビューが巨大になる。`max-w-lg`（512px）を外側ラッパーに適用。`PageSeoForm.tsx` で設定
 - **公開 Badge と管理 Badge の variant 型は異なる** — 公開 `"default"|"success"|"warning"|"info"`、管理 shadcn/ui `"secondary"|"outline"|"destructive"` 等。共有 `enums/helpers.ts` の `*_BADGE_VARIANTS` は管理用。公開ページでは `Record<Enum, BadgeVariant>` をコンポーネント内に定義する
 - **RHF `defaultValues` は Zod スキーマの全フィールドを宣言必須** — 省略すると `useWatch` の初期値が `undefined` になり条件分岐が壊れる。`z.literal(true)` フィールド（`agreeToTerms` 等）は `defaultValues` に含めない（型が `true` のため `false` を渡せない）
+- **`useFormAction.onSuccess` は `(data, form) => void` 契約** — hook 戻り値の `form` を action callback 内で closure 参照すると `react-hooks/immutability` 違反（公式: "Return values and arguments to Hooks are immutable"）。`onSuccess: (_data, form) => form.setValue(...)` で callback 引数から受け取る。参照実装: `GoogleMapsSection.tsx` / `TurnstileSection.tsx`
+- **eslint-plugin-react-hooks 7.1.x 新ルール挙動** — `react-hooks/set-state-in-effect` はリテラル値（`true` / `false` / `[]`）の setState を検出しない（動的値のみ）。`@eslint-react/set-state-in-effect` は両方検出するためルール併記で disable が必要なケースあり。`react-hooks/immutability` は hook 戻り値を同 hook の callback 引数内で参照すると TDZ 扱いで検出。正当な修正は eslint-disable ではなく render 中 state sync / `useSyncExternalStore` / render 中 derive / callback 引数化
 
 ## 公開ページ レスポンシブ標準
 
@@ -225,6 +227,7 @@ paths:
 - **JSX `className` 内の改行は hydration mismatch** — `className="fixed bottom-16\n        md:hidden"` のようにダブルクォート文字列内に改行+インデントを含めると SSR は生文字列をそのまま出力、React は CSR で空白正規化した文字列を期待し差分発生（`sticky-bottom-bar.tsx` で実例）。Prettier が複数行整形する長さなら `cn("fixed ...", "md:hidden")` で配列分割、そうでなければ single-line を維持する（→ `tailwind-patterns.md` §禁止事項 3.1）
 - **動的 layout を持つサブルートに `loading.tsx` 必須** — `mypage/layout.tsx`（認証チェーン）や `(dashboard)/layout.tsx` 配下のサブルートには個別の `loading.tsx` を追加。親の `loading.tsx` だけではページ固有のデータ取得待ちと認証待ちが同じスケルトンに合流する
 - **マイページ開発確認は dev login ボタンを使用** — `/login` ページに `NODE_ENV !== "production"` でのみ表示される「テスト顧客でログイン」ボタンあり（`dev-login-action.ts`）。Better Auth の `signUpEmail`/`signInEmail` で `dev-customer@example.com` セッションを作成し、`ensureCustomerLinked` が Customer を自動生成
+- **URL 由来 initial props の Client Component は `key={urlValue}` 必須** — `searchParams` / `params` が変わっても同一 route 内では Client Component が remount されず `useState` lazy init / `useForm defaultValues` / `useReducer` initial state が stale 化する。実例: 利用規約「規約を追加」ダイアログで type 選択時に URL は変わるが常にプライバシーポリシーテンプレートが表示される silent bug（`terms/new/page.tsx` で `key={typeParam}` を追加して修正）。key 不要ケース: Dialog 内 form（unmount で自動 reset）/ Settings singleton / list page（nuqs 直接 subscribe）/ 別 route segment。詳細は `react-patterns.md` §Resetting state with key
 
 ## Prisma / adapter-pg
 
@@ -267,6 +270,7 @@ paths:
 
 ## ビルド・検証
 
+- **bun:test 環境で `'use cache'` + `cacheLife()` が route handler テスト経由で 500** — `Error: cacheLife() is only available with the cacheComponents config.`（Next.js 16 `'use cache'` の dev 制約）。`next.config.ts` の `cacheComponents: true` が bunfig preload で反映されず、route handler 経由で `'use cache'` query を呼ぶ integration test（`calendar-reservation.test.ts` / `calendar-event.test.ts` の 3 件）が pre-existing failure。本体コード問題ではなく test 環境設定課題。恒久対策は `bunfig.toml` / `__tests__/setup.ts` での `cacheComponents` mock または該当 query の test 環境 skip 分岐が必要。新規 test 追加時に同エラーに遭遇したら本件として切り分ける
 - **`.next/dev/types/validator.ts` 途切れエラー（TS1434 / TS1128）** — `next typegen` が途中で中断した残骸で `tsc` が失敗する（例: `nst handler = ...` のような欠損行で `Unexpected keyword or identifier` / `Declaration or statement expected`）。復旧: `python3 -c "import shutil; shutil.rmtree('.next', ignore_errors=True)"` + `bunx --bun next typegen` → `bun run type-check`
 - **Playwright MCP が navigate/close 両方タイムアウトする場合** — HMR 多発後にブラウザセッションがスタックする。dev サーバーを `cmd //c "taskkill /PID <pid> /F /T"` で強制終了→再起動すると Playwright も新セッションで回復する
 - **Playwright MCP の `Browser is already in use for ...mcp-chrome-<id>` エラー** — 別セッション / VS Code 拡張等がブラウザプロファイルをロック中で `browser_close` も同エラーで解除不可。対処: (1) 他の MCP クライアント / 拡張の Chromium を閉じる (2) `cmd //c "taskkill /IM chrome.exe /F"` 相当で残存プロセス除去 (3) 自動化不可時は Read + `curl -s -o /dev/null -w "%{http_code}"` での HTTP 応答確認にフォールバックし、UI 表示確認はユーザーに依頼
@@ -426,6 +430,8 @@ paths:
 - **TurnstileWidget の `appearance` は prop で切替可能（デフォルト `"always"`＝公式標準）** — `DEFAULT_TURNSTILE_APPEARANCE` (`@/shared/lib/turnstile-actions`) は Cloudflare 公式デフォルトの `"always"`（Bot 保護 UI を明示）。widget を見せたくないフォームでは `appearance="interaction-only"`、プログラム的に実行する高度ケースでは `appearance="execute"` を明示指定。型は `TurnstileAppearance` で 3 値に限定済み。`size: "flexible"` + `retry: "auto"` + `refreshExpired: "auto"` は全モード共通の標準
 - **iCal (.ics) 生成は `@/shared/lib/ical` のヘルパー経由のみ** — `ical-generator` v10 + `@touch4it/ical-timezones` ベース。`ical()` / `ICalCalendar` の直接呼び出し禁止。UID は `buildReservationUid` / `buildEventRegistrationUid`（RFC 5545 `<localpart>@<domain>` 形式で永続安定）、update/cancel では `icsSequence: { increment: 1 }` を mutation に配線し `METHOD:CANCEL|REQUEST` ICS を同一 UID + 新 SEQUENCE で送ることで既存カレンダー登録を上書き。Add to Calendar の ICS ダウンロードは `/api/calendar/reservation/[id]` / `/api/calendar/event/[registrationId]` の customer-authenticated route handler URL を使用（`data:` URL は Gmail / Outlook Web ブロックのため禁止）。UI は `AddToCalendar` Server Component（`variant="public"` で Google/Outlook のみ、`"authenticated"` で 3 択）。`ical-generator` は 75 オクテット行折り返しを自動適用するためテストで `ics.replace(/\r\n /g, "")` で unfold してから assert。詳細: `.claude/rules/ical-patterns.md`
 - **`icsSequence` インクリメント対象は user-facing state transition のみ** — 予約: `updateReservation` / `cancelReservation` / `cancelCustomerReservation` / `confirmReservation` / `completeReservation` / `markNoShow` / `deleteReservation` / `restoreReservation`。イベント申込: `cancelEventRegistration` / `updateEventRegistration`。**対象外**: `paymentStatus` / Stripe ID（`payment-commands.ts` / `payment-queries.ts`）・`googleCalendarEventId` / `calendarSyncedAt`（`calendar-sync.ts`）・`notes` のみ（`updateReservationNotesCommand`）。SEQUENCE の意味は「カレンダー予定の内容が変わったか」
+- **新規外部 SaaS 統合時はプライバシーポリシーへの記載必須** — `terms-templates.ts` の `PRIVACY_POLICY_TEMPLATE` §7「利用する外部サービス」と env vars の整合性検証 grep: `grep "process.env\[" src/shared/lib/env/server.ts src/shared/lib/env/client.ts`。新規 OAuth プロバイダ・分析・決済・ストレージ等を追加した場合、サービス節 (`<h3>7.x ...</h3>`) と §8「個人データの越境移転」の事業者列挙を更新。記載漏れは個人情報保護法 21 条（利用目的明示義務）違反リスク。検出例: Supabase Storage が env にあるのに §7 不在だった事例（2026-04-21 修正）
+- **規約テンプレート HTML はプレースホルダー機構で Settings 連動** — `terms-templates.ts` の `【〜を入力してください】` 形式の `PLACEHOLDER` 文字列が `applyBusinessInfo()` で Settings 値に置換される。未設定フィールドはプレースホルダーがそのまま残り、管理画面で管理者への入力プロンプトとして機能する（intentional UX）。新規プレースホルダー追加は 4 箇所同時更新: ① `PLACEHOLDER` const + ② `applyBusinessInfo()` の `replacements` 配列 + ③ `BusinessInfo` interface + ④ `extractBusinessInfo()`（`terms/new/page.tsx`）+ seed `seedTerms()` の `businessInfo` 構築。同一プレースホルダーがテンプレート内に複数回出現するため `replaceAll` 必須（`replace` だと先頭のみ）
 
 ## ナビゲーション
 
