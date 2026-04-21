@@ -408,7 +408,7 @@ describe("deleteMediaCommand", () => {
 
     mockMediaFindUnique.mockResolvedValue(EXISTING_MEDIA_WITH_PATH);
     mockMediaUpdate.mockResolvedValue({ id: MEDIA_ID });
-    mockDeleteFile.mockResolvedValue(undefined);
+    mockDeleteFile.mockResolvedValue({ success: true });
   });
 
   describe("正常系", () => {
@@ -476,7 +476,7 @@ describe("bulkDeleteMediaCommand", () => {
       { id: "media-2", storagePath: "media/image2.jpg" },
     ]);
     mockMediaUpdateMany.mockResolvedValue({ count: 2 });
-    mockDeleteFiles.mockResolvedValue(undefined);
+    mockDeleteFiles.mockResolvedValue({ success: true });
   });
 
   describe("正常系", () => {
