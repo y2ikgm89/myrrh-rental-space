@@ -81,6 +81,7 @@ docs/api/
 .claude/agent-memory-local/
 .claude/agent-memory/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 tmpclaude-*-cwd
 nul
 
