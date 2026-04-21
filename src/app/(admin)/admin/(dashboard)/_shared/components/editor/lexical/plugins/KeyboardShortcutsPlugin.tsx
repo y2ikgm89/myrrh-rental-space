@@ -20,6 +20,11 @@ import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
 } from "@lexical/list";
+import {
+  OPEN_GROUP_DIALOG_COMMAND,
+  UNGROUP_GROUP_COMMAND,
+} from "./GroupPlugin";
+import { $getSelectionBlockNodes } from "../lib/selection-helpers";
 import { createPortal } from "react-dom";
 import { IconX, IconKeyboard } from "@tabler/icons-react";
 import { Button } from "@/admin/components/ui/button";
@@ -59,6 +64,8 @@ const SHORTCUT_LIST: ShortcutEntry[] = [
   { keys: "Ctrl+Shift+8", description: "箇条書き" },
   { keys: "Ctrl+Shift+K", description: "リンク挿入" },
   { keys: "Ctrl+Shift+M", description: "画像挿入" },
+  { keys: "Ctrl+Shift+G", description: "選択ブロックをグループ化" },
+  { keys: "Ctrl+Shift+Alt+G", description: "現在のグループを解除" },
   { keys: "Ctrl+F", description: "検索" },
   { keys: "Ctrl+H", description: "置換" },
   { keys: "Ctrl+Shift+/", description: "ショートカット一覧" },
@@ -201,6 +208,29 @@ export function KeyboardShortcutsPlugin({
             openDialog("image");
             return true;
           }
+        }
+
+        // Ctrl+Shift+Alt+G: 現在のグループを解除（Gutenberg の unwrap 相当）
+        if (event.altKey && (event.key === "g" || event.key === "G")) {
+          event.preventDefault();
+          editor.dispatchCommand(UNGROUP_GROUP_COMMAND, {});
+          return true;
+        }
+
+        // Ctrl+Shift+G: 選択ブロックをグループ化（ダイアログで装飾を選択）
+        if (event.key === "g" || event.key === "G") {
+          event.preventDefault();
+          // 選択中のブロックキーを先にスナップショット（dialog フォーカスで選択が失われる）
+          const keys: string[] = [];
+          editor.getEditorState().read(() => {
+            for (const node of $getSelectionBlockNodes()) {
+              keys.push(node.getKey());
+            }
+          });
+          editor.dispatchCommand(OPEN_GROUP_DIALOG_COMMAND, {
+            targetNodeKeys: keys,
+          });
+          return true;
         }
 
         // Ctrl+Shift+/: ショートカット一覧

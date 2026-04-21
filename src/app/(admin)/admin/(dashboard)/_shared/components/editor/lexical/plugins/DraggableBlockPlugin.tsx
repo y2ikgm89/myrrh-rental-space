@@ -26,6 +26,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/admin/components/ui/dropdown-menu";
+import {
+  OPEN_GROUP_DIALOG_COMMAND,
+  UNGROUP_GROUP_COMMAND,
+} from "./GroupPlugin";
+import { $isGroupNode } from "../nodes/GroupNode";
 
 // =============================================================================
 // Types
@@ -39,6 +44,7 @@ type MenuState = {
   x: number;
   y: number;
   nodeKey: string;
+  isGroup: boolean;
 };
 
 // =============================================================================
@@ -104,7 +110,12 @@ export function DraggableBlockPlugin({
     editor.getEditorState().read(() => {
       const node = $getNearestNodeFromDOMNode(blockElem);
       if (!node) return;
-      setMenu({ x: e.clientX, y: e.clientY, nodeKey: node.getKey() });
+      setMenu({
+        x: e.clientX,
+        y: e.clientY,
+        nodeKey: node.getKey(),
+        isGroup: $isGroupNode(node),
+      });
     });
   };
 
@@ -138,6 +149,22 @@ export function DraggableBlockPlugin({
       const serialized = node.exportJSON();
       const parsed = $parseSerializedNode(serialized);
       node.insertAfter(parsed);
+    });
+    setMenu(null);
+  };
+
+  const handleGroup = () => {
+    if (!menu) return;
+    editor.dispatchCommand(OPEN_GROUP_DIALOG_COMMAND, {
+      targetNodeKeys: [menu.nodeKey],
+    });
+    setMenu(null);
+  };
+
+  const handleUngroup = () => {
+    if (!menu) return;
+    editor.dispatchCommand(UNGROUP_GROUP_COMMAND, {
+      targetNodeKey: menu.nodeKey,
     });
     setMenu(null);
   };
@@ -204,6 +231,15 @@ export function DraggableBlockPlugin({
               下に移動
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {menu.isGroup ? (
+              <DropdownMenuItem onClick={handleUngroup}>
+                グループ解除
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleGroup}>
+                グループで囲む
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleDuplicate}>複製</DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

@@ -21,7 +21,8 @@ import {
 } from "@tabler/icons-react";
 import { INSERT_CAPTION_BOX_COMMAND } from "../../plugins/CaptionBoxPlugin";
 import { INSERT_COLLAPSIBLE_COMMAND } from "../../plugins/CollapsiblePlugin";
-import { INSERT_GROUP_COMMAND } from "../../plugins/GroupPlugin";
+import { OPEN_GROUP_DIALOG_COMMAND } from "../../plugins/GroupPlugin";
+import { $getSelectionBlockNodes } from "../../lib/selection-helpers";
 import type { InsertItem } from "./types";
 
 export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
@@ -55,10 +56,20 @@ export const LAYOUT_INSERT_ITEMS: readonly InsertItem[] = [
     category: "layout",
     showInToolbar: true,
     showInPicker: true,
-    dispatch: (editor) =>
-      editor.dispatchCommand(INSERT_GROUP_COMMAND, {
-        groupStyle: "solid-border",
-      }),
+    dispatch: (editor) => {
+      // ダイアログにフォーカスが移ると選択が失われるため、開く前に現在の
+      // ブロックキーをスナップショットする（他の経路 — FT / Keyboard — と同じ設計）
+      const keys: string[] = [];
+      editor.getEditorState().read(() => {
+        for (const node of $getSelectionBlockNodes()) {
+          keys.push(node.getKey());
+        }
+      });
+      editor.dispatchCommand(
+        OPEN_GROUP_DIALOG_COMMAND,
+        keys.length > 0 ? { targetNodeKeys: keys } : {},
+      );
+    },
   },
   {
     id: "callout",

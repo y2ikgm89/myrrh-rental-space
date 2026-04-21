@@ -37,9 +37,14 @@ export { ComponentPickerPlugin } from "./ComponentPickerPlugin";
 export { ToolbarPlugin } from "./ToolbarPlugin";
 export { DraggableBlockPlugin } from "./DraggableBlockPlugin";
 export {
-  FloatingToolbarPlugin,
+  FloatingTextFormatToolbarPlugin,
   LinkHoverPreviewPlugin,
-} from "./FloatingToolbarPlugin";
+  type FloatingTextFormatToolbarPluginProps,
+} from "./FloatingTextFormatToolbarPlugin";
+export {
+  FloatingBlockSelectionToolbarPlugin,
+  type FloatingBlockSelectionToolbarPluginProps,
+} from "./FloatingBlockSelectionToolbarPlugin";
 export { FontSizePlugin, useFontSize } from "./FontSizePlugin";
 export {
   CommentPlugin,
@@ -63,7 +68,15 @@ export {
 
 export { PageBreakPlugin, INSERT_PAGE_BREAK_COMMAND } from "./PageBreakPlugin";
 export { CalloutPlugin, INSERT_CALLOUT_COMMAND } from "./CalloutPlugin";
-export { GroupPlugin, INSERT_GROUP_COMMAND } from "./GroupPlugin";
+export {
+  GroupPlugin,
+  INSERT_GROUP_COMMAND,
+  OPEN_GROUP_DIALOG_COMMAND,
+  UNGROUP_GROUP_COMMAND,
+  type InsertGroupPayload,
+  type OpenGroupDialogPayload,
+  type UngroupGroupPayload,
+} from "./GroupPlugin";
 export {
   CollapsiblePlugin,
   INSERT_COLLAPSIBLE_COMMAND,

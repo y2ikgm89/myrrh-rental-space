@@ -21,8 +21,6 @@ import {
   $setState,
   createState,
   ElementNode,
-  $createParagraphNode,
-  $isElementNode,
 } from "lexical";
 import { createEnumGuard } from "../config/type-guards";
 import { type AccentColor, isAccentColor } from "../config/accent-colors";
@@ -216,21 +214,14 @@ export class GroupNode extends ElementNode {
     return false;
   }
 
+  /**
+   * Backspace at start → グループ解除（全子ノードを順序保持で親階層に展開）。
+   *
+   * 旧実装は「1 番目の子の children だけ新 paragraph に flatten」する lossy 挙動だった。
+   * 本実装は WordPress Gutenberg の unwrap 相当 — `$ungroupNode` に委譲する。
+   */
   override collapseAtStart(): boolean {
-    const children = this.getChildren();
-    const paragraph = $createParagraphNode();
-
-    if (children.length > 0) {
-      const firstChild = children[0];
-      if ($isElementNode(firstChild)) {
-        const firstChildChildren = firstChild.getChildren();
-        for (const child of firstChildChildren) {
-          paragraph.append(child);
-        }
-      }
-    }
-
-    this.replace(paragraph);
+    $ungroupNode(this);
     return true;
   }
 }
@@ -253,4 +244,38 @@ export function $isGroupNode(
   node: LexicalNode | null | undefined,
 ): node is GroupNode {
   return node instanceof GroupNode;
+}
+
+// =============================================================================
+// Unwrap helper
+// =============================================================================
+
+/**
+ * GroupNode を解除して子ノードをそのまま親階層に展開する（WordPress Gutenberg の
+ * unwrap 相当）。
+ *
+ * 挙動:
+ * - 子を 1 つずつ順に Group の直後に再挿入（順序保持）
+ * - Group ノード自体は remove
+ * - カーソルは旧 1 番目の子の先頭へ
+ *
+ * 呼び出し側は `editor.update()` コールバック内であること。
+ */
+export function $ungroupNode(group: GroupNode): void {
+  const children = group.getChildren();
+  const firstChild = children[0];
+
+  // 子がゼロ（通常起きないが NodeTransform で段落が埋められる前の瞬間）: 黙って消す
+  if (!firstChild) {
+    group.remove();
+    return;
+  }
+
+  let insertTarget: LexicalNode = group;
+  for (const child of children) {
+    insertTarget.insertAfter(child);
+    insertTarget = child;
+  }
+  group.remove();
+  firstChild.selectStart();
 }
