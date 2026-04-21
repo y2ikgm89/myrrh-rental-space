@@ -12,7 +12,7 @@ import {
 } from "@/admin/lib/calendar";
 import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
 import { loadAdminCalendarSearchParams } from "@/shared/lib/nuqs";
-import { CalendarViewWrapper } from "../_components/calendar";
+import { CalendarViewWrapper } from "../_components/calendar/CalendarViewWrapper";
 import { Button, Breadcrumb } from "@/admin/components/ui";
 import type { Metadata } from "next";
 

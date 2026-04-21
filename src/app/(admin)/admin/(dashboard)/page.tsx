@@ -16,11 +16,9 @@ import { DashboardChartSection } from "./_components/DashboardChartSection";
 import { DashboardTodaySection } from "./_components/DashboardTodaySection";
 import { DashboardRecentSection } from "./_components/DashboardRecentSection";
 import { AnalyticsCard } from "./_components/AnalyticsCard";
-import {
-  StatsCardsSkeleton,
-  TodayReservationsSkeleton,
-  RecentItemsSkeleton,
-} from "./_components/skeletons";
+import { StatsCardsSkeleton } from "./_components/skeletons/StatsCardsSkeleton";
+import { TodayReservationsSkeleton } from "./_components/skeletons/TodayReservationsSkeleton";
+import { RecentItemsSkeleton } from "./_components/skeletons/RecentItemsSkeleton";
 
 function ChartSkeleton() {
   return <div className="h-80 animate-pulse rounded-lg bg-muted" />;

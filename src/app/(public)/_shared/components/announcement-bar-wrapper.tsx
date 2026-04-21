@@ -1,4 +1,5 @@
-import { AnnouncementBar, type CarouselSettings } from "./announcement-bar";
+import { AnnouncementBar } from "./announcement-bar/announcement-bar";
+import type { CarouselSettings } from "./announcement-bar/types";
 import {
   getActiveAnnouncementBars,
   getAnnouncementBarCarouselSettings,

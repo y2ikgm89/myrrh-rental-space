@@ -15,7 +15,7 @@ import {
 } from "@/admin/components/ui";
 import { formatDateLabel } from "@/admin/lib/calendar";
 import { getReservationStatusFilterOrAll } from "@/shared/lib/validations/enums/helpers";
-import type { CalendarState } from "./hooks";
+import type { CalendarState } from "./hooks/use-calendar-state";
 
 interface CalendarToolbarProps {
   state: CalendarState;

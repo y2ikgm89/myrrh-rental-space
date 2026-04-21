@@ -1,8 +1,11 @@
 "use client";
 
-import { useCalendarState, useEventActions } from "./hooks";
+import { useCalendarState } from "./hooks/use-calendar-state";
+import { useEventActions } from "./hooks/use-event-actions";
 import { CalendarToolbar } from "./CalendarToolbar";
-import { MonthView, WeekView, DayView } from "./views";
+import { MonthView } from "./views/MonthView";
+import { WeekView } from "./views/WeekView";
+import { DayView } from "./views/DayView";
 import { EventDetailDialog } from "./EventDetailDialog";
 import type { CalendarEvent, SpaceOption } from "@/admin/lib/calendar";
 
