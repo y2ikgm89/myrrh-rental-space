@@ -59,6 +59,14 @@ describe("GET /api/calendar/event/[registrationId]", () => {
         }),
       ),
     }));
+    mock.module("@/shared/domain/settings/queries/organization", () => ({
+      getIcalOrganizer: mock(() =>
+        Promise.resolve({
+          name: "Myrrh Rental Space",
+          email: "noreply@example.com",
+        }),
+      ),
+    }));
     const { GET } =
       await import("@/app/api/calendar/event/[registrationId]/route");
     const res = await GET(

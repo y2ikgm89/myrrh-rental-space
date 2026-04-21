@@ -90,6 +90,14 @@ describe("GET /api/calendar/reservation/[id]", () => {
         }),
       ),
     }));
+    mock.module("@/shared/domain/settings/queries/organization", () => ({
+      getIcalOrganizer: mock(() =>
+        Promise.resolve({
+          name: "Myrrh Rental Space",
+          email: "noreply@example.com",
+        }),
+      ),
+    }));
     const { GET } = await import("@/app/api/calendar/reservation/[id]/route");
     const res = await GET(
       new Request(
@@ -134,6 +142,14 @@ describe("GET /api/calendar/reservation/[id]", () => {
           notes: null,
           icsSequence: 1,
           status: "CANCELLED",
+        }),
+      ),
+    }));
+    mock.module("@/shared/domain/settings/queries/organization", () => ({
+      getIcalOrganizer: mock(() =>
+        Promise.resolve({
+          name: "Myrrh Rental Space",
+          email: "noreply@example.com",
         }),
       ),
     }));
