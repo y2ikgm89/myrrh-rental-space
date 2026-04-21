@@ -98,7 +98,7 @@ export async function createEvent(
     afterSuccess: (data) => {
       invalidateEventCaches(data.id, data.slug);
       fireAndForget(syncEventOutbound(data.id), {
-        operation: "syncEventToCalendar",
+        operation: "syncEventOutbound.create",
         category: ErrorCategory.EXTERNAL_API,
       });
     },
@@ -130,7 +130,7 @@ export async function updateEvent(
         registrations: true,
       });
       fireAndForget(syncEventOutbound(idParsed.data), {
-        operation: "syncEventToCalendar",
+        operation: "syncEventOutbound.update",
         category: ErrorCategory.EXTERNAL_API,
       });
     },
@@ -162,7 +162,7 @@ export async function deleteEvent(
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
-          operation: "deleteEventCalendarSync",
+          operation: "deleteEventOutbound.delete",
           category: ErrorCategory.EXTERNAL_API,
         },
       );
@@ -188,7 +188,7 @@ export async function publishEvent(
     afterSuccess: (slug) => {
       invalidateEventCaches(validated.data, slug, { registrations: true });
       fireAndForget(syncEventOutbound(validated.data), {
-        operation: "syncEventToCalendar",
+        operation: "syncEventOutbound.publish",
         category: ErrorCategory.EXTERNAL_API,
       });
     },
@@ -208,7 +208,7 @@ export async function duplicateEvent(
     afterSuccess: (data) => {
       invalidateEventCaches(data.id, data.slug);
       fireAndForget(syncEventOutbound(data.id), {
-        operation: "syncEventToCalendar",
+        operation: "syncEventOutbound.duplicate",
         category: ErrorCategory.EXTERNAL_API,
       });
     },
@@ -241,7 +241,7 @@ export async function cancelEvent(
       fireAndForget(
         deleteEventOutbound(validated.data, data.googleCalendarEventId),
         {
-          operation: "deleteEventCalendarSync",
+          operation: "deleteEventOutbound.cancel",
           category: ErrorCategory.EXTERNAL_API,
         },
       );
