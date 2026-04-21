@@ -19,10 +19,16 @@ export interface ReservationSyncData {
 export interface EventSyncData {
   eventId: string;
   title: string;
-  descriptionPlainText: string; // Lexical plainText 派生
+  /** Lexical plainText 派生（descriptionPlainText カラムから取得） */
+  descriptionPlainText: string;
   startTime: Date;
   endTime: Date;
-  /** 合成済み会場文字列（formatEventVenue の結果）*/
+  /**
+   * 合成済み会場文字列（formatEventVenue の結果）。
+   * 会場未設定のイベント（location/space/addressDetail 全て空）では null。
+   * ReservationSyncData.location（optional）と異なり、Event は呼び出し側で
+   * 必ず明示的に解決してから渡す契約。
+   */
   location: string | null;
   /** 公開ページ URL（管理者が GCal から公開ページに飛べるようにする） */
   publicUrl: string;
