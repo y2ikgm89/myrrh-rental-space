@@ -25,8 +25,14 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.supabase.co",
-        pathname: "/storage/v1/object/public/**",
+        // R2 カスタムドメイン（R2_PUBLIC_URL のホスト名と一致させること）
+        // env 値をここで参照しない（next.config.ts はビルド時評価）
+        hostname: "media.example.com",
+      },
+      {
+        protocol: "https",
+        // R2 dev 用サブドメイン（カスタムドメイン未設定時）
+        hostname: "*.r2.dev",
       },
       {
         protocol: "https",
