@@ -42,7 +42,8 @@ import {
   ToolbarPlugin,
   ComponentPickerPlugin,
   DraggableBlockPlugin,
-  FloatingToolbarPlugin,
+  FloatingTextFormatToolbarPlugin,
+  FloatingBlockSelectionToolbarPlugin,
   LinkHoverPreviewPlugin,
   CommentPlugin,
   PageBreakPlugin,
@@ -144,10 +145,9 @@ function EditorInner({
       <div
         className={cn(
           "flex flex-col w-full flex-1 min-w-0 min-h-0 bg-card border border-border rounded-lg overflow-hidden",
-          isFullscreen &&
-            `fixed inset-0 z-[${Z_INDEX.editorFullscreen}] rounded-none border-0`,
+          isFullscreen && "fixed inset-0 rounded-none border-0",
         )}
-        style={isFullscreen ? undefined : { height }}
+        style={isFullscreen ? { zIndex: Z_INDEX.editorFullscreen } : { height }}
       >
         {/* ツールバー（全幅: エディタ + インスペクターにまたがる） */}
         {showToolbar && (
@@ -167,10 +167,13 @@ function EditorInner({
             aria-label="本文エディタ"
             className="flex flex-col flex-1 min-w-0 min-h-0"
           >
-            {/* コンテンツラッパー */}
+            {/* コンテンツラッパー（= 公式 Playground の .editor-scroller 相当）
+                公式 CSS に合わせ scroller / anchor 両方に position:relative を付与する。
+                scroller 側は FindReplacePlugin などの absolute 子要素の
+                positioning ancestor。anchor 側は下の contentWidthRef が担う */}
             <div
               ref={setContentWrapperRef}
-              className="flex-1 min-h-0 overflow-y-auto"
+              className="relative flex-1 min-h-0 overflow-y-auto"
             >
               <div
                 ref={setContentWidthRef}
@@ -229,15 +232,23 @@ function EditorInner({
             <DisablePlugin disabled={disabled} />
             <DraggableBlockPlugin anchorElem={contentWidthRef} />
             <TableActionMenuPlugin anchorElem={contentWidthRef} />
-            {contentWrapperRef && (
-              <FloatingToolbarPlugin
-                anchorElem={contentWrapperRef}
+            {contentWidthRef && (
+              <FloatingTextFormatToolbarPlugin
+                /* anchor = 公式 Playground の .editor 相当（position:relative）。
+                   scrollerElem は anchor.parentElement（= contentWrapperRef）
+                   として解決され、scroll listener とサイズ計算が正しく動作する。 */
+                anchorElem={contentWidthRef}
                 setIsLinkEditMode={(isEditMode) => {
                   if (isEditMode) dialogManager.openDialog("link");
                 }}
                 {...(onAddComment && { onAddComment: handleAddComment })}
                 onOpenRuby={() => dialogManager.openDialog("ruby")}
                 onOpenTooltip={() => dialogManager.openDialog("tooltip")}
+              />
+            )}
+            {contentWidthRef && (
+              <FloatingBlockSelectionToolbarPlugin
+                anchorElem={contentWidthRef}
               />
             )}
             <LinkHoverPreviewPlugin />

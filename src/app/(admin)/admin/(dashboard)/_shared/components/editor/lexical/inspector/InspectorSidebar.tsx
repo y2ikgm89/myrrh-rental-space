@@ -238,7 +238,10 @@ export function InspectorSidebar() {
             </Button>
           </div>
           {selectedNode ? (
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div
+              key={selectedNode.nodeKey}
+              className="flex-1 overflow-y-auto min-h-0"
+            >
               {renderPanel(selectedNode)}
             </div>
           ) : (

@@ -809,7 +809,46 @@ editor.update(() => {
 
 **挿入実行**: ツールバーは `executeInsertItem`（`dialog` は同期 `openDialog`、それ以外は 1 回の `editor.update`）。スラッシュメニューはトリガー削除と同一 `update` 内で `applyInsertItemInUpdate`（`dialog` は `queueMicrotask` で `openDialog`）。`type: "transform"` は `applyInUpdate` で $ API のみとし、ネストした `editor.update` を禁止。
 
-**ポイント**: FloatingToolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
+**ポイント**: Floating Text Format Toolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
+
+## Floating Toolbar 責務分離（Text FT / Block FT）
+
+公開 API は**2 種類のフローティングツールバーに責務分離**する（WordPress Gutenberg 流の UX と Lexical 公式 `FloatingTextFormatToolbarPlugin` パターンを両立させるための設計）。
+
+| プラグイン                            | 表示条件                               | 責務                                                                  |
+| ------------------------------------- | -------------------------------------- | --------------------------------------------------------------------- |
+| `FloatingTextFormatToolbarPlugin`     | 単一 top-level ブロック内の range 選択 | インラインフォーマット（bold / italic / link / color / font-size 等） |
+| `FloatingBlockSelectionToolbarPlugin` | 複数 top-level ブロックを跨ぐ範囲選択  | ブロックレベル操作（グループ化 / 将来: Callout / Collapsible 変換）   |
+
+**排他制御の SSoT**: `lexical/lib/selection-helpers.ts` の **`$isMultiBlockSelection()`**。両 FT の `updatePopup` で判定し、
+
+- Text FT: `$isMultiBlockSelection()` が `true` のとき `setIsText(false)` で非表示
+- Block FT: `$isMultiBlockSelection()` が `true` のときのみ `setIsMultiBlock(true)` で表示
+
+**`$getSelectionBlockNodes()` も同ファイルの正本**。`GroupPlugin` など、選択の「ブロック粒度」を取得が必要なプラグインは **必ずこのヘルパー経由**（ローカル再実装禁止）。アルゴリズムは WordPress Gutenberg の `getCommonRootClientID` 相当で、**deepest common ancestor の直接 block-level 子**を返す。Group ネストに自動対応する（Root 直下選択 → Root 子、Group 内選択 → Group 子）。
+
+### グループ化操作のエントリポイント（WordPress Gutenberg reference 準拠）
+
+すべて **`OPEN_GROUP_DIALOG_COMMAND` 経由**で装飾バリアント選択ダイアログを開く（作成時スタイル固定の silent default 禁止）:
+
+1. **Insert メニュー / スラッシュコマンド** — `INSERT_ITEMS` の `group` エントリがダイアログを起動
+2. **`FloatingBlockSelectionToolbarPlugin`** — 複数ブロック選択時にツールバーで「グループ化」ボタン → ダイアログ起動
+3. **`DraggableBlockPlugin` の ⋮⋮ メニュー** — 単一ブロックを「グループで囲む」→ ダイアログ起動（`targetNodeKeys: [nodeKey]`）
+4. **キーボードショートカット** — `Ctrl+Shift+G` でダイアログ起動、`Ctrl+Shift+Alt+G` で現在のグループを解除
+
+**コマンド 3 種**:
+
+| コマンド                    | payload                                   | 役割                                                                                                                                                                               |
+| --------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPEN_GROUP_DIALOG_COMMAND` | `{ targetNodeKeys? }`                     | 全 UI 経路の共通入口。ダイアログを開く前に呼び出し側で `$getSelectionBlockNodes()` のキーをスナップショット（ダイアログフォーカスで editor の選択が失われるため必須）              |
+| `INSERT_GROUP_COMMAND`      | `{ groupStyle, color?, targetNodeKeys? }` | ダイアログ確定時 or code path から直接ラップ。`targetNodeKeys` 指定時は選択無視、未指定かつ選択ブロックがあればそれをラップ、選択なしなら空 Group を最近接ルートに挿入             |
+| `UNGROUP_GROUP_COMMAND`     | `{ targetNodeKey? }`                      | `targetNodeKey` 指定時はそれを解除、未指定時は `$findMatchingParent($isGroupNode)` で選択中の最も近い Group を解除。全子ノードを順序保持で親階層に展開（Gutenberg の unwrap 相当） |
+
+**選択スナップショット必須パターン**: Insert / FT / Keyboard いずれも `editor.dispatchCommand(OPEN_GROUP_DIALOG_COMMAND, ...)` を呼ぶ前に `editor.getEditorState().read(() => $getSelectionBlockNodes())` で現在の block node キーを取得し、`targetNodeKeys` に積むこと。ダイアログが開いた後は focus が editor から離れるため `$getSelection()` 由来の情報は失われる。
+
+**Unwrap SSoT**: `$ungroupNode(group)`（`nodes/GroupNode.tsx` で export）。`UNGROUP_GROUP_COMMAND` ハンドラと `GroupNode.collapseAtStart()`（Backspace at start）の両方から呼ばれる単一実装。旧 `collapseAtStart` の「1 番目の子だけ paragraph に flatten」する lossy 実装は廃止。
+
+**ネスト許可**（WordPress Gutenberg 互換）: Group 内での更に内側 Group 作成、複数 Group の outer Group ラップ、いずれも可能。二重ネスト防止チェックは設けない（Gutenberg と同じく運用者が構造を制御する設計）。
 
 ## ファイル命名規則
 
@@ -879,6 +918,7 @@ return { node, after: () => [] };
 
 ## Gotchas（gotchas.md より移動）
 
+- **Lexical フルスクリーンには 2 種の実装** — ① `InlineEditorShell` (Posts/News/Terms): `useFullscreenMode()` で admin-layout-context の `enterFullscreen`/`exitFullscreen` を呼びサイドバー/ヘッダーを非表示にする（local overlay 不要） ② `LexicalEditor` 内部 `isFullscreen` state (Events/Spaces/Pages 等の tab/dialog 内): `fixed inset-0` + inline `style={{ zIndex: Z_INDEX.editorFullscreen }}` overlay。どちらも z-index は **inline style 必須** — ``className={`z-[${VAR}]`}`` は Tailwind JIT が scan しないため CSS 未生成の silent bug（→ `tailwind-patterns.md` §禁止事項 3.0.5）。InlineEditorShell なしで editor を使う tab/dialog では後者のみ動作するため、新規 editor 配置時は fullscreen が overlay z-index に依存することを意識する
 - **Lexical は既に dynamic import 済み** — `LazyLexicalEditor.tsx` が `next/dynamic` + `ssr: false` でコード分割。管理 layout には Lexical の直接 import なし。パフォーマンスレビューで「Lexical がバンドル肥大化」と指摘された場合は `LazyLexicalEditor` の存在を確認してから対応判断
 - **admin.css の `--font-serif` は Lexical WYSIWYG 用** — エディタ内の h1/h2 を公開ページと同じ Cormorant Garamond で表示するため。admin layout.tsx で Cormorant Garamond をロード、`theme.ts` の h1/h2 に `font-heading` 適用。管理 UI（サイドバー、フォーム等）は `--font-sans` のまま
 - **Lexical エディタのコンテンツ領域は `bg-card`（白）** — `bg-background`（`oklch(0.98 ...)` 微グレー）ではなく `bg-card`（`oklch(1 0 0)` 白）を使用。文書編集エリアは紙のメタファーで白背景が適切。`LexicalEditor.tsx` の外枠 div で設定
@@ -886,3 +926,5 @@ return { node, after: () => [] };
 - **`tryConvertHtmlStringToLexicalJsonString` は SSR で使用不可** — `DOMParser` が Node.js に存在しない。Server Component / Server Action から呼ぶと `Attempted to call client function from the server` エラー。`useState` 遅延初期化で呼ぶ場合も `typeof window === "undefined"` ガードが必須（SSR でも実行されるため）
 - **複合ノードの `isShadowRoot()` は全子ノードに必須** — Container だけでなく Item / Title / Content / Panel / Citation 等の全中間・子 ElementNode にも `isShadowRoot(): boolean { return true }` を実装する。欠落するとキャレットがノード境界を越えて漏れる。`updateDOM` の `prevNode` は具象クラス名ではなく `this` 型を使用
 - **Lexical アップグレード時はバージョン参照を全文 grep** — `0.XX` で `.claude/agents/`, `.claude/skills/`, `docs/`, `__tests__/`, ソースコメントを検索。CLAUDE.md・lexical-patterns.md（.claude/rules + docs/reference 両方）・TECH_STACK.md・project-reviewer.md・lexical-reviewer.md・scaffold ファイル・DraggableBlockPlugin フォークコメントが対象。plans/ の完了済みファイルは変更不要
+- **Floating toolbar は `.editor-scroller` / `.editor` 二層構造 + 両方に `position:relative` が必須** — 公式 Playground (`src/index.css` L79-97 / `src/Editor.tsx`) は scroller（`overflow` + relative）と anchor（relative）を分離し、`anchorElem = .editor` を各 floating plugin に渡す。`createPortal` の挿入先 `anchorElem` に relative が欠けると `position:absolute` がビューポート基準化し上部ツールバーに重なる silent bug。`setFloatingElemPosition` の top 境界判定は **`editorScrollerRect.top`**（= `anchorElem.parentElement`）を使う必要あり — `anchorElementRect.top` はスクロール時に負値化して判定不能。text-align: right/end のときは `targetRect.right - toolbarWidth + offset` で right-edge 基準 left 配置。参照実装: `LexicalEditor.tsx` の `contentWrapperRef`（scroller）+ `contentWidthRef`（anchor）、`floating-toolbar/positioning.ts` が公式 `setFloatingElemPosition` と完全一致
+- **Lexical 公式 API に Group / Container の native 概念なし** — `@lexical/react` / `lexical-playground` にラッパー型ノード（複数の block を囲む汎用コンテナ）の reference 実装は存在しない。Group / Callout / Collapsible / PullQuote 等の「ブロック群を囲む」UX は **WordPress Gutenberg reference implementation 準拠** が一択。主張粒度は「Lexical 公式 API 準拠」ではなく **「Gutenberg reference implementation 準拠」** と明記（overstate 回避）。context7 の `/facebook/lexical` を延々と探さず、`gh api repos/WordPress/gutenberg/contents/packages/block-library/src/group/` を直接参照する

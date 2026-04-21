@@ -101,7 +101,7 @@ export function getHighlightColorFromStyle(bgColor: string): HighlightColor {
 
 /**
  * ハイライト色を適用するユーティリティ関数
- * FloatingToolbarPluginなど外部からも使用可能
+ * FloatingTextFormatToolbarPlugin など外部からも使用可能
  */
 export function applyHighlightToSelection(
   editor: import("lexical").LexicalEditor,

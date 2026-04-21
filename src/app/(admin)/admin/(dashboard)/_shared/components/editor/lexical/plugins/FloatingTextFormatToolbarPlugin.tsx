@@ -1,7 +1,11 @@
 /**
- * Floating Toolbar Plugin
+ * Floating Text Format Toolbar Plugin
  *
- * テキスト選択時にフローティングツールバーを表示
+ * テキスト選択時（= 単一ブロック粒度の range 選択）にフローティングツールバーを
+ * 表示する。bold / italic / link / font-size / color 等のインラインフォーマット
+ * 専用。複数ブロック粒度を跨ぐ選択では責務分離のため
+ * `FloatingBlockSelectionToolbarPlugin` に表示を委ねる（`$isMultiBlockSelection`
+ * が true のときは isText=false にして非表示）。
  *
  * @see https://github.com/facebook/lexical/blob/main/packages/lexical-playground/src/plugins/FloatingTextFormatToolbarPlugin/index.tsx
  */
@@ -45,6 +49,7 @@ import {
   applyTextColorToSelection,
   type TextColor,
 } from "./TextColorPlugin";
+import { $isMultiBlockSelection } from "../lib/selection-helpers";
 import {
   AlignmentControl,
   DEFAULT_FONT_SIZE,
@@ -373,6 +378,14 @@ function useFloatingToolbar(
         return;
       }
 
+      // 複数ブロック粒度を跨ぐ選択は Block FT に委ねる（責務分離）。
+      // WordPress Gutenberg と同じく、複数ブロック選択時はブロックレベル操作
+      // （グループ化 / Callout化 等）の UI を優先する。
+      if ($isMultiBlockSelection()) {
+        setIsText(false);
+        return;
+      }
+
       setIsText(true);
 
       setIsBold(selection.hasFormat("bold"));
@@ -473,36 +486,12 @@ function useFloatingToolbar(
 }
 
 // =============================================================================
-// Plugin Component (公式エクスポートパターン)
+// Plugin Component (public export)
 // =============================================================================
 
-function FloatingToolbarInner({
-  anchorElem,
-  setIsLinkEditMode,
-  onAddComment,
-  onOpenRuby,
-  onOpenTooltip,
-}: {
+export type FloatingTextFormatToolbarPluginProps = {
   anchorElem: HTMLElement;
   setIsLinkEditMode: (isLinkEditMode: boolean) => void;
-  onAddComment?: () => void;
-  onOpenRuby?: () => void;
-  onOpenTooltip?: () => void;
-}) {
-  const [editor] = useLexicalComposerContext();
-  return useFloatingToolbar(
-    editor,
-    anchorElem,
-    setIsLinkEditMode,
-    onAddComment,
-    onOpenRuby,
-    onOpenTooltip,
-  );
-}
-
-export type FloatingToolbarPluginProps = {
-  anchorElem: HTMLElement;
-  setIsLinkEditMode?: (isLinkEditMode: boolean) => void;
   /** コメント追加時のコールバック */
   onAddComment?: () => void;
   /** ルビ挿入ダイアログを開くコールバック */
@@ -511,24 +500,20 @@ export type FloatingToolbarPluginProps = {
   onOpenTooltip?: () => void;
 };
 
-export function FloatingToolbarPlugin({
+export function FloatingTextFormatToolbarPlugin({
   anchorElem,
   setIsLinkEditMode,
   onAddComment,
   onOpenRuby,
   onOpenTooltip,
-}: FloatingToolbarPluginProps) {
-  const handleSetIsLinkEditMode = (isLinkEditMode: boolean) => {
-    setIsLinkEditMode?.(isLinkEditMode);
-  };
-
-  return (
-    <FloatingToolbarInner
-      anchorElem={anchorElem}
-      setIsLinkEditMode={handleSetIsLinkEditMode}
-      {...(onAddComment && { onAddComment })}
-      {...(onOpenRuby && { onOpenRuby })}
-      {...(onOpenTooltip && { onOpenTooltip })}
-    />
+}: FloatingTextFormatToolbarPluginProps) {
+  const [editor] = useLexicalComposerContext();
+  return useFloatingToolbar(
+    editor,
+    anchorElem,
+    setIsLinkEditMode,
+    onAddComment,
+    onOpenRuby,
+    onOpenTooltip,
   );
 }

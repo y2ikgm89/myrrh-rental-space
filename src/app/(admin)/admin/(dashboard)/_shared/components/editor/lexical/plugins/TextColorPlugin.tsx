@@ -135,7 +135,7 @@ function getPreviewColor(
 
 /**
  * 文字色を適用するユーティリティ関数
- * FloatingToolbarPluginなど外部からも使用可能
+ * FloatingTextFormatToolbarPlugin など外部からも使用可能
  */
 export function applyTextColorToSelection(
   editor: import("lexical").LexicalEditor,

@@ -24,7 +24,9 @@ import type { EditorHeaderProps } from "./types";
 
 const styles = tv({
   slots: {
-    header: `fixed top-0 left-0 right-0 z-[${Z_INDEX.editorToolbar}] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`,
+    // z-index は inline style で適用（Tailwind JIT は `z-[${VAR}]` を scan しないため CSS 未生成）
+    header:
+      "fixed top-0 left-0 right-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
     container: "flex h-14 items-center justify-between px-4",
     left: "flex items-center gap-3",
     center: "flex-1 flex items-center justify-center",
@@ -67,7 +69,10 @@ export function EditorHeader({
   const isPublished = checkIsPublished(publishActions);
 
   return (
-    <header className={styles.header()}>
+    <header
+      className={styles.header()}
+      style={{ zIndex: Z_INDEX.editorToolbar }}
+    >
       <div className={styles.container()}>
         {/* 左側: 戻るボタン + タイトル */}
         <div className={styles.left()}>

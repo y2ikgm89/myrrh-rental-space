@@ -267,6 +267,26 @@ override updateDOM(): false {
 
 **検出方法**: `override updateDOM(): boolean` を grep し、中身が `return false` のみのものを報告。
 
+### 16. Floating Toolbar 命名と selection-helpers SSoT
+
+Floating toolbar の追加・変更、または選択ベースのブロック操作プラグインを追加した場合:
+
+| チェック                                 | 内容                                                                                                                                                                                                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 命名（公式 Playground 準拠）             | 公開 export 名は `FloatingXxxToolbarPlugin` 形式で**責務を名前で明示**（例: `FloatingTextFormatToolbarPlugin` / `FloatingBlockSelectionToolbarPlugin` / `FloatingLinkEditorPlugin`）。`FloatingToolbarPlugin`（責務不明）は禁止                                                  |
+| selection-helpers SSoT                   | `lib/selection-helpers.ts` の **`$getSelectionBlockNodes`** / **`$isMultiBlockSelection`** を import して使う。ローカルに common-ancestor walk / ancestor chain 構築を直書きして選択ブロック列挙ロジックを再実装していないか                                                     |
+| 排他制御                                 | Text FT と Block FT が同時表示されないよう、両方が `$isMultiBlockSelection()` で分岐しているか（Text FT は `true` のとき非表示、Block FT は `true` のとき表示）                                                                                                                  |
+| **冗長 wrapper 禁止**                    | 公式 Playground パターン: **public component が直接 hook を呼ぶ**（`FloatingXxxToolbarPlugin` 自身が `useLexicalComposerContext()` + `useFloatingXxxToolbar()` を呼ぶ）。`*Inner` 中間コンポーネントで hook をラップするだけ、かつ public から 1 回しか呼ばれない wrapper は冗長 |
+| **optional Props の no-op wrapper 禁止** | 内部 hook で required な callback を Props で `optional` にして `handler?.()` で silent-swallow するパターンは anti-pattern。Props も required にして呼び出し側で明示的に no-op を渡す                                                                                           |
+
+**検出方法**:
+
+1. `plugins/Floating*ToolbarPlugin.tsx` の `export function` 名を grep し、`Text` / `Block` / `Link` 等の責務接頭辞なしを報告
+2. `$findMatchingParent.*\$isRootOrShadowRoot` を `lib/selection-helpers.ts` 以外で grep し、SSoT 再実装を報告
+3. `updatePopup` / `updateFloatingToolbar` 内で `$isMultiBlockSelection()` 呼び出しがない floating toolbar を報告
+4. `plugins/Floating*` 内で `function [A-Z][a-zA-Z]*Inner\(` を grep し、定義直後に `export function [A-Z][a-zA-Z]*Plugin` が呼ぶだけの wrapper なら冗長と報告
+5. `(?:const\|let) handle[A-Z][a-zA-Z]* = \(.*\) => \{\s*[a-zA-Z]+\?\.\(` を grep し、optional-call の silent-swallow wrapper を報告
+
 ## 報告形式
 
 問題が見つかった場合:

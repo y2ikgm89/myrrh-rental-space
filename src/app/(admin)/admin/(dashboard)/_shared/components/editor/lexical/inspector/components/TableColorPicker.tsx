@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button, Input, Label } from "@/admin/components/ui";
 import { cn } from "@/shared/lib/cn";
 
@@ -54,12 +54,14 @@ export function TableColorPicker({
 }: TableColorPickerProps) {
   // HEX 入力の一時値（確定前のバッファ）
   const [hexInput, setHexInput] = useState(value);
-
-  // value が外部から変更された時に同期
-  useEffect(() => {
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
+  // 公式「Adjusting State Directly During Render」パターン:
+  // prop の変化を render 中に検知して state を同期する（useEffect 経由の二重レンダー回避）
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [previousValue, setPreviousValue] = useState(value);
+  if (value !== previousValue) {
+    setPreviousValue(value);
     setHexInput(value);
-  }, [value]);
+  }
 
   const handleHexBlur = () => {
     if (hexInput === "") {
