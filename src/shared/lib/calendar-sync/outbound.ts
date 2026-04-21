@@ -35,6 +35,7 @@ import {
 import { omitUndefined } from "@/shared/lib/serialize";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { OUTBOUND_RESERVATION_MARKER } from "./loop-prevention";
 import type { ReservationSyncData, SyncResult } from "./types";
 
 // =============================================================================
@@ -52,7 +53,8 @@ function formatCalendarEvent(data: ReservationSyncData): CalendarEventParams {
   const formattedEnd = format(data.endTime, "HH:mm");
 
   const descriptionLines = [
-    `予約ID: ${data.reservationId.slice(0, 8).toUpperCase()}`,
+    // inbound ループ防止マーカー（loop-prevention.ts の SSoT を使用）
+    `${OUTBOUND_RESERVATION_MARKER} ${data.reservationId.slice(0, 8).toUpperCase()}`,
     `お客様: ${data.customerName}`,
     `メール: ${data.customerEmail}`,
     `日時: ${formattedDate} ${formattedStart} - ${formattedEnd}`,

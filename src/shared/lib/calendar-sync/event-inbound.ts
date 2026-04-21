@@ -23,6 +23,7 @@ import { getServiceAccountClient } from "@/shared/lib/google-calendar/service-ac
 import { formatGoogleApiError } from "@/shared/lib/google-calendar/helpers";
 import { withGoogleApiRetry } from "@/shared/lib/google-calendar/retry";
 import { upsertEventFromCalendar } from "@/shared/domain/events/commands";
+import { isAppGeneratedCalendarEvent } from "./loop-prevention";
 
 export interface EventImportResult {
   success: boolean;
@@ -204,11 +205,8 @@ async function fetchEventChanges(
     for (const event of response.data.items ?? []) {
       if (!event.id) continue;
 
-      // 予約イベントはスキップ（予約同期 outbound.ts の管轄）
-      if (event.description?.includes("予約ID:")) continue;
-
-      // 本アプリが書き込んだイベントはスキップ（event-outbound.ts のループ防止）
-      if (event.description?.includes("イベントID:")) continue;
+      // アプリ側 outbound 由来のイベントはスキップ（ループ防止 SSoT: loop-prevention.ts）
+      if (isAppGeneratedCalendarEvent(event.description)) continue;
 
       // キャンセルされたイベントはスキップ
       if (event.status === "cancelled") continue;

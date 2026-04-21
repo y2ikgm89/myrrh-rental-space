@@ -28,6 +28,7 @@ import {
   saveEventGoogleCalendarEventId,
 } from "@/shared/domain/events/calendar-sync";
 import { omitUndefined } from "@/shared/lib/serialize";
+import { OUTBOUND_EVENT_MARKER } from "./loop-prevention";
 import type { EventSyncData, SyncResult } from "./types";
 
 // =============================================================================
@@ -42,7 +43,8 @@ import type { EventSyncData, SyncResult } from "./types";
  */
 function formatEventCalendarEvent(data: EventSyncData): CalendarEventParams {
   const descriptionLines = [
-    `イベントID: ${data.eventId}`, // inbound ループ防止キー（必須第1行）
+    // inbound ループ防止マーカー（loop-prevention.ts の SSoT を使用）
+    `${OUTBOUND_EVENT_MARKER} ${data.eventId}`,
     `公開ページ: ${data.publicUrl}`,
     "",
     data.descriptionPlainText,
