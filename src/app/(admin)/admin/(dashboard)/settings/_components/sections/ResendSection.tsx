@@ -35,7 +35,7 @@ import {
 } from "@/admin/actions/api-keys";
 import type { ResendConfig } from "@/admin/types/api-keys";
 import { resendFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
-import { StatusBanner } from "../shared";
+import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

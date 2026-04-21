@@ -29,7 +29,7 @@ import { CharacterLimitPlugin } from "@lexical/react/LexicalCharacterLimitPlugin
 import type { EditorState, LexicalEditor as LexicalEditorType } from "lexical";
 import { IconAlertCircle } from "@tabler/icons-react";
 
-import { useMediaQuery } from "@/shared/hooks";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { isLexicalComposerReadyEditorStateJson } from "@/shared/lib/validations/lexical";
 import { cn } from "@/shared/lib/cn";
 import { EDITOR_TRANSFORMERS } from "./MarkdownTransformers";

@@ -34,7 +34,7 @@ import {
 } from "@/admin/actions/api-keys";
 import { turnstileFormSchema } from "@/admin/actions/settings/schemas/form-schemas-security-integrations";
 import type { TurnstileConfig } from "@/admin/types/api-keys";
-import { StatusBanner } from "../shared";
+import { StatusBanner } from "../shared/StatusBanner";
 import { formatDateTimeShort } from "@/shared/lib/date-format";
 import { isMutationError } from "@/shared/lib/mutation-result";
 

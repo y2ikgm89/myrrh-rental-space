@@ -13,7 +13,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { getNavigationItems, getSocialLinks } from "@/admin/queries/navigation";
 import { SettingsLayout } from "../_components/SettingsLayout";
-import { NavigationManager } from "../site/_components/navigation";
+import { NavigationManager } from "../site/_components/navigation/NavigationManager";
 import type { ReactElement } from "react";
 
 /**
