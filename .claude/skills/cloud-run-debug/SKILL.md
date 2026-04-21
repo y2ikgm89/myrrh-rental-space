@@ -29,8 +29,8 @@ Secret Manager:
 Runtime env (非 secret):
   NODE_ENV=production / NEXT_TELEMETRY_DISABLED=1
   NEXT_PUBLIC_BASE_URL / NEXT_PUBLIC_APP_URL / BETTER_AUTH_URL
-  NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY
   NEXT_PUBLIC_TURNSTILE_SITE_KEY / NEXT_PUBLIC_GA_MEASUREMENT_ID
+  R2_PUBLIC_URL（任意、R2 カスタムドメイン URL）
 
 Cloud Run 設定:
   region=asia-northeast1 / port=8080 / memory=1Gi / cpu=1
@@ -113,7 +113,7 @@ gcloud run services logs read myrrh-rental-space --region=asia-northeast1 --limi
 | ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `container failed to start and listen on port 8080`     | Next.js が 8080 で待たない（デフォルト 3000）   | Dockerfile の `ENV PORT=8080` 確認、`next start -p $PORT`                                        |
 | `DATABASE_URL is not defined` (起動ログ)                | Secret Manager バインド失敗                     | `gcloud run services describe ... --format="value(spec.template.spec.containers[0].env)"` で確認 |
-| `PrismaClientInitializationError: Can't reach database` | Supabase pooler URL 不正 / IP allow list 未設定 | `DATABASE_URL` が pooler 経由か確認                                                              |
+| `PrismaClientInitializationError: Can't reach database` | DATABASE_URL 不正 / ネットワーク設定未設定      | `DATABASE_URL` フォーマット確認、接続先ホスト・ポートの疎通確認                                  |
 | `Error: ENCRYPTION_KEY must be 32 bytes`                | Secret の値が壊れている                         | `gcloud secrets versions access latest --secret=ENCRYPTION_KEY` で長さ確認                       |
 | 起動は成功するが 500                                    | `BETTER_AUTH_URL` の不一致 / Zod env 検証エラー | `logError` 出力をログから探す                                                                    |
 
@@ -207,8 +207,6 @@ gcloud artifacts docker images delete \
 docker build \
   --build-arg NEXT_PUBLIC_BASE_URL=http://localhost:8080 \
   --build-arg NEXT_PUBLIC_APP_URL=http://localhost:8080 \
-  --build-arg NEXT_PUBLIC_SUPABASE_URL=... \
-  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=... \
   --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=... \
   -t myrrh-rental-space:local .
 

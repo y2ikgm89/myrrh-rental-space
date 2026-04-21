@@ -59,7 +59,7 @@ Turnstile の siteverify は **token 1 回限り消費** のため通常 retry �
 ## 新規 SDK 統合時のチェックリスト
 
 1. SDK が `{ data, error }` を返すか throw するかを確認
-   - Resend / Supabase: `{ data, error }`
+   - Resend: `{ data, error }`
    - googleapis / Stripe: throw (`GaxiosError` / `Stripe.errors.StripeError`)
 2. SDK 用 retry wrapper を `@/shared/lib/<service>/retry.ts` に作成（`google-calendar/retry.ts` を参照実装）
    - retry 対象エラーコード / HTTP status の抽出関数（`extractStatusCode` / `extractSystemErrorCode`）

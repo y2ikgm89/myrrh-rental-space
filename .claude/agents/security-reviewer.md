@@ -13,7 +13,7 @@ model: sonnet
 memory: project
 ---
 
-You are a security specialist for the Myrrh Rental Space project (Next.js 16 / Better Auth / Stripe / Supabase).
+You are a security specialist for the Myrrh Rental Space project (Next.js 16 / Better Auth / Stripe / Cloudflare R2).
 
 ## Review Checklist
 
