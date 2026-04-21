@@ -31,7 +31,7 @@ mock.module("@/shared/db/prisma", () => ({
   },
 }));
 
-// storage モック
+// r2 モック
 const mockUploadFile = mock<
   () => Promise<{
     success: boolean;
@@ -42,22 +42,26 @@ const mockUploadFile = mock<
 >(() =>
   Promise.resolve({
     success: true,
-    url: "https://example.com/image.jpg",
-    path: "media/image.jpg",
+    url: "https://media.test.example.com/media/folder/x.jpg",
+    path: "media/folder/x.jpg",
   }),
 );
-const mockDeleteFile = mock<() => Promise<void>>(() => Promise.resolve());
-const mockDeleteFiles = mock<() => Promise<void>>(() => Promise.resolve());
+const mockDeleteFile = mock<() => Promise<{ success: boolean }>>(() =>
+  Promise.resolve({ success: true }),
+);
+const mockDeleteFiles = mock<() => Promise<{ success: boolean }>>(() =>
+  Promise.resolve({ success: true }),
+);
 
-mock.module("@/shared/lib/storage", () => ({
+mock.module("@/shared/lib/r2/upload", () => ({
   uploadFile: mockUploadFile,
+}));
+mock.module("@/shared/lib/r2/delete", () => ({
   deleteFile: mockDeleteFile,
   deleteFiles: mockDeleteFiles,
 }));
-
-// supabase モック
-mock.module("@/shared/lib/supabase", () => ({
-  STORAGE_BUCKETS: {
+mock.module("@/shared/lib/r2/keys", () => ({
+  STORAGE_PREFIXES: {
     SPACES: "spaces",
     POSTS: "posts",
     SITE: "site",
@@ -220,7 +224,7 @@ describe("uploadMediaCommand", () => {
         DomainError,
       );
 
-      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH, "media");
+      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH);
     });
 
     test("アップロード失敗時は DB 作成が呼ばれない", async () => {
@@ -411,7 +415,7 @@ describe("deleteMediaCommand", () => {
     test("メディアをソフトデリートできる", async () => {
       await deleteMediaCommand(MEDIA_ID);
 
-      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH, "media");
+      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH);
       expect(mockMediaUpdate).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: MEDIA_ID },
@@ -424,7 +428,7 @@ describe("deleteMediaCommand", () => {
       await deleteMediaCommand(MEDIA_ID);
 
       expect(mockDeleteFile).toHaveBeenCalledTimes(1);
-      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH, "media");
+      expect(mockDeleteFile).toHaveBeenCalledWith(STORAGE_PATH);
     });
 
     test("戻り値が void（undefined）", async () => {
@@ -506,10 +510,10 @@ describe("bulkDeleteMediaCommand", () => {
     test("deleteFiles に正しいパス一覧が渡される", async () => {
       await bulkDeleteMediaCommand(["media-1", "media-2"]);
 
-      expect(mockDeleteFiles).toHaveBeenCalledWith(
-        ["media/image1.jpg", "media/image2.jpg"],
-        "media",
-      );
+      expect(mockDeleteFiles).toHaveBeenCalledWith([
+        "media/image1.jpg",
+        "media/image2.jpg",
+      ]);
     });
 
     test("updateMany が isActive: false で呼ばれる", async () => {
