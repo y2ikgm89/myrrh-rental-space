@@ -15,7 +15,10 @@
  *
  * @example
  * import { Z_INDEX } from '@/admin/lib/styles/z-index'
- * className={`z-[${Z_INDEX.editorToolbar}]`}
+ * // ✅ inline style（Tailwind JIT は静的スキャンのため template literal 内の
+ * //    arbitrary value `z-[${VAR}]` は CSS 未生成 → z-index 無効の silent bug）
+ * <div style={{ zIndex: Z_INDEX.editorToolbar }} />
+ * // ❌ className={`z-[${Z_INDEX.editorToolbar}]`} は禁止（CSS が生成されない）
  */
 
 export const Z_INDEX = {

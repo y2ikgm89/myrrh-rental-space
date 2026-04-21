@@ -55,6 +55,7 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 - **JSX 内の IIFE 禁止**（`@eslint-react/unsupported-syntax`）— `{(() => { ... })()}` は React Compiler 非互換。JSX 前に変数抽出する
 - **フック内コンポーネント定義禁止**（`@eslint-react/component-hook-factories`）— `useXxx` 内で `const Comp = () => <JSX />` は禁止。`ReactNode` を返すかモジュールレベルに抽出（`use-media-picker.tsx` が実装例）
 - **eslint-disable コメントのルール名が最新か確認** — v4 でプレフィックスフラット化（`@eslint-react/dom/no-xxx` → `@eslint-react/dom-no-xxx`）。旧 `hooks-extra/*` / `dom/*` / `web-api/*` 形式が残っていないか検証
+- **URL 由来 initial props の `key` 必須** — Server Component が `searchParams` / 動的セグメントから派生した値を Client Component の `useState` / `useForm defaultValues` / `useReducer` 初期値に渡す場合、親側に `key={urlValue}` が無ければ stale state バグ。`<Form entity={entity} />` を検出したら `<Form key={entity.id} entity={entity} />` の形になっているか確認（→ `react-patterns.md` §Resetting state with key）
 
 **Zod 4** (`.claude/rules/zod-patterns.md`):
 

@@ -333,6 +333,8 @@ seed や本番データで片方欠損するケースを silent に許容でき�
 
    **例外**: カラーピッカーのスウォッチプレビュー等、特定の色を表示目的で使う場合は許可
 
+3.0.5. **Tailwind arbitrary value に JS 変数埋め込み禁止** — ``className={`z-[${Z_INDEX.x}]`}`` / ``className={`text-[${theme.color}]`}`` / `tailwind-variants` slot 内の同パターンは Tailwind JIT が静的スキャンのため CSS 未生成で silent fail（z-index / color が無効になる）。対処: ① 数値（z-index 等）は `style={{ zIndex: Z_INDEX.x }}` で inline style ② 色・spacing 等は `@theme` にトークン定義して静的クラス使用。Lexical editor `LexicalEditor.tsx` / `EditorHeader.tsx` の z-index バグが実例。検出 grep: ``grep -rnE 'className=\{[^}]*`[^`]*\[\$\{' src/``
+
 3.1. **`className` 文字列内の改行禁止** — `className="fixed ...\n  md:hidden"` は SSR が生文字列（改行+インデント込み）を出力するのに対し、React は CSR で空白正規化した文字列を比較するため hydration mismatch になる。single-line に統一するか、長い場合は `cn("fixed ...", "md:hidden")` で配列分割する
 
 3.5. **`start-*` / `end-*` 配置ユーティリティ禁止**（v4.2 廃止予定）
