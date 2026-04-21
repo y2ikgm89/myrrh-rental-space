@@ -6,7 +6,13 @@
  * Better Auth 版
  */
 
-import { useState, useEffect, type FormEvent, type ReactElement } from "react";
+import {
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type ReactElement,
+} from "react";
 import { IconEye, IconEyeOff } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/shared/lib/admin-auth-client";
@@ -15,25 +21,52 @@ import { SubmitButton } from "@/admin/components/ui";
 
 const STORAGE_KEY = "myrrh_admin_email";
 
+// 外部ストア（localStorage）用の useSyncExternalStore ハンドラ
+// localStorage は変更通知を発火しないため subscribe は no-op
+const subscribe = () => () => {};
+const readSavedEmail = (): string => {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+};
+// getServerSnapshot は参照安定化のためモジュールスコープの定数を返す
+const getServerSnapshot = (): string => "";
+
 export function LoginForm(): ReactElement {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+
+  // 外部ストア（localStorage）から保存済みメールを取得。
+  // SSR は "" を返し、hydration 後に client snapshot に切り替わる（hydration mismatch 自動回避）。
+  // https://react.dev/reference/react/useSyncExternalStore#subscribing-to-a-browser-api
+  const snapshotRef = useRef<string | undefined>(undefined);
+  const savedEmail = useSyncExternalStore(
+    subscribe,
+    () => {
+      snapshotRef.current ??= readSavedEmail();
+      return snapshotRef.current;
+    },
+    getServerSnapshot,
+  );
+
+  // ユーザー入力 state。savedEmail は hydration 後に "" → 保存値に変わるため、
+  // 公式「Adjusting State Directly During Render」パターンで sync する。
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [email, setEmail] = useState(savedEmail);
+  const [rememberMe, setRememberMe] = useState(savedEmail !== "");
+  const [previousSavedEmail, setPreviousSavedEmail] = useState(savedEmail);
+  if (savedEmail !== previousSavedEmail) {
+    setPreviousSavedEmail(savedEmail);
+    setEmail(savedEmail);
+    setRememberMe(savedEmail !== "");
+  }
+
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // 保存されたメールアドレスを読み込み
-  useEffect(() => {
-    const savedEmail = localStorage.getItem(STORAGE_KEY);
-    if (savedEmail) {
-      // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
-      setEmail(savedEmail);
-      // eslint-disable-next-line @eslint-react/set-state-in-effect
-      setRememberMe(true);
-    }
-  }, []);
 
   const handleSubmit = async (
     event: FormEvent<HTMLFormElement>,
@@ -49,33 +82,37 @@ export function LoginForm(): ReactElement {
 
     setIsLoading(true);
 
-    try {
-      const { email: validatedEmail, password: validatedPassword } =
-        parsedCredentials.data;
+    const { email: validatedEmail, password: validatedPassword } =
+      parsedCredentials.data;
 
-      const result = await signIn.email({
-        email: validatedEmail,
-        password: validatedPassword,
-      });
-
-      if (result.error) {
-        setError("メールアドレスまたはパスワードが正しくありません");
-      } else {
-        // メールアドレスを保存/削除
-        if (rememberMe) {
-          localStorage.setItem(STORAGE_KEY, validatedEmail);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-
-        router.push("/admin");
-        router.refresh();
-      }
-    } catch {
-      setError("ログイン中にエラーが発生しました");
-    } finally {
-      setIsLoading(false);
-    }
+    // Better Auth 公式推奨: fetchOptions.onSuccess / onError でハンドリング。
+    // result.error のみでは HTTP 429 等が Promise サイレントに処理されてしまう。
+    // https://better-auth.com/docs/concepts/client#error-handling
+    await signIn.email({
+      email: validatedEmail,
+      password: validatedPassword,
+      fetchOptions: {
+        onSuccess: () => {
+          if (rememberMe) {
+            localStorage.setItem(STORAGE_KEY, validatedEmail);
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+          router.push("/admin");
+          router.refresh();
+        },
+        onError: (ctx) => {
+          if (ctx.response.status === 429) {
+            setError(
+              "リクエストが多すぎます。しばらく待ってからお試しください。",
+            );
+          } else {
+            setError("メールアドレスまたはパスワードが正しくありません");
+          }
+          setIsLoading(false);
+        },
+      },
+    });
   };
 
   return (

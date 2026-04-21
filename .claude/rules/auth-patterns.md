@@ -599,6 +599,26 @@ revalidatePath("/", "layout"); // ← ヘッダー更新に不十分
 
 **hybrid パターン**（server 操作が必要な場合）: ユーザー作成等を Server Action (`ensureDevUserAction` 等) に分離し、sign-in 自体は Client API で実行する。credentials は `xxx-credentials.ts` に SSoT 抽出して client / server 両方で参照（参照実装: `src/app/(public)/login/_components/dev-login-{action,button,credentials}.ts`）。
 
+**`fetchOptions.onError` は `signIn.email` でも必須**（`signIn.social` と同じ契約） — `result.error` のみでは HTTP 429（レート制限）等が Better Auth クライアントで Promise サイレントに処理され UI にフィードバックが出ない。管理画面 LoginForm も公開ページの social login と同パターンに統一:
+
+```typescript
+await signIn.email({
+  email,
+  password,
+  fetchOptions: {
+    onSuccess: () => {
+      /* localStorage 保存 + router.push */
+    },
+    onError: (ctx) => {
+      if (ctx.response.status === 429) setError("レート制限エラー");
+      else setError("認証エラー");
+    },
+  },
+});
+```
+
+**NG**: `try { const result = await signIn.email(...); if (result.error) setError(...); } catch { ... }` — Better Auth クライアントは例外を throw しないため catch は不到達、429 も result.error に現れず silent failure。参照実装: `src/app/(admin)/admin/(auth)/login/LoginForm.tsx`。
+
 ---
 
 ## Gotchas
