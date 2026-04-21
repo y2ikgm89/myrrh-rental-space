@@ -15,8 +15,16 @@ import {
   updateEventCommand,
 } from "@/shared/domain/events/commands";
 import { getEventById } from "@/shared/domain/events/admin-queries";
+import { getEventForCalendarSync } from "@/shared/domain/events/calendar-sync";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
 import { invalidateEventCaches } from "@/shared/lib/cache/event-cache";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory } from "@/shared/lib/errors/server";
+import {
+  syncEventToCalendar,
+  updateEventCalendarSync,
+  deleteEventCalendarSync,
+} from "@/shared/lib/calendar-sync/event-outbound";
 import {
   eventFormSchema,
   type EventFormInput,
@@ -48,6 +56,31 @@ async function buildEventCommandInput(data: EventFormInput) {
   });
 }
 
+/**
+ * create / duplicate / update / publish / cancel 共通: afterSuccess で DB 1 回読んで GCal 同期
+ * delete 後は soft-delete で取得できないため呼ばないこと
+ */
+async function syncEventOutbound(eventId: string): Promise<void> {
+  const context = await getEventForCalendarSync(eventId);
+  if (!context) return;
+  if (context.googleCalendarEventId) {
+    await updateEventCalendarSync(context, context.googleCalendarEventId);
+  } else {
+    await syncEventToCalendar(context);
+  }
+}
+
+/**
+ * cancel / delete 用: 既存 GCal ID がある場合のみ削除
+ */
+async function deleteEventOutbound(
+  eventId: string,
+  gcalEventId: string | null,
+): Promise<void> {
+  if (!gcalEventId) return;
+  await deleteEventCalendarSync(eventId, gcalEventId);
+}
+
 export async function createEvent(
   input: EventFormInput,
 ): Promise<MutationResult<{ id: string; slug: string }>> {
@@ -64,6 +97,10 @@ export async function createEvent(
     },
     afterSuccess: (data) => {
       invalidateEventCaches(data.id, data.slug);
+      fireAndForget(syncEventOutbound(data.id), {
+        operation: "syncEventToCalendar",
+        category: ErrorCategory.EXTERNAL_API,
+      });
     },
     resolveAuditResourceId: (data) => data.id,
   });
@@ -92,13 +129,19 @@ export async function updateEvent(
       invalidateEventCaches(idParsed.data, parsed.data.slug, {
         registrations: true,
       });
+      fireAndForget(syncEventOutbound(idParsed.data), {
+        operation: "syncEventToCalendar",
+        category: ErrorCategory.EXTERNAL_API,
+      });
     },
   });
 }
 
 export async function deleteEvent(
   id: string,
-): Promise<MutationResult<string | null>> {
+): Promise<
+  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -109,10 +152,20 @@ export async function deleteEvent(
     execute: async () => {
       const event = await getEventById(validated.data);
       await deleteEventCommand(validated.data);
-      return event?.slug ?? null;
+      return {
+        slug: event?.slug ?? null,
+        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+      };
     },
-    afterSuccess: (slug) => {
-      invalidateEventCaches(validated.data, slug, { registrations: true });
+    afterSuccess: (data) => {
+      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      fireAndForget(
+        deleteEventOutbound(validated.data, data.googleCalendarEventId),
+        {
+          operation: "deleteEventCalendarSync",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
     },
   });
 }
@@ -134,6 +187,10 @@ export async function publishEvent(
     },
     afterSuccess: (slug) => {
       invalidateEventCaches(validated.data, slug, { registrations: true });
+      fireAndForget(syncEventOutbound(validated.data), {
+        operation: "syncEventToCalendar",
+        category: ErrorCategory.EXTERNAL_API,
+      });
     },
   });
 }
@@ -150,6 +207,10 @@ export async function duplicateEvent(
     execute: async () => duplicateEventCommand(validated.data),
     afterSuccess: (data) => {
       invalidateEventCaches(data.id, data.slug);
+      fireAndForget(syncEventOutbound(data.id), {
+        operation: "syncEventToCalendar",
+        category: ErrorCategory.EXTERNAL_API,
+      });
     },
     resolveAuditResourceId: (data) => data.id,
   });
@@ -157,7 +218,9 @@ export async function duplicateEvent(
 
 export async function cancelEvent(
   id: string,
-): Promise<MutationResult<string | null>> {
+): Promise<
+  MutationResult<{ slug: string | null; googleCalendarEventId: string | null }>
+> {
   const validated = idSchema.safeParse(id);
   if (!validated.success) return createValidationMutationError(validated.error);
 
@@ -168,10 +231,20 @@ export async function cancelEvent(
     execute: async () => {
       const event = await getEventById(validated.data);
       await cancelEventCommand(validated.data);
-      return event?.slug ?? null;
+      return {
+        slug: event?.slug ?? null,
+        googleCalendarEventId: event?.googleCalendarEventId ?? null,
+      };
     },
-    afterSuccess: (slug) => {
-      invalidateEventCaches(validated.data, slug, { registrations: true });
+    afterSuccess: (data) => {
+      invalidateEventCaches(validated.data, data.slug, { registrations: true });
+      fireAndForget(
+        deleteEventOutbound(validated.data, data.googleCalendarEventId),
+        {
+          operation: "deleteEventCalendarSync",
+          category: ErrorCategory.EXTERNAL_API,
+        },
+      );
     },
   });
 }

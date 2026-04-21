@@ -10,6 +10,10 @@ import { getAppUrl } from "@/shared/lib/constants/urls";
 import { formatEventVenue } from "@/shared/domain/events/venue";
 import type { EventSyncData } from "@/shared/lib/calendar-sync/types";
 
+export type EventSyncContext = EventSyncData & {
+  googleCalendarEventId: string | null;
+};
+
 export async function saveEventGoogleCalendarEventId(params: {
   eventId: string;
   googleCalendarEventId: string;
@@ -43,7 +47,7 @@ export async function markEventCalendarSyncError(params: {
 
 export async function getEventForCalendarSync(
   eventId: string,
-): Promise<EventSyncData | null> {
+): Promise<EventSyncContext | null> {
   const event = await prisma.event.findFirst({
     where: { id: eventId, deletedAt: null },
     select: {
@@ -54,6 +58,7 @@ export async function getEventForCalendarSync(
       endTime: true,
       descriptionPlainText: true,
       addressDetail: true,
+      googleCalendarEventId: true,
       location: { select: { name: true } },
       space: { select: { name: true } },
     },
@@ -73,5 +78,6 @@ export async function getEventForCalendarSync(
       addressDetail: event.addressDetail,
     }),
     publicUrl: `${getAppUrl()}/events/${event.slug}`,
+    googleCalendarEventId: event.googleCalendarEventId,
   };
 }
