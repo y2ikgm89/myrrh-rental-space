@@ -91,19 +91,10 @@ export async function syncEventToCalendar(
       };
     }
 
-    // エラーを記録
+    // エラーを記録（markEventCalendarSyncError が logError を呼ぶため重複呼び出し禁止）
     await markEventCalendarSyncError({
       eventId: data.eventId,
       error: result.error ?? "Unknown error",
-    });
-
-    logError(new Error(result.error ?? "Unknown error"), {
-      category: ErrorCategory.EXTERNAL_API,
-      severity: ErrorSeverity.MEDIUM,
-      context: {
-        operation: "syncEventToCalendar",
-        eventId: data.eventId,
-      },
     });
 
     return omitUndefined({ success: false, error: result.error });
@@ -178,7 +169,7 @@ export async function updateEventCalendarSync(
 export async function deleteEventCalendarSync(
   eventId: string,
   gcalEventId: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<SyncResult> {
   try {
     const isEnabled = await isGoogleCalendarEnabled();
     if (!isEnabled) {

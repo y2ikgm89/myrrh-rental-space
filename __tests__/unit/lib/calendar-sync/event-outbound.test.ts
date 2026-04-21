@@ -186,6 +186,7 @@ describe("updateEventCalendarSync", () => {
   beforeEach(() => {
     mockIsEnabled.mockClear();
     mockUpdate.mockClear();
+    mockSave.mockClear();
     mockMarkError.mockClear();
   });
 
