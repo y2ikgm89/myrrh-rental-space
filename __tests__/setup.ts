@@ -24,8 +24,6 @@ process.env["ENCRYPTION_KEY"] = "a".repeat(64); // テスト用 64文字16進数
 // クライアント環境変数（テスト用ダミー値）
 process.env["NEXT_PUBLIC_BASE_URL"] = "http://localhost:3000";
 process.env["NEXT_PUBLIC_APP_URL"] = "http://localhost:3000";
-process.env["NEXT_PUBLIC_SUPABASE_URL"] = "https://test.supabase.co";
-process.env["NEXT_PUBLIC_SUPABASE_ANON_KEY"] = "test-anon-key";
 
 // グローバル型定義
 // NODE_ENV を 'test' リテラルに narrowing しない（src/ の比較式が TS2367 になるため）
