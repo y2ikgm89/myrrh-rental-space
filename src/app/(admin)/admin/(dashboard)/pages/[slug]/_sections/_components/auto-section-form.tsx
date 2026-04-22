@@ -22,7 +22,15 @@ import {
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import dynamic from "next/dynamic";
 import { z } from "zod";
-import { Input, Label, Textarea } from "@/admin/components/ui";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Input,
+  Label,
+  Textarea,
+} from "@/admin/components/ui";
 import { getSectionDefinition } from "@/shared/lib/sections/registry";
 import { EDITOR_PROSE_CLASSES } from "@/shared/lib/styles/prose";
 import { EMPTY_LEXICAL_EDITOR_STATE_JSON } from "@/shared/lib/validations/lexical";
@@ -124,8 +132,29 @@ export function AutoSectionForm({
     );
   }
 
+  // Group 別にフィールドを分離（ADR 0018: content / design / advanced の 3 段階固定）
+  const contentFields = fields.filter((f) => f.meta.group === "content");
+  const designFields = fields.filter((f) => f.meta.group === "design");
+  const advancedFields = fields.filter((f) => f.meta.group === "advanced");
+  const hasAccordionContent =
+    designFields.length > 0 || advancedFields.length > 0;
+
+  const renderField = (fieldInfo: (typeof fields)[number]) => (
+    <AutoField
+      key={fieldInfo.key}
+      fieldInfo={fieldInfo}
+      register={register}
+      setValue={setValue}
+      control={control}
+      isPending={isPending}
+      defaultValue={defaultConfig[fieldInfo.key]}
+      errors={errors}
+    />
+  );
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+      {/* Content: 常時展開（Accordion 外） */}
       <div className="space-y-4">
         {/* Custom セクションのみ: Lexical エディタを表示 */}
         {isCustomType && (
@@ -145,20 +174,34 @@ export function AutoSectionForm({
           </div>
         )}
 
-        {/* スキーマ駆動フィールド */}
-        {fields.map((fieldInfo) => (
-          <AutoField
-            key={fieldInfo.key}
-            fieldInfo={fieldInfo}
-            register={register}
-            setValue={setValue}
-            control={control}
-            isPending={isPending}
-            defaultValue={defaultConfig[fieldInfo.key]}
-            errors={errors}
-          />
-        ))}
+        {contentFields.map(renderField)}
       </div>
+
+      {/* Design + Advanced: Radix Accordion（type="multiple"、既定閉じ） */}
+      {hasAccordionContent && (
+        <Accordion
+          type="multiple"
+          className="border-t border-border"
+          defaultValue={[]}
+        >
+          {designFields.length > 0 && (
+            <AccordionItem value="design">
+              <AccordionTrigger className="px-1">デザイン</AccordionTrigger>
+              <AccordionContent className="space-y-4 px-1 pt-2">
+                {designFields.map(renderField)}
+              </AccordionContent>
+            </AccordionItem>
+          )}
+          {advancedFields.length > 0 && (
+            <AccordionItem value="advanced">
+              <AccordionTrigger className="px-1">詳細設定</AccordionTrigger>
+              <AccordionContent className="space-y-4 px-1 pt-2">
+                {advancedFields.map(renderField)}
+              </AccordionContent>
+            </AccordionItem>
+          )}
+        </Accordion>
+      )}
 
       <FormActions
         isDirty={isDirty}
