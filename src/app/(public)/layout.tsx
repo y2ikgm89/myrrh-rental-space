@@ -31,7 +31,8 @@ import {
 } from "@/public/components/analytics";
 import { CookieConsentBanner } from "@/public/components/cookie-consent-banner";
 import { AnnouncementBarWrapper } from "@/public/components/announcement-bar-wrapper";
-import { SkipLink, AriaLiveRegion } from "@/public/components/a11y";
+import { SkipLink } from "@/public/components/a11y/skip-link";
+import { AriaLiveRegion } from "@/public/components/a11y/aria-live-region";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { AriaLiveProvider } from "@/shared/contexts";
 import { LenisProvider } from "@/public/components/providers/lenis-provider";
