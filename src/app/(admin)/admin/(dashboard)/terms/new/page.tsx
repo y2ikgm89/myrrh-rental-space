@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSettings } from "@/admin/queries/settings";
-import { TermsInlineEditor } from "../_components/TermsInlineEditor";
+import { TermsInlineEditorCreate } from "../_components/TermsInlineEditorCreate";
 import { isValidTermsType } from "@/shared/lib/validations/enums/guards";
 import { getTermsTypeDefaults } from "@/shared/lib/validations/terms";
 import {
@@ -68,9 +68,8 @@ export default async function NewTermsPage({ searchParams }: PageProps) {
   const templateHtml = resolveTemplateHtml(typeParam, businessInfo);
 
   return (
-    <TermsInlineEditor
+    <TermsInlineEditorCreate
       key={typeParam}
-      mode="create"
       initialType={typeParam}
       initialTitle={defaults?.title ?? ""}
       initialSlug={defaults?.slug ?? ""}

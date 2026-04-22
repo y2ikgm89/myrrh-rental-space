@@ -481,6 +481,26 @@ function MyFormInner({ reservationId /* ... */ }: InnerProps) {
 
 参照実装: `src/app/(public)/mypage/reservations/[id]/_components/review-form.tsx`（`reviewsEnabled` による投稿フォーム gate）
 
+### Thin mode dispatcher は clean-break で削除推奨
+
+`if (mode === "x") return <X/>; return <Y/>` + 軽微な state 変換（一度だけ行う HTML→JSON 等）だけの dispatcher は、routing を pages に inline + state 変換を使用する component に移譲して削除する。dispatcher 層の `useState` は上記 Outer/Inner Component Split strict 規則（outer に hooks を置かない）違反。mode が props 由来で runtime 変化しない場合、discriminated union props も不要。
+
+**判断基準（dispatcher 削除適用）**:
+
+- dispatcher 本体が hooks + `if (mode) return <X/>` の 2 要素のみ
+- hooks の state が mode branch の一方でのみ使われる
+- pages が静的に mode を選択できる（`new/page.tsx` は常に create、`[id]/edit/page.tsx` は常に edit 等）
+
+**clean-break 手順**:
+
+1. dispatcher が持つ state 変換（HTML→JSON 等）を、実際に使用する inner component 内へ `useState` 遅延初期化で移譲
+2. inner component の props API を「変換前の生データ」を受ける形に変更（`resolvedContentJson: string | null` → `initialTemplateHtml: string | null` 等）
+3. pages が dispatcher 経由ではなく inner component を直接 import（`TermsInlineEditor` → `TermsInlineEditorCreate` / `TermsInlineEditorEdit`）
+4. `mode` prop と discriminated union props 型を削除
+5. dispatcher ファイルを削除（barrel 再 export 禁止の項と同じく後方互換シム不要）
+
+参照実装: `terms/new/page.tsx` が `TermsInlineEditorCreate` を直接 import、`terms/[id]/edit/page.tsx` が `TermsInlineEditorEdit` を直接 import（2026-04-22 削除事例、`TermsInlineEditor.tsx` 93 行 dispatcher 削除）
+
 ---
 
 ## useReducer — カスケードステート管理（React 公式推奨）

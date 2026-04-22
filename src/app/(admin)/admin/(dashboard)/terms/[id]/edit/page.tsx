@@ -4,7 +4,7 @@ import {
   getTermsVersionById,
   getTermsAgreements,
 } from "@/admin/queries/terms";
-import { TermsInlineEditor } from "../../_components/TermsInlineEditor";
+import { TermsInlineEditorEdit } from "../../_components/TermsInlineEditorEdit";
 import { TermsStatus } from "@/shared/lib/validations/enums/prisma-types";
 
 interface PageProps {
@@ -34,7 +34,7 @@ export default async function TermsEditPage({ params }: PageProps) {
   const agreementsData = await getTermsAgreements(id, 1);
 
   return (
-    <TermsInlineEditor
+    <TermsInlineEditorEdit
       key={terms.id}
       terms={{
         id: terms.id,
@@ -53,7 +53,6 @@ export default async function TermsEditPage({ params }: PageProps) {
       initialVersion={initialVersion}
       initialAgreements={agreementsData.agreements}
       initialTotal={agreementsData.total}
-      mode="edit"
     />
   );
 }
