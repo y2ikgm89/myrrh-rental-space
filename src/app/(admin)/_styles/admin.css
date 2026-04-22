@@ -200,9 +200,25 @@
   --modal-max-height-xl: 95vh;
 
   /* --------------------------------------------------------------------------
-   * Spacing — fluid
+   * Spacing — public と同系の fluid scale（プレビュー整合用）
    * -------------------------------------------------------------------------- */
-  --spacing-section: clamp(2rem, 4vw, 3rem);
+  --space-3xs: clamp(0.25rem, 0.198rem + 0.221vw, 0.5rem);
+  --space-2xs: clamp(0.5rem, 0.397rem + 0.442vw, 1rem);
+  --space-xs: clamp(1rem, 0.793rem + 0.884vw, 2rem);
+  --space-sm: clamp(2rem, 1.586rem + 1.768vw, 4rem);
+  --space-md: clamp(3rem, 2.171rem + 3.536vw, 7rem);
+  --space-lg: clamp(4rem, 2.55rem + 6.188vw, 11rem);
+  --space-xl: clamp(5rem, 2.929rem + 8.84vw, 15rem);
+  --space-2xl: clamp(6rem, 3.308rem + 11.491vw, 19rem);
+  --container-editorial: 50rem;
+  --container-padding-start: max(
+    var(--container-padding),
+    env(safe-area-inset-left, 0px)
+  );
+  --container-padding-end: max(
+    var(--container-padding),
+    env(safe-area-inset-right, 0px)
+  );
   --spacing-block: clamp(1.5rem, 3vw, 2.5rem);
   --spacing-card: clamp(1rem, 2vw, 1.5rem);
 

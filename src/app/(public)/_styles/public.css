@@ -103,16 +103,32 @@
   --text-pullquote--font-weight: 300;
 
   /* --------------------------------------------------------------------------
-   * Spacing
+   * Spacing — Utopia.fyi 風 fluid T-shirt scale (375–1280px)
    * -------------------------------------------------------------------------- */
-  --spacing-section: clamp(7rem, 12vw, 11rem);
-  --spacing-section-compact: clamp(5rem, 8vw, 7rem);
+  --space-3xs: clamp(0.25rem, 0.198rem + 0.221vw, 0.5rem);
+  --space-2xs: clamp(0.5rem, 0.397rem + 0.442vw, 1rem);
+  --space-xs: clamp(1rem, 0.793rem + 0.884vw, 2rem);
+  --space-sm: clamp(2rem, 1.586rem + 1.768vw, 4rem);
+  --space-md: clamp(3rem, 2.171rem + 3.536vw, 7rem);
+  --space-lg: clamp(4rem, 2.55rem + 6.188vw, 11rem);
+  --space-xl: clamp(5rem, 2.929rem + 8.84vw, 15rem);
+  --space-2xl: clamp(6rem, 3.308rem + 11.491vw, 19rem);
+
   --spacing-block: clamp(2.5rem, 5vw, 4rem);
   --spacing-element: 1.5rem;
   --spacing-inline: 1rem;
 
   --container-max: 80rem;
-  --container-padding: clamp(1.5rem, 3vw, 3rem);
+  --container-padding: clamp(1rem, 3vw, 3rem);
+  --container-editorial: 50rem;
+  --container-padding-start: max(
+    var(--container-padding),
+    env(safe-area-inset-left, 0px)
+  );
+  --container-padding-end: max(
+    var(--container-padding),
+    env(safe-area-inset-right, 0px)
+  );
   --container-header-max: 90rem;
   --container-measure: 65ch;
   --prose-narrow: 40ch;
