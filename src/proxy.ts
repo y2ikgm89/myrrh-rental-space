@@ -144,9 +144,17 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/api")) {
+    // Cloud Run の health / liveness probe は x-forwarded-for を設定しないため、
+    // getClientIp() が "unknown" を返し全 probe が同一 bucket に合算される。
+    // burst 時に apiRateLimiter (100/min) を超過すると 429 → probe 失敗 → コンテナ kill の silent bug。
+    // webhook / cron と同様に rate-limit 対象外。
+    const isProbeOrInfraEndpoint =
+      pathname === "/api/live" || pathname === "/api/health";
+
     if (
       !pathname.startsWith("/api/webhooks") &&
-      !pathname.startsWith("/api/cron")
+      !pathname.startsWith("/api/cron") &&
+      !isProbeOrInfraEndpoint
     ) {
       const clientIp = getClientIp(req);
       const rateLimitResult = checkRateLimit(pathname, clientIp);

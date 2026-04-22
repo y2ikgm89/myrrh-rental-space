@@ -29,7 +29,7 @@ Bun ランタイム + Prisma 7 WASM エンジン。
 ### 3-stage multi-stage build
 
 ```dockerfile
-FROM oven/bun:1.3.9-alpine AS base    # 共通ベース（DRY）
+FROM oven/bun:1.3.12-alpine AS base   # 共通ベース（package.json packageManager と一致）
 FROM base AS deps                      # 依存 + Prisma generate
 FROM base AS builder                   # validate + build
 FROM base AS runner                    # standalone output + 非root
@@ -100,13 +100,19 @@ RUN apk add --no-cache libc6-compat && \
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=8080 \
     HOSTNAME=0.0.0.0
+
+# PORT は書かない — Cloud Run が Container Runtime Contract に基づき自動注入する。
+# https://cloud.google.com/run/docs/container-contract#port
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# @prisma/client WASM runtime
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+# Prisma CLI + schema / migrations（Cloud Run Job が同一 image で `bunx --bun prisma migrate deploy` を実行するため必須）
+COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 USER nextjs
 EXPOSE 8080
@@ -115,7 +121,7 @@ CMD ["bun", "server.js"]
 
 **注意**: `node_modules/@prisma` は WASM ランタイムエンジン。standalone output には含まれないためコピー必須。
 
-**Cloud Run スタートアップ**: [公式ドキュメント](https://cloud.google.com/run/docs/configuring/healthchecks) の **TCP プローブ**（`tcpSocket.port=8080`）でリッスン確認。DB 疎通は `GET /api/health` を監視・手動確認に使う。
+**Cloud Run プローブ**: [公式ドキュメント](https://cloud.google.com/run/docs/configuring/healthchecks) の HTTP プローブを使用。startup-probe / liveness-probe とも `GET /api/live`（DB 非依存の軽量 alive チェック）に統一。`/api/health` は DB 疎通を含む詳細チェックで、監視・手動確認専用（liveness に使わない — DB 一時断でコンテナが連鎖 kill されるため）。
 
 ## Cloud Build パターン
 
@@ -172,14 +178,53 @@ Cloud Run デプロイでは `--update-*`（マージ）を使用。`--set-*`（
 
 ```yaml
 # cloudbuild.yaml — deploy ステップ
-- --update-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,...,BETTER_AUTH_URL=${_BETTER_AUTH_URL}
+- --update-env-vars=NODE_ENV=production,NEXT_TELEMETRY_DISABLED=1,DATABASE_POOL_MAX=${_DATABASE_POOL_MAX},...,BETTER_AUTH_URL=${_BETTER_AUTH_URL}
 ```
 
-| 変数                      | 用途                                       |
-| ------------------------- | ------------------------------------------ |
-| `BETTER_AUTH_URL`         | Better Auth のベース URL（ランタイムのみ） |
-| `NODE_ENV`                | production 設定                            |
-| `NEXT_TELEMETRY_DISABLED` | Next.js テレメトリー無効化                 |
+| 変数                      | 用途                                                    |
+| ------------------------- | ------------------------------------------------------- |
+| `BETTER_AUTH_URL`         | Better Auth のベース URL（ランタイムのみ）              |
+| `NODE_ENV`                | production 設定                                         |
+| `NEXT_TELEMETRY_DISABLED` | Next.js テレメトリー無効化                              |
+| `DATABASE_POOL_MAX`       | pg Pool 最大接続数（Cloud Run 1 vCPU 想定で `10` 推奨） |
+
+### Cloud Run runtime 設定（公式ベストプラクティス準拠）
+
+| 設定                      | 値 / 例                                                                    | 根拠                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `--service-account`       | dedicated SA（Compute default SA 禁止）                                    | [最小権限原則](https://cloud.google.com/run/docs/configuring/service-accounts)                 |
+| `--execution-environment` | `gen2`                                                                     | 公式推奨（syscall 互換性・ストレージ）                                                         |
+| `--cpu-boost`             | 有効                                                                       | Cold Start 高速化                                                                              |
+| `--no-cpu-throttling`     | 有効（CPU always-allocated）                                               | [fireAndForget / after() 安定化](https://cloud.google.com/run/docs/configuring/cpu-allocation) |
+| `--port`                  | `8080`                                                                     | Cloud Run container port（Container Runtime Contract）                                         |
+| `--startup-probe`         | `httpGet.path=/api/live,port=8080,failureThreshold=9,periodSeconds=10`     | DB 非依存の軽量 alive チェック                                                                 |
+| `--liveness-probe`        | `httpGet.path=/api/live,port=8080,initialDelaySeconds=10,periodSeconds=30` | `/api/health`（DB 依存）禁止                                                                   |
+
+### Prisma migrate Cloud Run Job（cloudbuild.yaml 組込）
+
+schema commit と migration 適用の drift を防ぐため、deploy 前に migrate Job を実行する:
+
+```yaml
+# Step N-1: migrate Job の image を新 SHA に更新
+- name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  id: migrate-update
+  entrypoint: gcloud
+  args:
+    - run
+    - jobs
+    - update
+    - ${_MIGRATE_JOB_NAME}
+    - --region=${_REGION}
+    - --image=${_AR_HOST}/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${SHORT_SHA}
+
+# Step N: migrate 実行（--wait で完了待機、fail 時はデプロイ全体停止）
+- name: gcr.io/google.com/cloudsdktool/cloud-sdk
+  id: migrate-execute
+  entrypoint: gcloud
+  args: [run, jobs, execute, ${_MIGRATE_JOB_NAME}, --region=${_REGION}, --wait]
+```
+
+**初回のみ**: Job の作成は手動で行う（`gcloud run jobs create prisma-migrate --command bunx --args --bun,prisma,migrate,deploy ...`）。手順は `docs/operations/deployment.md` §6。
 
 ### シークレットバージョン固定
 
@@ -260,11 +305,13 @@ gcloud run services update myrrh-rental-space \
 
 ## マイグレーション
 
-Prisma マイグレーションは Cloud Run Job で実行:
+Prisma マイグレーションは cloudbuild.yaml 内の `prisma-migrate` Cloud Run Job で自動実行される（schema と DB の drift 防止）。手動実行は緊急時のみ:
 
 ```bash
 gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 ```
+
+初回の Job 作成は `docs/operations/deployment.md` §6 を参照。
 
 ## 禁止事項
 
@@ -315,6 +362,36 @@ gcloud run jobs execute prisma-migrate --region asia-northeast1 --wait
 
 8. **root ユーザーでの実行禁止**
    - `adduser --system nextjs` + `USER nextjs` で非 root 実行
+
+9. **Dockerfile で `ENV PORT=...` を書かない**
+   - Cloud Run Container Runtime Contract が PORT を自動注入する
+   - hardcode すると `gcloud run deploy --port=<N>` の override が silent に壊れる
+   - `HOSTNAME=0.0.0.0` のみ保持（Next.js standalone が listen address として読む）
+
+10. **Cloud Run デプロイで `--service-account` 省略禁止**
+    - デフォルトは Compute Engine default SA（広範な権限 = 最小権限原則違反）
+    - dedicated SA を作成して `_SERVICE_ACCOUNT` substitution 必須
+
+11. **liveness-probe に `/api/health` を指定禁止**
+    - `/api/health` は DB 疎通を含むため、DB 一時断でコンテナが連鎖 kill される
+    - liveness は `/api/live`（DB 非依存）を使う。`/api/health` は監視・手動確認用
+
+12. **Cloud Run `--cpu-throttling`（default）で `fireAndForget` を使うと副作用が切られる**
+    - request 返却後に CPU が即座に停止し、メール送信・通知生成・カレンダー同期が midway で中断
+    - `--no-cpu-throttling`（CPU always-allocated）を指定する（コスト影響あり、公式推奨）
+
+13. **schema.prisma 変更を含むコミットのデプロイで migrate Job 実行を飛ばさない**
+    - cloudbuild.yaml の `migrate-update` → `migrate-execute` を deploy step の `waitFor` に入れる
+    - 飛ばすと schema と DB の drift で production の P2021（table not found）等の runtime エラー
+
+14. **`validateProductionEnv()` に `NEXT_PUBLIC_BASE_URL` / `NEXT_PUBLIC_APP_URL` 必須チェック維持**
+    - Cloud Build substitution で未指定だと `""` でビルドされ silent failure
+    - `instrumentation.register()` で fail-fast（起動時 throw）
+
+15. **Cloud Run probe endpoint (`/api/live`, `/api/health`) を `proxy.ts` の rate-limit 対象から外す**
+    - Cloud Run probe は `x-forwarded-for` 未設定 → `getClientIp()` が `"unknown"` を返し全 probe が同一 bucket に合算
+    - burst 時に `apiRateLimiter` (100/min) を超過 → 429 → liveness 失敗 → コンテナ kill 連鎖
+    - `proxy.ts` の `/api/webhooks` / `/api/cron` 早期リターンと同列に probe も除外する
 
 ## ファイル配置
 

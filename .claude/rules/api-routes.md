@@ -39,7 +39,7 @@ if (!parsed.success) return jsonValidationError(parsed.error);
 
 - **`checkRateLimit(pathname, clientIp)` に一元化**（`proxy.ts` で呼び出し）
 - エンドポイント別: `/api/auth` → 10/15分、`/api/admin/login-tokens` → 30/分、その他 → 100/分
-- **Webhook・Cron はレート制限対象外**（`proxy.ts` で早期リターン）
+- **Webhook・Cron・Cloud Run probe (`/api/live`, `/api/health`) はレート制限対象外**（`proxy.ts` で早期リターン）。Cloud Run probe は `x-forwarded-for` を設定せず `getClientIp()` が `"unknown"` を返すため、burst 時に probe が同一 bucket に合算されて 429 となり liveness 失敗 → コンテナ kill 連鎖の silent bug になる
 
 ## Webhook パターン
 

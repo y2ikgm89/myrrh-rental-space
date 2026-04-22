@@ -167,6 +167,14 @@ export function validateProductionEnv(): void {
     { name: "R2_SECRET_ACCESS_KEY", value: serverEnv.R2_SECRET_ACCESS_KEY },
     { name: "R2_BUCKET_NAME", value: serverEnv.R2_BUCKET_NAME },
     { name: "R2_PUBLIC_URL", value: serverEnv.R2_PUBLIC_URL },
+    // NEXT_PUBLIC_* はビルド時に client JS へインライン化されるが、
+    // Cloud Build substitution で未指定だと "" でビルドされ silent failure になる。
+    // instrumentation.register() で起動時に fail-fast させる。
+    {
+      name: "NEXT_PUBLIC_BASE_URL",
+      value: process.env["NEXT_PUBLIC_BASE_URL"],
+    },
+    { name: "NEXT_PUBLIC_APP_URL", value: process.env["NEXT_PUBLIC_APP_URL"] },
     // Google OAuth は env / Secret Manager を正本とする
   ];
 

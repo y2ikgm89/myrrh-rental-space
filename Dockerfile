@@ -46,13 +46,22 @@ RUN apk add --no-cache libc6-compat && \
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    PORT=8080 \
     HOSTNAME=0.0.0.0
+
+# PORT は Cloud Run が自動注入する（Cloud Run Container Runtime Contract）。
+# https://cloud.google.com/run/docs/container-contract#port
+# Next.js standalone の server.js は process.env.PORT を読み取るため Dockerfile 側で指定しない。
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# @prisma/client runtime（WASM ランタイムエンジン）
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+# Prisma CLI + schema / migrations — Cloud Run Job 側で `bunx --bun prisma migrate deploy` を実行するため
+# 同一 image を Cloud Run service と migrate Job で共有する（cloudbuild.yaml の migrate-update/execute 参照）。
+# standalone trace には `prisma` パッケージが含まれないため明示コピーが必須。
+COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 USER nextjs
 EXPOSE 8080

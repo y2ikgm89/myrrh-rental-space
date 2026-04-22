@@ -71,6 +71,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **内部 helper に `"use server"` を付けない** — 他の Server Action からのみ呼ばれる internal module（CDN purge / `updateTag` ラッパー等）は `import "server-only"` を使う。`"use server"` は RPC endpoint を生成するため、認証なし helper を公開すると Cache-layer DoS 等の security 経路になる（`post/cache-helpers.ts` 参照）
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離（`admin-roles.ts` / `admin-resources.ts` 参照）
 - **server-only / Node-only SDK 統合** — `ical-generator` / `resend` / `googleapis` / `stripe` 等は `import "server-only"` 必須（→ `server-only-patterns.md` §検出 grep）
+- **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe は `x-forwarded-for` 未設定で `getClientIp()` が `"unknown"` を返し同一 bucket 合算で 429 → コンテナ kill 連鎖の silent bug。`/api/webhooks` / `/api/cron` と同列で早期リターン。Cloud Run / Dockerfile 変更時は禁止事項 15 項目（`ops/deployment-patterns.md`）を横断チェック
 
 ### Validation / Domain
 

@@ -1,8 +1,12 @@
 /**
- * ヘルスチェックAPI
+ * ヘルスチェック API（監視・手動確認用）
  *
- * Cloud Run / Load Balancer / 監視からのヘルスチェック用。
- * データベース接続を確認する（スタートアップは Cloud Run の TCP プローブでリッスンのみ確認）。
+ * DB 疎通を含む詳細ヘルスチェック。Cloud Run の startup/liveness probe には
+ * 使用しない（DB 一時断でコンテナが連鎖 kill されるため）。probe は `/api/live` を使う。
+ *
+ * `.claude/rules/gotchas.md` §デプロイ 準拠: レスポンスは `status` + `timestamp` のみ。
+ * DB 接続状態・レスポンス時間・バージョン等の内部インフラ情報は露出しない
+ * （攻撃者のインフラ偵察対策）。
  *
  * @module api/health
  */
@@ -17,31 +21,17 @@ import {
   normalizeError,
 } from "@/shared/lib/errors/server";
 
-/**
- * Health check endpoint for Cloud Run / Load Balancer
- * GET /api/health
- */
-export async function GET() {
-  const startTime = Date.now();
+const noCacheHeaders = {
+  "Cache-Control": "no-cache, no-store, must-revalidate",
+} as const;
 
+export async function GET() {
   try {
-    // Database connectivity check
     await runDatabaseHealthCheck();
 
-    const responseTime = Date.now() - startTime;
-
     return NextResponse.json(
-      {
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        responseTime: `${responseTime}ms`,
-      },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-        },
-      },
+      { status: "healthy", timestamp: new Date().toISOString() },
+      { status: 200, headers: noCacheHeaders },
     );
   } catch (error) {
     unstable_rethrow(error);
@@ -52,16 +42,8 @@ export async function GET() {
     });
 
     return NextResponse.json(
-      {
-        status: "unhealthy",
-        timestamp: new Date().toISOString(),
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-        },
-      },
+      { status: "unhealthy", timestamp: new Date().toISOString() },
+      { status: 503, headers: noCacheHeaders },
     );
   }
 }
