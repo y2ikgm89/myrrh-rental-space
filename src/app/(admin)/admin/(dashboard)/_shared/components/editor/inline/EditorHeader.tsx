@@ -20,6 +20,7 @@ import {
 import { tv } from "tailwind-variants";
 import { Button } from "@/admin/components/ui";
 import { Z_INDEX } from "@/admin/lib/styles/z-index";
+import { PostStatus } from "@/shared/lib/validations/enums/prisma-types";
 import type { EditorHeaderProps } from "./types";
 
 const styles = tv({
@@ -46,7 +47,7 @@ function checkIsPublished(
   status: EditorHeaderProps["publishActions"],
 ): boolean {
   if (!status) return false;
-  return status.status === "PUBLISHED" || status.status === true;
+  return status.status === PostStatus.PUBLISHED || status.status === true;
 }
 
 export function EditorHeader({

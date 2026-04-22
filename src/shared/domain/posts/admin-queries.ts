@@ -1,7 +1,7 @@
 import "server-only";
 
-import { PostStatus } from "@generated/prisma/enums";
 import { prisma } from "@/shared/db/prisma";
+import { isValidPostStatus } from "@/shared/lib/validations/enums/guards";
 import type { PostWhereInput } from "@/shared/types/prisma";
 import type {
   GetPostsResult,
@@ -16,12 +16,8 @@ import type {
 function buildPostWhere(filters: PostFilters): PostWhereInput {
   const where: PostWhereInput = {};
 
-  if (filters.status === "PUBLISHED") {
-    where.status = PostStatus.PUBLISHED;
-  } else if (filters.status === "DRAFT") {
-    where.status = PostStatus.DRAFT;
-  } else if (filters.status === "ARCHIVED") {
-    where.status = PostStatus.ARCHIVED;
+  if (isValidPostStatus(filters.status)) {
+    where.status = filters.status;
   }
 
   if (filters.categoryId) {

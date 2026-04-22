@@ -38,6 +38,7 @@ import { buildAddToCalendarUrls } from "@/shared/lib/ical/urls";
 import { AddToCalendar } from "@/app/(public)/_shared/components/ui/add-to-calendar";
 import { getBaseUrl } from "@/shared/lib/constants";
 import { formatPrice } from "@/shared/lib/pricing/format";
+import { EventStatus } from "@/shared/lib/validations/enums/prisma-types";
 import { EventRegistrationForm } from "./_components/event-registration-form";
 import { RelatedEvents } from "./_components/related-events";
 
@@ -101,7 +102,7 @@ export default async function EventDetailPage({
   const isPastDeadline = isEventRegistrationPastDeadline(event);
   const canRegister =
     event.registrationOpen &&
-    event.status === "PUBLISHED" &&
+    event.status === EventStatus.PUBLISHED &&
     !isFull &&
     !isPastDeadline;
 
