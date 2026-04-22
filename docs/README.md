@@ -11,7 +11,7 @@ docs/
 ├── guides/          # 開発ガイド
 ├── security/        # セキュリティ
 ├── operations/      # 運用・デプロイ
-├── plans/           # 実装計画・履歴（archive/ に過去ログ）
+├── plans/           # 実装計画・履歴（日常手順の正本ではない。INDEX.md 参照）
 ├── reference/       # 詳細リファレンス（.claude/rules から参照）
 ├── superpowers/     # superpowers skill 生成の plans / specs
 └── templates/       # ドキュメントテンプレート
@@ -33,26 +33,12 @@ docs/
 
 ## 技術スタック
 
-| 技術            | バージョン |
-| --------------- | ---------- |
-| Next.js         | 16.2.3     |
-| React           | 19.2.5     |
-| TypeScript      | 6.0.2      |
-| Prisma          | 7.7.0      |
-| Better Auth     | 1.6.5      |
-| Bun             | 1.3.12     |
-| Zod             | 4.3.6      |
-| Tailwind CSS    | 4.2.2      |
-| Lexical         | 0.43.0     |
-| nuqs            | 2.8.9      |
-| React Hook Form | 7.73.1     |
-| GSAP            | 3.15.0     |
-| Lenis           | 1.3.23     |
-| Radix UI Dialog | 1.1.15     |
+**バージョン表の正本**はリポジトリルートの [AGENTS.md](../AGENTS.md#tech-stack)（コア依存の固定一覧）と、実 lock 解決版である [**bun.lock**](../bun.lock) である。`package.json` の semver だけでは確定版が分からないため、釘を刺すときは `bun pm ls` または `bun.lock` を参照すること。
 
-> **注**: 上記は 2026-04-22 時点の pinned/latest resolved versions。最新値は `package.json` + `bun.lock` が SSoT。major version ごとの注意点は [CLAUDE.md](../CLAUDE.md#技術スタック非自明な注意点のみ) を参照。
+- 採用技術の説明と UI / 体験層の補足: [architecture/TECH_STACK.md](./architecture/TECH_STACK.md)
+- 各ライブラリ major 世代の落とし穴: [CLAUDE.md § 技術スタック（非自明な注意点のみ）](../CLAUDE.md#技術スタック非自明な注意点のみ)
 
-詳細は [CLAUDE.md](../CLAUDE.md) を参照。
+プロジェクト全体の入口は [CLAUDE.md](../CLAUDE.md) を参照。
 
 ## 読者別ガイド
 

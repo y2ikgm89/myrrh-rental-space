@@ -1,6 +1,6 @@
 # 技術スタック
 
-最終更新: 2026-04-11
+最終更新: 2026-04-22
 
 ## コア
 
@@ -18,18 +18,18 @@
 | Prisma               | 7.7.0      | ORM, WASM client, `createAppPrismaClient` で `$extends` 共通化 |
 | PostgreSQL           | 16         | 本番 DB（Cloud Run から接続）                                  |
 | `@prisma/adapter-pg` | 7.7.0      | Prisma driver adapter（seed / `prisma.ts` で必須）             |
-| Better Auth          | 1.6.2      | session / RBAC                                                 |
+| Better Auth          | 1.6.5      | session / RBAC（`bun.lock` 解決版）                            |
 | Zod                  | 4.3.6      | 入出力検証                                                     |
 
 ## UI と体験
 
-| 技術         | バージョン | 用途                               |
-| ------------ | ---------- | ---------------------------------- |
-| Tailwind CSS | 4.2.2      | styling, theme tokens              |
-| GSAP         | 3.14.2     | scroll / timeline animation        |
-| Lenis        | 1.3.21     | smooth scroll（`bun.lock` 解決版） |
-| nuqs         | 2.8.9      | search params state                |
-| Lexical      | 0.43.0     | admin rich text editor             |
+| 技術         | バージョン | 用途                                             |
+| ------------ | ---------- | ------------------------------------------------ |
+| Tailwind CSS | 4.2.2      | styling, theme tokens                            |
+| GSAP         | 3.15.0     | scroll / timeline animation（`bun.lock` 解決版） |
+| Lenis        | 1.3.23     | smooth scroll（`bun.lock` 解決版）               |
+| nuqs         | 2.8.9      | search params state                              |
+| Lexical      | 0.43.0     | admin rich text editor                           |
 
 ## 実装上の判断
 

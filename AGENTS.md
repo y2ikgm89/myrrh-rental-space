@@ -16,16 +16,16 @@
 
 下記バージョンは `package.json` / `bun.lock` で現在解決されている実ランタイムに合わせる。
 
-| 技術         | バージョン | 備考                                   |
-| ------------ | ---------- | -------------------------------------- |
-| Next.js      | 16.2.3     | `'use cache'`, `updateTag`, PPR 対応   |
-| React        | 19.2.5     | React Compiler 1.0, `useEffectEvent`   |
-| TypeScript   | 6.0.2      | `target: es2025`, `erasableSyntaxOnly` |
-| Bun          | 1.3.12     | `bun:test`, `packageManager` と一致    |
-| Prisma       | 7.7.0      | WASM, mapped enums                     |
-| Better Auth  | 1.6.1      | RBAC, Google/LINE OAuth                |
-| Tailwind CSS | 4.2.2      | CSS-first, @theme                      |
-| Zod          | 4.3.6      | `{ error: }` パラメータ                |
+| 技術         | バージョン | 備考                                         |
+| ------------ | ---------- | -------------------------------------------- |
+| Next.js      | 16.2.3     | `'use cache'`, `updateTag`, PPR 対応         |
+| React        | 19.2.5     | React Compiler 1.0, `useEffectEvent`         |
+| TypeScript   | 6.0.2      | `target: es2025`, `erasableSyntaxOnly`       |
+| Bun          | 1.3.12     | `bun:test`, `packageManager` と一致          |
+| Prisma       | 7.7.0      | WASM, mapped enums                           |
+| Better Auth  | 1.6.5      | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
+| Tailwind CSS | 4.2.2      | CSS-first, @theme                            |
+| Zod          | 4.3.6      | `{ error: }` パラメータ                      |
 
 ### Project structure
 

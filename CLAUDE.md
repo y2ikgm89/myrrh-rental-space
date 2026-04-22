@@ -34,7 +34,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## 技術スタック（非自明な注意点のみ）
 
-> 実バージョンは `package.json` + `bun.lock` が SSoT。下記は major.minor で各世代固有の注意点を記述。完全版は [docs/README.md](docs/README.md#技術スタック)。
+> 実バージョンは `package.json` + `bun.lock` が SSoT。下記は major.minor で各世代固有の注意点を記述。コア依存の列挙は [AGENTS.md](AGENTS.md#tech-stack)。
 
 | 技術            | 注意点                                                                                                                                                      |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -173,7 +173,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **review agent の「欠落」「型不整合」報告は Read + Glob で実在確認** — project-reviewer は `Serialized<T>` 型システムを未把握で Date→string を warning 化、route-structure-reviewer は Glob Windows パス変換で実在 loading.tsx を「欠落」扱いする false positive 傾向あり。report ベースで修正着手せず、対象ファイルを直接 Read して現状確認
 - **reviewer は MINGW64 `()` 含みパス Glob で誤検出する** — cache-strategy-reviewer 等が `src/shared/lib/constants/` 実在を「不在」と報告し「キャッシュ実装なし」と結論する false positive。受領後は `ls src/shared/lib/constants/` + `grep -rln "updateTag\|revalidateTag\|'use cache'" src/` で独立検証してから判断
 - **密結合タスクは 1 implementer にバンドル**
-- **implementer dispatch の staging discipline 強化** — prompt に「`git add` は touched files の明示 path 列挙のみ、`git add -A` / `git add .` / `git commit -a` 禁止」を明記。既存の uncommitted changes（他 topic の rename 等）を巻き込むリスクを明示警告する（revert + 選択的 stage + 再コミットで復旧可能だが工数を増やす）
+- **implementer dispatch の git 禁止は `add`/`commit`/`push` だけでなく `reset`/`checkout`/`restore`/`stash` も全面禁止明記必須** — 並列 implementer で一方の `git reset` / `git restore` が他方の成果や controller の直前編集を silent revert する事故が実発生（2026-04-22 セッションで 4 agent 並列中に controller quick fixes 5 件 + 他 agent の main file 変更が HEAD@{0} `reset: moving to HEAD` で消失）。prompt に 🚫 `git add / commit / push / reset / checkout / restore / stash` を明記。staging は controller 側で実行し implementer は編集のみ
+- **parallel implementer 完了後は 3 段検証** — ① `git status --short`（modifications + untracked 列挙、`[post-subagent] git snapshot` hook の出力は truncate されうるため authoritative でなく `git status` 直接実行が ground truth）② `wc -l` で対象ファイルの行数 delta 確認（agent 報告の行数と照合）③ `grep` で期待 symbol 存在 + 削除 symbol 不在を確認。`system-reminder` の「X was modified by linter」も edit 時点 snapshot が表示されるケースがあり stale しうるため、現状は必ず `grep` / `Read` で直接確認
 - **dispatch プロンプトに「plan 記載 identifier と実装が乖離していれば justified deviation として保持し報告」を明記** — plan に合わせた強制 rename 禁止
 - **plan 実行前の前提実在確認** — plan に「既存テスト XXX に mock 追加」「既存ファイル YYY を修正」と記載されていても、実行前に `ls <path>` / `Glob` で **実在確認必須**。実在しない場合は Bundle スコープを「pure function 抽出 + 新規 unit test」「小機能追加」等に変換する判断を controller が行う（implementer を BLOCKED にせず scope を柔軟に変換）
 - **並列 reviewer dispatch 前に `.claude/rules/**` 準拠度を grep で先行確認** — rule で既に厳格化済みのパターン（`revalidateTag\(.\*,`/`useCallback\(`/`gsap.matchMedia` 等）は 1 回の grep で violations ゼロを判定できる。多数の reviewer を並列起動するより、grep hits を元に必要 reviewer を絞る方が token コスト + context 圧迫を削減
