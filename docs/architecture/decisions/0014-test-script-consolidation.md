@@ -116,7 +116,7 @@ ADR 0010 で per-directory batch 実行が採択された後も、`package.json`
 
 ### 2026-04-22 追加クリーンアップ
 
-本 ADR 採択時の `package.json` 変更が不完全で、Follow-up 実行時に `test` / `test:watch` / `test:coverage` / `test:coverage:check` 4 scripts が `package.json` に残存していたことが判明（Compliance / Validation の上記 `0 hit` 主張は当時の ADR 本体のみを対象とし、`package.json` scripts 本体の grep は未実施だった）。email SSoT test plan（`docs/plans/2026-04-22-email-ssot-tests.md`）実装時に「クリーン実装 + 後方互換性なし」指示に従って該当 4 scripts を削除。以後の grep（`"test":|"test:watch":|"test:coverage":|"test:coverage:check":"` against package.json）で 0 hit を確認。
+本 ADR 採択時の `package.json` 変更が不完全で、Follow-up 実行時に `test` / `test:watch` / `test:coverage` / `test:coverage:check` 4 scripts が `package.json` に残存していたことが判明（Compliance / Validation の上記 `0 hit` 主張は当時の ADR 本体のみを対象とし、`package.json` scripts 本体の grep は未実施だった）。email SSoT test plan（当時 `docs/plans/2026-04-22-email-ssot-tests.md`、ADR-0015 clean-break により削除済み → `git log --all --diff-filter=D -- docs/plans/2026-04-22-email-ssot-tests.md`）実装時に「クリーン実装 + 後方互換性なし」指示に従って該当 4 scripts を削除。以後の grep（`"test":|"test:watch":|"test:coverage":|"test:coverage:check":"` against package.json）で 0 hit を確認。
 
 ## Follow-ups
 

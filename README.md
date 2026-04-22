@@ -167,7 +167,7 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
 - [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
 - [`.claude/rules/`](./.claude/rules/) — ドメイン別実装ルール（paths frontmatter で自動ロード）
-- [`docs/plans/`](./docs/plans/) — 実装計画履歴 + `INDEX.md` 軽量索引
+- [`docs/plans/`](./docs/plans/) — 進行中プランのみ（完了プランは git history と ADR で辿る、clean-break 原則）
 - [`docs/architecture/`](./docs/architecture/) — アーキテクチャ図・設計判断記録
 
 ## ライセンス
