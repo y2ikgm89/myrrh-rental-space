@@ -1,6 +1,12 @@
 import type { ReactElement } from "react";
-import { Container } from "@/public/components/design-system/container";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
+import { SectionHeader } from "@/public/components/sections/SectionHeader";
+import {
+  defaultSectionDesign,
+  parseSectionDesign,
+  type SectionDesign,
+} from "@/shared/lib/validations/section";
 import { SpacesCarousel } from "./spaces-carousel";
 
 export interface ShowcaseSpace {
@@ -22,6 +28,7 @@ export interface SpacesSectionProps {
   readonly title: string;
   readonly count: number;
   readonly autoPlayInterval: number;
+  readonly design?: unknown;
 }
 
 export const spacesDefaultProps = {
@@ -37,29 +44,41 @@ export function SpacesSection({
   title = spacesDefaultProps.title,
   count = spacesDefaultProps.count,
   autoPlayInterval = spacesDefaultProps.autoPlayInterval,
+  design,
 }: SpacesSectionProps): ReactElement {
   const limited = spaces.slice(0, count);
+  const resolved = parseSectionDesign(design ?? defaultSectionDesign);
+
+  const headerDesign: SectionDesign = {
+    ...resolved,
+    paddingBottom: "none",
+  };
+  const carouselDesign: SectionDesign = {
+    ...resolved,
+    paddingTop: "none",
+    maxWidth: "full",
+  };
 
   return (
-    <section className="py-[var(--spacing-section-compact)]">
-      {/* Section header */}
-      <Container>
+    <>
+      <SectionWrapper design={headerDesign}>
         <ScrollReveal>
-          <div className="mb-10 text-center md:mb-14">
-            <span className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
-              {label}
-            </span>
-            <h2 className="mt-4 font-heading text-[clamp(2rem,4vw,3rem)] font-light tracking-tight">
-              {title}
-            </h2>
-          </div>
+          <SectionHeader
+            label={label}
+            title={title}
+            textAlign={resolved.textAlign}
+            className="text-center"
+          />
         </ScrollReveal>
-      </Container>
-
-      {/* Center Stage Carousel */}
-      {limited.length > 0 && (
-        <SpacesCarousel spaces={limited} autoPlayInterval={autoPlayInterval} />
-      )}
-    </section>
+      </SectionWrapper>
+      {limited.length > 0 ? (
+        <SectionWrapper design={carouselDesign} skipContainer>
+          <SpacesCarousel
+            spaces={limited}
+            autoPlayInterval={autoPlayInterval}
+          />
+        </SectionWrapper>
+      ) : null}
+    </>
   );
 }

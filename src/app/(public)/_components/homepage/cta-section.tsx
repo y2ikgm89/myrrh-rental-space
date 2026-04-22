@@ -2,6 +2,11 @@ import type { ReactElement } from "react";
 import { Button } from "@/public/components/design-system/button";
 import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
+import {
+  defaultSectionDesign,
+  parseSectionDesign,
+} from "@/shared/lib/validations/section";
 
 export interface CtaSectionProps {
   readonly label: string;
@@ -9,9 +14,10 @@ export interface CtaSectionProps {
   readonly description: string;
   readonly buttonText: string;
   readonly buttonUrl: string;
+  readonly design?: unknown;
 }
 
-export const ctaDefaultProps: CtaSectionProps = {
+export const ctaDefaultProps: Omit<CtaSectionProps, "design"> = {
   label: "Reservation",
   title: "あなたに最適な空間を",
   description:
@@ -26,9 +32,12 @@ export function CtaSection({
   description = ctaDefaultProps.description,
   buttonText = ctaDefaultProps.buttonText,
   buttonUrl = ctaDefaultProps.buttonUrl,
+  design,
 }: Partial<CtaSectionProps> = {}): ReactElement {
+  const resolvedDesign = parseSectionDesign(design ?? defaultSectionDesign);
+
   return (
-    <section className="px-4 py-[var(--spacing-section-compact)] text-center">
+    <SectionWrapper design={resolvedDesign}>
       <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
@@ -44,14 +53,16 @@ export function CtaSection({
       </ScrollReveal>
 
       <ScrollReveal delay={0.3}>
-        <Button
-          variant="editorial"
-          href={buttonUrl}
-          className="mt-8 text-xs uppercase tracking-[0.18em]"
-        >
-          {buttonText}
-        </Button>
+        <div className="mt-8 flex justify-center">
+          <Button
+            variant="editorial"
+            href={buttonUrl}
+            className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
+          >
+            {buttonText}
+          </Button>
+        </div>
       </ScrollReveal>
-    </section>
+    </SectionWrapper>
   );
 }

@@ -20,41 +20,19 @@ export type DefaultSectionDef = {
 /**
  * システムページごとのデフォルトセクション定義
  */
+const homeEditorialSpacing = {
+  paddingTop: "md",
+  paddingBottom: "md",
+  maxWidth: "xl",
+  textAlign: "center",
+} as const satisfies Prisma.InputJsonValue;
+
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
     {
-      type: "homepage-hero",
-      title: null,
-      config: {
-        label: "Volume One — Spring 2026",
-        title: "Where silence works.",
-        description:
-          "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
-        images: [
-          {
-            url: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&q=80",
-            alt: "自然光が差し込む開放的なレンタルスペース",
-          },
-          {
-            url: "https://images.unsplash.com/photo-1462826303086-329426d1aef5?w=1200&q=80",
-            alt: "木の温もりを感じるミーティングルーム",
-          },
-          {
-            url: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=1200&q=80",
-            alt: "モダンなデザインのコワーキングスペース",
-          },
-        ],
-        transition: "crossfade",
-        buttonText: "Reserve a space",
-        buttonUrl: "/reservation",
-      },
-      content: null,
-      order: 0,
-      isActive: true,
-    },
-    {
       type: "homepage-how-it-works",
       title: null,
+      design: homeEditorialSpacing,
       config: {
         label: "How to Reserve",
         title: "ご利用の流れ",
@@ -80,24 +58,31 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ],
       },
       content: null,
-      order: 1,
+      order: 0,
       isActive: true,
     },
     {
       type: "homepage-spaces",
       title: null,
+      design: homeEditorialSpacing,
       config: {
         label: "Selected Spaces",
         title: "厳選スペース",
         count: 6,
       },
       content: null,
-      order: 2,
+      order: 1,
       isActive: true,
     },
     {
       type: "homepage-features",
       title: null,
+      design: {
+        paddingTop: "md",
+        paddingBottom: "md",
+        maxWidth: "editorial",
+        textAlign: "center",
+      },
       config: {
         label: "Why Myrrh",
         title: "選ばれる理由",
@@ -125,12 +110,13 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         ],
       },
       content: null,
-      order: 3,
+      order: 2,
       isActive: true,
     },
     {
       type: "homepage-cta",
       title: null,
+      design: homeEditorialSpacing,
       config: {
         label: "Reservation",
         title: "あなたに最適な空間を",
@@ -140,7 +126,7 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         buttonUrl: "/spaces",
       },
       content: null,
-      order: 4,
+      order: 3,
       isActive: true,
     },
   ],

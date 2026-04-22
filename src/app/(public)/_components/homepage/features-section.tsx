@@ -3,6 +3,12 @@ import {
   ScrollReveal,
   ScrollRevealGroup,
 } from "@/public/components/animations/scroll-reveal";
+import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
+import { SectionHeader } from "@/public/components/sections/SectionHeader";
+import {
+  defaultSectionDesign,
+  parseSectionDesign,
+} from "@/shared/lib/validations/section";
 
 export interface FeatureItem {
   readonly title: string;
@@ -13,9 +19,10 @@ export interface FeaturesSectionProps {
   readonly label: string;
   readonly title: string;
   readonly items: readonly FeatureItem[];
+  readonly design?: unknown;
 }
 
-export const featuresDefaultProps: FeaturesSectionProps = {
+export const featuresDefaultProps: Omit<FeaturesSectionProps, "design"> = {
   label: "Why Myrrh",
   title: "選ばれる理由",
   items: [
@@ -46,42 +53,41 @@ export function FeaturesSection({
   label = featuresDefaultProps.label,
   title = featuresDefaultProps.title,
   items = featuresDefaultProps.items,
+  design,
 }: Partial<FeaturesSectionProps> = {}): ReactElement {
-  return (
-    <section className="py-[var(--spacing-section-compact)]">
-      <div className="mx-auto max-w-[50rem] px-4 md:px-6">
-        <ScrollReveal>
-          <div className="mb-10 text-center md:mb-14">
-            <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
-              {label}
-            </p>
-            <h2 className="mt-4 font-heading text-[clamp(2rem,4vw,3rem)] font-light tracking-tight">
-              {title}
-            </h2>
-          </div>
-        </ScrollReveal>
+  const resolvedDesign = parseSectionDesign(design ?? defaultSectionDesign);
 
-        <ScrollRevealGroup className="divide-y border-y border-border divide-border">
-          {items.map((feature, i) => (
-            <div
-              key={`feature-${String(i)}`}
-              className="grid grid-cols-[3rem_1fr] items-start gap-4 py-6 md:gap-6 md:py-8"
-            >
-              <span className="text-right font-heading text-[2rem] font-light italic leading-none text-accent/50">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <h3 className="text-base font-normal tracking-[0.02em]">
-                  {feature.title}
-                </h3>
-                <p className="mt-1 text-[0.9rem] leading-[1.9] text-muted-foreground">
-                  {feature.description}
-                </p>
-              </div>
+  return (
+    <SectionWrapper design={resolvedDesign}>
+      <ScrollReveal>
+        <SectionHeader
+          label={label}
+          title={title}
+          textAlign={resolvedDesign.textAlign}
+          className="text-center"
+        />
+      </ScrollReveal>
+
+      <ScrollRevealGroup className="divide-y border-y border-border divide-border">
+        {items.map((feature, i) => (
+          <div
+            key={`feature-${String(i)}`}
+            className="grid grid-cols-[3rem_1fr] items-start gap-4 py-6 md:gap-6 md:py-8"
+          >
+            <span className="text-right font-heading text-[2rem] font-light italic leading-none text-accent/50">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <h3 className="text-base font-normal tracking-[0.02em]">
+                {feature.title}
+              </h3>
+              <p className="mt-1 text-[0.9rem] leading-[1.9] text-muted-foreground">
+                {feature.description}
+              </p>
             </div>
-          ))}
-        </ScrollRevealGroup>
-      </div>
-    </section>
+          </div>
+        ))}
+      </ScrollRevealGroup>
+    </SectionWrapper>
   );
 }
