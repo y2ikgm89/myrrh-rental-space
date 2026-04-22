@@ -17,8 +17,8 @@ description: 公開ページのスクロール演出セクションを追加す�
 
 ## 先に読む
 
-1. `docs/reference/codex-rules/project-design-config.md`
-2. `docs/reference/codex-rules/gsap-patterns.md`
+1. `.claude/rules/frontend/project-design-config.md`
+2. `.claude/rules/frontend/gsap-patterns.md`
 3. `reference/mood-variants.md`
 4. `reference/section-templates.md`
 
@@ -61,7 +61,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll animation perform
 - モバイルではパララックス量を縮小し、`pin: true` を安易に使わない
 - `Math.random()` を使わず決定的な値でレイアウトや粒子を生成する
 - Three.js / PixiJS / WebGL は未使用（削除済み）。再導入しない
-- **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `docs/reference/codex-rules/nuqs-patterns.md`
+- **nuqs 以外**の URL 同期用 Context / Provider を public root に足さない。既存の **`NuqsAdapter`** は維持前提（二重ラップも禁止）。詳細は `.claude/rules/nuqs-patterns.md`
 - z-index、effect level、WebGL context 管理を local rule から逸脱させない
 - 履歴資料の `docs/plans/*` を実装ルールとして扱わない
 

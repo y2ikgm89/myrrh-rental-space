@@ -9,18 +9,18 @@
 1. ユーザーの直接指示
 2. 最も近い `AGENTS.override.md`
 3. ルート `AGENTS.md`
-4. `docs/reference/codex-rules/*.md`（詳細ルール）
+4. **`.claude/rules/**/\*.md`**（詳細ルール正本。Claude Code は `paths:` 付き自動ロード、Codex も同じファイルを参照）
 5. `.claude/skills/<name>/SKILL.md`（繰り返しワークフロー）
 
 ## ツール別の読み込み
 
-| 領域             | Codex                                | Claude Code                                                      |
-| ---------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| ルート方針       | `AGENTS.md`                          | **`CLAUDE.md`** + `AGENTS.md`（不変条件）                        |
-| 詳細ルール       | `docs/reference/codex-rules/`        | **`.claude/rules/**/\*.md`**（`paths:` 付き自動ロード）          |
-| 自動ガード       | エージェント設定に依存               | **`.claude/hooks/*.sh`** + **`.claude/settings.json`**           |
-| スキル           | **`.claude/skills/`**（正本）        | **`.claude/skills/`**（スタブ → `.claude/skills/` の正本を参照） |
-| サブエージェント | 増やさない（skill / ルールへ寄せる） | **`.claude/agents/*.md`**                                        |
+| 領域             | Codex                                                                                             | Claude Code                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ルート方針       | `AGENTS.md`                                                                                       | **`CLAUDE.md`** + `AGENTS.md`（不変条件）                        |
+| 詳細ルール       | **`.claude/rules/**/\*.md`**（正本。`docs/reference/codex-rules/` は Codex 互換 mirror 7 件のみ） | **`.claude/rules/**/\*.md`**（`paths:` 付き自動ロード）          |
+| 自動ガード       | エージェント設定に依存                                                                            | **`.claude/hooks/*.sh`** + **`.claude/settings.json`**           |
+| スキル           | **`.claude/skills/`**（正本）                                                                     | **`.claude/skills/`**（スタブ → `.claude/skills/` の正本を参照） |
+| サブエージェント | 増やさない（skill / ルールへ寄せる）                                                              | **`.claude/agents/*.md`**                                        |
 
 ## スキル配置
 
@@ -30,11 +30,16 @@
 
 > **将来の統合**: Claude Code 公式は `.claude/skills/` に正本を推奨。Codex 互換が不要になった時点で `.claude/skills/` → `.claude/skills/` に一本化する。
 
-## 二重管理が必要なトピック
+## 二重管理が必要なトピック（2 ファイルのみ）
 
-`docs/reference/codex-rules/` と `.claude/rules/` の両方に同トピックがある場合、**方針・公式リンク・「未依存」「削除済み」の事実を一致**させる。
+`docs/reference/codex-rules/` には Codex 互換用の mirror ファイルが残っており、`.claude/rules/frontend/` と **同一バイト列**で同期される（`scripts/verify-policy-docs.mjs` が CI で強制）。
 
-対象: Lexical シェル、インラインエディタ、`bun-patterns` 相当の記述
+| Codex mirror                                                 | 正本                                                     |
+| ------------------------------------------------------------ | -------------------------------------------------------- |
+| `docs/reference/codex-rules/lexical-patterns.md`             | `.claude/rules/frontend/lexical-patterns.md`             |
+| `docs/reference/codex-rules/admin-inline-editor-patterns.md` | `.claude/rules/frontend/admin-inline-editor-patterns.md` |
+
+それ以外の codex-rules（21 ファイル）は 2026-04-22 に削除済み。`.claude/rules/` を直接参照する。
 
 ## サブエージェント（`.claude/agents/`）
 

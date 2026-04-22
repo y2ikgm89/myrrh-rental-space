@@ -218,8 +218,8 @@ const updateToolbar = () => {
 - **アイコンサイズ**: `h-4 w-4` で統一
 - **ボタンサイズ**: `h-8 w-8`（アイコンのみ）または `h-8`（テキスト付き）
 - **title属性必須**: ツールチップ設定
-- **React Compiler互換**: `docs/reference/codex-rules/react-patterns.md` 準拠
-- **型アサーション禁止**: `docs/reference/codex-rules/type-safety.md` 準拠
+- **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
+- **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
 
 ## Definition of Done
 

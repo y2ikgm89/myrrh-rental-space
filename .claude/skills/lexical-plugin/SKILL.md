@@ -18,7 +18,7 @@ node 自体の追加が主目的なら `lexical-node`、toolbar 追加が主目�
 ## 先に読む
 
 1. `docs/reference/codex-rules/lexical-patterns.md`
-2. `docs/reference/codex-rules/react-patterns.md`
+2. `.claude/rules/react-patterns.md`
 3. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ImagePlugin.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/YouTubePlugin.tsx`

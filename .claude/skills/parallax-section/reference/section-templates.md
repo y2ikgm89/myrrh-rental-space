@@ -3,7 +3,7 @@
 > 各タイプの完全テンプレートコード + ムードバリアント表
 
 全テンプレートは `gsap.matchMedia()` パターン準拠（GSAP 公式推奨）。
-→ `docs/reference/codex-rules/gsap-patterns.md` §reduced-motion 対応 参照。
+→ `.claude/rules/frontend/gsap-patterns.md` §reduced-motion 対応 参照。
 
 ## hero テンプレート（5層パララックス）
 

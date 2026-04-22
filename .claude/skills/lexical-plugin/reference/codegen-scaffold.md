@@ -251,11 +251,11 @@ const {
 
 詳細は `docs/reference/codex-rules/lexical-patterns.md` を参照。
 
-- **React Compiler互換**: `docs/reference/codex-rules/react-patterns.md` 準拠
+- **React Compiler互換**: `.claude/rules/react-patterns.md` 準拠
 - **updateListener内でのeditor.update()禁止**: Node Transforms使用
 - **リスナー登録解除**: mergeRegister使用必須
 - **$関数**: read/update クロージャ内でのみ使用可能
-- **型アサーション禁止**: `docs/reference/codex-rules/type-safety.md` 準拠
+- **型アサーション禁止**: `.claude/rules/type-safety.md` 準拠
 
 ## Definition of Done
 

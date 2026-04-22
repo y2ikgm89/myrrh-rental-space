@@ -31,7 +31,7 @@
 
 - Read: `.claude/rules/type-safety.md`（現行版）
 - Modify: `.claude/rules/type-safety.md`
-- Sync: `docs/reference/codex-rules/type-safety.md`
+- Sync: `.claude/rules/type-safety.md`
 
 **Context（サブエージェントへ）:**
 このプロジェクトは TypeScript 6.0-beta を使用。`noUncheckedIndexedAccess: true`、`strict: true` が有効。
@@ -109,10 +109,10 @@ cat .claude/rules/type-safety.md
 [keysOf, isValid*, getValid* — ファイルパス付き]
 ```
 
-**Step 4: docs/reference/codex-rules/type-safety.md に同内容をコピー**
+**Step 4: .claude/rules/type-safety.md に同内容をコピー**
 
 ```bash
-cp .claude/rules/type-safety.md docs/reference/codex-rules/type-safety.md
+cp .claude/rules/type-safety.md .claude/rules/type-safety.md
 ```
 
 **Step 5: 確認**
@@ -127,7 +127,7 @@ cp .claude/rules/type-safety.md docs/reference/codex-rules/type-safety.md
 
 - Read: `.claude/rules/react-patterns.md`
 - Modify: `.claude/rules/react-patterns.md`
-- Sync: `docs/reference/codex-rules/react-patterns.md`
+- Sync: `.claude/rules/react-patterns.md`
 
 **Context（サブエージェントへ）:**
 React 19.2.4 + React Compiler 1.0 を使用。`forwardRef` 禁止（React 19 では ref は通常のprop）。
@@ -197,7 +197,7 @@ WebSearch: "React 19.2 new features useEffectEvent useOptimistic server actions 
 [パターンと制約]
 ```
 
-**Step 4: docs/reference/codex-rules/react-patterns.md に同期**
+**Step 4: .claude/rules/react-patterns.md に同期**
 
 ---
 
@@ -207,7 +207,7 @@ WebSearch: "React 19.2 new features useEffectEvent useOptimistic server actions 
 
 - Read: `.claude/rules/server-actions.md`
 - Modify: `.claude/rules/server-actions.md`
-- Sync: `docs/reference/codex-rules/server-actions.md`
+- Sync: `.claude/rules/server-actions.md`
 
 **Context（サブエージェントへ）:**
 Next.js 16.1.6 の `'use cache'` / `cacheLife` / `cacheTag` / `updateTag` が主要API。
@@ -267,7 +267,7 @@ WebSearch: "Next.js 16 cacheComponents use cache directive best practices 2025 2
 ## 禁止事項
 ```
 
-**Step 4: docs/reference/codex-rules/server-actions.md に同期**
+**Step 4: .claude/rules/server-actions.md に同期**
 
 ---
 
@@ -277,7 +277,7 @@ WebSearch: "Next.js 16 cacheComponents use cache directive best practices 2025 2
 
 - Read: `.claude/rules/prisma-patterns.md`
 - Modify: `.claude/rules/prisma-patterns.md`
-- Sync: `docs/reference/codex-rules/prisma-patterns.md`
+- Sync: `.claude/rules/prisma-patterns.md`
 
 **Context（サブエージェントへ）:**
 Prisma 7.4.0 / WASM エンジン（`engineType = "client"` + `runtime = "bun"`）。
@@ -349,7 +349,7 @@ head -30 src/shared/lib/prisma.ts
 ## 禁止事項
 ```
 
-**Step 4: docs/reference/codex-rules/prisma-patterns.md に同期**
+**Step 4: .claude/rules/prisma-patterns.md に同期**
 
 ---
 
@@ -359,7 +359,7 @@ head -30 src/shared/lib/prisma.ts
 
 - Read: `.claude/rules/zod-patterns.md`
 - Modify: `.claude/rules/zod-patterns.md`
-- Sync: `docs/reference/codex-rules/zod-patterns.md`
+- Sync: `.claude/rules/zod-patterns.md`
 
 **Context（サブエージェントへ）:**
 Zod 4.3.6 使用。`z.nativeEnum()` 禁止 → `z.enum(PrismaEnum)` 使用。
@@ -418,7 +418,7 @@ Query: "Zod 4 z.enum nativeEnum migration error parameter safeParse flattenError
 ## 禁止事項
 ```
 
-**Step 4: docs/reference/codex-rules/zod-patterns.md に同期**
+**Step 4: .claude/rules/zod-patterns.md に同期**
 
 ---
 
@@ -429,7 +429,7 @@ Query: "Zod 4 z.enum nativeEnum migration error parameter safeParse flattenError
 **Files:**
 
 - Create: `.claude/rules/bun-patterns.md`
-- Create: `docs/reference/codex-rules/bun-patterns.md`
+- Create: `.claude/rules/bun-patterns.md`
 
 **Context（サブエージェントへ）:**
 このプロジェクトは Bun 1.3.x をランタイム兼テストフレームワークとして使用。
@@ -543,7 +543,7 @@ bun run test:watch        # 監視モード
 
 **Files:**
 - Create: `.claude/rules/error-handling.md`
-- Create: `docs/reference/codex-rules/error-handling.md`
+- Create: `.claude/rules/error-handling.md`
 
 **Context（サブエージェントへ）:**
 プロジェクトには `src/shared/lib/errors/` に `logger.ts` / `safeFetch` が存在する。
@@ -610,7 +610,7 @@ head -30 src/app/(admin)/admin/(dashboard)/_shared/actions/post.ts
 **Files:**
 
 - Create: `.claude/rules/accessibility.md`
-- Create: `docs/reference/codex-rules/accessibility.md`
+- Create: `.claude/rules/frontend/accessibility.md`
 
 **Context（サブエージェントへ）:**
 公開ページはアニメーションが多い（GSAP / Three.js / PixiJS）。
@@ -702,7 +702,7 @@ useGSAP(
 
 **Files:**
 - Modify: `.claude/rules/auth-patterns.md`
-- Sync: `docs/reference/codex-rules/auth-patterns.md`
+- Sync: `.claude/rules/auth-patterns.md`
 
 **Context（サブエージェントへ）:**
 Better Auth 1.4.18 / RBAC 使用。権限階層: `SUPER_ADMIN > ADMIN > EDITOR > VIEWER > USER`。
@@ -771,7 +771,7 @@ head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
 ## 禁止事項
 ```
 
-**Step 4: docs/reference/codex-rules/auth-patterns.md に同期**
+**Step 4: .claude/rules/auth-patterns.md に同期**
 
 ---
 
@@ -780,7 +780,7 @@ head -50 src/app/(admin)/admin/(dashboard)/_shared/lib/permissions.ts
 **Files:**
 
 - Modify: `.claude/rules/tailwind-patterns.md`
-- Sync: `docs/reference/codex-rules/tailwind-patterns.md`
+- Sync: `.claude/rules/tailwind-patterns.md`
 
 **Context（サブエージェントへ）:**
 Tailwind CSS 4.1.18 / CSS-first 設定。`tailwind.config.js` は存在しない。
@@ -811,7 +811,7 @@ head -80 src/app/(public)/_styles/public.css
 **Files:**
 
 - Modify: `.claude/rules/gsap-patterns.md`
-- Sync: `docs/reference/codex-rules/gsap-patterns.md`
+- Sync: `.claude/rules/frontend/gsap-patterns.md`
 
 **Context（サブエージェントへ）:**
 GSAP 3.14.2 / @gsap/react 2.1 / ScrollTrigger / Lenis 1.3.17 使用。
@@ -917,7 +917,7 @@ head -150 .claude/rules/lexical-patterns.md
 **Files:**
 
 - Modify: `.claude/rules/seo-patterns.md`
-- Sync: `docs/reference/codex-rules/seo-patterns.md`
+- Sync: `.claude/rules/frontend/seo-patterns.md`
 
 **Context（サブエージェントへ）:**
 JSON-LD `@graph` パターン（LocalBusiness + WebSite を1つのscriptタグに統合）。
@@ -949,7 +949,7 @@ cat src/app/(public)/_shared/lib/page-metadata.ts | head -50
 **Files:**
 
 - Modify: `.claude/rules/nuqs-patterns.md`
-- Sync: `docs/reference/codex-rules/nuqs-patterns.md`
+- Sync: `.claude/rules/nuqs-patterns.md`
 
 **Context（サブエージェントへ）:**
 nuqs 2.8.8 使用。`createSearchParamsCache` / `parseAs*` / Zod 4 統合。
@@ -1177,9 +1177,9 @@ done
 **Step 2: 差分があるファイルを同期**
 
 ```bash
-cp .claude/rules/bun-patterns.md docs/reference/codex-rules/bun-patterns.md
-cp .claude/rules/error-handling.md docs/reference/codex-rules/error-handling.md
-cp .claude/rules/accessibility.md docs/reference/codex-rules/accessibility.md
+cp .claude/rules/bun-patterns.md .claude/rules/bun-patterns.md
+cp .claude/rules/error-handling.md .claude/rules/error-handling.md
+cp .claude/rules/accessibility.md .claude/rules/frontend/accessibility.md
 # 更新したファイルも同期
 ```
 

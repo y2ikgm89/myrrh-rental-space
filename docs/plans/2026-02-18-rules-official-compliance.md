@@ -306,13 +306,13 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 **Files:**
 
-- Modify: `docs/reference/codex-rules/accessibility.md` — ヘッダーに移動先メモ追加
-- Modify: `docs/reference/codex-rules/deployment-patterns.md` — 同上
+- Modify: `.claude/rules/frontend/accessibility.md` — ヘッダーに移動先メモ追加
+- Modify: `.claude/rules/ops/deployment-patterns.md` — 同上
 - Modify: `docs/reference/codex-rules/README.md` (存在する場合) — 構造更新
 
 **Step 1: 移動した各ファイルの参照先ドキュメントにメモを追加**
 
-`docs/reference/codex-rules/accessibility.md` のヘッダー注記を確認・更新:
+`.claude/rules/frontend/accessibility.md` のヘッダー注記を確認・更新:
 
 ```markdown
 # アクセシビリティ（a11y）ルール

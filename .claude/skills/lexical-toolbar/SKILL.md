@@ -18,7 +18,7 @@ plugin や node を伴う場合でも、主目的が toolbar 操作の追加な�
 ## 先に読む
 
 1. `docs/reference/codex-rules/lexical-patterns.md`
-2. `docs/reference/codex-rules/react-patterns.md`
+2. `.claude/rules/react-patterns.md`
 3. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/plugins/ToolbarPlugin.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/LexicalEditor.tsx`

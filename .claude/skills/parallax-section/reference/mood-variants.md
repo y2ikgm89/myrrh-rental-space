@@ -133,7 +133,7 @@ mm.add({
 各セルの組み合わせは、対応するルールファイル参照:
 
 - L1: CSS エフェクト（transition, transform, filter）
-- L2: `docs/reference/codex-rules/gsap-patterns.md`（GSAP / ScrollTrigger）
+- L2: `.claude/rules/frontend/gsap-patterns.md`（GSAP / ScrollTrigger）
 
 ## Three.js ムード別エンハンスメント
 

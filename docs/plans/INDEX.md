@@ -2,7 +2,9 @@
 
 > **このファイルは Status × Domain の軽量索引です。** 詳細な進行状況・計画内容は [`README.md`](./README.md) を参照してください。新規プラン作成手順は [`CLAUDE.md`](./CLAUDE.md)。
 
-**ファイル数**: `docs/plans/*.md` 166件 + `docs/superpowers/plans/*.md` 41件 = **207件**
+**ファイル数**: `docs/plans/*.md` 168件 + `docs/plans/archive/*.md` 1件 + `docs/superpowers/plans/*.md` 50件 = **219件**
+
+> 2026-04-22 整理: README.md を分割し、連番形式 + 2026-02-07 以前の完了履歴は [`archive/completed-legacy.md`](./archive/completed-legacy.md) に集約。
 
 ---
 

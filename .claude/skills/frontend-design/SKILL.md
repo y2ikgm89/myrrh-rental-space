@@ -10,11 +10,11 @@ description: 公開ページの新規 UI や大幅なリデザイン前に使う
 
 ## 先に読む
 
-1. `docs/reference/codex-rules/project-design-config.md`
-2. `docs/reference/codex-rules/anti-ai-design.md`
-3. `docs/reference/codex-rules/design-system-memory.md`
-4. 必要に応じて `docs/reference/codex-rules/ui-ux-patterns.md`
-5. モーションが主役なら `docs/reference/codex-rules/gsap-patterns.md`
+1. `.claude/rules/frontend/project-design-config.md`
+2. `.claude/rules/frontend/anti-ai-design.md`
+3. `.claude/rules/frontend/design-system-memory.md`
+4. 必要に応じて `.claude/rules/frontend/ui-ux-patterns.md`
+5. モーションが主役なら `.claude/rules/frontend/gsap-patterns.md`
 6. パターン例が必要なら `reference/anti-ai-patterns.md`
 
 ## 入力
@@ -60,6 +60,23 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "scroll accessibility" --
 python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --stack nextjs
 ```
 
+## レスポンシブ判断基準（Tailwind v4 公式準拠）
+
+Design Brief 作成時にレスポンシブ挙動を決める場合、**Container Query vs viewport breakpoint** を明示する:
+
+| 対象                                                           | 判定                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------- |
+| Hero split（左画像 + 右テキスト）                              | viewport (`md:`)                                      |
+| 2 カラム text+image マクロレイアウト                           | viewport (`md:`)                                      |
+| フォームグリッド（名前: 姓/名、時間: 開始/終了）               | viewport (`sm:`)                                      |
+| カードグリッド（Space / Post / News / Event / Testimonial 等） | **Container Query (`@container` + `@md:` / `@3xl:`)** |
+| ダッシュボード widget（admin dashboard cards）                 | **named container (`@container/main` + `@md/main:`)** |
+| Sidebar 持ちレイアウトで main content が追従すべき要素         | **named container**                                   |
+
+- **3xl breakpoint**（1920px, ultra wide / 2K-4K）は default 採用。`2xl:` 以上のワイドスクリーン対応は `@3xl:` or `3xl:` を使う
+- breakpoint tokens / container tokens / touch-target token は `public.css` / `admin.css` の `@theme` を参照（→ `project-design-config.md` §レスポンシブ設計）
+- タッチターゲットは WCAG 2.5.5 Enhanced (AAA) 44×44 CSS px — Button 全 size で `min-h-11` 以上を保証（→ `frontend/accessibility.md` §タッチターゲット）
+
 ## ガードレール
 
 - クライアントで `useSyncExternalStore`（ストレージ同期など）を足すときは `react-patterns.md`: **`getServerSnapshot` で `return []` / `return {}` 禁止**（モジュール定数で参照を固定）。空配列の実装例は `announcement-bar/use-dismissed-bars.ts`
@@ -68,7 +85,7 @@ python3 .claude/skills/ui-ux-pro-max/scripts/search.py "layout responsive" --sta
 - モーションの定数は共有実装を使い、マジックナンバーを増やさない
 - `prefers-reduced-motion` を無視しない
 - `src/app/(public)/layout.tsx` に新しい effect provider や scroll provider を直接積まない
-- **nuqs 以外**の URL state 用 Context を public root に足さない。既存の **`NuqsAdapter`**（nuqs）は維持前提（二重ラップも禁止）。`docs/reference/codex-rules/nuqs-patterns.md`
+- **nuqs 以外**の URL state 用 Context を public root に足さない。既存の **`NuqsAdapter`**（nuqs）は維持前提（二重ラップも禁止）。`.claude/rules/nuqs-patterns.md`
 - 公開 UI のために `@/shared/db/prisma` や新規 `public/_shared/actions` を足さない
 - 履歴資料の `docs/plans/*` を現行ルールとして引用しない
 - 永続化が必要な判断を hidden state に置かず、ドキュメントに残す

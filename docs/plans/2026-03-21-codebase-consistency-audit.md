@@ -55,7 +55,7 @@
 
 ## 追記（2026-03-22）一貫性フォローアップ
 
-- **技術スタック表と lockfile**: `bun.lock` の解決版に合わせ、Lenis **1.3.19**、@gsap/react **2.1.2** を `AGENTS.md`・[`docs/architecture/TECH_STACK.md`](../architecture/TECH_STACK.md)・[`docs/reference/codex-rules/gsap-patterns.md`](../reference/codex-rules/gsap-patterns.md)・[`.claude/rules/frontend/gsap-patterns.md`](../../.claude/rules/frontend/gsap-patterns.md) で揃えた（`CLAUDE.md` の技術表は Lenis 行を持たないため対象外）。
+- **技術スタック表と lockfile**: `bun.lock` の解決版に合わせ、Lenis **1.3.19**、@gsap/react **2.1.2** を `AGENTS.md`・[`docs/architecture/TECH_STACK.md`](../architecture/TECH_STACK.md)・[`.claude/rules/frontend/gsap-patterns.md`](../reference/codex-rules/gsap-patterns.md)・[`.claude/rules/frontend/gsap-patterns.md`](../../.claude/rules/frontend/gsap-patterns.md) で揃えた（`CLAUDE.md` の技術表は Lenis 行を持たないため対象外）。
 - **ページネーション**: 管理（nuqs + `Button`）と公開（`Link`）は実装が分岐している。ソース先頭に相互 `@see` を置き、省略表示は装飾として `aria-hidden` を付与。アルゴリズム変更時は両ファイルをペアレビューすること。
 - **証跡（本追記時）**: `bun run validate` / `bun run test:all` / `bun run docs:verify-policy-sync` / `bun run build` の結果を下表に追記する。
 

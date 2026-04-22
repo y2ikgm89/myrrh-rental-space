@@ -17,8 +17,8 @@ description: 管理画面の Lexical 実装を監査またはモダナイズす�
 ## 先に読む
 
 1. `docs/reference/codex-rules/lexical-patterns.md`（**「LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー」** 節、および **「HTML → Lexical JSON」** 節 — シェル・フォーク・`tryConvertHtmlStringToLexicalJsonString` 等の正本）
-2. `docs/reference/codex-rules/react-patterns.md`
-3. `docs/reference/codex-rules/type-safety.md`
+2. `.claude/rules/react-patterns.md`
+3. `.claude/rules/type-safety.md`
 4. 必要なら `package.json` の Lexical バージョン
 
 ## ワークフロー

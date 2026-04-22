@@ -86,7 +86,7 @@ R2_PUBLIC_URL=https://media.example.com        # 末尾スラッシュなし
 - `docs/quality/TEST_COVERAGE_ANALYSIS.md` — Supabase 言及
 - `docs/requirements/settings.md` — Storage 要件記述
 - `docs/requirements/posts.md` — 画像ストレージ記述
-- `docs/reference/codex-rules/deployment-patterns.md` — codex 用 ruleset 同期更新
+- `.claude/rules/ops/deployment-patterns.md` — codex 用 ruleset 同期更新
 - `docs/plans/README.md` — plans index
 - `docs/plans/{060-ci-quality-improvements,052-hardcode-config-centralization,042-complete-separation-architecture,030-media-management,026-remove-as-const-assertions,007-tiptap,002-stripe-payment-settings,2026-02-28-csp-nonce-migration,2026-02-28-csp-nonce-migration-design}.md` — 過去 plan 内の Supabase 言及（履歴ドキュメントのため言及削除ではなく「完了当時の名称」として注記に変更、または R2 に書き換え。セッション中に方針を Task 13 で確定）
 
@@ -1759,7 +1759,7 @@ grep -rln "supabase\|SUPABASE" docs/ | grep -v "^docs/plans/" | sort
 - Dockerfile / cloudbuild.yaml 例で Supabase 関連記述 → R2 に書き換え
 - 画像ストレージのアーキ図（mermaid 等）→ ラベルを R2 に差し替え
 
-- [ ] **Step 4: `docs/reference/codex-rules/deployment-patterns.md` の同期**
+- [ ] **Step 4: `.claude/rules/ops/deployment-patterns.md` の同期**
 
 このファイルは `.claude/rules/ops/deployment-patterns.md` と byte-identical を要求されている（CLAUDE.md 記載の policy-docs-sync）。Task 13 で更新した内容を反映:
 
@@ -1770,7 +1770,7 @@ bun run docs:verify-policy-sync
 
 Expected: exit 0 (同期済み)
 
-同期が取れていない場合、`.claude/rules/ops/deployment-patterns.md` の内容を `docs/reference/codex-rules/deployment-patterns.md` にコピーする。
+同期が取れていない場合、`.claude/rules/ops/deployment-patterns.md` の内容を `.claude/rules/ops/deployment-patterns.md` にコピーする。
 
 - [ ] **Step 5: 検証**
 

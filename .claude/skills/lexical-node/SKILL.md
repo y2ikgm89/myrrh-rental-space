@@ -18,8 +18,8 @@ description: 管理画面の Lexical に新しいノード型を追加すると�
 ## 先に読む
 
 1. `docs/reference/codex-rules/lexical-patterns.md`
-2. `docs/reference/codex-rules/type-safety.md`
-3. `docs/reference/codex-rules/react-patterns.md`
+2. `.claude/rules/type-safety.md`
+3. `.claude/rules/react-patterns.md`
 4. 既存実装:
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/ImageNode.tsx`
    - `src/app/(admin)/admin/(dashboard)/_shared/components/editor/lexical/nodes/YouTubeNode.tsx`

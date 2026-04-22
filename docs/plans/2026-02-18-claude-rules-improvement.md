@@ -112,14 +112,14 @@ wc -l .claude/rules/react-patterns.md
 
 Expected: 310〜360行
 
-**Step 8: docs/reference/codex-rules/react-patterns.md を同期**
+**Step 8: .claude/rules/react-patterns.md を同期**
 
-`.claude/rules/react-patterns.md` の最新内容を `docs/reference/codex-rules/react-patterns.md` にコピー（ミラーファイル）。
+`.claude/rules/react-patterns.md` の最新内容を `.claude/rules/react-patterns.md` にコピー（ミラーファイル）。
 
 **Step 9: コミット**
 
 ```bash
-git add .claude/rules/react-patterns.md docs/reference/claude-rules/react-api-reference.md docs/reference/codex-rules/react-patterns.md
+git add .claude/rules/react-patterns.md docs/reference/claude-rules/react-api-reference.md .claude/rules/react-patterns.md
 git commit -m "refactor(rules): move React 19.2 API details to reference, add paths: frontmatter"
 ```
 
@@ -203,12 +203,12 @@ wc -l .claude/rules/bun-patterns.md
 
 Expected: 270〜320行
 
-**Step 5: docs/reference/codex-rules/bun-patterns.md を同期**
+**Step 5: .claude/rules/bun-patterns.md を同期**
 
 **Step 6: コミット**
 
 ```bash
-git add .claude/rules/bun-patterns.md docs/reference/claude-rules/bun-test-reference.md docs/reference/codex-rules/bun-patterns.md
+git add .claude/rules/bun-patterns.md docs/reference/claude-rules/bun-test-reference.md .claude/rules/bun-patterns.md
 git commit -m "refactor(rules): move Bun mock details to reference, add paths: frontmatter"
 ```
 
@@ -305,13 +305,13 @@ Expected: 全ファイルに `---` + `paths:` が表示される
 変更した7ファイルを `docs/reference/codex-rules/` にコピー:
 
 ```bash
-cp .claude/rules/server-actions.md docs/reference/codex-rules/server-actions.md
-cp .claude/rules/zod-patterns.md docs/reference/codex-rules/zod-patterns.md
-cp .claude/rules/nuqs-patterns.md docs/reference/codex-rules/nuqs-patterns.md
-cp .claude/rules/prisma-patterns.md docs/reference/codex-rules/prisma-patterns.md
-cp .claude/rules/test-quality.md docs/reference/codex-rules/test-quality.md
-cp .claude/rules/auth-patterns.md docs/reference/codex-rules/auth-patterns.md
-cp .claude/rules/tailwind-patterns.md docs/reference/codex-rules/tailwind-patterns.md
+cp .claude/rules/server-actions.md .claude/rules/server-actions.md
+cp .claude/rules/zod-patterns.md .claude/rules/zod-patterns.md
+cp .claude/rules/nuqs-patterns.md .claude/rules/nuqs-patterns.md
+cp .claude/rules/prisma-patterns.md .claude/rules/prisma-patterns.md
+cp .claude/rules/test-quality.md .claude/rules/test-quality.md
+cp .claude/rules/auth-patterns.md .claude/rules/auth-patterns.md
+cp .claude/rules/tailwind-patterns.md .claude/rules/tailwind-patterns.md
 ```
 
 **Step 10: コミット**
