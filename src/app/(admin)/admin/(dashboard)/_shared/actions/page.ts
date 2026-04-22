@@ -3,6 +3,7 @@
 import { updateTag } from "next/cache";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
 import { createValidationMutationError } from "@/shared/lib/action-helpers";
+import { createMutationError } from "@/shared/lib/mutation-result";
 import { fireAndForget } from "@/shared/lib/async-utils";
 import { purgePageCache } from "@/shared/lib/cloudflare";
 import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
@@ -15,10 +16,12 @@ import {
   restorePageCommand,
   togglePagePublishedCommand,
   updatePageCommand,
+  updatePageHeroCommand,
   updatePageSeoCommand,
   bulkDeletePagesCommand,
   bulkTogglePagePublishedCommand,
 } from "@/shared/domain/pages/commands";
+import { pageHeroSchema } from "@/shared/lib/sections/page-hero/schema";
 import {
   createPageSchema,
   getSystemPageDefinition,
@@ -228,6 +231,39 @@ export async function updatePageSeo(
     afterSuccess: () => {
       invalidatePageTags(slug);
       invalidatePageSeoTags(slug);
+      purgePageCaches(slug);
+    },
+  });
+}
+
+/**
+ * ホーム Page.pageHero を更新（公開トップのヒーロー）
+ */
+export async function updatePageHero(
+  slug: string,
+  input: unknown,
+): Promise<MutationResult> {
+  if (slug !== "home") {
+    return createMutationError("PageHero はホームページのみ編集できます");
+  }
+
+  const parsed = pageHeroSchema.safeParse(input);
+  if (!parsed.success) {
+    return createValidationMutationError(parsed.error);
+  }
+
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: slug,
+    execute: async () => {
+      await updatePageHeroCommand(slug, parsed.data);
+      return null;
+    },
+    afterSuccess: () => {
+      invalidatePageTags(slug);
+      updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
+      updateTag(CACHE_TAGS.SECTIONS);
       purgePageCaches(slug);
     },
   });

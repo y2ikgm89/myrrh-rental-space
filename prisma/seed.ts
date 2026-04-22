@@ -32,6 +32,7 @@ import { createAppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { hashPassword } from "better-auth/crypto";
 import { createAdminGateToken } from "@/shared/lib/admin-login-gate";
 import { DEFAULT_PAGE_SECTIONS } from "../src/shared/lib/constants/default-page-sections";
+import { defaultPageHeroHome } from "../src/shared/lib/sections/page-hero/defaults";
 import {
   buildParagraphEditorStateJson,
   buildParagraphHtml,
@@ -2839,6 +2840,20 @@ async function seedSystemPageSections() {
     console.log(`✅ Created sections for ${createdCount} system pages`);
   } else {
     console.log("⏭️ System page sections already exist or no pages found");
+  }
+
+  const homeForHero = await prisma.page.findUnique({
+    where: { slug: "home" },
+    select: { id: true },
+  });
+  if (homeForHero) {
+    const heroUpdated = await prisma.page.updateMany({
+      where: { id: homeForHero.id, pageHero: { equals: Prisma.DbNull } },
+      data: { pageHero: defaultPageHeroHome },
+    });
+    if (heroUpdated.count > 0) {
+      console.log("✅ Set default pageHero on home page");
+    }
   }
 }
 

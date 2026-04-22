@@ -15,7 +15,7 @@
  */
 
 import { useState, useEffect, useRef, useTransition } from "react";
-import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
+import { useQueryState, parseAsString } from "nuqs";
 import { toast } from "sonner";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useConfirm } from "@/admin/contexts/confirm-context";
@@ -43,14 +43,23 @@ import {
 } from "@/admin/components/ui";
 import { SectionList } from "./SectionList";
 import { SectionEditor } from "./SectionEditor";
+import { PageHeroEditor } from "./PageHeroEditor";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
 
-const PAGE_TAB_VALUES = ["sections", "settings"] as const;
-type PageTab = (typeof PAGE_TAB_VALUES)[number];
-const PAGE_TAB_SET = new Set<string>(PAGE_TAB_VALUES);
-function isPageTab(v: string): v is PageTab {
-  return PAGE_TAB_SET.has(v);
+const TAB_SECTIONS = "sections";
+const TAB_HERO = "hero";
+const TAB_SETTINGS = "settings";
+
+function normalizePageTab(slug: string, raw: string | null): string {
+  const v = raw ?? TAB_SECTIONS;
+  if (v === TAB_HERO && slug !== "home") {
+    return TAB_SECTIONS;
+  }
+  if (v !== TAB_SECTIONS && v !== TAB_SETTINGS && v !== TAB_HERO) {
+    return TAB_SECTIONS;
+  }
+  return v;
 }
 
 interface SectionMasterDetailProps {
@@ -74,12 +83,14 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | undefined>();
 
-  const [pageTab, setPageTab] = useQueryState(
+  const [pageTabRaw, setPageTabRaw] = useQueryState(
     "tab",
-    parseAsStringLiteral(PAGE_TAB_VALUES)
-      .withDefault("sections")
-      .withOptions({ history: "push", shallow: true }),
+    parseAsString.withDefault(TAB_SECTIONS).withOptions({
+      history: "push",
+      shallow: true,
+    }),
   );
+  const pageTab = normalizePageTab(page.slug, pageTabRaw);
 
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -305,18 +316,21 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   return (
     <>
       <Tabs
-        value={pageTab ?? "sections"}
+        value={pageTab}
         onValueChange={(v) => {
-          if (isPageTab(v)) void setPageTab(v);
+          void setPageTabRaw(normalizePageTab(page.slug, v));
         }}
       >
         <TabsList className="mb-2">
-          <TabsTrigger value="sections">セクション</TabsTrigger>
-          <TabsTrigger value="settings">ページ設定</TabsTrigger>
+          <TabsTrigger value={TAB_SECTIONS}>セクション</TabsTrigger>
+          {page.slug === "home" ? (
+            <TabsTrigger value={TAB_HERO}>ヒーロー</TabsTrigger>
+          ) : null}
+          <TabsTrigger value={TAB_SETTINGS}>ページ設定</TabsTrigger>
         </TabsList>
 
         <TabsContent
-          value="sections"
+          value={TAB_SECTIONS}
           forceMount
           className="data-[state=inactive]:hidden"
         >
@@ -369,8 +383,25 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
           </div>
         </TabsContent>
 
+        {page.slug === "home" ? (
+          <TabsContent
+            value={TAB_HERO}
+            forceMount
+            className="data-[state=inactive]:hidden"
+          >
+            <PageHeroEditor
+              pageSlug={page.slug}
+              initial={page.pageHero}
+              onSaved={() => {
+                /* ヒーローは Section 一覧と独立 */
+              }}
+              onDirtyChange={handleDirtyChange}
+            />
+          </TabsContent>
+        ) : null}
+
         <TabsContent
-          value="settings"
+          value={TAB_SETTINGS}
           forceMount
           className="data-[state=inactive]:hidden"
         >

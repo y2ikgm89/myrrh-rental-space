@@ -1,6 +1,8 @@
+import { Prisma } from "@generated/prisma/client";
 import type { AppPrismaClient } from "@/shared/db/create-app-prisma-client";
 import { SYSTEM_PAGES } from "@/shared/lib/validations/page";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
+import { defaultPageHeroHome } from "@/shared/lib/sections/page-hero/defaults";
 import { logError } from "@/shared/lib/errors/logger-core";
 import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/types";
 
@@ -109,6 +111,7 @@ export async function bootstrapSystemPagesCommand(
 
         if (definition.slug === "home") {
           await migrateHomepageSectionsToPageId(db, existingPage.id);
+          await ensureHomePageHero(db, existingPage.id);
         }
 
         await ensurePageSectionsCommand(db, existingPage.id, definition.slug);
@@ -128,6 +131,7 @@ export async function bootstrapSystemPagesCommand(
 
       if (definition.slug === "home") {
         await migrateHomepageSectionsToPageId(db, page.id);
+        await ensureHomePageHero(db, page.id);
       }
 
       await ensurePageSectionsCommand(db, page.id, definition.slug);
@@ -146,6 +150,26 @@ export async function bootstrapSystemPagesCommand(
  *
  * 冪等: pageId: null のセクションがなければ何もしない
  */
+/**
+ * ホームの pageHero が未設定のときだけデフォルト JSON を投入（冪等）
+ */
+async function ensureHomePageHero(
+  db: AppPrismaClient,
+  homePageId: string,
+): Promise<void> {
+  const row = await db.page.findFirst({
+    where: { id: homePageId, pageHero: { equals: Prisma.DbNull } },
+    select: { id: true },
+  });
+  if (!row) {
+    return;
+  }
+  await db.page.update({
+    where: { id: homePageId },
+    data: { pageHero: defaultPageHeroHome },
+  });
+}
+
 async function migrateHomepageSectionsToPageId(
   db: AppPrismaClient,
   homePageId: string,

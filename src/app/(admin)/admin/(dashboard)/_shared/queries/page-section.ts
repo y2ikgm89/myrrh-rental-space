@@ -39,6 +39,7 @@ export type PageForEdit = {
   id: string;
   slug: string;
   title: string;
+  pageHero: unknown;
   isPublished: boolean;
   isSystem: boolean;
   metaDescription: string | null;

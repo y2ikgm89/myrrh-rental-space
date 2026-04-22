@@ -15,6 +15,7 @@ import {
   type UpdatePageInput,
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
+import type { PageHero } from "@/shared/lib/sections/page-hero/schema";
 
 function normalizeNullableString(
   value: string | null | undefined,
@@ -264,6 +265,28 @@ export async function bulkDeletePagesCommand(
   });
 
   return { deletedSlugs };
+}
+
+/**
+ * ホームページの PageHero JSON を更新（slug は home のみ許可）
+ */
+export async function updatePageHeroCommand(
+  slug: string,
+  hero: PageHero,
+): Promise<void> {
+  if (slug !== "home") {
+    throw new DomainError(
+      "PageHero はホームページ（slug: home）のみ設定できます",
+      "VALIDATION",
+    );
+  }
+
+  await ensurePageExists(slug);
+
+  await prisma.page.update({
+    where: { slug },
+    data: { pageHero: hero },
+  });
 }
 
 export async function updatePageSeoCommand(

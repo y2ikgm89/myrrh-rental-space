@@ -932,6 +932,8 @@ model Page {
   id                 String       @id @default(uuid()) @db.Uuid
   slug               String       @unique
   title              String
+  /// ホーム等で使用する first-class ヒーロー（variant 別 JSON）。旧 homepage-hero Section は廃止。
+  pageHero           Json?
   description        String?      @db.Text
   metaDescription    String?
   metaKeywords       String?

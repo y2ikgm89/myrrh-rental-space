@@ -1,16 +1,7 @@
 /**
  * Homepage — Editorial Magazine layout (DB-driven)
  *
- * Reads section configs from DB via getHomepageSections().
- * Each homepage-* section type maps to an editorial component.
- * Falls back to DEFAULT_PAGE_SECTIONS["home"] when DB is empty.
- *
- * Section types:
- * 1. homepage-hero — magazine cover split (image + text)
- * 2. homepage-how-it-works — 3-step reservation flow + value props strip
- * 3. homepage-spaces — featured spread + staggered grid (DB data injected)
- * 4. homepage-features — numbered editorial list
- * 5. homepage-cta — italic heading + bordered button
+ * PageHero は Page.pageHero（first-class JSON）。本文セクションは homepage-* Section 行。
  */
 
 import type { Metadata } from "next";
@@ -18,24 +9,15 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 
 import { WebSiteJsonLd } from "@/public/components/seo/json-ld";
+import { PageHero } from "@/public/components/page-hero/PageHero";
 import { getWebSiteJsonLdData } from "@/public/lib/seo";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import {
-  getHomepageSections,
+  getHomepagePublicData,
   getShowcaseSpaces,
   type PublicSection,
 } from "@/shared/domain/sections/queries";
 
-import {
-  HomepageHero,
-  heroDefaultProps,
-  type HeroSectionProps,
-  type HeroImage,
-} from "./_components/homepage/hero-section";
-import {
-  HERO_TRANSITIONS,
-  type HeroTransition,
-} from "@/shared/lib/sections/definitions/homepage-hero/schema";
 import {
   HowItWorksSection,
   howItWorksDefaultProps,
@@ -62,10 +44,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return generatePageMetadata("home");
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Config → Props mappers (type-safe extraction from DB JSON)                */
-/* -------------------------------------------------------------------------- */
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -99,38 +77,6 @@ function isStringPair(v: unknown): v is { title: string; description: string } {
 
 function isTitled(v: unknown): v is { title: string } {
   return isRecord(v) && typeof v["title"] === "string";
-}
-
-function isHeroImage(v: unknown): v is HeroImage {
-  return (
-    isRecord(v) && typeof v["url"] === "string" && typeof v["alt"] === "string"
-  );
-}
-
-const HERO_TRANSITION_SET = new Set<string>(HERO_TRANSITIONS);
-function isHeroTransition(v: unknown): v is HeroTransition {
-  return typeof v === "string" && HERO_TRANSITION_SET.has(v);
-}
-
-function mapHeroConfig(config: unknown): HeroSectionProps {
-  const rawImages = arr(config, "images");
-  const parsed = rawImages ? rawImages.filter(isHeroImage) : [];
-  const images = parsed.length > 0 ? parsed : heroDefaultProps.images;
-
-  const rawTransition = isRecord(config) ? config["transition"] : undefined;
-  const transition = isHeroTransition(rawTransition)
-    ? rawTransition
-    : heroDefaultProps.transition;
-
-  return {
-    label: str(config, "label", heroDefaultProps.label),
-    title: str(config, "title", heroDefaultProps.title),
-    description: str(config, "description", heroDefaultProps.description),
-    images,
-    transition,
-    buttonText: str(config, "buttonText", heroDefaultProps.buttonText),
-    buttonUrl: str(config, "buttonUrl", heroDefaultProps.buttonUrl),
-  };
 }
 
 function mapHowItWorksConfig(config: unknown): Partial<HowItWorksSectionProps> {
@@ -176,22 +122,20 @@ function mapCtaConfig(config: unknown): CtaSectionProps {
   };
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Section renderer                                                          */
-/* -------------------------------------------------------------------------- */
-
 function renderHomepageSection(
   section: PublicSection,
   spaces: readonly ShowcaseSpace[],
 ): ReactElement | null {
-  const { type, config } = section;
+  const { type, config, design } = section;
 
   switch (type) {
-    case "homepage-hero":
-      return <HomepageHero key={section.id} {...mapHeroConfig(config)} />;
     case "homepage-how-it-works":
       return (
-        <HowItWorksSection key={section.id} {...mapHowItWorksConfig(config)} />
+        <HowItWorksSection
+          key={section.id}
+          {...mapHowItWorksConfig(config)}
+          design={design}
+        />
       );
     case "homepage-spaces":
       return (
@@ -199,30 +143,37 @@ function renderHomepageSection(
           key={section.id}
           spaces={spaces}
           {...mapSpacesConfig(config)}
+          design={design}
         />
       );
     case "homepage-features":
       return (
-        <FeaturesSection key={section.id} {...mapFeaturesConfig(config)} />
+        <FeaturesSection
+          key={section.id}
+          {...mapFeaturesConfig(config)}
+          design={design}
+        />
       );
     case "homepage-cta":
-      return <CtaSection key={section.id} {...mapCtaConfig(config)} />;
+      return (
+        <CtaSection
+          key={section.id}
+          {...mapCtaConfig(config)}
+          design={design}
+        />
+      );
     default:
       return null;
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Page component                                                            */
-/* -------------------------------------------------------------------------- */
-
 export default async function HomePage(): Promise<ReactElement> {
   await connection();
 
-  const [webSiteData, rawSpaces, sections] = await Promise.all([
+  const [webSiteData, rawSpaces, homepage] = await Promise.all([
     getWebSiteJsonLdData(),
     getShowcaseSpaces(6, true),
-    getHomepageSections(),
+    getHomepagePublicData(),
   ]);
 
   const spaces: ShowcaseSpace[] = rawSpaces.map((s) => ({
@@ -238,8 +189,7 @@ export default async function HomePage(): Promise<ReactElement> {
     categoryName: s.category?.name ?? null,
   }));
 
-  // Filter for homepage-* sections only; fall back to defaults if none match
-  const homepageSections = sections.filter((s) =>
+  const homepageSections = homepage.sections.filter((s) =>
     s.type.startsWith("homepage-"),
   );
   const useDefaults = homepageSections.length === 0;
@@ -251,9 +201,9 @@ export default async function HomePage(): Promise<ReactElement> {
         description={webSiteData.description}
         url={webSiteData.url}
       />
+      <PageHero data={homepage.pageHero} />
       {useDefaults ? (
         <>
-          <HomepageHero />
           <HowItWorksSection />
           <SpacesSection
             spaces={spaces}

@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Editorial split PageHero — 雑誌カバー風 2 列 + モバイルオーバーレイ。
+ * GSAP / reduced-motion パターンは従来の homepage ヒーローと同一。
+ */
+
 import {
   useRef,
   useState,
@@ -17,25 +22,19 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { DURATION, EASE, REVEAL } from "@/public/lib/animations";
 import { cn } from "@/shared/lib/cn";
-import type { HeroTransition } from "@/shared/lib/sections/definitions/homepage-hero/schema";
+import type {
+  HeroTransition,
+  PageHero,
+} from "@/shared/lib/sections/page-hero/schema";
 
-/* -------------------------------------------------------------------------- */
-/*  Types & defaults                                                          */
-/* -------------------------------------------------------------------------- */
+export type EditorialSplitHeroProps = Omit<
+  Extract<PageHero, { variant: "editorial-split" }>,
+  "variant"
+>;
 
 export interface HeroImage {
   readonly url: string;
   readonly alt: string;
-}
-
-export interface HeroSectionProps {
-  readonly label: string;
-  readonly title: string;
-  readonly description: string;
-  readonly images: readonly HeroImage[];
-  readonly transition: HeroTransition;
-  readonly buttonText: string;
-  readonly buttonUrl: string;
 }
 
 const DEFAULT_IMAGE: HeroImage = {
@@ -43,7 +42,7 @@ const DEFAULT_IMAGE: HeroImage = {
   alt: "自然光が差し込む開放的なレンタルスペース",
 };
 
-export const heroDefaultProps: HeroSectionProps = {
+export const editorialSplitHeroDefaults: EditorialSplitHeroProps = {
   label: "Volume One — Spring 2026",
   title: "Where silence works.",
   description:
@@ -54,19 +53,9 @@ export const heroDefaultProps: HeroSectionProps = {
   buttonUrl: "/reservation",
 };
 
-/** Auto-advance interval in milliseconds */
 const AUTO_ADVANCE_MS = 6000;
-
-/** Minimum horizontal swipe distance (px) to trigger image change */
 const SWIPE_THRESHOLD_PX = 50;
 
-/* -------------------------------------------------------------------------- */
-/*  Transition animations (Pattern C: event-driven)                           */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Crossfade — soft dissolve between images.
- */
 function transitionCrossfade(
   prevEl: HTMLDivElement,
   nextEl: HTMLDivElement,
@@ -75,22 +64,13 @@ function transitionCrossfade(
   gsap.to(nextEl, { opacity: 1, duration: DURATION.hero, ease: EASE.inOut });
 }
 
-/**
- * Ken Burns — slow zoom+pan on active image with crossfade.
- * The zoom tween runs for the full auto-advance interval.
- */
 function transitionKenBurns(
   prevEl: HTMLDivElement,
   nextEl: HTMLDivElement,
 ): void {
-  // Stop any running Ken Burns zoom on the previous image
   gsap.killTweensOf(prevEl.firstElementChild);
-
-  // Crossfade
   gsap.to(prevEl, { opacity: 0, duration: DURATION.hero, ease: EASE.inOut });
   gsap.to(nextEl, { opacity: 1, duration: DURATION.hero, ease: EASE.inOut });
-
-  // Start slow zoom+pan on the next image (the <Image> wrapper)
   const img = nextEl.firstElementChild;
   if (img) {
     gsap.fromTo(
@@ -107,25 +87,16 @@ function transitionKenBurns(
   }
 }
 
-/**
- * Clip-path reveal — next image slides in from left using clip-path.
- * Uses REVEAL.clipPath constants.
- */
 function transitionClipReveal(
   prevEl: HTMLDivElement,
   nextEl: HTMLDivElement,
 ): void {
-  // Ensure next is visible but clipped
   gsap.set(nextEl, { opacity: 1, clipPath: REVEAL.clipPath.from });
-
-  // Reveal next image left-to-right
   gsap.to(nextEl, {
     clipPath: REVEAL.clipPath.to,
     duration: DURATION.hero,
     ease: EASE.outCubic,
   });
-
-  // Hide prev after reveal completes
   gsap.to(prevEl, {
     opacity: 0,
     duration: 0.01,
@@ -133,10 +104,6 @@ function transitionClipReveal(
   });
 }
 
-/**
- * Scale-fade — current image zooms out slightly while fading,
- * next image zooms in from slightly smaller.
- */
 function transitionScaleFade(
   prevEl: HTMLDivElement,
   nextEl: HTMLDivElement,
@@ -154,7 +121,6 @@ function transitionScaleFade(
   );
 }
 
-/** Instant switch for reduced-motion */
 function transitionInstant(
   prevEl: HTMLDivElement,
   nextEl: HTMLDivElement,
@@ -173,19 +139,15 @@ const TRANSITIONS: Record<
   "scale-fade": transitionScaleFade,
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Component                                                                 */
-/* -------------------------------------------------------------------------- */
-
-export function HomepageHero({
-  label = heroDefaultProps.label,
-  title = heroDefaultProps.title,
-  description = heroDefaultProps.description,
-  images = heroDefaultProps.images,
-  transition = heroDefaultProps.transition,
-  buttonText = heroDefaultProps.buttonText,
-  buttonUrl = heroDefaultProps.buttonUrl,
-}: Partial<HeroSectionProps> = {}): ReactElement {
+export function EditorialSplitHero({
+  label = editorialSplitHeroDefaults.label,
+  title = editorialSplitHeroDefaults.title,
+  description = editorialSplitHeroDefaults.description,
+  images = editorialSplitHeroDefaults.images,
+  transition = editorialSplitHeroDefaults.transition,
+  buttonText = editorialSplitHeroDefaults.buttonText,
+  buttonUrl = editorialSplitHeroDefaults.buttonUrl,
+}: Partial<EditorialSplitHeroProps> = {}): ReactElement {
   const contentRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const imageElsRef = useRef<(HTMLDivElement | null)[]>([]);
@@ -195,13 +157,13 @@ export function HomepageHero({
   const touchStartYRef = useRef<number | null>(null);
   const motionOkRef = useMotionPreference();
 
-  const resolvedImages = images.length > 0 ? images : heroDefaultProps.images;
+  const resolvedImages =
+    images.length > 0 ? images : editorialSplitHeroDefaults.images;
   const count = resolvedImages.length;
   const hasMultiple = count > 1;
 
   const [activeIndex, setActiveIndex] = useState(0);
 
-  /* ── Content entrance (Pattern A: matchMedia + useGSAP) ────────────── */
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
@@ -222,7 +184,6 @@ export function HomepageHero({
     { scope: contentRef },
   );
 
-  /* ── Ken Burns: start initial zoom on first image ──────────────────── */
   useGSAP(
     () => {
       if (transition !== "ken-burns" || !hasMultiple) return;
@@ -248,7 +209,6 @@ export function HomepageHero({
     { scope: imageContainerRef },
   );
 
-  /* ── Crossfade transition (Pattern C: event-driven) ────────────────── */
   const crossfadeTo = (nextIndex: number) => {
     const prevIndex = activeIndexRef.current;
     if (prevIndex === nextIndex) return;
@@ -268,7 +228,6 @@ export function HomepageHero({
     setActiveIndex(nextIndex);
   };
 
-  /* ── Auto-advance timer ─────────────────────────────────────────────── */
   const stopTimer = () => {
     if (timerRef.current !== null) {
       clearInterval(timerRef.current);
@@ -293,27 +252,23 @@ export function HomepageHero({
     return stopTimer;
   }, [hasMultiple, count]);
 
-  // Cleanup GSAP tweens on image elements at unmount (Pattern C requirement)
   useEffect(() => {
     const els = imageElsRef.current;
     return () => {
       for (const el of els) {
         if (el) {
           gsap.killTweensOf(el);
-          // Also kill tweens on the inner <img> wrapper (Ken Burns)
           if (el.firstElementChild) gsap.killTweensOf(el.firstElementChild);
         }
       }
     };
   }, []);
 
-  /* ── Dot click handler — restarts timer for full interval ──────────── */
   const handleDotClick = (index: number) => {
     crossfadeTo(index);
     startTimer();
   };
 
-  /* ── Touch swipe handlers (Pattern C: event-driven) ─────────────────── */
   const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0];
     touchStartXRef.current = touch?.clientX ?? null;
@@ -332,7 +287,6 @@ export function HomepageHero({
     const deltaX = touch.clientX - startX;
     const deltaY = touch.clientY - startY;
 
-    // Skip if vertical movement dominates (user scroll intent)
     if (Math.abs(deltaX) < Math.abs(deltaY)) return;
     if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
 
@@ -342,18 +296,19 @@ export function HomepageHero({
     startTimer();
   };
 
-  /* ── Render ─────────────────────────────────────────────────────────── */
+  const padXMobile =
+    "ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]";
+  const padXDesktop =
+    "md:ps-[var(--container-padding-start)] md:pe-[var(--container-padding-end)]";
+
   return (
     <section
       data-hero=""
       className={cn(
-        // Mobile: image + headline overlap on row 1, body on row 2
         "grid grid-cols-1",
-        // Desktop: 2 cols × 2 rows — image spans left full height, headline top-right, body bottom-right
         "md:min-h-[var(--hero-min-height-xl)] md:grid-cols-2 md:grid-rows-[1fr_1fr]",
       )}
     >
-      {/* Image carousel — mobile row 1 / desktop left col spanning both rows */}
       <div
         ref={imageContainerRef}
         className={cn(
@@ -368,7 +323,6 @@ export function HomepageHero({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Stacked images with transition */}
         {resolvedImages.map((img, i) => (
           <div
             key={img.url}
@@ -390,7 +344,6 @@ export function HomepageHero({
           </div>
         ))}
 
-        {/* Mobile-only scrim gradients for overlay text readability */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-foreground/60 via-foreground/25 to-transparent md:hidden"
           aria-hidden="true"
@@ -400,7 +353,6 @@ export function HomepageHero({
           aria-hidden="true"
         />
 
-        {/* Numbered pagination (top-right) — visible on both breakpoints */}
         {hasMultiple ? (
           <p
             className="pointer-events-none absolute top-6 right-6 z-20 text-[0.75rem] uppercase tracking-[0.18em] tabular-nums text-background"
@@ -417,7 +369,6 @@ export function HomepageHero({
           </p>
         ) : null}
 
-        {/* Dot navigation — bottom center, always visible */}
         {hasMultiple ? (
           <div
             className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2"
@@ -433,49 +384,55 @@ export function HomepageHero({
                 aria-label={`画像 ${i + 1}`}
                 onClick={() => handleDotClick(i)}
                 className={cn(
-                  "h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-all duration-500",
+                  "min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] px-1 flex items-center justify-center rounded-full",
+                  "transition-all duration-500",
                   i === activeIndex
-                    ? "w-6 bg-background"
-                    : "w-1.5 bg-background/60 hover:bg-background/85",
+                    ? "bg-background"
+                    : "bg-background/60 hover:bg-background/85",
                 )}
-              />
+              >
+                <span
+                  className={cn(
+                    "block h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)]",
+                    i === activeIndex ? "w-6" : "w-1.5",
+                  )}
+                  aria-hidden
+                />
+              </button>
             ))}
           </div>
         ) : null}
 
-        {/* Photo credit — bottom-left, always visible */}
         <span
-          className="pointer-events-none absolute bottom-4 left-4 z-20 text-[0.625rem] uppercase tracking-[0.15em] text-background/80"
+          className={cn(
+            "pointer-events-none absolute z-20 text-[0.625rem] uppercase tracking-[0.15em] text-background/80",
+            "bottom-[max(1rem,env(safe-area-inset-bottom,0px))] left-[var(--container-padding-start)]",
+          )}
           style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
         >
           Photography — Myrrh Studio, 2026
         </span>
       </div>
 
-      {/* Headline (label + title + divider) —
-          mobile: overlay on image (same grid cell, z-stacked, bottom-aligned).
-          desktop: right column, top row, bottom-aligned to meet body at center. */}
       <div
         ref={contentRef}
         className={cn(
-          // Shared layout
           "relative z-10 flex flex-col justify-end",
-          // Mobile: same grid cell as image (overlay); disable pointer events so carousel swipe works
-          "col-start-1 row-start-1 px-6 pb-14 pointer-events-none",
-          // Desktop: right column top row, on white background, pointer events normal
+          "col-start-1 row-start-1 pointer-events-none",
+          padXMobile,
+          "pb-[calc(var(--space-md)+env(safe-area-inset-bottom,0px))]",
           "md:col-start-2 md:row-start-1 md:pointer-events-auto",
-          "md:bg-background md:px-12 md:pt-16 md:pb-6 lg:px-16",
+          "md:bg-background md:pt-16 md:pb-6",
+          padXDesktop,
         )}
       >
         <p
           className={cn(
             "mb-6 text-[0.75rem] uppercase tracking-[0.18em]",
-            // Mobile: white over image with stroke + shadow (robust on any photo)
             "text-background",
             "[paint-order:stroke_fill]",
             "[-webkit-text-stroke:0.4px_rgb(0_0_0/0.4)]",
             "[text-shadow:0_1px_3px_rgb(0_0_0/0.55)]",
-            // Desktop: muted on white, no stroke/shadow needed
             "md:text-muted-foreground md:mb-8",
             "md:[paint-order:normal]",
             "md:[-webkit-text-stroke:0px_transparent]",
@@ -487,13 +444,10 @@ export function HomepageHero({
 
         <h1
           className={cn(
-            // Custom hero-scale — mobile floor 56px (vs --text-hero's 48px floor) for stronger catchphrase impact
             "text-[clamp(3.5rem,10vw,5rem)] font-heading font-light leading-[1.08] tracking-tight",
-            // Mobile: white with stroke outline for any background
             "text-background",
             "[paint-order:stroke_fill]",
             "[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]",
-            // Desktop: normal foreground on white
             "md:text-foreground",
             "md:[paint-order:normal]",
             "md:[-webkit-text-stroke:0px_transparent]",
@@ -510,13 +464,13 @@ export function HomepageHero({
         />
       </div>
 
-      {/* Body (description + CTA) —
-          mobile: below image on white.
-          desktop: right column bottom row, top-aligned. */}
       <div
         className={cn(
-          "col-start-1 row-start-2 flex flex-col bg-background px-6 pt-8 pb-14",
-          "md:col-start-2 md:row-start-2 md:pt-6 md:pb-16 md:px-12 lg:px-16",
+          "col-start-1 row-start-2 flex flex-col bg-background pt-8",
+          padXMobile,
+          "pb-[calc(var(--space-md)+env(safe-area-inset-bottom,0px))]",
+          "md:col-start-2 md:row-start-2 md:pt-6 md:pb-16",
+          padXDesktop,
         )}
       >
         <ScrollReveal delay={0.3}>
@@ -530,7 +484,7 @@ export function HomepageHero({
             <Button
               variant="editorial"
               href={buttonUrl}
-              className="text-xs uppercase tracking-[0.18em]"
+              className="inline-flex min-h-[var(--touch-target-min)] items-center justify-center text-xs uppercase tracking-[0.18em]"
             >
               {buttonText}
             </Button>

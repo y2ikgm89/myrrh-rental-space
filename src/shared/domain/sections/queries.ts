@@ -2,7 +2,8 @@ import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
 import { prisma } from "@/shared/db/prisma";
-import { CACHE_LIFE, CACHE_TAGS } from "@/shared/lib/constants";
+import { CACHE_LIFE, CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
+import { defaultPageHeroHome } from "@/shared/lib/sections/page-hero/defaults";
 import { DEFAULT_PAGE_SECTIONS } from "@/shared/lib/constants/default-page-sections";
 import {
   ErrorCategory,
@@ -47,25 +48,42 @@ function getDefaultSections(slug: string): PublicSection[] {
   }));
 }
 
-export async function getHomepageSections(): Promise<readonly PublicSection[]> {
+export type HomepagePublicData = {
+  readonly pageHero: unknown;
+  readonly sections: readonly PublicSection[];
+};
+
+/**
+ * ホームページの pageHero + セクション一覧（旧 homepage-hero Section は除外）
+ */
+export async function getHomepagePublicData(): Promise<HomepagePublicData> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
-  cacheTag(CACHE_TAGS.SECTIONS, CACHE_TAGS.HOMEPAGE_SECTIONS);
+  cacheTag(
+    CACHE_TAGS.SECTIONS,
+    CACHE_TAGS.HOMEPAGE_SECTIONS,
+    getCacheTag.pages.detail("home"),
+  );
+
+  const fallbackSections = getDefaultSections("home");
 
   const homePage = await safeFetch({
     fetch: () =>
       prisma.page.findUnique({
         where: { slug: "home" },
-        select: { id: true },
+        select: { id: true, pageHero: true },
       }),
     fallback: null,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: "getHomepageSections.findPage",
+    operationName: "getHomepagePublicData.findPage",
   });
 
   if (!homePage) {
-    return getDefaultSections("home");
+    return {
+      pageHero: defaultPageHeroHome,
+      sections: fallbackSections,
+    };
   }
 
   const sections = await safeFetch({
@@ -87,13 +105,24 @@ export async function getHomepageSections(): Promise<readonly PublicSection[]> {
         },
         orderBy: { order: "asc" },
       }),
-    fallback: getDefaultSections("home"),
+    fallback: fallbackSections,
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
-    operationName: "getHomepageSections",
+    operationName: "getHomepagePublicData.sections",
   });
 
-  return toPlainArray(sections);
+  const list = toPlainArray(sections).filter((s) => s.type !== "homepage-hero");
+  const useSections = list.length > 0 ? list : fallbackSections;
+
+  return {
+    pageHero: homePage.pageHero ?? defaultPageHeroHome,
+    sections: useSections,
+  };
+}
+
+export async function getHomepageSections(): Promise<readonly PublicSection[]> {
+  const { sections } = await getHomepagePublicData();
+  return sections;
 }
 
 export async function getShowcaseSpaces(

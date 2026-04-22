@@ -1,6 +1,6 @@
 // src/shared/lib/sections/registry.ts
 //
-// セクションレジストリ — 全 22 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
+// セクションレジストリ — 全 21 セクション定義を集約し、ルックアップ・バリデーション関数を提供する。
 
 import type { SectionCategory, SectionDefinition } from "./types";
 import { isRecord } from "@/shared/lib/serialize";
@@ -41,8 +41,6 @@ import { testimonialConfigSchema } from "./definitions/testimonial/schema";
 import { testimonialMetadata } from "./definitions/testimonial/metadata";
 import { eventCalendarConfigSchema } from "./definitions/event-calendar/schema";
 import { eventCalendarMetadata } from "./definitions/event-calendar/metadata";
-import { homepageHeroConfigSchema } from "./definitions/homepage-hero/schema";
-import { homepageHeroMetadata } from "./definitions/homepage-hero/metadata";
 import { homepageHowItWorksConfigSchema } from "./definitions/homepage-how-it-works/schema";
 import { homepageHowItWorksMetadata } from "./definitions/homepage-how-it-works/metadata";
 import { homepageSpacesConfigSchema } from "./definitions/homepage-spaces/schema";
@@ -56,7 +54,7 @@ import { homepageCtaMetadata } from "./definitions/homepage-cta/metadata";
 // 定義レコード
 // ─────────────────────────────────────────────────────────────
 
-/** 全 22 セクション定義 */
+/** 全 21 セクション定義 */
 const definitions: Record<string, SectionDefinition> = {
   hero: {
     type: "hero",
@@ -147,11 +145,6 @@ const definitions: Record<string, SectionDefinition> = {
     type: "event-calendar",
     configSchema: eventCalendarConfigSchema,
     metadata: eventCalendarMetadata,
-  },
-  "homepage-hero": {
-    type: "homepage-hero",
-    configSchema: homepageHeroConfigSchema,
-    metadata: homepageHeroMetadata,
   },
   "homepage-how-it-works": {
     type: "homepage-how-it-works",
