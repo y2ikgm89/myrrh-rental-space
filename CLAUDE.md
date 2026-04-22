@@ -228,3 +228,4 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 3. 数値・採用範囲リストは必ず grep ground truth 検証（subagent の hallucination 防止、上記「調査・監査」節参照）
 4. `@theme` / SSoT / ルール docs の整合を**同一コミット**で保つ（rule 更新と実装変更を同期して drift を防止）
 5. 破壊的変更が発生する改修は phase 単位で 1 commit 完結（ロールバック容易化）、`docs/superpowers/plans/YYYY-MM-DD-<name>.md` に記録
+6. **Claude Code hooks は公式仕様（`code.claude.com/docs/en/hooks`）に準拠** — `PostToolUse` / `SubagentStop` の stdout は Claude context に届かないため `hookSpecificOutput.additionalContext` JSON 必須。`Stop` + `asyncRewake: true` は `stop_hook_active` guard 必須（無限ループ防止）。`async` / `asyncRewake` / `if` フィールド採用。詳細・手動テスト手順は `.claude/rules/ops/hooks-patterns.md`（path-scoped autoload）
