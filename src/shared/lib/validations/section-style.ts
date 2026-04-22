@@ -163,6 +163,55 @@ export function parseSectionStylePayload(value: unknown): SectionStylePayload {
 // provided in styleOverride JSON columns.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Server Action input schemas (Style Library CRUD)
+// ---------------------------------------------------------------------------
+
+const sectionStyleScopeValues = ["global", "page", "section"] as const;
+export const sectionStyleScopeSchema = z.enum(sectionStyleScopeValues, {
+  error: "scope が不正です",
+});
+export type SectionStyleScope = z.infer<typeof sectionStyleScopeSchema>;
+
+export const createSectionStyleInputSchema = z.object({
+  name: z
+    .string()
+    .min(1, { error: "名前は必須です" })
+    .max(100, { error: "名前は100文字以内です" }),
+  scope: sectionStyleScopeSchema,
+  applicableTypes: z.array(z.string()),
+  payload: sectionStylePayloadSchema,
+  parentId: z.string().optional(),
+});
+
+export const updateSectionStyleInputSchema = z.object({
+  name: z
+    .string()
+    .min(1, { error: "名前は必須です" })
+    .max(100, { error: "名前は100文字以内です" })
+    .optional(),
+  applicableTypes: z.array(z.string()).optional(),
+  payload: sectionStylePayloadSchema.partial().optional(),
+});
+
+export const deriveSectionStyleInputSchema = z.object({
+  name: z
+    .string()
+    .min(1, { error: "名前は必須です" })
+    .max(100, { error: "名前は100文字以内です" }),
+  overrides: sectionStylePayloadSchema.partial().optional(),
+});
+
+export type CreateSectionStyleInput = z.infer<
+  typeof createSectionStyleInputSchema
+>;
+export type UpdateSectionStyleInput = z.infer<
+  typeof updateSectionStyleInputSchema
+>;
+export type DeriveSectionStyleInput = z.infer<
+  typeof deriveSectionStyleInputSchema
+>;
+
 export const sectionStyleOverrideSchema = z.object({
   spacing: sectionStyleSpacingSchema.partial().optional(),
   background: sectionStyleBackgroundSchema.partial().optional(),

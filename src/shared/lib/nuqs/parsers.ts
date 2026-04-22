@@ -630,6 +630,44 @@ export async function loadAdminEventSearchParams(
 }
 
 // ============================================================
+// 管理画面: Style Library
+// ============================================================
+
+const adminStyleScopeFilterValues = [
+  "all",
+  "global",
+  "page",
+  "section",
+] as const;
+export type AdminStyleScopeFilter =
+  (typeof adminStyleScopeFilterValues)[number];
+const adminStyleScopeFilterSet = new Set<string>(adminStyleScopeFilterValues);
+export function isAdminStyleScopeFilter(
+  value: string,
+): value is AdminStyleScopeFilter {
+  return adminStyleScopeFilterSet.has(value);
+}
+
+export const adminStyleSearchParamsParsers = {
+  scope: parseAsStringLiteral(adminStyleScopeFilterValues).withDefault("all"),
+  applicableType: parseAsString.withDefault("all"),
+  q: parseAsQuery,
+  page: parseAsPage,
+};
+
+const adminStyleSearchParamsCache = createSearchParamsCache(
+  adminStyleSearchParamsParsers,
+);
+
+/** 管理画面 Style Library 検索パラメータローダー */
+export async function loadAdminStyleSearchParams(
+  searchParams: Promise<SearchParams>,
+) {
+  await adminStyleSearchParamsCache.parse(searchParams);
+  return adminStyleSearchParamsCache.all();
+}
+
+// ============================================================
 // 管理画面: 通知
 // ============================================================
 

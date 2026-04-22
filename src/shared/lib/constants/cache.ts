@@ -108,6 +108,8 @@ export const CACHE_TAGS = {
   HOMEPAGE_SECTIONS: "homepage-sections",
   /** ページセクション */
   PAGE_SECTIONS: "page-sections",
+  /** セクションスタイル（Style Library） */
+  SECTION_STYLES: "section-styles",
   /** 利用規約 */
   TERMS: "terms",
   /** スタッフ */
@@ -236,6 +238,10 @@ export const getCacheTag = {
   },
   eventRegistrations: {
     list: (eventId: string) => `${CACHE_TAGS.EVENT_REGISTRATIONS}-${eventId}`,
+  },
+  sectionStyles: {
+    list: () => CACHE_TAGS.SECTION_STYLES,
+    detail: (id: string) => `${CACHE_TAGS.SECTION_STYLES}-${id}`,
   },
 } as const;
 
