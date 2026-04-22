@@ -38,9 +38,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/update-current-date.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/inject-current-date.sh",
             "timeout": 5,
-            "statusMessage": "日付を確認中..."
+            "statusMessage": "現在日付を注入中..."
           }
         ]
       }
@@ -53,7 +53,7 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-dangerous-bash.sh",
             "timeout": 10,
-            "statusMessage": "Checking dangerous commands..."
+            "statusMessage": "危険コマンドを検査中..."
           }
         ]
       },
@@ -64,7 +64,7 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
             "timeout": 10,
-            "statusMessage": "Checking file protection..."
+            "statusMessage": "機密ファイルを検査中..."
           }
         ]
       }
@@ -76,20 +76,20 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prettier-format.sh",
-            "timeout": 30,
-            "statusMessage": "Formatting..."
+            "async": true,
+            "statusMessage": "Prettier 実行中..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/eslint-fix.sh",
-            "timeout": 30,
-            "statusMessage": "Linting..."
+            "async": true,
+            "statusMessage": "ESLint --fix 実行中..."
           },
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/schema-change-guard.sh",
-            "timeout": 10,
-            "statusMessage": "Checking schema changes..."
+            "timeout": 30,
+            "statusMessage": "Prisma generate 実行中..."
           },
           {
             "type": "command",
@@ -101,7 +101,7 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/verify-policy-docs.sh",
             "timeout": 15,
-            "statusMessage": "Policy docs 同期検証中..."
+            "statusMessage": "Policy docs 同期を検証中..."
           }
         ]
       },
@@ -110,21 +110,36 @@
         "hooks": [
           {
             "type": "command",
+            "if": "Bash(mv *)",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
             "timeout": 10,
-            "statusMessage": "空ルートディレクトリをチェック中..."
+            "statusMessage": "空ルートディレクトリを検査中..."
           },
           {
             "type": "command",
+            "if": "Bash(rm *)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
+            "timeout": 10,
+            "statusMessage": "空ルートディレクトリを検査中..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(git mv *)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-empty-route-dirs.sh",
+            "timeout": 10,
+            "statusMessage": "空ルートディレクトリを検査中..."
+          },
+          {
+            "type": "command",
+            "if": "Bash(bunx --bun prisma migrate *)",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-db-generate.sh",
             "timeout": 30,
-            "statusMessage": "Prisma generate チェック中..."
+            "statusMessage": "prisma generate 実行中..."
           }
         ]
-      }
-    ],
-    "SubagentStop": [
+      },
       {
+        "matcher": "Task",
         "hooks": [
           {
             "type": "command",
@@ -152,8 +167,9 @@
           {
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/type-check-on-stop.sh",
-            "timeout": 60,
-            "statusMessage": "型チェック中..."
+            "asyncRewake": true,
+            "timeout": 300,
+            "statusMessage": "背景で型チェック中..."
           }
         ]
       }
