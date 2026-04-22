@@ -92,3 +92,6 @@ nul
 .serena/
 .worktrees
 .claire
+
+# Section Architecture Phase B: migration audit log (ephemeral, regenerated on run)
+prisma/migrations/section-design-migration-log.json
