@@ -15,7 +15,13 @@ import { resolve } from "node:path";
 export const PAIRS = [
   {
     mirror: "docs/reference/codex-rules/lexical-patterns.md",
-    sources: [".claude/rules/frontend/lexical-patterns.md"],
+    sources: [
+      ".claude/rules/frontend/lexical/core.md",
+      ".claude/rules/frontend/lexical/nodes.md",
+      ".claude/rules/frontend/lexical/plugins.md",
+      ".claude/rules/frontend/lexical/toolbar-layout.md",
+      ".claude/rules/frontend/lexical/conventions.md",
+    ],
   },
   {
     mirror: "docs/reference/codex-rules/admin-inline-editor-patterns.md",

@@ -1,9 +1,16 @@
----
-paths:
-  - src/app/(admin)/**/lexical/**
----
+<!-- === AUTO-GENERATED: do not edit directly ===
+     canonical sources (edit these instead):
+       - .claude/rules/frontend/lexical/core.md
+       - .claude/rules/frontend/lexical/nodes.md
+       - .claude/rules/frontend/lexical/plugins.md
+       - .claude/rules/frontend/lexical/toolbar-layout.md
+       - .claude/rules/frontend/lexical/conventions.md
+     regenerate: node scripts/sync-policy-docs.mjs
+=== -->
 
-# Lexical エディタ実装パターン
+<!-- === source: .claude/rules/frontend/lexical/core.md === -->
+
+# Lexical エディタ実装パターン — コアアーキテクチャ
 
 > **本文正本**（Codex / Claude Code 共通）。`docs/reference/codex-rules/lexical-patterns.md` と `.claude/rules/frontend/lexical-patterns.md` は **同一バイト列**（検証: `bun run docs:verify-policy-sync` → `scripts/verify-policy-docs.mjs`）。運用: `docs/reference/codex-rules/instruction-topology.md`。Next.js 16 / React 19 / Turbopack / React Compiler 対応
 
@@ -135,6 +142,10 @@ const [editorState, setEditorState] = useState()
 **このプロジェクトで使用中:**
 
 - RichTextPlugin, HistoryPlugin, ListPlugin, LinkPlugin, TabIndentationPlugin, OnChangePlugin
+
+<!-- === source: .claude/rules/frontend/lexical/nodes.md === -->
+
+# Lexical ノード実装パターン
 
 ## ノード実装パターン
 
@@ -555,6 +566,35 @@ export const isStepsStyle = createEnumGuard<StepsStyle>(STEPS_STYLES);
 
 **注意:** これは Prisma enum ではないため `enums.ts` ではなくノードファイル内に定義する。
 
+## 新規ノード登録チェックリスト
+
+ノード + プラグイン + インスペクターパネルをフル追加する場合の登録箇所（合計 9 箇所）:
+
+| ファイル                                       | 内容                                       | 必須条件                                       |
+| ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------- |
+| `config/nodes.ts`                              | `EDITOR_NODES` に追加                      | 全ノード                                       |
+| `nodes/index.ts`                               | barrel export                              | 全ノード                                       |
+| `config/dialog-registry.ts`                    | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                                  |
+| `config/insert-items.ts`                       | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合              |
+| `plugins/index.ts`                             | Plugin export                              | Plugin あり                                    |
+| `config/inspector-registry.ts`                 | `getInspectableInfoFromRegistry`           | Inspector あり                                 |
+| `inspector/hooks/inspectable-nodes.ts`         | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                                 |
+| `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                 |
+| `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
+| `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
+
+**HTML→Lexical JSON**: `tryConvertHtmlStringToLexicalJsonString`（`html-to-lexical-json.ts`）の戻りは `ConvertHtmlToLexicalJsonResult`。失敗時に `EMPTY` へ黙ってフォールバックしない。空 HTML（trim 後）のみ意図した空ドキュメントとして `ok: true` + `EMPTY_LEXICAL_EDITOR_STATE_JSON`。
+
+**挿入メニュー UI**: ツールバー「挿入」は **カテゴリごとのサブメニュー**（`DropdownMenuSub`）。項目が **6 件以上**のカテゴリはサブメニュー内 **2 カラム**。タイムライン・料金表等は `patterns`、カラム・コールアウト等は `layout`。詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
+
+**挿入実行**: ツールバーは `executeInsertItem`（`dialog` は同期 `openDialog`、それ以外は 1 回の `editor.update`）。スラッシュメニューはトリガー削除と同一 `update` 内で `applyInsertItemInUpdate`（`dialog` は `queueMicrotask` で `openDialog`）。`type: "transform"` は `applyInUpdate` で $ API のみとし、ネストした `editor.update` を禁止。
+
+**ポイント**: Floating Text Format Toolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
+
+<!-- === source: .claude/rules/frontend/lexical/plugins.md === -->
+
+# Lexical プラグイン実装パターン
+
 ## プラグイン実装パターン
 
 ### ノード挿入: `$insertNodeToNearestRoot` vs `$insertNodes`
@@ -723,6 +763,10 @@ const initialConfig = {
 };
 ```
 
+<!-- === source: .claude/rules/frontend/lexical/toolbar-layout.md === -->
+
+# Lexical ツールバー・レイアウトパターン
+
 ## LexicalEditor（メイン）のレイアウト・DraggableBlock・プレースホルダー
 
 [Lexical React 公式](https://lexical.dev/docs/getting-started/react) では **`ContentEditable` に `placeholder` を渡す**。`@lexical/react` の [`ContentEditable` 実装](https://github.com/facebook/lexical/blob/main/packages/lexical-react/src/LexicalContentEditable.tsx) では、プレースホルダーは **編集ルートの兄弟ノード**として描画されるため、`ContentEditable` に付けた `prose` / `prose-p:leading-relaxed` は **プレースホルダーには継承されない**。本文と揃えるには `LexicalEditor.tsx` 側で **`text-base leading-relaxed lg:text-lg`** 等を明示する（`top-6` / `left-10` は `py-6` / `pl-10` と一致）。
@@ -742,74 +786,6 @@ const initialConfig = {
 - ドラッグ UI の横位置はフォークが付与する **`transform` のみ**。メニュー／ドロップライン用 DOM に **`left-*` を重ねない**（`left-1` + `translate` や `left-6` + `translate` は二重オフセットになる）。
 - `@lexical/react` を上げたら **`node_modules/.../LexicalDraggableBlockPlugin` と差分マージ**し、必要ならフォークを更新する。
 - `eslint.config.mjs` の `lexical-draggable-fork` が当該ファイル用のルール緩和を担う。フォークを大きく変えたら **要否を再確認**する。
-
-## 禁止事項
-
-1. **直接的なDOM操作禁止**: `editor.update()` / `editor.read()` を経由
-2. **updateListener内での更新禁止**: パフォーマンス問題（Node Transforms使用）
-3. **read/update混在禁止**: 同期的にネストしない
-4. **メモリリーク**: リスナーは必ず `mergeRegister` で登録解除
-5. **型アサーション禁止**: 型ガード関数 `$isXxxNode()` を使用
-6. **制御コンポーネント化禁止**: EditorStateを親コンポーネントで管理しない
-7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
-8. **プレースホルダーの渡し先を誤らない**: `RichTextPlugin` に `placeholder` を渡さない。`ContentEditable` に `placeholder` と `aria-placeholder` を渡す（[Lexical React の用法](https://lexical.dev/docs/getting-started/react)）
-9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
-10. **レガシーノードパターン禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `__property`, `getWritable()`, `getLatest()`, `$applyNodeReplacement`, `SerializedXxxNode` interface — すべて `$config` + `createState` + `$getState` / `$setState` に置換済み
-11. **ブロックレベルノードへの `$insertNodes` 使用禁止**: `$insertNodeToNearestRoot` (`@lexical/utils`) を使用。`$insertNodes` はインライン/混合ノード専用
-12. **React render内でのノードプロパティ直接アクセス禁止**: `editor.getEditorState().read(() => $getState(node, xxxState))` で囲む。Lexicalはアクティブなeditor stateが必要
-13. **`node.__property` 直接アクセス禁止**: `$getState(node, xxxState)` を使用。`__` フィールドは `$config` で自動管理
-14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反
-15. **子ノードの collapseAtStart 委譲禁止**: Title/Content/Panel 等の子ノードに `collapseAtStart()` を実装しない。`isShadowRoot()` で境界保護する。コンテナノードのみが `collapseAtStart()` を持つ
-16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
-17. **CSS クラス使用禁止（createDOM / exportDOM 共通）**: `createDOM` / `exportDOM` では `config.theme.*` も CSS クラスも一切使用しない。data-attributes のみで DOM を構築する。CSS は `lexical-content.css` のアトリビュートセレクタで対応。`createDOM` のシグネチャは `override createDOM(_config: EditorConfig): HTMLElement`（未使用でも `_config` 必須）
-18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
-19. **AccentColor スウォッチ値と CSS トークン値の不一致禁止**: `lexical-content.css` の `[data-color]` `--accent` 値が **canonical**。`ACCENT_COLOR_SWATCHES`（`accent-colors.ts`）はその値をミラーするため、CSS 変更時は TS 側も必ず更新すること。Preview（ColorSwatchPicker）と実際の適用色が乖離するためユーザー混乱の原因になる
-20. **インライン DecoratorNode 挿入時の選択テキスト削除漏れ禁止**: `$insertNodes` でインラインノードを挿入する前に RangeSelection がある場合は `selection.removeText()` を呼ぶ。未呼出の場合、選択テキストが残存したまま挿入される
-
-```typescript
-// OK パターン（Ruby / Tooltip 等のインライン挿入）
-editor.update(() => {
-  const selection = $getSelection();
-  if ($isRangeSelection(selection)) {
-    selection.removeText(); // ← 必須: 選択テキストを先に削除
-  }
-  $insertNodes([$createRubyNode(baseText, rubyText)]);
-});
-```
-
-21. **`TableCellResizerPlugin` は @lexical/react 0.43.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
-22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
-23. **組み込みノード（TableNode 等）を継承する場合は Node Replacement パターン必須**: 独自型文字列（`"custom-table"`）を持つカスタムノードと `{ replace: TableNode, with: factory, withKlass: CustomTableNode }` をセットで `EDITOR_NODES` に登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を登録するため `TablePlugin.hasNodes([TableNode])` が通過し、`$isTableNode(customTableNode)` も `instanceof` で `true` になる。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外であり禁止
-24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する
-25. **`$getStateChange` の truthy チェック禁止** — `if (change)` ではなく `if (change !== null)` を使用。公式ドキュメントと一致させる
-26. **常に `false` を返す `updateDOM` に `boolean` 戻り型禁止** — 引数なし・常に `return false` のメソッドは `override updateDOM(): false` とリテラル型で宣言する。DecoratorNode や状態を持たない子ノードが該当
-27. **`contentWidthClassName` / `contentWidthStyle` 禁止（削除済み）** — `contentWidth?: number`（テキスト領域の純粋な幅 px）を使用。エディタ内部で `EDITOR_PADDING_HORIZONTAL`（64px）を加算。`useContentWidth` フック → `resolveWidthStyles().px`
-28. **Route Handler での `$generateHtmlFromNodes` 使用禁止** — DOM API 不在で 500 エラー。プレビュー HTML はクライアント側の `renderEditorStateJsonToHtmlClient` で生成。保存時は Server Actions の `renderEditorStateToHtmlLazy`（動作する）
-
-## 新規ノード登録チェックリスト
-
-ノード + プラグイン + インスペクターパネルをフル追加する場合の登録箇所（合計 9 箇所）:
-
-| ファイル                                       | 内容                                       | 必須条件                                       |
-| ---------------------------------------------- | ------------------------------------------ | ---------------------------------------------- |
-| `config/nodes.ts`                              | `EDITOR_NODES` に追加                      | 全ノード                                       |
-| `nodes/index.ts`                               | barrel export                              | 全ノード                                       |
-| `config/dialog-registry.ts`                    | `REGISTRY_DIALOG_IDS` + `DIALOG_REGISTRY`  | Dialog 使用時                                  |
-| `config/insert-items.ts`                       | `INSERT_ITEMS`                             | ツールバー/ピッカーに表示する場合              |
-| `plugins/index.ts`                             | Plugin export                              | Plugin あり                                    |
-| `config/inspector-registry.ts`                 | `getInspectableInfoFromRegistry`           | Inspector あり                                 |
-| `inspector/hooks/inspectable-nodes.ts`         | `InspectableNodeType` + `SelectedNodeInfo` | Inspector あり                                 |
-| `inspector/InspectorSidebar.tsx`               | switch case                                | Inspector あり                                 |
-| `inspector/panels/index.ts`                    | Panel export                               | Inspector あり                                 |
-| `__tests__/unit/.../inspectable-nodes.test.ts` | カウントと `expectedTypes` を更新          | Inspector あり（`InspectableNodeType` 追加時） |
-
-**HTML→Lexical JSON**: `tryConvertHtmlStringToLexicalJsonString`（`html-to-lexical-json.ts`）の戻りは `ConvertHtmlToLexicalJsonResult`。失敗時に `EMPTY` へ黙ってフォールバックしない。空 HTML（trim 後）のみ意図した空ドキュメントとして `ok: true` + `EMPTY_LEXICAL_EDITOR_STATE_JSON`。
-
-**挿入メニュー UI**: ツールバー「挿入」は **カテゴリごとのサブメニュー**（`DropdownMenuSub`）。項目が **6 件以上**のカテゴリはサブメニュー内 **2 カラム**。タイムライン・料金表等は `patterns`、カラム・コールアウト等は `layout`。詳細は `docs/reference/codex-rules/lexical-patterns.md` の「挿入メニュー」。
-
-**挿入実行**: ツールバーは `executeInsertItem`（`dialog` は同期 `openDialog`、それ以外は 1 回の `editor.update`）。スラッシュメニューはトリガー削除と同一 `update` 内で `applyInsertItemInUpdate`（`dialog` は `queueMicrotask` で `openDialog`）。`type: "transform"` は `applyInUpdate` で $ API のみとし、ネストした `editor.update` を禁止。
-
-**ポイント**: Floating Text Format Toolbar 経由で開くインラインノード（Ruby / Tooltip 等）は `INSERT_ITEMS` 不要だが `dialog-registry` への登録は必要。登録漏れは型エラーではなく実行時に無音で失敗するため注意。
 
 ## Floating Toolbar 責務分離（Text FT / Block FT）
 
@@ -849,6 +825,10 @@ editor.update(() => {
 **Unwrap SSoT**: `$ungroupNode(group)`（`nodes/GroupNode.tsx` で export）。`UNGROUP_GROUP_COMMAND` ハンドラと `GroupNode.collapseAtStart()`（Backspace at start）の両方から呼ばれる単一実装。旧 `collapseAtStart` の「1 番目の子だけ paragraph に flatten」する lossy 実装は廃止。
 
 **ネスト許可**（WordPress Gutenberg 互換）: Group 内での更に内側 Group 作成、複数 Group の outer Group ラップ、いずれも可能。二重ネスト防止チェックは設けない（Gutenberg と同じく運用者が構造を制御する設計）。
+
+<!-- === source: .claude/rules/frontend/lexical/conventions.md === -->
+
+# Lexical 規約・禁止事項・Gotchas
 
 ## ファイル命名規則
 
@@ -894,6 +874,49 @@ static override importDOM(): DOMConversionMap | null {
 // OK: 画像ノード等、子要素(<img>/<figcaption> 等)を Lexical 子ノードにしたくない場合のみ
 return { node, after: () => [] };
 ```
+
+## 禁止事項
+
+1. **直接的なDOM操作禁止**: `editor.update()` / `editor.read()` を経由
+2. **updateListener内での更新禁止**: パフォーマンス問題（Node Transforms使用）
+3. **read/update混在禁止**: 同期的にネストしない
+4. **メモリリーク**: リスナーは必ず `mergeRegister` で登録解除
+5. **型アサーション禁止**: 型ガード関数 `$isXxxNode()` を使用
+6. **制御コンポーネント化禁止**: EditorStateを親コンポーネントで管理しない
+7. **LexicalErrorBoundary省略禁止**: RichTextPluginには必須（v0.36+ は named export: `{ LexicalErrorBoundary }`）
+8. **プレースホルダーの渡し先を誤らない**: `RichTextPlugin` に `placeholder` を渡さない。`ContentEditable` に `placeholder` と `aria-placeholder` を渡す（[Lexical React の用法](https://lexical.dev/docs/getting-started/react)）
+9. **`@lexical/utils` からの `mergeRegister` / `$findMatchingParent` import禁止**: v0.40.0で `lexical` 本体に移動。`import { mergeRegister } from 'lexical'` を使用
+10. **レガシーノードパターン禁止**: `static getType()`, `static clone()`, `static importJSON()`, `exportJSON()`, `__property`, `getWritable()`, `getLatest()`, `$applyNodeReplacement`, `SerializedXxxNode` interface — すべて `$config` + `createState` + `$getState` / `$setState` に置換済み
+11. **ブロックレベルノードへの `$insertNodes` 使用禁止**: `$insertNodeToNearestRoot` (`@lexical/utils`) を使用。`$insertNodes` はインライン/混合ノード専用
+12. **React render内でのノードプロパティ直接アクセス禁止**: `editor.getEditorState().read(() => $getState(node, xxxState))` で囲む。Lexicalはアクティブなeditor stateが必要
+13. **`node.__property` 直接アクセス禁止**: `$getState(node, xxxState)` を使用。`__` フィールドは `$config` で自動管理
+14. **ノードクラスに getter/setter ラッパー定義禁止**: `node.getText()` / `node.setText(v)` ではなく `$getState(node, textState)` / `$setState(node, textState, v)` を直接使用。ラッパーメソッドは後方互換性ハックであり CLAUDE.md §禁止事項に違反
+15. **子ノードの collapseAtStart 委譲禁止**: Title/Content/Panel 等の子ノードに `collapseAtStart()` を実装しない。`isShadowRoot()` で境界保護する。コンテナノードのみが `collapseAtStart()` を持つ
+16. **コンテナ/コンテンツノードの isShadowRoot 省略禁止**: 複合ノードのコンテナ・コンテンツ・パネルノードには必ず `isShadowRoot() { return true }` を実装する
+17. **CSS クラス使用禁止（createDOM / exportDOM 共通）**: `createDOM` / `exportDOM` では `config.theme.*` も CSS クラスも一切使用しない。data-attributes のみで DOM を構築する。CSS は `lexical-content.css` のアトリビュートセレクタで対応。`createDOM` のシグネチャは `override createDOM(_config: EditorConfig): HTMLElement`（未使用でも `_config` 必須）
+18. **updateDOM で `return true` の乱用禁止**: 属性変更は `$getStateChange` + `dom.setAttribute()` で差分更新し `return false`。`return true` は DOM 要素タグの変更等、DOM 再構築が必要な場合のみ
+19. **AccentColor スウォッチ値と CSS トークン値の不一致禁止**: `lexical-content.css` の `[data-color]` `--accent` 値が **canonical**。`ACCENT_COLOR_SWATCHES`（`accent-colors.ts`）はその値をミラーするため、CSS 変更時は TS 側も必ず更新すること。Preview（ColorSwatchPicker）と実際の適用色が乖離するためユーザー混乱の原因になる
+20. **インライン DecoratorNode 挿入時の選択テキスト削除漏れ禁止**: `$insertNodes` でインラインノードを挿入する前に RangeSelection がある場合は `selection.removeText()` を呼ぶ。未呼出の場合、選択テキストが残存したまま挿入される
+
+```typescript
+// OK パターン（Ruby / Tooltip 等のインライン挿入）
+editor.update(() => {
+  const selection = $getSelection();
+  if ($isRangeSelection(selection)) {
+    selection.removeText(); // ← 必須: 選択テキストを先に削除
+  }
+  $insertNodes([$createRubyNode(baseText, rubyText)]);
+});
+```
+
+21. **`TableCellResizerPlugin` は @lexical/react 0.43.x に存在しない**: 使用禁止。`<TablePlugin hasCellMerge={true} hasCellBackgroundColor={true} />` が現バージョンのテーブル強化の上限
+22. **`exportDOM` 定義時に `importDOM` 省略禁止**: `exportDOM` を定義したすべてのノードは `static override importDOM(): DOMConversionMap | null` も必ず実装する。省略すると Lexical dev-mode が `exportDOM implemented without matching importDOM` を警告し続ける
+23. **組み込みノード（TableNode 等）を継承する場合は Node Replacement パターン必須**: 独自型文字列（`"custom-table"`）を持つカスタムノードと `{ replace: TableNode, with: factory, withKlass: CustomTableNode }` をセットで `EDITOR_NODES` に登録する。`withKlass` が `editor._nodes.get("table")` に `CustomTableNode` を登録するため `TablePlugin.hasNodes([TableNode])` が通過し、`$isTableNode(customTableNode)` も `instanceof` で `true` になる。親の型文字列をそのまま使う手法（`this.config("table", ...)`）は公式パターン外であり禁止
+24. **`updateDOM` の `prevNode` に具象型使用禁止** — `prevNode: CalloutNode` ではなく `prevNode: this` を使用。公式パターン準拠かつ継承時の型安全性を確保する
+25. **`$getStateChange` の truthy チェック禁止** — `if (change)` ではなく `if (change !== null)` を使用。公式ドキュメントと一致させる
+26. **常に `false` を返す `updateDOM` に `boolean` 戻り型禁止** — 引数なし・常に `return false` のメソッドは `override updateDOM(): false` とリテラル型で宣言する。DecoratorNode や状態を持たない子ノードが該当
+27. **`contentWidthClassName` / `contentWidthStyle` 禁止（削除済み）** — `contentWidth?: number`（テキスト領域の純粋な幅 px）を使用。エディタ内部で `EDITOR_PADDING_HORIZONTAL`（64px）を加算。`useContentWidth` フック → `resolveWidthStyles().px`
+28. **Route Handler での `$generateHtmlFromNodes` 使用禁止** — DOM API 不在で 500 エラー。プレビュー HTML はクライアント側の `renderEditorStateJsonToHtmlClient` で生成。保存時は Server Actions の `renderEditorStateToHtmlLazy`（動作する）
 
 ## Gotchas
 
