@@ -10,7 +10,8 @@ tools:
   - Grep
   - Glob
   - Bash
-model: haiku
+model: sonnet
+memory: project
 ---
 
 あなたは GSAP / Lenis のメモリリーク専門家です。

@@ -8,7 +8,7 @@ tools:
   - Bash
   - Read
   - Glob
-model: haiku
+model: sonnet
 memory: project
 ---
 

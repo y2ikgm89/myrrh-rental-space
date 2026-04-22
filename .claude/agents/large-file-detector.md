@@ -9,7 +9,8 @@ description: >
 tools:
   - Glob
   - Bash
-model: haiku
+model: sonnet
+memory: project
 ---
 
 # large-file-detector

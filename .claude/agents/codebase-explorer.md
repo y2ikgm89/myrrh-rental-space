@@ -10,7 +10,7 @@ tools:
   - Grep
   - Glob
   - LS
-model: haiku
+model: sonnet
 memory: project
 ---
 

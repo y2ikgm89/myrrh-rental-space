@@ -10,8 +10,8 @@ tools:
   - Grep
   - Glob
   - Bash
-model: haiku
-memory: local
+model: sonnet
+memory: project
 ---
 
 You are a Prisma migration safety reviewer for the Myrrh Rental Space project.

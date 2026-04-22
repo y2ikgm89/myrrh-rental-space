@@ -1,7 +1,10 @@
 ---
 name: lexical-reviewer
-description: Lexical 0.43 / NodeState API のコード変更後に使用。`src/**/lexical/` 配下を編集した後に呼び出す。NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・未使用型を検出し、高信頼度の問題のみ報告する。
-model: sonnet
+description: >
+  Lexical 0.43 / NodeState API のコード変更後に使用。
+  `src/**/lexical/` 配下を編集した後に呼び出す。
+  NodeState パターン・parseString/parseBoolean ヘルパー・theme.ts デッドエントリ・
+  未使用型を検出し、高信頼度の問題のみ報告する。
 tools:
   - Read
   - Grep
@@ -9,6 +12,7 @@ tools:
   - LS
   - mcp__context7__resolve-library-id
   - mcp__context7__query-docs
+model: sonnet
 memory: project
 ---
 

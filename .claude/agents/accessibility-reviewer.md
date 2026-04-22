@@ -10,7 +10,7 @@ tools:
   - Grep
   - Glob
 model: sonnet
-memory: local
+memory: project
 ---
 
 You are an accessibility specialist for the Myrrh Rental Space project (Next.js 16 / React 19 / Radix UI / shadcn / Tailwind 4).

@@ -17,7 +17,10 @@ fi
 
 EMPTY_DIRS=()
 while IFS= read -r dir; do
-  if [[ -z "$(find "$dir" -maxdepth 1 -type f 2>/dev/null)" ]]; then
+  # Recursively check for any file (route.ts / page.tsx in nested route segments
+  # such as [id]/agreements/route.ts are valid Next.js structures and must not
+  # be flagged as empty). Only flag truly empty dynamic-segment directories.
+  if [[ -z "$(find "$dir" -type f 2>/dev/null)" ]]; then
     EMPTY_DIRS+=("${dir#"$CLAUDE_PROJECT_DIR/"}")
   fi
 done < <(find "$APP_DIR" -type d \( -name '\[*\]' -o -name '\[\[*\]\]' \) 2>/dev/null)

@@ -12,6 +12,7 @@ tools:
   - Edit
   - Bash
 model: sonnet
+memory: project
 ---
 
 # E2E Test Writer

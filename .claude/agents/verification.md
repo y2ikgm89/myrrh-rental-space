@@ -11,8 +11,8 @@ tools:
   - Read
   - Grep
   - Glob
-model: haiku
-memory: local
+model: sonnet
+memory: project
 ---
 
 You are a build verification specialist for the Myrrh Rental Space project.
