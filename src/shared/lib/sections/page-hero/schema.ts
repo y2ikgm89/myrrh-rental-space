@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { isRecord } from "@/shared/lib/serialize";
-import { createSafeUrlSchema } from "@/shared/lib/validations/section-design";
+import { createSafeUrlSchema } from "@/shared/lib/validations/cta-and-url";
 
 /** parsePageHero 緩和用（defaults.ts との循環 import を避ける） */
 const EDITORIAL_FALLBACK_IMAGES = [

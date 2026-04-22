@@ -12,7 +12,8 @@ import {
   createCtaSchemas,
   createCtaButtonItemSchema,
   transformLegacyCtaToButtons,
-} from "./section-design";
+} from "./cta-and-url";
+import { sectionStyleOverrideSchema } from "./section-style";
 import {
   imageAspectValues,
   cardStyleValues,
@@ -105,23 +106,9 @@ const SECTION_TYPE_VALUES = [
   SectionType.EVENT_CALENDAR,
 ] as const;
 
-export type {
-  CTAButtonItem,
-  SectionDesign,
-  SectionDesignInput,
-  TitleSize,
-  TextAlign,
-} from "./section-design";
-export {
-  ctaButtonVariants,
-  ctaButtonSizes,
-  sectionDesignSchema,
-  defaultSectionDesign,
-  parseSectionDesign,
-  titleSizeValues,
-  isTitleSize,
-  isSectionAnimation,
-} from "./section-design";
+export type { CTAButtonItem } from "./cta-and-url";
+export { ctaButtonVariants, ctaButtonSizes } from "./cta-and-url";
+export type { TextAlign } from "./section-options";
 
 // =============================================================================
 // 共通スキーマ
@@ -632,25 +619,27 @@ export const createSectionSchema = z.object({
   }),
   title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   config: z.record(z.string(), z.unknown()).default({}),
-  design: z.record(z.string(), z.unknown()).default({}),
   contentJson: z
     .string()
     .max(500000, { error: "コンテンツは500,000文字以内です" })
     .optional(),
   order: z.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
+  styleId: z.string().min(1).nullable().optional(),
+  styleOverride: sectionStyleOverrideSchema.nullable().optional(),
 });
 
 /** セクション更新スキーマ */
 export const updateSectionSchema = z.object({
   title: z.string().max(100, { error: "タイトルは100文字以内です" }).optional(),
   config: z.record(z.string(), z.unknown()).optional(),
-  design: z.record(z.string(), z.unknown()).optional(),
   contentJson: z
     .string()
     .max(500000, { error: "コンテンツは500,000文字以内です" })
     .optional(),
   isActive: z.boolean().optional(),
+  styleId: z.string().min(1).nullable().optional(),
+  styleOverride: sectionStyleOverrideSchema.nullable().optional(),
 });
 
 /** セクション順序更新スキーマ */

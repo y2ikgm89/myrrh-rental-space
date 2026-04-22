@@ -26,6 +26,7 @@ import { LayoutSection } from "../_components/sections/LayoutSection";
 import { HeaderSection } from "../_components/sections/HeaderSection";
 import { FooterSection } from "../_components/sections/FooterSection";
 import { SidebarSection } from "../_components/sections/SidebarSection";
+import { DesignSection } from "../_components/sections/DesignSection";
 import type { ReactElement } from "react";
 
 /**
@@ -78,6 +79,7 @@ async function SiteSettingsContent(): Promise<ReactElement> {
           <FooterSection settings={settings} />
           <SidebarSection settings={settings} />
           <LayoutSection settings={settings} />
+          <DesignSection settings={settings} />
         </div>
       ),
     },

@@ -289,6 +289,21 @@ export async function updatePageHeroCommand(
   });
 }
 
+/**
+ * Page.pageStyleId を更新（4-tier cascade の page layer）。
+ * null は relation disconnect（継承値に戻す）。
+ */
+export async function updatePageStyleCommand(
+  slug: string,
+  pageStyleId: string | null,
+): Promise<void> {
+  await ensurePageExists(slug);
+  await prisma.page.update({
+    where: { slug },
+    data: { pageStyleId },
+  });
+}
+
 export async function updatePageSeoCommand(
   slug: string,
   input: UpdatePageSeoInput,

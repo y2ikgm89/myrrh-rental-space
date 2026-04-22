@@ -10,12 +10,16 @@ import type { Serialized } from "@/shared/lib/serialize";
 import type { SectionConfig } from "@/shared/lib/validations/section";
 import { requireAdminPermission } from "./_helpers";
 
+import type { PageSectionStyle } from "@/admin/actions/page-section-types";
+
 export type HomepageSectionData = {
   id: string;
   type: string;
   title: string | null;
   config: SectionConfig;
-  design: unknown;
+  styleId: string | null;
+  styleOverride: unknown;
+  style: PageSectionStyle | null;
   contentHtml: string | null;
   contentJson: unknown;
   order: number;

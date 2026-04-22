@@ -11,7 +11,6 @@ export type DefaultSectionDef = {
   type: string;
   title: string | null;
   config: Prisma.InputJsonValue;
-  design?: Prisma.InputJsonValue;
   content: string | null;
   order: number;
   isActive: boolean;
@@ -19,20 +18,16 @@ export type DefaultSectionDef = {
 
 /**
  * システムページごとのデフォルトセクション定義
+ *
+ * 旧 `design` JSON フィールドは廃止。Section レベルのスタイルは
+ * 4-tier cascade（Settings.globalSectionStyle → Page.pageStyle → Section.style →
+ * Section.styleOverride）経由で解決する。
  */
-const homeEditorialSpacing = {
-  paddingTop: "md",
-  paddingBottom: "md",
-  maxWidth: "xl",
-  textAlign: "center",
-} as const satisfies Prisma.InputJsonValue;
-
 export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
   home: [
     {
       type: "homepage-how-it-works",
       title: null,
-      design: homeEditorialSpacing,
       config: {
         label: "How to Reserve",
         title: "ご利用の流れ",
@@ -64,7 +59,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     {
       type: "homepage-spaces",
       title: null,
-      design: homeEditorialSpacing,
       config: {
         label: "Selected Spaces",
         title: "厳選スペース",
@@ -77,12 +71,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     {
       type: "homepage-features",
       title: null,
-      design: {
-        paddingTop: "md",
-        paddingBottom: "md",
-        maxWidth: "editorial",
-        textAlign: "center",
-      },
       config: {
         label: "Why Myrrh",
         title: "選ばれる理由",
@@ -116,7 +104,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
     {
       type: "homepage-cta",
       title: null,
-      design: homeEditorialSpacing,
       config: {
         label: "Reservation",
         title: "あなたに最適な空間を",
@@ -141,7 +128,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           "ビジネスからプライベートまで、あらゆるシーンに対応するレンタルスペース。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -180,7 +166,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "ご不明点がございましたら、まずはこちらをご確認ください。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -220,7 +205,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           "ご質問やご要望がございましたら、お気軽にお問い合わせください。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -236,7 +220,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "最寄り駅・駐車場・営業時間をご案内します。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -252,7 +235,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "お知らせ・最新情報をお届けします。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -268,7 +250,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "最新のお知らせやお役立ち情報をお届けします。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -285,7 +266,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
           "3ステップで簡単予約。お好みのスペースと日時をお選びください。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -312,7 +292,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "開催予定のイベント・ワークショップ情報",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,
@@ -336,7 +315,6 @@ export const DEFAULT_PAGE_SECTIONS: Record<string, DefaultSectionDef[]> = {
         subtitle: "ご利用可能なレンタルスペースをお探しください。",
         variant: "minimal",
       },
-      design: { titleSize: "3xl" },
       content: null,
       order: 0,
       isActive: true,

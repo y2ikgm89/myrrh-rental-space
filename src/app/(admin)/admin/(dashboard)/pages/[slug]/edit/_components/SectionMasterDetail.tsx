@@ -44,6 +44,7 @@ import {
 import { SectionList } from "./SectionList";
 import { SectionEditor } from "./SectionEditor";
 import { PageHeroEditor } from "./PageHeroEditor";
+import { PageStyleField } from "./PageStyleField";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
 
@@ -248,7 +249,6 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         pageId: page.id,
         type,
         config: getDefaultSectionConfig(type) ?? {},
-        design: {},
         isActive: true,
         ...(insertAtIndex !== undefined && { order: insertAtIndex }),
       });
@@ -405,7 +405,13 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
           forceMount
           className="data-[state=inactive]:hidden"
         >
-          <PageSeoForm page={page} />
+          <div className="space-y-6">
+            <PageStyleField
+              pageSlug={page.slug}
+              initialPageStyleId={page.pageStyleId}
+            />
+            <PageSeoForm page={page} />
+          </div>
         </TabsContent>
       </Tabs>
 

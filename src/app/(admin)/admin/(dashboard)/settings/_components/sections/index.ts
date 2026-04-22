@@ -9,6 +9,7 @@ export { RobotsTxtSection } from "./RobotsTxtSection";
 export { EmailSection } from "./EmailSection";
 export { NotificationSection } from "./NotificationSection";
 export { ReservationSection } from "./ReservationSection";
+export { DesignSection } from "./DesignSection";
 export { DiscountSection } from "./DiscountSection";
 export { TaxSection } from "./TaxSection";
 export { MaintenanceSection } from "./MaintenanceSection";

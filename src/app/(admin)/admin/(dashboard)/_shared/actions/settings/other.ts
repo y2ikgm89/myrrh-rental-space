@@ -196,6 +196,28 @@ export async function updateHeaderSettings(
   });
 }
 
+/**
+ * Settings.globalSectionStyleId を更新（4-tier cascade の global layer）。
+ * null は継承値（ハードコード DEFAULT_SECTION_STYLE）に戻す。
+ */
+export async function updateGlobalSectionStyle(
+  globalSectionStyleId: string | null,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
+    resource: "settings",
+    action: "update",
+    execute: async () => {
+      await settingsCommands.updateGlobalSectionStyle(globalSectionStyleId);
+      return null;
+    },
+    afterSuccess: () => {
+      updateTag(CACHE_TAGS.LAYOUT_SETTINGS);
+      updateTag(CACHE_TAGS.SECTIONS);
+      updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
+    },
+  });
+}
+
 export async function updateFooterSettings(
   data: FooterSettingsInput,
 ): Promise<MutationResult> {

@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * SectionEditor -- セクション編集パネル（右パネル）
+ * SectionEditor — セクション編集パネル（右パネル）
  *
- * タブなし、単一スクロール。コンテンツ + デザインを分離保存。
- * AutoSectionForm（コンテンツ）と DesignFields（デザイン）はそれぞれ独立した保存フロー。
+ * タブなし、単一スクロール。AutoSectionForm（コンテンツ）と Style カード
+ * （styleId + styleOverride）はそれぞれ独立した保存フロー。
  */
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Button,
@@ -21,14 +21,16 @@ import {
 } from "@/admin/components/ui";
 import { updatePageSection } from "@/admin/actions/page-section";
 import type { PageSectionData } from "@/admin/actions/page-section-types";
-import type { SectionDesign } from "@/shared/lib/validations/section";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { sectionTypeLabels } from "@/shared/lib/validations/section-metadata";
+import type { SectionStyleOverride } from "@/shared/lib/validations/section-style";
 import { SectionEmptyState } from "./SectionEmptyState";
 import type { ConfigFormSavePayload } from "../../_sections/_components/config-forms";
 import { AutoSectionForm } from "../../_sections/_components/auto-section-form";
 import { SectionTypeIcon } from "../../_sections/_components/SectionTypeIcon";
-import { DesignFields } from "./DesignFields";
+import { StyleSelector } from "./StyleSelector";
+import { StyleOverridePanel } from "./StyleOverridePanel";
+import { ResolvedStylePreview } from "./ResolvedStylePreview";
 
 interface SectionEditorProps {
   section: PageSectionData | null;
@@ -36,6 +38,19 @@ interface SectionEditorProps {
   onAddSection: () => void;
   onSectionUpdated: () => void;
   onDirtyChange?: (dirty: boolean) => void;
+}
+
+function parseInitialOverride(value: unknown): SectionStyleOverride | null {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return null;
+  }
+  // 安全な JSON 形で保持。Server Action 側で sectionStyleOverrideSchema が再検証する。
+  return value as SectionStyleOverride;
 }
 
 export function SectionEditor({
@@ -47,20 +62,33 @@ export function SectionEditor({
 }: SectionEditorProps) {
   const [isPending, startTransition] = useTransition();
   const [configDirty, setConfigDirty] = useState(false);
-  const [designDirty, setDesignDirty] = useState(false);
-  const latestDesignRef = useRef<SectionDesign | null>(null);
+  const [styleDirty, setStyleDirty] = useState(false);
+
+  // Style Card local state（保存前の draft）
+  const [styleIdDraft, setStyleIdDraft] = useState<string | null>(
+    section?.styleId ?? null,
+  );
+  const [overrideDraft, setOverrideDraft] =
+    useState<SectionStyleOverride | null>(
+      parseInitialOverride(section?.styleOverride),
+    );
+
+  // Section 切替時に draft state をリセット（render 中 state sync — 公式推奨
+  // "Adjusting State Directly During Render"、react-patterns.md 参照）
+  const [previousSectionId, setPreviousSectionId] = useState<string | null>(
+    section?.id ?? null,
+  );
+  if ((section?.id ?? null) !== previousSectionId) {
+    setPreviousSectionId(section?.id ?? null);
+    setConfigDirty(false);
+    setStyleDirty(false);
+    setStyleIdDraft(section?.styleId ?? null);
+    setOverrideDraft(parseInitialOverride(section?.styleOverride));
+  }
 
   useEffect(() => {
-    onDirtyChange?.(configDirty || designDirty);
-  }, [configDirty, designDirty, onDirtyChange]);
-
-  useEffect(() => {
-    return () => {
-      setConfigDirty(false);
-      setDesignDirty(false);
-      latestDesignRef.current = null;
-    };
-  }, [section?.id]);
+    onDirtyChange?.(configDirty || styleDirty);
+  }, [configDirty, styleDirty, onDirtyChange]);
 
   if (!section) {
     return (
@@ -100,15 +128,25 @@ export function SectionEditor({
     });
   };
 
-  const handleDesignSave = () => {
-    const design = latestDesignRef.current;
-    if (!design) return;
+  const handleStyleIdChange = (next: string | null) => {
+    setStyleIdDraft(next);
+    setStyleDirty(true);
+  };
+
+  const handleOverrideChange = (next: SectionStyleOverride | null) => {
+    setOverrideDraft(next);
+    setStyleDirty(true);
+  };
+
+  const handleStyleSave = () => {
     startTransition(async () => {
       const result = await updatePageSection(section.id, {
-        design: { ...design },
+        styleId: styleIdDraft,
+        styleOverride: overrideDraft,
       });
       if (!isMutationError(result)) {
-        toast.success("デザインを更新しました");
+        toast.success("スタイルを更新しました");
+        setStyleDirty(false);
         onSectionUpdated();
       } else {
         toast.error(result.error);
@@ -147,27 +185,39 @@ export function SectionEditor({
         </CardContent>
       </Card>
 
-      {/* デザイン Card */}
+      {/* スタイル Card */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">デザイン設定</CardTitle>
+          <CardTitle className="text-sm font-medium">スタイル設定</CardTitle>
         </CardHeader>
-        <CardContent>
-          <DesignFields
-            design={section.design}
-            onDesignChange={(d) => {
-              latestDesignRef.current = d;
-            }}
-            onDirtyChange={setDesignDirty}
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">
+              Style preset
+            </Label>
+            <StyleSelector
+              sectionType={section.type}
+              value={styleIdDraft}
+              onChange={handleStyleIdChange}
+              disabled={isPending}
+            />
+          </div>
+
+          <StyleOverridePanel
+            value={overrideDraft}
+            onChange={handleOverrideChange}
+            disabled={isPending}
           />
+
+          <ResolvedStylePreview section={section} />
         </CardContent>
         <CardFooter className="flex justify-end pt-0">
           <Button
-            onClick={handleDesignSave}
-            disabled={isPending || !designDirty}
+            onClick={handleStyleSave}
+            disabled={isPending || !styleDirty}
             size="sm"
           >
-            {isPending ? "保存中..." : "デザインを保存"}
+            {isPending ? "保存中..." : "スタイルを保存"}
           </Button>
         </CardFooter>
       </Card>

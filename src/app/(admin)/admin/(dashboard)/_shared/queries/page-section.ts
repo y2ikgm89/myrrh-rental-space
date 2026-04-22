@@ -7,48 +7,22 @@ import {
   getPageWithSectionsQuery,
   getPublicPageSectionsQuery,
 } from "@/shared/domain/sections/admin-queries";
-import type { SectionConfig } from "@/shared/lib/validations/section";
+import type {
+  PageSectionData,
+  PageWithSections,
+  PageForEdit,
+} from "@/admin/actions/page-section-types";
 import {
   requireAdminPermission,
   requireAdminResourcePermission,
 } from "./_helpers";
 
-export type PageSectionData = {
-  id: string;
-  pageId: string;
-  type: string;
-  title: string | null;
-  config: SectionConfig;
-  design: unknown;
-  contentHtml: string | null;
-  contentJson: unknown;
-  order: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type PageWithSections = {
-  id: string;
-  slug: string;
-  title: string;
-  sections: PageSectionData[];
-};
-
-export type PageForEdit = {
-  id: string;
-  slug: string;
-  title: string;
-  pageHero: unknown;
-  isPublished: boolean;
-  isSystem: boolean;
-  metaDescription: string | null;
-  metaKeywords: string | null;
-  ogpTitle: string | null;
-  ogpDescription: string | null;
-  ogpImageUrl: string | null;
-  sections: PageSectionData[];
-};
+export type {
+  PageSectionData,
+  PageWithSections,
+  PageForEdit,
+  PageSectionStyle,
+} from "@/admin/actions/page-section-types";
 
 export async function getPageSections(
   pageId: string,

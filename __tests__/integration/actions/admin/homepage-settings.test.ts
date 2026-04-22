@@ -74,11 +74,12 @@ describe("Homepage Settings Admin Action Integration", () => {
         }
       });
 
-      test("design のデフォルトは空オブジェクト", () => {
+      test("styleId / styleOverride はオプション（既定で未指定）", () => {
         const result = createSectionSchema.safeParse(VALID_CREATE_INPUT);
         expect(result.success).toBe(true);
         if (result.success) {
-          expect(result.data.design).toEqual({});
+          expect(result.data.styleId).toBeUndefined();
+          expect(result.data.styleOverride).toBeUndefined();
         }
       });
 

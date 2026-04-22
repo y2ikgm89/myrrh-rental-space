@@ -14,6 +14,7 @@ import {
   type UpdateSectionOrderInput,
 } from "@/shared/lib/validations/section";
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
+import type { SectionStyleOverride } from "@/shared/lib/validations/section-style";
 
 function parseSectionConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);
@@ -84,6 +85,18 @@ function validateConfig(type: string, config: unknown): SectionConfig {
   return result.data;
 }
 
+function styleOverrideToPrisma(
+  override: SectionStyleOverride | null | undefined,
+):
+  | Prisma.InputJsonValue
+  | typeof Prisma.JsonNull
+  | typeof Prisma.DbNull
+  | undefined {
+  if (override === undefined) return undefined;
+  if (override === null) return Prisma.DbNull;
+  return cloneJsonValue(override);
+}
+
 export async function createPageSectionCommand(
   input: CreateSectionInput,
   contentHtml: string | null,
@@ -110,6 +123,8 @@ export async function createPageSectionCommand(
       contentHtml,
       order: input.order ?? (maxOrder._max.order ?? -1) + 1,
       isActive: input.isActive,
+      styleId: input.styleId ?? undefined,
+      styleOverride: styleOverrideToPrisma(input.styleOverride),
     }),
     select: { id: true },
   });
@@ -141,6 +156,9 @@ export async function updatePageSectionCommand(
           }
         : {}),
       isActive: input.isActive,
+      // styleId: null → relation disconnect, undefined → skip
+      ...(input.styleId !== undefined && { styleId: input.styleId }),
+      styleOverride: styleOverrideToPrisma(input.styleOverride),
     }),
   });
 
@@ -215,6 +233,8 @@ export async function duplicatePageSectionCommand(id: string) {
       contentJson: section.contentJson ?? undefined,
       order: (maxOrderSection?.order ?? 0) + 1,
       isActive: section.isActive,
+      styleId: section.styleId ?? undefined,
+      styleOverride: section.styleOverride ?? undefined,
     }),
   });
 
@@ -226,8 +246,9 @@ export async function duplicatePageSectionCommand(id: string) {
       type: duplicated.type,
       title: duplicated.title,
       config: parseSectionConfig(duplicated.type, duplicated.config),
-      // Compat shim for DesignFields (Phase B.5 で削除予定)
-      design: {} as unknown,
+      styleId: duplicated.styleId,
+      styleOverride: duplicated.styleOverride,
+      style: null,
       contentHtml: duplicated.contentHtml,
       contentJson: duplicated.contentJson,
       order: duplicated.order,

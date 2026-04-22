@@ -9,6 +9,36 @@ import {
 } from "@/shared/lib/validations/section";
 import { getDefaultSectionConfig } from "@/shared/lib/validations/section-defaults";
 
+const ADMIN_SECTION_SELECT = {
+  id: true,
+  pageId: true,
+  type: true,
+  title: true,
+  config: true,
+  contentHtml: true,
+  contentJson: true,
+  order: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  styleId: true,
+  styleOverride: true,
+  style: {
+    select: {
+      id: true,
+      name: true,
+      scope: true,
+      applicableTypes: true,
+      spacing: true,
+      background: true,
+      container: true,
+      typography: true,
+      animation: true,
+      customClass: true,
+    },
+  },
+} as const;
+
 function parseSectionConfig(type: string, config: unknown): SectionConfig {
   const result = validateSectionConfig(type, config);
   if (result.success) {
@@ -36,12 +66,27 @@ function toSectionData(section: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  styleId?: string | null;
+  styleOverride?: unknown;
+  style?: {
+    id: string;
+    name: string;
+    scope: string;
+    applicableTypes: string[];
+    spacing: unknown;
+    background: unknown;
+    container: unknown;
+    typography: unknown;
+    animation: unknown;
+    customClass: string | null;
+  } | null;
 }) {
   return {
     ...section,
     config: parseSectionConfig(section.type, section.config),
-    // Compat shim for DesignFields (Phase B.5 で DesignFields と共に削除予定)
-    design: {} as unknown,
+    styleId: section.styleId ?? null,
+    styleOverride: section.styleOverride ?? null,
+    style: section.style ?? null,
   };
 }
 
@@ -59,19 +104,7 @@ export async function getHomepageSectionsQuery() {
 
   const sections = await prisma.section.findMany({
     where: { pageId: homePageId },
-    select: {
-      id: true,
-      pageId: true,
-      type: true,
-      title: true,
-      config: true,
-      contentHtml: true,
-      contentJson: true,
-      order: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: ADMIN_SECTION_SELECT,
     orderBy: { order: "asc" },
   });
 
@@ -84,19 +117,7 @@ export async function getPublicHomepageSectionsQuery() {
 
   const sections = await prisma.section.findMany({
     where: { pageId: homePageId, isActive: true },
-    select: {
-      id: true,
-      pageId: true,
-      type: true,
-      title: true,
-      config: true,
-      contentHtml: true,
-      contentJson: true,
-      order: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: ADMIN_SECTION_SELECT,
     orderBy: { order: "asc" },
   });
 
@@ -109,6 +130,7 @@ export async function getHomepageSectionQuery(id: string) {
 
   const section = await prisma.section.findUnique({
     where: { id },
+    select: ADMIN_SECTION_SELECT,
   });
 
   if (!section || section.pageId !== homePageId) {
@@ -124,6 +146,7 @@ export async function getHomepageSectionByTypeQuery(type: string) {
 
   const section = await prisma.section.findFirst({
     where: { type, pageId: homePageId },
+    select: ADMIN_SECTION_SELECT,
     orderBy: { order: "asc" },
   });
 
@@ -137,6 +160,7 @@ export async function getHomepageSectionByTypeQuery(type: string) {
 export async function getPageSectionsQuery(pageId: string) {
   const sections = await prisma.section.findMany({
     where: { pageId },
+    select: ADMIN_SECTION_SELECT,
     orderBy: { order: "asc" },
   });
 
@@ -149,6 +173,7 @@ export async function getPageSectionsQuery(pageId: string) {
 export async function getPublicPageSectionsQuery(pageId: string) {
   const sections = await prisma.section.findMany({
     where: { pageId, isActive: true },
+    select: ADMIN_SECTION_SELECT,
     orderBy: { order: "asc" },
   });
 
@@ -166,6 +191,7 @@ export async function getPageWithSectionsQuery(slug: string) {
       slug: true,
       title: true,
       sections: {
+        select: ADMIN_SECTION_SELECT,
         orderBy: { order: "asc" },
       },
     },
@@ -201,7 +227,9 @@ export async function getPageForEditQuery(slug: string) {
       ogpTitle: true,
       ogpDescription: true,
       ogpImageUrl: true,
+      pageStyleId: true,
       sections: {
+        select: ADMIN_SECTION_SELECT,
         orderBy: { order: "asc" },
       },
     },
@@ -223,6 +251,7 @@ export async function getPageForEditQuery(slug: string) {
     ogpTitle: page.ogpTitle,
     ogpDescription: page.ogpDescription,
     ogpImageUrl: page.ogpImageUrl,
+    pageStyleId: page.pageStyleId,
     sections: page.sections.map((section) => ({
       ...toSectionData(section),
       pageId: section.pageId ?? "",
@@ -233,6 +262,7 @@ export async function getPageForEditQuery(slug: string) {
 export async function getPageSectionQuery(id: string) {
   const section = await prisma.section.findUnique({
     where: { id },
+    select: ADMIN_SECTION_SELECT,
   });
 
   if (!section || !section.pageId) {

@@ -18,6 +18,7 @@ import {
   updatePageCommand,
   updatePageHeroCommand,
   updatePageSeoCommand,
+  updatePageStyleCommand,
   bulkDeletePagesCommand,
   bulkTogglePagePublishedCommand,
 } from "@/shared/domain/pages/commands";
@@ -263,6 +264,30 @@ export async function updatePageHero(
     afterSuccess: () => {
       invalidatePageTags(slug);
       updateTag(CACHE_TAGS.HOMEPAGE_SECTIONS);
+      updateTag(CACHE_TAGS.SECTIONS);
+      purgePageCaches(slug);
+    },
+  });
+}
+
+/**
+ * Page.pageStyleId を更新（4-tier cascade の page layer）。
+ * null は継承値に戻す（relation disconnect）。
+ */
+export async function updatePageStyle(
+  slug: string,
+  pageStyleId: string | null,
+): Promise<MutationResult> {
+  return executeAdminMutationResult({
+    resource: "page",
+    action: "update",
+    resourceId: slug,
+    execute: async () => {
+      await updatePageStyleCommand(slug, pageStyleId);
+      return null;
+    },
+    afterSuccess: () => {
+      invalidatePageTags(slug);
       updateTag(CACHE_TAGS.SECTIONS);
       purgePageCaches(slug);
     },

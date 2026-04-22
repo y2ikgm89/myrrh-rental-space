@@ -1,11 +1,9 @@
 /**
  * SectionWrapper — SectionStylePayload の共通フィールドを CSS クラス/style に変換
  *
- * Phase B.C2: props を design: SectionDesign → style: SectionStylePayload に刷新。
- * paddingTop/Bottom, background, container.maxWidth, backgroundImageUrl,
- * backgroundOverlayOpacity, textAlign, customClass を処理する。
- *
- * design が未設定（デフォルト値）の場合は各コンポーネントの既存見た目を維持。
+ * props として SectionStylePayload（4-tier cascade で解決済み）を受け取り、
+ * spacing.paddingTop/Bottom, background.type/imageUrl/overlayOpacity,
+ * container.maxWidth, typography.textAlign, customClass を処理する。
  */
 
 import type { ReactElement, ReactNode } from "react";
