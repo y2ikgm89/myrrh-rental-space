@@ -350,7 +350,7 @@ export function HomepageHero({
         // Mobile: image + headline overlap on row 1, body on row 2
         "grid grid-cols-1",
         // Desktop: 2 cols × 2 rows — image spans left full height, headline top-right, body bottom-right
-        "md:min-h-[85svh] md:grid-cols-2 md:grid-rows-[1fr_1fr]",
+        "md:min-h-[var(--hero-min-height-xl)] md:grid-cols-2 md:grid-rows-[1fr_1fr]",
       )}
     >
       {/* Image carousel — mobile row 1 / desktop left col spanning both rows */}

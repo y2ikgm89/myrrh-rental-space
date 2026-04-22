@@ -37,7 +37,7 @@ export function AddSectionDialog({
 }: AddSectionDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <AlertDialogContent className="max-w-2xl max-h-[var(--modal-max-height)] overflow-hidden flex flex-col">
         <AlertDialogHeader>
           <AlertDialogTitle>セクションを追加</AlertDialogTitle>
           <AlertDialogDescription>

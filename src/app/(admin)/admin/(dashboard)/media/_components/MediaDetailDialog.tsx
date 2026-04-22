@@ -143,7 +143,7 @@ export function MediaDetailDialog({ item, onClose }: Props) {
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0">
+      <DialogContent className="sm:max-w-2xl max-h-[var(--modal-max-height-lg)] overflow-hidden flex flex-col gap-0 p-0">
         {item && (
           <>
             <DialogHeader className="px-4 pt-4 pb-4 shrink-0 border-b">

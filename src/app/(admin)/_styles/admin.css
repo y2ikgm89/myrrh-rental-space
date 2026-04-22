@@ -196,6 +196,8 @@
   --header-height: 3.5rem; /* 56px */
   --dropdown-min-width: 12rem;
   --modal-max-height: 85vh;
+  --modal-max-height-lg: 90vh;
+  --modal-max-height-xl: 95vh;
 
   /* --------------------------------------------------------------------------
    * Spacing — fluid

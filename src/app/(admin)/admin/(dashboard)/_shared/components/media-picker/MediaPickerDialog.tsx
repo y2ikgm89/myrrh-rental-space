@@ -105,7 +105,7 @@ export function MediaPickerDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-4xl max-h-[var(--modal-max-height-lg)] flex flex-col gap-0 p-0 overflow-hidden">
         {/* Header - pr-12 でDialogContent内蔵の X ボタンとの重複を防ぐ */}
         <DialogHeader className="shrink-0 border-b p-4 pr-12">
           <DialogTitle>メディアを選択</DialogTitle>

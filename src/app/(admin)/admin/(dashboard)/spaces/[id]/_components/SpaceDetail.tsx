@@ -226,7 +226,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent
-          className="max-h-[95vh] max-w-[min(100vw-2rem,80rem)] gap-0 border-border bg-card p-4 shadow-lg"
+          className="max-h-[var(--modal-max-height-xl)] max-w-[min(100vw-2rem,80rem)] gap-0 border-border bg-card p-4 shadow-lg"
           aria-describedby={undefined}
         >
           <DialogTitle className="sr-only">
@@ -251,7 +251,7 @@ export function SpaceDetail({ space }: SpaceDetailProps) {
                 alt={`${space.name} - 画像${selectedIndex + 1}`}
                 width={1920}
                 height={1080}
-                className="max-h-[85vh] w-auto max-w-full object-contain"
+                className="max-h-[var(--modal-max-height)] w-auto max-w-full object-contain"
               />
             ) : null}
             {allImages.length > 1 ? (

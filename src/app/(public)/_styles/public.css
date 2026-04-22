@@ -139,7 +139,11 @@
    * -------------------------------------------------------------------------- */
   --header-height: 3.5rem;
   --hero-min-height: 60svh;
+  --hero-min-height-lg: 80svh;
+  --hero-min-height-xl: 85svh;
   --modal-max-height: 85vh;
+  --modal-max-height-lg: 90vh;
+  --modal-max-height-xl: 95vh;
   --lightbox-max-height: 90svh;
   --lightbox-max-width: 90vw;
   --dropdown-min-width: 12rem;

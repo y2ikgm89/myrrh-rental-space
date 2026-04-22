@@ -168,7 +168,7 @@ export function SettingsDialog<
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[var(--modal-max-height)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
           {config.description ? (

@@ -128,7 +128,7 @@ export function DeletedPagesDialog() {
             ゴミ箱
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[var(--modal-max-height)] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>削除済みページ</DialogTitle>
           </DialogHeader>
