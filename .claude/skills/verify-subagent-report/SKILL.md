@@ -86,8 +86,67 @@ echo "EXIT:$?"
 - Subagent が `BLOCKED` / `NEEDS_CONTEXT` を報告 — 実装未実施
 - Subagent が明示的に「ファイル変更なし」を報告 — 検証対象なし
 
+## 6. Parallel dispatch cross-revert 検証（N 並列 implementer 用）
+
+N 並列 implementer（2 件以上同時）を dispatch した場合、一方の `git reset` / `git restore` / `git stash` が他方の成果や controller の直前編集を silent revert する事故が実際に発生しうる（ADR-0015 §リスク B）。全員の完了報告受領後、controller は必ず以下の 3 段検証を実行する。
+
+### 6.1. `git status --short` で全 modifications + untracked を列挙
+
+```bash
+git status --short
+```
+
+**注意**: `[post-subagent] git snapshot` hook の出力は truncate されうるため authoritative でなく、`git status` 直接実行が ground truth。hook snapshot で 5 件だったはずのファイルが 3 件に減っているケースは silent revert の兆候。
+
+### 6.2. `wc -l` で対象ファイルの行数 delta 確認
+
+各 agent が「旧 N → 新 M 行」と報告した場合、実体と照合する:
+
+```bash
+wc -l src/path/to/agent-1-target.tsx \
+      src/path/to/agent-2-target.tsx \
+      src/path/to/agent-3-target.tsx \
+      src/path/to/agent-4-target.tsx
+```
+
+agent 報告と一致しないファイルは revert されている可能性が高い（例: 791 行→93 行と報告されたが実体 791 行のまま → agent の main file 編集が revert された）。
+
+### 6.3. `grep` で期待 symbol 存在 + 削除 symbol 不在を確認
+
+新規 import / 既存 symbol / 削除 symbol を明示的に検証する:
+
+```bash
+# 分割後に期待される新規 sub-component 参照
+grep -rn "import.*\\(TaxonomyFormFields\\|EventBasicFields\\|SidebarWidgetCard\\)" src/
+
+# 分割前の旧 symbol が消えているか
+grep -rn "const SortableWidgetItem" src/   # Sidebar 旧 inline 定義
+grep -rn "function CategoryFormFields" src/app/\\(admin\\)/admin/\\(dashboard\\)/posts/taxonomy/_components/TaxonomyEditor.tsx
+```
+
+**重要**: `system-reminder` の「X was modified by linter」は edit 時点の snapshot を表示するケースがあり stale しうる。旧内容が表示されても、実体が何かは `grep` / `Read` で直接確認する。
+
+### 6.4. 異常検出時の recovery
+
+| 症状                                                      | 対処                                       |
+| --------------------------------------------------------- | ------------------------------------------ |
+| controller の quick fixes が消えている                    | 同じ edit を再適用（Edit/Write を再実行）  |
+| 一部 agent の main file が元のまま                        | 該当 agent を再 dispatch（今度は単独実行） |
+| `[post-subagent] snapshot` と `git status` で件数が異なる | `git status` 直接実行を正とする            |
+| `git reflog -5` に `reset: moving to HEAD` が登場         | 本事故の確定兆候、3 段検証を完走           |
+
+### 6.5. 予防策
+
+implementer prompt に以下を明記済みか確認（未明記なら追記して再 dispatch）:
+
+> 🚫 **絶対禁止**: `git add` / `git commit` / `git push` / `git reset` / `git checkout` / `git restore` / `git stash` — 一切の git コマンド実行禁止。ファイル編集のみ。
+
+`git add / commit` 禁止だけでは不十分（`reset / restore / stash` が working tree を巻き戻す破壊操作）。
+
 ## 関連
 
 - `.claude/rules/gotchas.md` §Claude Code 設定 — subagent 検証規律・haiku ban
 - `.claude/hooks/post-subagent-git-snapshot.sh` — Task tool 実行後の自動 git state スナップショット
+- `CLAUDE.md` §Subagent 規律 — implementer dispatch の git 全面禁止 + 3 段検証
+- `docs/architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md` — ADR 本文
 - `superpowers:subagent-driven-development` — implementer + spec reviewer + quality reviewer の 3 段ループ

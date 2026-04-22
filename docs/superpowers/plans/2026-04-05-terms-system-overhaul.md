@@ -8,8 +8,6 @@
 
 **Tech Stack:** Prisma 7 (PostgreSQL), Next.js 16 (`'use cache'`, `updateTag`), React 19, Zod 4, React Hook Form, Tailwind CSS 4
 
-**Spec:** `docs/plans/2026-04-05-terms-system-overhaul.md`
-
 ---
 
 ## File Structure
