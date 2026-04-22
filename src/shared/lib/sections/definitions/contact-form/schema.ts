@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const variants = ["default", "minimal", "split"] as const;
 
@@ -21,6 +21,7 @@ export const contactFormConfigSchema = z.object({
   variant: field.select("バリエーション", {
     options: variants,
     default: "default",
+    group: "design",
   }),
 });
 

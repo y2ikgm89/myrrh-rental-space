@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
-import { extractFieldMeta } from "@/shared/lib/sections/field-helpers";
+import { fieldRegistry } from "@/shared/lib/sections/field-registry";
 import { isRecord } from "@/shared/lib/serialize";
-import type { FieldMeta } from "@/shared/lib/sections/types";
+import type { FieldMeta } from "@/shared/lib/sections/field-registry";
 
 // ─────────────────────────────────────────────────────────────
 // Types
@@ -104,11 +104,11 @@ export function hasShape(
 
 /**
  * FieldMeta を抽出する。
- * ZodPipe の場合は in 側（describe が付いている側）を探索する。
+ * registry に直接登録されていない場合は ZodPipe / ZodDefault / ZodOptional をアンラップして探索する。
  */
 export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
-  // Direct description
-  const meta = extractFieldMeta(schema);
+  // Direct registry lookup
+  const meta = fieldRegistry.get(schema);
   if (meta) return meta;
 
   const def = getZodDef(schema);

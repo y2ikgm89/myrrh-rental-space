@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const layouts = ["grid", "list"] as const;
 const imageAspects = ["16:9", "4:3", "1:1"] as const;
@@ -12,7 +12,12 @@ export const postListConfigSchema = z.object({
   title: field
     .text("タイトル", { default: "最新の記事" })
     .pipe(z.string().max(100)),
-  maxItems: field.number("最大表示件数", { min: 1, max: 20, default: 6 }),
+  maxItems: field.number("最大表示件数", {
+    min: 1,
+    max: 20,
+    default: 6,
+    group: "advanced",
+  }),
   showViewAllLink: field.boolean("全件リンクを表示", { default: true }),
   viewAllText: field
     .text("全件リンクテキスト", { default: "全ての記事" })
@@ -27,11 +32,18 @@ export const postListConfigSchema = z.object({
   layout: field.select("レイアウト", {
     options: layouts,
     default: "grid",
+    group: "design",
   }),
-  columns: field.number("カラム数", { min: 1, max: 4, default: 3 }),
+  columns: field.number("カラム数", {
+    min: 1,
+    max: 4,
+    default: 3,
+    group: "design",
+  }),
   imageAspect: field.select("画像アスペクト比", {
     options: imageAspects,
     default: "16:9",
+    group: "design",
   }),
 });
 

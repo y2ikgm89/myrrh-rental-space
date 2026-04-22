@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 export const homepageCtaConfigSchema = z.object({
   label: field.text("ラベル", { default: "Reservation" }),

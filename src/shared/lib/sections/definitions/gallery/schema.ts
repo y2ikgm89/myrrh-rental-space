@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const layouts = ["grid", "masonry", "carousel"] as const;
 const gaps = ["none", "sm", "md", "lg"] as const;
@@ -23,20 +23,29 @@ export const galleryConfigSchema = z
     layout: field.select("レイアウト", {
       options: layouts,
       default: "grid",
+      group: "design",
     }),
-    columns: field.number("カラム数", { min: 1, max: 6, default: 3 }),
+    columns: field.number("カラム数", {
+      min: 1,
+      max: 6,
+      default: 3,
+      group: "design",
+    }),
     gap: field.select("間隔", {
       options: gaps,
       default: "md",
+      group: "design",
     }),
     enableLightbox: field.boolean("ライトボックス", { default: true }),
     imageAspect: field.select("画像アスペクト比", {
       options: imageAspects,
       default: "original",
+      group: "design",
     }),
     hoverEffect: field.select("ホバーエフェクト", {
       options: hoverEffects,
       default: "zoom",
+      group: "design",
     }),
   })
   .refine(

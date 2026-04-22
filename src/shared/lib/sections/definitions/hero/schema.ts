@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const buttonVariants = ["primary", "secondary", "outline"] as const;
 
@@ -33,22 +33,26 @@ export const heroConfigSchema = z
     height: field.select("高さ", {
       options: heightOptions,
       default: "md",
+      group: "design",
     }),
     heightCustom: field.number("カスタム高さ (svh)", {
       min: 20,
       max: 100,
       default: 60,
       helpText: "高さが「カスタム」の場合に使用（svh 単位）",
+      group: "design",
     }),
     variant: field.select("バリエーション", {
       options: variantOptions,
       default: "default",
+      group: "design",
     }),
-    overlay: field.boolean("オーバーレイ", { default: true }),
+    overlay: field.boolean("オーバーレイ", { default: true, group: "design" }),
     overlayOpacity: field.number("オーバーレイ不透明度", {
       min: 0,
       max: 100,
       default: 40,
+      group: "design",
     }),
     videoUrl: field.url("動画URL"),
   })

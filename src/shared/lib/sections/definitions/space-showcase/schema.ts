@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9", "1:1"] as const;
@@ -12,16 +12,31 @@ export const spaceShowcaseConfigSchema = z.object({
   title: field
     .text("タイトル", { default: "Our Spaces" })
     .pipe(z.string().max(100)),
-  maxItems: field.number("最大表示件数", { min: 1, max: 12, default: 3 }),
-  showOnlyPublished: field.boolean("公開済みのみ", { default: true }),
-  columns: field.number("カラム数", { min: 2, max: 4, default: 3 }),
+  maxItems: field.number("最大表示件数", {
+    min: 1,
+    max: 12,
+    default: 3,
+    group: "advanced",
+  }),
+  showOnlyPublished: field.boolean("公開済みのみ", {
+    default: true,
+    group: "advanced",
+  }),
+  columns: field.number("カラム数", {
+    min: 2,
+    max: 4,
+    default: 3,
+    group: "design",
+  }),
   cardStyle: field.select("カードスタイル", {
     options: cardStyles,
     default: "bordered",
+    group: "design",
   }),
   imageAspect: field.select("画像アスペクト比", {
     options: imageAspects,
     default: "4:3",
+    group: "design",
   }),
 });
 

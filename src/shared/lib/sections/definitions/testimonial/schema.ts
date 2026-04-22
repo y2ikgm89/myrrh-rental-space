@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
@@ -24,11 +24,13 @@ export const testimonialConfigSchema = z.object({
   layout: field.select("レイアウト", {
     options: layouts,
     default: "carousel",
+    group: "design",
   }),
   showRating: field.boolean("評価を表示", { default: true }),
   variant: field.select("バリエーション", {
     options: variants,
     default: "default",
+    group: "design",
   }),
 });
 

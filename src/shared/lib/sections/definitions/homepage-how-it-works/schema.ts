@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 export const homepageHowItWorksConfigSchema = z.object({
   label: field.text("ラベル", { default: "How to Reserve" }),

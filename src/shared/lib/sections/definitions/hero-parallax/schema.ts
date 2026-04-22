@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const buttonVariants = ["primary", "secondary", "outline"] as const;
 const buttonSizes = ["sm", "md", "lg"] as const;
@@ -42,30 +42,37 @@ export const heroParallaxConfigSchema = z
       min: 0,
       max: 1,
       default: 0.3,
+      group: "design",
     }),
     overlayGradient: field.boolean("グラデーションオーバーレイ", {
       default: true,
+      group: "design",
     }),
     scrollIndicator: field.boolean("スクロールインジケーター", {
       default: true,
+      group: "design",
     }),
     contentPosition: field.select("コンテンツ位置", {
       options: contentPositions,
       default: "center",
+      group: "design",
     }),
     height: field.select("高さ", {
       options: heightOptions,
       default: "lg",
+      group: "design",
     }),
     heightCustom: field.number("カスタム高さ (svh)", {
       min: 20,
       max: 100,
       default: 80,
       helpText: "高さが「カスタム」の場合に使用（svh 単位）",
+      group: "design",
     }),
     overlayStyle: field.select("オーバーレイスタイル", {
       options: overlayStyles,
       default: "gradient",
+      group: "design",
     }),
   })
   .refine(

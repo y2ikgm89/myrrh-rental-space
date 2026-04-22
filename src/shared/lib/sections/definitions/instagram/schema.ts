@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const gaps = ["sm", "md", "lg"] as const;
 
@@ -11,11 +11,22 @@ export const instagramConfigSchema = z.object({
   title: field
     .text("タイトル", { default: "Instagram" })
     .pipe(z.string().max(100)),
-  columns: field.number("カラム数", { min: 3, max: 6, default: 6 }),
-  count: field.number("表示件数", { min: 6, max: 12, default: 6 }),
+  columns: field.number("カラム数", {
+    min: 3,
+    max: 6,
+    default: 6,
+    group: "design",
+  }),
+  count: field.number("表示件数", {
+    min: 6,
+    max: 12,
+    default: 6,
+    group: "advanced",
+  }),
   gap: field.select("間隔", {
     options: gaps,
     default: "md",
+    group: "design",
   }),
 });
 

@@ -1,34 +1,35 @@
 /**
- * field-helpers ユニットテスト
+ * field-registry ユニットテスト（旧 field-helpers.test.ts）
  *
- * src/shared/lib/sections/field-helpers.ts の各ヘルパーと extractFieldMeta を検証する。
+ * src/shared/lib/sections/field-registry.ts の各ヘルパーと fieldRegistry を検証する。
  * 純粋モジュール（Prisma / server-only 依存なし）のため mock.module 不要。
+ * ADR 0018: .describe(JSON.stringify()) → z.registry<FieldMeta>() へ移行済み
  */
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
-import { extractFieldMeta, field } from "@/shared/lib/sections/field-helpers";
+import { field, fieldRegistry } from "@/shared/lib/sections/field-registry";
+
+// 後方互換: extractFieldMeta の代替として fieldRegistry.get を使う
+const extractFieldMeta = (schema: z.ZodType) => fieldRegistry.get(schema);
 
 // ─────────────────────────────────────────────────────────────
-// extractFieldMeta
+// fieldRegistry.get (extractFieldMeta ラッパー)
 // ─────────────────────────────────────────────────────────────
 
-describe("extractFieldMeta", () => {
-  test("メタデータなしのスキーマは undefined を返す", () => {
+describe("extractFieldMeta (fieldRegistry.get wrapper)", () => {
+  test("registry に未登録のスキーマは undefined を返す", () => {
     const schema = z.string();
     expect(extractFieldMeta(schema)).toBeUndefined();
   });
 
-  test("fieldType・label がないスキーマの describe は undefined を返す", () => {
-    const schema = z.string().describe("plain text");
-    expect(extractFieldMeta(schema)).toBeUndefined();
-  });
-
-  test("正しい FieldMeta が埋め込まれたスキーマは抽出できる", () => {
-    const meta = { fieldType: "text" as const, label: "タイトル" };
-    const schema = z.string().describe(JSON.stringify(meta));
-    expect(extractFieldMeta(schema)).toEqual(meta);
+  test("field.text で登録したスキーマは FieldMeta を返す", () => {
+    const schema = field.text("タイトル");
+    const meta = extractFieldMeta(schema);
+    expect(meta).toBeDefined();
+    expect(meta?.fieldType).toBe("text");
+    expect(meta?.label).toBe("タイトル");
   });
 });
 

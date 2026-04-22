@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const maxWidthOptions = ["sm", "md", "lg", "xl", "full"] as const;
 const paddingOptions = ["none", "sm", "md", "lg"] as const;
@@ -12,12 +12,14 @@ export const customConfigSchema = z.object({
   maxWidth: field.select("最大幅", {
     options: maxWidthOptions,
     default: "lg",
+    group: "design",
   }),
-  containerClass: field.text("コンテナクラス"),
-  backgroundColor: field.color("背景色"),
+  containerClass: field.text("コンテナクラス", { group: "advanced" }),
+  backgroundColor: field.color("背景色", { group: "design" }),
   padding: field.select("パディング", {
     options: paddingOptions,
     default: "md",
+    group: "design",
   }),
 });
 

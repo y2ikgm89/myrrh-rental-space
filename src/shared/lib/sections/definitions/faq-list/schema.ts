@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const variants = ["default", "bordered", "minimal"] as const;
 const containerWidths = ["sm", "md", "lg", "full"] as const;
@@ -17,7 +17,12 @@ export const faqListConfigSchema = z.object({
     .string()
     .uuid({ error: "有効なUUIDを入力してください" })
     .optional(),
-  maxItems: field.number("最大表示件数", { min: 1, max: 50, default: 10 }),
+  maxItems: field.number("最大表示件数", {
+    min: 1,
+    max: 50,
+    default: 10,
+    group: "advanced",
+  }),
   showViewAllLink: field.boolean("全件リンクを表示", { default: true }),
   viewAllText: field
     .text("全件リンクテキスト", { default: "全てのFAQ" })
@@ -36,14 +41,17 @@ export const faqListConfigSchema = z.object({
   variant: field.select("バリエーション", {
     options: variants,
     default: "default",
+    group: "design",
   }),
   containerWidth: field.select("コンテナ幅", {
     options: containerWidths,
     default: "md",
+    group: "design",
   }),
   initialOpen: field.select("初期展開", {
     options: initialOpenOptions,
     default: "first",
+    group: "advanced",
   }),
 });
 

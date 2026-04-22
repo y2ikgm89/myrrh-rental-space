@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const layouts = ["hero-first", "equal-grid", "icon-left"] as const;
 
@@ -18,10 +18,16 @@ export const featuresConfigSchema = z.object({
       description: field.textarea("説明"),
     },
   }),
-  columns: field.number("カラム数", { min: 1, max: 4, default: 3 }),
+  columns: field.number("カラム数", {
+    min: 1,
+    max: 4,
+    default: 3,
+    group: "design",
+  }),
   layout: field.select("レイアウト", {
     options: layouts,
     default: "hero-first",
+    group: "design",
   }),
 });
 

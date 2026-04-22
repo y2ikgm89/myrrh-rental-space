@@ -3,17 +3,8 @@
 import type { z } from "zod";
 
 // ────────────────────────────────────────────
-// Field Metadata (embedded in Zod .describe())
+// Field Type (FieldMeta は field-registry.ts に集約)
 // ────────────────────────────────────────────
-
-/** フィールドメタデータ — Zod .describe() に JSON エンコードして埋め込む */
-export interface FieldMeta {
-  readonly fieldType: FieldType;
-  readonly label: string;
-  readonly placeholder?: string;
-  readonly suffix?: string;
-  readonly helpText?: string;
-}
 
 export const FIELD_TYPES = [
   "text",

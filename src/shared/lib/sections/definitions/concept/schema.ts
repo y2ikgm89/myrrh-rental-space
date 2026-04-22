@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const imagePositions = ["left", "right"] as const;
 const textAligns = ["left", "center", "right"] as const;
@@ -24,18 +24,22 @@ export const conceptConfigSchema = z.object({
   imagePosition: field.select("画像位置", {
     options: imagePositions,
     default: "right",
+    group: "design",
   }),
   textAlign: field.select("テキスト揃え", {
     options: textAligns,
     default: "left",
+    group: "design",
   }),
   layout: field.select("レイアウト", {
     options: layouts,
     default: "side-by-side",
+    group: "design",
   }),
   imageAspect: field.select("画像アスペクト比", {
     options: imageAspects,
     default: "original",
+    group: "design",
   }),
 });
 

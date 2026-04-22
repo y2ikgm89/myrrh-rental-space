@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 const buttonVariants = ["primary", "secondary", "outline"] as const;
 const variants = ["default", "centered", "split"] as const;
@@ -23,10 +23,11 @@ export const ctaConfigSchema = z
         openInNewTab: field.boolean("新しいタブで開く"),
       },
     }),
-    backgroundColor: field.color("背景色"),
+    backgroundColor: field.color("背景色", { group: "design" }),
     variant: field.select("バリエーション", {
       options: variants,
       default: "default",
+      group: "design",
     }),
   })
   .refine(
