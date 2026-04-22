@@ -2,7 +2,7 @@
 
 **日付**: 2026-04-22
 **種別**: リファクタリング（破壊的変更）
-**ステータス**: 設計中
+**ステータス**: 実装中（Phase 2 + 6 完了、Phase 3 / 4 / 5 は scope 再設計が必要）
 
 ---
 
@@ -37,16 +37,16 @@
 - [x] 非自明な検出事項を整理
 - [ ] ADR 0016 起案（agents frontmatter SSoT + docs/reference 撤去）
 
-### Phase 2: subagents 正規化（独立作業）
+### Phase 2: subagents 正規化（独立作業）— ✅ 完了（commit `5c4c79c3`）
 
 `.claude/agents/*.md` の frontmatter を公式仕様に揃える:
 
-- [ ] 全 25 agents に `model: sonnet`（haiku は implementer 禁止、`rate-limit-reviewer` の haiku を sonnet へ）
-- [ ] 全 25 agents に `memory: project` を追加
-- [ ] `description:` の block scalar (`>`) / inline 混在を block scalar に統一（parse 一貫性）
-- [ ] `tools:` を最小権限で列挙（`Read, Grep, Glob` 読み取り系、`Write, Edit` 必要時のみ）
+- [x] 全 25 agents に `model: sonnet`（9 件 haiku → sonnet、rate-limit-reviewer 含む）
+- [x] 全 25 agents に `memory: project`（5 件 local → project、4 件追加）
+- [x] `description:` の block scalar (`>`) / inline 混在を block scalar に統一（2 件: rate-limit-reviewer / lexical-reviewer）
+- [x] `tools:` 最小権限は既存で概ね適切。大幅変更不要と判定
 
-### Phase 3: rules 分割（大ファイル解消）
+### Phase 3: rules 分割（大ファイル解消）— ⚠️ 次セッション再計画
 
 600+ 行 rules を path-scoped subfile に split:
 
@@ -55,24 +55,29 @@
 - [ ] `gsap-patterns.md` (729) → `gsap-patterns/{core,scroll-trigger,matchmedia,lenis}.md` に分割
 - [ ] 既存 `.md` を barrel index 化（`## 詳細パターン別ファイル` 節で subfile 列挙、path scoping）
 - [ ] `paths:` frontmatter で該当ファイル編集時のみロードする grain を細かくする
+- [ ] **ADR-0013 制約**: `lexical-patterns.md` を split する場合、`docs/reference/codex-rules/lexical-patterns.md` との byte-identical 関係をどう維持するかの設計が必要（mirror も連動 split？それとも canonical 側だけ split して mirror は combined 維持？）→ ADR 改訂が前提
 
-### Phase 4: docs 二重管理解消
+### Phase 4: docs 二重管理解消 — ⚠️ scope 修正（ADR-0013 制約）
 
-- [ ] `docs/reference/claude-rules/*.md` を完全削除（`.claude/rules/**` に一本化）
-- [ ] `docs/reference/codex-rules/*.md` も同様（Codex plugin 用 mirror は runtime sync で再生成）
-- [ ] `docs/plans/archive/completed-legacy.md` (2487 行) を summary に圧縮（詳細は git history）
-- [ ] `docs/requirements/**` を ADR 昇格または削除（実装に吸収済みの stale 要件定義を除去）
+**重要な発見（本セッション）**: ADR-0013 `policy-docs-sync` が `docs/reference/codex-rules/**` を byte-identical mirror として必須化。**削除不可**。以下に scope 修正:
 
-### Phase 5: skills 正規化
+- [ ] `docs/reference/claude-rules/*.md` — 4 ファイル（bun-test-reference / gsap-reference / micro-interactions-reference / react-api-reference）。`.claude/rules/**` から「詳細リファレンス」として cross-link されているため、① `.claude/rules/**` に統合するか ② 存続させるか、ケースバイケースで判定。単純削除は broken link を大量発生させるため不可
+- [ ] ~~`docs/reference/codex-rules/*.md` 削除~~ — **却下**（ADR-0013 mandate）。byte-identical mirror の canonical 方向（`.claude/rules/frontend/` → `docs/reference/codex-rules/`）を維持
+- [ ] `docs/plans/archive/completed-legacy.md` (2487 行) を summary に圧縮（詳細は git history）。削除前に外部参照の grep 必須
+- [ ] `docs/requirements/**` を ADR 昇格または削除（実装に吸収済みの stale 要件定義を除去）。8 ファイルのうち外部参照ゼロは `docs/plans/` のみ、慎重に個別判定
 
-- [ ] 全 29 skills の description を「動詞始まり + trigger 条件明示」形式に統一（Anthropic 公式推奨）
-- [ ] debug skill 系（200+ 行）を `reference/*.md` + 手順本文に split（`ops/cloud-run-debug.md` 等）
-- [ ] `lexical-*` skill 群（4 つ）のスコープ境界を明文化（audit / node / plugin / toolbar の使い分け表を SKILL.md 先頭に追加）
+### Phase 5: skills 正規化 — ⚠️ scope 縮小
 
-### Phase 6: hook 改善
+本セッションで skills description を点検した結果、**大半は既に公式推奨（動詞始まり・trigger 明示・cross-link 完備）に準拠**。以下のみ残タスク:
 
-- [ ] `empty-dynamic-route-dir` hook を `find <dir> -name "route.ts" | head -1` ベースに修正（nested route を誤検出しない）
-- [ ] audit subagent prompt に `.claude/rules/**/*.md` の「例外」「sanctioned exception」節を cross-reference させるガイダンスを追加
+- [ ] debug skill 系（200+ 行: cloud-run-debug / add-prisma-enum / google-calendar-debug / add-settings-field）を `reference/*.md` + 手順本文に split（200 行超の真正 split は大工事のため次セッション）
+- [ ] `lexical-*` skill 群（4 つ）の冒頭に使い分け表を追加（現状は相互参照 description のみ）。low priority（現状の description で実運用は機能している）
+- [x] ~~全 29 skills description を「動詞始まり + trigger 条件明示」形式に統一~~ — 確認済み、既にクリーン
+
+### Phase 6: hook 改善 — ✅ 完了（commit `5c4c79c3`）
+
+- [x] `empty-dynamic-route-dir` hook を recursive `-type f` 検索に修正。nested route (`[id]/agreements/route.ts` 等) を誤検出しないよう `find "$dir" -type f` でディレクトリ全体が空か確認する方式に変更
+- [ ] audit subagent prompt に `.claude/rules/**/*.md` の「例外」「sanctioned exception」節を cross-reference させるガイダンス追加 — 次セッション（LayoutFields の `any` 事例で顕在化）
 
 ---
 
@@ -86,18 +91,29 @@
 
 ---
 
-## 所要見積り
+## 所要見積り（実績 + 残作業）
 
-| Phase | 見積時間 | 並列性           | 備考                                   |
-| ----- | -------- | ---------------- | -------------------------------------- |
-| 1     | 済       | —                | このドキュメント                       |
-| 2     | 30 分    | 単独             | 25 agents frontmatter 一括更新         |
-| 3     | 2 時間   | 単独             | 3 大 rules を split、path scoping 調整 |
-| 4     | 1 時間   | Phase 3 と並列可 | docs/reference 削除 + stale 要件整理   |
-| 5     | 1.5 時間 | Phase 2 と並列可 | 29 skills description 統一 + split     |
-| 6     | 30 分    | 単独             | hook スクリプト修正                    |
+| Phase | 見積時間 | 実績     | 備考                                                        |
+| ----- | -------- | -------- | ----------------------------------------------------------- |
+| 1     | 済       | ✅ 済    | このドキュメント                                            |
+| 2     | 30 分    | ✅ 20 分 | 14 agent files 編集（commit `5c4c79c3`）                    |
+| 6     | 30 分    | ✅ 10 分 | hook 1 ファイル編集（commit `5c4c79c3` 同梱）               |
+| 3     | 2 時間   | 未着手   | ADR-0013 制約の設計決定が先（mirror 連動 split の方針）     |
+| 4     | 1 時間   | 再計画   | `codex-rules` 削除は却下、`claude-rules` 個別統合判定が必要 |
+| 5     | 1.5 時間 | 縮小     | description 統一は不要と判明、split と lexical-\* 表のみ残  |
 
-**合計**: 約 5.5 時間（並列化で 3〜4 時間に短縮可）。単一セッションで完走するか、2〜3 セッションに分割するかは controller 判断。
+**今セッション合計**: 約 30 分で Phase 2 + 6 完了。
+
+**残セッション**: Phase 3 (rules split) + Phase 4 (docs cleanup) + Phase 5 split subset。約 3〜4 時間。
+
+## 次セッションへの引き継ぎ事項
+
+1. **Phase 3 前提設計**: `lexical-patterns.md` を split する場合の ADR-0013 互換性。候補:
+   - A) Canonical を split、mirror は combined 維持 → `verify-policy-docs.mjs` の pair 定義を「N 個の source → 1 個の concatenated mirror」に拡張
+   - B) Mirror も同じ粒度で split → ADR-0013 の pairs 配列に 5-10 個追加
+   - C) Split しない（現状維持）
+2. **Phase 4 再計画**: `docs/reference/claude-rules/*.md` 4 ファイルの個別判定。各ファイルの「詳細リファレンス」参照元を grep し、.claude/rules/ への統合 or 存続を決定
+3. **Phase 6 残タスク**: audit subagent prompt に `.claude/rules/**/*.md` の sanctioned exception cross-reference ガイダンスを追加（プロンプト テンプレート修正）
 
 ---
 
