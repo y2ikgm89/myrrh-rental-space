@@ -17,18 +17,18 @@ import type { SectionDesign } from "@/shared/lib/validations/section-design";
 
 const paddingTopMap = {
   none: "",
-  sm: "pt-8 md:pt-12",
-  md: "pt-16 md:pt-24",
-  lg: "pt-24 md:pt-32 lg:pt-40",
-  xl: "pt-32 md:pt-40 lg:pt-48",
+  sm: "pt-[var(--space-sm)]",
+  md: "pt-[var(--space-md)]",
+  lg: "pt-[var(--space-lg)]",
+  xl: "pt-[var(--space-xl)]",
 } satisfies Record<NonNullable<SectionDesign["paddingTop"]>, string>;
 
 const paddingBottomMap = {
   none: "",
-  sm: "pb-8 md:pb-12",
-  md: "pb-16 md:pb-24",
-  lg: "pb-24 md:pb-32 lg:pb-40",
-  xl: "pb-32 md:pb-40 lg:pb-48",
+  sm: "pb-[var(--space-sm)]",
+  md: "pb-[var(--space-md)]",
+  lg: "pb-[var(--space-lg)]",
+  xl: "pb-[var(--space-xl)]",
 } satisfies Record<NonNullable<SectionDesign["paddingBottom"]>, string>;
 
 const backgroundMap = {
@@ -42,6 +42,7 @@ const backgroundMap = {
 const maxWidthMap = {
   sm: "max-w-3xl",
   md: "max-w-4xl",
+  editorial: "max-w-[var(--container-editorial)]",
   lg: "max-w-6xl",
   xl: "max-w-7xl",
   full: "max-w-full",
@@ -121,7 +122,10 @@ export function SectionWrapper({
         children
       ) : (
         <div
-          className={cn("mx-auto px-[var(--container-padding)]", maxWidthClass)}
+          className={cn(
+            "mx-auto ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
+            maxWidthClass,
+          )}
         >
           {children}
         </div>

@@ -207,7 +207,14 @@ const sectionBgValues = [
 export type SectionBg = (typeof sectionBgValues)[number];
 
 /** コンテナ最大幅 */
-const sectionMaxWidthValues = ["sm", "md", "lg", "xl", "full"] as const;
+const sectionMaxWidthValues = [
+  "sm",
+  "md",
+  "editorial",
+  "lg",
+  "xl",
+  "full",
+] as const;
 export type SectionMaxWidth = (typeof sectionMaxWidthValues)[number];
 
 /** アニメーションプリセット */

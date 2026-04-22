@@ -63,6 +63,7 @@ const backgroundOptions = [
 const maxWidthOptions = [
   { value: "sm", label: "S", sub: "768" },
   { value: "md", label: "M", sub: "896" },
+  { value: "editorial", label: "編集", sub: "800" },
   { value: "lg", label: "L", sub: "1152" },
   { value: "xl", label: "XL", sub: "1280" },
   { value: "full", label: "全幅", sub: "" },
