@@ -947,15 +947,19 @@ model Page {
   contentWidth       LayoutWidth?
   contentWidthCustom Int? // CUSTOMの場合の幅（px）
   showSidebar        Boolean? // null=デフォルト使用、true/false=明示的指定
+  /// Page-level Section Style cascade（ADR 0017）。SectionStyle.scope="page" or "section" を推奨。
+  pageStyleId        String?      @db.VarChar(30)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
   // Relations
   sections    Section[]
   assignments UserPageAssignment[]
+  pageStyle   SectionStyle?        @relation("PageDefaultStyle", fields: [pageStyleId], references: [id], onDelete: SetNull)
 
   @@index([isPublished, isActive])
   @@index([isSystemPage])
+  @@index([pageStyleId])
   @@map("pages")
 }
 
@@ -971,16 +975,78 @@ model Section {
   contentHtml String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
   contentJson Json? // Lexical EditorState JSON（プライマリ）
   config      Json        @default("{}") // タイプ別設定（Zodで型安全）
+  /// @deprecated Phase B.P4 で削除予定。新規参照は styleId + styleOverride を使う（ADR 0017）。
   design    Json        @default("{}") // ビジュアル設定（共通）
+  /// Section preset cascade 層（ADR 0017 §D2 specificity #4）。SectionStyle.scope="section" を推奨。
+  styleId     String?     @db.VarChar(30)
+  /// Section instance override cascade 層（ADR 0017 §D2 specificity #5）。`Partial<SectionStylePayload>` 相当の JSON。
+  styleOverride Json?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   // Relations
-  page Page? @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  page  Page?          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  style SectionStyle?  @relation(fields: [styleId], references: [id], onDelete: SetNull)
 
   @@index([pageId, order, isActive])
   @@index([type])
+  @@index([styleId])
   @@map("sections")
+}
+
+// ==============================================
+// Section Style Cascade（ADR 0017）
+// ==============================================
+
+/// 再利用可能な Section ビジュアル設定 preset。4 段 cascade で解決（Settings.globalSectionStyle →
+/// Page.pageStyle → Section.style → Section.styleOverride）。`applicableTypes` で section type を制限
+/// できる（空配列なら全 type 許可）。詳細は ADR 0017 / specs/section-style-cascade-design.md。
+model SectionStyle {
+  id              String    @id @default(cuid()) @db.VarChar(30)
+  /// 運用者向けの一意な名前。管理画面の Style Library 一覧・選択 dropdown で表示
+  name            String    @unique @db.VarChar(100)
+  description     String?   @db.Text
+  /// "global" | "page" | "section" — 配置先カテゴリ（UI の絞り込み用）
+  scope           String    @db.VarChar(32)
+
+  /// { paddingTop, paddingBottom } 等の縦余白設定（SectionWrapper paddingTopMap に対応）
+  spacing         Json
+  /// { type, value, overlayOpacity, imageUrl } 等の背景設定
+  background      Json
+  /// { maxWidth } 等のコンテナ幅設定（SectionWrapper maxWidthMap に対応）
+  container       Json
+  /// { titleSize, titleColor, textColor, textAlign } 等のタイポグラフィ設定
+  typography      Json
+  /// { preset } 等のアニメーション設定
+  animation       Json
+  /// 追加 Tailwind class（admin only、XSS 回避のため regex 制約あり）
+  customClass     String?   @db.VarChar(200)
+
+  /// 適用可能な section type の whitelist（空配列=全 type 適用可）
+  applicableTypes String[]  @db.VarChar(64)
+
+  /// 版管理用
+  version         Int       @default(1)
+  parentId        String?   @db.VarChar(30)
+  parent          SectionStyle?  @relation("StyleDerivation", fields: [parentId], references: [id], onDelete: SetNull)
+  derived         SectionStyle[] @relation("StyleDerivation")
+
+  createdById     String?   @db.Uuid
+  updatedById     String?   @db.Uuid
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  /// ソフトデリート（現行参照を残したまま UI 露出を止める）
+  deletedAt       DateTime?
+
+  // Reverse relations
+  sections        Section[]
+  pagesAsDefault  Page[]     @relation("PageDefaultStyle")
+  settingsGlobal  Settings[] @relation("SettingsGlobalStyle")
+
+  @@index([scope])
+  @@index([deletedAt])
+  @@index([parentId])
+  @@map("section_styles")
 }
 
 model NavigationItem {
@@ -1371,6 +1437,15 @@ model Settings {
   cancellationDeadlineHours  Int @default(24) // キャンセル可能期限（時間前）
   modificationDeadlineHours  Int @default(24) // 変更可能期限（時間前）
 
+  // ==============================================
+  // Section Style Cascade（ADR 0017）
+  // ==============================================
+
+  /// Theme-level default Section style（cascade specificity #2）。未設定時は DEFAULT_SECTION_STYLE にフォールバック。
+  globalSectionStyleId String?       @db.VarChar(30)
+  globalSectionStyle   SectionStyle? @relation("SettingsGlobalStyle", fields: [globalSectionStyleId], references: [id], onDelete: SetNull)
+
+  @@index([globalSectionStyleId])
   @@map("settings")
 }
 

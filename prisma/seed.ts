@@ -43,6 +43,7 @@ import {
   applyBusinessInfo,
   type BusinessInfo,
 } from "../src/shared/lib/terms-templates";
+import { seedSectionStyles } from "./seed-section-styles";
 
 /**
  * seed 用ヘルパー: プレーンテキストから 3 カラム同時生成（Lexical JSON / HTML / Plain）。
@@ -3590,6 +3591,7 @@ async function seedAll(email: string, password: string, name: string) {
 
   // Phase 1: 基本設定
   await seedSettings();
+  await seedSectionStyles(prisma);
 
   // Phase 2: マスターデータ
   await seedLocations();
@@ -3638,6 +3640,7 @@ async function seedDemo() {
 
   // 基本設定
   await seedSettings();
+  await seedSectionStyles(prisma);
 
   // マスターデータ
   await seedLocations();
