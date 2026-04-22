@@ -398,6 +398,7 @@ paths:
   1. `git stash -u` で untracked ファイルも含めてスタッシュ（`git stash` のみでは untracked が残りマージを阻む）
   2. `git stash pop` コンフリクト後 → 解決して `git add` → `git stash drop`（エントリは自動保持されたまま）
   3. worktree ディレクトリを削除済みでもブランチ参照が残る → `git worktree prune` → `git branch -d`
+- **Linear history の worktree branch は `git merge --ff-only` で明示統合** — `git rev-list --count main..feature/X` で N commit 先行かつ diverge なしを確認できればまず FF 可能。`--ff-only` は非 FF を拒否するため safety net として機能し、merge commit を誤って生成しない。`git log --oneline` を clean に保つ canonical pattern（2026-04-22 Phase B 統合事例: 7 commit FF merge で main が linear に）
 - **ESLint が `.worktrees/` 内ファイルを lint 対象にする** — `eslint.config.mjs` の `globalIgnores` に `.worktrees/**` 追加済み。worktree ディレクトリ名を変えた場合はパターン更新が必要
 - **Windows で worktree 削除時の PermissionError** — bun/node プロセス起動中は native binary（`@tailwindcss/oxide-win32-x64-msvc.node` 等）がロックされる。`cmd /c rd /s /q ".worktrees/<name>"` で大部分は削除できるが binary は残る。git 参照だけなら `git worktree prune` + `git branch -d` で十分。完全削除は全プロセス終了後に `powershell.exe -Command "Remove-Item -Recurse -Force '...'"` で実施
 - **worktree 作成時に共有 dev DB がドリフト済みの場合** — main に未コミットの migration が既にローカル Postgres に適用済みの状態で worktree を切ると、worktree の schema.prisma（HEAD 基準）と DB が乖離し、worktree 内の `prisma migrate dev` が drift 検出 → reset 要求で進めない。**対処**: main 側で WIP スナップショット commit（`git add -A && git commit -m "wip: ..."`）を作ってから worktree を branch する。後で main で `git rebase -i` で分割整理可能。`prisma migrate reset` は共有 dev DB を破壊するため避ける

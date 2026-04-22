@@ -180,6 +180,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **plan 実行前の前提実在確認** — plan に「既存テスト XXX に mock 追加」「既存ファイル YYY を修正」と記載されていても、実行前に `ls <path>` / `Glob` で **実在確認必須**。実在しない場合は Bundle スコープを「pure function 抽出 + 新規 unit test」「小機能追加」等に変換する判断を controller が行う（implementer を BLOCKED にせず scope を柔軟に変換）
 - **並列 reviewer dispatch 前に `.claude/rules/**` 準拠度を grep で先行確認** — rule で既に厳格化済みのパターン（`revalidateTag\(.\*,`/`useCallback\(`/`gsap.matchMedia` 等）は 1 回の grep で violations ゼロを判定できる。多数の reviewer を並列起動するより、grep hits を元に必要 reviewer を絞る方が token コスト + context 圧迫を削減
 - **long-running general-purpose agent（tool_uses 40+ / duration 300s+）の最終報告が途切れたら git で独立検証** — SendMessage で再取得を待つより `git status --short` + `git diff --stat HEAD` + 対象ファイル個別 diff の方が速く正確。subagent の「実装完了」報告が HEAD と収束して staged diff ゼロのケースも検出できる
+- **implementer dispatch prompt に「JSDoc / コメントに "Phase X.Y" / "refactor from Y" / "後継 UI" 等のタスク・フロー参照を含めない」を明示** — デフォルトで混入しがち。CLAUDE.md の general rule「Don't reference the current task, fix, or callers」と衝突し commit 前の grep + cleanup が発生する（2026-04-22 Phase B.5-2 で 4 ファイル × 7 箇所の cleanup 事例）
 
 ---
 
