@@ -116,6 +116,23 @@ grep -rn "max-w-\[65ch\]\|max-w-\[40ch\]\|max-w-\[45ch\]\|min-h-\[60svh\]\|max-h
 
 **ルール:** `[65ch]` → `var(--container-measure)` / `[40ch]` → `var(--prose-narrow)` / `[45ch]` → `var(--prose-medium)` / `[60svh]` → `var(--hero-min-height)` / `[85vh]` → `var(--modal-max-height)` / `[90svh]` → `var(--lightbox-max-height)` / `[90vw]` → `var(--lightbox-max-width)` / `[12rem]` → `var(--dropdown-min-width)` / `[90rem]` → `var(--container-header-max)`。新規 arbitrary 値は **3 回以上使用されたら @theme に昇格**してから参照する。
 
+## False positive 防止（例外節の cross-check）
+
+違反を報告する前に、該当 rule ファイル（`.claude/rules/**/*.md`）の「例外」「許可」「sanctioned exception」節を Grep で確認:
+
+```bash
+Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
+```
+
+該当パターンが例外節に記載されていれば **Critical / High 扱いで報告しない**。参考 false positive 事例:
+
+- `LayoutFields.tsx` の `any` — `admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
+- `global-error.tsx` のハードコードカラー — `tailwind-patterns.md` で client-side fallback として除外
+- `select.tsx` の `required` — `gotchas.md` で Radix 制約として除外
+- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions.md` で Next.js 16 API として記載
+
+疑わしい場合は現物を `Read` で確認して例外可否を判断する。
+
 ## Output Format
 
 ```markdown

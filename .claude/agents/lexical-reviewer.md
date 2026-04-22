@@ -291,6 +291,23 @@ Floating toolbar の追加・変更、または選択ベースのブロック操
 4. `plugins/Floating*` 内で `function [A-Z][a-zA-Z]*Inner\(` を grep し、定義直後に `export function [A-Z][a-zA-Z]*Plugin` が呼ぶだけの wrapper なら冗長と報告
 5. `(?:const\|let) handle[A-Z][a-zA-Z]* = \(.*\) => \{\s*[a-zA-Z]+\?\.\(` を grep し、optional-call の silent-swallow wrapper を報告
 
+## False positive 防止（例外節の cross-check）
+
+違反を報告する前に、該当 rule ファイル（`.claude/rules/**/*.md`）の「例外」「許可」「sanctioned exception」節を Grep で確認:
+
+```bash
+Grep -n "例外\|EXCEPTION\|sanctioned\|許可\|除外" <rule-file>
+```
+
+該当パターンが例外節に記載されていれば **Critical / High 扱いで報告しない**。参考 false positive 事例:
+
+- `LayoutFields.tsx` の `any` — `admin-inline-editor-patterns.md` で RHF generic invariance 対応として明示許可
+- `global-error.tsx` のハードコードカラー — `tailwind-patterns.md` で client-side fallback として除外
+- `select.tsx` の `required` — `gotchas.md` で Radix 制約として除外
+- `revalidateTag` の第 2 引数 — `gotchas.md` / `server-actions.md` で Next.js 16 API として記載
+
+疑わしい場合は現物を `Read` で確認して例外可否を判断する。
+
 ## 報告形式
 
 問題が見つかった場合:
