@@ -22,8 +22,8 @@ model: sonnet
 
 呼び出し元は以下を提供する:
 
-- **`plan_path`**: 検証対象のプランファイル（例: `docs/plans/2026-04-13-review-reply.md`）
-- **`base_sha`**: プラン実行前のベース commit（例: `062b484f`）
+- **`plan_path`**: 検証対象のプランファイル（例: `docs/plans/YYYY-MM-DD-<name>.md` または `docs/superpowers/plans/YYYY-MM-DD-<name>.md`）
+- **`base_sha`**: プラン実行前のベース commit（例: `<7-digit-sha>`）
 - **`head_sha`**: プラン実行完了後の HEAD（省略時は現在の HEAD）
 
 ## 手順
@@ -119,9 +119,9 @@ git diff <base_sha>..<head_sha> --name-only
 
 ```
 Agent({
-  description: "Plan drift audit for review-reply",
+  description: "Plan drift audit",
   subagent_type: "plan-drift-detector",
-  prompt: "plan_path: docs/plans/2026-04-13-review-reply.md, base_sha: 062b484f, head_sha: HEAD"
+  prompt: "plan_path: docs/plans/YYYY-MM-DD-<name>.md, base_sha: <base-sha>, head_sha: HEAD"
 })
 ```
 
