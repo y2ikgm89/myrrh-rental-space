@@ -27,6 +27,7 @@ import {
   isAdminPageStatusFilter,
   isAdminPageTypeFilter,
 } from "@/shared/lib/nuqs";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 
 export function PageFilters() {
   const [params, setParams] = useQueryStates(adminPageSearchParamsParsers, {
@@ -66,8 +67,10 @@ export function PageFilters() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">すべてのステータス</SelectItem>
-            <SelectItem value="published">公開中</SelectItem>
-            <SelectItem value="draft">非公開</SelectItem>
+            <SelectItem value="published">
+              {PUBLISH_LABELS.published}
+            </SelectItem>
+            <SelectItem value="draft">{PUBLISH_LABELS.unpublished}</SelectItem>
           </SelectContent>
         </Select>
       </div>

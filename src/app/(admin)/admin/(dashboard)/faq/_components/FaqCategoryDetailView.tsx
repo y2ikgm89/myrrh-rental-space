@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 import { Badge, Button } from "@/admin/components/ui";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type {
   FaqCategoryWithItems,
   FaqItemWithCategory,
@@ -69,7 +70,9 @@ export function FaqCategoryDetailView({
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               {category.name}
             </h1>
-            {!category.isActive && <Badge variant="secondary">非公開</Badge>}
+            {!category.isActive && (
+              <Badge variant="secondary">{PUBLISH_LABELS.unpublished}</Badge>
+            )}
             <Badge variant="outline">{totalItems} 件</Badge>
           </div>
           {category.description && (

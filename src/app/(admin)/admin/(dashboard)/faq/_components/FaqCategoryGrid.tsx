@@ -37,6 +37,7 @@ import { EmptyState } from "@/admin/components/EmptyState";
 import { reorderFaqCategories } from "@/admin/actions/faq";
 import { isMutationError } from "@/shared/lib/mutation-result";
 import { cn } from "@/shared/lib/cn";
+import { PUBLISH_LABELS } from "@/shared/lib/validations/enums/helpers";
 import type { FaqCategoryWithItems } from "@/shared/domain/faq/types";
 import { FaqCategoryActionCell } from "./FaqCategoryActionCell";
 
@@ -101,7 +102,9 @@ function SortableCategoryCard({ category }: SortableCardProps) {
             <span className="truncate font-medium text-foreground">
               {category.name}
             </span>
-            {!category.isActive && <Badge variant="secondary">非公開</Badge>}
+            {!category.isActive && (
+              <Badge variant="secondary">{PUBLISH_LABELS.unpublished}</Badge>
+            )}
             <Badge variant="outline">
               {itemCount} 件（公開 {publishedCount}）
             </Badge>
