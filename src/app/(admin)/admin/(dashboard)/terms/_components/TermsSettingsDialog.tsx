@@ -26,6 +26,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  SubmitButton,
 } from "@/admin/components/ui";
 import type { TermsAgreementItem } from "@/shared/lib/validations/terms";
 import type { TermsVersionDetail } from "@/shared/lib/validations/terms";
@@ -174,9 +175,12 @@ export function TermsSettingsDialog(props: TermsSettingsDialogProps) {
             >
               閉じる
             </Button>
-            <Button type="submit" disabled={isPending || !isFormDirty}>
-              {isPending ? "保存中..." : "保存"}
-            </Button>
+            <SubmitButton
+              isPending={isPending}
+              label="保存"
+              pendingLabel="保存中..."
+              disabled={!isFormDirty}
+            />
           </DialogFooter>
         </form>
       </DialogContent>

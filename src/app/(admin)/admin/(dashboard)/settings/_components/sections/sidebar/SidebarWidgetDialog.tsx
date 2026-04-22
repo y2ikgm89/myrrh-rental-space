@@ -10,6 +10,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  SubmitButton,
   Textarea,
 } from "@/admin/components/ui";
 import type { CustomWidget } from "@/shared/lib/validations/sidebar";
@@ -148,9 +149,11 @@ export function SidebarWidgetDialog({
             >
               キャンセル
             </Button>
-            <Button type="submit" disabled={!form.title.trim()}>
-              {editingWidget ? "更新" : "追加"}
-            </Button>
+            <SubmitButton
+              isPending={false}
+              disabled={!form.title.trim()}
+              label={editingWidget ? "更新" : "追加"}
+            />
           </DialogFooter>
         </form>
       </DialogContent>

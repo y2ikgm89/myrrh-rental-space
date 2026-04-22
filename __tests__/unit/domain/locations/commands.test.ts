@@ -395,7 +395,7 @@ describe("updateLocationOrder", () => {
       expect(result).toEqual({ updated: 3 });
     });
 
-    test("$transaction が呼ばれる", async () => {
+    test("各アイテムに対して location.update が並列実行される（$transaction は使わない）", async () => {
       const items = [
         { id: "location-1", sortOrder: 0 },
         { id: "location-2", sortOrder: 1 },
@@ -403,7 +403,8 @@ describe("updateLocationOrder", () => {
 
       await updateLocationOrder(items);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockLocationUpdate).toHaveBeenCalledTimes(2);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("空配列を渡すと updated: 0 を返す", async () => {

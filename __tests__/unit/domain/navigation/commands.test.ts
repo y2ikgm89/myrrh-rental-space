@@ -671,13 +671,15 @@ describe("updateNavigationOrder", () => {
 
       await updateNavigationOrder(items);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockNavigationItemUpdate).toHaveBeenCalledTimes(2);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("空配列を渡しても正常に処理される", async () => {
       await updateNavigationOrder([]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockNavigationItemUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("1件の場合も正常に処理される", async () => {
@@ -685,7 +687,8 @@ describe("updateNavigationOrder", () => {
         { id: "550e8400-e29b-41d4-a716-446655440000", order: 5 },
       ]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockNavigationItemUpdate).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("parentId を含む場合も正常に処理される", async () => {
@@ -699,7 +702,14 @@ describe("updateNavigationOrder", () => {
 
       await updateNavigationOrder(items);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockNavigationItemUpdate).toHaveBeenCalledWith({
+        where: { id: "550e8400-e29b-41d4-a716-446655440000" },
+        data: {
+          order: 0,
+          parentId: "550e8400-e29b-41d4-a716-446655440099",
+        },
+      });
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
   });
 });
@@ -914,13 +924,15 @@ describe("updateSocialLinkOrder", () => {
 
       await updateSocialLinkOrder(items);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSocialLinkUpdate).toHaveBeenCalledTimes(3);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("空配列を渡しても正常に処理される", async () => {
       await updateSocialLinkOrder([]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSocialLinkUpdate).not.toHaveBeenCalled();
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("1件の場合も正常に処理される", async () => {
@@ -928,7 +940,8 @@ describe("updateSocialLinkOrder", () => {
         { id: "550e8400-e29b-41d4-a716-446655440000", order: 3 },
       ]);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSocialLinkUpdate).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
   });
 });

@@ -390,7 +390,7 @@ describe("updateSpaceCategoryOrder", () => {
       expect(result).toEqual({ updated: 3 });
     });
 
-    test("$transaction が呼ばれる", async () => {
+    test("各アイテムに対して spaceCategory.update が並列実行される", async () => {
       const items = [
         { id: "category-1", sortOrder: 0 },
         { id: "category-2", sortOrder: 1 },
@@ -398,7 +398,8 @@ describe("updateSpaceCategoryOrder", () => {
 
       await updateSpaceCategoryOrder(items);
 
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSpaceCategoryUpdate).toHaveBeenCalledTimes(2);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
 
     test("空配列を渡すと updated: 0 を返す", async () => {

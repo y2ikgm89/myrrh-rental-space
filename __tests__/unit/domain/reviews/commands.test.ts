@@ -16,11 +16,17 @@ const mockSpaceReviewUpdate = mock<() => Promise<Record<string, unknown>>>(() =>
 const mockSpaceReviewDelete = mock<() => Promise<Record<string, unknown>>>(() =>
   Promise.resolve({ id: "review-1" }),
 );
+const mockSettingsFindUnique = mock<
+  () => Promise<{ reviewsEnabledGlobal: boolean } | null>
+>(() => Promise.resolve({ reviewsEnabledGlobal: true }));
 
 mock.module("server-only", () => ({}));
 
 mock.module("@/shared/db/prisma", () => ({
   prisma: {
+    settings: {
+      findUnique: mockSettingsFindUnique,
+    },
     reservation: {
       findUnique: mockReservationFindUnique,
     },
@@ -78,8 +84,10 @@ const COMPLETED_RESERVATION = {
 
 describe("createReviewCommand", () => {
   beforeEach(() => {
+    mockSettingsFindUnique.mockReset();
     mockReservationFindUnique.mockReset();
     mockSpaceReviewCreate.mockReset();
+    mockSettingsFindUnique.mockResolvedValue({ reviewsEnabledGlobal: true });
     mockReservationFindUnique.mockResolvedValue(null);
     mockSpaceReviewCreate.mockResolvedValue({
       id: REVIEW_ID,

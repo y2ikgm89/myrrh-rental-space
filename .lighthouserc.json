@@ -2,13 +2,13 @@
   "ci": {
     "collect": {
       "numberOfRuns": 1,
-      "startServerCommand": "bun run build:skip-env && bun run start",
+      "startServerCommand": "bun run lhci:start-server",
       "startServerReadyPattern": "Ready in",
       "startServerReadyTimeout": 120000,
       "url": [
         "http://localhost:3000/",
         "http://localhost:3000/spaces",
-        "http://localhost:3000/journal",
+        "http://localhost:3000/posts",
         "http://localhost:3000/contact",
         "http://localhost:3000/faq"
       ],
