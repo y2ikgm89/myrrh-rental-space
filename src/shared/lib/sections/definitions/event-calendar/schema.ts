@@ -9,6 +9,7 @@ export const eventCalendarConfigSchema = z.object({
     min: 1,
     max: 50,
     default: 6,
+    suffix: "件",
     group: "advanced",
   }),
   layout: field.select("表示形式", {
@@ -16,7 +17,7 @@ export const eventCalendarConfigSchema = z.object({
     default: "list",
     group: "design",
   }),
-  showPastEvents: field.boolean("過去のイベントを表示", {
+  showPastEvents: field.boolean("過去のイベントも表示する", {
     default: false,
     group: "advanced",
   }),

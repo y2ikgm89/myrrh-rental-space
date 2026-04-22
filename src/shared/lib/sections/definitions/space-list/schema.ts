@@ -11,42 +11,46 @@ export const spaceListConfigSchema = z.object({
     .text("セクションラベル", { default: "Spaces" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "スペース一覧" })
+    .text("見出し", { default: "スペース一覧" })
     .pipe(z.string().max(100)),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 24,
     default: 6,
+    suffix: "件",
     group: "advanced",
   }),
-  showOnlyPublished: field.boolean("公開済みのみ", {
+  showOnlyPublished: field.boolean("公開済みスペースのみ表示する", {
     default: true,
     group: "advanced",
   }),
-  showViewAllLink: field.boolean("全件リンクを表示", { default: true }),
+  showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
+    default: true,
+  }),
   viewAllText: field
-    .text("全件リンクテキスト", { default: "全てのスペースを見る" })
+    .text("「すべて見る」リンクの文字", { default: "全てのスペースを見る" })
     .pipe(z.string().max(50)),
   viewAllUrl: field
-    .text("全件リンクURL", { default: "/spaces" })
+    .text("「すべて見る」リンク先 URL", { default: "/spaces" })
     .pipe(z.string().max(200)),
   layout: field.select("レイアウト", {
     options: layouts,
     default: "grid",
     group: "design",
   }),
-  columns: field.number("カラム数", {
+  columns: field.number("1 行あたりの列数", {
     min: 1,
     max: 4,
     default: 3,
+    suffix: "列",
     group: "design",
   }),
-  cardStyle: field.select("カードスタイル", {
+  cardStyle: field.select("カードの見た目", {
     options: cardStyles,
     default: "bordered",
     group: "design",
   }),
-  imageAspect: field.select("画像アスペクト比", {
+  imageAspect: field.select("画像のアスペクト比", {
     options: imageAspects,
     default: "4:3",
     group: "design",

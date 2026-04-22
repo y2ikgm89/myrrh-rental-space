@@ -16,14 +16,14 @@ const variantOptions = [
 
 export const heroConfigSchema = z
   .object({
-    title: field.text("タイトル").pipe(z.string().max(100)),
-    subtitle: field.textarea("サブタイトル").pipe(z.string().max(300)),
+    title: field.text("見出し").pipe(z.string().max(100)),
+    subtitle: field.textarea("サブ見出し").pipe(z.string().max(300)),
     backgroundImageUrl: field.image("背景画像"),
     buttons: field.array("ボタン", {
       fields: {
-        text: field.text("テキスト"),
-        url: field.url("リンク先"),
-        variant: field.select("スタイル", {
+        text: field.text("ボタンの文字"),
+        url: field.url("リンク先 URL"),
+        variant: field.select("ボタンの種類", {
           options: buttonVariants,
           default: "primary",
         }),
@@ -35,26 +35,33 @@ export const heroConfigSchema = z
       default: "md",
       group: "design",
     }),
-    heightCustom: field.number("カスタム高さ (svh)", {
+    heightCustom: field.number("カスタム高さ", {
       min: 20,
       max: 100,
       default: 60,
-      helpText: "高さが「カスタム」の場合に使用（svh 単位）",
+      suffix: "svh",
+      helpText: "100svh で画面いっぱい",
       group: "design",
     }),
-    variant: field.select("バリエーション", {
+    variant: field.select("レイアウトの種類", {
       options: variantOptions,
       default: "default",
+      helpText: "ヒーローセクションの見せ方を選びます",
       group: "design",
     }),
-    overlay: field.boolean("オーバーレイ", { default: true, group: "design" }),
-    overlayOpacity: field.number("オーバーレイ不透明度", {
+    overlay: field.boolean("画像の上に黒いオーバーレイを重ねる", {
+      default: true,
+      group: "design",
+    }),
+    overlayOpacity: field.number("オーバーレイの濃さ", {
       min: 0,
       max: 100,
       default: 40,
+      suffix: "%",
+      helpText: "0% は透明、100% は完全に黒",
       group: "design",
     }),
-    videoUrl: field.url("動画URL"),
+    videoUrl: field.url("動画 URL"),
   })
   .refine(
     (data) =>

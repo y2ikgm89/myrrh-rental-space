@@ -3,14 +3,14 @@ import { field } from "../../field-registry";
 
 export const homepageHowItWorksConfigSchema = z.object({
   label: field.text("ラベル", { default: "How to Reserve" }),
-  title: field.text("タイトル", { default: "ご利用の流れ" }),
+  title: field.text("見出し", { default: "ご利用の流れ" }),
   steps: field.array("ステップ", {
     fields: {
-      title: field.text("タイトル"),
+      title: field.text("ステップの見出し"),
       description: field.text("説明文"),
     },
   }),
-  valueProps: field.array("バリュープロップ", {
+  valueProps: field.array("アピールポイント", {
     fields: {
       title: field.text("テキスト"),
     },

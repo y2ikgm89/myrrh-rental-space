@@ -12,10 +12,10 @@ export const galleryConfigSchema = z
     sectionLabel: field
       .text("セクションラベル", { default: "Gallery" })
       .pipe(z.string().max(50)),
-    title: field.text("タイトル").pipe(z.string().max(100)),
+    title: field.text("見出し").pipe(z.string().max(100)),
     images: field.array("画像", {
       fields: {
-        url: field.image("URL"),
+        url: field.image("画像"),
         alt: field.text("代替テキスト"),
         caption: field.text("キャプション"),
       },
@@ -25,24 +25,27 @@ export const galleryConfigSchema = z
       default: "grid",
       group: "design",
     }),
-    columns: field.number("カラム数", {
+    columns: field.number("1 行あたりの列数", {
       min: 1,
       max: 6,
       default: 3,
+      suffix: "列",
       group: "design",
     }),
-    gap: field.select("間隔", {
+    gap: field.select("画像の間隔", {
       options: gaps,
       default: "md",
       group: "design",
     }),
-    enableLightbox: field.boolean("ライトボックス", { default: true }),
-    imageAspect: field.select("画像アスペクト比", {
+    enableLightbox: field.boolean("クリックで拡大表示する（ライトボックス）", {
+      default: true,
+    }),
+    imageAspect: field.select("画像のアスペクト比", {
       options: imageAspects,
       default: "original",
       group: "design",
     }),
-    hoverEffect: field.select("ホバーエフェクト", {
+    hoverEffect: field.select("ホバー時のエフェクト", {
       options: hoverEffects,
       default: "zoom",
       group: "design",

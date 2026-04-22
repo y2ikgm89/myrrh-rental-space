@@ -14,9 +14,9 @@ export const customConfigSchema = z.object({
     default: "lg",
     group: "design",
   }),
-  containerClass: field.text("コンテナクラス", { group: "advanced" }),
+  containerClass: field.text("カスタム CSS クラス", { group: "advanced" }),
   backgroundColor: field.color("背景色", { group: "design" }),
-  padding: field.select("パディング", {
+  padding: field.select("内側の余白", {
     options: paddingOptions,
     default: "md",
     group: "design",

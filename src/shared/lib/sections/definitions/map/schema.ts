@@ -9,7 +9,7 @@ export const mapConfigSchema = z.object({
   sectionLabel: field
     .text("セクションラベル", { default: "Location" })
     .pipe(z.string().max(50)),
-  title: field.text("タイトル").pipe(z.string().max(100)),
+  title: field.text("見出し").pipe(z.string().max(100)),
   address: field.textarea("住所").pipe(z.string().max(300)),
   latitude: field.number("緯度", { min: -90, max: 90 }),
   longitude: field.number("経度", { min: -180, max: 180 }),
@@ -17,14 +17,17 @@ export const mapConfigSchema = z.object({
     min: 1,
     max: 20,
     default: 15,
-    group: "advanced",
+    helpText: "数値が大きいほど拡大（1: 世界全体、20: 建物レベル）",
+    group: "design",
   }),
-  height: field.select("高さ", {
+  height: field.select("地図の高さ", {
     options: heights,
     default: "md",
     group: "design",
   }),
-  showAddressBelow: field.boolean("住所を下部に表示", { default: true }),
+  showAddressBelow: field.boolean("住所を地図の下に表示する", {
+    default: true,
+  }),
   borderRadius: field.select("角丸", {
     options: borderRadii,
     default: "sm",

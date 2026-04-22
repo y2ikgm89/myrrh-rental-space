@@ -14,10 +14,10 @@ export const heroParallaxConfigSchema = z
       .text("タグライン", { default: "Luxury Rental Space" })
       .pipe(z.string().max(50)),
     title: field
-      .text("タイトル", { default: "洗練された空間で 特別なひとときを" })
+      .text("見出し", { default: "洗練された空間で 特別なひとときを" })
       .pipe(z.string().max(100)),
     subtitle: field
-      .textarea("サブタイトル", {
+      .textarea("サブ見出し", {
         default:
           "厳選されたレンタルスペースで、ビジネスからプライベートまで、あらゆるシーンに対応する上質な空間をご提供します。",
       })
@@ -25,13 +25,13 @@ export const heroParallaxConfigSchema = z
     backgroundImageUrl: field.image("背景画像"),
     buttons: field.array("ボタン", {
       fields: {
-        text: field.text("テキスト"),
-        url: field.url("リンク先"),
-        variant: field.select("スタイル", {
+        text: field.text("ボタンの文字"),
+        url: field.url("リンク先 URL"),
+        variant: field.select("ボタンの種類", {
           options: buttonVariants,
           default: "primary",
         }),
-        size: field.select("サイズ", {
+        size: field.select("ボタンのサイズ", {
           options: buttonSizes,
           default: "md",
         }),
@@ -42,17 +42,18 @@ export const heroParallaxConfigSchema = z
       min: 0,
       max: 1,
       default: 0.3,
+      helpText: "0 で固定、1 で最大スクロール効果",
       group: "design",
     }),
-    overlayGradient: field.boolean("グラデーションオーバーレイ", {
+    overlayGradient: field.boolean("グラデーションオーバーレイを重ねる", {
       default: true,
       group: "design",
     }),
-    scrollIndicator: field.boolean("スクロールインジケーター", {
+    scrollIndicator: field.boolean("スクロールインジケーターを表示する", {
       default: true,
       group: "design",
     }),
-    contentPosition: field.select("コンテンツ位置", {
+    contentPosition: field.select("コンテンツの位置", {
       options: contentPositions,
       default: "center",
       group: "design",
@@ -62,14 +63,15 @@ export const heroParallaxConfigSchema = z
       default: "lg",
       group: "design",
     }),
-    heightCustom: field.number("カスタム高さ (svh)", {
+    heightCustom: field.number("カスタム高さ", {
       min: 20,
       max: 100,
       default: 80,
-      helpText: "高さが「カスタム」の場合に使用（svh 単位）",
+      suffix: "svh",
+      helpText: "100svh で画面いっぱい",
       group: "design",
     }),
-    overlayStyle: field.select("オーバーレイスタイル", {
+    overlayStyle: field.select("オーバーレイの種類", {
       options: overlayStyles,
       default: "gradient",
       group: "design",

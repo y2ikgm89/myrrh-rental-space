@@ -9,21 +9,23 @@ export const instagramConfigSchema = z.object({
     .text("セクションラベル", { default: "Follow Us" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "Instagram" })
+    .text("見出し", { default: "Instagram" })
     .pipe(z.string().max(100)),
-  columns: field.number("カラム数", {
+  columns: field.number("1 行あたりの列数", {
     min: 3,
     max: 6,
     default: 6,
+    suffix: "列",
     group: "design",
   }),
   count: field.number("表示件数", {
     min: 6,
     max: 12,
     default: 6,
+    suffix: "件",
     group: "advanced",
   }),
-  gap: field.select("間隔", {
+  gap: field.select("画像の間隔", {
     options: gaps,
     default: "md",
     group: "design",

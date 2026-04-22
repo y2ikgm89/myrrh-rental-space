@@ -9,19 +9,20 @@ export const featuresConfigSchema = z.object({
     .text("セクションラベル", { default: "Features" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "Features" })
+    .text("見出し", { default: "Features" })
     .pipe(z.string().max(100)),
   items: field.array("特徴", {
     fields: {
       icon: field.icon("アイコン"),
-      title: field.text("タイトル"),
-      description: field.textarea("説明"),
+      title: field.text("項目の見出し"),
+      description: field.textarea("説明文"),
     },
   }),
-  columns: field.number("カラム数", {
+  columns: field.number("1 行あたりの列数", {
     min: 1,
     max: 4,
     default: 3,
+    suffix: "列",
     group: "design",
   }),
   layout: field.select("レイアウト", {

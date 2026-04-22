@@ -10,15 +10,20 @@ export const testimonialConfigSchema = z.object({
     .text("セクションラベル", { default: "Testimonials" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "お客様の声" })
+    .text("見出し", { default: "お客様の声" })
     .pipe(z.string().max(100)),
   items: field.array("レビュー", {
     fields: {
-      content: field.textarea("内容"),
-      authorName: field.text("名前"),
+      content: field.textarea("レビュー内容"),
+      authorName: field.text("お客様の名前"),
       authorTitle: field.text("肩書き"),
-      authorImageUrl: field.image("アバター"),
-      rating: field.number("評価", { min: 1, max: 5, default: 5 }),
+      authorImageUrl: field.image("アバター画像"),
+      rating: field.number("評価", {
+        min: 1,
+        max: 5,
+        default: 5,
+        helpText: "1〜5 の星評価",
+      }),
     },
   }),
   layout: field.select("レイアウト", {
@@ -26,8 +31,8 @@ export const testimonialConfigSchema = z.object({
     default: "carousel",
     group: "design",
   }),
-  showRating: field.boolean("評価を表示", { default: true }),
-  variant: field.select("バリエーション", {
+  showRating: field.boolean("星評価を表示する", { default: true }),
+  variant: field.select("レイアウトの種類", {
     options: variants,
     default: "default",
     group: "design",

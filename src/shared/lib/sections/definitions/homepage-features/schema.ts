@@ -3,10 +3,10 @@ import { field } from "../../field-registry";
 
 export const homepageFeaturesConfigSchema = z.object({
   label: field.text("ラベル", { default: "Why Myrrh" }),
-  title: field.text("タイトル", { default: "選ばれる理由" }),
+  title: field.text("見出し", { default: "選ばれる理由" }),
   items: field.array("特長リスト", {
     fields: {
-      title: field.text("タイトル"),
+      title: field.text("項目の見出し"),
       description: field.textarea("説明文"),
     },
   }),

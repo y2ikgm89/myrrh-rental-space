@@ -10,13 +10,13 @@ export const ctaConfigSchema = z
     sectionLabel: field
       .text("セクションラベル", { default: "Ready to Begin?" })
       .pipe(z.string().max(50)),
-    title: field.text("タイトル").pipe(z.string().max(100)),
-    description: field.textarea("説明").pipe(z.string().max(500)),
+    title: field.text("見出し").pipe(z.string().max(100)),
+    description: field.textarea("説明文").pipe(z.string().max(500)),
     buttons: field.array("ボタン", {
       fields: {
-        text: field.text("テキスト"),
-        url: field.url("リンク先"),
-        variant: field.select("スタイル", {
+        text: field.text("ボタンの文字"),
+        url: field.url("リンク先 URL"),
+        variant: field.select("ボタンの種類", {
           options: buttonVariants,
           default: "primary",
         }),
@@ -24,7 +24,7 @@ export const ctaConfigSchema = z
       },
     }),
     backgroundColor: field.color("背景色", { group: "design" }),
-    variant: field.select("バリエーション", {
+    variant: field.select("レイアウトの種類", {
       options: variants,
       default: "default",
       group: "design",

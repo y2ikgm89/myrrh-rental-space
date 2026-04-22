@@ -20,13 +20,13 @@ export const conceptConfigSchema = z.object({
         "洗練されたデザインと機能性を兼ね備えた空間。\nビジネスミーティングからプライベートパーティーまで。\nあらゆるシーンに対応する上質な空間をご提供します。",
     })
     .pipe(z.string().max(1000)),
-  imageUrl: field.image("画像"),
-  imagePosition: field.select("画像位置", {
+  imageUrl: field.image("メイン画像"),
+  imagePosition: field.select("画像の位置", {
     options: imagePositions,
     default: "right",
     group: "design",
   }),
-  textAlign: field.select("テキスト揃え", {
+  textAlign: field.select("テキストの揃え", {
     options: textAligns,
     default: "left",
     group: "design",
@@ -36,7 +36,7 @@ export const conceptConfigSchema = z.object({
     default: "side-by-side",
     group: "design",
   }),
-  imageAspect: field.select("画像アスペクト比", {
+  imageAspect: field.select("画像のアスペクト比", {
     options: imageAspects,
     default: "original",
     group: "design",

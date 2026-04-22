@@ -11,7 +11,7 @@ export const faqListConfigSchema = z.object({
     .text("セクションラベル", { default: "FAQ" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "よくあるご質問" })
+    .text("見出し", { default: "よくあるご質問" })
     .pipe(z.string().max(100)),
   categoryId: z
     .string()
@@ -21,14 +21,17 @@ export const faqListConfigSchema = z.object({
     min: 1,
     max: 50,
     default: 10,
+    suffix: "件",
     group: "advanced",
   }),
-  showViewAllLink: field.boolean("全件リンクを表示", { default: true }),
+  showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
+    default: true,
+  }),
   viewAllText: field
-    .text("全件リンクテキスト", { default: "全てのFAQ" })
+    .text("「すべて見る」リンクの文字", { default: "全てのFAQ" })
     .pipe(z.string().max(50)),
   viewAllUrl: field
-    .text("全件リンクURL", { default: "/faq" })
+    .text("「すべて見る」リンク先 URL", { default: "/faq" })
     .pipe(z.string().max(200)),
   items: field
     .array("カスタム項目", {
@@ -38,7 +41,7 @@ export const faqListConfigSchema = z.object({
       },
     })
     .optional(),
-  variant: field.select("バリエーション", {
+  variant: field.select("レイアウトの種類", {
     options: variants,
     default: "default",
     group: "design",
@@ -48,7 +51,7 @@ export const faqListConfigSchema = z.object({
     default: "md",
     group: "design",
   }),
-  initialOpen: field.select("初期展開", {
+  initialOpen: field.select("初期展開状態", {
     options: initialOpenOptions,
     default: "first",
     group: "advanced",

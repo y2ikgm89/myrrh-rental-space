@@ -10,30 +10,32 @@ export const spaceShowcaseConfigSchema = z.object({
     .text("セクションラベル", { default: "Spaces" })
     .pipe(z.string().max(50)),
   title: field
-    .text("タイトル", { default: "Our Spaces" })
+    .text("見出し", { default: "Our Spaces" })
     .pipe(z.string().max(100)),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 12,
     default: 3,
+    suffix: "件",
     group: "advanced",
   }),
-  showOnlyPublished: field.boolean("公開済みのみ", {
+  showOnlyPublished: field.boolean("公開済みスペースのみ表示する", {
     default: true,
     group: "advanced",
   }),
-  columns: field.number("カラム数", {
+  columns: field.number("1 行あたりの列数", {
     min: 2,
     max: 4,
     default: 3,
+    suffix: "列",
     group: "design",
   }),
-  cardStyle: field.select("カードスタイル", {
+  cardStyle: field.select("カードの見た目", {
     options: cardStyles,
     default: "bordered",
     group: "design",
   }),
-  imageAspect: field.select("画像アスペクト比", {
+  imageAspect: field.select("画像のアスペクト比", {
     options: imageAspects,
     default: "4:3",
     group: "design",
