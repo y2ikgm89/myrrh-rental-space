@@ -25,15 +25,15 @@ Dependabot設定、CSPセキュリティヘッダー、テストカバレッジ�
 
 - Content-Security-Policy ヘッダー追加
 - 環境別設定（開発: unsafe-eval許可、本番: 厳格化）
-- 対応サービス: Turnstile, Stripe, Supabase, YouTube
+- 対応サービス: Turnstile, Stripe, Cloudflare R2, YouTube
 
 CSP設定内容:
 
 - `default-src: 'self'`
 - `script-src: 'self' 'unsafe-inline' + 開発時unsafe-eval + 外部サービス`
 - `style-src: 'self' 'unsafe-inline'`
-- `img-src: 'self' data: blob: + Supabase/YouTube/placehold.co`
-- `connect-src: 'self' + Supabase/Stripe API`
+- `img-src: 'self' data: blob: + Cloudflare R2/YouTube/placehold.co`
+- `connect-src: 'self' + Stripe API`
 - `frame-src: 'self' + Turnstile/Stripe/YouTube`
 - `object-src: 'none'`, `frame-ancestors: 'none'`
 

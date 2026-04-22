@@ -141,7 +141,7 @@ api/                           # API Route Handlers
 | **TypeScript** | 5.9.3 | Type safety |
 | **Bun** | 1.3.x | Runtime + package manager |
 | **Prisma** | 7.3.0 | ORM (mapped enums, type-gen 98% reduction) |
-| **PostgreSQL** | (Supabase) | Database |
+| **PostgreSQL** | — | Database (Cloud SQL / local) |
 | **Tailwind CSS** | 4.1.18 | CSS framework (CSS-first configuration) |
 
 ### Feature Libraries

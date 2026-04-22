@@ -1495,9 +1495,9 @@ model AuditLog {
 model Media {
   id          String @id @default(uuid()) @db.Uuid
   filename    String // 元のファイル名
-  storagePath String // Supabase Storage パス
+  storagePath String // Cloudflare R2 オブジェクトキー（`{prefix}/{folder}/{timestamp}-{uuid}.{ext}`）
   url         String // 公開URL
-  bucket      String // Supabase バケット名
+  bucket      String // ストレージ prefix（`STORAGE_PREFIXES` の 4 値: `spaces` / `posts` / `site` / `media`）
   mimeType    String // MIME type
   size        Int // ファイルサイズ（bytes）
   width       Int? // 画像幅（px）

@@ -215,6 +215,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Skills**: `.claude/skills/<name>/SKILL.md` に frontmatter（`description` 必須）+ 手順本体（500 行未満推奨）。詳細は `reference/*.md` / `data/*` に分割
 - **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` / `tools:`（最小権限）/ `model: sonnet` / `memory: project`
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
+- **Serena memories**: `.serena/memories/**/*.md` が Serena MCP セッション開始時に自動ロード — 大規模マイグレーション・機能削除後は現状参照系（`project_overview.md` / `architecture-analysis.md` / `architecture/*.md`）を同期更新必須。stale 情報は次セッションで誤情報として注入される silent bug（実例: Supabase→R2 移行後に `project_overview.md` の `PostgreSQL (Supabase)` が残存）
 
 包括的監査が必要な場合は、該当 subagent を並列起動（Agent ツール経由で description 参照）。
 

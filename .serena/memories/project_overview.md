@@ -6,7 +6,7 @@
 ## Tech Stack
 - Next.js 16.1, React 19.2, TypeScript 5.9
 - Bun 1.3 (runtime & package manager)
-- Prisma 7.3 / PostgreSQL (Supabase)
+- Prisma 7 / PostgreSQL
 - Better Auth 1.4 (認証)
 - Tailwind CSS 4 (CSS-first)
 - Zod 4, nuqs 2.8, Lexical 0.39

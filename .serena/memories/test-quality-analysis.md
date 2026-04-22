@@ -173,12 +173,6 @@
 ❌ slug-validation.ts
   - スラッグ生成・検証
   
-❌ storage.ts
-  - ストレージ抽象化
-  
-❌ supabase.ts
-  - Supabase クライアント設定
-  
 ❌ terms-templates.ts
   - 利用規約テンプレート
   

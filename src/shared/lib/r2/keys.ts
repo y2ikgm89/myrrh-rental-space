@@ -3,7 +3,7 @@
  *
  * Key 構造: `{prefix}/{folder}/{timestamp}-{uuid}.{ext}`
  *
- * - `prefix`: `STORAGE_PREFIXES` の 4 値のいずれか（旧 Supabase Bucket 名相当）
+ * - `prefix`: `STORAGE_PREFIXES` の 4 値のいずれか（R2 バケット内の仮想フォルダ）
  * - `folder`: 任意サブパス（spaceId / postId / logo 等のスコープ）
  * - `timestamp-uuid.ext`: 衝突回避のためのランダム化ファイル名
  *

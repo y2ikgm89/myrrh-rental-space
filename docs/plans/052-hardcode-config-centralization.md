@@ -130,12 +130,10 @@ const session = {
 
 ### クライアント（必須）
 
-| 変数                            | 説明              |
-| ------------------------------- | ----------------- |
-| `NEXT_PUBLIC_BASE_URL`          | 公開サイトURL     |
-| `NEXT_PUBLIC_APP_URL`           | アプリURL         |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase URL      |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key |
+| 変数                   | 説明          |
+| ---------------------- | ------------- |
+| `NEXT_PUBLIC_BASE_URL` | 公開サイトURL |
+| `NEXT_PUBLIC_APP_URL`  | アプリURL     |
 
 ### クライアント（オプション）
 
