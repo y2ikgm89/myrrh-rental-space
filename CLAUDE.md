@@ -148,6 +148,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Worktree 作成前**: `git status --short | wc -l` + `ls prisma/migrations/ | tail -1` で未コミット migration 確認、ドリフトあれば先に WIP commit（→ `gotchas.md`）
 - **Prisma 7.7 CLI フラグ変更**: `migrate diff --to-schema-datamodel` → `--to-schema`、`--shadow-database-url` 削除、`db execute --schema` 削除。非対話 destructive migration は「schema 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` 手書き → `db execute --file` → `migrate resolve --applied`」順（→ `gotchas.md`）
 - **schema.prisma commit 後は `prisma/migrations/` 側も同時 commit 必須** — schema のみ commit は `prisma migrate deploy` が CI/prod で fail する silent drift
+- **destructive migration 適用後は dev server を該当 worktree から再起動必須** — 共有 dev DB のため、他の worktree / main から起動中の dev server は古い code + 新 schema で `PrismaClientKnownRequestError: The column ... does not exist` → 公開ページ白画面の silent bug（→ `gotchas.md` §Worktree §共有 dev DB + 異 worktree dev server）
 - **テストファイルは top-level `__tests__/` のみ** — `src/**/__tests__/` 配置禁止（`tsconfig.test.json` include 範囲外）（→ `test-quality.md`）
 - **ADR 新規作成前に `ls docs/architecture/decisions/ | grep "^00"` で既存番号確認** — 連番重複採番を防ぐ。本セッションで 0011 衝突が発生（`0011-dual-better-auth-instance.md` 既存を見落として重複作成 → 0014 に変更）
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/guides/**` / `bunfig.toml` / `.vscode/launch.json` に旧 script 名が残らないか確認（ADR 0014 で実例化）
