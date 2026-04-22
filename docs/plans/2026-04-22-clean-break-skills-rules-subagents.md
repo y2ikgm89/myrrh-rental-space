@@ -115,6 +115,43 @@
 2. **Phase 4 再計画**: `docs/reference/claude-rules/*.md` 4 ファイルの個別判定。各ファイルの「詳細リファレンス」参照元を grep し、.claude/rules/ への統合 or 存続を決定
 3. **Phase 6 残タスク**: audit subagent prompt に `.claude/rules/**/*.md` の sanctioned exception cross-reference ガイダンスを追加（プロンプト テンプレート修正）
 
+### 推奨作業順序（次セッション）
+
+破壊的変更は依存関係があるため以下の順で実行する:
+
+1. **Step 1 (先行 brainstorm)**: ADR-0013 改訂案を `superpowers:brainstorming` で設計
+   - `docs/reference/codex-rules/lexical-patterns.md` との byte-identical 関係をどう再定義するか
+   - 成果物: ADR-0016（または 0013 supersede）の draft
+   - 所要: 30 分
+
+2. **Step 2 (Phase 3 実行)**: ADR 確定後に rules split
+   - `lexical-patterns.md` (930) → 5 分割（core / nodes / plugins / toolbar / a11y）
+   - `react-patterns.md` (870) → 5 分割（compiler / hooks / rhf / ssr / gotchas）
+   - `gsap-patterns.md` (729) → 4 分割（core / scroll-trigger / matchmedia / lenis）
+   - 各 split ファイルに `paths:` frontmatter で scoped autoload 設定
+   - canonical `.md` を barrel index 化（subfile 列挙節を追加）
+   - ADR 決定が B/C のどちらかで `scripts/verify-policy-docs.mjs` 同期更新
+   - 所要: 2 時間（implementer 1 人 bundle）
+
+3. **Step 3 (Phase 4 実行)**: docs cleanup
+   - `docs/reference/claude-rules/*.md` 4 件: `grep -rln "docs/reference/claude-rules/" .claude/ docs/ src/` で参照元特定 → `.claude/rules/**` への吸収 or 存続を個別判定
+   - `docs/plans/archive/completed-legacy.md` (103KB / 2487 行): 外部参照ゼロ確認後 summary に圧縮（詳細は git history `git log --all --diff-filter=D -- docs/plans/001-*.md`）
+   - `docs/requirements/**`: 各ファイルの外部参照 grep → 実装吸収済みは削除、そうでなければ ADR 昇格
+   - 所要: 1 時間
+
+4. **Step 4 (Phase 5 実行)**: skills split
+   - debug skill 4 件（cloud-run-debug / add-prisma-enum / google-calendar-debug / add-settings-field）を `SKILL.md` 手順本体 + `reference/*.md` 詳細に分割
+   - `lexical-*` skill 群 4 件の冒頭に使い分け表追加
+   - 所要: 1.5 時間
+
+5. **Step 5 (Phase 6 残)**: audit subagent prompt 改善
+   - `.claude/agents/{ssot-audit,architecture-boundary-audit,...}.md` の prompt に「`.claude/rules/**/*.md` の『例外』『sanctioned exception』節を cross-reference して false positive を排除する」指示を追加
+   - 所要: 20 分
+
+**合計所要**: 約 5 時間（1 セッションで完走可能）。Step 1 の ADR 決定が Step 2 の前提のため sequential 実行必須。
+
+**dispatch 戦略**: `superpowers:subagent-driven-development` で phase ごとに implementer 1 人 bundle（密結合タスクのため）。controller が phase 間で `bun run validate && bun run build` + 削除 symbol の grep で drift ゼロ検証。
+
 ---
 
 ## 非スコープ（別計画で扱う）

@@ -193,6 +193,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **計画実行**: `subagent-driven-development`（推奨）または `executing-plans`
 - **完了時**: `verification-before-completion` → `finishing-a-development-branch`
 - **セッション継続時**: `docs/plans/README.md` 確認
+- **セッション跨ぎ大規模 plan は handoff memory 必須** — `~/.claude/projects/<slug>/memory/project_<phase>-handoff.md`（type=project）に ①plan 場所 ②worktree 場所 ③commit SHA ④残 chunk 分割 ⑤次セッション起動コマンドの 5 点セット + `MEMORY.md` に一行 index。context 枯渇で中断判断した phase（例: Section Architecture Phase B.4）で canonical
 
 ---
 
