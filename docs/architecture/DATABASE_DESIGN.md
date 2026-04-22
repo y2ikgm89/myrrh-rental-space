@@ -191,7 +191,6 @@
 - **設計方針**:
   - **シングルトン**: Settingsテーブルは1レコードのみ存在（ID固定または`findFirst`で取得）
   - **型安全性**: 専用フィールドを使用して型安全性を確保
-- **詳細**: [`SETTINGS_REQUIREMENTS.md`](../requirements/settings.md) を参照してください
 
 ### Pages（公開ページコンテンツ）
 
@@ -780,7 +779,6 @@ try {
 - [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（Prisma設定）
 - [`API.md`](./API.md) - API仕様
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
-- [`FEATURE_REQUIREMENTS.md`](../requirements/README.md) - 機能要件
 
 ### 外部リソース
 

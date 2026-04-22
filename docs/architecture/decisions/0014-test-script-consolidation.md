@@ -123,4 +123,4 @@ ADR 0010 で per-directory batch 実行が採択された後も、`package.json`
 - [x] `docs/guides/testing.md`（1623 行）の全面刷新 → 20 行の redirect に圧縮（本 PR で達成）。同時に `type-safety.md` / `prisma.md` / `nuqs.md` / `turbopack.md` / `coding-standards.md` も redirect 化
 - [x] **`package.json` 残存 dead scripts（`test` / `test:watch` / `test:coverage` / `test:coverage:check`）の削除**（2026-04-22 完了）
 - [ ] 次回依存更新時に `bun run validate` + CI green を確認し、削除した scripts への依存が外部 CI（GCP 以外）に残っていないか最終確認
-- [ ] `docs/requirements/email.md` / `posts.md` が `coding-standards.md` を **API 仕様の代替** として参照している誤リンク（既に元から壊れていた）を整理
+- [x] `docs/requirements/` 全体を削除（stale な要件定義で実装が SoT のため）。`coding-standards.md` への誤リンク問題も同時解消（2026-04-23 完了）
