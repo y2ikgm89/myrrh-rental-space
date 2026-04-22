@@ -133,6 +133,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **a11y 実装前に UX state の実使用を grep で確認** — `selectedId` / `isSelected` 等の state が外部 consumer と連動しない「視覚ハイライト専用」なら dead state として削除候補。dead state に `aria-pressed` / キーボードハンドラ / focus ring を付けるのは over-engineering（`media/_components/MediaGrid.tsx` の `selectedId` 削除が参照事例）
 - **context7 に無い Playground / reference implementation は `gh api` で一次ソース直接参照** — Lexical の `FloatingTextFormatToolbarPlugin` / `setFloatingElemPosition` / `DraggableBlockPlugin_EXPERIMENTAL` 等は `@lexical/react` の公開 API ではなく Playground 固有の参考実装のため context7（`/facebook/lexical` / `/websites/lexical_dev` 両方）にヒットしない。`gh api repos/facebook/lexical/contents/packages/lexical-playground/...` で裏取り。この場合の主張粒度は「公式 API ドキュメント準拠」ではなく **「reference implementation 準拠」** と明記（overstate 回避）
 - **Radix primitives の具体例**: context7 取得不可 → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>`
+- **Claude Code 自体の公式仕様（hooks/skills/sub-agents/settings/permissions）は `code.claude.com/docs/en/<topic>` を WebFetch で取得** — context7 はサードパーティライブラリ用で Claude Code 本体は未収録。Agent SDK は別ルート（`docs.anthropic.com` 配下）
 - **一括修正後**: Grep で違反パターン残存ゼロ確認してから完了報告
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
 - **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate することあり（このセッションで `xl:` 22→実際 18、`@container` 採用 5→実際 3 の drift を検出）。修正計画に組み込む前に `grep -rE "\bxl:" src/ --include="*.tsx" -c | awk -F: '{s+=$2} END{print s}'` 等で ground truth を取る
@@ -181,6 +182,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **並列 reviewer dispatch 前に `.claude/rules/**` 準拠度を grep で先行確認** — rule で既に厳格化済みのパターン（`revalidateTag\(.\*,`/`useCallback\(`/`gsap.matchMedia` 等）は 1 回の grep で violations ゼロを判定できる。多数の reviewer を並列起動するより、grep hits を元に必要 reviewer を絞る方が token コスト + context 圧迫を削減
 - **long-running general-purpose agent（tool_uses 40+ / duration 300s+）の最終報告が途切れたら git で独立検証** — SendMessage で再取得を待つより `git status --short` + `git diff --stat HEAD` + 対象ファイル個別 diff の方が速く正確。subagent の「実装完了」報告が HEAD と収束して staged diff ゼロのケースも検出できる
 - **implementer dispatch prompt に「JSDoc / コメントに "Phase X.Y" / "refactor from Y" / "後継 UI" 等のタスク・フロー参照を含めない」を明示** — デフォルトで混入しがち。CLAUDE.md の general rule「Don't reference the current task, fix, or callers」と衝突し commit 前の grep + cleanup が発生する（2026-04-22 Phase B.5-2 で 4 ファイル × 7 箇所の cleanup 事例）
+- **subagent frontmatter `memory: project` は実利用がある場合のみ付ける** — 公式仕様で Read/Write/Edit ツールが暗黙有効化 + MEMORY.md (200行/25KB) が system prompt に注入される。本文で MEMORY 参照を持つ設計か `.claude/agent-memory/<name>/` に dir があるかで判定。未使用で付けると context 浪費 + 最小権限原則違反（2026-04-23 監査で 10 agent 削除）
 
 ---
 
@@ -220,6 +222,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Subagents**: `.claude/agents/<name>.md` — frontmatter `name` / `description` / `tools:`（最小権限）/ `model: sonnet` / `memory: project`
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
 - **Serena memories**: `.serena/memories/**/*.md` が Serena MCP セッション開始時に自動ロード — 大規模マイグレーション・機能削除後は現状参照系（`project_overview.md` / `architecture-analysis.md` / `architecture/*.md`）を同期更新必須。stale 情報は次セッションで誤情報として注入される silent bug（実例: Supabase→R2 移行後に `project_overview.md` の `PostgreSQL (Supabase)` が残存）
+- **research/analysis タイプの memory は冒頭に `> **Snapshot: YYYY-MM-DD**` を入れる** — `/memory-staleness-audit` skill で自動履歴扱いされ、既知の drift を stale 検出から除外できる（filename に `YYYY-MM-DD` を含む場合も同等）
 
 包括的監査が必要な場合は、該当 subagent を並列起動（Agent ツール経由で description 参照）。
 

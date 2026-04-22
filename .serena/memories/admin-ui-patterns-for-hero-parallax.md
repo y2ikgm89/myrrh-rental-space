@@ -1,5 +1,9 @@
 # Admin UI Patterns for 2-Tab HERO_PARALLAX Section Editor
 
+> ⚠️ **Snapshot: 2026-02-11** — このリサーチは参照していた `CTAButtonEditor` コンポーネント（`src/shared/components/cta-button-editor/CTAButtonEditor.tsx`）が**完全に削除済**のため、Pattern C / D / 6 / 9 の具体実装例は現存しない。Tab 構造・Radix tabs 利用方針などの一般パターンは引き続き参考可能。
+>
+> HERO_PARALLAX 機能自体の現状は src/ を直接確認すること。
+
 ## Overview
 Research findings for implementing a 2-tab section editor for HERO_PARALLAX sections with "基本" (Basic) and "デザイン" (Design) tabs.
 

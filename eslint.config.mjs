@@ -194,13 +194,6 @@ const eslintConfig = defineConfig([
       "no-console": "off",
     },
   },
-  {
-    name: "auth-lib",
-    files: ["src/shared/lib/auth.ts"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
   // Lexical DraggableBlock フォーク（@lexical/react 由来のパターン・@ts-nocheck を許容）
   {
     name: "lexical-draggable-fork",

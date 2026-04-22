@@ -1,5 +1,11 @@
 # assignedPages フィールド完全分析
 
+> ⚠️ **Snapshot: 2026-02-11** — 本ドキュメントは当時の分析結果。以下の path 参照は現在 stale:
+> - `src/shared/lib/auth.ts` → `admin-auth.ts` + `customer-auth.ts` に分離済
+> - `src/admin/lib/validations/user.ts` → `src/shared/lib/validations/user.ts`
+>
+> 実装状況は現在の schema.prisma / src/ で再確認すること。
+
 ## 現状サマリー
 
 | 項目 | 状態 | 詳細 |
