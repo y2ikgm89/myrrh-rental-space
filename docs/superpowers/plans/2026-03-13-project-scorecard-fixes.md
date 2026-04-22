@@ -1,5 +1,10 @@
 # Project Scorecard Fixes Implementation Plan
 
+> **ステータス**: ✅ 全タスク実装済み（2026-04-22 検証、Task 1-7）
+> Task 2 は対象ファイルが `announcement-bar/announcement-bar.tsx` に再編され、そこで明示ガード済み。
+> Task 4 は settings `sections/index.ts` から Layout/Header/Footer/Sidebar 系 export が既に除去済み。
+> Task 7 は `pages/[slug]/_seo/` / `pages/[slug]/_sections/` で rename 済み。
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** スコアカード分析で発見された全 Critical/Warning 問題を修正し、プロジェクトスコアを 85 → 90+ に引き上げる
@@ -12,14 +17,16 @@
 
 ## Chunk 1: Security & Code Quality Fixes
 
-### Task 1: Instagram OAuth 認証ガード追加 [P0/Security]
+### Task 1: Instagram OAuth 認証ガード追加 [P0/Security] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: 両 route で `getAdminSession` + `getAdminSessionUser` + `isAdminRole`/`isSuperAdminRole` の認証ガードが先頭に配置されている（参照: `src/app/api/instagram/oauth/{authorize,callback}/route.ts`）。プランと実装の差分: ヘルパー名が `getSession`/`getRoleFromSession` ではなく `getAdminSession`/`getAdminSessionUser` に evolve しているが、効果は同等以上（`role-guards` で admin/super_admin をチェック）。
 
 **Files:**
 
 - Modify: `src/app/api/instagram/oauth/authorize/route.ts`
 - Modify: `src/app/api/instagram/oauth/callback/route.ts`
 
-- [ ] **Step 1: authorize/route.ts に認証チェック追加**
+- [x] **Step 1: authorize/route.ts に認証チェック追加**
 
 `GET()` 関数の冒頭（環境変数チェックの前）に認証ガードを追加:
 
@@ -44,7 +51,7 @@ export async function GET(request: Request) {
 
 注意: `GET()` のシグネチャを `GET(request: Request)` に変更（`request` が必要）。
 
-- [ ] **Step 2: callback/route.ts に認証チェック追加**
+- [x] **Step 2: callback/route.ts に認証チェック追加**
 
 `GET(request: NextRequest)` の冒頭（query パース前）に同様の認証ガードを追加:
 
@@ -64,11 +71,11 @@ if (
 }
 ```
 
-- [ ] **Step 3: 型チェック確認**
+- [x] **Step 3: 型チェック確認**
 
 Run: `bun run type-check`
 
-- [ ] **Step 4: コミット**
+- [x] **Step 4: コミット** — 実装済（git history に該当変更あり）
 
 ```bash
 git add src/app/api/instagram/oauth/authorize/route.ts src/app/api/instagram/oauth/callback/route.ts
@@ -77,7 +84,9 @@ git commit -m "fix(security): add auth guard to Instagram OAuth routes"
 
 ---
 
-### Task 2: AnnouncementBarCarousel 非null アサーション修正 [P2/Quality]
+### Task 2: AnnouncementBarCarousel 非null アサーション修正 [P2/Quality] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: 対象ファイルは `announcement-bar/announcement-bar.tsx:20` に移動しており、`return startAt !== null && endAt !== null && now >= startAt && now <= endAt;` の明示ガード実装済み。非null アサーション（`startAt!`/`endAt!`）はコードベース全域で 0 hit。
 
 **Files:**
 
@@ -111,7 +120,9 @@ git commit -m "fix(type-safety): remove non-null assertion in AnnouncementBarCar
 
 ## Chunk 2: Performance Fixes
 
-### Task 3: Zod を公開ページ Client Component から除去 [P0/Performance]
+### Task 3: Zod を公開ページ Client Component から除去 [P0/Performance] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: `src/shared/lib/validations/section-parsers.ts` が作成済み。`createParser` パターン（`Set.has` + 型ガード）で Zod を公開ページバンドルから除去。
 
 **Files:**
 
@@ -248,7 +259,9 @@ instead of Zod safeParse. Saves ~74KB gzip from all public pages."
 
 ---
 
-### Task 4: Lexical barrel import tree-shaking 修正 [P1/Performance]
+### Task 4: Lexical barrel import tree-shaking 修正 [P1/Performance] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: `settings/_components/sections/index.ts` から `LayoutSection`/`HeaderSection`/`FooterSection`/`SidebarSection` の export は除去済み。各 Section 本体ファイルは存在するが、利用側が直接 import する構成になっている（Lexical チャンクが他 settings ページにリークしない）。
 
 **Files:**
 
@@ -296,7 +309,9 @@ prevent ~239KB gzip Lexical+Prism leak into non-editor settings pages."
 
 ## Chunk 3: Route Structure Fixes
 
-### Task 5: global-error.tsx をインラインスタイルに変更 [P1/Route]
+### Task 5: global-error.tsx をインラインスタイルに変更 [P1/Route] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: `src/app/global-error.tsx` は `<body style={{ fontFamily: ..., margin: 0, backgroundColor: ... }}>` 等の完全インラインスタイル化済み（Tailwind クラス / CSS 変数非依存）。
 
 **Files:**
 
@@ -469,7 +484,9 @@ are unavailable. All classes were silently failing."
 
 ---
 
-### Task 6: (auth)/ に error.tsx / not-found.tsx 追加 [P2/Route]
+### Task 6: (auth)/ に error.tsx / not-found.tsx 追加 [P2/Route] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: `src/app/(admin)/admin/(auth)/error.tsx` と `src/app/(admin)/admin/(auth)/not-found.tsx` 両方とも存在。
 
 **Files:**
 
@@ -568,7 +585,9 @@ Prevents unauthenticated users from seeing dashboard-styled
 
 ---
 
-### Task 7: pages/[slug] 非ルートディレクトリを \_ prefix に変更 [P2/Route]
+### Task 7: pages/[slug] 非ルートディレクトリを \_ prefix に変更 [P2/Route] — ✅ 実装済み（2026-04-22 検証）
+
+**実装確認**: `pages/[slug]/_seo/_components/PageSeoForm.tsx` と `pages/[slug]/_sections/_components/...` で `_` prefix 化完了。旧 `seo/` / `sections/` ディレクトリは存在しない。
 
 **Files:**
 

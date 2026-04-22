@@ -1,5 +1,7 @@
 # 060 - CI/CD品質改善計画
 
+> **ステータス**: ✅ 完了（historical）。本 plan Phase 3 の **`coverageThreshold = { lines = 80, functions = 80, branches = 70 }`** は **ADR 0010 / ADR 0014 で superseded**（`docs/architecture/decisions/0014-test-script-consolidation.md`）。per-directory batch と coverage 計測は非互換のため `bunfig.toml` の coverage 設定は撤去済み。必要時は `bun test --coverage <single-file>` で参考値を取得する方針。
+
 ## 概要
 
 プロジェクト品質をA（95点）からA+（98点以上）に向上させるための包括的改善計画。

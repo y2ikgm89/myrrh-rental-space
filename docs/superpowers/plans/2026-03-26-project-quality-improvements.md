@@ -1,5 +1,7 @@
 # プロジェクト品質改善 Implementation Plan
 
+> **⚠️ ADR 0014 による部分 supersede**: 本 plan Task 4「カバレッジ閾値強制（`coverageThreshold = { lines = 60, functions = 45 }`）」は **ADR 0014 で後方互換性なく撤去**（`docs/architecture/decisions/0014-test-script-consolidation.md`）。per-directory batch 実行と coverage 計測は非互換のため、`bunfig.toml` の coverage 設定は削除済み。Task 1-3（`as` 削除 / ParallaxLayer GSAP / CSP ヘッダー）は通常通り有効。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** プロジェクトスコアを 8.7→9.2+ に引き上げ — `as` 型アサーション削除、ParallaxLayer GSAP 移行、CSP ヘッダー追加、カバレッジ閾値強制

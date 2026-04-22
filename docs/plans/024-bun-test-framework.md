@@ -1,5 +1,7 @@
 # 024: Bun テストフレームワーク導入
 
+> **ステータス**: ✅ 完了（historical）。本 plan の `bun test` / `bun test:watch` / `bun test:coverage` 等の script 構成は **ADR 0014 で後方互換性なく superseded**（`docs/architecture/decisions/0014-test-script-consolidation.md`）。現状の正本は `bun test <path>` / `bun run test:unit` / `test:integration` / `test:all`。
+
 ## 概要
 
 Bun 1.3.6のネイティブテストランナー(`bun:test`)を使用した、包括的なテストフレームワークを導入。

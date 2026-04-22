@@ -241,37 +241,28 @@ describe("Calendar Sync Utility", () => {
 
 ### フェーズ 1
 
-- [ ] homepage-settings.test.ts 実装
-  - [ ] スキーマ定義
-  - [ ] 正常系テスト
-  - [ ] エラー系テスト
-  - [ ] キャッシュ検証
+- [x] homepage-settings.test.ts 実装 — `__tests__/integration/actions/admin/homepage-settings.test.ts` に実装済み（2026-04-22 確認）。個別テストケースの網羅状況は当該ファイル参照
+- [x] audit-log.test.ts 実装 — `__tests__/integration/actions/admin/audit-log.test.ts` に実装済み（2026-04-22 確認）
 
-- [ ] audit-log.test.ts 実装
-  - [ ] スキーマ定義
-  - [ ] 権限検査
-  - [ ] フィルタ検証
-  - [ ] 統計機能
-
-- [ ] page-edit.spec.ts 実装
-  - [ ] セクション追加フロー
-  - [ ] セクション削除フロー
-  - [ ] セクション並び替え
-  - [ ] バリデーション表示
+- [x] page-edit.spec.ts 実装 — `e2e/authenticated/admin/pages.spec.ts` の describe ブロック 8「ページ管理 - セクション管理」として実装済み（2026-04-22、+396 行）
+  - [x] セクション追加フロー（Dialog 起動・type 選択・件数バッジ検証）
+  - [x] セクション削除フロー（オプティミスティック削除 + Sonner「削除しました」トースト）
+  - [ ] セクション並び替え — **除外**（dnd-kit `PointerSensor` 8px 閾値と Playwright `mouse.move` の相性で flaky。将来 Playwright native drag API 安定時に追加）
+  - [x] バリデーション表示（管理用タイトル保存 + dirty 警告ダイアログ `useConfirm`）
 
 ### フェーズ 2
 
-- [ ] editor-comment.test.ts
-- [ ] email-service.test.ts
-- [ ] media-upload.spec.ts
-- [ ] calendar-sync.test.ts
+- [x] editor-comment.test.ts — `__tests__/integration/actions/admin/editor-comment.test.ts` に実装済み（2026-04-22 確認）
+- [x] ~~email-service.test.ts~~ → **再スコープ実装完了**: `src/shared/lib/email-service.ts` は廃止済みで `src/shared/lib/email/` 11 モジュール分割（SSoT は `send.ts`）。`docs/plans/2026-04-22-email-ssot-tests.md` で再スコープし `__tests__/unit/shared/lib/email/send.test.ts` に 9 describe ブロック（sendEmail: no-op/正常系/retry/エラー・hashForKey: 決定論性/出力長/特殊入力）実装済み（2026-04-22）。副次: `package.json` の ADR 0014 drift（削除済み記録だが実態残存していた `test`/`test:watch`/`test:coverage`/`test:coverage:check`）をクリーンアップ
+- [x] media-upload E2E — 既存 `e2e/authenticated/admin/media.spec.ts` に describe ブロック「メディア管理 - ファイルアップロード」（8 tests）追加（2026-04-22、+308 行）。Playwright `setInputFiles()` で in-memory PNG buffer 送信、MIME 拒否（text/plain）・10MB size 超過拒否・dialog state 遷移を検証。DnD / R2 実接続 / バッチ送信は除外（UI/インフラ制約）
+- [x] calendar-sync.test.ts — `__tests__/integration/api/cron/calendar-sync.test.ts` + `calendar-event.test.ts` + `calendar-reservation.test.ts` の 3 ファイルで実装済み（2026-04-22 確認）
 
 ### フェーズ 3
 
-- [ ] post-comment.test.ts
-- [ ] ical-tokens.test.ts
-- [ ] settings E2E テスト群
-- [ ] モック改善
+- [x] post-comment.test.ts — `__tests__/integration/actions/admin/post-comment.test.ts` + `__tests__/unit/domain/post-comments/commands.test.ts`（2026-04-22 確認）
+- [x] ical-tokens.test.ts — `__tests__/integration/actions/admin/ical-tokens.test.ts` + `__tests__/integration/api/ical.test.ts` + `__tests__/unit/lib/ical/ical.test.ts`（2026-04-22 確認）
+- [x] settings E2E テスト群 — `e2e/authenticated/admin/settings.spec.ts`（2026-04-22 確認）
+- [x] モック改善 — **既存テストで網羅済み（2026-04-22 検証）**: (1) GCal retry は `src/shared/lib/google-calendar/retry.ts` SSoT 化済み（429/500/403 reason 判定 + `__tests__/unit/lib/google-calendar/` でカバー）。(2) Resend retry は `src/shared/lib/email/send.ts` SSoT 化 + `__tests__/unit/shared/lib/email/send.test.ts` でカバー（2026-04-22 追加）。(3) Stripe Webhook は `__tests__/unit/api/stripe-webhook.test.ts` 19 tests で `checkout.session.completed` (paid/unpaid/べき等性) / `async_payment_succeeded` / `async_payment_failed` / `checkout.session.expired` (べき等性含む) / `charge.refunded` (べき等性 + edge cases) / 未対応イベント / 署名検証 / 503 設定不正を完全網羅。(4) メール送信失敗シナリオは send.test.ts の retry 動作 / エラーハンドリング describe で完備
 
 ---
 
