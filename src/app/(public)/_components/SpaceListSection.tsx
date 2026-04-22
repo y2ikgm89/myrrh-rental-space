@@ -31,7 +31,7 @@ import {
 } from "@/public/lib/section-style-maps";
 import { parseSpaceImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { SpaceListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 export interface SpaceListData {
   readonly id: string;
@@ -47,13 +47,13 @@ export interface SpaceListData {
 interface SpaceListSectionProps {
   readonly config: SpaceListConfig;
   readonly spaces: readonly SpaceListData[];
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function SpaceListSection({
   config,
   spaces,
-  design,
+  style,
 }: SpaceListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
   const { formatUnit } = useFormatPrice();
@@ -101,17 +101,17 @@ export function SpaceListSection({
       : cn("@container grid gap-6", getCardGridColsClass(colKey));
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
         </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(design)}>
+        <div className="mt-4" style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn("tracking-tight", getTitleClasses(design))}
+            className={cn("tracking-tight", getTitleClasses(style))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -158,7 +158,7 @@ export function SpaceListSection({
               {space.descriptionPlainText && (
                 <p
                   className="mt-1 line-clamp-2 text-sm text-muted-foreground"
-                  style={getTextStyle(design)}
+                  style={getTextStyle(style)}
                 >
                   {space.descriptionPlainText}
                 </p>

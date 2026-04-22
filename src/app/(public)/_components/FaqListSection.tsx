@@ -29,7 +29,7 @@ import {
   parseFaqInitialOpen,
 } from "@/shared/lib/validations/section-parsers";
 import type { FaqListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 export interface FaqData {
   readonly id: string;
@@ -40,7 +40,7 @@ export interface FaqData {
 interface FaqListSectionProps {
   readonly config: FaqListConfig;
   readonly items: readonly FaqData[];
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 const VARIANT_STYLES = {
@@ -70,7 +70,7 @@ const VARIANT_STYLES = {
 export function FaqListSection({
   config,
   items,
-  design,
+  style,
 }: FaqListSectionProps): ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -114,7 +114,7 @@ export function FaqListSection({
 
   return (
     <>
-      <SectionWrapper design={design}>
+      <SectionWrapper style={style}>
         <div className={cn("mx-auto", containerWidth)}>
           <div className="mb-10 text-center md:mb-14">
             <ScrollReveal>
@@ -122,14 +122,10 @@ export function FaqListSection({
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
             </ScrollReveal>
-            <div style={getTitleStyle(design)}>
+            <div style={getTitleStyle(style)}>
               <Heading
                 level={2}
-                className={cn(
-                  "mt-4",
-                  getTitleClasses(design),
-                  "tracking-tight",
-                )}
+                className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
               >
                 <SplitText>{config.title}</SplitText>
               </Heading>

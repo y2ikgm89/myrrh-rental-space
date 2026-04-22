@@ -1,69 +1,86 @@
 /**
- * SectionWrapper — design JSON の共通フィールドを適用するセクションラッパー
+ * SectionWrapper — SectionStylePayload の共通フィールドを CSS クラス/style に変換
  *
- * paddingTop/Bottom, background, maxWidth, backgroundImageUrl,
- * backgroundOverlayOpacity, textAlign, customClass を CSS クラス/style に変換。
+ * Phase B.C2: props を design: SectionDesign → style: SectionStylePayload に刷新。
+ * paddingTop/Bottom, background, container.maxWidth, backgroundImageUrl,
+ * backgroundOverlayOpacity, textAlign, customClass を処理する。
  *
  * design が未設定（デフォルト値）の場合は各コンポーネントの既存見た目を維持。
  */
 
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 // =============================================================================
 // Mapping tables
 // =============================================================================
 
-const paddingTopMap = {
+const paddingTopMap: Record<
+  NonNullable<SectionStylePayload["spacing"]["paddingTop"]>,
+  string
+> = {
   none: "",
   sm: "pt-[var(--space-sm)]",
   md: "pt-[var(--space-md)]",
   lg: "pt-[var(--space-lg)]",
   xl: "pt-[var(--space-xl)]",
-} satisfies Record<NonNullable<SectionDesign["paddingTop"]>, string>;
+};
 
-const paddingBottomMap = {
+const paddingBottomMap: Record<
+  NonNullable<SectionStylePayload["spacing"]["paddingBottom"]>,
+  string
+> = {
   none: "",
   sm: "pb-[var(--space-sm)]",
   md: "pb-[var(--space-md)]",
   lg: "pb-[var(--space-lg)]",
   xl: "pb-[var(--space-xl)]",
-} satisfies Record<NonNullable<SectionDesign["paddingBottom"]>, string>;
+};
 
-const backgroundMap = {
+const backgroundMap: Record<
+  NonNullable<SectionStylePayload["background"]["type"]>,
+  string
+> = {
   default: "",
   surface: "bg-surface",
-  accent: "bg-accent/5",
-  primary: "bg-accent/10",
+  // TODO: Phase B.C2 — muted/gradient は暫定で surface/accent 相当に仮置き
+  muted: "bg-muted",
+  gradient: "bg-accent/5",
   image: "bg-cover bg-center bg-no-repeat",
-} satisfies Record<NonNullable<SectionDesign["background"]>, string>;
+};
 
-const maxWidthMap = {
+const maxWidthMap: Record<
+  NonNullable<SectionStylePayload["container"]["maxWidth"]>,
+  string
+> = {
   sm: "max-w-3xl",
   md: "max-w-4xl",
   editorial: "max-w-[var(--container-editorial)]",
   lg: "max-w-6xl",
   xl: "max-w-7xl",
   full: "max-w-full",
-} satisfies Record<NonNullable<SectionDesign["maxWidth"]>, string>;
+};
 
-const textAlignMap = {
+const textAlignMap: Record<
+  NonNullable<SectionStylePayload["typography"]["textAlign"]>,
+  string
+> = {
   left: "text-left",
   center: "text-center",
   right: "text-right",
-} satisfies Record<NonNullable<SectionDesign["textAlign"]>, string>;
+};
 
 // =============================================================================
 // Component
 // =============================================================================
 
 interface SectionWrapperProps {
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
   readonly children: ReactNode;
   readonly className?: string;
   /** 追加の inline style（config.backgroundColor 等） */
-  readonly style?: React.CSSProperties;
+  readonly styleProp?: React.CSSProperties;
   /** セクション固有のデフォルト padding を上書きしたくない場合に true */
   readonly skipPadding?: boolean;
   /** コンテナ div を省略する場合に true（Hero 等の特殊レイアウト用） */
@@ -71,32 +88,35 @@ interface SectionWrapperProps {
 }
 
 export function SectionWrapper({
-  design,
+  style,
   children,
   className,
-  style: styleProp,
+  styleProp,
   skipPadding,
   skipContainer,
 }: SectionWrapperProps): ReactElement {
   const paddingClass = skipPadding
     ? ""
     : cn(
-        paddingTopMap[design.paddingTop],
-        paddingBottomMap[design.paddingBottom],
+        paddingTopMap[style.spacing.paddingTop],
+        paddingBottomMap[style.spacing.paddingBottom],
       );
-  const bgClass = backgroundMap[design.background];
-  const maxWidthClass = maxWidthMap[design.maxWidth];
+  const bgClass = backgroundMap[style.background.type];
+  const maxWidthClass = maxWidthMap[style.container.maxWidth];
   const alignClass =
-    design.textAlign !== "left" ? textAlignMap[design.textAlign] : "";
+    style.typography.textAlign !== "left"
+      ? textAlignMap[style.typography.textAlign]
+      : "";
 
-  const hasBgImage = design.background === "image" && design.backgroundImageUrl;
+  const hasBgImage =
+    style.background.type === "image" && style.background.imageUrl;
   const bgImageStyle = hasBgImage
-    ? { backgroundImage: `url(${design.backgroundImageUrl})` }
+    ? { backgroundImage: `url(${style.background.imageUrl})` }
     : undefined;
   const mergedStyle =
     bgImageStyle || styleProp ? { ...bgImageStyle, ...styleProp } : undefined;
 
-  const showOverlay = hasBgImage && design.backgroundOverlayOpacity > 0;
+  const showOverlay = hasBgImage && style.background.overlayOpacity > 0;
 
   return (
     <section
@@ -105,7 +125,7 @@ export function SectionWrapper({
         paddingClass,
         bgClass,
         alignClass,
-        design.customClass,
+        style.customClass,
         className,
       ]
         .filter(Boolean)
@@ -115,7 +135,7 @@ export function SectionWrapper({
       {showOverlay && (
         <div
           className="pointer-events-none absolute inset-0 bg-foreground"
-          style={{ opacity: design.backgroundOverlayOpacity / 100 }}
+          style={{ opacity: style.background.overlayOpacity / 100 }}
         />
       )}
       {skipContainer ? (
@@ -141,40 +161,44 @@ export function SectionWrapper({
 /**
  * titleSize → レスポンシブ CSS クラスのマッピング
  *
- * - 値は `titleSizeValues`（section-design.ts）と 1:1 対応
- * - `satisfies` で網羅チェック: titleSizeValues に値追加時にコンパイルエラー
- * - 新サイズ追加時: section-design.ts の titleSizeValues → ここに追加 → DesignFields の titleSizeLabels
+ * - 値は SectionStylePayload.typography.titleSize と 1:1 対応
+ * - `satisfies` で網羅チェック: titleSize に値追加時にコンパイルエラー
  */
 export const titleSizeMap = {
   sm: "text-xl md:text-2xl",
   md: "text-2xl md:text-3xl",
   lg: "text-2xl md:text-3xl lg:text-4xl",
   xl: "text-3xl md:text-4xl lg:text-5xl",
-  "2xl": "text-4xl md:text-5xl lg:text-6xl",
-  "3xl": "text-3xl sm:text-4xl md:text-5xl lg:text-7xl",
-} satisfies Record<NonNullable<SectionDesign["titleSize"]>, string>;
+} satisfies Record<
+  NonNullable<SectionStylePayload["typography"]["titleSize"]>,
+  string
+>;
 
 /**
- * design から title 用 CSS クラスを生成
+ * style から title 用 CSS クラスを生成
  */
-export function getTitleClasses(design: SectionDesign): string {
-  return titleSizeMap[design.titleSize] ?? titleSizeMap.lg;
+export function getTitleClasses(style: SectionStylePayload): string {
+  return titleSizeMap[style.typography.titleSize] ?? titleSizeMap.lg;
 }
 
 /**
- * design から title 用 inline style を生成（カラー指定時のみ）
+ * style から title 用 inline style を生成（カラー指定時のみ）
  */
 export function getTitleStyle(
-  design: SectionDesign,
+  style: SectionStylePayload,
 ): React.CSSProperties | undefined {
-  return design.titleColor ? { color: design.titleColor } : undefined;
+  return style.typography.titleColor
+    ? { color: style.typography.titleColor }
+    : undefined;
 }
 
 /**
- * design から body text 用 inline style を生成（カラー指定時のみ）
+ * style から body text 用 inline style を生成（カラー指定時のみ）
  */
 export function getTextStyle(
-  design: SectionDesign,
+  style: SectionStylePayload,
 ): React.CSSProperties | undefined {
-  return design.textColor ? { color: design.textColor } : undefined;
+  return style.typography.textColor
+    ? { color: style.typography.textColor }
+    : undefined;
 }

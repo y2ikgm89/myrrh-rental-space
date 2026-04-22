@@ -25,11 +25,11 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { TestimonialConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface TestimonialSectionProps {
   readonly config: TestimonialConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 function StarRating({ rating }: { readonly rating: number }): ReactElement {
@@ -72,7 +72,7 @@ const CARD_CLASS = {
 
 export function TestimonialSection({
   config,
-  design,
+  style,
 }: TestimonialSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -110,17 +110,17 @@ export function TestimonialSection({
   if (config.items.length === 0) return <></>;
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
         </ScrollReveal>
-        <div style={getTitleStyle(design)}>
+        <div style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+            className={cn("mt-4 tracking-tight", getTitleClasses(style))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -180,7 +180,7 @@ export function TestimonialSection({
                         : "text-sm leading-relaxed",
                     "text-foreground",
                   )}
-                  style={getTextStyle(design)}
+                  style={getTextStyle(style)}
                 >
                   {variant === "minimal" && (
                     <span

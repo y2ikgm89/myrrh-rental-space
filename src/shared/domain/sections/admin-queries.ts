@@ -30,7 +30,6 @@ function toSectionData(section: {
   type: string;
   title: string | null;
   config: unknown;
-  design: unknown;
   contentHtml: string | null;
   contentJson: unknown;
   order: number;
@@ -41,6 +40,8 @@ function toSectionData(section: {
   return {
     ...section,
     config: parseSectionConfig(section.type, section.config),
+    // Compat shim for DesignFields (Phase B.5 で DesignFields と共に削除予定)
+    design: {} as unknown,
   };
 }
 
@@ -64,7 +65,6 @@ export async function getHomepageSectionsQuery() {
       type: true,
       title: true,
       config: true,
-      design: true,
       contentHtml: true,
       contentJson: true,
       order: true,
@@ -90,7 +90,6 @@ export async function getPublicHomepageSectionsQuery() {
       type: true,
       title: true,
       config: true,
-      design: true,
       contentHtml: true,
       contentJson: true,
       order: true,

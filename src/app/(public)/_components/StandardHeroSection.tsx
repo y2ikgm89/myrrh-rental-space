@@ -31,7 +31,7 @@ import {
   SCROLL_TRIGGER,
 } from "@/public/lib/animations";
 import type { HeroConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -79,12 +79,12 @@ const HEIGHT_MAP: Record<string, string> = {
 
 interface StandardHeroSectionProps {
   readonly config: HeroConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function StandardHeroSection({
   config,
-  design,
+  style,
 }: StandardHeroSectionProps): ReactElement {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -174,11 +174,11 @@ export function StandardHeroSection({
 
         <Container className="relative w-full !max-w-6xl">
           {config.title && (
-            <div style={getTitleStyle(design)}>
+            <div style={getTitleStyle(style)}>
               <Heading
                 level={1}
                 className={cn(
-                  getTitleClasses(design),
+                  getTitleClasses(style),
                   "uppercase tracking-tight",
                 )}
               >
@@ -192,7 +192,7 @@ export function StandardHeroSection({
             <ScrollReveal delay={0.5}>
               <p
                 className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {config.subtitle}
               </p>
@@ -232,11 +232,11 @@ export function StandardHeroSection({
         >
           <div className="flex flex-1 flex-col justify-center py-12 md:py-0 md:pr-12">
             {config.title && (
-              <div style={getTitleStyle(design)}>
+              <div style={getTitleStyle(style)}>
                 <Heading
                   level={1}
                   className={cn(
-                    getTitleClasses(design),
+                    getTitleClasses(style),
                     "leading-tight tracking-tight",
                   )}
                 >
@@ -250,7 +250,7 @@ export function StandardHeroSection({
               <ScrollReveal delay={0.2}>
                 <p
                   className="mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
-                  style={getTextStyle(design)}
+                  style={getTextStyle(style)}
                 >
                   {config.subtitle}
                 </p>
@@ -341,11 +341,11 @@ export function StandardHeroSection({
         className="relative z-10 px-[var(--container-padding)] text-center"
       >
         {config.title && (
-          <div style={getTitleStyle(design)}>
+          <div style={getTitleStyle(style)}>
             <Heading
               level={1}
               className={cn(
-                getTitleClasses(design),
+                getTitleClasses(style),
                 "leading-tight tracking-tight",
               )}
             >
@@ -360,7 +360,7 @@ export function StandardHeroSection({
           <ScrollReveal delay={0.2}>
             <p
               className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-muted-foreground md:mt-6 md:text-base"
-              style={getTextStyle(design)}
+              style={getTextStyle(style)}
             >
               {config.subtitle}
             </p>

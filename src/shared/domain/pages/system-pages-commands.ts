@@ -60,7 +60,6 @@ export async function ensurePageSectionsCommand(
             type: section.type,
             title: section.title,
             config: section.config,
-            design: section.design ?? {},
             contentHtml: section.content,
             order: section.order,
             isActive: section.isActive,

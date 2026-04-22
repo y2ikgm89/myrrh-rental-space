@@ -22,7 +22,7 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { parseConceptLayout } from "@/shared/lib/validations/section-parsers";
 import type { ConceptConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 /** text-left は CSS デフォルトなので省略し、非デフォルト値のみクラスを付与 */
 const TEXT_ALIGN_CLASS: Record<string, string | undefined> = {
@@ -32,12 +32,12 @@ const TEXT_ALIGN_CLASS: Record<string, string | undefined> = {
 
 interface ConceptSectionProps {
   readonly config: ConceptConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function ConceptSection({
   config,
-  design,
+  style,
 }: ConceptSectionProps): ReactElement {
   const heading = config.heading;
   const body = config.body;
@@ -55,13 +55,10 @@ export function ConceptSection({
         )}
       </ScrollReveal>
 
-      <div className="mt-6" style={getTitleStyle(design)}>
+      <div className="mt-6" style={getTitleStyle(style)}>
         <Heading
           level={2}
-          className={cn(
-            getTitleClasses(design),
-            "leading-[1.1] tracking-tight",
-          )}
+          className={cn(getTitleClasses(style), "leading-[1.1] tracking-tight")}
         >
           <SplitText>{heading}</SplitText>
         </Heading>
@@ -73,7 +70,7 @@ export function ConceptSection({
             "mt-6 text-sm leading-[1.9] text-muted-foreground md:text-base",
             isStacked && "mx-auto max-w-2xl",
           )}
-          style={getTextStyle(design)}
+          style={getTextStyle(style)}
         >
           {body.split("\n").map((line, i, arr) => (
             // eslint-disable-next-line @eslint-react/no-array-index-key
@@ -89,7 +86,7 @@ export function ConceptSection({
 
   if (isStacked) {
     return (
-      <SectionWrapper design={design}>
+      <SectionWrapper style={style}>
         <div className="mx-auto max-w-3xl text-center">
           {imageUrl && (
             <div className="mb-12">
@@ -109,7 +106,7 @@ export function ConceptSection({
   }
 
   return (
-    <SectionWrapper design={design} skipContainer>
+    <SectionWrapper style={style} skipContainer>
       <div className="grid grid-cols-1 md:grid-cols-2">
         {/* Image — full bleed, no container padding */}
         <div

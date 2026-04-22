@@ -3,11 +3,14 @@
  *
  * Server Component。PublicSection を受け取り、section.type に応じて
  * v3 コンポーネントを出し分ける。全ページ共通で使用。
+ *
+ * Phase B.C3: resolveSectionStyle を呼び出して SectionStylePayload を生成。
+ * page / settings は Phase B.C5 で実際のデータが渡される。
+ * それまでは null stub を使用し DEFAULT_SECTION_STYLE に fallback する。
  */
 
 import type { ReactElement } from "react";
 import { SectionType } from "@/shared/lib/validations/section";
-import { parseSectionDesign } from "@/shared/lib/validations/section";
 import {
   getHeroConfig,
   getHeroParallaxConfig,
@@ -31,11 +34,14 @@ import {
   getPublishedFaqItems,
   getShowcaseSpaces,
   type PublicSection,
+  type PublicPageForStyle,
+  type PublicSettingsForStyle,
 } from "@/shared/domain/sections/queries";
 import { getPublishedNews } from "@/shared/domain/news/queries";
 import { getPublishedPosts } from "@/shared/domain/posts/queries";
 import { getInstagramPosts } from "@/shared/domain/instagram/queries";
 import { getDecryptedGoogleMapsApiKey } from "@/shared/domain/settings/api-key-queries";
+import { resolveSectionStyle } from "@/shared/domain/section-styles/style-resolver";
 
 // v3 components
 import { HeroSection } from "../../../_components/HeroSection";
@@ -63,14 +69,33 @@ import type { NewsData } from "../../../_components/NewsListSection";
 import type { PostData } from "../../../_components/PostListSection";
 import type { FaqData } from "../../../_components/FaqListSection";
 
+// Phase B.C5: null stubs — replaced with real data when pages/queries include pageStyle/globalSectionStyle
+const NULL_PAGE_STYLE: PublicPageForStyle = { pageStyle: null };
+const NULL_SETTINGS_STYLE: PublicSettingsForStyle = {
+  globalSectionStyle: null,
+};
+
 interface SectionRendererProps {
   readonly section: PublicSection;
+  /**
+   * Page-level style context.
+   * Phase B.C5 で実データが渡される。それまで null stub を使用。
+   */
+  readonly page?: PublicPageForStyle;
+  /**
+   * Settings-level global style context.
+   * Phase B.C5 で実データが渡される。それまで null stub を使用。
+   */
+  readonly settings?: PublicSettingsForStyle;
 }
 
 export async function SectionRenderer({
   section,
+  page = NULL_PAGE_STYLE,
+  settings = NULL_SETTINGS_STYLE,
 }: SectionRendererProps): Promise<ReactElement | null> {
-  const design = parseSectionDesign(section.design);
+  // C3: resolveSectionStyle でカスケード解決（Line 28-49 の resolveSectionStyle を参照）
+  const resolved = resolveSectionStyle(section, page, settings);
 
   switch (section.type) {
     // =========================================================================
@@ -79,12 +104,12 @@ export async function SectionRenderer({
 
     case SectionType.HERO: {
       const config = getHeroConfig(section.config);
-      return <StandardHeroSection config={config} design={design} />;
+      return <StandardHeroSection config={config} style={resolved} />;
     }
 
     case SectionType.HERO_PARALLAX: {
       const config = getHeroParallaxConfig(section.config);
-      return <HeroSection config={config} design={design} />;
+      return <HeroSection config={config} style={resolved} />;
     }
 
     // =========================================================================
@@ -98,14 +123,14 @@ export async function SectionRenderer({
           config={config}
           content={section.contentHtml ?? ""}
           title={section.title}
-          design={design}
+          style={resolved}
         />
       );
     }
 
     case SectionType.CONCEPT: {
       const config = getConceptConfig(section.config);
-      return <ConceptSection config={config} design={design} />;
+      return <ConceptSection config={config} style={resolved} />;
     }
 
     // =========================================================================
@@ -129,7 +154,7 @@ export async function SectionRenderer({
         mainImageUrl: s.mainImageUrl,
       }));
       return (
-        <SpaceListSection config={config} spaces={spaces} design={design} />
+        <SpaceListSection config={config} spaces={spaces} style={resolved} />
       );
     }
 
@@ -153,7 +178,11 @@ export async function SectionRenderer({
         locationName: s.location?.name ?? null,
       }));
       return (
-        <SpaceShowcaseSection config={config} spaces={spaces} design={design} />
+        <SpaceShowcaseSection
+          config={config}
+          spaces={spaces}
+          style={resolved}
+        />
       );
     }
 
@@ -167,7 +196,7 @@ export async function SectionRenderer({
         title: n.title,
         publishedAt: n.publishedAt,
       }));
-      return <NewsListSection config={config} news={news} design={design} />;
+      return <NewsListSection config={config} news={news} style={resolved} />;
     }
 
     case SectionType.POST_LIST: {
@@ -186,7 +215,7 @@ export async function SectionRenderer({
         publishedAt: p.publishedAt,
         categoryName: p.category?.name ?? null,
       }));
-      return <PostListSection config={config} posts={posts} design={design} />;
+      return <PostListSection config={config} posts={posts} style={resolved} />;
     }
 
     case SectionType.FAQ_LIST: {
@@ -207,7 +236,7 @@ export async function SectionRenderer({
               answer: f.answer,
             }),
           );
-      return <FaqListSection config={config} items={items} design={design} />;
+      return <FaqListSection config={config} items={items} style={resolved} />;
     }
 
     // =========================================================================
@@ -216,17 +245,17 @@ export async function SectionRenderer({
 
     case SectionType.FEATURES: {
       const config = getFeaturesConfig(section.config);
-      return <FeaturesSection config={config} design={design} />;
+      return <FeaturesSection config={config} style={resolved} />;
     }
 
     case SectionType.TESTIMONIAL: {
       const config = getTestimonialConfig(section.config);
-      return <TestimonialSection config={config} design={design} />;
+      return <TestimonialSection config={config} style={resolved} />;
     }
 
     case SectionType.GALLERY: {
       const config = getGalleryConfig(section.config);
-      return <GallerySection config={config} design={design} />;
+      return <GallerySection config={config} style={resolved} />;
     }
 
     // =========================================================================
@@ -235,34 +264,36 @@ export async function SectionRenderer({
 
     case SectionType.CTA: {
       const config = getCtaConfig(section.config);
-      return <CTASection config={config} design={design} />;
+      return <CTASection config={config} style={resolved} />;
     }
 
     case SectionType.CONTACT_FORM: {
       const config = getContactFormConfig(section.config);
-      return <ContactFormSection config={config} design={design} />;
+      return <ContactFormSection config={config} style={resolved} />;
     }
 
     case SectionType.MAP: {
       const config = getMapConfig(section.config);
       const mapApiKey = await getDecryptedGoogleMapsApiKey();
-      return <MapSection config={config} design={design} apiKey={mapApiKey} />;
+      return <MapSection config={config} style={resolved} apiKey={mapApiKey} />;
     }
 
     case SectionType.EMBED: {
       const config = getEmbedConfig(section.config);
-      return <EmbedSection config={config} design={design} />;
+      return <EmbedSection config={config} style={resolved} />;
     }
 
     case SectionType.INSTAGRAM: {
       const config = getInstagramConfig(section.config);
       const posts = await getInstagramPosts();
-      return <InstagramSection config={config} design={design} posts={posts} />;
+      return (
+        <InstagramSection config={config} style={resolved} posts={posts} />
+      );
     }
 
     case SectionType.EVENT_CALENDAR: {
       // event-calendar は /events ページで FullCalendar として直接実装済み
-      // SectionRenderer 経由では null を返す
+      // SectionRenderer 経由では null を返す（style 統合対象外）
       return null;
     }
 

@@ -11,7 +11,10 @@ import { getPublishedPost } from "@/shared/domain/posts/queries";
 import { resolvePostDetailRoute } from "@/shared/domain/posts/routing";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 import { getPageSections } from "@/shared/domain/sections/queries";
-import { getPermalinkSettings } from "@/shared/domain/settings/queries/display";
+import {
+  getPermalinkSettings,
+  getPublicSettingsForStyle,
+} from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "../_shared/components/sections/section-renderer";
 
 interface PageProps {
@@ -56,7 +59,12 @@ export default async function DynamicPage({ params }: PageProps) {
     const page = await getPublicPage(slug);
 
     if (page) {
-      const sections = await getPageSections(page.id);
+      const [sections, settings] = await Promise.all([
+        getPageSections(page.id),
+        getPublicSettingsForStyle(),
+      ]);
+
+      const pageCtx = { pageStyle: page.pageStyle };
 
       return (
         <>
@@ -67,7 +75,12 @@ export default async function DynamicPage({ params }: PageProps) {
             ]}
           />
           {sections.map((section) => (
-            <SectionRenderer key={section.id} section={section} />
+            <SectionRenderer
+              key={section.id}
+              section={section}
+              page={pageCtx}
+              settings={settings}
+            />
           ))}
         </>
       );

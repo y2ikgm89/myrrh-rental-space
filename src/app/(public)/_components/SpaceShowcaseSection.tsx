@@ -20,7 +20,7 @@ import { cn } from "@/shared/lib/cn";
 import { SpaceCard } from "../spaces/_components/space-card";
 import { getCardGridColsClass } from "@/public/lib/section-style-maps";
 import type { SpaceShowcaseConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 export interface ShowcaseSpaceData {
   readonly id: string;
@@ -39,19 +39,19 @@ export interface ShowcaseSpaceData {
 interface SpaceShowcaseSectionProps {
   readonly config: SpaceShowcaseConfig;
   readonly spaces: readonly ShowcaseSpaceData[];
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function SpaceShowcaseSection({
   config,
   spaces,
-  design,
+  style,
 }: SpaceShowcaseSectionProps): ReactElement {
   const featured = spaces[0];
   const remaining = spaces.slice(1);
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       {/* Section heading — left aligned, editorial */}
       <div className="mb-12 flex items-end justify-between md:mb-20">
         <div>
@@ -59,10 +59,10 @@ export function SpaceShowcaseSection({
             {config.sectionLabel ? (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             ) : null}
-            <div className="mt-4" style={getTitleStyle(design)}>
+            <div className="mt-4" style={getTitleStyle(style)}>
               <Heading
                 level={2}
-                className={cn(getTitleClasses(design), "tracking-tight")}
+                className={cn(getTitleClasses(style), "tracking-tight")}
               >
                 {config.title}
               </Heading>

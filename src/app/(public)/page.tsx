@@ -17,6 +17,10 @@ import {
   getShowcaseSpaces,
   type PublicSection,
 } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
+import { resolveSectionStyle } from "@/shared/domain/section-styles/style-resolver";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 import {
   HowItWorksSection,
@@ -125,8 +129,9 @@ function mapCtaConfig(config: unknown): CtaSectionProps {
 function renderHomepageSection(
   section: PublicSection,
   spaces: readonly ShowcaseSpace[],
+  resolvedStyle: SectionStylePayload,
 ): ReactElement | null {
-  const { type, config, design } = section;
+  const { type, config } = section;
 
   switch (type) {
     case "homepage-how-it-works":
@@ -134,7 +139,7 @@ function renderHomepageSection(
         <HowItWorksSection
           key={section.id}
           {...mapHowItWorksConfig(config)}
-          design={design}
+          resolvedStyle={resolvedStyle}
         />
       );
     case "homepage-spaces":
@@ -143,7 +148,7 @@ function renderHomepageSection(
           key={section.id}
           spaces={spaces}
           {...mapSpacesConfig(config)}
-          design={design}
+          resolvedStyle={resolvedStyle}
         />
       );
     case "homepage-features":
@@ -151,7 +156,7 @@ function renderHomepageSection(
         <FeaturesSection
           key={section.id}
           {...mapFeaturesConfig(config)}
-          design={design}
+          resolvedStyle={resolvedStyle}
         />
       );
     case "homepage-cta":
@@ -159,7 +164,7 @@ function renderHomepageSection(
         <CtaSection
           key={section.id}
           {...mapCtaConfig(config)}
-          design={design}
+          resolvedStyle={resolvedStyle}
         />
       );
     default:
@@ -170,11 +175,14 @@ function renderHomepageSection(
 export default async function HomePage(): Promise<ReactElement> {
   await connection();
 
-  const [webSiteData, rawSpaces, homepage] = await Promise.all([
+  const [webSiteData, rawSpaces, homepage, page, settings] = await Promise.all([
     getWebSiteJsonLdData(),
     getShowcaseSpaces(6, true),
     getHomepagePublicData(),
+    getPublicPage("home"),
+    getPublicSettingsForStyle(),
   ]);
+  const pageForStyle = { pageStyle: page?.pageStyle ?? null };
 
   const spaces: ShowcaseSpace[] = rawSpaces.map((s) => ({
     id: s.id,
@@ -217,7 +225,11 @@ export default async function HomePage(): Promise<ReactElement> {
         </>
       ) : (
         homepageSections.map((section) =>
-          renderHomepageSection(section, spaces),
+          renderHomepageSection(
+            section,
+            spaces,
+            resolveSectionStyle(section, pageForStyle, settings),
+          ),
         )
       )}
     </>

@@ -56,31 +56,3 @@ export type SectionCategory =
   | "list"
   | "functional"
   | "media";
-
-// ────────────────────────────────────────────
-// Public Section Component Props
-// ────────────────────────────────────────────
-
-/** 公開ページセクションコンポーネントの props */
-export interface SectionProps<TConfig> {
-  readonly config: TConfig;
-  readonly design: SectionDesign;
-  readonly section: PublicSectionData;
-}
-
-/** セクションデザイン（全タイプ共通ビジュアル設定） */
-export interface SectionDesign {
-  readonly backgroundColor?: string;
-  readonly padding?: string;
-  readonly containerWidth?: string;
-}
-
-/** SectionRenderer に渡される DB セクションデータ */
-export interface PublicSectionData {
-  readonly id: string;
-  readonly type: string;
-  readonly title: string | null;
-  readonly contentHtml: string;
-  readonly contentJson: unknown;
-  readonly isActive: boolean;
-}

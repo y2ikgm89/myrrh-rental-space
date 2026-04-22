@@ -15,9 +15,9 @@ import {
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import { SectionHeader } from "@/public/components/sections/SectionHeader";
 import {
-  defaultSectionDesign,
-  parseSectionDesign,
-} from "@/shared/lib/validations/section";
+  DEFAULT_SECTION_STYLE,
+  type SectionStylePayload,
+} from "@/shared/domain/section-styles/types";
 
 export interface HowItWorksStep {
   readonly title: string;
@@ -33,8 +33,8 @@ export interface HowItWorksSectionProps {
   readonly title: string;
   readonly steps: readonly HowItWorksStep[];
   readonly valueProps: readonly ValueProp[];
-  /** Section.design JSON（DB） */
-  readonly design?: unknown;
+  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  readonly resolvedStyle?: SectionStylePayload;
 }
 
 const STEP_ICONS = [IconSearch, IconCalendarEvent, IconCircleCheck];
@@ -45,7 +45,10 @@ const VALUE_PROP_ICONS = [
   IconCreditCard,
 ];
 
-export const howItWorksDefaultProps: Omit<HowItWorksSectionProps, "design"> = {
+export const howItWorksDefaultProps: Omit<
+  HowItWorksSectionProps,
+  "resolvedStyle"
+> = {
   label: "How to Reserve",
   title: "ご利用の流れ",
   steps: [
@@ -75,17 +78,15 @@ export function HowItWorksSection({
   title = howItWorksDefaultProps.title,
   steps = howItWorksDefaultProps.steps,
   valueProps = howItWorksDefaultProps.valueProps,
-  design,
+  resolvedStyle = DEFAULT_SECTION_STYLE,
 }: Partial<HowItWorksSectionProps> = {}): ReactElement {
-  const resolvedDesign = parseSectionDesign(design ?? defaultSectionDesign);
-
   return (
-    <SectionWrapper design={resolvedDesign}>
+    <SectionWrapper style={resolvedStyle}>
       <ScrollReveal>
         <SectionHeader
           label={label}
           title={title}
-          textAlign={resolvedDesign.textAlign}
+          textAlign={resolvedStyle.typography.textAlign}
           className="text-center"
         />
       </ScrollReveal>

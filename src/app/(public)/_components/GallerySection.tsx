@@ -36,16 +36,16 @@ import {
   parseGalleryHoverEffect,
 } from "@/shared/lib/validations/section-parsers";
 import type { GalleryConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface GallerySectionProps {
   readonly config: GalleryConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function GallerySection({
   config,
-  design,
+  style,
 }: GallerySectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -127,7 +127,7 @@ export function GallerySection({
       : undefined;
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       {config.title && (
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>
@@ -135,10 +135,10 @@ export function GallerySection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
           </ScrollReveal>
-          <div style={getTitleStyle(design)}>
+          <div style={getTitleStyle(style)}>
             <Heading
               level={2}
-              className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+              className={cn("mt-4 tracking-tight", getTitleClasses(style))}
             >
               <SplitText>{config.title}</SplitText>
             </Heading>
@@ -190,7 +190,7 @@ export function GallerySection({
             {image.caption && (
               <p
                 className="mt-2 text-xs text-muted-foreground"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {image.caption}
               </p>

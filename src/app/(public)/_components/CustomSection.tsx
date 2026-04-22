@@ -17,7 +17,7 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { cn } from "@/shared/lib/cn";
 import type { CustomConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 
 const MAX_WIDTH_MAP = {
@@ -39,20 +39,20 @@ interface CustomSectionProps {
   readonly config: CustomConfig;
   readonly content: string | null;
   readonly title: string | null;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function CustomSection({
   config,
   content,
   title,
-  design,
+  style,
 }: CustomSectionProps): ReactElement {
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
   const paddingClass = PADDING_MAP[config.padding] ?? PADDING_MAP.md;
 
   return (
-    <SectionWrapper design={design} skipPadding skipContainer>
+    <SectionWrapper style={style} skipPadding skipContainer>
       <div className={paddingClass}>
         <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
           {title && (
@@ -61,10 +61,10 @@ export function CustomSection({
                 {config.sectionLabel && (
                   <SectionLabel>{config.sectionLabel}</SectionLabel>
                 )}
-                <div className="mt-4" style={getTitleStyle(design)}>
+                <div className="mt-4" style={getTitleStyle(style)}>
                   <Heading
                     level={2}
-                    className={cn(getTitleClasses(design), "tracking-tight")}
+                    className={cn(getTitleClasses(style), "tracking-tight")}
                   >
                     {title}
                   </Heading>
@@ -75,7 +75,7 @@ export function CustomSection({
 
           {content && (
             <ScrollReveal>
-              <div style={getTextStyle(design)}>
+              <div style={getTextStyle(style)}>
                 <SanitizedHtml
                   html={content}
                   className="prose prose-neutral max-w-none"

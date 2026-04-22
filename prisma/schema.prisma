@@ -975,8 +975,6 @@ model Section {
   contentHtml String?     @db.Text @map("content") // HTMLキャッシュ（CUSTOM等で使用）
   contentJson Json? // Lexical EditorState JSON（プライマリ）
   config      Json        @default("{}") // タイプ別設定（Zodで型安全）
-  /// @deprecated Phase B.P4 で削除予定。新規参照は styleId + styleOverride を使う（ADR 0017）。
-  design    Json        @default("{}") // ビジュアル設定（共通）
   /// Section preset cascade 層（ADR 0017 §D2 specificity #4）。SectionStyle.scope="section" を推奨。
   styleId     String?     @db.VarChar(30)
   /// Section instance override cascade 層（ADR 0017 §D2 specificity #5）。`Partial<SectionStylePayload>` 相当の JSON。

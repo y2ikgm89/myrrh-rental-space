@@ -4,9 +4,9 @@ import { SplitText } from "@/public/components/animations/split-text";
 import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import {
-  defaultSectionDesign,
-  parseSectionDesign,
-} from "@/shared/lib/validations/section";
+  DEFAULT_SECTION_STYLE,
+  type SectionStylePayload,
+} from "@/shared/domain/section-styles/types";
 
 export interface CtaSectionProps {
   readonly label: string;
@@ -14,10 +14,11 @@ export interface CtaSectionProps {
   readonly description: string;
   readonly buttonText: string;
   readonly buttonUrl: string;
-  readonly design?: unknown;
+  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  readonly resolvedStyle?: SectionStylePayload;
 }
 
-export const ctaDefaultProps: Omit<CtaSectionProps, "design"> = {
+export const ctaDefaultProps: Omit<CtaSectionProps, "resolvedStyle"> = {
   label: "Reservation",
   title: "あなたに最適な空間を",
   description:
@@ -32,12 +33,10 @@ export function CtaSection({
   description = ctaDefaultProps.description,
   buttonText = ctaDefaultProps.buttonText,
   buttonUrl = ctaDefaultProps.buttonUrl,
-  design,
+  resolvedStyle = DEFAULT_SECTION_STYLE,
 }: Partial<CtaSectionProps> = {}): ReactElement {
-  const resolvedDesign = parseSectionDesign(design ?? defaultSectionDesign);
-
   return (
-    <SectionWrapper design={resolvedDesign}>
+    <SectionWrapper style={resolvedStyle}>
       <p className="text-[0.8rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>

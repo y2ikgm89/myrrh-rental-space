@@ -20,34 +20,34 @@ import { cn } from "@/shared/lib/cn";
 import { getGridColsClass, GAP_MAP } from "@/public/lib/section-style-maps";
 import type { InstagramConfig } from "@/shared/lib/validations/section";
 import { parseGapSize } from "@/shared/lib/validations/section-parsers";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import type { InstagramPostData } from "@/shared/domain/instagram/types";
 
 interface InstagramSectionProps {
   readonly config: InstagramConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
   readonly posts: InstagramPostData[];
 }
 
 export function InstagramSection({
   config,
-  design,
+  style,
   posts,
 }: InstagramSectionProps): ReactElement {
   const displayPosts = posts.slice(0, config.count);
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mb-10 text-center md:mb-14">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
         </ScrollReveal>
-        <div style={getTitleStyle(design)}>
+        <div style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn("mt-4", getTitleClasses(design), "tracking-tight")}
+            className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
           >
             {config.title}
           </Heading>

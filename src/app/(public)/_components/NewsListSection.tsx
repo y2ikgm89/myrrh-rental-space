@@ -25,7 +25,7 @@ import { cn } from "@/shared/lib/cn";
 import { DURATION, EASE, STAGGER } from "@/public/lib/animations";
 import { getGridColsClass } from "@/public/lib/section-style-maps";
 import type { NewsListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 export interface NewsData {
   readonly id: string;
@@ -38,7 +38,7 @@ export interface NewsData {
 interface NewsListSectionProps {
   readonly config: NewsListConfig;
   readonly news: readonly NewsData[];
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 function formatDate(date: string | null): string {
@@ -55,7 +55,7 @@ function formatDate(date: string | null): string {
 export function NewsListSection({
   config,
   news,
-  design,
+  style,
 }: NewsListSectionProps): ReactElement {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -95,17 +95,17 @@ export function NewsListSection({
   const isCard = config.layout === "card";
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mb-10 text-center md:mb-14">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
         </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(design)}>
+        <div className="mt-4" style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn(getTitleClasses(design), "tracking-tight")}
+            className={cn(getTitleClasses(style), "tracking-tight")}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -130,7 +130,7 @@ export function NewsListSection({
             >
               <time
                 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}
               </time>
@@ -147,7 +147,7 @@ export function NewsListSection({
             >
               <time
                 className="shrink-0 text-[11px] tabular-nums uppercase tracking-[0.18em] text-muted-foreground"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {formatDate(item.publishedAt)}
               </time>

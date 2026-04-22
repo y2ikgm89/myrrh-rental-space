@@ -19,6 +19,20 @@ import {
 } from "@/shared/lib/validations/params";
 import { getPublicPage } from "@/shared/domain/pages/queries";
 
+/**
+ * SectionStyle の最小 shape — DB モデルから必要なフィールドのみ抽出。
+ * section-renderer が resolveSectionStyle に渡す型として使用する。
+ * Phase B.C3 で追加（style-resolver.ts の SectionStyle 型と同形）。
+ */
+export type PublicSectionStyle = {
+  readonly spacing: unknown;
+  readonly background: unknown;
+  readonly container: unknown;
+  readonly typography: unknown;
+  readonly animation: unknown;
+  readonly customClass: string | null;
+};
+
 export type PublicSection = {
   readonly id: string;
   readonly type: string;
@@ -26,8 +40,27 @@ export type PublicSection = {
   readonly contentHtml: string | null;
   readonly contentJson: unknown | null;
   readonly config: unknown;
-  readonly design: unknown;
   readonly order: number;
+  /** Section preset スタイル（Phase B.C5 以降で DB から取得） */
+  readonly style: PublicSectionStyle | null;
+  /** Section instance override JSON（Phase B.C5 以降で DB から取得） */
+  readonly styleOverride: unknown | null;
+};
+
+/**
+ * page の最小 shape — section-renderer が resolveSectionStyle に渡す型。
+ * Phase B.C3 で追加。Phase B.C5 で実際のデータが注入される。
+ */
+export type PublicPageForStyle = {
+  readonly pageStyle: PublicSectionStyle | null;
+};
+
+/**
+ * settings の最小 shape — section-renderer が resolveSectionStyle に渡す型。
+ * Phase B.C3 で追加。Phase B.C5 で実際のデータが注入される。
+ */
+export type PublicSettingsForStyle = {
+  readonly globalSectionStyle: PublicSectionStyle | null;
 };
 
 function getDefaultSections(slug: string): PublicSection[] {
@@ -43,8 +76,9 @@ function getDefaultSections(slug: string): PublicSection[] {
     contentHtml: section.content,
     contentJson: null,
     config: section.config,
-    design: section.design ?? {},
     order: section.order,
+    style: null,
+    styleOverride: null,
   }));
 }
 
@@ -86,7 +120,9 @@ export async function getHomepagePublicData(): Promise<HomepagePublicData> {
     };
   }
 
-  const sections = await safeFetch({
+  // Phase B.C5: style / styleOverride are sourced from DB via Prisma `style` relation
+  // and the `styleOverride` JSON column respectively.
+  const rawSections = await safeFetch({
     fetch: () =>
       prisma.section.findMany({
         where: {
@@ -100,19 +136,30 @@ export async function getHomepagePublicData(): Promise<HomepagePublicData> {
           contentHtml: true,
           contentJson: true,
           config: true,
-          design: true,
           order: true,
+          styleOverride: true,
+          style: {
+            select: {
+              spacing: true,
+              background: true,
+              container: true,
+              typography: true,
+              animation: true,
+              customClass: true,
+            },
+          },
         },
         orderBy: { order: "asc" },
       }),
-    fallback: fallbackSections,
+    fallback: [],
     category: ErrorCategory.DATABASE,
     severity: ErrorSeverity.LOW,
     operationName: "getHomepagePublicData.sections",
   });
 
-  const list = toPlainArray(sections).filter((s) => s.type !== "homepage-hero");
-  const useSections = list.length > 0 ? list : fallbackSections;
+  const list = toPlainArray(rawSections) satisfies PublicSection[];
+  const filtered = list.filter((s) => s.type !== "homepage-hero");
+  const useSections = filtered.length > 0 ? filtered : fallbackSections;
 
   return {
     pageHero: homePage.pageHero ?? defaultPageHeroHome,
@@ -187,6 +234,8 @@ export async function getPageSections(
 
   if (!idParamSchema.safeParse(pageId).success) return [];
 
+  // Phase B.C5: style / styleOverride are sourced from DB via Prisma `style` relation
+  // and the `styleOverride` JSON column respectively.
   const sections = await safeFetch({
     fetch: () =>
       prisma.section.findMany({
@@ -201,8 +250,18 @@ export async function getPageSections(
           contentHtml: true,
           contentJson: true,
           config: true,
-          design: true,
           order: true,
+          styleOverride: true,
+          style: {
+            select: {
+              spacing: true,
+              background: true,
+              container: true,
+              typography: true,
+              animation: true,
+              customClass: true,
+            },
+          },
         },
         orderBy: { order: "asc" },
       }),
@@ -212,7 +271,7 @@ export async function getPageSections(
     operationName: "getPageSections",
   });
 
-  return toPlainArray(sections);
+  return toPlainArray(sections) satisfies PublicSection[];
 }
 
 export async function getPageSectionsWithFallback(

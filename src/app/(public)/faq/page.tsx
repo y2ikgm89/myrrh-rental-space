@@ -13,6 +13,8 @@ import {
   getPageSectionsWithFallback,
   getPublishedFaqCategoriesWithItems,
 } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Container } from "@/public/components/design-system/container";
 import { FAQPageJsonLd } from "@/public/components/seo/json-ld";
@@ -29,10 +31,14 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function FaqPage(): Promise<ReactElement> {
   await connection();
 
-  const [sections, categories] = await Promise.all([
+  const [sections, categories, page, settings] = await Promise.all([
     getPageSectionsWithFallback("faq"),
     getPublishedFaqCategoriesWithItems(),
+    getPublicPage("faq"),
+    getPublicSettingsForStyle(),
   ]);
+
+  const pageCtx = { pageStyle: page?.pageStyle ?? null };
 
   // JSON-LD は全項目をフラットに展開（構造化データはカテゴリ区別不要）
   const faqJsonLdItems = categories.flatMap((category) =>
@@ -57,7 +63,15 @@ export default async function FaqPage(): Promise<ReactElement> {
   return (
     <PageLayout
       variant="content"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      hero={
+        heroSection ? (
+          <SectionRenderer
+            section={heroSection}
+            page={pageCtx}
+            settings={settings}
+          />
+        ) : undefined
+      }
       cta={
         <SiteCTA
           label="Contact"
@@ -79,7 +93,12 @@ export default async function FaqPage(): Promise<ReactElement> {
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer
+          key={section.id}
+          section={section}
+          page={pageCtx}
+          settings={settings}
+        />
       ))}
     </PageLayout>
   );

@@ -9,6 +9,8 @@ import type { ReactElement } from "react";
 import { connection } from "next/server";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { Section } from "@/public/components/design-system/section";
 import { PageLayout } from "@/public/components/design-system/page-layout";
@@ -37,14 +39,25 @@ export default async function ReservationPage({
   const rawSpaceId =
     typeof params["spaceId"] === "string" ? params["spaceId"] : undefined;
 
-  const [sections, locations, businessHours, turnstileSiteKey, user] =
-    await Promise.all([
-      getPageSectionsWithFallback("reservation"),
-      getPublishedLocationsWithSpaces(),
-      getBusinessHoursSettingsQuery(),
-      getTurnstileSiteKey(),
-      getCurrentCustomerUser(),
-    ]);
+  const [
+    sections,
+    locations,
+    businessHours,
+    turnstileSiteKey,
+    user,
+    pageRecord,
+    settings,
+  ] = await Promise.all([
+    getPageSectionsWithFallback("reservation"),
+    getPublishedLocationsWithSpaces(),
+    getBusinessHoursSettingsQuery(),
+    getTurnstileSiteKey(),
+    getCurrentCustomerUser(),
+    getPublicPage("reservation"),
+    getPublicSettingsForStyle(),
+  ]);
+
+  const pageCtx = { pageStyle: pageRecord?.pageStyle ?? null };
 
   const customer = user ? await getCustomerByUserId(user.id) : null;
 
@@ -82,7 +95,15 @@ export default async function ReservationPage({
   return (
     <PageLayout
       variant="form"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      hero={
+        heroSection ? (
+          <SectionRenderer
+            section={heroSection}
+            page={pageCtx}
+            settings={settings}
+          />
+        ) : undefined
+      }
     >
       <div className="mx-auto max-w-4xl">
         <ReservationForm
@@ -104,7 +125,12 @@ export default async function ReservationPage({
           className="mt-[var(--spacing-block)]"
         >
           {trailingSections.map((section) => (
-            <SectionRenderer key={section.id} section={section} />
+            <SectionRenderer
+              key={section.id}
+              section={section}
+              page={pageCtx}
+              settings={settings}
+            />
           ))}
         </Section>
       ) : null}

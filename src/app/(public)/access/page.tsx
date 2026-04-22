@@ -19,6 +19,8 @@ import { SiteCTA } from "@/public/components/layouts/site-cta";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import {
   getPublishedLocationsForAccess,
   type LocationForAccess,
@@ -138,10 +140,14 @@ async function AccessChapters({
 export default async function AccessPage(): Promise<ReactElement> {
   await connection();
 
-  const [sections, businessInfo] = await Promise.all([
+  const [sections, businessInfo, page, settings] = await Promise.all([
     getPageSectionsWithFallback("access"),
     getBusinessInfo(),
+    getPublicPage("access"),
+    getPublicSettingsForStyle(),
   ]);
+
+  const pageCtx = { pageStyle: page?.pageStyle ?? null };
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -157,7 +163,15 @@ export default async function AccessPage(): Promise<ReactElement> {
   return (
     <PageLayout
       variant="content"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      hero={
+        heroSection ? (
+          <SectionRenderer
+            section={heroSection}
+            page={pageCtx}
+            settings={settings}
+          />
+        ) : undefined
+      }
       cta={
         <SiteCTA
           label="Contact"
@@ -199,7 +213,12 @@ export default async function AccessPage(): Promise<ReactElement> {
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer
+          key={section.id}
+          section={section}
+          page={pageCtx}
+          settings={settings}
+        />
       ))}
     </PageLayout>
   );

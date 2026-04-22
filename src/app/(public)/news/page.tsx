@@ -12,6 +12,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import { getPublishedNewsList } from "@/shared/domain/news/queries";
 import { Container } from "@/public/components/design-system/container";
@@ -53,10 +55,14 @@ export default async function NewsPage({
   const { page, q } = await newsSearchParams.parse(searchParams);
   const currentPage = Math.max(1, page);
 
-  const [sections, newsResult] = await Promise.all([
+  const [sections, newsResult, pageRecord, settings] = await Promise.all([
     getPageSectionsWithFallback("news"),
     getPublishedNewsList(currentPage, NEWS_PER_PAGE, q),
+    getPublicPage("news"),
+    getPublicSettingsForStyle(),
   ]);
+
+  const pageCtx = { pageStyle: pageRecord?.pageStyle ?? null };
 
   const heroSection = sections.find(
     (s) => s.type === "hero" || s.type === "hero-parallax",
@@ -78,7 +84,15 @@ export default async function NewsPage({
   return (
     <PageLayout
       variant="content"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      hero={
+        heroSection ? (
+          <SectionRenderer
+            section={heroSection}
+            page={pageCtx}
+            settings={settings}
+          />
+        ) : undefined
+      }
       cta={<SiteCTA />}
     >
       <BreadcrumbJsonLd
@@ -108,7 +122,12 @@ export default async function NewsPage({
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer
+          key={section.id}
+          section={section}
+          page={pageCtx}
+          settings={settings}
+        />
       ))}
     </PageLayout>
   );

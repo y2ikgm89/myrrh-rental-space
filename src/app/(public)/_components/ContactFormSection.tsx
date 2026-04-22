@@ -21,11 +21,11 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import type { ContactFormConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface ContactFormSectionProps {
   readonly config: ContactFormConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 const INPUT_CLASS =
@@ -120,14 +120,14 @@ function ContactForm({
 
 export function ContactFormSection({
   config,
-  design,
+  style,
 }: ContactFormSectionProps): ReactElement {
   const variant = config.variant;
 
   // split: 2-column (left=heading/description/contact info, right=form)
   if (variant === "split") {
     return (
-      <SectionWrapper design={design}>
+      <SectionWrapper style={style}>
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-12 md:flex-row md:gap-16">
             <div className="flex-1">
@@ -136,10 +136,10 @@ export function ContactFormSection({
                   <SectionLabel>{config.sectionLabel}</SectionLabel>
                 )}
               </ScrollReveal>
-              <div style={getTitleStyle(design)}>
+              <div style={getTitleStyle(style)}>
                 <Heading
                   level={2}
-                  className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+                  className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
                   <SplitText>{config.title}</SplitText>
                 </Heading>
@@ -148,7 +148,7 @@ export function ContactFormSection({
                 <ScrollReveal delay={0.2}>
                   <p
                     className="mt-4 text-sm leading-relaxed text-muted-foreground"
-                    style={getTextStyle(design)}
+                    style={getTextStyle(style)}
                   >
                     {config.description}
                   </p>
@@ -169,7 +169,7 @@ export function ContactFormSection({
   // minimal: no labels (placeholder only), compact
   // default: standard centered form
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mx-auto max-w-2xl">
         <div className="mb-10 text-center md:mb-14">
           <ScrollReveal>
@@ -177,10 +177,10 @@ export function ContactFormSection({
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
           </ScrollReveal>
-          <div style={getTitleStyle(design)}>
+          <div style={getTitleStyle(style)}>
             <Heading
               level={2}
-              className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+              className={cn("mt-4 tracking-tight", getTitleClasses(style))}
             >
               <SplitText>{config.title}</SplitText>
             </Heading>
@@ -189,7 +189,7 @@ export function ContactFormSection({
             <ScrollReveal delay={0.2}>
               <p
                 className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted-foreground"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {config.description}
               </p>

@@ -6,9 +6,9 @@ import {
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import { SectionHeader } from "@/public/components/sections/SectionHeader";
 import {
-  defaultSectionDesign,
-  parseSectionDesign,
-} from "@/shared/lib/validations/section";
+  DEFAULT_SECTION_STYLE,
+  type SectionStylePayload,
+} from "@/shared/domain/section-styles/types";
 
 export interface FeatureItem {
   readonly title: string;
@@ -19,51 +19,51 @@ export interface FeaturesSectionProps {
   readonly label: string;
   readonly title: string;
   readonly items: readonly FeatureItem[];
-  readonly design?: unknown;
+  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  readonly resolvedStyle?: SectionStylePayload;
 }
 
-export const featuresDefaultProps: Omit<FeaturesSectionProps, "design"> = {
-  label: "Why Myrrh",
-  title: "選ばれる理由",
-  items: [
-    {
-      title: "自然光設計",
-      description:
-        "全室に大きな窓を配置。時間帯で変化する光が、空間に深みを与えます。",
-    },
-    {
-      title: "遮音性能",
-      description:
-        "プロフェッショナル水準の遮音設計。外部の喧騒を遮断し、深い集中を可能にします。",
-    },
-    {
-      title: "即日予約",
-      description:
-        "オンラインで空き状況確認から決済まで完結。当日予約にも対応しています。",
-    },
-    {
-      title: "柔軟なレイアウト",
-      description:
-        "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
-    },
-  ],
-};
+export const featuresDefaultProps: Omit<FeaturesSectionProps, "resolvedStyle"> =
+  {
+    label: "Why Myrrh",
+    title: "選ばれる理由",
+    items: [
+      {
+        title: "自然光設計",
+        description:
+          "全室に大きな窓を配置。時間帯で変化する光が、空間に深みを与えます。",
+      },
+      {
+        title: "遮音性能",
+        description:
+          "プロフェッショナル水準の遮音設計。外部の喧騒を遮断し、深い集中を可能にします。",
+      },
+      {
+        title: "即日予約",
+        description:
+          "オンラインで空き状況確認から決済まで完結。当日予約にも対応しています。",
+      },
+      {
+        title: "柔軟なレイアウト",
+        description:
+          "可動式の家具と設備で、会議・撮影・イベントなど用途に合わせた配置変更が可能です。",
+      },
+    ],
+  };
 
 export function FeaturesSection({
   label = featuresDefaultProps.label,
   title = featuresDefaultProps.title,
   items = featuresDefaultProps.items,
-  design,
+  resolvedStyle = DEFAULT_SECTION_STYLE,
 }: Partial<FeaturesSectionProps> = {}): ReactElement {
-  const resolvedDesign = parseSectionDesign(design ?? defaultSectionDesign);
-
   return (
-    <SectionWrapper design={resolvedDesign}>
+    <SectionWrapper style={resolvedStyle}>
       <ScrollReveal>
         <SectionHeader
           label={label}
           title={title}
-          textAlign={resolvedDesign.textAlign}
+          textAlign={resolvedStyle.typography.textAlign}
           className="text-center"
         />
       </ScrollReveal>

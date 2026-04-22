@@ -3,10 +3,9 @@ import { ScrollReveal } from "@/public/components/animations/scroll-reveal";
 import { SectionWrapper } from "@/public/components/sections/SectionWrapper";
 import { SectionHeader } from "@/public/components/sections/SectionHeader";
 import {
-  defaultSectionDesign,
-  parseSectionDesign,
-  type SectionDesign,
-} from "@/shared/lib/validations/section";
+  DEFAULT_SECTION_STYLE,
+  type SectionStylePayload,
+} from "@/shared/domain/section-styles/types";
 import { SpacesCarousel } from "./spaces-carousel";
 
 export interface ShowcaseSpace {
@@ -28,7 +27,8 @@ export interface SpacesSectionProps {
   readonly title: string;
   readonly count: number;
   readonly autoPlayInterval: number;
-  readonly design?: unknown;
+  /** Resolved style from 4-tier cascade (settings → page → section → override) */
+  readonly resolvedStyle?: SectionStylePayload;
 }
 
 export const spacesDefaultProps = {
@@ -44,35 +44,35 @@ export function SpacesSection({
   title = spacesDefaultProps.title,
   count = spacesDefaultProps.count,
   autoPlayInterval = spacesDefaultProps.autoPlayInterval,
-  design,
+  resolvedStyle = DEFAULT_SECTION_STYLE,
 }: SpacesSectionProps): ReactElement {
   const limited = spaces.slice(0, count);
-  const resolved = parseSectionDesign(design ?? defaultSectionDesign);
+  const resolved = resolvedStyle;
 
-  const headerDesign: SectionDesign = {
+  const headerStyle: SectionStylePayload = {
     ...resolved,
-    paddingBottom: "none",
+    spacing: { ...resolved.spacing, paddingBottom: "none" },
   };
-  const carouselDesign: SectionDesign = {
+  const carouselStyle: SectionStylePayload = {
     ...resolved,
-    paddingTop: "none",
-    maxWidth: "full",
+    spacing: { ...resolved.spacing, paddingTop: "none" },
+    container: { maxWidth: "full" },
   };
 
   return (
     <>
-      <SectionWrapper design={headerDesign}>
+      <SectionWrapper style={headerStyle}>
         <ScrollReveal>
           <SectionHeader
             label={label}
             title={title}
-            textAlign={resolved.textAlign}
+            textAlign={resolved.typography.textAlign}
             className="text-center"
           />
         </ScrollReveal>
       </SectionWrapper>
       {limited.length > 0 ? (
-        <SectionWrapper design={carouselDesign} skipContainer>
+        <SectionWrapper style={carouselStyle} skipContainer>
           <SpacesCarousel
             spaces={limited}
             autoPlayInterval={autoPlayInterval}

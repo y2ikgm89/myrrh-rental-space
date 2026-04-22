@@ -24,6 +24,37 @@ import type { SectionStyleLayer, SectionStylePayload } from "./types";
 import { mergeStyleLayers } from "./style-merger";
 
 // ---------------------------------------------------------------------------
+// Public-compatible shape types (mirror of domain/sections/queries.ts)
+// Used by section-renderer which cannot import Prisma types directly.
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal shape for a style record — compatible with both SectionStyle (Prisma)
+ * and PublicSectionStyle (from domain/sections/queries.ts).
+ */
+type StyleRecord = {
+  readonly spacing: unknown;
+  readonly background: unknown;
+  readonly container: unknown;
+  readonly typography: unknown;
+  readonly animation: unknown;
+  readonly customClass: string | null;
+};
+
+type SectionForStyle = {
+  readonly style: StyleRecord | null;
+  readonly styleOverride: unknown;
+};
+
+type PageForStyle = {
+  readonly pageStyle: StyleRecord | null;
+};
+
+type SettingsForStyle = {
+  readonly globalSectionStyle: StyleRecord | null;
+};
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -31,13 +62,17 @@ import { mergeStyleLayers } from "./style-merger";
  * Resolve the effective SectionStylePayload for a section by merging all
  * cascade layers from lowest to highest specificity.
  *
- * Relation arguments may be null — in that case the DEFAULT_SECTION_STYLE
- * fallback is the effective style.
+ * Accepts both Prisma model types and the lightweight public-facing shape types
+ * (PublicSection / PublicPageForStyle / PublicSettingsForStyle from
+ * domain/sections/queries.ts). Relation arguments may be null — in that case
+ * the DEFAULT_SECTION_STYLE fallback is the effective style.
  */
 export function resolveSectionStyle(
-  section: Section & { style: SectionStyle | null },
-  page: Page & { pageStyle: SectionStyle | null },
-  settings: Settings & { globalSectionStyle: SectionStyle | null },
+  section: (Section & { style: SectionStyle | null }) | SectionForStyle,
+  page: (Page & { pageStyle: SectionStyle | null }) | PageForStyle,
+  settings:
+    | (Settings & { globalSectionStyle: SectionStyle | null })
+    | SettingsForStyle,
 ): SectionStylePayload {
   const layers: (SectionStyleLayer | null)[] = [
     extractStylePayload(settings.globalSectionStyle),
@@ -53,12 +88,13 @@ export function resolveSectionStyle(
 // ---------------------------------------------------------------------------
 
 /**
- * Extract a SectionStyleLayer from a SectionStyle DB record.
+ * Extract a SectionStyleLayer from a SectionStyle DB record or a lightweight
+ * StyleRecord shape (used by section-renderer via PublicSectionStyle).
  * Each JSON column (spacing / background / container / typography / animation)
  * is individually validated with isRecord() before inclusion.
  */
 function extractStylePayload(
-  style: SectionStyle | null | undefined,
+  style: SectionStyle | StyleRecord | null | undefined,
 ): SectionStyleLayer | null {
   if (!style) return null;
 

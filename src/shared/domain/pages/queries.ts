@@ -10,6 +10,7 @@ import {
 } from "@/shared/lib/errors/server";
 import { slugParamSchema } from "@/shared/lib/validations/params";
 import { toPlainObject } from "@/shared/lib/serialize";
+import type { PublicSectionStyle } from "@/shared/domain/sections/queries";
 
 export interface PageSeoData {
   title: string;
@@ -21,7 +22,18 @@ export interface PageSeoData {
   ogpImageUrl: string | null;
 }
 
-export async function getPublicPage(slug: string) {
+/**
+ * 公開ページ基本情報 + pageStyle（Phase B.C5 cascade 解決用）
+ */
+export type PublicPage = {
+  readonly id: string;
+  readonly slug: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly pageStyle: PublicSectionStyle | null;
+};
+
+export async function getPublicPage(slug: string): Promise<PublicPage | null> {
   "use cache";
   cacheLife(CACHE_LIFE.PUBLIC_CONTENT);
   cacheTag(CACHE_TAGS.PAGES, getCacheTag.pages.detail(slug));
@@ -41,6 +53,16 @@ export async function getPublicPage(slug: string) {
           slug: true,
           title: true,
           description: true,
+          pageStyle: {
+            select: {
+              spacing: true,
+              background: true,
+              container: true,
+              typography: true,
+              animation: true,
+              customClass: true,
+            },
+          },
         },
       }),
     fallback: null,
@@ -49,7 +71,8 @@ export async function getPublicPage(slug: string) {
     operationName: "getPublicPage",
   });
 
-  return toPlainObject(page);
+  if (!page) return null;
+  return toPlainObject(page) satisfies PublicPage;
 }
 
 export async function getPageSeo(slug: string): Promise<PageSeoData | null> {

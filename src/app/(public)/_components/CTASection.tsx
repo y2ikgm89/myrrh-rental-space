@@ -20,11 +20,11 @@ import {
   getTextStyle,
 } from "@/public/components/sections/SectionWrapper";
 import type { CtaConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface CTASectionProps {
   readonly config: CtaConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 function CTAButtons({
@@ -69,18 +69,21 @@ function CTAButtons({
   );
 }
 
-export function CTASection({ config, design }: CTASectionProps): ReactElement {
+export function CTASection({ config, style }: CTASectionProps): ReactElement {
   const primaryButton = config.buttons.find((b) => b.variant === "primary");
   const secondaryButton = config.buttons.find((b) => b.variant === "secondary");
   const variant = config.variant;
-  const styleProps = config.backgroundColor
-    ? { style: { backgroundColor: config.backgroundColor } }
-    : {};
+  const bgStyleProp = config.backgroundColor
+    ? { backgroundColor: config.backgroundColor }
+    : undefined;
 
   // split: 2-column layout (text left, buttons right)
   if (variant === "split") {
     return (
-      <SectionWrapper design={design} {...styleProps}>
+      <SectionWrapper
+        style={style}
+        {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
+      >
         <div className="flex flex-col items-center gap-8 md:flex-row md:gap-16">
           <div className="flex-1">
             <ScrollReveal>
@@ -88,10 +91,10 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
             </ScrollReveal>
-            <div style={getTitleStyle(design)}>
+            <div style={getTitleStyle(style)}>
               <Heading
                 level={2}
-                className={cn("mt-6 tracking-tight", getTitleClasses(design))}
+                className={cn("mt-6 tracking-tight", getTitleClasses(style))}
               >
                 <SplitText>{config.title}</SplitText>
               </Heading>
@@ -100,7 +103,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
               <ScrollReveal delay={0.2}>
                 <p
                   className="mt-8 max-w-md text-sm leading-[2] text-muted-foreground md:mt-10 md:text-base"
-                  style={getTextStyle(design)}
+                  style={getTextStyle(style)}
                 >
                   {config.description}
                 </p>
@@ -121,7 +124,10 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
 
   // centered / default — Editorial Magazine: white background + editorial button
   return (
-    <SectionWrapper design={design} {...styleProps}>
+    <SectionWrapper
+      style={style}
+      {...(bgStyleProp !== undefined && { styleProp: bgStyleProp })}
+    >
       <div className="text-center">
         <ScrollReveal>
           {config.sectionLabel && (
@@ -129,10 +135,10 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
           )}
         </ScrollReveal>
 
-        <div style={getTitleStyle(design)}>
+        <div style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn("mt-6 tracking-tight", getTitleClasses(design))}
+            className={cn("mt-6 tracking-tight", getTitleClasses(style))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -142,7 +148,7 @@ export function CTASection({ config, design }: CTASectionProps): ReactElement {
           <ScrollReveal delay={0.2}>
             <p
               className="mx-auto mt-8 max-w-lg text-sm leading-[2] text-muted-foreground md:text-base"
-              style={getTextStyle(design)}
+              style={getTextStyle(style)}
             >
               {config.description}
             </p>

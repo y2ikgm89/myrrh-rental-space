@@ -106,7 +106,6 @@ export async function createPageSectionCommand(
       type: input.type,
       title: input.title,
       config: cloneJsonValue(config),
-      design: cloneJsonValue(input.design ?? {}),
       contentJson: parseJsonValue(input.contentJson),
       contentHtml,
       order: input.order ?? (maxOrder._max.order ?? -1) + 1,
@@ -135,8 +134,6 @@ export async function updatePageSectionCommand(
     data: omitUndefined({
       title: input.title,
       config: config === undefined ? undefined : cloneJsonValue(config),
-      design:
-        input.design === undefined ? undefined : cloneJsonValue(input.design),
       ...(input.contentJson !== undefined
         ? {
             contentJson: parseJsonValue(input.contentJson),
@@ -214,7 +211,6 @@ export async function duplicatePageSectionCommand(id: string) {
       type: section.type,
       title: section.title ? `コピー - ${section.title}` : null,
       config: section.config ?? undefined,
-      design: section.design ?? undefined,
       contentHtml: section.contentHtml,
       contentJson: section.contentJson ?? undefined,
       order: (maxOrderSection?.order ?? 0) + 1,
@@ -230,7 +226,8 @@ export async function duplicatePageSectionCommand(id: string) {
       type: duplicated.type,
       title: duplicated.title,
       config: parseSectionConfig(duplicated.type, duplicated.config),
-      design: duplicated.design,
+      // Compat shim for DesignFields (Phase B.5 で削除予定)
+      design: {} as unknown,
       contentHtml: duplicated.contentHtml,
       contentJson: duplicated.contentJson,
       order: duplicated.order,

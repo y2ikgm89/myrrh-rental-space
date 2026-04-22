@@ -30,7 +30,7 @@ import {
 } from "@/public/lib/section-style-maps";
 import { parsePostImageAspect } from "@/shared/lib/validations/section-parsers";
 import type { PostListConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 export interface PostData {
   readonly id: string;
@@ -46,13 +46,13 @@ export interface PostData {
 interface PostListSectionProps {
   readonly config: PostListConfig;
   readonly posts: readonly PostData[];
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function PostListSection({
   config,
   posts,
-  design,
+  style,
 }: PostListSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -93,17 +93,17 @@ export function PostListSection({
   const colKey = Math.min(Math.max(config.columns, 1), 4);
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       <div className="mb-12 text-center md:mb-16">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
         </ScrollReveal>
-        <div className="mt-4" style={getTitleStyle(design)}>
+        <div className="mt-4" style={getTitleStyle(style)}>
           <Heading
             level={2}
-            className={cn("tracking-tight", getTitleClasses(design))}
+            className={cn("tracking-tight", getTitleClasses(style))}
           >
             <SplitText>{config.title}</SplitText>
           </Heading>
@@ -160,7 +160,7 @@ export function PostListSection({
               </h3>
               <p
                 className="mt-2 line-clamp-2 text-sm text-muted-foreground"
-                style={getTextStyle(design)}
+                style={getTextStyle(style)}
               >
                 {post.excerpt}
               </p>

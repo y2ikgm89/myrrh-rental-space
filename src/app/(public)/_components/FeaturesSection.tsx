@@ -24,16 +24,16 @@ import {
 } from "@/public/components/sections/SectionWrapper";
 import { DURATION, EASE, REVEAL, STAGGER } from "@/public/lib/animations";
 import type { FeaturesConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 interface FeaturesSectionProps {
   readonly config: FeaturesConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function FeaturesSection({
   config,
-  design,
+  style,
 }: FeaturesSectionProps): ReactElement {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -72,17 +72,17 @@ export function FeaturesSection({
   if (items.length === 0) return <></>;
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       {/* Section heading */}
       <div className="mb-16 max-w-2xl md:mb-24">
         <ScrollReveal>
           {config.sectionLabel && (
             <SectionLabel>{config.sectionLabel}</SectionLabel>
           )}
-          <div style={getTitleStyle(design)}>
+          <div style={getTitleStyle(style)}>
             <Heading
               level={2}
-              className={cn("mt-4", getTitleClasses(design), "tracking-tight")}
+              className={cn("mt-4", getTitleClasses(style), "tracking-tight")}
             >
               {config.title}
             </Heading>
@@ -114,7 +114,7 @@ export function FeaturesSection({
               {feature.description && (
                 <p
                   className="mt-3 text-sm leading-[1.9] text-muted-foreground md:text-base"
-                  style={getTextStyle(design)}
+                  style={getTextStyle(style)}
                 >
                   {feature.description}
                 </p>

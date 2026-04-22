@@ -20,7 +20,7 @@ import { SectionLabel } from "@/public/components/ui/SectionLabel";
 import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import type { MapConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 const HEIGHT_MAP = {
   sm: "h-[300px]",
@@ -30,7 +30,7 @@ const HEIGHT_MAP = {
 
 interface MapSectionProps {
   readonly config: MapConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
   readonly apiKey: string | null;
 }
 
@@ -47,24 +47,24 @@ function buildMapEmbedUrl(config: MapConfig, apiKey: string): string | null {
 
 export function MapSection({
   config,
-  design,
+  style,
   apiKey,
 }: MapSectionProps): ReactElement {
   const heightClass = HEIGHT_MAP[config.height] ?? HEIGHT_MAP.md;
   const embedUrl = apiKey ? buildMapEmbedUrl(config, apiKey) : null;
 
   return (
-    <SectionWrapper design={design}>
+    <SectionWrapper style={style}>
       {config.title && (
         <div className="mb-8 text-center md:mb-12">
           <ScrollReveal>
             {config.sectionLabel && (
               <SectionLabel>{config.sectionLabel}</SectionLabel>
             )}
-            <div style={getTitleStyle(design)}>
+            <div style={getTitleStyle(style)}>
               <Heading
                 level={2}
-                className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+                className={cn("mt-4 tracking-tight", getTitleClasses(style))}
               >
                 {config.title}
               </Heading>
@@ -105,7 +105,7 @@ export function MapSection({
         <ScrollReveal delay={0.2}>
           <p
             className="mt-4 text-center text-sm text-muted-foreground"
-            style={getTextStyle(design)}
+            style={getTextStyle(style)}
           >
             {config.address}
           </p>

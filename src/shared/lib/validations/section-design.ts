@@ -2,191 +2,38 @@
  * セクション共通スキーマ
  *
  * section.ts で使用
- * URL / CTA ボタン / HEXカラーバリデーション / デザイン設定
+ * URL / CTA ボタン / HEXカラーバリデーション / デザイン設定（旧API）
+ *
+ * Phase B.C1: URL/CTA/HEX helpers は cta-and-url.ts に移動済み。
+ * このファイルは admin 画面（DesignFields.tsx 等）が使用する旧 SectionDesign 型を保持。
+ * 新規コードは section-style.ts + SectionStylePayload を使用すること。
  */
 
 import { z } from "zod";
 import { textAlignValues } from "./section-options";
+import { optionalHexColorSchema } from "./cta-and-url";
 
 // =============================================================================
-// URL / CTAボタン共通スキーマ
+// URL / CTAボタン / HEXカラー helpers — cta-and-url.ts から re-export
 // =============================================================================
 
-/**
- * URL検証ファクトリ: 内部パス（/で始まる）またはhttp/httpsのみ許可
- */
-export function createSafeUrlSchema(maxLength = 500) {
-  return z
-    .string()
-    .max(maxLength, { error: `URLは${maxLength}文字以内です` })
-    .refine(
-      (url) =>
-        url === "" ||
-        url.startsWith("/") ||
-        url.startsWith("http://") ||
-        url.startsWith("https://"),
-      { error: "有効なURLまたはパス（/で始まる）を入力してください" },
-    );
-}
+export {
+  createSafeUrlSchema,
+  createCtaSchemas,
+  createCtaButtonItemSchema,
+  ctaButtonVariants,
+  ctaButtonSizes,
+  transformLegacyCtaToButtons,
+  transformCtaFields,
+  optionalHexColorSchema,
+  isValidHexColor,
+} from "./cta-and-url";
 
-/**
- * CTAボタン設定（レガシー: ctaPrimary/ctaSecondary 用）
- */
-export function createCtaSchemas(urlSchema: z.ZodType<string>) {
-  const ctaButtonSchema = z.object({
-    text: z
-      .string()
-      .min(1, { error: "ボタンテキストは必須です" })
-      .max(50, { error: "ボタンテキストは50文字以内です" }),
-    url: urlSchema,
-  });
-
-  const optionalCtaButtonSchema = z
-    .object({
-      text: z
-        .string()
-        .max(50, { error: "ボタンテキストは50文字以内です" })
-        .optional(),
-      url: urlSchema.optional(),
-    })
-    .optional();
-
-  return { ctaButtonSchema, optionalCtaButtonSchema };
-}
-
-// =============================================================================
-// HEXカラーバリデーション
-// =============================================================================
-
-const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
-
-/**
- * オプショナルHEXカラースキーマ
- * 空文字列 → undefined に変換、非空ならHEX形式を検証
- */
-export const optionalHexColorSchema = z
-  .string()
-  .refine((val) => val === "" || HEX_COLOR_REGEX.test(val), {
-    error: "HEXカラー形式（#RRGGBB）で入力してください",
-  })
-  .transform((val) => val || undefined)
-  .optional();
-
-/**
- * HEXカラー値の簡易バリデーション（null/undefined/空文字はtrue）
- */
-export function isValidHexColor(value: string | null | undefined): boolean {
-  if (!value) return true;
-  return HEX_COLOR_REGEX.test(value);
-}
-
-// =============================================================================
-// CTAボタン配列スキーマ（新API）
-// =============================================================================
-
-/** ボタンバリアント */
-export const ctaButtonVariants = [
-  "primary",
-  "secondary",
-  "outline",
-  "ghost",
-] as const;
-export type CTAButtonVariant = (typeof ctaButtonVariants)[number];
-
-/** ボタンサイズ */
-export const ctaButtonSizes = ["sm", "md", "lg"] as const;
-export type CTAButtonSize = (typeof ctaButtonSizes)[number];
-
-/**
- * CTAボタン配列アイテムスキーマファクトリ
- */
-export function createCtaButtonItemSchema(urlSchema: z.ZodType<string>) {
-  return z.object({
-    text: z
-      .string()
-      .min(1, { error: "ボタンテキストは必須です" })
-      .max(50, { error: "ボタンテキストは50文字以内です" }),
-    url: urlSchema,
-    variant: z.enum(ctaButtonVariants).default("primary"),
-    size: z.enum(ctaButtonSizes).default("lg"),
-    openInNewTab: z.boolean().default(false),
-    backgroundColor: optionalHexColorSchema,
-    textColor: optionalHexColorSchema,
-  });
-}
-
-/**
- * CTAボタン配列アイテムの出力型
- */
-export type CTAButtonItem = {
-  text: string;
-  url: string;
-  variant: CTAButtonVariant;
-  size: CTAButtonSize;
-  openInNewTab: boolean;
-  backgroundColor?: string | undefined;
-  textColor?: string | undefined;
-};
-
-/**
- * レガシーCTAフィールド（ctaPrimary/ctaSecondary）→ buttons[] に変換
- */
-export function transformLegacyCtaToButtons(
-  ctaPrimary?: { text: string; url: string } | undefined,
-  ctaSecondary?:
-    | { text?: string | undefined; url?: string | undefined }
-    | undefined,
-): CTAButtonItem[] {
-  const buttons: CTAButtonItem[] = [];
-  if (ctaPrimary?.text && ctaPrimary?.url) {
-    buttons.push({
-      text: ctaPrimary.text,
-      url: ctaPrimary.url,
-      variant: "primary",
-      size: "lg",
-      openInNewTab: false,
-    });
-  }
-  if (ctaSecondary?.text && ctaSecondary?.url) {
-    buttons.push({
-      text: ctaSecondary.text,
-      url: ctaSecondary.url,
-      variant: "secondary",
-      size: "lg",
-      openInNewTab: false,
-    });
-  }
-  return buttons;
-}
-
-/**
- * レガシーCTA → buttons[] 統一変換
- *
- * heroConfigSchema / ctaConfigSchema の .transform() で共通利用。
- * buttons[] が存在すればそのまま使用し、なければレガシーフィールドから変換する。
- *
- * Note: Return type is inferred by TypeScript as
- * `Omit<T, 'ctaPrimary' | 'ctaSecondary' | 'buttons'> & { buttons: CTAButtonItem[] }`
- * which is structurally equivalent to `Omit<T, 'ctaPrimary' | 'ctaSecondary'> & { buttons: CTAButtonItem[] }`.
- */
-export function transformCtaFields<
-  T extends {
-    ctaPrimary?: { text: string; url: string } | undefined;
-    ctaSecondary?:
-      | { text?: string | undefined; url?: string | undefined }
-      | undefined;
-    buttons?: CTAButtonItem[] | undefined;
-  },
->(input: T) {
-  const { ctaPrimary, ctaSecondary, buttons, ...rest } = input;
-  return {
-    ...rest,
-    buttons:
-      buttons && buttons.length > 0
-        ? buttons
-        : transformLegacyCtaToButtons(ctaPrimary, ctaSecondary),
-  };
-}
+export type {
+  CTAButtonVariant,
+  CTAButtonSize,
+  CTAButtonItem,
+} from "./cta-and-url";
 
 // =============================================================================
 // セクション design JSON スキーマ

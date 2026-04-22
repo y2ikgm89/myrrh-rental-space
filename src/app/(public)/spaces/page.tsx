@@ -12,6 +12,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { generatePageMetadata } from "@/public/lib/page-metadata";
 import { getPageSectionsWithFallback } from "@/shared/domain/sections/queries";
+import { getPublicPage } from "@/shared/domain/pages/queries";
+import { getPublicSettingsForStyle } from "@/shared/domain/settings/queries/display";
 import { SectionRenderer } from "@/public/components/sections/section-renderer";
 import {
   getPublishedSpacesPaginated,
@@ -52,6 +54,8 @@ export default async function SpacesPage({
     { items, totalCount, totalPages, currentPage },
     categories,
     locations,
+    pageRecord,
+    settings,
   ] = await Promise.all([
     getPageSectionsWithFallback("spaces"),
     getPublishedSpacesPaginated(
@@ -62,7 +66,11 @@ export default async function SpacesPage({
     ),
     getActiveCategories(),
     getActiveLocations(),
+    getPublicPage("spaces"),
+    getPublicSettingsForStyle(),
   ]);
+
+  const pageCtx = { pageStyle: pageRecord?.pageStyle ?? null };
 
   const reviewStats = await getSpaceReviewStatsMultiple(items.map((s) => s.id));
 
@@ -80,7 +88,15 @@ export default async function SpacesPage({
   return (
     <PageLayout
       variant="content"
-      hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
+      hero={
+        heroSection ? (
+          <SectionRenderer
+            section={heroSection}
+            page={pageCtx}
+            settings={settings}
+          />
+        ) : undefined
+      }
       cta={<SiteCTA />}
     >
       <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
@@ -117,7 +133,12 @@ export default async function SpacesPage({
       </section>
 
       {trailingSections.map((section) => (
-        <SectionRenderer key={section.id} section={section} />
+        <SectionRenderer
+          key={section.id}
+          section={section}
+          page={pageCtx}
+          settings={settings}
+        />
       ))}
     </PageLayout>
   );

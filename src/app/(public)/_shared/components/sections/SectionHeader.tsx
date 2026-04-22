@@ -1,19 +1,22 @@
 import type { ReactElement, ReactNode } from "react";
 import { cn } from "@/shared/lib/cn";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 const textAlignMap = {
   left: "text-left",
   center: "text-center",
   right: "text-right",
-} satisfies Record<NonNullable<SectionDesign["textAlign"]>, string>;
+} satisfies Record<
+  NonNullable<SectionStylePayload["typography"]["textAlign"]>,
+  string
+>;
 
 export interface SectionHeaderProps {
   readonly label: string;
   readonly title: string;
   readonly description?: ReactNode;
-  /** SectionDesign.textAlign に追従（未指定は left） */
-  readonly textAlign?: SectionDesign["textAlign"];
+  /** SectionStylePayload.typography.textAlign に追従（未指定は left） */
+  readonly textAlign?: SectionStylePayload["typography"]["textAlign"];
   readonly className?: string;
 }
 

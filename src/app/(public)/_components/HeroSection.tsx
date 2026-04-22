@@ -25,7 +25,7 @@ import {
 import { HERO_PARALLAX_HEIGHT_MAP } from "@/public/lib/section-style-maps";
 import { parseHeroParallaxHeight } from "@/shared/lib/validations/section-parsers";
 import type { HeroParallaxConfig } from "@/shared/lib/validations/section";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 import {
   getTitleClasses,
   getTitleStyle,
@@ -37,13 +37,10 @@ const DEFAULT_BG_IMAGE =
 
 interface HeroSectionProps {
   readonly config: HeroParallaxConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
-export function HeroSection({
-  config,
-  design,
-}: HeroSectionProps): ReactElement {
+export function HeroSection({ config, style }: HeroSectionProps): ReactElement {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
@@ -145,10 +142,10 @@ export function HeroSection({
             </p>
           )}
 
-          <div style={getTitleStyle(design)}>
+          <div style={getTitleStyle(style)}>
             <Heading
               level={1}
-              className={cn("mt-6", getTitleClasses(design), "leading-[1.05]")}
+              className={cn("mt-6", getTitleClasses(style), "leading-[1.05]")}
             >
               <SplitText trigger={false} delay={0.5}>
                 {config.title}
@@ -162,7 +159,7 @@ export function HeroSection({
           {config.subtitle && (
             <p
               className="mt-6 max-w-sm text-sm leading-[2] text-muted-foreground"
-              style={getTextStyle(design)}
+              style={getTextStyle(style)}
             >
               {config.subtitle}
             </p>

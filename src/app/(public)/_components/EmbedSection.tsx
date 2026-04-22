@@ -19,7 +19,7 @@ import { BORDER_RADIUS_MAP } from "@/public/lib/section-style-maps";
 import { SanitizedHtml } from "@/shared/components/SanitizedHtml";
 import type { EmbedConfig } from "@/shared/lib/validations/section";
 import { parseBorderRadius } from "@/shared/lib/validations/section-parsers";
-import type { SectionDesign } from "@/shared/lib/validations/section-design";
+import type { SectionStylePayload } from "@/shared/domain/section-styles/types";
 
 const MAX_WIDTH_MAP = {
   sm: "max-w-2xl",
@@ -38,12 +38,12 @@ const ASPECT_RATIO_MAP = {
 
 interface EmbedSectionProps {
   readonly config: EmbedConfig;
-  readonly design: SectionDesign;
+  readonly style: SectionStylePayload;
 }
 
 export function EmbedSection({
   config,
-  design,
+  style,
 }: EmbedSectionProps): ReactElement {
   const maxWidthClass = MAX_WIDTH_MAP[config.maxWidth] ?? MAX_WIDTH_MAP.lg;
   const aspectClass =
@@ -51,7 +51,7 @@ export function EmbedSection({
   const radiusClass = BORDER_RADIUS_MAP[parseBorderRadius(config.borderRadius)];
 
   return (
-    <SectionWrapper design={design} skipContainer>
+    <SectionWrapper style={style} skipContainer>
       <div className={cn("mx-auto px-5 md:px-8", maxWidthClass)}>
         {config.title && (
           <div className="mb-8 text-center md:mb-12">
@@ -59,10 +59,10 @@ export function EmbedSection({
               {config.sectionLabel && (
                 <SectionLabel>{config.sectionLabel}</SectionLabel>
               )}
-              <div style={getTitleStyle(design)}>
+              <div style={getTitleStyle(style)}>
                 <Heading
                   level={2}
-                  className={cn("mt-4 tracking-tight", getTitleClasses(design))}
+                  className={cn("mt-4 tracking-tight", getTitleClasses(style))}
                 >
                   {config.title}
                 </Heading>
