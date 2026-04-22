@@ -6,6 +6,7 @@ import {
   useEffect,
   useEffectEvent,
   type ReactElement,
+  type TouchEvent as ReactTouchEvent,
 } from "react";
 import Image from "next/image";
 import { Button } from "@/public/components/design-system/button";
@@ -49,12 +50,15 @@ export const heroDefaultProps: HeroSectionProps = {
     "静けさが仕事をする場所。Myrrh は光と余白を大切にした、思考のためのレンタルスペースです。",
   images: [DEFAULT_IMAGE],
   transition: "crossfade",
-  buttonText: "Explore spaces",
-  buttonUrl: "/spaces",
+  buttonText: "Reserve a space",
+  buttonUrl: "/reservation",
 };
 
 /** Auto-advance interval in milliseconds */
 const AUTO_ADVANCE_MS = 6000;
+
+/** Minimum horizontal swipe distance (px) to trigger image change */
+const SWIPE_THRESHOLD_PX = 50;
 
 /* -------------------------------------------------------------------------- */
 /*  Transition animations (Pattern C: event-driven)                           */
@@ -187,6 +191,8 @@ export function HomepageHero({
   const imageElsRef = useRef<(HTMLDivElement | null)[]>([]);
   const activeIndexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
   const motionOkRef = useMotionPreference();
 
   const resolvedImages = images.length > 0 ? images : heroDefaultProps.images;
@@ -307,21 +313,60 @@ export function HomepageHero({
     startTimer();
   };
 
+  /* ── Touch swipe handlers (Pattern C: event-driven) ─────────────────── */
+  const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    touchStartXRef.current = touch?.clientX ?? null;
+    touchStartYRef.current = touch?.clientY ?? null;
+  };
+
+  const handleTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const startX = touchStartXRef.current;
+    const startY = touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    if (startX === null || startY === null || !hasMultiple) return;
+
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    // Skip if vertical movement dominates (user scroll intent)
+    if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
+
+    const direction = deltaX < 0 ? 1 : -1;
+    const nextIndex = (activeIndexRef.current + direction + count) % count;
+    crossfadeTo(nextIndex);
+    startTimer();
+  };
+
   /* ── Render ─────────────────────────────────────────────────────────── */
   return (
     <section
-      className="grid min-h-[85svh] grid-cols-1 md:grid-cols-2"
       data-hero=""
+      className={cn(
+        // Mobile: image + headline overlap on row 1, body on row 2
+        "grid grid-cols-1",
+        // Desktop: 2 cols × 2 rows — image spans left full height, headline top-right, body bottom-right
+        "md:min-h-[85svh] md:grid-cols-2 md:grid-rows-[1fr_1fr]",
+      )}
     >
-      {/* Left: Image area */}
+      {/* Image carousel — mobile row 1 / desktop left col spanning both rows */}
       <div
         ref={imageContainerRef}
-        className="relative min-h-[50svh] overflow-hidden bg-card md:min-h-0"
+        className={cn(
+          "relative col-start-1 row-start-1 aspect-[4/3] overflow-hidden bg-card",
+          "md:aspect-auto md:row-span-2 md:min-h-0",
+        )}
         role={hasMultiple ? "region" : undefined}
         aria-roledescription={hasMultiple ? "carousel" : undefined}
         aria-label={
           hasMultiple ? `ヒーロー画像 — ${count}枚` : resolvedImages[0]?.alt
         }
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Stacked images with transition */}
         {resolvedImages.map((img, i) => (
@@ -345,10 +390,37 @@ export function HomepageHero({
           </div>
         ))}
 
-        {/* Dot indicators */}
-        {hasMultiple && (
+        {/* Mobile-only scrim gradients for overlay text readability */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-foreground/60 via-foreground/25 to-transparent md:hidden"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-foreground/90 via-foreground/45 to-transparent md:hidden"
+          aria-hidden="true"
+        />
+
+        {/* Numbered pagination (top-right) — visible on both breakpoints */}
+        {hasMultiple ? (
+          <p
+            className="pointer-events-none absolute top-6 right-6 z-20 text-[0.75rem] uppercase tracking-[0.18em] tabular-nums text-background"
+            style={{
+              paintOrder: "stroke fill",
+              WebkitTextStroke: "0.4px rgba(0,0,0,0.5)",
+              textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+            }}
+            aria-hidden="true"
+          >
+            {String(activeIndex + 1).padStart(2, "0")}
+            <span className="mx-1 text-background/70">/</span>
+            {String(count).padStart(2, "0")}
+          </p>
+        ) : null}
+
+        {/* Dot navigation — bottom center, always visible */}
+        {hasMultiple ? (
           <div
-            className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2"
+            className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 gap-2"
             role="tablist"
             aria-label="画像選択"
           >
@@ -361,52 +433,108 @@ export function HomepageHero({
                 aria-label={`画像 ${i + 1}`}
                 onClick={() => handleDotClick(i)}
                 className={cn(
-                  "h-1.5 rounded-full transition-all duration-500",
+                  "h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-all duration-500",
                   i === activeIndex
                     ? "w-6 bg-background"
-                    : "w-1.5 bg-background/50 hover:bg-background/70",
+                    : "w-1.5 bg-background/60 hover:bg-background/85",
                 )}
               />
             ))}
           </div>
-        )}
+        ) : null}
 
-        <span className="absolute bottom-4 left-4 z-10 text-[0.55rem] uppercase tracking-[0.15em] text-background/50">
+        {/* Photo credit — bottom-left, always visible */}
+        <span
+          className="pointer-events-none absolute bottom-4 left-4 z-20 text-[0.625rem] uppercase tracking-[0.15em] text-background/80"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
+        >
           Photography — Myrrh Studio, 2026
         </span>
       </div>
 
-      {/* Right: Text content */}
+      {/* Headline (label + title + divider) —
+          mobile: overlay on image (same grid cell, z-stacked, bottom-aligned).
+          desktop: right column, top row, bottom-aligned to meet body at center. */}
       <div
         ref={contentRef}
-        className="flex flex-col justify-center bg-background px-6 py-12 md:px-12 md:py-16 lg:px-16"
+        className={cn(
+          // Shared layout
+          "relative z-10 flex flex-col justify-end",
+          // Mobile: same grid cell as image (overlay); disable pointer events so carousel swipe works
+          "col-start-1 row-start-1 px-6 pb-14 pointer-events-none",
+          // Desktop: right column top row, on white background, pointer events normal
+          "md:col-start-2 md:row-start-1 md:pointer-events-auto",
+          "md:bg-background md:px-12 md:pt-16 md:pb-6 lg:px-16",
+        )}
       >
-        <p className="mb-8 text-[0.55rem] uppercase tracking-[0.18em] text-muted-foreground md:mb-12">
+        <p
+          className={cn(
+            "mb-6 text-[0.75rem] uppercase tracking-[0.18em]",
+            // Mobile: white over image with stroke + shadow (robust on any photo)
+            "text-background",
+            "[paint-order:stroke_fill]",
+            "[-webkit-text-stroke:0.4px_rgb(0_0_0/0.4)]",
+            "[text-shadow:0_1px_3px_rgb(0_0_0/0.55)]",
+            // Desktop: muted on white, no stroke/shadow needed
+            "md:text-muted-foreground md:mb-8",
+            "md:[paint-order:normal]",
+            "md:[-webkit-text-stroke:0px_transparent]",
+            "md:[text-shadow:none]",
+          )}
+        >
           {label}
         </p>
 
-        <h1 className="text-hero font-heading font-light leading-[1.08] tracking-tight">
+        <h1
+          className={cn(
+            // Custom hero-scale — mobile floor 56px (vs --text-hero's 48px floor) for stronger catchphrase impact
+            "text-[clamp(3.5rem,10vw,5rem)] font-heading font-light leading-[1.08] tracking-tight",
+            // Mobile: white with stroke outline for any background
+            "text-background",
+            "[paint-order:stroke_fill]",
+            "[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]",
+            // Desktop: normal foreground on white
+            "md:text-foreground",
+            "md:[paint-order:normal]",
+            "md:[-webkit-text-stroke:0px_transparent]",
+          )}
+        >
           <SplitText trigger={false} delay={0.5}>
             {title}
           </SplitText>
         </h1>
 
-        <div className="mt-6 h-px w-12 bg-accent md:mt-8" aria-hidden="true" />
+        <div
+          className={cn("mt-5 h-px w-12 bg-accent", "md:mt-8")}
+          aria-hidden="true"
+        />
+      </div>
 
+      {/* Body (description + CTA) —
+          mobile: below image on white.
+          desktop: right column bottom row, top-aligned. */}
+      <div
+        className={cn(
+          "col-start-1 row-start-2 flex flex-col bg-background px-6 pt-8 pb-14",
+          "md:col-start-2 md:row-start-2 md:pt-6 md:pb-16 md:px-12 lg:px-16",
+        )}
+      >
         <ScrollReveal delay={0.3}>
-          <p className="mt-6 max-w-[22rem] text-sm leading-[2.1] text-muted-foreground md:mt-8 md:text-base">
+          <p className="max-w-[22rem] text-sm leading-[2.1] text-muted-foreground md:text-base">
             {description}
           </p>
         </ScrollReveal>
 
         <ScrollReveal delay={0.4}>
-          <Button
-            variant="editorial"
-            href={buttonUrl}
-            className="mt-8 text-xs uppercase tracking-[0.18em] md:mt-10"
-          >
-            {buttonText}
-          </Button>
+          <div className="mt-8 flex justify-center md:mt-10">
+            <Button
+              variant="editorial"
+              href={buttonUrl}
+              className="text-xs uppercase tracking-[0.18em]"
+            >
+              {buttonText}
+            </Button>
+          </div>
         </ScrollReveal>
       </div>
     </section>

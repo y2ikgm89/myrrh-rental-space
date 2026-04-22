@@ -120,7 +120,7 @@ paths:
 - **公開カレンダーの曜日色は日=`text-destructive`、土=`text-info`** — 日本標準のカレンダー配色。日曜始まり。今日マーカーは `bg-accent text-accent-foreground rounded-full`。曜日ヘッダーは `bg-surface` + 枠線
 - **日本語ラベルのタブ/ナビに `uppercase` 禁止** — `uppercase` は Latin 専用。日本語タブは Journal タブパターン（`text-sm tracking-[0.18em]`、uppercase なし）に合わせる。ヘッダーナビ（`text-[0.75rem] uppercase`）は英語ラベル向け
 - **空状態の CTA は `Button variant="editorial" size="sm"` を使用** — テキストリンクは余白の中で埋もれる。メッセージテキストは `text-muted-foreground`（base サイズ）、ボタンは `space-y-4` で配置
-- **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。SpaceGrid, PostGrid, RelatedSpaces, TestimonialSection, FeaturesSection で採用済み
+- **カードグリッドは Container Queries を使う** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`。viewport breakpoints (`md:grid-cols-2`) ではなくコンテナ幅に応じて適応。公開: SpaceGrid / PostGrid / RelatedSpaces / TestimonialSection / SpaceShowcaseSection / SpaceListSection / PostListSection / CARD_GRID_COLS_MAP（`section-style-maps.ts`）で採用済み。管理画面 dashboard は `@container/main` named container を使用（`MainContent.tsx` が main に付与 → DashboardStatsSection が `@md/main:grid-cols-2 @3xl/main:grid-cols-4` で適応）。FeaturesSection は grid 列切替なし（`grid-cols-[6rem_1fr]` 固定）のため @container 不要
 - **ページレベルのレイアウト切替は viewport breakpoints を維持** — 2カラム text+image（ConceptSection）、フォームグリッド（ContactFormSection）等のマクロレイアウトは `md:grid-cols-2` のまま。Container Queries はコンポーネント内部の適応に使う
 - **Heading サイズは `text-h1`/`text-h2`/`text-h3`/`text-h4`/`text-hero` クラスを使う** — `@theme` で `--text-*--line-height/letter-spacing/font-weight` が自動適用される。`text-[length:var(--text-h1)]` + `font-bold` + `leading-[...]` の冗長パターンは廃止
 - **Design System Primitives (Container, Stack, Heading, Badge, Prose, ImageFrame) は Server Component** — `"use client"` は不要。Tailwind クラスは CSS にコンパイルされるため JS バンドル不要。Button と Dialog のみ `"use client"` 維持
@@ -139,6 +139,7 @@ paths:
 
 - **`<header>` に `role="banner"`、`<footer>` に `role="contentinfo"` を明示** — HTML5 暗黙 role は一部 AT で認識されない。公開ページ `site-header.tsx` / `site-footer.tsx` で設定済み
 - **公開モバイルメニューは Radix Dialog (`@radix-ui/react-dialog`) 必須** — 手動オーバーレイ（`useState` + `fixed inset-0`）禁止。Radix が focus trap / Esc / body scroll lock / trigger フォーカス復帰を全て自動処理する。`site-header.tsx` が参照実装
+- **Radix `Dialog.Title` に手動 `id` / `Dialog.Content` に手動 `aria-labelledby` 禁止** — Radix は context 経由で `titleId` を自動生成し `Dialog.Title` に `id={context.titleId}` を内部付与、`TitleWarning` は context の `titleId` を `getElementById` で lookup する。手動 `id={xxx}` を spread すると Radix 内部 ID を上書きして `DialogContent requires a DialogTitle` warning が発火する silent bug（Title は存在するのに Radix が見つけられない）。視覚的に隠すだけなら `className="sr-only"` で十分（`@radix-ui/react-visually-hidden` パッケージ追加不要）。`useId()` + `aria-labelledby` + `id` を a11y 強化のつもりで書くのはアンチパターン
 - **Radix `NavigationMenu.Link` は `asChild` + `active` prop 必須** — Next.js 統合の[公式パターン](https://www.radix-ui.com/primitives/docs/components/navigation-menu#with-client-side-routing)。`usePathname()` で判定し `<NavigationMenu.Link asChild active={isActive}><NextLink aria-current={isActive ? "page" : undefined} /></NavigationMenu.Link>`。`active` prop が `data-active` 属性と aria-current semantics を提供する
 - **`<details>` を `Dialog.Close asChild` でラップ禁止** — summary クリックで accordion 開閉と Dialog 閉じが競合しアコーディオンが開けなくなる。controlled Dialog（`open` state）+ leaf link で `onClick={closeMenu}` を個別付与するパターンを使う
 - **Dialog / メニュー閉じコールバックは `onClick` を使う（`onNavigate` ではない）** — `onNavigate` は client-side SPA 遷移時のみ発火で外部 URL / modifier click では発火しない。Dialog 閉じには `onClick` が必須
@@ -259,6 +260,27 @@ paths:
 - **seed 変更後は 2 回連続実行で idempotency 実証** — `bun prisma/seed.ts && bun prisma/seed.ts` を走らせ、前後で全モデルの `count()` が変化しないことを確認（`bun -e` + PrismaClient で count 取得）。upsert パターンが正しく効いているかの ground truth 検証（単体テストでは再現困難な `skipDuplicates` 系 silent bug を検出できる）。Location / SpaceCategory / Tag 等 master data 変更時に必須
 - **重複マスターデータ cleanup + UNIQUE 制約後付けの canonical migration recipe** — 既存 DB に duplicate が蓄積した状態から `@unique` を追加するには ① `WITH keepers AS (SELECT DISTINCT ON (name) id, name FROM <table> ORDER BY name, "createdAt" ASC)` + `mapping AS (SELECT dup.id AS dup_id, k.id AS keeper_id FROM <table> dup JOIN keepers k ON k.name = dup.name WHERE dup.id <> k.id)` で「最古を keeper」に特定 ② 全 FK テーブル（例: `spaces.locationId` / `events.locationId` / `spaces.categoryId`）を keeper に `UPDATE ... FROM mapping` で defensive re-link ③ 重複 `DELETE FROM <table> WHERE id NOT IN (SELECT id FROM (SELECT DISTINCT ON (name) id ... ) t)` ④ `ALTER TABLE <table> ADD CONSTRAINT <table>_name_key UNIQUE (name)`。schema.prisma の `@unique` 追加は migration 適用後に行い `prisma generate` で型を更新。参照実装: `prisma/migrations/20260420093149_dedupe_location_category_and_add_unique/migration.sql`
 - **`ALTER COLUMN SET DEFAULT` は既存行の値を保持（Postgres 標準挙動）** — `@default(true)` → `@default(false)` のような default 変更は新規 INSERT にのみ適用され、既存行の値は一切触らない。ユーザー設定済みの `Space.reviewsEnabled: true` を保ったまま「新規作成時はデフォルト OFF」に切り替えたい multi-tenant template の canonical migration パターン。実行手順: ① migration.sql に `ALTER TABLE <table> ALTER COLUMN "<col>" SET DEFAULT <new>;` を記述 ② `schema.prisma` も同じ `@default(<new>)` に更新 ③ `prisma db execute --file` + `prisma migrate resolve --applied` ④ `prisma generate`。既存値を一括リセットしたい場合のみ追加で `UPDATE <table> SET <col> = <new>` を明記（デフォルト変更だけでは既存行は動かない）。参照実装: `prisma/migrations/20260420095742_add_reviews_enabled_global_and_default_false/migration.sql`
+- **`Section.config` JSON field の data migration は `bun -e` targeted update が canonical** — `seedPages()` は `existingCount > 0` で skip する仕様のため、`DEFAULT_PAGE_SECTIONS` 更新だけでは既存レコードに反映されない。dev/staging で既存 section の config を更新する場合は migration file ではなく targeted script で「旧値を持つレコードのみ update」（管理者カスタマイズを尊重）:
+  ```bash
+  bun -e "
+  const { PrismaClient } = require('./generated/prisma/client');
+  const { PrismaPg } = require('@prisma/adapter-pg');
+  const { Pool } = require('pg');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const p = new PrismaClient({ adapter: new PrismaPg(pool) });
+  (async () => {
+    const sections = await p.section.findMany({ where: { type: 'homepage-hero' } });
+    for (const s of sections) {
+      const c = s.config;
+      if (!c || typeof c !== 'object' || Array.isArray(c)) continue;
+      if (c.oldKey !== 'oldVal') continue;
+      await p.section.update({ where: { id: s.id }, data: { config: { ...c, oldKey: 'newVal' } } });
+    }
+    await p.\$disconnect();
+  })();
+  "
+  ```
+  Migration file (`prisma/migrations/*.sql`) は schema 変更専用（data 変更で作成しない）。同パターンは `Settings` の JSON field / Page の SEO config 等にも適用可能
 
 ## デプロイ
 
@@ -320,9 +342,9 @@ paths:
 - **dev サーバーは `db:generate` 後も古い Prisma Client を保持** — `schema.prisma` 変更 → `bun run db:generate` しても、稼働中の `next dev` プロセスはメモリに旧 Prisma Client の型を持ったまま。新カラムを select すると `PrismaClientValidationError: Unknown field ... for select statement on model ...` で 500 → 公開ページは 404 フォールバック。`cmd //c "taskkill /PID <pid> /F /T"` で強制終了 → `bun dev` で再起動が必須
 - **dnd-kit `CSS.Transform.toString()` はスケールを含む** — ドラッグ開始時に微妙なサイズ変化でレイアウトシフトが起きる。`translate3d(${x}px, ${y}px, 0)` のみ使用。また動的なマージン（`ml-8`）で幅が変わる場合は `paddingLeft` で代替する
 - **`server-only` の間接依存チェーンに注意** — `safe-fetch.ts` 等の共有ユーティリティが `./logger`（`server-only`）を import すると、テストで `mock.module("server-only")` が効かない場合がある。`server-only` なしの `logger-core` を直接 import する。対象: `safe-fetch.ts`, `cron-auth.ts` 等のテスト対象モジュール
-- **`bun run test` はディレクトリ別分離実行** — `bun test` 一括実行では `mock.module` のグローバル干渉で unit テストと integration テストが相互汚染する。`package.json` の `test` スクリプトは `bun test __tests__/unit/lib && bun test __tests__/unit/api && ... && bun test __tests__/integration` の形式。一括実行（`bun test`）は避ける
+- **`bun run test:unit` / `test:integration` はディレクトリ別分離実行** — `bun test` 一括実行（親ディレクトリ指定 / `--watch` のパス未指定）では `mock.module` のグローバル干渉でテストが相互汚染する。`package.json` の `test:unit` / `test:integration` スクリプトは `bun test __tests__/unit/lib && bun test __tests__/unit/api && ...` の形式で `&&` チェーン。日常の単発実行は `bun test <single-file>` のみ許可（ADR 0010 / 0011）
 - **副作用なし純粋モジュールの `mock.module` 禁止** — `@/shared/lib/constants`（CACHE_TAGS/getCacheTag）と `@/shared/lib/route-responses` は DB 依存も `server-only` 依存もない純粋関数ファイル。`mock.module` すると不完全なモックがグローバル干渉して他テストを壊す。実モジュールをそのまま使用
-- **新規テストディレクトリ追加時は `package.json` の `test` スクリプトにバッチ追加必須** — `bun test __tests__/unit/domain` のような親ディレクトリ指定は `mock.module` 干渉を起こす。`bun test __tests__/unit/domain/<subdomain>` のようにサブディレクトリ単位で分離実行する
+- **新規テストディレクトリ追加時は `package.json` の `test:unit` / `test:integration` スクリプトにバッチ追加必須** — `bun test __tests__/unit/domain` のような親ディレクトリ指定は `mock.module` 干渉を起こす。`bun test __tests__/unit/domain/<subdomain>` のようにサブディレクトリ単位で分離実行する（ADR 0010）
 - **テスト内で `mock.calls[0]?.[0] as Record<string, unknown>` パターン禁止** — `noUncheckedIndexedAccess` + `as` 禁止に違反。`expect(mockFn).toHaveBeenCalledWith(expect.objectContaining({...}))` を使用
 - **`"use server"` ファイルで型を re-export すると Turbopack が `ReferenceError` を投げる** — `export type { X }` は `verbatimModuleSyntax` 下で TypeScript erase されるはずだが、Turbopack の server-actions bundler が型識別子を runtime `export {X as '<hash>'} from 'ACTIONS_MODULEn'` として残し module evaluation 時に `X is not defined` で落ちる。公式仕様は async 関数のみ export 可。型・定数は co-located `<file>-types.ts` に分離する（→ `server-actions.md` §`"use server"` ファイルの export 契約）
 - **Bash tool で exit code + log 両取りする場合は `cmd > /tmp/log 2>&1; echo "EXIT=$?"` の順序** — `cmd 2>&1 > /tmp/log` は順序逆で stderr が捕捉されずログが空になる。`bun test` / `bun run build` 等で失敗詳細を後から確認したい時に必須
@@ -354,7 +376,7 @@ paths:
 - **新規 hook スクリプトは `bash` 明示呼び出し** — MINGW64 で `chmod` が Bash deny されるため、`settings.json` の `command` は `bash "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/script.sh"` 形式で記述する
 - **hook スクリプトの `grep` + `pipefail` 罠** — `set -euo pipefail` 下で `var=$(cmd | grep pattern | head -1)` は grep 不一致（exit 1）でスクリプトが無音終了・stderr なし。根本解決: `if ! cmd | grep -qE 'pattern'; then exit 0; fi`（`if` 条件式内は `set -e` 対象外が Bash 仕様）
 - **lefthook の YAML `run:` block に `"` を含めると実行時 shell syntax error** — lefthook は `sh -c "..."` wrapper で hook を起動するため、YAML literal block scalar (`run: |`) / single-line double-quoted / single-quoted いずれの形式でも内部 `"` が外側 sh -c の閉じ quote と衝突する。対処: 外部 `scripts/*.sh` に抽出して `run: bash scripts/x.sh` で呼び出す。参照実装: `scripts/check-protected-files.sh` / `scripts/check-commit-msg.sh`
-- **`core.hooksPath` が local に設定済みの場合 `lefthook install` が no-op** — `.git/config` で local に `core.hooksPath` が設定されていると lefthook はインストールをスキップする。`bunx lefthook install --force` で上書きインストール、または `bunx lefthook install --reset-hooks-path` で local 設定を解除。`ls .git/hooks/pre-commit` で実インストールを確認する
+- **lefthook 2.x は `core.hooksPath` 設定済みで `prepare` を exit 1 で失敗させる** — `bun install` / `bun update` 後に `postinstall`→`prepare`→`lefthook install` が走り、local `core.hooksPath` が設定されていると `Error: core.hooksPath is set locally` で失敗する（1.x の silent no-op から仕様変更）。**推奨対処**: `bunx lefthook install --reset-hooks-path` で local 設定を unset + 再インストール（設定値が git デフォルトの `.git/hooks` 相当なら動作差異ゼロ）。`--force` は設定を残したまま強制上書きするため根本解決にならない。`git config --local --get core.hooksPath; echo $?` で現状確認（exit 1 = 未設定）
 - **Subagent report は必ず独立検証する** — implementer の「commit SHA: xxx」「EXIT: 0」報告を鵜呑みにせず、次タスク dispatch 前に `git log --oneline -N` + `git show --stat HEAD` で実在確認する。報告内容と git state の乖離は稀だが発生する（特に安価なモデルを implementer に使った場合）。乖離検出時は同じタスクをより上位モデルで再 dispatch
 - **Implementation サブエージェントに haiku を使わない** — ファイル編集 + commit を伴うタスクで haiku モデルは Bash/Edit ツール呼び出しを省略し成功報告を捏造することがある。`Agent` tool の `model: "haiku"` オプションは read-only 調査（Explore 等）のみで使用し、implementer には sonnet 以上を指定する
 - **Explore subagent のファイル名 hallucination** — Explore エージェントは調査結果に実在しないファイルパス（例: `color-swatch-picker.tsx` / `day-view.tsx` 等、それらしいが存在しないパス）を混ぜることがある。大量の発見を報告してきた場合は `Glob` / `Read` で実在確認してから対処する。特に「さらに徹底調査」指示後の報告は hallucination 率が上がる傾向

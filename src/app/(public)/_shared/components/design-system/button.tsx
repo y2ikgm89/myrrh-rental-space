@@ -19,8 +19,9 @@ const variantClasses = {
     "border border-foreground text-foreground transition-colors duration-300 hover:bg-accent hover:text-accent-foreground",
 } as const satisfies Record<ButtonVariant, string>;
 
+// WCAG 2.5.5 Enhanced (AAA) — all sizes meet 44×44 CSS px minimum
 const sizeClasses = {
-  sm: "px-3 py-2 text-sm min-h-10",
+  sm: "px-3 py-2 text-sm min-h-11",
   md: "px-5 py-2.5 text-base min-h-11",
   lg: "px-7 py-3 text-lg min-h-12",
 } as const satisfies Record<ButtonSize, string>;

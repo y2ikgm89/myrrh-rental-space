@@ -39,7 +39,7 @@ export function SiteCTA({
                 {title}
               </Heading>
               {description ? (
-                <p className="max-w-[45ch] leading-relaxed text-muted-foreground">
+                <p className="max-w-[var(--prose-medium)] leading-relaxed text-muted-foreground">
                   {description}
                 </p>
               ) : null}

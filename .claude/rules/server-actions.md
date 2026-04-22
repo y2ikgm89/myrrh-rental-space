@@ -6,7 +6,7 @@ paths:
 
 # Server Actions ルール
 
-> Next.js 16 / 'use cache' / PPR 対応
+> Next.js 16.2 / 'use cache' / PPR 対応
 
 ## `"use server"` ファイルの export 契約（Next.js 16 公式仕様）
 

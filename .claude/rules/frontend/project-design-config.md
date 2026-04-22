@@ -130,6 +130,61 @@ OKLCH形式。Luxury White × Bronze。
 - **入場順序**: SplitText → ScrollReveal → ParallaxImage
 - **制約**: 1セクションで動く要素は最大3箇所
 
+## レスポンシブ設計（Tailwind 4 公式準拠）
+
+### ブレイクポイント policy
+
+public.css / admin.css 両方で **Tailwind default bp 維持 + `--breakpoint-3xl` 追加** の 6 段階構成。完全リセット（`--breakpoint-*: initial`）は shadcn/ui・Radix エコシステム互換性を損なうため不採用。
+
+| bp  | 値       | px   | semantic 用途                                    |
+| --- | -------- | ---- | ------------------------------------------------ |
+| sm  | `40rem`  | 640  | large phone                                      |
+| md  | `48rem`  | 768  | tablet portrait                                  |
+| lg  | `64rem`  | 1024 | tablet landscape / laptop (admin サイドバー出現) |
+| xl  | `80rem`  | 1280 | desktop                                          |
+| 2xl | `96rem`  | 1536 | large desktop                                    |
+| 3xl | `120rem` | 1920 | ultra wide / 2K-4K monitor                       |
+
+### 採用方針
+
+- **マクロレイアウト**（Hero split, 2 カラム text+image, フォームグリッド）: **viewport breakpoint**（`md:grid-cols-2`）
+- **カードグリッド / ダッシュボード widget**: **Container Queries**（`@container` + `@md:grid-cols-2 @3xl:grid-cols-3`）
+- **管理画面 dashboard**: **named container**（`@container/main` on `MainContent.tsx` → children で `@md/main:` / `@3xl/main:`）— サイドバー折りたたみ時の適応に必須
+- **ultra-wide 対応**: `@3xl` / `3xl:` variant を使用。default `lg:grid-cols-3` の上位として追加
+
+### Layout tokens（public.css / admin.css 共通プレフィックス）
+
+| トークン                    | public 値                    | admin 値                     | 用途                                     |
+| --------------------------- | ---------------------------- | ---------------------------- | ---------------------------------------- |
+| `--container-max`           | `80rem` (1280px)             | `100rem` (1600px)            | ページ幅の上限                           |
+| `--container-padding`       | `clamp(1.5rem, 3vw, 3rem)`   | `clamp(1rem, 2vw, 2rem)`     | fluid 水平 padding                       |
+| `--container-header-max`    | `90rem` (1440px)             | N/A                          | site-header の拡張幅                     |
+| `--container-measure`       | `65ch`                       | N/A                          | editorial Prose の読みやすさ上限         |
+| `--prose-narrow`            | `40ch`                       | N/A                          | Hero subtitle 等の狭い測度               |
+| `--prose-medium`            | `45ch`                       | N/A                          | SiteCTA 説明文等                         |
+| `--header-height`           | 3.5rem (mobile) / 4rem (md+) | 3.5rem (mobile) / 4rem (md+) | sticky UI・scroll offset の SSoT         |
+| `--hero-min-height`         | `60svh`                      | N/A                          | Hero 最小高さ                            |
+| `--modal-max-height`        | `85vh`                       | `85vh`                       | Dialog の最大高                          |
+| `--lightbox-max-height`     | `90svh`                      | N/A                          | image-gallery lightbox                   |
+| `--lightbox-max-width`      | `90vw`                       | N/A                          | 同上                                     |
+| `--dropdown-min-width`      | `12rem`                      | `12rem`                      | filter-bar / その他 DropdownMenu.Content |
+| `--sidebar-width`           | N/A                          | `18rem` (288px)              | admin desktop sidebar                    |
+| `--sidebar-width-collapsed` | N/A                          | `4rem` (64px)                | admin collapsed sidebar                  |
+| `--touch-target-min`        | `2.75rem` (44px)             | `2.75rem` (44px)             | WCAG 2.5.5 Enhanced 最小ヒットエリア     |
+
+### WCAG 2.5.5 Enhanced (AAA) 準拠
+
+全 Button / interactive element は **44×44 CSS px 以上**。public Button / admin Button 両方とも sm/md/lg/icon すべて `min-h-11`（44px）以上。
+
+### Viewport metadata（Next.js 16）
+
+| layout                        | themeColor                     | interactiveWidget | colorScheme |
+| ----------------------------- | ------------------------------ | ----------------- | ----------- |
+| `src/app/(public)/layout.tsx` | DB 動的（Settings）            | `resizes-visual`  | `"light"`   |
+| `src/app/(admin)/layout.tsx`  | light/dark array（Trust Blue） | `resizes-visual`  | `"light"`   |
+
+`interactiveWidget: "resizes-visual"` により仮想キーボード表示時に visual viewport が縮小される（入力中に送信ボタンが可視維持）。
+
 ## UX 定数
 
 | 定数                     | 値           | 根拠                                                                                            |

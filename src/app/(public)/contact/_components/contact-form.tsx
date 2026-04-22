@@ -80,7 +80,7 @@ export function ContactForm({
           <p className="mt-4 font-heading text-h3 font-light">
             お問い合わせを受け付けました
           </p>
-          <p className="mx-auto mt-4 max-w-[40ch] leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-[var(--prose-narrow)] leading-relaxed text-muted-foreground">
             確認メールをお送りしましたのでご確認ください。
             <br />
             通常1営業日以内に担当者よりご連絡いたします。

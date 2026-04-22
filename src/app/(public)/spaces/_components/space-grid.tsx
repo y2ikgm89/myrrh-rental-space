@@ -35,31 +35,33 @@ export function SpaceGrid({ spaces, reviewStats }: SpaceGridProps) {
   }
 
   return (
-    <ScrollRevealGroup className="grid grid-cols-1 gap-10 sm:grid-cols-2 md:gap-x-10 md:gap-y-14">
-      {spaces.map((space) => {
-        const stats = reviewStats?.[space.id];
-        return (
-          <SpaceCard
-            key={space.id}
-            slug={space.slug}
-            name={space.name}
-            description={space.descriptionPlainText}
-            capacity={space.capacity}
-            area={space.area}
-            hourlyPrice={space.hourlyPrice}
-            locationName={space.location.name}
-            mainImageUrl={space.mainImageUrl}
-            imageUrls={space.imageUrls}
-            categoryName={space.category?.name}
-            {...(stats && stats.totalCount > 0
-              ? {
-                  averageRating: stats.averageRating,
-                  reviewCount: stats.totalCount,
-                }
-              : {})}
-          />
-        );
-      })}
-    </ScrollRevealGroup>
+    <div className="@container">
+      <ScrollRevealGroup className="grid grid-cols-1 gap-10 @md:grid-cols-2 @3xl:grid-cols-3 @md:gap-x-10 @md:gap-y-14">
+        {spaces.map((space) => {
+          const stats = reviewStats?.[space.id];
+          return (
+            <SpaceCard
+              key={space.id}
+              slug={space.slug}
+              name={space.name}
+              description={space.descriptionPlainText}
+              capacity={space.capacity}
+              area={space.area}
+              hourlyPrice={space.hourlyPrice}
+              locationName={space.location.name}
+              mainImageUrl={space.mainImageUrl}
+              imageUrls={space.imageUrls}
+              categoryName={space.category?.name}
+              {...(stats && stats.totalCount > 0
+                ? {
+                    averageRating: stats.averageRating,
+                    reviewCount: stats.totalCount,
+                  }
+                : {})}
+            />
+          );
+        })}
+      </ScrollRevealGroup>
+    </div>
   );
 }

@@ -9,7 +9,7 @@
  * - 全ナビ項目は DB 駆動。navItems が空なら nav リストのみ省略
  */
 
-import { useEffect, useId, useRef, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
@@ -209,7 +209,6 @@ export function Header({
   // /reservation は CTA ボタンで導線があるためナビから除外
   const items = navItems.filter((item) => item.url !== "/reservation");
   const headerRef = useRef<HTMLElement>(null);
-  const mobileTitleId = useId();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
@@ -340,7 +339,7 @@ export function Header({
         scrolled && "border-b border-border/50",
       )}
     >
-      <div className="mx-auto grid max-w-[90rem] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 md:grid-cols-3 md:gap-10 md:px-8 md:py-5 lg:gap-16">
+      <div className="mx-auto grid max-w-[var(--container-header-max)] grid-cols-2 items-center justify-items-start gap-6 px-5 py-4 md:grid-cols-3 md:gap-10 md:px-8 md:py-5 lg:gap-16">
         {/* Brand — 左列（container の justify-items-start が default 適用） */}
         <SiteBrand brand={brand} variant="header" />
 
@@ -428,11 +427,8 @@ export function Header({
           </Dialog.Trigger>
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 md:hidden" />
-            <Dialog.Content
-              aria-labelledby={mobileTitleId}
-              className="fixed inset-0 z-50 flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 md:hidden"
-            >
-              <Dialog.Title id={mobileTitleId} className="sr-only">
+            <Dialog.Content className="fixed inset-0 z-50 flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 md:hidden">
+              <Dialog.Title className="sr-only">
                 ナビゲーションメニュー
               </Dialog.Title>
               <Dialog.Description className="sr-only">

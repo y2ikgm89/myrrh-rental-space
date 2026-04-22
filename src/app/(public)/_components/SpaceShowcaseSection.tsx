@@ -95,32 +95,34 @@ export function SpaceShowcaseSection({
         </ScrollReveal>
       )}
 
-      {/* Remaining cards — smaller grid */}
+      {/* Remaining cards — smaller grid (@container for responsive card columns) */}
       {remaining.length > 0 && (
-        <ScrollRevealGroup
-          className={cn(
-            "grid gap-6",
-            getCardGridColsClass(config.columns),
-            "md:gap-8",
-          )}
-          stagger={0.08}
-        >
-          {remaining.map((space) => (
-            <SpaceCard
-              key={space.id}
-              slug={space.slug}
-              name={space.name}
-              description={space.descriptionPlainText}
-              capacity={space.capacity}
-              area={space.area}
-              hourlyPrice={space.hourlyPrice}
-              mainImageUrl={space.mainImageUrl}
-              imageUrls={space.imageUrls}
-              categoryName={space.categoryName}
-              locationName={space.locationName ?? undefined}
-            />
-          ))}
-        </ScrollRevealGroup>
+        <div className="@container">
+          <ScrollRevealGroup
+            className={cn(
+              "grid gap-6",
+              getCardGridColsClass(config.columns),
+              "@md:gap-8",
+            )}
+            stagger={0.08}
+          >
+            {remaining.map((space) => (
+              <SpaceCard
+                key={space.id}
+                slug={space.slug}
+                name={space.name}
+                description={space.descriptionPlainText}
+                capacity={space.capacity}
+                area={space.area}
+                hourlyPrice={space.hourlyPrice}
+                mainImageUrl={space.mainImageUrl}
+                imageUrls={space.imageUrls}
+                categoryName={space.categoryName}
+                locationName={space.locationName ?? undefined}
+              />
+            ))}
+          </ScrollRevealGroup>
+        </div>
       )}
     </SectionWrapper>
   );

@@ -40,7 +40,7 @@ export async function DashboardRecentSection() {
   ]);
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 @3xl/main:grid-cols-2">
       {/* 最近の予約 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

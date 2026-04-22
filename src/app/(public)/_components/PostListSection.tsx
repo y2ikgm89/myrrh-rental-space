@@ -115,7 +115,7 @@ export function PostListSection({
         className={
           isList
             ? "flex flex-col gap-4"
-            : `grid gap-6 ${getCardGridColsClass(colKey)}`
+            : `@container grid gap-6 ${getCardGridColsClass(colKey)}`
         }
       >
         {posts.map((post) => (

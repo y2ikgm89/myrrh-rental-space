@@ -20,17 +20,19 @@ You run failing tests in isolation, read the source to understand intent, and ex
 ## Test commands
 
 ```bash
-# Bun – unit
-bun test __tests__/unit/<file>                    # single file
-bun test __tests__/unit/                          # all unit
+# Bun – unit (single file only; ADR 0010 forbids parent-dir runs due to mock.module interference)
+bun test __tests__/unit/<file>                       # single file
 bun test --test-name-pattern "<describe/test name>"  # filter by name
+bun test --bail=1 <file>                             # fail fast
+bun test --watch <file>                              # TDD watch (single file only)
 
 # Bun – integration
 bun test __tests__/integration/<file>
-bun test __tests__/integration/
 
-# Both in parallel
-bun run test:all
+# Full batch runs (use package.json scripts — parent-dir `bun test` is banned)
+bun run test:unit         # all unit (per-directory batch via package.json chain)
+bun run test:integration  # all integration (per-directory batch)
+bun run test:all          # unit + integration
 
 # Playwright – e2e
 bun run e2e                                        # all
@@ -38,6 +40,8 @@ bunx playwright test e2e/<file> --reporter=list    # single file
 bunx playwright test --grep "<test title>"         # filter by name
 bunx playwright test --debug                       # headed/debug mode
 ```
+
+Note: `bun run test` は ADR 0014 で廃止。フル実行は `test:all` を使う。
 
 ## Workflow
 

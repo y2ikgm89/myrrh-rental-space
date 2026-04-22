@@ -34,17 +34,20 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## 技術スタック（非自明な注意点のみ）
 
-| 技術         | 注意点                                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Next.js 16   | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。Suspense 内 async SC は `await connection()` |
-| React 19.2   | Compiler 1.0 自動メモ化。`useCallback`/`useMemo`/`memo` 禁止（例外→`react-patterns.md`）                              |
-| TypeScript 6 | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                             |
-| Prisma 7     | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`                                             |
-| Tailwind 4.2 | CSS-first `@theme`、セマンティックトークン必須                                                                        |
-| Better Auth  | `adminAuth`/`customerAuth` 分離、独自 `ROLE_PERMISSIONS` SSoT、`generateId: "uuid"` 必須                              |
-| Zod 4        | `.merge()` deprecated（→ `.extend(shape)`）、`.refine()` 後の `.omit()` 不可、`error:` 必須                           |
-| Lexical 0.43 | NodeState API（`$config` + `createState`）                                                                            |
-| nuqs 2.8     | パーサーマップ `@/shared/lib/nuqs`、`useQueryStates({ shallow: false })` で RSC 再レンダリング                        |
+> 実バージョンは `package.json` + `bun.lock` が SSoT。下記は major.minor で各世代固有の注意点を記述。完全版は [docs/README.md](docs/README.md#技術スタック)。
+
+| 技術            | 注意点                                                                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js 16.2    | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。Suspense 内 async SC は `await connection()`                                       |
+| React 19.2      | Compiler 1.0 自動メモ化。`useCallback`/`useMemo`/`memo` 禁止（例外→`react-patterns.md`）                                                                    |
+| TypeScript 6.0  | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                                                   |
+| Prisma 7.7      | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`。CLI flag 変更（`migrate diff --to-schema` / `--shadow-database-url` 削除）       |
+| Tailwind 4.2    | CSS-first `@theme`、セマンティックトークン必須、default bp + `--breakpoint-3xl: 120rem`、カードグリッドは Container Queries（named `@container/main` 対応） |
+| Better Auth 1.6 | `adminAuth`/`customerAuth` 分離、独自 `ROLE_PERMISSIONS` SSoT、`generateId: "uuid"` 必須                                                                    |
+| Zod 4.3         | `.merge()` deprecated（→ `.extend(shape)`）、`.refine()` 後の `.omit()` 不可、`error:` 必須                                                                 |
+| Lexical 0.43    | NodeState API（`$config` + `createState`）                                                                                                                  |
+| nuqs 2.8        | パーサーマップ `@/shared/lib/nuqs`、`useQueryStates({ shallow: false })` で RSC 再レンダリング                                                              |
+| Bun 1.3         | test は per-directory バッチ（`mock.module` 干渉回避）、`packageManager: bun@1.3.12` pinned                                                                 |
 
 ---
 
@@ -82,6 +85,9 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ### UI / UX
 
+- **全 interactive 要素は WCAG 2.5.5 Enhanced (AAA) 準拠 44×44 CSS px 必須** — public/admin Button は全 size で `min-h-11` 以上。checkbox/radio は wrapper で 44px ヒットエリア確保（→ `frontend/accessibility.md` §タッチターゲット、`frontend/project-design-config.md` §レスポンシブ設計）
+- **カードグリッドは Container Queries、マクロレイアウトは viewport breakpoint** — `@container` + `@md:grid-cols-2 @3xl:grid-cols-3` がカード系 SSoT、`CARD_GRID_COLS_MAP` も container variant 化済。管理画面 dashboard は named container `@container/main` on `MainContent.tsx`（children で `@md/main:` / `@3xl/main:`）（→ `gotchas.md` §公開ページ レスポンシブ標準、`frontend/tailwind-patterns.md` §Container Queries）
+- **arbitrary sizing（`max-w-[65ch]` / `[85vh]` 等）は @theme token で参照** — `--hero-min-height` / `--modal-max-height` / `--lightbox-max-*` / `--dropdown-min-width` / `--prose-narrow|medium` / `--container-measure` / `--container-header-max` / `--touch-target-min` が SSoT（public.css / admin.css の `@theme`）。新規 arbitrary 値は 3 回以上使用されたら @theme に昇格
 - **DB フェッチ公開ルートは `loading.tsx` + `error.tsx` 必須**
 - **URL 由来の初期値を受ける Client Component は `key={urlValue}` で remount 必須** — 同一ルート内で `searchParams` / 動的セグメントが変わっても Client は remount されず `useState` lazy init / `useForm defaultValues` / `useReducer` initial state が stale 化する（→ `react-patterns.md` §Resetting state with key）
 - **Multiple Root Layouts で `app/not-found.tsx` 禁止** — `app/global-not-found.tsx` + `experimental.globalNotFound: true` 使用（→ `gotchas.md`）
@@ -95,6 +101,10 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **公開サインインは Better Auth Client API `signIn.email({ callbackURL })`** — Server Action 経由は Router Cache 未更新の silent bug（→ `auth-patterns.md` §signIn）
 - **Tailwind v4 JIT HMR 新規 class 未反映時は dev restart** — `netstat -ano | grep :3000` → `cmd //c "taskkill /PID <pid> /F /T"` → `bun dev`（→ `gotchas.md`）
 - **Event admin form は構造化フィールド先頭・本文最後** — 業界標準（Eventbrite / Peatix / connpass）は日時/定員/ステータスが主役。content-first は Article（Post / News）専用
+- **Homepage hero CTA は primary conversion action（予約等）に向ける** — browse navigation（`/spaces` 一覧等）は secondary CTA（`homepage-cta` セクション）に譲る。hero CTA は mobile fold 内に収めて first view の action wall とする
+- **画像 overlay text は 12px 以上（WCAG a11y）** — label/caption に `text-[0.55rem]` (8.8px) 禁止。editorial でも mobile 最小 `text-[0.75rem]` (12px)、photo credit のみ `text-[0.625rem]` (10px) まで許容。画像上テキストは 3 層防御（scrim + paint-order stroke + text-shadow）必須（→ `frontend/accessibility.md` §画像上テキストの 3 層可読性保証）
+- **画像に text overlay する responsive hero は grid cell overlap パターン** — モバイル `col-start-1 row-start-1` + z-index で overlay、desktop で `md:col-start-2` に分離。単一 h1 / DOM 重複なしで SEO 整合（→ `tailwind-patterns.md` §同 Grid cell overlap）
+- **Tailwind v4 responsive reset が必要な値は inline style 不可** — `style={{ WebkitTextStroke: "..." }}` は specificity で `md:[-webkit-text-stroke:0]` を上書きする silent bug。arbitrary class `[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]` + `md:[-webkit-text-stroke:0px_transparent]` を使う（→ `tailwind-patterns.md` §インラインスタイル vs Tailwind arbitrary properties）
 
 ---
 
@@ -104,7 +114,13 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 - **作業中** `bun run type-check`、**完了前** `bun run validate`、**コミット前** `bun run validate && bun run build`
 - **依存パッチ/マイナー更新後は `bun run validate` 必須** — eslint-plugin-react-hooks 7.0.1 → 7.1.1 のようなパッチで新 lint ルール（`set-state-in-effect` / `immutability` / `refs` / `purity` 等）が追加され実質破壊的変更になる。新ルール由来のエラーは eslint-disable ではなく公式推奨パターン（"Adjusting State Directly During Render" / `useSyncExternalStore` / render 中 derive）への書き換えで解消する
-- **`test:unit` / `test:integration` は per-directory バッチ**（`package.json` 参照）— `bun test __tests__/unit` / `bun test --coverage` への簡略化禁止（`mock.module` 干渉で偽陽性）。CI の `.github/workflows/ci.yml` も同一制約（→ ADR 0010）
+- **テスト実行ポリシー（ADR 0014）** — 毎回のコミット前・完了前に **全テストを走らせる必要はない**。責務分担:
+  - ローカル（開発中）: 関連する 1〜数ファイルのみ `bun test <path/to/file.test.ts>` で回す。TDD 時は `bun test --watch <path/to/file.test.ts>` を単一ファイル指定で使う（親ディレクトリ指定は ADR 0010 違反）。fail fast が欲しければ `bun test --bail=1 <path>`、名前フィルターは `--test-name-pattern <pat>`
+  - lefthook `pre-push`: `type-check` + `architecture-boundaries.test.ts` を自動実行（`lefthook.yml`）
+  - CI (`.github/workflows/ci.yml`): `bun run test:unit && bun run test:integration` + E2E を毎 push/PR で実行
+  - フル実行を手で確認したい場合のみ `bun run test:all`。日常の作業では不要
+- **`test:unit` / `test:integration` は per-directory バッチ**（`package.json` 参照）— `bun test __tests__/unit` / `bun test --coverage <dir>` への簡略化禁止（`mock.module` 干渉で偽陽性）。CI の `.github/workflows/ci.yml` も同一制約（→ ADR 0010）
+- **Coverage は参考値のみ** — `bunfig.toml` の coverage 設定は撤去済（ADR 0014）。必要時は `bun test --coverage <single-file>` で単発実行し参考値として扱う。CI には coverage ゲートを置かない
 - **大規模監査の前提** — `bun run validate` が exit 0 なら compiler/linter 基準ではクリーン。監査で大量違反報告時はまず validate を ground truth に
 - **Pre-existing test failure の切り分け** — `git stash -u && bun test <file> && git stash pop` で HEAD 時点の fail 数と比較
 
@@ -118,6 +134,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Radix primitives の具体例**: context7 取得不可 → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>`
 - **一括修正後**: Grep で違反パターン残存ゼロ確認してから完了報告
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
+- **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate することあり（このセッションで `xl:` 22→実際 18、`@container` 採用 5→実際 3 の drift を検出）。修正計画に組み込む前に `grep -rE "\bxl:" src/ --include="*.tsx" -c | awk -F: '{s+=$2} END{print s}'` 等で ground truth を取る
 - **レビューエージェント指摘**: `gotchas.md` と照合して誤報除外（`revalidateTag` 第2引数、JSX IIFE 算術式偽陽性、`select.tsx` required 等）。`bun run lint` exit 状態 + Read を ground truth とする
 - **監査エージェント指摘**: 該当 rule ファイル（`react-patterns.md` / `lexical-patterns.md` / `type-safety.md` 等）の「例外」節とクロスリファレンス
 - **SSoT 重複検出の grep**: symbol 名だけでなく **literal 文字列**（`"スーパー管理者"` 等）でも再 grep
@@ -131,6 +148,9 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Prisma 7.7 CLI フラグ変更**: `migrate diff --to-schema-datamodel` → `--to-schema`、`--shadow-database-url` 削除、`db execute --schema` 削除。非対話 destructive migration は「schema 編集 → `mkdir prisma/migrations/<ts>_<name>` → `migration.sql` 手書き → `db execute --file` → `migrate resolve --applied`」順（→ `gotchas.md`）
 - **schema.prisma commit 後は `prisma/migrations/` 側も同時 commit 必須** — schema のみ commit は `prisma migrate deploy` が CI/prod で fail する silent drift
 - **テストファイルは top-level `__tests__/` のみ** — `src/**/__tests__/` 配置禁止（`tsconfig.test.json` include 範囲外）（→ `test-quality.md`）
+- **ADR 新規作成前に `ls docs/architecture/decisions/ | grep "^00"` で既存番号確認** — 連番重複採番を防ぐ。本セッションで 0011 衝突が発生（`0011-dual-better-auth-instance.md` 既存を見落として重複作成 → 0014 に変更）
+- **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/guides/**` / `bunfig.toml` / `.vscode/launch.json` に旧 script 名が残らないか確認（ADR 0014 で実例化）
+- **ADR 制約と設定ファイルの整合を grep で周期検証** — `bunfig.toml` / `playwright.config.ts` / `.gitignore` 等が ADR 制約と乖離した dead code になっていないか（本セッション: `coverageThreshold` が ADR 0010 採択後も残存していた → ADR 0014 で撤去）
 
 ### 実装パターン
 
@@ -143,6 +163,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **UX スケール判断は seed 件数ではなく CMS 運用上限で** — Location / Category / Tag 等運用者が追加できるリソースは production 想定値（数十〜100）で設計。フィルタ UI 閾値目安: pill 2〜5 / scroll 6〜15 / dropdown 16+
 - **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.xxxEnabledGlobal` + `Entity.xxxEnabled` の 2 層（precedence 一方向: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.reviewsEnabledGlobal` ↔ `Space.reviewsEnabled`
 - **Lexical 新規ノードで作成時バリアント選択 UI が必要な場合** — dialog-upfront 3 コマンド体制（`OPEN_XXX_DIALOG_COMMAND` / `INSERT_XXX_COMMAND` / `UNGROUP|TRANSFORM_XXX_COMMAND`）。全 UI 経路（Insert / FT / ⋮⋮ / keyboard）は dispatch 前に `$getSelectionBlockNodes()` のキーをスナップショットして payload に積む（ダイアログフォーカスで editor 選択が失われるため必須）。hardcoded default 値の silent 挿入禁止。参照実装: `GroupPlugin`（→ `frontend/lexical-patterns.md` §グループ化）
+- **UI デザイン探索は `src/app/(public)/<feature>-demo/` で複数バリアント比較** — `hero-demo/` / `spaces-design-demo/` が参照実装。上部 sticky nav で variant 切替 + `max-w-[420px]` wrapper で desktop でも mobile preview 可能。`shared.ts` に variant metadata（name / tagline / description / pros / cons）を SSoT 化。決定後も reference として保持（削除しない）
 
 ### Subagent 規律
 
@@ -172,34 +193,18 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ---
 
-## SSOT 定数・シングルトン
+## SSOT 定数・シングルトン（主要）
 
-| 定数/変数                                                                                            | 場所                                           | メモ                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DASHBOARD_ROLES` / `ROLE_LABELS` / `ROLE_DESCRIPTIONS` / `isDashboardRole()` / `DashboardRole`      | `@/shared/lib/admin-roles`                     | client-safe Role SSoT。`admin-auth.ts`（server-only）が再 export。tuple のため `isDashboardRole()` 型ガード必須                                                                                                                                                                                                                                                        |
-| `INVITABLE_BY` / `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()`                       | `@/shared/lib/admin-roles`                     | client-safe RBAC 階層制御。SUPER_ADMIN→ADMIN/EDITOR/VIEWER、ADMIN→EDITOR/VIEWER のみ（特権昇格防止）                                                                                                                                                                                                                                                                   |
-| `adminAuth` / `customerAuth`                                                                         | `@/shared/lib/{admin,customer}-auth`           | cookie prefix 分離。顧客は Google/LINE、`basePath: /api/customer-auth`                                                                                                                                                                                                                                                                                                 |
-| `prisma` / `basePrisma`                                                                              | `@/shared/db/prisma`                           | `basePrisma` は Better Auth アダプター専用（`$extends` 前）                                                                                                                                                                                                                                                                                                            |
-| `CACHE_TAGS` / `getCacheTag` / `CACHE_LIFE`                                                          | `@/shared/lib/constants`                       | `CACHE_TAGS.SETTINGS` は廃止済 → 個別タグ                                                                                                                                                                                                                                                                                                                              |
-| `invalidateReservationCaches` / `invalidateEventCaches` / `invalidateReviewCaches`                   | `@/shared/lib/cache/*-cache.ts`                | mutation 後のキャッシュ無効化 SSoT。ローカル `updateTag` 羅列禁止、helper を拡張                                                                                                                                                                                                                                                                                       |
-| `OUTBOUND_RESERVATION_MARKER` / `OUTBOUND_EVENT_MARKER` / `isAppGeneratedCalendarEvent`              | `@/shared/lib/calendar-sync/loop-prevention`   | GCal outbound → inbound ループ防止 SSoT。outbound（`outbound.ts` / `event-outbound.ts`）が description 先頭に「予約ID:」「イベントID:」を埋め込み、inbound（`event-inbound.ts`）が `isAppGeneratedCalendarEvent(description)` で 1 本化判定してスキップ。literal を outbound / inbound で重複定義しない                                                                |
-| `Resource` / `Action` / `RESOURCE_LABELS`                                                            | `@/admin/lib/admin-resources`                  | client-safe Resource SSoT。`permissions.ts` が再 export                                                                                                                                                                                                                                                                                                                |
-| `TURNSTILE_ACTIONS` / `TurnstileAction` / `DEFAULT_TURNSTILE_APPEARANCE`                             | `@/shared/lib/turnstile-actions`               | client-safe Turnstile action SSoT（英数/`_`/`-`、最大32文字）。server 側 `expectedAction` 検証で同一値参照                                                                                                                                                                                                                                                             |
-| `STORAGE_PREFIXES` / `StoragePrefix`                                                                 | `@/shared/lib/r2/keys`                         | 画像ストレージの key prefix SSoT（`spaces` / `posts` / `site` / `media`）。Cloudflare R2 バケット内の仮想フォルダ名に対応。upload / delete の第 2 引数で使用                                                                                                                                                                                                           |
-| `Prisma` 型 / Prisma enums（`Role` / `ReservationStatus` 等 34 種）                                  | `@/shared/lib/validations/enums/prisma-types`  | client-safe gateway。`Prisma` 名前空間は型のみ再 export。**runtime sentinel（`JsonNull` / `DbNull` / `join` / `sql` / `raw`）は gateway から取得不可** — `shared/db` / `shared/domain` が `@generated/prisma/client` から直接 import                                                                                                                                   |
-| `*_STATUS_LABELS` / `AUDIT_ACTION_LABELS` / `PUBLISH_LABELS` / `getPublishLabel()`                   | `enums/helpers`                                | 全ステータス enum + boolean publish のラベル SSoT。UI でハードコード禁止                                                                                                                                                                                                                                                                                               |
-| `NOTIFICATION_TYPE` / `isValidNotificationType`                                                      | `enums/helpers`                                | DB VARCHAR 管理                                                                                                                                                                                                                                                                                                                                                        |
-| `FaqItem.answer`                                                                                     | `prisma/schema.prisma`                         | **プレーンテキスト単一列**（`@db.Text`）。管理は `/admin/faq` → `/admin/faq/[categoryId]` master-detail、CRUD は `FaqItemDialog` / `FaqCategoryDialog`。公開は `whitespace-pre-wrap`。Lexical 本文は Post/News/Terms/Section のみ                                                                                                                                      |
-| `ArticleLayout` / `ArticleHeader` / `ArticleFooter` / `ArticleTagList`                               | `@/public/components/{layouts,ui}/article-*`   | 公開記事詳細（posts/news/preview）の統一ラッパー SSoT。`<article>` 末尾に個別 border ブロックを重ねない                                                                                                                                                                                                                                                                |
-| `extractHeadings` / `HeadingEntry`                                                                   | `@/shared/lib/lexical/extract-headings`        | 目次用 h2/h3 抽出（Prisma JSON / 文字列両対応）。永続化済み `anchorId` のみ返す                                                                                                                                                                                                                                                                                        |
-| `CustomHeadingNode` / `anchorIdState` / `HeadingAnchorPlugin`                                        | `@/admin/.../lexical/nodes,plugins`            | `HeadingNode` の NodeState 拡張 + Node Replacement。`HeadingAnchorPlugin` が `generateUniqueSlug` で `anchorId` 自動生成                                                                                                                                                                                                                                               |
-| `$getSelectionBlockNodes` / `$isMultiBlockSelection`                                                 | `@/admin/.../lexical/lib/selection-helpers`    | 選択の「ブロック粒度」を求める SSoT。deepest common ancestor の直接 block-level 子を返す（WordPress Gutenberg の `getCommonRootClientID` 等価）。Group ネストに対応: Root 直下選択 → Root 子、Group 内選択 → Group 子。Floating Text FT（単一）↔ Block FT（複数）の排他制御、`GroupPlugin` から参照。ローカル再実装禁止                                                |
-| `scrollToElement` / `scrollToElementById` / `scrollToTop`                                            | `@/public/lib/scroll`                          | `--header-height` 補正 + `prefers-reduced-motion` で `behavior: "instant"` 切替                                                                                                                                                                                                                                                                                        |
-| `buildReservationCalendar` / `buildEventCalendar` / `buildAddToCalendarUrls` / `buildReservationUid` | `@/shared/lib/ical`                            | **RFC 5545 準拠 ICS SSoT**。`ical-generator` v10 + `@touch4it/ical-timezones`。UID 安定・SEQUENCE 管理（`icsSequence` を `{ increment: 1 }`）・METHOD:REQUEST/CANCEL・VTIMEZONE(Asia/Tokyo)。直接 `ical()` 呼び出し禁止。ICS DL は `/api/calendar/*` route（`data:` URL は Gmail ブロック）。UI は `AddToCalendar` Server Component（→ `ical-patterns.md`）            |
-| `LogoutButton` / `HeaderAuthSlot`                                                                    | `@/public/components/{ui,layouts}/*`           | 公開顧客ログアウト SSoT。`HeaderAuthSlot` は `"authenticated" \| "guest"` discriminated union。`signOut({ fetchOptions: { onSuccess: () => router.push + router.refresh } })` で PPR session 無効化。**マイページ等にローカル配置禁止** — ヘッダー右上 1 箇所（→ `auth-patterns.md`）                                                                                  |
-| `ScrollReveal` / `ScrollRevealGroup`                                                                 | `@/public/components/animations/scroll-reveal` | 入場演出 SSoT。単一要素は `ScrollReveal`（Hero/CTA）、`.map` リストは `ScrollRevealGroup`（1 ScrollTrigger + stagger）。個別 wrap は fold 外 opacity:0 待機の silent bug（→ `frontend/gsap-patterns.md`）                                                                                                                                                              |
-| `formatEventVenue` / `formatEventAddress`                                                            | `@/shared/domain/events/venue`                 | Event 会場表示 SSoT。`location` + `space` + `addressDetail` の 3 ソース合成。iCal LOCATION / Email / JSON-LD / EventCard / CSV / related events で共通利用。直接組み立て禁止                                                                                                                                                                                           |
-| `TERMS_TEMPLATES` / `applyBusinessInfo` / `getTemplatesForType` / `BusinessInfo`                     | `@/shared/lib/terms-templates`                 | 規約テンプレート SSoT（8 標準 TermsType の HTML テンプレート + Settings 事業者情報置換ヘルパー）。`【〜を入力してください】` プレースホルダーを Settings から自動置換し、未設定フィールドは入力プロンプトとして UI に残る設計。管理画面 `terms/new/page.tsx` と `seedTerms()` の両方が参照（DRY 化済み）。新規 `TermsType` enum 追加時はこの Record にテンプレ登録必須 |
+| 定数/変数                              | 場所                                              | メモ                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `adminAuth` / `customerAuth`           | `@/shared/lib/{admin,customer}-auth`              | cookie prefix 分離、customer は Google/LINE（`/api/customer-auth`）                                                                 |
+| `DASHBOARD_ROLES` / RBAC helpers       | `@/shared/lib/admin-roles`                        | client-safe Role + `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()`                                                    |
+| `prisma` / `basePrisma` / Prisma enums | `@/shared/db/prisma` / `enums/prisma-types`       | `basePrisma` は Better Auth アダプター専用。Prisma enum は gateway 経由（runtime sentinel は `@generated/prisma/client` 直 import） |
+| `CACHE_TAGS` / `invalidate*Caches`     | `@/shared/lib/constants` / `@/shared/lib/cache/*` | mutation 後の無効化 SSoT、ローカル `updateTag` 羅列禁止                                                                             |
+| `*_STATUS_LABELS` / `PUBLISH_LABELS`   | `enums/helpers`                                   | 全ステータス enum + publish ラベル、UI ハードコード禁止                                                                             |
+| レスポンシブ @theme tokens             | `(public\|admin)/_styles/*.css`                   | `--breakpoint-3xl` / `--header-height` / `--hero-min-height` 等。arbitrary 値 3 回以上で token 昇格                                 |
+
+**全 27 件の完全な一覧は `.claude/rules/ssot-singletons.md`**（src/prisma 編集時に自動ロード）。auth / DB / キャッシュ / 外部連携（Calendar/Storage）/ ドメイン / Lexical / 公開 UI / @theme token のカテゴリ別に整理。
 
 ---
 
@@ -211,3 +216,13 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Memory**: `~/.claude/projects/<slug>/memory/MEMORY.md` がセッション開始時に自動ロード
 
 包括的監査が必要な場合は、該当 subagent を並列起動（Agent ツール経由で description 参照）。
+
+## 公式 API / ベストプラクティス準拠の原則
+
+「公式推奨」「クリーン実装」「後方互換なし」指示時は以下を厳守:
+
+1. `mcp__context7__query-docs` で該当バージョンの一次資料を取得（Next.js / React / Tailwind / WCAG / Radix / Better Auth / Prisma / Zod / Lexical 等）
+2. プロジェクトルール（`.claude/rules/**`）と公式推奨の**差分を ADR 扱いで保持**（プロジェクト独自厳格化は正当化・記録）
+3. 数値・採用範囲リストは必ず grep ground truth 検証（subagent の hallucination 防止、上記「調査・監査」節参照）
+4. `@theme` / SSoT / ルール docs の整合を**同一コミット**で保つ（rule 更新と実装変更を同期して drift を防止）
+5. 破壊的変更が発生する改修は phase 単位で 1 commit 完結（ロールバック容易化）、`docs/superpowers/plans/YYYY-MM-DD-<name>.md` に記録

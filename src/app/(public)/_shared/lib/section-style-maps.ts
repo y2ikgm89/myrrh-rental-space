@@ -115,17 +115,20 @@ export function getGridColsClass(columns: number): string {
 // カードグリッド（SpaceList / PostList 用）
 // =============================================================================
 
-/** カードグリッド列数 → Tailwind クラス (1〜4列, sm: ブレークポイント) */
+/**
+ * カードグリッド列数 → Tailwind クラス (1〜4列、container query variants)
+ * コンシューマ側で親要素に `@container` を付与する必要がある（Tailwind v4 推奨パターン）。
+ */
 export const CARD_GRID_COLS_MAP: Record<number, string> = {
   1: "grid-cols-1",
-  2: "grid-cols-1 sm:grid-cols-2",
-  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
-  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  2: "grid-cols-1 @md:grid-cols-2",
+  3: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3",
+  4: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-4",
 };
 
 /** デフォルトのカードグリッド列クラス */
 export const DEFAULT_CARD_GRID_COLS =
-  "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+  "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3";
 
 /**
  * カードグリッド列数からTailwindクラスを取得（SpaceList / PostList 用）

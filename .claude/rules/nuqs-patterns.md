@@ -5,7 +5,7 @@ paths:
 
 # nuqs パターンルール
 
-> nuqs 2.8.9 / Next.js 16対応
+> nuqs 2.8.9 / Next.js 16.2 対応
 
 ## 概要
 

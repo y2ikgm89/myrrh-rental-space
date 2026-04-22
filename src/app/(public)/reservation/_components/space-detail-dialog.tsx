@@ -35,7 +35,7 @@ export function SpaceDetailDialog({
 
   return (
     <Dialog open={space !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className="max-h-[var(--modal-max-height)] overflow-y-auto sm:max-w-md">
         {space !== null ? (
           <>
             <DialogHeader>

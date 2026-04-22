@@ -93,11 +93,12 @@ export function SpaceListSection({
   const isCarousel = config.layout === "carousel";
   const isList = config.layout === "list";
 
+  // grid layout は @container + container query variants を使用（Tailwind v4 推奨）
   const layoutClass = isCarousel
     ? "flex gap-6 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-5 px-5 md:-mx-8 md:px-8"
     : isList
       ? "flex flex-col gap-4"
-      : cn("grid gap-6", getCardGridColsClass(colKey));
+      : cn("@container grid gap-6", getCardGridColsClass(colKey));
 
   return (
     <SectionWrapper design={design}>

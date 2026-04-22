@@ -379,51 +379,34 @@ describe("createPost", () => {
 ## コマンド
 
 ```bash
-# 全テスト実行
-bun run test
-
-# ウォッチモード（開発中）
-bun run test:watch
-
-# カバレッジ計測
-bun run test:coverage
-
-# 単体テストのみ
-bun run test:unit
-
-# 統合テストのみ
-bun run test:integration
-
-# 並列実行（CI推奨）
-bun run test:all
-
-# 特定ファイルのみ
+# 単一ファイル実行（日常の開発はこれで十分、ADR 0014）
 bun test __tests__/unit/lib/crypto.test.ts
+bun test --watch __tests__/unit/lib/crypto.test.ts   # TDD watch（単一ファイル指定必須）
+bun test --bail=1 <file>                             # 最初の失敗で停止
+bun test --test-name-pattern "暗号化"                 # 名前フィルター
 
-# パターンマッチ
-bun test --test-name-pattern "暗号化"
+# per-directory batch（フル実行時のみ）
+bun run test:unit          # 全 unit（package.json の && チェーン）
+bun run test:integration   # 全 integration
+bun run test:all           # unit + integration（sequential。mock.module 干渉防止で並列化禁止）
 ```
 
-## カバレッジ設定
+- **禁止**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は ADR 0014 で廃止
+- **禁止**: `bun test __tests__/unit`（親ディレクトリ指定）/ `bun test --watch`（パス未指定）は再帰実行で `mock.module` 干渉を誘発（ADR 0010）
+- **テスト実行ポリシー**: 毎回全走させる必要なし。lefthook pre-push + CI が担保（`CLAUDE.md` §検証）
 
-### bunfig.toml での閾値設定
+## カバレッジ
 
-```toml
-[test]
-coverageThreshold = { line = 80, function = 80, statement = 80 }
-coverageReporter = ["lcov", "text"]
-```
+Coverage は per-directory batch と非互換（ADR 0010: 複数プロセス間で lcov が上書き / `mock.module` で計測値が歪む）。CI ゲートは置かない。`bunfig.toml` の coverage 関連設定は撤去済み（ADR 0014）。
 
-- `coverage/` ディレクトリは `.gitignore` に追加推奨（自動生成ファイル）
-- `text` レポーターはターミナルに直接出力（開発中の即時確認用）
-- `lcov.info` を CI で Codecov / Coveralls に送信可能
-
-### 実行例
+必要時のみ単発で参考値を取得:
 
 ```bash
-bun run test:coverage                  # coverage/ に lcov.info + ターミナル出力
-bun run test:coverage __tests__/unit   # 特定ディレクトリのみ計測
+bun test --coverage __tests__/unit/lib/crypto.test.ts    # 単一ファイルのみ
 ```
+
+- 複数ファイル計測 / 閾値ゲート運用は**しない**
+- Codecov / Coveralls 連携も行わない（CI 側で artifact 化しない方針）
 
 ---
 

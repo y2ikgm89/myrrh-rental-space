@@ -8,7 +8,7 @@ tools:
   - Read
   - Grep
   - Glob
-model: haiku
+model: sonnet
 memory: local
 ---
 
@@ -81,6 +81,40 @@ grep -rn "bg-foreground" src/app/'(public)'/_components/
 ```
 
 **ルール:** 全コンテンツセクションは `bg-background`（白）に統一。セクション間は余白で分離。`bg-foreground`（ダーク反転セクション）は Editorial Magazine トーンに合わないため全面禁止。SiteCTA は `bg-background` + `border-t border-border`（余白で分離）。フッターのみ `bg-surface`。
+
+### 7. タッチターゲット（WCAG 2.5.5 Enhanced）
+
+```bash
+# 禁止: Button で min-h-10 以下（40px < 44px）
+grep -rn "min-h-10\b\|min-h-9\b\|min-h-8\b" src/app/'(public)'/_shared/components/
+
+# 禁止: icon-only button でサイズ指定なし
+grep -rnE "<button[^>]*aria-label=[^>]*>\s*<Icon" src/app/'(public)'/
+```
+
+**ルール:** 全 interactive 要素は **44×44 CSS px（WCAG 2.5.5 Enhanced）** 以上。Button 全 size で `min-h-11` 以上。icon-only button は `h-11 w-11`。native checkbox/radio は `<label className="flex min-h-11 ...">` でヒットエリア確保。
+
+→ 詳細: `.claude/rules/frontend/accessibility.md` §タッチターゲット
+
+### 8. Container Queries（カードグリッド）
+
+```bash
+# 禁止: カードグリッドに viewport breakpoint
+grep -rnE "grid-cols-1\s+(sm|md|lg):grid-cols-[234]" src/app/'(public)'/spaces/ src/app/'(public)'/posts/ src/app/'(public)'/news/ src/app/'(public)'/_components/
+```
+
+**ルール:** カードグリッドは `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`（Tailwind v4 公式推奨）。viewport breakpoint は Hero split / 2 カラム text+image / フォームグリッド等のマクロレイアウトのみ。`CARD_GRID_COLS_MAP`（`section-style-maps.ts`）が container variants で定義済み。
+
+→ 詳細: `.claude/rules/tailwind-patterns.md` §レスポンシブ breakpoints + Container Queries
+
+### 9. arbitrary sizing の @theme 昇格
+
+```bash
+# 禁止: 既存 @theme token があるのに arbitrary で書く
+grep -rn "max-w-\[65ch\]\|max-w-\[40ch\]\|max-w-\[45ch\]\|min-h-\[60svh\]\|max-h-\[85vh\]\|max-h-\[90svh\]\|max-w-\[90vw\]\|min-w-\[12rem\]\|max-w-\[90rem\]" src/app/'(public)'/
+```
+
+**ルール:** `[65ch]` → `var(--container-measure)` / `[40ch]` → `var(--prose-narrow)` / `[45ch]` → `var(--prose-medium)` / `[60svh]` → `var(--hero-min-height)` / `[85vh]` → `var(--modal-max-height)` / `[90svh]` → `var(--lightbox-max-height)` / `[90vw]` → `var(--lightbox-max-width)` / `[12rem]` → `var(--dropdown-min-width)` / `[90rem]` → `var(--container-header-max)`。新規 arbitrary 値は **3 回以上使用されたら @theme に昇格**してから参照する。
 
 ## Output Format
 

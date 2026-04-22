@@ -475,24 +475,26 @@ describe("commandName", () => {
 ## コマンド
 
 ```bash
-# 単体テスト
-bun run test
+# 単一ファイル実行（日常の開発はこれで十分）
+bun test __tests__/unit/lib/crypto.test.ts
+bun test --watch __tests__/unit/lib/crypto.test.ts    # TDD watch（単一ファイルのみ）
+bun test --bail=1 __tests__/unit/lib/crypto.test.ts   # fail fast
+bun test --test-name-pattern "encryption"             # 名前フィルター
 
-# 特定ファイル
-bun run test __tests__/unit/lib/crypto.test.ts
+# per-directory batch（フル実行時のみ）
+bun run test:unit          # 全 unit（package.json の && チェーン）
+bun run test:integration   # 全 integration
+bun run test:all           # unit + integration
 
-# 全テスト（unit + integration 並列）
-bun run test:all
-
-# E2Eテスト
-bun run e2e
-
-# E2E（UIモード）
-bun run e2e:ui
-
-# E2E（ヘッドレス）
-bun run e2e:headless
+# E2E
+bun run e2e                # Playwright（全件）
+bun run e2e:ui             # UI モード
+bunx playwright test e2e/<file>                    # 単一ファイル
+bunx playwright test --grep "<test title>"         # 名前フィルター
 ```
+
+- **ADR 0010**: `bun test __tests__/unit`（親ディレクトリ指定）は `mock.module` 干渉のため禁止。必ず単一ファイル指定 or `test:unit` / `test:integration` script を使う
+- **ADR 0014**: `bun run test` / `bun run test:watch` / `bun run test:coverage` は廃止（冗長・coverage は per-directory batch と非互換）
 
 ## ファイル配置
 

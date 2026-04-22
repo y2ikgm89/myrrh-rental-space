@@ -289,6 +289,191 @@ admin.css / public.css の両方で統一:
 
 ---
 
+## レスポンシブ breakpoints + Container Queries（Tailwind v4 公式推奨）
+
+### breakpoint policy
+
+default breakpoint（sm/md/lg/xl/2xl）を維持しつつ `--breakpoint-3xl: 120rem` を追加する **6 段階構成**。完全リセット（`--breakpoint-*: initial`）は shadcn/ui・Radix エコシステム互換性を損なうため不採用。
+
+```css
+@theme {
+  /* Tailwind v4 default + 3xl 追加 */
+  --breakpoint-3xl: 120rem; /* 1920px — ultra wide / 2K-4K monitor */
+}
+```
+
+| bp  | 値       | px   | semantic 用途                                       |
+| --- | -------- | ---- | --------------------------------------------------- |
+| sm  | `40rem`  | 640  | large phone                                         |
+| md  | `48rem`  | 768  | tablet portrait                                     |
+| lg  | `64rem`  | 1024 | tablet landscape / laptop（admin サイドバー出現点） |
+| xl  | `80rem`  | 1280 | desktop                                             |
+| 2xl | `96rem`  | 1536 | large desktop                                       |
+| 3xl | `120rem` | 1920 | ultra wide / 2K-4K                                  |
+
+### 採用方針（マクロ vs マイクロレイアウト）
+
+- **マクロレイアウト**（Hero split, 2 カラム text+image, フォームグリッド）: **viewport breakpoint**（`md:grid-cols-2` / `lg:grid-cols-[1fr_320px]`）
+- **カードグリッド / ダッシュボード widget**: **Container Queries**（`@container` + `@md:grid-cols-2 @3xl:grid-cols-3`）
+- **管理画面 dashboard**: **named container**（`@container/main` on `MainContent.tsx` → children で `@md/main:` / `@3xl/main:`）— サイドバー折りたたみ時の適応に必須
+
+### Container Queries — 基本パターン
+
+```tsx
+// OK: コンポーネント内部の幅適応（カード系）
+<div className="@container">
+  <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3 gap-6">
+    {cards.map(...)}
+  </div>
+</div>
+```
+
+### Container Queries — named container（admin 等の複雑レイアウト）
+
+```tsx
+// layout.tsx / MainContent.tsx で named container を付与
+<main className="@container/main ...">{children}</main>
+
+// children 側で @md/main: / @3xl/main: を使用
+<div className="grid gap-4 @md/main:grid-cols-2 @3xl/main:grid-cols-4">
+  {stats.map(...)}
+</div>
+```
+
+サイドバーの開閉で main content 幅が変わる admin 等では named container が必須（viewport では追従できない）。
+
+### Container Queries — 逆方向（@max-\*）
+
+```tsx
+// コンテナが md 未満のときのみ縦積み（通常は横並び）
+<div className="@container">
+  <div className="flex flex-row @max-md:flex-col">...</div>
+</div>
+```
+
+### CARD_GRID_COLS_MAP（公開 Section 用 SSoT）
+
+`@/public/lib/section-style-maps.ts` が container query variants で定義済み:
+
+```typescript
+export const CARD_GRID_COLS_MAP: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 @md:grid-cols-2",
+  3: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3",
+  4: "grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-4",
+};
+```
+
+consumer 側は必ず親に `@container` を付与（`SpaceShowcaseSection` / `SpaceListSection` / `PostListSection` が参照実装）。
+
+### 禁止パターン
+
+```tsx
+// NG: カードグリッドに viewport breakpoint
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+
+// NG: named container を付けずに @md/main: を使う（無効）
+<div className="grid @md/main:grid-cols-2">
+
+// NG: arbitrary max-w-[90rem] を @theme 経由せず直書き
+<div className="max-w-[90rem]">
+```
+
+### OK パターン
+
+```tsx
+// OK: カードは @container
+<div className="@container">
+  <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3">
+
+// OK: admin named container + children variants
+<main className="@container/main">
+  <div className="grid @md/main:grid-cols-2 @3xl/main:grid-cols-4">
+
+// OK: @theme token 経由
+<div className="max-w-[var(--container-header-max)]">
+```
+
+---
+
+## インラインスタイル vs Tailwind arbitrary properties（specificity 衝突）
+
+`style={{}}` の specificity `(1,0,0,0)` は class utility `(0,0,1,0)` を常に上回る。
+responsive reset（`md:[...:0]` 等）したい値は **inline style ではなく arbitrary class** で書く:
+
+```tsx
+// NG: inline style は md: で上書き不可（desktop で stroke/shadow が残る silent bug）
+<h1
+  style={{ WebkitTextStroke: "0.5px rgba(0,0,0,0.45)" }}
+  className="md:[-webkit-text-stroke:0px]"
+>
+
+// OK: arbitrary class で統一（rgb() CSS Color 4 + underscore で値区切り）
+<h1
+  className={cn(
+    "[paint-order:stroke_fill]",
+    "[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]",
+    "[text-shadow:0_1px_2px_rgb(0_0_0/0.6),0_2px_12px_rgb(0_0_0/0.5)]",
+    // Desktop reset（responsive utility で clean override）
+    "md:[paint-order:normal]",
+    "md:[-webkit-text-stroke:0px_transparent]",
+    "md:[text-shadow:none]",
+  )}
+>
+```
+
+**記法ルール**:
+
+- 値の空白は `_` で区切る（例: `stroke fill` → `stroke_fill`）
+- 色は `rgb(R_G_B/A)` 形式（CSS Color 4、カンマ不可）
+- reset は `:none` / `:0px_transparent` / `:normal` で明示
+- 常時固定の値（breakpoint 切替不要）は inline style も許容（例: hero の photo credit）
+
+参照実装: `_components/homepage/hero-section.tsx` の label / h1（mobile overlay stroke → desktop reset）
+
+---
+
+## 同 Grid cell overlap（responsive overlay pattern）
+
+モバイルで画像に text を overlay、desktop で split レイアウトを **単一 DOM / 単一 h1** で実現するパターン。
+
+```tsx
+<section className="grid grid-cols-1 md:grid-cols-2 md:grid-rows-[1fr_1fr] md:min-h-[85svh]">
+  {/* Image: mobile row 1 / desktop left col spanning 2 rows */}
+  <div className="col-start-1 row-start-1 aspect-[4/3] overflow-hidden md:row-span-2 md:aspect-auto md:min-h-0">
+    <Image fill sizes="(max-width: 768px) 100vw, 50vw" />
+  </div>
+
+  {/* Headline: mobile overlaps image via same cell + z-index / desktop right-top */}
+  <div
+    className={cn(
+      "col-start-1 row-start-1 z-10 flex flex-col justify-end",
+      "pointer-events-none px-6 pb-14", // mobile: pass touch events to image for swipe
+      "md:col-start-2 md:row-start-1 md:pointer-events-auto",
+      "md:bg-background md:px-12 md:pt-16 md:pb-6",
+    )}
+  >
+    <h1>...</h1>
+  </div>
+
+  {/* Body: mobile row 2 / desktop right-bottom */}
+  <div className="col-start-1 row-start-2 md:col-start-2 md:row-start-2">
+    <p>...</p>
+  </div>
+</section>
+```
+
+**ポイント**:
+
+- モバイル: image と headline が同 grid cell `(1,1)` に配置 → z-index で layering
+- デスクトップ: headline が `md:col-start-2` に分離 → image と独立カラム
+- `pointer-events-none` on mobile overlay で swipe/tap が image に到達
+- 単一 h1 — DOM 重複なし、SEO 整合
+
+参照実装: `src/app/(public)/_components/homepage/hero-section.tsx`
+
+---
+
 ## Pair Grid の動的カラム切替
 
 2-col grid で片方が条件付きレンダリングの場合、両方 present 時のみ `grid-cols-2` を適用する。

@@ -304,6 +304,67 @@ import * as Dialog from "@radix-ui/react-dialog";
 
 ---
 
+## タッチターゲット（WCAG 2.5.5 Enhanced — AAA 準拠）
+
+**本プロジェクトは WCAG 2.2 AA + 2.5.5 Enhanced (AAA) 採用**。全 interactive 要素は **44×44 CSS px 以上**を保証する（[WCAG 2.2 SC 2.5.5 公式](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced)）。
+
+### 要素別サイズ基準
+
+| 要素                           | 最小サイズ                   | 実装                                                                  |
+| ------------------------------ | ---------------------------- | --------------------------------------------------------------------- |
+| Button（public Design System） | `min-h-11`（44px）           | `button.tsx` の sm/md/lg 全 size で `min-h-11` 以上                   |
+| Button（admin shadcn）         | `h-11` (44px) / lg は `h-12` | tailwind-variants `size` の default/sm/lg/icon 全て 44px 以上         |
+| checkbox / radio               | wrapper に `min-h-11`        | native 要素は 16px だが、`<label>` / wrapper で 44px ヒットエリア確保 |
+| inline link（pagination 等）   | `min-block-size: 44px`       | `<a>` に `min-block-size / min-inline-size: 44px` + padding           |
+| Icon-only button               | `h-11 w-11`                  | `<button aria-label="...">` にサイズ明示                              |
+| Mobile nav / hamburger         | `h-11 w-11`                  | ヘッダーの menu trigger 等                                            |
+
+### token
+
+`@theme --touch-target-min: 2.75rem;`（public.css / admin.css 両方）— `min-h-[var(--touch-target-min)]` / `min-w-[var(--touch-target-min)]` で参照可能。
+
+### WCAG 2.5.5 の例外条項
+
+以下のみ 44px 未達が許容される（[公式](https://www.w3.org/WAI/WCAG22/Understanding/target-size-enhanced#exceptions)）:
+
+- **Equivalent**: 同一ページに 44×44 の equivalent control がある場合
+- **Inline**: テキスト段落内のインライン link（文字サイズに従う — Prose 内の `<a>` は例外）
+- **User Agent Control**: ブラウザがサイズを制御する要素（native `<select>` dropdown 項目等）
+- **Essential**: 情報伝達のため意図的に小さいプレゼンテーション（カラースウォッチ・タイムライン上の点等）
+
+### 禁止パターン
+
+```tsx
+// NG: Button sm が min-h-10（40px）— WCAG 2.5.5 Enhanced 未達
+const sm = "px-3 py-2 text-sm min-h-10";
+
+// NG: icon-only button にサイズ指定なし（native button は browser default で ~24-30px）
+<button aria-label="閉じる"><IconX className="h-4 w-4" /></button>
+
+// NG: checkbox を裸配置（native 16px でヒットエリア不足）
+<input type="checkbox" />テキスト
+```
+
+### OK パターン
+
+```tsx
+// OK: Button sm が min-h-11（44px）
+const sm = "px-3 py-2 text-sm min-h-11";
+
+// OK: icon-only button に h-11 w-11
+<button type="button" aria-label="閉じる" className="h-11 w-11 inline-flex items-center justify-center">
+  <IconX className="h-4 w-4" />
+</button>
+
+// OK: checkbox は label wrapper で 44px
+<label className="flex min-h-11 items-center gap-2 cursor-pointer">
+  <input type="checkbox" />
+  <span>同意する</span>
+</label>
+```
+
+---
+
 ## prefers-reduced-motion
 
 ### GSAP matchMedia 必須パターン（パターン A）
@@ -483,6 +544,65 @@ function FormField({ id, label, error }: Props) {
 // OK: アイコンは aria-hidden（ラベルをボタン側に付与）
 <SearchIcon aria-hidden="true" />
 ```
+
+---
+
+## 画像上テキストの 3 層可読性保証（editorial mobile hero）
+
+画像 overlay text は背景画像の明度・彩度・柄により可読性が変動する。**どの画像でも読める** ようにするには 3 層防御:
+
+### レイヤー構成
+
+1. **Gradient scrim** — readable zone を作る（画像中央は透明維持で visual が生きる）
+
+   ```tsx
+   <div
+     aria-hidden="true"
+     className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-foreground/90 via-foreground/45 to-transparent"
+   />
+   ```
+
+2. **`paint-order: stroke fill` + `-webkit-text-stroke`** — 文字に絶対的輪郭を焼き込む（背景色に非依存、WebKit / Blink 両対応）
+
+   ```tsx
+   <h1
+     className={cn(
+       "text-background",
+       "[paint-order:stroke_fill]",
+       "[-webkit-text-stroke:0.5px_rgb(0_0_0/0.45)]",
+     )}
+   >
+   ```
+
+3. **Layered `text-shadow`** — edge + 中距離分離 + diffuse glow で背景の複雑さを吸収
+
+   ```tsx
+   "[text-shadow:0_1px_2px_rgb(0_0_0/0.6),0_2px_12px_rgb(0_0_0/0.5),0_0_24px_rgb(0_0_0/0.3)]";
+   ```
+
+### パラメータ目安
+
+| 要素                            | stroke 幅          | text-shadow 強度         |
+| ------------------------------- | ------------------ | ------------------------ |
+| Hero title（40-64px）           | 0.5px opacity 0.45 | 3 層（edge/mid/diffuse） |
+| Label / eyebrow（12px）         | 0.4px opacity 0.5  | 単層（edge のみ）        |
+| Pagination / caption（10-12px） | 0.4px opacity 0.5  | 単層                     |
+
+### 禁止パターン
+
+- **`backdrop-blur-2xl` (40px) で画像全体をぼかす** — 画像がモザイク化して visual が失われる。`backdrop-blur-md` (12px) 以下で局所適用のみ許容
+- **inline style で stroke / shadow を書く** — `md:` reset が効かない（specificity 衝突）。必ず Tailwind arbitrary class で書く（→ `tailwind-patterns.md` §インラインスタイル vs Tailwind arbitrary properties）
+- **白画像に white text + scrim なし** — 白 on 白で読めない。scrim `foreground/80` 以上 + stroke 併用で担保
+
+### Desktop の扱い
+
+desktop で overlay しない split レイアウト（text が右カラム white bg）では stroke / shadow を reset:
+
+```tsx
+"md:text-foreground md:[paint-order:normal] md:[-webkit-text-stroke:0px_transparent] md:[text-shadow:none]";
+```
+
+参照実装: `_components/homepage/hero-section.tsx` の label / h1、`hero-demo/_components/variant-k-photo-overlay-landscape.tsx`
 
 ---
 

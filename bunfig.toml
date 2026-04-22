@@ -8,20 +8,10 @@ preload = ["./__tests__/setup-dom.ts", "./__tests__/setup.ts"]
 # E2E テスト（Playwright）を除外
 root = "./__tests__"
 
-# カバレッジ設定
-coverage = true
-coverageReporter = ["text", "lcov"]
-coverageDir = "coverage"
-
-# カバレッジ閾値（公式推奨: bunfig.toml で設定）
-# 90% — 現状 95%+ でクリア。100% は mock.module カバレッジ計測の Bun 既知制限で不可。
-# フォールバック: scripts/check-coverage.mjs（Bun の exit code バグ遭遇時に CI で使用）
-coverageThreshold = { line = 0.9, function = 0.9 }
-
-# カバレッジ除外パターン
-coverageSkipTestFiles = true
-coverageIgnoreSourcemaps = true
-coveragePathIgnorePatterns = ["**/__tests__/setup.ts", "**/__tests__/setup-dom.ts"]
-
 # タイムアウト設定（5秒）
 timeout = 5000
+
+# Coverage は設定しない（ADR 0010 / ADR 0014）。
+# per-directory batch 実行のため複数プロセス間で lcov が上書きされ、
+# `mock.module()` の干渉で各プロセスの計測結果も不正確になる。
+# 必要時は `bun test --coverage <specific-file>` を単発で実行し参考値として扱う。

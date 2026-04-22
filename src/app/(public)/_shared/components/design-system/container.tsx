@@ -7,7 +7,7 @@ const variantClasses = {
   default: "max-w-[var(--container-max)]",
   narrow: "max-w-3xl",
   wide: "max-w-screen-2xl",
-  editorial: "max-w-[65ch]",
+  editorial: "max-w-[var(--container-measure)]",
 } as const satisfies Record<ContainerVariant, string>;
 
 interface ContainerProps {

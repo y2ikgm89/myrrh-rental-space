@@ -38,8 +38,11 @@ type PageHeroProps =
 export function PageHero(props: PageHeroProps) {
   if (props.variant === "editorial") {
     return (
-      <section data-hero="" className="relative min-h-[60svh] bg-surface">
-        <div className="grid min-h-[60svh] grid-cols-1 md:grid-cols-[5fr_4fr]">
+      <section
+        data-hero=""
+        className="relative min-h-[var(--hero-min-height)] bg-surface"
+      >
+        <div className="grid min-h-[var(--hero-min-height)] grid-cols-1 md:grid-cols-[5fr_4fr]">
           <div className="relative aspect-[4/3] md:aspect-auto">
             <Image
               src={props.image.src}
@@ -56,7 +59,7 @@ export function PageHero(props: PageHeroProps) {
               {props.label ? <SectionLabel>{props.label}</SectionLabel> : null}
               <Heading level={1}>{props.title}</Heading>
               {props.subtitle ? (
-                <p className="max-w-[40ch] text-lg leading-relaxed text-muted-foreground">
+                <p className="max-w-[var(--prose-narrow)] text-lg leading-relaxed text-muted-foreground">
                   {props.subtitle}
                 </p>
               ) : null}

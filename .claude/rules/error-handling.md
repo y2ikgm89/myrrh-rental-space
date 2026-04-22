@@ -9,7 +9,7 @@ paths:
 
 # エラーハンドリングルール
 
-> Next.js 16 Server Actions / safeFetch / criticalFetch / logger 対応
+> Next.js 16.2 Server Actions / safeFetch / criticalFetch / logger 対応
 
 ## ActionResult 型
 

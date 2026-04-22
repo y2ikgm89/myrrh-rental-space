@@ -113,6 +113,10 @@
 
   --container-max: 80rem;
   --container-padding: clamp(1.5rem, 3vw, 3rem);
+  --container-header-max: 90rem;
+  --container-measure: 65ch;
+  --prose-narrow: 40ch;
+  --prose-medium: 45ch;
 
   /* --------------------------------------------------------------------------
    * Border Radius
@@ -133,7 +137,34 @@
   /* --------------------------------------------------------------------------
    * Layout
    * -------------------------------------------------------------------------- */
-  --header-height: 64px;
+  --header-height: 3.5rem;
+  --hero-min-height: 60svh;
+  --modal-max-height: 85vh;
+  --lightbox-max-height: 90svh;
+  --lightbox-max-width: 90vw;
+  --dropdown-min-width: 12rem;
+
+  /* --------------------------------------------------------------------------
+   * Responsive Breakpoints — Tailwind v4 default + 3xl (ultra wide)
+   *
+   * sm: 40rem (640px) — large phone
+   * md: 48rem (768px) — tablet portrait
+   * lg: 64rem (1024px) — tablet landscape / laptop
+   * xl: 80rem (1280px) — desktop
+   * 2xl: 96rem (1536px) — large desktop
+   * 3xl: 120rem (1920px) — ultra wide / 2K-4K monitor
+   * -------------------------------------------------------------------------- */
+  --breakpoint-3xl: 120rem;
+
+  /* Touch Targets — WCAG 2.5.5 Enhanced (AAA) */
+  --touch-target-min: 2.75rem; /* 44px */
+}
+
+/* Responsive --header-height: mobile 56px → tablet+ 64px */
+@media (min-width: 48rem) {
+  :root {
+    --header-height: 4rem;
+  }
 }
 
 /* ==========================================================================

@@ -17,7 +17,7 @@ export function Prose({
   return (
     <div
       className={cn(
-        "prose prose-neutral max-w-[65ch] leading-[var(--leading-normal)]",
+        "prose prose-neutral max-w-[var(--container-measure)] leading-[var(--leading-normal)]",
         "prose-a:text-accent prose-a:no-underline hover:prose-a:text-accent-light",
         "prose-blockquote:font-heading prose-blockquote:italic prose-blockquote:font-light prose-blockquote:border-accent",
         variant === "editorial" && "drop-cap",

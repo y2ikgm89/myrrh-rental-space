@@ -24,6 +24,7 @@ ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null | head -10
 新規は **日付形式** (`YYYY-MM-DD-title.md`) のみ使用。設計ドキュメントは `-design` サフィックス。
 
 > 連番形式（`001-*.md`）は初期の完了済み計画。新規には使わない。
+> 過去の連番 plan を参照する場合は `git log --follow -- docs/plans/001-*.md` で履歴を辿る。
 
 ### フォーマット
 
@@ -32,7 +33,7 @@ ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null | head -10
 
 **日付**: YYYY-MM-DD
 **種別**: 新機能 | バグ修正 | リファクタリング | 破壊的変更
-**ステータス**: 設計中 | 設計承認済み | 実装中 | 完了
+**ステータス**: 設計中 | 設計承認済み | 実装中 | 完了 | 破棄
 
 ---
 
@@ -48,9 +49,11 @@ ls -t docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null | head -10
 
 ### ステータス管理
 
-`設計中` → `設計承認済み` → `実装中` → `完了`
+`設計中` → `設計承認済み` → `実装中` → `完了` / `破棄`
 
 完了時は計画ファイル先頭に `> **ステータス**: ✅ 完了（YYYY-MM-DD、commit `<start>..<end>`）` を追記し、`README.md` にも `✅` を付与。commit range があると後続セッション・`plan-drift-detector` subagent が plan と実装の対応を追跡しやすい。
+
+破棄時は先頭に `> **ステータス**: 🗑️ 破棄（YYYY-MM-DD、理由: <方針変更 / スコープ外化 / Superseded by <plan>>）` を追記し、`README.md` から除去。ファイルは履歴保全のため削除せず残す。
 
 ## 実行
 

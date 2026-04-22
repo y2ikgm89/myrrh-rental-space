@@ -175,7 +175,7 @@ function FilterDropdown({
         <DropdownMenu.Content
           sideOffset={8}
           align="start"
-          className="z-50 min-w-[12rem] overflow-hidden border border-border bg-background py-1 shadow-sm focus-visible:outline-none"
+          className="z-50 min-w-[var(--dropdown-min-width)] overflow-hidden border border-border bg-background py-1 shadow-sm focus-visible:outline-none"
         >
           <DropdownMenu.RadioGroup
             value={currentValue}

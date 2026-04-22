@@ -31,8 +31,8 @@ export const homepageHeroConfigSchema = z
       helpText:
         "crossfade: 溶け合い / ken-burns: ゆっくりズーム / clip-reveal: スライド露出 / scale-fade: 拡大フェード",
     }),
-    buttonText: field.text("ボタンテキスト", { default: "Explore spaces" }),
-    buttonUrl: field.url("ボタンリンク先", { default: "/spaces" }),
+    buttonText: field.text("ボタンテキスト", { default: "Reserve a space" }),
+    buttonUrl: field.url("ボタンリンク先", { default: "/reservation" }),
   })
   .refine(
     (data) =>

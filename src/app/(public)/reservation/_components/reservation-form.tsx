@@ -398,7 +398,7 @@ export function ReservationForm({
           Confirmed
         </p>
         <Heading level={2}>ご予約を受け付けました</Heading>
-        <p className="mt-6 max-w-[40ch] mx-auto leading-relaxed text-muted-foreground">
+        <p className="mt-6 max-w-[var(--prose-narrow)] mx-auto leading-relaxed text-muted-foreground">
           確認メールをお送りしましたのでご確認ください。
         </p>
         {!isLoggedIn ? (

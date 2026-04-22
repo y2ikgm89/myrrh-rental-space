@@ -89,6 +89,8 @@ export async function generateViewport(): Promise<Viewport> {
   return {
     width: "device-width",
     initialScale: 1,
+    interactiveWidget: "resizes-visual",
+    colorScheme: "light",
     themeColor: footerSettings.themeColor,
   };
 }

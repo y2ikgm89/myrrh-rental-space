@@ -39,6 +39,7 @@ NNNN-kebab-case-title.md
 | [0011](./0011-dual-better-auth-instance.md)        | 管理者用と顧客用で Better Auth インスタンスを完全分離する                   | Accepted | 2026-04-15 |
 | [0012](./0012-execute-admin-mutation-result.md)    | 管理画面の書き込み系 Server Actions は executeAdminMutationResult に統一    | Accepted | 2026-04-15 |
 | [0013](./0013-policy-docs-sync.md)                 | .claude/rules と docs/reference/codex-rules を byte-identical に同期        | Accepted | 2026-04-15 |
+| [0014](./0014-test-script-consolidation.md)        | Test script の整理とテスト実行ポリシーの明文化                              | Accepted | 2026-04-22 |
 
 ## 参考
 

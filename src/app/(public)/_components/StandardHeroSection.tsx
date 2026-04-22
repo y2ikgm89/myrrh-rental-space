@@ -72,7 +72,7 @@ function HeroButtons({
 
 const HEIGHT_MAP: Record<string, string> = {
   sm: "min-h-[40svh]",
-  md: "min-h-[60svh]",
+  md: "min-h-[var(--hero-min-height)]",
   lg: "min-h-[80svh]",
   full: "min-h-svh",
 };
