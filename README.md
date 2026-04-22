@@ -9,7 +9,7 @@
 | フレームワーク | Next.js App Router + Turbopack     | 16.2.3     | PPR (`cacheComponents: true`), React Compiler    |
 | UI             | React                              | 19.2.5     | Compiler 1.0 自動メモ化、`use()` / Activity 対応 |
 | 言語           | TypeScript                         | 6.0-beta   | `erasableSyntaxOnly`, `verbatimModuleSyntax`     |
-| ランタイム     | Bun                                | 1.3.11     | パッケージ管理 + test runner                     |
+| ランタイム     | Bun                                | 1.3.12     | パッケージ管理 + test runner                     |
 | ORM            | Prisma (`prisma-client` generator) | 7.7.0      | ESM, Turbopack 対応, browser entry               |
 | 認証           | Better Auth (dual instance)        | 1.6.2      | adminAuth / customerAuth、Google/LINE OAuth      |
 | 決済           | Stripe                             | latest     | Checkout + Webhook                               |
@@ -51,7 +51,7 @@ src/
 
 ### 前提条件
 
-- **Bun** 1.3.11+
+- **Bun** 1.3.12+
 - **Node.js** 20+（CLI ツール向け）
 - **PostgreSQL** 16（Docker 推奨）
 - **Git** 2.40+
@@ -90,15 +90,15 @@ bun run dev
 
 ### テスト
 
-| コマンド                      | 説明                                          |
-| ----------------------------- | --------------------------------------------- |
-| `bun run test:all`            | 単体 + 統合テスト（per-directory batch）      |
-| `bun run test:unit`           | 単体のみ                                      |
-| `bun run test:integration`    | 統合のみ                                      |
-| `bun run test:coverage:check` | 90% threshold カバレッジ検証                  |
-| `bun run e2e`                 | Playwright E2E（全 project）                  |
-| `bun run e2e:ui`              | Playwright UI モード                          |
-| `bun run lhci`                | Lighthouse CI（perf/a11y/SEO/best-practices） |
+| コマンド                   | 説明                                           |
+| -------------------------- | ---------------------------------------------- |
+| `bun run test:all`         | 単体 + 統合テスト（per-directory batch）       |
+| `bun run test:unit`        | 単体のみ                                       |
+| `bun run test:integration` | 統合のみ                                       |
+| `bun test <path>`          | 単一ファイル（日常開発はこれで十分、ADR 0014） |
+| `bun run e2e`              | Playwright E2E（全 project）                   |
+| `bun run e2e:ui`           | Playwright UI モード                           |
+| `bun run lhci`             | Lighthouse CI（perf/a11y/SEO/best-practices）  |
 
 ### DB
 
@@ -127,7 +127,7 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 | -------------------- | -------------------------------------------------- | :------: |
 | `policy-docs-sync`   | `.claude/rules` ↔ `codex-rules` の同期確認         |    ✅    |
 | `lint-and-typecheck` | Prettier format check + ESLint + `tsc --noEmit`    |    ✅    |
-| `unit-tests`         | Bun test + カバレッジ 90% 閾値                     |    ✅    |
+| `unit-tests`         | Bun test (per-directory batch) + integration tests |    ✅    |
 | `e2e-tests`          | Playwright（786 tests、全 project、browser cache） |    ✅    |
 | `build`              | env validation ありの本番ビルド                    |    ✅    |
 | `dependency-audit`   | `bun audit` + artifact 保存                        | ⚠️ warn  |

@@ -6,7 +6,7 @@
 
 ### 前提ソフトウェア
 
-- **Bun** 1.3.11+ — パッケージ管理・スクリプト実行
+- **Bun** 1.3.12+ — パッケージ管理・スクリプト実行
 - **Node.js** 20+ — 一部 CLI ツール
 - **PostgreSQL** 16 — ローカル DB
 - **Git** 2.40+
@@ -112,23 +112,27 @@ bun run validate && bun run build
 ### 3. テスト
 
 ```bash
-# 単体 + 統合（per-directory batch）
+# 単体 + 統合（per-directory batch、ADR 0010）
 bun run test:all
 
-# 特定ディレクトリのみ
-bun test __tests__/unit/domain/reservations
+# 特定ファイルのみ（日常開発はこれで十分）
+bun test __tests__/unit/domain/reservations/commands.test.ts
+bun test --watch __tests__/unit/domain/reservations/commands.test.ts  # TDD
+bun test --bail=1 <file>                                              # fail fast
+bun test --test-name-pattern "<name>"                                 # 名前フィルター
 
 # E2E（dev サーバー自動起動）
 bun run e2e
 
 # E2E（特定 project）
 bunx playwright test --project=chromium-customer
-
-# カバレッジ
-bun run test:coverage:check
 ```
 
-**注意**: `bun test` 単体実行は `mock.module` グローバル干渉を引き起こすため禁止。必ず `test:unit` / `test:integration` の per-directory batch を使用してください。
+**注意**:
+
+- `bun test __tests__/unit/domain/reservations`（親ディレクトリ指定）は `mock.module` グローバル干渉のため禁止（ADR 0010）。単一ファイル指定か `bun run test:unit` / `test:integration` を使う
+- フル実行を毎回行う必要はない（ADR 0014）。lefthook pre-push と CI が自動で守る
+- Coverage は per-directory batch と非互換のため CI ゲートなし。必要時 `bun test --coverage <single-file>` を参考値として取る
 
 ### 4. PR 作成
 
@@ -148,7 +152,7 @@ CI で以下が自動実行されます：
 | -------------------- | --------------------------------------------------------------------------------- |
 | `policy-docs-sync`   | `.claude/rules` と `codex-rules` の同期確認                                       |
 | `lint-and-typecheck` | ESLint + `tsc --noEmit`                                                           |
-| `unit-tests`         | bun test with coverage threshold 90%                                              |
+| `unit-tests`         | bun test (per-directory batch、ADR 0010) + integration tests                      |
 | `e2e-tests`          | Playwright（全 project、Playwright browsers cache 対応）                          |
 | `build`              | env validation ありの `bun run build`                                             |
 | `dependency-audit`   | `bun audit`（non-blocking、artifact として保存）                                  |

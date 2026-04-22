@@ -17,7 +17,7 @@ description: >
 gcloud builds submit --config=cloudbuild.yaml
   │
   ├─ Step 1: pull-cache     （Artifact Registry から :cache tag を pull、失敗無視）
-  ├─ Step 2: test           （oven/bun:1.3.11 で bun run test:unit）
+  ├─ Step 2: test           （oven/bun:1.3.12 で bun run test:unit）
   ├─ Step 3: build-image    （Docker build、NEXT_SERVER_ACTIONS_ENCRYPTION_KEY は secret）
   ├─ Step 4: push-image     （:SHORT_SHA と :cache を push）
   └─ Step 5: deploy         （gcloud run deploy myrrh-rental-space）

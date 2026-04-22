@@ -21,7 +21,7 @@
 | Next.js      | 16.2.3     | `'use cache'`, `updateTag`, PPR 対応   |
 | React        | 19.2.5     | React Compiler 1.0, `useEffectEvent`   |
 | TypeScript   | 6.0.2      | `target: es2025`, `erasableSyntaxOnly` |
-| Bun          | 1.3.11     | `bun:test`, `packageManager` と一致    |
+| Bun          | 1.3.12     | `bun:test`, `packageManager` と一致    |
 | Prisma       | 7.7.0      | WASM, mapped enums                     |
 | Better Auth  | 1.6.1      | RBAC, Google/LINE OAuth                |
 | Tailwind CSS | 4.2.2      | CSS-first, @theme                      |
@@ -56,9 +56,10 @@ bun run dev
 ## Testing instructions
 
 ```bash
-bun run test                    # 全テスト
-bun run test:unit               # 単体のみ
-bun run test:integration        # 統合のみ
+bun run test:unit               # 単体（per-directory バッチ、ADR 0010）
+bun run test:integration        # 統合（per-directory バッチ）
+bun run test:all                # 単体 + 統合（フル手動実行）
+bun test <path>                 # 単一ファイル（通常の開発はこれで十分）
 bun run validate                # type-check → lint
 bun run validate && bun run build  # 完全検証
 bun run e2e                     # Playwright E2E
@@ -66,6 +67,7 @@ bun run e2e                     # Playwright E2E
 
 - 作業完了前の最低ライン: `bun run validate`
 - PR 作成前: `bun run validate && bun run build`
+- テスト全走は **CI と `lefthook` pre-push に委ねる**（毎回手動実行は不要、ADR 0014）
 
 ## Required coding rules
 
@@ -130,5 +132,6 @@ bun run e2e                     # Playwright E2E
 
 - `docs/architecture/agent-instructions.md`: AI 向け指示の配置
 - `docs/architecture/`: アーキテクチャ、DB 設計、キャッシュ戦略
-- `docs/reference/codex-rules/`: 詳細ルール
-- `.claude/skills/README.md`: Codex スキルの索引と作成基準
+- `.claude/rules/`: 詳細ルール（正本。Codex / Claude Code 共通参照）
+- `docs/reference/codex-rules/`: Codex 互換 mirror 7 件のみ（lexical / admin-inline / instruction-topology / 旧 visual 系）
+- `.claude/skills/README.md`: スキルの索引と作成基準

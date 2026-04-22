@@ -69,10 +69,13 @@ bun run build        # 本番ビルド（Turbopack使用）
 # 本番サーバー
 bun run start        # 本番サーバー起動
 
-# テスト
-bun run test         # テスト実行
-bun run test:watch   # ウォッチモード
-bun run test:coverage # カバレッジレポート
+# テスト（ADR 0014）
+bun test <path>                        # 単一ファイル（日常開発の主入口）
+bun test --watch <path>                # ウォッチモード（単一ファイル指定必須）
+bun test --coverage <path>             # カバレッジ参考値（単発、CI ゲートなし）
+bun run test:unit                      # 全単体テスト（per-directory batch、ADR 0010）
+bun run test:integration               # 全統合テスト
+bun run test:all                       # 単体 + 統合
 
 # 詳細なテスト要件については、[`testing.md`](./testing.md)を参照
 

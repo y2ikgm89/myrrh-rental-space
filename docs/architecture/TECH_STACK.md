@@ -9,7 +9,7 @@
 | Next.js    | 16.2.3     | App Router, PPR, `proxy.ts`, Metadata API  |
 | React      | 19.2.5     | Server / Client Components, React Compiler |
 | TypeScript | 6.0.2      | strict type-checking, `erasableSyntaxOnly` |
-| Bun        | 1.3.11     | package manager, test runner, app runtime  |
+| Bun        | 1.3.12     | package manager, test runner, app runtime  |
 
 ## データと認証
 
