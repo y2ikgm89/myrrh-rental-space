@@ -42,6 +42,7 @@ NNNN-kebab-case-title.md
 | [0014](./0014-test-script-consolidation.md)                                | Test script の整理とテスト実行ポリシーの明文化                              | Accepted | 2026-04-22 |
 | [0015](./0015-clean-break-refactor-and-parallel-implementer-discipline.md) | Clean-break refactor 原則と parallel implementer の git 副作用規律          | Accepted | 2026-04-22 |
 | [0016](./0016-page-hero-first-class-field.md)                              | ホームヒーローを `Page.pageHero` へ移行し `homepage-hero` Section を廃止    | Accepted | 2026-04-22 |
+| [0017](./0017-section-style-cascade.md)                                    | SectionStyle を独立 entity 化し 4 段 cascade で解決する                     | Proposed | 2026-04-22 |
 
 ## 参考
 
