@@ -83,7 +83,7 @@ export default async function SpacesPage({
       hero={heroSection ? <SectionRenderer section={heroSection} /> : undefined}
       cta={<SiteCTA />}
     >
-      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container>
           {/* Filter */}
           <Suspense fallback={null}>

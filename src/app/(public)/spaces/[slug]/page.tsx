@@ -107,7 +107,7 @@ export default async function SpaceDetailPage({
         })}
       />
 
-      <Section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <Section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container>
           <div className="grid gap-10 lg:grid-cols-[1fr_320px] lg:gap-12">
             <div className="space-y-12">

@@ -4,7 +4,7 @@ export default function EventDetailLoading() {
   return (
     <main id="main-content">
       <Container variant="narrow">
-        <div className="animate-pulse space-y-6 py-[var(--spacing-section)]">
+        <div className="animate-pulse space-y-6 py-[var(--space-lg)]">
           {/* Title */}
           <div className="space-y-3">
             <div className="h-10 w-3/4 bg-surface" />

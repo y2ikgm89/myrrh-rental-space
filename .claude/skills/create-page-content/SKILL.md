@@ -123,7 +123,7 @@ export default async function <PageName>Page(): Promise<ReactElement> {
     <>
       {heroSection && <SectionRenderer section={heroSection} />}
 
-      <section className="py-[var(--spacing-section)]">
+      <section className="py-[var(--space-lg)]">
         <Container>
           {/* ページ固有コンテンツ（フォーム、リスト等） */}
         </Container>

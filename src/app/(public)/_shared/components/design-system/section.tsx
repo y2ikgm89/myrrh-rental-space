@@ -17,7 +17,7 @@ const borderClasses = {
 } as const satisfies Record<SectionBorder, string>;
 
 const spacingClasses = {
-  default: "py-[var(--spacing-section)]",
+  default: "py-[var(--space-lg)]",
   compact: "py-[var(--spacing-block)]",
   none: "",
 } as const satisfies Record<SectionSpacing, string>;

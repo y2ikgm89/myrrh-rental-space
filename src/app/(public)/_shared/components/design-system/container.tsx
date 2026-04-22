@@ -26,7 +26,7 @@ export function Container({
   return (
     <Tag
       className={cn(
-        "mx-auto px-[var(--container-padding)]",
+        "mx-auto ps-[var(--container-padding-start)] pe-[var(--container-padding-end)]",
         variantClasses[variant],
         className,
       )}

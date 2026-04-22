@@ -17,7 +17,7 @@ export default function PublicNotFound() {
   return (
     <main id="main-content">
       <Container>
-        <div className="flex min-h-[60vh] flex-col items-center justify-center py-[var(--spacing-section)]">
+        <div className="flex min-h-[60vh] flex-col items-center justify-center py-[var(--space-lg)]">
           <Stack gap="lg" className="items-center text-center">
             <span className="font-heading text-8xl font-bold text-border">
               404

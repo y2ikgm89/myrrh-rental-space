@@ -97,7 +97,7 @@ export default async function PostsPage({
         ]}
       />
 
-      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container>
           <BlogLayout showSidebar={showSidebar}>
             <Suspense fallback={null}>

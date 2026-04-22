@@ -4,7 +4,7 @@ export default function SettingsLoading() {
   return (
     <main id="main-content">
       <Container>
-        <div className="animate-pulse space-y-8 py-[var(--spacing-section)]">
+        <div className="animate-pulse space-y-8 py-[var(--space-lg)]">
           {/* Title */}
           <div className="h-8 w-48 bg-surface" />
 

@@ -78,8 +78,18 @@ paths:
 - Breakpoint: `--breakpoint-3xl: 120rem`
 - Header: `--header-height`（mobile-md 分岐）
 - Hero/Modal/Lightbox/Dropdown: `--hero-min-height` / `--modal-max-height` / `--lightbox-max-{height,width}` / `--dropdown-min-width`
-- Prose/Container: `--prose-{narrow,medium}` / `--container-{measure,header-max,max,padding}`
+- Prose/Container: `--prose-{narrow,medium}` / `--container-{measure,header-max,max,padding}` / `--container-editorial`
 - Touch target: `--touch-target-min`
-- Fluid text / spacing: `--text-*` / `--spacing-{section,block,card}`
+- Fluid typography: `--text-*`
+- **セクション縦余白（公開・管理の SectionWrapper）**: `--space-3xs` … `--space-2xl` を `pt/pb-[var(--space-{sm,md,lg,xl})]` で参照。旧 `--spacing-section` / `--spacing-section-compact` は **廃止**（`src` では使用禁止、`architecture-boundaries.test.ts` で検出）
+- **ブロック・カード用（レイアウトブロック）**: public `--spacing-block` / admin `--spacing-card`（フォーム・カード枠の `py-[var(--spacing-block)]` 等）
+
+### ホームヒーロー（Page 第一級フィールド）
+
+| 定数/変数                          | 場所                                       | メモ                                                                     |
+| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `pageHeroSchema` / `parsePageHero` | `@/shared/lib/sections/page-hero/schema`   | `Page.pageHero` JSON の正本。管理・公開で共通                            |
+| `defaultPageHeroHome`              | `@/shared/lib/sections/page-hero/defaults` | seed / 未設定時のホーム既定                                              |
+| `<PageHero />`                     | `@/public/components/page-hero/PageHero`   | variant dispatch。旧 `homepage-hero` **Section type は廃止**（ADR 0016） |
 
 **新規 arbitrary 値（`[65ch]` / `[85vh]` / `[90svh]` / `[12rem]` 等）を追加する前に既存 token を grep し、不足なら `@theme` に追加してから `min-h-[var(--hero-min-height)]` 等の CSS var 参照形式で利用する。**

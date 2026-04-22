@@ -355,7 +355,8 @@ describe("updatePageSectionOrderCommand", () => {
           sections: [{ id: SECTION_ID, order: 0 }],
         }),
       ).resolves.toBeUndefined();
-      expect(mockTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSectionUpdate).toHaveBeenCalledTimes(1);
+      expect(mockTransaction).not.toHaveBeenCalled();
     });
   });
 

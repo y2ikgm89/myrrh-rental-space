@@ -4,7 +4,7 @@ export default function SpaceDetailLoading() {
   return (
     <main id="main-content">
       <Container>
-        <div className="animate-pulse space-y-8 py-[var(--spacing-section)]">
+        <div className="animate-pulse space-y-8 py-[var(--space-lg)]">
           {/* Image placeholder */}
           <div className="aspect-[16/9] w-full bg-surface" />
 

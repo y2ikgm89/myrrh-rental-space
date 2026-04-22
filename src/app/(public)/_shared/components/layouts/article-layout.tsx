@@ -92,7 +92,7 @@ export function ArticleLayout({
           </Container>
         </div>
       ) : null}
-      <Container className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <Container className="pt-10 pb-[var(--space-lg)] md:pt-14">
         {toc ? (
           <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-16">
             <div className="min-w-0">{article}</div>

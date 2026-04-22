@@ -189,8 +189,8 @@ export default async function AccessPage(): Promise<ReactElement> {
       </section>
 
       {/* Section 3: 拠点ごとの詳細 chapters
-          pb-[var(--spacing-section)] で SiteCTA の border-t と視覚的に分離 */}
-      <section className="pt-20 pb-[var(--spacing-section)] md:pt-28">
+          pb-[var(--space-lg)] で SiteCTA の border-t と視覚的に分離 */}
+      <section className="pt-20 pb-[var(--space-lg)] md:pt-28">
         <Container>
           <Suspense fallback={null}>
             <AccessChapters googleMapsUrl={businessInfo.googleMapsUrl} />

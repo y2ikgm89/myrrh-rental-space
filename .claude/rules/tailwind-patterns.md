@@ -429,7 +429,7 @@ responsive reset（`md:[...:0]` 等）したい値は **inline style ではな�
 - reset は `:none` / `:0px_transparent` / `:normal` で明示
 - 常時固定の値（breakpoint 切替不要）は inline style も許容（例: hero の photo credit）
 
-参照実装: `_components/homepage/hero-section.tsx` の label / h1（mobile overlay stroke → desktop reset）
+参照実装: `_shared/components/page-hero/EditorialSplitHero.tsx` の label / h1（mobile overlay stroke → desktop reset）
 
 ---
 
@@ -470,7 +470,7 @@ responsive reset（`md:[...:0]` 等）したい値は **inline style ではな�
 - `pointer-events-none` on mobile overlay で swipe/tap が image に到達
 - 単一 h1 — DOM 重複なし、SEO 整合
 
-参照実装: `src/app/(public)/_components/homepage/hero-section.tsx`
+参照実装: `src/app/(public)/_shared/components/page-hero/EditorialSplitHero.tsx`
 
 ---
 

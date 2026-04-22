@@ -4,7 +4,7 @@ export default function AccessLoading() {
   return (
     <main id="main-content">
       <Container>
-        <div className="space-y-8 py-[var(--spacing-section)]">
+        <div className="space-y-8 py-[var(--space-lg)]">
           {/* Hero placeholder */}
           <div className="mx-auto h-10 w-48 animate-pulse bg-surface" />
           {/* Map skeleton */}

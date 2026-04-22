@@ -88,7 +88,7 @@ export default async function NewsPage({
         ]}
       />
 
-      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container>
           <Suspense fallback={null}>
             <div className="mb-8 max-w-md">

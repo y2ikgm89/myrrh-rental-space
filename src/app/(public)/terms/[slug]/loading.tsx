@@ -4,7 +4,7 @@ export default function TermsDetailLoading() {
   return (
     <main id="main-content">
       <Container variant="narrow">
-        <div className="animate-pulse space-y-6 py-[var(--spacing-section)]">
+        <div className="animate-pulse space-y-6 py-[var(--space-lg)]">
           {/* Title + date */}
           <div className="space-y-3">
             <div className="h-10 w-2/3 bg-surface" />

@@ -4,7 +4,7 @@ export default function AboutLoading() {
   return (
     <main id="main-content">
       <Container>
-        <div className="space-y-10 py-[var(--spacing-section)]">
+        <div className="space-y-10 py-[var(--space-lg)]">
           {/* Hero placeholder */}
           <div className="mx-auto h-10 w-48 animate-pulse bg-surface" />
           {/* Section placeholders */}

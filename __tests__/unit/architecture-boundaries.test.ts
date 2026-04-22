@@ -582,6 +582,30 @@ function collectSourceFiles(dir: string): string[] {
   return files;
 }
 
+/** TS / TSX / CSS を再帰収集（design token 廃止の横断 grep 用） */
+function collectStyleSourceFiles(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectStyleSourceFiles(fullPath));
+      continue;
+    }
+
+    if (
+      entry.name.endsWith(".ts") ||
+      entry.name.endsWith(".tsx") ||
+      entry.name.endsWith(".css")
+    ) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
 function collectNonCommentOffenders(
   files: string[],
   pattern: RegExp,
@@ -739,6 +763,33 @@ describe("architecture boundaries", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("deprecated spacing-section CSS variables は src 以下に残さない（Phase A: --space-* へ移行済み）", () => {
+    const files = collectStyleSourceFiles(SRC_ROOT);
+    const offenders = files
+      .filter((file) => {
+        const source = readFileSync(file, "utf8");
+        return source.includes("--spacing-section");
+      })
+      .map((filePath) => relative(ROOT, filePath));
+
+    expect(offenders).toEqual([]);
+  });
+
+  test("public セクション系 surface は px-4 / px-6 の横パディングを直書きしない（Container / SectionWrapper トークン経由）", () => {
+    const sectionRoots = [
+      join(PUBLIC_APP_ROOT, "_shared", "components", "sections"),
+      join(PUBLIC_APP_ROOT, "_shared", "components", "page-hero"),
+      join(PUBLIC_APP_ROOT, "_components", "homepage"),
+    ];
+    const files = sectionRoots
+      .filter((dir) => existsSync(dir))
+      .flatMap((dir) => collectSourceFiles(dir));
+    const px4 = collectNonCommentOffenders(files, /\bpx-4\b/u);
+    const px6 = collectNonCommentOffenders(files, /\bpx-6\b/u);
+
+    expect({ px4, px6 }).toEqual({ px4: [], px6: [] });
+  });
+
   test("app layer は generated Prisma model/client type を直接 import しない", () => {
     const appRoot = join(SRC_ROOT, "app");
     const sourceFiles = collectSourceFiles(appRoot);
@@ -869,7 +920,7 @@ describe("architecture boundaries", () => {
       "bun run db:generate",
     );
     expect(packageJson.scripts?.["build"]).toContain("bun run db:generate");
-    expect(packageJson.scripts?.["test"]).toContain("bun run db:generate");
+    expect(packageJson.scripts?.["test:unit"]).toContain("bun run db:generate");
   });
 
   test("Cloud Run deploy は Server Actions encryption key を runtime にも注入する", () => {

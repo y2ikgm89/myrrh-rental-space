@@ -59,16 +59,16 @@ OKLCH形式。Luxury White × Bronze。
 ## セクション設計
 
 | 要素              | 値                                                                                                                                              |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Section padding   | Content ページ: `py-[var(--spacing-section)]` = `clamp(7rem, 12vw, 11rem)`                                                                      |
-| Homepage padding  | `py-[var(--spacing-section-compact)]` = `clamp(5rem, 8vw, 7rem)`                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | --- | ---------------------------------------------------------------- |
+| Section padding   | DB 駆動セクションは `SectionWrapper` が `pt/pb-[var(--space-sm                                                                                  | md                                              | lg  | xl)]` を適用（`--space-\*`は`public.css` の fluid 段階スケール） |
+| Homepage padding  | ホームの DB セクションも同じく `SectionWrapper` + `SectionDesign`。ヒーロー本体は `Page.pageHero`（`PageHero` コンポーネント）で別経路          |
 | Homepage 背景     | 全セクション `bg-background`（白）統一。視覚変化は余白・タイポグラフィ・画像で確保                                                              |
 | Block padding     | Form/Auth/Dashboard: `py-[var(--spacing-block)]` = `clamp(2.5rem, 5vw, 4rem)`                                                                   |
-| Hero              | `min-h-[85vh]` split layout（左画像 + 右テキスト）                                                                                              |
-| Container         | `mx-auto max-w-[var(--container-max)] px-[var(--container-padding)]`                                                                            |
-| Container padding | Fluid: `clamp(1.5rem, 3vw, 3rem)`                                                                                                               |
+| Hero              | ホーム: `pageHero.variant`（editorial-split / compact / minimal）。旧 `homepage-hero` Section は廃止                                            |
+| Container         | `mx-auto max-w-[var(--container-max)]` + 横 inset は `padding-inline: var(--container-padding-start                                             | end)`（safe-area 考慮は `SectionWrapper` 参照） |
+| Container padding | Fluid: `clamp(1rem, 3vw, 3rem)`（`--container-padding`）。editorial 幅は `--container-editorial`（50rem）                                       |
 | Container max     | `80rem` (1280px)                                                                                                                                |
-| セクション分離    | 余白 `--spacing-section` + 必要時 `border-t border-border`。背景色切替は使わない                                                                |
+| セクション分離    | 余白は `--space-*` + 必要時 `border-t border-border`。`--spacing-section*` は廃止（`src` では使用禁止）                                         |
 | Grid 傾向         | Container Queries: `@container` + `@md:grid-cols-2 @3xl:grid-cols-3`                                                                            |
 | border-radius     | コンテナ/画像=`rounded-lg`, 全ボタン=sharp（editorial 統一）, セクション境界=sharp。`rounded-full` はバッジ・タグ・アイコンボタン・スピナーのみ |
 
@@ -157,7 +157,7 @@ public.css / admin.css 両方で **Tailwind default bp 維持 + `--breakpoint-3x
 | トークン                    | public 値                    | admin 値                     | 用途                                     |
 | --------------------------- | ---------------------------- | ---------------------------- | ---------------------------------------- |
 | `--container-max`           | `80rem` (1280px)             | `100rem` (1600px)            | ページ幅の上限                           |
-| `--container-padding`       | `clamp(1.5rem, 3vw, 3rem)`   | `clamp(1rem, 2vw, 2rem)`     | fluid 水平 padding                       |
+| `--container-padding`       | `clamp(1rem, 3vw, 3rem)`     | `clamp(1rem, 2vw, 2rem)`     | fluid 水平 padding                       |
 | `--container-header-max`    | `90rem` (1440px)             | N/A                          | site-header の拡張幅                     |
 | `--container-measure`       | `65ch`                       | N/A                          | editorial Prose の読みやすさ上限         |
 | `--prose-narrow`            | `40ch`                       | N/A                          | Hero subtitle 等の狭い測度               |

@@ -185,7 +185,7 @@ export default async function EventDetailPage({
           : {})}
       />
 
-      <Section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <Section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container variant="narrow">
           <Stack gap="lg">
             <div className="flex flex-wrap gap-2">

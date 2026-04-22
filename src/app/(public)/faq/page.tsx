@@ -72,7 +72,7 @@ export default async function FaqPage(): Promise<ReactElement> {
         <FAQPageJsonLd items={faqJsonLdItems} />
       ) : null}
 
-      <section className="pt-10 pb-[var(--spacing-section)] md:pt-14">
+      <section className="pt-10 pb-[var(--space-lg)] md:pt-14">
         <Container variant="narrow">
           <FaqAccordion categories={categories} />
         </Container>
