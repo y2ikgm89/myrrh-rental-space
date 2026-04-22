@@ -5,6 +5,15 @@ description: 管理画面の Lexical に新しいノード型を追加すると�
 
 # lexical-node
 
+## lexical skill 使い分け
+
+| 主目的                                              | 使う skill        |
+| --------------------------------------------------- | ----------------- |
+| 新しい node 型を追加（TextNode / DecoratorNode 等） | `lexical-node`    |
+| 新しい plugin を追加（dialog / command / listener） | `lexical-plugin`  |
+| 新しい toolbar 操作を追加（button / command 接続）  | `lexical-toolbar` |
+| 既存実装を監査 / deprecated API / モダナイズ        | `lexical-audit`   |
+
 `src/app/(admin)/**/lexical/**` に新しい Lexical node を追加するときに使う。
 単なる toolbar 追加や command 追加だけなら別 skill を使う。
 

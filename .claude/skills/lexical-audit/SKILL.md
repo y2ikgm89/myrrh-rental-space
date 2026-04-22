@@ -5,6 +5,15 @@ description: 管理画面の Lexical 実装を監査またはモダナイズす�
 
 # lexical-audit
 
+## lexical skill 使い分け
+
+| 主目的                                              | 使う skill        |
+| --------------------------------------------------- | ----------------- |
+| 新しい node 型を追加（TextNode / DecoratorNode 等） | `lexical-node`    |
+| 新しい plugin を追加（dialog / command / listener） | `lexical-plugin`  |
+| 新しい toolbar 操作を追加（button / command 接続）  | `lexical-toolbar` |
+| 既存実装を監査 / deprecated API / モダナイズ        | `lexical-audit`   |
+
 `src/app/(admin)/**/lexical/**` の既存実装を見直すときに使う。
 新機能追加が主目的なら `lexical-node`、`lexical-plugin`、`lexical-toolbar` を使う。
 
