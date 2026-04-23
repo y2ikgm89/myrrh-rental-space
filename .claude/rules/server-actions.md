@@ -47,6 +47,87 @@ done
 
 ---
 
+## Reader 関数は Route Handler が canonical（Server Action 読み取り禁止）
+
+Next.js 16 公式 [backend-for-frontend ガイド](https://github.com/vercel/next.js/blob/canary/docs/01-app/02-guides/backend-for-frontend.mdx) は `'use server'` を **form / mutation 用途**、リーダー（公開 fetch も含む）は **Route Handler `route.ts`** と明示している。プロジェクトでも Server Action で read-only 関数を export する形は非推奨（Server Action は RPC endpoint を生成するため、認証ヘルパーの選択肢が狭まり `"use server"` ファイル export 制約にも巻き込まれる）。
+
+### canonical Route Handler（管理画面 reader 用）
+
+```typescript
+// src/app/(admin)/admin/api/section-styles/route.ts
+import { NextResponse } from "next/server";
+import { checkPermission } from "@/admin/lib/action-auth";
+import { listSectionStyles } from "@/shared/domain/section-styles/queries";
+import { jsonError, jsonValidationError } from "@/shared/lib/route-responses";
+import { omitUndefined } from "@/shared/lib/serialize";
+import { sectionStyleListFiltersSchema } from "@/shared/lib/validations/section-style";
+
+export async function GET(request: Request) {
+  const auth = await checkPermission("sectionStyle", "read", request.headers);
+  if (!auth.success) return jsonError(auth.error.error, 403);
+
+  const url = new URL(request.url);
+  const parsed = sectionStyleListFiltersSchema.safeParse({
+    scope: url.searchParams.get("scope") ?? undefined,
+    applicableType: url.searchParams.get("applicableType") || undefined,
+    search: url.searchParams.get("search") || undefined,
+  });
+  if (!parsed.success)
+    return jsonValidationError(parsed.error, "クエリが不正です");
+
+  const styles = await listSectionStyles(omitUndefined(parsed.data));
+  return NextResponse.json(styles);
+}
+```
+
+### 契約の要点
+
+| 項目                   | 契約                                                                                                                                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 認証                   | `checkAdminAuth(request.headers)` (→ 401) または `checkPermission(resource, action, request.headers)` (→ 403)。`request.headers` を**第 3 引数**で渡す（Server Actions と異なり `headers()` が使えない） |
+| 副作用なし admin fetch | `checkAdminAuth` 止まりで OK。特定 resource に紐づく read は `checkPermission(resource, "read", ...)`                                                                                                    |
+| バリデーション         | 認証後に zod `safeParse`。失敗時は `jsonValidationError`                                                                                                                                                 |
+| Response               | `NextResponse.json(data)` / `jsonError(msg, status)` / `jsonValidationError(zodError, msg)`                                                                                                              |
+| 外部 fetch timeout     | `AbortSignal.timeout(10000)` 必須（`ogp/route.ts` 参照実装）                                                                                                                                             |
+| Client consumer        | `fetchAdminJson<T>("/admin/api/...", { signal: abortController.signal, cache: "no-store" })` — AbortController で unmount cleanup（`StyleSelector.tsx` 参照実装）                                        |
+| エラー時 UX            | SWR 的に silent fail ではなく `setLoadError(err.message)` で表示。`AbortError` は無視                                                                                                                    |
+
+### 参照実装（3 経路）
+
+- `src/app/(admin)/admin/api/ogp/route.ts` — POST + SSRF guard + external fetch + timeout
+- `src/app/(admin)/admin/api/section-styles/route.ts` — GET + filter query + zod safeParse
+- `src/app/(admin)/admin/api/notifications/unread-count/route.ts` — GET + 軽量 count
+
+### 禁止パターン
+
+```typescript
+// NG: read-only 関数を "use server" で export（Next.js 公式外 + Server Action RPC 化）
+"use server";
+export async function fetchOgpPreview(url: string) {
+  /* ... */
+}
+
+// NG: mutation だけど Route Handler で書く
+// → mutation は Server Action + executeAdminMutationResult を使う
+```
+
+### いつ Server Action を使うか
+
+`'use server'` は次の用途に限定:
+
+- フォーム送信（`<form action={...}>`）
+- `useFormAction` / `useActionState` 経由の mutation
+- Client Component からの mutation 呼び出し（RPC）
+- キャッシュ無効化を伴う write 操作（`updateTag` は Server Action 内のみ可能）
+
+読み取り操作で「server-side state（DB / cookie / headers）を読むだけ」なら Route Handler。
+
+### 移行メモ（ADR 0019）
+
+`fetch-ogp.ts` / `notification-polling.ts` / `section-styles/queries.ts` の 3 経路を `"use server"` から Route Handler に移行済み。新規 reader は最初から Route Handler で書く。
+
+---
+
 ## 'use cache' パターン（Next.js 16 新API）
 
 ### 基本キャッシュ（関数レベル）

@@ -72,6 +72,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **server-only 定数を Client Component から import 禁止** — client-safe ファイルに分離（`admin-roles.ts` / `admin-resources.ts` 参照）
 - **server-only / Node-only SDK 統合** — `ical-generator` / `resend` / `googleapis` / `stripe` 等は `import "server-only"` 必須（→ `server-only-patterns.md` §検出 grep）
 - **Cloud Run probe endpoint (`/api/live` / `/api/health`) は `proxy.ts` rate-limit 除外必須** — probe は `x-forwarded-for` 未設定で `getClientIp()` が `"unknown"` を返し同一 bucket 合算で 429 → コンテナ kill 連鎖の silent bug。`/api/webhooks` / `/api/cron` と同列で早期リターン。Cloud Run / Dockerfile 変更時は禁止事項 15 項目（`ops/deployment-patterns.md`）を横断チェック
+- **管理画面向け preview は第 3 root layout `(preview)/` + 公開 renderer 抽出パターン**（ADR 0020）— Next.js 公式 Draft Mode（公開 URL 流用）は headless CMS 等の用途向け。管理者専用の軽量 preview で公開 layout の分離を維持したい場合は `(preview)/` を新設し、`HomepageSections` / `ManagedPageSections` を `_shared/components/{homepage,pages}/` に抽出して公開 + preview 両用にする。未認証 fallback は `(preview)/error.tsx` で `/admin/login` 誘導。URL 生成は `@/shared/lib/preview-routes` SSoT 経由
 
 ### Validation / Domain
 
@@ -135,6 +136,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **context7 に無い Playground / reference implementation は `gh api` で一次ソース直接参照** — Lexical の `FloatingTextFormatToolbarPlugin` / `setFloatingElemPosition` / `DraggableBlockPlugin_EXPERIMENTAL` 等は `@lexical/react` の公開 API ではなく Playground 固有の参考実装のため context7（`/facebook/lexical` / `/websites/lexical_dev` 両方）にヒットしない。`gh api repos/facebook/lexical/contents/packages/lexical-playground/...` で裏取り。この場合の主張粒度は「公式 API ドキュメント準拠」ではなく **「reference implementation 準拠」** と明記（overstate 回避）
 - **Radix primitives の具体例**: context7 取得不可 → `WebFetch` で `https://www.radix-ui.com/primitives/docs/components/<name>`
 - **Claude Code 自体の公式仕様（hooks/skills/sub-agents/settings/permissions）は `code.claude.com/docs/en/<topic>` を WebFetch で取得** — context7 はサードパーティライブラリ用で Claude Code 本体は未収録。Agent SDK は別ルート（`docs.anthropic.com` 配下）
+- **`mcp__context7__query-docs` の引数は `query`（`topic` / `question` は誤り）** — `{ libraryId, query, tokens }` の 3 引数。誤引数は `InputValidationError: Invalid input: expected string, received undefined` で即失敗。旧 MCP API を記憶ベースで呼ばない
 - **一括修正後**: Grep で違反パターン残存ゼロ確認してから完了報告
 - **精査系 subagent の「使用なし」「欠落」報告は実装 Read + grep で二段検証必須** — grep ベース調査は seed 関数内の間接使用を見落として false positive を出す
 - **Explore / 監査 subagent の数値・採用範囲リストは grep で再検証必須** — `breakpoint 使用箇所数` / `@container 採用ファイル数` / `arbitrary 値の件数` 等は rule docs の記述を根拠に hallucinate することあり（このセッションで `xl:` 22→実際 18、`@container` 採用 5→実際 3 の drift を検出）。修正計画に組み込む前に `grep -rE "\bxl:" src/ --include="*.tsx" -c | awk -F: '{s+=$2} END{print s}'` 等で ground truth を取る
@@ -155,6 +157,8 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **ADR 新規作成前に `ls docs/architecture/decisions/ | grep "^00"` で既存番号確認** — 連番重複採番を防ぐ。本セッションで 0011 衝突が発生（`0011-dual-better-auth-instance.md` 既存を見落として重複作成 → 0014 に変更）
 - **`package.json` scripts 削除・リネーム時は横断 grep 必須** — `AGENTS.md` / `CONTRIBUTING.md` / `cloudbuild.yaml` / `.github/workflows/*.yml` / `.claude/{rules,agents,skills}/**` / `docs/guides/**` / `bunfig.toml` / `.vscode/launch.json` に旧 script 名が残らないか確認（ADR 0014 で実例化）
 - **ADR 制約と設定ファイルの整合を grep で周期検証** — `bunfig.toml` / `playwright.config.ts` / `.gitignore` 等が ADR 制約と乖離した dead code になっていないか（本セッション: `coverageThreshold` が ADR 0010 採択後も残存していた → ADR 0014 で撤去）
+- **`bun.lock` 単独コミット禁止** — `scripts/check-protected-files.sh` が拒否（依存更新は `package.json` と同時 stage 必須）。大きな改修バンドル内に誤混入した lockfile 差分は `git restore --staged --worktree bun.lock` で HEAD に戻して分離
+- **単一 worktree に複数改修が混入したら Conventional Commits type で分離** — `feat:` / `refactor:` / `fix:` / `docs:` を個別 commit に。lefthook `commit-msg` hook が type を強制するため、scope 汚染のまま 1 commit で push すると review / revert 粒度が崩れる。`git add <subset>` → commit の反復で分離
 
 ### 実装パターン
 
@@ -164,6 +168,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Terms / News / Post / Section / Space の seed は Lexical JSON 同時保存必須** — `contentHtml` 単独禁止。`buildParagraphEditorStateJson()` + `buildParagraphHtml()`（`@/shared/lib/lexical/description-defaults.ts`）
 - **公開一覧ページ新設の 10 点セット**: ① `page.tsx` + `loading.tsx` + `error.tsx` ② `generatePageMetadata(slug)` + `BreadcrumbJsonLd` ③ `getPageSectionsWithFallback(slug)` ④ trailing sections から同種 + `cta` 除外 ⑤ `default-page-sections.ts` + `SYSTEM_PAGES` ⑥ seed Page レコード ⑦ sitemap.ts ⑧ NavigationItem seed ⑨ E2E fixtures urls ⑩ layout.tsx `alternates`（該当時）
 - **「推奨で」「クリーン実装」指示時の変換セット** — ① nuqs `parseAsString.withDefault` → `parseAsStringLiteral(values)` + `isValid*` 型ガード ② 複合 `sort` → `sortBy` + `sortOrder` + `SortableColumnHeader` ③ 手動 debounce → `useDebouncedCallback`（`@/admin/hooks`）④ Select `onValueChange` `as` → `isValid*` narrow ⑤ 同系統テーブルと Grep 比較
+- **Reader 関数を `"use server"` で export しない — Route Handler `route.ts` が公式推奨**（Next.js 16 [backend-for-frontend](https://github.com/vercel/next.js/blob/canary/docs/01-app/02-guides/backend-for-frontend.mdx) ガイド）。canonical: `checkAdminAuth` (401) / `checkPermission` (403, `request.headers` を第 3 引数で渡す) + `NextResponse.json` + `AbortSignal.timeout` + zod `safeParse` + `jsonError` / `jsonValidationError`。参照実装: `src/app/(admin)/admin/api/{ogp,section-styles,notifications/unread-count}/route.ts`（ADR 0019）
 - **UX スケール判断は seed 件数ではなく CMS 運用上限で** — Location / Category / Tag 等運用者が追加できるリソースは production 想定値（数十〜100）で設計。フィルタ UI 閾値目安: pill 2〜5 / scroll 6〜15 / dropdown 16+
 - **Feature toggle 粒度** — 単一 tenant は per-entity 単一層、multi-tenant template は `Settings.xxxEnabledGlobal` + `Entity.xxxEnabled` の 2 層（precedence 一方向: Global OFF → 常に非表示 / Global ON → per-entity 効く）。参照: `Settings.reviewsEnabledGlobal` ↔ `Space.reviewsEnabled`
 - **Lexical 新規ノードで作成時バリアント選択 UI が必要な場合** — dialog-upfront 3 コマンド体制（`OPEN_XXX_DIALOG_COMMAND` / `INSERT_XXX_COMMAND` / `UNGROUP|TRANSFORM_XXX_COMMAND`）。全 UI 経路（Insert / FT / ⋮⋮ / keyboard）は dispatch 前に `$getSelectionBlockNodes()` のキーをスナップショットして payload に積む（ダイアログフォーカスで editor 選択が失われるため必須）。hardcoded default 値の silent 挿入禁止。参照実装: `GroupPlugin`（→ `frontend/lexical-patterns.md` §グループ化）
