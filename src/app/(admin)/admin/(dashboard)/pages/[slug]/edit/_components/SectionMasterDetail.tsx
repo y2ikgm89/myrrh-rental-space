@@ -373,6 +373,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
                 セクション一覧
               </button>
               <SectionEditor
+                key={selectedSection?.id ?? "none"}
                 section={selectedSection}
                 hasSections={sections.length > 0}
                 onAddSection={() => handleOpenAddDialog()}

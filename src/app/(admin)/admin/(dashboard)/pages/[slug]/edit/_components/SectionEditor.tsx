@@ -64,28 +64,17 @@ export function SectionEditor({
   const [configDirty, setConfigDirty] = useState(false);
   const [styleDirty, setStyleDirty] = useState(false);
 
-  // Style Card local state（保存前の draft）
+  // Style Card local state（保存前の draft）— 親が key={section.id} で remount するため、
+  // 各 useState 初期値は props から安全に派生できる（React 公式 "Resetting state with key"）
   const [styleIdDraft, setStyleIdDraft] = useState<string | null>(
     section?.styleId ?? null,
   );
   const [overrideDraft, setOverrideDraft] =
-    useState<SectionStyleOverride | null>(
+    useState<SectionStyleOverride | null>(() =>
       parseInitialOverride(section?.styleOverride),
     );
 
-  // Section 切替時に draft state をリセット（render 中 state sync — 公式推奨
-  // "Adjusting State Directly During Render"、react-patterns.md 参照）
-  const [previousSectionId, setPreviousSectionId] = useState<string | null>(
-    section?.id ?? null,
-  );
-  if ((section?.id ?? null) !== previousSectionId) {
-    setPreviousSectionId(section?.id ?? null);
-    setConfigDirty(false);
-    setStyleDirty(false);
-    setStyleIdDraft(section?.styleId ?? null);
-    setOverrideDraft(parseInitialOverride(section?.styleOverride));
-  }
-
+  // Dirty 通知は useEffect で（parent setState を render 中に発火しないため）
   useEffect(() => {
     onDirtyChange?.(configDirty || styleDirty);
   }, [configDirty, styleDirty, onDirtyChange]);
