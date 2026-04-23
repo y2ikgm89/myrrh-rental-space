@@ -1,23 +1,28 @@
 "use client";
 
 /**
- * セクション追加ダイアログ
+ * AddSectionDialog — Command Palette パターン（cmdk）
  *
- * 17セクションタイプを5カテゴリに分類して表示
+ * WordPress Gutenberg / Notion / Linear / Framer と同系統のブロックインサーター。
+ * ファジー検索 + カテゴリグルーピング + キーボードナビ（WAI-ARIA Combobox 準拠）。
+ *
+ * 設計メモ:
+ * - `CommandDialog` は shadcn が公式提供する Dialog + Command の統合 primitive
+ * - `CommandItem.value` に label + description + category を連結して日本語・英語どちらでもヒットする検索体験
+ * - `onSelect` は cmdk が自動で提供（↑↓ で選択 → Enter で発火）
  */
 
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
 } from "@/admin/components/ui";
 import {
-  sectionTypeLabels,
   sectionTypeDescriptions,
+  sectionTypeLabels,
   sectionTypesByCategory,
 } from "@/shared/lib/validations/section";
 import { SectionTypeIcon } from "./SectionTypeIcon";
@@ -35,60 +40,65 @@ export function AddSectionDialog({
   onAdd,
   disabled,
 }: AddSectionDialogProps) {
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-2xl max-h-[var(--modal-max-height)] overflow-hidden flex flex-col">
-        <AlertDialogHeader>
-          <AlertDialogTitle>セクションを追加</AlertDialogTitle>
-          <AlertDialogDescription>
-            ページに追加するセクションタイプを選択
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="space-y-5 py-4 overflow-y-auto">
-          {sectionTypesByCategory.map(({ category, label, types }) => (
-            <div key={category}>
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                {label}
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {types.map((type) => {
-                  const typeLabel = sectionTypeLabels[type];
-                  const description = sectionTypeDescriptions[type];
+  const handleSelect = (type: string) => {
+    if (disabled) return;
+    onAdd(type);
+    onOpenChange(false);
+  };
 
+  return (
+    <CommandDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="セクションを追加"
+      description="キーワードで検索してセクションを挿入します"
+      className="max-w-2xl"
+    >
+      <CommandInput placeholder="セクション名・カテゴリで検索…（例: ヒーロー、お知らせ、FAQ）" />
+      <CommandList className="max-h-[420px]">
+        <CommandEmpty>該当するセクションが見つかりません</CommandEmpty>
+        {sectionTypesByCategory.map(
+          ({ category, label: categoryLabel, types }) => {
+            if (types.length === 0) return null;
+            return (
+              <CommandGroup key={category} heading={categoryLabel}>
+                {types.map((type) => {
+                  const typeLabel = sectionTypeLabels[type] ?? type;
+                  const description = sectionTypeDescriptions[type] ?? "";
+                  // ファジー検索対象: 日本語ラベル・英語 type 名・カテゴリ・description すべて
+                  const searchValue = `${typeLabel} ${type} ${categoryLabel} ${description}`;
                   return (
-                    <button
+                    <CommandItem
                       key={type}
-                      type="button"
-                      onClick={() => {
-                        onAdd(type);
-                        onOpenChange(false);
-                      }}
+                      value={searchValue}
+                      onSelect={() => handleSelect(type)}
                       disabled={disabled}
-                      className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-left disabled:opacity-50"
+                      className="gap-3"
                     >
-                      <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10">
                         <SectionTypeIcon
                           type={type}
-                          className="h-5 w-5 text-primary"
+                          className="h-4 w-4 text-primary"
                         />
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium">{typeLabel}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {description}
-                        </p>
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className="font-medium text-foreground">
+                          {typeLabel}
+                        </span>
+                        {description && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {description}
+                          </span>
+                        )}
                       </div>
-                    </button>
+                    </CommandItem>
                   );
                 })}
-              </div>
-            </div>
-          ))}
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>キャンセル</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+              </CommandGroup>
+            );
+          },
+        )}
+      </CommandList>
+    </CommandDialog>
   );
 }
