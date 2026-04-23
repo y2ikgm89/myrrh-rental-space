@@ -202,14 +202,14 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 ## SSOT 定数・シングルトン（主要）
 
-| 定数/変数                              | 場所                                              | メモ                                                                                                                                |
-| -------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `adminAuth` / `customerAuth`           | `@/shared/lib/{admin,customer}-auth`              | cookie prefix 分離、customer は Google/LINE（`/api/customer-auth`）                                                                 |
-| `DASHBOARD_ROLES` / RBAC helpers       | `@/shared/lib/admin-roles`                        | client-safe Role + `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()`                                                    |
-| `prisma` / `basePrisma` / Prisma enums | `@/shared/db/prisma` / `enums/prisma-types`       | `basePrisma` は Better Auth アダプター専用。Prisma enum は gateway 経由（runtime sentinel は `@generated/prisma/client` 直 import） |
-| `CACHE_TAGS` / `invalidate*Caches`     | `@/shared/lib/constants` / `@/shared/lib/cache/*` | mutation 後の無効化 SSoT、ローカル `updateTag` 羅列禁止                                                                             |
-| `*_STATUS_LABELS` / `PUBLISH_LABELS`   | `enums/helpers`                                   | 全ステータス enum + publish ラベル、UI ハードコード禁止                                                                             |
-| レスポンシブ @theme tokens             | `(public\|admin)/_styles/*.css`                   | `--breakpoint-3xl` / `--header-height` / `--hero-min-height` 等。arbitrary 値 3 回以上で token 昇格                                 |
+| 定数/変数                                         | 場所                                              | メモ                                                                                                                                                                                                                |
+| ------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adminAuth` / `customerAuth`                      | `@/shared/lib/{admin,customer}-auth`              | cookie prefix 分離、customer は Google/LINE（`/api/customer-auth`）                                                                                                                                                 |
+| `DASHBOARD_ROLES` / RBAC helpers                  | `@/shared/lib/admin-roles`                        | client-safe Role + `getInvitableRoles()` / `canInviteRole()` / `canModifyUser()`                                                                                                                                    |
+| `prisma` / `basePrisma` / Prisma enums            | `@/shared/db/prisma` / `enums/prisma-types`       | `basePrisma` は Better Auth アダプター専用。Prisma enum は gateway 経由（runtime sentinel は `@generated/prisma/client` 直 import）                                                                                 |
+| `CACHE_TAGS` / `CACHE_LIFE` / `invalidate*Caches` | `@/shared/lib/constants` / `@/shared/lib/cache/*` | mutation 後の無効化 SSoT（ローカル `updateTag` 羅列禁止）。`CACHE_LIFE.MAX` は stale-while-revalidate 用（cron / webhook）。顧客統計連動の mutation command は customerId を戻り値に含める契約（helper cascade 用） |
+| `*_STATUS_LABELS` / `PUBLISH_LABELS`              | `enums/helpers`                                   | 全ステータス enum + publish ラベル、UI ハードコード禁止                                                                                                                                                             |
+| レスポンシブ @theme tokens                        | `(public\|admin)/_styles/*.css`                   | `--breakpoint-3xl` / `--header-height` / `--hero-min-height` 等。arbitrary 値 3 回以上で token 昇格                                                                                                                 |
 
 **全 27 件の完全な一覧は `.claude/rules/ssot-singletons.md`**（src/prisma 編集時に自動ロード）。auth / DB / キャッシュ / 外部連携（Calendar/Storage）/ ドメイン / Lexical / 公開 UI / @theme token のカテゴリ別に整理。
 

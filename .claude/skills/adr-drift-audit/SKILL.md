@@ -33,6 +33,10 @@ ADR 0010 採択後も `bunfig.toml` に `coverageThreshold` が残存してい�
 | 0012 | executeAdminMutationResult           | 管理 Server Actions で `executeAdminMutationResult` 呼び出し（`src/app/(admin)/**/*.ts` grep）                                                                            |
 | 0013 | Policy docs sync                     | `scripts/verify-policy-docs.mjs` 存在・`.github/workflows/ci.yml` の policy-docs-sync job                                                                                 |
 | 0014 | Test script consolidation            | `package.json` に `test` / `test:watch` / `test:coverage` / `test:coverage:check` **不在** / `bunfig.toml` coverage 設定 **不在** / `scripts/check-coverage.mjs` **不在** |
+| 0015 | Clean-break refactor discipline      | `docs/architecture/decisions/0015-*.md` の parallel implementer 禁止記述と `.claude/agents/*.md` / CLAUDE.md §Subagent 規律 の整合                                        |
+| 0016 | Page hero first-class field          | `prisma/schema.prisma` の `Page.pageHero Json?` 存在 + `homepage-hero` Section type 不在（`src/shared/lib/sections/registry.ts` で廃止確認）+ `pageHeroSchema` 実装       |
+| 0017 | Section style cascade                | `prisma/schema.prisma` の `SectionStyle` model + `Section.styleId` + `Page.defaultStyleId` + `Settings.defaultSectionStyleId` の 4-tier cascade 実装                      |
+| 0018 | Field registry + group hierarchy     | `src/shared/lib/sections/field-registry.ts` の `z.registry<FieldMeta>()` 存在 + `field-helpers.ts` **不在** + `FieldMeta.group` 必須 + Accordion 3 層 UI                  |
 
 ## ワークフロー
 
