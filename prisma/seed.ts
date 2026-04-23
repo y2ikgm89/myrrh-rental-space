@@ -746,6 +746,35 @@ async function seedBlogTags() {
 
 async function seedCustomers() {
   const customers = [
+    // PERSONAL customers (3) — CustomerType.PERSONAL の enum カバレッジ
+    {
+      lastName: "渡部",
+      firstName: "亮",
+      customerType: CustomerType.PERSONAL,
+      email: "watabe.ryo@example.com",
+      phoneNumber: "090-5555-1111",
+      status: "NEW" as const,
+    },
+    {
+      lastName: "近藤",
+      firstName: "綾",
+      customerType: CustomerType.PERSONAL,
+      email: "kondo.aya@example.com",
+      phoneNumber: "090-5555-2222",
+      status: "REGULAR" as const,
+      totalReservations: 2,
+      totalSpent: 20000,
+    },
+    {
+      lastName: "浅野",
+      firstName: "真一",
+      customerType: CustomerType.PERSONAL,
+      email: "asano.shinichi@example.com",
+      phoneNumber: "090-5555-3333",
+      status: "REGULAR" as const,
+      totalReservations: 4,
+      totalSpent: 42000,
+    },
     // NEW customers (5)
     {
       lastName: "田中",
@@ -1252,6 +1281,7 @@ async function seedReservations() {
     status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";
     notes?: string;
     applyCoupon?: boolean;
+    paymentStatus?: "UNPAID" | "PENDING" | "PAID" | "REFUNDED" | "FAILED";
   }> = [
     // Past reservations
     {
@@ -1262,6 +1292,7 @@ async function seedReservations() {
       duration: 2,
       status: "COMPLETED",
       notes: "電話予約",
+      paymentStatus: "PAID", // PaymentStatus.PAID カバレッジ
     },
     {
       spaceIndex: 1,
@@ -1270,6 +1301,7 @@ async function seedReservations() {
       startHour: 14,
       duration: 3,
       status: "COMPLETED",
+      paymentStatus: "PAID",
     },
     {
       spaceIndex: 2,
@@ -1297,6 +1329,7 @@ async function seedReservations() {
       duration: 3,
       status: "CANCELLED",
       notes: "天候不良でキャンセル",
+      paymentStatus: "REFUNDED", // PaymentStatus.REFUNDED カバレッジ
     },
     {
       spaceIndex: 2,
@@ -1468,6 +1501,7 @@ async function seedReservations() {
       duration: 2,
       status: "PENDING",
       notes: "当日予約",
+      paymentStatus: "PENDING", // PaymentStatus.PENDING カバレッジ（Stripe Checkout 開始直後）
     },
     // Future confirmed (with some coupon usage)
     {
@@ -1641,6 +1675,7 @@ async function seedReservations() {
       duration: 4,
       status: "PENDING",
       notes: "新規お客様",
+      paymentStatus: "FAILED", // PaymentStatus.FAILED カバレッジ（Stripe 決済失敗）
     },
     {
       spaceIndex: 1,
@@ -1734,6 +1769,9 @@ async function seedReservations() {
             ? new Prisma.Decimal(couponDiscountAmount)
             : null,
           ...(res.notes != null ? { notes: res.notes } : {}),
+          ...(res.paymentStatus !== undefined
+            ? { paymentStatus: res.paymentStatus }
+            : {}),
         },
       });
       console.log(
@@ -1975,7 +2013,18 @@ async function seedNews() {
       where: { slug: news.slug },
     });
     if (!existing) {
-      await prisma.news.create({ data: news });
+      // Lexical JSON 同時保存（CLAUDE.md ハードルール: contentHtml 単独禁止）
+      const plainText = stripHtmlToText(news.contentHtml, 4000);
+      const contentJson = JSON.parse(
+        buildParagraphEditorStateJson(plainText),
+      ) as Prisma.InputJsonValue;
+      await prisma.news.create({
+        data: {
+          ...news,
+          contentHtml: buildParagraphHtml(plainText),
+          contentJson,
+        },
+      });
       console.log(`✅ Created news: ${news.title.slice(0, 30)}...`);
     } else {
       console.log(`⏭️ Skipped existing news: ${news.title.slice(0, 30)}...`);
@@ -2512,6 +2561,23 @@ async function seedBlog() {
       status: "DRAFT",
       publishedAt: null,
     },
+    {
+      // PostStatus.ARCHIVED カバレッジ
+      title: "【アーカイブ】旧サービス案内（2025年3月まで）",
+      slug: "archived-legacy-service",
+      excerpt: "現行サービスに移行済みの旧案内記事のアーカイブです。",
+      contentHtml: `# 旧サービス案内（アーカイブ）
+
+2025年4月より、当記事で紹介していたサービスはリニューアルされました。
+
+現行のサービス案内は新しい記事をご参照ください。`,
+      thumbnailUrl: "/images/seed/blog.svg",
+      categoryId: tipsCategory.id,
+      authorId: author.id,
+      tagNames: ["アーカイブ", "サービス変更"],
+      status: "ARCHIVED",
+      publishedAt: new Date("2025-01-15T00:00:00+09:00"),
+    },
   ];
 
   for (const { tagNames, ...postData } of posts) {
@@ -2530,9 +2596,20 @@ async function seedBlog() {
         }),
       );
 
+      // Lexical JSON 同時保存（CLAUDE.md ハードルール: contentHtml 単独禁止）。
+      // Markdown 風の # 見出しは段落テキストに平坦化（seed 簡易版、管理画面で再編集可能）
+      const rawContent =
+        typeof postData.contentHtml === "string" ? postData.contentHtml : "";
+      const plainText = stripHtmlToText(rawContent, 4000);
+      const contentJson = JSON.parse(
+        buildParagraphEditorStateJson(plainText),
+      ) as Prisma.InputJsonValue;
+
       await prisma.post.create({
         data: {
           ...postData,
+          contentHtml: buildParagraphHtml(plainText),
+          contentJson,
           postTags: {
             create: tagIds.map((tagId) => ({ tagId })),
           },
@@ -2777,13 +2854,20 @@ async function seedSystemPageSections() {
       const homeSections = DEFAULT_PAGE_SECTIONS["home"];
       if (homeSections) {
         for (const section of homeSections) {
+          const plain = section.content?.trim() ?? "";
+          const contentJson = plain
+            ? (JSON.parse(
+                buildParagraphEditorStateJson(plain),
+              ) as Prisma.InputJsonValue)
+            : null;
           await prisma.section.create({
             data: {
               pageId: homePage.id,
               type: section.type,
               title: section.title,
               config: section.config,
-              contentHtml: section.content,
+              contentHtml: plain ? buildParagraphHtml(plain) : section.content,
+              ...(contentJson !== null ? { contentJson } : {}),
               order: section.order,
               isActive: section.isActive,
             },
@@ -2820,13 +2904,20 @@ async function seedSystemPageSections() {
     if (!defaults || defaults.length === 0) continue;
 
     for (const section of defaults) {
+      const plain = section.content?.trim() ?? "";
+      const contentJson = plain
+        ? (JSON.parse(
+            buildParagraphEditorStateJson(plain),
+          ) as Prisma.InputJsonValue)
+        : null;
       await prisma.section.create({
         data: {
           pageId: page.id,
           type: section.type,
           title: section.title,
           config: section.config,
-          contentHtml: section.content,
+          contentHtml: plain ? buildParagraphHtml(plain) : section.content,
+          ...(contentJson !== null ? { contentJson } : {}),
           order: section.order,
           isActive: section.isActive,
         },
@@ -3305,7 +3396,7 @@ async function seedMedia() {
     mimeType: string;
     size: number;
     type: "IMAGE" | "VIDEO" | "DOCUMENT" | "OTHER";
-    usage: "SPACE" | "SITE" | "POST" | "NEWS" | "PAGE" | "GENERAL";
+    usage: "SPACE" | "SITE" | "POST" | "NEWS" | "PAGE" | "EVENT" | "GENERAL";
     alt: string;
     title: string;
     tags: string[];
@@ -3458,6 +3549,18 @@ async function seedMedia() {
       title: "About ヒーロー",
       tags: ["page", "about"],
     },
+    // MediaUsage: EVENT
+    {
+      filename: "event-workshop-hero.svg",
+      url: "/images/seed/event-workshop-hero.svg",
+      mimeType: "image/svg+xml",
+      size: 6144,
+      type: "IMAGE",
+      usage: "EVENT",
+      alt: "イベント告知用ヒーロー画像",
+      title: "イベントヒーロー",
+      tags: ["event", "workshop"],
+    },
   ];
 
   for (const entry of mediaEntries) {
@@ -3534,6 +3637,644 @@ async function seedBlockTemplates() {
   }
 
   console.log(`✅ Created ${templates.length.toString()} block templates`);
+}
+
+// =============================================================================
+// Audit Logs（監査ログ・全 AuditAction カバレッジ）
+// =============================================================================
+
+async function seedAuditLog() {
+  const existingCount = await prisma.auditLog.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped audit logs (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
+    select: { id: true },
+  });
+  if (!admin) {
+    console.log("⚠️ No admin user found. Skipping audit log seed.");
+    return;
+  }
+
+  const firstPost = await prisma.post.findFirst({
+    select: { id: true, title: true },
+  });
+  const firstSpace = await prisma.space.findFirst({
+    select: { id: true, name: true },
+  });
+  const firstReservation = await prisma.reservation.findFirst({
+    select: { id: true },
+  });
+
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
+
+  // AuditAction 全 12 値（schema.prisma L1504-1517 と一致）:
+  // CREATE / UPDATE / DELETE / PUBLISH / UNPUBLISH / LOGIN_SUCCESS / LOGIN_FAILED /
+  // LOGOUT / PERMISSION_DENIED / PASSWORD_CHANGE / PASSWORD_RESET_REQUEST / ROLE_CHANGE
+  const entries: Array<{
+    action:
+      | "CREATE"
+      | "UPDATE"
+      | "DELETE"
+      | "PUBLISH"
+      | "UNPUBLISH"
+      | "LOGIN_SUCCESS"
+      | "LOGIN_FAILED"
+      | "LOGOUT"
+      | "PERMISSION_DENIED"
+      | "PASSWORD_CHANGE"
+      | "PASSWORD_RESET_REQUEST"
+      | "ROLE_CHANGE";
+    resource: string;
+    resourceId?: string;
+    metadata?: Prisma.InputJsonValue;
+    createdAt: Date;
+    userId: string | null;
+  }> = [
+    {
+      action: "CREATE",
+      resource: "space",
+      ...(firstSpace?.id ? { resourceId: firstSpace.id } : {}),
+      userId: admin.id,
+      createdAt: hoursAgo(72),
+    },
+    {
+      action: "UPDATE",
+      resource: "post",
+      ...(firstPost?.id ? { resourceId: firstPost.id } : {}),
+      userId: admin.id,
+      createdAt: hoursAgo(60),
+    },
+    {
+      action: "DELETE",
+      resource: "post",
+      userId: admin.id,
+      createdAt: hoursAgo(48),
+    },
+    {
+      action: "PUBLISH",
+      resource: "post",
+      ...(firstPost?.id ? { resourceId: firstPost.id } : {}),
+      userId: admin.id,
+      createdAt: hoursAgo(40),
+    },
+    {
+      action: "UNPUBLISH",
+      resource: "post",
+      ...(firstPost?.id ? { resourceId: firstPost.id } : {}),
+      userId: admin.id,
+      createdAt: hoursAgo(36),
+    },
+    {
+      action: "LOGIN_SUCCESS",
+      resource: "auth",
+      userId: admin.id,
+      metadata: { ip: "203.0.113.10", userAgent: "Mozilla/5.0" },
+      createdAt: hoursAgo(24),
+    },
+    {
+      action: "LOGIN_FAILED",
+      resource: "auth",
+      userId: null,
+      metadata: { ip: "203.0.113.99", reason: "invalid_password" },
+      createdAt: hoursAgo(18),
+    },
+    {
+      action: "LOGOUT",
+      resource: "auth",
+      userId: admin.id,
+      createdAt: hoursAgo(12),
+    },
+    {
+      action: "PERMISSION_DENIED",
+      resource: "user",
+      userId: admin.id,
+      metadata: { attempted: "user:delete", reason: "insufficient_role" },
+      createdAt: hoursAgo(8),
+    },
+    {
+      action: "PASSWORD_CHANGE",
+      resource: "auth",
+      userId: admin.id,
+      createdAt: hoursAgo(6),
+    },
+    {
+      action: "PASSWORD_RESET_REQUEST",
+      resource: "auth",
+      userId: null,
+      metadata: { email: "forgot@example.com" },
+      createdAt: hoursAgo(4),
+    },
+    {
+      action: "ROLE_CHANGE",
+      resource: "user",
+      userId: admin.id,
+      metadata: { target: "editor@example.com", from: "VIEWER", to: "EDITOR" },
+      createdAt: hoursAgo(2),
+    },
+  ];
+
+  // 最新の予約 CREATE をさらに 1 件（resource バラエティ）
+  if (firstReservation?.id) {
+    entries.push({
+      action: "CREATE",
+      resource: "reservation",
+      resourceId: firstReservation.id,
+      userId: admin.id,
+      createdAt: hoursAgo(1),
+    });
+  }
+
+  for (const entry of entries) {
+    await prisma.auditLog.create({
+      data: {
+        action: entry.action,
+        resource: entry.resource,
+        userId: entry.userId,
+        ...(entry.resourceId !== undefined
+          ? { resourceId: entry.resourceId }
+          : {}),
+        ...(entry.metadata !== undefined ? { metadata: entry.metadata } : {}),
+        createdAt: entry.createdAt,
+      },
+    });
+  }
+
+  console.log(
+    `✅ Created ${entries.length.toString()} audit log entries (all 12 AuditAction values)`,
+  );
+}
+
+// =============================================================================
+// Editor Comments（Lexical MarkNode コメント・全 EditorCommentStatus カバレッジ）
+// =============================================================================
+
+async function seedEditorComments() {
+  const existingCount = await prisma.editorCommentThread.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped editor comments (${existingCount.toString()} threads already exist)`,
+    );
+    return;
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
+    select: { id: true },
+  });
+  if (!admin) {
+    console.log("⚠️ No admin user found. Skipping editor comments seed.");
+    return;
+  }
+
+  const posts = await prisma.post.findMany({
+    take: 3,
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (posts.length < 3) {
+    console.log(
+      "⚠️ Fewer than 3 posts available. Skipping editor comments seed.",
+    );
+    return;
+  }
+
+  // EditorCommentStatus 全 3 値: ACTIVE / RESOLVED / DELETED
+  const threads: Array<{
+    markId: string;
+    contentType: "post";
+    contentId: string;
+    quotedText: string;
+    status: "ACTIVE" | "RESOLVED" | "DELETED";
+    comments: { content: string; isDeleted?: boolean }[];
+  }> = [
+    {
+      markId: "seed-mark-active",
+      contentType: "post",
+      contentId: posts[0]!.id,
+      quotedText: "セミナーを開催する際、会場選びは成功の鍵",
+      status: "ACTIVE",
+      comments: [
+        { content: "ここ、もう少し具体例を足しませんか？" },
+        { content: "過去の成功事例を 1 つ挟むと説得力が出ます。" },
+      ],
+    },
+    {
+      markId: "seed-mark-resolved",
+      contentType: "post",
+      contentId: posts[1]!.id,
+      quotedText: "会議が長引いてしまう、なかなか結論が出ない",
+      status: "RESOLVED",
+      comments: [
+        { content: "この一文、読み手目線でわかりにくい気がします。" },
+        { content: "修正しました。ご確認ください。" },
+      ],
+    },
+    {
+      markId: "seed-mark-deleted",
+      contentType: "post",
+      contentId: posts[2]!.id,
+      quotedText: "IT企業様の社内研修",
+      status: "DELETED",
+      comments: [
+        { content: "（削除済み：別ブロックへ移動）", isDeleted: true },
+      ],
+    },
+  ];
+
+  for (const t of threads) {
+    const thread = await prisma.editorCommentThread.create({
+      data: {
+        markId: t.markId,
+        contentType: t.contentType,
+        contentId: t.contentId,
+        quotedText: t.quotedText,
+        status: t.status,
+        ...(t.status === "RESOLVED"
+          ? { resolvedAt: new Date(), resolvedBy: admin.id }
+          : {}),
+        createdBy: admin.id,
+      },
+    });
+    for (const c of t.comments) {
+      await prisma.editorComment.create({
+        data: {
+          threadId: thread.id,
+          content: c.content,
+          createdBy: admin.id,
+          ...(c.isDeleted
+            ? {
+                isDeleted: true,
+                deletedAt: new Date(),
+                deletedBy: admin.id,
+              }
+            : {}),
+        },
+      });
+    }
+  }
+
+  console.log(
+    `✅ Created ${threads.length.toString()} editor comment threads (ACTIVE / RESOLVED / DELETED)`,
+  );
+}
+
+// =============================================================================
+// Instagram Posts（公開フィード mock データ）
+// =============================================================================
+
+async function seedInstagramPosts() {
+  const existingCount = await prisma.instagramPost.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped instagram posts (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  // 全 InstagramMediaType（IMAGE / VIDEO / CAROUSEL_ALBUM）を網羅
+  const posts: Array<{
+    postId: string;
+    postUrl: string;
+    mediaUrl: string;
+    thumbnailUrl: string | null;
+    caption: string;
+    mediaType: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+    permalink: string;
+    sortOrder: number;
+  }> = [
+    {
+      postId: "seed-ig-001",
+      postUrl: "https://www.instagram.com/p/seed-ig-001/",
+      mediaUrl: "/images/seed/space-meeting-a.svg",
+      thumbnailUrl: null,
+      caption: "本日の会議室A。午後のご予約受付中です。#レンタルスペース",
+      mediaType: "IMAGE",
+      permalink: "https://www.instagram.com/p/seed-ig-001/",
+      sortOrder: 0,
+    },
+    {
+      postId: "seed-ig-002",
+      postUrl: "https://www.instagram.com/p/seed-ig-002/",
+      mediaUrl: "/images/seed/space-tour-intro.mp4",
+      thumbnailUrl: "/images/seed/space-meeting-a.svg",
+      caption: "スペース紹介ツアー動画を公開しました。",
+      mediaType: "VIDEO",
+      permalink: "https://www.instagram.com/p/seed-ig-002/",
+      sortOrder: 1,
+    },
+    {
+      postId: "seed-ig-003",
+      postUrl: "https://www.instagram.com/p/seed-ig-003/",
+      mediaUrl: "/images/seed/space-seminar.svg",
+      thumbnailUrl: null,
+      caption: "セミナールーム 新レイアウト公開。",
+      mediaType: "CAROUSEL_ALBUM",
+      permalink: "https://www.instagram.com/p/seed-ig-003/",
+      sortOrder: 2,
+    },
+    {
+      postId: "seed-ig-004",
+      postUrl: "https://www.instagram.com/p/seed-ig-004/",
+      mediaUrl: "/images/seed/space-coworking.svg",
+      thumbnailUrl: null,
+      caption: "コワーキングスペース、Wi-Fi 増強完了。",
+      mediaType: "IMAGE",
+      permalink: "https://www.instagram.com/p/seed-ig-004/",
+      sortOrder: 3,
+    },
+    {
+      postId: "seed-ig-005",
+      postUrl: "https://www.instagram.com/p/seed-ig-005/",
+      mediaUrl: "/images/seed/event-workshop-hero.svg",
+      thumbnailUrl: null,
+      caption: "イベント告知：ヨガ＆マインドフルネス体験会",
+      mediaType: "IMAGE",
+      permalink: "https://www.instagram.com/p/seed-ig-005/",
+      sortOrder: 4,
+    },
+    {
+      postId: "seed-ig-006",
+      postUrl: "https://www.instagram.com/p/seed-ig-006/",
+      mediaUrl: "/images/seed/blog-thumbnail-1.svg",
+      thumbnailUrl: null,
+      caption: "ブログ更新：レンタルスペースを活用したセミナー開催のコツ",
+      mediaType: "IMAGE",
+      permalink: "https://www.instagram.com/p/seed-ig-006/",
+      sortOrder: 5,
+    },
+  ];
+
+  for (const p of posts) {
+    await prisma.instagramPost.upsert({
+      where: { postId: p.postId },
+      update: {},
+      create: p,
+    });
+  }
+
+  console.log(`✅ Upserted ${posts.length.toString()} instagram posts`);
+}
+
+// =============================================================================
+// Login Attempts（レートリミット・認証追跡）
+// =============================================================================
+
+async function seedLoginAttempts() {
+  const existingCount = await prisma.loginAttempt.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped login attempts (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000);
+  // 識別子はハッシュ化済み IP の mock（実運用は `hashForKey` の結果）
+  const attempts: Array<{
+    identifier: string;
+    email: string;
+    success: boolean;
+    createdAt: Date;
+  }> = [
+    // 成功 3 件
+    {
+      identifier: "hash-ip-203-0-113-10",
+      email: "admin@example.com",
+      success: true,
+      createdAt: minutesAgo(5),
+    },
+    {
+      identifier: "hash-ip-203-0-113-11",
+      email: "editor@example.com",
+      success: true,
+      createdAt: minutesAgo(30),
+    },
+    {
+      identifier: "hash-ip-203-0-113-12",
+      email: "viewer@example.com",
+      success: true,
+      createdAt: minutesAgo(90),
+    },
+    // 失敗 3 件（レートリミット検証用・同一 IP 連続失敗を含む）
+    {
+      identifier: "hash-ip-198-51-100-99",
+      email: "bruteforce@example.com",
+      success: false,
+      createdAt: minutesAgo(2),
+    },
+    {
+      identifier: "hash-ip-198-51-100-99",
+      email: "bruteforce@example.com",
+      success: false,
+      createdAt: minutesAgo(3),
+    },
+    {
+      identifier: "hash-ip-198-51-100-77",
+      email: "typo-address@example.com",
+      success: false,
+      createdAt: minutesAgo(60),
+    },
+  ];
+
+  for (const a of attempts) {
+    await prisma.loginAttempt.create({ data: a });
+  }
+
+  console.log(
+    `✅ Created ${attempts.length.toString()} login attempts (3 success / 3 failed)`,
+  );
+}
+
+// =============================================================================
+// Terms Agreements（規約同意記録・既存予約に対する必須規約同意）
+// =============================================================================
+
+async function seedTermsAgreements() {
+  const existingCount = await prisma.termsAgreement.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped terms agreements (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  // 必須規約（requiredAtReservation: true）の現在バージョンを取得
+  const requiredTerms = await prisma.terms.findMany({
+    where: { requiredAtReservation: true, isActive: true },
+    select: {
+      id: true,
+      slug: true,
+      versions: {
+        where: { isCurrentVersion: true },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+  const requiredPairs = requiredTerms
+    .map((t) => {
+      const versionId = t.versions[0]?.id;
+      return versionId ? { termsId: t.id, versionId } : null;
+    })
+    .filter((v): v is { termsId: string; versionId: string } => v !== null);
+
+  if (requiredPairs.length === 0) {
+    console.log(
+      "⚠️ No required terms with current version found. Skipping terms agreements seed.",
+    );
+    return;
+  }
+
+  // 対象予約: 既存予約の先頭半数
+  const reservations = await prisma.reservation.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      customer: { select: { userId: true, email: true, lastName: true } },
+      startTime: true,
+    },
+  });
+  if (reservations.length === 0) {
+    console.log("⚠️ No reservations found. Skipping terms agreements seed.");
+    return;
+  }
+
+  const half = reservations.slice(
+    0,
+    Math.max(1, Math.ceil(reservations.length / 2)),
+  );
+
+  let created = 0;
+  for (const reservation of half) {
+    for (const pair of requiredPairs) {
+      await prisma.termsAgreement.create({
+        data: {
+          termsId: pair.termsId,
+          versionId: pair.versionId,
+          reservationId: reservation.id,
+          ...(reservation.customer.userId !== null
+            ? { userId: reservation.customer.userId }
+            : {
+                guestName: reservation.customer.lastName,
+                guestEmail: reservation.customer.email,
+              }),
+          agreedAt: reservation.startTime,
+          ipAddress: "hash-seed-ip",
+          userAgent: "seed",
+        },
+      });
+      created++;
+    }
+  }
+
+  console.log(
+    `✅ Created ${created.toString()} terms agreements (${half.length.toString()} reservations × ${requiredPairs.length.toString()} required terms)`,
+  );
+}
+
+// =============================================================================
+// Post / News Versions（記事バージョン履歴・version 1 スナップショット）
+// =============================================================================
+
+async function seedPostVersions() {
+  const existingCount = await prisma.postVersion.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped post versions (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  const posts = await prisma.post.findMany({
+    select: {
+      id: true,
+      title: true,
+      contentHtml: true,
+      contentJson: true,
+      authorId: true,
+    },
+  });
+
+  if (posts.length === 0) {
+    console.log("⚠️ No posts found. Skipping post versions seed.");
+    return;
+  }
+
+  let created = 0;
+  for (const post of posts) {
+    // `@@unique([postId, version])` があるため upsert で idempotent 化
+    await prisma.postVersion.upsert({
+      where: { postId_version: { postId: post.id, version: 1 } },
+      update: {},
+      create: {
+        postId: post.id,
+        version: 1,
+        contentHtml: post.contentHtml,
+        ...(post.contentJson !== null
+          ? { contentJson: post.contentJson as Prisma.InputJsonValue }
+          : {}),
+        ...(post.authorId !== null ? { createdBy: post.authorId } : {}),
+      },
+    });
+    created++;
+  }
+
+  console.log(`✅ Upserted ${created.toString()} post versions (version 1)`);
+}
+
+async function seedNewsVersions() {
+  const existingCount = await prisma.newsVersion.count();
+  if (existingCount > 0) {
+    console.log(
+      `⏭️ Skipped news versions (${existingCount.toString()} already exist)`,
+    );
+    return;
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { role: { in: [Role.ADMIN, Role.SUPER_ADMIN] } },
+    select: { id: true },
+  });
+
+  const newsItems = await prisma.news.findMany({
+    select: {
+      id: true,
+      title: true,
+      contentHtml: true,
+      contentJson: true,
+    },
+  });
+
+  if (newsItems.length === 0) {
+    console.log("⚠️ No news found. Skipping news versions seed.");
+    return;
+  }
+
+  let created = 0;
+  for (const news of newsItems) {
+    await prisma.newsVersion.upsert({
+      where: { newsId_version: { newsId: news.id, version: 1 } },
+      update: {},
+      create: {
+        newsId: news.id,
+        version: 1,
+        contentHtml: news.contentHtml,
+        ...(news.contentJson !== null
+          ? { contentJson: news.contentJson as Prisma.InputJsonValue }
+          : {}),
+        ...(admin?.id ? { createdBy: admin.id } : {}),
+      },
+    });
+    created++;
+  }
+
+  console.log(`✅ Upserted ${created.toString()} news versions (version 1)`);
 }
 
 // =============================================================================
@@ -3630,6 +4371,15 @@ async function seedAll(email: string, password: string, name: string) {
   await seedMedia();
   await seedBlockTemplates();
   await seedUserPageAssignments();
+
+  // Phase 10: 監査・バージョン履歴・規約同意・レートリミット・Instagram
+  await seedPostVersions();
+  await seedNewsVersions();
+  await seedTermsAgreements();
+  await seedAuditLog();
+  await seedLoginAttempts();
+  await seedEditorComments();
+  await seedInstagramPosts();
 }
 
 async function seedDemo() {
@@ -3690,6 +4440,15 @@ async function seedDemo() {
   await seedMedia();
   await seedBlockTemplates();
   await seedUserPageAssignments();
+
+  // 監査・バージョン履歴・規約同意・レートリミット・Instagram
+  await seedPostVersions();
+  await seedNewsVersions();
+  await seedTermsAgreements();
+  await seedAuditLog();
+  await seedLoginAttempts();
+  await seedEditorComments();
+  await seedInstagramPosts();
 }
 
 async function main() {
