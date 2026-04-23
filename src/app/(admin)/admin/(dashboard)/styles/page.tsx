@@ -9,7 +9,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { Button } from "@/admin/components/ui";
-import { getSectionStyleList } from "@/app/(admin)/admin/(dashboard)/_shared/actions/section-styles/queries";
+import { getSectionStyleList } from "@/admin/queries/section-styles";
 import { loadAdminStyleSearchParams } from "@/shared/lib/nuqs";
 import { omitUndefined } from "@/shared/lib/serialize";
 import { StyleFilters } from "./_components/StyleFilters";

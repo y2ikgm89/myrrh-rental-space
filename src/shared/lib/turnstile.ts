@@ -20,6 +20,7 @@
  */
 
 import "server-only";
+import { z } from "zod";
 import {
   getDecryptedTurnstileSecretKey,
   getTurnstileConfig,
@@ -58,14 +59,18 @@ export type VerifyTurnstileResult =
       readonly errorCodes: readonly string[];
     };
 
-type TurnstileSiteverifyResponse = {
-  readonly success: boolean;
-  readonly "error-codes"?: readonly string[];
-  readonly challenge_ts?: string;
-  readonly hostname?: string;
-  readonly action?: string;
-  readonly cdata?: string;
-};
+const turnstileSiteverifyResponseSchema = z.object({
+  success: z.boolean(),
+  "error-codes": z.array(z.string()).optional(),
+  challenge_ts: z.string().optional(),
+  hostname: z.string().optional(),
+  action: z.string().optional(),
+  cdata: z.string().optional(),
+});
+
+type TurnstileSiteverifyResponse = z.infer<
+  typeof turnstileSiteverifyResponseSchema
+>;
 
 async function getTurnstileSecretKey(): Promise<string | null> {
   return getDecryptedTurnstileSecretKey();
@@ -133,7 +138,25 @@ export async function verifyTurnstileToken(
       return { success: false, errorCodes: [`http-${response.status}`] };
     }
 
-    const data = (await response.json()) as TurnstileSiteverifyResponse;
+    const rawData: unknown = await response.json();
+    const parsedResponse = turnstileSiteverifyResponseSchema.safeParse(rawData);
+
+    if (!parsedResponse.success) {
+      logError(new Error("Invalid Turnstile API response format"), {
+        category: ErrorCategory.EXTERNAL_API,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          operation: "verifyTurnstileToken",
+          issues: parsedResponse.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        },
+      });
+      return { success: false, errorCodes: ["invalid-response"] };
+    }
+
+    const data: TurnstileSiteverifyResponse = parsedResponse.data;
 
     if (!data.success) {
       const errorCodes = data["error-codes"] ?? ["unknown-error"];

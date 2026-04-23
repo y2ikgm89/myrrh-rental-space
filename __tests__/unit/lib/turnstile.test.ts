@@ -196,6 +196,27 @@ describe("turnstile", () => {
       expect(result).toEqual({ success: false, errorCodes: ["http-500"] });
     });
 
+    test("レスポンス形式が不正な場合は invalid-response を返す", async () => {
+      mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
+        turnstileSecretKey: "test-secret-key",
+      });
+
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+
+      const { verifyTurnstileToken } = await import("@/shared/lib/turnstile");
+      const result = await verifyTurnstileToken(DEFAULT_PARAMS);
+
+      expect(result).toEqual({
+        success: false,
+        errorCodes: ["invalid-response"],
+      });
+    });
+
     test("ネットワークエラー時は network-error を返す", async () => {
       mockPrismaClient.settings.findUnique.mockResolvedValueOnce({
         turnstileSecretKey: "test-secret-key",

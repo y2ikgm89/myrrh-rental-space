@@ -20,6 +20,15 @@ export type PageSectionStyle = {
   customClass: string | null;
 };
 
+export type PageStyleData = {
+  spacing: unknown;
+  background: unknown;
+  container: unknown;
+  typography: unknown;
+  animation: unknown;
+  customClass: string | null;
+};
+
 export type PageSectionData = {
   id: string;
   pageId: string;
@@ -56,6 +65,7 @@ export type PageForEdit = {
   ogpDescription: string | null;
   ogpImageUrl: string | null;
   pageStyleId: string | null;
+  pageStyle: PageStyleData | null;
   pageHero: unknown;
   sections: PageSectionData[];
 };

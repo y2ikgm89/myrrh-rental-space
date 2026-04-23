@@ -1,18 +1,10 @@
 /**
- * Section Styles Server Actions — barrel re-export.
+ * Section Styles mutation actions — barrel re-export.
  *
  * This file has NO `"use server"` directive: it only re-exports async
- * functions from sibling files, each of which already declares its own
- * server boundary. Client Components must import via submodule paths
- * (`./queries` / `./mutations`) to avoid Turbopack server-actions
- * bundler conflicts.
+ * mutation functions from sibling files, each of which already declares
+ * its own server boundary.
  */
-
-export {
-  getSectionStyleDetail,
-  getSectionStyleList,
-  getSectionStyleUsageData,
-} from "./queries";
 
 export {
   createSectionStyleAction,

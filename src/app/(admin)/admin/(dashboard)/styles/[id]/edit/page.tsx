@@ -5,7 +5,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
-import { getSectionStyleDetail } from "@/app/(admin)/admin/(dashboard)/_shared/actions/section-styles/queries";
+import { getSectionStyleDetail } from "@/admin/queries/section-styles";
 import { parseSectionStylePayload } from "@/shared/lib/validations/section-style";
 import { StyleEditor } from "../../_components/StyleEditor";
 import type { CreateSectionStyleInput } from "@/shared/lib/validations/section-style";

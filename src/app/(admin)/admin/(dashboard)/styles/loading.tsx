@@ -1,5 +1,14 @@
 import { Skeleton } from "@/admin/components/ui/skeleton";
 
+const STYLE_SKELETON_KEYS = [
+  "style-skeleton-1",
+  "style-skeleton-2",
+  "style-skeleton-3",
+  "style-skeleton-4",
+  "style-skeleton-5",
+  "style-skeleton-6",
+] as const;
+
 export default function StylesLoading() {
   return (
     <div className="space-y-6">
@@ -18,8 +27,8 @@ export default function StylesLoading() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-52 w-full rounded-lg" />
+        {STYLE_SKELETON_KEYS.map((key) => (
+          <Skeleton key={key} className="h-52 w-full rounded-lg" />
         ))}
       </div>
     </div>

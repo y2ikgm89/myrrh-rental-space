@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/admin/components/ui";
-import { getSectionStyleList } from "@/admin/actions/section-styles/queries";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import type { SectionStyleListItem } from "@/shared/domain/section-styles/queries";
 
 // Radix Select は value="" を placeholder 用に予約しているため sentinel を使う。
@@ -46,28 +46,35 @@ export function StyleSelector({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    getSectionStyleList()
+    const abortController = new AbortController();
+
+    void fetchAdminJson<SectionStyleListItem[]>("/admin/api/section-styles", {
+      cache: "no-store",
+      signal: abortController.signal,
+    })
       .then((list) => {
-        if (cancelled) return;
         setStyles(list);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+
         setLoadError(
           err instanceof Error ? err.message : "Style の読み込みに失敗しました",
         );
         setStyles([]);
       });
+
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
   }, []);
 
-  // applicableTypes フィルタ（空配列 = 全 type 対象）
   const applicable = (styles ?? []).filter(
-    (s) =>
-      s.applicableTypes.length === 0 || s.applicableTypes.includes(sectionType),
+    (style) =>
+      style.applicableTypes.length === 0 ||
+      style.applicableTypes.includes(sectionType),
   );
 
   const selectValue = value ?? NONE_VALUE;

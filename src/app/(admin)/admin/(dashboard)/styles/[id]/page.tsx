@@ -9,11 +9,11 @@ import type { Metadata } from "next";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { DetailDeleteButton } from "@/admin/components/DetailDeleteButton";
 import { Button } from "@/admin/components/ui";
-import { deleteSectionStyleAction } from "@/app/(admin)/admin/(dashboard)/_shared/actions/section-styles/mutations";
 import {
   getSectionStyleDetail,
   getSectionStyleUsageData,
-} from "@/app/(admin)/admin/(dashboard)/_shared/actions/section-styles/queries";
+} from "@/admin/queries/section-styles";
+import { deleteSectionStyleAction } from "@/app/(admin)/admin/(dashboard)/_shared/actions/section-styles/mutations";
 import { parseSectionStylePayload } from "@/shared/lib/validations/section-style";
 import { StylePreview } from "../_components/StylePreview";
 import { StyleUsageTable } from "../_components/StyleUsageTable";

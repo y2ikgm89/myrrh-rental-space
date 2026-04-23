@@ -173,6 +173,15 @@ export const sectionStyleScopeSchema = z.enum(sectionStyleScopeValues, {
 });
 export type SectionStyleScope = z.infer<typeof sectionStyleScopeSchema>;
 
+export const sectionStyleListFiltersSchema = z.object({
+  scope: sectionStyleScopeSchema.optional(),
+  applicableType: z
+    .string()
+    .max(100, { error: "applicableType は100文字以内です" })
+    .optional(),
+  search: z.string().max(100, { error: "search は100文字以内です" }).optional(),
+});
+
 export const createSectionStyleInputSchema = z.object({
   name: z
     .string()

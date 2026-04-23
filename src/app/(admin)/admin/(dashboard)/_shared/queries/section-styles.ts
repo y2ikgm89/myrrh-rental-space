@@ -1,7 +1,5 @@
-"use server";
+import "server-only";
 
-import { checkAdminAuth } from "@/admin/lib/action-auth";
-import { hasPermission } from "@/admin/lib/permissions";
 import {
   getSectionStyleById,
   getSectionStyleUsage,
@@ -11,32 +9,43 @@ import {
   type SectionStyleListItem,
   type SectionStyleUsage,
 } from "@/shared/domain/section-styles/queries";
+import { omitUndefined } from "@/shared/lib/serialize";
+import { sectionStyleListFiltersSchema } from "@/shared/lib/validations/section-style";
+import { requireAdminPermission } from "./_helpers";
 
 export async function getSectionStyleList(
   filters: SectionStyleListFilters = {},
 ): Promise<SectionStyleListItem[]> {
-  const auth = await checkAdminAuth();
-  if (!auth.success) return [];
-  if (!hasPermission(auth.user.role, "sectionStyle", "read")) return [];
-  return listSectionStyles(filters);
+  await requireAdminPermission("sectionStyle", "read");
+
+  const validatedFilters = sectionStyleListFiltersSchema.safeParse(filters);
+  if (!validatedFilters.success) {
+    return [];
+  }
+
+  return listSectionStyles(omitUndefined(validatedFilters.data));
 }
 
 export async function getSectionStyleDetail(
   id: string,
 ): Promise<SectionStyleDetail | null> {
-  const auth = await checkAdminAuth();
-  if (!auth.success) return null;
-  if (!hasPermission(auth.user.role, "sectionStyle", "read")) return null;
+  await requireAdminPermission("sectionStyle", "read");
+
+  if (id.length === 0) {
+    return null;
+  }
+
   return getSectionStyleById(id);
 }
 
 export async function getSectionStyleUsageData(
   id: string,
 ): Promise<SectionStyleUsage> {
-  const auth = await checkAdminAuth();
-  if (!auth.success) return { sections: [], pages: [], settings: [] };
-  if (!hasPermission(auth.user.role, "sectionStyle", "read")) {
+  await requireAdminPermission("sectionStyle", "read");
+
+  if (id.length === 0) {
     return { sections: [], pages: [], settings: [] };
   }
+
   return getSectionStyleUsage(id);
 }

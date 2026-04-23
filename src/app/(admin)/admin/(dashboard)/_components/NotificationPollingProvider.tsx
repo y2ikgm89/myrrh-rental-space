@@ -1,13 +1,25 @@
 "use client";
 
-import { createContext, use, useState, useEffect, useRef } from "react";
+import { createContext, use, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { fetchUnreadCount } from "@/admin/actions/notification-polling";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 
 type NotificationPollingContextValue = {
   unreadCount: number;
   refresh: () => void;
 };
+
+type UnreadCountResponse = {
+  unreadCount: number;
+};
+
+async function readUnreadCount(): Promise<number> {
+  const response = await fetchAdminJson<UnreadCountResponse>(
+    "/admin/api/notifications/unread-count",
+    { cache: "no-store" },
+  );
+  return response.unreadCount;
+}
 
 const NotificationPollingContext = createContext<
   NotificationPollingContextValue | undefined
@@ -23,22 +35,27 @@ export function NotificationPollingProvider({
   children: ReactNode;
 }) {
   const [unreadCount, setUnreadCount] = useState(initialCount);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
   const refresh = () => {
-    void fetchUnreadCount().then(setUnreadCount);
+    void readUnreadCount()
+      .then(setUnreadCount)
+      .catch(() => {
+        // Keep the last known count when polling fails.
+      });
   };
 
   // Polling
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      void fetchUnreadCount().then(setUnreadCount);
+    const intervalId = setInterval(() => {
+      void readUnreadCount()
+        .then(setUnreadCount)
+        .catch(() => {
+          // Keep the last known count when polling fails.
+        });
     }, POLLING_INTERVAL_MS);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      clearInterval(intervalId);
     };
   }, []);
 

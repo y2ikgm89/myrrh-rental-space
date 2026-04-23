@@ -17,10 +17,9 @@ import {
   IconExternalLink,
   IconAlertCircle,
 } from "@tabler/icons-react";
+import { fetchAdminJson } from "@/admin/lib/admin-api-client";
 import { logger } from "@/shared/lib/logger";
-import { isMutationError } from "@/shared/lib/mutation-result";
 import { $createBookmarkNode } from "../nodes/BookmarkNode";
-import { fetchOgp } from "../../../../actions/fetch-ogp";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +55,17 @@ type OgpPreview = {
   imageUrl: string | null;
   faviconUrl: string;
   siteName: string | null;
-} | null;
+};
+
+async function fetchOgpPreview(targetUrl: string): Promise<OgpPreview> {
+  return fetchAdminJson<OgpPreview>("/admin/api/ogp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: targetUrl }),
+  });
+}
 
 // =============================================================================
 // Component
@@ -65,7 +74,7 @@ type OgpPreview = {
 export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
   const [editor] = useLexicalComposerContext();
   const [url, setUrl] = useState("");
-  const [preview, setPreview] = useState<OgpPreview>(null);
+  const [preview, setPreview] = useState<OgpPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -75,12 +84,8 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
       INSERT_BOOKMARK_COMMAND,
       (payload) => {
         startTransition(async () => {
-          const result = await fetchOgp(payload.url);
-          if (isMutationError(result)) {
-            logger.warn("PasteUrlPlugin: OGP fetch failed", {
-              url: payload.url,
-            });
-          } else {
+          try {
+            const result = await fetchOgpPreview(payload.url);
             editor.update(() => {
               const bookmarkNode = $createBookmarkNode({
                 url: result.url,
@@ -93,6 +98,10 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
                 ...(result.siteName != null && { siteName: result.siteName }),
               });
               $insertNodeToNearestRoot(bookmarkNode);
+            });
+          } catch {
+            logger.warn("PasteUrlPlugin: OGP fetch failed", {
+              url: payload.url,
             });
           }
         });
@@ -115,13 +124,17 @@ export function BookmarkPlugin({ isOpen, onClose }: BookmarkPluginProps) {
     setPreview(null);
 
     startTransition(async () => {
-      const result = await fetchOgp(url.trim());
-      if (isMutationError(result)) {
-        setError(result.error);
-        setPreview(null);
-      } else {
+      try {
+        const result = await fetchOgpPreview(url.trim());
         setPreview(result);
         setError(null);
+      } catch (fetchError) {
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "OGP の取得に失敗しました",
+        );
+        setPreview(null);
       }
     });
   };

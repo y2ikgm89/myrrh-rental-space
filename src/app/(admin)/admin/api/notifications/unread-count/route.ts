@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import { checkPermission } from "@/admin/lib/action-auth";
+import { getUnreadCountQuery } from "@/shared/domain/notifications/admin-queries";
+import { jsonError } from "@/shared/lib/route-responses";
+
+export async function GET(request: Request) {
+  const auth = await checkPermission("notification", "read", request.headers);
+  if (!auth.success) {
+    return jsonError(auth.error.error, 403);
+  }
+
+  const unreadCount = await getUnreadCountQuery();
+  return NextResponse.json({ unreadCount });
+}

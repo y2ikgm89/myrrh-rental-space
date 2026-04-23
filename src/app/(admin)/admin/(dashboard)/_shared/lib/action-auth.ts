@@ -178,9 +178,9 @@ export function logAction(
   action: Action,
   resource: Resource,
   resourceId?: string,
-): void {
+): Promise<void> {
   const auditAction = actionToAuditAction(action);
-  void logUserAction({ id: userId }, auditAction, resource, resourceId);
+  return logUserAction({ id: userId }, auditAction, resource, resourceId);
 }
 
 function actionToAuditAction(action: Action): AuditAction {

@@ -228,6 +228,16 @@ export async function getPageForEditQuery(slug: string) {
       ogpDescription: true,
       ogpImageUrl: true,
       pageStyleId: true,
+      pageStyle: {
+        select: {
+          spacing: true,
+          background: true,
+          container: true,
+          typography: true,
+          animation: true,
+          customClass: true,
+        },
+      },
       sections: {
         select: ADMIN_SECTION_SELECT,
         orderBy: { order: "asc" },
@@ -252,6 +262,7 @@ export async function getPageForEditQuery(slug: string) {
     ogpDescription: page.ogpDescription,
     ogpImageUrl: page.ogpImageUrl,
     pageStyleId: page.pageStyleId,
+    pageStyle: page.pageStyle,
     sections: page.sections.map((section) => ({
       ...toSectionData(section),
       pageId: section.pageId ?? "",

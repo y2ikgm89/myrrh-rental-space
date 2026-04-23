@@ -8,6 +8,8 @@ import {
   logAction,
 } from "@/admin/lib/action-auth";
 import { isDomainError } from "@/shared/domain/domain-error";
+import { fireAndForget } from "@/shared/lib/async-utils";
+import { ErrorCategory, ErrorSeverity } from "@/shared/lib/errors/server";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 
 type ExecuteAdminMutationResultOptions<TData> = {
@@ -39,11 +41,23 @@ export async function executeAdminMutationResult<TData>(
     const data = await options.execute(permissionResult.user);
     await options.afterSuccess?.(data);
 
-    logAction(
-      permissionResult.user.id,
-      options.action,
-      options.resource,
-      options.resolveAuditResourceId?.(data) ?? options.resourceId,
+    fireAndForget(
+      logAction(
+        permissionResult.user.id,
+        options.action,
+        options.resource,
+        options.resolveAuditResourceId?.(data) ?? options.resourceId,
+      ),
+      {
+        operation: "executeAdminMutationResult.logAction",
+        category: ErrorCategory.DATABASE,
+        severity: ErrorSeverity.MEDIUM,
+        context: {
+          resource: options.resource,
+          action: options.action,
+          userId: permissionResult.user.id,
+        },
+      },
     );
 
     return data;

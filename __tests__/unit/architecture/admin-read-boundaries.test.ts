@@ -29,13 +29,13 @@ function collectSourceFiles(dir: string): string[] {
 }
 
 function isActionReadImport(source: string): boolean {
-  return /import\s*{[^}]*\bget[A-Z]\w*[^}]*}\s*from\s*['"]@\/admin\/actions\//.test(
+  return /import\s*(?:type\s+)?{[^}]*\b(?:get|fetch)[A-Z]\w*[^}]*}\s*from\s*['"][^'"]*(?:@\/admin\/actions\/|_shared\/actions\/|\/actions\/)/.test(
     source,
   );
 }
 
 function hasReadActionExport(source: string): boolean {
-  return /export\s+async\s+function\s+get[A-Z]\w*/.test(source);
+  return /export\s+async\s+function\s+(?:get|fetch)[A-Z]\w*/.test(source);
 }
 
 describe("admin read boundaries", () => {
