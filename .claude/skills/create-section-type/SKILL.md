@@ -20,12 +20,14 @@ argument-hint: "<type-name-kebab-case>"
 ```typescript
 import { z } from "zod";
 
-import { field } from "../../field-helpers";
+import { field } from "../../field-registry";
 
 export const <camelCase>ConfigSchema = z.object({
-  sectionLabel: field.text("セクションラベル").pipe(z.string().max(50)).default("<Title Case>"),
-  title: field.text("タイトル").pipe(z.string().max(100)).default("<日本語デフォルト>"),
+  sectionLabel: field.text("セクションラベル", { maxLength: 50, default: "<Title Case>" }),
+  title: field.text("見出し", { maxLength: 100, default: "<日本語デフォルト>" }),
   // TODO: フィールドを追加
+  // group 振り分け: "content" (default) / "design" / "advanced"
+  // 例: variant: field.select("レイアウトの種類", { options: [...], default: "...", group: "design" }),
 });
 ```
 

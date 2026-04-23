@@ -554,7 +554,7 @@ return result.data; // 型エラー
 return result.success ? omitUndefined(result.data) : undefined;
 ```
 
-参照実装: `src/shared/lib/sections/field-helpers.ts` の `extractFieldMeta`。
+参照実装: `src/shared/lib/sections/field-registry.ts` の `z.registry<FieldMeta>()` 経由 metadata registration（Zod 4 公式パターン、ADR 0018）。
 
 ## React Hook Form 連携
 
