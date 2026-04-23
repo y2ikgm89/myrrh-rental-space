@@ -1,8 +1,7 @@
 "use server";
 
-import { updateTag } from "next/cache";
-import { CACHE_TAGS, getCacheTag } from "@/shared/lib/constants";
 import { executeAdminMutationResult } from "@/admin/lib/admin-action";
+import { invalidateReservationCaches } from "@/shared/lib/cache/reservation-cache";
 import type { MutationResult } from "@/shared/lib/mutation-result";
 import {
   createCheckoutSessionCommand,
@@ -17,28 +16,25 @@ export async function createCheckoutSession(
     action: "update",
     resourceId: reservationId,
     execute: async () => createCheckoutSessionCommand(reservationId),
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(reservationId));
+    afterSuccess: (data) => {
+      invalidateReservationCaches(reservationId, data.customerId);
     },
   });
 }
 
 export async function refundReservationPayment(
   reservationId: string,
-): Promise<MutationResult<null>> {
+): Promise<MutationResult<{ refundId: string; status: string | null }>> {
   return executeAdminMutationResult({
     resource: "reservation",
     action: "update",
     resourceId: reservationId,
     execute: async () => {
-      await refundReservationPaymentCommand(reservationId);
-      return null;
+      const result = await refundReservationPaymentCommand(reservationId);
+      return result;
     },
-    afterSuccess: () => {
-      updateTag(CACHE_TAGS.RESERVATIONS);
-      updateTag(getCacheTag.reservations.detail(reservationId));
-      updateTag(CACHE_TAGS.CUSTOMERS);
+    afterSuccess: (data) => {
+      invalidateReservationCaches(reservationId, data.customerId);
     },
   });
 }

@@ -230,6 +230,7 @@ export const updateReservationNotes = async (
     afterSuccess: () => {
       updateTag(CACHE_TAGS.RESERVATIONS);
       updateTag(getCacheTag.reservations.detail(id));
+      updateTag(getCacheTag.reservations.calendar());
     },
   });
 };

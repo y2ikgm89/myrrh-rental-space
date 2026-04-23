@@ -54,6 +54,7 @@ export async function createCheckoutSessionCommand(reservationId: string) {
     where: { id: reservationId, deletedAt: null },
     select: {
       id: true,
+      customerId: true,
       totalPrice: true,
       paymentStatus: true,
       stripeCheckoutSessionId: true,
@@ -128,7 +129,11 @@ export async function createCheckoutSessionCommand(reservationId: string) {
       },
     });
 
-    return { sessionId: session.id, sessionUrl: session.url };
+    return {
+      sessionId: session.id,
+      sessionUrl: session.url,
+      customerId: reservation.customerId,
+    };
   } catch (error) {
     logError(error, {
       category: ErrorCategory.EXTERNAL_API,
@@ -151,6 +156,7 @@ export async function refundReservationPaymentCommand(reservationId: string) {
     where: { id: reservationId, deletedAt: null },
     select: {
       id: true,
+      customerId: true,
       paymentStatus: true,
       stripePaymentIntentId: true,
       totalPrice: true,
@@ -194,7 +200,11 @@ export async function refundReservationPaymentCommand(reservationId: string) {
       },
     });
 
-    return { refundId: refund.id, status: refund.status };
+    return {
+      refundId: refund.id,
+      status: refund.status,
+      customerId: reservation.customerId,
+    };
   } catch (error) {
     logError(error, {
       category: ErrorCategory.EXTERNAL_API,
