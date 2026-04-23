@@ -514,10 +514,6 @@ function AutoFieldByType(props: AutoFieldByTypeProps) {
         />
       );
 
-    case "richtext":
-      // richtext は現在 custom セクションの Lexical エディタで処理される
-      return null;
-
     default:
       return null;
   }

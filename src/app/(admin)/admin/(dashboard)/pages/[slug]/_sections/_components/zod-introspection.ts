@@ -52,11 +52,6 @@ export function getZodObjectShape(
     return getZodObjectShape(def["innerType"]);
   }
 
-  // ZodPipe → in
-  if (type === "pipe" && isZodType(def["in"])) {
-    return getZodObjectShape(def["in"]);
-  }
-
   // ZodOptional → innerType
   if (type === "optional" && isZodType(def["innerType"])) {
     return getZodObjectShape(def["innerType"]);
@@ -104,7 +99,11 @@ export function hasShape(
 
 /**
  * FieldMeta を抽出する。
- * registry に直接登録されていない場合は ZodPipe / ZodDefault / ZodOptional をアンラップして探索する。
+ * registry に直接登録されていない場合は ZodDefault / ZodOptional をアンラップして探索する。
+ *
+ * Note: Zod 4 の natural chain パターン（`.max().default().register()`）では
+ * register が ZodDefault に attach されるため direct lookup が通るが、nested
+ * ZodOptional 経由でアクセスされる場合に備えて unwrap フォールバックを持つ。
  */
 export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
   // Direct registry lookup
@@ -115,11 +114,6 @@ export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
   if (!def) return undefined;
 
   const type = def["type"];
-
-  // ZodPipe → check in side
-  if (type === "pipe" && isZodType(def["in"])) {
-    return extractFieldMetaDeep(def["in"]);
-  }
 
   // ZodDefault → check innerType
   if (type === "default" && isZodType(def["innerType"])) {
@@ -135,7 +129,7 @@ export function extractFieldMetaDeep(schema: z.ZodType): FieldMeta | undefined {
 }
 
 /**
- * ZodDefault/ZodPipe をアンラップして select フィールドの enum 値を取得する。
+ * ZodDefault/ZodOptional をアンラップして select フィールドの enum 値を取得する。
  */
 export function getSelectOptions(schema: z.ZodType): string[] {
   const def = getZodDef(schema);
@@ -155,11 +149,6 @@ export function getSelectOptions(schema: z.ZodType): string[] {
   // ZodDefault → innerType
   if (type === "default" && isZodType(def["innerType"])) {
     return getSelectOptions(def["innerType"]);
-  }
-
-  // ZodPipe → in
-  if (type === "pipe" && isZodType(def["in"])) {
-    return getSelectOptions(def["in"]);
   }
 
   // ZodOptional → innerType

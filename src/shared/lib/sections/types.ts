@@ -9,7 +9,6 @@ import type { z } from "zod";
 export const FIELD_TYPES = [
   "text",
   "textarea",
-  "richtext",
   "number",
   "boolean",
   "select",
