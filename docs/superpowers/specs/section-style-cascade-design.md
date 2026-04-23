@@ -1,7 +1,7 @@
 # Section Style Cascade — Design Spec
 
 **日付**: 2026-04-22
-**対象プラン**: `docs/superpowers/plans/2026-04-22-section-architecture-phase-b.md`
+**対象プラン**: 完了済削除（Phase B 実装 commit `25ce3ff7`〜`a03a739c`）
 **ADR**: `docs/architecture/decisions/0017-section-style-cascade.md`
 **前提**: Phase A（PageHero first-class / fluid spacing tokens / SectionWrapper 必須化）完了
 

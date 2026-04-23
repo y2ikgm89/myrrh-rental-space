@@ -66,6 +66,11 @@ You are a senior code reviewer for the Myrrh Rental Space project (Next.js 16 / 
 **Server Actions / Cache** (`.claude/rules/server-actions.md`):
 
 - **Auth check required** — write 系は `executeAdminMutationResult`（認証・権限・監査ログ一括処理）、API Route のみ `checkPermission()` 直接使用
+- **`executeAdminMutationResult` の実行順序契約（ADR 0019）** — 正しい順序は `execute → await afterSuccess → fireAndForget(logAction)`。以下の grep で hit したら silent bug として報告（cache invalidation がスキップされ公開ページが stale になる）:
+  - `grep -rnE "await logAction\(" src/` — `admin-action.ts` 以外の場所で `logAction` を直接 await している違反を検出（`logAction` SSoT は `@/admin/lib/action-auth` 経由のみのため、これが hit したら設計違反）
+  - `grep -nE "await logAction\(" src/app/\(admin\)/admin/\(dashboard\)/_shared/lib/admin-action.ts` — `executeAdminMutationResult` 内部で順序が regression していないか
+- **API Route permission 選定** — 副作用なし（DB write なし + SSRF guard + timeout）・特定 resource に紐づかない admin-only fetch endpoint は `checkAdminAuth()` を使う。`checkPermission("media", "read")` 等の semantic ミスマッチを検出して `checkAdminAuth` 移行を推奨（→ `auth-patterns.md` §副作用のない admin-only fetch endpoint）
+- **HTTP status 選定** — 認証失敗 = 401、権限不足 = 403。`checkAdminAuth` の失敗で 403 を返している / `checkPermission` の失敗で 401 を返しているミスマッチを検出
 - **Cache tags**: Always `CACHE_TAGS.*` constants, never magic strings
 - **`updateTag`** (Server Actions only, immediate invalidation) vs **`revalidateTag`** (Route Handlers / delayed) — do not confuse
 - **`safeFetch`** required for public data fetching — direct Prisma calls without error handling are banned in public actions

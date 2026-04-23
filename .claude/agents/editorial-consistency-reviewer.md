@@ -9,7 +9,6 @@ tools:
   - Grep
   - Glob
 model: sonnet
-memory: project
 ---
 
 You are an editorial design consistency reviewer for the Myrrh Rental Space project (Next.js 16 / React 19 / Tailwind CSS 4).

@@ -18,13 +18,13 @@
 
 | 技術         | バージョン | 備考                                         |
 | ------------ | ---------- | -------------------------------------------- |
-| Next.js      | 16.2.3     | `'use cache'`, `updateTag`, PPR 対応         |
+| Next.js      | 16.2.4     | `'use cache'`, `updateTag`, PPR 対応         |
 | React        | 19.2.5     | React Compiler 1.0, `useEffectEvent`         |
-| TypeScript   | 6.0.2      | `target: es2025`, `erasableSyntaxOnly`       |
+| TypeScript   | 6.0.3      | `target: es2025`, `erasableSyntaxOnly`       |
 | Bun          | 1.3.12     | `bun:test`, `packageManager` と一致          |
 | Prisma       | 7.7.0      | WASM, mapped enums                           |
 | Better Auth  | 1.6.5      | RBAC, Google/LINE OAuth（`bun.lock` 解決版） |
-| Tailwind CSS | 4.2.2      | CSS-first, @theme                            |
+| Tailwind CSS | 4.2.3      | CSS-first, @theme                            |
 | Zod          | 4.3.6      | `{ error: }` パラメータ                      |
 
 ### Project structure
@@ -133,5 +133,5 @@ bun run e2e                     # Playwright E2E
 - `docs/architecture/agent-instructions.md`: AI 向け指示の配置
 - `docs/architecture/`: アーキテクチャ、DB 設計、キャッシュ戦略
 - `.claude/rules/`: 詳細ルール（正本。Codex / Claude Code 共通参照）
-- `docs/reference/codex-rules/`: Codex 互換 mirror 7 件のみ（lexical / admin-inline / instruction-topology / 旧 visual 系）
+- `docs/reference/codex-rules/`: Codex 互換 mirror 4 件（`admin-inline-editor-patterns` / `instruction-topology` / `lexical-patterns` / `turbopack-hmr`）
 - `.claude/skills/README.md`: スキルの索引と作成基準

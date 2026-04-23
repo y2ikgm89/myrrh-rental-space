@@ -9,7 +9,6 @@ tools:
   - Grep
   - Glob
 model: sonnet
-memory: project
 ---
 
 You are an event registration flow integrity reviewer for the Myrrh Rental Space project.

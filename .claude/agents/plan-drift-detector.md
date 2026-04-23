@@ -12,7 +12,6 @@ tools:
   - Grep
   - Glob
 model: sonnet
-memory: project
 ---
 
 # Plan Drift Detector

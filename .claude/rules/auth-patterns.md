@@ -247,6 +247,31 @@ export async function POST(request: Request) {
 }
 ```
 
+### 副作用のない admin-only fetch endpoint は `checkAdminAuth` で十分
+
+OGP プレビュー取得のような「① DB write なし ② SSRF guard + timeout 等の安全装置あり ③ 特定 resource の管理画面に紐づかない」API route は、`checkPermission(resource, action)` ではなく `checkAdminAuth()` を使う:
+
+```typescript
+// NG: Lexical BookmarkPlugin は post/news/terms/page/section いずれでも使うため
+//     "media" resource に縛ると semantic ミスマッチ + EDITOR 権限の偶然の一致に依存する
+const auth = await checkPermission("media", "read", request.headers);
+
+// OK: 認証済み admin なら全員が利用できる共通ユーティリティ
+const auth = await checkAdminAuth(request.headers);
+if (!auth.success) return jsonError(auth.error.error, 401);
+```
+
+**判定基準**: 3 条件すべて満たすなら `checkAdminAuth`。1 つでも該当しなければ `checkPermission(resource, action)` を使う（例: media アップロード → `media:create` / settings 更新 → `settings:update`）。
+
+### HTTP status の使い分け（401 vs 403）
+
+[RFC 9110 §15.5.2 / §15.5.4](https://www.rfc-editor.org/rfc/rfc9110#name-401-unauthorized) 準拠:
+
+- **401 Unauthorized** — 認証失敗（`checkAdminAuth` が `!success`）。クライアントは認証情報を付与して再試行可能
+- **403 Forbidden** — 認証済みだが権限不足（`checkPermission` の permission チェックが `!success`）。同じ認証情報での再試行は失敗する
+
+`checkPermission` は内部で `checkAdminAuth` も呼ぶため未認証時も `!success` になるが、エラーメッセージ文言（`"ログインが必要です"` / `"管理者権限が必要です"`）を見て status を分岐させない。**そのエンドポイントが `checkAdminAuth` 止まりか `checkPermission` まで検査するか**で status を選ぶ（呼び出し側の意図で決定）。
+
 ### NG パターン
 
 ```typescript
@@ -387,7 +412,7 @@ export type CustomerUser = Omit<CustomerSession["user"], "role"> & {
 
 ## 監査ログ
 
-`executeAdminMutationResult` は `logAction()` を内部で自動呼び出しするため、手動呼び出し不要。
+`executeAdminMutationResult` は `logAction()` を **`fireAndForget`（非ブロッキング）で内部呼び出し**するため、手動呼び出し不要。実行順序は `execute → await afterSuccess → fireAndForget(logAction)` で不変（→ `server-actions.md` §executeAdminMutationResult 実行順序契約）。監査 write 失敗時は `logError`（category: `DATABASE`, severity: `MEDIUM`）で構造化ログに記録されるが mutation 応答は影響を受けない。
 `resolveAuditResourceId` でリソース ID を動的解決できる:
 
 ```typescript

@@ -3,7 +3,7 @@
 - **Status**: Accepted
 - **Date**: 2026-04-22
 - **Deciders**: y2ikgm89
-- **Related**: [Section Architecture Phase A plan](../../superpowers/plans/2026-04-22-section-architecture-phase-a.md) / Phase B（`SectionStyle`）は別 ADR 予定
+- **Related**: Phase A 実装 commit `0dd7c4f3`〜`29ad57b6`（プランは clean-break 原則で削除済、`git log --all --diff-filter=D -- docs/superpowers/plans/` で復元可） / Phase B（`SectionStyle`）は [ADR 0017](./0017-section-style-cascade.md)
 
 ## Context
 

@@ -10,7 +10,6 @@ tools:
   - Glob
   - Bash
 model: sonnet
-memory: project
 ---
 
 # large-file-detector

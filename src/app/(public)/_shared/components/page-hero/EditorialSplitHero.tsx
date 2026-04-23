@@ -383,18 +383,14 @@ export function EditorialSplitHero({
                 aria-selected={i === activeIndex}
                 aria-label={`画像 ${i + 1}`}
                 onClick={() => handleDotClick(i)}
-                className={cn(
-                  "min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] px-1 flex items-center justify-center rounded-full",
-                  "transition-all duration-500",
-                  i === activeIndex
-                    ? "bg-background"
-                    : "bg-background/60 hover:bg-background/85",
-                )}
+                className="min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] flex items-center justify-center"
               >
                 <span
                   className={cn(
-                    "block h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)]",
-                    i === activeIndex ? "w-6" : "w-1.5",
+                    "block h-1.5 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.4)] transition-all duration-500",
+                    i === activeIndex
+                      ? "w-6 bg-background"
+                      : "w-1.5 bg-background/70",
                   )}
                   aria-hidden
                 />

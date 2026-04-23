@@ -80,6 +80,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 - **Mutually exclusive boolean フィールドは 3 層防御** — ① UI `disabled` ② onChange で子 field クリア ③ domain command で `normalizeXxx()` ヘルパー強制正規化（Event `status` ↔ `registrationOpen` 参照）
 - **管理ユーザー操作（招待・作成・ロール変更・削除）は階層制御の 2 層防御必須** — UI で `getInvitableRoles(actorRole)` フィルタ + domain command で `canInviteRole()` / `canModifyUser()` による `DomainError("FORBIDDEN")`
 - **ドメインコマンドの actor 引数は `{ id: string; role: Role }` オブジェクト** — 単独 `actorUserId: string` 禁止。`executeAdminMutationResult` から `(user) => cmd(input, { id: user.id, role: user.role })` で渡す
+- **`executeAdminMutationResult` の監査ログは fire-and-forget 必須** — 実行順序契約は `execute → await afterSuccess → fireAndForget(logAction)` で不変。`await logAction` にすると Prisma 監査書き込み失敗時に `afterSuccess` がスキップされ `updateTag` が呼ばれず公開ページが stale のままになる silent bug。監査はコンプライアンス用の非クリティカル副作用で、mutation 応答を遅延・失敗させない（→ `server-actions.md` §executeAdminMutationResult 実行順序契約）
 - **外部 API 統合は SSoT ヘルパー経由必須** — Resend は `sendEmail()`、Google Calendar は `withGoogleApiRetry()`、Turnstile は `validateTurnstile()`、Cloudflare R2 は `uploadFile()` / `deleteFile()`（`@/shared/lib/r2/*`）。直接 SDK 呼び出しは接続テスト / OAuth 初期化のみ例外（→ `external-api-retry-patterns.md`）
 - **GCal outbound sync は attendees 空 + description マーカー + fireAndForget** — サービスアカウント + DWD 未設定では `attendees` populate 不可（Google 公式）。業界標準（Eventbrite/Peatix/connpass/Luma/Meetup 全社）と揃える。description 1 行目に `予約ID:` / `イベントID:` マーカー（`OUTBOUND_*_MARKER`）を埋め込み `isAppGeneratedCalendarEvent` で inbound ループ防止。Server Action の `afterSuccess` で `fireAndForget` 非ブロッキング実行。エラー記録は `markXxxCalendarSyncError` 経由のみ（catch で `logError` 重複禁止）（→ `ical-patterns.md` §GCal Outbound Sync）
 - **Turnstile 配置基準** — 未認証公開フォーム必須。認証済みでも予約作成/変更/キャンセル・決済等の高リスク操作は許容。参照系は不要
@@ -172,6 +173,7 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 - **implementer は sonnet 以上**（haiku 禁止、report 捏造リスク）
 - **完了報告後は独立検証**: `git log --oneline` + `git show --stat HEAD`
+- **SSoT ヘルパー（`executeAdminMutationResult` / `fireAndForget` / `safeFetch` / `sendEmail` 等）の改修は ADR / rule ファイルで実行順序・契約を事前確認必須** — 別 AI / implementer が「クリーンに直す」指示で契約を壊す事故あり（例: `await logAction` 化 → cache invalidation スキップ regression、ADR 0019）。これらヘルパーを編集する dispatch prompt には「該当 ADR / rule を Read してから変更」「契約破りを疑ったら justified deviation として報告」を明記
 - **review agent の「欠落」「型不整合」報告は Read + Glob で実在確認** — project-reviewer は `Serialized<T>` 型システムを未把握で Date→string を warning 化、route-structure-reviewer は Glob Windows パス変換で実在 loading.tsx を「欠落」扱いする false positive 傾向あり。report ベースで修正着手せず、対象ファイルを直接 Read して現状確認
 - **reviewer は MINGW64 `()` 含みパス Glob で誤検出する** — cache-strategy-reviewer 等が `src/shared/lib/constants/` 実在を「不在」と報告し「キャッシュ実装なし」と結論する false positive。受領後は `ls src/shared/lib/constants/` + `grep -rln "updateTag\|revalidateTag\|'use cache'" src/` で独立検証してから判断
 - **密結合タスクは 1 implementer にバンドル**

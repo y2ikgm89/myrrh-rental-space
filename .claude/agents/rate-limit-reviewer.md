@@ -9,7 +9,6 @@ tools:
   - Grep
   - Glob
 model: sonnet
-memory: project
 ---
 
 # Rate Limit Reviewer

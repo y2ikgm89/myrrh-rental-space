@@ -6,18 +6,18 @@
 
 | カテゴリ       | 技術                               | バージョン | 備考                                             |
 | -------------- | ---------------------------------- | ---------- | ------------------------------------------------ |
-| フレームワーク | Next.js App Router + Turbopack     | 16.2.3     | PPR (`cacheComponents: true`), React Compiler    |
+| フレームワーク | Next.js App Router + Turbopack     | 16.2.4     | PPR (`cacheComponents: true`), React Compiler    |
 | UI             | React                              | 19.2.5     | Compiler 1.0 自動メモ化、`use()` / Activity 対応 |
-| 言語           | TypeScript                         | 6.0.2      | `erasableSyntaxOnly`, `verbatimModuleSyntax`     |
+| 言語           | TypeScript                         | 6.0.3      | `erasableSyntaxOnly`, `verbatimModuleSyntax`     |
 | ランタイム     | Bun                                | 1.3.12     | パッケージ管理 + test runner                     |
 | ORM            | Prisma (`prisma-client` generator) | 7.7.0      | ESM, Turbopack 対応, browser entry               |
 | 認証           | Better Auth (dual instance)        | 1.6.5      | adminAuth / customerAuth、Google/LINE OAuth      |
 | 決済           | Stripe                             | latest     | Checkout + Webhook                               |
-| スタイリング   | Tailwind CSS (CSS-first)           | 4.2.2      | `@theme`, semantic tokens                        |
+| スタイリング   | Tailwind CSS (CSS-first)           | 4.2.3      | `@theme`, semantic tokens                        |
 | 検証           | Zod                                | 4.3.6      | `error:` パラメータ、native enum                 |
 | エディタ       | Lexical                            | 0.43.0     | NodeState API                                    |
-| E2E            | Playwright                         | latest     | storage state auth, 786 tests                    |
-| a11y           | @axe-core/playwright               | 4.11.1     | WCAG 2.1 AA 自動検証                             |
+| E2E            | Playwright                         | 1.59.1     | storage state auth, 786 tests                    |
+| a11y           | @axe-core/playwright               | 4.11.2     | WCAG 2.1 AA 自動検証                             |
 | Perf 監視      | Lighthouse CI                      | 0.15.1     | budget.json で granular gate                     |
 
 ## アーキテクチャ概要

@@ -106,7 +106,7 @@ export const createPost = async (input: CreatePostInput) => {
 - 認証チェック（`checkPermission` / `checkResourceAccess`）
 - 権限チェック（resource + action ベース）
 - DomainError のキャッチ → `createFailure(error.message)` 変換
-- 監査ログ記録（`logAction`）
+- 監査ログ記録（`fireAndForget(logAction)` で非ブロッキング、ADR 0019）
 
 関数の種類:
 

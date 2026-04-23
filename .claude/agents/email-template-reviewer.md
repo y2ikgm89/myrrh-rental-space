@@ -12,7 +12,6 @@ tools:
   - Glob
   - mcp__context7__query-docs
 model: sonnet
-memory: project
 ---
 
 You are an email delivery specialist for the Myrrh Rental Space project (Resend 6 + react-email / Next.js 16 Server Actions / ical-generator).

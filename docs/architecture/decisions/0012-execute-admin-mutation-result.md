@@ -56,8 +56,8 @@ export async function executeAdminMutationResult<TData>(options: {
 }): Promise<MutationResult<TData>> {
   // 1. checkPermission / checkResourceAccess
   // 2. try { const data = await execute(user) } catch DomainError → createFailure
-  // 3. logAction(user.id, action, resource, resolveAuditResourceId?.(data))
-  // 4. await afterSuccess?.(data)
+  // 3. await afterSuccess?.(data)  // クリティカル副作用（cache invalidation 等）
+  // 4. fireAndForget(logAction(...))  // 監査ログは非ブロッキング（ADR 0019）
   // 5. return { data }
 }
 ```

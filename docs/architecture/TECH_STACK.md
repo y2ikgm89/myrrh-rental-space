@@ -1,14 +1,14 @@
 # 技術スタック
 
-最終更新: 2026-04-22
+最終更新: 2026-04-23
 
 ## コア
 
 | 技術       | バージョン | 用途                                       |
 | ---------- | ---------- | ------------------------------------------ |
-| Next.js    | 16.2.3     | App Router, PPR, `proxy.ts`, Metadata API  |
+| Next.js    | 16.2.4     | App Router, PPR, `proxy.ts`, Metadata API  |
 | React      | 19.2.5     | Server / Client Components, React Compiler |
-| TypeScript | 6.0.2      | strict type-checking, `erasableSyntaxOnly` |
+| TypeScript | 6.0.3      | strict type-checking, `erasableSyntaxOnly` |
 | Bun        | 1.3.12     | package manager, test runner, app runtime  |
 
 ## データと認証
@@ -25,7 +25,7 @@
 
 | 技術         | バージョン | 用途                                             |
 | ------------ | ---------- | ------------------------------------------------ |
-| Tailwind CSS | 4.2.2      | styling, theme tokens                            |
+| Tailwind CSS | 4.2.3      | styling, theme tokens                            |
 | GSAP         | 3.15.0     | scroll / timeline animation（`bun.lock` 解決版） |
 | Lenis        | 1.3.23     | smooth scroll（`bun.lock` 解決版）               |
 | nuqs         | 2.8.9      | search params state                              |
@@ -76,7 +76,7 @@
 
 ## 補足
 
-- TypeScript は 6 系（rc）を使用。`erasableSyntaxOnly` 等の制約は `type-safety.md` を参照
+- TypeScript は 6.0.3 を使用。`erasableSyntaxOnly` 等の制約は `type-safety.md` を参照
 - Prisma は Bun runtime で使用するが、Edge Runtime 対応は前提にしない
 - **Three.js / PixiJS** は未使用（削除済み）。再導入しない
 - 管理画面は Lexical と Better Auth を中心にした Node/Bun runtime 前提
