@@ -36,18 +36,18 @@ Multiple Root Layouts: `(admin)/` と `(public)/` で CSS・認証・レイア�
 
 > 実バージョンは `package.json` + `bun.lock` が SSoT。下記は major.minor で各世代固有の注意点を記述。コア依存の列挙は [AGENTS.md](AGENTS.md#tech-stack)。
 
-| 技術            | 注意点                                                                                                                                                      |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Next.js 16.2    | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。Suspense 内 async SC は `await connection()`                                       |
-| React 19.2      | Compiler 1.0 自動メモ化。`useCallback`/`useMemo`/`memo` 禁止（例外→`react-patterns.md`）                                                                    |
-| TypeScript 6.0  | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                                                   |
-| Prisma 7.7      | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`。CLI flag 変更（`migrate diff --to-schema` / `--shadow-database-url` 削除）       |
-| Tailwind 4.2    | CSS-first `@theme`、セマンティックトークン必須、default bp + `--breakpoint-3xl: 120rem`、カードグリッドは Container Queries（named `@container/main` 対応） |
-| Better Auth 1.6 | `adminAuth`/`customerAuth` 分離、独自 `ROLE_PERMISSIONS` SSoT、`generateId: "uuid"` 必須                                                                    |
-| Zod 4.3         | `.merge()` deprecated（→ `.extend(shape)`）、`.refine()` 後の `.omit()` 不可、`error:` 必須                                                                 |
-| Lexical 0.43    | NodeState API（`$config` + `createState`）                                                                                                                  |
-| nuqs 2.8        | パーサーマップ `@/shared/lib/nuqs`、`useQueryStates({ shallow: false })` で RSC 再レンダリング                                                              |
-| Bun 1.3         | test は per-directory バッチ（`mock.module` 干渉回避）、`packageManager: bun@1.3.12` pinned                                                                 |
+| 技術            | 注意点                                                                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js 16.2    | `'use cache'` + `updateTag`（Server Actions）/ `revalidateTag`（2引数）。Suspense 内 async SC は `await connection()`                                               |
+| React 19.2      | Compiler 1.0 自動メモ化。`useCallback`/`useMemo`/`memo` 禁止（例外→`react-patterns.md`）                                                                            |
+| TypeScript 6.0  | `erasableSyntaxOnly`（enum 禁止）、`verbatimModuleSyntax`                                                                                                           |
+| Prisma 7.7      | `createAppPrismaClient` で `$extends` 集約、enum は `@generated/prisma/*`。CLI flag 変更（`migrate diff --to-schema` / `--shadow-database-url` 削除）               |
+| Tailwind 4.2    | CSS-first `@theme`、セマンティックトークン必須、default bp + `--breakpoint-3xl: 120rem`、カードグリッドは Container Queries（named `@container/main` 対応）         |
+| Better Auth 1.6 | `adminAuth`/`customerAuth` 分離、独自 `ROLE_PERMISSIONS` SSoT、`generateId: "uuid"` 必須                                                                            |
+| Zod 4.3         | `.merge()` deprecated（→ `.extend(shape)`）、`.refine()` 後の `.omit()` 不可、`error:` 必須、`z.registry<T>().register(schema, meta)` がメタデータ SSoT（ADR 0018） |
+| Lexical 0.43    | NodeState API（`$config` + `createState`）                                                                                                                          |
+| nuqs 2.8        | パーサーマップ `@/shared/lib/nuqs`、`useQueryStates({ shallow: false })` で RSC 再レンダリング                                                                      |
+| Bun 1.3         | test は per-directory バッチ（`mock.module` 干渉回避）、`packageManager: bun@1.3.12` pinned                                                                         |
 
 ---
 
