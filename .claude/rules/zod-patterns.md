@@ -171,9 +171,13 @@ export async function updatePost(
 
 ## Prisma Enum バリデーション
 
-### z.enum() で Prisma enum を使用（nativeEnum 禁止）
+### z.enum() で Prisma enum を使用（nativeEnum はプロジェクト規範で禁止）
 
-Zod 4 では `z.nativeEnum()` は非推奨。Prisma 7 の `@map` enum は TypeScript 側で `as const` オブジェクトとして生成されるため、`z.enum()` で直接受け付ける:
+Zod 4 は `z.enum()` で TS enum / const object を直接受ける API を**推奨パターン**として前面に出している（`nativeEnum` は v3-era API として残存）。プロジェクト規範として **`z.enum()` に統一**し、`nativeEnum` の使用を禁止する:
+
+- SSoT は Prisma 7 の `@map` enum（TS 側で `as const` オブジェクトとして生成される）
+- `z.enum(PrismaEnum)` は const object の keys を自動展開し、`nativeEnum` と同等の型推論を提供
+- 併存を避けることで Zod 4 推奨パターンに揃え、エコシステム変化（将来の deprecation）にも強くなる
 
 ```typescript
 import { z } from "zod";
@@ -183,7 +187,7 @@ import {
   PostStatus,
 } from "@/shared/generated/prisma/enums";
 
-// NG: z.nativeEnum()（Zod 4 非推奨）
+// NG: z.nativeEnum() — プロジェクト規範で禁止（Zod 4 推奨は z.enum()）
 z.nativeEnum(DiscountType);
 
 // NG: 文字列リテラル配列（Prisma enum と乖離するリスク）
@@ -209,6 +213,98 @@ discountType: z.enum(DiscountType).default("none");
 discountType: z.enum(DiscountType).default(DiscountType.none);
 taxRateType: z.enum(TaxRateType).default(TaxRateType.standard);
 ```
+
+## メタデータと registry（Zod 4 公式パターン）
+
+Zod 4 は `.meta()` / `z.registry<T>()` でスキーマに型安全メタデータを登録する公式 API を提供する。本プロジェクトは ADR 0018（field-registry）でこの API を採用し、フィールドメタデータ（ラベル・プレースホルダー・フィールド種別・グループ等）の SSoT として運用している。
+
+### `.meta()` shorthand（z.globalRegistry）
+
+```typescript
+import { z } from "zod";
+
+// .meta() は z.globalRegistry に登録する shorthand
+const userSchema = z
+  .object({
+    email: z.string().email(),
+    age: z.number().int(),
+  })
+  .meta({
+    title: "User",
+    description: "A registered user",
+    examples: [{ email: "a@example.com", age: 20 }],
+  });
+
+// 読み取り
+const meta = z.globalRegistry.get(userSchema);
+// => { title: "User", description: "A registered user", examples: [...] }
+```
+
+`.meta()` は `.describe(JSON.stringify(...))` の型安全な後継。`describe()` は文字列のみ受け取るため構造化メタデータが失われるが、`.meta()` は型付きオブジェクトとして保持する。
+
+### カスタム registry `z.registry<T>()`
+
+ドメイン固有のメタデータを型安全に管理したい場合は `z.registry<T>()` でカスタム registry を作成する:
+
+```typescript
+// src/shared/lib/sections/field-registry.ts（ADR 0018 参照実装）
+import { z } from "zod";
+
+export type FieldMeta = {
+  label: string;
+  placeholder?: string;
+  fieldType: "text" | "textarea" | "select" | /* ... */;
+  group: "content" | "design" | "advanced";
+  maxLength?: number;
+};
+
+export const fieldRegistry = z.registry<FieldMeta>();
+
+// スキーマに登録
+const titleSchema = z
+  .string()
+  .max(100)
+  .register(fieldRegistry, {
+    label: "タイトル",
+    fieldType: "text",
+    group: "content",
+    maxLength: 100,
+  });
+
+// 読み取り（型安全）
+const meta = fieldRegistry.get(titleSchema);
+// => FieldMeta | undefined
+```
+
+### GlobalMeta augmentation（プロジェクト共通メタデータ型）
+
+`z.globalRegistry` のメタデータ型を project-wide で拡張したい場合は `declare module "zod"` で augmentation:
+
+```typescript
+declare module "zod" {
+  interface GlobalMeta {
+    // 既存の title / description / examples / id に加えてプロジェクト固有のフィールド
+    deprecated?: boolean;
+    seoWeight?: "high" | "medium" | "low";
+  }
+}
+
+const schema = z.string().meta({
+  title: "Title",
+  deprecated: false, // 型補完が効く
+  seoWeight: "high",
+});
+```
+
+**本プロジェクトの採用方針**:
+
+- **フィールドメタデータ**（セクション編集 UI 用）: `z.registry<FieldMeta>()` でカスタム registry（`fieldRegistry`、ADR 0018）
+- **汎用メタデータ**（title / description 等）: `.meta()` shorthand（`z.globalRegistry`）
+- `.describe(JSON.stringify(...))` + parse パターンは廃止（dead code）
+
+参照実装: `@/shared/lib/sections/field-registry` の `field.text()` / `field.select()` ヘルパーが `fieldRegistry` 経由でメタデータを自動登録する（→ ADR 0018・SSOT 一覧の「管理画面 セクション編集」節）。
+
+---
 
 ## 配列要素の uniqueness 契約（React key 安全性）
 
@@ -624,8 +720,8 @@ type Schema = z.infer<typeof schema>;
 3. **バリデーションなしの Server Action 禁止**
    - 入力は必ず `safeParse` でバリデーション後に使用
 
-4. **z.nativeEnum() 禁止（Zod 4 非推奨）**
-   - `z.enum(PrismaEnum)` を使用
+4. **z.nativeEnum() 禁止（プロジェクト規範）**
+   - Zod 4 推奨パターンは `z.enum()`。`z.enum(PrismaEnum)` に統一（`nativeEnum` は v3-era API として残存するが併存させない）
 
 5. **Zodデフォルト値での文字列リテラル禁止（Prisma enum存在時）**
    - `z.enum(DiscountType).default('none')` → `.default(DiscountType.none)`

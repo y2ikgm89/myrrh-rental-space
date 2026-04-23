@@ -192,7 +192,7 @@ export async function deletePost(id: string) {
 
 ### revalidateTag（非同期再検証 — stale-while-revalidate）
 
-即時性が不要な場合（バックグラウンド処理・Route Handlers など）:
+即時性が不要な場合（バックグラウンド処理・Route Handlers など）。**Next.js 16 公式: 第2引数は CacheLife プリセット文字列または `{ expire }` オブジェクト形式**:
 
 ```typescript
 import { revalidateTag } from "next/cache";
@@ -212,6 +212,15 @@ export async function GET() {
 
 // 個別アイテムのみ無効化（第2引数に適切なプロファイルを指定）
 revalidateTag(getCacheTag.posts.detail(slug), CACHE_LIFE.PUBLIC_CONTENT);
+
+// 大量バッチ処理・非同期再構築ジョブ — 公式推奨の stale-while-revalidate
+// `'max'` プリセット（stale 5分 / revalidate 1ヶ月 / expire 1年）で次回以降の
+// リクエストで徐々に再検証させる。cron / webhook 等「次 tick で良い」シナリオ向け
+revalidateTag(CACHE_TAGS.POSTS, CACHE_LIFE.MAX);
+
+// 即時失効（オブジェクト形式 — 特殊ケース向け公式API）
+// Server Actions では updateTag を優先するため、Route Handler の同期的用途のみ検討
+revalidateTag(CACHE_TAGS.POSTS, { expire: 0 });
 ```
 
 ### updateTag vs revalidateTag 比較
@@ -221,9 +230,21 @@ revalidateTag(getCacheTag.posts.detail(slug), CACHE_LIFE.PUBLIC_CONTENT);
 | `updateTag`     | 即時失効（同一リクエスト内で反映） | **Server Actions 内のみ**      | CRUD 操作後の read-your-own-writes  |
 | `revalidateTag` | 非同期再検証（次リクエストで反映） | Server Actions・Route Handlers | バックグラウンド処理・CRON・webhook |
 
+### キャッシュ無効化の優先順位（Next.js 16 公式推奨）
+
+```
+updateTag (SA)  >  revalidateTag(tag, CACHE_LIFE.MAX) (SA/RH, SWR)  >  revalidatePath (最終)
+```
+
+| 優先順位 | API              | 使用場所            | 選択基準                                                                                   |
+| -------- | ---------------- | ------------------- | ------------------------------------------------------------------------------------------ |
+| 1        | `updateTag`      | Server Actions      | CRUD 操作後の即時反映（read-your-own-writes）。タグで特定可能な場合の第一選択              |
+| 2        | `revalidateTag`  | SA / Route Handlers | cron / webhook / バックグラウンド処理。`CACHE_LIFE.MAX` で stale-while-revalidate          |
+| 3        | `revalidatePath` | SA / Route Handlers | タグ管理が現実的でないページ単位 invalidation のみ。原則として 1・2 で対応不可能な場合のみ |
+
 ### revalidatePath（最終手段）
 
-タグで対応できない場合のみ。**原則 revalidateTag を優先**:
+タグで対応できない場合のみ。**原則 `updateTag` / `revalidateTag` を優先**:
 
 ```typescript
 import { revalidatePath } from "next/cache";

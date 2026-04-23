@@ -47,6 +47,14 @@ export const CACHE_LIFE = {
    * - 公開コンテンツと同期
    */
   METADATA: "hours",
+
+  /**
+   * 最大有効期間（Next.js 16 公式推奨: stale-while-revalidate 用途）
+   * - cron / webhook で `revalidateTag(tag, CACHE_LIFE.MAX)` として使用
+   * - stale 5分 / revalidate 1ヶ月 / expire 1年
+   * - 「次回以降のリクエストで再検証すれば良い」非同期再検証シナリオ
+   */
+  MAX: "max",
 } as const;
 
 /**

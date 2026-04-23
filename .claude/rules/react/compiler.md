@@ -259,17 +259,21 @@ function TemporarilyExcluded() {
 - `// TODO: Issue番号 — 根本原因の説明` を必ず付記
 - Rules of React 違反を修正したら即座に削除
 
-### 'use memo' — コンパイル強制 opt-in（annotation モードのみ）
+### 'use memo' — コンパイル強制 opt-in（`annotation` / `syntax` モードでのみ有効）
 
-Next.js 16 では全コンポーネントが自動コンパイル対象のため通常不要。
-`compilationMode: 'annotation'` による段階的採用時のみ使用:
+React Compiler 1.0 の `compilationMode` は 4 値（`infer` / `syntax` / `annotation` / `all`）で、`'use memo'` / `'use no memo'` ディレクティブが有効なのは **`annotation` または `syntax` モードのみ**（公式ドキュメント）。
+
+本プロジェクトは **Next.js 16 の react-compiler 統合（デフォルト `compilationMode: 'infer'`）** を採用しているため、`'use memo'` は不要（自動判定）。強制 opt-in が必要なのは library 作者等で `compilationMode: 'annotation'` を選ぶ特殊ケースのみ:
 
 ```typescript
-// compilationMode: 'annotation' 設定時: 明示的に最適化対象にする
+// compilationMode: 'annotation' 設定時のみ有効
 function ExpensiveList({ items }: { items: Item[] }) {
-  "use memo"  // このコンポーネントのみ Compiler 対象にする
+  "use memo"  // annotation モードで明示的に最適化対象にする
   return <ul>{items.map((item) => <li key={item.id}>{item.name}</li>)}</ul>
 }
+
+// Next.js 16 デフォルト（compilationMode: 'infer'）では上記ディレクティブは no-op。
+// 'use no memo' エスケープハッチは全モードで有効（Rules of React 違反を一時除外）
 ```
 
 ### Rules of React（コンパイラが最適化できる条件）

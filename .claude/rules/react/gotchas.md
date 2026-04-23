@@ -9,20 +9,37 @@ paths:
 
 > React 19.2 / React Compiler 1.0 対応
 
-## React 19 `<Activity>` — EXPERIMENTAL 採用禁止
+## React 19.2 `<Activity>` — 採用条件
 
-`<Activity>` は `display: none` で DOM を非表示にするため CSS transform アニメーションと非互換（アニメーション中でも要素が消える）。context7/WebFetch で確認済み。
+`<Activity>` は **React 19.2 で stable 化**（2025-10-01 公式リリース）。`unstable_Activity` ではなく正式 `Activity` として export される。`hidden` でも state 保持 + effect unmount + 低優先レンダー継続という挙動で、navigation preload（BFCache 代替）・back navigation の state 復元・ViewTransition と組合せた preload が公式推奨の用途。
+
+ただし `display: none` で DOM を非表示にするため **CSS transform / opacity アニメーションと非互換**（hidden 中は画面から消えるためアニメーション中の要素が見えない）。
+
+### 採用可能ケース
 
 ```typescript
-// NG: Activity は EXPERIMENTAL — CSS transform アニメーションと非互換
-import { unstable_Activity as Activity } from 'react'
-<Activity mode="hidden"><AnimatedPanel /></Activity>
+// OK: navigation preload (BFCache 代替) / back navigation の state 復元
+import { Activity } from 'react'
+<Activity mode={isPreloading ? 'visible' : 'hidden'}>
+  <ExpensiveComponent />
+</Activity>
+```
+
+### 採用不可ケース（アニメーション中の切替）
+
+```typescript
+// NG: Activity は display: none でアニメーション中に要素が消える
+<Activity mode={isHidden ? 'hidden' : 'visible'}>
+  <AnimatedPanel />  {/* transform/opacity transition が途中で飛ぶ */}
+</Activity>
 
 // OK: CSS visibility / opacity で代替（DOM を保持しアニメーション可能）
 <div style={{ visibility: isHidden ? 'hidden' : 'visible' }}>
   <AnimatedPanel />
 </div>
 ```
+
+**判断基準**: preload / bfcache ユースケース以外では `visibility` / `opacity` 継続推奨。本プロジェクトでは現時点で Activity 採用箇所なし。新規採用時は用途の妥当性を ADR で記録。
 
 ---
 
