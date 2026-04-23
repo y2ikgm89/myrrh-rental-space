@@ -15,7 +15,7 @@ import {
   getPermalinkSettings,
   getPublicSettingsForStyle,
 } from "@/shared/domain/settings/queries/display";
-import { SectionRenderer } from "../_shared/components/sections/section-renderer";
+import { ManagedPageSections } from "@/public/components/pages/ManagedPageSections";
 
 interface PageProps {
   params: Promise<{ segments: string[] }>;
@@ -64,8 +64,6 @@ export default async function DynamicPage({ params }: PageProps) {
         getPublicSettingsForStyle(),
       ]);
 
-      const pageCtx = { pageStyle: page.pageStyle };
-
       return (
         <>
           <BreadcrumbJsonLd
@@ -74,14 +72,11 @@ export default async function DynamicPage({ params }: PageProps) {
               { name: page.title, url: `/${slug}` },
             ]}
           />
-          {sections.map((section) => (
-            <SectionRenderer
-              key={section.id}
-              section={section}
-              page={pageCtx}
-              settings={settings}
-            />
-          ))}
+          <ManagedPageSections
+            sections={sections}
+            pageStyle={page.pageStyle}
+            settings={settings}
+          />
         </>
       );
     }

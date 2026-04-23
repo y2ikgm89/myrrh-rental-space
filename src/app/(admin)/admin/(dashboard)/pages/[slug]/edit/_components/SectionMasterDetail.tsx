@@ -45,6 +45,7 @@ import { SectionList } from "./SectionList";
 import { SectionEditor } from "./SectionEditor";
 import { PageHeroEditor } from "./PageHeroEditor";
 import { PageStyleField } from "./PageStyleField";
+import { PageLivePreview } from "./PageLivePreview";
 import { PageSeoForm } from "../../_seo/_components/PageSeoForm";
 import { AddSectionDialog } from "../../_sections/_components/AddSectionDialog";
 
@@ -83,6 +84,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
   );
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number | undefined>();
+  const [previewRevision, setPreviewRevision] = useState(0);
 
   const [pageTabRaw, setPageTabRaw] = useQueryState(
     "tab",
@@ -117,6 +119,10 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       .catch(() => {
         /* best-effort */
       });
+  }
+
+  function refreshPreview() {
+    setPreviewRevision((current) => current + 1);
   }
 
   // =========================================================================
@@ -158,6 +164,7 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       const result = await togglePageSection(id, isActive);
       if (!isMutationError(result)) {
         toast.success("更新しました");
+        refreshPreview();
       } else {
         toast.error(result.error);
         reloadSections();
@@ -210,7 +217,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
             if (isMutationError(result)) {
               toast.error(result.error);
               reloadSections();
+              return;
             }
+            refreshPreview();
           });
         }
       },
@@ -225,12 +234,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
         // リロードして新しいセクションを取得 & 自動選択
         const sectionList = await fetchPageSections(page.id);
         setSections(sectionList);
-        // 複製されたセクションは末尾に追加されるので最後を選択
-        const lastSection = sectionList[sectionList.length - 1];
-        if (lastSection) {
-          setSelectedId(lastSection.id);
-          setShowMobileList(false);
-        }
+        setSelectedId(result.id);
+        setShowMobileList(false);
+        refreshPreview();
       } else {
         toast.error(result.error);
       }
@@ -261,11 +267,9 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       // リロードして新しいセクションを自動選択
       const sectionList = await fetchPageSections(page.id);
       setSections(sectionList);
-      const lastNewSection = sectionList[sectionList.length - 1];
-      if (lastNewSection) {
-        setSelectedId(lastNewSection.id);
-        setShowMobileList(false);
-      }
+      setSelectedId(result.id);
+      setShowMobileList(false);
+      refreshPreview();
     });
   }
 
@@ -283,12 +287,15 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
       if (isMutationError(result)) {
         toast.error(result.error);
         reloadSections();
+        return;
       }
+      refreshPreview();
     });
   }
 
   function handleSectionUpdated() {
     reloadSections();
+    refreshPreview();
   }
 
   // =========================================================================
@@ -315,106 +322,111 @@ export function SectionMasterDetail({ page }: SectionMasterDetailProps) {
 
   return (
     <>
-      <Tabs
-        value={pageTab}
-        onValueChange={(v) => {
-          void setPageTabRaw(normalizePageTab(page.slug, v));
-        }}
-      >
-        <TabsList className="mb-2">
-          <TabsTrigger value={TAB_SECTIONS}>セクション</TabsTrigger>
-          {page.slug === "home" ? (
-            <TabsTrigger value={TAB_HERO}>ヒーロー</TabsTrigger>
-          ) : null}
-          <TabsTrigger value={TAB_SETTINGS}>ページ設定</TabsTrigger>
-        </TabsList>
-
-        <TabsContent
-          value={TAB_SECTIONS}
-          forceMount
-          className="data-[state=inactive]:hidden"
-        >
-          <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-0 h-auto lg:h-[calc(100vh-280px)]">
-            {/* Left Sidebar */}
-            <div
-              className={cn(
-                "border-b lg:border-b-0 lg:border-r overflow-hidden",
-                "lg:block",
-                showMobileList ? "flex-1" : "hidden",
-              )}
-            >
-              <SectionList
-                sections={sections}
-                selectedId={effectiveSelectedId}
-                onSelect={handleSelect}
-                onReorder={handleReorder}
-                onToggle={handleToggle}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onAddSection={handleOpenAddDialog}
-                disabled={isPending}
-              />
-            </div>
-
-            {/* Right Detail Panel */}
-            <div
-              className={cn(
-                "overflow-y-auto p-4",
-                "lg:block",
-                showMobileList ? "hidden" : "flex-1",
-              )}
-            >
-              <button
-                type="button"
-                onClick={handleBackToList}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden"
-              >
-                <IconArrowLeft className="h-4 w-4" />
-                セクション一覧
-              </button>
-              <SectionEditor
-                key={selectedSection?.id ?? "none"}
-                section={selectedSection}
-                hasSections={sections.length > 0}
-                onAddSection={() => handleOpenAddDialog()}
-                onSectionUpdated={handleSectionUpdated}
-                onDirtyChange={handleDirtyChange}
-              />
-            </div>
-          </div>
-        </TabsContent>
-
-        {page.slug === "home" ? (
-          <TabsContent
-            value={TAB_HERO}
-            forceMount
-            className="data-[state=inactive]:hidden"
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(420px,460px)] xl:items-start xl:gap-6">
+        <div className="min-w-0">
+          <Tabs
+            value={pageTab}
+            onValueChange={(v) => {
+              void setPageTabRaw(normalizePageTab(page.slug, v));
+            }}
           >
-            <PageHeroEditor
-              pageSlug={page.slug}
-              initial={page.pageHero}
-              onSaved={() => {
-                /* ヒーローは Section 一覧と独立 */
-              }}
-              onDirtyChange={handleDirtyChange}
-            />
-          </TabsContent>
-        ) : null}
+            <TabsList className="mb-2">
+              <TabsTrigger value={TAB_SECTIONS}>セクション</TabsTrigger>
+              {page.slug === "home" ? (
+                <TabsTrigger value={TAB_HERO}>ヒーロー</TabsTrigger>
+              ) : null}
+              <TabsTrigger value={TAB_SETTINGS}>ページ設定</TabsTrigger>
+            </TabsList>
 
-        <TabsContent
-          value={TAB_SETTINGS}
-          forceMount
-          className="data-[state=inactive]:hidden"
-        >
-          <div className="space-y-6">
-            <PageStyleField
-              pageSlug={page.slug}
-              initialPageStyleId={page.pageStyleId}
-            />
-            <PageSeoForm page={page} />
-          </div>
-        </TabsContent>
-      </Tabs>
+            <TabsContent
+              value={TAB_SECTIONS}
+              forceMount
+              className="data-[state=inactive]:hidden"
+            >
+              <div className="flex flex-col lg:grid lg:grid-cols-[280px_1fr] gap-0 h-auto lg:h-[calc(100vh-280px)]">
+                {/* Left Sidebar */}
+                <div
+                  className={cn(
+                    "border-b lg:border-b-0 lg:border-r overflow-hidden",
+                    "lg:block",
+                    showMobileList ? "flex-1" : "hidden",
+                  )}
+                >
+                  <SectionList
+                    sections={sections}
+                    selectedId={effectiveSelectedId}
+                    onSelect={handleSelect}
+                    onReorder={handleReorder}
+                    onToggle={handleToggle}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                    onAddSection={handleOpenAddDialog}
+                    disabled={isPending}
+                  />
+                </div>
+
+                {/* Right Detail Panel */}
+                <div
+                  className={cn(
+                    "overflow-y-auto p-4",
+                    "lg:block",
+                    showMobileList ? "hidden" : "flex-1",
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={handleBackToList}
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 lg:hidden"
+                  >
+                    <IconArrowLeft className="h-4 w-4" />
+                    セクション一覧
+                  </button>
+                  <SectionEditor
+                    key={selectedSection?.id ?? "none"}
+                    section={selectedSection}
+                    hasSections={sections.length > 0}
+                    onAddSection={() => handleOpenAddDialog()}
+                    onSectionUpdated={handleSectionUpdated}
+                    onDirtyChange={handleDirtyChange}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            {page.slug === "home" ? (
+              <TabsContent
+                value={TAB_HERO}
+                forceMount
+                className="data-[state=inactive]:hidden"
+              >
+                <PageHeroEditor
+                  pageSlug={page.slug}
+                  initial={page.pageHero}
+                  onSaved={refreshPreview}
+                  onDirtyChange={handleDirtyChange}
+                />
+              </TabsContent>
+            ) : null}
+
+            <TabsContent
+              value={TAB_SETTINGS}
+              forceMount
+              className="data-[state=inactive]:hidden"
+            >
+              <div className="space-y-6">
+                <PageStyleField
+                  pageSlug={page.slug}
+                  initialPageStyleId={page.pageStyleId}
+                  onSaved={refreshPreview}
+                />
+                <PageSeoForm page={page} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <PageLivePreview slug={page.slug} revision={previewRevision} />
+      </div>
 
       <AddSectionDialog
         open={showAddDialog}

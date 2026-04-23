@@ -24,6 +24,7 @@ import {
 import { DeleteConfirmDialog } from "@/admin/components/DeleteConfirmDialog";
 import { deletePage, togglePagePublished } from "@/admin/actions/page";
 import { isMutationError } from "@/shared/lib/mutation-result";
+import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 
 type PageActionsProps = {
   slug: string;
@@ -78,7 +79,7 @@ export function PageActions({
   };
 
   const handlePreview = () => {
-    window.open(isHomepage ? "/" : `/${slug}`, "_blank");
+    window.open(getPagePreviewHref(slug), "_blank");
   };
 
   return (

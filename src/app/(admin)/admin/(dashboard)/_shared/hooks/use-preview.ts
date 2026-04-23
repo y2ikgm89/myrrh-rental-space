@@ -5,6 +5,7 @@
  */
 
 import { logger } from "@/shared/lib/logger";
+import { getContentPreviewHref } from "@/shared/lib/preview-routes";
 import {
   type PostPreviewData,
   type NewsPreviewData,
@@ -70,8 +71,7 @@ export function openPreview(
   identifier: string,
   basePath: string,
 ): void {
-  const previewSlug = identifier || "preview-new";
-  const url = `${basePath}/preview/${previewSlug}`;
+  const url = getContentPreviewHref(basePath, identifier);
   window.open(url, "_blank");
 }
 

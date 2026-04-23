@@ -18,6 +18,7 @@ import { Button, Badge } from "@/admin/components/ui";
 import { AdminDetailLayout } from "@/admin/components/AdminDetailLayout";
 import { SectionMasterDetail } from "./_components/SectionMasterDetail";
 import { PublishToggle } from "./_components/PublishToggle";
+import { getPagePreviewHref } from "@/shared/lib/preview-routes";
 import type { Metadata } from "next";
 import type { ReactElement } from "react";
 
@@ -64,7 +65,7 @@ export default async function EditPagePage({
           )}
           <Button asChild variant="outline" size="sm">
             <a
-              href={slug === "home" ? "/" : `/${slug}`}
+              href={getPagePreviewHref(slug)}
               target="_blank"
               rel="noopener noreferrer"
             >

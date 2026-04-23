@@ -3,8 +3,7 @@ import type { ReactElement } from "react";
 /**
  * PreviewBanner — プレビューモード通知
  *
- * 管理画面から開かれた sessionStorage ベースのプレビューページで、
- * 公開ページと視覚的に区別するためにページ上部に表示する。
+ * 管理画面から開かれたプレビューを公開ページと視覚的に区別するための通知。
  */
 export function PreviewBanner(): ReactElement {
   return (
@@ -12,7 +11,7 @@ export function PreviewBanner(): ReactElement {
       role="status"
       className="bg-accent/10 py-2 text-center text-xs text-accent"
     >
-      プレビューモード — このページは公開されていません
+      プレビューモード — この表示は管理画面用の確認ページです
     </div>
   );
 }

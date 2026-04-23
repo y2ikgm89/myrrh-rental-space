@@ -19,11 +19,13 @@ import { StyleSelector } from "./StyleSelector";
 interface PageStyleFieldProps {
   readonly pageSlug: string;
   readonly initialPageStyleId: string | null;
+  readonly onSaved?: () => void;
 }
 
 export function PageStyleField({
   pageSlug,
   initialPageStyleId,
+  onSaved,
 }: PageStyleFieldProps) {
   const [isPending, startTransition] = useTransition();
   const [styleId, setStyleId] = useState<string | null>(initialPageStyleId);
@@ -34,6 +36,7 @@ export function PageStyleField({
       const result = await updatePageStyle(pageSlug, styleId);
       if (!isMutationError(result)) {
         toast.success("ページ既定スタイルを更新しました");
+        onSaved?.();
       } else {
         toast.error(result.error);
       }
