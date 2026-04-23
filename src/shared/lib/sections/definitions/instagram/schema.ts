@@ -5,12 +5,14 @@ import { field } from "../../field-registry";
 const gaps = ["sm", "md", "lg"] as const;
 
 export const instagramConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Follow Us" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "Instagram" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Follow Us",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "Instagram",
+    maxLength: 100,
+  }),
   columns: field.number("1 行あたりの列数", {
     min: 3,
     max: 6,

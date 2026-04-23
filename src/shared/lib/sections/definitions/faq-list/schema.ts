@@ -7,12 +7,14 @@ const containerWidths = ["sm", "md", "lg", "full"] as const;
 const initialOpenOptions = ["first", "none", "all"] as const;
 
 export const faqListConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "FAQ" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "よくあるご質問" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "FAQ",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "よくあるご質問",
+    maxLength: 100,
+  }),
   categoryId: z
     .string()
     .uuid({ error: "有効なUUIDを入力してください" })
@@ -27,12 +29,14 @@ export const faqListConfigSchema = z.object({
   showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
     default: true,
   }),
-  viewAllText: field
-    .text("「すべて見る」リンクの文字", { default: "全てのFAQ" })
-    .pipe(z.string().max(50)),
-  viewAllUrl: field
-    .text("「すべて見る」リンク先 URL", { default: "/faq" })
-    .pipe(z.string().max(200)),
+  viewAllText: field.text("「すべて見る」リンクの文字", {
+    default: "全てのFAQ",
+    maxLength: 50,
+  }),
+  viewAllUrl: field.text("「すべて見る」リンク先 URL", {
+    default: "/faq",
+    maxLength: 200,
+  }),
   items: field
     .array("カスタム項目", {
       fields: {

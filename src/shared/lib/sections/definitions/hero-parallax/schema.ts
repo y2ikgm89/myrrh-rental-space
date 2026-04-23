@@ -10,18 +10,19 @@ const overlayStyles = ["gradient", "solid", "none"] as const;
 
 export const heroParallaxConfigSchema = z
   .object({
-    tagline: field
-      .text("タグライン", { default: "Luxury Rental Space" })
-      .pipe(z.string().max(50)),
-    title: field
-      .text("見出し", { default: "洗練された空間で 特別なひとときを" })
-      .pipe(z.string().max(100)),
-    subtitle: field
-      .textarea("サブ見出し", {
-        default:
-          "厳選されたレンタルスペースで、ビジネスからプライベートまで、あらゆるシーンに対応する上質な空間をご提供します。",
-      })
-      .pipe(z.string().max(300)),
+    tagline: field.text("タグライン", {
+      default: "Luxury Rental Space",
+      maxLength: 50,
+    }),
+    title: field.text("見出し", {
+      default: "洗練された空間で 特別なひとときを",
+      maxLength: 100,
+    }),
+    subtitle: field.textarea("サブ見出し", {
+      default:
+        "厳選されたレンタルスペースで、ビジネスからプライベートまで、あらゆるシーンに対応する上質な空間をご提供します。",
+      maxLength: 300,
+    }),
     backgroundImageUrl: field.image("背景画像"),
     buttons: field.array("ボタン", {
       fields: {

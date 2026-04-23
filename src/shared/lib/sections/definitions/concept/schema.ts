@@ -8,18 +8,19 @@ const layouts = ["side-by-side", "stacked"] as const;
 const imageAspects = ["original", "16:9", "4:3", "3:2", "1:1", "4:5"] as const;
 
 export const conceptConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Our Philosophy" })
-    .pipe(z.string().max(50)),
-  heading: field
-    .text("見出し", { default: "空間が、体験を変える" })
-    .pipe(z.string().max(100)),
-  body: field
-    .textarea("本文", {
-      default:
-        "洗練されたデザインと機能性を兼ね備えた空間。\nビジネスミーティングからプライベートパーティーまで。\nあらゆるシーンに対応する上質な空間をご提供します。",
-    })
-    .pipe(z.string().max(1000)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Our Philosophy",
+    maxLength: 50,
+  }),
+  heading: field.text("見出し", {
+    default: "空間が、体験を変える",
+    maxLength: 100,
+  }),
+  body: field.textarea("本文", {
+    default:
+      "洗練されたデザインと機能性を兼ね備えた空間。\nビジネスミーティングからプライベートパーティーまで。\nあらゆるシーンに対応する上質な空間をご提供します。",
+    maxLength: 1000,
+  }),
   imageUrl: field.image("メイン画像"),
   imagePosition: field.select("画像の位置", {
     options: imagePositions,

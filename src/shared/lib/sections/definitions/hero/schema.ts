@@ -16,8 +16,8 @@ const variantOptions = [
 
 export const heroConfigSchema = z
   .object({
-    title: field.text("見出し").pipe(z.string().max(100)),
-    subtitle: field.textarea("サブ見出し").pipe(z.string().max(300)),
+    title: field.text("見出し", { maxLength: 100 }),
+    subtitle: field.textarea("サブ見出し", { maxLength: 300 }),
     backgroundImageUrl: field.image("背景画像"),
     buttons: field.array("ボタン", {
       fields: {

@@ -6,11 +6,12 @@ const heights = ["sm", "md", "lg"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
 
 export const mapConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Location" })
-    .pipe(z.string().max(50)),
-  title: field.text("見出し").pipe(z.string().max(100)),
-  address: field.textarea("住所").pipe(z.string().max(300)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Location",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", { maxLength: 100 }),
+  address: field.textarea("住所", { maxLength: 300 }),
   latitude: field.number("緯度", { min: -90, max: 90 }),
   longitude: field.number("経度", { min: -180, max: 180 }),
   zoom: field.number("ズームレベル", {

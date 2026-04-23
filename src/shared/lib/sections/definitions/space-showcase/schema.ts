@@ -6,12 +6,14 @@ const cardStyles = ["bordered", "shadow", "minimal"] as const;
 const imageAspects = ["4:3", "3:2", "16:9", "1:1"] as const;
 
 export const spaceShowcaseConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Spaces" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "Our Spaces" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Spaces",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "Our Spaces",
+    maxLength: 100,
+  }),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 12,

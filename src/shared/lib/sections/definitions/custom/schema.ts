@@ -6,9 +6,10 @@ const maxWidthOptions = ["sm", "md", "lg", "xl", "full"] as const;
 const paddingOptions = ["none", "sm", "md", "lg"] as const;
 
 export const customConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Contents" })
-    .pipe(z.string().max(50)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Contents",
+    maxLength: 50,
+  }),
   maxWidth: field.select("最大幅", {
     options: maxWidthOptions,
     default: "lg",

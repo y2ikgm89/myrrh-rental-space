@@ -5,12 +5,14 @@ import { field } from "../../field-registry";
 const layouts = ["hero-first", "equal-grid", "icon-left"] as const;
 
 export const featuresConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Features" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "Features" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Features",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "Features",
+    maxLength: 100,
+  }),
   items: field.array("特徴", {
     fields: {
       icon: field.icon("アイコン"),

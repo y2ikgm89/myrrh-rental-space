@@ -6,12 +6,14 @@ const layouts = ["grid", "list"] as const;
 const imageAspects = ["16:9", "4:3", "1:1"] as const;
 
 export const postListConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Blog" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "最新の記事" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Blog",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "最新の記事",
+    maxLength: 100,
+  }),
   maxItems: field.number("最大表示件数", {
     min: 1,
     max: 20,
@@ -22,12 +24,14 @@ export const postListConfigSchema = z.object({
   showViewAllLink: field.boolean("「すべて見る」リンクを表示する", {
     default: true,
   }),
-  viewAllText: field
-    .text("「すべて見る」リンクの文字", { default: "全ての記事" })
-    .pipe(z.string().max(50)),
-  viewAllUrl: field
-    .text("「すべて見る」リンク先 URL", { default: "/posts" })
-    .pipe(z.string().max(200)),
+  viewAllText: field.text("「すべて見る」リンクの文字", {
+    default: "全ての記事",
+    maxLength: 50,
+  }),
+  viewAllUrl: field.text("「すべて見る」リンク先 URL", {
+    default: "/posts",
+    maxLength: 200,
+  }),
   categoryId: z
     .string()
     .uuid({ error: "有効なUUIDを入力してください" })

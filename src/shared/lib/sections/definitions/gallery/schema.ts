@@ -9,10 +9,11 @@ const hoverEffects = ["zoom", "overlay", "none"] as const;
 
 export const galleryConfigSchema = z
   .object({
-    sectionLabel: field
-      .text("セクションラベル", { default: "Gallery" })
-      .pipe(z.string().max(50)),
-    title: field.text("見出し").pipe(z.string().max(100)),
+    sectionLabel: field.text("セクションラベル", {
+      default: "Gallery",
+      maxLength: 50,
+    }),
+    title: field.text("見出し", { maxLength: 100 }),
     images: field.array("画像", {
       fields: {
         url: field.image("画像"),

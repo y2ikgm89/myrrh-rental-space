@@ -6,12 +6,14 @@ const layouts = ["grid", "carousel", "list"] as const;
 const variants = ["default", "card", "minimal"] as const;
 
 export const testimonialConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Testimonials" })
-    .pipe(z.string().max(50)),
-  title: field
-    .text("見出し", { default: "お客様の声" })
-    .pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Testimonials",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", {
+    default: "お客様の声",
+    maxLength: 100,
+  }),
   items: field.array("レビュー", {
     fields: {
       content: field.textarea("レビュー内容"),

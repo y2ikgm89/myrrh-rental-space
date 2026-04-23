@@ -7,11 +7,12 @@ const variants = ["default", "centered", "split"] as const;
 
 export const ctaConfigSchema = z
   .object({
-    sectionLabel: field
-      .text("セクションラベル", { default: "Ready to Begin?" })
-      .pipe(z.string().max(50)),
-    title: field.text("見出し").pipe(z.string().max(100)),
-    description: field.textarea("説明文").pipe(z.string().max(500)),
+    sectionLabel: field.text("セクションラベル", {
+      default: "Ready to Begin?",
+      maxLength: 50,
+    }),
+    title: field.text("見出し", { maxLength: 100 }),
+    description: field.textarea("説明文", { maxLength: 500 }),
     buttons: field.array("ボタン", {
       fields: {
         text: field.text("ボタンの文字"),

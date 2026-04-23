@@ -32,14 +32,19 @@ export const fieldRegistry = z.registry<FieldMeta>();
 // Helper オプション型
 // ─────────────────────────────────────────────────────────────
 
-interface TextOpts {
+interface StringConstraints {
+  readonly minLength?: number;
+  readonly maxLength?: number;
+}
+
+interface TextOpts extends StringConstraints {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
   readonly group?: FieldMeta["group"];
 }
 
-interface TextareaOpts {
+interface TextareaOpts extends StringConstraints {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
@@ -69,11 +74,22 @@ interface SelectOpts<T extends string> {
   readonly group?: FieldMeta["group"];
 }
 
-interface StringFieldOpts {
+interface StringFieldOpts extends StringConstraints {
   readonly placeholder?: string;
   readonly helpText?: string;
   readonly default?: string;
   readonly group?: FieldMeta["group"];
+}
+
+/** string 制約を z.string() に適用する境界ヘルパー */
+function applyStringConstraints(
+  schema: z.ZodString,
+  constraints: StringConstraints,
+): z.ZodString {
+  let s = schema;
+  if (constraints.minLength !== undefined) s = s.min(constraints.minLength);
+  if (constraints.maxLength !== undefined) s = s.max(constraints.maxLength);
+  return s;
 }
 
 interface ArrayItem {
@@ -93,8 +109,7 @@ interface ArrayOpts<TItem extends ArrayItem> {
 export const field = {
   /** 単一行テキスト入力 */
   text(label: string, opts?: TextOpts) {
-    return z
-      .string()
+    return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "text",
@@ -109,8 +124,7 @@ export const field = {
 
   /** 複数行テキスト入力 */
   textarea(label: string, opts?: TextareaOpts) {
-    return z
-      .string()
+    return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "textarea",
@@ -175,8 +189,7 @@ export const field = {
 
   /** カラーピッカー（hex 文字列） */
   color(label: string, opts?: StringFieldOpts) {
-    return z
-      .string()
+    return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "color",
@@ -191,8 +204,7 @@ export const field = {
 
   /** 画像 URL 入力 */
   image(label: string, opts?: StringFieldOpts) {
-    return z
-      .string()
+    return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "image",
@@ -211,9 +223,7 @@ export const field = {
    * `z.string().url()` は空文字を拒否するため、空文字列は `z.literal("")` で別途許可する。
    */
   url(label: string, opts?: StringFieldOpts) {
-    return z
-      .string()
-      .url()
+    return applyStringConstraints(z.string().url(), opts ?? {})
       .or(z.literal(""))
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
@@ -229,8 +239,7 @@ export const field = {
 
   /** アイコン名入力（Tabler Icons 等） */
   icon(label: string, opts?: StringFieldOpts) {
-    return z
-      .string()
+    return applyStringConstraints(z.string(), opts ?? {})
       .default(opts?.default ?? "")
       .register(fieldRegistry, {
         fieldType: "icon",

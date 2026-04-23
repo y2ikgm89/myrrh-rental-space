@@ -7,12 +7,13 @@ const maxWidths = ["sm", "md", "lg", "xl", "full"] as const;
 const borderRadii = ["none", "sm", "lg"] as const;
 
 export const embedConfigSchema = z.object({
-  sectionLabel: field
-    .text("セクションラベル", { default: "Media" })
-    .pipe(z.string().max(50)),
-  title: field.text("見出し").pipe(z.string().max(100)),
+  sectionLabel: field.text("セクションラベル", {
+    default: "Media",
+    maxLength: 50,
+  }),
+  title: field.text("見出し", { maxLength: 100 }),
   embedUrl: field.url("埋め込み URL"),
-  embedCode: field.textarea("埋め込みコード").pipe(z.string().max(10000)),
+  embedCode: field.textarea("埋め込みコード", { maxLength: 10000 }),
   aspectRatio: field.select("アスペクト比", {
     options: aspectRatios,
     default: "16:9",
