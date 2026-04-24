@@ -2432,13 +2432,13 @@ export function PageBuilderEditor({
           ) : null}
 
           {isMultiSelection ? (
-            <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-950">
+                  <p className="text-sm font-semibold text-foreground">
                     {editableSelectedNodeIds.length} nodes selected
                   </p>
-                  <p className="text-xs leading-relaxed text-slate-600">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
                     Ctrl/Cmd/Shift
                     クリックで複数選択します。グループ化と等間隔分布は同じ
                     absolute 親枠内の固定サイズ要素だけに適用されます。

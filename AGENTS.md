@@ -9,7 +9,7 @@
 - ルート `AGENTS.md` を Codex 向けプロジェクト指示の正本にする。長い反復手順はここへ増やさず `.agents/skills/<name>/SKILL.md` に分離する。
 - `.agents/skills/<name>/SKILL.md` は Codex の progressive disclosure 用に保つ。frontmatter は `name` と、適用範囲 / 非適用範囲が明確な `description` のみにする。
 - 明示的に subagent / 並列調査を依頼されたときだけ `.codex/agents/*.toml` の専門エージェントを使う。各 agent は `name` / `description` / `developer_instructions` を必須とし、狭い read-only / verifier 職能を基本にする。
-- `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` と `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
+- `.codex/rules/*.rules` はサンドボックス外コマンドの承認ルール専用。公式上 experimental なので、`prefix_rule` の `pattern` / `decision` / `justification` / `match` / `not_match` だけでコマンド方針を表し、コーディング規約は置かない。
 - `.codex/hooks.json` は空設定にする。hooks は公式上 experimental かつ Windows support が一時無効なので、検証強制は `lefthook` / CI / このファイルの delivery checklist で担保する。
 - `.claude/*` は残置された Claude Code 用資産として扱う。Codex 作業では参照・同期・正本扱いしない。
 - ドキュメント探索中に `CLAUDE.md` や `.claude/*` へのリンクを見つけても、Codex では追跡しない。必要な情報は `AGENTS.md`、`.agents/skills/*`、`docs/architecture/*`、`docs/guides/*` の Codex 向け導線から読む。
@@ -131,13 +131,13 @@ bun run e2e
 
 ## Codex Project Assets
 
-| 用途             | 置き場所                         | 備考                                        |
-| ---------------- | -------------------------------- | ------------------------------------------- |
-| プロジェクト指示 | `AGENTS.md`                      | Codex が作業前に読む正本                    |
-| 繰り返し手順     | `.agents/skills/<name>/SKILL.md` | frontmatter は `name` と `description` のみ |
-| 専門 subagent    | `.codex/agents/*.toml`           | 明示依頼時だけ使う。狭く、証拠ベースにする  |
-| コマンド承認     | `.codex/rules/*.rules`           | `prefix_rule` のみ。coding rules ではない   |
-| hooks            | `.codex/hooks.json`              | 未採用。空設定で維持                        |
+| 用途             | 置き場所                         | 備考                                                |
+| ---------------- | -------------------------------- | --------------------------------------------------- |
+| プロジェクト指示 | `AGENTS.md`                      | Codex が作業前に読む正本                            |
+| 繰り返し手順     | `.agents/skills/<name>/SKILL.md` | frontmatter は `name` と `description` のみ         |
+| 専門 subagent    | `.codex/agents/*.toml`           | 明示依頼時だけ使う。狭く、証拠ベースにする          |
+| コマンド承認     | `.codex/rules/*.rules`           | `prefix_rule` による承認方針。coding rules ではない |
+| hooks            | `.codex/hooks.json`              | 未採用。空設定で維持                                |
 
 ### Repository Skills
 

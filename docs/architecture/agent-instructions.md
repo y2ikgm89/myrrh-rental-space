@@ -14,13 +14,15 @@
 | コマンド承認ルール       | `.codex/rules/*.rules`           | `prefix_rule` による sandbox 外コマンド制御                       |
 | lifecycle hooks          | `.codex/hooks.json`              | Windows では公式上無効。未採用で維持                              |
 
-## 優先順位
+## 読み込み順
 
 1. ユーザーの直接指示
-2. 最も近い `AGENTS.override.md`
-3. ルート `AGENTS.md`
+2. Codex home の `AGENTS.override.md` または `AGENTS.md`
+3. プロジェクトルートから作業ディレクトリまでの各階層にある `AGENTS.override.md` または `AGENTS.md`
 4. 必要時に Codex が選ぶ `.agents/skills/<name>/SKILL.md`
 5. 明示依頼された場合のみ `.codex/agents/*.toml`
+
+同じ階層では `AGENTS.override.md` が `AGENTS.md` より優先される。このリポジトリではルート `AGENTS.md` を恒久的な正本にし、下位 override は必要になるまで追加しない。
 
 `docs/reference/codex-rules/*` は使わない。Codex の rules は `.codex/rules/*.rules` に置く command approval policy だけを指す。
 

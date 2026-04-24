@@ -1032,7 +1032,7 @@ export function PageBuilderCanvas({
         >
           <div
             ref={canvasSurfaceRef}
-            className="relative bg-white shadow-[0_18px_60px_rgba(15,23,42,0.12)] ring-1 ring-slate-200"
+            className="relative bg-card shadow-lg ring-1 ring-border"
             onPointerDown={startMarqueeSelection}
           >
             <FreeformPageRenderer
@@ -1050,10 +1050,10 @@ export function PageBuilderCanvas({
                 className="pointer-events-none absolute inset-0 z-10 opacity-70 mix-blend-multiply"
                 style={{
                   backgroundImage: [
-                    "linear-gradient(to right, rgba(37,99,235,0.08) 1px, transparent 1px)",
-                    "linear-gradient(to bottom, rgba(37,99,235,0.08) 1px, transparent 1px)",
-                    "linear-gradient(to right, rgba(37,99,235,0.15) 1px, transparent 1px)",
-                    "linear-gradient(to bottom, rgba(37,99,235,0.15) 1px, transparent 1px)",
+                    "linear-gradient(to right, color-mix(in oklch, var(--color-primary) 8%, transparent) 1px, transparent 1px)",
+                    "linear-gradient(to bottom, color-mix(in oklch, var(--color-primary) 8%, transparent) 1px, transparent 1px)",
+                    "linear-gradient(to right, color-mix(in oklch, var(--color-primary) 15%, transparent) 1px, transparent 1px)",
+                    "linear-gradient(to bottom, color-mix(in oklch, var(--color-primary) 15%, transparent) 1px, transparent 1px)",
                   ].join(","),
                   backgroundSize: [
                     `${PAGE_BUILDER_SNAP_GRID_SIZE}px ${PAGE_BUILDER_SNAP_GRID_SIZE}px`,
@@ -1071,7 +1071,7 @@ export function PageBuilderCanvas({
                   <div
                     key={`${guide.orientation}:${guide.offset}`}
                     className={cn(
-                      "absolute bg-blue-500/80",
+                      "absolute bg-primary/80",
                       guide.orientation === "vertical"
                         ? "top-0 bottom-0 w-px"
                         : "left-0 right-0 h-px",
@@ -1095,7 +1095,7 @@ export function PageBuilderCanvas({
                     top: `${selectionRect.top}px`,
                     width: `${selectionRect.width}px`,
                     height: `${selectionRect.height}px`,
-                    outline: "2px solid rgb(37 99 235)",
+                    outline: "2px solid var(--color-primary)",
                     outlineOffset: "2px",
                   }}
                 >
@@ -1112,7 +1112,7 @@ export function PageBuilderCanvas({
                       <button
                         type="button"
                         className={cn(
-                          "pointer-events-auto inline-flex h-7 touch-none items-center rounded-md border border-blue-500/30 bg-white px-2 text-[11px] font-medium text-slate-950 shadow-sm",
+                          "pointer-events-auto inline-flex h-7 touch-none items-center rounded-md border border-primary/30 bg-card px-2 text-[11px] font-medium text-foreground shadow-sm",
                           interactionState?.kind === "move"
                             ? "cursor-grabbing"
                             : "cursor-grab",
@@ -1128,14 +1128,14 @@ export function PageBuilderCanvas({
                   {canResizeSelectedNode ? (
                     <button
                       type="button"
-                      className="pointer-events-auto absolute -bottom-2 -right-2 h-4 w-4 touch-none rounded-full border border-blue-500 bg-white shadow-sm cursor-se-resize"
+                      className="pointer-events-auto absolute -bottom-2 -right-2 h-4 w-4 touch-none rounded-full border border-primary bg-card shadow-sm cursor-se-resize"
                       aria-label="ドラッグしてサイズ変更"
                       onPointerDown={(event) =>
                         startInteraction("resize", event)
                       }
                     />
                   ) : null}
-                  <div className="absolute left-2 top-full mt-2 rounded-md border border-slate-950/10 bg-slate-950/90 px-2 py-1 font-mono text-[11px] leading-none text-white shadow-lg">
+                  <div className="absolute left-2 top-full mt-2 rounded-md border border-foreground/10 bg-foreground/90 px-2 py-1 font-mono text-[11px] leading-none text-background shadow-lg">
                     X{" "}
                     {formatPageBuilderCanvasCoordinateLabel(
                       activeSelectionBox.x,
@@ -1160,7 +1160,7 @@ export function PageBuilderCanvas({
             {marqueeRect ? (
               <div className="pointer-events-none absolute inset-0 z-30">
                 <div
-                  className="absolute rounded-md border border-blue-500 bg-blue-500/10 shadow-[0_0_0_1px_rgba(255,255,255,0.9)_inset]"
+                  className="absolute rounded-md border border-primary bg-primary/10 shadow-sm"
                   style={{
                     left: `${marqueeRect.left}px`,
                     top: `${marqueeRect.top}px`,

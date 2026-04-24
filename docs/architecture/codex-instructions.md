@@ -15,7 +15,7 @@ OpenAI Codex 公式ドキュメントに合わせ、Codex 向け instruction ass
 | AGENTS.md      | `AGENTS.md`                      | 常時読むプロジェクト指示。短く、全体制約に絞る                 |
 | Skills         | `.agents/skills/<name>/SKILL.md` | 再利用する作業手順。frontmatter は `name` / `description` のみ |
 | Subagents      | `.codex/agents/*.toml`           | 明示依頼時だけ使う狭い専門ロール                               |
-| Rules          | `.codex/rules/default.rules`     | sandbox 外コマンドの `prefix_rule`。coding rules ではない      |
+| Rules          | `.codex/rules/default.rules`     | sandbox 外コマンド承認の `prefix_rule`。coding rules ではない  |
 | Hooks          | `.codex/hooks.json`              | Windows では公式上無効。現時点では未採用。空設定で維持         |
 | Codex app      | `.codex/config.toml`             | app / CLI で共有する subagent 上限だけ設定                     |
 
@@ -24,7 +24,7 @@ OpenAI Codex 公式ドキュメントに合わせ、Codex 向け instruction ass
 - `AGENTS.md` は Codex 起動時にグローバルから作業ディレクトリまで階層的に連結されるため、このリポジトリではルートに恒久的なプロジェクト制約だけを置く。
 - skills は `name` / `description` metadata で候補化され、必要時だけ `SKILL.md` 本文が読まれるため、description に発火条件と非発火条件を明記する。
 - custom agents は `.codex/agents/*.toml` に 1 ファイル 1 agent で置き、`name` / `description` / `developer_instructions` を必須にする。`model` は必要な場合だけ固定し、通常は親セッションから継承する。
-- rules は experimental な command approval policy として扱い、`prefix_rule` の `match` / `not_match` を小さな仕様テストとして維持する。
+- rules は experimental な command approval policy として扱い、`prefix_rule` の `pattern` / `decision` / `justification` で方針を表し、`match` / `not_match` を小さな仕様テストとして維持する。
 - hooks は experimental かつ Windows support が一時無効なので、Windows 開発が主環境のこのリポジトリでは有効化しない。
 
 ## Local Tooling Notes

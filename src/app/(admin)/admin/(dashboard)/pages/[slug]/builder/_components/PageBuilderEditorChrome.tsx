@@ -169,8 +169,8 @@ function BuilderRailButton({
       className={cn(
         "flex h-14 w-full flex-col items-center justify-center gap-1 border-l-2 text-[11px] font-medium transition-colors",
         isActive
-          ? "border-blue-500 bg-blue-50 text-blue-600"
-          : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+          ? "border-primary bg-accent text-accent-foreground"
+          : "border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground",
       )}
       onClick={() => onSelect(value)}
     >
@@ -189,7 +189,7 @@ export function PageBuilderEditorShell({
 }: PageBuilderEditorShellProps): ReactElement {
   return (
     <div
-      className="fixed inset-0 overflow-auto bg-[#f4f6fb] text-slate-950"
+      className="fixed inset-0 overflow-auto bg-background text-foreground"
       style={{ zIndex: Z_INDEX.editorFullscreen }}
     >
       <div className="flex h-full min-h-[720px] min-w-[1280px] flex-col overflow-hidden">
@@ -257,11 +257,11 @@ export function PageBuilderTopbar({
   onUnpublish,
 }: PageBuilderTopbarProps): ReactElement {
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 text-white">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-sidebar-border bg-sidebar-bg text-sidebar-text">
       <div className="flex h-full min-w-0 items-center">
         <Link
           href="/admin/pages"
-          className="flex h-14 w-14 shrink-0 items-center justify-center border-r border-slate-800 text-xl font-bold tracking-tight hover:bg-slate-900"
+          className="flex h-14 w-14 shrink-0 items-center justify-center border-r border-sidebar-border text-xl font-bold tracking-tight hover:bg-sidebar-nav-hover"
           aria-label="ページ一覧へ戻る"
         >
           S
@@ -269,26 +269,28 @@ export function PageBuilderTopbar({
         <div className="min-w-0 px-4">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold">{pageTitle}</p>
-            <span className="rounded-full bg-blue-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
               Freeform
             </span>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-semibold",
                 isPublished
-                  ? "bg-emerald-500/15 text-emerald-200"
-                  : "bg-slate-700 text-slate-200",
+                  ? "bg-success/15 text-success"
+                  : "bg-sidebar-border text-sidebar-text",
               )}
             >
               {isPublished ? "公開中" : "下書き"}
             </span>
           </div>
-          <p className="truncate text-xs text-slate-400">/{pageSlug}</p>
+          <p className="truncate text-xs text-sidebar-text-muted">
+            /{pageSlug}
+          </p>
         </div>
       </div>
 
       <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-3">
-        <div className="flex items-center rounded-lg border border-slate-700 bg-slate-900 p-1">
+        <div className="flex items-center rounded-lg border border-sidebar-border bg-sidebar-border/40 p-1">
           {BREAKPOINT_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -296,8 +298,8 @@ export function PageBuilderTopbar({
               className={cn(
                 "flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors",
                 breakpoint === option.value
-                  ? "bg-blue-500 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                  ? "bg-primary text-primary-foreground"
+                  : "text-sidebar-text-muted hover:bg-sidebar-nav-hover hover:text-sidebar-text",
               )}
               onClick={() => onBreakpointChange(option.value)}
             >
@@ -307,10 +309,10 @@ export function PageBuilderTopbar({
           ))}
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900 p-1">
+        <div className="flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-border/40 p-1">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-text-muted transition-colors hover:bg-sidebar-nav-hover hover:text-sidebar-text disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="zoom out"
             onClick={() => onZoomStep(-1)}
             disabled={canvasZoom <= PAGE_BUILDER_CANVAS_MIN_ZOOM}
@@ -326,7 +328,7 @@ export function PageBuilderTopbar({
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[88px] border-slate-700 bg-slate-950 text-xs text-white">
+            <SelectTrigger className="h-8 w-[88px] border-sidebar-border bg-sidebar-bg text-xs text-sidebar-text">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -339,7 +341,7 @@ export function PageBuilderTopbar({
           </Select>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-text-muted transition-colors hover:bg-sidebar-nav-hover hover:text-sidebar-text disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="zoom in"
             onClick={() => onZoomStep(1)}
             disabled={canvasZoom >= PAGE_BUILDER_CANVAS_MAX_ZOOM}
@@ -348,10 +350,10 @@ export function PageBuilderTopbar({
           </button>
         </div>
 
-        <div className="flex items-center rounded-lg border border-slate-700 bg-slate-900 p-1">
+        <div className="flex items-center rounded-lg border border-sidebar-border bg-sidebar-border/40 p-1">
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-text-muted transition-colors hover:bg-sidebar-nav-hover hover:text-sidebar-text disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="元に戻す"
             onClick={onUndo}
             disabled={!canUndo || undoDisabled}
@@ -360,7 +362,7 @@ export function PageBuilderTopbar({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-8 w-8 items-center justify-center rounded-md text-sidebar-text-muted transition-colors hover:bg-sidebar-nav-hover hover:text-sidebar-text disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="やり直す"
             onClick={onRedo}
             disabled={!canRedo || redoDisabled}
@@ -373,10 +375,10 @@ export function PageBuilderTopbar({
           className={cn(
             "hidden items-center rounded-full px-2.5 py-1 text-xs font-semibold xl:inline-flex",
             saveStatusMeta.variant === "success"
-              ? "bg-emerald-500/15 text-emerald-200"
+              ? "bg-success/15 text-success"
               : saveStatusMeta.variant === "destructive"
-                ? "bg-red-500/15 text-red-200"
-                : "bg-amber-500/15 text-amber-100",
+                ? "bg-destructive/15 text-destructive"
+                : "bg-warning/15 text-warning",
           )}
         >
           {saveStatusMeta.icon === "loader" ? (
@@ -387,18 +389,18 @@ export function PageBuilderTopbar({
           {saveStatusMeta.label}
         </span>
         {hasValidationErrors ? (
-          <span className="hidden items-center rounded-full bg-red-500/15 px-2.5 py-1 text-xs font-semibold text-red-200 2xl:inline-flex">
+          <span className="hidden items-center rounded-full bg-destructive/15 px-2.5 py-1 text-xs font-semibold text-destructive 2xl:inline-flex">
             <IconAlertCircle className="mr-1.5 h-3.5 w-3.5" />
             入力エラー {validationIssueCount} 件
           </span>
         ) : null}
       </div>
 
-      <div className="flex h-full shrink-0 items-center border-l border-slate-800">
+      <div className="flex h-full shrink-0 items-center border-l border-sidebar-border">
         <Button
           type="button"
           variant="ghost"
-          className="h-full rounded-none px-4 text-slate-200 hover:bg-slate-900 hover:text-white"
+          className="h-full rounded-none px-4 text-sidebar-text hover:bg-sidebar-nav-hover hover:text-sidebar-text"
           asChild
         >
           <Link
@@ -413,7 +415,7 @@ export function PageBuilderTopbar({
         <Button
           type="button"
           variant="ghost"
-          className="h-full rounded-none px-4 text-slate-200 hover:bg-slate-900 hover:text-white"
+          className="h-full rounded-none px-4 text-sidebar-text hover:bg-sidebar-nav-hover hover:text-sidebar-text"
           onClick={onSave}
           disabled={saveDisabled}
         >
@@ -426,7 +428,7 @@ export function PageBuilderTopbar({
           <Button
             type="button"
             variant="ghost"
-            className="h-full rounded-none px-4 text-slate-200 hover:bg-slate-900 hover:text-white"
+            className="h-full rounded-none px-4 text-sidebar-text hover:bg-sidebar-nav-hover hover:text-sidebar-text"
             onClick={onUnpublish}
             disabled={unpublishDisabled}
           >
@@ -440,7 +442,7 @@ export function PageBuilderTopbar({
         ) : null}
         <Button
           type="button"
-          className="h-full rounded-none bg-blue-500 px-6 text-white hover:bg-blue-600"
+          className="h-full rounded-none bg-primary px-6 text-primary-foreground hover:bg-primary/90"
           onClick={onPublish}
           disabled={publishDisabled}
         >
@@ -470,7 +472,7 @@ export function PageBuilderSyncConflictBanner({
   onReloadLatest,
 }: PageBuilderSyncConflictBannerProps): ReactElement {
   return (
-    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
       <div className="flex min-w-0 items-center gap-2">
         <IconAlertCircle className="h-4 w-4 shrink-0" />
         <span className="font-medium">
@@ -563,7 +565,7 @@ export function PageBuilderWorkspacePanel({
       <nav
         role="tablist"
         aria-label="Builder workspace"
-        className="flex w-20 shrink-0 flex-col border-r border-slate-200 bg-white"
+        className="flex w-20 shrink-0 flex-col border-r border-border bg-card"
       >
         {RAIL_ITEMS.map((item) => (
           <BuilderRailButton
@@ -575,21 +577,21 @@ export function PageBuilderWorkspacePanel({
             onSelect={onTabChange}
           />
         ))}
-        <div className="mt-auto border-t border-slate-200 p-2 text-center text-[11px] font-medium text-slate-500">
+        <div className="mt-auto border-t border-border p-2 text-center text-[11px] font-medium text-muted-foreground">
           {nodeCount}
           <br />
           nodes
         </div>
       </nav>
 
-      <aside className="flex min-w-0 flex-1 flex-col border-r border-slate-200 bg-white">
-        <div className="shrink-0 border-b border-slate-200 px-4 py-3">
+      <aside className="flex min-w-0 flex-1 flex-col border-r border-border bg-card">
+        <div className="shrink-0 border-b border-border px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Workspace
               </p>
-              <h2 className="text-base font-semibold text-slate-950">
+              <h2 className="text-base font-semibold text-foreground">
                 {getWorkspaceTitle(tab)}
               </h2>
             </div>
@@ -608,7 +610,7 @@ export function PageBuilderWorkspacePanel({
           ) : null}
           {tab === "layers" ? (
             <div className="space-y-3">
-              <p className="text-xs leading-relaxed text-slate-500">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 同じ親ノード内ではドラッグで順序変更できます。表示と lock
                 は現在の breakpoint に対して保存されます。
               </p>
@@ -638,7 +640,7 @@ export function PageBuilderWorkspacePanel({
           ) : null}
           {tab === "revisions" ? (
             <div className="space-y-3">
-              <p className="text-xs leading-relaxed text-slate-500">
+              <p className="text-xs leading-relaxed text-muted-foreground">
                 復元すると現在の draft を置き換え、新しい draft revision
                 を作成します。
               </p>
@@ -703,18 +705,18 @@ export function PageBuilderCanvasStage({
   return (
     <main
       className={cn(
-        "flex min-w-0 flex-1 flex-col bg-[#eef0f5]",
+        "flex min-w-0 flex-1 flex-col bg-muted",
         hasSyncConflict && "pointer-events-none opacity-60",
       )}
     >
-      <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-200 bg-white/80 px-5 backdrop-blur">
+      <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-card/80 px-5 backdrop-blur">
         <div>
-          <p className="text-sm font-semibold text-slate-950">Canvas</p>
-          <p className="text-xs text-slate-500">
+          <p className="text-sm font-semibold text-foreground">Canvas</p>
+          <p className="text-xs text-muted-foreground">
             {breakpoint} / {breakpointWidth}px / zoom {zoom}%
           </p>
         </div>
-        <p className="hidden text-xs text-slate-500 xl:block">
+        <p className="hidden text-xs text-muted-foreground xl:block">
           Ctrl/Cmd+S 保存 / Ctrl/Cmd+Z Undo / Arrow 移動 / G Grid / Shift
           で吸着OFF
         </p>
@@ -725,8 +727,8 @@ export function PageBuilderCanvasStage({
           className={cn(
             "h-8 shrink-0 text-xs",
             showGrid
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "border-input bg-card text-muted-foreground hover:bg-secondary",
           )}
           onClick={() => onGridVisibilityChange(!showGrid)}
         >
@@ -773,20 +775,20 @@ export function PageBuilderInspectorPanel({
   return (
     <aside
       className={cn(
-        "flex w-[380px] shrink-0 flex-col border-l border-slate-200 bg-white",
+        "flex w-[380px] shrink-0 flex-col border-l border-border bg-card",
         hasSyncConflict && "pointer-events-none opacity-60",
       )}
     >
-      <div className="shrink-0 border-b border-slate-200 px-5 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+      <div className="shrink-0 border-b border-border px-5 py-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Inspector
         </p>
         <div className="mt-1 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-slate-950">
+            <h2 className="truncate text-base font-semibold text-foreground">
               {nodeName}
             </h2>
-            <p className="text-xs text-slate-500">{nodeTypeLabel}</p>
+            <p className="text-xs text-muted-foreground">{nodeTypeLabel}</p>
           </div>
           <Badge variant="secondary">{breakpoint}</Badge>
         </div>

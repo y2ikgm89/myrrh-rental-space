@@ -4,7 +4,7 @@ This directory contains Codex-native project configuration. It does not depend o
 
 - `config.toml`: project subagent concurrency limits.
 - `agents/*.toml`: project custom agents. Filenames match each agent `name`; Codex only spawns them when explicitly asked.
-- `rules/default.rules`: experimental command approval policy for commands requested outside the sandbox. Keep rules limited to `prefix_rule` entries with `match` / `not_match` examples.
+- `rules/default.rules`: experimental command approval policy for commands requested outside the sandbox. Keep rules limited to `prefix_rule` entries with `pattern`, `decision`, `justification`, and `match` / `not_match` examples.
 - `hooks.json`: intentionally empty. Codex hooks are experimental and currently disabled on Windows; validation is enforced through `AGENTS.md`, `lefthook`, and CI instead.
 
 Do not put coding standards in `.codex/rules`; Codex rules are command approval rules.

@@ -82,6 +82,33 @@ prefix_rule(
     justification = "Read-only validation for Codex rules files.",
     match = [
         "codex execpolicy check --pretty --rules .codex/rules/default.rules -- bun run validate",
+        "codex execpolicy check --pretty --rules .codex/rules/default.rules -- git commit -m docs",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "add"],
+    decision = "prompt",
+    justification = "Staging writes the git index and may include user work; confirm the requested scope before running outside the sandbox.",
+    match = [
+        "git add -A",
+        "git add AGENTS.md .codex/rules/default.rules",
+    ],
+    not_match = [
+        "git commit -m docs",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "commit"],
+    decision = "prompt",
+    justification = "Creating a commit changes repository history and should happen only when the user explicitly requests it.",
+    match = [
+        "git commit -m docs",
+        "git commit -m \"chore: align codex assets\"",
+    ],
+    not_match = [
+        "git add -A",
     ],
 )
 

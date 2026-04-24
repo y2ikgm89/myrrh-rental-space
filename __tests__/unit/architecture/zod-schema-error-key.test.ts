@@ -1,6 +1,6 @@
 /**
  * Zod 4: スキーマ引数で非推奨の `message:` が src に残っていないことを検証する。
- * プロジェクトルールは `{ error: "..." }` 形式（.claude/rules/zod-patterns.md）。
+ * AGENTS.md §Required Coding Rules: `{ error: "..." }` 形式。
  */
 
 import { describe, expect, test } from "bun:test";

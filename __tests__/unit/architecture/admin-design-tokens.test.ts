@@ -2,7 +2,7 @@
  * 管理画面: admin-ui-patterns で禁止されている Tailwind パレット直指定が
  * src/app/(admin) に混入していないことを静的に検証する。
  *
- * @see .claude/rules/frontend/admin-ui-patterns.md（セマンティックカラートークン）
+ * @see AGENTS.md §Required Coding Rules（セマンティックトークン）
  */
 
 import { describe, expect, test } from "bun:test";
