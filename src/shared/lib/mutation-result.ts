@@ -1,5 +1,6 @@
 export type MutationError = {
   readonly error: string;
+  readonly code?: string;
   readonly fieldErrors?: Record<string, string[]>;
 };
 
@@ -8,8 +9,13 @@ export type MutationResult<T = null> = T | MutationError;
 export function createMutationError(
   error: string,
   fieldErrors?: Record<string, string[]>,
+  code?: string,
 ): MutationError {
-  return fieldErrors ? { error, fieldErrors } : { error };
+  return {
+    error,
+    ...(fieldErrors ? { fieldErrors } : {}),
+    ...(code ? { code } : {}),
+  };
 }
 
 export function isMutationError(result: unknown): result is MutationError {

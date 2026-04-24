@@ -1,6 +1,6 @@
 # 開発ガイド
 
-開発者向けの補助ガイドです。実装ルールの正本は `docs/reference/codex-rules/*` と `AGENTS.md` を参照してください。
+開発者向けの補助ガイドです。Codex 向け実装ルールの正本は `AGENTS.md` と `.agents/skills/*` を参照してください。
 
 ## ガイド一覧
 
@@ -61,4 +61,4 @@ export async function updateItem(input: unknown) {
 
 - [アーキテクチャ](../architecture/README.md)
 - [セキュリティ](../security/README.md)
-- [Codex Rules](../reference/codex-rules/)
+- [Codex Instruction Architecture](../architecture/codex-instructions.md)

@@ -11,6 +11,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactElement, ReactNode } from "react";
 import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
 import { cn } from "@/shared/lib/cn";
+import { getAppUrl } from "@/shared/lib/constants";
 import "./_styles/admin.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -27,6 +28,7 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getAppUrl()),
   title: {
     default: "管理画面",
     template: "%s | 管理画面",

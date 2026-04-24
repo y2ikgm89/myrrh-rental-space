@@ -88,31 +88,38 @@ export function LoginForm(): ReactElement {
     // Better Auth 公式推奨: fetchOptions.onSuccess / onError でハンドリング。
     // result.error のみでは HTTP 429 等が Promise サイレントに処理されてしまう。
     // https://better-auth.com/docs/concepts/client#error-handling
-    await signIn.email({
-      email: validatedEmail,
-      password: validatedPassword,
-      fetchOptions: {
-        onSuccess: () => {
-          if (rememberMe) {
-            localStorage.setItem(STORAGE_KEY, validatedEmail);
-          } else {
-            localStorage.removeItem(STORAGE_KEY);
-          }
-          router.push("/admin");
-          router.refresh();
+    try {
+      await signIn.email({
+        email: validatedEmail,
+        password: validatedPassword,
+        fetchOptions: {
+          onSuccess: () => {
+            if (rememberMe) {
+              localStorage.setItem(STORAGE_KEY, validatedEmail);
+            } else {
+              localStorage.removeItem(STORAGE_KEY);
+            }
+            router.push("/admin");
+            router.refresh();
+          },
+          onError: (ctx) => {
+            if (ctx.response.status === 429) {
+              setError(
+                "リクエストが多すぎます。しばらく待ってからお試しください。",
+              );
+            } else {
+              setError("メールアドレスまたはパスワードが正しくありません");
+            }
+            setIsLoading(false);
+          },
         },
-        onError: (ctx) => {
-          if (ctx.response.status === 429) {
-            setError(
-              "リクエストが多すぎます。しばらく待ってからお試しください。",
-            );
-          } else {
-            setError("メールアドレスまたはパスワードが正しくありません");
-          }
-          setIsLoading(false);
-        },
-      },
-    });
+      });
+    } catch {
+      setError(
+        "ログインに失敗しました。通信環境を確認して再度お試しください。",
+      );
+      setIsLoading(false);
+    }
   };
 
   return (

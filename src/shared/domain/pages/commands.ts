@@ -16,6 +16,8 @@ import {
   type UpdatePageSeoInput,
 } from "@/shared/lib/validations/page";
 import type { PageHero } from "@/shared/lib/sections/page-hero/schema";
+import { createDefaultPageBuilderDocument } from "@/shared/lib/page-builder/default-document";
+import { clonePrismaInputJson } from "@/shared/db/prisma-input-json";
 
 function normalizeNullableString(
   value: string | null | undefined,
@@ -145,13 +147,41 @@ export async function createPageCommand(
 ): Promise<{ slug: string }> {
   await ensurePageSlugAvailable(input.slug);
 
+  const initialDocument = createDefaultPageBuilderDocument(input.title);
+  const publishedAt = input.isPublished ? new Date() : null;
+  const freeformStateData = input.isPublished
+    ? {
+        draftDocument: clonePrismaInputJson(
+          initialDocument,
+          "初期ページビルダードキュメントが不正です",
+        ),
+        draftVersion: 1,
+        publishedDocument: clonePrismaInputJson(
+          initialDocument,
+          "初期ページビルダードキュメントが不正です",
+        ),
+        publishedVersion: 1,
+        lastPublishedAt: publishedAt,
+      }
+    : {
+        draftDocument: clonePrismaInputJson(
+          initialDocument,
+          "初期ページビルダードキュメントが不正です",
+        ),
+        draftVersion: 1,
+        lastPublishedAt: publishedAt,
+      };
   const page = await prisma.page.create({
     data: {
       slug: input.slug,
       title: input.title,
       description: normalizeNullableString(input.description),
       isPublished: input.isPublished,
+      publishedAt,
       isActive: true,
+      freeformState: {
+        create: freeformStateData,
+      },
     },
     select: { slug: true },
   });

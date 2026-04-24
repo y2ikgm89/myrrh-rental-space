@@ -7,11 +7,11 @@
  * 階層構造（下から上へ）:
  * - IconLayout (10-19): サイドバー・ヘッダーなどのページレイアウト
  * - Interactive (20-39): ドロップダウン・ポップオーバー
- * - Overlay (40-49): モーダル背景など
- * - Modal (50-59): ダイアログ・モーダル
+ * - Overlay (40-49): ページ内オーバーレイ、モバイルドロワー
  * - Editor (60-79): エディター専用レイヤー
- * - Fullscreen (80-89): フルスクリーンモード
- * - System (90-99): トースト・ツールチップなど最上位
+ * - Fullscreen (80-84): フルスクリーンモード
+ * - Dialog (85-94): ダイアログ・モーダル
+ * - System (95-99): トースト・ツールチップなど最上位
  *
  * @example
  * import { Z_INDEX } from '@/admin/lib/styles/z-index'
@@ -38,9 +38,8 @@ export const Z_INDEX = {
 
   // Overlay layers (40-49)
   overlay: 40,
-
-  // Dialog layers (50-59) - ダイアログ（HTML <dialog> / WAI-ARIA準拠）
-  dialog: 50,
+  /** モバイルサイドバー本体 - オーバーレイより上に置く */
+  sidebarDrawer: 45,
 
   // Editor layers (60-79) - エディター専用
   editorCanvas: 60,
@@ -50,6 +49,10 @@ export const Z_INDEX = {
 
   // Fullscreen layers (80-89)
   editorFullscreen: 80,
+
+  // Dialog layers (85-94) - body Portal でも fullscreen editor より上に出す
+  dialogOverlay: 85,
+  dialog: 90,
 
   // System layers (90-99) - 最上位システム要素
   toast: 95,

@@ -9,12 +9,14 @@ interface CustomerTypeToggleProps {
   readonly value: CustomerType;
   readonly onChange: (value: CustomerType) => void;
   readonly id?: string;
+  readonly disabled?: boolean;
 }
 
 export function CustomerTypeToggle({
   value,
   onChange,
   id = "customer-type",
+  disabled = false,
 }: CustomerTypeToggleProps): ReactElement {
   return (
     <fieldset>
@@ -31,9 +33,10 @@ export function CustomerTypeToggle({
           type="button"
           role="radio"
           aria-checked={value === CustomerType.PERSONAL}
+          disabled={disabled}
           onClick={() => onChange(CustomerType.PERSONAL)}
           className={cn(
-            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
+            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
             value === CustomerType.PERSONAL
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
@@ -47,9 +50,10 @@ export function CustomerTypeToggle({
           type="button"
           role="radio"
           aria-checked={value === CustomerType.CORPORATE}
+          disabled={disabled}
           onClick={() => onChange(CustomerType.CORPORATE)}
           className={cn(
-            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200",
+            "flex items-center justify-center gap-2 border px-4 py-2.5 text-sm transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50",
             value === CustomerType.CORPORATE
               ? "border-accent bg-accent/5 text-foreground"
               : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",

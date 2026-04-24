@@ -19,4 +19,4 @@
 
 ## RBAC / サーバー側
 
-- 管理系 mutation は `executeAdminMutationResult` + `checkPermission` パターン（[auth-patterns.md](../../.claude/rules/auth-patterns.md)）。
+- 管理系 mutation は `executeAdminMutationResult` + `checkPermission` パターン。Codex では [`auth-rbac-change`](../../.agents/skills/auth-rbac-change/SKILL.md) を入口にする。

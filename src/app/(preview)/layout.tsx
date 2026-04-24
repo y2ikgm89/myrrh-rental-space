@@ -5,6 +5,7 @@ import { Cormorant_Garamond, Noto_Sans_JP } from "next/font/google";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { cn } from "@/shared/lib/cn";
+import { getAppUrl } from "@/shared/lib/constants";
 import "../(public)/_styles/public.css";
 
 const notoSansJP = Noto_Sans_JP({
@@ -20,6 +21,7 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getAppUrl()),
   robots: { index: false, follow: false },
 };
 

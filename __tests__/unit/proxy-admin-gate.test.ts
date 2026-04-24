@@ -40,4 +40,24 @@ describe("proxy admin gate", () => {
       "https://example.com/admin/login",
     );
   });
+
+  test("公開ページは frame-ancestors 'none' で埋め込み禁止にする", async () => {
+    const response = await proxy(new NextRequest("https://example.com/spaces"));
+    const csp = response.headers.get("Content-Security-Policy");
+
+    expect(response.status).toBe(200);
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(response.headers.get("X-Frame-Options")).toBeNull();
+  });
+
+  test("ページプレビューは同一オリジン iframe を許可する", async () => {
+    const response = await proxy(
+      new NextRequest("https://example.com/preview/pages/about"),
+    );
+    const csp = response.headers.get("Content-Security-Policy");
+
+    expect(response.status).toBe(200);
+    expect(csp).toContain("frame-ancestors 'self'");
+    expect(response.headers.get("X-Frame-Options")).toBeNull();
+  });
 });

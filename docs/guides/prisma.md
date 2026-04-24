@@ -1,19 +1,22 @@
 # Prisma ガイド
 
-> このページは **リダイレクトのみ**。正本は以下を参照してください。
+> Codex では `CLAUDE.md` / `.claude/*` を追跡しない。Prisma 変更は Codex skill を入口にする。
 
-## 正本
+## Codex 正本
 
-| 対象                                                                           | 正本                                                                                                                          |
-| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Prisma 7.x 実装パターン / WASM runtime / `$extends` / enum 運用                | [`.claude/rules/prisma-patterns.md`](../../.claude/rules/prisma-patterns.md)                                                  |
-| `enums/prisma-types` re-export gateway                                         | [ADR 0002](../architecture/decisions/0002-prisma-type-only-gateway.md)                                                        |
-| CLI フラグ（7.7 で `migrate diff --to-schema` / `--shadow-database-url` 削除） | [`CLAUDE.md` §Git / Migration](../../CLAUDE.md#git--migration) + [`.claude/rules/gotchas.md`](../../.claude/rules/gotchas.md) |
-| マイグレーション運用（`prisma-migration` skill）                               | [`.claude/skills/prisma-migration/SKILL.md`](../../.claude/skills/prisma-migration/SKILL.md)                                  |
-| Cloud Run / Cloud Build での WASM 起動                                         | [`.claude/rules/ops/deployment-patterns.md`](../../.claude/rules/ops/deployment-patterns.md)                                  |
-| Prisma enum 追加の 8 箇所更新                                                  | [`.claude/skills/add-prisma-enum/SKILL.md`](../../.claude/skills/add-prisma-enum/SKILL.md)                                    |
+| 対象                                                            | Codex で読む場所                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Prisma 7.x 実装パターン / WASM runtime / `$extends` / enum 運用 | [`prisma-data-change`](../../.agents/skills/prisma-data-change/SKILL.md)         |
+| `enums/prisma-types` re-export gateway                          | [ADR 0002](../architecture/decisions/0002-prisma-type-only-gateway.md)           |
+| CLI フラグ / migration / seed / generated client                | [`prisma-data-change`](../../.agents/skills/prisma-data-change/SKILL.md)         |
+| Auth adapter と Better Auth 境界                                | [`auth-rbac-change`](../../.agents/skills/auth-rbac-change/SKILL.md)             |
+| Cloud Run / Cloud Build での WASM 起動                          | [`docs/operations/`](../operations/) と [`docs/architecture/`](../architecture/) |
+| Prisma enum 追加                                                | [`prisma-data-change`](../../.agents/skills/prisma-data-change/SKILL.md)         |
+
+## Claude Code Legacy
+
+`.claude/rules/prisma-patterns.md` や `.claude/skills/prisma-migration` は Claude Code 用に残置する。Codex 作業では参照しない。
 
 ## 補足
 
 - 使用バージョンの SSoT は `package.json` + `bun.lock`
-- 旧本文（2026-01-19 更新、Prisma 7.2.0 前提）は drift のため撤去。`git log` で過去版を参照できます

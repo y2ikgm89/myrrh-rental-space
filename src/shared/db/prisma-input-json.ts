@@ -21,7 +21,11 @@ export function isPrismaInputJsonValue(
     return value.every(isPrismaInputJsonValue);
   }
 
-  if (value === null || typeof value !== "object") {
+  if (value === null) {
+    return true;
+  }
+
+  if (typeof value !== "object") {
     return false;
   }
 

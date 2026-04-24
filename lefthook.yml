@@ -6,7 +6,7 @@
 #
 # スキップ:
 #   LEFTHOOK=0 git commit   # 全 hook スキップ
-#   git commit --no-verify  # 非推奨（CLAUDE.md で deny）
+#   git commit --no-verify  # 非推奨
 #
 # 設計原則:
 # - pre-commit は staged files のみを対象（高速）
@@ -36,7 +36,7 @@ pre-commit:
       run: bunx prettier --write --ignore-unknown {staged_files}
       stage_fixed: true
 
-    # 保護ファイルへのコミット防止（CLAUDE.md ハードルール）
+    # 保護ファイルへのコミット防止
     # 実装: scripts/check-protected-files.sh
     # - .env*                    常にブロック（秘密情報）
     # - prisma/migrations/*.sql  常にブロック（生成物）

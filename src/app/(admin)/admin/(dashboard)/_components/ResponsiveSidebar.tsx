@@ -156,7 +156,9 @@ export function ResponsiveSidebar({ userInfo }: ResponsiveSidebarProps) {
       {/* サイドバー */}
       <aside
         className={classes.sidebar()}
-        style={{ zIndex: Z_INDEX.sidebar }}
+        style={{
+          zIndex: effectiveIsMobile ? Z_INDEX.sidebarDrawer : Z_INDEX.sidebar,
+        }}
         aria-label="メインナビゲーション"
       >
         {/* 閉じるボタン (モバイル) */}

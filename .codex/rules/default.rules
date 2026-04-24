@@ -1,0 +1,133 @@
+# Project-local Codex command approval rules.
+# Rules are experimental and only control commands Codex requests outside the sandbox.
+# Keep coding standards in AGENTS.md or .agents/skills, not in this file.
+
+prefix_rule(
+    pattern = ["bun", "run", "validate"],
+    decision = "allow",
+    justification = "Repository minimum validation gate before reporting completion.",
+    match = [
+        "bun run validate",
+    ],
+    not_match = [
+        "bun run build",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "build"],
+    decision = "allow",
+    justification = "Required release and PR readiness check for this repository.",
+    match = [
+        "bun run build",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "db:generate"],
+    decision = "allow",
+    justification = "Prisma client generation is a routine prerequisite for type-checking and builds.",
+    match = [
+        "bun run db:generate",
+    ],
+    not_match = [
+        "bunx --bun prisma migrate dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "test"],
+    decision = "allow",
+    justification = "Targeted Bun tests are safe and expected during development.",
+    match = [
+        "bun test __tests__/unit/lib/page-builder",
+        "bun test __tests__/unit/architecture-boundaries.test.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "test:unit"],
+    decision = "allow",
+    justification = "Unit test suite is expected during repository validation.",
+    match = [
+        "bun run test:unit",
+    ],
+    not_match = [
+        "bun run test:integration",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "test:integration"],
+    decision = "prompt",
+    justification = "Integration tests may depend on local database and environment state; confirm before running outside the sandbox.",
+    match = [
+        "bun run test:integration",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bun", "run", "e2e"],
+    decision = "prompt",
+    justification = "E2E may use browsers, local servers, and test artifacts; confirm before running outside the sandbox.",
+    match = [
+        "bun run e2e",
+        "bun run e2e -- e2e/authenticated/admin/page-builder.spec.ts",
+    ],
+)
+
+prefix_rule(
+    pattern = ["codex", "execpolicy", "check"],
+    decision = "allow",
+    justification = "Read-only validation for Codex rules files.",
+    match = [
+        "codex execpolicy check --pretty --rules .codex/rules/default.rules -- bun run validate",
+    ],
+)
+
+prefix_rule(
+    pattern = ["bunx", "--bun", "prisma", "migrate", "dev"],
+    decision = "prompt",
+    justification = "Prisma migrate dev can create migration files and change the development database.",
+    match = [
+        "bunx --bun prisma migrate dev",
+        "bunx --bun prisma migrate dev --name add_freeform_page_builder",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Never discard user or agent worktree changes. Inspect and revert only explicit files when the user requests it.",
+    match = [
+        "git reset --hard",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "forbidden",
+    justification = "Never remove untracked files broadly. Inspect targets and remove only explicitly approved paths.",
+    match = [
+        "git clean -fd",
+        "git clean -fdx",
+    ],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Recursive deletion must not be approved by broad prefix rule. Use a reviewed, explicit path-specific command instead.",
+    match = [
+        "rm -rf .next",
+    ],
+)
+
+prefix_rule(
+    pattern = ["Remove-Item"],
+    decision = "prompt",
+    justification = "PowerShell deletion commands must be reviewed with explicit paths.",
+    match = [
+        "Remove-Item -Recurse .next",
+    ],
+)

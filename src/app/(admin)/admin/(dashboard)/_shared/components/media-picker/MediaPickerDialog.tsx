@@ -13,6 +13,7 @@ import { LibraryTab, UrlTab, UploadTab } from "./tabs";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   Button,
@@ -109,6 +110,9 @@ export function MediaPickerDialog({
         {/* Header - pr-12 でDialogContent内蔵の X ボタンとの重複を防ぐ */}
         <DialogHeader className="shrink-0 border-b p-4 pr-12">
           <DialogTitle>メディアを選択</DialogTitle>
+          <DialogDescription className="sr-only">
+            メディアライブラリから画像を検索して選択するか、新しい画像をアップロードします。
+          </DialogDescription>
         </DialogHeader>
 
         {/* Tabs */}

@@ -54,7 +54,7 @@ import {
 } from "@/shared/domain/settings/queries/site";
 import { MaintenancePage } from "@/public/components/maintenance-page";
 import { getAnalyticsConfig } from "@/shared/lib/analytics/config";
-import { SITE_DEFAULTS } from "@/shared/lib/constants";
+import { getBaseUrl, SITE_DEFAULTS } from "@/shared/lib/constants";
 import { getPublicTaxSettings } from "@/shared/domain/settings/queries/tax";
 import { TaxSettingsProvider } from "@/public/contexts/tax-settings";
 import { cn } from "@/shared/lib/cn";
@@ -73,6 +73,7 @@ const cormorantGaramond = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getBaseUrl()),
   title: {
     default: SITE_DEFAULTS.name,
     template: `%s | ${SITE_DEFAULTS.name}`,

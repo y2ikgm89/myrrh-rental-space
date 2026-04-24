@@ -953,14 +953,46 @@ model Page {
   updatedAt          DateTime     @updatedAt
 
   // Relations
-  sections    Section[]
-  assignments UserPageAssignment[]
-  pageStyle   SectionStyle?        @relation("PageDefaultStyle", fields: [pageStyleId], references: [id], onDelete: SetNull)
+  sections         Section[]
+  assignments      UserPageAssignment[]
+  pageStyle        SectionStyle?       @relation("PageDefaultStyle", fields: [pageStyleId], references: [id], onDelete: SetNull)
+  freeformState    PageFreeformState?
+  freeformRevisions PageFreeformRevision[]
 
   @@index([isPublished, isActive])
   @@index([isSystemPage])
   @@index([pageStyleId])
   @@map("pages")
+}
+
+model PageFreeformState {
+  pageId            String    @id @db.Uuid
+  draftDocument     Json
+  publishedDocument Json?
+  draftVersion      Int       @default(1)
+  publishedVersion  Int?
+  lastPublishedAt   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_freeform_states")
+}
+
+model PageFreeformRevision {
+  id          String   @id @default(uuid()) @db.Uuid
+  pageId      String   @db.Uuid
+  version     Int
+  kind        String   @db.VarChar(32)
+  document    Json
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, version])
+  @@map("page_freeform_revisions")
 }
 
 /// 統一セクション（ホームページ + カスタムページ共通）

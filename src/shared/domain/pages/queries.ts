@@ -30,6 +30,7 @@ export type PublicPage = {
   readonly slug: string;
   readonly title: string;
   readonly description: string | null;
+  readonly isSystemPage: boolean;
   readonly pageStyle: PublicSectionStyle | null;
 };
 
@@ -53,6 +54,7 @@ export async function getPublicPage(slug: string): Promise<PublicPage | null> {
           slug: true,
           title: true,
           description: true,
+          isSystemPage: true,
           pageStyle: {
             select: {
               spacing: true,

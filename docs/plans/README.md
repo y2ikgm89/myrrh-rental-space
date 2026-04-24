@@ -28,7 +28,7 @@ ls docs/plans/*.md docs/superpowers/plans/*.md 2>/dev/null \
 | 実行（別）   | `superpowers:executing-plans`                                                  | —                                                       |
 | 完了後       | **プランファイルを削除** — 恒久決定は [ADR](../architecture/decisions/) に昇格 | git log: `git log --all --diff-filter=D -- docs/plans/` |
 
-詳細手順は [`CLAUDE.md`](./CLAUDE.md)。
+Codex 作業では [`AGENTS.md`](../../AGENTS.md) と `.agents/skills` を入口にする。`docs/plans/CLAUDE.md` は Claude Code 用 legacy reference として残置するが、Codex 作業では参照しない。
 
 ---
 

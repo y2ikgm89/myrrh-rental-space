@@ -4,6 +4,7 @@ import { prisma } from "@/shared/db/prisma";
 import type { Prisma } from "@generated/prisma/client";
 import { parseStringArray } from "@/shared/lib/json-validators";
 import type { MediaType, MediaUsage } from "@generated/prisma/enums";
+import type { PageBuilderResolvedMedia } from "@/shared/lib/page-builder/media";
 
 function transformMedia(media: {
   id: string;
@@ -42,6 +43,24 @@ function transformMedia(media: {
     uploader: media.uploader
       ? { id: media.uploader.id, name: media.uploader.name }
       : null,
+  };
+}
+
+function transformPageBuilderMedia(media: {
+  id: string;
+  url: string;
+  alt: string | null;
+  filename: string;
+  width: number | null;
+  height: number | null;
+}): PageBuilderResolvedMedia {
+  return {
+    id: media.id,
+    url: media.url,
+    alt: media.alt,
+    filename: media.filename,
+    width: media.width,
+    height: media.height,
   };
 }
 
@@ -151,4 +170,30 @@ export async function getMediaByIdQuery(id: string) {
   });
 
   return media ? transformMedia(media) : null;
+}
+
+export async function getMediaByIdsQuery(
+  ids: readonly string[],
+): Promise<PageBuilderResolvedMedia[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const media = await prisma.media.findMany({
+    where: {
+      id: { in: [...ids] },
+      isActive: true,
+      type: "IMAGE",
+    },
+    select: {
+      id: true,
+      url: true,
+      alt: true,
+      filename: true,
+      width: true,
+      height: true,
+    },
+  });
+
+  return media.map(transformPageBuilderMedia);
 }

@@ -8,7 +8,7 @@
  * Pageモデルが存在しなければ自動作成します。
  */
 
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { IconExternalLink } from "@tabler/icons-react";
 import {
   getPageForEdit,
@@ -48,6 +48,10 @@ export default async function EditPagePage({
 
   if (!page) {
     notFound();
+  }
+
+  if (!page.isSystem) {
+    redirect(`/admin/pages/${slug}/builder`);
   }
 
   return (

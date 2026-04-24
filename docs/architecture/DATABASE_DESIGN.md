@@ -1,6 +1,6 @@
 # データベース設計
 
-> **Note**: このドキュメントには詳細なデータベーススキーマが記載されています。概要については [CLAUDE.md](../CLAUDE.md) を参照してください。
+> **Note**: このドキュメントには詳細なデータベーススキーマが記載されています。Codex 作業では [`AGENTS.md`](../../AGENTS.md) と [`prisma-data-change`](../../.agents/skills/prisma-data-change/SKILL.md) を入口にしてください。
 
 ---
 
@@ -776,7 +776,7 @@ try {
 
 ### プロジェクトドキュメント
 
-- [`CLAUDE.md`](../CLAUDE.md) - プロジェクト全体の仕様書（Prisma設定）
+- [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト指示
 - [`API.md`](./API.md) - API仕様
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 

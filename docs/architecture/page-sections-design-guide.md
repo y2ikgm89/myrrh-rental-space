@@ -189,5 +189,6 @@ bun run build
 
 ## 参考
 
-- `.claude/rules/tailwind-patterns.md` - Tailwind CSSルール
-- `.claude/rules/ui-ux-patterns.md` - UI/UXガイドライン
+- `AGENTS.md` - Tailwind CSS / UI 実装の共通ルール
+- `.agents/skills/public-site-change/SKILL.md` - 公開ページ UI 変更の Codex skill
+- `.claude/rules/tailwind-patterns.md` / `.claude/rules/ui-ux-patterns.md` - Claude Code 用 legacy reference。Codex 作業では参照しない

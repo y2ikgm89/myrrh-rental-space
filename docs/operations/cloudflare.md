@@ -317,7 +317,7 @@ Cloudflare Dashboard → Caching → Configuration → Cache Rules
 
 ### プロジェクトドキュメント
 
-- [`CLAUDE.md`](../../CLAUDE.md) - プロジェクト概要
+- [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト概要
 - [`DEPLOYMENT.md`](./DEPLOYMENT.md) - デプロイメント手順
 - [`docs/architecture/`](../architecture/) - システムアーキテクチャ
 

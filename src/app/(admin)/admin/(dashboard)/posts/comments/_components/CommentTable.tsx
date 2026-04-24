@@ -221,6 +221,7 @@ export function CommentTable({ comments }: Props) {
                   <Link
                     href={comment.postUrl}
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="text-sm text-primary hover:underline flex items-center gap-1"
                   >
                     <span className="line-clamp-1 max-w-[150px]">

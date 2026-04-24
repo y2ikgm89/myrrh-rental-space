@@ -71,7 +71,6 @@ steps:
       - -c
       - |
         bun install --frozen-lockfile
-        bun run docs:verify-policy-sync
         bun run db:generate
         bun run test:unit
 

@@ -63,7 +63,10 @@ export async function executeAdminMutationResult<TData>(
     return data;
   } catch (error) {
     if (isDomainError(error)) {
-      return { error: error.message };
+      return {
+        error: error.message,
+        code: error.code,
+      };
     }
 
     throw error;

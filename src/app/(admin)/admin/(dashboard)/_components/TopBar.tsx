@@ -14,6 +14,7 @@ import { IconMenu2 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useAdminLayout } from "@/admin/contexts/admin-layout-context";
 import { Button } from "@/admin/components/ui";
+import { Z_INDEX } from "@/admin/lib/styles/z-index";
 import { LogoutButton } from "./LogoutButton";
 import { NotificationBell } from "./NotificationBell";
 import type { SerializedAdminNotificationData } from "@/shared/domain/notifications/admin-queries";
@@ -69,7 +70,10 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm lg:px-6">
+    <header
+      className="sticky top-0 flex h-16 items-center justify-between border-b bg-card px-4 shadow-sm lg:px-6"
+      style={{ zIndex: Z_INDEX.header }}
+    >
       {/* 左: ハンバーガー + ブランディング */}
       <div className="flex items-center gap-3">
         {showMobileMenu && (
@@ -95,6 +99,7 @@ export function TopBar({
         <Link
           href="/"
           target="_blank"
+          rel="noopener noreferrer"
           className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 hidden sm:block"
         >
           サイトを表示

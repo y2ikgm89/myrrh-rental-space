@@ -13,41 +13,65 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { urls, testUsers } from "./fixtures";
+import {
+  gotoAdminLogin,
+  primeAdminLoginGate,
+  signInAsAdmin,
+} from "./helpers/admin-auth";
 
 /**
  * Setup authenticated session for admin user
  */
 async function setupAuthenticatedSession(page: Page) {
-  await page.goto(urls.login);
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123"); // Test password
-  await page.click('button[type="submit"]');
-
-  // Wait for navigation to dashboard
-  await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
+  await signInAsAdmin(page);
 }
 
 /**
  * Clear all authentication cookies and storage
  */
-async function clearAuthSession(page: Page) {
+async function clearAuthSession(
+  page: Page,
+  options?: { preserveLocalStorage?: boolean },
+) {
   await page.context().clearCookies();
-  await page.evaluate(() => {
-    localStorage.clear();
+  await page.goto(urls.home);
+  await page.evaluate((preserveLocalStorage) => {
+    if (!preserveLocalStorage) {
+      localStorage.clear();
+    }
     sessionStorage.clear();
-  });
+  }, options?.preserveLocalStorage ?? false);
+  await primeAdminLoginGate(page.context());
+}
+
+function getLoginErrorMessage(page: Page) {
+  return page
+    .getByText(
+      /メールアドレスまたはパスワードが正しくありません|リクエストが多すぎます|入力内容を確認してください|ログインに失敗しました。通信環境を確認して再度お試しください。/,
+    )
+    .first();
+}
+
+function adminShell(page: Page) {
+  return page.getByRole("button", { name: "ログアウト" });
 }
 
 test.describe("Authentication Flow", () => {
+  test.beforeEach(async ({ page }) => {
+    await primeAdminLoginGate(page.context());
+  });
+
   test.describe("Login Page", () => {
     test("should display login form when accessing /admin/login", async ({
       page,
     }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       // Verify page title and heading
       await expect(page).toHaveTitle(/ログイン/);
-      await expect(page.locator("h1")).toContainText("管理画面");
+      await expect(
+        page.getByRole("heading", { name: "ログイン" }),
+      ).toBeVisible();
 
       // Verify form elements exist
       await expect(page.locator('input[type="email"]')).toBeVisible();
@@ -72,15 +96,15 @@ test.describe("Authentication Flow", () => {
     });
 
     test("should show error for invalid credentials", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       await page.fill('input[type="email"]', "invalid@example.com");
       await page.fill('input[type="password"]', "wrongpassword");
       await page.click('button[type="submit"]');
 
       // Wait for error message
-      await expect(page.locator(".bg-red-50")).toBeVisible();
-      await expect(page.locator(".bg-red-50")).toContainText(
+      await expect(getLoginErrorMessage(page)).toBeVisible();
+      await expect(getLoginErrorMessage(page)).toContainText(
         "メールアドレスまたはパスワードが正しくありません",
       );
 
@@ -89,7 +113,7 @@ test.describe("Authentication Flow", () => {
     });
 
     test("should validate email format", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       await page.fill('input[type="email"]', "not-an-email");
       await page.fill('input[type="password"]', "password123");
@@ -101,7 +125,7 @@ test.describe("Authentication Flow", () => {
     });
 
     test("should show loading state during login", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       await page.fill('input[type="email"]', testUsers.admin.email);
       await page.fill('input[type="password"]', "admin123");
@@ -118,7 +142,7 @@ test.describe("Authentication Flow", () => {
     test('should remember email when "Remember Me" is checked', async ({
       page,
     }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       const email = testUsers.admin.email;
       await page.fill('input[type="email"]', email);
@@ -130,8 +154,8 @@ test.describe("Authentication Flow", () => {
       await page.waitForURL(urls.adminDashboard);
 
       // Clear session and go back to login
-      await clearAuthSession(page);
-      await page.goto(urls.login);
+      await clearAuthSession(page, { preserveLocalStorage: true });
+      await gotoAdminLogin(page);
 
       // Email should be pre-filled
       await expect(page.locator('input[type="email"]')).toHaveValue(email);
@@ -145,18 +169,11 @@ test.describe("Authentication Flow", () => {
     test("should login with valid credentials and redirect to dashboard", async ({
       page,
     }) => {
-      await page.goto(urls.login);
-
-      await page.fill('input[type="email"]', testUsers.admin.email);
-      await page.fill('input[type="password"]', "admin123");
-      await page.click('button[type="submit"]');
-
-      // Wait for redirect to dashboard
-      await page.waitForURL(urls.adminDashboard, { timeout: 10000 });
+      await signInAsAdmin(page);
 
       // Verify dashboard is loaded
       await expect(page).toHaveURL(urls.adminDashboard);
-      await expect(page.locator("nav")).toBeVisible(); // Sidebar should be visible
+      await expect(adminShell(page)).toBeVisible();
     });
 
     test("should display user info after successful login", async ({
@@ -179,7 +196,7 @@ test.describe("Authentication Flow", () => {
         urls.adminDashboard,
         urls.adminSpaces,
         urls.adminReservations,
-        urls.adminBlog,
+        urls.adminPages,
         urls.adminNews,
         urls.adminUsers,
         urls.adminSettings,
@@ -202,7 +219,7 @@ test.describe("Authentication Flow", () => {
         { url: urls.adminDashboard, expectedText: "ダッシュボード" },
         { url: urls.adminSpaces, expectedText: "スペース" },
         { url: urls.adminReservations, expectedText: "予約" },
-        { url: urls.adminBlog, expectedText: "ブログ" },
+        { url: urls.adminPages, expectedText: "ページ管理" },
         { url: urls.adminNews, expectedText: "お知らせ" },
       ];
 
@@ -212,7 +229,7 @@ test.describe("Authentication Flow", () => {
         // Should successfully load the page
         await expect(page).toHaveURL(route.url);
         // Navigation sidebar should be visible
-        await expect(page.locator("nav")).toBeVisible();
+        await expect(adminShell(page)).toBeVisible();
       }
     });
 
@@ -228,13 +245,13 @@ test.describe("Authentication Flow", () => {
       await page.goto(urls.adminReservations);
       await expect(page).toHaveURL(urls.adminReservations);
 
-      await page.goto(urls.adminBlog);
-      await expect(page).toHaveURL(urls.adminBlog);
+      await page.goto(urls.adminPages);
+      await expect(page).toHaveURL(urls.adminPages);
 
       // Should still be authenticated on dashboard
       await page.goto(urls.adminDashboard);
       await expect(page).toHaveURL(urls.adminDashboard);
-      await expect(page.locator("nav")).toBeVisible();
+      await expect(adminShell(page)).toBeVisible();
     });
   });
 
@@ -250,7 +267,7 @@ test.describe("Authentication Flow", () => {
 
       // Should still be authenticated
       await expect(page).toHaveURL(urls.adminDashboard);
-      await expect(page.locator("nav")).toBeVisible();
+      await expect(adminShell(page)).toBeVisible();
     });
 
     test("should maintain session in new tab", async ({ context }) => {
@@ -263,7 +280,7 @@ test.describe("Authentication Flow", () => {
 
       // Should be authenticated in new tab
       await expect(newPage).toHaveURL(urls.adminDashboard);
-      await expect(newPage.locator("nav")).toBeVisible();
+      await expect(adminShell(newPage)).toBeVisible();
 
       await newPage.close();
       await page.close();
@@ -295,7 +312,7 @@ test.describe("Authentication Flow", () => {
   });
 
   test.describe("Logout", () => {
-    test("should logout and redirect to home page", async ({ page }) => {
+    test("should logout and redirect to admin login", async ({ page }) => {
       await setupAuthenticatedSession(page);
 
       // Find and click logout button
@@ -305,8 +322,8 @@ test.describe("Authentication Flow", () => {
       );
       await logoutButton.click();
 
-      // Should redirect to public home page
-      await expect(page).toHaveURL(urls.home, { timeout: 5000 });
+      // Should redirect to admin login page
+      await expect(page).toHaveURL(urls.login, { timeout: 5000 });
     });
 
     test("should clear session after logout", async ({ page }) => {
@@ -319,7 +336,7 @@ test.describe("Authentication Flow", () => {
       await logoutButton.click();
 
       // Wait for redirect
-      await page.waitForURL(urls.home);
+      await page.waitForURL(urls.login);
 
       // Try to access admin dashboard
       await page.goto(urls.adminDashboard);
@@ -343,7 +360,7 @@ test.describe("Authentication Flow", () => {
         'button:has-text("ログアウト"), a:has-text("ログアウト")',
       );
       await logoutButton.click();
-      await page.waitForURL(urls.home);
+      await page.waitForURL(urls.login);
 
       // Get cookies after logout
       const cookiesAfter = await page.context().cookies();
@@ -369,14 +386,14 @@ test.describe("Authentication Flow", () => {
 
       // Should return 401 or redirect
       if (response) {
-        expect([200, 401, 403]).toContain(response.status());
+        expect([200, 401, 403, 404]).toContain(response.status());
       }
     });
 
     test("should not expose sensitive data in client-side code", async ({
       page,
     }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       // Check that no sensitive environment variables are exposed
       const pageContent = await page.content();
@@ -384,31 +401,6 @@ test.describe("Authentication Flow", () => {
       expect(pageContent).not.toContain("GOOGLE_CLIENT_SECRET");
       expect(pageContent).not.toContain("DATABASE_URL");
       expect(pageContent).not.toContain("BETTER_AUTH_SECRET");
-    });
-
-    test("should implement rate limiting on login attempts", async ({
-      page,
-    }) => {
-      await page.goto(urls.login);
-
-      // Attempt multiple failed logins
-      const attempts = 5;
-      for (let i = 0; i < attempts; i++) {
-        await page.fill('input[type="email"]', "test@example.com");
-        await page.fill('input[type="password"]', `wrongpassword${i}`);
-        await page.click('button[type="submit"]');
-
-        // Wait for error message
-        await page.waitForSelector(".bg-red-50", { timeout: 5000 });
-      }
-
-      // After multiple attempts, should show rate limit warning
-      // Note: This test assumes rate limiting is implemented
-      // Adjust based on actual implementation
-      const errorMessage = await page.locator(".bg-red-50").textContent();
-
-      // Either rate limit message or standard error
-      expect(errorMessage).toBeTruthy();
     });
 
     test("should not allow concurrent sessions from different browsers to interfere", async ({
@@ -422,18 +414,10 @@ test.describe("Authentication Flow", () => {
       const page2 = await context2.newPage();
 
       // Login in first context
-      await page1.goto(urls.login);
-      await page1.fill('input[type="email"]', testUsers.admin.email);
-      await page1.fill('input[type="password"]', "admin123");
-      await page1.click('button[type="submit"]');
-      await page1.waitForURL(urls.adminDashboard);
+      await signInAsAdmin(page1);
 
       // Login in second context
-      await page2.goto(urls.login);
-      await page2.fill('input[type="email"]', testUsers.admin.email);
-      await page2.fill('input[type="password"]', "admin123");
-      await page2.click('button[type="submit"]');
-      await page2.waitForURL(urls.adminDashboard);
+      await signInAsAdmin(page2);
 
       // Both should be logged in independently
       await expect(page1).toHaveURL(urls.adminDashboard);
@@ -446,7 +430,7 @@ test.describe("Authentication Flow", () => {
 
   test.describe("Edge Cases", () => {
     test("should handle empty form submission", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       await page.click('button[type="submit"]');
 
@@ -456,7 +440,7 @@ test.describe("Authentication Flow", () => {
     });
 
     test("should handle network errors gracefully", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       // Simulate offline mode
       await page.context().setOffline(true);
@@ -466,7 +450,9 @@ test.describe("Authentication Flow", () => {
       await page.click('button[type="submit"]');
 
       // Should show error message
-      await expect(page.locator(".bg-red-50")).toBeVisible({ timeout: 10000 });
+      await expect(getLoginErrorMessage(page)).toBeVisible({
+        timeout: 10000,
+      });
 
       // Re-enable network
       await page.context().setOffline(false);
@@ -486,7 +472,7 @@ test.describe("Authentication Flow", () => {
     });
 
     test("should handle malformed credentials gracefully", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       // Test with very long input
       const longEmail = "a".repeat(300) + "@example.com";
@@ -497,11 +483,11 @@ test.describe("Authentication Flow", () => {
       await page.click('button[type="submit"]');
 
       // Should handle gracefully without crashing
-      await expect(page.locator(".bg-red-50")).toBeVisible();
+      await expect(getLoginErrorMessage(page)).toBeVisible();
     });
 
     test("should handle special characters in password", async ({ page }) => {
-      await page.goto(urls.login);
+      await gotoAdminLogin(page);
 
       const specialPassword = "!@#$%^&*()_+-=[]{}|;:,.<>?";
       await page.fill('input[type="email"]', testUsers.admin.email);
@@ -509,7 +495,27 @@ test.describe("Authentication Flow", () => {
       await page.click('button[type="submit"]');
 
       // Should process without errors (will fail auth but not crash)
-      await expect(page.locator(".bg-red-50")).toBeVisible();
+      await expect(getLoginErrorMessage(page)).toBeVisible();
+    });
+
+    test("should implement rate limiting on login attempts", async ({
+      page,
+    }) => {
+      await gotoAdminLogin(page);
+
+      const attempts = 5;
+      for (let i = 0; i < attempts; i++) {
+        await page.fill('input[type="email"]', "test@example.com");
+        await page.fill('input[type="password"]', `wrongpassword${i}`);
+        await page.click('button[type="submit"]');
+
+        await expect(getLoginErrorMessage(page)).toBeVisible({
+          timeout: 5000,
+        });
+      }
+
+      const errorMessage = await getLoginErrorMessage(page).textContent();
+      expect(errorMessage).toBeTruthy();
     });
   });
 });

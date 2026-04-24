@@ -69,9 +69,7 @@ export function PageTableHeader({
         >
           スラッグ
         </SortableColumnHeader>
-        <TableHead className="hidden text-right md:table-cell">
-          セクション数
-        </TableHead>
+        <TableHead className="hidden text-right md:table-cell">構成</TableHead>
         <SortableColumnHeader
           column="updatedAt"
           currentSortBy={params.sortBy}

@@ -38,13 +38,20 @@ function timingSafeEqual(a: string, b: string): boolean {
 const SECURITY_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ["Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload"],
   ["X-Content-Type-Options", "nosniff"],
-  ["X-Frame-Options", "DENY"],
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"],
   ["X-DNS-Prefetch-Control", "on"],
 ];
 
-function buildCsp(nonce: string): string {
+function resolveFrameAncestors(pathname: string): string {
+  if (pathname.startsWith("/preview/")) {
+    return "'self'";
+  }
+
+  return "'none'";
+}
+
+function buildCsp(nonce: string, pathname: string): string {
   const isDev = serverEnv.NODE_ENV === "development";
   return `
     default-src 'self';
@@ -57,7 +64,7 @@ function buildCsp(nonce: string): string {
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    frame-ancestors 'none';
+    frame-ancestors ${resolveFrameAncestors(pathname)};
     upgrade-insecure-requests;
   `
     .replace(/\s{2,}/g, " ")
@@ -73,7 +80,7 @@ function applySecurityHeaders(headers: Headers, csp: string): void {
 
 function createResponse(req: NextRequest, pathname: string): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const cspValue = buildCsp(nonce);
+  const cspValue = buildCsp(nonce, pathname);
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("x-pathname", pathname);
@@ -223,6 +230,13 @@ export async function proxy(req: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
+    {
+      source:
+        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

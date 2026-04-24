@@ -13,4 +13,6 @@
 
 ## 依存更新
 
-セマンバー範囲内の更新は `bun update`（[upgrade-deps スキル](../../.claude/skills/upgrade-deps/SKILL.md)）。
+セマンバー範囲内の更新は `bun update`。Codex では `AGENTS.md`、`project-validation`、変更対象の skill を入口にする。
+
+`.claude/skills/upgrade-deps` は Claude Code 用 legacy reference として残置する。Codex 作業では参照しない。

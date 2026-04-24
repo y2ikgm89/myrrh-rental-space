@@ -56,6 +56,7 @@ export function createValidationMutationError(
 ): MutationError {
   return {
     error: message,
+    code: "VALIDATION",
     fieldErrors: extractFieldErrors(error),
   };
 }

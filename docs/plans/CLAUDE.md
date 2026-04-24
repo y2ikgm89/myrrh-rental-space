@@ -1,5 +1,7 @@
 # docs/plans
 
+> Claude Code 用 legacy reference。Codex 作業では [`AGENTS.md`](../../AGENTS.md) と `.agents/skills` を入口にし、このファイルを正本として参照しない。
+
 実装計画ドキュメント置き場（**WIP 専用**、clean-break 原則: [ADR-0015](../architecture/decisions/0015-clean-break-refactor-and-parallel-implementer-discipline.md)）。
 
 ## セッション継続時

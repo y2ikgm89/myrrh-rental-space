@@ -59,6 +59,8 @@ setup("authenticate as customer", async ({ page }) => {
 });
 ```
 
+Admin 側は `/admin/login` に admin gate があるため、setup project では gate 自体を再検証しない。Playwright helper で `admin-gate` cookie を事前投入し、E2E 用 admin credential user を自動 upsert したうえで UI ログインして storage state を作る。gate 本体の正否は unit test (`proxy-admin-gate.test.ts`) を正本とする。
+
 ### 2. `playwright.config.ts` の 6 project 構成
 
 ```ts

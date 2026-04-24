@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="80" viewBox="0 0 280 80">
+  <rect width="280" height="80" rx="16" fill="#111827"/>
+  <circle cx="44" cy="40" r="18" fill="#d1fae5"/>
+  <text x="44" y="50" fill="#065f46" font-family="sans-serif" font-size="28" font-weight="700" text-anchor="middle">M</text>
+  <text x="82" y="50" fill="#d1fae5" font-family="sans-serif" font-size="28" font-weight="700">Myrrh</text>
+</svg>

@@ -136,7 +136,7 @@ export function CreatePageDialog({
       onSuccess: (result) => {
         setIsOpen(false);
         form.reset();
-        router.push(`/admin/pages/${result.slug}/edit`);
+        router.push(`/admin/pages/${result.slug}`);
       },
     },
   );
@@ -223,7 +223,8 @@ export function CreatePageDialog({
         <DialogHeader>
           <DialogTitle>新規ページ作成</DialogTitle>
           <DialogDescription>
-            タイトルと URL スラッグを設定し、エディターで本文を作成します。
+            タイトルと URL スラッグを設定し、freeform builder
+            で本文を作成します。
           </DialogDescription>
         </DialogHeader>
 
@@ -313,7 +314,7 @@ export function CreatePageDialog({
             <SubmitButton
               isPending={isPending}
               disabled={slugStatus === "unavailable"}
-              label="作成してエディターを開く"
+              label="作成して builder を開く"
               pendingLabel="作成中..."
             />
           </div>

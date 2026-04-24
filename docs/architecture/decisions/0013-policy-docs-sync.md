@@ -1,9 +1,13 @@
 # 13. .claude/rules と docs/reference/codex-rules を canonical-driven で同期
 
-- **Status**: Accepted（2026-04-22 改訂: N-to-1 concat 対応）
+- **Status**: Superseded（2026-04-24: Codex ネイティブ clean-break により同期を廃止）
 - **Date**: 2026-04-15（初版）/ 2026-04-22（改訂）
 - **Deciders**: @y2ikgm89
 - **Tags**: docs, governance, ci
+
+## Supersession Note
+
+この ADR は歴史的記録として残す。現在の Codex 正本は `AGENTS.md`, `.agents/skills`, `.codex/agents`, `.codex/rules`, `.codex/hooks.json` であり、`docs/reference/codex-rules/*`、policy sync scripts、CI の `policy-docs-sync` job は廃止済み。現在の方針は [`docs/architecture/codex-instructions.md`](../codex-instructions.md) を参照。
 
 ## Context and Problem Statement
 

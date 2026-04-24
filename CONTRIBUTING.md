@@ -1,6 +1,6 @@
 # Contributing to Myrrh Rental Space
 
-このドキュメントは開発者向けのクイックスタートです。プロジェクト固有のハードルール・アーキテクチャ詳細は [`CLAUDE.md`](./CLAUDE.md) を参照してください。
+このドキュメントは開発者向けのクイックスタートです。Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。
 
 ## 開発環境セットアップ
 
@@ -80,7 +80,7 @@ feature/*, fix/*, chore/*  ← PR ベースで develop にマージ
 feat(reservation): add customer cancellation flow with refund
 fix(stripe): handle webhook race condition in payment_intent.succeeded
 refactor(domain): split reservations commands into lifecycle/admin/public
-docs(claude.md): document Prisma re-export gateway rules
+docs(agents): document Prisma re-export gateway rules
 ```
 
 ## 開発フロー
@@ -91,10 +91,10 @@ docs(claude.md): document Prisma re-export gateway rules
 
 ```bash
 # docs/plans/YYYY-MM-DD-<name>.md を手動作成、または
-# Claude Code の brainstorming → writing-plans スキルチェーンで自動生成
+# Codex で計画を作成
 ```
 
-詳細は [`docs/plans/CLAUDE.md`](./docs/plans/CLAUDE.md) を参照。
+詳細は [`docs/plans/`](./docs/plans/) を参照。
 
 ### 2. 実装
 
@@ -150,7 +150,6 @@ CI で以下が自動実行されます：
 
 | Gate                 | 内容                                                                              |
 | -------------------- | --------------------------------------------------------------------------------- |
-| `policy-docs-sync`   | `.claude/rules` と `codex-rules` の同期確認                                       |
 | `lint-and-typecheck` | ESLint + `tsc --noEmit`                                                           |
 | `unit-tests`         | bun test (per-directory batch、ADR 0010) + integration tests                      |
 | `e2e-tests`          | Playwright（全 project、Playwright browsers cache 対応）                          |
@@ -166,9 +165,9 @@ CI で以下が自動実行されます：
 
 脆弱性を発見した場合は **公開 issue を開かず** [`SECURITY.md`](./SECURITY.md) の指示に従って報告してください。
 
-## ハードルール（CLAUDE.md 抜粋）
+## ハードルール（AGENTS.md 抜粋）
 
-以下は [`CLAUDE.md`](./CLAUDE.md) のハードルールのダイジェストです。詳細は本体を参照：
+以下は [`AGENTS.md`](./AGENTS.md) のハードルールのダイジェストです。詳細は本体を参照：
 
 - **型アサーション（`as`）禁止** — 型ガード・`satisfies`・`safeParse` を使用
 - **`useCallback`/`useMemo`/`memo` 禁止** — React Compiler 1.0 が自動メモ化
@@ -181,6 +180,6 @@ CI で以下が自動実行されます：
 
 ## 質問・サポート
 
-- プロジェクト固有の疑問: `CLAUDE.md` + `.claude/rules/` を先に読む
-- 実装パターン: `.claude/rules/` / `docs/architecture/decisions/` を参照（過去プランは git log で辿る）
+- プロジェクト固有の疑問: `AGENTS.md` + `.agents/skills/` を先に読む
+- 実装パターン: `docs/architecture/` / `docs/architecture/decisions/` を参照（過去プランは git log で辿る）
 - それでも不明な場合: GitHub Issue（bug / feature template）または owner に直接連絡

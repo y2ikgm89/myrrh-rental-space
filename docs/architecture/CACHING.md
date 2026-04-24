@@ -1,6 +1,6 @@
 # キャッシング戦略ガイド
 
-> **Note**: このドキュメントには、Next.js 16 App Routerの最新のキャッシングAPIに基づく詳細なキャッシング戦略が記載されています。技術スタックの詳細については、[`CLAUDE.md`](../../CLAUDE.md)を参照してください。
+> **Note**: このドキュメントには、Next.js 16 App Router のキャッシング API に基づくキャッシング戦略が記載されています。Codex 作業では [`AGENTS.md`](../../AGENTS.md) と関連 skill を入口にしてください。
 
 **最終更新**: 2026-01-12
 
@@ -556,7 +556,7 @@ revalidatePath("/spaces");
 
 ### プロジェクトドキュメント
 
-- [`CLAUDE.md`](../../CLAUDE.md) - プロジェクト全体の仕様書
+- [`AGENTS.md`](../../AGENTS.md) - Codex 向けプロジェクト指示
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) - システムアーキテクチャ
 
 ### 外部リソース

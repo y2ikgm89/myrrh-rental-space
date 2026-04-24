@@ -133,7 +133,9 @@ export function PageListTable({
                       {isHomepage ? "/" : `/${page.slug}`}
                     </TableCell>
                     <TableCell className="hidden text-right text-muted-foreground md:table-cell">
-                      {page.sectionCount ?? 0}
+                      {page.isSystemPage
+                        ? `${page.sectionCount ?? 0}`
+                        : "Freeform"}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {formatDateTimeShort(page.updatedAt)}
@@ -145,7 +147,7 @@ export function PageListTable({
                         isPublished={page.isPublished}
                         isSystemPage={page.isSystemPage}
                         isHomepage={isHomepage}
-                        editHref={`/admin/pages/${page.slug}/edit`}
+                        editHref={`/admin/pages/${page.slug}`}
                       />
                     </TableCell>
                   </TableRow>

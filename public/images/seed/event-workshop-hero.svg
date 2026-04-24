@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="720" fill="#ecfeff"/>
+  <rect x="130" y="120" width="940" height="480" rx="48" fill="#f0fdfa"/>
+  <rect x="220" y="225" width="280" height="220" rx="28" fill="#2dd4bf"/>
+  <rect x="560" y="235" width="380" height="42" rx="21" fill="#0f766e"/>
+  <rect x="560" y="320" width="300" height="30" rx="15" fill="#5eead4"/>
+  <rect x="560" y="375" width="220" height="30" rx="15" fill="#99f6e4"/>
+  <text x="600" y="650" fill="#0f766e" font-family="sans-serif" font-size="38" text-anchor="middle">Workshop Event</text>
+</svg>

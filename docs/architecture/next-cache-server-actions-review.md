@@ -10,4 +10,4 @@
 
 ## 変更時
 
-- `updateTag` / `revalidateTag` / `'use cache'` を触ったら **cache-strategy-reviewer**（CLAUDE.md）を回す。
+- `updateTag` / `revalidateTag` / `'use cache'` を触ったら Codex では `admin-clean-break` または変更対象 skill を入口にし、必要なら `docs_researcher` custom agent で Next.js 公式 docs を確認する。

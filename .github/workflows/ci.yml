@@ -25,17 +25,6 @@ env:
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
 
 jobs:
-  policy-docs-sync:
-    name: Policy docs (codex-rules ↔ .claude/rules)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Bun 未セットアップでも動くよう Node のみで検証（スクリプト正本）
-      - name: Verify Lexical + inline editor rules are byte-identical
-        run: node scripts/verify-policy-docs.mjs
-
   dependency-audit:
     name: Dependency Audit (bun audit)
     runs-on: ubuntu-latest
@@ -69,7 +58,6 @@ jobs:
 
   lint-and-typecheck:
     name: Lint & Type Check
-    needs: [policy-docs-sync]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -96,7 +84,6 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    needs: [policy-docs-sync]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -131,7 +118,7 @@ jobs:
       - name: Run database migrations
         run: bunx --bun prisma migrate deploy
 
-      # per-directory batch 必須（mock.module グローバル干渉防止 — CLAUDE.md ハードルール）
+      # per-directory batch 必須（mock.module グローバル干渉防止）
       - name: Run unit tests (per-directory batch)
         run: bun run test:unit
 
@@ -144,7 +131,6 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    needs: [policy-docs-sync]
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -220,7 +206,7 @@ jobs:
   build:
     name: Build (env validation)
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync, lint-and-typecheck]
+    needs: [lint-and-typecheck]
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
@@ -261,7 +247,7 @@ jobs:
   bundle-size-diff:
     name: Bundle Size Diff (PR comment)
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync, lint-and-typecheck]
+    needs: [lint-and-typecheck]
     # PR のみ実行（base vs head の gzipped size 差分を sticky comment）
     if: github.event_name == 'pull_request'
     permissions:
@@ -287,7 +273,7 @@ jobs:
   bundle-analysis:
     name: Bundle Analysis (Turbopack)
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync, lint-and-typecheck]
+    needs: [lint-and-typecheck]
     # PR とメインブランチ push のみで実行（フィーチャーブランチ push はスキップ）
     if: |
       github.event_name == 'pull_request' ||
@@ -325,7 +311,7 @@ jobs:
   lighthouse-ci:
     name: Lighthouse CI (perf / a11y / SEO)
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync, lint-and-typecheck]
+    needs: [lint-and-typecheck]
     # Lighthouse は重いため main/develop push と PR のみ実行
     if: |
       github.event_name == 'pull_request' ||
@@ -383,7 +369,6 @@ jobs:
   visual-regression:
     name: Visual Regression (opt-in)
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync]
     # opt-in 実行条件:
     # - PR に `visual-regression` ラベルが付与された（labeled イベント含む）
     # - workflow_dispatch で run_visual=true 指定
@@ -457,7 +442,7 @@ jobs:
   docs:
     name: Generate API Docs
     runs-on: ubuntu-latest
-    needs: [policy-docs-sync, lint-and-typecheck]
+    needs: [lint-and-typecheck]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout

@@ -1,20 +1,19 @@
 # テストガイド
 
-> このページは **リダイレクトのみ**。正本は以下を参照してください。
+> Codex では `CLAUDE.md` / `.claude/*` を追跡しない。検証判断は Codex skill を入口にする。
 
-## 正本
+## Codex 正本
 
-| 対象                                       | 正本                                                                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 実行コマンド（日常運用）                   | [`CLAUDE.md` §コマンド](../../CLAUDE.md#コマンド)                                                                                                            |
-| テスト実行ポリシー（何をいつ走らせるか）   | [`CLAUDE.md` §検証](../../CLAUDE.md#検証)                                                                                                                    |
-| テスト記述規約（mock / 型安全 / DO/DON'T） | [`.claude/rules/test-quality.md`](../../.claude/rules/test-quality.md)                                                                                       |
-| Bun Test 固有パターン                      | [`.claude/rules/bun-patterns.md`](../../.claude/rules/bun-patterns.md)                                                                                       |
-| per-directory batch の決定                 | [ADR 0010](../architecture/decisions/0010-per-directory-test-batch.md)                                                                                       |
-| script 整理とテスト実行ポリシー            | [ADR 0014](../architecture/decisions/0014-test-script-consolidation.md)                                                                                      |
-| E2E / Playwright 認証                      | [ADR 0003](../architecture/decisions/0003-playwright-storage-state-auth.md) + [`.claude/agents/e2e-test-writer.md`](../../.claude/agents/e2e-test-writer.md) |
+| 対象                                       | Codex で読む場所                                                            |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| 実行コマンド（日常運用）                   | [`AGENTS.md`](../../AGENTS.md)                                              |
+| テスト実行ポリシー（何をいつ走らせるか）   | [`project-validation`](../../.agents/skills/project-validation/SKILL.md)    |
+| テスト記述規約（mock / 型安全 / DO/DON'T） | 近接テストと既存 helper                                                     |
+| Bun Test 固有パターン                      | 近接テストと `package.json` scripts                                         |
+| per-directory batch の決定                 | [ADR 0010](../architecture/decisions/0010-per-directory-test-batch.md)      |
+| script 整理とテスト実行ポリシー            | [ADR 0014](../architecture/decisions/0014-test-script-consolidation.md)     |
+| E2E / Playwright 認証                      | [ADR 0003](../architecture/decisions/0003-playwright-storage-state-auth.md) |
 
-## 補足
+## Claude Code Legacy
 
-- 正本優先原則により、旧 1623 行の内容はすべて撤去しました。`git log` で過去版を参照できます
-- 外部 AI tool からの参照は `AGENTS.md` を起点にしてください
+`.claude/rules/test-quality.md`、`.claude/rules/bun-patterns.md`、`.claude/agents/e2e-test-writer.md` は Claude Code 用に残置する。Codex 作業では参照しない。

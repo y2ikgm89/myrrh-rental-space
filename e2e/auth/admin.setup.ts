@@ -1,6 +1,6 @@
 import { test as setup, expect } from "@playwright/test";
 import path from "node:path";
-import { urls, testUsers } from "../fixtures";
+import { signInAsAdmin } from "../helpers/admin-auth";
 
 /**
  * 管理者（admin）認証セットアップ
@@ -14,7 +14,7 @@ import { urls, testUsers } from "../fixtures";
  *
  * 前提:
  * - dev サーバーが動作中
- * - seed で admin user が作成済み（`bun prisma/seed.ts --admin`）
+ * - Playwright helper が E2E 用 admin user を自動で upsert する
  * - `testUsers.admin.email` / "admin123" でログイン可能
  */
 
@@ -28,19 +28,8 @@ const adminAuthFile = path.join(
 );
 
 setup("authenticate as admin", async ({ page }) => {
-  await page.goto(urls.login);
-  await page.waitForLoadState("networkidle");
-
-  // ログインフォーム
-  await page.fill('input[type="email"]', testUsers.admin.email);
-  await page.fill('input[type="password"]', "admin123");
-  await page.click('button[type="submit"]');
-
-  // ダッシュボードへの遷移を待つ
-  await page.waitForURL(urls.adminDashboard, { timeout: 15000 });
-
-  // session cookie が確定したことを確認
-  await expect(page.locator("main, h1")).toBeVisible();
+  await signInAsAdmin(page);
+  await expect(page.getByRole("main")).toBeVisible();
 
   // storage state を保存
   await page.context().storageState({ path: adminAuthFile });

@@ -1,21 +1,19 @@
 # コーディング規約
 
-> このページは **リダイレクトのみ**。正本は以下を参照してください。
+> Codex では `CLAUDE.md` / `.claude/*` を追跡しない。`.claude` 参照は Claude Code 用 legacy reference として残すだけ。
 
-## 正本
+## Codex 正本
 
-| 対象                                             | 正本                                                                                                  |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| 命名規則 / 型安全 / 型アサーション禁止           | [`AGENTS.md`](../../AGENTS.md) + [`.claude/rules/type-safety.md`](../../.claude/rules/type-safety.md) |
-| React 19 / Compiler 1.0 / eslint-react v4        | [`.claude/rules/react-patterns.md`](../../.claude/rules/react-patterns.md)                            |
-| Server Actions / `'use cache'` / `updateTag`     | [`.claude/rules/server-actions.md`](../../.claude/rules/server-actions.md)                            |
-| Tailwind v4 / セマンティックトークン / `cn()`    | [`.claude/rules/tailwind-patterns.md`](../../.claude/rules/tailwind-patterns.md)                      |
-| エラーハンドリング                               | [`.claude/rules/error-handling.md`](../../.claude/rules/error-handling.md)                            |
-| アクセシビリティ（WCAG 2.2 AA + 2.5.5 Enhanced） | [`.claude/rules/frontend/accessibility.md`](../../.claude/rules/frontend/accessibility.md)            |
-| プロジェクト固有 gotchas                         | [`.claude/rules/gotchas.md`](../../.claude/rules/gotchas.md)                                          |
-| ハードルール一覧                                 | [`CLAUDE.md` §ハードルール](../../CLAUDE.md#ハードルールプロジェクト固有)                             |
+| 対象                                             | Codex で読む場所                                                                                        |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| 命名規則 / 型安全 / 型アサーション禁止           | [`AGENTS.md`](../../AGENTS.md)                                                                          |
+| React 19 / Compiler 1.0 / eslint-react v4        | [`AGENTS.md`](../../AGENTS.md)                                                                          |
+| Server Actions / `'use cache'` / `updateTag`     | [`AGENTS.md`](../../AGENTS.md) + [`admin-clean-break`](../../.agents/skills/admin-clean-break/SKILL.md) |
+| Tailwind v4 / セマンティックトークン / `cn()`    | [`AGENTS.md`](../../AGENTS.md)                                                                          |
+| エラーハンドリング                               | [`AGENTS.md`](../../AGENTS.md) と該当 domain / action の既存実装                                        |
+| アクセシビリティ（WCAG 2.2 AA + 2.5.5 Enhanced） | [`AGENTS.md`](../../AGENTS.md) と公開 / 管理 UI の既存コンポーネント                                    |
+| プロジェクト固有 gotchas                         | [`docs/architecture/`](../architecture/) と近接コード                                                   |
 
-## 補足
+## Claude Code Legacy
 
-- `.claude/rules/**/*.md` は `paths:` フロントマターで条件付き自動ロードされます
-- 旧本文は drift のため撤去。`git log` で過去版を参照できます
+`.claude/rules/**/*.md` は Claude Code 用に残置する。Codex 作業では参照しない。

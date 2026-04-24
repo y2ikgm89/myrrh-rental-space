@@ -45,7 +45,7 @@ src/
 - **Prisma gateway**: app 層は `@/shared/lib/validations/enums/prisma-types`（browser entry 由来、type-only）経由でのみ Prisma 型にアクセス。runtime 値は `shared/db/` / `shared/domain/` のみ直接 import 可
 - **`executeAdminMutationResult`**: 管理 write 系 Server Actions は認証・権限・監査ログを一括処理
 
-詳細は [`CLAUDE.md`](./CLAUDE.md) のハードルール + SSoT 表、および [`.claude/rules/**/*.md`](./.claude/rules/) を参照してください。
+Codex 作業の正本は [`AGENTS.md`](./AGENTS.md) と [`.agents/skills/`](./.agents/skills/) です。詳細な配置方針は [`docs/architecture/codex-instructions.md`](./docs/architecture/codex-instructions.md) を参照してください。
 
 ## セットアップ
 
@@ -119,13 +119,12 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual --update-snap
 PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 ```
 
-## CI 品質ゲート（12 jobs）
+## CI 品質ゲート（11 jobs）
 
 全 PR は以下の自動チェックを通過する必要があります：
 
 | Job                  | 内容                                               | Blocking |
 | -------------------- | -------------------------------------------------- | :------: |
-| `policy-docs-sync`   | `.claude/rules` ↔ `codex-rules` の同期確認         |    ✅    |
 | `lint-and-typecheck` | Prettier format check + ESLint + `tsc --noEmit`    |    ✅    |
 | `unit-tests`         | Bun test (per-directory batch) + integration tests |    ✅    |
 | `e2e-tests`          | Playwright（786 tests、全 project、browser cache） |    ✅    |
@@ -140,7 +139,7 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 
 ## 実装ハードルール（抜粋）
 
-詳細は [`CLAUDE.md`](./CLAUDE.md) 参照。主要ルール：
+詳細は [`AGENTS.md`](./AGENTS.md) 参照。主要ルール：
 
 - **型アサーション（`as`）禁止** — 型ガード / `satisfies` / Zod `safeParse` を使用
 - **`useCallback` / `useMemo` / `memo` 禁止** — React Compiler 1.0 が自動メモ化
@@ -157,16 +156,17 @@ PLAYWRIGHT_VISUAL=1 bunx playwright test --project=chromium-visual
 2. feature ブランチで実装
 3. `bun run validate && bun run build` で最終検証
 4. PR 作成（[`.github/pull_request_template.md`](./.github/pull_request_template.md) を埋める）
-5. CI 12 jobs を通過
+5. CI 11 jobs を通過
 6. CODEOWNERS レビュー
 7. マージ
 
 ## ドキュメント
 
-- [`CLAUDE.md`](./CLAUDE.md) — Claude Code / 開発者向け正本ハードルール・SSoT 表
+- [`AGENTS.md`](./AGENTS.md) — Codex 向けプロジェクト指示
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — 開発環境セットアップ・ブランチ戦略・コミット規約
 - [`SECURITY.md`](./SECURITY.md) — 脆弱性報告 policy・対応 SLA
-- [`.claude/rules/`](./.claude/rules/) — ドメイン別実装ルール（paths frontmatter で自動ロード）
+- [`.agents/skills/`](./.agents/skills/) — Codex ネイティブの反復作業 skill
+- [`docs/architecture/codex-instructions.md`](./docs/architecture/codex-instructions.md) — Codex 資産の配置方針
 - [`docs/plans/`](./docs/plans/) — 進行中プランのみ（完了プランは git history と ADR で辿る、clean-break 原則）
 - [`docs/architecture/`](./docs/architecture/) — アーキテクチャ図・設計判断記録
 
